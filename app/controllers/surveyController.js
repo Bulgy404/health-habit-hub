@@ -1,6 +1,4 @@
-import { getLanguageMessages } from '../utils/localization.js';
-import path from 'path';
-import { connect, ObjectId } from '../models/survey.js';
+import { connect } from '../models/survey.js';
 
 export async function renderSurvey(req, res) {
   try {
@@ -13,20 +11,17 @@ export async function renderSurvey(req, res) {
         .findOne({ id: surveyId });
     if (!survey) {
         console.error(`Survey with id "${surveyId}" not found in MongoDB.`);
-        return res.status(404).send('Survey not found');
+        return res.status(404).json({ error: 'Survey not found' });
     }
 
-    res.render(
-        "survey",
-        {
-            survey,
-            locale: req.lang,
-            ...getLanguageMessages(req.lang)
-        }
-    );
+    res.json({
+      status: 'ok',
+      survey,
+      locale: req.lang
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).json({ error: 'Server error' });
   }
 }
 
@@ -44,7 +39,7 @@ export async function submitSurvey(req, res) {
     res.cookie('demographicsCompleted', 'true', {
         maxAge: 365 * 24 * 60 * 60 * 1000,
         httpOnly: true,
-        path: '/' 
+        path: '/'
     });
     const basepath = req.app.get('basepath') || '/';
     const normalizedBasepath = basepath.endsWith('/') ? basepath : `${basepath}/`;
@@ -56,41 +51,3 @@ export async function submitSurvey(req, res) {
     });
   }
 }
-
-//const dbConfig = {
-//    host: process.env.MONGO_HOST || "localhost",
-//    port: process.env.MONGO_PORT || 27017,
-//    database: process.env.MONGO_DB,
-//    user: process.env.MONGO_USER,
-//    password: process.env.MONGO_PASSWORD
-//};
-//const client = new MongoClient(`mongodb://${dbConfig.user}:${dbConfig.password}@${dbConfig.host}:${dbConfig.port}/`);
-//
-//export function renderSurveys(req, res) {
-//    client.connect()
-//        .then(() => {
-//            const db = client.db(dbConfig.database);
-//            db.collection("surveys").find().toArray()
-//                //.then(console.log)
-//                .then(results => {
-//                    console.log(results);
-//                    res.render(
-//                        url.fileURLToPath(new URL('../views/surveys.ejs', import.meta.url)),
-//                        {
-//                            surveyJson: results[0].json,
-//                            ...getLanguageMessages(req.lang)
-//                        }
-//                    );
-//                })
-//                .catch(console.error);
-//                //.finally(client.close());
-//        })
-//        .catch(console.error)
-//
-//    //res.render(
-//    //    url.fileURLToPath(new URL('../views/surveys.ejs', import.meta.url)),
-//    //    {
-//    //        ...getLanguageMessages(req.lang)
-//    //    }
-//    //);
-//}

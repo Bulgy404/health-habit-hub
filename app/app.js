@@ -22,8 +22,6 @@ import accessibilityRouter from './routes/accessibilityRouter.js';
 import surveyRouter from './routes/surveyRouter.js';
 
 const app = express();
-app.set('view engine', 'ejs');
-app.set('views', path.join(path.resolve(), 'views'));
 const port = config.port;
 const contextPath = process.env.APP_BASE_PATH || '/';
 console.log('ContextPath: ', contextPath);
@@ -47,8 +45,6 @@ router.use((req, res, next) => {
   next();
 });
 
-// Set template engine
-app.set("view engine", "ejs");
 
 // Enable language functions
 loadLanguageFiles();
@@ -159,6 +155,11 @@ router.use((req, res, next) => {
     console.log('Redirect-Path', p);
     res.redirect(307, path.join(contextPath, req.lang, req.url));
   }
+});
+
+// API health/info endpoint
+app.get('/api', (req, res) => {
+  res.json({ status: 'ok', service: 'Health Habit Hub API', version: '1.0.0' });
 });
 
 app.use(cookieParser());

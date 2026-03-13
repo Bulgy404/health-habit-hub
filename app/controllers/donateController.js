@@ -1,4 +1,3 @@
-import url from 'url';
 import contexts from '../models/contexts.js';
 import { ExperimentGroup } from '../models/experimentGroup.js';
 import { getLanguageMessages } from '../utils/localization.js';
@@ -65,22 +64,18 @@ function getExperimentGroup(req, res) {
 
 export function showDonateForm(req, res) {
   const experimentGroup = getExperimentGroup(req, res);
-  res.render(
-    url.fileURLToPath(new URL('../views/donate.ejs', import.meta.url)),
-    {
-      experimentGroup: experimentGroup,
-      contexts: contexts,
-      locale: req.lang,
-      recaptchaSiteKey: config.recaptcha.siteKey,
-      ...getLanguageMessages(req.lang),
-    }
-  );
+  res.json({
+    status: 'ok',
+    lang: req.lang,
+    experimentGroup: experimentGroup,
+    contexts: contexts,
+    messages: getLanguageMessages(req.lang),
+  });
 }
 
 export async function saveDonateData(req, res) {
-  const userId = req.userId;  // User-ID direkt aus req holen
+  const userId = req.userId;
   console.log(`Received donate data for user ${userId}:`, req.body);
-  // Choose backend for graph storage without affecting surveys/cookies
   let dbClient;
   if (config.graphBackend === 'neo4j') {
     const { Neo4jDbClient } = await import('../utils/Neo4jDatabase.js');
@@ -97,7 +92,7 @@ export async function saveDonateData(req, res) {
   console.log(data);
 
   try {
-    await dbClient.insertDonateData(data, userId); 
+    await dbClient.insertDonateData(data, userId);
     const redirectLang = req.body.language || req.lang || 'en';
     const basepath = req.app.get('basepath') || '/';
     const normalizedBasepath = basepath.endsWith('/') ? basepath : `${basepath}/`;
@@ -115,6 +110,6 @@ export async function saveDonateData(req, res) {
   } catch (error) {
     console.log(data, userId)
     console.error('Fehler beim Speichern der Spendendaten:', error);
-    res.status(500).send('Fehler beim Speichern der Daten.');
+    res.status(500).json({ error: 'Fehler beim Speichern der Daten.' });
   }
 }
