@@ -7,7 +7,11 @@ import cookieParser from 'cookie-parser';
 import { jsonBodyParser } from './middleware/requestParser.js';
 import { staticFileMiddleware } from './middleware/staticFileMiddleware.js';
 import { config } from './utils/config.js';
-import { getLanguageCodes, getLanguageMessages, loadLanguageFiles } from './utils/localization.js';
+import {
+  getLanguageCodes,
+  getLanguageMessages,
+  loadLanguageFiles,
+} from './utils/localization.js';
 
 // Express config
 import aboutRouter from './routes/aboutRouter.js';
@@ -29,13 +33,28 @@ console.log('ContextPath: ', contextPath);
 const publicPath = path.join(process.cwd(), 'app/public');
 app.use(express.static(publicPath));
 
-
 // Serve survey js core and ui files
-const vendorSurveyCoreLangMount = path.join(contextPath, ':lng', 'vendor', 'survey-core');
-const vendorSurveyJsUiLangMount = path.join(contextPath, ':lng', 'vendor', 'survey-js-ui');
+const vendorSurveyCoreLangMount = path.join(
+  contextPath,
+  ':lng',
+  'vendor',
+  'survey-core'
+);
+const vendorSurveyJsUiLangMount = path.join(
+  contextPath,
+  ':lng',
+  'vendor',
+  'survey-js-ui'
+);
 
-app.use(vendorSurveyCoreLangMount,  express.static(path.join(process.cwd(), 'node_modules/survey-core')));
-app.use(vendorSurveyJsUiLangMount, express.static(path.join(process.cwd(), 'node_modules/survey-js-ui')));
+app.use(
+  vendorSurveyCoreLangMount,
+  express.static(path.join(process.cwd(), 'node_modules/survey-core'))
+);
+app.use(
+  vendorSurveyJsUiLangMount,
+  express.static(path.join(process.cwd(), 'node_modules/survey-js-ui'))
+);
 
 const router = express.Router();
 
@@ -44,7 +63,6 @@ router.use((req, res, next) => {
   res.locals.contextPath = contextPath;
   next();
 });
-
 
 // Enable language functions
 loadLanguageFiles();
@@ -66,7 +84,7 @@ router.use((req, res, next) => {
   if (!userId) {
     userId = uuidv4();
     res.cookie('userId', userId, {
-      maxAge: 365 * 24 * 60 * 60 * 1000, 
+      maxAge: 365 * 24 * 60 * 60 * 1000,
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
     });
@@ -83,10 +101,9 @@ app.get('/test-disclaimer', (req, res) => {
   res.send('Disclaimer Test Route Reached ✅');
 });
 
-
 // Either sets req.lang to the already set route language parameter or gets the preferred browser language. Default value is 'en'.
 router.use('/:lng(' + validLanguageCodes + ')?/', (req, res, next) => {
-  console.log("Disclaimer route middleware hit")
+  console.log('Disclaimer route middleware hit');
   console.log('Language use: ', req.url);
 
   //console.log('Route language parameter:', req.params.lng);
@@ -110,8 +127,6 @@ router.use('/:lng(' + validLanguageCodes + ')?/', (req, res, next) => {
 
 import { requireAgeConsent } from './middleware/ageGateMiddleware.js';
 import disclaimerRouter from './routes/disclaimerRouter.js';
-
-
 
 // Public routes (no age check)
 router.use('/:lng(' + validLanguageCodes + ')/disclaimer', disclaimerRouter);
@@ -141,7 +156,10 @@ router.use('/:lng(' + validLanguageCodes + ')/demo', demoRouter); //Probably nee
 router.use('/:lng(' + validLanguageCodes + ')/thanks', thanksRouter);
 router.use('/:lng(' + validLanguageCodes + ')/imprint', imprintRouter);
 router.use('/:lng(' + validLanguageCodes + ')/privacy', privacyRouter);
-router.use('/:lng(' + validLanguageCodes + ')/accessibility', accessibilityRouter);
+router.use(
+  '/:lng(' + validLanguageCodes + ')/accessibility',
+  accessibilityRouter
+);
 router.use('/:lng(' + validLanguageCodes + ')/survey', surveyRouter);
 
 // Intercepts all calls of '/' and checks whether a language (req.lang) is already set. If not, this parameter is set.
@@ -161,6 +179,10 @@ router.use((req, res, next) => {
 app.get('/api', (req, res) => {
   res.json({ status: 'ok', service: 'Health Habit Hub API', version: '1.0.0' });
 });
+
+// Versioned API routes (JWT-protected)
+import createV1Router from './routes/v1Router.js';
+app.use('/api/v1', createV1Router());
 
 app.use(cookieParser());
 app.use(contextPath, router);
