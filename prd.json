@@ -192,7 +192,7 @@
       ],
       "priority": 12,
       "passes": true,
-      "notes": "bcio.owl not present in repo — BCIO classes merged inline from BCT Taxonomy v1 (Michie et al. 2013). 134 total owl:Class entries (15 HHH + 119 BCIO). concepts_all_merged.jsonl also absent; uncertain HHH↔BCIO mappings annotated with rdfs:comment 'TODO: domain-review'."
+      "notes": "bcio.owl not present in repo \u2014 BCIO classes merged inline from BCT Taxonomy v1 (Michie et al. 2013). 134 total owl:Class entries (15 HHH + 119 BCIO). concepts_all_merged.jsonl also absent; uncertain HHH\u2194BCIO mappings annotated with rdfs:comment 'TODO: domain-review'."
     },
     {
       "id": "US-013",
@@ -243,7 +243,7 @@
         "Typecheck passes"
       ],
       "priority": 15,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -373,7 +373,7 @@
         "File mobile/lib/screens/recommend_screen.dart created",
         "Fetches recommendations via RecommendationService on screen open",
         "Cards enter with FadeTransition + SlideTransition (bottom-up, 300ms stagger)",
-        "Empty state widget shown with message 'No recommendations yet — complete your profile first'",
+        "Empty state widget shown with message 'No recommendations yet \u2014 complete your profile first'",
         "Loading skeleton shown during fetch",
         "Error state with retry button",
         "Accept/Dismiss calls service endpoint and removes card from list with AnimatedList",
@@ -592,7 +592,7 @@
       "description": "As an admin, I want a dialog to create a new participant and immediately download their token card so that I can enrol participants quickly.",
       "acceptanceCriteria": [
         "FloatingActionButton on participant list screen opens AlertDialog",
-        "Dialog shows: group selector (G1–G4 dropdown), token card format selector (QR / Print / Both)",
+        "Dialog shows: group selector (G1\u2013G4 dropdown), token card format selector (QR / Print / Both)",
         "Create button calls POST /api/v1/admin/participants and then GET /:id/token-card",
         "PDF opens in device browser or triggers download (url_launcher)",
         "Success snackbar: 'Participant p-xxxx created'",
@@ -647,7 +647,7 @@
         "Tap survey row navigates to editor screen",
         "Editor screen: full-width monospace JSON TextField pre-populated with survey jsonSchema",
         "Save button calls PUT /api/v1/admin/surveys/:id with updated JSON",
-        "Group assignment checkboxes (G1–G4) below editor",
+        "Group assignment checkboxes (G1\u2013G4) below editor",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
@@ -732,7 +732,7 @@
         "Each controller test mocks MongoDB and Neo4j (no live connections)",
         "Auth middleware tests: valid JWT passes, expired JWT returns 401, wrong role returns 403",
         "npm test exits 0",
-        "Coverage: app/middleware/ and app/controllers/ ≥ 80% lines covered (nyc report)"
+        "Coverage: app/middleware/ and app/controllers/ \u2265 80% lines covered (nyc report)"
       ],
       "priority": 44,
       "passes": false,
@@ -772,7 +772,7 @@
     },
     {
       "id": "US-047",
-      "title": "Flutter integration test: login → survey → recommendation flow",
+      "title": "Flutter integration test: login \u2192 survey \u2192 recommendation flow",
       "description": "As a developer, I want an end-to-end integration test that drives a complete participant journey so that critical user flows are regression-tested.",
       "acceptanceCriteria": [
         "mobile/integration_test/participant_flow_test.dart created",
@@ -889,7 +889,7 @@
         "docs/guides/participant-guide.md created",
         "Sections with numbered steps: 1) Accessing the app (Android APK / iOS / browser URL), 2) Logging in with token card (QR scan + manual entry), 3) Completing your profile, 4) Donating a habit, 5) Exploring the habit graph and annotating nodes, 6) Understanding your recommendations (rationale + citation), 7) Updating your profile",
         "Each section has at least one screenshot in docs/assets/screenshots/participant/ named descriptively (e.g. 01-login-android.png)",
-        "Screenshots taken on Android emulator, iOS simulator, and Chrome browser — each labelled in the markdown",
+        "Screenshots taken on Android emulator, iOS simulator, and Chrome browser \u2014 each labelled in the markdown",
         "Written in plain English, no technical jargon",
         "docs/guides/participant-guide.pdf generated (pandoc or similar)"
       ],
@@ -949,10 +949,10 @@
         "docs/architecture.md created",
         "System overview Mermaid diagram: all Docker services (Traefik, Node.js backend, Flutter web, Python recommender, Keycloak, Neo4j, Fuseki, MongoDB, Mongo Express, LibreTranslate, backup) with arrows showing data flow and port numbers",
         "Per-service table: service name, technology, purpose, internal port, external URL (if any), key env vars",
-        "Sequence diagram (Mermaid): Keycloak PKCE login flow (Flutter → Keycloak → Flutter → backend)",
-        "Sequence diagram (Mermaid): habit donation flow (Flutter → backend → MongoDB + Neo4j)",
-        "Sequence diagram (Mermaid): recommendation request flow (Flutter → backend → Python recommender → Neo4j → backend → Flutter)",
-        "Ontology section: HHH namespace, BCIO integration point, G1–G4 encoding, 2 example Cypher + 2 SPARQL queries"
+        "Sequence diagram (Mermaid): Keycloak PKCE login flow (Flutter \u2192 Keycloak \u2192 Flutter \u2192 backend)",
+        "Sequence diagram (Mermaid): habit donation flow (Flutter \u2192 backend \u2192 MongoDB + Neo4j)",
+        "Sequence diagram (Mermaid): recommendation request flow (Flutter \u2192 backend \u2192 Python recommender \u2192 Neo4j \u2192 backend \u2192 Flutter)",
+        "Ontology section: HHH namespace, BCIO integration point, G1\u2013G4 encoding, 2 example Cypher + 2 SPARQL queries"
       ],
       "priority": 58,
       "passes": false,
@@ -967,7 +967,7 @@
         "Neo4j section: table of all node labels (with properties + types), table of all relationship types; 10 annotated Cypher queries (habits by group, habits by BCIO category, donation timeline, top annotated habits, G3 vs G4 habits, etc.)",
         "Fuseki/SPARQL section: namespace prefix table (hhh:, bcio:, owl:, rdfs:); 10 example SPARQL queries",
         "MongoDB section: all collections (results, profiles, habit_annotations, admin_settings, surveys) with JSON schema tables and one example document each",
-        "G1–G4 encoding explanation: how to unambiguously query each group after migration",
+        "G1\u2013G4 encoding explanation: how to unambiguously query each group after migration",
         "Anonymisation model: table showing what data is stored vs removed/anonymized on soft-delete"
       ],
       "priority": 59,
@@ -1026,7 +1026,7 @@
       "description": "As a stakeholder, I want a maintained changelog and a deploy guard that warns about missing version bumps so that every release is documented.",
       "acceptanceCriteria": [
         "CHANGELOG.md created at repo root following Keep a Changelog format (https://keepachangelog.com)",
-        "Version 1.0.0 entry dated with today's date; sections: Added (all phases 0–11 summarized), Changed (old Node.js views retired), Fixed (G3/G4 ontology bug)",
+        "Version 1.0.0 entry dated with today's date; sections: Added (all phases 0\u201311 summarized), Changed (old Node.js views retired), Fixed (G3/G4 ontology bug)",
         "scripts/deploy-full.sh checks: current git tag matches latest version in CHANGELOG.md; if not, prints WARNING: Version not bumped since last deploy and continues (does not block deploy)",
         "npm run version-check script added to package.json that performs the same check and exits non-zero if mismatched"
       ],
