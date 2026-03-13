@@ -1,3 +1,14 @@
+## 2026-03-13 - US-014
+- What was implemented: Scaffolded full Flutter project in mobile/ using `flutter create --org de.tu-dresden --project-name hhh --platforms android,ios,web .`; updated pubspec.yaml (Flutter >=3.22.0, Dart >=3.10.0, added flutter_appauth, flutter_secure_storage, dio, flutter_riverpod, go_router, fl_chart); updated android/app/build.gradle.kts (applicationId de.tu-dresden.hhh, namespace de.tu_dresden.hhh); rewrote ios/Runner/Info.plist (CFBundleIdentifier de.tu-dresden.hhh + CFBundleURLSchemes [hhh]); updated web/index.html (theme-color meta + PWA manifest link); updated web/manifest.json (name Health Habit Hub, short_name HHH, display standalone); moved MainActivity.kt to de/tu_dresden/hhh/ package
+- Files changed: mobile/pubspec.yaml, mobile/android/app/build.gradle.kts, mobile/android/app/src/main/kotlin/de/tu_dresden/hhh/MainActivity.kt (new), mobile/ios/Runner/Info.plist, mobile/web/index.html, mobile/web/manifest.json, plus all flutter create scaffolding files, prd.json (US-014 passes=true)
+- **Learnings for future iterations:**
+  - flutter create --org uses the org as-is but removes hyphens in namespace; applicationId CAN contain hyphens but namespace must be a valid Java package (use underscore)
+  - Dart SDK constraint must be >=3.10.0 for the generated main.dart dot-shorthands feature; flutter SDK constraint goes under environment.flutter key
+  - The mobile/ directory started with only a .env file; flutter create preserved it while generating full project structure
+  - dart analyze must be run from within the mobile directory (or using `dart analyze .` from mobile) to analyze the Flutter project
+  - Pre-existing test failures remain (4 out of ~61 tests): Backup alert, Fuseki, Neo4j, LibreTranslate
+---
+
 ## 2026-03-13 - US-013
 - What was implemented: Updated neo4j/init/constraints.cypher with group label constraint comment + Group1/Group2 indexes; created tests/ontology/test-ontology.sh (bash, chmod +x) with 5 tests: all 4 groups retrievable via Cypher, no donors without group, no orphaned habits, Fuseki Habit rdfs:label coverage, BCIO owl:Class count >= 100 in Fuseki; created .github/workflows/ci.yml with two jobs: test-node (npm test) and test-ontology (docker services for neo4j:5-community + stain/jena-fuseki, seeds minimal data, runs test-ontology.sh).
 - Files changed: neo4j/init/constraints.cypher (group label constraint + Group1/Group2 indexes), tests/ontology/test-ontology.sh (new, executable), .github/workflows/ci.yml (new), prd.json (US-013 passes=true)
