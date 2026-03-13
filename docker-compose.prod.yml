@@ -246,6 +246,18 @@ services:
       - traefik.http.routers.keycloak.service=keycloak
       - traefik.http.services.keycloak.loadbalancer.server.port=8080
 
+  recommender:
+    image: hhh/recommender
+    container_name: h3-recommender
+    build: ./API-service
+    restart: always
+    env_file:
+      - stack.env
+    networks:
+      - h3-proxy
+    depends_on:
+      - proxy
+
   backup:
     image: hhh/backup
     container_name: h3-backup
