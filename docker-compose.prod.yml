@@ -213,6 +213,38 @@ services:
       - traefik.http.middlewares.neo4j-stripprefix.stripprefix.prefixes=/neo4j
       - traefik.http.routers.neo4j.middlewares=neo4j-stripprefix
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:24
+    container_name: h3-keycloak
+    restart: always
+    env_file:
+      - stack.env
+    environment:
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_PROXY=edge
+      - KC_HTTP_RELATIVE_PATH=/auth
+      - KC_DB=dev-file
+    command: start-dev
+    networks:
+      - h3-proxy
+    volumes:
+      - /mnt/data/appdata/hhh/keycloak:/opt/keycloak/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.keycloak.rule=Host(`${DOMAIN}`) && PathPrefix(`/auth`)
+      - traefik.http.routers.keycloak.entrypoints=websecure
+      - traefik.http.routers.keycloak.tls=true
+      - traefik.http.routers.keycloak.tls.certresolver=letsencrypt
+      - traefik.http.routers.keycloak.service=keycloak
+      - traefik.http.services.keycloak.loadbalancer.server.port=8080
+
   backup:
     image: hhh/backup
     container_name: h3-backup

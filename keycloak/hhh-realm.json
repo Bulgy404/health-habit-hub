@@ -1,0 +1,6 @@
+{
+  "_comment": "Placeholder for the Health Habit Hub Keycloak realm configuration. Replace with the exported realm JSON from US-005.",
+  "realm": "hhh",
+  "enabled": true,
+  "displayName": "Health Habit Hub"
+}

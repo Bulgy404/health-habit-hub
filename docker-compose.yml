@@ -15,7 +15,7 @@ services:
     restart: always
     ports:
       - ${TRAEFIK_HOST_PORT80:-80}:80
-      - ${TRAEFIK_HOST_PORT8080:-8080}:8080
+      - ${TRAEFIK_HOST_PORT8080:-8888}:8080
     networks:
       - h3-proxy
     volumes:
@@ -177,6 +177,30 @@ services:
       - traefik.http.routers.neo4j.service=neo4j
       - traefik.http.services.neo4j.loadbalancer.server.port=7474
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:24
+    container_name: h3-keycloak
+    restart: unless-stopped
+    env_file:
+      - stack.env
+    environment:
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - KC_DB=dev-file
+    command: start-dev
+    ports:
+      - "8080:8080"
+    networks:
+      - h3-proxy
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
   backup:
     image: hhh/backup
     build: ./backup-service
@@ -213,3 +237,5 @@ volumes:
     name: h3-neo4j-data
   neo4j-logs:
     name: h3-neo4j-logs
+  keycloak-data:
+    name: h3-keycloak-data
