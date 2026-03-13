@@ -1,0 +1,16 @@
+## Codebase Patterns
+- All infrastructure branches (feature/traeffic, feature/h3-proxy, feature/server, docker-env, max-base-path, max-deployment-optionen) were already merged into master before this project started — merges into rapid_dev will be no-ops
+- docker-compose config exits 0 cleanly on master/rapid_dev
+- Real conflict markers use 7 angle brackets: `<<<<<<< ` and `>>>>>>> ` — the `=======` lines in DOCUMENTATION.md are section separators, not conflict markers
+
+---
+
+## 2026-03-13 - US-001
+- What was implemented: Created `ralph/hhh-platform-unified` working branch from master; created `rapid_dev` branch from master; merged all required infrastructure branches (feature/traeffic, feature/h3-proxy, feature/server, docker-env, max-base-path, max-deployment-optionen) — all were already in master so merges were no-ops
+- Files changed: prd.json (US-001 passes=true), progress.txt (created)
+- **Learnings for future iterations:**
+  - All infrastructure branches listed in US-001 were already merged into master — rapid_dev is effectively identical to master at this point
+  - `docker-compose config` (v1 CLI) returns exit 0; both docker-compose.yml and docker-compose.prod.yml exist at repo root
+  - No actual merge conflict markers exist in the codebase; the `=======` lines in DOCUMENTATION.md are decorative separators
+  - git stash was needed because analytics/survey_analytics.ipynb had unstaged changes on the development branch
+---
