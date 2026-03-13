@@ -1,3 +1,13 @@
+## 2026-03-13 - US-009
+- What was implemented: Created app/utils/healthCheck.js with checkAllServices() function — parallel health checks (1500ms timeout each) for neo4j (bolt), mongo, fuseki (HTTP), keycloak (HTTP), recommender (HTTP); returns {status: 'ok'|'error', services:{...}} with latencyMs per service; 503 if neo4j or mongo down; updated v1Router.js to call checkAllServices (accepts optional serviceChecks injection); updated auth.routes.test.js to pass mock serviceChecks; added 5 unit tests in tests/unit/health.check.test.js
+- Files changed: app/utils/healthCheck.js (new), app/routes/v1Router.js (updated health handler), app/tests/unit/health.check.test.js (new), app/tests/integration/auth.routes.test.js (pass mock serviceChecks)
+- **Learnings for future iterations:**
+  - createV1Router now accepts `serviceChecks` option for injecting mock DB checks in tests — avoids real connection attempts during unit/integration tests
+  - healthCheck.js uses dependency injection pattern: neo4jCheck and mongoCheck are injectable, HTTP URLs are injectable via options
+  - HTTP checks use AbortController with setTimeout for 1500ms timeout; non-2xx/3xx/4xx responses are ok (only 5xx counts as error)
+  - Both format:check and some lint errors are pre-existing (40 files, BackupConfiguration, Neo4jDatabase) — not introduced here
+---
+
 ## 2026-03-13 - US-007
 - What was implemented: Created app/middleware/requireRole.js (checks req.user.realm_access.roles, returns 403 if role missing); created app/routes/v1Router.js with createV1Router factory — /health public, authenticate applied to all routes below, /admin requires admin|researcher, /surveys and /habits require participant|admin|researcher; mounted /api/v1 in app.js; created 12 integration tests in tests/integration/auth.routes.test.js covering 401/403/200 for each role level
 - Files changed: app/middleware/requireRole.js (new), app/routes/v1Router.js (new), app/tests/integration/auth.routes.test.js (new), app/app.js (updated)
