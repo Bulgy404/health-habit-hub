@@ -128,12 +128,14 @@ hhh:Group2 rdf:type owl:Class ;
 ###  http://example.com/hhh#Group3
 hhh:Group3 rdf:type owl:Class ;
            rdfs:subClassOf hhh:ExperimentalSetting ;
+           rdfs:label "Group 3 (Full+Free-text)" ;
            rdfs:comment "Opened-Ended Task, Closed-Ended General" .
 
 
 ###  http://example.com/hhh#Group4
 hhh:Group4 rdf:type owl:Class ;
            rdfs:subClassOf hhh:ExperimentalSetting ;
+           rdfs:label "Group 4 (Minimal+Free-text)" ;
            rdfs:comment "Opened-Ended" .
 
 
