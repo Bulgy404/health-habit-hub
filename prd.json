@@ -76,7 +76,7 @@
         "docker-compose up keycloak starts and realm hhh visible in Keycloak admin UI"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

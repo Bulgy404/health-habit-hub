@@ -1,3 +1,13 @@
+## 2026-03-13 - US-005
+- What was implemented: Replaced keycloak/hhh-realm.json placeholder with full Keycloak 24 realm export; updated docker-compose.yml and docker-compose.prod.yml to mount realm file and pass --import-realm flag
+- Files changed: keycloak/hhh-realm.json, docker-compose.yml, docker-compose.prod.yml
+- **Learnings for future iterations:**
+  - Keycloak --import-realm reads from /opt/keycloak/data/import/*.json — mount realm file there as :ro
+  - hhh-flutter is a public PKCE client (no secret); hhh-backend is confidential with serviceAccountsEnabled
+  - Realm roles (participant, admin, researcher) are defined under roles.realm in the JSON
+  - Both compose files parse cleanly after the volume mount addition
+---
+
 ## 2026-03-13 - US-004
 - What was implemented: Added Keycloak 24 service to docker-compose.yml (dev) and docker-compose.prod.yml (prod); added KEYCLOAK_ADMIN/KEYCLOAK_ADMIN_PASSWORD to stack.env; created keycloak/hhh-realm.json placeholder
 - Files changed: docker-compose.yml, docker-compose.prod.yml, stack.env, keycloak/hhh-realm.json (new)
