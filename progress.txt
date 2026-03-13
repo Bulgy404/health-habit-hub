@@ -2,6 +2,8 @@
 - All infrastructure branches (feature/traeffic, feature/h3-proxy, feature/server, docker-env, max-base-path, max-deployment-optionen) were already merged into master before this project started — merges into rapid_dev will be no-ops
 - docker-compose config exits 0 cleanly on master/rapid_dev
 - Real conflict markers use 7 angle brackets: `<<<<<<< ` and `>>>>>>> ` — the `=======` lines in DOCUMENTATION.md are section separators, not conflict markers
+- feature/hjt-* branches have unrelated git histories — use --allow-unrelated-histories; they conflict on .gitignore and README.md (keep HHH version, append unique content)
+- rapid_dev branch structure: API-service/ (Python FastAPI recommender), habit-recommendation-system-ui/ (Vue UI), mobile/ (Flutter app), app/ (Node.js backend)
 
 ---
 
@@ -13,4 +15,20 @@
   - `docker-compose config` (v1 CLI) returns exit 0; both docker-compose.yml and docker-compose.prod.yml exist at repo root
   - No actual merge conflict markers exist in the codebase; the `=======` lines in DOCUMENTATION.md are decorative separators
   - git stash was needed because analytics/survey_analytics.ipynb had unstaged changes on the development branch
+---
+
+## 2026-03-13 - US-002
+- What was implemented: Merged all required feature branches into rapid_dev
+  - feature/neo4j, feature/backup, feature/colorLaMarcel, contact-reward-language: already merged into master (no-op)
+  - feature/adminpanel: fast-forward merge (adds admin panel, experiment config, analytics notebook)
+  - ralph/flutter-mobile-app: merge commit (adds mobile/ Flutter app with all screens and widgets)
+  - feature/hjt-diplomarbeit-habit-recommendation-system: merged with --allow-unrelated-histories (adds API-service/, habit-recommendation-system-ui/)
+  - feature/hjt-context-classifier: merged with --allow-unrelated-histories (adds HHH-service/ context classifier)
+- Files changed: rapid_dev branch (multiple merge commits), prd.json (US-002 passes=true), progress.txt
+- **Learnings for future iterations:**
+  - hjt branches (feature/hjt-*) have unrelated git histories — always use --allow-unrelated-histories when merging them
+  - Both hjt branches conflict on .gitignore and README.md: resolve by keeping HHH version and appending unique content
+  - rapid_dev now has API-service/, habit-recommendation-system-ui/, and mobile/ at repo root
+  - A docker-compose.yaml was added from hjt-diplomarbeit (different from docker-compose.yml) — may cause duplicate config warnings
+  - docker-compose up --no-start exits 0 even without Docker daemon running (warning only, not error)
 ---
