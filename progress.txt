@@ -1,3 +1,14 @@
+## 2026-03-13 - US-006
+- What was implemented: Created app/middleware/auth.js with Keycloak JWT verification middleware using Node.js built-in crypto; created tests/unit/auth.middleware.test.js with 6 unit tests (valid JWT, expired JWT, missing header, tampered signature, non-Bearer header, malformed token)
+- Files changed: app/middleware/auth.js (new), app/tests/unit/auth.middleware.test.js (new)
+- **Learnings for future iterations:**
+  - Node.js 25 has built-in fetch and crypto — no external JWT library needed; use createPublicKey({ key: jwk, format: 'jwk' }) to load RSA public key from JWK
+  - createVerify('RSA-SHA256') + verify.verify(publicKey, sigBuffer) for RSA signature verification
+  - authMiddleware.ready is an exposed Promise for tests to await the startup JWKS prefetch before making requests
+  - Pre-existing test failures (BackupConfiguration alert test, Fuseki/Neo4j/LibreTranslate integration) remain — not introduced by this story
+  - Use `before()` hook in node:test to await middleware.ready before running tests
+---
+
 ## 2026-03-13 - US-005
 - What was implemented: Replaced keycloak/hhh-realm.json placeholder with full Keycloak 24 realm export; updated docker-compose.yml and docker-compose.prod.yml to mount realm file and pass --import-realm flag
 - Files changed: keycloak/hhh-realm.json, docker-compose.yml, docker-compose.prod.yml
