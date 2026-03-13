@@ -1,3 +1,14 @@
+## 2026-03-13 - US-004
+- What was implemented: Added Keycloak 24 service to docker-compose.yml (dev) and docker-compose.prod.yml (prod); added KEYCLOAK_ADMIN/KEYCLOAK_ADMIN_PASSWORD to stack.env; created keycloak/hhh-realm.json placeholder
+- Files changed: docker-compose.yml, docker-compose.prod.yml, stack.env, keycloak/hhh-realm.json (new)
+- **Learnings for future iterations:**
+  - Traefik dashboard port default changed from 8080 to 8888 in dev docker-compose.yml to avoid conflict with Keycloak (both use port 8080 inside container)
+  - Keycloak 24 in dev uses `start-dev` with `KC_DB=dev-file` (embedded H2); prod also uses `start-dev` (simpler, no external DB needed) with KC_PROXY=edge and KC_HTTP_RELATIVE_PATH=/auth
+  - Both compose files parse cleanly with `docker-compose config`
+  - stack.env is used as env_file for keycloak service; credentials are read from there
+  - keycloak/ directory placeholder created at keycloak/hhh-realm.json for future realm config (US-005)
+---
+
 ## Codebase Patterns
 - All infrastructure branches (feature/traeffic, feature/h3-proxy, feature/server, docker-env, max-base-path, max-deployment-optionen) were already merged into master before this project started — merges into rapid_dev will be no-ops
 - docker-compose config exits 0 cleanly on master/rapid_dev
