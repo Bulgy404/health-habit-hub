@@ -60,7 +60,14 @@ before(async () => {
   };
 
   const testApp = express();
-  const v1Router = createV1Router({ jwksUrl: 'http://keycloak/jwks' });
+  const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
+  const v1Router = createV1Router({
+    jwksUrl: 'http://keycloak/jwks',
+    serviceChecks: {
+      neo4jCheck: okCheck,
+      mongoCheck: okCheck,
+    },
+  });
   testApp.use('/api/v1', v1Router);
 
   server = createServer(testApp);
