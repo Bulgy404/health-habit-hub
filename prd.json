@@ -1,0 +1,1038 @@
+{
+  "project": "Health Habit Hub",
+  "branchName": "ralph/hhh-platform-unified",
+  "description": "Full platform unification: Flutter app (Android/iOS/Web), shared backend API, Keycloak auth, revised Neo4j ontology with BCIO integration, recommender system UI, sophisticated study admin panel, comprehensive tests + deployment scripts, and complete documentation.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create rapid_dev branch and merge infrastructure branches",
+      "description": "As a developer, I need rapid_dev created from master with all infrastructure branches merged so that a single base exists for all feature work.",
+      "acceptanceCriteria": [
+        "Create branch rapid_dev from master",
+        "Merge branches in order: feature/traeffic, feature/h3-proxy, feature/server, docker-env, max-base-path, max-deployment-optionen",
+        "No merge conflict markers remain in any file",
+        "docker-compose.yml parses without error (docker-compose config exits 0)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Merge data and feature branches into rapid_dev",
+      "description": "As a developer, I need all feature branches merged into rapid_dev so that all existing work is consolidated in one place.",
+      "acceptanceCriteria": [
+        "Merge branches in order: feature/neo4j, feature/backup, feature/colorLaMarcel, contact-reward-language, feature/adminpanel, ralph/flutter-mobile-app, feature/hjt-diplomarbeit-habit-recommendation-system, feature/hjt-context-classifier",
+        "No merge conflict markers remain in any file",
+        "Files API-service/ and habit-recommendation-system-ui/ and mobile/ all present at repo root",
+        "docker-compose up --no-start exits 0 (all images build)"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Verify rapid_dev boots and remove old Node.js views",
+      "description": "As a developer, I need the merged codebase to start cleanly and all duplicate user-facing view code removed so that Flutter is the sole frontend.",
+      "acceptanceCriteria": [
+        "docker-compose up brings all services healthy (app, neo4j, mongo, fuseki, traefik)",
+        "Remove all EJS/HTML view templates from app/views/ (backend API layer kept, views deleted)",
+        "Remove view-rendering logic from app/controllers/ (keep only JSON response logic)",
+        "GET /api returns JSON, not HTML",
+        "No references to res.render() remain in app/controllers/"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Add Keycloak service to docker-compose",
+      "description": "As a system administrator, I want a self-hosted Keycloak instance running in Docker so that all apps share one identity provider.",
+      "acceptanceCriteria": [
+        "keycloak service added to docker-compose.yml using image quay.io/keycloak/keycloak:24",
+        "keycloak service added to docker-compose.prod.yml",
+        "Keycloak admin credentials (KEYCLOAK_ADMIN, KEYCLOAK_ADMIN_PASSWORD) read from stack.env",
+        "Keycloak accessible at http://localhost:8080 in dev; routed via Traefik at /auth in prod",
+        "Docker healthcheck configured: curl -f http://localhost:8080/health/ready",
+        "keycloak/ directory created with placeholder for realm JSON"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Create Keycloak realm JSON configuration",
+      "description": "As a developer, I need the HHH Keycloak realm defined as code so that it can be imported reproducibly on any environment.",
+      "acceptanceCriteria": [
+        "File keycloak/hhh-realm.json committed to repo",
+        "Realm name: hhh",
+        "Client hhh-flutter: public client, PKCE enabled, redirect URI hhh://* and http://localhost:*",
+        "Client hhh-backend: confidential client, service account enabled",
+        "Realm roles defined: participant, admin, researcher",
+        "Keycloak docker-compose entrypoint imports realm on first start via --import-realm",
+        "docker-compose up keycloak starts and realm hhh visible in Keycloak admin UI"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Implement Keycloak JWT verification middleware in Express",
+      "description": "As a developer, I want Express middleware that validates Keycloak JWTs so that all protected routes are secured.",
+      "acceptanceCriteria": [
+        "File app/middleware/auth.js created",
+        "Middleware fetches JWKS from Keycloak JWKS endpoint on startup and caches it",
+        "Middleware verifies Authorization: Bearer <token> on each request",
+        "Returns 401 JSON {error: 'Unauthorized'} for missing or invalid token",
+        "Attaches decoded token payload to req.user",
+        "KEYCLOAK_JWKS_URL read from environment variable",
+        "Tests pass: tests/unit/auth.middleware.test.js covers valid JWT, expired JWT, missing header"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Apply auth middleware to all routes with role checks",
+      "description": "As a developer, I want all API routes protected with appropriate role requirements so that only authorized users access each endpoint.",
+      "acceptanceCriteria": [
+        "app/middleware/requireRole.js created: checks req.user.realm_access.roles for given role, returns 403 if missing",
+        "All routes under /api/v1/ protected with authenticate middleware",
+        "Routes under /api/v1/admin/* additionally require admin or researcher role",
+        "Routes under /api/v1/surveys/* and /api/v1/habits/* require participant role (or admin/researcher)",
+        "Public routes (GET /, GET /api/v1/health) explicitly skip auth middleware",
+        "Tests pass: tests/integration/auth.routes.test.js covers 401, 403, 200 for each role level"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Reorganize all Express routes under /api/v1/",
+      "description": "As a developer, I want all backend routes namespaced under /api/v1/ so that the API is versioned and Flutter has a single consistent base URL.",
+      "acceptanceCriteria": [
+        "All existing routers mounted under /api/v1/ prefix in app.js",
+        "GET /api/v1/surveys/:id works (previously GET /surveys/:id)",
+        "GET /api/v1/health returns JSON: {status:'ok', version:'1.0.0', services:{}}",
+        "Old unversioned route paths removed",
+        "app/routes/index.js or equivalent consolidates all v1 routes",
+        "Existing tests updated to use /api/v1/ prefix and pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "GET /api/v1/health endpoint with downstream service status",
+      "description": "As a developer, I want a health endpoint that checks all downstream services so that monitoring and deploy scripts can verify the stack.",
+      "acceptanceCriteria": [
+        "GET /api/v1/health returns 200 JSON: {status, services:{neo4j, mongo, fuseki, keycloak, recommender}}",
+        "Each service entry has {status: 'ok'|'error', latencyMs}",
+        "Endpoint is unauthenticated (no JWT required)",
+        "Returns 503 if any critical service (neo4j, mongo) is down",
+        "Response time < 2000ms (parallel checks with 1500ms timeout each)",
+        "Tests pass for health check logic"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Add Python recommender service to docker-compose and proxy routes",
+      "description": "As a developer, I want the Python recommender service running in Docker and proxied through Node.js so that Flutter only talks to one API host.",
+      "acceptanceCriteria": [
+        "recommender service added to docker-compose.yml using API-service/Dockerfile",
+        "Service not exposed outside Docker network (no ports: mapping in prod)",
+        "RECOMMENDER_URL environment variable in stack.env points to http://recommender:8000",
+        "Node.js route GET /api/v1/recommend/:userId proxies to Python GET /recommend/:userId",
+        "Node.js route POST /api/v1/recommend/classify proxies to Python POST /classify",
+        "Node.js route GET /api/v1/recommend/:userId/history proxies history endpoint",
+        "Proxy preserves Authorization header for downstream auth if needed",
+        "Integration test: mock recommender server returns fixture, proxy returns same fixture"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Fix G3/G4 indistinguishability in Ontology.ttl",
+      "description": "As a researcher, I need groups 3 and 4 to have distinct identities in the ontology so that study group analyses are unambiguous.",
+      "acceptanceCriteria": [
+        "Ontology.ttl updated: hhh:Group3 has URI http://example.com/hhh#Group3 with label 'Group 3 (Full+Free-text)'",
+        "Ontology.ttl updated: hhh:Group4 has URI http://example.com/hhh#Group4 with label 'Group 4 (Minimal+Free-text)'",
+        "fuseki/init/Ontology.ttl updated identically",
+        "Neo4j seed/init scripts updated to use hhh__Group3 and hhh__Group4 labels distinctly",
+        "Migration script scripts/migrate-group-labels.cypher provided with comments",
+        "Cypher: MATCH (u:hhh__Donor) RETURN u.hhh__group, count(*) returns 4 rows after migration"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Merge BCIO ontology into HHH Ontology.ttl",
+      "description": "As a developer, I want the BCIO human behavior ontology integrated into the HHH ontology so that habit classification uses validated behavioral science vocabulary.",
+      "acceptanceCriteria": [
+        "bcio.owl from API-service/src/openapi_server/Ontologies/ merged into Ontology.ttl (owl:imports or inline merge)",
+        "No duplicate URIs (run SPARQL: SELECT ?s (COUNT(*) AS ?c) WHERE {?s a owl:Class} GROUP BY ?s HAVING (?c > 1) returns 0 rows)",
+        "SPARQL SELECT * WHERE { ?s a owl:Class } against Fuseki returns > 100 classes",
+        "fuseki/init/Ontology.ttl updated with merged content",
+        "Uncertain mappings (from concepts_all_merged.jsonl) annotated with rdfs:comment 'TODO: domain-review' in Ontology.ttl",
+        "docker-compose up fuseki loads ontology without errors (check Fuseki logs)"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Neo4j APOC constraints and ontology validation test suite",
+      "description": "As a developer, I need APOC constraints on Neo4j and an automated test suite for the ontology so that data integrity and entity retrievability are continuously verified.",
+      "acceptanceCriteria": [
+        "neo4j/init/ contains constraints.cypher: hhh__userId uniqueness constraint, group label constraint (only G1-G4 allowed)",
+        "File tests/ontology/test-ontology.sh created and executable",
+        "Test suite checks: all 4 groups retrievable via Cypher, all hhh__Habit nodes have rdfs:label in Fuseki, all BCIO owl:Class entries present, no donor nodes without group, no orphaned habit nodes",
+        "Script exits 0 on clean seed, non-zero on failure",
+        "CI: .github/workflows/ci.yml runs test-ontology.sh in a step after docker-compose up",
+        "All tests green on clean docker-compose seed"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Configure Flutter pubspec.yaml and platform configs for Android, iOS, Web",
+      "description": "As a developer, I need the Flutter project configured correctly for all three platforms so that a single codebase builds everywhere.",
+      "acceptanceCriteria": [
+        "mobile/pubspec.yaml: package name de.tu-dresden.hhh, Flutter SDK >=3.22.0",
+        "mobile/pubspec.yaml includes: flutter_appauth, flutter_secure_storage, dio, flutter_riverpod, go_router, fl_chart",
+        "android/app/build.gradle: applicationId de.tu-dresden.hhh",
+        "ios/Runner/Info.plist: CFBundleIdentifier de.tu-dresden.hhh, CFBundleURLSchemes includes hhh",
+        "web/index.html: PWA manifest linked, theme-color set to brand color",
+        "web/manifest.json: name Health Habit Hub, short_name HHH, display standalone",
+        "flutter pub get exits 0",
+        "Typecheck passes"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-015",
+      "title": "Implement Flutter auth service (Keycloak PKCE + secure storage)",
+      "description": "As a developer, I need an auth service in Flutter that handles OIDC login, token storage, refresh, and logout so that all screens can access authenticated API calls.",
+      "acceptanceCriteria": [
+        "File mobile/lib/services/auth_service.dart created",
+        "AuthService uses flutter_appauth for PKCE flow against Keycloak client hhh-flutter",
+        "Access token and refresh token stored in flutter_secure_storage",
+        "AuthService.login(username, password) triggers resource owner password flow or redirect flow",
+        "AuthService.refreshToken() called automatically when token is within 60s of expiry",
+        "AuthService.logout() clears tokens from secure storage",
+        "AuthService exposed as Riverpod provider in mobile/lib/providers/auth_provider.dart",
+        "Typecheck passes"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Implement login screen UI in Flutter",
+      "description": "As a participant, I want a login screen where I enter my credentials so that I can access the app on any device.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/login_screen.dart created",
+        "Screen shows HHH logo, username field, password field, Login button",
+        "Loading spinner shown during login attempt",
+        "Error message shown below fields on failed login (e.g. 'Invalid credentials')",
+        "On success, navigates to main navigation shell",
+        "Deep link hhh://login?user=X&token=Y pre-fills username and password fields",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Implement bottom navigation shell with role-based tabs",
+      "description": "As a user, I want a persistent navigation shell so that I can switch between the app's main sections without losing state.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/shell_screen.dart created using go_router ShellRoute",
+        "Bottom navigation bar shows tabs: Donate (icon: volunteer_activism), Explore (icon: hub), Recommend (icon: recommend), Profile (icon: person)",
+        "Admin tab (icon: admin_panel_settings) appears only when user role includes admin or researcher",
+        "Active tab icon and label highlighted with brand color",
+        "Navigation state preserved on tab switch (pages not rebuilt)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-018",
+      "title": "Survey API service and model classes in Flutter",
+      "description": "As a developer, I need Survey and SurveyResult model classes and an API service in Flutter so that questionnaire screens have a clean data layer.",
+      "acceptanceCriteria": [
+        "File mobile/lib/models/survey.dart: Survey(id, title, type, jsonSchema, assignedGroups, status)",
+        "File mobile/lib/models/survey_result.dart: SurveyResult(surveyId, userId, answers, completedAt)",
+        "File mobile/lib/services/survey_service.dart: fetchSurvey(id), fetchProfileSurvey(), submitResult(surveyId, answers)",
+        "Service calls GET /api/v1/surveys/:id and POST /api/v1/surveys/:id/results with JWT",
+        "Service exposed as Riverpod provider",
+        "Typecheck passes"
+      ],
+      "priority": 18,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-019",
+      "title": "Survey render screen (habit donation questionnaire)",
+      "description": "As a participant, I want to fill in the habit-donation questionnaire inside the app so that I can donate habits without leaving Flutter.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/donate_screen.dart created",
+        "Screen fetches survey by type habit-donation via SurveyService",
+        "Survey JSON rendered inside a WebView (webview_flutter) loading the SurveyJS HTML served by backend at /api/v1/surveys/:id/render",
+        "WebView injects JWT into headers for the SurveyJS page",
+        "On survey completion, SurveyJS posts results; Flutter intercepts and calls SurveyService.submitResult()",
+        "Success toast shown on submission; screen pops back to shell",
+        "Offline state: shows 'No connection' banner if fetch fails",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 19,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-020",
+      "title": "Profile questionnaire screen",
+      "description": "As a participant, I want to complete a one-time profile questionnaire so that the recommender can personalize suggestions for me.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/profile_screen.dart created",
+        "Screen fetches survey by type profile via SurveyService",
+        "If profile already completed (GET /api/v1/profile returns 200), show summary card with completion date and Edit button",
+        "If not completed, show survey WebView same as donate_screen",
+        "On completion, POST /api/v1/profile with answers; navigate back to shell",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 20,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-021",
+      "title": "Backend: profile storage endpoint",
+      "description": "As a developer, I need backend endpoints to store and retrieve participant profiles so that the Flutter profile screen has a data source.",
+      "acceptanceCriteria": [
+        "GET /api/v1/profile returns participant's profile document from MongoDB (or 404 if not set)",
+        "POST /api/v1/profile upserts profile document linked to req.user.sub (userId)",
+        "MongoDB collection profiles with fields: userId, answers (object), completedAt, updatedAt",
+        "Requires participant role JWT",
+        "Tests pass for both endpoints"
+      ],
+      "priority": 21,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-022",
+      "title": "Recommendation Flutter service and card widget",
+      "description": "As a developer, I need a recommendation service and reusable card widget in Flutter so that the recommender screen has clean data and UI layers.",
+      "acceptanceCriteria": [
+        "File mobile/lib/models/recommendation.dart: Recommendation(id, habitName, category, confidenceScore, rationale, ragCitation?)",
+        "RagCitation model: sourceTitle, excerpt",
+        "File mobile/lib/services/recommendation_service.dart: fetchRecommendations(userId), acceptRecommendation(id), dismissRecommendation(id)",
+        "File mobile/lib/widgets/recommendation_card.dart: shows habitName (large), category chip, confidenceScore bar, rationale text (2 lines)",
+        "Card shows collapsible RAG citation section (ExpansionTile) if ragCitation is non-null",
+        "Accept (check icon) and Dismiss (close icon) buttons in card footer",
+        "Typecheck passes"
+      ],
+      "priority": 22,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-023",
+      "title": "Recommendations screen with animations",
+      "description": "As a participant, I want to see my personalized recommendations with engaging animations so that the experience feels polished.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/recommend_screen.dart created",
+        "Fetches recommendations via RecommendationService on screen open",
+        "Cards enter with FadeTransition + SlideTransition (bottom-up, 300ms stagger)",
+        "Empty state widget shown with message 'No recommendations yet \u2014 complete your profile first'",
+        "Loading skeleton shown during fetch",
+        "Error state with retry button",
+        "Accept/Dismiss calls service endpoint and removes card from list with AnimatedList",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 23,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-024",
+      "title": "Backend WebSocket endpoint for live recommendations",
+      "description": "As a developer, I need a WebSocket endpoint that pushes new recommendations to connected clients so that the Flutter app can display them live.",
+      "acceptanceCriteria": [
+        "WebSocket server added to Node.js app using ws package at path /ws/recommendations",
+        "On new recommendation generated (POST from recommender service to /api/internal/recommendations), message broadcast to connected sockets for that userId",
+        "Socket authentication: client must send JWT as first message; server disconnects unauthenticated sockets after 5s",
+        "Message format: JSON {type:'new_recommendation', data: Recommendation}",
+        "Integration test: connect mock socket, trigger internal endpoint, verify message received"
+      ],
+      "priority": 24,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-025",
+      "title": "Flutter live recommendations feed with WebSocket",
+      "description": "As a participant, I want new recommendations to appear live as they are generated so that I don't need to refresh the screen.",
+      "acceptanceCriteria": [
+        "File mobile/lib/services/recommendation_ws_service.dart: connects to /ws/recommendations, sends JWT on connect, handles reconnect",
+        "Recommendations screen subscribes to stream on mount, unsubscribes on dispose",
+        "New recommendation card animates into top of list using AnimatedList.insertItem()",
+        "Connection status indicator (small dot: green=connected, grey=polling)",
+        "Fallback: if WebSocket fails, poll GET /api/v1/recommend/:userId every 30 seconds",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 25,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-026",
+      "title": "Backend: public anonymized habits endpoint and annotation endpoint",
+      "description": "As a developer, I need endpoints that return anonymized habit data and accept anonymous node annotations so that the habit explorer has a data source.",
+      "acceptanceCriteria": [
+        "GET /api/v1/habits/public: queries Neo4j for all habit nodes, strips userId, returns [{id, name, category, bcioClass, annotationCounts:{helpful, iDoThis}}]",
+        "POST /api/v1/habits/:id/annotate: body {type:'helpful'|'iDoThis'}, stores anonymous annotation in MongoDB collection habit_annotations, returns updated counts",
+        "Annotation stored with: habitId, type, createdAt (no userId stored)",
+        "GET /api/v1/habits/stats: returns {total, byCategory:[{category, count}], byDay:[{date, count}]}",
+        "All three endpoints require participant role JWT",
+        "Tests pass for all three endpoints"
+      ],
+      "priority": 26,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-027",
+      "title": "Habit graph visualization widget (force-directed)",
+      "description": "As a developer, I need a reusable force-directed graph widget so that the habit explorer can render the Neo4j graph interactively.",
+      "acceptanceCriteria": [
+        "File mobile/lib/widgets/habit_graph_widget.dart created using CustomPainter + GestureDetector",
+        "Accepts List<HabitNode> where HabitNode has id, name, category, bcioClass, annotationCounts",
+        "Force simulation: nodes repel, edges attract (simple spring model, 60fps via AnimationController)",
+        "Nodes colored by category (map of category->Color derived from Material 3 palette)",
+        "Node size proportional to total annotation count (min 8px, max 24px radius)",
+        "Pinch-to-zoom and pan gesture supported",
+        "Typecheck passes"
+      ],
+      "priority": 27,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-028",
+      "title": "Habit explorer screen with filter, node tap, and annotations",
+      "description": "As a participant, I want to explore the anonymized habit graph, filter by category, tap nodes for detail, and annotate nodes so that I can engage with the donated data.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/explore_screen.dart created",
+        "Fetches habits via GET /api/v1/habits/public on load",
+        "Renders HabitGraphWidget with fetched nodes",
+        "Category filter chips row below graph; selecting chip filters visible nodes",
+        "Tap on node shows bottom sheet: habit name, category, BCIO class, annotation counts",
+        "Bottom sheet has two action buttons: 'I do this too' (thumb-up) and 'Helpful' (star)",
+        "Tapping action calls POST /api/v1/habits/:id/annotate and updates counts in UI",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 28,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-029",
+      "title": "Habit statistics dashboard screen",
+      "description": "As a participant, I want to see aggregated habit statistics so that I can understand the scale and diversity of the study data.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/stats_screen.dart created (or tab within explore_screen)",
+        "Fetches GET /api/v1/habits/stats on load and every 60 seconds",
+        "Shows: total donated count (large number), bar chart of habits by category using fl_chart, line chart of habits by day (last 30 days)",
+        "Charts have axis labels and tooltips on tap",
+        "Loading skeleton and error state handled",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 29,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-030",
+      "title": "Backend: admin participant management endpoints",
+      "description": "As a developer, I need admin endpoints for listing participants, creating them in Keycloak, and updating group assignments so that the admin panel has a data source.",
+      "acceptanceCriteria": [
+        "GET /api/v1/admin/participants: returns [{userId, username, group, enrolledAt, lastActive, surveyCompletionPct}] from MongoDB + Keycloak",
+        "POST /api/v1/admin/participants: creates Keycloak user (p-<uuid>, random password), assigns participant role, stores in MongoDB, returns {userId, username, password}",
+        "PATCH /api/v1/admin/participants/:id/group: body {group: 'G1'|'G2'|'G3'|'G4'}, updates Keycloak user attribute + Neo4j node label",
+        "DELETE /api/v1/admin/participants/:id: soft-delete (set deletedAt, anonymize username to 'deleted-<hash>')",
+        "All endpoints require admin or researcher role",
+        "Tests pass for all four endpoints"
+      ],
+      "priority": 30,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-031",
+      "title": "Backend: token card PDF and QR generation",
+      "description": "As a developer, I need a service that generates participant token cards as PDF (with QR code and/or printed credentials) so that admins can distribute access.",
+      "acceptanceCriteria": [
+        "File app/services/token_card_service.js created using pdfkit and qrcode packages",
+        "generateTokenCard(userId, username, password, format) where format is 'qr'|'print'|'both'",
+        "QR code encodes hhh://login?user=<username>&token=<password>",
+        "PDF layout: HHH logo, participant ID, QR code (if format includes qr), username/password block (if format includes print)",
+        "POST /api/v1/admin/participants response includes tokenCardUrl; GET /api/v1/admin/participants/:id/token-card returns PDF stream",
+        "Tests pass: PDF buffer generated for all three formats"
+      ],
+      "priority": 31,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-032",
+      "title": "Backend: admin settings endpoint (token card format config)",
+      "description": "As a developer, I need a backend endpoint for admin settings so that the token card format and other study settings can be persisted.",
+      "acceptanceCriteria": [
+        "MongoDB collection admin_settings with fields: key (unique), value, updatedAt",
+        "GET /api/v1/admin/settings: returns all settings as {key: value} object",
+        "PUT /api/v1/admin/settings/:key: upserts setting value",
+        "Default setting token_card_format: 'both' seeded on startup if not present",
+        "Requires admin role",
+        "Tests pass"
+      ],
+      "priority": 32,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-033",
+      "title": "Backend: participant progress and admin habits/sessions endpoints",
+      "description": "As a developer, I need endpoints for per-participant progress, live habit feed, and device sessions so that admin detail screens have data.",
+      "acceptanceCriteria": [
+        "GET /api/v1/admin/participants/:id/progress: returns {profile: {completed, completedAt}, surveys: [{id, title, completedAt}], habitsCount, recommendations: {accepted, dismissed}, timeline: [{type, timestamp, detail}]}",
+        "GET /api/v1/admin/habits/feed: returns paginated habit donations [{participantId (anonymized), habitName, category, donatedAt}], supports query params ?group=&from=&to=&category=",
+        "GET /api/v1/admin/habits/feed/export?format=csv: streams CSV of filtered results",
+        "GET /api/v1/admin/sessions: calls Keycloak admin API to list active sessions, returns [{participantId, deviceType, appVersion, lastSeen, sessionId}]",
+        "DELETE /api/v1/admin/sessions/:sessionId: calls Keycloak admin API to revoke session",
+        "All endpoints require admin or researcher role",
+        "Tests pass"
+      ],
+      "priority": 33,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-034",
+      "title": "Backend: survey CRUD and group assignment endpoints",
+      "description": "As a developer, I need CRUD endpoints for surveys so that the admin questionnaire builder has a full data layer.",
+      "acceptanceCriteria": [
+        "GET /api/v1/admin/surveys: list all surveys [{id, title, type, status, assignedGroups}]",
+        "POST /api/v1/admin/surveys: create survey {title, type, jsonSchema, assignedGroups:[], status:'draft'}",
+        "PUT /api/v1/admin/surveys/:id: update survey fields",
+        "PATCH /api/v1/admin/surveys/:id/status: body {status:'published'|'archived'|'draft'}",
+        "PATCH /api/v1/admin/surveys/:id/groups: body {groups:['G1','G2',...]}",
+        "GET /api/v1/surveys (participant): returns only published surveys assigned to caller's group",
+        "Requires admin role for write endpoints, participant for read",
+        "Tests pass"
+      ],
+      "priority": 34,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-035",
+      "title": "Admin panel Flutter: participant list screen",
+      "description": "As an admin, I want a participant list screen so that I can see all enrolled participants at a glance.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/admin/admin_participants_screen.dart created",
+        "DataTable shows columns: Username, Group, Enrolled, Last Active, Surveys %",
+        "Search field filters table by username",
+        "Group filter dropdown: All, G1, G2, G3, G4",
+        "Pagination: 50 rows per page with Previous/Next controls",
+        "Tap row navigates to participant detail screen (US-039)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 35,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-036",
+      "title": "Admin panel Flutter: create participant dialog and token card download",
+      "description": "As an admin, I want a dialog to create a new participant and immediately download their token card so that I can enrol participants quickly.",
+      "acceptanceCriteria": [
+        "FloatingActionButton on participant list screen opens AlertDialog",
+        "Dialog shows: group selector (G1\u2013G4 dropdown), token card format selector (QR / Print / Both)",
+        "Create button calls POST /api/v1/admin/participants and then GET /:id/token-card",
+        "PDF opens in device browser or triggers download (url_launcher)",
+        "Success snackbar: 'Participant p-xxxx created'",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 36,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-037",
+      "title": "Admin panel Flutter: group assignment and soft-delete actions",
+      "description": "As an admin, I want to change a participant's group and soft-delete them directly from the list so that group management is efficient.",
+      "acceptanceCriteria": [
+        "Each participant row has inline group dropdown; on change calls PATCH /api/v1/admin/participants/:id/group",
+        "Each row has context menu or trailing icon with 'Delete' option",
+        "Delete shows confirmation dialog: 'This will anonymize participant data. Cannot be undone.'",
+        "Confirm calls DELETE /api/v1/admin/participants/:id and removes row from list",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 37,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-038",
+      "title": "Admin panel Flutter: per-participant progress detail screen",
+      "description": "As a researcher, I want to see a full progress timeline for any participant so that I can track compliance and identify drop-off.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/admin/admin_participant_detail_screen.dart created",
+        "Shows: profile completion status (checkmark/cross), surveys completed list with timestamps, habits donated count + expandable list, recommendations accepted/dismissed counts",
+        "Timeline ListView shows all actions in chronological order with icons",
+        "Export JSON button calls GET /:id/progress and triggers file download via share_plus",
+        "Back navigation returns to participant list",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 38,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-039",
+      "title": "Admin panel Flutter: survey list and JSON editor screen",
+      "description": "As an admin, I want to view, create, and edit surveys directly in the app so that questionnaire changes don't require code deployments.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/admin/admin_surveys_screen.dart: lists surveys with title, type, status badge (draft/published/archived), assignedGroups chips",
+        "Publish / Archive action buttons per row",
+        "FAB opens new survey dialog: title field, type dropdown (habit-donation/profile/custom), create button",
+        "Tap survey row navigates to editor screen",
+        "Editor screen: full-width monospace JSON TextField pre-populated with survey jsonSchema",
+        "Save button calls PUT /api/v1/admin/surveys/:id with updated JSON",
+        "Group assignment checkboxes (G1\u2013G4) below editor",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 39,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-040",
+      "title": "Admin panel Flutter: donated habits monitor screen",
+      "description": "As a researcher, I want a live feed of donated habits with filters and CSV export so that I can monitor data quality.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/admin/admin_habits_screen.dart created",
+        "ListView of habit donations: anonymized participantId, habitName, category, donatedAt",
+        "Filter row: group dropdown, date range picker, category dropdown",
+        "Apply Filters button reloads list with query params",
+        "Export CSV button calls GET /api/v1/admin/habits/feed/export?format=csv and triggers download",
+        "Auto-refresh every 30 seconds (can be toggled off)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 40,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-041",
+      "title": "Admin panel Flutter: device/session management screen",
+      "description": "As an admin, I want to see all active device sessions and revoke them if needed so that I have control over access.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/admin/admin_devices_screen.dart created",
+        "DataTable: Participant ID, Device Type, App Version, Last Seen, Session ID (truncated)",
+        "Summary row at top: Android N, iOS N, Web N",
+        "Revoke button per row: confirmation dialog, then DELETE /api/v1/admin/sessions/:id, row removed",
+        "Refresh button reloads session list",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 41,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-042",
+      "title": "Admin panel Flutter: settings screen (token card format)",
+      "description": "As an admin, I want a settings screen where I can configure the token card format so that credential distribution matches our study workflow.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/admin/admin_settings_screen.dart created",
+        "Token card format section: radio buttons for QR only / Print only / Both",
+        "Current value loaded from GET /api/v1/admin/settings on screen open",
+        "Save button calls PUT /api/v1/admin/settings/token_card_format with selected value",
+        "Success snackbar on save",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 42,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-043",
+      "title": "Admin panel Flutter: shell, route guard, and navigation",
+      "description": "As a developer, I need the admin panel wired into the Flutter navigation with a role guard so that only admins see the admin tab and routes.",
+      "acceptanceCriteria": [
+        "File mobile/lib/screens/admin/admin_shell_screen.dart: side-nav rail with items: Participants, Surveys, Habits, Devices, Settings",
+        "Admin routes added to go_router under /admin/* with redirect guard: if user lacks admin/researcher role, redirect to /",
+        "Admin tab in bottom navigation shell calls go_router.go('/admin/participants')",
+        "Each admin section navigable from the side rail",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 43,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-044",
+      "title": "Backend unit tests: controllers and middleware",
+      "description": "As a developer, I want unit tests for all Express controllers and middleware so that logic regressions are caught immediately.",
+      "acceptanceCriteria": [
+        "tests/unit/ directory with test files for: auth.middleware, requireRole.middleware, survey.controller, habit.controller, admin.controller, token_card.service, health.controller",
+        "Each controller test mocks MongoDB and Neo4j (no live connections)",
+        "Auth middleware tests: valid JWT passes, expired JWT returns 401, wrong role returns 403",
+        "npm test exits 0",
+        "Coverage: app/middleware/ and app/controllers/ \u2265 80% lines covered (nyc report)"
+      ],
+      "priority": 44,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-045",
+      "title": "Backend integration tests: API routes",
+      "description": "As a developer, I want integration tests that hit real routes against in-memory services so that end-to-end request handling is verified.",
+      "acceptanceCriteria": [
+        "tests/integration/ with test files for: surveys.routes, habits.routes, admin.routes, recommend.routes, health.route",
+        "Tests use supertest against the Express app",
+        "MongoDB uses mongodb-memory-server for in-memory isolation",
+        "Auth tokens generated with a test Keycloak or mocked JWT signing key",
+        "Tests verify: correct status codes, response shape, auth enforcement, pagination",
+        "npm test exits 0",
+        "All route integration tests pass"
+      ],
+      "priority": 45,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-046",
+      "title": "Flutter widget tests for all screens",
+      "description": "As a developer, I want widget tests for every Flutter screen so that UI regressions are caught in CI without a running device.",
+      "acceptanceCriteria": [
+        "mobile/test/widget/ contains test files: login_screen_test, shell_screen_test, donate_screen_test, profile_screen_test, recommend_screen_test, explore_screen_test, stats_screen_test, admin_participants_screen_test, admin_surveys_screen_test",
+        "Each test pumps the widget with mocked Riverpod providers (override with mock services)",
+        "Tests verify: key widgets present, loading state shown, error state shown, empty state shown",
+        "flutter test mobile/test/widget/ exits 0",
+        "Typecheck passes"
+      ],
+      "priority": 46,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-047",
+      "title": "Flutter integration test: login \u2192 survey \u2192 recommendation flow",
+      "description": "As a developer, I want an end-to-end integration test that drives a complete participant journey so that critical user flows are regression-tested.",
+      "acceptanceCriteria": [
+        "mobile/integration_test/participant_flow_test.dart created",
+        "Test flow: launch app, enter credentials on login screen, verify navigation shell appears, tap Donate tab, verify survey screen loads, submit mock survey, tap Recommend tab, verify recommendation cards appear",
+        "Test uses flutter_test driver against a local test backend (configured via flutter_dotenv test env)",
+        "flutter test integration_test/participant_flow_test.dart exits 0 when backend is running",
+        "Typecheck passes"
+      ],
+      "priority": 47,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-048",
+      "title": "Per-service deployment scripts",
+      "description": "As a developer, I want dedicated deployment scripts for each service so that I can update individual components without a full-stack redeploy.",
+      "acceptanceCriteria": [
+        "scripts/deploy-backend.sh: docker-compose build h3-app && docker-compose up -d h3-app, waits for health check",
+        "scripts/deploy-flutter-web.sh: runs flutter build web in mobile/, copies build/web/ to app/public/flutter/",
+        "scripts/deploy-recommender.sh: docker-compose build recommender && docker-compose up -d recommender",
+        "scripts/deploy-keycloak.sh: imports keycloak/hhh-realm.json via Keycloak admin API, restarts keycloak service",
+        "All scripts accept --dry-run flag (print commands, do not execute)",
+        "All scripts exit non-zero on any failure (set -e)",
+        "All scripts are executable (chmod +x)"
+      ],
+      "priority": 48,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-049",
+      "title": "Full-stack deploy script with health checks",
+      "description": "As a developer, I want a single orchestrator deploy script that deploys all services in order with health checks between steps.",
+      "acceptanceCriteria": [
+        "scripts/deploy-full.sh calls in order: deploy-backend.sh, deploy-keycloak.sh, deploy-recommender.sh, deploy-flutter-web.sh",
+        "Between each step: polls GET /api/v1/health until {status:'ok'} or 60s timeout (fail if timeout)",
+        "Accepts --dry-run flag (passes to sub-scripts)",
+        "Prints step-by-step progress with timestamps",
+        "Warns if git tag not bumped since last deploy (checks CHANGELOG.md last version vs git tag)",
+        "Exits non-zero if any step fails"
+      ],
+      "priority": 49,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-050",
+      "title": "CI GitHub Actions workflow (test + lint + ontology)",
+      "description": "As a developer, I want a CI pipeline that runs all tests on every PR so that broken code cannot be merged.",
+      "acceptanceCriteria": [
+        ".github/workflows/ci.yml created",
+        "Triggers on: pull_request to rapid_dev and master",
+        "Jobs: backend-test (npm ci && npm test), flutter-test (flutter pub get && flutter test), ontology-test (docker-compose up -d neo4j fuseki && tests/ontology/test-ontology.sh)",
+        "All jobs run in parallel; workflow fails if any job fails",
+        "flutter analyze exits 0 (no analysis warnings)",
+        "Coverage report uploaded as artifact"
+      ],
+      "priority": 50,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-051",
+      "title": "CD GitHub Actions workflow (deploy on master push + release artifacts)",
+      "description": "As a developer, I want automatic deployment to the production server on master push and artifact upload on version tags so that releases are fully automated.",
+      "acceptanceCriteria": [
+        ".github/workflows/deploy.yml created",
+        "Triggers on: push to master and on git tag v*",
+        "Deploy job: SSH to production server (uses GH Actions secret SERVER_SSH_KEY), runs git pull && scripts/deploy-full.sh",
+        "On tag push: builds Flutter APK (flutter build apk --release), builds Flutter web (flutter build web), uploads both as GitHub Release assets",
+        "Workflow fails fast on any step failure",
+        "deploy.yml only runs if ci.yml passed (needs: ci)"
+      ],
+      "priority": 51,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-052",
+      "title": "Extended backup script: MongoDB + Neo4j + Keycloak",
+      "description": "As an admin, I want all critical data stores backed up together so that the full study state can be restored from a single timestamp.",
+      "acceptanceCriteria": [
+        "backup-service/backup.sh extended: mongodump to backups/<timestamp>/mongo/, neo4j-admin dump to backups/<timestamp>/neo4j/, Keycloak realm export via admin API to backups/<timestamp>/keycloak/",
+        "Backup runs daily via cron in backup container (crontab: 0 2 * * *)",
+        "backup.sh logs success/failure to backups/backup.log with timestamps",
+        "Backups older than 30 days pruned automatically (find + rm in backup.sh)",
+        "BACKUP_EMAIL in stack.env triggers email on failure (uses sendmail or curl to mail API if configured)"
+      ],
+      "priority": 52,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-053",
+      "title": "Restore script and data integrity safeguards",
+      "description": "As a developer, I want a tested restore script and runtime safeguards so that data can be recovered and corruption is prevented.",
+      "acceptanceCriteria": [
+        "scripts/restore.sh <timestamp>: restores MongoDB (mongorestore), Neo4j (neo4j-admin load), Keycloak (realm import) from backups/<timestamp>/",
+        "Restore script confirms before executing: 'Restore from <timestamp>? This will overwrite current data. [y/N]'",
+        "MongoDB: JSON schema validation added to collections results, profiles, habit_annotations, admin_settings (mongod rejects unknown fields)",
+        "All DELETE routes use soft-delete pattern: set deletedAt timestamp, never remove documents",
+        "Rate limiting middleware: express-rate-limit, max 100 req/15min per token, returns 429 with JSON error",
+        "Input sanitization: express-validator applied on all POST/PUT body parameters, strips HTML tags"
+      ],
+      "priority": 53,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-054",
+      "title": "Participant guide (English) with screenshots",
+      "description": "As a participant, I want a clear illustrated guide to the app so that I can use it confidently without external help.",
+      "acceptanceCriteria": [
+        "docs/guides/participant-guide.md created",
+        "Sections with numbered steps: 1) Accessing the app (Android APK / iOS / browser URL), 2) Logging in with token card (QR scan + manual entry), 3) Completing your profile, 4) Donating a habit, 5) Exploring the habit graph and annotating nodes, 6) Understanding your recommendations (rationale + citation), 7) Updating your profile",
+        "Each section has at least one screenshot in docs/assets/screenshots/participant/ named descriptively (e.g. 01-login-android.png)",
+        "Screenshots taken on Android emulator, iOS simulator, and Chrome browser \u2014 each labelled in the markdown",
+        "Written in plain English, no technical jargon",
+        "docs/guides/participant-guide.pdf generated (pandoc or similar)"
+      ],
+      "priority": 54,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-055",
+      "title": "Participant guide (German translation)",
+      "description": "As a German-speaking participant, I want the participant guide in German so that the study is accessible without language barriers.",
+      "acceptanceCriteria": [
+        "docs/guides/participant-guide-de.md created",
+        "Same structure and screenshots as English guide",
+        "Translation produced via LibreTranslate API (POST /translate) and reviewed for accuracy",
+        "docs/guides/participant-guide-de.pdf generated",
+        "All section headings, step labels, and captions translated"
+      ],
+      "priority": 55,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-056",
+      "title": "Admin guide (English) with annotated screenshots",
+      "description": "As a researcher or admin, I want a complete illustrated admin guide so that I can manage the study without needing developer assistance.",
+      "acceptanceCriteria": [
+        "docs/guides/admin-guide.md created",
+        "Sections: 1) Logging in as admin, 2) Creating a participant + downloading token card, 3) Assigning study groups, 4) Configuring questionnaires (create/edit/publish/archive/assign groups), 5) Monitoring donated habits (filters + CSV export), 6) Tracking participant progress, 7) Revoking device sessions, 8) Configuring token card format in settings",
+        "Quick Start checklist at the top: 8-step list for setting up a new study cohort",
+        "Every screen has a screenshot in docs/assets/screenshots/admin/ with numbered callout annotations (drawn in image or listed as numbered descriptions in markdown)",
+        "docs/guides/admin-guide.pdf generated"
+      ],
+      "priority": 56,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-057",
+      "title": "Admin guide (German translation)",
+      "description": "As a German-speaking researcher, I want the admin guide in German so that all team members can administer the study.",
+      "acceptanceCriteria": [
+        "docs/guides/admin-guide-de.md created with same structure as English guide",
+        "Translated via LibreTranslate and reviewed",
+        "docs/guides/admin-guide-de.pdf generated",
+        "Quick Start checklist translated"
+      ],
+      "priority": 57,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-058",
+      "title": "System architecture documentation with diagrams",
+      "description": "As a developer or future maintainer, I want a comprehensive architecture document so that I can understand the full system at a glance.",
+      "acceptanceCriteria": [
+        "docs/architecture.md created",
+        "System overview Mermaid diagram: all Docker services (Traefik, Node.js backend, Flutter web, Python recommender, Keycloak, Neo4j, Fuseki, MongoDB, Mongo Express, LibreTranslate, backup) with arrows showing data flow and port numbers",
+        "Per-service table: service name, technology, purpose, internal port, external URL (if any), key env vars",
+        "Sequence diagram (Mermaid): Keycloak PKCE login flow (Flutter \u2192 Keycloak \u2192 Flutter \u2192 backend)",
+        "Sequence diagram (Mermaid): habit donation flow (Flutter \u2192 backend \u2192 MongoDB + Neo4j)",
+        "Sequence diagram (Mermaid): recommendation request flow (Flutter \u2192 backend \u2192 Python recommender \u2192 Neo4j \u2192 backend \u2192 Flutter)",
+        "Ontology section: HHH namespace, BCIO integration point, G1\u2013G4 encoding, 2 example Cypher + 2 SPARQL queries"
+      ],
+      "priority": 58,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-059",
+      "title": "Ontology and data model reference",
+      "description": "As a researcher, I want a data model reference document so that I can write queries and interpret study data without reading source code.",
+      "acceptanceCriteria": [
+        "docs/data-model.md created",
+        "Neo4j section: table of all node labels (with properties + types), table of all relationship types; 10 annotated Cypher queries (habits by group, habits by BCIO category, donation timeline, top annotated habits, G3 vs G4 habits, etc.)",
+        "Fuseki/SPARQL section: namespace prefix table (hhh:, bcio:, owl:, rdfs:); 10 example SPARQL queries",
+        "MongoDB section: all collections (results, profiles, habit_annotations, admin_settings, surveys) with JSON schema tables and one example document each",
+        "G1\u2013G4 encoding explanation: how to unambiguously query each group after migration",
+        "Anonymisation model: table showing what data is stored vs removed/anonymized on soft-delete"
+      ],
+      "priority": 59,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-060",
+      "title": "API reference: OpenAPI spec and Postman collection",
+      "description": "As a developer, I want a complete and accurate API reference so that every endpoint is unambiguous and testable.",
+      "acceptanceCriteria": [
+        "swagger-jsdoc added to Node.js app; JSDoc @swagger annotations added to all route files",
+        "GET /api/v1/docs serves Swagger UI (swagger-ui-express)",
+        "docs/api/openapi.yaml generated from the live spec (npm run generate-spec script)",
+        "Every endpoint in openapi.yaml has: summary, description, all parameters, requestBody schema, all response codes with example payloads, security scheme (bearerAuth)",
+        "docs/api/hhh-postman-collection.json created: one request per endpoint with example auth header, request body, and expected response",
+        "Python recommender spec (API-service/openapi.yaml) linked from docs/api/openapi.yaml via externalDocs"
+      ],
+      "priority": 60,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-061",
+      "title": "Deployment and operations runbook",
+      "description": "As a system operator, I want a step-by-step runbook so that I can deploy, update, and recover the platform without prior context.",
+      "acceptanceCriteria": [
+        "docs/runbook.md created",
+        "Sections: Prerequisites (server spec, Docker 24+, open ports 80/443/8080), First-time setup (clone repo, create stack.env from template, docker-compose up), Per-service updates (scripts/deploy-*.sh), Full deploy (scripts/deploy-full.sh), Rollback (git checkout <prev-tag> && deploy-full.sh), Backup verification, Restore from backup (scripts/restore.sh), Rotating Keycloak secrets, Adding an admin user, Checking service health (GET /api/v1/health)",
+        "Troubleshooting section: Keycloak 401 errors (JWKS URL misconfigured), Neo4j connection refused (container not ready), Flutter web blank page (CORS issue), Recommender service unreachable (container name resolution)",
+        "Every command is copy-pasteable, tested, and surrounded by expected output"
+      ],
+      "priority": 61,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-062",
+      "title": "Developer onboarding guide",
+      "description": "As a new developer, I want a single document that takes me from zero to a working local development environment within one day.",
+      "acceptanceCriteria": [
+        "docs/guides/developer-onboarding.md created",
+        "Sections: Required tools (Flutter 3.22+, Docker 24+, Node.js 20+, Git), Clone + branch setup, Create stack.env (template provided inline), docker-compose up and verify (includes expected healthy services output), Run Flutter app in Chrome (flutter run -d chrome), Run Flutter app in Android emulator, Run all tests (npm test + flutter test + test-ontology.sh), Common pitfalls (port conflicts, Keycloak not ready, Flutter web CORS)",
+        "Verify your setup checklist: 8 numbered checks with expected output for each",
+        "Links to: docs/architecture.md, docs/api/openapi.yaml, docs/data-model.md",
+        "Screenshot of Flutter web running locally in Chrome",
+        "Screenshot of npm test passing in terminal"
+      ],
+      "priority": 62,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-063",
+      "title": "CHANGELOG.md and deploy version check",
+      "description": "As a stakeholder, I want a maintained changelog and a deploy guard that warns about missing version bumps so that every release is documented.",
+      "acceptanceCriteria": [
+        "CHANGELOG.md created at repo root following Keep a Changelog format (https://keepachangelog.com)",
+        "Version 1.0.0 entry dated with today's date; sections: Added (all phases 0\u201311 summarized), Changed (old Node.js views retired), Fixed (G3/G4 ontology bug)",
+        "scripts/deploy-full.sh checks: current git tag matches latest version in CHANGELOG.md; if not, prints WARNING: Version not bumped since last deploy and continues (does not block deploy)",
+        "npm run version-check script added to package.json that performs the same check and exits non-zero if mismatched"
+      ],
+      "priority": 63,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
