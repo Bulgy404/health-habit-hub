@@ -1,3 +1,13 @@
+## 2026-03-13 - US-011
+- What was implemented: Added `rdfs:label` to hhh:Group3 ("Group 3 (Full+Free-text)") and hhh:Group4 ("Group 4 (Minimal+Free-text)") in both Ontology.ttl files; created neo4j/init/constraints.cypher with uniqueness constraints and group-label index comments; created scripts/migrate-group-labels.cypher with commented two-step migration (Donor→Habit→Behavior→ExperimentalSetting, with fallback via Context→ExperimentalSetting) that writes hhh__group property on Donor nodes
+- Files changed: Ontology.ttl (add rdfs:label to Group3/Group4), fuseki/init/Ontology.ttl (same), neo4j/init/constraints.cypher (new), scripts/migrate-group-labels.cypher (new)
+- **Learnings for future iterations:**
+  - Ontology.ttl and fuseki/init/Ontology.ttl must always be kept in sync — they're identical files served to two different backends
+  - n10s SHORTEN mode maps `hhh:Group3` → Neo4j label `hhh__Group3`; relationships like `hhh:partOf` → `hhh__partOf`
+  - The migration traversal path is Donor -[:hhh__donates]-> Habit -[:hhh__hasBehavior]-> Behavior -[:hhh__partOf]-> ExperimentalSetting
+  - 4 pre-existing test failures remain (Backup alert, Fuseki, Neo4j, LibreTranslate)
+---
+
 ## 2026-03-13 - US-010
 - What was implemented: Created API-service/Dockerfile (minimal Python FastAPI); added recommender service to docker-compose.yml (with port 8000 exposed for dev) and docker-compose.prod.yml (no ports, internal network only); added RECOMMENDER_URL=http://recommender:8000 to stack.env; created app/routes/recommendRouter.js with createRecommendRouter factory — GET /:userId/history, GET /:userId, POST /classify — all proxy to RECOMMENDER_URL via fetch, forwarding Authorization header; mounted at /recommend in v1Router.js with participant|admin|researcher role check; created 6 integration tests in tests/integration/recommend.routes.test.js (401/403 auth checks + 3 fixture proxy tests + auth header preservation test)
 - Files changed: API-service/Dockerfile (new), docker-compose.yml (add recommender service), docker-compose.prod.yml (add recommender service, no ports), stack.env (add RECOMMENDER_URL), app/routes/recommendRouter.js (new), app/routes/v1Router.js (import + mount recommendRouter), app/tests/integration/recommend.routes.test.js (new)

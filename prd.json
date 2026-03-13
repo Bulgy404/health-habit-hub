@@ -175,7 +175,7 @@
         "Cypher: MATCH (u:hhh__Donor) RETURN u.hhh__group, count(*) returns 4 rows after migration"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
