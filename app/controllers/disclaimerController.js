@@ -1,11 +1,14 @@
-import { renderLocalizedView } from './defaultController.js';
-
 export function renderDisclaimer(req, res) {
   const contextPath = process.env.APP_BASE_PATH || '/';
   const lang = req.lang;
   const nextUrl = `${contextPath}${lang}/donate`;
 
-  renderLocalizedView(req, res, 'disclaimer', { nextUrl, contextPath });
+  res.json({
+    status: 'ok',
+    lang,
+    nextUrl,
+    contextPath
+  });
 }
 
 export function acceptDisclaimer(req, res) {
