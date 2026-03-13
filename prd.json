@@ -207,8 +207,8 @@
         "All tests green on clean docker-compose seed"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "constraints.cypher updated with group label integrity check comment + Group1/Group2 indexes. tests/ontology/test-ontology.sh created (5 tests: 4 group existence via Cypher, donor group integrity, orphaned habits, Fuseki habit rdfs:label, BCIO class count >= 100). .github/workflows/ci.yml created with test-node and test-ontology jobs; test-ontology seeds minimal data and runs the shell test suite."
     },
     {
       "id": "US-014",
