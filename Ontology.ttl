@@ -1,4 +1,5 @@
 @prefix hhh: <http://example.com/hhh#> .
+@prefix bcio: <http://humanbehaviourchange.org/ontology/BCIO#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix xml: <http://www.w3.org/XML/1998/namespace> .
@@ -6,8 +7,10 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @base <http://www.w3.org/2002/07/owl#> .
 
-[ rdf:type owl:Ontology
- ] .
+[ rdf:type owl:Ontology ;
+  rdfs:label "Health Habit Hub Ontology with BCIO Integration" ;
+  rdfs:comment "HHH domain ontology merged with Behaviour Change Intervention Ontology (BCIO) classes inline. BCIO source: http://humanbehaviourchange.org/ontology/BCIO (BCT Taxonomy v1, Michie et al. 2013)."
+] .
 
 #################################################################
 #    Object Properties
@@ -90,17 +93,19 @@ hhh:value rdf:type owl:DatatypeProperty ;
 
 
 #################################################################
-#    Classes
+#    HHH Classes
 #################################################################
 
 ###  http://example.com/hhh#Behavior
 hhh:Behavior rdf:type owl:Class ;
-             rdfs:label "Behavior" .
+             rdfs:label "Behavior" ;
+             rdfs:comment "TODO: domain-review — possible partial alignment with bcio:BehaviourChangeTechnique; HHH Behavior is user-reported habit action, not an intervention technique." .
 
 
 ###  http://example.com/hhh#Context
 hhh:Context rdf:type owl:Class ;
-            rdfs:label "Context" .
+            rdfs:label "Context" ;
+            rdfs:comment "TODO: domain-review — may partially align with bcio:Setting; HHH Context is the situational trigger for a habit, BCIO Setting is the intervention delivery environment." .
 
 
 ###  http://example.com/hhh#Donor
@@ -146,13 +151,14 @@ hhh:Habit rdf:type owl:Class .
 ###  http://example.com/hhh#InternalState
 hhh:InternalState rdf:type owl:Class ;
                   rdfs:subClassOf hhh:Context ;
-                  rdfs:label "Internal State" .
+                  rdfs:label "Internal State" ;
+                  rdfs:comment "TODO: domain-review — may align with bcio:MechanismOfAction; HHH InternalState is a self-reported psychological context for habit, BCIO Mechanism is a theoretical construct." .
 
 ###  http://example.com/hhh#Reasoning
 hhh:Reasoning rdf:type owl:Class ;
                   rdfs:subClassOf hhh:Context ;
-                  rdfs:label "Reasoning" .
-
+                  rdfs:label "Reasoning" ;
+                  rdfs:comment "TODO: domain-review — may partially align with bcio:MechanismOfAction." .
 
 
 ###  http://example.com/hhh#People
@@ -164,7 +170,8 @@ hhh:People rdf:type owl:Class ;
 ###  http://example.com/hhh#PhysicalSetting
 hhh:PhysicalSetting rdf:type owl:Class ;
                     rdfs:subClassOf hhh:Context ;
-                    rdfs:label "Physical Setting" .
+                    rdfs:label "Physical Setting" ;
+                    rdfs:comment "TODO: domain-review — may align with bcio:Setting; HHH PhysicalSetting is the environment where a habit occurs, BCIO Setting is where an intervention is delivered." .
 
 
 ###  http://example.com/hhh#PriorBehavior
@@ -177,6 +184,578 @@ hhh:PriorBehavior rdf:type owl:Class ;
 hhh:TimeReference rdf:type owl:Class ;
                   rdfs:subClassOf hhh:Context ;
                   rdfs:label "Time Reference" .
+
+
+#################################################################
+#    BCIO Core Classes
+#    Source: Behaviour Change Intervention Ontology (BCIO)
+#    http://humanbehaviourchange.org/ontology/BCIO
+#    Inline merge — original BCIO OWL not present in repository;
+#    classes reproduced from BCT Taxonomy v1 (Michie et al. 2013)
+#    and BCIO upper level (West et al. 2019).
+#################################################################
+
+###  http://humanbehaviourchange.org/ontology/BCIO#BehaviourChangeIntervention
+bcio:BehaviourChangeIntervention rdf:type owl:Class ;
+    rdfs:label "Behaviour Change Intervention" ;
+    rdfs:comment "A coordinated set of activities designed to change specified behaviour patterns." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#BehaviourChangeTechnique
+bcio:BehaviourChangeTechnique rdf:type owl:Class ;
+    rdfs:label "Behaviour Change Technique" ;
+    rdfs:comment "An observable, replicable, and irreducible component of an intervention designed to alter or redirect causal processes that regulate behaviour." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#InterventionFunction
+bcio:InterventionFunction rdf:type owl:Class ;
+    rdfs:label "Intervention Function" ;
+    rdfs:comment "A broad category of means by which an intervention can change behaviour (e.g. Education, Persuasion, Incentivisation)." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#PolicyCategory
+bcio:PolicyCategory rdf:type owl:Class ;
+    rdfs:label "Policy Category" ;
+    rdfs:comment "A type of decision made by authorities to enable or support behaviour change interventions." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#ModeOfDelivery
+bcio:ModeOfDelivery rdf:type owl:Class ;
+    rdfs:label "Mode of Delivery" ;
+    rdfs:comment "The way in which a behaviour change intervention is delivered to recipients." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#Setting
+bcio:Setting rdf:type owl:Class ;
+    rdfs:label "Setting" ;
+    rdfs:comment "The environment (physical or digital) in which a behaviour change intervention is delivered." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#SourceOfBehaviour
+bcio:SourceOfBehaviour rdf:type owl:Class ;
+    rdfs:label "Source of Behaviour" ;
+    rdfs:comment "The entity that is the target or source of the behavioural processes addressed by an intervention." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#MechanismOfAction
+bcio:MechanismOfAction rdf:type owl:Class ;
+    rdfs:label "Mechanism of Action" ;
+    rdfs:comment "The process through which a BCT is hypothesised to change behaviour (e.g. increasing self-efficacy, reducing habit strength)." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#BehaviourChangeWheel
+bcio:BehaviourChangeWheel rdf:type owl:Class ;
+    rdfs:label "Behaviour Change Wheel" ;
+    rdfs:comment "A framework that connects sources of behaviour, intervention functions, and policy categories (Michie et al. 2011)." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#OutcomeType
+bcio:OutcomeType rdf:type owl:Class ;
+    rdfs:label "Outcome Type" ;
+    rdfs:comment "A category of result measured to evaluate the effectiveness of a behaviour change intervention." .
+
+
+#################################################################
+#    BCIO — BCT Taxonomy v1 Groupings (16 groupings)
+#    Michie S et al. (2013) The Behavior Change Technique Taxonomy
+#    (v1) of 93 Hierarchically Clustered Techniques. Ann Behav Med.
+#################################################################
+
+###  http://humanbehaviourchange.org/ontology/BCIO#GoalsAndPlanning
+bcio:GoalsAndPlanning rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Goals and Planning" ;
+    rdfs:comment "BCT Taxonomy v1 Group 1: techniques related to goal setting and planning for behaviour change." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#FeedbackAndMonitoring
+bcio:FeedbackAndMonitoring rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Feedback and Monitoring" ;
+    rdfs:comment "BCT Taxonomy v1 Group 2: techniques involving feedback and self-monitoring." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#SocialSupport
+bcio:SocialSupport rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Social Support" ;
+    rdfs:comment "BCT Taxonomy v1 Group 3: techniques involving social support." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#ShapingKnowledge
+bcio:ShapingKnowledge rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Shaping Knowledge" ;
+    rdfs:comment "BCT Taxonomy v1 Group 4: techniques that shape knowledge about behaviour." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#NaturalConsequences
+bcio:NaturalConsequences rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Natural Consequences" ;
+    rdfs:comment "BCT Taxonomy v1 Group 5: techniques addressing natural consequences of behaviour." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#ComparisonOfBehaviour
+bcio:ComparisonOfBehaviour rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Comparison of Behaviour" ;
+    rdfs:comment "BCT Taxonomy v1 Group 6: techniques involving comparison of own behaviour with others." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#Associations
+bcio:Associations rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Associations" ;
+    rdfs:comment "BCT Taxonomy v1 Group 7: techniques that work through stimulus-response associations." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#RepetitionAndSubstitution
+bcio:RepetitionAndSubstitution rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Repetition and Substitution" ;
+    rdfs:comment "BCT Taxonomy v1 Group 8: techniques involving repetition and behaviour substitution." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#ComparisonOfOutcomes
+bcio:ComparisonOfOutcomes rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Comparison of Outcomes" ;
+    rdfs:comment "BCT Taxonomy v1 Group 9: techniques comparing expected outcomes." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#RewardAndThreat
+bcio:RewardAndThreat rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Reward and Threat" ;
+    rdfs:comment "BCT Taxonomy v1 Group 10: techniques using reward and threat contingencies." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#Regulation
+bcio:Regulation rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Regulation" ;
+    rdfs:comment "BCT Taxonomy v1 Group 11: techniques that regulate emotional or cognitive processes." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#Antecedents
+bcio:Antecedents rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Antecedents" ;
+    rdfs:comment "BCT Taxonomy v1 Group 12: techniques that alter antecedents or cues for behaviour." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#Identity
+bcio:Identity rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Identity" ;
+    rdfs:comment "BCT Taxonomy v1 Group 13: techniques targeting self-identity and role." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#ScheduledConsequences
+bcio:ScheduledConsequences rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Scheduled Consequences" ;
+    rdfs:comment "BCT Taxonomy v1 Group 14: techniques using scheduled reward/punishment." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#SelfBelief
+bcio:SelfBelief rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Self-belief" ;
+    rdfs:comment "BCT Taxonomy v1 Group 15: techniques targeting self-efficacy and capability beliefs." .
+
+###  http://humanbehaviourchange.org/ontology/BCIO#CovertLearning
+bcio:CovertLearning rdf:type owl:Class ;
+    rdfs:subClassOf bcio:BehaviourChangeTechnique ;
+    rdfs:label "Covert Learning" ;
+    rdfs:comment "BCT Taxonomy v1 Group 16: techniques using imagined or covert conditioning." .
+
+
+#################################################################
+#    BCIO — BCT Taxonomy v1 Individual Techniques (93 BCTs)
+#################################################################
+
+### Group 1: Goals and Planning
+
+bcio:GoalSettingBehaviour rdf:type owl:Class ;
+    rdfs:subClassOf bcio:GoalsAndPlanning ;
+    rdfs:label "1.1 Goal setting (behaviour)" .
+
+bcio:ProblemSolving rdf:type owl:Class ;
+    rdfs:subClassOf bcio:GoalsAndPlanning ;
+    rdfs:label "1.2 Problem solving" .
+
+bcio:GoalSettingOutcome rdf:type owl:Class ;
+    rdfs:subClassOf bcio:GoalsAndPlanning ;
+    rdfs:label "1.3 Goal setting (outcome)" .
+
+bcio:ActionPlanning rdf:type owl:Class ;
+    rdfs:subClassOf bcio:GoalsAndPlanning ;
+    rdfs:label "1.4 Action planning" .
+
+bcio:ReviewBehaviourGoal rdf:type owl:Class ;
+    rdfs:subClassOf bcio:GoalsAndPlanning ;
+    rdfs:label "1.5 Review behaviour goal(s)" .
+
+bcio:DiscrepancyCurrentBehaviourGoal rdf:type owl:Class ;
+    rdfs:subClassOf bcio:GoalsAndPlanning ;
+    rdfs:label "1.6 Discrepancy between current behaviour and goal" .
+
+bcio:ReviewOutcomeGoal rdf:type owl:Class ;
+    rdfs:subClassOf bcio:GoalsAndPlanning ;
+    rdfs:label "1.7 Review outcome goal(s)" .
+
+bcio:BehaviouralContract rdf:type owl:Class ;
+    rdfs:subClassOf bcio:GoalsAndPlanning ;
+    rdfs:label "1.8 Behavioural contract" .
+
+bcio:Commitment rdf:type owl:Class ;
+    rdfs:subClassOf bcio:GoalsAndPlanning ;
+    rdfs:label "1.9 Commitment" .
+
+### Group 2: Feedback and Monitoring
+
+bcio:MonitoringOfBehaviourByOthers rdf:type owl:Class ;
+    rdfs:subClassOf bcio:FeedbackAndMonitoring ;
+    rdfs:label "2.1 Monitoring of behaviour by others without feedback" .
+
+bcio:FeedbackOnBehaviour rdf:type owl:Class ;
+    rdfs:subClassOf bcio:FeedbackAndMonitoring ;
+    rdfs:label "2.2 Feedback on behaviour" .
+
+bcio:SelfMonitoringOfBehaviour rdf:type owl:Class ;
+    rdfs:subClassOf bcio:FeedbackAndMonitoring ;
+    rdfs:label "2.3 Self-monitoring of behaviour" .
+
+bcio:SelfMonitoringOfOutcome rdf:type owl:Class ;
+    rdfs:subClassOf bcio:FeedbackAndMonitoring ;
+    rdfs:label "2.4 Self-monitoring of outcome(s) of behaviour" .
+
+bcio:MonitoringOutcomeWithoutFeedback rdf:type owl:Class ;
+    rdfs:subClassOf bcio:FeedbackAndMonitoring ;
+    rdfs:label "2.5 Monitoring of outcome(s) of behaviour without feedback" .
+
+bcio:Biofeedback rdf:type owl:Class ;
+    rdfs:subClassOf bcio:FeedbackAndMonitoring ;
+    rdfs:label "2.6 Biofeedback" .
+
+bcio:FeedbackOnOutcome rdf:type owl:Class ;
+    rdfs:subClassOf bcio:FeedbackAndMonitoring ;
+    rdfs:label "2.7 Feedback on outcome(s) of behaviour" .
+
+### Group 3: Social Support
+
+bcio:SocialSupportUnspecified rdf:type owl:Class ;
+    rdfs:subClassOf bcio:SocialSupport ;
+    rdfs:label "3.1 Social support (unspecified)" .
+
+bcio:SocialSupportPractical rdf:type owl:Class ;
+    rdfs:subClassOf bcio:SocialSupport ;
+    rdfs:label "3.2 Social support (practical)" .
+
+bcio:SocialSupportEmotional rdf:type owl:Class ;
+    rdfs:subClassOf bcio:SocialSupport ;
+    rdfs:label "3.3 Social support (emotional)" .
+
+### Group 4: Shaping Knowledge
+
+bcio:InstructionHowToPerform rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ShapingKnowledge ;
+    rdfs:label "4.1 Instruction on how to perform the behaviour" .
+
+bcio:InformationAboutAntecedents rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ShapingKnowledge ;
+    rdfs:label "4.2 Information about antecedents" .
+
+bcio:ReAttribution rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ShapingKnowledge ;
+    rdfs:label "4.3 Re-attribution" .
+
+bcio:BehaviouralExperiments rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ShapingKnowledge ;
+    rdfs:label "4.4 Behavioural experiments" .
+
+### Group 5: Natural Consequences
+
+bcio:InformationHealthConsequences rdf:type owl:Class ;
+    rdfs:subClassOf bcio:NaturalConsequences ;
+    rdfs:label "5.1 Information about health consequences" .
+
+bcio:SalienceOfConsequences rdf:type owl:Class ;
+    rdfs:subClassOf bcio:NaturalConsequences ;
+    rdfs:label "5.2 Salience of consequences" .
+
+bcio:InformationSocialEnvironmentalConsequences rdf:type owl:Class ;
+    rdfs:subClassOf bcio:NaturalConsequences ;
+    rdfs:label "5.3 Information about social and environmental consequences" .
+
+bcio:MonitoringEmotionalConsequences rdf:type owl:Class ;
+    rdfs:subClassOf bcio:NaturalConsequences ;
+    rdfs:label "5.4 Monitoring of emotional consequences" .
+
+bcio:AnticipatedRegret rdf:type owl:Class ;
+    rdfs:subClassOf bcio:NaturalConsequences ;
+    rdfs:label "5.5 Anticipated regret" .
+
+bcio:InformationEmotionalConsequences rdf:type owl:Class ;
+    rdfs:subClassOf bcio:NaturalConsequences ;
+    rdfs:label "5.6 Information about emotional consequences" .
+
+### Group 6: Comparison of Behaviour
+
+bcio:DemonstrationOfBehaviour rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ComparisonOfBehaviour ;
+    rdfs:label "6.1 Demonstration of the behaviour" .
+
+bcio:SocialComparison rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ComparisonOfBehaviour ;
+    rdfs:label "6.2 Social comparison" .
+
+bcio:InformationOthersApproval rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ComparisonOfBehaviour ;
+    rdfs:label "6.3 Information about others' approval" .
+
+### Group 7: Associations
+
+bcio:PromptsCues rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Associations ;
+    rdfs:label "7.1 Prompts/cues" .
+
+bcio:CueSignalingReward rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Associations ;
+    rdfs:label "7.2 Cue signaling reward" .
+
+bcio:ReducePromptsCues rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Associations ;
+    rdfs:label "7.3 Reduce prompts/cues" .
+
+bcio:RemoveAccessToReward rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Associations ;
+    rdfs:label "7.4 Remove access to the reward" .
+
+bcio:RemoveAversiveStimulus rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Associations ;
+    rdfs:label "7.5 Remove aversive stimulus" .
+
+bcio:Satiation rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Associations ;
+    rdfs:label "7.6 Satiation" .
+
+bcio:Exposure rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Associations ;
+    rdfs:label "7.7 Exposure" .
+
+bcio:AssociativeLearning rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Associations ;
+    rdfs:label "7.8 Associative learning" .
+
+### Group 8: Repetition and Substitution
+
+bcio:BehaviouralPracticeRehearsal rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RepetitionAndSubstitution ;
+    rdfs:label "8.1 Behavioural practice/rehearsal" .
+
+bcio:BehaviourSubstitution rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RepetitionAndSubstitution ;
+    rdfs:label "8.2 Behaviour substitution" .
+
+bcio:HabitFormation rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RepetitionAndSubstitution ;
+    rdfs:label "8.3 Habit formation" .
+
+bcio:HabitReversal rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RepetitionAndSubstitution ;
+    rdfs:label "8.4 Habit reversal" .
+
+bcio:Overcorrection rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RepetitionAndSubstitution ;
+    rdfs:label "8.5 Overcorrection" .
+
+bcio:GeneralizationTargetBehaviour rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RepetitionAndSubstitution ;
+    rdfs:label "8.6 Generalization of a target behaviour" .
+
+bcio:GradedTasks rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RepetitionAndSubstitution ;
+    rdfs:label "8.7 Graded tasks" .
+
+### Group 9: Comparison of Outcomes
+
+bcio:CredibleSource rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ComparisonOfOutcomes ;
+    rdfs:label "9.1 Credible source" .
+
+bcio:ProsAndCons rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ComparisonOfOutcomes ;
+    rdfs:label "9.2 Pros and cons" .
+
+bcio:ComparativeImaginingFutureOutcomes rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ComparisonOfOutcomes ;
+    rdfs:label "9.3 Comparative imagining of future outcomes" .
+
+### Group 10: Reward and Threat
+
+bcio:MaterialIncentiveBehaviour rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RewardAndThreat ;
+    rdfs:label "10.1 Material incentive (behaviour)" .
+
+bcio:MaterialRewardBehaviour rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RewardAndThreat ;
+    rdfs:label "10.2 Material reward (behaviour)" .
+
+bcio:NonSpecificReward rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RewardAndThreat ;
+    rdfs:label "10.3 Non-specific reward" .
+
+bcio:SocialReward rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RewardAndThreat ;
+    rdfs:label "10.4 Social reward" .
+
+bcio:SocialIncentive rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RewardAndThreat ;
+    rdfs:label "10.5 Social incentive" .
+
+bcio:NonSpecificIncentive rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RewardAndThreat ;
+    rdfs:label "10.6 Non-specific incentive" .
+
+bcio:SelfIncentive rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RewardAndThreat ;
+    rdfs:label "10.7 Self-incentive" .
+
+bcio:IncentiveOutcome rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RewardAndThreat ;
+    rdfs:label "10.8 Incentive (outcome)" .
+
+bcio:SelfReward rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RewardAndThreat ;
+    rdfs:label "10.9 Self-reward" .
+
+bcio:RewardOutcome rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RewardAndThreat ;
+    rdfs:label "10.10 Reward (outcome)" .
+
+bcio:FuturePunishment rdf:type owl:Class ;
+    rdfs:subClassOf bcio:RewardAndThreat ;
+    rdfs:label "10.11 Future punishment" .
+
+### Group 11: Regulation
+
+bcio:PharmacologicalSupport rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Regulation ;
+    rdfs:label "11.1 Pharmacological support" .
+
+bcio:ReduceNegativeEmotions rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Regulation ;
+    rdfs:label "11.2 Reduce negative emotions" .
+
+bcio:ConservingMentalResources rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Regulation ;
+    rdfs:label "11.3 Conserving mental resources" .
+
+bcio:DistractionRegulation rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Regulation ;
+    rdfs:label "11.4 Distraction" .
+
+### Group 12: Antecedents
+
+bcio:RestructuringPhysicalEnvironment rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Antecedents ;
+    rdfs:label "12.1 Restructuring the physical environment" .
+
+bcio:RestructuringSocialEnvironment rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Antecedents ;
+    rdfs:label "12.2 Restructuring the social environment" .
+
+bcio:AvoidanceReducingExposureCues rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Antecedents ;
+    rdfs:label "12.3 Avoidance/reducing exposure to cues for the behaviour" .
+
+bcio:DistractionAntecedent rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Antecedents ;
+    rdfs:label "12.4 Distraction (antecedent)" .
+
+bcio:AddingObjectsToEnvironment rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Antecedents ;
+    rdfs:label "12.5 Adding objects to the environment" .
+
+bcio:BodyChanges rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Antecedents ;
+    rdfs:label "12.6 Body changes" .
+
+### Group 13: Identity
+
+bcio:IdentificationSelfAsRoleModel rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Identity ;
+    rdfs:label "13.1 Identification of self as role model" .
+
+bcio:FramingReframing rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Identity ;
+    rdfs:label "13.2 Framing/reframing" .
+
+bcio:IncompatibleBeliefs rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Identity ;
+    rdfs:label "13.3 Incompatible beliefs" .
+
+bcio:ValuedSelfIdentity rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Identity ;
+    rdfs:label "13.4 Valued self-identity" .
+
+bcio:IdentityAssociatedChangedBehaviour rdf:type owl:Class ;
+    rdfs:subClassOf bcio:Identity ;
+    rdfs:label "13.5 Identity associated with changed behaviour" .
+
+### Group 14: Scheduled Consequences
+
+bcio:BehaviourCost rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ScheduledConsequences ;
+    rdfs:label "14.1 Behaviour cost" .
+
+bcio:Punishment rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ScheduledConsequences ;
+    rdfs:label "14.2 Punishment" .
+
+bcio:RemovePunishment rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ScheduledConsequences ;
+    rdfs:label "14.3 Remove punishment" .
+
+bcio:RewardApproximations rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ScheduledConsequences ;
+    rdfs:label "14.4 Reward approximations" .
+
+bcio:RewardingCompletion rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ScheduledConsequences ;
+    rdfs:label "14.5 Rewarding completion" .
+
+bcio:SituationSpecificReward rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ScheduledConsequences ;
+    rdfs:label "14.6 Situation-specific reward" .
+
+bcio:SelfMonitoringOfConsequences rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ScheduledConsequences ;
+    rdfs:label "14.7 Self-monitoring of consequences" .
+
+bcio:RewardIncompatibleBehaviour rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ScheduledConsequences ;
+    rdfs:label "14.8 Reward incompatible behaviour" .
+
+bcio:ReduceRewardFrequency rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ScheduledConsequences ;
+    rdfs:label "14.9 Reduce reward frequency" .
+
+bcio:RemoveReward rdf:type owl:Class ;
+    rdfs:subClassOf bcio:ScheduledConsequences ;
+    rdfs:label "14.10 Remove reward" .
+
+### Group 15: Self-belief
+
+bcio:VerbalPersuasionCapability rdf:type owl:Class ;
+    rdfs:subClassOf bcio:SelfBelief ;
+    rdfs:label "15.1 Verbal persuasion about capability" .
+
+bcio:MentalRehearsalSuccessfulPerformance rdf:type owl:Class ;
+    rdfs:subClassOf bcio:SelfBelief ;
+    rdfs:label "15.2 Mental rehearsal of successful performance" .
+
+bcio:FocusOnPastSuccess rdf:type owl:Class ;
+    rdfs:subClassOf bcio:SelfBelief ;
+    rdfs:label "15.3 Focus on past success" .
+
+bcio:SelfTalk rdf:type owl:Class ;
+    rdfs:subClassOf bcio:SelfBelief ;
+    rdfs:label "15.4 Self-talk" .
+
+### Group 16: Covert Learning
+
+bcio:ImaginaryPunishment rdf:type owl:Class ;
+    rdfs:subClassOf bcio:CovertLearning ;
+    rdfs:label "16.1 Imaginary punishment" .
+
+bcio:ImaginaryReward rdf:type owl:Class ;
+    rdfs:subClassOf bcio:CovertLearning ;
+    rdfs:label "16.2 Imaginary reward" .
+
+bcio:VicariousConsequences rdf:type owl:Class ;
+    rdfs:subClassOf bcio:CovertLearning ;
+    rdfs:label "16.3 Vicarious consequences" .
 
 
 #################################################################
