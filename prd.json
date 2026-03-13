@@ -109,7 +109,7 @@
         "Tests pass: tests/integration/auth.routes.test.js covers 401, 403, 200 for each role level"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

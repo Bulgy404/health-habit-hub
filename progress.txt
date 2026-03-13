@@ -1,3 +1,13 @@
+## 2026-03-13 - US-007
+- What was implemented: Created app/middleware/requireRole.js (checks req.user.realm_access.roles, returns 403 if role missing); created app/routes/v1Router.js with createV1Router factory — /health public, authenticate applied to all routes below, /admin requires admin|researcher, /surveys and /habits require participant|admin|researcher; mounted /api/v1 in app.js; created 12 integration tests in tests/integration/auth.routes.test.js covering 401/403/200 for each role level
+- Files changed: app/middleware/requireRole.js (new), app/routes/v1Router.js (new), app/tests/integration/auth.routes.test.js (new), app/app.js (updated)
+- **Learnings for future iterations:**
+  - v1Router exports `createV1Router` as default (factory, not pre-built instance) — avoids eager JWKS prefetch with undefined URL at module load time
+  - Integration tests use `global.fetch` patching that passes through non-JWKS URLs to the real fetch (save original, delegate non-JWKS calls) so the test server can handle real HTTP requests
+  - `server.listen(0, '127.0.0.1', resolve)` binds to a random port; use `server.address().port` to get it
+  - Pre-existing failures (Backup alert, Fuseki, Neo4j, LibreTranslate) remain — not introduced by this story
+---
+
 ## 2026-03-13 - US-006
 - What was implemented: Created app/middleware/auth.js with Keycloak JWT verification middleware using Node.js built-in crypto; created tests/unit/auth.middleware.test.js with 6 unit tests (valid JWT, expired JWT, missing header, tampered signature, non-Bearer header, malformed token)
 - Files changed: app/middleware/auth.js (new), app/tests/unit/auth.middleware.test.js (new)
