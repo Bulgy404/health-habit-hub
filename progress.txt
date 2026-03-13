@@ -1,3 +1,15 @@
+## 2026-03-13 - US-012
+- What was implemented: Merged BCIO (Behaviour Change Intervention Ontology) classes inline into Ontology.ttl and fuseki/init/Ontology.ttl. Added 119 BCIO classes: 10 core (BehaviourChangeIntervention, BehaviourChangeTechnique, InterventionFunction, PolicyCategory, ModeOfDelivery, Setting, SourceOfBehaviour, MechanismOfAction, BehaviourChangeWheel, OutcomeType), 16 BCT taxonomy groupings, and 93 BCT leaf techniques from BCT Taxonomy v1 (Michie et al. 2013). Total owl:Class count: 134 (up from 15). Uncertain HHH↔BCIO mappings annotated with rdfs:comment "TODO: domain-review" on 5 HHH classes (Behavior, Context, PhysicalSetting, InternalState, Reasoning). Added ontology header with rdfs:label and rdfs:comment.
+- Files changed: Ontology.ttl (BCIO merge + TODO annotations), fuseki/init/Ontology.ttl (sync copy), prd.json (US-012 passes=true)
+- **Learnings for future iterations:**
+  - bcio.owl was not present in the repo (API-service/src/openapi_server/Ontologies/ doesn't exist); inline merge approach was used instead
+  - concepts_all_merged.jsonl also absent — uncertain mappings were inferred from domain knowledge rather than the file
+  - BCIO namespace used: http://humanbehaviourchange.org/ontology/BCIO# with readable class names (valid Turtle)
+  - Turtle local names CAN start with digits (Turtle 1.1 spec), but using alpha-prefixed readable names is safer across parsers
+  - BCT Taxonomy v1 has exactly 93 techniques in 16 groupings — all 93 added as owl:Class with rdfs:subClassOf their grouping class
+  - 4 pre-existing test failures remain (Backup alert, Fuseki, Neo4j, LibreTranslate)
+---
+
 ## 2026-03-13 - US-011
 - What was implemented: Added `rdfs:label` to hhh:Group3 ("Group 3 (Full+Free-text)") and hhh:Group4 ("Group 4 (Minimal+Free-text)") in both Ontology.ttl files; created neo4j/init/constraints.cypher with uniqueness constraints and group-label index comments; created scripts/migrate-group-labels.cypher with commented two-step migration (Donor→Habit→Behavior→ExperimentalSetting, with fallback via Context→ExperimentalSetting) that writes hhh__group property on Donor nodes
 - Files changed: Ontology.ttl (add rdfs:label to Group3/Group4), fuseki/init/Ontology.ttl (same), neo4j/init/constraints.cypher (new), scripts/migrate-group-labels.cypher (new)
