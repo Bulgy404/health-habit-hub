@@ -125,7 +125,7 @@
         "Existing tests updated to use /api/v1/ prefix and pass"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

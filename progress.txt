@@ -85,3 +85,12 @@
   - ObjectId was imported in surveyController but never used — removed to fix lint
   - Pre-existing lint errors exist in app/public/js/ and app/utils/Neo4jDatabase.js — not introduced by this story
 ---
+
+## 2026-03-13 - US-008
+- What was implemented: Created app/routes/index.js (re-exports createV1Router as consolidation point); updated v1Router.js to mount actual surveyRouter under /surveys (GET /api/v1/surveys/:id now calls renderSurvey); added GET / handler to surveyRouter for base /surveys route; updated app.js to import from routes/index.js and removed old /:lng/survey route
+- Files changed: app/routes/index.js (new), app/routes/v1Router.js (mount surveyRouter), app/routes/surveyRouter.js (add GET /), app/app.js (import from index.js, remove /:lng/survey route and import)
+- **Learnings for future iterations:**
+  - surveyRouter only had GET /:id — needed GET / handler for base /surveys path tests to return 200
+  - app/routes/index.js is a thin re-export; routes/v1Router.js is still where all logic lives
+  - 4 pre-existing failures remain (Backup alert, Fuseki, Neo4j, LibreTranslate) — not introduced here
+---

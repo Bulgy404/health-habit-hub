@@ -1,6 +1,7 @@
 import express from 'express';
 import { createAuthMiddleware } from '../middleware/auth.js';
 import { requireRole } from '../middleware/requireRole.js';
+import surveyRouter from './surveyRouter.js';
 
 export function createV1Router({ jwksUrl } = {}) {
   const router = express.Router();
@@ -23,9 +24,7 @@ export function createV1Router({ jwksUrl } = {}) {
   router.use(
     '/surveys',
     requireRole('participant', 'admin', 'researcher'),
-    (req, res) => {
-      res.json({ ok: true });
-    }
+    surveyRouter
   );
 
   // Habits routes: require participant, admin, or researcher role
