@@ -1,3 +1,13 @@
+## 2026-03-13 - US-010
+- What was implemented: Created API-service/Dockerfile (minimal Python FastAPI); added recommender service to docker-compose.yml (with port 8000 exposed for dev) and docker-compose.prod.yml (no ports, internal network only); added RECOMMENDER_URL=http://recommender:8000 to stack.env; created app/routes/recommendRouter.js with createRecommendRouter factory — GET /:userId/history, GET /:userId, POST /classify — all proxy to RECOMMENDER_URL via fetch, forwarding Authorization header; mounted at /recommend in v1Router.js with participant|admin|researcher role check; created 6 integration tests in tests/integration/recommend.routes.test.js (401/403 auth checks + 3 fixture proxy tests + auth header preservation test)
+- Files changed: API-service/Dockerfile (new), docker-compose.yml (add recommender service), docker-compose.prod.yml (add recommender service, no ports), stack.env (add RECOMMENDER_URL), app/routes/recommendRouter.js (new), app/routes/v1Router.js (import + mount recommendRouter), app/tests/integration/recommend.routes.test.js (new)
+- **Learnings for future iterations:**
+  - createRecommendRouter accepts `recommenderUrl` for test injection (same DI pattern as healthCheck.js)
+  - Route order matters: /:userId/history must be defined before /:userId to prevent shadowing (though Express single-segment :params don't actually conflict across path depths)
+  - POST /classify is not at risk of collision with GET /:userId because different HTTP methods
+  - Pre-existing failures (Backup, Fuseki, Neo4j, LibreTranslate) remain — 4 out of 65 tests
+---
+
 ## 2026-03-13 - US-009
 - What was implemented: Created app/utils/healthCheck.js with checkAllServices() function — parallel health checks (1500ms timeout each) for neo4j (bolt), mongo, fuseki (HTTP), keycloak (HTTP), recommender (HTTP); returns {status: 'ok'|'error', services:{...}} with latencyMs per service; 503 if neo4j or mongo down; updated v1Router.js to call checkAllServices (accepts optional serviceChecks injection); updated auth.routes.test.js to pass mock serviceChecks; added 5 unit tests in tests/unit/health.check.test.js
 - Files changed: app/utils/healthCheck.js (new), app/routes/v1Router.js (updated health handler), app/tests/unit/health.check.test.js (new), app/tests/integration/auth.routes.test.js (pass mock serviceChecks)
