@@ -1,3 +1,14 @@
+## 2026-03-13 - US-013
+- What was implemented: Updated neo4j/init/constraints.cypher with group label constraint comment + Group1/Group2 indexes; created tests/ontology/test-ontology.sh (bash, chmod +x) with 5 tests: all 4 groups retrievable via Cypher, no donors without group, no orphaned habits, Fuseki Habit rdfs:label coverage, BCIO owl:Class count >= 100 in Fuseki; created .github/workflows/ci.yml with two jobs: test-node (npm test) and test-ontology (docker services for neo4j:5-community + stain/jena-fuseki, seeds minimal data, runs test-ontology.sh).
+- Files changed: neo4j/init/constraints.cypher (group label constraint + Group1/Group2 indexes), tests/ontology/test-ontology.sh (new, executable), .github/workflows/ci.yml (new), prd.json (US-013 passes=true)
+- **Learnings for future iterations:**
+  - Neo4j CE does not support multi-label existence constraints natively — group label integrity is enforced via a documented check query in constraints.cypher, not a DB-level constraint
+  - cypher-shell --format plain prints header row + data rows; use `tail -n +2 | grep -cv '^$'` to count data rows without header
+  - stain/jena-fuseki Docker image uses ADMIN_PASSWORD and FUSEKI_DATASET_1 env vars; dataset is created automatically on startup
+  - n10s graphconfig.init must be called before n10s.onto.import.fetch; it requires the n10s plugin installed
+  - 4 pre-existing test failures remain (Backup alert, Fuseki, Neo4j, LibreTranslate) — 58/65 tests pass
+---
+
 ## 2026-03-13 - US-012
 - What was implemented: Merged BCIO (Behaviour Change Intervention Ontology) classes inline into Ontology.ttl and fuseki/init/Ontology.ttl. Added 119 BCIO classes: 10 core (BehaviourChangeIntervention, BehaviourChangeTechnique, InterventionFunction, PolicyCategory, ModeOfDelivery, Setting, SourceOfBehaviour, MechanismOfAction, BehaviourChangeWheel, OutcomeType), 16 BCT taxonomy groupings, and 93 BCT leaf techniques from BCT Taxonomy v1 (Michie et al. 2013). Total owl:Class count: 134 (up from 15). Uncertain HHH↔BCIO mappings annotated with rdfs:comment "TODO: domain-review" on 5 HHH classes (Behavior, Context, PhysicalSetting, InternalState, Reasoning). Added ontology header with rdfs:label and rdfs:comment.
 - Files changed: Ontology.ttl (BCIO merge + TODO annotations), fuseki/init/Ontology.ttl (sync copy), prd.json (US-012 passes=true)
