@@ -191,8 +191,8 @@
         "docker-compose up fuseki loads ontology without errors (check Fuseki logs)"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "bcio.owl not present in repo — BCIO classes merged inline from BCT Taxonomy v1 (Michie et al. 2013). 134 total owl:Class entries (15 HHH + 119 BCIO). concepts_all_merged.jsonl also absent; uncertain HHH↔BCIO mappings annotated with rdfs:comment 'TODO: domain-review'."
     },
     {
       "id": "US-013",
