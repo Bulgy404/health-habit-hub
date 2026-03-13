@@ -59,7 +59,7 @@
         "keycloak/ directory created with placeholder for realm JSON"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
