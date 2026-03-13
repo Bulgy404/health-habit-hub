@@ -17,3 +17,17 @@ CREATE CONSTRAINT donor_userid_unique IF NOT EXISTS
 //   hhh__Group4 – Minimal+Free-text (Open Task, Open Description)
 CREATE INDEX group3_idx IF NOT EXISTS FOR (n:hhh__Group3) ON (n.uri);
 CREATE INDEX group4_idx IF NOT EXISTS FOR (n:hhh__Group4) ON (n.uri);
+
+// Group label constraint: every ExperimentalSetting must carry exactly one of the
+// four valid group labels.  The constraint is enforced at application layer via a
+// trigger-style check query run after each data import (Neo4j CE does not support
+// multi-label existence constraints natively).  The query below is the canonical
+// integrity check — 0 rows means all ExperimentalSetting nodes are in a valid group:
+//
+//   MATCH (s:hhh__ExperimentalSetting)
+//   WHERE NOT (s:hhh__Group1 OR s:hhh__Group2 OR s:hhh__Group3 OR s:hhh__Group4)
+//   RETURN s.uri AS ungrouped_setting
+//
+// Additional indexes for Group1 and Group2 (Group3/Group4 already indexed above):
+CREATE INDEX group1_idx IF NOT EXISTS FOR (n:hhh__Group1) ON (n.uri);
+CREATE INDEX group2_idx IF NOT EXISTS FOR (n:hhh__Group2) ON (n.uri);
