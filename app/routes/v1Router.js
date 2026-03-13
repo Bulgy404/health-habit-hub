@@ -2,9 +2,10 @@ import express from 'express';
 import { createAuthMiddleware } from '../middleware/auth.js';
 import { requireRole } from '../middleware/requireRole.js';
 import surveyRouter from './surveyRouter.js';
+import { createRecommendRouter } from './recommendRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 
-export function createV1Router({ jwksUrl, serviceChecks } = {}) {
+export function createV1Router({ jwksUrl, serviceChecks, recommenderUrl } = {}) {
   const router = express.Router();
   const authenticate = createAuthMiddleware({ jwksUrl });
 
@@ -37,6 +38,13 @@ export function createV1Router({ jwksUrl, serviceChecks } = {}) {
     (req, res) => {
       res.json({ ok: true });
     }
+  );
+
+  // Recommend routes: require participant, admin, or researcher role
+  router.use(
+    '/recommend',
+    requireRole('participant', 'admin', 'researcher'),
+    createRecommendRouter({ recommenderUrl })
   );
 
   return router;

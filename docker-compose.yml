@@ -202,6 +202,20 @@ services:
       retries: 5
       start_period: 60s
 
+  recommender:
+    image: hhh/recommender
+    container_name: h3-recommender
+    build: ./API-service
+    restart: on-failure:3
+    env_file:
+      - stack.env
+    ports:
+      - ${RECOMMENDER_HOST_PORT:-8000}:8000
+    networks:
+      - h3-proxy
+    depends_on:
+      - proxy
+
   backup:
     image: hhh/backup
     build: ./backup-service
