@@ -43,8 +43,8 @@
         "No references to res.render() remain in app/controllers/"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Deleted all EJS view templates from app/views/. Replaced all res.render() calls with res.json() in controllers. Removed EJS view engine setup from app.js. Added GET /api endpoint returning JSON."
     },
     {
       "id": "US-004",

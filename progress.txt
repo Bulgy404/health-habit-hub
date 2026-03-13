@@ -32,3 +32,14 @@
   - A docker-compose.yaml was added from hjt-diplomarbeit (different from docker-compose.yml) — may cause duplicate config warnings
   - docker-compose up --no-start exits 0 even without Docker daemon running (warning only, not error)
 ---
+
+## 2026-03-13 - US-003
+- What was implemented: Removed all EJS/HTML view templates from app/views/ (14 files deleted); replaced all res.render() calls with res.json() in all controllers (aboutController, accessibilityController, contactController, defaultController, demoController, disclaimerController, donateController, imprintController, privacyController, rewardController, surveyController, thanksController); removed EJS view engine setup from app.js; added GET /api endpoint returning JSON health/info response
+- Files changed: app/app.js, app/controllers/*.js (all 12), app/views/*.ejs (all 14 deleted)
+- **Learnings for future iterations:**
+  - The app had EJS view engine configured twice in app.js — both were removed
+  - Controllers that used renderLocalizedView (from defaultController.js) still work since defaultController now returns JSON
+  - Integration tests (Fuseki, Neo4j, LibreTranslate, Backup) were already failing before this story — pre-existing failures
+  - ObjectId was imported in surveyController but never used — removed to fix lint
+  - Pre-existing lint errors exist in app/public/js/ and app/utils/Neo4jDatabase.js — not introduced by this story
+---
