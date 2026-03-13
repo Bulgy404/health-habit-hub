@@ -23,7 +23,6 @@ import rewardRouter from './routes/rewardRouter.js';
 import imprintRouter from './routes/imprintRouter.js';
 import privacyRouter from './routes/privacyRouter.js';
 import accessibilityRouter from './routes/accessibilityRouter.js';
-import surveyRouter from './routes/surveyRouter.js';
 
 const app = express();
 const port = config.port;
@@ -160,8 +159,6 @@ router.use(
   '/:lng(' + validLanguageCodes + ')/accessibility',
   accessibilityRouter
 );
-router.use('/:lng(' + validLanguageCodes + ')/survey', surveyRouter);
-
 // Intercepts all calls of '/' and checks whether a language (req.lang) is already set. If not, this parameter is set.
 router.use((req, res, next) => {
   console.log('Path: ', req.url);
@@ -181,7 +178,7 @@ app.get('/api', (req, res) => {
 });
 
 // Versioned API routes (JWT-protected)
-import createV1Router from './routes/v1Router.js';
+import createV1Router from './routes/index.js';
 app.use('/api/v1', createV1Router());
 
 app.use(cookieParser());

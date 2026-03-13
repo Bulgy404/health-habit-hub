@@ -16,6 +16,7 @@ router.use((req, res, next) => {
   next();
 });
 
+router.get('/', (req, res) => res.json({ ok: true }));
 router.get('/:id', renderSurvey);
 router.post('/:id/complete', submitSurvey);
 
