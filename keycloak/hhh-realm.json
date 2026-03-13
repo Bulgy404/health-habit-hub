@@ -1,6 +1,106 @@
 {
-  "_comment": "Placeholder for the Health Habit Hub Keycloak realm configuration. Replace with the exported realm JSON from US-005.",
   "realm": "hhh",
   "enabled": true,
-  "displayName": "Health Habit Hub"
+  "displayName": "Health Habit Hub",
+  "displayNameHtml": "<b>Health Habit Hub</b>",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "participant",
+        "description": "Study participant role",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "hhh"
+      },
+      {
+        "name": "admin",
+        "description": "Administrator role",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "hhh"
+      },
+      {
+        "name": "researcher",
+        "description": "Researcher role",
+        "composite": false,
+        "clientRole": false,
+        "containerId": "hhh"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "hhh-flutter",
+      "name": "HHH Flutter App",
+      "description": "Public PKCE client for the Flutter mobile/web application",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "hhh://*",
+        "http://localhost:*"
+      ],
+      "webOrigins": [
+        "http://localhost:*"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "hhh-backend",
+      "name": "HHH Backend Service",
+      "description": "Confidential client for the Express backend service",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "protocol": "openid-connect",
+      "redirectUris": [],
+      "webOrigins": [],
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    }
+  ],
+  "defaultRoles": [
+    "offline_access",
+    "uma_authorization"
+  ]
 }
