@@ -583,8 +583,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 35,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "AdminParticipantsScreen created in mobile/lib/screens/admin/. DataTable with Username/Group/Enrolled/Last Active/Surveys% columns; search field filters by username; group dropdown (All/G1-G4); 50-row pagination with Previous/Next; row tap navigates to /admin/participants/:id (placeholder for US-039). AdminParticipant model + AdminService provider added. dart analyze passes."
     },
     {
       "id": "US-036",
