@@ -1,3 +1,14 @@
+## 2026-03-15 - US-051
+- What was implemented: Created `.github/workflows/deploy.yml` — CD workflow with two triggers: `workflow_run` (watches CI workflow on master, only proceeds if CI concluded successfully) and `push: tags: v*`. Deploy job SSHs to production server via `appleboy/ssh-action@v1` using `SERVER_SSH_KEY`, `SERVER_HOST`, `SERVER_USER` secrets; runs `git pull && bash scripts/deploy-full.sh` with `set -euo pipefail`. Release job (tag-only) sets up Flutter, builds APK with `flutter build apk --release` and web with `flutter build web`, zips the web output, then uploads both artifacts to a GitHub Release via `softprops/action-gh-release@v2` with `generate_release_notes: true`.
+- Files changed: .github/workflows/deploy.yml (rewritten), prd.json (US-051 passes=true)
+- **Learnings for future iterations:**
+  - `workflow_run` is the correct GitHub Actions event for "only run deploy after CI passes" across two separate workflow files — use `if: github.event.workflow_run.conclusion == 'success'` on the job
+  - `workflow_run` does NOT carry the full commit SHA of the triggering push by default — the deploy job uses the latest commit on the branch (git pull fetches it)
+  - `softprops/action-gh-release@v2` (not v1) is the current version for uploading release assets; set `files:` to a multiline list of glob patterns
+  - Flutter web output lands in `mobile/build/web/` — zip it (`zip -r flutter-web.zip .` from inside that dir) before uploading since GitHub Releases expects single files, not directories
+  - `appleboy/ssh-action@v1` is the current major version (not v0.1.8 used in the legacy deploy.yml)
+---
+
 ## 2026-03-15 - US-050
 - What was implemented: Updated `.github/workflows/ci.yml` — added `flutter-test` job (flutter pub get, flutter analyze lib/ test/, flutter test test/widget/ --coverage, upload coverage artifact); added backend coverage artifact upload step after `npm test`; scoped triggers to `pull_request` on master/rapid_dev branches and `push` to master. All three jobs (backend-test, flutter-test, ontology-test) run in parallel. Ontology job uses GitHub Actions service containers for neo4j+fuseki (more reliable than docker-compose in CI). `flutter analyze` confirmed exits 0, `npm test` passes 176 tests.
 - Files changed: .github/workflows/ci.yml (updated), prd.json (US-050 passes=true)
