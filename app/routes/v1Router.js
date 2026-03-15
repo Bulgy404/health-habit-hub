@@ -5,6 +5,7 @@ import surveyRouter from './surveyRouter.js';
 import { createRecommendRouter } from './recommendRouter.js';
 import { createProfileRouter } from './profileRouter.js';
 import { createHabitsRouter } from './habitsRouter.js';
+import { createAdminRouter } from './adminRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 
 export function createV1Router({
@@ -13,6 +14,7 @@ export function createV1Router({
   recommenderUrl,
   db,
   neo4jRun,
+  keycloak,
 } = {}) {
   const router = express.Router();
   const authenticate = createAuthMiddleware({ jwksUrl });
@@ -28,9 +30,11 @@ export function createV1Router({
   router.use(authenticate);
 
   // Admin routes: require admin or researcher role
-  router.use('/admin', requireRole('admin', 'researcher'), (req, res) => {
-    res.json({ ok: true });
-  });
+  router.use(
+    '/admin',
+    requireRole('admin', 'researcher'),
+    createAdminRouter({ db, neo4jRun, keycloak })
+  );
 
   // Surveys routes: require participant, admin, or researcher role
   router.use(
