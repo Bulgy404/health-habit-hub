@@ -35,6 +35,37 @@ export function createSurveyRouter({ db } = {}) {
     return connect();
   }
 
+  /**
+   * @swagger
+   * /surveys:
+   *   get:
+   *     summary: List surveys
+   *     description: Participants see only published surveys assigned to their study group. Admins and researchers see all surveys regardless of status.
+   *     tags: [Surveys]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Array of surveys
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/Survey'
+   *             example:
+   *               - id: survey-uuid-001
+   *                 title: Baseline Questionnaire
+   *                 type: questionnaire
+   *                 status: published
+   *                 assignedGroups: [G1, G2]
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // GET /api/v1/surveys – participant sees only published surveys for their group
   router.get('/', async (req, res) => {
     try {
@@ -86,6 +117,65 @@ export function createSurveyRouter({ db } = {}) {
     }
   });
 
+  /**
+   * @swagger
+   * /surveys/{id}:
+   *   get:
+   *     summary: Get a single survey by ID
+   *     description: Returns the full survey including JSON schema (SurveyJS definition) and assigned groups.
+   *     tags: [Surveys]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Survey UUID
+   *         example: survey-uuid-001
+   *     responses:
+   *       200:
+   *         description: Survey detail
+   *         content:
+   *           application/json:
+   *             schema:
+   *               allOf:
+   *                 - $ref: '#/components/schemas/Survey'
+   *                 - type: object
+   *                   properties:
+   *                     jsonSchema:
+   *                       type: object
+   *                       description: SurveyJS JSON definition
+   *             example:
+   *               id: survey-uuid-001
+   *               title: Baseline Questionnaire
+   *               type: questionnaire
+   *               status: published
+   *               assignedGroups: [G1, G2]
+   *               jsonSchema: { pages: [] }
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: Survey not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *             example:
+   *               error: Survey not found
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // GET /api/v1/surveys/:id
   router.get('/:id', async (req, res) => {
     try {
@@ -108,6 +198,66 @@ export function createSurveyRouter({ db } = {}) {
     }
   });
 
+  /**
+   * @swagger
+   * /surveys/{id}/results:
+   *   post:
+   *     summary: Submit survey answers
+   *     description: Stores the authenticated participant's answers for a specific survey. Returns a confirmation with completion timestamp.
+   *     tags: [Surveys]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Survey UUID
+   *         example: survey-uuid-001
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               answers:
+   *                 type: object
+   *                 additionalProperties: true
+   *                 description: SurveyJS answer map (question name → value)
+   *                 example: { q1: "yes", q2: 42 }
+   *     responses:
+   *       201:
+   *         description: Survey response recorded
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 ok: { type: boolean, example: true }
+   *                 surveyId: { type: string, example: survey-uuid-001 }
+   *                 completedAt: { type: string, format: date-time }
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: Survey not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // POST /api/v1/surveys/:id/results
   router.post('/:id/results', async (req, res) => {
     try {

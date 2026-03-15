@@ -1,0 +1,1088 @@
+{
+  "info": {
+    "name": "Health Habit Hub API",
+    "description": "Complete REST API collection for the Health Habit Hub platform. Import this into Postman, set the `baseUrl` and `token` variables, then run any request.\n\nFor the Python Recommender Service spec, see: API-service/openapi.yaml",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string",
+      "description": "Base URL for the HHH API"
+    },
+    {
+      "key": "token",
+      "value": "<your-keycloak-jwt>",
+      "type": "string",
+      "description": "Keycloak JWT bearer token. Obtain from: POST /realms/hhh/protocol/openid-connect/token"
+    },
+    {
+      "key": "participantId",
+      "value": "a1b2c3d4-1234-5678-abcd-ef0123456789",
+      "type": "string",
+      "description": "Example participant userId (UUID)"
+    },
+    {
+      "key": "surveyId",
+      "value": "survey-uuid-001",
+      "type": "string",
+      "description": "Example survey UUID"
+    },
+    {
+      "key": "habitId",
+      "value": "habit-001",
+      "type": "string",
+      "description": "Example habit node ID"
+    },
+    {
+      "key": "sessionId",
+      "value": "session-abc123",
+      "type": "string",
+      "description": "Example Keycloak session ID"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check health of all downstream services (neo4j, mongo, fuseki, keycloak, recommender). No authentication required."
+          },
+          "response": [
+            {
+              "name": "200 – All services healthy",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"status\":\"ok\",\"services\":{\"neo4j\":{\"status\":\"ok\",\"latencyMs\":8},\"mongo\":{\"status\":\"ok\",\"latencyMs\":5},\"fuseki\":{\"status\":\"ok\",\"latencyMs\":22},\"keycloak\":{\"status\":\"ok\",\"latencyMs\":30},\"recommender\":{\"status\":\"ok\",\"latencyMs\":15}}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Docs",
+      "item": [
+        {
+          "name": "GET /docs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/docs",
+              "host": ["{{baseUrl}}"],
+              "path": ["docs"]
+            },
+            "description": "Open Swagger UI in browser for interactive API documentation."
+          },
+          "response": []
+        },
+        {
+          "name": "GET /docs/openapi.json",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/docs/openapi.json",
+              "host": ["{{baseUrl}}"],
+              "path": ["docs", "openapi.json"]
+            },
+            "description": "Raw OpenAPI 3.1 spec as JSON."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "GET /profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile"]
+            },
+            "description": "Get the authenticated user's profile. Returns 404 if no profile has been created yet."
+          },
+          "response": [
+            {
+              "name": "200 – Profile found",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"userId\":\"a1b2c3d4-1234-5678-abcd-ef0123456789\",\"answers\":{\"age\":30,\"goal\":\"exercise more\"},\"completedAt\":\"2026-03-15T10:00:00.000Z\",\"updatedAt\":\"2026-03-15T10:00:00.000Z\"}"
+            },
+            {
+              "name": "401 – Unauthorized",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"error\":\"Unauthorized\"}"
+            },
+            {
+              "name": "404 – Profile not found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"error\":\"Profile not found\"}"
+            }
+          ]
+        },
+        {
+          "name": "POST /profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"answers\":{\"age\":30,\"goal\":\"exercise more\"},\"completedAt\":\"2026-03-15T10:00:00.000Z\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["profile"]
+            },
+            "description": "Create or update the authenticated user's profile."
+          },
+          "response": [
+            {
+              "name": "200 – Profile upserted",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"userId\":\"a1b2c3d4-1234-5678-abcd-ef0123456789\",\"answers\":{\"age\":30,\"goal\":\"exercise more\"},\"completedAt\":\"2026-03-15T10:00:00.000Z\",\"updatedAt\":\"2026-03-15T10:00:00.000Z\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Surveys",
+      "item": [
+        {
+          "name": "GET /surveys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/surveys",
+              "host": ["{{baseUrl}}"],
+              "path": ["surveys"]
+            },
+            "description": "List surveys. Participants see only published surveys for their group; admins/researchers see all."
+          },
+          "response": [
+            {
+              "name": "200 – Surveys list",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"assignedGroups\":[\"G1\",\"G2\"]}]"
+            }
+          ]
+        },
+        {
+          "name": "GET /surveys/:id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/surveys/{{surveyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["surveys", "{{surveyId}}"]
+            },
+            "description": "Get a single survey by ID including the SurveyJS JSON schema."
+          },
+          "response": [
+            {
+              "name": "200 – Survey detail",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"assignedGroups\":[\"G1\",\"G2\"],\"jsonSchema\":{\"pages\":[]}}"
+            },
+            {
+              "name": "404 – Survey not found",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"error\":\"Survey not found\"}"
+            }
+          ]
+        },
+        {
+          "name": "POST /surveys/:id/results",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"answers\":{\"q1\":\"yes\",\"q2\":42}}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/surveys/{{surveyId}}/results",
+              "host": ["{{baseUrl}}"],
+              "path": ["surveys", "{{surveyId}}", "results"]
+            },
+            "description": "Submit survey answers for the authenticated participant."
+          },
+          "response": [
+            {
+              "name": "201 – Survey response recorded",
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"ok\":true,\"surveyId\":\"survey-uuid-001\",\"completedAt\":\"2026-03-15T10:00:00.000Z\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Habits",
+      "item": [
+        {
+          "name": "GET /habits/public",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/habits/public",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits", "public"]
+            },
+            "description": "Get anonymized habit list with annotation counts for the habit graph visualization."
+          },
+          "response": [
+            {
+              "name": "200 – Habits list",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[{\"id\":\"habit-001\",\"name\":\"Go for a 30-min walk daily\",\"category\":\"Group1\",\"bcioClass\":null,\"annotationCounts\":{\"helpful\":5,\"iDoThis\":3}}]"
+            }
+          ]
+        },
+        {
+          "name": "GET /habits/stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/habits/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits", "stats"]
+            },
+            "description": "Get aggregate habit donation statistics: total count, by category, and daily activity over 30 days."
+          },
+          "response": [
+            {
+              "name": "200 – Stats",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"total\":142,\"byCategory\":[{\"category\":\"Group1\",\"count\":42}],\"byDay\":[{\"date\":\"2026-03-15\",\"count\":12}]}"
+            }
+          ]
+        },
+        {
+          "name": "POST /habits/:id/annotate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\":\"helpful\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/habits/{{habitId}}/annotate",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits", "{{habitId}}", "annotate"]
+            },
+            "description": "Add an anonymous annotation (helpful or iDoThis) to a habit. Returns updated counts."
+          },
+          "response": [
+            {
+              "name": "200 – Annotation stored",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"habitId\":\"habit-001\",\"annotationCounts\":{\"helpful\":6,\"iDoThis\":3}}"
+            },
+            {
+              "name": "400 – Invalid type",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"error\":\"type must be \\\"helpful\\\" or \\\"iDoThis\\\"\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Recommend",
+      "item": [
+        {
+          "name": "GET /recommend/:userId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/recommend/{{participantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommend", "{{participantId}}"]
+            },
+            "description": "Get personalized habit recommendations for a user (proxied to Python recommender)."
+          },
+          "response": [
+            {
+              "name": "200 – Recommendations",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[{\"recommendationId\":\"rec-001\",\"habitName\":\"Walk 30 minutes daily\",\"rationale\":\"Based on your goal to exercise more\",\"citation\":\"BCIO:0000042\"}]"
+            }
+          ]
+        },
+        {
+          "name": "GET /recommend/:userId/history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/recommend/{{participantId}}/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommend", "{{participantId}}", "history"]
+            },
+            "description": "Get recommendation history (accepted + dismissed) for a user."
+          },
+          "response": [
+            {
+              "name": "200 – History",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[{\"recommendationId\":\"rec-001\",\"type\":\"accepted\",\"timestamp\":\"2026-03-15T08:00:00.000Z\"}]"
+            }
+          ]
+        },
+        {
+          "name": "POST /recommend/classify",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"text\":\"I go for a 30-minute walk every morning\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/recommend/classify",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommend", "classify"]
+            },
+            "description": "Classify a habit text into a BCIO behavior category (proxied to Python classifier)."
+          },
+          "response": [
+            {
+              "name": "200 – Classification",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"class\":\"Physical activity\",\"confidence\":0.92,\"bcioUri\":\"http://humanbehaviourchange.org/ontology/BCIO_000042\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin – Participants",
+      "item": [
+        {
+          "name": "GET /admin/participants",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text",
+                "description": "Requires admin or researcher role"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/participants",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "participants"]
+            },
+            "description": "List all active (non-deleted) participants."
+          },
+          "response": [
+            {
+              "name": "200 – Participants list",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[{\"userId\":\"a1b2c3d4-1234-5678-abcd-ef0123456789\",\"username\":\"p-a1b2c3d4\",\"group\":\"G2\",\"enrolledAt\":\"2026-03-01T09:00:00.000Z\",\"lastActive\":\"2026-03-15T14:00:00.000Z\",\"surveyCompletionPct\":0.5}]"
+            },
+            {
+              "name": "403 – Forbidden",
+              "status": "Forbidden",
+              "code": 403,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"error\":\"Forbidden\"}"
+            }
+          ]
+        },
+        {
+          "name": "POST /admin/participants",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/participants",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "participants"]
+            },
+            "description": "Create a new participant (Keycloak user + MongoDB record). Returns credentials and token card URL."
+          },
+          "response": [
+            {
+              "name": "200 – Participant created",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"userId\":\"a1b2c3d4-1234-5678-abcd-ef0123456789\",\"username\":\"p-a1b2c3d4\",\"password\":\"Xk9mP2rNv7wQ\",\"tokenCardUrl\":\"/api/v1/admin/participants/a1b2c3d4.../token-card\"}"
+            }
+          ]
+        },
+        {
+          "name": "PATCH /admin/participants/:id/group",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"group\":\"G2\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/participants/{{participantId}}/group",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "participants", "{{participantId}}", "group"]
+            },
+            "description": "Assign participant to study group G1-G4 (updates MongoDB, Keycloak attributes, and Neo4j labels)."
+          },
+          "response": [
+            {
+              "name": "200 – Group updated",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"ok\":true,\"userId\":\"a1b2c3d4-1234-5678-abcd-ef0123456789\",\"group\":\"G2\"}"
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/participants/:id/token-card",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/participants/{{participantId}}/token-card?format=both",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "participants", "{{participantId}}", "token-card"],
+              "query": [{"key": "format", "value": "both"}]
+            },
+            "description": "Download participant token card as PDF. format=qr|print|both (default: both)."
+          },
+          "response": [
+            {
+              "name": "200 – PDF token card",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/pdf"}],
+              "body": "<binary PDF>"
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/participants/:id/progress",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/participants/{{participantId}}/progress",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "participants", "{{participantId}}", "progress"]
+            },
+            "description": "Get participant progress: profile, surveys, habit count, recommendations, timeline."
+          },
+          "response": [
+            {
+              "name": "200 – Progress summary",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"profile\":{\"completed\":true,\"completedAt\":\"2026-03-02T10:00:00.000Z\"},\"surveys\":[{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"completedAt\":\"2026-03-03T11:00:00.000Z\"}],\"habitsCount\":7,\"recommendations\":{\"accepted\":3,\"dismissed\":1},\"timeline\":[{\"type\":\"enrolled\",\"timestamp\":\"2026-03-01T09:00:00.000Z\",\"detail\":\"Participant enrolled\"}]}"
+            }
+          ]
+        },
+        {
+          "name": "DELETE /admin/participants/:id",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/participants/{{participantId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "participants", "{{participantId}}"]
+            },
+            "description": "Soft-delete a participant (sets deletedAt, anonymizes username). GDPR-safe."
+          },
+          "response": [
+            {
+              "name": "200 – Participant deleted",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"ok\":true}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin – Surveys",
+      "item": [
+        {
+          "name": "GET /admin/surveys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/surveys",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "surveys"]
+            },
+            "description": "List all surveys (all statuses). Admin/researcher only."
+          },
+          "response": [
+            {
+              "name": "200 – All surveys",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"assignedGroups\":[\"G1\",\"G2\"]}]"
+            }
+          ]
+        },
+        {
+          "name": "POST /admin/surveys",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"jsonSchema\":{\"pages\":[]},\"assignedGroups\":[\"G1\",\"G2\"]}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/surveys",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "surveys"]
+            },
+            "description": "Create a new survey in draft status."
+          },
+          "response": [
+            {
+              "name": "201 – Survey created",
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"draft\",\"assignedGroups\":[\"G1\",\"G2\"]}"
+            }
+          ]
+        },
+        {
+          "name": "PUT /admin/surveys/:id",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Updated Questionnaire\",\"assignedGroups\":[\"G1\",\"G2\",\"G3\"]}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/surveys/{{surveyId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "surveys", "{{surveyId}}"]
+            },
+            "description": "Update survey fields (any combination of title, type, jsonSchema, assignedGroups, status)."
+          },
+          "response": [
+            {
+              "name": "200 – Updated",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"ok\":true,\"id\":\"survey-uuid-001\"}"
+            }
+          ]
+        },
+        {
+          "name": "PATCH /admin/surveys/:id/status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"status\":\"published\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/surveys/{{surveyId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "surveys", "{{surveyId}}", "status"]
+            },
+            "description": "Transition survey status: draft → published → archived."
+          },
+          "response": [
+            {
+              "name": "200 – Status updated",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"ok\":true,\"id\":\"survey-uuid-001\",\"status\":\"published\"}"
+            }
+          ]
+        },
+        {
+          "name": "PATCH /admin/surveys/:id/groups",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"groups\":[\"G1\",\"G3\"]}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/surveys/{{surveyId}}/groups",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "surveys", "{{surveyId}}", "groups"]
+            },
+            "description": "Assign study groups to a survey."
+          },
+          "response": [
+            {
+              "name": "200 – Groups updated",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"ok\":true,\"id\":\"survey-uuid-001\",\"assignedGroups\":[\"G1\",\"G3\"]}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin – Habits Feed",
+      "item": [
+        {
+          "name": "GET /admin/habits/feed",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/habits/feed?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "habits", "feed"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "20"},
+                {"key": "group", "value": "G1", "disabled": true},
+                {"key": "category", "value": "", "disabled": true},
+                {"key": "from", "value": "2026-03-01", "disabled": true},
+                {"key": "to", "value": "2026-03-31", "disabled": true}
+              ]
+            },
+            "description": "Paginated donated habits feed with optional filters."
+          },
+          "response": [
+            {
+              "name": "200 – Feed page",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"total\":142,\"page\":1,\"limit\":20,\"results\":[{\"participantId\":\"anon-001\",\"habitName\":\"Walk daily\",\"category\":\"G1\",\"donatedAt\":\"2026-03-15T08:00:00.000Z\"}]}"
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/habits/feed/export",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/habits/feed/export?format=csv",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "habits", "feed", "export"],
+              "query": [
+                {"key": "format", "value": "csv"},
+                {"key": "group", "value": "G1", "disabled": true},
+                {"key": "from", "value": "2026-03-01", "disabled": true},
+                {"key": "to", "value": "2026-03-31", "disabled": true}
+              ]
+            },
+            "description": "Export donated habits as CSV file."
+          },
+          "response": [
+            {
+              "name": "200 – CSV download",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "text/csv"}],
+              "body": "participantId,habitName,category,donatedAt\nanon-001,Walk daily,G1,2026-03-15T08:00:00.000Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin – Sessions",
+      "item": [
+        {
+          "name": "GET /admin/sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sessions"]
+            },
+            "description": "List all active Keycloak sessions in the hhh realm."
+          },
+          "response": [
+            {
+              "name": "200 – Sessions",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[{\"id\":\"session-abc123\",\"userId\":\"a1b2c3d4-...\",\"username\":\"p-a1b2c3d4\",\"start\":1742000000000,\"lastAccess\":1742040000000}]"
+            }
+          ]
+        },
+        {
+          "name": "DELETE /admin/sessions/:sessionId",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/sessions/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "sessions", "{{sessionId}}"]
+            },
+            "description": "Revoke a Keycloak session, forcing the user to re-authenticate."
+          },
+          "response": [
+            {
+              "name": "200 – Session revoked",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"ok\":true}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin – Settings",
+      "item": [
+        {
+          "name": "GET /admin/settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings"]
+            },
+            "description": "Get all admin configuration settings as a key-value map."
+          },
+          "response": [
+            {
+              "name": "200 – Settings",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"token_card_format\":\"both\"}"
+            }
+          ]
+        },
+        {
+          "name": "PUT /admin/settings/:key",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"value\":\"qr\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/settings/token_card_format",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "settings", "token_card_format"]
+            },
+            "description": "Update a single admin setting by key."
+          },
+          "response": [
+            {
+              "name": "200 – Setting updated",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"ok\":true,\"key\":\"token_card_format\",\"value\":\"qr\"}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

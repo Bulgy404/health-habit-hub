@@ -20,6 +20,48 @@ export function createRecommendRouter({ recommenderUrl } = {}) {
     recommenderUrl || process.env.RECOMMENDER_URL || 'http://recommender:8000';
   const router = express.Router();
 
+  /**
+   * @swagger
+   * /recommend/{userId}/history:
+   *   get:
+   *     summary: Get recommendation history for a user
+   *     description: Proxies to the Python recommender service. Returns all past recommendations (accepted and dismissed) for the given user.
+   *     tags: [Recommend]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Keycloak user UUID
+   *         example: a1b2c3d4-1234-5678-abcd-ef0123456789
+   *     responses:
+   *       200:
+   *         description: Recommendation history list
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 type: object
+   *                 properties:
+   *                   recommendationId: { type: string }
+   *                   type: { type: string, enum: [accepted, dismissed] }
+   *                   timestamp: { type: string, format: date-time }
+   *             example:
+   *               - recommendationId: rec-001
+   *                 type: accepted
+   *                 timestamp: "2026-03-15T08:00:00.000Z"
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // GET /api/v1/recommend/:userId/history → Python GET /recommend/:userId/history
   router.get('/:userId/history', async (req, res) => {
     await proxyToRecommender(
@@ -29,6 +71,50 @@ export function createRecommendRouter({ recommenderUrl } = {}) {
     );
   });
 
+  /**
+   * @swagger
+   * /recommend/{userId}:
+   *   get:
+   *     summary: Get habit recommendations for a user
+   *     description: Proxies to the Python recommender service. Returns a list of personalized habit recommendations with rationale and BCIO citation.
+   *     tags: [Recommend]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: string
+   *           format: uuid
+   *         description: Keycloak user UUID
+   *         example: a1b2c3d4-1234-5678-abcd-ef0123456789
+   *     responses:
+   *       200:
+   *         description: List of habit recommendations
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 type: object
+   *                 properties:
+   *                   recommendationId: { type: string }
+   *                   habitName: { type: string }
+   *                   rationale: { type: string }
+   *                   citation: { type: string }
+   *             example:
+   *               - recommendationId: rec-001
+   *                 habitName: Walk 30 minutes daily
+   *                 rationale: Based on your goal to exercise more
+   *                 citation: BCIO:0000042
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // GET /api/v1/recommend/:userId → Python GET /recommend/:userId
   router.get('/:userId', async (req, res) => {
     await proxyToRecommender(
@@ -38,6 +124,51 @@ export function createRecommendRouter({ recommenderUrl } = {}) {
     );
   });
 
+  /**
+   * @swagger
+   * /recommend/classify:
+   *   post:
+   *     summary: Classify a habit text into a BCIO behavior category
+   *     description: Proxies to the Python recommender context classifier. Returns the predicted BCIO class for the given habit description.
+   *     tags: [Recommend]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [text]
+   *             properties:
+   *               text:
+   *                 type: string
+   *                 description: Free-text habit description to classify
+   *                 example: I go for a 30-minute walk every morning
+   *     responses:
+   *       200:
+   *         description: Classification result
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 class:
+   *                   type: string
+   *                   example: Physical activity
+   *                 confidence:
+   *                   type: number
+   *                   example: 0.92
+   *                 bcioUri:
+   *                   type: string
+   *                   example: "http://humanbehaviourchange.org/ontology/BCIO_000042"
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // POST /api/v1/recommend/classify → Python POST /classify
   router.post('/classify', async (req, res) => {
     await proxyToRecommender(req, res, `${baseUrl}/classify`);

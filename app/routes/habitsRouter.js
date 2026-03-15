@@ -42,6 +42,43 @@ export function createHabitsRouter({ db, neo4jRun } = {}) {
     res.json({ ok: true });
   });
 
+  /**
+   * @swagger
+   * /habits/public:
+   *   get:
+   *     summary: Get anonymized public habit list
+   *     description: Returns all donated habits with annotation counts. No personal data included. Useful for the habit graph visualization.
+   *     tags: [Habits]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: List of anonymized habits
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: array
+   *               items:
+   *                 $ref: '#/components/schemas/Habit'
+   *             example:
+   *               - id: habit-001
+   *                 name: Go for a 30-min walk daily
+   *                 category: Group1
+   *                 bcioClass: null
+   *                 annotationCounts: { helpful: 5, iDoThis: 3 }
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // GET /api/v1/habits/public
   // Returns anonymized habit list with annotation counts
   router.get('/public', async (req, res) => {
@@ -84,6 +121,70 @@ export function createHabitsRouter({ db, neo4jRun } = {}) {
     }
   });
 
+  /**
+   * @swagger
+   * /habits/{id}/annotate:
+   *   post:
+   *     summary: Annotate a habit
+   *     description: Adds an anonymous annotation ("helpful" or "iDoThis") to a habit node. Returns updated annotation counts.
+   *     tags: [Habits]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Neo4j habit node ID
+   *         example: habit-001
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [type]
+   *             properties:
+   *               type:
+   *                 type: string
+   *                 enum: [helpful, iDoThis]
+   *                 example: helpful
+   *     responses:
+   *       200:
+   *         description: Annotation stored; updated counts returned
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 habitId: { type: string, example: habit-001 }
+   *                 annotationCounts:
+   *                   type: object
+   *                   properties:
+   *                     helpful: { type: integer, example: 6 }
+   *                     iDoThis: { type: integer, example: 3 }
+   *       400:
+   *         description: Invalid annotation type
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *             example:
+   *               error: 'type must be "helpful" or "iDoThis"'
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // POST /api/v1/habits/:id/annotate
   // Stores anonymous annotation (no userId) and returns updated counts
   router.post('/:id/annotate', async (req, res) => {
@@ -121,6 +222,47 @@ export function createHabitsRouter({ db, neo4jRun } = {}) {
     }
   });
 
+  /**
+   * @swagger
+   * /habits/stats:
+   *   get:
+   *     summary: Get aggregate habit donation statistics
+   *     description: Returns total habit count, breakdown by study group category, and daily annotation activity over the last 30 days.
+   *     tags: [Habits]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Habit statistics
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/HabitStats'
+   *             example:
+   *               total: 142
+   *               byCategory:
+   *                 - category: Group1
+   *                   count: 42
+   *                 - category: Group2
+   *                   count: 38
+   *               byDay:
+   *                 - date: "2026-03-14"
+   *                   count: 7
+   *                 - date: "2026-03-15"
+   *                   count: 12
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // GET /api/v1/habits/stats
   // Returns {total, byCategory, byDay}
   router.get('/stats', async (req, res) => {
