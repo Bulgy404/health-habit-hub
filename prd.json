@@ -633,8 +633,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 38,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created admin_participant_detail_screen.dart (AdminParticipantDetailScreen — ConsumerStatefulWidget; fetches GET /api/v1/admin/participants/:id/progress via AdminService.fetchParticipantProgress(); shows ProfileCard (check/cross icon + completedAt), SurveysSection (list with timestamps), HabitsSection (ExpansionTile showing count + detail note), RecommendationsCard (accepted/dismissed count chips), TimelineSection (vertical timeline with icons per event type); Export JSON button fetches progress and calls Share.share(jsonString) via share_plus; back navigation via GoRouter nested route); created participant_progress.dart model (ParticipantProgress/ProfileStatus/SurveyEntry/RecommendationCounts/TimelineEntry + toJson()); added fetchParticipantProgress() to AdminService; added share_plus: ^10.1.0 to pubspec.yaml; updated main.dart to replace _PlaceholderScreen with AdminParticipantDetailScreen; dart analyze: no issues."
     },
     {
       "id": "US-039",
