@@ -924,8 +924,8 @@
         "docs/guides/admin-guide.pdf generated"
       ],
       "priority": 56,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created docs/guides/admin-guide.md with Quick Start checklist (8 steps) and all 8 sections. Placeholder PNGs generated in docs/assets/screenshots/admin/ (13 files). Callout annotations listed as numbered descriptions in markdown tables. Generated docs/guides/admin-guide.pdf via pandoc (LaTeX engine, ToC reference warnings only — PDF created successfully)."
     },
     {
       "id": "US-057",

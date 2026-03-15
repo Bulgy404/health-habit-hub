@@ -1,0 +1,283 @@
+# Health Habit Hub — Admin Guide
+
+This guide walks researchers and administrators through every day-to-day task in the Health Habit Hub platform. No developer assistance is needed for the operations described here.
+
+---
+
+## Quick Start: Setting Up a New Study Cohort
+
+Use this checklist when launching a new cohort of participants.
+
+1. **Log in as admin** — open `https://hhh.tu-dresden.de/admin` and authenticate with your admin credentials (Section 1).
+2. **Create participant accounts** — for each participant, use *Participants → New Participant* and note the generated token (Section 2).
+3. **Download and distribute token cards** — download the printable PDF token card for each participant and hand it out physically or via post (Section 2).
+4. **Assign study groups** — assign each participant to one of the four study groups (G1–G4) in the participant's detail view (Section 3).
+5. **Create or publish questionnaires** — set up the baseline profile survey and any follow-up questionnaires; assign them to the correct groups (Section 4).
+6. **Verify first logins** — open the participant progress dashboard and confirm each participant's first login is registered (Section 6).
+7. **Monitor habit donations** — once the study is running, use the habits dashboard to check donation counts per group (Section 5).
+8. **Export data for analysis** — use the CSV export button to download donated habits for offline analysis (Section 5).
+
+---
+
+## Table of Contents
+
+1. [Logging In as Admin](#1-logging-in-as-admin)
+2. [Creating a Participant and Downloading the Token Card](#2-creating-a-participant-and-downloading-the-token-card)
+3. [Assigning Study Groups](#3-assigning-study-groups)
+4. [Configuring Questionnaires](#4-configuring-questionnaires)
+5. [Monitoring Donated Habits](#5-monitoring-donated-habits)
+6. [Tracking Participant Progress](#6-tracking-participant-progress)
+7. [Revoking Device Sessions](#7-revoking-device-sessions)
+8. [Configuring Token Card Format in Settings](#8-configuring-token-card-format-in-settings)
+
+---
+
+## 1. Logging In as Admin
+
+The admin panel is accessible only to users with the `admin` or `researcher` Keycloak role. Participants cannot access any admin screen even if they navigate to the URL.
+
+**Step 1.** Open a browser and navigate to `https://hhh.tu-dresden.de` (or `http://localhost:3000` in development).
+
+**Step 2.** On the login screen enter your **admin username** and **password** (not a token card — admin accounts use a regular password set in Keycloak). Tap **Login**.
+
+**Step 3.** After login, the navigation bar will show an extra **Admin** tab (gear icon). Tap it to open the admin panel.
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Admin login screen](../assets/screenshots/admin/01-admin-login.png) | **(1)** Username field — enter your admin account username. **(2)** Password field — enter your admin password (not a token card code). **(3)** Login button — tap to authenticate. **(4)** HHH logo and version number shown at the top of the login card. |
+
+*Figure 1: Admin login screen. Callout numbers correspond to the table above.*
+
+> **Tip:** If you see "Invalid credentials", check that you are using an admin account (not a participant token). Participant tokens are one-time tokens and cannot be used to log in as admin.
+
+---
+
+## 2. Creating a Participant and Downloading the Token Card
+
+Each study participant needs an account and a printable token card with their QR-code credentials.
+
+**Step 1.** In the Admin panel, tap **Participants** in the left sidebar.
+
+**Step 2.** Tap the **+ New Participant** button in the top right.
+
+**Step 3.** Fill in the **Display Name** (optional, for your reference only — participants are pseudonymised) and select the **Study Group** (you can change this later; see Section 3).
+
+**Step 4.** Tap **Create**. The system generates a pseudonymous username (e.g. `p-2024-0042`) and a one-time access token.
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Create participant form](../assets/screenshots/admin/02-create-participant.png) | **(1)** Display Name field — researcher-visible only; not shown to the participant. **(2)** Study Group dropdown — defaults to G1; can be changed later. **(3)** Create button — generates credentials and creates the Keycloak account. |
+
+*Figure 2a: New participant creation form.*
+
+**Step 5.** After creation, the participant's detail view opens automatically. Tap **Download Token Card** to get a printable PDF.
+
+**Step 6.** Print the token card and hand it to the participant. The card contains:
+- The study logo and participant pseudonym
+- A QR code that encodes `hhh://login?user=<username>&token=<password>`
+- The username and password in plain text (for manual entry)
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Download token card button](../assets/screenshots/admin/02-download-token-card.png) | **(1)** Participant pseudonym and internal ID. **(2)** Download Token Card button — generates the printable PDF. **(3)** Copy Credentials button — copies username:password to clipboard for digital distribution. **(4)** QR code preview showing the encoded deep link. |
+
+*Figure 2b: Participant detail view after creation, showing the token card download button.*
+
+> **Tip:** The token card PDF is re-downloadable at any time from the participant's detail view. Tokens do not expire unless you manually revoke them.
+
+---
+
+## 3. Assigning Study Groups
+
+Each participant must be assigned to exactly one study group (G1–G4). The group determines which questionnaire items are shown and how habits are classified.
+
+| Group | Description |
+|---|---|
+| G1 | Full intervention — structured habit donation |
+| G2 | Partial intervention — structured donation without recommendations |
+| G3 | Full intervention + free-text annotation |
+| G4 | Minimal intervention + free-text annotation |
+
+**Step 1.** In the Admin panel, tap **Participants** and open the participant you want to assign.
+
+**Step 2.** Tap the **Study Group** dropdown (currently shows the group assigned at creation).
+
+**Step 3.** Select the new group and tap **Save**.
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Assign study group](../assets/screenshots/admin/03-assign-group.png) | **(1)** Participant pseudonym and current group badge. **(2)** Study Group dropdown — select G1, G2, G3, or G4. **(3)** Save button — immediately updates the group in Keycloak and Neo4j. **(4)** Group change history log showing previous assignments with timestamps. |
+
+*Figure 3: Assigning a study group to a participant.*
+
+> **Warning:** Changing a participant's group mid-study may affect recommendation quality and data integrity. Only change the group before the participant logs in for the first time, unless instructed by the study lead.
+
+---
+
+## 4. Configuring Questionnaires
+
+Questionnaires (surveys) are JSON-schema driven forms shown to participants on the Donate and Profile screens. Admins can create, edit, publish, archive, and assign questionnaires to specific study groups.
+
+### Creating a Questionnaire
+
+**Step 1.** In the Admin panel, tap **Questionnaires** in the sidebar, then tap **+ New Questionnaire**.
+
+**Step 2.** Enter a **Title** and select a **Type**: `profile` (shown on the Profile screen) or `habit` (shown after habit donation).
+
+**Step 3.** Paste or type the **JSON Schema** that defines the form fields. The schema must follow the JSON Schema draft-07 format. Each property becomes one form field.
+
+**Step 4.** Tap **Save as Draft**. The questionnaire is not yet visible to participants.
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Questionnaire list](../assets/screenshots/admin/04-questionnaire-list.png) | **(1)** List of all questionnaires with status badges (Draft / Published / Archived). **(2)** + New Questionnaire button. **(3)** Filter bar to search by title or type. **(4)** Row action buttons: Edit, Publish/Archive, Assign Groups, Delete. |
+
+*Figure 4a: Questionnaire list view.*
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Create questionnaire form](../assets/screenshots/admin/04-questionnaire-create.png) | **(1)** Title field. **(2)** Type selector (profile / habit). **(3)** JSON Schema editor with syntax highlighting. **(4)** Preview button — renders the form as participants will see it. **(5)** Save as Draft button. |
+
+*Figure 4b: New questionnaire creation form.*
+
+### Publishing and Archiving
+
+- **Publish:** Tap the **Publish** action on a Draft questionnaire. Published questionnaires are immediately visible to all assigned groups.
+- **Archive:** Tap **Archive** on a Published questionnaire to hide it from participants. Existing responses are retained.
+
+### Assigning Questionnaires to Groups
+
+**Step 1.** On the questionnaire list, tap **Assign Groups** for the questionnaire.
+
+**Step 2.** Toggle on the study groups (G1–G4) that should see this questionnaire.
+
+**Step 3.** Tap **Save Assignment**.
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Assign questionnaire to groups](../assets/screenshots/admin/04-questionnaire-assign-groups.png) | **(1)** Questionnaire name shown at the top. **(2)** Group toggle checkboxes (G1–G4). **(3)** Currently assigned groups highlighted in teal. **(4)** Save Assignment button. |
+
+*Figure 4c: Assigning a questionnaire to specific study groups.*
+
+---
+
+## 5. Monitoring Donated Habits
+
+The Habits dashboard shows all habits donated across all participants, with filter and export capabilities.
+
+**Step 1.** In the Admin panel, tap **Habits** in the sidebar.
+
+**Step 2.** The list shows all habit donations sorted by submission date (newest first). Each row shows: pseudonym, habit text, study group, BCIO category, and submission timestamp.
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Habits list](../assets/screenshots/admin/05-habits-list.png) | **(1)** Total donation count. **(2)** List of habit donations with group and BCIO category columns. **(3)** Sort controls (by date, group, or category). **(4)** Filter bar (see below). **(5)** CSV Export button. |
+
+*Figure 5a: Habits monitoring list.*
+
+### Filtering Habits
+
+**Step 1.** Use the filter bar above the list to narrow results:
+- **Group filter:** Select G1, G2, G3, G4, or All.
+- **BCIO category filter:** Select a BCT taxonomy category or All.
+- **Date range:** Set a start and end date to filter by donation date.
+
+**Step 2.** The list updates in real time as you change filters.
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Habits filter bar](../assets/screenshots/admin/05-habits-filter.png) | **(1)** Group filter dropdown. **(2)** BCIO category dropdown. **(3)** Start date picker. **(4)** End date picker. **(5)** Reset Filters button. |
+
+*Figure 5b: Filter controls on the habits dashboard.*
+
+### Exporting to CSV
+
+**Step 1.** Apply any filters you want (or leave all at "All" to export everything).
+
+**Step 2.** Tap **Export CSV**. The browser downloads `habits_export_<date>.csv`.
+
+The CSV contains columns: `participant_pseudonym`, `study_group`, `habit_text`, `bcio_category`, `submitted_at`, `annotation_text` (G3/G4 only).
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![CSV export confirmation](../assets/screenshots/admin/05-habits-export.png) | **(1)** Export CSV button. **(2)** Row count shown before export (confirms scope). **(3)** Download progress indicator. |
+
+*Figure 5c: Triggering a CSV export.*
+
+---
+
+## 6. Tracking Participant Progress
+
+The participant progress view shows activity summaries for each participant to help identify inactive or struggling participants.
+
+**Step 1.** In the Admin panel, tap **Participants** and open a participant's detail view.
+
+**Step 2.** Scroll to the **Activity** section. It shows:
+- **First login date** (or "Not yet logged in")
+- **Profile survey completed** (Yes / No)
+- **Habits donated count** (total and per week)
+- **Last active date**
+- **Recommendations accepted / dismissed count**
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Participant progress view](../assets/screenshots/admin/06-participant-progress.png) | **(1)** First login date (or "Not yet logged in" banner). **(2)** Profile completion badge — green tick if completed. **(3)** Habits donated — number badge with weekly sparkline. **(4)** Recommendations panel — accepted vs dismissed ratio bar. **(5)** Last active timestamp. |
+
+*Figure 6: Participant activity summary.*
+
+> **Tip:** Use the **Participants** list view's **"No logins yet"** filter (Group filter → Status: Never logged in) to identify participants who have not activated their token cards.
+
+---
+
+## 7. Revoking Device Sessions
+
+If a participant loses their token card or a device is compromised, you can revoke their active sessions. This forces a re-authentication with a new token.
+
+**Step 1.** Open the participant's detail view (Admin panel → Participants → select participant).
+
+**Step 2.** Tap **Revoke All Sessions**. A confirmation dialog appears: *"This will log the participant out of all devices immediately. Continue?"*
+
+**Step 3.** Tap **Confirm**. The participant's Keycloak sessions are terminated. They will see an "Invalid session" message on their next app action.
+
+**Step 4.** If the participant needs a new token card (e.g. lost card), tap **Regenerate Token** to issue a new random password, then download the updated token card (Section 2).
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Revoke sessions panel](../assets/screenshots/admin/07-revoke-session.png) | **(1)** Active Sessions count — shows how many devices are currently authenticated. **(2)** Revoke All Sessions button (red, destructive action). **(3)** Confirmation dialog with participant pseudonym. **(4)** Regenerate Token button — issues a new password without revoking existing sessions. |
+
+*Figure 7: Revoking a participant's active device sessions.*
+
+> **Warning:** Revoking sessions is immediate and irreversible. The participant will need their new token card to log in again.
+
+---
+
+## 8. Configuring Token Card Format in Settings
+
+The token card PDF layout — logo, font size, QR code position, and colour scheme — can be adjusted in the admin settings without code changes.
+
+**Step 1.** In the Admin panel, tap **Settings** (gear icon in the sidebar footer).
+
+**Step 2.** Under **Token Card Format**, you can configure:
+
+| Setting | Description | Default |
+|---|---|---|
+| Logo URL | URL or base64 of the logo image shown at the top | HHH shield logo |
+| Primary colour | Hex colour for header and QR code border | `#1A73E8` |
+| Font size | Body text size in pt | `11` |
+| QR code size | QR block pixel size (80–200) | `120` |
+| Footer text | Custom text at card bottom (e.g. study contact) | `"Contact: study@tu-dresden.de"` |
+| Include plain text credentials | Show username/password below QR code | `true` |
+
+**Step 3.** Tap **Preview Token Card** to see a live preview PDF with the current settings applied to a sample participant.
+
+**Step 4.** Tap **Save Settings** to persist. All subsequently downloaded token cards use the new format.
+
+| Screenshot | Callout annotations |
+|---|---|
+| ![Token card settings panel](../assets/screenshots/admin/08-token-card-settings.png) | **(1)** Logo URL input with inline image preview. **(2)** Primary colour swatch picker. **(3)** QR code size slider. **(4)** Footer text input. **(5)** Include plain text credentials toggle. **(6)** Preview Token Card button — opens PDF preview in a new tab. **(7)** Save Settings button. |
+
+*Figure 8: Token card format settings.*
+
+---
+
+*Health Habit Hub — Admin Guide v1.0 · TU Dresden · 2024*
