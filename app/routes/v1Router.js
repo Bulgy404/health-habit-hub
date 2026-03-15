@@ -15,6 +15,7 @@ export function createV1Router({
   db,
   neo4jRun,
   keycloak,
+  tokenCardService,
 } = {}) {
   const router = express.Router();
   const authenticate = createAuthMiddleware({ jwksUrl });
@@ -33,7 +34,7 @@ export function createV1Router({
   router.use(
     '/admin',
     requireRole('admin', 'researcher'),
-    createAdminRouter({ db, neo4jRun, keycloak })
+    createAdminRouter({ db, neo4jRun, keycloak, tokenCardService })
   );
 
   // Surveys routes: require participant, admin, or researcher role
