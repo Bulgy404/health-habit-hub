@@ -541,6 +541,128 @@ export function createAdminRouter({
     }
   });
 
+  // ── Survey CRUD endpoints ─────────────────────────────────────────────────
+
+  // GET /api/v1/admin/surveys
+  router.get('/surveys', async (req, res) => {
+    try {
+      const database = await getDb();
+      const docs = await database.collection('surveys').find({}).toArray();
+      res.json(
+        docs.map((s) => ({
+          id: s.id,
+          title: s.title,
+          type: s.type,
+          status: s.status,
+          assignedGroups: s.assignedGroups || [],
+        }))
+      );
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/v1/admin/surveys
+  router.post('/surveys', async (req, res) => {
+    try {
+      const { title, type, jsonSchema, assignedGroups } = req.body;
+      if (!title || !type) {
+        return res.status(400).json({ error: 'title and type are required' });
+      }
+      const database = await getDb();
+      const id = randomUUID();
+      const doc = {
+        id,
+        title,
+        type,
+        jsonSchema: jsonSchema || {},
+        assignedGroups: assignedGroups || [],
+        status: 'draft',
+        createdAt: new Date(),
+      };
+      await database.collection('surveys').insertOne(doc);
+      res.status(201).json({ id, title, type, status: 'draft', assignedGroups: doc.assignedGroups });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PUT /api/v1/admin/surveys/:id
+  router.put('/surveys/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { title, type, jsonSchema, assignedGroups, status } = req.body;
+      const database = await getDb();
+      const update = { updatedAt: new Date() };
+      if (title !== undefined) update.title = title;
+      if (type !== undefined) update.type = type;
+      if (jsonSchema !== undefined) update.jsonSchema = jsonSchema;
+      if (assignedGroups !== undefined) update.assignedGroups = assignedGroups;
+      if (status !== undefined) update.status = status;
+      const result = await database
+        .collection('surveys')
+        .updateOne({ id }, { $set: update });
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ error: 'Survey not found' });
+      }
+      res.json({ ok: true, id });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PATCH /api/v1/admin/surveys/:id/status
+  router.patch('/surveys/:id/status', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      if (!['published', 'archived', 'draft'].includes(status)) {
+        return res
+          .status(400)
+          .json({ error: "status must be 'published', 'archived', or 'draft'" });
+      }
+      const database = await getDb();
+      const result = await database
+        .collection('surveys')
+        .updateOne({ id }, { $set: { status, updatedAt: new Date() } });
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ error: 'Survey not found' });
+      }
+      res.json({ ok: true, id, status });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PATCH /api/v1/admin/surveys/:id/groups
+  router.patch('/surveys/:id/groups', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { groups } = req.body;
+      if (!Array.isArray(groups)) {
+        return res.status(400).json({ error: 'groups must be an array' });
+      }
+      const valid = ['G1', 'G2', 'G3', 'G4'];
+      if (groups.some((g) => !valid.includes(g))) {
+        return res
+          .status(400)
+          .json({ error: 'groups must contain only G1, G2, G3, G4' });
+      }
+      const database = await getDb();
+      const result = await database
+        .collection('surveys')
+        .updateOne({ id }, { $set: { assignedGroups: groups, updatedAt: new Date() } });
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ error: 'Survey not found' });
+      }
+      res.json({ ok: true, id, assignedGroups: groups });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ── Participant management (cont.) ────────────────────────────────────────
+
   // DELETE /api/v1/admin/participants/:id (soft delete)
   router.delete('/participants/:id', async (req, res) => {
     try {
