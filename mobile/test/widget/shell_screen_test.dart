@@ -1,0 +1,123 @@
+// Widget tests for ShellScreen (bottom navigation shell).
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hhh/providers/auth_provider.dart';
+import 'package:hhh/screens/shell_screen.dart';
+
+// ---------------------------------------------------------------------------
+// Test router factory
+// ---------------------------------------------------------------------------
+
+GoRouter _buildTestRouter({List<String> roles = const []}) {
+  return GoRouter(
+    initialLocation: '/donate',
+    routes: [
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, shell) => ShellScreen(navigationShell: shell),
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/donate',
+              builder: (_, _) => const Scaffold(body: Text('Donate Tab')),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/explore',
+              builder: (_, _) => const Scaffold(body: Text('Explore Tab')),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/recommend',
+              builder: (_, _) => const Scaffold(body: Text('Recommend Tab')),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/profile',
+              builder: (_, _) => const Scaffold(body: Text('Profile Tab')),
+            ),
+          ]),
+          StatefulShellBranch(
+            initialLocation: '/admin/participants',
+            routes: [
+              GoRoute(
+                path: '/admin/participants',
+                builder: (_, _) =>
+                    const Scaffold(body: Text('Admin Participants')),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+Widget _buildSubject(GoRouter router, List<String> roles) {
+  return ProviderScope(
+    overrides: [
+      userRolesProvider.overrideWith((ref) async => roles),
+    ],
+    child: MaterialApp.router(routerConfig: router),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+void main() {
+  testWidgets('shows NavigationBar and Donate tab', (tester) async {
+    final router = _buildTestRouter();
+    await tester.pumpWidget(_buildSubject(router, const []));
+    await tester.pump(); // allow StatefulShellRoute to settle
+
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('Donate'), findsOneWidget);
+    expect(find.text('Explore'), findsOneWidget);
+    expect(find.text('Recommend'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
+  });
+
+  testWidgets('hides Admin tab for regular users', (tester) async {
+    final router = _buildTestRouter();
+    await tester.pumpWidget(_buildSubject(router, const []));
+    await tester.pump();
+
+    expect(find.text('Admin'), findsNothing);
+  });
+
+  testWidgets('shows Admin tab for admin users', (tester) async {
+    final router = _buildTestRouter(roles: ['admin']);
+    await tester.pumpWidget(_buildSubject(router, ['admin']));
+    await tester.pump();
+
+    expect(find.text('Admin'), findsOneWidget);
+  });
+
+  testWidgets('shows loading state (NavigationBar still visible)', (tester) async {
+    final router = _buildTestRouter();
+    // Use a Completer that never completes to simulate a long-running roles load.
+    // Completer.future does NOT create a pending timer (unlike Future.delayed).
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userRolesProvider.overrideWith(
+            (ref) => Completer<List<String>>().future,
+          ),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pump();
+
+    // Even while loading roles, the NavigationBar renders (with empty roles = no admin tab)
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
+}
