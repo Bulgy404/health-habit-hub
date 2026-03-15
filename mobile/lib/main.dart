@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'models/admin_survey.dart';
+import 'screens/admin/admin_devices_screen.dart';
 import 'screens/admin/admin_habits_screen.dart';
 import 'screens/admin/admin_participant_detail_screen.dart';
 import 'screens/admin/admin_participants_screen.dart';
@@ -104,6 +105,11 @@ final _router = GoRouter(
                   path: 'habits',
                   builder: (context, state) =>
                       const AdminHabitsScreen(),
+                ),
+                GoRoute(
+                  path: 'devices',
+                  builder: (context, state) =>
+                      const AdminDevicesScreen(),
                 ),
               ],
             ),
