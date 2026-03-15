@@ -565,8 +565,8 @@
         "Tests pass"
       ],
       "priority": 34,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Admin survey CRUD added to adminRouter.js (GET/POST /surveys, PUT /surveys/:id, PATCH /surveys/:id/status, PATCH /surveys/:id/groups). surveyRouter.js converted to factory with createSurveyRouter({db}) — GET / returns published+group-filtered surveys for participants, all surveys for admin/researcher. v1Router updated to use factory. 20 integration tests in admin.surveys.test.js all green."
     },
     {
       "id": "US-035",
