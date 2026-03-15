@@ -4,6 +4,7 @@ import { requireRole } from '../middleware/requireRole.js';
 import surveyRouter from './surveyRouter.js';
 import { createRecommendRouter } from './recommendRouter.js';
 import { createProfileRouter } from './profileRouter.js';
+import { createHabitsRouter } from './habitsRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 
 export function createV1Router({
@@ -11,6 +12,7 @@ export function createV1Router({
   serviceChecks,
   recommenderUrl,
   db,
+  neo4jRun,
 } = {}) {
   const router = express.Router();
   const authenticate = createAuthMiddleware({ jwksUrl });
@@ -41,9 +43,7 @@ export function createV1Router({
   router.use(
     '/habits',
     requireRole('participant', 'admin', 'researcher'),
-    (req, res) => {
-      res.json({ ok: true });
-    }
+    createHabitsRouter({ db, neo4jRun })
   );
 
   // Recommend routes: require participant, admin, or researcher role

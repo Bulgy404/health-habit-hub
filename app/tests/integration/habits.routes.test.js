@@ -1,0 +1,265 @@
+import { test, before, after } from 'node:test';
+import assert from 'node:assert';
+import { createServer } from 'node:http';
+import { generateKeyPairSync, createSign } from 'node:crypto';
+import express from 'express';
+import { createV1Router } from '../../routes/v1Router.js';
+
+// ── Key material ─────────────────────────────────────────────────────────────
+
+const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+});
+const pubKeyJwk = publicKey.export({ format: 'jwk' });
+pubKeyJwk.kid = 'habits-key-1';
+pubKeyJwk.use = 'sig';
+const mockJwks = { keys: [pubKeyJwk] };
+
+// ── JWT helpers ───────────────────────────────────────────────────────────────
+
+function base64urlEncode(buf) {
+  return buf
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+function createJwt(payload) {
+  const header = { alg: 'RS256', kid: 'habits-key-1', typ: 'JWT' };
+  const h = base64urlEncode(Buffer.from(JSON.stringify(header)));
+  const p = base64urlEncode(Buffer.from(JSON.stringify(payload)));
+  const signingInput = `${h}.${p}`;
+  const sign = createSign('RSA-SHA256');
+  sign.update(signingInput);
+  return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
+}
+
+function makeToken(roles = ['participant']) {
+  const now = Math.floor(Date.now() / 1000);
+  return createJwt({
+    sub: 'test-user',
+    exp: now + 3600,
+    iat: now,
+    realm_access: { roles },
+  });
+}
+
+// ── In-memory mock MongoDB ────────────────────────────────────────────────────
+
+function createMockDb() {
+  const annotations = [];
+  return {
+    collection(name) {
+      if (name !== 'habit_annotations')
+        throw new Error(`unexpected collection: ${name}`);
+      return {
+        async insertOne(doc) {
+          annotations.push({ ...doc });
+        },
+        find(query) {
+          let results = [...annotations];
+          if (query && query.habitId !== undefined) {
+            results = results.filter((a) => a.habitId === query.habitId);
+          }
+          if (query && query.createdAt && query.createdAt.$gte) {
+            results = results.filter(
+              (a) => a.createdAt >= query.createdAt.$gte
+            );
+          }
+          return {
+            async toArray() {
+              return results;
+            },
+          };
+        },
+      };
+    },
+  };
+}
+
+// ── Mock Neo4j run ────────────────────────────────────────────────────────────
+
+const FIXTURE_HABITS = [
+  {
+    id: 'habit-1',
+    name: 'Morning run',
+    category: 'hhh__Group1',
+    bcioClass: null,
+  },
+  {
+    id: 'habit-2',
+    name: 'Evening yoga',
+    category: 'hhh__Group2',
+    bcioClass: null,
+  },
+];
+
+function createMockNeo4jRun() {
+  return async (cypher) => {
+    if (cypher.includes('count(h) AS total')) {
+      return [{ total: 2 }];
+    }
+    if (cypher.includes('AS category, cnt AS count')) {
+      return [
+        { category: 'hhh__Group1', count: 1 },
+        { category: 'hhh__Group2', count: 1 },
+      ];
+    }
+    // default: return habits
+    return FIXTURE_HABITS;
+  };
+}
+
+// ── Test server ───────────────────────────────────────────────────────────────
+
+let server;
+let baseUrl;
+let mockDb;
+
+before(async () => {
+  mockDb = createMockDb();
+
+  const realFetch = global.fetch;
+  global.fetch = async (url, options) => {
+    if (typeof url === 'string' && url.includes('/jwks')) {
+      return { ok: true, json: async () => mockJwks };
+    }
+    return realFetch(url, options);
+  };
+
+  const testApp = express();
+  testApp.use(express.json());
+  const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
+  const v1Router = createV1Router({
+    jwksUrl: 'http://keycloak/jwks',
+    serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
+    db: mockDb,
+    neo4jRun: createMockNeo4jRun(),
+  });
+  testApp.use('/api/v1', v1Router);
+
+  server = createServer(testApp);
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  baseUrl = `http://127.0.0.1:${server.address().port}`;
+
+  await fetch(`${baseUrl}/api/v1/health`);
+});
+
+after(() => {
+  server.close();
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function get(path, token) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  return fetch(`${baseUrl}${path}`, { headers });
+}
+
+async function post(path, body, token) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return fetch(`${baseUrl}${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+}
+
+// ── Auth enforcement ──────────────────────────────────────────────────────────
+
+test('GET /api/v1/habits/public returns 401 without token', async () => {
+  const res = await get('/api/v1/habits/public');
+  assert.strictEqual(res.status, 401);
+});
+
+test('GET /api/v1/habits/public returns 403 for no-role token', async () => {
+  const res = await get('/api/v1/habits/public', makeToken([]));
+  assert.strictEqual(res.status, 403);
+});
+
+test('POST /api/v1/habits/h1/annotate returns 401 without token', async () => {
+  const res = await post('/api/v1/habits/h1/annotate', { type: 'helpful' });
+  assert.strictEqual(res.status, 401);
+});
+
+test('GET /api/v1/habits/stats returns 401 without token', async () => {
+  const res = await get('/api/v1/habits/stats');
+  assert.strictEqual(res.status, 401);
+});
+
+// ── GET /public ───────────────────────────────────────────────────────────────
+
+test('GET /api/v1/habits/public returns anonymized habit list', async () => {
+  const res = await get('/api/v1/habits/public', makeToken());
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body));
+  assert.strictEqual(body.length, 2);
+  const h = body[0];
+  assert.ok('id' in h);
+  assert.ok('name' in h);
+  assert.ok('category' in h);
+  assert.ok('bcioClass' in h);
+  assert.ok('annotationCounts' in h);
+  assert.ok('helpful' in h.annotationCounts);
+  assert.ok('iDoThis' in h.annotationCounts);
+  // userId must NOT be present
+  assert.ok(!('userId' in h));
+  assert.ok(!('source' in h));
+});
+
+// ── POST /:id/annotate ────────────────────────────────────────────────────────
+
+test('POST /:id/annotate returns 400 for invalid type', async () => {
+  const res = await post(
+    '/api/v1/habits/habit-1/annotate',
+    { type: 'invalid' },
+    makeToken()
+  );
+  assert.strictEqual(res.status, 400);
+  const body = await res.json();
+  assert.ok(body.error);
+});
+
+test('POST /:id/annotate stores annotation and returns updated counts', async () => {
+  const res = await post(
+    '/api/v1/habits/habit-1/annotate',
+    { type: 'helpful' },
+    makeToken()
+  );
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.strictEqual(body.habitId, 'habit-1');
+  assert.ok('annotationCounts' in body);
+  assert.ok(body.annotationCounts.helpful >= 1);
+  assert.strictEqual(body.annotationCounts.iDoThis, 0);
+});
+
+test('POST /:id/annotate works with iDoThis type', async () => {
+  const res = await post(
+    '/api/v1/habits/habit-2/annotate',
+    { type: 'iDoThis' },
+    makeToken()
+  );
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.strictEqual(body.habitId, 'habit-2');
+  assert.ok(body.annotationCounts.iDoThis >= 1);
+});
+
+// ── GET /stats ────────────────────────────────────────────────────────────────
+
+test('GET /api/v1/habits/stats returns total, byCategory, byDay', async () => {
+  const res = await get('/api/v1/habits/stats', makeToken());
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok('total' in body);
+  assert.strictEqual(body.total, 2);
+  assert.ok(Array.isArray(body.byCategory));
+  assert.ok(body.byCategory.length > 0);
+  assert.ok('category' in body.byCategory[0]);
+  assert.ok('count' in body.byCategory[0]);
+  assert.ok(Array.isArray(body.byDay));
+});
