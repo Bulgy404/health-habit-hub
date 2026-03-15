@@ -782,8 +782,8 @@
         "Typecheck passes"
       ],
       "priority": 47,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created mobile/integration_test/participant_flow_test.dart using integration_test package with Riverpod provider overrides for all services (FakeAuthService, FakeSurveyService, FakeRecommendationService). Test drives full app: login screen → enter credentials → tap Login → NavigationBar appears → Donate a Habit screen → tap Recommend → Morning Walk and Mindful Breathing cards visible. Added integration_test SDK dependency to pubspec.yaml. flutter analyze reports no issues. Test requires a connected device/emulator to run (flutter test -d <device>); macOS desktop project not configured in this repo."
     },
     {
       "id": "US-048",
