@@ -55,10 +55,14 @@ class _NodeState {
 /// Nodes repel each other (Coulomb) while nodes of the same category attract
 /// via a spring force.  An AnimationController drives the simulation at 60 fps.
 /// Supports pinch-to-zoom and pan via [GestureDetector].
+///
+/// When [onNodeTap] is provided, tapping a node (as opposed to panning) fires
+/// the callback with the tapped [HabitNode].
 class HabitGraphWidget extends StatefulWidget {
   final List<HabitNode> nodes;
+  final void Function(HabitNode)? onNodeTap;
 
-  const HabitGraphWidget({super.key, required this.nodes});
+  const HabitGraphWidget({super.key, required this.nodes, this.onNodeTap});
 
   @override
   State<HabitGraphWidget> createState() => _HabitGraphWidgetState();
@@ -74,6 +78,13 @@ class _HabitGraphWidgetState extends State<HabitGraphWidget>
   double _zoom = 1.0;
   Offset? _focalPoint;
   double? _baseZoom;
+
+  // Tap detection — track whether the gesture moved/scaled significantly.
+  Offset? _scaleLocalStart;
+  bool _moved = false;
+
+  // Canvas size tracked via LayoutBuilder.
+  Size _canvasSize = Size.zero;
 
   // Physics constants
   static const double _kRep = 4000.0;
@@ -149,6 +160,22 @@ class _HabitGraphWidgetState extends State<HabitGraphWidget>
     }
   }
 
+  void _handleTapAt(Offset localPos) {
+    if (widget.onNodeTap == null || _canvasSize == Size.zero) return;
+    final center =
+        Offset(_canvasSize.width / 2, _canvasSize.height / 2) + _panOffset;
+    final graphPos = (localPos - center) / _zoom;
+    for (int i = 0; i < widget.nodes.length; i++) {
+      if (i >= _states.length) break;
+      final r = _nodeRadius(widget.nodes[i]);
+      // Add 4px hit-test slop on top of the drawn radius.
+      if ((_states[i].pos - graphPos).distance <= r + 4) {
+        widget.onNodeTap!.call(widget.nodes[i]);
+        return;
+      }
+    }
+  }
+
   @override
   void dispose() {
     _ticker.dispose();
@@ -161,8 +188,15 @@ class _HabitGraphWidgetState extends State<HabitGraphWidget>
       onScaleStart: (details) {
         _focalPoint = details.focalPoint;
         _baseZoom = _zoom;
+        _scaleLocalStart = details.localFocalPoint;
+        _moved = false;
       },
       onScaleUpdate: (details) {
+        if (_focalPoint != null) {
+          final panDelta = details.focalPoint - _focalPoint!;
+          if (panDelta.distance > 6) _moved = true;
+        }
+        if ((details.scale - 1.0).abs() > 0.05) _moved = true;
         setState(() {
           if (_focalPoint != null) {
             _panOffset += details.focalPoint - _focalPoint!;
@@ -174,20 +208,30 @@ class _HabitGraphWidgetState extends State<HabitGraphWidget>
         });
       },
       onScaleEnd: (_) {
+        if (!_moved && _scaleLocalStart != null) {
+          _handleTapAt(_scaleLocalStart!);
+        }
         _focalPoint = null;
         _baseZoom = null;
+        _scaleLocalStart = null;
+        _moved = false;
       },
-      child: AnimatedBuilder(
-        animation: _ticker,
-        builder: (context, _) => CustomPaint(
-          painter: _GraphPainter(
-            nodes: widget.nodes,
-            states: _states,
-            panOffset: _panOffset,
-            zoom: _zoom,
-          ),
-          size: Size.infinite,
-        ),
+      child: LayoutBuilder(
+        builder: (_, constraints) {
+          _canvasSize = constraints.biggest;
+          return AnimatedBuilder(
+            animation: _ticker,
+            builder: (_, _) => CustomPaint(
+              painter: _GraphPainter(
+                nodes: widget.nodes,
+                states: _states,
+                panOffset: _panOffset,
+                zoom: _zoom,
+              ),
+              size: Size.infinite,
+            ),
+          );
+        },
       ),
     );
   }
