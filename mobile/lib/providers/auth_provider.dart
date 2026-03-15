@@ -14,6 +14,24 @@ final isLoggedInProvider = FutureProvider<bool>((ref) async {
   return authService.isLoggedIn();
 });
 
+/// Provides the user ID (JWT `sub` claim) from the stored access token.
+///
+/// Returns null when no token is stored or decoding fails.
+final userIdProvider = FutureProvider<String?>((ref) async {
+  final authService = ref.watch(authServiceProvider);
+  final token = await authService.getAccessToken();
+  if (token == null) return null;
+  try {
+    final parts = token.split('.');
+    if (parts.length != 3) return null;
+    final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+    final claims = jsonDecode(payload) as Map<String, dynamic>;
+    return claims['sub'] as String?;
+  } catch (_) {
+    return null;
+  }
+});
+
 /// Provides the list of Keycloak realm roles from the stored JWT access token.
 ///
 /// Returns an empty list when no token is stored or decoding fails.

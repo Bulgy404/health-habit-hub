@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'screens/donate_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/recommend_screen.dart';
 import 'screens/shell_screen.dart';
 
 void main() {
@@ -67,8 +68,7 @@ final _router = GoRouter(
           routes: [
             GoRoute(
               path: '/recommend',
-              builder: (context, state) =>
-                  const _PlaceholderScreen(label: 'Recommend'),
+              builder: (context, state) => const RecommendScreen(),
             ),
           ],
         ),
