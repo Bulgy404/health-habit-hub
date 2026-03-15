@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/admin_participant.dart';
+import '../models/admin_survey.dart';
 import '../models/participant_progress.dart';
 import '../providers/auth_provider.dart';
 import '../services/auth_service.dart';
@@ -87,6 +88,62 @@ class AdminService {
   /// Returns the full token card URL for a participant.
   String tokenCardUrl(String participantId, String format) =>
       '$_baseUrl/admin/participants/$participantId/token-card?format=$format';
+
+  // ---------------------------------------------------------------------------
+  // Survey endpoints
+  // ---------------------------------------------------------------------------
+
+  /// Returns all surveys.
+  Future<List<AdminSurvey>> fetchSurveys() async {
+    final response = await _dio.get<List<dynamic>>(
+      '$_baseUrl/admin/surveys',
+      options: await _authOptions(),
+    );
+    final data = response.data ?? [];
+    return data
+        .map((e) => AdminSurvey.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Creates a new survey with [title] and [type].
+  Future<AdminSurvey> createSurvey({
+    required String title,
+    required String type,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '$_baseUrl/admin/surveys',
+      data: {'title': title, 'type': type},
+      options: await _authOptions(),
+    );
+    return AdminSurvey.fromJson(response.data ?? {});
+  }
+
+  /// Updates survey fields (e.g. jsonSchema).
+  Future<void> updateSurvey(String id, Map<String, dynamic> data) async {
+    await _dio.put<void>(
+      '$_baseUrl/admin/surveys/$id',
+      data: data,
+      options: await _authOptions(),
+    );
+  }
+
+  /// Updates survey publish/archive status.
+  Future<void> updateSurveyStatus(String id, String status) async {
+    await _dio.patch<void>(
+      '$_baseUrl/admin/surveys/$id/status',
+      data: {'status': status},
+      options: await _authOptions(),
+    );
+  }
+
+  /// Updates the groups a survey is assigned to.
+  Future<void> updateSurveyGroups(String id, List<String> groups) async {
+    await _dio.patch<void>(
+      '$_baseUrl/admin/surveys/$id/groups',
+      data: {'groups': groups},
+      options: await _authOptions(),
+    );
+  }
 }
 
 /// Riverpod provider for [AdminService].

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'models/admin_survey.dart';
 import 'screens/admin/admin_participant_detail_screen.dart';
 import 'screens/admin/admin_participants_screen.dart';
+import 'screens/admin/admin_surveys_screen.dart';
 import 'screens/donate_screen.dart';
 import 'screens/explore_screen.dart';
 import 'screens/login_screen.dart';
@@ -79,6 +81,23 @@ final _router = GoRouter(
                     participantId:
                         state.pathParameters['id'] ?? '',
                   ),
+                ),
+                GoRoute(
+                  path: 'surveys',
+                  builder: (context, state) =>
+                      const AdminSurveysScreen(),
+                  routes: [
+                    GoRoute(
+                      path: ':id',
+                      builder: (context, state) =>
+                          AdminSurveyEditorScreen(
+                        surveyId:
+                            state.pathParameters['id'] ?? '',
+                        initialSurvey:
+                            state.extra as AdminSurvey?,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

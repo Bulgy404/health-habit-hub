@@ -652,8 +652,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 39,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created mobile/lib/models/admin_survey.dart (AdminSurvey with id/title/type/status/assignedGroups/jsonSchema; fromJson handles _id||id fallback). Created mobile/lib/screens/admin/admin_surveys_screen.dart with AdminSurveysScreen (list view with ListTile per survey showing title, type chip, group chips, status badge, Publish/Archive TextButtons; FAB opens _CreateSurveyDialog with title TextField + type DropdownButton; taps push /admin/surveys/:id with extra=AdminSurvey) and AdminSurveyEditorScreen (full-width monospace JSON TextField pre-populated from survey.jsonSchema; FilterChip row for G1–G4 group assignment; Save button calls updateSurvey+updateSurveyGroups). Added survey methods to AdminService: fetchSurveys, createSurvey, updateSurvey, updateSurveyStatus, updateSurveyGroups. Added /admin/surveys and /admin/surveys/:id routes to main.dart. dart analyze: no issues."
     },
     {
       "id": "US-040",
