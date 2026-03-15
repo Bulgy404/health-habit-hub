@@ -6,10 +6,14 @@ RUN apk add --no-cache \
     tar \
     gzip \
     bash \
-    docker-cli
+    docker-cli \
+    jq
 
 COPY backup.sh /backup.sh
 COPY restore.sh /restore.sh
 RUN chmod +x /backup.sh /restore.sh
 
-CMD ["/backup.sh"]
+# Setup daily cron at 02:00
+RUN echo "0 2 * * * /backup.sh" > /var/spool/cron/crontabs/root
+
+CMD ["crond", "-f"]

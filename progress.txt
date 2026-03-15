@@ -1,3 +1,13 @@
+## 2026-03-15 - US-052
+- What was implemented: Extended `backup-service/backup.sh` — added Keycloak realm export via admin API (POST token to master realm, then POST partial-export to hhh realm, saves to `backups/<timestamp>/keycloak/hhh-realm.json`); renamed `ALERT_EMAIL` to `BACKUP_EMAIL` per PRD spec; added `log()` function writing timestamped output to both stdout and `$BACKUP_DIR/backup.log`; changed all `echo` calls in main flow to `log()`; changed default retention from 14 to 30 days; added `jq` to Dockerfile apk packages for JSON token parsing; changed Dockerfile `CMD` from `/backup.sh` (one-shot) to `crond -f` (daemon) with `0 2 * * *` crontab entry. MongoDB (`mongodump`), Fuseki (tar), and Neo4j (`neo4j-admin dump`) were already present.
+- Files changed: backup-service/backup.sh (Keycloak export + log() + BACKUP_EMAIL + 30-day retention), backup-service/Dockerfile (add jq + crond CMD + crontab), prd.json (US-052 passes=true)
+- **Learnings for future iterations:**
+  - Keycloak realm export via API: POST to `/realms/master/protocol/openid-connect/token` with `grant_type=password` for admin-cli token, then POST to `/admin/realms/hhh/partial-export?exportClients=true&exportGroupsAndRoles=true` — `jq` required in container to parse the token JSON
+  - `crond -f` (foreground) is the correct Alpine cron daemon command — `-f` keeps it in foreground so Docker container stays running; `CMD ["/backup.sh"]` only runs one-shot
+  - The backup.sh crontab entry goes to `/var/spool/cron/crontabs/root` on Alpine Linux — different path from Ubuntu's `/etc/cron.d/`
+  - `${VAR:-}` (empty default) prevents `set -u` errors for optional env vars; required once using `set -euo pipefail` patterns
+---
+
 ## 2026-03-15 - US-051
 - What was implemented: Created `.github/workflows/deploy.yml` — CD workflow with two triggers: `workflow_run` (watches CI workflow on master, only proceeds if CI concluded successfully) and `push: tags: v*`. Deploy job SSHs to production server via `appleboy/ssh-action@v1` using `SERVER_SSH_KEY`, `SERVER_HOST`, `SERVER_USER` secrets; runs `git pull && bash scripts/deploy-full.sh` with `set -euo pipefail`. Release job (tag-only) sets up Flutter, builds APK with `flutter build apk --release` and web with `flutter build web`, zips the web output, then uploads both artifacts to a GitHub Release via `softprops/action-gh-release@v2` with `generate_release_notes: true`.
 - Files changed: .github/workflows/deploy.yml (rewritten), prd.json (US-051 passes=true)
