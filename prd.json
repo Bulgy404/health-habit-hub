@@ -831,8 +831,8 @@
         "Coverage report uploaded as artifact"
       ],
       "priority": 50,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated ci.yml: added flutter-test job (flutter analyze + flutter test test/widget/ --coverage), coverage artifact uploads for both backend and flutter, scoped triggers to pull_request on master/rapid_dev and push to master. Ontology job uses service containers (neo4j + fuseki) instead of docker-compose, which is more reliable in GitHub Actions."
     },
     {
       "id": "US-051",
