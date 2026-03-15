@@ -1,3 +1,13 @@
+## 2026-03-15 - US-058
+- What was implemented: Created `docs/architecture.md` — comprehensive system architecture document with: (1) system overview Mermaid diagram showing all 10 Docker services (Traefik, Node.js backend, Keycloak, Python recommender, Fuseki, Neo4j, MongoDB, Mongo Express, LibreTranslate, backup) with arrows showing data flow and port numbers; (2) per-service reference table with technology, purpose, internal port, external URL (dev), and key env vars; (3) note that Flutter web is served as static files from `app/public/flutter/` via the Node.js backend (no separate container); (4) three Mermaid sequence diagrams: Keycloak PKCE login flow, habit donation flow (Flutter→backend→MongoDB+Neo4j), recommendation request flow (Flutter→backend→Python recommender→Neo4j); (5) ontology section with HHH/BCIO namespace table, HHH core classes table, BCIO integration alignment notes, G1–G4 encoding table, 2 example Cypher queries, 2 example SPARQL queries.
+- Files changed: docs/architecture.md (new), prd.json (US-058 passes=true)
+- **Learnings for future iterations:**
+  - Flutter web is NOT a separate Docker service — it is built with `flutter build web` and served as static files from `app/public/flutter/` by the Node.js backend; Traefik routes everything to port 3000
+  - Ontology files are in `fuseki/init/` (Ontology.ttl, schema.ttl, data.ttl); BCIO is merged inline into Ontology.ttl with TODO alignment comments
+  - G1–G4 groups are OWL subclasses of `hhh:ExperimentalSetting` defined in Ontology.ttl; after migration use `donor.studyGroup` property in Neo4j
+  - Keycloak runs with `KC_DB=dev-file` (file-based H2 DB) in both dev and prod docker-compose files — not a production-grade DB
+---
+
 ## 2026-03-15 - US-057
 - What was implemented: Created `docs/guides/admin-guide-de.md` — full German translation of the English admin guide with Quick Start checklist (8-step cohort setup) and all 8 sections translated: 1) Als Admin anmelden, 2) Teilnehmer erstellen und Token-Karte herunterladen, 3) Studiengruppen zuweisen, 4) Fragebögen konfigurieren, 5) Gespendete Gewohnheiten ueberwachen, 6) Teilnehmerfortschritt verfolgen, 7) Gerätesitzungen widerrufen, 8) Token-Karten-Format in den Einstellungen konfigurieren. Screenshot references identical to English guide (`../assets/screenshots/admin/`). Generated `docs/guides/admin-guide-de.pdf` via pandoc (LaTeX engine, ToC anchor reference warnings only — PDF 180KB).
 - Files changed: docs/guides/admin-guide-de.md (new), docs/guides/admin-guide-de.pdf (new), prd.json (US-057 passes=true)
