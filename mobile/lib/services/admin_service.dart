@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/admin_participant.dart';
+import '../models/participant_progress.dart';
 import '../providers/auth_provider.dart';
 import '../services/auth_service.dart';
 
@@ -70,6 +71,17 @@ class AdminService {
       '$_baseUrl/admin/participants/$id',
       options: await _authOptions(),
     );
+  }
+
+  /// Returns the full progress data for a participant.
+  ///
+  /// Calls GET /api/v1/admin/participants/:id/progress.
+  Future<ParticipantProgress> fetchParticipantProgress(String id) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '$_baseUrl/admin/participants/$id/progress',
+      options: await _authOptions(),
+    );
+    return ParticipantProgress.fromJson(response.data ?? {});
   }
 
   /// Returns the full token card URL for a participant.
