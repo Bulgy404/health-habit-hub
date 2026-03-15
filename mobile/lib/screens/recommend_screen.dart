@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/recommendation.dart';
 import '../providers/auth_provider.dart';
 import '../services/recommendation_service.dart';
+import '../services/recommendation_ws_service.dart';
 import '../widgets/recommendation_card.dart';
 
 /// Screen that lists personalized habit recommendations with staggered
-/// entry animations and an [AnimatedList] for card removal.
+/// entry animations, an [AnimatedList] for card removal/insertion, and a
+/// live WebSocket feed with automatic polling fallback.
 class RecommendScreen extends ConsumerStatefulWidget {
   const RecommendScreen({super.key});
 
@@ -19,8 +24,14 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
   final _listKey = GlobalKey<AnimatedListState>();
   final List<Recommendation> _recommendations = [];
   final List<AnimationController> _controllers = [];
+
   bool _loading = true;
   String? _error;
+  bool _wsConnected = false;
+
+  // WS subscriptions — cancelled in dispose.
+  StreamSubscription<Recommendation>? _recSub;
+  StreamSubscription<WsConnectionStatus>? _statusSub;
 
   @override
   void initState() {
@@ -28,11 +39,14 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
     _fetch();
   }
 
+  // ---------------------------------------------------------------------------
+  // Initial fetch + WS setup
+  // ---------------------------------------------------------------------------
+
   Future<void> _fetch() async {
     setState(() {
       _loading = true;
       _error = null;
-      // Clear existing items and dispose controllers.
       for (final c in _controllers) {
         c.dispose();
       }
@@ -50,6 +64,7 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
         });
         return;
       }
+
       final service = ref.read(recommendationServiceProvider);
       final recs = await service.fetchRecommendations(userId);
       if (!mounted) return;
@@ -73,6 +88,9 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
         if (i > 0) await Future.delayed(const Duration(milliseconds: 80));
         if (mounted) _controllers[i].forward();
       }
+
+      // Wire up the WS service now that we have a userId.
+      _initWs(userId, recs.map((r) => r.id));
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -82,9 +100,54 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
     }
   }
 
-  // -------------------------------------------------------------------------
+  void _initWs(String userId, Iterable<String> initialIds) {
+    final wsService = ref.read(recommendationWsServiceProvider(userId));
+    // Pre-populate seen IDs so polling doesn't re-emit initial batch.
+    wsService.markSeen(initialIds);
+
+    _recSub?.cancel();
+    _statusSub?.cancel();
+
+    _recSub = wsService.recommendations.listen(_insertAtTop);
+    _statusSub = wsService.status.listen((s) {
+      if (mounted) {
+        setState(() => _wsConnected = s == WsConnectionStatus.connected);
+      }
+    });
+
+    // Reflect the current (synchronous) status immediately.
+    if (mounted) {
+      setState(
+        () => _wsConnected =
+            wsService.currentStatus == WsConnectionStatus.connected,
+      );
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Live insertion at top of list
+  // ---------------------------------------------------------------------------
+
+  void _insertAtTop(Recommendation rec) {
+    if (!mounted) return;
+    final controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    setState(() {
+      _recommendations.insert(0, rec);
+      _controllers.insert(0, controller);
+    });
+    _listKey.currentState?.insertItem(
+      0,
+      duration: const Duration(milliseconds: 300),
+    );
+    controller.forward();
+  }
+
+  // ---------------------------------------------------------------------------
   // Accept / Dismiss
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   Future<void> _accept(int index) async {
     final rec = _recommendations[index];
@@ -115,7 +178,7 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
       (context, animation) => _buildCard(
         removed,
         animation,
-        -1, // index irrelevant during removal
+        -1,
         removing: true,
       ),
       duration: const Duration(milliseconds: 200),
@@ -123,9 +186,9 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
     removedController.dispose();
   }
 
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Card builder
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   Widget _buildCard(
     Recommendation rec,
@@ -133,8 +196,6 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
     int index, {
     bool removing = false,
   }) {
-    // During removal use the AnimatedList animation (1→0).
-    // For live items use our manually-driven staggered controller (0→1).
     final Animation<double> driver =
         (!removing && index >= 0 && index < _controllers.length)
             ? _controllers[index].view
@@ -159,26 +220,31 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
     );
   }
 
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Lifecycle
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   @override
   void dispose() {
+    _recSub?.cancel();
+    _statusSub?.cancel();
     for (final c in _controllers) {
       c.dispose();
     }
     super.dispose();
   }
 
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
   // Build
-  // -------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Recommendations')),
+      appBar: AppBar(
+        title: const Text('Recommendations'),
+        actions: [_ConnectionDot(connected: _wsConnected)],
+      ),
       body: _buildBody(),
     );
   }
@@ -229,6 +295,36 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
             const SizedBox(height: 16),
             ElevatedButton(onPressed: _fetch, child: const Text('Retry')),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Connection status dot
+// ---------------------------------------------------------------------------
+
+/// Small indicator dot shown in the AppBar.
+/// Green when the WebSocket is live, grey when falling back to polling.
+class _ConnectionDot extends StatelessWidget {
+  const _ConnectionDot({required this.connected});
+
+  final bool connected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 16),
+      child: Tooltip(
+        message: connected ? 'Live' : 'Polling',
+        child: Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: connected ? Colors.green : Colors.grey,
+          ),
         ),
       ),
     );
