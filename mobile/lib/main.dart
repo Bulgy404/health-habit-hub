@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'screens/admin/admin_participant_detail_screen.dart';
 import 'screens/admin/admin_participants_screen.dart';
 import 'screens/donate_screen.dart';
 import 'screens/explore_screen.dart';
@@ -11,23 +12,6 @@ import 'screens/shell_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: HhhApp()));
-}
-
-// ---------------------------------------------------------------------------
-// Simple placeholder screens for branches not yet implemented as full screens.
-// ---------------------------------------------------------------------------
-
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(label)),
-      body: Center(child: Text('$label – coming soon')),
-    );
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -90,9 +74,10 @@ final _router = GoRouter(
               routes: [
                 GoRoute(
                   path: 'participants/:id',
-                  builder: (context, state) => _PlaceholderScreen(
-                    label:
-                        'Participant ${state.pathParameters['id'] ?? ''}',
+                  builder: (context, state) =>
+                      AdminParticipantDetailScreen(
+                    participantId:
+                        state.pathParameters['id'] ?? '',
                   ),
                 ),
               ],
