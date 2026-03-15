@@ -514,7 +514,7 @@
         "Tests pass: PDF buffer generated for all three formats"
       ],
       "priority": 31,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
