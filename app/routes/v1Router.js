@@ -1,7 +1,7 @@
 import express from 'express';
 import { createAuthMiddleware } from '../middleware/auth.js';
 import { requireRole } from '../middleware/requireRole.js';
-import surveyRouter from './surveyRouter.js';
+import { createSurveyRouter } from './surveyRouter.js';
 import { createRecommendRouter } from './recommendRouter.js';
 import { createProfileRouter } from './profileRouter.js';
 import { createHabitsRouter } from './habitsRouter.js';
@@ -41,7 +41,7 @@ export function createV1Router({
   router.use(
     '/surveys',
     requireRole('participant', 'admin', 'researcher'),
-    surveyRouter
+    createSurveyRouter({ db })
   );
 
   // Habits routes: require participant, admin, or researcher role
