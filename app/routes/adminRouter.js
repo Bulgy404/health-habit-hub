@@ -77,6 +77,20 @@ function createKeycloakClient() {
         body: JSON.stringify({ attributes: { [key]: [value] } }),
       });
     },
+    async listSessions() {
+      const token = await getAdminToken();
+      const res = await fetch(`${base}/admin/realms/${realm}/sessions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.json();
+    },
+    async revokeSession(sessionId) {
+      const token = await getAdminToken();
+      await fetch(`${base}/admin/realms/${realm}/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    },
   };
 }
 
@@ -114,7 +128,9 @@ export function createAdminRouter({
   }
 
   // Seed default settings asynchronously on router creation
-  getDb().then(seedDefaultSettings).catch(() => {});
+  getDb()
+    .then(seedDefaultSettings)
+    .catch(() => {});
 
   function getKeycloak() {
     return keycloak || createKeycloakClient();
@@ -302,12 +318,224 @@ export function createAdminRouter({
         return res.status(400).json({ error: 'Missing value' });
       }
       const database = await getDb();
-      await database.collection('admin_settings').updateOne(
-        { key },
-        { $set: { value, updatedAt: new Date() } },
-        { upsert: true }
-      );
+      await database
+        .collection('admin_settings')
+        .updateOne(
+          { key },
+          { $set: { value, updatedAt: new Date() } },
+          { upsert: true }
+        );
       res.json({ ok: true, key, value });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/participants/:id/progress
+  router.get('/participants/:id/progress', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const database = await getDb();
+
+      const participant = await database
+        .collection('participants')
+        .findOne({ userId: id, deletedAt: { $exists: false } });
+
+      if (!participant) {
+        return res.status(404).json({ error: 'Participant not found' });
+      }
+
+      const surveyResponses = await database
+        .collection('survey_responses')
+        .find({ participantId: id })
+        .toArray();
+
+      let habitsCount = 0;
+      if (neo4jRun) {
+        try {
+          const records = await neo4jRun(
+            'MATCH (h:hhh__Habit {hhh__source: $userId}) RETURN count(h) AS cnt',
+            { userId: id }
+          );
+          const cnt = records[0]?.cnt;
+          habitsCount =
+            typeof cnt?.toNumber === 'function' ? cnt.toNumber() : (cnt ?? 0);
+        } catch {}
+      } else {
+        const habitDocs = await database
+          .collection('habit_donations')
+          .find({ participantId: id })
+          .toArray();
+        habitsCount = habitDocs.length;
+      }
+
+      const recDocs = await database
+        .collection('recommendations_log')
+        .find({ participantId: id })
+        .toArray();
+      const accepted = recDocs.filter((r) => r.type === 'accepted').length;
+      const dismissed = recDocs.filter((r) => r.type === 'dismissed').length;
+
+      const timeline = [];
+      if (participant.enrolledAt) {
+        timeline.push({
+          type: 'enrolled',
+          timestamp: participant.enrolledAt,
+          detail: 'Participant enrolled',
+        });
+      }
+      for (const sr of surveyResponses) {
+        timeline.push({
+          type: 'survey_completed',
+          timestamp: sr.completedAt,
+          detail: sr.surveyTitle || sr.surveyId,
+        });
+      }
+      for (const rec of recDocs) {
+        timeline.push({
+          type: `recommendation_${rec.type}`,
+          timestamp: rec.timestamp,
+          detail: rec.recommendationId || '',
+        });
+      }
+      timeline.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+      res.json({
+        profile: {
+          completed: participant.profileCompleted || false,
+          completedAt: participant.profileCompletedAt || null,
+        },
+        surveys: surveyResponses.map((sr) => ({
+          id: sr.surveyId,
+          title: sr.surveyTitle || '',
+          completedAt: sr.completedAt,
+        })),
+        habitsCount,
+        recommendations: { accepted, dismissed },
+        timeline,
+      });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/habits/feed/export (must be before /habits/feed)
+  router.get('/habits/feed/export', async (req, res) => {
+    try {
+      const { group, from, to, category, format = 'csv' } = req.query;
+
+      if (format !== 'csv') {
+        return res
+          .status(400)
+          .json({ error: "Invalid format. Only 'csv' is supported." });
+      }
+
+      const database = await getDb();
+      const filter = {};
+      if (group) filter.group = group;
+      if (category) filter.category = category;
+      if (from || to) {
+        filter.donatedAt = {};
+        if (from) filter.donatedAt.$gte = new Date(from);
+        if (to) filter.donatedAt.$lte = new Date(to);
+      }
+
+      const docs = await database
+        .collection('habit_donations')
+        .find(filter)
+        .toArray();
+
+      const escape = (v) => {
+        const s = v == null ? '' : String(v);
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+          return `"${s.replace(/"/g, '""')}"`;
+        }
+        return s;
+      };
+
+      const header = 'participantId,habitName,category,donatedAt';
+      const rows = docs.map((d) =>
+        [
+          d.participantId,
+          d.habitName,
+          d.category,
+          d.donatedAt instanceof Date ? d.donatedAt.toISOString() : d.donatedAt,
+        ]
+          .map(escape)
+          .join(',')
+      );
+      const csv = [header, ...rows].join('\n');
+
+      res.set({
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename="habits-feed.csv"',
+      });
+      res.send(csv);
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/habits/feed
+  router.get('/habits/feed', async (req, res) => {
+    try {
+      const { group, from, to, category, page = '1', limit = '20' } = req.query;
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+      const skip = (pageNum - 1) * limitNum;
+
+      const database = await getDb();
+      const filter = {};
+      if (group) filter.group = group;
+      if (category) filter.category = category;
+      if (from || to) {
+        filter.donatedAt = {};
+        if (from) filter.donatedAt.$gte = new Date(from);
+        if (to) filter.donatedAt.$lte = new Date(to);
+      }
+
+      const docs = await database
+        .collection('habit_donations')
+        .find(filter)
+        .toArray();
+
+      const total = docs.length;
+      const paginated = docs.slice(skip, skip + limitNum);
+
+      res.json({
+        total,
+        page: pageNum,
+        limit: limitNum,
+        results: paginated.map((d) => ({
+          participantId: d.participantId,
+          habitName: d.habitName,
+          category: d.category,
+          donatedAt: d.donatedAt,
+        })),
+      });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/sessions
+  router.get('/sessions', async (req, res) => {
+    try {
+      const kc = getKeycloak();
+      const sessions = await kc.listSessions();
+      res.json(sessions);
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // DELETE /api/v1/admin/sessions/:sessionId
+  router.delete('/sessions/:sessionId', async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const kc = getKeycloak();
+      await kc.revokeSession(sessionId);
+      res.json({ ok: true });
     } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
