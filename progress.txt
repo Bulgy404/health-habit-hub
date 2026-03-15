@@ -536,3 +536,14 @@
   - app/routes/index.js is a thin re-export; routes/v1Router.js is still where all logic lives
   - 4 pre-existing failures remain (Backup alert, Fuseki, Neo4j, LibreTranslate) — not introduced here
 ---
+
+## 2026-03-15 - US-048
+- What was implemented: Created 4 per-service deployment scripts in `scripts/`: `deploy-backend.sh` (docker-compose build app + up -d app + polls GET /api/v1/health until status:ok or 60s timeout); `deploy-flutter-web.sh` (cd mobile && flutter build web; cp -r build/web/ app/public/flutter/); `deploy-recommender.sh` (docker-compose build recommender + up -d recommender); `deploy-keycloak.sh` (obtain Keycloak admin token via REST API, create or update realm 'hhh' from keycloak/hhh-realm.json, docker-compose restart keycloak). All scripts: `set -euo pipefail`, `--dry-run` flag (prints commands without executing), exit non-zero on failure, chmod +x (mode 755).
+- Files changed: scripts/deploy-backend.sh (new), scripts/deploy-flutter-web.sh (new), scripts/deploy-recommender.sh (new), scripts/deploy-keycloak.sh (new), prd.json (US-048 passes=true)
+- **Learnings for future iterations:**
+  - `run_in_dir()` helper pattern: for dry-run of commands requiring a `cd`, print `(cd dir && cmd)` instead of using `run bash -c "..."` which loses command legibility
+  - Keycloak admin API: GET /admin/realms/hhh returns 200 if realm exists — use HTTP status to decide create (POST /admin/realms) vs update (PUT /admin/realms/hhh)
+  - KEYCLOAK_ADMIN_PASSWORD must be explicitly checked for empty string before hitting the API — `curl -sf` would fail silently with empty password producing a confusing error
+  - `docker-compose` service names (app, recommender, keycloak) differ from container names (h3-app, h3-recommender, h3-keycloak) — always use service names with docker-compose CLI
+  - `set -euo pipefail` with `grep -q` in a pipeline: if grep finds no match it exits non-zero, which triggers `set -e`. Use `|| true` after grep in non-critical checks to avoid premature script failure
+---

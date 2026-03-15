@@ -799,8 +799,8 @@
         "All scripts are executable (chmod +x)"
       ],
       "priority": 48,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created scripts/deploy-backend.sh (docker-compose build/up app + health poll), scripts/deploy-flutter-web.sh (flutter build web + copy to app/public/flutter/), scripts/deploy-recommender.sh (docker-compose build/up recommender), scripts/deploy-keycloak.sh (admin token + realm create/update via REST API + restart). All scripts: set -euo pipefail, --dry-run flag, chmod +x."
     },
     {
       "id": "US-049",
