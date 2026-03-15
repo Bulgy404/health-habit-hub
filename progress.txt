@@ -1,3 +1,14 @@
+## 2026-03-15 - US-017
+- What was implemented: Created mobile/lib/screens/shell_screen.dart with ConsumerWidget — StatefulNavigationShell from go_router for state-preserving tab navigation; bottom NavigationBar with 5 tabs (Donate/volunteer_activism, Explore/hub, Recommend/recommend, Profile/person, Admin/admin_panel_settings); Admin tab visible only when userRolesProvider contains 'admin' or 'researcher'; active tab highlighted via NavigationBar's indicatorColor from brand colorScheme.primaryContainer; added userRolesProvider (FutureProvider<List<String>>) to auth_provider.dart that decodes the JWT access token and extracts realm_access.roles; updated main.dart with StatefulShellRoute.indexedStack() with 5 branches (donate/explore/recommend/profile/admin) each using placeholder screens; removed _HomeShellPlaceholder; login still routes to /login, post-login navigates to /donate.
+- Files changed: mobile/lib/screens/shell_screen.dart (new), mobile/lib/providers/auth_provider.dart (add userRolesProvider), mobile/lib/main.dart (StatefulShellRoute replaces placeholder /home route), prd.json (US-017 passes=true)
+- **Learnings for future iterations:**
+  - StatefulShellRoute.indexedStack() is the go_router API for state-preserving tab navigation; `navigationShell.goBranch(index)` switches tabs
+  - Pass `initialLocation: branchIndex == navigationShell.currentIndex` to goBranch to pop to root when re-tapping current tab
+  - JWT role decoding: split on '.', base64Url.normalize(parts[1]) handles missing padding, then utf8.decode + jsonDecode; realm_access.roles is the Keycloak claim
+  - ConsumerWidget (not ConsumerStatefulWidget) is sufficient when you only need Riverpod watch, no local setState
+  - `dart analyze lib/` passes with no issues after these changes
+---
+
 ## 2026-03-14 - US-016
 - What was implemented: Created mobile/lib/screens/login_screen.dart with ConsumerStatefulWidget — HHH logo (health_and_safety icon), username/password TextFields, loading CircularProgressIndicator, error message display, login via authServiceProvider (navigates to /home on success); updated mobile/lib/main.dart with ProviderScope, go_router (_router with /login and /home routes), deep link pre-fill via GoRouterState.uri.queryParameters['user'/'token'], MaterialApp.router with teal colorScheme.
 - Files changed: mobile/lib/screens/login_screen.dart (new), mobile/lib/main.dart (rewritten), prd.json (US-016 passes=true)
