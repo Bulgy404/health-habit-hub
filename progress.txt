@@ -1,3 +1,14 @@
+## 2026-03-15 - US-018
+- What was implemented: Created mobile/lib/models/survey.dart (Survey with id/title/type/jsonSchema/assignedGroups/status, fromJson/toJson); created mobile/lib/models/survey_result.dart (SurveyResult with surveyId/userId/answers/completedAt, fromJson/toJson); created mobile/lib/services/survey_service.dart (SurveyService using dio — fetchSurvey(id), fetchProfileSurvey() calls fetchSurvey('profile'), submitResult(surveyId, answers) POST to /api/v1/surveys/:id/results; auth headers injected from AuthService; exposed as surveyServiceProvider Riverpod Provider).
+- Files changed: mobile/lib/models/survey.dart (new), mobile/lib/models/survey_result.dart (new), mobile/lib/services/survey_service.dart (new), prd.json (US-018 passes=true)
+- **Learnings for future iterations:**
+  - SurveyService follows the same DI pattern as AuthService: injectable Dio and AuthService via constructor, with defaults for production use
+  - fetchProfileSurvey() is a convenience wrapper: calls fetchSurvey('profile') — backend resolves the profile survey by userId from auth context
+  - submitResult posts to /api/v1/surveys/:id/results (not /:id/complete — PRD specifies /results endpoint)
+  - Provider<SurveyService> uses ref.watch(authServiceProvider) to get AuthService — same pattern as other providers in auth_provider.dart
+  - `dart analyze lib/` passes with no issues after these additions
+---
+
 ## 2026-03-15 - US-017
 - What was implemented: Created mobile/lib/screens/shell_screen.dart with ConsumerWidget — StatefulNavigationShell from go_router for state-preserving tab navigation; bottom NavigationBar with 5 tabs (Donate/volunteer_activism, Explore/hub, Recommend/recommend, Profile/person, Admin/admin_panel_settings); Admin tab visible only when userRolesProvider contains 'admin' or 'researcher'; active tab highlighted via NavigationBar's indicatorColor from brand colorScheme.primaryContainer; added userRolesProvider (FutureProvider<List<String>>) to auth_provider.dart that decodes the JWT access token and extracts realm_access.roles; updated main.dart with StatefulShellRoute.indexedStack() with 5 branches (donate/explore/recommend/profile/admin) each using placeholder screens; removed _HomeShellPlaceholder; login still routes to /login, post-login navigates to /donate.
 - Files changed: mobile/lib/screens/shell_screen.dart (new), mobile/lib/providers/auth_provider.dart (add userRolesProvider), mobile/lib/main.dart (StatefulShellRoute replaces placeholder /home route), prd.json (US-017 passes=true)
