@@ -1,3 +1,14 @@
+## 2026-03-15 - US-050
+- What was implemented: Updated `.github/workflows/ci.yml` — added `flutter-test` job (flutter pub get, flutter analyze lib/ test/, flutter test test/widget/ --coverage, upload coverage artifact); added backend coverage artifact upload step after `npm test`; scoped triggers to `pull_request` on master/rapid_dev branches and `push` to master. All three jobs (backend-test, flutter-test, ontology-test) run in parallel. Ontology job uses GitHub Actions service containers for neo4j+fuseki (more reliable than docker-compose in CI). `flutter analyze` confirmed exits 0, `npm test` passes 176 tests.
+- Files changed: .github/workflows/ci.yml (updated), prd.json (US-050 passes=true)
+- **Learnings for future iterations:**
+  - GitHub Actions service containers are more reliable than `docker-compose up -d` in CI — no need for docker-compose CLI install, healthchecks are built in via `options:`
+  - `subosito/flutter-action@v2` is the standard Flutter setup action; use `flutter-version: "3.32.0"` + `channel: "stable"` + `cache: true`
+  - Flutter widget tests run with `flutter test test/widget/ --coverage` — coverage goes to `mobile/coverage/`; `integration_test` tests require a device so they're excluded from CI
+  - `actions/upload-artifact@v4` is the current version (v3 is deprecated); use `name:` for the artifact name and `path:` for the directory
+  - ci.yml trigger: use both `push: branches: [master]` and `pull_request: branches: [master, rapid_dev]` to cover both direct pushes and PR workflows
+---
+
 ## 2026-03-15 - US-049
 - What was implemented: Created `scripts/deploy-full.sh` — orchestrator deploy script that runs all four per-service scripts in order (deploy-backend.sh → deploy-keycloak.sh → deploy-recommender.sh → deploy-flutter-web.sh), polling GET /api/v1/health between each step (60s timeout, fails if exceeded). Passes --dry-run to all sub-scripts when invoked with --dry-run. Every log line is timestamped. Warns if CHANGELOG.md version has no matching git tag. Uses `set -euo pipefail` to exit non-zero on any step failure. Script made executable (chmod +x).
 - Files changed: scripts/deploy-full.sh (new), prd.json (US-049 passes=true)
