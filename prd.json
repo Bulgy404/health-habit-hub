@@ -987,7 +987,7 @@
         "Python recommender spec (API-service/openapi.yaml) linked from docs/api/openapi.yaml via externalDocs"
       ],
       "priority": 60,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
