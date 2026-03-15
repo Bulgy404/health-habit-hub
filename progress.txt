@@ -1,3 +1,17 @@
+## 2026-03-15 - US-027
+- What was implemented: Created `mobile/lib/models/habit_node.dart` (HabitNode with id/name/category/bcioClass/annotationCounts fields, totalAnnotations getter, fromJson factory); created `mobile/lib/widgets/habit_graph_widget.dart` (HabitGraphWidget StatefulWidget — AnimationController with repeat() drives 60fps physics via addListener(_stepPhysics); _stepPhysics applies Coulomb repulsion between all node pairs + spring attraction between same-category pairs + center gravity, Euler integration with velocity damping; CustomPainter _GraphPainter draws same-category edges as light lines then nodes as circles colored by category from _kCategoryColors map + abbreviated text labels; GestureDetector onScaleStart/Update/End handles both pan and pinch-to-zoom with _panOffset/_zoom viewport transform; node radius = clamp(8 + total/10*16, 8, 24) px).
+- Files changed: mobile/lib/models/habit_node.dart (new), mobile/lib/widgets/habit_graph_widget.dart (new), prd.json (US-027 passes=true)
+- **Learnings for future iterations:**
+  - AnimatedBuilder(animation: _ticker, builder: ...) + addListener(_stepPhysics) pattern: physics step runs first in listener, then AnimatedBuilder rebuilds on same tick — no setState needed for physics updates
+  - For same-category spring model without explicit edge data, use `nodes[i].category == nodes[j].category` to create implicit edges during force accumulation
+  - `AnimationController(vsync: this, duration: const Duration(days: 1))..repeat()` runs indefinitely at 60fps — simpler than using a raw Ticker
+  - onScaleUpdate handles both pan and pinch simultaneously; track _focalPoint delta for pan, _baseZoom * details.scale for zoom
+  - _NodeState is a mutable helper (not a Flutter widget state) — safe to update in an animation listener
+  - `color.withAlpha(180)` for border paint; reset strokeWidth=0 and style=fill after border pass to avoid leaking state into next node
+  - dart analyze lib/ passes with no issues
+  - Browser verification: no browser tools available — manual verification needed
+---
+
 ## 2026-03-15 - US-026
 - What was implemented: Created `app/routes/habitsRouter.js` (createHabitsRouter factory — GET / base route returning {ok:true}, GET /public queries Neo4j via injectable neo4jRun for all hhh__Habit nodes, strips userId/source, merges annotation counts from MongoDB habit_annotations collection; POST /:id/annotate stores anonymous {habitId, type, createdAt} document in habit_annotations (no userId), returns updated counts; GET /stats returns {total, byCategory, byDay} using Neo4j for total/byCategory and MongoDB for byDay from last 30 days); updated `app/routes/v1Router.js` to import createHabitsRouter, accept neo4jRun param, replace placeholder habits handler with real router; created 12 integration tests in `app/tests/integration/habits.routes.test.js` (401/403 auth checks for all 3 endpoints, 400 for invalid annotate type, 200+body checks for all 3 happy paths).
 - Files changed: app/routes/habitsRouter.js (new), app/routes/v1Router.js (import + neo4jRun param + mount habitsRouter), app/tests/integration/habits.routes.test.js (new), prd.json (US-026 passes=true)
