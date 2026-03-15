@@ -6,6 +6,6 @@ export function renderAboutPage(req, res) {
     status: 'ok',
     lang: req.lang,
     messages: getLanguageMessages(req.lang),
-    contexts
+    contexts,
   });
 }

@@ -104,7 +104,8 @@ function createMockDb() {
                   : {}),
                 ...update.$set,
               };
-              const k = newDoc.key || newDoc.userId || Math.random().toString(36);
+              const k =
+                newDoc.key || newDoc.userId || Math.random().toString(36);
               store.set(k, newDoc);
               return { matchedCount: 0, modifiedCount: 0, upsertedCount: 1 };
             }
@@ -230,7 +231,11 @@ test('PUT /api/v1/admin/settings/:key - updates existing setting', async () => {
 test('GET /api/v1/admin/settings - reflects updated value', async () => {
   const token = makeToken(['admin']);
   // Set to 'print'
-  await put('/api/v1/admin/settings/token_card_format', { value: 'print' }, token);
+  await put(
+    '/api/v1/admin/settings/token_card_format',
+    { value: 'print' },
+    token
+  );
   const res = await get('/api/v1/admin/settings', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();

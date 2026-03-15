@@ -213,11 +213,11 @@
     ]
   },
 
-  "form_descriptions":{
+  "form_descriptions": {
     "sex": "Choose the gender you identify with the most.",
     "origin": "Select the country you are from.",
     "graduation": "Select the highest level you have completed.",
-    "age": "Type in your current age in years.", 
+    "age": "Type in your current age in years.",
     "weight": "Select the weight category that best describes you.",
     "occupation": "Select the option that best describes your current professional situation.",
     "working_hours": "Select the option that best describes your working hours.",
@@ -227,10 +227,10 @@
     "relationship_context": "Select the option that best describes your partner's attitude towards health and physical activity.",
     "pets": "Select the option that best describes your relationship with pets and their influence on your physical activity."
   },
-   "disclaimer": {
-      "title": "",
-      "text": "<h2>Welcome!</h2><p>This site is intended for users aged <strong>18 and over</strong>. We use a small cookie to store your confirmation and improve your experience.</p><p>By clicking <strong>“Enter Website”</strong>, you confirm that you are over 18 and accept our privacy policy.</p>",
-      "confirm": "Enter Website",
-      "leave": "Leave Site"
-    }
+  "disclaimer": {
+    "title": "",
+    "text": "<h2>Welcome!</h2><p>This site is intended for users aged <strong>18 and over</strong>. We use a small cookie to store your confirmation and improve your experience.</p><p>By clicking <strong>“Enter Website”</strong>, you confirm that you are over 18 and accept our privacy policy.</p>",
+    "confirm": "Enter Website",
+    "leave": "Leave Site"
+  }
 }

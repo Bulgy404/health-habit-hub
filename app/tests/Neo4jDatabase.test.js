@@ -15,7 +15,9 @@ function getNeo4jConfig() {
 async function canConnectBolt() {
   const { uri, user, password } = getNeo4jConfig();
   try {
-    const driver = neo4j.driver(uri, neo4j.auth.basic(user, password), { connectionTimeout: 5000 });
+    const driver = neo4j.driver(uri, neo4j.auth.basic(user, password), {
+      connectionTimeout: 5000,
+    });
     const session = driver.session();
     await session.run('RETURN 1');
     await session.close();
@@ -27,7 +29,15 @@ async function canConnectBolt() {
 }
 
 test('Neo4jDbClient constructs', async () => {
-  const testConfig = { ...config, neo4j: { ...config.neo4j, uri: getNeo4jConfig().uri, user: getNeo4jConfig().user, password: getNeo4jConfig().password } };
+  const testConfig = {
+    ...config,
+    neo4j: {
+      ...config.neo4j,
+      uri: getNeo4jConfig().uri,
+      user: getNeo4jConfig().user,
+      password: getNeo4jConfig().password,
+    },
+  };
   const client = new Neo4jDbClient(testConfig);
   assert.ok(client);
   await client.close();
@@ -37,11 +47,22 @@ test('Neo4jDbClient insertDonateData (integration)', async () => {
   const ping = await canConnectBolt();
   if (!ping.ok) {
     const { uri, user } = getNeo4jConfig();
-    assert.fail(`Neo4j not reachable at ${uri} (user=${user}). Error: ${ping.error}`);
+    assert.fail(
+      `Neo4j not reachable at ${uri} (user=${user}). Error: ${ping.error}`
+    );
   }
 
   // Use localhost Bolt for tests
-  const testConfig = { ...config, graphBackend: 'neo4j', neo4j: { ...config.neo4j, uri: getNeo4jConfig().uri, user: getNeo4jConfig().user, password: getNeo4jConfig().password } };
+  const testConfig = {
+    ...config,
+    graphBackend: 'neo4j',
+    neo4j: {
+      ...config.neo4j,
+      uri: getNeo4jConfig().uri,
+      user: getNeo4jConfig().user,
+      password: getNeo4jConfig().password,
+    },
+  };
   const client = new Neo4jDbClient(testConfig);
   const userId = 'neo4j-test-user-e2e';
 

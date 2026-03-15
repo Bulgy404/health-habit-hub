@@ -11,25 +11,24 @@ Diese Webpräsenz wurde vor dem 8. April 2025 veröffentlicht und entspricht noc
 
 ### Nicht barrierefreie Inhalte
 
-*   Alternativtexte für Bilder und grafische Elemente sind nicht vollständig vorhanden.
-*   ARIA-Attribute zur Orientierung innerhalb von Elementen sind nicht vollständig verfügbar.
-*   Die Tastaturbedienbarkeit ist für folgende Elemente/Inhalte nicht vollständig gegeben: Beschriftungen für Kontext und Verhalten.
-*   Die Position des Tastaturfokus ist nicht deutlich sichtbar.
-*   Wörter und Abschnitte in anderen Sprachen sind nicht gekennzeichnet.
-*   Bei Formularen gibt es keine Übersichtsseite zur nachträglichen Prüfung oder Korrektur der Eingaben. Diese werden direkt übermittelt.
-*   Auf Start- und Übersichtsseiten können bestimmte Elemente nicht übersprungen werden, da Überschriften fehlen.
+- Alternativtexte für Bilder und grafische Elemente sind nicht vollständig vorhanden.
+- ARIA-Attribute zur Orientierung innerhalb von Elementen sind nicht vollständig verfügbar.
+- Die Tastaturbedienbarkeit ist für folgende Elemente/Inhalte nicht vollständig gegeben: Beschriftungen für Kontext und Verhalten.
+- Die Position des Tastaturfokus ist nicht deutlich sichtbar.
+- Wörter und Abschnitte in anderen Sprachen sind nicht gekennzeichnet.
+- Bei Formularen gibt es keine Übersichtsseite zur nachträglichen Prüfung oder Korrektur der Eingaben. Diese werden direkt übermittelt.
+- Auf Start- und Übersichtsseiten können bestimmte Elemente nicht übersprungen werden, da Überschriften fehlen.
 
 ### Feedback und Kontaktangaben
 
-Wenn Sie Mängel in Bezug auf die barrierefreie Gestaltung feststellen, kontaktieren Sie uns bitte unter:  
-  
+Wenn Sie Mängel in Bezug auf die barrierefreie Gestaltung feststellen, kontaktieren Sie uns bitte unter:
+
 Email: [digital-health@tu-dresden.de](mailto:digital-health@tu-dresden.de)  
 Telefon: [+49 351 463-37671](tel:+4935146337671)
 
 ### Durchsetzungsverfahren
 
-Wenn Sie mit der Bearbeitung Ihres Feedbacks nicht zufrieden sind, können Sie sich an die Durchsetzungsstelle des Freistaates Sachsen wenden:  
-  
+Wenn Sie mit der Bearbeitung Ihres Feedbacks nicht zufrieden sind, können Sie sich an die Durchsetzungsstelle des Freistaates Sachsen wenden:
 
 Geschäftsstelle des Beauftragten der Sächsischen Staatsregierung für die Belange von Menschen mit Behinderungen  
 Albertstraße 10  

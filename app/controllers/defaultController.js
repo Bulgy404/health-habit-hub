@@ -8,6 +8,6 @@ export function renderLocalizedView(req, res, pageName, extraData = {}) {
     lang: req.lang,
     page: pageName,
     messages,
-    ...extraData
+    ...extraData,
   });
 }

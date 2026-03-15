@@ -8,7 +8,7 @@ export async function renderPrivacyPolicy(req, res, next) {
       status: 'ok',
       lang: req.lang,
       messages: getLanguageMessages(req.lang),
-      content: html
+      content: html,
     });
   } catch (err) {
     console.error('Error rendering privacy policy:', err);

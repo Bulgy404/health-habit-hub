@@ -8,7 +8,7 @@ export async function renderAccessibility(req, res, next) {
       status: 'ok',
       lang: req.lang,
       messages: getLanguageMessages(req.lang),
-      content: html
+      content: html,
     });
   } catch (err) {
     console.error('Error rendering accessibility page:', err);

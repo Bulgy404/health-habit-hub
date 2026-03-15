@@ -23,7 +23,7 @@ const DOCKER_COMPOSE_PATH = resolve(__dirname, '../../docker-compose.yml');
 const readFile = (path) => {
   try {
     return readFileSync(path, 'utf8');
-  } catch (error) {
+  } catch {
     return null;
   }
 };

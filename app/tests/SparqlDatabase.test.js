@@ -43,7 +43,8 @@ test('Create instance of DbClient', () => {
 });
 
 test('Insert open data (integration)', async (t) => {
-  if (!INTEGRATION) return t.skip('Integration disabled (set ENABLE_INTEGRATION=1)');
+  if (!INTEGRATION)
+    return t.skip('Integration disabled (set ENABLE_INTEGRATION=1)');
   const openExperimentGroup = new ExperimentGroup(false, false);
   const data = {
     language: 'en',
@@ -62,7 +63,8 @@ test('Insert open data (integration)', async (t) => {
 });
 
 test('Insert closed data (integration)', async (t) => {
-  if (!INTEGRATION) return t.skip('Integration disabled (set ENABLE_INTEGRATION=1)');
+  if (!INTEGRATION)
+    return t.skip('Integration disabled (set ENABLE_INTEGRATION=1)');
   const closedExperimentGroup = new ExperimentGroup(true, true);
   const data = {
     language: 'en',

@@ -360,7 +360,9 @@ export function createAdminRouter({
           const cnt = records[0]?.cnt;
           habitsCount =
             typeof cnt?.toNumber === 'function' ? cnt.toNumber() : (cnt ?? 0);
-        } catch {}
+        } catch {
+          // Neo4j unavailable; habitsCount stays 0
+        }
       } else {
         const habitDocs = await database
           .collection('habit_donations')
@@ -581,7 +583,13 @@ export function createAdminRouter({
         createdAt: new Date(),
       };
       await database.collection('surveys').insertOne(doc);
-      res.status(201).json({ id, title, type, status: 'draft', assignedGroups: doc.assignedGroups });
+      res.status(201).json({
+        id,
+        title,
+        type,
+        status: 'draft',
+        assignedGroups: doc.assignedGroups,
+      });
     } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -617,9 +625,9 @@ export function createAdminRouter({
       const { id } = req.params;
       const { status } = req.body;
       if (!['published', 'archived', 'draft'].includes(status)) {
-        return res
-          .status(400)
-          .json({ error: "status must be 'published', 'archived', or 'draft'" });
+        return res.status(400).json({
+          error: "status must be 'published', 'archived', or 'draft'",
+        });
       }
       const database = await getDb();
       const result = await database
@@ -651,7 +659,10 @@ export function createAdminRouter({
       const database = await getDb();
       const result = await database
         .collection('surveys')
-        .updateOne({ id }, { $set: { assignedGroups: groups, updatedAt: new Date() } });
+        .updateOne(
+          { id },
+          { $set: { assignedGroups: groups, updatedAt: new Date() } }
+        );
       if (result.matchedCount === 0) {
         return res.status(404).json({ error: 'Survey not found' });
       }

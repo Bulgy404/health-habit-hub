@@ -7,7 +7,7 @@ export function renderDisclaimer(req, res) {
     status: 'ok',
     lang,
     nextUrl,
-    contextPath
+    contextPath,
   });
 }
 
