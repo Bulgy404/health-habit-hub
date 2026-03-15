@@ -465,8 +465,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 28,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created HabitService (fetchPublicHabits, annotateHabit). Modified HabitGraphWidget to add onNodeTap callback via accumulated-movement tap detection in onScale*. Created ExploreScreen: fetches habits on init, renders HabitGraphWidget with filtered nodes, horizontal FilterChip row for category selection, node tap shows modal bottom sheet with name/category/BCIO class/annotation counts and 'I do this too' + 'Helpful' buttons that call annotateHabit and update UI."
     },
     {
       "id": "US-029",
