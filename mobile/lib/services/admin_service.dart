@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/admin_habit_donation.dart';
 import '../models/admin_participant.dart';
+import '../models/admin_session.dart';
 import '../models/admin_survey.dart';
 import '../models/participant_progress.dart';
 import '../providers/auth_provider.dart';
@@ -89,6 +90,30 @@ class AdminService {
   /// Returns the full token card URL for a participant.
   String tokenCardUrl(String participantId, String format) =>
       '$_baseUrl/admin/participants/$participantId/token-card?format=$format';
+
+  // ---------------------------------------------------------------------------
+  // Session endpoints
+  // ---------------------------------------------------------------------------
+
+  /// Returns all active device sessions.
+  Future<List<AdminSession>> fetchSessions() async {
+    final response = await _dio.get<List<dynamic>>(
+      '$_baseUrl/admin/sessions',
+      options: await _authOptions(),
+    );
+    final data = response.data ?? [];
+    return data
+        .map((e) => AdminSession.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Revokes (deletes) a session by [sessionId].
+  Future<void> revokeSession(String sessionId) async {
+    await _dio.delete<void>(
+      '$_baseUrl/admin/sessions/$sessionId',
+      options: await _authOptions(),
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // Survey endpoints
