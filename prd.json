@@ -878,8 +878,8 @@
         "Input sanitization: express-validator applied on all POST/PUT body parameters, strips HTML tags"
       ],
       "priority": 53,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "scripts/restore.sh: extracts full_backup_<timestamp>.tar.gz to temp dir, confirms with user, restores MongoDB (mongorestore --drop), Neo4j (neo4j-admin database load + docker stop/start), Keycloak (DELETE realm + POST import). scripts/add-mongo-validators.js: adds $jsonSchema validators (additionalProperties:false) to results, profiles, habit_annotations, admin_settings collections. app/middleware/rateLimiter.js: express-rate-limit 100 req/15min keyed by req.user.sub. app/middleware/inputSanitizer.js: recursively strips HTML tags from all string fields in POST/PUT/PATCH req.body. v1Router.js: limiter + sanitizeBody applied before auth middleware. DELETE /admin/participants/:id already used soft-delete. 186 tests pass."
     },
     {
       "id": "US-054",

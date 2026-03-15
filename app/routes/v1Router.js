@@ -1,6 +1,8 @@
 import express from 'express';
 import { createAuthMiddleware } from '../middleware/auth.js';
 import { requireRole } from '../middleware/requireRole.js';
+import { apiRateLimiter } from '../middleware/rateLimiter.js';
+import { sanitizeBody } from '../middleware/inputSanitizer.js';
 import { createSurveyRouter } from './surveyRouter.js';
 import { createRecommendRouter } from './recommendRouter.js';
 import { createProfileRouter } from './profileRouter.js';
@@ -16,9 +18,11 @@ export function createV1Router({
   neo4jRun,
   keycloak,
   tokenCardService,
+  rateLimiter,
 } = {}) {
   const router = express.Router();
   const authenticate = createAuthMiddleware({ jwksUrl });
+  const limiter = rateLimiter || apiRateLimiter;
 
   // Public: health check (no auth required)
   router.get('/health', async (req, res) => {
@@ -26,6 +30,10 @@ export function createV1Router({
     const httpStatus = result.status === 'ok' ? 200 : 503;
     res.status(httpStatus).json(result);
   });
+
+  // Apply rate limiting and input sanitization to all authenticated routes
+  router.use(limiter);
+  router.use(sanitizeBody);
 
   // All routes below require a valid JWT
   router.use(authenticate);
