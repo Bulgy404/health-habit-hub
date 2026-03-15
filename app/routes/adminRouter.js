@@ -84,6 +84,21 @@ function randomPassword() {
   return randomBytes(12).toString('base64url');
 }
 
+const DEFAULT_SETTINGS = [{ key: 'token_card_format', value: 'both' }];
+
+async function seedDefaultSettings(database) {
+  for (const { key, value } of DEFAULT_SETTINGS) {
+    const existing = await database
+      .collection('admin_settings')
+      .findOne({ key });
+    if (!existing) {
+      await database
+        .collection('admin_settings')
+        .insertOne({ key, value, updatedAt: new Date() });
+    }
+  }
+}
+
 export function createAdminRouter({
   db,
   neo4jRun,
@@ -97,6 +112,9 @@ export function createAdminRouter({
     const { connect } = await import('../models/survey.js');
     return connect();
   }
+
+  // Seed default settings asynchronously on router creation
+  getDb().then(seedDefaultSettings).catch(() => {});
 
   function getKeycloak() {
     return keycloak || createKeycloakClient();
@@ -252,6 +270,44 @@ export function createAdminRouter({
         'Content-Length': pdfBuffer.length,
       });
       res.send(pdfBuffer);
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/settings
+  router.get('/settings', async (req, res) => {
+    try {
+      const database = await getDb();
+      const docs = await database
+        .collection('admin_settings')
+        .find({})
+        .toArray();
+      const result = {};
+      for (const doc of docs) {
+        result[doc.key] = doc.value;
+      }
+      res.json(result);
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PUT /api/v1/admin/settings/:key
+  router.put('/settings/:key', async (req, res) => {
+    try {
+      const { key } = req.params;
+      const { value } = req.body;
+      if (value === undefined) {
+        return res.status(400).json({ error: 'Missing value' });
+      }
+      const database = await getDb();
+      await database.collection('admin_settings').updateOne(
+        { key },
+        { $set: { value, updatedAt: new Date() } },
+        { upsert: true }
+      );
+      res.json({ ok: true, key, value });
     } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
