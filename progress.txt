@@ -1,3 +1,12 @@
+## 2026-03-15 - US-057
+- What was implemented: Created `docs/guides/admin-guide-de.md` — full German translation of the English admin guide with Quick Start checklist (8-step cohort setup) and all 8 sections translated: 1) Als Admin anmelden, 2) Teilnehmer erstellen und Token-Karte herunterladen, 3) Studiengruppen zuweisen, 4) Fragebögen konfigurieren, 5) Gespendete Gewohnheiten ueberwachen, 6) Teilnehmerfortschritt verfolgen, 7) Gerätesitzungen widerrufen, 8) Token-Karten-Format in den Einstellungen konfigurieren. Screenshot references identical to English guide (`../assets/screenshots/admin/`). Generated `docs/guides/admin-guide-de.pdf` via pandoc (LaTeX engine, ToC anchor reference warnings only — PDF 180KB).
+- Files changed: docs/guides/admin-guide-de.md (new), docs/guides/admin-guide-de.pdf (new), prd.json (US-057 passes=true)
+- **Learnings for future iterations:**
+  - LibreTranslate runs on port 5000 in the docker-compose stack; if not running, translation can be produced directly (same as participant guide de pattern)
+  - German umlauts (ae, oe, ue etc.) and special characters render correctly via pandoc/pdflatex with UTF-8 inputenc — no need for manual escaping
+  - German ToC anchor links in markdown cause the same "undefined reference" LaTeX warnings as in English — cosmetic only, PDF generated successfully
+---
+
 ## 2026-03-15 - US-056
 - What was implemented: Created `docs/guides/admin-guide.md` — full admin guide with Quick Start checklist (8-step cohort setup) and 8 sections: 1) Logging in as admin, 2) Creating a participant + downloading token card, 3) Assigning study groups, 4) Configuring questionnaires (create/edit/publish/archive/assign groups), 5) Monitoring donated habits (filters + CSV export), 6) Tracking participant progress, 7) Revoking device sessions, 8) Configuring token card format in settings. Generated 13 placeholder PNG screenshots in `docs/assets/screenshots/admin/` using pure Python (struct + zlib, same approach as participant screenshots). Callout annotations listed as numbered descriptions in markdown tables (circled Unicode numbers ①–⑦ replaced with ASCII (1)–(7) for LaTeX compatibility). Generated `docs/guides/admin-guide.pdf` via pandoc from the guides/ directory using `--resource-path=..` (LaTeX engine; ToC anchor reference warnings only — PDF generated successfully, 177KB).
 - Files changed: docs/guides/admin-guide.md (new), docs/guides/admin-guide.pdf (new), docs/assets/screenshots/admin/*.png (13 new placeholder files), prd.json (US-056 passes=true)
