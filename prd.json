@@ -815,8 +815,8 @@
         "Exits non-zero if any step fails"
       ],
       "priority": 49,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created scripts/deploy-full.sh: calls sub-scripts in order (backend→keycloak→recommender→flutter-web), polls /api/v1/health (60s timeout) between each step, passes --dry-run to sub-scripts, timestamps every log line, warns if CHANGELOG.md version has no matching git tag, set -euo pipefail ensures non-zero exit on any failure."
     },
     {
       "id": "US-050",

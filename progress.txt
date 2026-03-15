@@ -1,3 +1,12 @@
+## 2026-03-15 - US-049
+- What was implemented: Created `scripts/deploy-full.sh` — orchestrator deploy script that runs all four per-service scripts in order (deploy-backend.sh → deploy-keycloak.sh → deploy-recommender.sh → deploy-flutter-web.sh), polling GET /api/v1/health between each step (60s timeout, fails if exceeded). Passes --dry-run to all sub-scripts when invoked with --dry-run. Every log line is timestamped. Warns if CHANGELOG.md version has no matching git tag. Uses `set -euo pipefail` to exit non-zero on any step failure. Script made executable (chmod +x).
+- Files changed: scripts/deploy-full.sh (new), prd.json (US-049 passes=true)
+- **Learnings for future iterations:**
+  - CHANGELOG.md does not exist at repo root; the version-bump check handles this gracefully with a WARN message
+  - Git tag check uses `git tag --list "v<version>"` — works with both `v1.2.3` and `1.2.3` tag conventions
+  - Sub-scripts each have their own --dry-run handling; the orchestrator simply passes the flag through rather than skipping sub-script execution
+---
+
 ## 2026-03-15 - US-047
 - What was implemented: Created `mobile/integration_test/participant_flow_test.dart` — end-to-end participant flow test using `integration_test` SDK package with Riverpod provider overrides for all services. Test drives: (1) login screen visible with Health Habit Hub title; (2) enter credentials and tap Login; (3) NavigationBar with Donate/Explore/Recommend/Profile tabs appears; (4) DonateScreen loads showing "Donate a Habit" AppBar; (5) tap Recommend tab; (6) RecommendScreen shows "Recommendations" AppBar and two recommendation cards ("Morning Walk", "Mindful Breathing"). Fake services: `_FakeAuthService` (login succeeds, token returns test JWT), `_FakeSurveyService` (returns mock Survey), `_FakeRecommendationService` (returns 2 mock Recommendation objects). Custom test router adds `/home` redirect to `/donate` to handle `LoginScreen`'s `context.go('/home')` post-login. Added `integration_test: sdk: flutter` to pubspec.yaml dev_dependencies. `flutter analyze integration_test/ lib/` reports no issues.
 - Files changed: mobile/integration_test/participant_flow_test.dart (new), mobile/pubspec.yaml (add integration_test dep), mobile/pubspec.lock (updated), prd.json (US-047 passes=true)
