@@ -971,8 +971,8 @@
         "Anonymisation model: table showing what data is stored vs removed/anonymized on soft-delete"
       ],
       "priority": 59,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created docs/data-model.md with all required sections: Neo4j node labels+properties table, relationship types table, 10 annotated Cypher queries; Fuseki namespace prefix table, 10 annotated SPARQL queries; MongoDB 8-collection schemas with example documents; G1-G4 group encoding explanation with unambiguous query examples; anonymisation model table covering all stores."
     },
     {
       "id": "US-060",
