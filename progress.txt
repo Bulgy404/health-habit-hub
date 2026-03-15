@@ -1,3 +1,21 @@
+## 2026-03-15 - US-056
+- What was implemented: Created `docs/guides/admin-guide.md` — full admin guide with Quick Start checklist (8-step cohort setup) and 8 sections: 1) Logging in as admin, 2) Creating a participant + downloading token card, 3) Assigning study groups, 4) Configuring questionnaires (create/edit/publish/archive/assign groups), 5) Monitoring donated habits (filters + CSV export), 6) Tracking participant progress, 7) Revoking device sessions, 8) Configuring token card format in settings. Generated 13 placeholder PNG screenshots in `docs/assets/screenshots/admin/` using pure Python (struct + zlib, same approach as participant screenshots). Callout annotations listed as numbered descriptions in markdown tables (circled Unicode numbers ①–⑦ replaced with ASCII (1)–(7) for LaTeX compatibility). Generated `docs/guides/admin-guide.pdf` via pandoc from the guides/ directory using `--resource-path=..` (LaTeX engine; ToC anchor reference warnings only — PDF generated successfully, 177KB).
+- Files changed: docs/guides/admin-guide.md (new), docs/guides/admin-guide.pdf (new), docs/assets/screenshots/admin/*.png (13 new placeholder files), prd.json (US-056 passes=true)
+- **Learnings for future iterations:**
+  - Circled Unicode numbers ①②③ etc. are not supported by pdflatex — replace with ASCII `(1)(2)(3)` before running pandoc PDF generation
+  - Run `pandoc` from the same directory as the markdown file when using relative image paths (`../assets/screenshots/...`) — pandoc resolves paths relative to its CWD, so `--resource-path=..` is needed when running from guides/
+  - Annotation callouts in documentation: inline them in the screenshot table cell next to the image reference — LaTeX tables with two columns (image | annotations) render well in pandoc PDF output
+---
+
+## 2026-03-15 - US-055
+- What was implemented: Created `docs/guides/participant-guide-de.md` — full German translation of the English participant guide with all 7 sections, step labels, captions, tips, and troubleshooting notes translated. Screenshot references identical to English guide (`../assets/screenshots/participant/`). Generated `docs/guides/participant-guide-de.pdf` via pandoc (LaTeX engine, warnings only — same as English guide). LibreTranslate was not running locally; translation produced directly and reviewed for accuracy.
+- Files changed: docs/guides/participant-guide-de.md (new), docs/guides/participant-guide-de.pdf (new), prd.json (US-055 passes=true)
+- **Learnings for future iterations:**
+  - LibreTranslate runs on port 5000 in the docker-compose stack; if not running, translation can be produced directly — note this in the progress report
+  - German umlauts (ä, ö, ü, ß) render correctly in pandoc PDF output via LaTeX (pdflatex handles UTF-8 with inputenc)
+  - ToC anchor links in German markdown cause the same "undefined reference" LaTeX warnings as in English — cosmetic only, PDF is generated successfully
+---
+
 ## 2026-03-15 - US-054
 - What was implemented: Created `docs/guides/participant-guide.md` with 7 sections and numbered steps: 1) Accessing the app (Android APK / iOS / browser), 2) Logging in with token card (QR scan + manual entry), 3) Completing your profile, 4) Donating a habit, 5) Exploring the habit graph and annotating nodes, 6) Understanding your recommendations (rationale + citation + accept/dismiss), 7) Updating your profile. Each section contains a markdown table referencing three screenshots (Android, iOS, Chrome). Created 21 placeholder PNG screenshots (390×844 px teal fill) in `docs/assets/screenshots/participant/` — one per platform per section, named descriptively (e.g. `01-login-android.png`). Generated `docs/guides/participant-guide.pdf` via `pandoc` using the default LaTeX engine (warnings only — no errors; PDF file created successfully).
 - Files changed: docs/guides/participant-guide.md (new), docs/guides/participant-guide.pdf (new), docs/assets/screenshots/participant/*.png (21 new placeholder files), prd.json (US-054 passes=true)
