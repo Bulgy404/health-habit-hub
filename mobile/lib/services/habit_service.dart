@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/habit_node.dart';
+import '../models/habit_stats.dart';
 import '../providers/auth_provider.dart';
 import 'auth_service.dart';
 
@@ -32,6 +33,16 @@ class HabitService {
         .cast<Map<String, dynamic>>()
         .map(HabitNode.fromJson)
         .toList();
+  }
+
+  /// Returns aggregated habit statistics (total, byCategory, byDay).
+  Future<HabitStats> fetchStats() async {
+    final headers = await _authHeaders();
+    final response = await _dio.get<Map<String, dynamic>>(
+      '$_baseUrl/habits/stats',
+      options: Options(headers: headers),
+    );
+    return HabitStats.fromJson(response.data ?? {});
   }
 
   /// Submits an anonymous annotation of [type] ('helpful' or 'iDoThis') for

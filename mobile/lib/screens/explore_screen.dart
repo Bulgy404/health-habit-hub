@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/habit_node.dart';
 import '../services/habit_service.dart';
 import '../widgets/habit_graph_widget.dart';
+import 'stats_screen.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -247,19 +248,33 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Explore Habits'),
-        actions: [
-          if (!_loading)
-            IconButton(
-              onPressed: _fetchHabits,
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Refresh',
-            ),
-        ],
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Explore Habits'),
+          actions: [
+            if (!_loading)
+              IconButton(
+                onPressed: _fetchHabits,
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh',
+              ),
+          ],
+          bottom: const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.hub), text: 'Graph'),
+              Tab(icon: Icon(Icons.bar_chart), text: 'Stats'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            body,
+            const StatsScreen(),
+          ],
+        ),
       ),
-      body: body,
     );
   }
 }
