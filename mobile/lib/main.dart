@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'screens/donate_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/shell_screen.dart';
 
@@ -48,8 +49,7 @@ final _router = GoRouter(
           routes: [
             GoRoute(
               path: '/donate',
-              builder: (context, state) =>
-                  const _PlaceholderScreen(label: 'Donate'),
+              builder: (context, state) => const DonateScreen(),
             ),
           ],
         ),
