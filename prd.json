@@ -600,8 +600,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 36,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added url_launcher to pubspec.yaml. Added createParticipant() and tokenCardUrl() to AdminService. Added FloatingActionButton + _showCreateDialog() to AdminParticipantsScreen. Created _CreateParticipantDialog StatefulWidget: group dropdown (G1-G4) + format dropdown (QR/Print/Both); Create button POSTs to admin/participants, reads tokenCardUrl from response (or derives it), dismisses dialog, shows snackbar 'Participant p-xxxx created', opens PDF via launchUrl. dart analyze: no issues."
     },
     {
       "id": "US-037",
