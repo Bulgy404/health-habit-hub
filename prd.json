@@ -862,8 +862,8 @@
         "BACKUP_EMAIL in stack.env triggers email on failure (uses sendmail or curl to mail API if configured)"
       ],
       "priority": 52,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "backup-service/backup.sh extended with mongodump (mongo/), neo4j-admin dump (neo4j/), Keycloak realm export via admin API (keycloak/). Daily cron at 02:00 in Dockerfile. Timestamped logging to backup.log. 30-day retention via find+rm. BACKUP_EMAIL triggers email via Mailjet API on failure."
     },
     {
       "id": "US-053",
