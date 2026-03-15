@@ -847,8 +847,8 @@
         "deploy.yml only runs if ci.yml passed (needs: ci)"
       ],
       "priority": 51,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created .github/workflows/deploy.yml: uses workflow_run event (triggers after CI completes successfully on master) for deploys, plus push tag v* for releases. Deploy job SSHs to server using SERVER_SSH_KEY secret, runs git pull && scripts/deploy-full.sh. Release job builds Flutter APK + web, zips web build, uploads both to GitHub Release via softprops/action-gh-release@v2. Both jobs use fail-fast by default (set -euo pipefail in SSH script). workflow_run conclusion check ensures CI must pass before deploy runs."
     },
     {
       "id": "US-052",
