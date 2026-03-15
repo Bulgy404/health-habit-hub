@@ -498,7 +498,7 @@
         "Tests pass for all four endpoints"
       ],
       "priority": 30,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
