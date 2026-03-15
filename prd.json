@@ -720,8 +720,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 43,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created admin_shell_screen.dart (AdminShellScreen — StatelessWidget; NavigationRail with 5 destinations: Participants/Surveys/Habits/Devices/Settings; active item detected via GoRouterState.of(context).matchedLocation.startsWith(section.path); context.go(path) on destination tap; Row(NavigationRail + VerticalDivider + Expanded(child))). Converted GoRouter from top-level global to routerProvider (Provider<GoRouter>) so redirect guard can use ref.read(userRolesProvider.future); redirect returns '/' for /admin/* paths when user lacks admin/researcher role. Added ShellRoute inside admin StatefulShellBranch (initialLocation: '/admin/participants') — ShellRoute builder wraps child in AdminShellScreen; admin sub-routes (/admin/participants, /admin/surveys, /admin/habits, /admin/devices, /admin/settings) use absolute paths; detail routes (:id) nested within. Converted HhhApp from StatelessWidget to ConsumerWidget watching routerProvider. dart analyze lib/: no issues."
     },
     {
       "id": "US-044",
