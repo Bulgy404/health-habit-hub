@@ -1,5 +1,6 @@
 import express from 'express';
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
+import { generateTokenCard } from '../services/token_card_service.js';
 
 // Production Keycloak admin client (reads config from env)
 function createKeycloakClient() {
@@ -83,7 +84,12 @@ function randomPassword() {
   return randomBytes(12).toString('base64url');
 }
 
-export function createAdminRouter({ db, neo4jRun, keycloak } = {}) {
+export function createAdminRouter({
+  db,
+  neo4jRun,
+  keycloak,
+  tokenCardService,
+} = {}) {
   const router = express.Router();
 
   async function getDb() {
@@ -94,6 +100,10 @@ export function createAdminRouter({ db, neo4jRun, keycloak } = {}) {
 
   function getKeycloak() {
     return keycloak || createKeycloakClient();
+  }
+
+  function getTokenCardService() {
+    return tokenCardService || { generateTokenCard };
   }
 
   // GET /api/v1/admin – base route
@@ -142,13 +152,15 @@ export function createAdminRouter({ db, neo4jRun, keycloak } = {}) {
       await database.collection('participants').insertOne({
         userId,
         username,
+        password,
         group: null,
         enrolledAt: now,
         lastActive: null,
         surveyCompletionPct: 0,
       });
 
-      res.json({ userId, username, password });
+      const tokenCardUrl = `/api/v1/admin/participants/${userId}/token-card`;
+      res.json({ userId, username, password, tokenCardUrl });
     } catch {
       res.status(500).json({ error: 'Internal server error' });
     }
@@ -200,6 +212,46 @@ export function createAdminRouter({ db, neo4jRun, keycloak } = {}) {
       }
 
       res.json({ ok: true, userId: id, group });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/participants/:id/token-card – returns PDF
+  router.get('/participants/:id/token-card', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const format = req.query.format || 'both';
+
+      if (!['qr', 'print', 'both'].includes(format)) {
+        return res
+          .status(400)
+          .json({ error: "Invalid format. Must be 'qr', 'print', or 'both'" });
+      }
+
+      const database = await getDb();
+      const participant = await database
+        .collection('participants')
+        .findOne({ userId: id, deletedAt: { $exists: false } });
+
+      if (!participant) {
+        return res.status(404).json({ error: 'Participant not found' });
+      }
+
+      const svc = getTokenCardService();
+      const pdfBuffer = await svc.generateTokenCard(
+        participant.userId,
+        participant.username,
+        participant.password || '',
+        format
+      );
+
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="token-card-${id}.pdf"`,
+        'Content-Length': pdfBuffer.length,
+      });
+      res.send(pdfBuffer);
     } catch {
       res.status(500).json({ error: 'Internal server error' });
     }

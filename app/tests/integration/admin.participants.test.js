@@ -81,7 +81,15 @@ function createMockDb() {
         },
         async findOne(query) {
           for (const [, doc] of store) {
-            if (query.userId && doc.userId === query.userId) return { ...doc };
+            if (query.userId && doc.userId !== query.userId) continue;
+            if (
+              query.deletedAt &&
+              query.deletedAt.$exists === false &&
+              doc.deletedAt !== undefined
+            ) {
+              continue;
+            }
+            return { ...doc };
           }
           return null;
         },
@@ -111,6 +119,17 @@ function createMockDb() {
           return { matchedCount: 1, modifiedCount: 1 };
         },
       };
+    },
+  };
+}
+
+// ── Mock Token Card Service ───────────────────────────────────────────────────
+
+function createMockTokenCardService() {
+  return {
+    async generateTokenCard(userId, username, password, format) {
+      // Return a minimal fake PDF buffer (starts with %PDF)
+      return Buffer.from(`%PDF-1.4 fake-pdf userId=${userId} format=${format}`);
     },
   };
 }
@@ -147,10 +166,12 @@ let server;
 let baseUrl;
 let mockDb;
 let mockKc;
+let mockTokenCardSvc;
 
 before(async () => {
   mockDb = createMockDb();
   mockKc = createMockKeycloak();
+  mockTokenCardSvc = createMockTokenCardService();
 
   const realFetch = global.fetch;
   global.fetch = async (url, options) => {
@@ -168,6 +189,7 @@ before(async () => {
     serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
     db: mockDb,
     keycloak: mockKc,
+    tokenCardService: mockTokenCardSvc,
   });
   testApp.use('/api/v1', v1Router);
 
@@ -330,6 +352,70 @@ test('DELETE returns 404 for unknown participant', async () => {
   const res = await del('/api/v1/admin/participants/unknown-id', token);
   assert.strictEqual(res.status, 404);
 });
+
+// ── Token card ────────────────────────────────────────────────────────────────
+
+test('POST /api/v1/admin/participants response includes tokenCardUrl', async () => {
+  const token = makeToken(['admin'], 'admin-token-url-test');
+  const res = await post('/api/v1/admin/participants', {}, token);
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.tokenCardUrl, 'response should include tokenCardUrl');
+  assert.ok(
+    body.tokenCardUrl.includes(body.userId),
+    'tokenCardUrl should contain the userId'
+  );
+});
+
+test('GET /api/v1/admin/participants/:id/token-card returns PDF for valid participant', async () => {
+  const token = makeToken(['admin'], 'admin-tokencard-get-test');
+
+  // Create participant first
+  const createRes = await post('/api/v1/admin/participants', {}, token);
+  const { userId } = await createRes.json();
+
+  // Fetch token card
+  const res = await get(
+    `/api/v1/admin/participants/${userId}/token-card`,
+    token
+  );
+  assert.strictEqual(res.status, 200);
+  assert.ok(
+    res.headers.get('content-type').includes('application/pdf'),
+    'content-type should be application/pdf'
+  );
+  const buf = Buffer.from(await res.arrayBuffer());
+  assert.ok(buf.length > 0, 'PDF buffer should not be empty');
+});
+
+test('GET /api/v1/admin/participants/:id/token-card returns 404 for unknown participant', async () => {
+  const token = makeToken(['admin']);
+  const res = await get(
+    '/api/v1/admin/participants/nonexistent/token-card',
+    token
+  );
+  assert.strictEqual(res.status, 404);
+});
+
+test('GET /api/v1/admin/participants/:id/token-card returns 400 for invalid format', async () => {
+  const token = makeToken(['admin'], 'admin-tokencard-format-test');
+
+  const createRes = await post('/api/v1/admin/participants', {}, token);
+  const { userId } = await createRes.json();
+
+  const res = await get(
+    `/api/v1/admin/participants/${userId}/token-card?format=invalid`,
+    token
+  );
+  assert.strictEqual(res.status, 400);
+});
+
+test('GET /api/v1/admin/participants/:id/token-card returns 401 without token', async () => {
+  const res = await get('/api/v1/admin/participants/some-id/token-card');
+  assert.strictEqual(res.status, 401);
+});
+
+// ── Deleted participant list ──────────────────────────────────────────────────
 
 test('Deleted participant not included in GET list', async () => {
   const token = makeToken(['admin'], 'admin-deleted-list-test');
