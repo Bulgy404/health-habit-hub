@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'screens/donate_screen.dart';
+import 'screens/explore_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/recommend_screen.dart';
@@ -59,8 +60,7 @@ final _router = GoRouter(
           routes: [
             GoRoute(
               path: '/explore',
-              builder: (context, state) =>
-                  const _PlaceholderScreen(label: 'Explore'),
+              builder: (context, state) => const ExploreScreen(),
             ),
           ],
         ),

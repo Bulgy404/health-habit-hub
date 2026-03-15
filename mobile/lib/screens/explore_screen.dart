@@ -1,0 +1,306 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../models/habit_node.dart';
+import '../services/habit_service.dart';
+import '../widgets/habit_graph_widget.dart';
+
+class ExploreScreen extends ConsumerStatefulWidget {
+  const ExploreScreen({super.key});
+
+  @override
+  ConsumerState<ExploreScreen> createState() => _ExploreScreenState();
+}
+
+class _ExploreScreenState extends ConsumerState<ExploreScreen> {
+  late HabitService _habitService;
+  List<HabitNode> _allHabits = [];
+  bool _loading = true;
+  String? _error;
+  String? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _habitService = ref.read(habitServiceProvider);
+    _fetchHabits();
+  }
+
+  Future<void> _fetchHabits() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final habits = await _habitService.fetchPublicHabits();
+      setState(() {
+        _allHabits = habits;
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  List<String> get _categories {
+    final seen = <String>{};
+    return _allHabits
+        .map((h) => h.category)
+        .where((c) => c.isNotEmpty && seen.add(c))
+        .toList()
+      ..sort();
+  }
+
+  List<HabitNode> get _filteredHabits {
+    if (_selectedCategory == null) return _allHabits;
+    return _allHabits.where((h) => h.category == _selectedCategory).toList();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Node detail bottom sheet
+  // ---------------------------------------------------------------------------
+
+  void _showNodeDetail(HabitNode initialNode) {
+    // Find the live node (counts may have updated since the tap).
+    HabitNode node =
+        _allHabits.firstWhere((h) => h.id == initialNode.id, orElse: () => initialNode);
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          Future<void> annotate(String type) async {
+            try {
+              final newCounts = await _habitService.annotateHabit(node.id, type);
+              final updated = HabitNode(
+                id: node.id,
+                name: node.name,
+                category: node.category,
+                bcioClass: node.bcioClass,
+                annotationCounts: newCounts,
+              );
+              // Update live list so graph reflects new counts.
+              setState(() {
+                final idx = _allHabits.indexWhere((h) => h.id == node.id);
+                if (idx != -1) _allHabits[idx] = updated;
+              });
+              // Update bottom sheet display.
+              setSheetState(() => node = updated);
+            } catch (_) {
+              if (ctx.mounted) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(content: Text('Could not submit annotation')),
+                );
+              }
+            }
+          }
+
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Habit name
+                Text(
+                  node.name,
+                  style: Theme.of(ctx).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+
+                // Category chip
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    Chip(
+                      label: Text(node.category.isEmpty ? 'Unknown' : node.category),
+                      avatar: const Icon(Icons.category, size: 16),
+                    ),
+                    if (node.bcioClass.isNotEmpty)
+                      Chip(
+                        label: Text(
+                          node.bcioClass.length > 40
+                              ? '…${node.bcioClass.substring(node.bcioClass.length - 40)}'
+                              : node.bcioClass,
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        avatar: const Icon(Icons.science, size: 16),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Annotation counts
+                Text('Community annotations',
+                    style: Theme.of(ctx).textTheme.labelLarge),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.thumb_up_outlined, size: 18),
+                    const SizedBox(width: 6),
+                    Text('I do this too: ${node.annotationCounts['iDoThis'] ?? 0}'),
+                    const SizedBox(width: 24),
+                    const Icon(Icons.star_outline, size: 18),
+                    const SizedBox(width: 6),
+                    Text('Helpful: ${node.annotationCounts['helpful'] ?? 0}'),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => annotate('iDoThis'),
+                        icon: const Icon(Icons.thumb_up),
+                        label: const Text('I do this too'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => annotate('helpful'),
+                        icon: const Icon(Icons.star),
+                        label: const Text('Helpful'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    Widget body;
+
+    if (_loading) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (_error != null) {
+      body = Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.red),
+            const SizedBox(height: 12),
+            Text('Failed to load habits', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              onPressed: _fetchHabits,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    } else if (_allHabits.isEmpty) {
+      body = const Center(child: Text('No habit data available yet.'));
+    } else {
+      body = Column(
+        children: [
+          // Graph occupies most of the screen
+          Expanded(
+            child: HabitGraphWidget(
+              nodes: _filteredHabits,
+              onNodeTap: _showNodeDetail,
+            ),
+          ),
+
+          // Category filter chips
+          _CategoryFilterBar(
+            categories: _categories,
+            selected: _selectedCategory,
+            onSelect: (cat) => setState(() {
+              _selectedCategory = _selectedCategory == cat ? null : cat;
+            }),
+          ),
+        ],
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Explore Habits'),
+        actions: [
+          if (!_loading)
+            IconButton(
+              onPressed: _fetchHabits,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh',
+            ),
+        ],
+      ),
+      body: body,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Category filter bar
+// ---------------------------------------------------------------------------
+
+class _CategoryFilterBar extends StatelessWidget {
+  final List<String> categories;
+  final String? selected;
+  final void Function(String) onSelect;
+
+  const _CategoryFilterBar({
+    required this.categories,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (categories.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      height: 52,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(80),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        itemCount: categories.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final cat = categories[i];
+          final isSelected = cat == selected;
+          return FilterChip(
+            label: Text(cat),
+            selected: isSelected,
+            onSelected: (_) => onSelect(cat),
+          );
+        },
+      ),
+    );
+  }
+}
