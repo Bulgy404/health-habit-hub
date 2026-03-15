@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'models/admin_survey.dart';
+import 'providers/auth_provider.dart';
 import 'screens/admin/admin_devices_screen.dart';
-import 'screens/admin/admin_settings_screen.dart';
 import 'screens/admin/admin_habits_screen.dart';
 import 'screens/admin/admin_participant_detail_screen.dart';
 import 'screens/admin/admin_participants_screen.dart';
+import 'screens/admin/admin_settings_screen.dart';
+import 'screens/admin/admin_shell_screen.dart';
 import 'screens/admin/admin_surveys_screen.dart';
 import 'screens/donate_screen.dart';
 import 'screens/explore_screen.dart';
@@ -20,128 +22,158 @@ void main() {
 }
 
 // ---------------------------------------------------------------------------
-// Router
+// Router provider
 // ---------------------------------------------------------------------------
 
-final _router = GoRouter(
-  initialLocation: '/login',
-  routes: [
-    GoRoute(
-      path: '/login',
-      builder: (context, state) {
-        final user = state.uri.queryParameters['user'];
-        final token = state.uri.queryParameters['token'];
-        return LoginScreen(initialUsername: user, initialPassword: token);
-      },
-    ),
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) =>
-          ShellScreen(navigationShell: navigationShell),
-      branches: [
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/donate',
-              builder: (context, state) => const DonateScreen(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/explore',
-              builder: (context, state) => const ExploreScreen(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/recommend',
-              builder: (context, state) => const RecommendScreen(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/profile',
-              builder: (context, state) => const ProfileScreen(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/admin',
-              builder: (context, state) =>
-                  const AdminParticipantsScreen(),
-              routes: [
-                GoRoute(
-                  path: 'participants/:id',
-                  builder: (context, state) =>
-                      AdminParticipantDetailScreen(
-                    participantId:
-                        state.pathParameters['id'] ?? '',
-                  ),
-                ),
-                GoRoute(
-                  path: 'surveys',
-                  builder: (context, state) =>
-                      const AdminSurveysScreen(),
-                  routes: [
-                    GoRoute(
-                      path: ':id',
-                      builder: (context, state) =>
-                          AdminSurveyEditorScreen(
-                        surveyId:
-                            state.pathParameters['id'] ?? '',
-                        initialSurvey:
-                            state.extra as AdminSurvey?,
+/// GoRouter wrapped in a Riverpod Provider so the redirect guard can access
+/// auth state via [userRolesProvider] without relying on BuildContext.
+final routerProvider = Provider<GoRouter>((ref) {
+  final router = GoRouter(
+    initialLocation: '/login',
+    // Redirect guard: only admin/researcher roles may access /admin/* routes.
+    redirect: (context, state) async {
+      if (!state.matchedLocation.startsWith('/admin')) return null;
+      try {
+        final roles = await ref.read(userRolesProvider.future);
+        if (!roles.contains('admin') && !roles.contains('researcher')) {
+          return '/';
+        }
+      } catch (_) {
+        return '/';
+      }
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/login',
+        builder: (context, state) {
+          final user = state.uri.queryParameters['user'];
+          final token = state.uri.queryParameters['token'];
+          return LoginScreen(initialUsername: user, initialPassword: token);
+        },
+      ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            ShellScreen(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/donate',
+                builder: (context, state) => const DonateScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/explore',
+                builder: (context, state) => const ExploreScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/recommend',
+                builder: (context, state) => const RecommendScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/profile',
+                builder: (context, state) => const ProfileScreen(),
+              ),
+            ],
+          ),
+          // Admin branch: side-nav rail via AdminShellScreen.
+          // initialLocation ensures the Admin tab always opens to the
+          // participants list on first visit.
+          StatefulShellBranch(
+            initialLocation: '/admin/participants',
+            routes: [
+              ShellRoute(
+                builder: (context, state, child) =>
+                    AdminShellScreen(child: child),
+                routes: [
+                  GoRoute(
+                    path: '/admin/participants',
+                    builder: (context, state) =>
+                        const AdminParticipantsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        builder: (context, state) =>
+                            AdminParticipantDetailScreen(
+                          participantId:
+                              state.pathParameters['id'] ?? '',
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                GoRoute(
-                  path: 'habits',
-                  builder: (context, state) =>
-                      const AdminHabitsScreen(),
-                ),
-                GoRoute(
-                  path: 'devices',
-                  builder: (context, state) =>
-                      const AdminDevicesScreen(),
-                ),
-                GoRoute(
-                  path: 'settings',
-                  builder: (context, state) =>
-                      const AdminSettingsScreen(),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    ),
-  ],
-);
+                    ],
+                  ),
+                  GoRoute(
+                    path: '/admin/surveys',
+                    builder: (context, state) =>
+                        const AdminSurveysScreen(),
+                    routes: [
+                      GoRoute(
+                        path: ':id',
+                        builder: (context, state) =>
+                            AdminSurveyEditorScreen(
+                          surveyId:
+                              state.pathParameters['id'] ?? '',
+                          initialSurvey:
+                              state.extra as AdminSurvey?,
+                        ),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: '/admin/habits',
+                    builder: (context, state) =>
+                        const AdminHabitsScreen(),
+                  ),
+                  GoRoute(
+                    path: '/admin/devices',
+                    builder: (context, state) =>
+                        const AdminDevicesScreen(),
+                  ),
+                  GoRoute(
+                    path: '/admin/settings',
+                    builder: (context, state) =>
+                        const AdminSettingsScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
+  ref.onDispose(router.dispose);
+  return router;
+});
 
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
 
-class HhhApp extends StatelessWidget {
+class HhhApp extends ConsumerWidget {
   const HhhApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'Health Habit Hub',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
         useMaterial3: true,
       ),
-      routerConfig: _router,
+      routerConfig: router,
     );
   }
 }
