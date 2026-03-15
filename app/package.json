@@ -5,7 +5,7 @@
     "format:fix": "npx prettier --write .",
     "lint": "npx eslint .",
     "lint:fix": "npx eslint --fix .",
-    "test:unitTests": "node --test \"tests/**/*.test.js\"",
+    "test:unitTests": "node --test \"tests/unit/**/*.test.js\" \"tests/integration/**/*.test.js\"",
     "test:backup": "node --test tests/BackupConfiguration.test.js",
     "test:neo4j": "ENABLE_INTEGRATION=1 node --test tests/Neo4jDatabase.test.js",
     "test:fuseki": "ENABLE_INTEGRATION=1 node --test tests/FusekiDatabase.integration.test.js",

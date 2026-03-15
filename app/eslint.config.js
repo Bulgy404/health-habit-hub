@@ -20,6 +20,21 @@ export default [
       'public/js/thanks.js',
       'public/js/contact.js',
       'public/js/reward.js',
+      'public/js/donate.js',
+      'public/js/nav.js',
+      'coverage/',
     ],
+  },
+  {
+    rules: {
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+    },
   },
 ];

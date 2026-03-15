@@ -48,15 +48,15 @@ Wir setzen folgenden Hoster ein:
 
 Technische Universität Dresden  
 CIDS – Center for Interdisciplinary Digital Sciences  
-01062 Dresden  
-  
+01062 Dresden
+
 Tel. +49 351 463-40000  
-E-Mail: servicedesk@tu-dresden.de  
-  
+E-Mail: servicedesk@tu-dresden.de
+
 Der Datenschutzbeauftragte:  
 Herr Jens Syckor  
-01062 Dresden  
-  
+01062 Dresden
+
 Tel. +49 351 463-32839  
 E-Mail: informationssicherheit@tu-dresden.de
 
@@ -76,8 +76,8 @@ Die verantwortliche Stelle für die Datenverarbeitung auf dieser Website ist:
 TUD Dresden University of Technology  
 Faculty of Business and Economics  
 Research Group Digital Health  
-01062 Dresden  
-  
+01062 Dresden
+
 Tel. +49 351 463-37671  
 E-Mail: digital-health@tu-dresden.de
 
@@ -115,10 +115,10 @@ Sie haben jederzeit das Recht auf Auskunft, Berichtigung oder Löschung Ihrer Da
 
 ## Einschränkung der Verarbeitung
 
-*   Bei Bestreiten der Richtigkeit
-*   Bei unrechtmäßiger Verarbeitung
-*   Bei Löschungskonflikt mit Rechtsansprüchen
-*   Bei Widerspruch Art. 21
+- Bei Bestreiten der Richtigkeit
+- Bei unrechtmäßiger Verarbeitung
+- Bei Löschungskonflikt mit Rechtsansprüchen
+- Bei Widerspruch Art. 21
 
 ## SSL/TLS
 
@@ -148,4 +148,4 @@ Wir nutzen Google Fonts für einheitliche Typografie. Ihr Browser lädt Fonts vo
 
 Wir nutzen reCAPTCHA, um automatisierte Anfragen zu verhindern. Google analysiert Ihr Verhalten (z. B. IP, Mausbewegungen) im Hintergrund. Nutzung auf Basis von Art. 6 Abs. 1 lit. f DSGVO oder mit Einwilligung (Art. 6 Abs. 1 lit. a & § 25 Abs. 1 TDDDG). Widerruf möglich.
 
-Quelle: [e-recht24.de](\"https://www.e-recht24.de\")
+Quelle: [e-recht24.de]("https://www.e-recht24.de")

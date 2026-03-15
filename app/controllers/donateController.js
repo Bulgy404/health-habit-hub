@@ -88,27 +88,35 @@ export async function saveDonateData(req, res) {
     habitStrength: req.body.habitStrength,
     experimentGroup: ExperimentGroup.fromObject(req.body.experimentGroup),
   };
-  console.log("Hier die Daten des Habits die an die DB weitergeleitet werden:")
+  console.log('Hier die Daten des Habits die an die DB weitergeleitet werden:');
   console.log(data);
 
   try {
     await dbClient.insertDonateData(data, userId);
     const redirectLang = req.body.language || req.lang || 'en';
     const basepath = req.app.get('basepath') || '/';
-    const normalizedBasepath = basepath.endsWith('/') ? basepath : `${basepath}/`;
+    const normalizedBasepath = basepath.endsWith('/')
+      ? basepath
+      : `${basepath}/`;
 
     console.log('Cookies empfangen:', req.cookies);
-    console.log(`Prüfe Cookie 'demographicsCompleted': Wert ist "${req.cookies.demographicsCompleted}"`);
+    console.log(
+      `Prüfe Cookie 'demographicsCompleted': Wert ist "${req.cookies.demographicsCompleted}"`
+    );
 
     if (req.cookies.demographicsCompleted === 'true') {
-      console.log("Entscheidung: Cookie ist gesetzt. Leite weiter zur Dankesseite.");
+      console.log(
+        'Entscheidung: Cookie ist gesetzt. Leite weiter zur Dankesseite.'
+      );
       res.redirect(`${normalizedBasepath}${redirectLang}/thanks`);
     } else {
-      console.log("Entscheidung: Cookie ist NICHT gesetzt oder falsch. Leite weiter zur Umfrage.");
+      console.log(
+        'Entscheidung: Cookie ist NICHT gesetzt oder falsch. Leite weiter zur Umfrage.'
+      );
       res.redirect(`${normalizedBasepath}${redirectLang}/survey/1`);
     }
   } catch (error) {
-    console.log(data, userId)
+    console.log(data, userId);
     console.error('Fehler beim Speichern der Spendendaten:', error);
     res.status(500).json({ error: 'Fehler beim Speichern der Daten.' });
   }

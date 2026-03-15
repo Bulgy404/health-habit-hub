@@ -16,11 +16,7 @@ export function requireAgeConsent(req, res, next) {
   }
 
   if (!consentGiven) {
-    const redirectUrl = path.join(
-      contextPath,
-      req.lang,
-      'disclaimer'
-    );
+    const redirectUrl = path.join(contextPath, req.lang, 'disclaimer');
 
     console.log('🔴 No consent — redirecting to:', redirectUrl);
     return res.redirect(302, redirectUrl);

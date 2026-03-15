@@ -10,7 +10,10 @@ legacyRouter.use((req, res, next) => {
   let userId = req.cookies.userId;
   if (!userId) {
     userId = uuid();
-    res.cookie('userId', userId, { maxAge: 365 * 24 * 60 * 60 * 1000, httpOnly: true });
+    res.cookie('userId', userId, {
+      maxAge: 365 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+    });
   }
   req.userId = userId;
   next();
@@ -37,17 +40,20 @@ export function createSurveyRouter({ db } = {}) {
     try {
       const database = await getDb();
       const roles = req.user?.realm_access?.roles || [];
-      const isAdminOrResearcher = roles.includes('admin') || roles.includes('researcher');
+      const isAdminOrResearcher =
+        roles.includes('admin') || roles.includes('researcher');
 
       if (isAdminOrResearcher) {
         const docs = await database.collection('surveys').find({}).toArray();
-        return res.json(docs.map((s) => ({
-          id: s.id,
-          title: s.title,
-          type: s.type,
-          status: s.status,
-          assignedGroups: s.assignedGroups || [],
-        })));
+        return res.json(
+          docs.map((s) => ({
+            id: s.id,
+            title: s.title,
+            type: s.type,
+            status: s.status,
+            assignedGroups: s.assignedGroups || [],
+          }))
+        );
       }
 
       // For participants: look up their group from the participants collection
@@ -123,7 +129,9 @@ export function createSurveyRouter({ db } = {}) {
         completedAt: new Date(),
       };
       await database.collection('survey_responses').insertOne(result);
-      res.status(201).json({ ok: true, surveyId: id, completedAt: result.completedAt });
+      res
+        .status(201)
+        .json({ ok: true, surveyId: id, completedAt: result.completedAt });
     } catch {
       res.status(500).json({ error: 'Internal server error' });
     }

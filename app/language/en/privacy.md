@@ -115,10 +115,10 @@ You have the right to access, correct, or delete your data at any time.
 
 ## Restriction of processing
 
-* If accuracy is contested
-* If processing is unlawful
-* If deletion conflicts with legal claims
-* If objection is made pursuant to Art. 21
+- If accuracy is contested
+- If processing is unlawful
+- If deletion conflicts with legal claims
+- If objection is made pursuant to Art. 21
 
 ## SSL/TLS
 
@@ -148,4 +148,4 @@ We use Google Fonts for consistent typography. Your browser loads fonts from Goo
 
 We use reCAPTCHA to prevent automated requests. Google analyzes your behavior (e.g., IP, mouse movements) in the background. Use based on Art. 6 (1) (f) GDPR or with consent (Art. 6 (1) (a) & Section 25 (1) TDDDG). Revocation possible.
 
-Source: [e-recht24.de](\"https://www.e-recht24.de\")
+Source: [e-recht24.de]("https://www.e-recht24.de")

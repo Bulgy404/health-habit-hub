@@ -11,13 +11,13 @@ This website was published before April 8, 2025, and does not yet fully meet the
 
 ### Non-accessible content
 
-* Alternative text for images and graphic elements is not fully available.
-* ARIA attributes for orientation within elements are not fully available.
-* Keyboard accessibility is not fully available for the following elements/content: Labels for context and behavior.
-* The position of the keyboard focus is not clearly visible.
-* Words and sections in other languages are not marked.
-* Forms do not have an overview page for subsequent review or correction of entries. These are submitted directly.
-* On start and overview pages, certain elements cannot be skipped because headings are missing.
+- Alternative text for images and graphic elements is not fully available.
+- ARIA attributes for orientation within elements are not fully available.
+- Keyboard accessibility is not fully available for the following elements/content: Labels for context and behavior.
+- The position of the keyboard focus is not clearly visible.
+- Words and sections in other languages are not marked.
+- Forms do not have an overview page for subsequent review or correction of entries. These are submitted directly.
+- On start and overview pages, certain elements cannot be skipped because headings are missing.
 
 ### Feedback and Contact Information
 

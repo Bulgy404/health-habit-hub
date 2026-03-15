@@ -96,7 +96,7 @@ function sendData(data, language) {
   // Add reCAPTCHA token to data
   const dataWithCaptcha = {
     ...data,
-    'g-recaptcha-response': recaptchaResponse
+    'g-recaptcha-response': recaptchaResponse,
   };
 
   fetch('donate/data', {
@@ -128,7 +128,7 @@ function parseInput(editable, experimentGroup, language) {
     experimentGroup: experimentGroup,
     language: language,
     contexts: getContexts(editable),
-    habitStrength: habitStrength
+    habitStrength: habitStrength,
   };
   return habitData;
 }

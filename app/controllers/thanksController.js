@@ -6,6 +6,6 @@ export function renderThanksPage(req, res) {
   res.json({
     status: 'ok',
     lang: req.lang,
-    messages
+    messages,
   });
 }

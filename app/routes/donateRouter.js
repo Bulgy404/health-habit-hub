@@ -21,7 +21,10 @@ router.use((req, res, next) => {
   if (!userId) {
     userId = uuid();
     // Set a cookie that expires in a year. httpOnly for security.
-    res.cookie('userId', userId, { maxAge: 365 * 24 * 60 * 60 * 1000, httpOnly: true });
+    res.cookie('userId', userId, {
+      maxAge: 365 * 24 * 60 * 60 * 1000,
+      httpOnly: true,
+    });
   }
   // Make userId available on the request object for subsequent handlers
   req.userId = userId;
@@ -30,8 +33,12 @@ router.use((req, res, next) => {
 
 // Configure the reCAPTCHA module with your own keys
 console.log('🔑 reCAPTCHA Config:', {
-  siteKey: config.recaptcha.siteKey ? `${config.recaptcha.siteKey.substring(0, 10)}...` : 'MISSING',
-  secretKey: config.recaptcha.secretKey ? `${config.recaptcha.secretKey.substring(0, 10)}...` : 'MISSING',
+  siteKey: config.recaptcha.siteKey
+    ? `${config.recaptcha.siteKey.substring(0, 10)}...`
+    : 'MISSING',
+  secretKey: config.recaptcha.secretKey
+    ? `${config.recaptcha.secretKey.substring(0, 10)}...`
+    : 'MISSING',
   useRecaptchaDomain: config.recaptcha.useRecaptchaDomain,
   siteKeyLength: config.recaptcha.siteKey.length,
   secretKeyLength: config.recaptcha.secretKey.length,
@@ -59,7 +66,10 @@ router.post(
   '/data',
   (req, res, next) => {
     // Debug: Log what we received
-    console.log('📨 Received reCAPTCHA token:', req.body['g-recaptcha-response'] ? 'Present' : 'MISSING');
+    console.log(
+      '📨 Received reCAPTCHA token:',
+      req.body['g-recaptcha-response'] ? 'Present' : 'MISSING'
+    );
     next();
   },
   recaptcha.middleware.verify,
@@ -72,7 +82,7 @@ router.post(
       console.error('❌ reCAPTCHA verification failed:', req.recaptcha.error);
       res.status(400).json({
         error: 'Captcha verification failed. Please try again.',
-        details: req.recaptcha.error
+        details: req.recaptcha.error,
       });
     }
   },

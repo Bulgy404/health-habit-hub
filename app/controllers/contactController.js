@@ -10,12 +10,16 @@ export async function handleContactForm(req, res) {
 
   // Step 1: Validate form input
   if (!name || !email || !subject || !message) {
-    return res.status(400).json({ error: 'Alle Felder müssen ausgefüllt sein.' });
+    return res
+      .status(400)
+      .json({ error: 'Alle Felder müssen ausgefüllt sein.' });
   }
 
   // Step 2: Verify reCAPTCHA
   if (!recaptchaToken) {
-    return res.status(400).json({ error: 'Bitte bestätigen Sie das reCAPTCHA.' });
+    return res
+      .status(400)
+      .json({ error: 'Bitte bestätigen Sie das reCAPTCHA.' });
   }
 
   try {
@@ -25,12 +29,17 @@ export async function handleContactForm(req, res) {
 
     if (!recaptchaData.success) {
       console.error('❌ reCAPTCHA verification failed:', recaptchaData);
-      return res.status(400).json({ error: 'reCAPTCHA-Verifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.' });
+      return res.status(400).json({
+        error:
+          'reCAPTCHA-Verifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      });
     }
     console.log('✅ reCAPTCHA verification passed for contact form');
   } catch (error) {
     console.error('❌ Error verifying reCAPTCHA:', error);
-    return res.status(500).json({ error: 'Fehler bei der reCAPTCHA-Verifizierung.' });
+    return res
+      .status(500)
+      .json({ error: 'Fehler bei der reCAPTCHA-Verifizierung.' });
   }
 
   // Step 3: Create the mail transporter using Mailjet SMTP
@@ -70,7 +79,10 @@ ${message}
     res.json({ status: 'ok', message: 'Message sent successfully.' });
   } catch (error) {
     console.error('Error sending email:', error);
-    res.status(500).json({ error: 'There was an error while sending your message. Please try again later.' });
+    res.status(500).json({
+      error:
+        'There was an error while sending your message. Please try again later.',
+    });
   }
 }
 
@@ -80,6 +92,6 @@ export function renderContactPage(req, res) {
     status: 'ok',
     lang: req.lang,
     messages: getLanguageMessages(req.lang),
-    recaptchaSiteKey: config.recaptcha.siteKey
+    recaptchaSiteKey: config.recaptcha.siteKey,
   });
 }

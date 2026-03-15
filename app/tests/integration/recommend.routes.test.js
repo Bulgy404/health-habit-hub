@@ -49,7 +49,9 @@ function makeToken(roles = ['participant']) {
 
 const FIXTURE_RECOMMEND = { habits: ['drink water', 'walk 10 min'] };
 const FIXTURE_CLASSIFY = { category: 'exercise', confidence: 0.92 };
-const FIXTURE_HISTORY = { history: [{ date: '2026-01-01', habit: 'walk 10 min' }] };
+const FIXTURE_HISTORY = {
+  history: [{ date: '2026-01-01', habit: 'walk 10 min' }],
+};
 
 let mockRecommender;
 let recommenderUrl;

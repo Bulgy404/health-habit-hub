@@ -79,7 +79,11 @@ function createMockDb() {
               continue;
             }
             // status filter
-            if (query && query.status !== undefined && doc.status !== query.status) {
+            if (
+              query &&
+              query.status !== undefined &&
+              doc.status !== query.status
+            ) {
               continue;
             }
             // assignedGroups filter (MongoDB $in or string equality)
@@ -99,7 +103,8 @@ function createMockDb() {
         async findOne(query) {
           for (const [, doc] of store) {
             if (query.id !== undefined && doc.id !== query.id) continue;
-            if (query.userId !== undefined && doc.userId !== query.userId) continue;
+            if (query.userId !== undefined && doc.userId !== query.userId)
+              continue;
             if (
               query.deletedAt &&
               query.deletedAt.$exists === false &&
@@ -112,7 +117,8 @@ function createMockDb() {
           return null;
         },
         async insertOne(doc) {
-          const k = doc.id || doc.userId || doc.key || Math.random().toString(36);
+          const k =
+            doc.id || doc.userId || doc.key || Math.random().toString(36);
           store.set(k, { ...doc });
           return { insertedId: k };
         },
@@ -121,7 +127,8 @@ function createMockDb() {
           let storeKey = null;
           for (const [k, doc] of store) {
             if (filter.id !== undefined && doc.id !== filter.id) continue;
-            if (filter.userId !== undefined && doc.userId !== filter.userId) continue;
+            if (filter.userId !== undefined && doc.userId !== filter.userId)
+              continue;
             if (filter.key !== undefined && doc.key !== filter.key) continue;
             matched = doc;
             storeKey = k;
@@ -237,13 +244,20 @@ test('GET /api/v1/admin/surveys - empty list initially', async () => {
 });
 
 test('POST /api/v1/admin/surveys - 401 without token', async () => {
-  const res = await post('/api/v1/admin/surveys', { title: 'Test', type: 'custom' });
+  const res = await post('/api/v1/admin/surveys', {
+    title: 'Test',
+    type: 'custom',
+  });
   assert.strictEqual(res.status, 401);
 });
 
 test('POST /api/v1/admin/surveys - 403 for participant role', async () => {
   const token = makeToken(['participant']);
-  const res = await post('/api/v1/admin/surveys', { title: 'Test', type: 'custom' }, token);
+  const res = await post(
+    '/api/v1/admin/surveys',
+    { title: 'Test', type: 'custom' },
+    token
+  );
   assert.strictEqual(res.status, 403);
 });
 
@@ -265,7 +279,11 @@ test('POST /api/v1/admin/surveys - creates survey with defaults', async () => {
 
 test('POST /api/v1/admin/surveys - 400 missing required fields', async () => {
   const token = makeToken(['admin']);
-  const res = await post('/api/v1/admin/surveys', { title: 'No type survey' }, token);
+  const res = await post(
+    '/api/v1/admin/surveys',
+    { title: 'No type survey' },
+    token
+  );
   assert.strictEqual(res.status, 400);
 });
 
@@ -292,7 +310,11 @@ test('PATCH /api/v1/admin/surveys/:id/status - publishes survey', async () => {
   const { id } = await createRes.json();
 
   // Publish it
-  const res = await patch(`/api/v1/admin/surveys/${id}/status`, { status: 'published' }, adminToken);
+  const res = await patch(
+    `/api/v1/admin/surveys/${id}/status`,
+    { status: 'published' },
+    adminToken
+  );
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.strictEqual(body.ok, true);
@@ -307,13 +329,21 @@ test('PATCH /api/v1/admin/surveys/:id/status - 400 for invalid status', async ()
     adminToken
   );
   const { id } = await createRes.json();
-  const res = await patch(`/api/v1/admin/surveys/${id}/status`, { status: 'invalid' }, adminToken);
+  const res = await patch(
+    `/api/v1/admin/surveys/${id}/status`,
+    { status: 'invalid' },
+    adminToken
+  );
   assert.strictEqual(res.status, 400);
 });
 
 test('PATCH /api/v1/admin/surveys/:id/status - 404 for unknown survey', async () => {
   const token = makeToken(['admin']);
-  const res = await patch('/api/v1/admin/surveys/nonexistent-id/status', { status: 'draft' }, token);
+  const res = await patch(
+    '/api/v1/admin/surveys/nonexistent-id/status',
+    { status: 'draft' },
+    token
+  );
   assert.strictEqual(res.status, 404);
 });
 
@@ -326,7 +356,11 @@ test('PATCH /api/v1/admin/surveys/:id/groups - assigns groups', async () => {
   );
   const { id } = await createRes.json();
 
-  const res = await patch(`/api/v1/admin/surveys/${id}/groups`, { groups: ['G1', 'G2'] }, adminToken);
+  const res = await patch(
+    `/api/v1/admin/surveys/${id}/groups`,
+    { groups: ['G1', 'G2'] },
+    adminToken
+  );
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.strictEqual(body.ok, true);
@@ -341,7 +375,11 @@ test('PATCH /api/v1/admin/surveys/:id/groups - 400 for invalid groups', async ()
     adminToken
   );
   const { id } = await createRes.json();
-  const res = await patch(`/api/v1/admin/surveys/${id}/groups`, { groups: ['G5'] }, adminToken);
+  const res = await patch(
+    `/api/v1/admin/surveys/${id}/groups`,
+    { groups: ['G5'] },
+    adminToken
+  );
   assert.strictEqual(res.status, 400);
 });
 
@@ -367,7 +405,11 @@ test('PUT /api/v1/admin/surveys/:id - updates survey fields', async () => {
 
 test('PUT /api/v1/admin/surveys/:id - 404 for unknown survey', async () => {
   const token = makeToken(['admin']);
-  const res = await put('/api/v1/admin/surveys/no-such-id', { title: 'X' }, token);
+  const res = await put(
+    '/api/v1/admin/surveys/no-such-id',
+    { title: 'X' },
+    token
+  );
   assert.strictEqual(res.status, 404);
 });
 
@@ -394,8 +436,16 @@ test('GET /api/v1/surveys - participant sees only published surveys for their gr
     adminToken
   );
   const { id: surveyId } = await createRes.json();
-  await patch(`/api/v1/admin/surveys/${surveyId}/groups`, { groups: ['G1'] }, adminToken);
-  await patch(`/api/v1/admin/surveys/${surveyId}/status`, { status: 'published' }, adminToken);
+  await patch(
+    `/api/v1/admin/surveys/${surveyId}/groups`,
+    { groups: ['G1'] },
+    adminToken
+  );
+  await patch(
+    `/api/v1/admin/surveys/${surveyId}/status`,
+    { status: 'published' },
+    adminToken
+  );
 
   // Seed a participant in G1 matching the participant token sub
   mockDb._seed('participants', [
@@ -426,8 +476,16 @@ test('GET /api/v1/surveys - participant does not see surveys for other groups', 
     adminToken
   );
   const { id: g3SurveyId } = await createRes.json();
-  await patch(`/api/v1/admin/surveys/${g3SurveyId}/groups`, { groups: ['G3'] }, adminToken);
-  await patch(`/api/v1/admin/surveys/${g3SurveyId}/status`, { status: 'published' }, adminToken);
+  await patch(
+    `/api/v1/admin/surveys/${g3SurveyId}/groups`,
+    { groups: ['G3'] },
+    adminToken
+  );
+  await patch(
+    `/api/v1/admin/surveys/${g3SurveyId}/status`,
+    { status: 'published' },
+    adminToken
+  );
 
   const participantToken = makeToken(['participant'], 'participant-g2');
   const res = await get('/api/v1/surveys', participantToken);

@@ -35,18 +35,18 @@ const config = {
     host: process.env.TRANSLATE_HOST || 'localhost',
     port: process.env.TRANSLATE_PORT || '5000',
     path: process.env.TRANSLATE_PATH || '/translate',
-    protocol: process.env.TRANSLATE_PROTOCOL || 'http'
+    protocol: process.env.TRANSLATE_PROTOCOL || 'http',
   },
   getDbEndpoint: function () {
     return `${this.db.protocol}://${this.db.host}:${this.db.port}/${this.db.path}`;
   },
-   mail: {
+  mail: {
     host: process.env.MAIL_HOST,
     port: parseInt(process.env.MAIL_PORT, 10),
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS,
     from: process.env.MAIL_FROM,
-    receiver: process.env.MAIL_RECEIVER
+    receiver: process.env.MAIL_RECEIVER,
   },
   getDbHeader: function () {
     return [
@@ -57,7 +57,7 @@ const config = {
   },
   getTranslateApiEndpoint: function () {
     return `${this.translateApi.protocol}://${this.translateApi.host}:${this.translateApi.port}${this.translateApi.path}`;
-  }
+  },
 };
 
 export { config };
