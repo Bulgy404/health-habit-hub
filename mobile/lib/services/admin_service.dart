@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/admin_habit_donation.dart';
 import '../models/admin_participant.dart';
 import '../models/admin_survey.dart';
 import '../models/participant_progress.dart';
@@ -143,6 +144,62 @@ class AdminService {
       data: {'groups': groups},
       options: await _authOptions(),
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Habit donation feed endpoints
+  // ---------------------------------------------------------------------------
+
+  /// Returns a paginated list of habit donations with optional filters.
+  ///
+  /// [group] – one of G1–G4 (omit to show all groups).
+  /// [category] – filter by habit category.
+  /// [dateFrom] / [dateTo] – ISO-8601 date strings (YYYY-MM-DD).
+  Future<HabitsFeedResult> fetchHabitsFeed({
+    String? group,
+    String? category,
+    String? dateFrom,
+    String? dateTo,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'page': page,
+      'limit': limit,
+      if (group != null && group.isNotEmpty) 'group': group,
+      if (category != null && category.isNotEmpty) 'category': category,
+      // ignore: use_null_aware_elements
+      if (dateFrom != null) 'dateFrom': dateFrom,
+      // ignore: use_null_aware_elements
+      if (dateTo != null) 'dateTo': dateTo,
+    };
+    final response = await _dio.get<Map<String, dynamic>>(
+      '$_baseUrl/admin/habits/feed',
+      queryParameters: queryParams,
+      options: await _authOptions(),
+    );
+    return HabitsFeedResult.fromJson(response.data ?? {});
+  }
+
+  /// Returns the CSV export URL for the habits feed (with bearer token embedded).
+  ///
+  /// Intended for use with [url_launcher] so the browser triggers a download.
+  Future<String> exportHabitsCsvUrl({
+    String? group,
+    String? category,
+    String? dateFrom,
+    String? dateTo,
+  }) async {
+    final token = await _authService.getAccessToken();
+    final params = <String>['format=csv'];
+    if (group != null && group.isNotEmpty) params.add('group=$group');
+    if (category != null && category.isNotEmpty) {
+      params.add('category=${Uri.encodeComponent(category)}');
+    }
+    if (dateFrom != null) params.add('dateFrom=$dateFrom');
+    if (dateTo != null) params.add('dateTo=$dateTo');
+    if (token != null) params.add('token=${Uri.encodeComponent(token)}');
+    return '$_baseUrl/admin/habits/feed/export?${params.join('&')}';
   }
 }
 
