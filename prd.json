@@ -1001,8 +1001,8 @@
         "Every command is copy-pasteable, tested, and surrounded by expected output"
       ],
       "priority": 61,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created docs/runbook.md with all 11 sections: Prerequisites (server spec + required software + open ports), First-time setup (clone, stack.env, docker-compose up, health check, Keycloak realm import), Per-service updates (deploy-backend/flutter-web/recommender/keycloak scripts), Full-stack deploy (deploy-full.sh + dry-run), Rollback (git checkout prev-tag + single-service rollback), Backup verification (list archives + inspect log + verify integrity), Restore from backup (scripts/restore.sh with expected interaction), Rotating Keycloak secrets (admin password + client secret + JWKS URL), Adding admin user (UI + API), Checking service health (curl + docker logs + polling script). Troubleshooting: Keycloak 401/JWKS, Neo4j connection refused, Flutter web CORS, recommender container DNS."
     },
     {
       "id": "US-062",
