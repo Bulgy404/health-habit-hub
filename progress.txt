@@ -1,3 +1,16 @@
+## 2026-03-15 - US-023
+- What was implemented: Created mobile/lib/screens/recommend_screen.dart (ConsumerStatefulWidget with TickerProviderStateMixin — fetches recommendations via RecommendationService on init; staggered entry with FadeTransition+SlideTransition (300ms, 80ms stagger between cards) driven by per-card AnimationControllers; AnimatedList for card removal (removeItem with 200ms out-animation); loading skeleton (_SkeletonCard placeholder cards); empty state message 'No recommendations yet — complete your profile first'; error state with retry button). Added userIdProvider (FutureProvider<String?>) to auth_provider.dart that extracts `sub` claim from JWT. Updated main.dart to import and use RecommendScreen at /recommend route.
+- Files changed: mobile/lib/screens/recommend_screen.dart (new), mobile/lib/providers/auth_provider.dart (add userIdProvider), mobile/lib/main.dart (import + route update), prd.json (US-023 passes=true)
+- **Learnings for future iterations:**
+  - AnimatedList initialItemCount items receive animation=AlwaysStoppedAnimation(1.0) — must use own AnimationControllers for staggered entry of initial items
+  - For AnimatedList removeItem builder, capture removed item and its animation separately; the live list/controllers are already updated by the time builder runs
+  - `TickerProviderStateMixin` (not `SingleTickerProviderStateMixin`) required when creating multiple AnimationControllers
+  - userIdProvider extracts `sub` claim from JWT with same base64 decode pattern as userRolesProvider
+  - Lint: avoid `__` (double underscore) in itemBuilder params; use named single-letter vars like `(context, i)`
+  - dart analyze lib/ passes with no issues after these changes
+  - Browser verification: no browser tools available — manual verification needed
+---
+
 ## 2026-03-15 - US-022
 - What was implemented: Created mobile/lib/models/recommendation.dart (RagCitation with sourceTitle/excerpt, Recommendation with id/habitName/category/confidenceScore/rationale/ragCitation?); created mobile/lib/services/recommendation_service.dart (RecommendationService — fetchRecommendations(userId), acceptRecommendation(id), dismissRecommendation(id) via Dio; DI pattern matching SurveyService; recommendationServiceProvider); created mobile/lib/widgets/recommendation_card.dart (RecommendationCard StatelessWidget — large habitName, category Chip, LinearProgressIndicator for confidenceScore, 2-line rationale, optional ExpansionTile for ragCitation, Accept/Dismiss IconButton footer).
 - Files changed: mobile/lib/models/recommendation.dart (new), mobile/lib/services/recommendation_service.dart (new), mobile/lib/widgets/recommendation_card.dart (new), prd.json (US-022 passes=true)
