@@ -396,7 +396,7 @@
         "Integration test: connect mock socket, trigger internal endpoint, verify message received"
       ],
       "priority": 24,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
