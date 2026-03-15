@@ -1,3 +1,14 @@
+## 2026-03-15 - US-022
+- What was implemented: Created mobile/lib/models/recommendation.dart (RagCitation with sourceTitle/excerpt, Recommendation with id/habitName/category/confidenceScore/rationale/ragCitation?); created mobile/lib/services/recommendation_service.dart (RecommendationService — fetchRecommendations(userId), acceptRecommendation(id), dismissRecommendation(id) via Dio; DI pattern matching SurveyService; recommendationServiceProvider); created mobile/lib/widgets/recommendation_card.dart (RecommendationCard StatelessWidget — large habitName, category Chip, LinearProgressIndicator for confidenceScore, 2-line rationale, optional ExpansionTile for ragCitation, Accept/Dismiss IconButton footer).
+- Files changed: mobile/lib/models/recommendation.dart (new), mobile/lib/services/recommendation_service.dart (new), mobile/lib/widgets/recommendation_card.dart (new), prd.json (US-022 passes=true)
+- **Learnings for future iterations:**
+  - RecommendationService follows same DI pattern as SurveyService: Dio? + AuthService injected, default Dio() for production
+  - LinearProgressIndicator with ClipRRect(borderRadius) gives a rounded confidence bar; .clamp(0.0, 1.0) guards against out-of-range scores
+  - ExpansionTile with tilePadding: EdgeInsets.zero removes default horizontal padding for tight card layouts
+  - surfaceContainerHighest is the correct M3 token for muted track color (avoids deprecated surfaceVariant)
+  - dart analyze lib/ passes with no issues after these changes
+---
+
 ## 2026-03-15 - US-021
 - What was implemented: Created app/routes/profileRouter.js with createProfileRouter factory — GET / returns profile from MongoDB profiles collection (404 if not found); POST / upserts profile doc with userId=req.user.sub, answers, completedAt, updatedAt; db injectable for tests. Updated v1Router.js to import createProfileRouter and accept db param, mounted /profile with participant|admin|researcher role check. Created 7 integration tests in tests/integration/profile.routes.test.js using in-memory mock DB (Map-based store with findOne/updateOne simulation).
 - Files changed: app/routes/profileRouter.js (new), app/routes/v1Router.js (import + mount profileRouter + accept db param), app/tests/integration/profile.routes.test.js (new), prd.json (US-021 passes=true)
