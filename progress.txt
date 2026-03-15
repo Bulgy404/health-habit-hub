@@ -1,3 +1,14 @@
+## 2026-03-15 - US-020
+- What was implemented: Created mobile/lib/screens/profile_screen.dart with ConsumerStatefulWidget — checks if profile already exists via GET /api/v1/profile (validateStatus accepts non-5xx); if 200, shows _ProfileSummaryCard with formatted completion date and Edit button; if 404/other, loads profile survey WebView via SurveyService.fetchSurvey('profile') with JWT in loadRequest headers; JS hook uses ProfileSurveyComplete JavaScriptChannel (separate from DonateScreen's SurveyComplete); on completion POSTs /api/v1/profile with answers + completedAt, shows SnackBar, returns to summary card; offline state shows _OfflineBanner with retry; Edit button re-invokes _initSurvey(). Updated main.dart to import ProfileScreen and replace _PlaceholderScreen on /profile route.
+- Files changed: mobile/lib/screens/profile_screen.dart (new), mobile/lib/main.dart (import + route update), prd.json (US-020 passes=true)
+- **Learnings for future iterations:**
+  - For profile GET, use validateStatus: (status) => status != null && status < 500 so Dio treats 404 as a response (not exception)
+  - POST /api/v1/profile sends { answers: {...}, completedAt: ISO8601 } — backend is responsible for linking to req.user.sub
+  - Each WebView that fires JS messages needs its own uniquely-named JavaScriptChannel to avoid cross-screen conflicts
+  - `dart analyze lib/` with no issues requires all declared fields to be referenced — add guard `if (_submitting || _surveyId == null) return;` to use _surveyId
+  - `dart analyze lib/` passes with no issues after these changes
+---
+
 ## 2026-03-15 - US-019
 - What was implemented: Created mobile/lib/screens/donate_screen.dart with ConsumerStatefulWidget — fetches habit-donation survey via SurveyService.fetchSurvey('habit-donation'); loads /api/v1/surveys/:id/render in a WebView (webview_flutter ^4.10.0) with JWT Authorization header injected via loadRequest headers; injects JS after page load to hook SurveyJS onComplete event and forward answers to Flutter via SurveyComplete JavaScriptChannel; on completion calls SurveyService.submitResult(), shows SnackBar toast, pops via context.pop(); offline/error state shows 'No connection' banner with retry button. Updated main.dart to import DonateScreen and replace _PlaceholderScreen on /donate branch. Added webview_flutter: ^4.10.0 to pubspec.yaml.
 - Files changed: mobile/lib/screens/donate_screen.dart (new), mobile/lib/main.dart (import + route update), mobile/pubspec.yaml (add webview_flutter), mobile/pubspec.lock (updated), prd.json (US-019 passes=true)
