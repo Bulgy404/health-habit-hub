@@ -51,6 +51,27 @@ class AdminService {
     return response.data ?? {};
   }
 
+  /// Updates a participant's study group.
+  ///
+  /// Calls PATCH /api/v1/admin/participants/:id/group with body {group}.
+  Future<void> updateParticipantGroup(String id, String group) async {
+    await _dio.patch<void>(
+      '$_baseUrl/admin/participants/$id/group',
+      data: {'group': group},
+      options: await _authOptions(),
+    );
+  }
+
+  /// Soft-deletes (anonymizes) a participant.
+  ///
+  /// Calls DELETE /api/v1/admin/participants/:id.
+  Future<void> deleteParticipant(String id) async {
+    await _dio.delete<void>(
+      '$_baseUrl/admin/participants/$id',
+      options: await _authOptions(),
+    );
+  }
+
   /// Returns the full token card URL for a participant.
   String tokenCardUrl(String participantId, String format) =>
       '$_baseUrl/admin/participants/$participantId/token-card?format=$format';
