@@ -894,8 +894,8 @@
         "docs/guides/participant-guide.pdf generated (pandoc or similar)"
       ],
       "priority": 54,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created docs/guides/participant-guide.md with all 7 sections and numbered steps. Created 21 placeholder screenshots (Android/iOS/Chrome per section) in docs/assets/screenshots/participant/. Generated docs/guides/participant-guide.pdf via pandoc (LaTeX engine)."
     },
     {
       "id": "US-055",
