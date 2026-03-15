@@ -118,6 +118,74 @@ class _AdminParticipantsScreenState
     });
   }
 
+  Future<void> _changeGroup(AdminParticipant p, String newGroup) async {
+    // Optimistic update
+    setState(() {
+      final idx = _all.indexWhere((e) => e.id == p.id);
+      if (idx >= 0) {
+        final updated = AdminParticipant(
+          id: p.id,
+          username: p.username,
+          group: newGroup,
+          enrolledAt: p.enrolledAt,
+          lastActiveAt: p.lastActiveAt,
+          surveysCompleted: p.surveysCompleted,
+          surveysTotal: p.surveysTotal,
+        );
+        _all = List.of(_all)..[idx] = updated;
+      }
+    });
+    try {
+      await ref.read(adminServiceProvider).updateParticipantGroup(p.id, newGroup);
+    } catch (_) {
+      await _load();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update group.')),
+        );
+      }
+    }
+  }
+
+  Future<void> _confirmDelete(AdminParticipant p) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Participant'),
+        content: const Text(
+          'This will anonymize participant data. Cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+              foregroundColor: Theme.of(ctx).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(adminServiceProvider).deleteParticipant(p.id);
+      setState(() {
+        _all = _all.where((e) => e.id != p.id).toList();
+      });
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete participant.')),
+        );
+      }
+    }
+  }
+
   Future<void> _showCreateDialog() async {
     await showDialog<void>(
       context: context,
@@ -186,6 +254,8 @@ class _AdminParticipantsScreenState
                                   onTap: (p) => context.push(
                                     '/admin/participants/${p.id}',
                                   ),
+                                  onGroupChange: _changeGroup,
+                                  onDelete: _confirmDelete,
                                 ),
                               ),
                             ),
@@ -271,12 +341,18 @@ class _ParticipantsTable extends StatelessWidget {
     required this.formatDate,
     required this.formatSurveys,
     required this.onTap,
+    required this.onGroupChange,
+    required this.onDelete,
   });
 
   final List<AdminParticipant> rows;
   final String Function(DateTime?) formatDate;
   final String Function(AdminParticipant) formatSurveys;
   final ValueChanged<AdminParticipant> onTap;
+  final void Function(AdminParticipant, String) onGroupChange;
+  final ValueChanged<AdminParticipant> onDelete;
+
+  static const _groups = ['G1', 'G2', 'G3', 'G4'];
 
   @override
   Widget build(BuildContext context) {
@@ -290,6 +366,7 @@ class _ParticipantsTable extends StatelessWidget {
         DataColumn(label: Text('Enrolled')),
         DataColumn(label: Text('Last Active')),
         DataColumn(label: Text('Surveys %')),
+        DataColumn(label: Text('Actions')),
       ],
       rows: rows
           .map(
@@ -297,10 +374,35 @@ class _ParticipantsTable extends StatelessWidget {
               onSelectChanged: (_) => onTap(p),
               cells: [
                 DataCell(Text(p.username)),
-                DataCell(Text(p.group.isNotEmpty ? p.group : '—')),
+                DataCell(
+                  DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _groups.contains(p.group) ? p.group : null,
+                      isDense: true,
+                      hint: const Text('—'),
+                      items: _groups
+                          .map(
+                            (g) =>
+                                DropdownMenuItem(value: g, child: Text(g)),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) onGroupChange(p, v);
+                      },
+                    ),
+                  ),
+                ),
                 DataCell(Text(formatDate(p.enrolledAt))),
                 DataCell(Text(formatDate(p.lastActiveAt))),
                 DataCell(Text(formatSurveys(p))),
+                DataCell(
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: 'Delete participant',
+                    color: Theme.of(context).colorScheme.error,
+                    onPressed: () => onDelete(p),
+                  ),
+                ),
               ],
             ),
           )
