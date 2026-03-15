@@ -1,3 +1,13 @@
+## 2026-03-15 - US-021
+- What was implemented: Created app/routes/profileRouter.js with createProfileRouter factory — GET / returns profile from MongoDB profiles collection (404 if not found); POST / upserts profile doc with userId=req.user.sub, answers, completedAt, updatedAt; db injectable for tests. Updated v1Router.js to import createProfileRouter and accept db param, mounted /profile with participant|admin|researcher role check. Created 7 integration tests in tests/integration/profile.routes.test.js using in-memory mock DB (Map-based store with findOne/updateOne simulation).
+- Files changed: app/routes/profileRouter.js (new), app/routes/v1Router.js (import + mount profileRouter + accept db param), app/tests/integration/profile.routes.test.js (new), prd.json (US-021 passes=true)
+- **Learnings for future iterations:**
+  - profileRouter follows same DI pattern as recommendRouter: accepts { db } option; falls back to `import('../models/survey.js').connect()` in production
+  - For test mocking, a simple Map-based mock db with findOne/updateOne works without any external mock library
+  - createV1Router now accepts `db` param alongside jwksUrl/serviceChecks/recommenderUrl — pass it through to profileRouter
+  - 4 pre-existing test failures remain (Backup alert, Fuseki, Neo4j, LibreTranslate) — 64/71 tests pass
+---
+
 ## 2026-03-15 - US-020
 - What was implemented: Created mobile/lib/screens/profile_screen.dart with ConsumerStatefulWidget — checks if profile already exists via GET /api/v1/profile (validateStatus accepts non-5xx); if 200, shows _ProfileSummaryCard with formatted completion date and Edit button; if 404/other, loads profile survey WebView via SurveyService.fetchSurvey('profile') with JWT in loadRequest headers; JS hook uses ProfileSurveyComplete JavaScriptChannel (separate from DonateScreen's SurveyComplete); on completion POSTs /api/v1/profile with answers + completedAt, shows SnackBar, returns to summary card; offline state shows _OfflineBanner with retry; Edit button re-invokes _initSurvey(). Updated main.dart to import ProfileScreen and replace _PlaceholderScreen on /profile route.
 - Files changed: mobile/lib/screens/profile_screen.dart (new), mobile/lib/main.dart (import + route update), prd.json (US-020 passes=true)
