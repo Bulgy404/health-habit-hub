@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'screens/donate_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/profile_screen.dart';
 import 'screens/shell_screen.dart';
 
 void main() {
@@ -75,8 +76,7 @@ final _router = GoRouter(
           routes: [
             GoRoute(
               path: '/profile',
-              builder: (context, state) =>
-                  const _PlaceholderScreen(label: 'Profile'),
+              builder: (context, state) => const ProfileScreen(),
             ),
           ],
         ),
