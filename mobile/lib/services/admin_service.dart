@@ -206,6 +206,32 @@ class AdminService {
     return HabitsFeedResult.fromJson(response.data ?? {});
   }
 
+  // ---------------------------------------------------------------------------
+  // Settings endpoints
+  // ---------------------------------------------------------------------------
+
+  /// Returns all admin settings as a flat {key: value} map.
+  ///
+  /// Calls GET /api/v1/admin/settings.
+  Future<Map<String, dynamic>> fetchSettings() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '$_baseUrl/admin/settings',
+      options: await _authOptions(),
+    );
+    return response.data ?? {};
+  }
+
+  /// Updates a single admin setting.
+  ///
+  /// Calls PUT /api/v1/admin/settings/:key with body {value}.
+  Future<void> updateSetting(String key, String value) async {
+    await _dio.put<void>(
+      '$_baseUrl/admin/settings/$key',
+      data: {'value': value},
+      options: await _authOptions(),
+    );
+  }
+
   /// Returns the CSV export URL for the habits feed (with bearer token embedded).
   ///
   /// Intended for use with [url_launcher] so the browser triggers a download.
