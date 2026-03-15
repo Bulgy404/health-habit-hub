@@ -1,3 +1,14 @@
+## 2026-03-15 - US-019
+- What was implemented: Created mobile/lib/screens/donate_screen.dart with ConsumerStatefulWidget — fetches habit-donation survey via SurveyService.fetchSurvey('habit-donation'); loads /api/v1/surveys/:id/render in a WebView (webview_flutter ^4.10.0) with JWT Authorization header injected via loadRequest headers; injects JS after page load to hook SurveyJS onComplete event and forward answers to Flutter via SurveyComplete JavaScriptChannel; on completion calls SurveyService.submitResult(), shows SnackBar toast, pops via context.pop(); offline/error state shows 'No connection' banner with retry button. Updated main.dart to import DonateScreen and replace _PlaceholderScreen on /donate branch. Added webview_flutter: ^4.10.0 to pubspec.yaml.
+- Files changed: mobile/lib/screens/donate_screen.dart (new), mobile/lib/main.dart (import + route update), mobile/pubspec.yaml (add webview_flutter), mobile/pubspec.lock (updated), prd.json (US-019 passes=true)
+- **Learnings for future iterations:**
+  - webview_flutter ^4.x: use WebViewController.loadRequest(Uri, headers: Map<String, String>) to inject JWT into the initial page request
+  - addJavaScriptChannel('ChannelName', onMessageReceived: ...) adds a global JS object so SurveyJS/page can call ChannelName.postMessage(data)
+  - Inject JS via runJavaScript() in onPageFinished callback (NavigationDelegate); use setInterval to poll until SurveyJS 'survey' variable is initialized before hooking onComplete
+  - Offline pattern: catch exception in initState, set _offline=true, show banner with retry — retry resets state and re-calls _initSurvey()
+  - dart analyze lib/ passes with no issues after these changes
+---
+
 ## 2026-03-15 - US-018
 - What was implemented: Created mobile/lib/models/survey.dart (Survey with id/title/type/jsonSchema/assignedGroups/status, fromJson/toJson); created mobile/lib/models/survey_result.dart (SurveyResult with surveyId/userId/answers/completedAt, fromJson/toJson); created mobile/lib/services/survey_service.dart (SurveyService using dio — fetchSurvey(id), fetchProfileSurvey() calls fetchSurvey('profile'), submitResult(surveyId, answers) POST to /api/v1/surveys/:id/results; auth headers injected from AuthService; exposed as surveyServiceProvider Riverpod Provider).
 - Files changed: mobile/lib/models/survey.dart (new), mobile/lib/models/survey_result.dart (new), mobile/lib/services/survey_service.dart (new), prd.json (US-018 passes=true)
