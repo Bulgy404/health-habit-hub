@@ -909,8 +909,8 @@
         "All section headings, step labels, and captions translated"
       ],
       "priority": 55,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created docs/guides/participant-guide-de.md with all 7 sections translated to German. LibreTranslate not running locally — translation produced directly (reviewed for accuracy). Same screenshot references as English guide. Generated docs/guides/participant-guide-de.pdf via pandoc (LaTeX engine, warnings only)."
     },
     {
       "id": "US-056",
