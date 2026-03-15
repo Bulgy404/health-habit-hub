@@ -938,8 +938,8 @@
         "Quick Start checklist translated"
       ],
       "priority": 57,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "German translation produced directly (LibreTranslate not running locally). All 8 sections translated including Quick Start checklist. Screenshot references identical to English guide. PDF generated via pandoc (LaTeX engine, anchor warnings only)."
     },
     {
       "id": "US-058",
