@@ -1,3 +1,4 @@
+import { createServer } from 'node:http';
 import bodyParser from 'body-parser';
 import express from 'express';
 import path from 'path';
@@ -179,6 +180,9 @@ app.get('/api', (req, res) => {
 
 // Versioned API routes (JWT-protected)
 import createV1Router from './routes/index.js';
+import { createInternalRouter } from './routes/internalRouter.js';
+import { createRecommendationWsServer } from './ws/recommendationWs.js';
+import { createTokenVerifier } from './middleware/auth.js';
 app.use('/api/v1', createV1Router());
 
 app.use(cookieParser());
@@ -190,6 +194,11 @@ app.use((req, res) => {
   res.status(404).send('404 - Not Found');
 });
 
-app.listen(port, () => {
+const httpServer = createServer(app);
+const verifyToken = createTokenVerifier();
+const { broadcast } = createRecommendationWsServer(httpServer, { verifyToken });
+app.use('/api/internal', express.json(), createInternalRouter({ broadcast }));
+
+httpServer.listen(port, () => {
   console.log(`Server is running on http://app.localhost`);
 });

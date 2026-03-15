@@ -26,6 +26,33 @@ function verifyJwtSignature(signingInput, signature, jwk) {
   return verify.verify(publicKey, base64urlDecode(signature));
 }
 
+export function createTokenVerifier({ jwksUrl } = {}) {
+  const url = jwksUrl || process.env.KEYCLOAK_JWKS_URL;
+  let cachedKeys = null;
+
+  async function fetchJwks() {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch JWKS: ${res.status}`);
+    const { keys } = await res.json();
+    cachedKeys = keys;
+    return keys;
+  }
+
+  return async function verifyToken(token) {
+    const { header, payload, signature, signingInput } = parseJwt(token);
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) throw new Error('Token expired');
+    const keys = cachedKeys || (await fetchJwks());
+    const key = keys.find(
+      (k) => k.kid === header.kid || (!header.kid && k.use === 'sig')
+    );
+    if (!key) throw new Error('Key not found');
+    const valid = verifyJwtSignature(signingInput, signature, key);
+    if (!valid) throw new Error('Invalid signature');
+    return payload;
+  };
+}
+
 export function createAuthMiddleware({ jwksUrl } = {}) {
   const url = jwksUrl || process.env.KEYCLOAK_JWKS_URL;
   let cachedKeys = null;
