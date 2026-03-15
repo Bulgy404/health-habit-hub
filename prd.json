@@ -616,8 +616,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 37,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added updateParticipantGroup() (PATCH /:id/group) and deleteParticipant() (DELETE /:id) to AdminService. Updated _ParticipantsTable: group cell is now an inline DropdownButton (G1-G4) that calls onGroupChange with optimistic update + revert on error; added Actions column with IconButton(delete_outline) that calls onDelete. _confirmDelete shows AlertDialog with required text; on confirm calls deleteParticipant and removes row. dart analyze: no issues."
     },
     {
       "id": "US-038",
