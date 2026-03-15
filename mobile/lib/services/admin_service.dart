@@ -32,6 +32,28 @@ class AdminService {
         .map((e) => AdminParticipant.fromJson(e as Map<String, dynamic>))
         .toList();
   }
+
+  /// Creates a new participant in Keycloak and MongoDB.
+  ///
+  /// [group] must be one of G1–G4.
+  /// [tokenCardFormat] must be 'qr', 'print', or 'both'.
+  ///
+  /// Returns a map with keys: userId, username, password, tokenCardUrl.
+  Future<Map<String, dynamic>> createParticipant({
+    required String group,
+    required String tokenCardFormat,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '$_baseUrl/admin/participants',
+      data: {'group': group, 'tokenCardFormat': tokenCardFormat},
+      options: await _authOptions(),
+    );
+    return response.data ?? {};
+  }
+
+  /// Returns the full token card URL for a participant.
+  String tokenCardUrl(String participantId, String format) =>
+      '$_baseUrl/admin/participants/$participantId/token-card?format=$format';
 }
 
 /// Riverpod provider for [AdminService].

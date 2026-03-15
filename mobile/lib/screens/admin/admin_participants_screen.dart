@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/admin_participant.dart';
 import '../../services/admin_service.dart';
@@ -117,6 +118,30 @@ class _AdminParticipantsScreenState
     });
   }
 
+  Future<void> _showCreateDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => _CreateParticipantDialog(
+        onCreated: (username, tokenCardUrl) async {
+          // Show snackbar
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Participant $username created')),
+            );
+          }
+          // Open token card URL
+          final uri = Uri.parse(tokenCardUrl);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
+          // Reload list
+          await _load();
+        },
+        adminService: ref.read(adminServiceProvider),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -129,6 +154,11 @@ class _AdminParticipantsScreenState
             onPressed: _load,
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showCreateDialog,
+        tooltip: 'Create participant',
+        child: const Icon(Icons.person_add),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -357,6 +387,163 @@ class _ErrorView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Create participant dialog
+// ---------------------------------------------------------------------------
+
+/// Dialog for creating a new participant.
+///
+/// Shows a group selector (G1–G4) and a token card format selector
+/// (QR / Print / Both). On confirm, calls POST /api/v1/admin/participants
+/// and invokes [onCreated] with the new username and the token card URL.
+class _CreateParticipantDialog extends StatefulWidget {
+  const _CreateParticipantDialog({
+    required this.onCreated,
+    required this.adminService,
+  });
+
+  /// Called after a successful creation with the new username and the
+  /// token card URL to open.
+  final Future<void> Function(String username, String tokenCardUrl) onCreated;
+  final AdminService adminService;
+
+  @override
+  State<_CreateParticipantDialog> createState() =>
+      _CreateParticipantDialogState();
+}
+
+class _CreateParticipantDialogState extends State<_CreateParticipantDialog> {
+  String _group = 'G1';
+  String _format = 'both';
+  bool _loading = false;
+  String? _error;
+
+  static const _groups = ['G1', 'G2', 'G3', 'G4'];
+  static const _formats = [
+    ('both', 'QR + Print'),
+    ('qr', 'QR only'),
+    ('print', 'Print only'),
+  ];
+
+  Future<void> _submit() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final result = await widget.adminService.createParticipant(
+        group: _group,
+        tokenCardFormat: _format,
+      );
+      final username = (result['username'] ?? '').toString();
+      final userId = (result['userId'] ?? '').toString();
+      // Prefer tokenCardUrl returned by backend; fall back to derived URL.
+      final tokenCardUrl = result['tokenCardUrl']?.toString() ??
+          widget.adminService.tokenCardUrl(userId, _format);
+      if (mounted) Navigator.of(context).pop();
+      await widget.onCreated(username, tokenCardUrl);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Failed to create participant. Please try again.';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Create Participant'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Study group'),
+          const SizedBox(height: 4),
+          InputDecorator(
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              isDense: true,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _group,
+                isDense: true,
+                isExpanded: true,
+                items: _groups
+                    .map(
+                      (g) => DropdownMenuItem(value: g, child: Text(g)),
+                    )
+                    .toList(),
+                onChanged: _loading
+                    ? null
+                    : (v) => setState(() => _group = v ?? _group),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text('Token card format'),
+          const SizedBox(height: 4),
+          InputDecorator(
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              isDense: true,
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _format,
+                isDense: true,
+                isExpanded: true,
+                items: _formats
+                    .map(
+                      (f) =>
+                          DropdownMenuItem(value: f.$1, child: Text(f.$2)),
+                    )
+                    .toList(),
+                onChanged: _loading
+                    ? null
+                    : (v) => setState(() => _format = v ?? _format),
+              ),
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _loading ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _loading ? null : _submit,
+          child: _loading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Create'),
+        ),
+      ],
     );
   }
 }
