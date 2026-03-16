@@ -279,9 +279,10 @@ jobs:
       # Install cypher-shell FIRST (needed by the wait loop below)
       - name: Install cypher-shell
         run: |
-          wget -q https://dist.neo4j.org/cypher-shell/cypher-shell-5.latest.zip -O /tmp/cypher-shell.zip
-          unzip -q /tmp/cypher-shell.zip -d /tmp/cypher-shell
-          sudo ln -sf /tmp/cypher-shell/cypher-shell/bin/cypher-shell /usr/local/bin/cypher-shell
+          wget -O- https://debian.neo4j.com/neotechnology.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/neo4j.gpg
+          echo 'deb [signed-by=/usr/share/keyrings/neo4j.gpg] https://debian.neo4j.com stable latest' | sudo tee /etc/apt/sources.list.d/neo4j.list
+          sudo apt-get update -qq
+          sudo apt-get install -y cypher-shell
 
       - name: Wait for services to be healthy
         run: |
