@@ -1017,8 +1017,8 @@
         "Screenshot of npm test passing in terminal"
       ],
       "priority": 62,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created docs/guides/developer-onboarding.md with all 8 sections: Required tools table (Flutter 3.22+/Docker 24+/Node.js 20+/Git with version verify commands), Clone+branch setup, stack.env template with all vars, docker-compose up with expected healthy output, Flutter in Chrome (flutter run -d chrome with dart-defines), Flutter in Android emulator (10.0.2.2 host mapping), Run all tests (npm test + flutter test + test-ontology.sh with expected outputs), Common pitfalls (port conflicts, Keycloak not ready, CORS, realm import, dependencies). 8-point verify checklist with copy-pasteable commands. Links to architecture.md, api/openapi.yaml, data-model.md. Placeholder screenshots: flutter-web-chrome.png and npm-test-passing.png in docs/assets/screenshots/developer/."
     },
     {
       "id": "US-063",

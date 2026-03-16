@@ -1,0 +1,500 @@
+# Health Habit Hub — Developer Onboarding Guide
+
+Welcome to the Health Habit Hub project. This guide takes you from zero to a fully working local development environment.
+
+---
+
+## Table of Contents
+
+1. [Required Tools](#1-required-tools)
+2. [Clone and Branch Setup](#2-clone-and-branch-setup)
+3. [Create stack.env](#3-create-stackenv)
+4. [Start Services with Docker Compose](#4-start-services-with-docker-compose)
+5. [Run Flutter App in Chrome](#5-run-flutter-app-in-chrome)
+6. [Run Flutter App in Android Emulator](#6-run-flutter-app-in-android-emulator)
+7. [Run All Tests](#7-run-all-tests)
+8. [Common Pitfalls](#8-common-pitfalls)
+9. [Verify Your Setup Checklist](#9-verify-your-setup-checklist)
+
+---
+
+## 1. Required Tools
+
+Install the following tools before proceeding. The table shows the minimum required version and how to verify your installation.
+
+| Tool | Minimum Version | Verify |
+|------|----------------|--------|
+| **Flutter** | 3.22.0 | `flutter --version` |
+| **Docker** | 24.0.0 | `docker --version` |
+| **Docker Compose** | 2.20.0 | `docker compose version` |
+| **Node.js** | 20.0.0 | `node --version` |
+| **npm** | 10.0.0 | `npm --version` |
+| **Git** | 2.40.0 | `git --version` |
+
+### Installation links
+
+- Flutter: https://docs.flutter.dev/get-started/install
+- Docker Desktop (includes Compose): https://docs.docker.com/get-docker/
+- Node.js (LTS): https://nodejs.org/en/download/
+
+### Verify Flutter setup
+
+Run `flutter doctor` to confirm your environment is ready. You should see no critical errors for the Chrome and Android targets you plan to use:
+
+```
+Doctor summary (to see all details, run flutter doctor -v):
+[v] Flutter (Channel stable, 3.22.x)
+[v] Android toolchain
+[v] Chrome - develop for the web
+[v] Android Studio
+[v] VS Code
+[v] Connected device (3 available)
+```
+
+---
+
+## 2. Clone and Branch Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/your-org/health-habit-hub.git
+cd health-habit-hub
+
+# Switch to the unified development branch
+git checkout ralph/hhh-platform-unified
+
+# Verify you are on the correct branch
+git branch --show-current
+# Expected output: ralph/hhh-platform-unified
+```
+
+---
+
+## 3. Create stack.env
+
+The Docker stack reads all secrets and configuration from a `stack.env` file at the repo root. Copy the template and fill in your local values:
+
+```bash
+cp stack.env stack.env.local
+```
+
+Edit `stack.env.local` with values suitable for local development. Below is a minimal template that works out-of-the-box for local development (all `CHANGE_THIS_*` values replaced with safe defaults):
+
+```ini
+# ── Domain ─────────────────────────────────────────────────────────────
+DOMAIN=localhost
+SERVER_IP=127.0.0.1
+ACME_EMAIL=dev@localhost
+
+# ── App ────────────────────────────────────────────────────────────────
+APP_BASE_PATH=/
+NODE_ENV=development
+
+# ── Fuseki ─────────────────────────────────────────────────────────────
+FUSEKI_PATH=fuseki
+DB_HOST=fuseki
+DB_PORT=3030
+DB_USER=admin
+DB_PASSWORD=devpassword
+DB_PATH=hhh
+
+# ── MongoDB ─────────────────────────────────────────────────────────────
+MONGO_HOST=mongo
+MONGO_PORT=27017
+MONGO_USER=admin
+MONGO_PASSWORD=devpassword
+MONGO_DB=surveyjs
+MONGO_AUTH_SOURCE=admin
+MONGO_SERVER_SELECTION_TIMEOUT_MS=30000
+MONGO_SOCKET_TIMEOUT_MS=30000
+
+# ── Graph backend ───────────────────────────────────────────────────────
+GRAPH_BACKEND=neo4j
+
+# ── Neo4j ───────────────────────────────────────────────────────────────
+NEO4J_URI=bolt://neo4j:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=devpassword
+
+# ── Keycloak ─────────────────────────────────────────────────────────────
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=devpassword
+
+# ── Recommender ──────────────────────────────────────────────────────────
+RECOMMENDER_URL=http://recommender:8000
+
+# ── LibreTranslate ───────────────────────────────────────────────────────
+LT_LOAD_ONLY=de,en
+LT_REQ_LIMIT=0
+LT_DEBUG=false
+LT_DISABLE_WEB_UI=false
+
+# ── Backup ───────────────────────────────────────────────────────────────
+BACKUP_RETENTION_DAYS=7
+BACKUP_EMAIL=dev@localhost
+ALERT_WEBHOOK_URL=
+
+# ── Admin app password ───────────────────────────────────────────────────
+ADMIN_PASSWORD=devpassword
+
+# ── reCAPTCHA (dev — set to empty to disable) ────────────────────────────
+RECAPTCHA_SITEKEY=
+RECAPTCHA_SECRETKEY=
+RECAPTCHA_USE_RECAPTCHA_DOMAIN=false
+
+# ── Mail (dev — set to empty to disable) ─────────────────────────────────
+MAIL_USER=
+MAIL_PASS=
+MAIL_FROM=noreply@localhost
+MAIL_RECEIVER=dev@localhost
+
+# ── Traefik ──────────────────────────────────────────────────────────────
+TRAEFIK_DASHBOARD_AUTH=admin:$$apr1$$devhash
+```
+
+> **Note:** Never commit `stack.env.local` to Git — it is listed in `.gitignore`. For production deployments use the values in `stack.env` overridden in Portainer.
+
+---
+
+## 4. Start Services with Docker Compose
+
+```bash
+# Start all backend services in detached mode
+docker compose --env-file stack.env.local up -d
+
+# Watch logs during startup (Ctrl+C to stop following)
+docker compose logs -f
+```
+
+Wait approximately 60–90 seconds for Keycloak and Neo4j to initialise. Then verify all services are healthy:
+
+```bash
+curl -s http://localhost:3000/api/v1/health | python3 -m json.tool
+```
+
+Expected output:
+
+```json
+{
+  "status": "ok",
+  "version": "1.0.0",
+  "services": {
+    "neo4j":    { "status": "ok", "latencyMs": 12 },
+    "mongo":    { "status": "ok", "latencyMs": 5  },
+    "fuseki":   { "status": "ok", "latencyMs": 18 },
+    "keycloak": { "status": "ok", "latencyMs": 22 },
+    "recommender": { "status": "ok", "latencyMs": 8 }
+  }
+}
+```
+
+Confirm Docker containers are running:
+
+```bash
+docker compose ps
+```
+
+Expected — all services should show status **running** or **healthy**:
+
+```
+NAME                STATUS
+h3-app             running
+h3-keycloak        healthy
+h3-mongo           running
+h3-neo4j           healthy
+h3-fuseki          running
+h3-recommender     running
+h3-traefik         running
+```
+
+---
+
+## 5. Run Flutter App in Chrome
+
+The Flutter app lives in the `mobile/` directory.
+
+```bash
+cd mobile
+
+# Fetch Flutter dependencies
+flutter pub get
+
+# List available devices — confirm Chrome is available
+flutter devices
+# Expected line: Chrome (web)    • chrome  • web-javascript • Google Chrome ...
+
+# Run in Chrome with the local backend
+flutter run -d chrome \
+  --dart-define=API_BASE_URL=http://localhost:3000/api/v1 \
+  --dart-define=KEYCLOAK_URL=http://localhost:8080 \
+  --dart-define=KEYCLOAK_REALM=hhh \
+  --dart-define=KEYCLOAK_CLIENT_ID=hhh-flutter
+```
+
+Flutter will compile the web app (first run takes ~60–90 s) and open Chrome automatically.
+
+| Platform | Screenshot |
+|----------|-----------|
+| Chrome (local) | ![Flutter web running locally in Chrome](../assets/screenshots/developer/flutter-web-chrome.png) |
+
+---
+
+## 6. Run Flutter App in Android Emulator
+
+### Prerequisites
+
+1. Install **Android Studio** and open **Virtual Device Manager**.
+2. Create an AVD (Android Virtual Device) — any Pixel device with API 33+ works.
+3. Start the emulator from Android Studio or run:
+
+```bash
+# List available emulators
+flutter emulators
+
+# Launch one (replace <emulator_id> with the ID shown above)
+flutter emulators --launch <emulator_id>
+```
+
+### Run the app
+
+```bash
+cd mobile
+
+# Confirm emulator is listed as a connected device
+flutter devices
+# Expected: Android SDK built for x86_64 • emulator-5554 • android ...
+
+# Run on the emulator
+flutter run \
+  --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1 \
+  --dart-define=KEYCLOAK_URL=http://10.0.2.2:8080 \
+  --dart-define=KEYCLOAK_REALM=hhh \
+  --dart-define=KEYCLOAK_CLIENT_ID=hhh-flutter
+```
+
+> **Note:** Inside an Android emulator, `10.0.2.2` maps to your host machine's `localhost`.
+
+---
+
+## 7. Run All Tests
+
+### Node.js backend tests
+
+```bash
+cd app
+npm install
+npm test
+```
+
+Expected output:
+
+```
+Test Suites: 12 passed, 12 total
+Tests:       186 passed, 186 total
+```
+
+| Terminal | Screenshot |
+|----------|-----------|
+| npm test passing | ![npm test output showing all tests passing](../assets/screenshots/developer/npm-test-passing.png) |
+
+### Flutter tests
+
+```bash
+cd mobile
+flutter test
+```
+
+Expected output:
+
+```
+00:15 +42: All tests passed!
+```
+
+### Ontology / SPARQL tests
+
+```bash
+cd tests
+bash test-ontology.sh
+```
+
+Expected output (each line is a PASS):
+
+```
+[PASS] Ontology loads into Fuseki without errors
+[PASS] owl:Class count > 100 (found: 134)
+[PASS] No duplicate URIs
+[PASS] G3/G4 groups are distinct
+[PASS] HHH core classes present
+```
+
+---
+
+## 8. Common Pitfalls
+
+### Port conflicts
+
+If `docker compose up` fails with "address already in use", find and stop the conflicting process:
+
+```bash
+# Find what is using port 3000
+lsof -i :3000
+# Kill it (replace <PID> with the actual PID)
+kill -9 <PID>
+```
+
+Common conflicting ports: **3000** (Node.js), **8080** (Keycloak), **7474/7687** (Neo4j), **27017** (MongoDB), **3030** (Fuseki).
+
+### Keycloak not ready
+
+Keycloak takes 30–60 s to start. If the health endpoint returns `"keycloak": {"status": "error"}`:
+
+```bash
+# Watch Keycloak logs
+docker compose logs -f keycloak
+
+# Wait until you see:
+# ... Keycloak 24.x.x on JVM ... started in ...ms
+```
+
+Then retry `curl http://localhost:3000/api/v1/health`.
+
+### Flutter web CORS errors
+
+If the Flutter web app shows network errors in Chrome DevTools, the backend CORS origin is not configured for `localhost`.
+
+Set the `CORS_ORIGIN` variable in your `stack.env.local`:
+
+```ini
+CORS_ORIGIN=http://localhost:8080
+```
+
+Restart the app container:
+
+```bash
+docker compose restart app
+```
+
+### Keycloak realm not imported
+
+If you see `404` on Keycloak realm endpoints, the realm import may have failed on first start:
+
+```bash
+# Inspect Keycloak startup logs
+docker compose logs keycloak | grep -i "import\|error\|realm"
+
+# Re-import manually
+docker compose exec keycloak \
+  /opt/keycloak/bin/kc.sh import --dir /opt/keycloak/data/import
+```
+
+### Flutter dependencies out of date
+
+After a `git pull`, run `flutter pub get` in `mobile/` to refresh packages.
+
+---
+
+## 9. Verify Your Setup Checklist
+
+Work through each check in order. Each shows the command and expected output.
+
+**Check 1 — Docker services healthy**
+
+```bash
+curl -s http://localhost:3000/api/v1/health | python3 -c "import sys,json; d=json.load(sys.stdin); print('OK' if d['status']=='ok' else 'FAIL')"
+```
+
+Expected: `OK`
+
+---
+
+**Check 2 — Backend responds with JSON**
+
+```bash
+curl -s http://localhost:3000/api/v1/health | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])"
+```
+
+Expected: `ok`
+
+---
+
+**Check 3 — Keycloak realm accessible**
+
+```bash
+curl -s http://localhost:8080/realms/hhh/.well-known/openid-configuration | python3 -c "import sys,json; print(json.load(sys.stdin)['issuer'])"
+```
+
+Expected: `http://localhost:8080/realms/hhh`
+
+---
+
+**Check 4 — MongoDB reachable from app container**
+
+```bash
+docker compose exec app node -e "const {MongoClient}=require('mongodb'); MongoClient.connect(process.env.MONGO_HOST?'mongodb://'+process.env.MONGO_USER+':'+process.env.MONGO_PASSWORD+'@'+process.env.MONGO_HOST+':'+process.env.MONGO_PORT:'mongodb://localhost:27017').then(()=>{console.log('OK');process.exit(0)}).catch(e=>{console.log('FAIL',e.message);process.exit(1)})"
+```
+
+Expected: `OK`
+
+---
+
+**Check 5 — Neo4j reachable**
+
+```bash
+docker compose exec neo4j cypher-shell -u neo4j -p devpassword "RETURN 'OK' AS status;"
+```
+
+Expected:
+
+```
+status
+"OK"
+```
+
+---
+
+**Check 6 — Fuseki SPARQL endpoint responding**
+
+```bash
+curl -s -u admin:devpassword "http://localhost:3030/hhh/query?query=SELECT+%28COUNT%28*%29+AS+%3Fc%29+WHERE+%7B%3Fs+a+%3Chttp%3A%2F%2Fwww.w3.org%2F2002%2F07%2Fowl%23Class%3E%7D" | python3 -c "import sys,json; r=json.load(sys.stdin)['results']['bindings'][0]['c']['value']; print('OK ('+r+' classes)' if int(r)>100 else 'FAIL')"
+```
+
+Expected: `OK (134 classes)` (or similar — must be > 100)
+
+---
+
+**Check 7 — npm tests pass**
+
+```bash
+cd app && npm test -- --passWithNoTests 2>&1 | tail -5
+```
+
+Expected last lines:
+
+```
+Tests:       186 passed, 186 total
+Test Suites: 12 passed, 12 total
+```
+
+---
+
+**Check 8 — Flutter web compiles**
+
+```bash
+cd mobile && flutter build web --dart-define=API_BASE_URL=http://localhost:3000/api/v1 2>&1 | tail -3
+```
+
+Expected:
+
+```
+Built build/web
+```
+
+---
+
+## Further Reading
+
+- System architecture: [docs/architecture.md](../architecture.md)
+- API specification: [docs/api/openapi.yaml](../api/openapi.yaml)
+- Data model reference: [docs/data-model.md](../data-model.md)
+- Operations runbook: [docs/runbook.md](../runbook.md)
+- Admin guide: [docs/guides/admin-guide.md](admin-guide.md)
