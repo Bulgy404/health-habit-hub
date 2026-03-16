@@ -1,3 +1,12 @@
+## 2026-03-16 - US-068
+- What was implemented: (1) Split the single multi-statement MERGE cypher-shell call in the "Seed minimal test data" CI step into 8 separate cypher-shell calls (one per MERGE/MATCH), eliminating shell-quoting and multi-statement parsing issues. Relationship merges use MATCH to find existing nodes since variables don't persist across separate cypher-shell invocations. (2) Fixed `assert_cypher_count` in `tests/ontology/test-ontology.sh`: replaced `grep -cE '^[0-9]'` (which counted lines starting with a digit — always 1 for a COUNT query, even if count=0) with `tail -n +2 | head -1 | tr -d '[:space:]'` to extract the actual integer value from the second line of cypher-shell --format plain output, with a regex guard to default to 0 for non-numeric output.
+- Files changed: .github/workflows/ci.yml (split seed step into 8 separate cypher-shell calls), tests/ontology/test-ontology.sh (fix assert_cypher_count), prd.json (US-068 passes=true)
+- **Learnings for future iterations:**
+  - cypher-shell `--format plain` output: first line is the column name, second line is the value — use `tail -n +2 | head -1` to extract the value, not `grep -cE '^[0-9]'` which always returns 1 for COUNT queries
+  - When splitting multi-statement Cypher into separate cypher-shell calls, use MATCH (not MERGE) to find previously created nodes when building relationships, since variables don't persist across invocations
+  - n10s.graphconfig.init + multi-label MERGE can conflict; splitting into separate calls avoids any constraint/label interaction issues
+---
+
 ## 2026-03-16 - US-067
 - What was implemented: Updated GitHub Actions in both CI and CD workflows to use Node.js 24 runtime. (1) `actions/checkout@v4` → `actions/checkout@v6` in ci.yml (8 occurrences) and deploy.yml (1 occurrence). (2) `actions/setup-node@v4` → `actions/setup-node@v6` in ci.yml (4 occurrences). (3) `actions/upload-artifact@v4` → `actions/upload-artifact@v6` in ci.yml (2 occurrences). `softprops/action-gh-release@v2` and `appleboy/ssh-action@v1` remain at their latest major versions (no newer major versions exist).
 - Files changed: .github/workflows/ci.yml (checkout v6, setup-node v6, upload-artifact v6), .github/workflows/deploy.yml (checkout v6), prd.json (US-067 passes=true)
