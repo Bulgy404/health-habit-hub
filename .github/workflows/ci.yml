@@ -11,80 +11,253 @@ on:
       - rapid_dev
 
 jobs:
-  backend-test:
-    name: Backend tests (Node.js)
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 1. BACKEND – lint & format (fast gate, no services)
+  # ─────────────────────────────────────────────────────────────────────────────
+  backend-lint:
+    name: Backend – lint & format
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: "22"
+          cache: npm
           cache-dependency-path: app/package-lock.json
 
       - name: Install dependencies
         working-directory: app
         run: npm ci
 
+      - name: Format check
+        working-directory: app
+        run: npx prettier --check .
+
       - name: Lint
         working-directory: app
-        run: npm run lint --if-present
+        run: npx eslint .
 
-      - name: Typecheck
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 2. BACKEND – unit tests + coverage (no services)
+  # ─────────────────────────────────────────────────────────────────────────────
+  backend-unit:
+    name: Backend – unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
         working-directory: app
-        run: npm run typecheck --if-present
+        run: npm ci
 
-      - name: Unit tests
+      - name: Run unit tests with coverage
         working-directory: app
-        run: npm test
+        run: >
+          npx c8
+          --include='middleware/**'
+          --include='controllers/**'
+          --include='routes/**'
+          --include='services/**'
+          --reporter=text
+          --reporter=lcov
+          node --test "tests/unit/**/*.test.js"
 
-      - name: Generate coverage report
-        working-directory: app
-        run: npm run test:coverage
-
-      - name: Upload coverage report
+      - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
-          name: backend-coverage
+          name: backend-unit-coverage
           path: app/coverage/
 
-  flutter-test:
-    name: Flutter tests
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 3. BACKEND – integration tests (MongoDB + Neo4j + Fuseki)
+  # ─────────────────────────────────────────────────────────────────────────────
+  backend-integration:
+    name: Backend – integration tests
     runs-on: ubuntu-latest
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+      neo4j:
+        image: neo4j:5-community
+        env:
+          NEO4J_AUTH: neo4j/password
+          NEO4J_PLUGINS: '["apoc", "n10s"]'
+          NEO4J_apoc_export_file_enabled: "true"
+          NEO4J_apoc_import_file_enabled: "true"
+          NEO4J_apoc_import_file_use__neo4j__config: "true"
+          NEO4J_dbms_security_procedures_unrestricted: "apoc.*,n10s.*"
+        ports:
+          - 7687:7687
+          - 7474:7474
+        options: >-
+          --health-cmd "cypher-shell -u neo4j -p password 'RETURN 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 15
+
+      fuseki:
+        image: stain/jena-fuseki:4.9.0
+        env:
+          ADMIN_PASSWORD: admin
+          FUSEKI_DATASET_1: hhh
+        ports:
+          - 3030:3030
+        options: >-
+          --health-cmd "curl -sf http://localhost:3030/$/ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Run integration tests
+        working-directory: app
+        env:
+          NODE_ENV: test
+          MONGO_HOST: localhost
+          MONGO_USER: ""
+          MONGO_PASSWORD: ""
+          MONGO_DB: hhh_test
+          NEO4J_URI: bolt://localhost:7687
+          NEO4J_USER: neo4j
+          NEO4J_PASSWORD: password
+          FUSEKI_URL: http://localhost:3030
+          FUSEKI_DATASET: hhh
+          KEYCLOAK_URL: http://localhost:8080
+          ENABLE_INTEGRATION: "1"
+        run: node --test "tests/integration/**/*.test.js"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 4. BACKEND – security audit
+  # ─────────────────────────────────────────────────────────────────────────────
+  backend-security:
+    name: Backend – security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Audit dependencies
+        working-directory: app
+        run: npm audit --audit-level=high
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 5. FLUTTER – analyze (fast gate)
+  # ─────────────────────────────────────────────────────────────────────────────
+  flutter-analyze:
+    name: Flutter – analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.32.0"
-          channel: "stable"
+          channel: stable
           cache: true
 
-      - name: Install Flutter dependencies
+      - name: Install dependencies
         working-directory: mobile
         run: flutter pub get
 
-      - name: Flutter analyze
+      - name: Analyze
         working-directory: mobile
         run: flutter analyze lib/ test/
 
-      - name: Flutter widget tests
-        working-directory: mobile
-        run: flutter test test/widget/ --coverage
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 6. FLUTTER – widget tests + coverage
+  # ─────────────────────────────────────────────────────────────────────────────
+  flutter-test:
+    name: Flutter – widget tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Upload Flutter coverage report
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.0"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Run all widget tests with coverage
+        working-directory: mobile
+        run: flutter test --coverage
+
+      - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: flutter-coverage
           path: mobile/coverage/
 
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 7. FLUTTER – web build (validates the build compiles)
+  # ─────────────────────────────────────────────────────────────────────────────
+  flutter-build-web:
+    name: Flutter – build web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.32.0"
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Build Flutter web
+        working-directory: mobile
+        run: flutter build web --release
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 8. ONTOLOGY – graph integrity tests (Neo4j + Fuseki)
+  #    Fix: install cypher-shell BEFORE the wait loop that uses it
+  # ─────────────────────────────────────────────────────────────────────────────
   ontology-test:
-    name: Ontology & graph integrity tests
+    name: Ontology – graph integrity
     runs-on: ubuntu-latest
 
     services:
@@ -104,7 +277,7 @@ jobs:
           --health-cmd "cypher-shell -u neo4j -p password 'RETURN 1'"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 15
 
       fuseki:
         image: stain/jena-fuseki:4.9.0
@@ -122,18 +295,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Install cypher-shell FIRST (needed by the wait loop below)
+      - name: Install cypher-shell
+        run: |
+          wget -q https://dist.neo4j.org/cypher-shell/cypher-shell-5.latest.zip -O /tmp/cypher-shell.zip
+          unzip -q /tmp/cypher-shell.zip -d /tmp/cypher-shell
+          sudo ln -sf /tmp/cypher-shell/cypher-shell/bin/cypher-shell /usr/local/bin/cypher-shell
+
       - name: Wait for services to be healthy
         run: |
           echo "Waiting for Neo4j..."
           timeout 120 bash -c 'until cypher-shell --address bolt://localhost:7687 -u neo4j -p password "RETURN 1" 2>/dev/null; do sleep 3; done'
           echo "Waiting for Fuseki..."
           timeout 60 bash -c 'until curl -sf http://localhost:3030/$/ping; do sleep 3; done'
-
-      - name: Install cypher-shell
-        run: |
-          wget -q https://dist.neo4j.org/cypher-shell/cypher-shell-5.latest.zip -O /tmp/cypher-shell.zip
-          unzip -q /tmp/cypher-shell.zip -d /tmp/cypher-shell
-          sudo ln -sf /tmp/cypher-shell/cypher-shell/bin/cypher-shell /usr/local/bin/cypher-shell
 
       - name: Bootstrap Neo4j schema (n10s + constraints)
         run: |
@@ -175,3 +349,21 @@ jobs:
           FUSEKI_URL: http://localhost:3030
           FUSEKI_DATASET: hhh
         run: bash tests/ontology/test-ontology.sh
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 9. GATE – all jobs must pass before deploy can proceed
+  # ─────────────────────────────────────────────────────────────────────────────
+  ci-passed:
+    name: All checks passed
+    runs-on: ubuntu-latest
+    needs:
+      - backend-lint
+      - backend-unit
+      - backend-integration
+      - backend-security
+      - flutter-analyze
+      - flutter-test
+      - flutter-build-web
+      - ontology-test
+    steps:
+      - run: echo "All CI jobs passed."

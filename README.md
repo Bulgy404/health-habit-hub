@@ -138,7 +138,8 @@ See [DEPLOYMENT.md - Neo4j SSH Tunnel](DEPLOYMENT.md#accessing-neo4j-browser-via
 
 ## Tech Stack
 
-**Backend**: Node.js 22, Express.js, EJS
+**Backend**: Node.js 22, Express.js (JSON API)
+**Frontend**: Flutter 3.22 (web, Android, iOS)
 **Databases**: Apache Fuseki (RDF), Neo4j, MongoDB
 **Infrastructure**: Docker, Traefik, Let's Encrypt
 **Tools**: LibreTranslate, reCAPTCHA, Mailjet
