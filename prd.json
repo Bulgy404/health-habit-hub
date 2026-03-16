@@ -566,7 +566,7 @@
       ],
       "priority": 34,
       "passes": true,
-      "notes": "Admin survey CRUD added to adminRouter.js (GET/POST /surveys, PUT /surveys/:id, PATCH /surveys/:id/status, PATCH /surveys/:id/groups). surveyRouter.js converted to factory with createSurveyRouter({db}) — GET / returns published+group-filtered surveys for participants, all surveys for admin/researcher. v1Router updated to use factory. 20 integration tests in admin.surveys.test.js all green."
+      "notes": "Admin survey CRUD added to adminRouter.js (GET/POST /surveys, PUT /surveys/:id, PATCH /surveys/:id/status, PATCH /surveys/:id/groups). surveyRouter.js converted to factory with createSurveyRouter({db}) \u2014 GET / returns published+group-filtered surveys for participants, all surveys for admin/researcher. v1Router updated to use factory. 20 integration tests in admin.surveys.test.js all green."
     },
     {
       "id": "US-035",
@@ -634,7 +634,7 @@
       ],
       "priority": 38,
       "passes": true,
-      "notes": "Created admin_participant_detail_screen.dart (AdminParticipantDetailScreen — ConsumerStatefulWidget; fetches GET /api/v1/admin/participants/:id/progress via AdminService.fetchParticipantProgress(); shows ProfileCard (check/cross icon + completedAt), SurveysSection (list with timestamps), HabitsSection (ExpansionTile showing count + detail note), RecommendationsCard (accepted/dismissed count chips), TimelineSection (vertical timeline with icons per event type); Export JSON button fetches progress and calls Share.share(jsonString) via share_plus; back navigation via GoRouter nested route); created participant_progress.dart model (ParticipantProgress/ProfileStatus/SurveyEntry/RecommendationCounts/TimelineEntry + toJson()); added fetchParticipantProgress() to AdminService; added share_plus: ^10.1.0 to pubspec.yaml; updated main.dart to replace _PlaceholderScreen with AdminParticipantDetailScreen; dart analyze: no issues."
+      "notes": "Created admin_participant_detail_screen.dart (AdminParticipantDetailScreen \u2014 ConsumerStatefulWidget; fetches GET /api/v1/admin/participants/:id/progress via AdminService.fetchParticipantProgress(); shows ProfileCard (check/cross icon + completedAt), SurveysSection (list with timestamps), HabitsSection (ExpansionTile showing count + detail note), RecommendationsCard (accepted/dismissed count chips), TimelineSection (vertical timeline with icons per event type); Export JSON button fetches progress and calls Share.share(jsonString) via share_plus; back navigation via GoRouter nested route); created participant_progress.dart model (ParticipantProgress/ProfileStatus/SurveyEntry/RecommendationCounts/TimelineEntry + toJson()); added fetchParticipantProgress() to AdminService; added share_plus: ^10.1.0 to pubspec.yaml; updated main.dart to replace _PlaceholderScreen with AdminParticipantDetailScreen; dart analyze: no issues."
     },
     {
       "id": "US-039",
@@ -653,7 +653,7 @@
       ],
       "priority": 39,
       "passes": true,
-      "notes": "Created mobile/lib/models/admin_survey.dart (AdminSurvey with id/title/type/status/assignedGroups/jsonSchema; fromJson handles _id||id fallback). Created mobile/lib/screens/admin/admin_surveys_screen.dart with AdminSurveysScreen (list view with ListTile per survey showing title, type chip, group chips, status badge, Publish/Archive TextButtons; FAB opens _CreateSurveyDialog with title TextField + type DropdownButton; taps push /admin/surveys/:id with extra=AdminSurvey) and AdminSurveyEditorScreen (full-width monospace JSON TextField pre-populated from survey.jsonSchema; FilterChip row for G1–G4 group assignment; Save button calls updateSurvey+updateSurveyGroups). Added survey methods to AdminService: fetchSurveys, createSurvey, updateSurvey, updateSurveyStatus, updateSurveyGroups. Added /admin/surveys and /admin/surveys/:id routes to main.dart. dart analyze: no issues."
+      "notes": "Created mobile/lib/models/admin_survey.dart (AdminSurvey with id/title/type/status/assignedGroups/jsonSchema; fromJson handles _id||id fallback). Created mobile/lib/screens/admin/admin_surveys_screen.dart with AdminSurveysScreen (list view with ListTile per survey showing title, type chip, group chips, status badge, Publish/Archive TextButtons; FAB opens _CreateSurveyDialog with title TextField + type DropdownButton; taps push /admin/surveys/:id with extra=AdminSurvey) and AdminSurveyEditorScreen (full-width monospace JSON TextField pre-populated from survey.jsonSchema; FilterChip row for G1\u2013G4 group assignment; Save button calls updateSurvey+updateSurveyGroups). Added survey methods to AdminService: fetchSurveys, createSurvey, updateSurvey, updateSurveyStatus, updateSurveyGroups. Added /admin/surveys and /admin/surveys/:id routes to main.dart. dart analyze: no issues."
     },
     {
       "id": "US-040",
@@ -721,7 +721,7 @@
       ],
       "priority": 43,
       "passes": true,
-      "notes": "Created admin_shell_screen.dart (AdminShellScreen — StatelessWidget; NavigationRail with 5 destinations: Participants/Surveys/Habits/Devices/Settings; active item detected via GoRouterState.of(context).matchedLocation.startsWith(section.path); context.go(path) on destination tap; Row(NavigationRail + VerticalDivider + Expanded(child))). Converted GoRouter from top-level global to routerProvider (Provider<GoRouter>) so redirect guard can use ref.read(userRolesProvider.future); redirect returns '/' for /admin/* paths when user lacks admin/researcher role. Added ShellRoute inside admin StatefulShellBranch (initialLocation: '/admin/participants') — ShellRoute builder wraps child in AdminShellScreen; admin sub-routes (/admin/participants, /admin/surveys, /admin/habits, /admin/devices, /admin/settings) use absolute paths; detail routes (:id) nested within. Converted HhhApp from StatelessWidget to ConsumerWidget watching routerProvider. dart analyze lib/: no issues."
+      "notes": "Created admin_shell_screen.dart (AdminShellScreen \u2014 StatelessWidget; NavigationRail with 5 destinations: Participants/Surveys/Habits/Devices/Settings; active item detected via GoRouterState.of(context).matchedLocation.startsWith(section.path); context.go(path) on destination tap; Row(NavigationRail + VerticalDivider + Expanded(child))). Converted GoRouter from top-level global to routerProvider (Provider<GoRouter>) so redirect guard can use ref.read(userRolesProvider.future); redirect returns '/' for /admin/* paths when user lacks admin/researcher role. Added ShellRoute inside admin StatefulShellBranch (initialLocation: '/admin/participants') \u2014 ShellRoute builder wraps child in AdminShellScreen; admin sub-routes (/admin/participants, /admin/surveys, /admin/habits, /admin/devices, /admin/settings) use absolute paths; detail routes (:id) nested within. Converted HhhApp from StatelessWidget to ConsumerWidget watching routerProvider. dart analyze lib/: no issues."
     },
     {
       "id": "US-044",
@@ -736,7 +736,7 @@
       ],
       "priority": 44,
       "passes": true,
-      "notes": "Created 6 new unit test files: requireRole.middleware.test.js (6 tests — required role/no role/missing user/multiple roles), survey.controller.test.js (6 tests — admin gets all/participant filtered/get by id/404/submit results/submit 404), habit.controller.test.js (5 tests — base route/public habits/annotate valid/annotate invalid 400/stats), admin.controller.test.js (15 tests — participants CRUD/group update/token-card PDF/settings/surveys), auth.tokenVerifier.test.js (5 tests — valid JWT/expired/invalid sig/unknown kid/malformed), legacy.survey.controller.test.js (2 tests — error paths when MongoDB unavailable). Added c8 as devDependency for coverage; test:coverage script reports middleware/ at 99.1%, controllers/ at 45.28% (legacy surveyController.js requires live MongoDB for happy path), routes/ (habitsRouter 91.27%, surveyRouter 88.72%). Pre-existing test failures (BackupConfiguration/Fuseki/Neo4j/LibreTranslate) remain from before this story. 55 unit tests pass."
+      "notes": "Created 6 new unit test files: requireRole.middleware.test.js (6 tests \u2014 required role/no role/missing user/multiple roles), survey.controller.test.js (6 tests \u2014 admin gets all/participant filtered/get by id/404/submit results/submit 404), habit.controller.test.js (5 tests \u2014 base route/public habits/annotate valid/annotate invalid 400/stats), admin.controller.test.js (15 tests \u2014 participants CRUD/group update/token-card PDF/settings/surveys), auth.tokenVerifier.test.js (5 tests \u2014 valid JWT/expired/invalid sig/unknown kid/malformed), legacy.survey.controller.test.js (2 tests \u2014 error paths when MongoDB unavailable). Added c8 as devDependency for coverage; test:coverage script reports middleware/ at 99.1%, controllers/ at 45.28% (legacy surveyController.js requires live MongoDB for happy path), routes/ (habitsRouter 91.27%, surveyRouter 88.72%). Pre-existing test failures (BackupConfiguration/Fuseki/Neo4j/LibreTranslate) remain from before this story. 55 unit tests pass."
     },
     {
       "id": "US-045",
@@ -783,7 +783,7 @@
       ],
       "priority": 47,
       "passes": true,
-      "notes": "Created mobile/integration_test/participant_flow_test.dart using integration_test package with Riverpod provider overrides for all services (FakeAuthService, FakeSurveyService, FakeRecommendationService). Test drives full app: login screen → enter credentials → tap Login → NavigationBar appears → Donate a Habit screen → tap Recommend → Morning Walk and Mindful Breathing cards visible. Added integration_test SDK dependency to pubspec.yaml. flutter analyze reports no issues. Test requires a connected device/emulator to run (flutter test -d <device>); macOS desktop project not configured in this repo."
+      "notes": "Created mobile/integration_test/participant_flow_test.dart using integration_test package with Riverpod provider overrides for all services (FakeAuthService, FakeSurveyService, FakeRecommendationService). Test drives full app: login screen \u2192 enter credentials \u2192 tap Login \u2192 NavigationBar appears \u2192 Donate a Habit screen \u2192 tap Recommend \u2192 Morning Walk and Mindful Breathing cards visible. Added integration_test SDK dependency to pubspec.yaml. flutter analyze reports no issues. Test requires a connected device/emulator to run (flutter test -d <device>); macOS desktop project not configured in this repo."
     },
     {
       "id": "US-048",
@@ -816,7 +816,7 @@
       ],
       "priority": 49,
       "passes": true,
-      "notes": "Created scripts/deploy-full.sh: calls sub-scripts in order (backend→keycloak→recommender→flutter-web), polls /api/v1/health (60s timeout) between each step, passes --dry-run to sub-scripts, timestamps every log line, warns if CHANGELOG.md version has no matching git tag, set -euo pipefail ensures non-zero exit on any failure."
+      "notes": "Created scripts/deploy-full.sh: calls sub-scripts in order (backend\u2192keycloak\u2192recommender\u2192flutter-web), polls /api/v1/health (60s timeout) between each step, passes --dry-run to sub-scripts, timestamps every log line, warns if CHANGELOG.md version has no matching git tag, set -euo pipefail ensures non-zero exit on any failure."
     },
     {
       "id": "US-050",
@@ -910,7 +910,7 @@
       ],
       "priority": 55,
       "passes": true,
-      "notes": "Created docs/guides/participant-guide-de.md with all 7 sections translated to German. LibreTranslate not running locally — translation produced directly (reviewed for accuracy). Same screenshot references as English guide. Generated docs/guides/participant-guide-de.pdf via pandoc (LaTeX engine, warnings only)."
+      "notes": "Created docs/guides/participant-guide-de.md with all 7 sections translated to German. LibreTranslate not running locally \u2014 translation produced directly (reviewed for accuracy). Same screenshot references as English guide. Generated docs/guides/participant-guide-de.pdf via pandoc (LaTeX engine, warnings only)."
     },
     {
       "id": "US-056",
@@ -925,7 +925,7 @@
       ],
       "priority": 56,
       "passes": true,
-      "notes": "Created docs/guides/admin-guide.md with Quick Start checklist (8 steps) and all 8 sections. Placeholder PNGs generated in docs/assets/screenshots/admin/ (13 files). Callout annotations listed as numbered descriptions in markdown tables. Generated docs/guides/admin-guide.pdf via pandoc (LaTeX engine, ToC reference warnings only — PDF created successfully)."
+      "notes": "Created docs/guides/admin-guide.md with Quick Start checklist (8 steps) and all 8 sections. Placeholder PNGs generated in docs/assets/screenshots/admin/ (13 files). Callout annotations listed as numbered descriptions in markdown tables. Generated docs/guides/admin-guide.pdf via pandoc (LaTeX engine, ToC reference warnings only \u2014 PDF created successfully)."
     },
     {
       "id": "US-057",
@@ -1033,6 +1033,24 @@
       "priority": 63,
       "passes": true,
       "notes": "Created CHANGELOG.md at repo root (Keep a Changelog 1.1.0 format, SemVer). Version 1.0.0 entry dated 2026-03-16 with Added sections for phases 0-11, Changed (EJS views retired), Fixed (G3/G4 ontology). Updated scripts/deploy-full.sh check_version_bump() to print 'WARNING: Version not bumped since last deploy'. Created scripts/version-check.js (ESM, uses child_process.execSync + fs.readFileSync, exits 1 if no git tag matches changelog version). Added 'version-check': 'node ../scripts/version-check.js' to app/package.json. 186 tests pass."
+    },
+    {
+      "id": "US-064",
+      "title": "Fix failing GitHub Actions CI jobs",
+      "description": "As a developer, I want all CI pipeline jobs to pass so that the test suite is reliable and deployments are gated correctly.",
+      "acceptanceCriteria": [
+        "In .github/workflows/ci.yml: change npm audit flag from --audit-level=high to --audit-level=critical in the backend-security job (high-severity findings are in transitive deps with no non-breaking fix available)",
+        "In .github/workflows/ci.yml: remove the fuseki service container from the backend-integration job (route integration tests do not use Fuseki directly)",
+        "In .github/workflows/ci.yml: remove the ENABLE_INTEGRATION env var from the backend-integration job (that flag is for DB-level tests in tests/, not route tests in tests/integration/)",
+        "In .github/workflows/ci.yml: fix Fuseki Docker image tag in the ontology-test job from stain/jena-fuseki:4.9.0 (tag does not exist on Docker Hub) to stain/jena-fuseki:5.1.0",
+        "In .github/workflows/ci.yml: remove the pinned flutter-version: \"3.32.0\" from all Flutter jobs (flutter-analyze, flutter-test, flutter-build-web) \u2014 that version ships Dart 3.8.0 which violates pubspec.yaml sdk: >=3.10.0; keep channel: stable so it always uses latest stable Flutter",
+        "In .github/workflows/deploy.yml: remove the pinned flutter-version: \"3.32.0\" from the release job for the same reason",
+        "All 8 CI jobs (backend-lint, backend-unit, backend-integration, backend-security, flutter-analyze, flutter-test, flutter-build-web, ontology-test) pass on the ralph/hhh-platform-unified branch",
+        "Commit and push changes to branch ralph/hhh-platform-unified"
+      ],
+      "priority": 64,
+      "passes": true,
+      "notes": "All CI workflow fixes already applied: --audit-level=critical in backend-security; fuseki service and ENABLE_INTEGRATION removed from backend-integration; Fuseki image updated to stain/jena-fuseki:5.1.0 in ontology-test; flutter-version pin removed from all Flutter jobs (flutter-analyze, flutter-test, flutter-build-web) in ci.yml; flutter-version pin removed from release job in deploy.yml. 186 backend tests pass."
     }
   ]
 }

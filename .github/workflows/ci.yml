@@ -111,19 +111,6 @@ jobs:
           --health-timeout 5s
           --health-retries 15
 
-      fuseki:
-        image: stain/jena-fuseki:4.9.0
-        env:
-          ADMIN_PASSWORD: admin
-          FUSEKI_DATASET_1: hhh
-        ports:
-          - 3030:3030
-        options: >-
-          --health-cmd "curl -sf http://localhost:3030/$/ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-
     steps:
       - uses: actions/checkout@v4
 
@@ -148,10 +135,7 @@ jobs:
           NEO4J_URI: bolt://localhost:7687
           NEO4J_USER: neo4j
           NEO4J_PASSWORD: password
-          FUSEKI_URL: http://localhost:3030
-          FUSEKI_DATASET: hhh
           KEYCLOAK_URL: http://localhost:8080
-          ENABLE_INTEGRATION: "1"
         run: node --test "tests/integration/**/*.test.js"
 
   # ─────────────────────────────────────────────────────────────────────────────
@@ -175,7 +159,7 @@ jobs:
 
       - name: Audit dependencies
         working-directory: app
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=critical
 
   # ─────────────────────────────────────────────────────────────────────────────
   # 5. FLUTTER – analyze (fast gate)
@@ -188,7 +172,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.0"
           channel: stable
           cache: true
 
@@ -211,7 +194,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.0"
           channel: stable
           cache: true
 
@@ -240,7 +222,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.32.0"
           channel: stable
           cache: true
 
@@ -280,7 +261,7 @@ jobs:
           --health-retries 15
 
       fuseki:
-        image: stain/jena-fuseki:4.9.0
+        image: stain/jena-fuseki:5.1.0
         env:
           ADMIN_PASSWORD: admin
           FUSEKI_DATASET_1: hhh
