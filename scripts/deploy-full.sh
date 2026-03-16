@@ -50,7 +50,7 @@ check_version_bump() {
   fi
 
   if [ "$tag_exists" = false ]; then
-    echo "WARN: CHANGELOG.md version ${changelog_version} has no matching git tag (v${changelog_version}). Consider tagging before deploying." >&2
+    echo "WARNING: Version not bumped since last deploy (CHANGELOG.md v${changelog_version} has no matching git tag)" >&2
   else
     log "Version ${changelog_version} is tagged — OK."
   fi
