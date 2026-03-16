@@ -42,16 +42,21 @@ assert_cypher_count() {
   local query="$2"
   local expected="$3"
 
-  local result
-  result=$(run_cypher "$query" 2>&1) || {
+  # Capture stdout only — stderr (connection banner) must not pollute the output
+  # we parse, or tail -n +2 picks up the banner line instead of the value.
+  local result stderr_file
+  stderr_file=$(mktemp)
+  if ! result=$(run_cypher "$query" 2>"$stderr_file"); then
     FAIL=$((FAIL + 1))
-    ERRORS+=("FAIL [$desc]: cypher-shell error: $result")
+    ERRORS+=("FAIL [$desc]: cypher-shell error: $(cat "$stderr_file")")
+    rm -f "$stderr_file"
     return
-  }
-  # cypher-shell --format plain prints: first line = column name, second line = value.
-  # Extract the integer value from the second line.
+  fi
+  rm -f "$stderr_file"
+
+  # --format plain: first line = column header, second line = integer value.
   local count
-  count=$(echo "$result" | tail -n +2 | head -1 | tr -d '[:space:]') || count=0
+  count=$(echo "$result" | tail -n +2 | head -1 | tr -d '[:space:]"')
   if ! [[ "$count" =~ ^[0-9]+$ ]]; then
     count=0
   fi
@@ -71,20 +76,20 @@ assert_cypher_zero() {
   local desc="$1"
   local query="$2"
 
-  local result
-  result=$(run_cypher "$query" 2>&1) || {
+  local result stderr_file
+  stderr_file=$(mktemp)
+  if ! result=$(run_cypher "$query" 2>"$stderr_file"); then
     FAIL=$((FAIL + 1))
-    ERRORS+=("FAIL [$desc]: cypher-shell error: $result")
+    ERRORS+=("FAIL [$desc]: cypher-shell error: $(cat "$stderr_file")")
+    rm -f "$stderr_file"
     return
-  }
-  local count
-  count=$(echo "$result" | grep -cE '^[0-9"]') || count=0
+  fi
+  rm -f "$stderr_file"
 
-  # cypher-shell prints header row followed by data rows; a header-only result
-  # means no data rows, which we treat as 0 violations.
-  # We strip the header line and count remaining non-empty lines.
+  # --format plain: first line = column header, remaining lines = data rows.
+  # Zero data rows (header only) means no violations.
   local data_lines
-  data_lines=$(echo "$result" | tail -n +2 | grep -cv '^$') || data_lines=0
+  data_lines=$(echo "$result" | tail -n +2 | grep -cv '^[[:space:]]*$') || data_lines=0
 
   if [[ "$data_lines" -eq 0 ]]; then
     PASS=$((PASS + 1))

@@ -246,14 +246,8 @@ jobs:
         image: neo4j:5-community
         env:
           NEO4J_AUTH: neo4j/password
-          NEO4J_PLUGINS: '["apoc", "n10s"]'
-          NEO4J_apoc_export_file_enabled: "true"
-          NEO4J_apoc_import_file_enabled: "true"
-          NEO4J_apoc_import_file_use__neo4j__config: "true"
-          NEO4J_dbms_security_procedures_unrestricted: "apoc.*,n10s.*"
         ports:
           - 7687:7687
-          - 7474:7474
         options: >-
           --health-cmd "cypher-shell -u neo4j -p password 'RETURN 1'"
           --health-interval 10s
@@ -276,18 +270,10 @@ jobs:
           echo "Waiting for Neo4j..."
           timeout 120 bash -c 'until cypher-shell --address bolt://localhost:7687 -u neo4j -p password "RETURN 1" 2>/dev/null; do sleep 3; done'
 
-      - name: Bootstrap Neo4j schema (n10s + constraints)
+      - name: Apply constraints
         run: |
-          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            "CALL n10s.graphconfig.init({handleVocabUris:'SHORTEN', handleMultival:'OVERWRITE'});"
           cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
             --file neo4j/init/constraints.cypher
-
-      - name: Load ontology into Neo4j via n10s
-        run: |
-          ONTOLOGY_PATH="$(pwd)/fuseki/init/Ontology.ttl"
-          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            "CALL n10s.onto.import.fetch('file://${ONTOLOGY_PATH}', 'Turtle');"
 
       - name: Seed minimal test data
         run: |
