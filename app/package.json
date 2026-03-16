@@ -14,7 +14,8 @@
     "test:integration": "npm run test:neo4j && npm run test:fuseki && npm run test:mongo && npm run test:translate",
     "test:coverage": "c8 --include='middleware/**' --include='controllers/**' --include='routes/**' --include='services/**' --reporter=text node --test \"tests/unit/**/*.test.js\"",
     "test": "npm run format:check && npm run lint && npm run test:unitTests",
-    "generate-spec": "node ../scripts/generate-spec.js"
+    "generate-spec": "node ../scripts/generate-spec.js",
+    "version-check": "node ../scripts/version-check.js"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
