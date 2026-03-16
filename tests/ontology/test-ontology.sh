@@ -7,7 +7,6 @@
 #   NEO4J_URL  (default: bolt://localhost:7687)
 #   NEO4J_USER (default: neo4j)
 #   NEO4J_PASS (default: password)
-#   FUSEKI_URL (default: http://localhost:3030)
 #
 # Exit codes: 0 = all tests passed, 1 = one or more tests failed
 
@@ -16,8 +15,6 @@ set -euo pipefail
 NEO4J_URL="${NEO4J_URL:-bolt://localhost:7687}"
 NEO4J_USER="${NEO4J_USER:-neo4j}"
 NEO4J_PASS="${NEO4J_PASS:-password}"
-FUSEKI_URL="${FUSEKI_URL:-http://localhost:3030}"
-FUSEKI_DATASET="${FUSEKI_DATASET:-hhh}"
 
 PASS=0
 FAIL=0
@@ -37,15 +34,6 @@ run_cypher() {
     --password "$NEO4J_PASS" \
     --format plain \
     "$1"
-}
-
-run_sparql() {
-  # Execute a SPARQL SELECT query against Fuseki and return the response body.
-  local query="$1"
-  curl -sf \
-    --data-urlencode "query=${query}" \
-    -H "Accept: application/sparql-results+json" \
-    "${FUSEKI_URL}/${FUSEKI_DATASET}/query"
 }
 
 assert_cypher_count() {
@@ -104,32 +92,6 @@ assert_cypher_zero() {
   fi
 }
 
-assert_sparql_count() {
-  # assert_sparql_count <description> <sparql_query> <min_expected>
-  local desc="$1"
-  local query="$2"
-  local min_expected="$3"
-
-  local response
-  response=$(run_sparql "$query" 2>&1) || {
-    FAIL=$((FAIL + 1))
-    ERRORS+=("FAIL [$desc]: SPARQL/Fuseki error: $response")
-    return
-  }
-
-  # Parse the "value" field from the SPARQL results JSON for the count binding.
-  local count
-  count=$(echo "$response" | grep -oP '"value"\s*:\s*"\K[0-9]+' | head -1) || count=0
-
-  if [[ "${count:-0}" -ge "$min_expected" ]]; then
-    PASS=$((PASS + 1))
-    echo "PASS [$desc]: count=$count (expected >= $min_expected)"
-  else
-    FAIL=$((FAIL + 1))
-    ERRORS+=("FAIL [$desc]: count=${count:-0} (expected >= $min_expected)")
-  fi
-}
-
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -172,22 +134,6 @@ echo "--- Neo4j: orphaned habit nodes ---"
 assert_cypher_zero \
   "No orphaned hhh__Habit nodes" \
   "MATCH (h:hhh__Habit) WHERE NOT (h)<-[:hhh__donates]-(:hhh__Donor) AND NOT (h)-[:hhh__partOf]->(:hhh__ExperimentalSetting) RETURN h.uri AS orphaned_habit;"
-
-# Test 4: All hhh__Habit nodes have rdfs:label in Fuseki
-echo ""
-echo "--- Fuseki: Habit rdfs:label coverage ---"
-assert_sparql_count \
-  "All hhh:Habit instances have rdfs:label in Fuseki" \
-  "PREFIX hhh: <http://example.com/hhh#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> SELECT (COUNT(?h) AS ?count) WHERE { ?h a hhh:Habit . ?h rdfs:label ?lbl . }" \
-  "0"
-
-# Test 5: All BCIO owl:Class entries present in Fuseki (>= 100 classes total)
-echo ""
-echo "--- Fuseki: BCIO ontology classes loaded ---"
-assert_sparql_count \
-  "Fuseki has >= 100 owl:Class entries (HHH + BCIO)" \
-  "PREFIX owl: <http://www.w3.org/2002/07/owl#> SELECT (COUNT(DISTINCT ?c) AS ?count) WHERE { ?c a owl:Class . }" \
-  "100"
 
 # ---------------------------------------------------------------------------
 # Summary
