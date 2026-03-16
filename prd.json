@@ -1031,8 +1031,8 @@
         "npm run version-check script added to package.json that performs the same check and exits non-zero if mismatched"
       ],
       "priority": 63,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created CHANGELOG.md at repo root (Keep a Changelog 1.1.0 format, SemVer). Version 1.0.0 entry dated 2026-03-16 with Added sections for phases 0-11, Changed (EJS views retired), Fixed (G3/G4 ontology). Updated scripts/deploy-full.sh check_version_bump() to print 'WARNING: Version not bumped since last deploy'. Created scripts/version-check.js (ESM, uses child_process.execSync + fs.readFileSync, exits 1 if no git tag matches changelog version). Added 'version-check': 'node ../scripts/version-check.js' to app/package.json. 186 tests pass."
     }
   ]
 }
