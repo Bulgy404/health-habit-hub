@@ -292,14 +292,21 @@ jobs:
       - name: Seed minimal test data
         run: |
           cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            "MERGE (g1:hhh__ExperimentalSetting:hhh__Group1 {uri:'http://example.com/hhh#G1'})
-             MERGE (g2:hhh__ExperimentalSetting:hhh__Group2 {uri:'http://example.com/hhh#G2'})
-             MERGE (g3:hhh__ExperimentalSetting:hhh__Group3 {uri:'http://example.com/hhh#G3'})
-             MERGE (g4:hhh__ExperimentalSetting:hhh__Group4 {uri:'http://example.com/hhh#G4'})
-             MERGE (d1:hhh__Donor {uri:'http://example.com/hhh#d1', hhh__userId:'u1', hhh__group:'G1'})
-             MERGE (h1:hhh__Habit {uri:'http://example.com/hhh#h1'})
-             MERGE (d1)-[:hhh__donates]->(h1)
-             MERGE (h1)-[:hhh__partOf]->(g1);"
+            "MERGE (:hhh__ExperimentalSetting:hhh__Group1 {uri:'http://example.com/hhh#G1'});"
+          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
+            "MERGE (:hhh__ExperimentalSetting:hhh__Group2 {uri:'http://example.com/hhh#G2'});"
+          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
+            "MERGE (:hhh__ExperimentalSetting:hhh__Group3 {uri:'http://example.com/hhh#G3'});"
+          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
+            "MERGE (:hhh__ExperimentalSetting:hhh__Group4 {uri:'http://example.com/hhh#G4'});"
+          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
+            "MERGE (:hhh__Donor {uri:'http://example.com/hhh#d1', hhh__userId:'u1', hhh__group:'G1'});"
+          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
+            "MERGE (:hhh__Habit {uri:'http://example.com/hhh#h1'});"
+          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
+            "MATCH (d1:hhh__Donor {uri:'http://example.com/hhh#d1'}), (h1:hhh__Habit {uri:'http://example.com/hhh#h1'}) MERGE (d1)-[:hhh__donates]->(h1);"
+          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
+            "MATCH (h1:hhh__Habit {uri:'http://example.com/hhh#h1'}), (g1:hhh__Group1 {uri:'http://example.com/hhh#G1'}) MERGE (h1)-[:hhh__partOf]->(g1);"
 
       - name: Run ontology test suite
         env:

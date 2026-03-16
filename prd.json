@@ -1102,6 +1102,22 @@
       "priority": 67,
       "passes": true,
       "notes": ""
+    },
+    {
+      "id": "US-068",
+      "title": "Fix ontology CI: group node seed data not found after seeding",
+      "description": "As a developer, I want the ontology test suite to correctly verify group nodes so the CI ontology job is fully green.",
+      "acceptanceCriteria": [
+        "Investigate why the 4 group-node tests (Group1\u2013Group4) return 'got 0 rows' after the seed step \u2014 likely causes: (a) the multi-statement MERGE block passed as a single shell argument has shell-quoting issues due to YAML indentation, OR (b) n10s.graphconfig.init creates constraints that conflict with the MERGE labels, OR (c) n10s.onto.import.fetch via file:// URI fails silently leaving the graph in an inconsistent state",
+        "Fix the seed step in .github/workflows/ci.yml: split the single multi-statement cypher-shell call into separate cypher-shell calls \u2014 one per MERGE statement \u2014 to avoid any shell-quoting or multi-statement parsing issues",
+        "Fix the assert_cypher_count function in tests/ontology/test-ontology.sh: the current logic counts lines starting with a digit (grep -cE '^[0-9]') rather than parsing the actual returned count value; rewrite it to correctly extract the integer value from the cypher-shell --format plain output (header line is the column name, second line is the value) and compare that value against the expected minimum",
+        "The 4 group-node tests (Group1 nodes exist, Group2 nodes exist, Group3 nodes exist, Group4 nodes exist) all PASS in the ontology-test CI job",
+        "The 2 existing passing tests (No donors missing group assignment, No orphaned hhh__Habit nodes) continue to pass",
+        "Commit and push changes to branch ralph/hhh-platform-unified"
+      ],
+      "priority": 68,
+      "passes": true,
+      "notes": ""
     }
   ]
 }
