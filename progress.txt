@@ -1,3 +1,12 @@
+## 2026-03-16 - US-066
+- What was implemented: (1) Removed fuseki service container from `.github/workflows/ci.yml` ontology-test job. (2) Removed 'Load ontology into Fuseki' step (curl POST that was failing with exit code 22). (3) Removed 'Waiting for Fuseki...' from the wait-for-services step. (4) Removed FUSEKI_URL and FUSEKI_DATASET env vars from the 'Run ontology test suite' step. (5) In `tests/ontology/test-ontology.sh`: removed `run_sparql` helper, `assert_sparql_count` helper, Test 4 ('All hhh:Habit instances have rdfs:label in Fuseki'), and Test 5 ('Fuseki has >= 100 owl:Class entries'). Remaining 3 Cypher-based tests (group retrievability, donor group integrity, orphaned habit nodes) are unchanged.
+- Files changed: .github/workflows/ci.yml (remove fuseki service, step, wait line, env vars), tests/ontology/test-ontology.sh (remove SPARQL helpers and tests 4+5), prd.json (US-066 passes=true)
+- **Learnings for future iterations:**
+  - The ontology-test CI job now only needs Neo4j — Fuseki was only used for SPARQL-based tests which have been removed
+  - When removing a service from CI, also check: service container block, wait-for-services step, any step that loads data into that service, and env vars in subsequent steps
+  - test-ontology.sh now has exactly 3 Cypher-based tests (6 assertions total): group nodes exist (4), no donors missing group (1), no orphaned habits (1)
+---
+
 ## 2026-03-16 - US-065
 - What was implemented: (1) Deleted `mobile/test/widget_test.dart` — the stale auto-generated counter smoke test that caused `flutter test` to fail with no relevant tests. (2) Replaced the broken wget-based cypher-shell install in the ontology-test CI job with installation via the official Neo4j APT repository: add GPG key with gpg --dearmor, add deb source to /etc/apt/sources.list.d/neo4j.list, run `sudo apt-get update -qq && sudo apt-get install -y cypher-shell`. 186 backend tests still pass.
 - Files changed: mobile/test/widget_test.dart (deleted), .github/workflows/ci.yml (cypher-shell install step), prd.json (US-065 passes=true)
