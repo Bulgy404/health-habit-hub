@@ -1051,6 +1051,21 @@
       "priority": 64,
       "passes": true,
       "notes": "All CI workflow fixes already applied: --audit-level=critical in backend-security; fuseki service and ENABLE_INTEGRATION removed from backend-integration; Fuseki image updated to stain/jena-fuseki:5.1.0 in ontology-test; flutter-version pin removed from all Flutter jobs (flutter-analyze, flutter-test, flutter-build-web) in ci.yml; flutter-version pin removed from release job in deploy.yml. 186 backend tests pass."
+    },
+    {
+      "id": "US-065",
+      "title": "Fix remaining CI failures: stale Flutter test and cypher-shell install",
+      "description": "As a developer, I want all CI jobs to pass so the pipeline is fully green.",
+      "acceptanceCriteria": [
+        "Delete mobile/test/widget_test.dart \u2014 it is the auto-generated counter smoke test that has no relevance to this project and causes flutter test to fail",
+        "In .github/workflows/ci.yml ontology-test job: replace the wget download of cypher-shell-5.latest.zip (URL returns HTTP error / exit code 8) with installation via the official Neo4j APT repository: add Neo4j GPG key, add neo4j apt source, run apt-get install -y cypher-shell",
+        "The flutter-test CI job passes with 0 failures after widget_test.dart is removed",
+        "The ontology-test CI job successfully installs cypher-shell and reaches the wait-for-services step without error",
+        "Commit and push changes to branch ralph/hhh-platform-unified"
+      ],
+      "priority": 65,
+      "passes": true,
+      "notes": "Deleted mobile/test/widget_test.dart (stale auto-generated counter test). Replaced wget-based cypher-shell install with Neo4j official APT repo: GPG key + deb source + apt-get install -y cypher-shell."
     }
   ]
 }
