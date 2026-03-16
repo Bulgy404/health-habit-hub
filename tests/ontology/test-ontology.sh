@@ -4,15 +4,15 @@
 # Usage: ./tests/ontology/test-ontology.sh
 #
 # Requires:
-#   NEO4J_URL  (default: bolt://localhost:7687)
-#   NEO4J_USER (default: neo4j)
-#   NEO4J_PASS (default: password)
+#   NEO4J_HTTP  (default: http://localhost:7474)
+#   NEO4J_USER  (default: neo4j)
+#   NEO4J_PASS  (default: password)
 #
 # Exit codes: 0 = all tests passed, 1 = one or more tests failed
 
 set -euo pipefail
 
-NEO4J_URL="${NEO4J_URL:-bolt://localhost:7687}"
+NEO4J_HTTP="${NEO4J_HTTP:-http://localhost:7474}"
 NEO4J_USER="${NEO4J_USER:-neo4j}"
 NEO4J_PASS="${NEO4J_PASS:-password}"
 
@@ -25,48 +25,68 @@ ERRORS=()
 # ---------------------------------------------------------------------------
 
 run_cypher() {
-  # Execute a Cypher query via cypher-shell and return stdout.
-  # cypher-shell must be on PATH (available in the neo4j Docker image at
-  # /var/lib/neo4j/bin/cypher-shell, symlinked into PATH).
-  cypher-shell \
-    --address "$NEO4J_URL" \
-    --username "$NEO4J_USER" \
-    --password "$NEO4J_PASS" \
-    --format plain \
-    "$1"
+  # Execute a Cypher query via the Neo4j HTTP transactional API.
+  # Returns the raw JSON response. Exits non-zero on HTTP or curl error.
+  # Uses python3 to escape the query string safely into JSON.
+  local query="$1"
+  local payload
+  payload=$(python3 -c "
+import json, sys
+q = sys.argv[1]
+print(json.dumps({'statements': [{'statement': q}]}))
+" "$query")
+
+  curl -sf \
+    --user "${NEO4J_USER}:${NEO4J_PASS}" \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
+    -d "$payload" \
+    "${NEO4J_HTTP}/db/neo4j/tx/commit"
 }
 
 assert_cypher_count() {
-  # assert_cypher_count <description> <query> <expected_count>
+  # assert_cypher_count <description> <query> <expected_min_count>
   local desc="$1"
   local query="$2"
   local expected="$3"
 
-  # Capture stdout only — stderr (connection banner) must not pollute the output
-  # we parse, or tail -n +2 picks up the banner line instead of the value.
-  local result stderr_file
-  stderr_file=$(mktemp)
-  if ! result=$(run_cypher "$query" 2>"$stderr_file"); then
+  local response
+  if ! response=$(run_cypher "$query" 2>/dev/null); then
     FAIL=$((FAIL + 1))
-    ERRORS+=("FAIL [$desc]: cypher-shell error: $(cat "$stderr_file")")
-    rm -f "$stderr_file"
+    ERRORS+=("FAIL [$desc]: HTTP request to Neo4j failed")
     return
   fi
-  rm -f "$stderr_file"
 
-  # --format plain: first line = column header, second line = integer value.
-  local count
-  count=$(echo "$result" | tail -n +2 | head -1 | tr -d '[:space:]"')
-  if ! [[ "$count" =~ ^[0-9]+$ ]]; then
-    count=0
+  # Check for Cypher errors in the response body
+  local err_count
+  err_count=$(python3 -c "
+import json, sys
+d = json.loads(sys.argv[1])
+print(len(d.get('errors', [])))
+" "$response" 2>/dev/null) || err_count=1
+
+  if [[ "${err_count:-1}" -gt 0 ]]; then
+    FAIL=$((FAIL + 1))
+    ERRORS+=("FAIL [$desc]: Cypher error — $response")
+    return
   fi
 
-  if [[ "$count" -ge "$expected" ]]; then
+  # Extract the first column of the first row
+  local count
+  count=$(python3 -c "
+import json, sys
+d = json.loads(sys.argv[1])
+data = d['results'][0]['data']
+print(data[0]['row'][0] if data else 0)
+" "$response" 2>/dev/null) || count=0
+
+  if [[ "${count:-0}" -ge "$expected" ]]; then
     PASS=$((PASS + 1))
-    echo "PASS [$desc]: got $count rows (expected >= $expected)"
+    echo "PASS [$desc]: count=$count (expected >= $expected)"
   else
     FAIL=$((FAIL + 1))
-    ERRORS+=("FAIL [$desc]: got $count rows (expected >= $expected)")
+    ERRORS+=("FAIL [$desc]: got ${count:-0} rows (expected >= $expected)")
   fi
 }
 
@@ -76,27 +96,39 @@ assert_cypher_zero() {
   local desc="$1"
   local query="$2"
 
-  local result stderr_file
-  stderr_file=$(mktemp)
-  if ! result=$(run_cypher "$query" 2>"$stderr_file"); then
+  local response
+  if ! response=$(run_cypher "$query" 2>/dev/null); then
     FAIL=$((FAIL + 1))
-    ERRORS+=("FAIL [$desc]: cypher-shell error: $(cat "$stderr_file")")
-    rm -f "$stderr_file"
+    ERRORS+=("FAIL [$desc]: HTTP request to Neo4j failed")
     return
   fi
-  rm -f "$stderr_file"
 
-  # --format plain: first line = column header, remaining lines = data rows.
-  # Zero data rows (header only) means no violations.
-  local data_lines
-  data_lines=$(echo "$result" | tail -n +2 | grep -cv '^[[:space:]]*$') || data_lines=0
+  local err_count
+  err_count=$(python3 -c "
+import json, sys
+d = json.loads(sys.argv[1])
+print(len(d.get('errors', [])))
+" "$response" 2>/dev/null) || err_count=1
 
-  if [[ "$data_lines" -eq 0 ]]; then
+  if [[ "${err_count:-1}" -gt 0 ]]; then
+    FAIL=$((FAIL + 1))
+    ERRORS+=("FAIL [$desc]: Cypher error — $response")
+    return
+  fi
+
+  local data_rows
+  data_rows=$(python3 -c "
+import json, sys
+d = json.loads(sys.argv[1])
+print(len(d['results'][0]['data']))
+" "$response" 2>/dev/null) || data_rows=0
+
+  if [[ "${data_rows:-0}" -eq 0 ]]; then
     PASS=$((PASS + 1))
     echo "PASS [$desc]: 0 violations"
   else
     FAIL=$((FAIL + 1))
-    ERRORS+=("FAIL [$desc]: $data_lines violation(s) found")
+    ERRORS+=("FAIL [$desc]: ${data_rows} violation(s) found")
   fi
 }
 
@@ -107,26 +139,26 @@ assert_cypher_zero() {
 echo "=== HHH Ontology + Graph Integrity Tests ==="
 echo ""
 
-# Test 1: All 4 experimental groups retrievable via Cypher
+# Test 1: All 4 experimental groups retrievable
 echo "--- Neo4j: group retrievability ---"
 assert_cypher_count \
   "Group1 nodes exist" \
-  "MATCH (n:hhh__Group1) RETURN count(n) AS c;" \
+  "MATCH (n:hhh__Group1) RETURN count(n) AS c" \
   "1"
 
 assert_cypher_count \
   "Group2 nodes exist" \
-  "MATCH (n:hhh__Group2) RETURN count(n) AS c;" \
+  "MATCH (n:hhh__Group2) RETURN count(n) AS c" \
   "1"
 
 assert_cypher_count \
   "Group3 nodes exist" \
-  "MATCH (n:hhh__Group3) RETURN count(n) AS c;" \
+  "MATCH (n:hhh__Group3) RETURN count(n) AS c" \
   "1"
 
 assert_cypher_count \
   "Group4 nodes exist" \
-  "MATCH (n:hhh__Group4) RETURN count(n) AS c;" \
+  "MATCH (n:hhh__Group4) RETURN count(n) AS c" \
   "1"
 
 # Test 2: No donor nodes without a group assignment
@@ -134,14 +166,14 @@ echo ""
 echo "--- Neo4j: donor group integrity ---"
 assert_cypher_zero \
   "No donors missing group assignment" \
-  "MATCH (d:hhh__Donor) WHERE NOT EXISTS(d.hhh__group) RETURN d.hhh__userId AS ungrouped_donor;"
+  "MATCH (d:hhh__Donor) WHERE NOT EXISTS(d.hhh__group) RETURN d.hhh__userId AS ungrouped_donor"
 
-# Test 3: No orphaned habit nodes (every Habit must relate to a Donor or ExperimentalSetting)
+# Test 3: No orphaned habit nodes
 echo ""
 echo "--- Neo4j: orphaned habit nodes ---"
 assert_cypher_zero \
   "No orphaned hhh__Habit nodes" \
-  "MATCH (h:hhh__Habit) WHERE NOT (h)<-[:hhh__donates]-(:hhh__Donor) AND NOT (h)-[:hhh__partOf]->(:hhh__ExperimentalSetting) RETURN h.uri AS orphaned_habit;"
+  "MATCH (h:hhh__Habit) WHERE NOT (h)<-[:hhh__donates]-(:hhh__Donor) AND NOT (h)-[:hhh__partOf]->(:hhh__ExperimentalSetting) RETURN h.uri AS orphaned_habit"
 
 # ---------------------------------------------------------------------------
 # Summary
