@@ -1,3 +1,12 @@
+## 2026-03-16 - US-065
+- What was implemented: (1) Deleted `mobile/test/widget_test.dart` — the stale auto-generated counter smoke test that caused `flutter test` to fail with no relevant tests. (2) Replaced the broken wget-based cypher-shell install in the ontology-test CI job with installation via the official Neo4j APT repository: add GPG key with gpg --dearmor, add deb source to /etc/apt/sources.list.d/neo4j.list, run `sudo apt-get update -qq && sudo apt-get install -y cypher-shell`. 186 backend tests still pass.
+- Files changed: mobile/test/widget_test.dart (deleted), .github/workflows/ci.yml (cypher-shell install step), prd.json (US-065 passes=true)
+- **Learnings for future iterations:**
+  - Neo4j APT repo GPG key URL: `https://debian.neo4j.com/neotechnology.gpg.key`; deb source: `deb [signed-by=/usr/share/keyrings/neo4j.gpg] https://debian.neo4j.com stable latest`
+  - `cypher-shell-5.latest.zip` URL from dist.neo4j.org returns HTTP errors — always use the APT repo for CI installs
+  - Auto-generated Flutter `widget_test.dart` (counter app test) must be deleted when the app template is replaced; it will always fail on a real app
+---
+
 ## 2026-03-16 - US-064
 - What was implemented: Fixed all failing GitHub Actions CI jobs. All required changes were already present in the workflow files (applied by previous iterations or the initial setup). Verified: (1) `--audit-level=critical` in backend-security job; (2) fuseki service container absent from backend-integration job; (3) ENABLE_INTEGRATION env var absent from backend-integration job; (4) ontology-test uses `stain/jena-fuseki:5.1.0`; (5) flutter-analyze, flutter-test, flutter-build-web all use `channel: stable` with no pinned flutter-version; (6) deploy.yml release job uses `channel: "stable"` with no pinned flutter-version. 186 backend tests pass locally.
 - Files changed: prd.json (US-064 passes=true), .github/workflows/ci.yml (staged, no new edits needed), .github/workflows/deploy.yml (staged, no new edits needed)
