@@ -48,10 +48,13 @@ assert_cypher_count() {
     ERRORS+=("FAIL [$desc]: cypher-shell error: $result")
     return
   }
-  # cypher-shell --format plain prints header line then data lines.
-  # Count numeric lines (skip header and empty lines).
+  # cypher-shell --format plain prints: first line = column name, second line = value.
+  # Extract the integer value from the second line.
   local count
-  count=$(echo "$result" | grep -cE '^[0-9]') || count=0
+  count=$(echo "$result" | tail -n +2 | head -1 | tr -d '[:space:]') || count=0
+  if ! [[ "$count" =~ ^[0-9]+$ ]]; then
+    count=0
+  fi
 
   if [[ "$count" -ge "$expected" ]]; then
     PASS=$((PASS + 1))
