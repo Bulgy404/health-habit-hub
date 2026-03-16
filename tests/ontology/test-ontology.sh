@@ -166,7 +166,7 @@ echo ""
 echo "--- Neo4j: donor group integrity ---"
 assert_cypher_zero \
   "No donors missing group assignment" \
-  "MATCH (d:hhh__Donor) WHERE NOT EXISTS(d.hhh__group) RETURN d.hhh__userId AS ungrouped_donor"
+  "MATCH (d:hhh__Donor) WHERE d.hhh__group IS NULL RETURN d.hhh__userId AS ungrouped_donor"
 
 # Test 3: No orphaned habit nodes
 echo ""

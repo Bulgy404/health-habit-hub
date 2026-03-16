@@ -235,7 +235,6 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────────────
   # 8. ONTOLOGY – graph integrity tests (Neo4j only)
-  #    Fix: install cypher-shell BEFORE the wait loop that uses it
   # ─────────────────────────────────────────────────────────────────────────────
   ontology-test:
     name: Ontology – graph integrity
@@ -250,7 +249,7 @@ jobs:
           - 7687:7687
           - 7474:7474
         options: >-
-          --health-cmd "cypher-shell -u neo4j -p password 'RETURN 1'"
+          --health-cmd "wget -q -O /dev/null http://localhost:7474 || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 15
@@ -258,42 +257,67 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Install cypher-shell FIRST (needed by the wait loop below)
-      - name: Install cypher-shell
-        run: |
-          wget -O- https://debian.neo4j.com/neotechnology.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/neo4j.gpg
-          echo 'deb [signed-by=/usr/share/keyrings/neo4j.gpg] https://debian.neo4j.com stable latest' | sudo tee /etc/apt/sources.list.d/neo4j.list
-          sudo apt-get update -qq
-          sudo apt-get install -y cypher-shell
-
-      - name: Wait for services to be healthy
+      - name: Wait for Neo4j HTTP API
         run: |
           echo "Waiting for Neo4j..."
-          timeout 120 bash -c 'until cypher-shell --address bolt://localhost:7687 -u neo4j -p password "RETURN 1" 2>/dev/null; do sleep 3; done'
+          timeout 120 bash -c 'until curl -sf -u neo4j:password http://localhost:7474/db/neo4j/tx/commit \
+            -H "Content-Type: application/json" \
+            -d "{\"statements\":[{\"statement\":\"RETURN 1\"}]}" 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); exit(0 if not d[\"errors\"] else 1)" 2>/dev/null; do sleep 3; done'
 
       - name: Apply constraints
         run: |
-          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            --file neo4j/init/constraints.cypher
+          python3 - <<'EOF'
+          import json, urllib.request, urllib.parse
+          constraints = open("neo4j/init/constraints.cypher").read()
+          # Strip comments and split on semicolons to get individual statements
+          stmts = [s.strip() for s in constraints.split(";") if s.strip() and not s.strip().startswith("//")]
+          payload = json.dumps({"statements": [{"statement": s} for s in stmts]}).encode()
+          req = urllib.request.Request(
+              "http://localhost:7474/db/neo4j/tx/commit",
+              data=payload,
+              headers={"Content-Type": "application/json", "Accept": "application/json"},
+          )
+          import base64
+          req.add_header("Authorization", "Basic " + base64.b64encode(b"neo4j:password").decode())
+          with urllib.request.urlopen(req) as r:
+              d = json.loads(r.read())
+              if d["errors"]:
+                  raise SystemExit(f"Constraint errors: {d['errors']}")
+          print("Constraints applied.")
+          EOF
 
       - name: Seed minimal test data
         run: |
-          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            "MERGE (:hhh__ExperimentalSetting:hhh__Group1 {uri:'http://example.com/hhh#G1'});"
-          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            "MERGE (:hhh__ExperimentalSetting:hhh__Group2 {uri:'http://example.com/hhh#G2'});"
-          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            "MERGE (:hhh__ExperimentalSetting:hhh__Group3 {uri:'http://example.com/hhh#G3'});"
-          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            "MERGE (:hhh__ExperimentalSetting:hhh__Group4 {uri:'http://example.com/hhh#G4'});"
-          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            "MERGE (:hhh__Donor {uri:'http://example.com/hhh#d1', hhh__userId:'u1', hhh__group:'G1'});"
-          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            "MERGE (:hhh__Habit {uri:'http://example.com/hhh#h1'});"
-          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            "MATCH (d1:hhh__Donor {uri:'http://example.com/hhh#d1'}), (h1:hhh__Habit {uri:'http://example.com/hhh#h1'}) MERGE (d1)-[:hhh__donates]->(h1);"
-          cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
-            "MATCH (h1:hhh__Habit {uri:'http://example.com/hhh#h1'}), (g1:hhh__Group1 {uri:'http://example.com/hhh#G1'}) MERGE (h1)-[:hhh__partOf]->(g1);"
+          python3 - <<'EOF'
+          import json, urllib.request, base64
+
+          def cypher(stmts):
+              payload = json.dumps({"statements": [{"statement": s} for s in stmts]}).encode()
+              req = urllib.request.Request(
+                  "http://localhost:7474/db/neo4j/tx/commit",
+                  data=payload,
+                  headers={"Content-Type": "application/json", "Accept": "application/json"},
+              )
+              req.add_header("Authorization", "Basic " + base64.b64encode(b"neo4j:password").decode())
+              with urllib.request.urlopen(req) as r:
+                  d = json.loads(r.read())
+                  if d["errors"]:
+                      raise SystemExit(f"Seed error: {d['errors']}")
+
+          cypher([
+              "MERGE (:hhh__ExperimentalSetting:hhh__Group1 {uri:'http://example.com/hhh#G1'})",
+              "MERGE (:hhh__ExperimentalSetting:hhh__Group2 {uri:'http://example.com/hhh#G2'})",
+              "MERGE (:hhh__ExperimentalSetting:hhh__Group3 {uri:'http://example.com/hhh#G3'})",
+              "MERGE (:hhh__ExperimentalSetting:hhh__Group4 {uri:'http://example.com/hhh#G4'})",
+              "MERGE (:hhh__Donor {uri:'http://example.com/hhh#d1', hhh__userId:'u1', hhh__group:'G1'})",
+              "MERGE (:hhh__Habit {uri:'http://example.com/hhh#h1'})",
+          ])
+          cypher([
+              "MATCH (d1:hhh__Donor {uri:'http://example.com/hhh#d1'}), (h1:hhh__Habit {uri:'http://example.com/hhh#h1'}) MERGE (d1)-[:hhh__donates]->(h1)",
+              "MATCH (h1:hhh__Habit {uri:'http://example.com/hhh#h1'}), (g1:hhh__Group1 {uri:'http://example.com/hhh#G1'}) MERGE (h1)-[:hhh__partOf]->(g1)",
+          ])
+          print("Seed data applied.")
+          EOF
 
       - name: Run ontology test suite
         env:
