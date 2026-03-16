@@ -1066,6 +1066,42 @@
       "priority": 65,
       "passes": true,
       "notes": "Deleted mobile/test/widget_test.dart (stale auto-generated counter test). Replaced wget-based cypher-shell install with Neo4j official APT repo: GPG key + deb source + apt-get install -y cypher-shell."
+    },
+    {
+      "id": "US-066",
+      "title": "Remove Fuseki from ontology CI job and test script",
+      "description": "As a developer, I want the ontology CI job to only test Neo4j since Fuseki is no longer used by any backend route logic.",
+      "acceptanceCriteria": [
+        "In .github/workflows/ci.yml ontology-test job: remove the fuseki service container entirely",
+        "In .github/workflows/ci.yml ontology-test job: remove the 'Load ontology into Fuseki' step (the curl POST that is currently failing with exit code 22)",
+        "In .github/workflows/ci.yml ontology-test job: remove 'Waiting for Fuseki...' from the wait-for-services step",
+        "In .github/workflows/ci.yml ontology-test job: remove FUSEKI_URL and FUSEKI_DATASET from the env block of the 'Run ontology test suite' step",
+        "In tests/ontology/test-ontology.sh: remove the run_sparql helper function and the assert_sparql_count helper function",
+        "In tests/ontology/test-ontology.sh: remove Test 4 ('All hhh:Habit instances have rdfs:label in Fuseki') and Test 5 ('Fuseki has >= 100 owl:Class entries') \u2014 these are the only two SPARQL-based tests; the remaining 3 Cypher-based tests must stay",
+        "The ontology-test CI job passes using only Neo4j",
+        "Commit and push changes to branch ralph/hhh-platform-unified"
+      ],
+      "priority": 66,
+      "passes": true,
+      "notes": "Removed fuseki service container, 'Load ontology into Fuseki' step, 'Waiting for Fuseki...' from wait step, and FUSEKI_URL/FUSEKI_DATASET env vars from ci.yml ontology-test job. Removed run_sparql, assert_sparql_count helpers and Test 4/Test 5 (SPARQL-based) from test-ontology.sh. Remaining 3 Cypher-based tests stay."
+    },
+    {
+      "id": "US-067",
+      "title": "Update GitHub Actions to Node.js 24 runtime",
+      "description": "As a developer, I want the CI/CD workflows to use Node.js 24 actions so there are no deprecation warnings and we stay ahead of the June 2nd 2026 forced migration.",
+      "acceptanceCriteria": [
+        "In both .github/workflows/ci.yml and .github/workflows/deploy.yml: update actions/checkout@v4 to the latest version that runs on Node.js 24 (check https://github.com/actions/checkout/releases for the current latest tag)",
+        "In both files: update actions/setup-node@v4 to the latest version that runs on Node.js 24 (check https://github.com/actions/setup-node/releases)",
+        "In ci.yml: update actions/upload-artifact@v4 to the latest version that runs on Node.js 24 (check https://github.com/actions/upload-artifact/releases)",
+        "In deploy.yml: update softprops/action-gh-release@v2 to its latest release if a newer version supporting Node.js 24 exists",
+        "In deploy.yml: update appleboy/ssh-action@v1 to its latest release if a newer version supporting Node.js 24 exists",
+        "No 'Node.js 20 actions are deprecated' warnings appear in any CI or CD workflow run after the update",
+        "All existing CI jobs still pass after the version bumps",
+        "Commit and push changes to branch ralph/hhh-platform-unified"
+      ],
+      "priority": 67,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

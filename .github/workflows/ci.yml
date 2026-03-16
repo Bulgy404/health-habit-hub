@@ -234,7 +234,7 @@ jobs:
         run: flutter build web --release
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # 8. ONTOLOGY – graph integrity tests (Neo4j + Fuseki)
+  # 8. ONTOLOGY – graph integrity tests (Neo4j only)
   #    Fix: install cypher-shell BEFORE the wait loop that uses it
   # ─────────────────────────────────────────────────────────────────────────────
   ontology-test:
@@ -260,19 +260,6 @@ jobs:
           --health-timeout 5s
           --health-retries 15
 
-      fuseki:
-        image: stain/jena-fuseki:5.1.0
-        env:
-          ADMIN_PASSWORD: admin
-          FUSEKI_DATASET_1: hhh
-        ports:
-          - 3030:3030
-        options: >-
-          --health-cmd "curl -sf http://localhost:3030/$/ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-
     steps:
       - uses: actions/checkout@v4
 
@@ -288,8 +275,6 @@ jobs:
         run: |
           echo "Waiting for Neo4j..."
           timeout 120 bash -c 'until cypher-shell --address bolt://localhost:7687 -u neo4j -p password "RETURN 1" 2>/dev/null; do sleep 3; done'
-          echo "Waiting for Fuseki..."
-          timeout 60 bash -c 'until curl -sf http://localhost:3030/$/ping; do sleep 3; done'
 
       - name: Bootstrap Neo4j schema (n10s + constraints)
         run: |
@@ -297,13 +282,6 @@ jobs:
             "CALL n10s.graphconfig.init({handleVocabUris:'SHORTEN', handleMultival:'OVERWRITE'});"
           cypher-shell --address bolt://localhost:7687 -u neo4j -p password \
             --file neo4j/init/constraints.cypher
-
-      - name: Load ontology into Fuseki
-        run: |
-          curl -sf -X POST \
-            -H "Content-Type: text/turtle" \
-            --data-binary @fuseki/init/Ontology.ttl \
-            "http://localhost:3030/hhh/data"
 
       - name: Load ontology into Neo4j via n10s
         run: |
@@ -328,8 +306,6 @@ jobs:
           NEO4J_URL: bolt://localhost:7687
           NEO4J_USER: neo4j
           NEO4J_PASS: password
-          FUSEKI_URL: http://localhost:3030
-          FUSEKI_DATASET: hhh
         run: bash tests/ontology/test-ontology.sh
 
   # ─────────────────────────────────────────────────────────────────────────────
