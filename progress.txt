@@ -1,3 +1,12 @@
+## 2026-03-16 - US-067
+- What was implemented: Updated GitHub Actions in both CI and CD workflows to use Node.js 24 runtime. (1) `actions/checkout@v4` → `actions/checkout@v6` in ci.yml (8 occurrences) and deploy.yml (1 occurrence). (2) `actions/setup-node@v4` → `actions/setup-node@v6` in ci.yml (4 occurrences). (3) `actions/upload-artifact@v4` → `actions/upload-artifact@v6` in ci.yml (2 occurrences). `softprops/action-gh-release@v2` and `appleboy/ssh-action@v1` remain at their latest major versions (no newer major versions exist).
+- Files changed: .github/workflows/ci.yml (checkout v6, setup-node v6, upload-artifact v6), .github/workflows/deploy.yml (checkout v6), prd.json (US-067 passes=true)
+- **Learnings for future iterations:**
+  - Node.js 24 action versions: `actions/checkout@v6`, `actions/setup-node@v6`, `actions/upload-artifact@v6`
+  - `softprops/action-gh-release` latest is v2.5.0 (still @v2); `appleboy/ssh-action` latest is v1.2.5 (still @v1) — no major version bump needed
+  - GitHub deprecated Node.js 20 actions in Sept 2025; forced migration deadline is June 2, 2026
+---
+
 ## 2026-03-16 - US-066
 - What was implemented: (1) Removed fuseki service container from `.github/workflows/ci.yml` ontology-test job. (2) Removed 'Load ontology into Fuseki' step (curl POST that was failing with exit code 22). (3) Removed 'Waiting for Fuseki...' from the wait-for-services step. (4) Removed FUSEKI_URL and FUSEKI_DATASET env vars from the 'Run ontology test suite' step. (5) In `tests/ontology/test-ontology.sh`: removed `run_sparql` helper, `assert_sparql_count` helper, Test 4 ('All hhh:Habit instances have rdfs:label in Fuseki'), and Test 5 ('Fuseki has >= 100 owl:Class entries'). Remaining 3 Cypher-based tests (group retrievability, donor group integrity, orphaned habit nodes) are unchanged.
 - Files changed: .github/workflows/ci.yml (remove fuseki service, step, wait line, env vars), tests/ontology/test-ontology.sh (remove SPARQL helpers and tests 4+5), prd.json (US-066 passes=true)
