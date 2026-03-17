@@ -66,6 +66,12 @@ services:
       - NEO4J_USER=${NEO4J_USER:-neo4j}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
     # Dockerfile already sets USER node, no need to override
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - h3-proxy
     depends_on:
@@ -124,6 +130,12 @@ services:
       - ./mongo/entrypoint:/docker-entrypoint-initdb.d:ro
       - /mnt/data/appdata/hhh/mongo/db:/data/db
       - /mnt/data/appdata/hhh/mongo/config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ping:1})"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   mongo-express:
     image: mongo-express:1.0
@@ -191,6 +203,12 @@ services:
       - NEO4J_dbms_security_procedures_unrestricted=n10s.*
       - NEO4J_dbms_security_procedures_allowlist=n10s.*
     # Neo4j runs as 'neo4j' user (UID 7474)
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - h3-proxy
     ports:
