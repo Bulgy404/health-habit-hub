@@ -1251,7 +1251,7 @@
         "No other Dockerfile changes \u2014 minimal diff"
       ],
       "priority": 77,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
