@@ -1,3 +1,21 @@
+## 2026-03-17 - US-080
+- What was implemented: Changed Keycloak production command from `start-dev --import-realm` to `start --import-realm` in docker-compose.prod.yml. Added `KC_HOSTNAME_STRICT=false` environment variable. `KC_PROXY=edge` was already present.
+- Files changed: docker-compose.prod.yml (change command, add KC_HOSTNAME_STRICT=false), prd.json (US-080 passes=true)
+- **Learnings for future iterations:**
+  - `start-dev` is Keycloak's development mode (no TLS required, relaxed security); production must use `start`
+  - `KC_HOSTNAME_STRICT=false` is needed when running behind a reverse proxy (Traefik) without a fixed hostname configured in Keycloak
+  - `KC_PROXY=edge` was already set in docker-compose.prod.yml, satisfying the second acceptance criterion
+---
+
+## 2026-03-17 - US-079
+- What was implemented: Added `app.set('trust proxy', 1)` to app/app.js immediately after `const app = express()`. This ensures the Express rate limiter reads the real client IP from X-Forwarded-For header set by Traefik, instead of Traefik's internal IP.
+- Files changed: app/app.js (add trust proxy setting), prd.json (US-079 passes=true)
+- **Learnings for future iterations:**
+  - `app.set('trust proxy', 1)` must come before any rate-limiting middleware (it's applied to the express app itself)
+  - The rate limiter in this project is applied in app/routes/v1Router.js (not in app.js directly), but trust proxy setting on the app object applies globally regardless
+  - 186 tests pass after this change; no test changes needed
+---
+
 ## 2026-03-17 - US-078
 - What was implemented: Added `set -euo pipefail` as line 2 of backup-service/backup.sh. All environment variables were already initialized with `${VAR:-default}` syntax (BACKUP_RETENTION_DAYS, ALERT_WEBHOOK_URL, BACKUP_EMAIL, KEYCLOAK_HOST, KEYCLOAK_ADMIN, KEYCLOAK_ADMIN_PASSWORD, MONGO_USER, MONGO_PASSWORD, MAIL_USER, MAIL_PASS, MAIL_FROM), so no additional changes were needed to avoid -u false errors.
 - Files changed: backup-service/backup.sh (add set -euo pipefail), prd.json (US-078 passes=true)
