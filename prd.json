@@ -1290,7 +1290,7 @@
         "docker-compose -f docker-compose.prod.yml config exits 0"
       ],
       "priority": 80,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
