@@ -101,6 +101,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     context.go('/onboarding/passphrase');
   }
 
+  void _onRestore() {
+    context.push('/onboarding/restore');
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -118,7 +122,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 controller: _pageController,
                 onPageChanged: (page) => setState(() => _currentPage = page),
                 children: [
-                  _WelcomePage(onGetStarted: _nextPage),
+                  _WelcomePage(
+                    onGetStarted: _nextPage,
+                    onRestore: _onRestore,
+                  ),
                   for (var i = 0; i < _steps.length; i++)
                     _WalkthroughPage(
                       step: _steps[i],
@@ -165,8 +172,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
 class _WelcomePage extends StatelessWidget {
   final VoidCallback onGetStarted;
+  final VoidCallback onRestore;
 
-  const _WelcomePage({required this.onGetStarted});
+  const _WelcomePage({
+    required this.onGetStarted,
+    required this.onRestore,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -205,6 +216,11 @@ class _WelcomePage extends StatelessWidget {
               minimumSize: const Size(200, 52),
             ),
             child: const Text('Get Started'),
+          ),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: onRestore,
+            child: const Text('Restore existing account'),
           ),
         ],
       ),

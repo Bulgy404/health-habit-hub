@@ -14,6 +14,7 @@ import 'screens/donate_screen.dart';
 import 'screens/explore_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding/passphrase_screen.dart';
+import 'screens/onboarding/restore_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/recommend_screen.dart';
@@ -73,6 +74,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/onboarding/passphrase',
         builder: (context, state) => const PassphraseScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/restore',
+        builder: (context, state) => const RestoreScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
