@@ -3,46 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 
-/// Login screen with username/password fields, loading state, and error display.
+/// Admin login screen that triggers the PKCE OAuth 2.0 authorization code flow.
 ///
-/// Deep link `hhh://login?user=X&token=Y` pre-fills the username and password
-/// fields via the [initialUsername] and [initialPassword] constructor params
-/// (populated by the router from query parameters).
+/// This screen is only accessible to administrators via the hidden 'Admin login'
+/// button on the welcome screen. Regular users are onboarded via the passphrase
+/// flow (see [WelcomeScreen]).
 class LoginScreen extends ConsumerStatefulWidget {
-  final String? initialUsername;
-  final String? initialPassword;
-
-  const LoginScreen({
-    super.key,
-    this.initialUsername,
-    this.initialPassword,
-  });
+  const LoginScreen({super.key});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  late final TextEditingController _usernameController;
-  late final TextEditingController _passwordController;
   bool _isLoading = false;
   String? _errorMessage;
-
-  @override
-  void initState() {
-    super.initState();
-    _usernameController =
-        TextEditingController(text: widget.initialUsername ?? '');
-    _passwordController =
-        TextEditingController(text: widget.initialPassword ?? '');
-  }
-
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
 
   Future<void> _login() async {
     setState(() {
@@ -52,14 +27,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
-      await authService.login(_usernameController.text.trim());
+      await authService.login();
       if (mounted) {
-        context.go('/home');
+        context.go('/donate');
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Invalid credentials';
+          _errorMessage = 'Login failed. Please try again.';
         });
       }
     } finally {
@@ -76,6 +51,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Admin Login')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -85,42 +61,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // HHH logo
                 const Icon(
-                  Icons.health_and_safety,
+                  Icons.admin_panel_settings,
                   size: 80,
                   color: Colors.teal,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Health Habit Hub',
+                  'Admin Login',
                   textAlign: TextAlign.center,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 48),
-                TextField(
-                  controller: _usernameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Username',
-                    border: OutlineInputBorder(),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  autofillHints: const [AutofillHints.username],
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Password',
-                    border: OutlineInputBorder(),
-                  ),
-                  obscureText: true,
-                  autofillHints: const [AutofillHints.password],
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _isLoading ? null : _login(),
+                const SizedBox(height: 8),
+                Text(
+                  'Authenticate with your admin account via the browser.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium,
                 ),
                 if (_errorMessage != null) ...[
                   const SizedBox(height: 12),
@@ -138,7 +96,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 else
                   ElevatedButton(
                     onPressed: _login,
-                    child: const Text('Login'),
+                    child: const Text('Login with Admin Account'),
                   ),
               ],
             ),

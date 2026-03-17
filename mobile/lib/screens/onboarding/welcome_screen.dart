@@ -105,6 +105,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     context.push('/onboarding/restore');
   }
 
+  void _onAdminLogin() {
+    context.push('/login');
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -125,6 +129,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   _WelcomePage(
                     onGetStarted: _nextPage,
                     onRestore: _onRestore,
+                    onAdminLogin: _onAdminLogin,
                   ),
                   for (var i = 0; i < _steps.length; i++)
                     _WalkthroughPage(
@@ -173,10 +178,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 class _WelcomePage extends StatelessWidget {
   final VoidCallback onGetStarted;
   final VoidCallback onRestore;
+  final VoidCallback onAdminLogin;
 
   const _WelcomePage({
     required this.onGetStarted,
     required this.onRestore,
+    required this.onAdminLogin,
   });
 
   @override
@@ -221,6 +228,14 @@ class _WelcomePage extends StatelessWidget {
           TextButton(
             onPressed: onRestore,
             child: const Text('Restore existing account'),
+          ),
+          TextButton(
+            onPressed: onAdminLogin,
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.outline,
+              textStyle: const TextStyle(fontSize: 11),
+            ),
+            child: const Text('Admin login'),
           ),
         ],
       ),
