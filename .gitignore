@@ -26,4 +26,14 @@ backups/*.manifest
 # Mongo Data
 /mongo/data/
 
+# Generated and IDE files
+*.log
+dist/
+tmp/
+.cache/
+.idea/
+*.swp
+*.swo
+*~
+Thumbs.db
 
