@@ -13,6 +13,7 @@ import 'screens/admin/admin_surveys_screen.dart';
 import 'screens/donate_screen.dart';
 import 'screens/explore_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/onboarding/passphrase_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/recommend_screen.dart';
@@ -71,10 +72,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/onboarding/passphrase',
-        // Placeholder — implemented in US-085.
-        builder: (context, state) => const Scaffold(
-          body: Center(child: Text('Passphrase screen coming soon')),
-        ),
+        builder: (context, state) => const PassphraseScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
