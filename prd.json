@@ -1149,6 +1149,174 @@
         "Commit AUDIT.md and the updated prd.json to branch ralph/hhh-platform-unified"
       ],
       "priority": 70,
+      "passes": true,
+      "notes": "Audit completed. 12 distinct issues identified and documented in AUDIT.md. User stories US-071 through US-082 created."
+    },
+    {
+      "id": "US-071",
+      "title": "Remove committed .env file with real credentials from git history",
+      "description": "As a security engineer, I need the .env file containing real credentials removed from git history so that secrets are no longer exposed in version control.",
+      "acceptanceCriteria": [
+        "Remove .env from git tracking using git rm --cached .env",
+        "Verify .env is listed in .gitignore (already present)",
+        "Create .env.example at repo root with all variable names and CHANGE_THIS_* placeholder values (no real credentials)",
+        "Update README.md or stack.env to reference .env.example as the setup template",
+        "Commit the changes so .env is untracked going forward",
+        "Note in the commit message that credentials should be rotated (rotation itself is out of scope for this story)"
+      ],
+      "priority": 71,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-072",
+      "title": "Replace hardcoded production API URLs in Flutter services with configurable env vars",
+      "description": "As a developer, I need Flutter service files to read API base URLs from compile-time environment variables so that dev, staging, and production builds can point to different backends without code changes.",
+      "acceptanceCriteria": [
+        "Create mobile/lib/config/app_config.dart with constants: apiBaseUrl, keycloakUrl, wsBaseUrl — each using String.fromEnvironment with a localhost default",
+        "Replace hardcoded URL strings in mobile/lib/services/auth_service.dart, recommendation_service.dart, habit_service.dart, admin_service.dart, survey_service.dart, recommendation_ws_service.dart with references to AppConfig constants",
+        "Update docs/guides/developer-onboarding.md to document --dart-define flags for each environment variable",
+        "flutter analyze lib/ exits 0 with no issues"
+      ],
+      "priority": 72,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-073",
+      "title": "Pin all Docker image tags to specific versions (remove :latest)",
+      "description": "As a developer, I want all Docker images pinned to explicit versions so that builds are reproducible and breaking changes in new releases do not silently affect deployments.",
+      "acceptanceCriteria": [
+        "In docker-compose.yml: replace mongo-express:latest with mongo-express:1.0, libretranslate/libretranslate:latest with libretranslate/libretranslate:1.5",
+        "In docker-compose.prod.yml: replace mongo:latest with mongo:7.0, mongo-express:latest with mongo-express:1.0, libretranslate/libretranslate:latest with libretranslate/libretranslate:1.5",
+        "In backup-service/Dockerfile: replace FROM alpine:latest with FROM alpine:3.21",
+        "docker-compose config exits 0 (YAML valid)",
+        "No remaining :latest tags in docker-compose.yml, docker-compose.prod.yml, or backup-service/Dockerfile"
+      ],
+      "priority": 73,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-074",
+      "title": "Add Docker health checks to app, mongo, and neo4j services",
+      "description": "As a developer, I need health checks on the app, mongo, and neo4j services so that Docker Compose can detect and report unhealthy containers.",
+      "acceptanceCriteria": [
+        "In docker-compose.yml: add healthcheck to app service (curl -f http://localhost:3000/api/v1/health)",
+        "In docker-compose.yml: add healthcheck to mongo service (mongosh --eval 'db.runCommand({ping:1})')",
+        "In docker-compose.yml: add healthcheck to neo4j service (wget -q -O /dev/null http://localhost:7474)",
+        "Apply identical health checks to the same services in docker-compose.prod.yml",
+        "docker-compose config exits 0 for both files"
+      ],
+      "priority": 74,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-075",
+      "title": "Remove unused npm polyfill dependencies `fs` and `path` from app/package.json",
+      "description": "As a developer, I want the dead npm polyfill packages `fs` and `path` removed from the backend dependencies so that the package.json only contains packages actually used.",
+      "acceptanceCriteria": [
+        "Remove 'fs' and 'path' entries from dependencies in app/package.json",
+        "Run npm ci in app/ — exits 0",
+        "Run npm test in app/ — all tests still pass",
+        "Verify no app/ source file imports these as npm packages (grep for require('fs') or require('path') — any remaining uses are Node.js builtins, which is fine)"
+      ],
+      "priority": 75,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-076",
+      "title": "Remove TODO comments from app/utils/SparqlDatabase.js",
+      "description": "As a developer, I want all TODO comments removed or resolved in SparqlDatabase.js so that the file does not carry untracked technical debt in production code.",
+      "acceptanceCriteria": [
+        "All // TODO comments removed from app/utils/SparqlDatabase.js",
+        "If a TODO indicates a genuine future improvement (not a current bug), add a corresponding GitHub-style comment block instead: // NOTE: ... describing what was simplified and why",
+        "npm test passes (all existing tests still pass)",
+        "No new linting errors introduced"
+      ],
+      "priority": 76,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-077",
+      "title": "Add non-root USER directive to API-service/Dockerfile",
+      "description": "As a security engineer, I need the Python recommender container to run as a non-root user so that a compromised process does not have root access to the container.",
+      "acceptanceCriteria": [
+        "API-service/Dockerfile creates a non-root user (addgroup + adduser or useradd)",
+        "USER directive switches to the non-root user before the CMD/ENTRYPOINT",
+        "docker build ./API-service exits 0",
+        "No other Dockerfile changes — minimal diff"
+      ],
+      "priority": 77,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-078",
+      "title": "Add `set -euo pipefail` to backup-service/backup.sh",
+      "description": "As a developer, I need backup.sh to use strict bash error handling so that backup failures are not silently swallowed.",
+      "acceptanceCriteria": [
+        "Line 2 of backup-service/backup.sh is exactly: set -euo pipefail",
+        "Verify any variables that might be unset are given defaults with ${VAR:-default} syntax to avoid false -u errors",
+        "Script still executes without errors in a basic shell syntax check: bash -n backup-service/backup.sh exits 0"
+      ],
+      "priority": 78,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-079",
+      "title": "Configure Express `trust proxy` so rate limiter uses real client IP behind Traefik",
+      "description": "As a developer, I need the Express app to trust the Traefik reverse proxy so that the rate limiter uses the real client IP from X-Forwarded-For instead of Traefik's internal IP.",
+      "acceptanceCriteria": [
+        "Add app.set('trust proxy', 1) to app/app.js before the rate limiter middleware is applied",
+        "npm test passes (all tests still pass)",
+        "No linting errors introduced"
+      ],
+      "priority": 79,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-080",
+      "title": "Fix Keycloak production config to use `start` instead of `start-dev`",
+      "description": "As a developer, I need the Keycloak service in docker-compose.prod.yml to use the production start command so that it runs with proper security and performance settings.",
+      "acceptanceCriteria": [
+        "In docker-compose.prod.yml, change the Keycloak command from `start-dev --import-realm` to `start --import-realm`",
+        "Add KC_HOSTNAME_STRICT=false and KC_PROXY=edge environment variables to allow operation behind Traefik without a full hostname configuration",
+        "docker-compose -f docker-compose.prod.yml config exits 0"
+      ],
+      "priority": 80,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-081",
+      "title": "Add missing .gitignore entries for generated and IDE files",
+      "description": "As a developer, I need the root .gitignore to cover common generated files so that logs, IDE configs, and build artifacts are not accidentally committed.",
+      "acceptanceCriteria": [
+        "Add to .gitignore: *.log, dist/, tmp/, .cache/, .idea/, *.swp, *.swo, *~, Thumbs.db",
+        "Verify no currently-tracked files match any of the new patterns (git ls-files | grep -E pattern returns empty)",
+        "git status shows no unintended untracked files after the change"
+      ],
+      "priority": 81,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-082",
+      "title": "Replace hardcoded mongo-express credentials in docker-compose.yml with env vars",
+      "description": "As a developer, I need the mongo-express service in docker-compose.yml to use environment variable references for MongoDB credentials so that they are not hardcoded.",
+      "acceptanceCriteria": [
+        "In docker-compose.yml, replace ME_CONFIG_MONGODB_ADMINUSERNAME=admin with ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USER:-admin}",
+        "Replace ME_CONFIG_MONGODB_ADMINPASSWORD=admin with ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASSWORD:-admin}",
+        "Replace ME_CONFIG_MONGODB_URL=mongodb://admin:admin@mongo:27017/ with ME_CONFIG_MONGODB_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin}@mongo:27017/",
+        "docker-compose config exits 0"
+      ],
+      "priority": 82,
       "passes": false,
       "notes": ""
     }
