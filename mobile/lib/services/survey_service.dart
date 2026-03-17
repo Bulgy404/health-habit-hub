@@ -4,10 +4,11 @@ import '../models/survey.dart';
 import '../models/survey_result.dart';
 import '../providers/auth_provider.dart';
 import 'auth_service.dart';
+import '../config/app_config.dart';
 
 /// Service for fetching surveys and submitting results via the backend API.
 class SurveyService {
-  static const _baseUrl = 'https://api.hhh.tu-dresden.de/api/v1';
+  static const _baseUrl = AppConfig.apiBaseUrl;
 
   final Dio _dio;
   final AuthService _authService;

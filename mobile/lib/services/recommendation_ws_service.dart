@@ -6,6 +6,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../models/recommendation.dart';
 import '../providers/auth_provider.dart';
+import '../config/app_config.dart';
 import 'auth_service.dart';
 import 'recommendation_service.dart';
 
@@ -26,7 +27,7 @@ enum WsConnectionStatus {
 /// falls back to polling [RecommendationService.fetchRecommendations] every
 /// [_pollInterval] and retries the WebSocket after [_reconnectDelay].
 class RecommendationWsService {
-  static const _wsUrl = 'wss://api.hhh.tu-dresden.de/ws/recommendations';
+  static final _wsUrl = '${AppConfig.wsBaseUrl}/recommendations';
   static const _pollInterval = Duration(seconds: 30);
   static const _reconnectDelay = Duration(seconds: 5);
 

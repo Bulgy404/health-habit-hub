@@ -1173,13 +1173,13 @@
       "title": "Replace hardcoded production API URLs in Flutter services with configurable env vars",
       "description": "As a developer, I need Flutter service files to read API base URLs from compile-time environment variables so that dev, staging, and production builds can point to different backends without code changes.",
       "acceptanceCriteria": [
-        "Create mobile/lib/config/app_config.dart with constants: apiBaseUrl, keycloakUrl, wsBaseUrl — each using String.fromEnvironment with a localhost default",
+        "Create mobile/lib/config/app_config.dart with constants: apiBaseUrl, keycloakUrl, wsBaseUrl \u2014 each using String.fromEnvironment with a localhost default",
         "Replace hardcoded URL strings in mobile/lib/services/auth_service.dart, recommendation_service.dart, habit_service.dart, admin_service.dart, survey_service.dart, recommendation_ws_service.dart with references to AppConfig constants",
         "Update docs/guides/developer-onboarding.md to document --dart-define flags for each environment variable",
         "flutter analyze lib/ exits 0 with no issues"
       ],
       "priority": 72,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -1218,9 +1218,9 @@
       "description": "As a developer, I want the dead npm polyfill packages `fs` and `path` removed from the backend dependencies so that the package.json only contains packages actually used.",
       "acceptanceCriteria": [
         "Remove 'fs' and 'path' entries from dependencies in app/package.json",
-        "Run npm ci in app/ — exits 0",
-        "Run npm test in app/ — all tests still pass",
-        "Verify no app/ source file imports these as npm packages (grep for require('fs') or require('path') — any remaining uses are Node.js builtins, which is fine)"
+        "Run npm ci in app/ \u2014 exits 0",
+        "Run npm test in app/ \u2014 all tests still pass",
+        "Verify no app/ source file imports these as npm packages (grep for require('fs') or require('path') \u2014 any remaining uses are Node.js builtins, which is fine)"
       ],
       "priority": 75,
       "passes": false,
@@ -1248,7 +1248,7 @@
         "API-service/Dockerfile creates a non-root user (addgroup + adduser or useradd)",
         "USER directive switches to the non-root user before the CMD/ENTRYPOINT",
         "docker build ./API-service exits 0",
-        "No other Dockerfile changes — minimal diff"
+        "No other Dockerfile changes \u2014 minimal diff"
       ],
       "priority": 77,
       "passes": false,
