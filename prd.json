@@ -1165,8 +1165,8 @@
         "Note in the commit message that credentials should be rotated (rotation itself is out of scope for this story)"
       ],
       "priority": 71,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": ".env was already untracked (removed from git in prior commit 1b62aea). Added .env.example with CHANGE_THIS_* placeholders. Added !.env.example negation to .gitignore so the example file is tracked. README.md already referenced cp .env.example .env."
     },
     {
       "id": "US-072",
