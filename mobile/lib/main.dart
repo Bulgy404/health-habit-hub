@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'models/admin_survey.dart';
 import 'providers/auth_provider.dart';
 import 'screens/admin/admin_devices_screen.dart';
@@ -183,6 +184,122 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 
 // ---------------------------------------------------------------------------
+// Brand theme
+// ---------------------------------------------------------------------------
+
+// HabShare brand colors.
+const _kPrimary = Color(0xFF45b700);
+const _kPrimaryDark = Color(0xFF237c00);
+const _kAccent = Color(0xFFe679ab);
+const _kSurface = Color(0xFFdadada);
+const _kNavBar = Color(0xFF454446);
+const _kChipGreen = Color(0xFF4cd49e);
+
+ThemeData _buildLightTheme() {
+  final colorScheme = ColorScheme.fromSeed(
+    seedColor: _kPrimary,
+    primary: _kPrimary,
+    secondary: _kAccent,
+    surface: _kSurface,
+    onPrimary: Colors.white,
+    onSecondary: Colors.white,
+    brightness: Brightness.light,
+  );
+
+  // Start with a base theme using our color scheme.
+  final base = ThemeData(
+    useMaterial3: true,
+    colorScheme: colorScheme,
+    scaffoldBackgroundColor: Colors.white,
+  );
+
+  // Extend with Google Fonts and component themes.
+  return base.copyWith(
+    textTheme: GoogleFonts.figtreeTextTheme(base.textTheme),
+    primaryColor: _kPrimary,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: _kNavBar,
+      foregroundColor: Colors.white,
+      iconTheme: IconThemeData(color: Colors.white),
+      actionsIconTheme: IconThemeData(color: Colors.white),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: _kNavBar,
+      indicatorColor: _kPrimary,
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return const IconThemeData(color: Colors.white);
+        }
+        return IconThemeData(color: Colors.white.withAlpha(153));
+      }),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return GoogleFonts.figtree(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          );
+        }
+        return GoogleFonts.figtree(
+          color: Colors.white.withAlpha(153),
+          fontSize: 12,
+        );
+      }),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: _kPrimary,
+        foregroundColor: Colors.white,
+        textStyle: GoogleFonts.figtree(fontWeight: FontWeight.bold),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: _kPrimary,
+        foregroundColor: Colors.white,
+        textStyle: GoogleFonts.figtree(fontWeight: FontWeight.bold),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _kPrimary,
+        side: const BorderSide(color: _kPrimary, width: 1.5),
+        textStyle: GoogleFonts.figtree(fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: _kPrimary,
+        textStyle: GoogleFonts.figtree(),
+      ),
+    ),
+    cardTheme: CardThemeData(
+      color: _kSurface,
+      elevation: 4,
+      shadowColor: const Color(0x40000000),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: _kPrimary, width: 2),
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: _kChipGreen,
+      labelStyle: const TextStyle(color: Colors.white),
+      selectedColor: _kPrimaryDark,
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
 
@@ -194,10 +311,7 @@ class HhhApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'Health Habit Hub',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
+      theme: _buildLightTheme(),
       routerConfig: router,
     );
   }
