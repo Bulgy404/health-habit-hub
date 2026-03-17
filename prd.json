@@ -1277,7 +1277,7 @@
         "No linting errors introduced"
       ],
       "priority": 79,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
