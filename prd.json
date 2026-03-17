@@ -1317,7 +1317,7 @@
         "docker-compose config exits 0"
       ],
       "priority": 82,
-      "passes": false,
+      "passes": true,
       "notes": ""
     }
   ]

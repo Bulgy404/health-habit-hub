@@ -1,3 +1,19 @@
+## 2026-03-17 - US-082
+- What was implemented: Replaced three hardcoded `admin` credentials in mongo-express service of docker-compose.yml with `${MONGO_USER:-admin}` and `${MONGO_PASSWORD:-admin}` env var references (consistent with docker-compose.prod.yml and the mongo service).
+- Files changed: docker-compose.yml (parameterize ME_CONFIG_MONGODB_ADMINUSERNAME, ME_CONFIG_MONGODB_ADMINPASSWORD, ME_CONFIG_MONGODB_URL), prd.json (US-082 passes=true)
+- **Learnings for future iterations:**
+  - ME_CONFIG_BASICAUTH_USERNAME/PASSWORD were already using env vars; only the MONGODB_ vars were hardcoded
+  - `docker compose -f docker-compose.yml config` validates YAML including variable interpolation
+---
+
+## 2026-03-17 - US-081
+- What was implemented: Added missing .gitignore entries: *.log, dist/, tmp/, .cache/, .idea/, *.swp, *.swo, *~, Thumbs.db under a new "Generated and IDE files" comment section.
+- Files changed: .gitignore (add 9 new patterns), prd.json (US-081 passes=true)
+- **Learnings for future iterations:**
+  - No tracked files matched any new pattern — safe to add without risk of hiding existing files
+  - `git ls-files | grep -E` is the right way to verify before adding patterns that could affect tracked files
+---
+
 ## 2026-03-17 - US-080
 - What was implemented: Changed Keycloak production command from `start-dev --import-realm` to `start --import-realm` in docker-compose.prod.yml. Added `KC_HOSTNAME_STRICT=false` environment variable. `KC_PROXY=edge` was already present.
 - Files changed: docker-compose.prod.yml (change command, add KC_HOSTNAME_STRICT=false), prd.json (US-080 passes=true)
