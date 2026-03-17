@@ -1223,7 +1223,7 @@
         "Verify no app/ source file imports these as npm packages (grep for require('fs') or require('path') \u2014 any remaining uses are Node.js builtins, which is fine)"
       ],
       "priority": 75,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
