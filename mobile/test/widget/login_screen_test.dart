@@ -1,4 +1,4 @@
-// Widget tests for LoginScreen.
+// Widget tests for LoginScreen (admin PKCE login).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -27,9 +27,8 @@ class _FakeAuthService extends AuthService {
   @override
   Future<void> login([String? username, String? password]) {
     if (neverCompletes) return Completer<void>().future;
-    if (shouldThrow) return Future.error(Exception('Invalid credentials'));
-    // Success: in a real app this would trigger context.go('/home').
-    // The router is not set up in unit widget tests, so success is not tested here.
+    if (shouldThrow) return Future.error(Exception('Login failed'));
+    // Success: in widget tests the router is not set up, so navigation is not tested.
     return Future.value();
   }
 }
@@ -41,8 +40,6 @@ class _FakeAuthService extends AuthService {
 Widget _buildSubject({
   bool shouldThrow = false,
   bool neverCompletes = false,
-  String? user,
-  String? token,
 }) {
   return ProviderScope(
     overrides: [
@@ -53,8 +50,8 @@ Widget _buildSubject({
         ),
       ),
     ],
-    child: MaterialApp(
-      home: LoginScreen(initialUsername: user, initialPassword: token),
+    child: const MaterialApp(
+      home: LoginScreen(),
     ),
   );
 }
@@ -64,28 +61,25 @@ Widget _buildSubject({
 // ---------------------------------------------------------------------------
 
 void main() {
-  testWidgets('shows username field, password field and login button',
-      (tester) async {
+  testWidgets('shows admin login button and icon', (tester) async {
     await tester.pumpWidget(_buildSubject());
 
-    expect(find.byType(TextField), findsNWidgets(2));
-    expect(find.text('Username'), findsOneWidget);
-    expect(find.text('Password'), findsOneWidget);
-    expect(find.text('Login'), findsOneWidget);
-    expect(find.byIcon(Icons.health_and_safety), findsOneWidget);
+    expect(find.text('Login with Admin Account'), findsOneWidget);
+    expect(find.byIcon(Icons.admin_panel_settings), findsOneWidget);
+    // "Admin Login" appears in both the AppBar title and the heading.
+    expect(find.text('Admin Login'), findsAtLeastNWidgets(1));
   });
 
-  testWidgets('pre-fills fields from constructor params', (tester) async {
-    await tester.pumpWidget(_buildSubject(user: 'alice', token: 'secret'));
+  testWidgets('shows no username or password text fields', (tester) async {
+    await tester.pumpWidget(_buildSubject());
 
-    final usernameField = tester.widget<TextField>(find.byType(TextField).first);
-    expect(usernameField.controller?.text, 'alice');
+    expect(find.byType(TextField), findsNothing);
   });
 
   testWidgets('shows loading indicator while logging in', (tester) async {
     await tester.pumpWidget(_buildSubject(neverCompletes: true));
 
-    await tester.tap(find.text('Login'));
+    await tester.tap(find.text('Login with Admin Account'));
     await tester.pump(); // start async operation — login is pending
 
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -94,9 +88,9 @@ void main() {
   testWidgets('shows error message on failed login', (tester) async {
     await tester.pumpWidget(_buildSubject(shouldThrow: true));
 
-    await tester.tap(find.text('Login'));
+    await tester.tap(find.text('Login with Admin Account'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Invalid credentials'), findsOneWidget);
+    expect(find.text('Login failed. Please try again.'), findsOneWidget);
   });
 }

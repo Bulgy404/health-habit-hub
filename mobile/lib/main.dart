@@ -32,8 +32,8 @@ void main() {
 /// auth state via [userRolesProvider] without relying on BuildContext.
 final routerProvider = Provider<GoRouter>((ref) {
   final router = GoRouter(
-    initialLocation: '/login',
-    // Redirect guard: only admin/researcher roles may access /admin/* routes.
+    initialLocation: '/onboarding/welcome',
+    // Redirect guard: admin route protection and onboarding bypass.
     redirect: (context, state) async {
       // Admin guard: only admin/researcher roles may access /admin/* routes.
       if (state.matchedLocation.startsWith('/admin')) {
@@ -49,10 +49,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Onboarding bypass: if the user has already completed onboarding,
-      // skip the welcome screen entirely.
-      if (state.matchedLocation.startsWith('/onboarding/welcome')) {
+      // skip the welcome and login screens and go straight to the app.
+      final location = state.matchedLocation;
+      if (location.startsWith('/onboarding/welcome') ||
+          location == '/login') {
         if (await isOnboardingComplete()) {
-          return '/login';
+          return '/donate';
         }
       }
 
@@ -61,11 +63,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/login',
-        builder: (context, state) {
-          final user = state.uri.queryParameters['user'];
-          final token = state.uri.queryParameters['token'];
-          return LoginScreen(initialUsername: user, initialPassword: token);
-        },
+        builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
         path: '/onboarding/welcome',
