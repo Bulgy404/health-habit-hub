@@ -1,3 +1,13 @@
+## 2026-03-17 - US-083
+- What was implemented: Added `POST /api/v1/onboard` as a public (unauthenticated) Express route. Created `app/routes/onboardRouter.js` with: (1) separate IP-based rate limiter (5 req/hour via `ipKeyGenerator`); (2) creates Keycloak user via Admin REST API using `randomUUID()` for username and `randomBytes(32).toString('hex')` for password; (3) performs direct-grant token exchange; (4) returns 201 with `access_token`, `refresh_token`, `expires_in`, `username`, `password`; (5) returns 502 if Keycloak is unreachable. Registered route in `v1Router.js` before the general rate limiter and authenticate middleware. Added 3 unit tests covering the 201 success case.
+- Files changed: app/routes/onboardRouter.js (new), app/routes/v1Router.js (add import + route), app/tests/unit/onboard.route.test.js (new), prd.json (US-083 passes=true)
+- **Learnings for future iterations:**
+  - `express-rate-limit` throws `ERR_ERL_KEY_GEN_IPV6` if you use `req.ip` directly in `keyGenerator` — always use the exported `ipKeyGenerator(req)` helper instead
+  - When unit-testing an Express route that uses `global.fetch` for external calls, the test's own `fetch()` calls to the local server are also intercepted — save `global.fetch` as `originalFetch` and pass through calls to `127.0.0.1` to avoid the test calling the mock instead of the actual server
+  - Public routes must be registered in `v1Router.js` BEFORE the `router.use(limiter)` and `router.use(authenticate)` lines to avoid requiring a JWT
+  - The `onboardRouter` accepts an optional `keycloak` dependency for testing; if `keycloak.getAdminToken` is present it's used, otherwise falls back to `client_credentials` fetch
+---
+
 ## 2026-03-17 - US-082
 - What was implemented: Replaced three hardcoded `admin` credentials in mongo-express service of docker-compose.yml with `${MONGO_USER:-admin}` and `${MONGO_PASSWORD:-admin}` env var references (consistent with docker-compose.prod.yml and the mongo service).
 - Files changed: docker-compose.yml (parameterize ME_CONFIG_MONGODB_ADMINUSERNAME, ME_CONFIG_MONGODB_ADMINPASSWORD, ME_CONFIG_MONGODB_URL), prd.json (US-082 passes=true)
