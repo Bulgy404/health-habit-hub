@@ -26,6 +26,7 @@ import privacyRouter from './routes/privacyRouter.js';
 import accessibilityRouter from './routes/accessibilityRouter.js';
 
 const app = express();
+app.set('trust proxy', 1);
 const port = config.port;
 const contextPath = process.env.APP_BASE_PATH || '/';
 console.log('ContextPath: ', contextPath);
