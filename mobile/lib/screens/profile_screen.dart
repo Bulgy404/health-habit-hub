@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../providers/auth_provider.dart';
@@ -211,9 +212,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           else if (_loading)
             const Center(child: CircularProgressIndicator())
           else if (_completedAt != null && !_editing)
-            _ProfileSummaryCard(
-              completedAt: _completedAt!,
-              onEdit: _startEdit,
+            Column(
+              children: [
+                Expanded(
+                  child: _ProfileSummaryCard(
+                    completedAt: _completedAt!,
+                    onEdit: _startEdit,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/onboarding/restore'),
+                    icon: const Icon(Icons.lock_reset),
+                    label: const Text('Restore account on this device'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                    ),
+                  ),
+                ),
+              ],
             )
           else if (_controller != null)
             WebViewWidget(controller: _controller!),
