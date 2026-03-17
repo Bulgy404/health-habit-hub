@@ -793,3 +793,19 @@
   - `String.fromEnvironment` with a `defaultValue` is the correct Dart pattern for compile-time env vars; values are injected via `--dart-define=KEY=value` at `flutter run` / `flutter build` time
   - `flutter analyze lib/` must be run from inside the `mobile/` directory
 ---
+
+## 2026-03-17 - US-075
+- What was implemented: Removed unused npm polyfill packages `fs` (^0.0.1-security) and `path` (^0.12.7) from `dependencies` in app/package.json. All `import fs from 'fs'` and `import path from 'path'` usages in source files are Node.js built-ins and continue to work without the npm packages.
+- Files changed: app/package.json (remove fs and path deps), app/package-lock.json (regenerated), prd.json (US-075 passes=true)
+- **Learnings for future iterations:**
+  - `fs` (npm) and `path` (npm) are polyfill/stub packages — Node.js provides both as built-ins; the npm packages add no value for server-side code
+  - grep results for `import ... from 'fs'` / `import ... from 'path'` are all Node.js built-in usage (not npm package usage) — safe to remove the npm deps
+---
+
+## 2026-03-17 - US-076
+- What was implemented: Removed all 8 TODO comments from app/utils/SparqlDatabase.js. Simple "Refactor" TODOs with no actionable detail were deleted outright. TODOs with meaningful context were replaced with // NOTE: comments: (1) label type mapping → NOTE about BCIO context categories; (2) NORMALIZE_LANG constant → NOTE about hardcoded 'en' and potential env var future; (3) translate(), addContext(), _appendContext(), addBehavior(), _appendBehavior() — bare "Refactor" TODOs removed. Ran `npx prettier --write` to fix blank-line formatting introduced by the edits.
+- Files changed: app/utils/SparqlDatabase.js (remove 8 TODO comments, add 2 NOTE comments), prd.json (US-076 passes=true)
+- **Learnings for future iterations:**
+  - After removing comment lines from a JS file, run `npx prettier --write` from app/ to catch any whitespace/blank-line formatting issues that would fail the `format:check` step
+  - TODO comments in this file were all stale (no bugs, just suggestions) — safe to remove or convert to NOTE
+---

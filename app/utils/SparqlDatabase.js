@@ -64,7 +64,6 @@ class ExperimentalSetting {
 
   constructor(setting) {
     this.id = uuid();
-    // TODO: Refactor constructor
     this.description = setting.closedDescription ? 'closed' : 'open';
     this.task = setting.closedTask ? 'closed' : 'open';
     if (this.isClosedTaskOpenDescription()) this.group = 'Group1';
@@ -126,7 +125,8 @@ class Donation {
     this.id = uuid();
     this.value = value;
     this.language = language;
-    // TODO: Refactor label constructor
+    // NOTE: Label type is derived from a static mapping of BCIO context categories.
+    // Behavior is the only non-context type; all others map to 'context'.
     this.labels = (labels || []).map(
       (label) =>
         new Label(
@@ -152,7 +152,6 @@ class Donation {
     return this.labels && this.labels.length > 0;
   }
 
-  // TODO: Refactor
   async translate(targetLanguage) {
     // Translation functions
     const translateValue = async () =>
@@ -205,7 +204,8 @@ class DbClient {
   }
 
   async insertDonateData(data, userId) {
-    // TODO: Move to config/env
+    // NOTE: NORMALIZE_LANG is hardcoded to 'en' as the canonical storage language.
+    // This could be moved to an environment variable if multi-language normalization is needed.
     const NORMALIZE_LANG = 'en';
 
     // Input data
@@ -307,7 +307,6 @@ class DbClient {
   }
 
   addContext(query, donation, experimentalSetting) {
-    // TODO: Refactor
     if (donation.translation) {
       return (
         query +
@@ -326,7 +325,6 @@ class DbClient {
     );
   }
 
-  // TODO: Refactor
   _appendContext(donation, translatedDonation, experimentalSetting) {
     return donation.labels
       .filter((label) => label.type === 'context')
@@ -353,7 +351,6 @@ class DbClient {
   }
 
   addBehavior(query, donation, experimentalSetting) {
-    // TODO: Refactor
     if (donation.translation) {
       return (
         query +
@@ -376,7 +373,6 @@ class DbClient {
     );
   }
 
-  // TODO: Refactor
   _appendBehavior(donation, translatedDonation, experimentalSetting) {
     const contextStatement = donation.labels
       .filter((label) => label.type === 'context')
