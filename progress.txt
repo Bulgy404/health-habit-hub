@@ -1,3 +1,12 @@
+## 2026-03-17 - US-078
+- What was implemented: Added `set -euo pipefail` as line 2 of backup-service/backup.sh. All environment variables were already initialized with `${VAR:-default}` syntax (BACKUP_RETENTION_DAYS, ALERT_WEBHOOK_URL, BACKUP_EMAIL, KEYCLOAK_HOST, KEYCLOAK_ADMIN, KEYCLOAK_ADMIN_PASSWORD, MONGO_USER, MONGO_PASSWORD, MAIL_USER, MAIL_PASS, MAIL_FROM), so no additional changes were needed to avoid -u false errors.
+- Files changed: backup-service/backup.sh (add set -euo pipefail), prd.json (US-078 passes=true)
+- **Learnings for future iterations:**
+  - backup.sh already uses `${VAR:-}` pattern throughout — adding `set -euo pipefail` required only inserting line 2
+  - `bash -n` only validates syntax (not execution); the script passes this check after the change
+  - All failure paths in backup.sh are wrapped in `if ... then ... else ... fi` blocks, which is compatible with `set -e`
+---
+
 ## 2026-03-17 - US-077
 - What was implemented: Added non-root user to API-service/Dockerfile. Added `RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser` after COPY, then `USER appuser` before EXPOSE and CMD.
 - Files changed: API-service/Dockerfile (add addgroup/adduser + USER directive), prd.json (US-077 passes=true)
