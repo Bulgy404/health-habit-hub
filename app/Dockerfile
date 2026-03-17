@@ -6,6 +6,9 @@ ENV NODE_ENV=production
 
 WORKDIR /usr/src/app
 
+# Install curl for Docker healthcheck
+RUN apk add --no-cache curl
+
 # Install dependencies first (leverages Docker layer cache)
 COPY --chown=node:node package*.json ./
 RUN npm ci --omit=dev --verbose

@@ -54,6 +54,12 @@ services:
       - traefik.http.routers.app.entrypoints=web
       - traefik.http.routers.app.service=app
       - traefik.http.services.app.loadbalancer.server.port=3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     develop:
       watch:
         - path: ./app
@@ -99,6 +105,12 @@ services:
       - ./mongo/entrypoint:/docker-entrypoint-initdb.d
       - ./mongo/data:/data/db
       - ./mongo/config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand({ping:1})"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
 
   mongo-express:
@@ -164,6 +176,12 @@ services:
       - neo4j-data:/data
       - neo4j-logs:/logs
       - ./fuseki/init:/import:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7474"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     depends_on:
       - proxy
     labels:
