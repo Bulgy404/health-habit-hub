@@ -1,6 +1,8 @@
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../config/app_config.dart';
+
 /// Authentication service for Keycloak OIDC/PKCE flow.
 ///
 /// Stores tokens in flutter_secure_storage and auto-refreshes
@@ -8,7 +10,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class AuthService {
   static const _clientId = 'hhh-flutter';
   static const _redirectUrl = 'de.tu-dresden.hhh://callback';
-  static const _keycloakBaseUrl = 'https://keycloak.hhh.tu-dresden.de';
+  static const _keycloakBaseUrl = AppConfig.keycloakUrl;
   static const _realm = 'hhh';
 
   static String get _discoveryUrl =>

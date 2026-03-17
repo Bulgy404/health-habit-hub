@@ -211,7 +211,13 @@ h3-traefik         running
 
 ## 5. Run Flutter App in Chrome
 
-The Flutter app lives in the `mobile/` directory.
+The Flutter app lives in the `mobile/` directory. All backend URLs are injected at compile time via `--dart-define` flags (defined in `mobile/lib/config/app_config.dart`):
+
+| Flag | Default (localhost) | Description |
+|------|--------------------|-|
+| `API_BASE_URL` | `http://localhost:3000/api/v1` | REST API base URL |
+| `KEYCLOAK_URL` | `http://localhost:8080` | Keycloak base URL (no realm path) |
+| `WS_BASE_URL` | `ws://localhost:3000/ws` | WebSocket base URL |
 
 ```bash
 cd mobile
@@ -227,6 +233,7 @@ flutter devices
 flutter run -d chrome \
   --dart-define=API_BASE_URL=http://localhost:3000/api/v1 \
   --dart-define=KEYCLOAK_URL=http://localhost:8080 \
+  --dart-define=WS_BASE_URL=ws://localhost:3000/ws \
   --dart-define=KEYCLOAK_REALM=hhh \
   --dart-define=KEYCLOAK_CLIENT_ID=hhh-flutter
 ```
@@ -268,6 +275,7 @@ flutter devices
 flutter run \
   --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1 \
   --dart-define=KEYCLOAK_URL=http://10.0.2.2:8080 \
+  --dart-define=WS_BASE_URL=ws://10.0.2.2:3000/ws \
   --dart-define=KEYCLOAK_REALM=hhh \
   --dart-define=KEYCLOAK_CLIENT_ID=hhh-flutter
 ```

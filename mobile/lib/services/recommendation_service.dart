@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recommendation.dart';
 import '../providers/auth_provider.dart';
 import 'auth_service.dart';
+import '../config/app_config.dart';
 
 /// Service for fetching and acting on habit recommendations.
 class RecommendationService {
-  static const _baseUrl = 'https://api.hhh.tu-dresden.de/api/v1';
+  static const _baseUrl = AppConfig.apiBaseUrl;
 
   final Dio _dio;
   final AuthService _authService;

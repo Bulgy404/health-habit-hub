@@ -7,11 +7,12 @@ import '../models/admin_session.dart';
 import '../models/admin_survey.dart';
 import '../models/participant_progress.dart';
 import '../providers/auth_provider.dart';
+import '../config/app_config.dart';
 import '../services/auth_service.dart';
 
 /// Service for admin API endpoints.
 class AdminService {
-  static const _baseUrl = 'https://api.hhh.tu-dresden.de/api/v1';
+  static const _baseUrl = AppConfig.apiBaseUrl;
 
   AdminService(this._authService);
 

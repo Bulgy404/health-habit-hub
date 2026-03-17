@@ -4,10 +4,11 @@ import '../models/habit_node.dart';
 import '../models/habit_stats.dart';
 import '../providers/auth_provider.dart';
 import 'auth_service.dart';
+import '../config/app_config.dart';
 
 /// Service for fetching public habit data and submitting anonymous annotations.
 class HabitService {
-  static const _baseUrl = 'https://api.hhh.tu-dresden.de/api/v1';
+  static const _baseUrl = AppConfig.apiBaseUrl;
 
   final Dio _dio;
   final AuthService _authService;
