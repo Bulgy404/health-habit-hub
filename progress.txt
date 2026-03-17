@@ -1,3 +1,11 @@
+## 2026-03-17 - US-077
+- What was implemented: Added non-root user to API-service/Dockerfile. Added `RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser` after COPY, then `USER appuser` before EXPOSE and CMD.
+- Files changed: API-service/Dockerfile (add addgroup/adduser + USER directive), prd.json (US-077 passes=true)
+- **Learnings for future iterations:**
+  - python:3.11-slim uses Debian-based commands: `addgroup --system` and `adduser --system --ingroup` (not `adduser -S -G` which is Alpine syntax)
+  - Place USER directive after COPY so files are copied as root (needed for pip install), then switch to non-root user before CMD
+---
+
 ## 2026-03-17 - US-074
 - What was implemented: Added Docker healthchecks to app, mongo, and neo4j services in both docker-compose.yml and docker-compose.prod.yml. Added `apk add --no-cache curl` to app/Dockerfile so curl is available for the healthcheck. Health checks: app uses `curl -f http://localhost:3000/api/v1/health` (interval 30s, timeout 10s, retries 5, start_period 30s); mongo uses `mongosh --eval 'db.runCommand({ping:1})'` (same timing, start_period 30s); neo4j uses `wget -q -O /dev/null http://localhost:7474` (same timing, start_period 60s — longer to allow neo4j to start).
 - Files changed: app/Dockerfile (add curl), docker-compose.yml (healthchecks on app, mongo, neo4j), docker-compose.prod.yml (same healthchecks), prd.json (US-074 passes=true)
