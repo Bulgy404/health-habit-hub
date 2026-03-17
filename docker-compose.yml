@@ -41,7 +41,6 @@ services:
       - MONGO_USER=admin
       - MONGO_PASSWORD=admin
       - MONGO_HOST=mongo
-    user: root
     ports:
       - ${APP_HOST_PORT:-3000}:3000
     networks:
@@ -89,8 +88,8 @@ services:
     container_name: h3-mongo
     restart: unless-stopped
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=admin
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-admin}
       - MONGO_INITDB_DATABASE=surveyjs
     ports:
       - 27017:27017
@@ -100,8 +99,7 @@ services:
       - ./mongo/entrypoint:/docker-entrypoint-initdb.d
       - ./mongo/data:/data/db
       - ./mongo/config:/data/configdb
-    depends_on:
-      - app
+
 
   mongo-express:
     image: mongo-express:latest
@@ -140,8 +138,6 @@ services:
     env_file:
       - .env
     tty: true
-    depends_on:
-      - app
     labels:
       - traefik.enable=true
       - traefik.http.routers.translate.rule=Host(`${TRANSLATE_HOST:-translate}.${PATH_SUFFIX:-localhost}`)

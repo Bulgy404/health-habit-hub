@@ -327,7 +327,28 @@ jobs:
         run: bash tests/ontology/test-ontology.sh
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # 9. GATE – all jobs must pass before deploy can proceed
+  # 9. DOCKER – build validation (all four custom images)
+  # ─────────────────────────────────────────────────────────────────────────────
+  docker-build:
+    name: Docker – build images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build app (Node.js)
+        run: docker build ./app
+
+      - name: Build recommender (Python)
+        run: docker build ./API-service
+
+      - name: Build fuseki
+        run: docker build ./fuseki
+
+      - name: Build backup-service
+        run: docker build ./backup-service
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 10. GATE – all jobs must pass before deploy can proceed
   # ─────────────────────────────────────────────────────────────────────────────
   ci-passed:
     name: All checks passed
@@ -341,5 +362,6 @@ jobs:
       - flutter-test
       - flutter-build-web
       - ontology-test
+      - docker-build
     steps:
       - run: echo "All CI jobs passed."

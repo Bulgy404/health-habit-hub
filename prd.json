@@ -1118,6 +1118,39 @@
       "priority": 68,
       "passes": true,
       "notes": ""
+    },
+    {
+      "id": "US-069",
+      "title": "Add Docker build validation to CI and fix docker-compose.yml dev issues",
+      "description": "As a developer, I want Dockerfile regressions caught in CI and local dev to work correctly.",
+      "acceptanceCriteria": [
+        "Add a new CI job 'docker-build' in .github/workflows/ci.yml that runs 'docker build' for all four custom images: ./app (Node.js), ./API-service (Python recommender), ./fuseki, ./backup-service \u2014 job fails if any build fails",
+        "Add 'docker-build' to the needs list of the ci-passed gate job",
+        "In docker-compose.yml: remove 'user: root' from the app service (Dockerfile already sets USER node)",
+        "In docker-compose.yml: fix depends_on \u2014 remove 'app' from mongo's depends_on (mongo does not depend on app); remove 'app' from translate's depends_on (translate does not depend on app)",
+        "In docker-compose.yml: replace hardcoded MONGO_INITDB_ROOT_PASSWORD=admin with MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-admin} and MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin} to match the pattern used in docker-compose.prod.yml",
+        "Commit and push to branch ralph/hhh-platform-unified"
+      ],
+      "priority": 69,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-070",
+      "title": "Full repo audit: identify and document all code quality issues",
+      "description": "As a developer, I want a thorough professional audit of the entire repository so that every inconsistency, gap, and clean code violation is tracked as an actionable user story.",
+      "acceptanceCriteria": [
+        "Act as a senior software engineer and audit the ENTIRE repository \u2014 every directory, every file type: Node.js backend (app/), Flutter app (mobile/), Python recommender (API-service/), Docker/compose files, shell scripts, CI/CD workflows, documentation, and configuration files",
+        "For each problem found, write a concise entry in a new file AUDIT.md at the repo root. Each entry must include: file path(s), description of the problem, why it violates clean code / best practice, and the suggested fix",
+        "Categories to check: hardcoded secrets or credentials, inconsistent environment variable usage across docker-compose.yml vs docker-compose.prod.yml vs stack.env, dead code or unused imports/variables, missing error handling, inconsistent naming conventions (camelCase vs snake_case vs PascalCase used incorrectly), duplicate logic that should be shared, missing or incorrect TypeScript/Dart types, TODO/FIXME/HACK comments left in code, outdated or mismatched dependency versions (package.json vs Dockerfile Node version vs CI node version), missing .gitignore entries for generated files, API endpoints without input validation, inconsistent HTTP status codes, missing rate limiting on any unprotected endpoints, Flutter services with hardcoded base URLs that should be configurable, shell scripts without set -euo pipefail, Docker images pinned to 'latest' (unpinned), docker-compose services missing health checks, missing or stale documentation, and any other issues a professional would flag in a code review",
+        "After completing AUDIT.md, add one new user story to prd.json for EACH distinct problem found \u2014 each story must have a clear title, description, and verifiable acceptance criteria following the existing prd.json format with sequential IDs starting from US-071",
+        "Keep each generated user story small enough to complete in one Ralph iteration (one focused fix, not a sweeping refactor)",
+        "Do not fix anything yet \u2014 only audit, document, and create the user stories",
+        "Commit AUDIT.md and the updated prd.json to branch ralph/hhh-platform-unified"
+      ],
+      "priority": 70,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
