@@ -110,7 +110,7 @@ services:
       - traefik.http.routers.fuseki.middlewares=fuseki-stripprefix
 
   mongo:
-    image: mongo:latest
+    image: mongo:7.0
     container_name: h3-mongo
     restart: always
     environment:
@@ -126,7 +126,7 @@ services:
       - /mnt/data/appdata/hhh/mongo/config:/data/configdb
 
   mongo-express:
-    image: mongo-express:latest
+    image: mongo-express:1.0
     container_name: h3-mongo-express
     restart: always
     environment:
@@ -151,7 +151,7 @@ services:
       - traefik.http.services.mongo-express.loadbalancer.server.port=8081
 
   translate:
-    image: libretranslate/libretranslate:latest
+    image: libretranslate/libretranslate:1.5
     container_name: h3-translate
     restart: always
     # LibreTranslate runs as 'libretranslate' user (UID 1032)

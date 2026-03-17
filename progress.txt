@@ -1,3 +1,11 @@
+## 2026-03-17 - US-073
+- What was implemented: Pinned all `:latest` Docker image tags to explicit versions in docker-compose.yml, docker-compose.prod.yml, and backup-service/Dockerfile.
+- Files changed: docker-compose.yml (mongo-express:1.0, libretranslate/libretranslate:1.5), docker-compose.prod.yml (mongo:7.0, mongo-express:1.0, libretranslate/libretranslate:1.5), backup-service/Dockerfile (alpine:3.21), prd.json (US-073 passes=true)
+- **Learnings for future iterations:**
+  - Pinned versions: mongo:7.0, mongo-express:1.0, libretranslate/libretranslate:1.5, alpine:3.21
+  - `docker compose -f <file> config` validates YAML and reports missing env vars as warnings (not errors)
+---
+
 ## 2026-03-17 - US-071
 - What was implemented: Created `.env.example` with all variable names from `.env` but with `CHANGE_THIS_*` placeholder values (no real credentials). Added `!.env.example` negation rule to `.gitignore` so the example file is tracked despite the `.env*` wildcard. The `.env` file itself was already removed from git tracking in a prior commit (1b62aea). README.md already referenced `cp .env.example .env` as the setup step.
 - Files changed: .env.example (new), .gitignore (add !.env.example negation), prd.json (US-071 passes=true)
@@ -765,4 +773,13 @@
   - KEYCLOAK_ADMIN_PASSWORD must be explicitly checked for empty string before hitting the API — `curl -sf` would fail silently with empty password producing a confusing error
   - `docker-compose` service names (app, recommender, keycloak) differ from container names (h3-app, h3-recommender, h3-keycloak) — always use service names with docker-compose CLI
   - `set -euo pipefail` with `grep -q` in a pipeline: if grep finds no match it exits non-zero, which triggers `set -e`. Use `|| true` after grep in non-critical checks to avoid premature script failure
+---
+
+## 2026-03-17 - US-072
+- What was implemented: Created `mobile/lib/config/app_config.dart` with `AppConfig` abstract final class exposing three `String.fromEnvironment` constants: `apiBaseUrl` (default `http://localhost:3000/api/v1`), `keycloakUrl` (default `http://localhost:8080`), `wsBaseUrl` (default `ws://localhost:3000/ws`). Replaced hardcoded `https://api.hhh.tu-dresden.de/api/v1` and `https://keycloak.hhh.tu-dresden.de` strings in all six service files with references to `AppConfig` constants. Changed `_wsUrl` in `recommendation_ws_service.dart` from `static const` to `static final` since string interpolation of a const isn't itself const. Updated `docs/guides/developer-onboarding.md`: added `WS_BASE_URL` flag to both Chrome and Android emulator run commands, and added an `--dart-define` reference table above the Flutter section.
+- Files changed: mobile/lib/config/app_config.dart (new), mobile/lib/services/admin_service.dart, auth_service.dart, habit_service.dart, recommendation_service.dart, recommendation_ws_service.dart, survey_service.dart (all updated), docs/guides/developer-onboarding.md, prd.json (US-072 passes=true)
+- **Learnings for future iterations:**
+  - String interpolation in Dart (`'${AppConfig.wsBaseUrl}/path'`) produces a non-const value even when the interpolated variable is const — use `static final` (not `static const`) for interpolated URL fields
+  - `String.fromEnvironment` with a `defaultValue` is the correct Dart pattern for compile-time env vars; values are injected via `--dart-define=KEY=value` at `flutter run` / `flutter build` time
+  - `flutter analyze lib/` must be run from inside the `mobile/` directory
 ---

@@ -102,7 +102,7 @@ services:
 
 
   mongo-express:
-    image: mongo-express:latest
+    image: mongo-express:1.0
     container_name: h3-mongo-express
     restart: unless-stopped
     environment:
@@ -126,7 +126,7 @@ services:
       - traefik.http.services.mongo-express.loadbalancer.server.port=8081
 
   translate:
-    image: libretranslate/libretranslate:latest
+    image: libretranslate/libretranslate:1.5
     container_name: h3-translate
     restart: always
     ports:

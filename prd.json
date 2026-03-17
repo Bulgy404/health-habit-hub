@@ -1194,7 +1194,7 @@
         "No remaining :latest tags in docker-compose.yml, docker-compose.prod.yml, or backup-service/Dockerfile"
       ],
       "priority": 73,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
