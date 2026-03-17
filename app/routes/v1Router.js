@@ -9,6 +9,7 @@ import { createRecommendRouter } from './recommendRouter.js';
 import { createProfileRouter } from './profileRouter.js';
 import { createHabitsRouter } from './habitsRouter.js';
 import { createAdminRouter } from './adminRouter.js';
+import { createOnboardRouter } from './onboardRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 import { swaggerSpec } from '../swagger.js';
 
@@ -110,6 +111,9 @@ export function createV1Router({
     const httpStatus = result.status === 'ok' ? 200 : 503;
     res.status(httpStatus).json(result);
   });
+
+  // Public: anonymous self-registration (rate limited separately, no JWT required)
+  router.use('/onboard', createOnboardRouter({ keycloak }));
 
   // Apply rate limiting and input sanitization to all authenticated routes
   router.use(limiter);
