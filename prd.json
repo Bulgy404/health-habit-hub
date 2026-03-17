@@ -1303,7 +1303,7 @@
         "git status shows no unintended untracked files after the change"
       ],
       "priority": 81,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
