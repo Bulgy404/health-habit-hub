@@ -13,6 +13,7 @@ import 'screens/admin/admin_surveys_screen.dart';
 import 'screens/donate_screen.dart';
 import 'screens/explore_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/onboarding/welcome_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/recommend_screen.dart';
 import 'screens/shell_screen.dart';
@@ -32,15 +33,27 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/login',
     // Redirect guard: only admin/researcher roles may access /admin/* routes.
     redirect: (context, state) async {
-      if (!state.matchedLocation.startsWith('/admin')) return null;
-      try {
-        final roles = await ref.read(userRolesProvider.future);
-        if (!roles.contains('admin') && !roles.contains('researcher')) {
+      // Admin guard: only admin/researcher roles may access /admin/* routes.
+      if (state.matchedLocation.startsWith('/admin')) {
+        try {
+          final roles = await ref.read(userRolesProvider.future);
+          if (!roles.contains('admin') && !roles.contains('researcher')) {
+            return '/';
+          }
+        } catch (_) {
           return '/';
         }
-      } catch (_) {
-        return '/';
+        return null;
       }
+
+      // Onboarding bypass: if the user has already completed onboarding,
+      // skip the welcome screen entirely.
+      if (state.matchedLocation.startsWith('/onboarding/welcome')) {
+        if (await isOnboardingComplete()) {
+          return '/login';
+        }
+      }
+
       return null;
     },
     routes: [
@@ -51,6 +64,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           final token = state.uri.queryParameters['token'];
           return LoginScreen(initialUsername: user, initialPassword: token);
         },
+      ),
+      GoRoute(
+        path: '/onboarding/welcome',
+        builder: (context, state) => const WelcomeScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/passphrase',
+        // Placeholder — implemented in US-085.
+        builder: (context, state) => const Scaffold(
+          body: Center(child: Text('Passphrase screen coming soon')),
+        ),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
