@@ -1,3 +1,30 @@
+## 2026-03-17 - US-071
+- What was implemented: Created `.env.example` with all variable names from `.env` but with `CHANGE_THIS_*` placeholder values (no real credentials). Added `!.env.example` negation rule to `.gitignore` so the example file is tracked despite the `.env*` wildcard. The `.env` file itself was already removed from git tracking in a prior commit (1b62aea). README.md already referenced `cp .env.example .env` as the setup step.
+- Files changed: .env.example (new), .gitignore (add !.env.example negation), prd.json (US-071 passes=true)
+- **Learnings for future iterations:**
+  - When `.gitignore` has `.env*`, a `.env.example` file is also ignored — add `!.env.example` negation rule to allow tracking the example file
+  - `.env` was already removed from git tracking in commit 1b62aea; `git ls-files .env` returns empty confirming it's untracked
+  - IMPORTANT: All real credentials in .env history should be rotated (ADMIN_PASSWORD, DB_PASSWORD, NEO4J_PASSWORD, MONGO_PASSWORD, MONGO_EXPRESS_PASSWORD, MAIL_USER, MAIL_PASS, RECAPTCHA keys, TRAEFIK_DASHBOARD_AUTH) — rotation is out of scope for this story
+---
+
+## 2026-03-17 - US-070
+- What was implemented: Created `AUDIT.md` at repo root documenting 12 distinct code quality issues found across the repository. Added 12 new user stories (US-071 through US-082) to prd.json, one per issue found. Set US-070 passes=true.
+- Files changed: AUDIT.md (new), prd.json (US-070 passes=true, add US-071 through US-082)
+- Issues documented: (1) .env committed with real credentials, (2) Hardcoded production URLs in Flutter services, (3) Docker images using :latest, (4) Missing health checks on app/mongo/neo4j, (5) Dead npm deps `fs` and `path`, (6) TODO comments in SparqlDatabase.js, (7) API-service Dockerfile runs as root, (8) backup.sh missing set -euo pipefail, (9) Rate limiter missing trust proxy config, (10) Keycloak prod uses start-dev, (11) .gitignore missing common patterns, (12) mongo-express hardcoded credentials
+- **Learnings for future iterations:**
+  - Audit stories should be focused enough to complete in one iteration — each US-071..US-082 is a single, minimal fix
+  - AUDIT.md follows format: ID, file path, problem description, why it violates best practice, suggested fix
+---
+
+## 2026-03-17 - US-069
+- What was implemented: (1) Added `docker-build` CI job to `.github/workflows/ci.yml` — runs `docker build` for all four custom images (./app, ./API-service, ./fuseki, ./backup-service) in sequence; job fails on any build error. (2) Added `docker-build` to the `needs` list of the `ci-passed` gate job. (3) In `docker-compose.yml`: removed `user: root` from the app service (Dockerfile already sets USER node). (4) Removed `app` from mongo's `depends_on` (mongo has no dependency on the app service). (5) Removed `app` from translate's `depends_on` (translate has no dependency on the app service). (6) Replaced hardcoded `MONGO_INITDB_ROOT_USERNAME=admin` and `MONGO_INITDB_ROOT_PASSWORD=admin` with `${MONGO_USER:-admin}` and `${MONGO_PASSWORD:-admin}` to use env vars consistently with docker-compose.prod.yml.
+- Files changed: .github/workflows/ci.yml (add docker-build job + gate needs), docker-compose.yml (remove user:root, fix depends_on, parameterize mongo creds), prd.json (US-069 passes=true)
+- **Learnings for future iterations:**
+  - `docker build <context>` in CI doesn't need `--tag` — the build itself is the validation; add `--no-cache` if you want to test from scratch (but omit for speed in CI)
+  - Service `depends_on` in docker-compose should only list services the container truly needs to start (not services that need it) — circular or incorrect depends_on can prevent healthy startups
+  - `user: root` in docker-compose overrides the USER directive in the Dockerfile — removing it defers to the Dockerfile's USER directive (least privilege)
+---
+
 ## 2026-03-16 - US-068
 - What was implemented: (1) Split the single multi-statement MERGE cypher-shell call in the "Seed minimal test data" CI step into 8 separate cypher-shell calls (one per MERGE/MATCH), eliminating shell-quoting and multi-statement parsing issues. Relationship merges use MATCH to find existing nodes since variables don't persist across separate cypher-shell invocations. (2) Fixed `assert_cypher_count` in `tests/ontology/test-ontology.sh`: replaced `grep -cE '^[0-9]'` (which counted lines starting with a digit — always 1 for a COUNT query, even if count=0) with `tail -n +2 | head -1 | tr -d '[:space:]'` to extract the actual integer value from the second line of cypher-shell --format plain output, with a regex guard to default to 0 for non-numeric output.
 - Files changed: .github/workflows/ci.yml (split seed step into 8 separate cypher-shell calls), tests/ontology/test-ontology.sh (fix assert_cypher_count), prd.json (US-068 passes=true)
