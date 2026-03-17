@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../services/survey_service.dart';
 
 /// Profile questionnaire screen.
@@ -205,41 +206,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('My Profile')),
-      body: Stack(
+      body: Column(
         children: [
-          if (_offline)
-            _OfflineBanner(onRetry: _init)
-          else if (_loading)
-            const Center(child: CircularProgressIndicator())
-          else if (_completedAt != null && !_editing)
-            Column(
+          Expanded(
+            child: Stack(
               children: [
-                Expanded(
-                  child: _ProfileSummaryCard(
-                    completedAt: _completedAt!,
-                    onEdit: _startEdit,
+                if (_offline)
+                  _OfflineBanner(onRetry: _init)
+                else if (_loading)
+                  const Center(child: CircularProgressIndicator())
+                else if (_completedAt != null && !_editing)
+                  Column(
+                    children: [
+                      Expanded(
+                        child: _ProfileSummaryCard(
+                          completedAt: _completedAt!,
+                          onEdit: _startEdit,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                        child: OutlinedButton.icon(
+                          onPressed: () =>
+                              context.push('/onboarding/restore'),
+                          icon: const Icon(Icons.lock_reset),
+                          label:
+                              const Text('Restore account on this device'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 48),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                else if (_controller != null)
+                  WebViewWidget(controller: _controller!),
+                if (_submitting)
+                  const ColoredBox(
+                    color: Color(0x44000000),
+                    child: Center(child: CircularProgressIndicator()),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push('/onboarding/restore'),
-                    icon: const Icon(Icons.lock_reset),
-                    label: const Text('Restore account on this device'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                    ),
-                  ),
-                ),
               ],
-            )
-          else if (_controller != null)
-            WebViewWidget(controller: _controller!),
-          if (_submitting)
-            const ColoredBox(
-              color: Color(0x44000000),
-              child: Center(child: CircularProgressIndicator()),
             ),
+          ),
+          const _AppearanceSection(),
         ],
       ),
     );
@@ -293,6 +303,58 @@ class _ProfileSummaryCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Appearance section — theme mode toggle (Light / Dark / System).
+// ---------------------------------------------------------------------------
+
+class _AppearanceSection extends ConsumerWidget {
+  const _AppearanceSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+    final notifier = ref.read(themeModeProvider.notifier);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Divider(),
+          const SizedBox(height: 4),
+          Text(
+            'Appearance',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<ThemeMode>(
+            segments: const [
+              ButtonSegment(
+                value: ThemeMode.light,
+                label: Text('Light'),
+                icon: Icon(Icons.light_mode),
+              ),
+              ButtonSegment(
+                value: ThemeMode.system,
+                label: Text('System'),
+                icon: Icon(Icons.brightness_auto),
+              ),
+              ButtonSegment(
+                value: ThemeMode.dark,
+                label: Text('Dark'),
+                icon: Icon(Icons.dark_mode),
+              ),
+            ],
+            selected: {themeMode},
+            onSelectionChanged: (selected) =>
+                notifier.setMode(selected.first),
+          ),
+        ],
       ),
     );
   }

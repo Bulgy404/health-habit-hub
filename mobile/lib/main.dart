@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'models/admin_survey.dart';
 import 'providers/auth_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/admin/admin_devices_screen.dart';
 import 'screens/admin/admin_habits_screen.dart';
 import 'screens/admin/admin_participant_detail_screen.dart';
@@ -299,6 +300,113 @@ ThemeData _buildLightTheme() {
   );
 }
 
+ThemeData _buildDarkTheme() {
+  const kDarkBackground = Color(0xFF1a1a1a);
+  const kDarkSurface = Color(0xFF2a2a2a);
+  const kDarkOnSurface = Color(0xFFf0f0f0);
+
+  final colorScheme = ColorScheme.fromSeed(
+    seedColor: _kPrimary,
+    primary: _kPrimary,
+    secondary: _kAccent,
+    surface: kDarkSurface,
+    onPrimary: Colors.white,
+    onSecondary: Colors.white,
+    onSurface: kDarkOnSurface,
+    brightness: Brightness.dark,
+  );
+
+  final base = ThemeData(
+    useMaterial3: true,
+    colorScheme: colorScheme,
+    scaffoldBackgroundColor: kDarkBackground,
+  );
+
+  return base.copyWith(
+    textTheme: GoogleFonts.figtreeTextTheme(base.textTheme),
+    primaryColor: _kPrimary,
+    appBarTheme: const AppBarTheme(
+      backgroundColor: _kNavBar,
+      foregroundColor: Colors.white,
+      iconTheme: IconThemeData(color: Colors.white),
+      actionsIconTheme: IconThemeData(color: Colors.white),
+    ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: _kNavBar,
+      indicatorColor: _kPrimary,
+      iconTheme: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return const IconThemeData(color: Colors.white);
+        }
+        return IconThemeData(color: Colors.white.withAlpha(153));
+      }),
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return GoogleFonts.figtree(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          );
+        }
+        return GoogleFonts.figtree(
+          color: Colors.white.withAlpha(153),
+          fontSize: 12,
+        );
+      }),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: _kPrimary,
+        foregroundColor: Colors.white,
+        textStyle: GoogleFonts.figtree(fontWeight: FontWeight.bold),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: _kPrimary,
+        foregroundColor: Colors.white,
+        textStyle: GoogleFonts.figtree(fontWeight: FontWeight.bold),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: _kPrimary,
+        side: const BorderSide(color: _kPrimary, width: 1.5),
+        textStyle: GoogleFonts.figtree(fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: _kPrimary,
+        textStyle: GoogleFonts.figtree(),
+      ),
+    ),
+    cardTheme: CardThemeData(
+      color: kDarkSurface,
+      elevation: 4,
+      shadowColor: const Color(0x40000000),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: const BorderSide(color: _kPrimary, width: 2),
+      ),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: _kChipGreen,
+      labelStyle: const TextStyle(color: Colors.white),
+      selectedColor: _kPrimaryDark,
+    ),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
@@ -309,9 +417,12 @@ class HhhApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
       title: 'Health Habit Hub',
       theme: _buildLightTheme(),
+      darkTheme: _buildDarkTheme(),
+      themeMode: themeMode,
       routerConfig: router,
     );
   }
