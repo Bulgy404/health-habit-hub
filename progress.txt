@@ -1,3 +1,11 @@
+## 2026-03-18 - US-093
+- What was implemented: Verified that the SdkRoot fix was already fully applied by commit 3af6687. The project-level Profile XCBuildConfiguration (249021D3217E4FDB00AE95B9) already contains `SDKROOT = iphoneos` and `SUPPORTED_PLATFORMS = iphoneos`. Profile.xcconfig is wired as `baseConfigurationReference` in the Runner target's Profile config (249021D4217E4FDB00AE95B9). `flutter analyze` passes with no issues.
+- Files changed: prd.json (US-093 passes=true)
+- **Learnings for future iterations:**
+  - `native_assets` is a Flutter-generated target not present in project.pbxproj — the fix is to ensure the project-level Profile XCBuildConfiguration has SDKROOT and SUPPORTED_PLATFORMS, which was already done in commit 3af6687
+  - When the acceptance criteria says "add X if missing" and X is already present, mark as complete after verifying flutter analyze passes
+---
+
 ## 2026-03-18 - US-092
 - What was implemented: Uncommented `platform :ios, '13.0'` in mobile/ios/Podfile (removes the 'Automatically assigning platform' warning). Created mobile/ios/Flutter/Profile.xcconfig with two lines matching Debug.xcconfig/Release.xcconfig pattern: `#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"` and `#include "Generated.xcconfig"` (removes the missing xcconfig warning for Profile build configuration).
 - Files changed: mobile/ios/Podfile (uncomment platform line), mobile/ios/Flutter/Profile.xcconfig (new), prd.json (US-092 passes=true)
