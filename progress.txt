@@ -1,3 +1,11 @@
+## 2026-03-18 - US-094
+- What was implemented: Changed CFBundleName from 'hhh' to 'Health Habit Hub' in mobile/ios/Runner/Info.plist (CFBundleDisplayName was already 'Health Habit Hub'). Changed android:label from 'hhh' to 'Health Habit Hub' in mobile/android/app/src/main/AndroidManifest.xml. pubspec.yaml `name: hhh` left unchanged (Dart package identifier).
+- Files changed: mobile/ios/Runner/Info.plist (CFBundleName), mobile/android/app/src/main/AndroidManifest.xml (android:label), prd.json (US-094 passes=true)
+- **Learnings for future iterations:**
+  - iOS has two bundle name fields: CFBundleDisplayName (shown on home screen, was already 'Health Habit Hub') and CFBundleName (short name used in alerts/menus, was 'hhh' — needed updating)
+  - Android app label in AndroidManifest.xml `<application android:label=...>` is the display name shown to users; pubspec.yaml `name:` is the Dart package identifier and must not be changed
+---
+
 ## 2026-03-18 - US-093
 - What was implemented: Verified that the SdkRoot fix was already fully applied by commit 3af6687. The project-level Profile XCBuildConfiguration (249021D3217E4FDB00AE95B9) already contains `SDKROOT = iphoneos` and `SUPPORTED_PLATFORMS = iphoneos`. Profile.xcconfig is wired as `baseConfigurationReference` in the Runner target's Profile config (249021D4217E4FDB00AE95B9). `flutter analyze` passes with no issues.
 - Files changed: prd.json (US-093 passes=true)
