@@ -1523,6 +1523,22 @@
       "priority": 94,
       "passes": true,
       "notes": ""
+    },
+    {
+      "id": "US-095",
+      "title": "Recheck and verify US-091 through US-094 are fully complete",
+      "description": "As a developer, I want to confirm that the icon, SdkRoot fix, and app name changes from US-091–094 are all correctly implemented and working end-to-end.",
+      "acceptanceCriteria": [
+        "US-091 (icon): mobile/assets/icon/app_icon.png exists at 1024×1024px; mobile/assets/icon/generate_icon.py exists and re-running it regenerates the same PNG; generated platform icons exist at android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png and ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json; icon is visually a bold minimalistic graph node (not the default Flutter icon)",
+        "US-092 (CocoaPods): running `cd mobile/ios && pod install` completes with zero [!] warnings",
+        "US-093 (SdkRoot): running `flutter build ios --no-codesign 2>&1 | grep -i sdkroot` returns no matches",
+        "US-094 (app name): mobile/ios/Runner/Info.plist CFBundleName is 'Health Habit Hub'; mobile/android/app/src/main/AndroidManifest.xml android:label is 'Health Habit Hub'",
+        "flutter analyze passes",
+        "If any check fails, fix it before marking this story as passing"
+      ],
+      "priority": 95,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
