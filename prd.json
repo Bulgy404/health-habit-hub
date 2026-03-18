@@ -1459,6 +1459,23 @@
       "priority": 90,
       "passes": true,
       "notes": "All fixes already applied in previous session (captured in US-064). ci.yml: --audit-level=critical in backend-security; fuseki service and ENABLE_INTEGRATION removed from backend-integration; flutter-version pin removed from all Flutter jobs. deploy.yml: flutter-version pin removed from release job."
+    },
+    {
+      "id": "US-091",
+      "title": "Design and implement app icon representing health habits and graph databases",
+      "description": "As a user, I want a distinctive app icon that visually communicates the app's purpose — connecting personal health habits to a knowledge graph.",
+      "acceptanceCriteria": [
+        "Design concept: a stylised graph network (nodes connected by edges) where the nodes are rendered as small leaf/heart shapes in the HabShare green (#45b700), suggesting health and growth; the overall silhouette forms a recognisable circular badge on a dark charcoal (#454446) or white background",
+        "Generate the master icon as a 1024×1024 PNG at mobile/assets/icon/app_icon.png using only Dart/Flutter (dart:ui canvas drawing) or Python (Pillow/cairo) — no external design tools or binary blobs committed to the repo",
+        "Add flutter_launcher_icons: ^0.14.0 to pubspec.yaml dev_dependencies",
+        "Add a flutter_launcher_icons config section in pubspec.yaml: image_path: assets/icon/app_icon.png, android: true, ios: true, web.generate: true, windows.generate: false, macos.generate: false",
+        "Run flutter pub run flutter_launcher_icons to generate all platform icon sizes (Android mipmap-*, iOS AppIcon.appiconset, web/favicon.png)",
+        "Verify generated icons exist: android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png, ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+        "flutter analyze passes"
+      ],
+      "priority": 91,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
