@@ -1476,6 +1476,20 @@
       "priority": 91,
       "passes": true,
       "notes": "Generated 1024x1024 PNG icon with Python/Pillow: charcoal (#454446) circular background with a graph network of 9 nodes (5 heart-shaped, 4 circle-with-highlight) in HabShare green (#45b700) connected by white edges. Added flutter_launcher_icons: ^0.14.0 to dev_dependencies. Added flutter_launcher_icons config + assets section to pubspec.yaml. Ran flutter pub run flutter_launcher_icons — generated Android mipmap-*, iOS AppIcon.appiconset, and web icons. flutter analyze passes with no issues."
+    },
+    {
+      "id": "US-092",
+      "title": "Fix iOS CocoaPods warnings: missing platform specifier and Profile xcconfig",
+      "description": "As a developer, I want pod install to complete without warnings so that iOS builds work reliably in all build configurations.",
+      "acceptanceCriteria": [
+        "In mobile/ios/Podfile: uncomment the platform line so it reads `platform :ios, '13.0'` (removes the 'Automatically assigning platform' warning)",
+        "Create mobile/ios/Flutter/Profile.xcconfig with exactly two lines matching the pattern of Debug.xcconfig and Release.xcconfig: first line `#include? \"Pods/Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig\"`, second line `#include \"Generated.xcconfig\"`",
+        "Running `cd mobile/ios && pod install` produces no [!] warnings",
+        "flutter analyze passes"
+      ],
+      "priority": 92,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
