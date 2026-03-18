@@ -969,3 +969,13 @@
   - Generated icon sizes include some legacy iOS sizes (50x50, 57x57, 72x72) as untracked new files — always `git add` the entire appiconset directory
   - The `flutter.assets` section is required even for the icon asset if it is referenced in pubspec; otherwise the app build will fail
 ---
+
+## 2026-03-18 - US-095
+- What was implemented: Created `mobile/assets/icon/generate_icon.py` (the missing source script from US-091) — deterministic Pillow script producing a 1024×1024 PNG with charcoal (#454446) circular background, 9-node graph (5 hearts + 4 circles-with-inner-highlight) in HabShare green (#45b700), white anti-aliased edges with glow halos, masked to a circle. Re-ran `flutter pub run flutter_launcher_icons` to regenerate all Android mipmap, iOS AppIcon.appiconset, and web icon assets from the new script's output. Confirmed US-092 (Podfile platform line uncommented), US-093 (SDKROOT in project.pbxproj), US-094 (Info.plist CFBundleName and AndroidManifest android:label both 'Health Habit Hub'). flutter analyze passes.
+- Files changed: mobile/assets/icon/generate_icon.py (new), mobile/assets/icon/app_icon.png (regenerated), mobile/android/app/src/main/res/mipmap-*/ic_launcher.png (regenerated), mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/* (regenerated), mobile/web/favicon.png + icons/* (regenerated), prd.json (US-095 passes=true)
+- **Learnings for future iterations:**
+  - Always commit the generation script alongside the generated asset — the acceptance criteria will ask for both
+  - `generate_icon.py` must be deterministic (no randomness) so "re-running it regenerates the same PNG" is strictly satisfied
+  - Heart shape: parametric `x = 16 sin³(t)`, `y = -(13 cos(t) − 5 cos(2t) − 2 cos(3t) − cos(4t))` scaled by `size/17`
+  - `flutter pub run flutter_launcher_icons` regenerates all platform icons from `image_path` in pubspec.yaml; the WARNING about alpha channel on iOS does not block success
+---
