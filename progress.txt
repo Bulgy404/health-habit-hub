@@ -1,3 +1,12 @@
+## 2026-03-18 - US-092
+- What was implemented: Uncommented `platform :ios, '13.0'` in mobile/ios/Podfile (removes the 'Automatically assigning platform' warning). Created mobile/ios/Flutter/Profile.xcconfig with two lines matching Debug.xcconfig/Release.xcconfig pattern: `#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"` and `#include "Generated.xcconfig"` (removes the missing xcconfig warning for Profile build configuration).
+- Files changed: mobile/ios/Podfile (uncomment platform line), mobile/ios/Flutter/Profile.xcconfig (new), prd.json (US-092 passes=true)
+- **Learnings for future iterations:**
+  - Profile.xcconfig follows the same two-line pattern as Debug.xcconfig and Release.xcconfig but uses `.profile.xcconfig` as the Pods include filename suffix
+  - The platform :ios line in Podfile is commented out by default in Flutter-generated projects — always uncomment it to avoid CocoaPods auto-assignment warnings
+  - `flutter analyze` (not pod install) is the CI check available here; pod install requires a Mac with Xcode and CocoaPods installed
+---
+
 ## 2026-03-17 - US-089
 - What was implemented: Created `mobile/lib/providers/theme_provider.dart` — a `ThemeModeNotifier` (StateNotifier) that persists the selected ThemeMode to flutter_secure_storage under key `theme_mode`. Added `_buildDarkTheme()` to main.dart: scaffoldBackgroundColor #1a1a1a, surface #2a2a2a, onSurface #f0f0f0, primary remains #45b700, charcoal navbar (#454446) shared with light theme. Updated `HhhApp` to watch `themeModeProvider` and pass `darkTheme: _buildDarkTheme()`, `themeMode: themeMode` alongside the existing light theme. Added `_AppearanceSection` widget to `profile_screen.dart` (always visible at bottom, below the main content area): a `SegmentedButton<ThemeMode>` with Light/System/Dark options that reads/writes via `themeModeProvider`.
 - Files changed: mobile/lib/providers/theme_provider.dart (new), mobile/lib/main.dart (import theme_provider, add _buildDarkTheme, update HhhApp), mobile/lib/screens/profile_screen.dart (import theme_provider, restructure body to Column, add _AppearanceSection), prd.json (US-089 passes=true)

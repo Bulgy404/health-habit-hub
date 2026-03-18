@@ -1488,7 +1488,7 @@
         "flutter analyze passes"
       ],
       "priority": 92,
-      "passes": false,
+      "passes": true,
       "notes": ""
     }
   ]
