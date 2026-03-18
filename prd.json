@@ -1505,8 +1505,8 @@
         "flutter analyze passes"
       ],
       "priority": 93,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Fix was already applied via commit 3af6687: project-level Profile XCBuildConfiguration (249021D3217E4FDB00AE95B9) already has SDKROOT = iphoneos and SUPPORTED_PLATFORMS = iphoneos; Profile.xcconfig properly wired to Runner target Profile build config. flutter analyze passes."
     },
     {
       "id": "US-094",
