@@ -933,3 +933,14 @@
   - After removing comment lines from a JS file, run `npx prettier --write` from app/ to catch any whitespace/blank-line formatting issues that would fail the `format:check` step
   - TODO comments in this file were all stale (no bugs, just suggestions) — safe to remove or convert to NOTE
 ---
+## 2026-03-18 - US-091
+- What was implemented: Generated `mobile/assets/icon/app_icon.png` (1024×1024 PNG) via a Python/Pillow script: charcoal (#454446) circle background, a graph-network of 9 nodes (5 heart-shaped + 4 circle-with-inner-highlight) in HabShare green (#45b700), connected by white anti-aliased edges with glow halos, masked to a clean circle. Added `flutter_launcher_icons: ^0.14.0` to dev_dependencies. Added `flutter_launcher_icons` config block + `flutter.assets` entry in pubspec.yaml. Ran `flutter pub run flutter_launcher_icons` to produce Android mipmap-*, iOS AppIcon.appiconset (all sizes), and web favicons/icons.
+- Files changed: mobile/assets/icon/app_icon.png (new), mobile/pubspec.yaml (dev_dependencies + config + assets), mobile/pubspec.lock (regenerated), mobile/android/app/src/main/res/mipmap-*/ic_launcher.png (overwritten), mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/* (overwritten + new sizes), mobile/ios/Runner.xcodeproj/project.pbxproj, mobile/web/favicon.png, mobile/web/icons/Icon-*.png, mobile/web/manifest.json, prd.json (US-091 passes=true)
+- **Learnings for future iterations:**
+  - Python/Pillow is available in the dev environment — use it for icon/asset generation scripts
+  - `flutter_launcher_icons` config goes at the TOP level of pubspec.yaml (not inside `flutter:`); the `web:` key takes `generate: true` and `image_path:` as sub-keys
+  - Run `flutter pub get` before `flutter pub run flutter_launcher_icons` when the package is newly added
+  - The generator warns about alpha channel on iOS icons but still succeeds; adding `remove_alpha_ios: true` to the config suppresses it if needed for App Store submission
+  - Generated icon sizes include some legacy iOS sizes (50x50, 57x57, 72x72) as untracked new files — always `git add` the entire appiconset directory
+  - The `flutter.assets` section is required even for the icon asset if it is referenced in pubspec; otherwise the app build will fail
+---
