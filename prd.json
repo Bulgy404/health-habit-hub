@@ -1462,15 +1462,16 @@
     },
     {
       "id": "US-091",
-      "title": "Design and implement app icon representing health habits and graph databases",
-      "description": "As a user, I want a distinctive app icon that visually communicates the app's purpose — connecting personal health habits to a knowledge graph.",
+      "title": "Design and implement minimalistic app icon representing health habits and graph databases",
+      "description": "As a user, I want a bold, minimalistic app icon that is immediately recognisable on a crowded home screen and communicates the app's theme of health habits connected by a graph network.",
       "acceptanceCriteria": [
-        "Design concept: a stylised graph network (nodes connected by edges) where the nodes are rendered as small leaf/heart shapes in the HabShare green (#45b700), suggesting health and growth; the overall silhouette forms a recognisable circular badge on a dark charcoal (#454446) or white background",
-        "Generate the master icon as a 1024×1024 PNG at mobile/assets/icon/app_icon.png using only Dart/Flutter (dart:ui canvas drawing) or Python (Pillow/cairo) — no external design tools or binary blobs committed to the repo",
-        "Add flutter_launcher_icons: ^0.14.0 to pubspec.yaml dev_dependencies",
-        "Add a flutter_launcher_icons config section in pubspec.yaml: image_path: assets/icon/app_icon.png, android: true, ios: true, web.generate: true, windows.generate: false, macos.generate: false",
-        "Run flutter pub run flutter_launcher_icons to generate all platform icon sizes (Android mipmap-*, iOS AppIcon.appiconset, web/favicon.png)",
-        "Verify generated icons exist: android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png, ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
+        "Design concept: a single bold node (circle) with 3–4 thick connecting edges radiating outward, where the terminal nodes are small leaf or heart shapes — keeping the total shape count under 8 so it reads clearly at 60×60px on a home screen",
+        "Color palette: primary node and edges in HabShare green (#45b700) on a clean white or very dark charcoal (#454446) background — maximum 2 colors so it is distinguishable at small sizes",
+        "NO fine-grained details, gradients, or text — the icon must read as a clear silhouette at 29×29px (notification) and 1024×1024px (App Store) without looking cluttered",
+        "Generate the master icon as a 1024×1024 PNG at mobile/assets/icon/app_icon.png using Python (Pillow) — the generation script must be committed at mobile/assets/icon/generate_icon.py so the icon is fully reproducible",
+        "Add flutter_launcher_icons: ^0.14.0 to pubspec.yaml dev_dependencies and a flutter_launcher_icons config: image_path: assets/icon/app_icon.png, android: true, ios: true, web.generate: true",
+        "Run flutter pub run flutter_launcher_icons to generate all platform icon sizes",
+        "Verify generated icons exist: android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png and ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
         "flutter analyze passes"
       ],
       "priority": 91,
@@ -1489,6 +1490,38 @@
       ],
       "priority": 92,
       "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-093",
+      "title": "Fix 'Target native_assets required define SdkRoot' Xcode warning",
+      "description": "As a developer, I want flutter run to produce no SdkRoot warning so that the build output is clean and CI is not noisy.",
+      "acceptanceCriteria": [
+        "Run `flutter clean && flutter pub get && cd mobile/ios && pod install` and confirm pod install completes with zero [!] warnings",
+        "Run `flutter build ios --no-codesign 2>&1 | grep -i sdkroot` and confirm it returns no matches (zero lines)",
+        "If the warning persists after clean: locate the native_assets XCBuildConfiguration block(s) in project.pbxproj that are missing SDKROOT and add `SDKROOT = iphoneos;` to their buildSettings",
+        "Alternatively, if the native_assets target is Flutter-generated (not in pbxproj): add `SDKROOT = iphoneos` and `SUPPORTED_PLATFORMS = iphoneos` to the project-level Profile XCBuildConfiguration (249021D3217E4FDB00AE95B9) if they are missing",
+        "After the fix, `flutter run` on a connected device or simulator produces no 'Target native_assets required define SdkRoot' line in the output",
+        "flutter analyze passes"
+      ],
+      "priority": 93,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-094",
+      "title": "Fix app display name to 'Health Habit Hub' on iOS and Android",
+      "description": "As a user, I want to see 'Health Habit Hub' as the app name under the icon on my home screen, not 'hhh'.",
+      "acceptanceCriteria": [
+        "In mobile/ios/Runner/Info.plist: set CFBundleName value to 'Health Habit Hub' (currently 'hhh')",
+        "CFBundleDisplayName in Info.plist is already 'Health Habit Hub' — leave it unchanged",
+        "In mobile/android/app/src/main/AndroidManifest.xml: set android:label to 'Health Habit Hub' (currently 'hhh')",
+        "The pubspec.yaml `name:` field (hhh) is the Dart package identifier — do NOT change it",
+        "Build and run on iOS simulator: the app name shown under the icon reads 'Health Habit Hub'",
+        "flutter analyze passes"
+      ],
+      "priority": 94,
+      "passes": false,
       "notes": ""
     }
   ]
