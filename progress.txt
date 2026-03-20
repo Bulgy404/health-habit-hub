@@ -1271,3 +1271,12 @@
   - `HabitNode.fromDonatedJson` vs `fromJson`: two separate factories handle old (public) and new (donated) API response shapes — keeps backward compat
   - When `fetchDonatedHabits` returns habits without categories, the category filter bar becomes empty (which is handled by `_CategoryFilterBar` returning `SizedBox.shrink()` when categories list is empty)
 ---
+
+## 2026-03-20 - US-124
+- What was implemented: Added `GET /api/v1/surveys/:id/render?lang=en|de` route to `surveyRouter.js` — returns `{id, title, lang, jsonSchema}` where lang defaults to 'en' if absent or unsupported. Updated `DonateScreen` to import localeProvider, read `ref.read(localeProvider).languageCode` in `_initSurvey()`, and append `?lang=X` to the render URI using `Uri.replace(queryParameters: {'lang': lang})`. Added 4 integration tests: 401 without token, default lang=en, lang=de when requested, 404 for unknown survey. All 244 backend tests pass; flutter analyze passes.
+- Files changed: app/routes/surveyRouter.js (add /:id/render route), app/tests/integration/surveys.routes.test.js (4 new render tests), mobile/lib/screens/donate_screen.dart (import locale_provider + pass ?lang), prd.json (US-124 passes=true)
+- **Learnings for future iterations:**
+  - The `/:id/render` route must be registered BEFORE `/:id` in Express, otherwise `render` would be matched as the id parameter — ordering matters
+  - `Uri.parse(url).replace(queryParameters: {...})` is the Dart way to append query params to an existing URI
+  - Survey render endpoint returns `jsonSchema` verbatim — locale/i18n of the actual questions is SurveyJS client-side (e.g. using SurveyJS locale setting); the `lang` field in the response tells the client which locale to activate
+---

@@ -2034,7 +2034,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 124,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-122; also resolves audit finding US-129"
     },
     {
