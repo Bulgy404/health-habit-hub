@@ -1232,3 +1232,13 @@
   - When US-118 scaffolded the ARB files, it already populated all DE translations — US-119 is purely a verification story; just run `flutter gen-l10n` and `flutter analyze` to confirm completeness
   - `flutter gen-l10n` reads `l10n.yaml` at the project root (not in lib/) and exits 0 with no output when all translations are present
 ---
+
+## 2026-03-20 - US-120
+- What was implemented: Created `app/routes/usersRouter.js` with GET /me (returns user record including preferredLanguage, defaults to 'en' if no record exists) and PUT /me (upserts preferredLanguage; returns 400 if value is not 'en' or 'de'). Users stored in MongoDB `users` collection keyed by `userId` (from req.user.sub). Registered `/users` route in `v1Router.js` behind participant/admin/researcher role guard. Created `app/tests/integration/users.routes.test.js` with 9 tests: auth enforcement (401/403), GET default, PUT to de/en, GET after PUT, 400 for unsupported language, 400 for empty string. All 240 backend tests pass; lint/prettier pass.
+- Files changed: app/routes/usersRouter.js (new), app/routes/v1Router.js (import + mount), app/tests/integration/users.routes.test.js (new), prd.json (US-120 passes=true)
+- **Learnings for future iterations:**
+  - Users collection is `users` (separate from `profiles`) — userId is the Keycloak sub claim
+  - GET /me returns a synthetic default `{ userId, preferredLanguage: 'en' }` without persisting to DB when no record exists — this is intentional to avoid creating phantom records
+  - PUT /me uses `{ $set: { userId, ...update } }` with `upsert: true` — this creates the record on first PUT
+  - Prettier formatting in the app/ directory: run `npx prettier --write` in the app/ dir specifically (not in the project root)
+---
