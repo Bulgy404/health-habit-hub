@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -94,22 +95,21 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
   Future<void> _onSurveyComplete(String message) async {
     if (_submitting || _surveyId == null) return;
     setState(() => _submitting = true);
+    final l10n = AppLocalizations.of(context)!;
     try {
       final answers = jsonDecode(message) as Map<String, dynamic>;
       final surveyService = ref.read(surveyServiceProvider);
       await surveyService.submitResult(_surveyId!, answers);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Habit donated successfully!')),
+          SnackBar(content: Text(l10n.habitDonatedSuccess)),
         );
         context.pop();
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Submission failed — please try again.'),
-          ),
+          SnackBar(content: Text(l10n.submissionFailed)),
         );
       }
     } finally {
@@ -120,7 +120,7 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Donate a Habit')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.donateHabit)),
       body: Stack(
         children: [
           if (_offline)
@@ -153,19 +153,20 @@ class _OfflineBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Container(
           width: double.infinity,
           color: Colors.orange,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.wifi_off, color: Colors.white),
-              SizedBox(width: 8),
+              const Icon(Icons.wifi_off, color: Colors.white),
+              const SizedBox(width: 8),
               Text(
-                'No connection',
-                style: TextStyle(color: Colors.white, fontSize: 15),
+                l10n.noConnection,
+                style: const TextStyle(color: Colors.white, fontSize: 15),
               ),
             ],
           ),
@@ -177,16 +178,16 @@ class _OfflineBanner extends StatelessWidget {
               children: [
                 const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
                 const SizedBox(height: 16),
-                const Text(
-                  'Could not load survey.\nPlease check your connection.',
+                Text(
+                  l10n.couldNotLoadSurvey,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                  style: const TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  label: Text(l10n.retry),
                 ),
               ],
             ),
