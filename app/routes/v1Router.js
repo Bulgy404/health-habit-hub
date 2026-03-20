@@ -12,6 +12,7 @@ import { createAdminRouter } from './adminRouter.js';
 import { createOnboardRouter } from './onboardRouter.js';
 import { createQuestionnairesRouter } from './questionnairesRouter.js';
 import { createQuestionnaireResponsesRouter } from './questionnaireResponsesRouter.js';
+import { createRecommendationsRouter } from './recommendationsRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 import { swaggerSpec } from '../swagger.js';
 
@@ -25,6 +26,8 @@ export function createV1Router({
   keycloak,
   tokenCardService,
   rateLimiter,
+  redisClient,
+  redisUrl,
 } = {}) {
   const router = express.Router();
   const authenticate = createAuthMiddleware({ jwksUrl });
@@ -172,6 +175,13 @@ export function createV1Router({
     '/questionnaire-responses',
     requireRole('participant', 'admin', 'researcher'),
     createQuestionnaireResponsesRouter({ db })
+  );
+
+  // Recommendations routes: require participant, admin, or researcher role
+  router.use(
+    '/recommendations',
+    requireRole('participant', 'admin', 'researcher'),
+    createRecommendationsRouter({ db, redisClient, redisUrl })
   );
 
   return router;
