@@ -97,6 +97,40 @@
         "offline_access",
         "microprofile-jwt"
       ]
+    },
+    {
+      "clientId": "hhh-admin",
+      "name": "HHH Admin Panel",
+      "description": "Confidential OIDC client for the Next.js admin web application",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "hhh-admin-secret-change-me",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://localhost:3001/*",
+        "http://admin.localhost/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3001",
+        "http://admin.localhost"
+      ],
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
     }
   ],
   "defaultRoles": [
