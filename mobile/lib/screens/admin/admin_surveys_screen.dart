@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/admin_survey.dart';
 import '../../services/admin_service.dart';
 
@@ -60,7 +61,7 @@ class _AdminSurveysScreenState extends ConsumerState<AdminSurveysScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update status')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.adminFailedToUpdateStatus)),
         );
       }
     }
@@ -78,20 +79,21 @@ class _AdminSurveysScreenState extends ConsumerState<AdminSurveysScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Surveys'),
+        title: Text(l10n.adminSurveys),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
             onPressed: _load,
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateDialog,
-        tooltip: 'New survey',
+        tooltip: l10n.adminNewSurveyTooltip,
         child: const Icon(Icons.add),
       ),
       body: _loading
@@ -125,8 +127,9 @@ class _SurveyListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (surveys.isEmpty) {
-      return const Center(child: Text('No surveys found'));
+      return Center(child: Text(l10n.adminNoSurveysFound));
     }
     return ListView.separated(
       itemCount: surveys.length,
@@ -162,6 +165,7 @@ class _SurveyTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final statusColor = _statusColor(survey.status);
     return ListTile(
       onTap: onTap,
@@ -210,7 +214,7 @@ class _SurveyTile extends StatelessWidget {
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('Publish'),
+              child: Text(l10n.adminPublish),
             ),
           if (survey.status != 'archived')
             TextButton(
@@ -220,7 +224,7 @@ class _SurveyTile extends StatelessWidget {
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              child: const Text('Archive'),
+              child: Text(l10n.adminArchive),
             ),
         ],
       ),
@@ -260,9 +264,10 @@ class _CreateSurveyDialogState extends State<_CreateSurveyDialog> {
   }
 
   Future<void> _create() async {
+    final l10n = AppLocalizations.of(context)!;
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      setState(() => _error = 'Title is required');
+      setState(() => _error = l10n.adminTitleIsRequired);
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -274,28 +279,29 @@ class _CreateSurveyDialogState extends State<_CreateSurveyDialog> {
       }
     } catch (_) {
       if (mounted) {
-        setState(() { _loading = false; _error = 'Failed to create survey'; });
+        setState(() { _loading = false; _error = AppLocalizations.of(context)!.adminFailedToCreateSurvey; });
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('New Survey'),
+      title: Text(l10n.adminNewSurveyTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _titleController,
-            decoration: const InputDecoration(labelText: 'Title'),
+            decoration: InputDecoration(labelText: l10n.adminSurveyTitleLabel),
             enabled: !_loading,
             autofocus: true,
           ),
           const SizedBox(height: 12),
           DropdownButtonHideUnderline(
             child: InputDecorator(
-              decoration: const InputDecoration(labelText: 'Type'),
+              decoration: InputDecoration(labelText: l10n.adminSurveyTypeLabel),
               child: DropdownButton<String>(
                 value: _type,
                 isExpanded: true,
@@ -321,7 +327,7 @@ class _CreateSurveyDialogState extends State<_CreateSurveyDialog> {
       actions: [
         TextButton(
           onPressed: _loading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         ElevatedButton(
           onPressed: _loading ? null : _create,
@@ -331,7 +337,7 @@ class _CreateSurveyDialogState extends State<_CreateSurveyDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Create'),
+              : Text(l10n.create),
         ),
       ],
     );
@@ -349,18 +355,19 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.error_outline, size: 48, color: Colors.red),
           const SizedBox(height: 8),
-          const Text('Failed to load surveys'),
+          Text(l10n.adminFailedToLoadSurveys),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ],
       ),
@@ -444,12 +451,13 @@ class _AdminSurveyEditorScreenState
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context)!;
     Map<String, dynamic> parsed;
     try {
       parsed = jsonDecode(_jsonController.text) as Map<String, dynamic>;
     } catch (_) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid JSON — please fix before saving')),
+        SnackBar(content: Text(l10n.adminInvalidJson)),
       );
       return;
     }
@@ -462,14 +470,14 @@ class _AdminSurveyEditorScreenState
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Survey saved')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.adminSurveySaved)),
         );
       }
     } catch (_) {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save survey')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.adminFailedToSaveSurvey)),
         );
       }
     }
@@ -477,9 +485,10 @@ class _AdminSurveyEditorScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(_survey?.title ?? 'Survey Editor'),
+        title: Text(_survey?.title ?? l10n.adminSurveyEditor),
         actions: [
           if (!_loading)
             _saving
@@ -493,7 +502,7 @@ class _AdminSurveyEditorScreenState
                   )
                 : TextButton(
                     onPressed: _save,
-                    child: const Text('Save'),
+                    child: Text(l10n.save),
                   ),
         ],
       ),
@@ -504,12 +513,12 @@ class _AdminSurveyEditorScreenState
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Failed to load survey'),
+                      Text(l10n.adminFailedToLoadSurvey),
                       const SizedBox(height: 8),
                       TextButton.icon(
                         onPressed: _load,
                         icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
+                        label: Text(l10n.retry),
                       ),
                     ],
                   ),
@@ -547,6 +556,7 @@ class _EditorBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -556,16 +566,16 @@ class _EditorBody extends StatelessWidget {
             controller: jsonController,
             maxLines: null,
             style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-            decoration: const InputDecoration(
-              labelText: 'JSON Schema',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.adminJsonSchema,
+              border: const OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Assign to Groups',
-            style: TextStyle(fontWeight: FontWeight.bold),
+          Text(
+            l10n.adminAssignToGroups,
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Wrap(

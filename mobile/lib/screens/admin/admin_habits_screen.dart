@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/admin_habit_donation.dart';
 import '../../services/admin_service.dart';
 
@@ -132,6 +133,7 @@ class _AdminHabitsScreenState extends ConsumerState<AdminHabitsScreen> {
   }
 
   Future<void> _exportCsv() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final url = await ref.read(adminServiceProvider).exportHabitsCsvUrl(
             group: _appliedGroup,
@@ -146,13 +148,13 @@ class _AdminHabitsScreenState extends ConsumerState<AdminHabitsScreen> {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open export URL')),
+          SnackBar(content: Text(l10n.adminCouldNotOpenExportUrl)),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('CSV export failed')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.adminCsvExportFailed)),
         );
       }
     }
@@ -180,19 +182,20 @@ class _AdminHabitsScreenState extends ConsumerState<AdminHabitsScreen> {
       '${dt.month.toString().padLeft(2, '0')}-'
       '${dt.day.toString().padLeft(2, '0')}';
 
-  String _dateRangeLabel() {
-    if (_dateRange == null) return 'All dates';
+  String _dateRangeLabel(AppLocalizations l10n) {
+    if (_dateRange == null) return l10n.adminAllDates;
     return '${_isoDate(_dateRange!.start)} – ${_isoDate(_dateRange!.end)}';
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Donated Habits'),
+        title: Text(l10n.adminDonatedHabits),
         actions: [
           Tooltip(
-            message: _autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off',
+            message: _autoRefresh ? l10n.adminAutoRefreshOn : l10n.adminAutoRefreshOff,
             child: IconButton(
               icon: Icon(
                 _autoRefresh ? Icons.timer : Icons.timer_off,
@@ -203,7 +206,7 @@ class _AdminHabitsScreenState extends ConsumerState<AdminHabitsScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
             onPressed: _load,
           ),
         ],
@@ -213,7 +216,8 @@ class _AdminHabitsScreenState extends ConsumerState<AdminHabitsScreen> {
           _FilterBar(
             selectedGroup: _selectedGroup,
             selectedCategory: _selectedCategory,
-            dateRangeLabel: _dateRangeLabel(),
+            dateRangeLabel: _dateRangeLabel(l10n),
+            hasDateRange: _dateRange != null,
             groups: _groups,
             categories: _categories,
             onGroupChanged: (v) => setState(() => _selectedGroup = v ?? ''),
@@ -247,6 +251,7 @@ class _FilterBar extends StatelessWidget {
     required this.selectedGroup,
     required this.selectedCategory,
     required this.dateRangeLabel,
+    required this.hasDateRange,
     required this.groups,
     required this.categories,
     required this.onGroupChanged,
@@ -260,6 +265,7 @@ class _FilterBar extends StatelessWidget {
   final String selectedGroup;
   final String selectedCategory;
   final String dateRangeLabel;
+  final bool hasDateRange;
   final List<String> groups;
   final List<String> categories;
   final void Function(String?) onGroupChanged;
@@ -271,6 +277,7 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       child: Column(
@@ -282,12 +289,12 @@ class _FilterBar extends StatelessWidget {
               Expanded(
                 child: DropdownButtonHideUnderline(
                   child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Group',
+                    decoration: InputDecoration(
+                      labelText: l10n.adminGroup,
                       isDense: true,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       contentPadding:
-                          EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     ),
                     child: DropdownButton<String>(
                       value: selectedGroup,
@@ -298,7 +305,7 @@ class _FilterBar extends StatelessWidget {
                           .map(
                             (g) => DropdownMenuItem(
                               value: g,
-                              child: Text(g.isEmpty ? 'All' : g),
+                              child: Text(g.isEmpty ? l10n.adminAll : g),
                             ),
                           )
                           .toList(),
@@ -310,12 +317,12 @@ class _FilterBar extends StatelessWidget {
               Expanded(
                 child: DropdownButtonHideUnderline(
                   child: InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Category',
+                    decoration: InputDecoration(
+                      labelText: l10n.adminCategory,
                       isDense: true,
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       contentPadding:
-                          EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     ),
                     child: DropdownButton<String>(
                       value: selectedCategory,
@@ -326,7 +333,7 @@ class _FilterBar extends StatelessWidget {
                           .map(
                             (c) => DropdownMenuItem(
                               value: c,
-                              child: Text(c.isEmpty ? 'All' : c),
+                              child: Text(c.isEmpty ? l10n.adminAll : c),
                             ),
                           )
                           .toList(),
@@ -354,10 +361,10 @@ class _FilterBar extends StatelessWidget {
                   ),
                 ),
               ),
-              if (dateRangeLabel != 'All dates')
+              if (hasDateRange)
                 IconButton(
                   icon: const Icon(Icons.clear, size: 18),
-                  tooltip: 'Clear date range',
+                  tooltip: l10n.adminClearDateRange,
                   onPressed: onClearDateRange,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -369,13 +376,13 @@ class _FilterBar extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   minimumSize: const Size(0, 36),
                 ),
-                child: const Text('Apply'),
+                child: Text(l10n.apply),
               ),
               const SizedBox(width: 8),
               OutlinedButton.icon(
                 onPressed: onExportCsv,
                 icon: const Icon(Icons.download, size: 16),
-                label: const Text('CSV'),
+                label: Text(l10n.adminCsv),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   minimumSize: const Size(0, 36),
@@ -401,8 +408,9 @@ class _DonationListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (donations.isEmpty) {
-      return const Center(child: Text('No habit donations found'));
+      return Center(child: Text(l10n.adminNoHabitDonationsFound));
     }
     return ListView.separated(
       itemCount: donations.length,
@@ -470,18 +478,19 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.error_outline, size: 48, color: Colors.red),
           const SizedBox(height: 8),
-          const Text('Failed to load habit donations'),
+          Text(l10n.adminFailedToLoadHabitDonations),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ],
       ),

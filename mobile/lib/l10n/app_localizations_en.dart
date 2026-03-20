@@ -160,4 +160,307 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dark => 'Dark';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get create => 'Create';
+
+  @override
+  String get apply => 'Apply';
+
+  @override
+  String get adminDeviceSessions => 'Device Sessions';
+
+  @override
+  String get adminRevokeSessionTitle => 'Revoke session?';
+
+  @override
+  String adminRevokeSessionContent(String participantId) {
+    return 'Revoke session for participant $participantId?\nThey will be logged out immediately.';
+  }
+
+  @override
+  String get adminRevoke => 'Revoke';
+
+  @override
+  String get adminSessionRevoked => 'Session revoked';
+
+  @override
+  String get adminFailedToRevokeSession => 'Failed to revoke session';
+
+  @override
+  String get adminNoActiveSessions => 'No active sessions';
+
+  @override
+  String get adminFailedToLoadSessions => 'Failed to load sessions';
+
+  @override
+  String get adminColParticipantId => 'Participant ID';
+
+  @override
+  String get adminColDeviceType => 'Device Type';
+
+  @override
+  String get adminColAppVersion => 'App Version';
+
+  @override
+  String get adminColLastSeen => 'Last Seen';
+
+  @override
+  String get adminColSessionId => 'Session ID';
+
+  @override
+  String get adminColActions => 'Actions';
+
+  @override
+  String get adminDonatedHabits => 'Donated Habits';
+
+  @override
+  String get adminAutoRefreshOn => 'Auto-refresh on';
+
+  @override
+  String get adminAutoRefreshOff => 'Auto-refresh off';
+
+  @override
+  String get adminCouldNotOpenExportUrl => 'Could not open export URL';
+
+  @override
+  String get adminCsvExportFailed => 'CSV export failed';
+
+  @override
+  String get adminAllDates => 'All dates';
+
+  @override
+  String get adminGroup => 'Group';
+
+  @override
+  String get adminCategory => 'Category';
+
+  @override
+  String get adminAll => 'All';
+
+  @override
+  String get adminClearDateRange => 'Clear date range';
+
+  @override
+  String get adminCsv => 'CSV';
+
+  @override
+  String get adminNoHabitDonationsFound => 'No habit donations found';
+
+  @override
+  String get adminFailedToLoadHabitDonations =>
+      'Failed to load habit donations';
+
+  @override
+  String adminParticipantTitle(String participantId) {
+    return 'Participant $participantId';
+  }
+
+  @override
+  String get adminExportJson => 'Export JSON';
+
+  @override
+  String get adminFailedToExportProgress => 'Failed to export progress data.';
+
+  @override
+  String get adminProfileCard => 'Profile';
+
+  @override
+  String get adminProfileNotYetCompleted => 'Not yet completed';
+
+  @override
+  String adminSurveysCompleted(int count) {
+    return 'Surveys Completed ($count)';
+  }
+
+  @override
+  String get adminNoSurveysCompletedYet => 'No surveys completed yet.';
+
+  @override
+  String adminHabitsDonated(int count) {
+    return 'Habits Donated ($count)';
+  }
+
+  @override
+  String get adminNoHabitsDonatedYet => 'No habits donated yet.';
+
+  @override
+  String adminHabitsDonatedDetail(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count habits donated. Individual habit details are available in the Habits Monitor.',
+      one:
+          '1 habit donated. Individual habit details are available in the Habits Monitor.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminRecommendations => 'Recommendations';
+
+  @override
+  String get adminAccepted => 'Accepted';
+
+  @override
+  String get adminDismissed => 'Dismissed';
+
+  @override
+  String get adminTimeline => 'Timeline';
+
+  @override
+  String get adminNoTimelineEventsYet => 'No timeline events yet.';
+
+  @override
+  String get adminTimelineEnrolled => 'Enrolled';
+
+  @override
+  String get adminTimelineSurveyCompleted => 'Survey completed';
+
+  @override
+  String get adminTimelineRecommendationAccepted => 'Recommendation accepted';
+
+  @override
+  String get adminTimelineRecommendationDismissed => 'Recommendation dismissed';
+
+  @override
+  String get adminFailedToLoadParticipantProgress =>
+      'Failed to load participant progress.';
+
+  @override
+  String get adminParticipants => 'Participants';
+
+  @override
+  String get adminNoParticipantsFound => 'No participants found.';
+
+  @override
+  String get adminSearchByUsername => 'Search by username…';
+
+  @override
+  String get adminAllGroups => 'All groups';
+
+  @override
+  String get adminColUsername => 'Username';
+
+  @override
+  String get adminColEnrolled => 'Enrolled';
+
+  @override
+  String get adminColLastActive => 'Last Active';
+
+  @override
+  String get adminColSurveysPercent => 'Surveys %';
+
+  @override
+  String get adminDeleteParticipant => 'Delete participant';
+
+  @override
+  String get adminFailedToUpdateGroup => 'Failed to update group.';
+
+  @override
+  String get adminDeleteParticipantTitle => 'Delete Participant';
+
+  @override
+  String get adminDeleteParticipantContent =>
+      'This will anonymize participant data. Cannot be undone.';
+
+  @override
+  String get adminFailedToDeleteParticipant => 'Failed to delete participant.';
+
+  @override
+  String adminParticipantCreated(String username) {
+    return 'Participant $username created';
+  }
+
+  @override
+  String get adminCreateParticipantTooltip => 'Create participant';
+
+  @override
+  String get adminFailedToLoadParticipants => 'Failed to load participants.';
+
+  @override
+  String get adminPrevious => 'Previous';
+
+  @override
+  String get adminNext => 'Next';
+
+  @override
+  String get adminCreateParticipantTitle => 'Create Participant';
+
+  @override
+  String get adminStudyGroup => 'Study group';
+
+  @override
+  String get adminTokenCardFormat => 'Token card format';
+
+  @override
+  String get adminQrAndPrint => 'QR + Print';
+
+  @override
+  String get adminFailedToCreateParticipant =>
+      'Failed to create participant. Please try again.';
+
+  @override
+  String get adminSurveys => 'Surveys';
+
+  @override
+  String get adminFailedToUpdateStatus => 'Failed to update status';
+
+  @override
+  String get adminNewSurveyTooltip => 'New survey';
+
+  @override
+  String get adminNoSurveysFound => 'No surveys found';
+
+  @override
+  String get adminFailedToLoadSurveys => 'Failed to load surveys';
+
+  @override
+  String get adminPublish => 'Publish';
+
+  @override
+  String get adminArchive => 'Archive';
+
+  @override
+  String get adminNewSurveyTitle => 'New Survey';
+
+  @override
+  String get adminSurveyTitleLabel => 'Title';
+
+  @override
+  String get adminSurveyTypeLabel => 'Type';
+
+  @override
+  String get adminTitleIsRequired => 'Title is required';
+
+  @override
+  String get adminFailedToCreateSurvey => 'Failed to create survey';
+
+  @override
+  String get adminSurveyEditor => 'Survey Editor';
+
+  @override
+  String get adminInvalidJson => 'Invalid JSON — please fix before saving';
+
+  @override
+  String get adminSurveySaved => 'Survey saved';
+
+  @override
+  String get adminFailedToSaveSurvey => 'Failed to save survey';
+
+  @override
+  String get adminFailedToLoadSurvey => 'Failed to load survey';
+
+  @override
+  String get adminJsonSchema => 'JSON Schema';
+
+  @override
+  String get adminAssignToGroups => 'Assign to Groups';
 }

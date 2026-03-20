@@ -1303,3 +1303,9 @@
 - **Learnings for future iterations:**
   - Audit-finding tracker stories (US-127/128/129) are just visibility markers — check if the referenced resolution story already passes=true before implementing anything
 ---
+---
+- US: US-130
+- What was implemented: Extracted all hardcoded English strings from admin screens (admin_devices_screen.dart, admin_habits_screen.dart, admin_participant_detail_screen.dart, admin_participants_screen.dart, admin_surveys_screen.dart). Added 67+ new ARB keys to app_en.arb and matching German translations in app_de.arb. Replaced all hardcoded strings with AppLocalizations.of(context)! calls. Ran flutter gen-l10n and flutter analyze — no issues.
+- Files changed: mobile/lib/l10n/app_en.arb, mobile/lib/l10n/app_de.arb, mobile/lib/screens/admin/admin_devices_screen.dart, mobile/lib/screens/admin/admin_habits_screen.dart, mobile/lib/screens/admin/admin_participant_detail_screen.dart, mobile/lib/screens/admin/admin_participants_screen.dart, mobile/lib/screens/admin/admin_surveys_screen.dart, mobile/lib/l10n/app_localizations_en.dart, mobile/lib/l10n/app_localizations_de.dart, prd.json
+- **Learnings for future iterations:**
+  - Always run flutter gen-l10n after modifying ARB files to regenerate the Dart localization classes before running flutter analyze
