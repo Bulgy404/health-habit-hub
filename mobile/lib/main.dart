@@ -13,6 +13,7 @@ import 'screens/admin/admin_settings_screen.dart';
 import 'screens/admin/admin_shell_screen.dart';
 import 'screens/admin/admin_surveys_screen.dart';
 import 'features/questionnaire/questionnaire_screen.dart';
+import 'features/recommendation/goal_input_screen.dart';
 import 'screens/donate_screen.dart';
 import 'screens/explore_screen.dart';
 import 'screens/login_screen.dart';
@@ -20,7 +21,6 @@ import 'screens/onboarding/passphrase_screen.dart';
 import 'screens/onboarding/restore_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
 import 'screens/profile_screen.dart';
-import 'screens/recommend_screen.dart';
 import 'screens/shell_screen.dart';
 
 void main() {
@@ -118,7 +118,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/recommend',
-                builder: (context, state) => const RecommendScreen(),
+                builder: (context, state) => const GoalInputScreen(),
               ),
             ],
           ),

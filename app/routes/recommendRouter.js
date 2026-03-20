@@ -174,6 +174,11 @@ export function createRecommendRouter({ recommenderUrl } = {}) {
     await proxyToRecommender(req, res, `${baseUrl}/classify`);
   });
 
+  // POST /api/v1/recommend/generate → Python POST /api/v1/llm/recommend
+  router.post('/generate', async (req, res) => {
+    await proxyToRecommender(req, res, `${baseUrl}/api/v1/llm/recommend`);
+  });
+
   return router;
 }
 
