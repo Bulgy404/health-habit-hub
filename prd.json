@@ -1928,7 +1928,7 @@
         "Typecheck/lint passes"
       ],
       "priority": 117,
-      "passes": false,
+      "passes": true,
       "notes": "Foundation story \u2014 must land before US-118, US-119, US-121, US-122, US-123, US-124, US-130"
     },
     {
