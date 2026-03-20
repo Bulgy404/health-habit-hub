@@ -95,6 +95,23 @@ const FIXTURE_HABITS = [
   },
 ];
 
+const FIXTURE_DONATED_HABITS = [
+  {
+    uuid: 'uuid-1',
+    original: 'I go for a run every morning',
+    language: 'en',
+    translationEN: null,
+    translationDE: 'Ich gehe jeden Morgen laufen',
+  },
+  {
+    uuid: 'uuid-2',
+    original: 'Ich meditiere täglich',
+    language: 'de',
+    translationEN: 'I meditate daily',
+    translationDE: null,
+  },
+];
+
 function createMockNeo4jRun() {
   return async (cypher) => {
     if (cypher.includes('count(h) AS total')) {
@@ -106,7 +123,10 @@ function createMockNeo4jRun() {
         { category: 'hhh__Group2', count: 1 },
       ];
     }
-    // default: return habits
+    if (cypher.includes('h.sentence AS original')) {
+      return FIXTURE_DONATED_HABITS;
+    }
+    // default: return public habits
     return FIXTURE_HABITS;
   };
 }
@@ -262,4 +282,47 @@ test('GET /api/v1/habits/stats returns total, byCategory, byDay', async () => {
   assert.ok('category' in body.byCategory[0]);
   assert.ok('count' in body.byCategory[0]);
   assert.ok(Array.isArray(body.byDay));
+});
+
+// ── GET /habits ───────────────────────────────────────────────────────────────
+
+test('GET /api/v1/habits returns 401 without token', async () => {
+  const res = await get('/api/v1/habits');
+  assert.strictEqual(res.status, 401);
+});
+
+test('GET /api/v1/habits returns habits with original, translationEN, translationDE', async () => {
+  const res = await get('/api/v1/habits', makeToken());
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body));
+  assert.strictEqual(body.length, 2);
+  const h = body[0];
+  assert.ok('uuid' in h);
+  assert.ok('original' in h);
+  assert.ok('language' in h);
+  assert.ok('translationEN' in h);
+  assert.ok('translationDE' in h);
+  assert.ok(!('displayText' in h));
+});
+
+test('GET /api/v1/habits?lang=de adds displayText from translationDE', async () => {
+  const res = await get('/api/v1/habits?lang=de', makeToken());
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body));
+  // First habit: English original, has translationDE
+  assert.strictEqual(body[0].displayText, 'Ich gehe jeden Morgen laufen');
+  // Second habit: German original, no translationDE — falls back to original
+  assert.strictEqual(body[1].displayText, 'Ich meditiere täglich');
+});
+
+test('GET /api/v1/habits?lang=en adds displayText from translationEN', async () => {
+  const res = await get('/api/v1/habits?lang=en', makeToken());
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  // First habit: English original, no translationEN — falls back to original
+  assert.strictEqual(body[0].displayText, 'I go for a run every morning');
+  // Second habit: German original, has translationEN
+  assert.strictEqual(body[1].displayText, 'I meditate daily');
 });
