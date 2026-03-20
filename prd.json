@@ -1667,8 +1667,8 @@
         "Typecheck/lint passes"
       ],
       "priority": 102,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created mongo/seed/questionnaires.json with full SLIQ (4 questions) and RAND-36 (36 questions) definitions. Created mongo/seed/seed-questionnaires.js upsert seed script. Created app/routes/questionnairesRouter.js with GET /questionnaires (returns active only) and GET /questionnaires/:slug. Registered in v1Router.js under /questionnaires with participant/admin/researcher role guard. 8 integration tests added; all 204 tests pass."
     },
     {
       "id": "US-103",

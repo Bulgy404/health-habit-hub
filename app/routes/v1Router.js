@@ -10,6 +10,7 @@ import { createProfileRouter } from './profileRouter.js';
 import { createHabitsRouter } from './habitsRouter.js';
 import { createAdminRouter } from './adminRouter.js';
 import { createOnboardRouter } from './onboardRouter.js';
+import { createQuestionnairesRouter } from './questionnairesRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 import { swaggerSpec } from '../swagger.js';
 
@@ -156,6 +157,13 @@ export function createV1Router({
     '/profile',
     requireRole('participant', 'admin', 'researcher'),
     createProfileRouter({ db })
+  );
+
+  // Questionnaires routes: require participant, admin, or researcher role
+  router.use(
+    '/questionnaires',
+    requireRole('participant', 'admin', 'researcher'),
+    createQuestionnairesRouter({ db })
   );
 
   return router;
