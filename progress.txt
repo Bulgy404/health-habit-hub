@@ -1130,3 +1130,14 @@
   - Route order: `POST /kb/reindex` must be registered before `DELETE /kb/{filename}` to ensure FastAPI's routing resolves the literal "reindex" segment correctly for POST requests
   - pypdf `PdfReader.pages[i].extract_text()` can return None for image-only PDFs — always apply `or ""` guard
 ---
+
+## 2026-03-20 - US-110
+- What was implemented: Created `API-service/routers/recommend.py` — POST /api/v1/llm/recommend endpoint that orchestrates M3.1 (extract_habits) + M3.2 (extract_profile) in parallel via asyncio.gather, then M3.3 (retrieve) using the rag_query from M3.2, then fetches prior feedback from MongoDB `recommendation_feedback` collection, builds a prompt, and calls the LLM to produce personalised recommendations. Response: {recommendation_id (uuid4), goal, recommendations[{title, body, rationale, sources[{filename, excerpt}]}], generated_at}. Recommendation stored in MongoDB `recommendations` collection. Redis caching keyed by (user_id, goal). Created `API-service/prompts/recommend.txt` prompt template with all 7 template variables: {goal, profile_summary, profile_detailed, habit_summary, habits_json, sources_json, prior_feedback}. Added `motor>=3.3.0` to requirements.txt. Registered router in main.py. 37 tests pass.
+- Files changed: API-service/routers/recommend.py (new), API-service/prompts/recommend.txt (new), API-service/tests/test_recommend.py (new), API-service/requirements.txt (add motor), API-service/main.py (add recommend router), prd.json (US-110 passes=true)
+- **Learnings for future iterations:**
+  - Orchestrator routers should import sub-module endpoint functions directly (`from routers.extract_habits import extract_habits as _extract_habits`) and call them as async functions — this avoids HTTP overhead and keeps the pipeline in-process. Test patches target `routers.recommend._extract_habits` (the imported name), not the original module.
+  - `asyncio.gather(m31_call, m32_call)` runs M3.1 and M3.2 in parallel since they are independent; M3.3 must wait for M3.2's rag_query output before it can run.
+  - `motor.motor_asyncio.AsyncIOMotorClient` is the async MongoDB driver; construct the URL from MONGO_HOST/MONGO_PORT/MONGO_USER/MONGO_PASSWORD/MONGO_AUTH_SOURCE env vars (consistent with existing Node.js backend pattern). Allow MONGO_URL override for tests.
+  - The `recommendation_feedback` collection is written by US-111 (Feedback Collector) — reading from it in US-110 is safe even if the collection doesn't exist yet (motor returns an empty cursor).
+  - `_store_recommendation` and `_fetch_prior_feedback` are extracted as helper functions so tests can patch them independently without touching the MongoDB client.
+---
