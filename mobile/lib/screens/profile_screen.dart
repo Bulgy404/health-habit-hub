@@ -205,7 +205,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.myProfile)),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.myProfile),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: AppLocalizations.of(context)!.settings,
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(

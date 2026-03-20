@@ -24,6 +24,8 @@ import 'screens/onboarding/restore_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/shell_screen.dart';
+import 'screens/user_settings_screen.dart';
+import 'providers/locale_provider.dart';
 
 void main() {
   runApp(const ProviderScope(child: HhhApp()));
@@ -129,6 +131,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/profile',
                 builder: (context, state) => const ProfileScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/settings',
+                builder: (context, state) => const UserSettingsScreen(),
               ),
             ],
           ),
@@ -435,11 +445,13 @@ class HhhApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
     return MaterialApp.router(
       title: 'Health Habit Hub',
       theme: _buildLightTheme(),
       darkTheme: _buildDarkTheme(),
       themeMode: themeMode,
+      locale: locale,
       routerConfig: router,
       localizationsDelegates: const [
         AppLocalizations.delegate,
