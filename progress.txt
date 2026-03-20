@@ -1262,3 +1262,12 @@
   - Auth headers returning empty `{}` (when no token) should be checked before API calls — return early to avoid spurious 401 errors in background init
   - The `loadPreference()` public method is for calling after auth completes (e.g., after login); background fetch in constructor handles the "already logged in on startup" case
 ---
+
+## 2026-03-20 - US-123
+- What was implemented: Updated `HabitNode` model to add `language` (String, ISO 639-1, e.g. 'en') and `hasTranslation` (bool, whether name is translated vs original) fields. Added `HabitNode.fromDonatedJson(json, requestedLang)` factory that maps `GET /api/v1/habits` response format (uuid, original, language, displayText) to HabitNode — name is displayText if available, else original; hasTranslation is true if language matches or displayText != original. Added `fetchDonatedHabits(String lang)` to `HabitService` that calls `GET /api/v1/habits?lang=X`. Updated `ExploreScreen` to: import localeProvider, track `_fetchedLang`, call `fetchDonatedHabits(lang)` instead of `fetchPublicHabits()`, detect locale changes in `build()` via addPostFrameCallback and refetch. Updated bottom sheet to show an orange translate icon + "Original (de)" label when `!node.hasTranslation`. Flutter analyze: no issues.
+- Files changed: mobile/lib/models/habit_node.dart (language + hasTranslation fields + fromDonatedJson factory), mobile/lib/services/habit_service.dart (fetchDonatedHabits), mobile/lib/screens/explore_screen.dart (locale watch + refetch + language indicator), prd.json (US-123 passes=true)
+- **Learnings for future iterations:**
+  - POST-frame callback pattern for state-driven refetch: `WidgetsBinding.instance.addPostFrameCallback((_) => _fetchHabits())` in `build()` when locale differs from `_fetchedLang`
+  - `HabitNode.fromDonatedJson` vs `fromJson`: two separate factories handle old (public) and new (donated) API response shapes — keeps backward compat
+  - When `fetchDonatedHabits` returns habits without categories, the category filter bar becomes empty (which is handled by `_CategoryFilterBar` returning `SizedBox.shrink()` when categories list is empty)
+---

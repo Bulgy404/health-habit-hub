@@ -3,6 +3,7 @@ import '../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/habit_node.dart';
+import '../providers/locale_provider.dart';
 import '../services/habit_service.dart';
 import '../widgets/habit_graph_widget.dart';
 import 'stats_screen.dart';
@@ -21,6 +22,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   String? _error;
   String? _selectedCategory;
 
+  /// The language code used for the last fetch; used to detect locale changes.
+  String _fetchedLang = '';
+
   @override
   void initState() {
     super.initState();
@@ -29,21 +33,27 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   }
 
   Future<void> _fetchHabits() async {
+    final lang = ref.read(localeProvider).languageCode;
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final habits = await _habitService.fetchPublicHabits();
-      setState(() {
-        _allHabits = habits;
-        _loading = false;
-      });
+      final habits = await _habitService.fetchDonatedHabits(lang);
+      if (mounted) {
+        setState(() {
+          _allHabits = habits;
+          _fetchedLang = lang;
+          _loading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -124,21 +134,39 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Habit name
+                // Habit name (displayText or original)
                 Text(
                   node.name,
                   style: Theme.of(ctx).textTheme.titleLarge,
                 ),
+                if (!node.hasTranslation && node.language.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.translate,
+                          size: 14, color: Colors.orange),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Original (${node.language})',
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.orange),
+                      ),
+                    ],
+                  ),
+                ],
                 const SizedBox(height: 12),
 
                 // Category chip
                 Wrap(
                   spacing: 8,
                   children: [
-                    Chip(
-                      label: Text(node.category.isEmpty ? AppLocalizations.of(ctx)!.unknown : node.category),
-                      avatar: const Icon(Icons.category, size: 16),
-                    ),
+                    if (node.category.isNotEmpty)
+                      Chip(
+                        label: Text(node.category.isEmpty
+                            ? AppLocalizations.of(ctx)!.unknown
+                            : node.category),
+                        avatar: const Icon(Icons.category, size: 16),
+                      ),
                     if (node.bcioClass.isNotEmpty)
                       Chip(
                         label: Text(
@@ -205,6 +233,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final currentLang = ref.watch(localeProvider).languageCode;
+
+    // Refetch when locale changes.
+    if (!_loading && currentLang != _fetchedLang) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _fetchHabits());
+    }
+
     Widget body;
 
     if (_loading) {
