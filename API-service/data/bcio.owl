@@ -1,0 +1,166 @@
+<?xml version="1.0"?>
+<rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+    xml:base="http://bcio.bcw.ac.uk/ontology/bcio">
+
+  <owl:Ontology rdf:about="http://bcio.bcw.ac.uk/ontology/bcio">
+    <rdfs:label xml:lang="en">Behaviour Change Intervention Ontology (BCIO) — minimal stub</rdfs:label>
+  </owl:Ontology>
+
+  <!-- ============================================================
+       TIME concepts
+       ============================================================ -->
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#MorningRoutine">
+    <rdfs:label xml:lang="en">morning routine</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#EveningRoutine">
+    <rdfs:label xml:lang="en">evening routine</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#DailyHabit">
+    <rdfs:label xml:lang="en">daily habit</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#WeeklyRoutine">
+    <rdfs:label xml:lang="en">weekly routine</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#TemporalContext">
+    <rdfs:label xml:lang="en">temporal context</rdfs:label>
+  </owl:Class>
+
+  <!-- ============================================================
+       PHYSICAL SETTING concepts
+       ============================================================ -->
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#HomeEnvironment">
+    <rdfs:label xml:lang="en">home environment</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#WorkplaceEnvironment">
+    <rdfs:label xml:lang="en">workplace environment</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#OutdoorEnvironment">
+    <rdfs:label xml:lang="en">outdoor environment</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#GymFitnessCenter">
+    <rdfs:label xml:lang="en">gym or fitness center</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#PhysicalSetting">
+    <rdfs:label xml:lang="en">physical setting</rdfs:label>
+  </owl:Class>
+
+  <!-- ============================================================
+       SOCIAL / OTHER PEOPLE concepts
+       ============================================================ -->
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#SocialSupport">
+    <rdfs:label xml:lang="en">social support</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#FamilyInfluence">
+    <rdfs:label xml:lang="en">family influence</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#PeerInfluence">
+    <rdfs:label xml:lang="en">peer influence</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#SocialNorm">
+    <rdfs:label xml:lang="en">social norm</rdfs:label>
+  </owl:Class>
+
+  <!-- ============================================================
+       INTERNAL STATE concepts
+       ============================================================ -->
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#Motivation">
+    <rdfs:label xml:lang="en">motivation</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#StressAnxiety">
+    <rdfs:label xml:lang="en">stress and anxiety</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#SelfEfficacy">
+    <rdfs:label xml:lang="en">self-efficacy</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#Emotion">
+    <rdfs:label xml:lang="en">emotion</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#Habit">
+    <rdfs:label xml:lang="en">habit</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#BeliefAboutConsequences">
+    <rdfs:label xml:lang="en">belief about consequences</rdfs:label>
+  </owl:Class>
+
+  <!-- ============================================================
+       BEHAVIOR concepts
+       ============================================================ -->
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#PhysicalActivity">
+    <rdfs:label xml:lang="en">physical activity</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#ExerciseBehavior">
+    <rdfs:label xml:lang="en">exercise behavior</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#DietaryBehavior">
+    <rdfs:label xml:lang="en">dietary behavior</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#SleepBehavior">
+    <rdfs:label xml:lang="en">sleep behavior</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#MindfulnessMeditation">
+    <rdfs:label xml:lang="en">mindfulness and meditation</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#SubstanceUse">
+    <rdfs:label xml:lang="en">substance use</rdfs:label>
+  </owl:Class>
+
+  <!-- ============================================================
+       REASONING / GOAL concepts
+       ============================================================ -->
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#HealthGoal">
+    <rdfs:label xml:lang="en">health goal</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#GoalSetting">
+    <rdfs:label xml:lang="en">goal setting</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#WellbeingImprovement">
+    <rdfs:label xml:lang="en">wellbeing improvement</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#StressReduction">
+    <rdfs:label xml:lang="en">stress reduction</rdfs:label>
+  </owl:Class>
+
+  <!-- ============================================================
+       PRIOR BEHAVIOR concepts
+       ============================================================ -->
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#HabitFormation">
+    <rdfs:label xml:lang="en">habit formation</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#BehavioralPattern">
+    <rdfs:label xml:lang="en">behavioral pattern</rdfs:label>
+  </owl:Class>
+
+  <owl:Class rdf:about="http://bcio.bcw.ac.uk/ontology/bcio#PriorBehavior">
+    <rdfs:label xml:lang="en">prior behavior</rdfs:label>
+  </owl:Class>
+
+</rdf:RDF>
