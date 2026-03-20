@@ -19,5 +19,192 @@
   "profile": "Profile",
   "@profile": {
     "description": "Label for the profile screen"
+  },
+  "habitDonatedSuccess": "Habit donated successfully!",
+  "@habitDonatedSuccess": {
+    "description": "Snackbar message when habit donation succeeds"
+  },
+  "submissionFailed": "Submission failed — please try again.",
+  "@submissionFailed": {
+    "description": "Snackbar message when a form submission fails"
+  },
+  "noConnection": "No connection",
+  "@noConnection": {
+    "description": "Offline banner heading"
+  },
+  "couldNotLoadSurvey": "Could not load survey.\nPlease check your connection.",
+  "@couldNotLoadSurvey": {
+    "description": "Offline banner body for donate screen"
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Label for the retry button"
+  },
+  "refresh": "Refresh",
+  "@refresh": {
+    "description": "Tooltip for the refresh icon button"
+  },
+  "graphTab": "Graph",
+  "@graphTab": {
+    "description": "Tab label for the habit graph view"
+  },
+  "statsTab": "Stats",
+  "@statsTab": {
+    "description": "Tab label for the stats view"
+  },
+  "failedToLoadHabits": "Failed to load habits",
+  "@failedToLoadHabits": {
+    "description": "Error message when habit list fails to load"
+  },
+  "noHabitDataYet": "No habit data available yet.",
+  "@noHabitDataYet": {
+    "description": "Empty state message on explore screen"
+  },
+  "couldNotSubmitAnnotation": "Could not submit annotation",
+  "@couldNotSubmitAnnotation": {
+    "description": "Snackbar message when annotation submission fails"
+  },
+  "communityAnnotations": "Community annotations",
+  "@communityAnnotations": {
+    "description": "Section heading for annotation counts in habit detail sheet"
+  },
+  "unknown": "Unknown",
+  "@unknown": {
+    "description": "Fallback label when a category is empty"
+  },
+  "iDoThisCount": "I do this too: {count}",
+  "@iDoThisCount": {
+    "description": "Annotation count label for iDoThis",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "helpfulCount": "Helpful: {count}",
+  "@helpfulCount": {
+    "description": "Annotation count label for helpful",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "iDoThisToo": "I do this too",
+  "@iDoThisToo": {
+    "description": "Button label for the iDoThis annotation action"
+  },
+  "helpful": "Helpful",
+  "@helpful": {
+    "description": "Button label for the helpful annotation action"
+  },
+  "failedToLoadSettings": "Failed to load settings",
+  "@failedToLoadSettings": {
+    "description": "Error message when settings fail to load"
+  },
+  "tokenCardFormat": "Token Card Format",
+  "@tokenCardFormat": {
+    "description": "Section title for token card format setting"
+  },
+  "tokenCardFormatDescription": "Select the format used when generating token cards for new participants.",
+  "@tokenCardFormatDescription": {
+    "description": "Description text for the token card format setting"
+  },
+  "settingsSaved": "Settings saved",
+  "@settingsSaved": {
+    "description": "Snackbar message when settings are saved successfully"
+  },
+  "failedToSaveSettings": "Failed to save settings",
+  "@failedToSaveSettings": {
+    "description": "Snackbar message when saving settings fails"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Label for the save button"
+  },
+  "qrOnly": "QR only",
+  "@qrOnly": {
+    "description": "Radio option label for QR-only token card format"
+  },
+  "qrOnlyDescription": "Generate QR code tokens only",
+  "@qrOnlyDescription": {
+    "description": "Subtitle for the QR-only token card format option"
+  },
+  "printOnly": "Print only",
+  "@printOnly": {
+    "description": "Radio option label for print-only token card format"
+  },
+  "printOnlyDescription": "Generate printable token cards only",
+  "@printOnlyDescription": {
+    "description": "Subtitle for the print-only token card format option"
+  },
+  "both": "Both",
+  "@both": {
+    "description": "Radio option label for both QR and print token card format"
+  },
+  "bothDescription": "Generate QR code and printable token cards",
+  "@bothDescription": {
+    "description": "Subtitle for the both token card format option"
+  },
+  "myProfile": "My Profile",
+  "@myProfile": {
+    "description": "AppBar title for the profile screen"
+  },
+  "profileSavedSuccess": "Profile saved successfully!",
+  "@profileSavedSuccess": {
+    "description": "Snackbar message when profile is saved successfully"
+  },
+  "couldNotLoadProfile": "Could not load profile.\nPlease check your connection.",
+  "@couldNotLoadProfile": {
+    "description": "Offline banner body for profile screen"
+  },
+  "healthQuestionnaires": "Health Questionnaires",
+  "@healthQuestionnaires": {
+    "description": "Section heading for health questionnaire buttons"
+  },
+  "sliqLifestyleIndex": "SLIQ — Lifestyle Index",
+  "@sliqLifestyleIndex": {
+    "description": "Button label for the SLIQ questionnaire"
+  },
+  "rand36HealthSurvey": "RAND-36 — Health Survey",
+  "@rand36HealthSurvey": {
+    "description": "Button label for the RAND-36 questionnaire"
+  },
+  "restoreAccountOnDevice": "Restore account on this device",
+  "@restoreAccountOnDevice": {
+    "description": "Button label to restore account on current device"
+  },
+  "profileCompleted": "Profile Completed",
+  "@profileCompleted": {
+    "description": "Card title when profile has been completed"
+  },
+  "completedOn": "Completed on {date}",
+  "@completedOn": {
+    "description": "Card subtitle showing when profile was completed",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "edit": "Edit",
+  "@edit": {
+    "description": "Label for the edit button"
+  },
+  "appearance": "Appearance",
+  "@appearance": {
+    "description": "Section heading for theme mode selector"
+  },
+  "light": "Light",
+  "@light": {
+    "description": "Theme mode option: light"
+  },
+  "system": "System",
+  "@system": {
+    "description": "Theme mode option: system default"
+  },
+  "dark": "Dark",
+  "@dark": {
+    "description": "Theme mode option: dark"
   }
 }

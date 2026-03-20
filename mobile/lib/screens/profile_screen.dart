@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -158,6 +159,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _onSurveyComplete(String message) async {
     if (_submitting || _surveyId == null) return;
     setState(() => _submitting = true);
+    final l10n = AppLocalizations.of(context)!;
     try {
       final answers = jsonDecode(message) as Map<String, dynamic>;
       final headers = await _authHeaders();
@@ -168,7 +170,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile saved successfully!')),
+          SnackBar(content: Text(l10n.profileSavedSuccess)),
         );
         // Return to summary view.
         setState(() {
@@ -181,9 +183,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Submission failed — please try again.'),
-          ),
+          SnackBar(content: Text(l10n.submissionFailed)),
         );
       }
     } finally {
@@ -205,7 +205,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Profile')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.myProfile)),
       body: Column(
         children: [
           Expanded(
@@ -229,16 +229,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Text(
-                              'Health Questionnaires',
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                            Text(
+                              AppLocalizations.of(context)!.healthQuestionnaires,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 8),
                             OutlinedButton.icon(
                               onPressed: () =>
                                   context.push('/questionnaire/sliq'),
                               icon: const Icon(Icons.assignment),
-                              label: const Text('SLIQ — Lifestyle Index'),
+                              label: Text(AppLocalizations.of(context)!.sliqLifestyleIndex),
                               style: OutlinedButton.styleFrom(
                                 minimumSize:
                                     const Size(double.infinity, 48),
@@ -249,8 +249,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               onPressed: () =>
                                   context.push('/questionnaire/rand-36'),
                               icon: const Icon(Icons.health_and_safety),
-                              label:
-                                  const Text('RAND-36 — Health Survey'),
+                              label: Text(AppLocalizations.of(context)!.rand36HealthSurvey),
                               style: OutlinedButton.styleFrom(
                                 minimumSize:
                                     const Size(double.infinity, 48),
@@ -265,8 +264,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           onPressed: () =>
                               context.push('/onboarding/restore'),
                           icon: const Icon(Icons.lock_reset),
-                          label:
-                              const Text('Restore account on this device'),
+                          label: Text(AppLocalizations.of(context)!.restoreAccountOnDevice),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(double.infinity, 48),
                           ),
@@ -306,6 +304,7 @@ class _ProfileSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dateStr =
         '${completedAt.year}-${completedAt.month.toString().padLeft(2, '0')}-${completedAt.day.toString().padLeft(2, '0')}';
     return Center(
@@ -319,20 +318,20 @@ class _ProfileSummaryCard extends StatelessWidget {
               children: [
                 const Icon(Icons.check_circle, size: 64, color: Colors.teal),
                 const SizedBox(height: 16),
-                const Text(
-                  'Profile Completed',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Text(
+                  l10n.profileCompleted,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Completed on $dateStr',
+                  l10n.completedOn(dateStr),
                   style: const TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
                   onPressed: onEdit,
                   icon: const Icon(Icons.edit),
-                  label: const Text('Edit'),
+                  label: Text(l10n.edit),
                 ),
               ],
             ),
@@ -352,6 +351,7 @@ class _AppearanceSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final themeMode = ref.watch(themeModeProvider);
     final notifier = ref.read(themeModeProvider.notifier);
 
@@ -363,26 +363,26 @@ class _AppearanceSection extends ConsumerWidget {
           const Divider(),
           const SizedBox(height: 4),
           Text(
-            'Appearance',
+            l10n.appearance,
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 8),
           SegmentedButton<ThemeMode>(
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: ThemeMode.light,
-                label: Text('Light'),
-                icon: Icon(Icons.light_mode),
+                label: Text(l10n.light),
+                icon: const Icon(Icons.light_mode),
               ),
               ButtonSegment(
                 value: ThemeMode.system,
-                label: Text('System'),
-                icon: Icon(Icons.brightness_auto),
+                label: Text(l10n.system),
+                icon: const Icon(Icons.brightness_auto),
               ),
               ButtonSegment(
                 value: ThemeMode.dark,
-                label: Text('Dark'),
-                icon: Icon(Icons.dark_mode),
+                label: Text(l10n.dark),
+                icon: const Icon(Icons.dark_mode),
               ),
             ],
             selected: {themeMode},
@@ -406,19 +406,20 @@ class _OfflineBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Container(
           width: double.infinity,
           color: Colors.orange,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.wifi_off, color: Colors.white),
-              SizedBox(width: 8),
+              const Icon(Icons.wifi_off, color: Colors.white),
+              const SizedBox(width: 8),
               Text(
-                'No connection',
-                style: TextStyle(color: Colors.white, fontSize: 15),
+                l10n.noConnection,
+                style: const TextStyle(color: Colors.white, fontSize: 15),
               ),
             ],
           ),
@@ -430,16 +431,16 @@ class _OfflineBanner extends StatelessWidget {
               children: [
                 const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
                 const SizedBox(height: 16),
-                const Text(
-                  'Could not load profile.\nPlease check your connection.',
+                Text(
+                  l10n.couldNotLoadProfile,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                  style: const TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  label: Text(l10n.retry),
                 ),
               ],
             ),

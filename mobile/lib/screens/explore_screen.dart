@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/habit_node.dart';
@@ -78,6 +79,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) {
           Future<void> annotate(String type) async {
+            final l10n = AppLocalizations.of(ctx)!;
             try {
               final newCounts = await _habitService.annotateHabit(node.id, type);
               final updated = HabitNode(
@@ -97,7 +99,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             } catch (_) {
               if (ctx.mounted) {
                 ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(content: Text('Could not submit annotation')),
+                  SnackBar(content: Text(l10n.couldNotSubmitAnnotation)),
                 );
               }
             }
@@ -134,7 +136,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   spacing: 8,
                   children: [
                     Chip(
-                      label: Text(node.category.isEmpty ? 'Unknown' : node.category),
+                      label: Text(node.category.isEmpty ? AppLocalizations.of(ctx)!.unknown : node.category),
                       avatar: const Icon(Icons.category, size: 16),
                     ),
                     if (node.bcioClass.isNotEmpty)
@@ -152,18 +154,18 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 const SizedBox(height: 16),
 
                 // Annotation counts
-                Text('Community annotations',
+                Text(AppLocalizations.of(ctx)!.communityAnnotations,
                     style: Theme.of(ctx).textTheme.labelLarge),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     const Icon(Icons.thumb_up_outlined, size: 18),
                     const SizedBox(width: 6),
-                    Text('I do this too: ${node.annotationCounts['iDoThis'] ?? 0}'),
+                    Text(AppLocalizations.of(ctx)!.iDoThisCount('${node.annotationCounts['iDoThis'] ?? 0}')),
                     const SizedBox(width: 24),
                     const Icon(Icons.star_outline, size: 18),
                     const SizedBox(width: 6),
-                    Text('Helpful: ${node.annotationCounts['helpful'] ?? 0}'),
+                    Text(AppLocalizations.of(ctx)!.helpfulCount('${node.annotationCounts['helpful'] ?? 0}')),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -175,7 +177,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () => annotate('iDoThis'),
                         icon: const Icon(Icons.thumb_up),
-                        label: const Text('I do this too'),
+                        label: Text(AppLocalizations.of(ctx)!.iDoThisToo),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -183,7 +185,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       child: FilledButton.icon(
                         onPressed: () => annotate('helpful'),
                         icon: const Icon(Icons.star),
-                        label: const Text('Helpful'),
+                        label: Text(AppLocalizations.of(ctx)!.helpful),
                       ),
                     ),
                   ],
@@ -202,6 +204,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     Widget body;
 
     if (_loading) {
@@ -213,18 +216,18 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 12),
-            Text('Failed to load habits', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.failedToLoadHabits, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             ElevatedButton.icon(
               onPressed: _fetchHabits,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(l10n.retry),
             ),
           ],
         ),
       );
     } else if (_allHabits.isEmpty) {
-      body = const Center(child: Text('No habit data available yet.'));
+      body = Center(child: Text(l10n.noHabitDataYet));
     } else {
       body = Column(
         children: [
@@ -252,19 +255,19 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Explore Habits'),
+          title: Text(l10n.exploreHabits),
           actions: [
             if (!_loading)
               IconButton(
                 onPressed: _fetchHabits,
                 icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
+                tooltip: l10n.refresh,
               ),
           ],
-          bottom: const TabBar(
+          bottom: TabBar(
             tabs: [
-              Tab(icon: Icon(Icons.hub), text: 'Graph'),
-              Tab(icon: Icon(Icons.bar_chart), text: 'Stats'),
+              Tab(icon: const Icon(Icons.hub), text: l10n.graphTab),
+              Tab(icon: const Icon(Icons.bar_chart), text: l10n.statsTab),
             ],
           ),
         ),

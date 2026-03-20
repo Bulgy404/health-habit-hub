@@ -1,5 +1,6 @@
 // Admin screen for configuring token card format and other admin settings.
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../services/admin_service.dart';
@@ -59,20 +60,21 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
+    final l10n = AppLocalizations.of(context)!;
     try {
       final service = ref.read(adminServiceProvider);
       await service.updateSetting('token_card_format', _tokenCardFormat);
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Settings saved')),
+          SnackBar(content: Text(l10n.settingsSaved)),
         );
       }
     } catch (_) {
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save settings')),
+          SnackBar(content: Text(l10n.failedToSaveSettings)),
         );
       }
     }
@@ -80,13 +82,14 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(l10n.settings),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
             onPressed: _loading ? null : _load,
           ),
         ],
@@ -96,6 +99,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
   }
 
   Widget _buildBody() {
+    final l10n = AppLocalizations.of(context)!;
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -104,9 +108,9 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Failed to load settings'),
+            Text(l10n.failedToLoadSettings),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: _load, child: const Text('Retry')),
+            ElevatedButton(onPressed: _load, child: Text(l10n.retry)),
           ],
         ),
       );
@@ -115,13 +119,13 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
       padding: const EdgeInsets.all(16),
       children: [
         Text(
-          'Token Card Format',
+          l10n.tokenCardFormat,
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 4),
-        const Text(
-          'Select the format used when generating token cards for new participants.',
-          style: TextStyle(color: Colors.grey),
+        Text(
+          l10n.tokenCardFormatDescription,
+          style: const TextStyle(color: Colors.grey),
         ),
         const SizedBox(height: 8),
         _FormatRadioGroup(
@@ -139,7 +143,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                     height: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Save'),
+                : Text(l10n.save),
           ),
         ),
       ],
@@ -158,10 +162,11 @@ class _FormatRadioGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const options = [
-      ('qr', 'QR only', 'Generate QR code tokens only'),
-      ('print', 'Print only', 'Generate printable token cards only'),
-      ('both', 'Both', 'Generate QR code and printable token cards'),
+    final l10n = AppLocalizations.of(context)!;
+    final options = [
+      ('qr', l10n.qrOnly, l10n.qrOnlyDescription),
+      ('print', l10n.printOnly, l10n.printOnlyDescription),
+      ('both', l10n.both, l10n.bothDescription),
     ];
     return Card(
       margin: EdgeInsets.zero,
