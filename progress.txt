@@ -1213,3 +1213,14 @@
   - Generated files (`app_localizations*.dart`) live in `mobile/lib/l10n/` alongside the ARBs and are importable as `package:hhh/l10n/app_localizations.dart`
   - Import order in main.dart: `flutter_localizations` before `flutter_riverpod`, then local `l10n/app_localizations.dart` at end of import block
 ---
+
+## 2026-03-20 - US-118
+- What was implemented: Replaced all hardcoded English UI strings in donate_screen.dart, explore_screen.dart, admin_settings_screen.dart, and profile_screen.dart with AppLocalizations references. Added 45 new keys to app_en.arb (with @metadata) covering: snackbar messages, AppBar titles, button labels, tab labels, section headings, offline banners, radio subtitles, appearance/theme segment labels, and interpolated strings (completedOn, iDoThisCount, helpfulCount with String placeholders). Updated app_de.arb with German translations for all new keys (satisfying US-119 prerequisites). Corrected import path to use relative `'../l10n/app_localizations.dart'` (not the flutter_gen package path). flutter gen-l10n and flutter analyze both pass with no issues.
+- Files changed: mobile/lib/l10n/app_en.arb (45 new keys), mobile/lib/l10n/app_de.arb (45 new German keys), mobile/lib/l10n/app_localizations.dart (regenerated), mobile/lib/l10n/app_localizations_en.dart (regenerated), mobile/lib/l10n/app_localizations_de.dart (regenerated), mobile/lib/screens/donate_screen.dart (l10n import + 6 strings), mobile/lib/screens/explore_screen.dart (l10n import + 12 strings), mobile/lib/screens/admin/admin_settings_screen.dart (l10n import + 12 strings), mobile/lib/screens/profile_screen.dart (l10n import + 15 strings), prd.json (US-118 passes=true)
+- **Learnings for future iterations:**
+  - Import path for generated l10n is RELATIVE not package: use `'../l10n/app_localizations.dart'` from screens/, `'../../l10n/app_localizations.dart'` from screens/admin/ — NOT `package:flutter_gen/gen_l10n/...`
+  - Capture `AppLocalizations.of(context)!` at the top of build() or before async gaps in callbacks; it's safe to use the captured reference after await since context is still valid when mounted check passes
+  - ARB interpolated string placeholders use `"type": "String"` when the value comes from string interpolation (`'${val}'`); this avoids int/num type mismatch when map values are dynamic
+  - `const TabBar(tabs: [...])` must become non-const when tab text uses l10n — same for `SegmentedButton` segments and `Row` children containing l10n strings
+  - German translations (app_de.arb) should be added in the same PR as English extraction to keep all ARBs in sync; US-119 acceptance criteria were already satisfied here
+---
