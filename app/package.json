@@ -39,6 +39,7 @@
     "nodemailer": "^7.0.5",
     "pdfkit": "^0.18.0",
     "qrcode": "^1.5.4",
+    "redis": "^4.7.1",
     "sparql-http-client": "^2.4.2",
     "survey-core": "^2.3.1",
     "survey-js-ui": "^2.3.1",
