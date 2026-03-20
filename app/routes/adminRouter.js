@@ -1549,6 +1549,146 @@ export function createAdminRouter({
     }
   });
 
+  // ── Questionnaire CRUD (admin) ────────────────────────────────────────────
+
+  // GET /api/v1/admin/questionnaires
+  router.get('/questionnaires', async (req, res) => {
+    try {
+      const database = await getDb();
+      const docs = await database
+        .collection('questionnaires')
+        .find({})
+        .toArray();
+      res.json(
+        docs.map((q) => ({
+          slug: q.slug,
+          title: q.title,
+          description: q.description || '',
+          version: q.version || '1',
+          active: q.active !== false,
+          questionCount: Array.isArray(q.questions) ? q.questions.length : 0,
+          updatedAt: q.updatedAt || q.createdAt || null,
+        }))
+      );
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/v1/admin/questionnaires
+  router.post('/questionnaires', async (req, res) => {
+    try {
+      const { slug, title, description, version, questions } = req.body;
+      if (!slug || !title) {
+        return res.status(400).json({ error: 'slug and title are required' });
+      }
+      const database = await getDb();
+      const existing = await database
+        .collection('questionnaires')
+        .findOne({ slug });
+      if (existing) {
+        return res
+          .status(409)
+          .json({ error: 'Questionnaire with this slug already exists' });
+      }
+      const now = new Date();
+      const doc = {
+        slug,
+        title,
+        description: description || '',
+        version: version || '1',
+        active: true,
+        questions: Array.isArray(questions) ? questions : [],
+        createdAt: now,
+        updatedAt: now,
+      };
+      await database.collection('questionnaires').insertOne(doc);
+      res.status(201).json({ ok: true, slug });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PUT /api/v1/admin/questionnaires/:slug
+  router.put('/questionnaires/:slug', async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { title, description, version, questions } = req.body;
+      const database = await getDb();
+      const update = { updatedAt: new Date() };
+      if (title !== undefined) update.title = title;
+      if (description !== undefined) update.description = description;
+      if (version !== undefined) update.version = version;
+      if (questions !== undefined) update.questions = questions;
+      const result = await database
+        .collection('questionnaires')
+        .updateOne({ slug }, { $set: update });
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ error: 'Questionnaire not found' });
+      }
+      res.json({ ok: true, slug });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PATCH /api/v1/admin/questionnaires/:slug/active
+  router.patch('/questionnaires/:slug/active', async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { active } = req.body;
+      if (typeof active !== 'boolean') {
+        return res.status(400).json({ error: 'active must be a boolean' });
+      }
+      const database = await getDb();
+      const result = await database
+        .collection('questionnaires')
+        .updateOne({ slug }, { $set: { active, updatedAt: new Date() } });
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ error: 'Questionnaire not found' });
+      }
+      res.json({ ok: true, slug, active });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // DELETE /api/v1/admin/questionnaires/:slug
+  router.delete('/questionnaires/:slug', async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const database = await getDb();
+      const responseCount = await database
+        .collection('form_responses')
+        .countDocuments({ questionnaireSlug: slug });
+      if (responseCount > 0) {
+        // Has responses: deactivate only
+        await database
+          .collection('questionnaires')
+          .updateOne(
+            { slug },
+            { $set: { active: false, updatedAt: new Date() } }
+          );
+        return res.json({
+          ok: true,
+          slug,
+          deleted: false,
+          deactivated: true,
+          responseCount,
+        });
+      }
+      const result = await database
+        .collection('questionnaires')
+        .deleteOne({ slug });
+      if (result.deletedCount === 0) {
+        return res.status(404).json({ error: 'Questionnaire not found' });
+      }
+      res.json({ ok: true, slug, deleted: true });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // ── Participant management (cont.) ────────────────────────────────────────
 
   /**
