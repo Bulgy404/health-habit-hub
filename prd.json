@@ -1589,8 +1589,8 @@
         "Typecheck passes"
       ],
       "priority": 98,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created prompts/classify_context.txt with BCIO 7-dimension extraction prompt. Created routers/classify_context.py with Redis caching (same key strategy as classify_habit). Updated main.py to include the new router. Added 3 unit tests (non-empty BEHAVIOR, graceful non-habit, cache hit). All 6 tests pass, pyright reports 0 errors."
     },
     {
       "id": "US-099",
