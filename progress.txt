@@ -1097,3 +1097,14 @@
   - `DELETE /admin/questionnaires/:slug` checks `form_responses` collection for `questionnaireSlug` field before hard-delete; always deactivate instead of delete when responses exist
   - Prettier must be run on adminRouter.js after editing — format check is part of the test suite; run `npx prettier --write routes/adminRouter.js` from the `app/` directory
 ---
+
+## 2026-03-20 - US-107
+- What was implemented: Created `API-service/prompts/extract_habits.txt` — LLM prompt that lists all user habits (uuid, sentence, context) and asks the model to select relevant ones for a goal, returning JSON `{selected_habit_uuids, habit_summary}`. Created `API-service/routers/extract_habits.py` with `POST /api/v1/llm/extract-habits` — request: `{user_id, goal}`; response: `{selected_habits: [{uuid, sentence, context}], habit_summary}`. Neo4j query fetches all `Habit` nodes for `userID` with `OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)` and groups context phrases by dimension. Redis caching keyed by SHA-256 of `user_id||goal`. Empty-habits short-circuit (no LLM call). Added `neo4j>=5.19.0` to `requirements.txt`. Registered router in `main.py`. Created 4 unit tests (happy path, empty habits, bad LLM JSON, cache hit). All 15 tests pass; pyright 0 errors.
+- Files changed: API-service/prompts/extract_habits.txt (new), API-service/routers/extract_habits.py (new), API-service/tests/test_extract_habits.py (new), API-service/requirements.txt (add neo4j), API-service/main.py (import + include router), prd.json (US-107 passes=true)
+- **Learnings for future iterations:**
+  - Use `neo4j>=5.19.0` Python driver (`AsyncGraphDatabase.driver`) for async Neo4j access from FastAPI; `await result.fetch(N)` retrieves records as a list
+  - Habit nodes stored with `userID` property (camelCase) — query `MATCH (h:Habit {userID: $user_id})`; context nodes via `OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)`
+  - `_fetch_habits_for_user` is a standalone async function (not a method) so it can be mocked directly with `patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(...))`
+  - Cache the full `result.model_dump()` JSON (not just the LLM output) so cache hits reconstruct the complete response without re-querying Neo4j
+  - Python 3.9 supports `tuple[List[str], str]` return type hints only in quotes or with `from __future__ import annotations` — use the import
+---
