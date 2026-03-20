@@ -2072,7 +2072,7 @@
         "This story tracks the audit finding explicitly for visibility"
       ],
       "priority": 127,
-      "passes": false,
+      "passes": true,
       "notes": "Audit finding: insertDonateData only calls translate() when language is not English; English habits have no translationDE. Resolved by US-115."
     },
     {
@@ -2084,7 +2084,7 @@
         "This story tracks the audit finding explicitly for visibility"
       ],
       "priority": 128,
-      "passes": false,
+      "passes": true,
       "notes": "Audit finding: GET /api/v1/habits returns no displayText field and accepts no lang parameter. Resolved by US-116."
     },
     {
@@ -2096,7 +2096,7 @@
         "This story tracks the audit finding explicitly for visibility"
       ],
       "priority": 129,
-      "passes": false,
+      "passes": true,
       "notes": "Audit finding: donate_screen.dart calls surveyService.fetchSurvey with no locale; German users see English survey form. Resolved by US-124."
     },
     {
