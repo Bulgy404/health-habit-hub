@@ -7,6 +7,7 @@ import styles from "./sidebar.module.css";
 
 const NAV_ITEMS = [
   { href: "/questionnaires", label: "Questionnaires", icon: "📋" },
+  { href: "/knowledge-base", label: "Knowledge Base", icon: "📚" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
