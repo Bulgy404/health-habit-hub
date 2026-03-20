@@ -8,6 +8,7 @@ from routers.classify_habit import router as classify_habit_router
 from routers.extract_habits import router as extract_habits_router
 from routers.extract_profile import router as extract_profile_router
 from routers.map_bcio import router as map_bcio_router
+from routers.retrieve import router as retrieve_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -18,6 +19,7 @@ app.include_router(classify_context_router, prefix="/api/v1")
 app.include_router(map_bcio_router, prefix="/api/v1")
 app.include_router(extract_habits_router, prefix="/api/v1")
 app.include_router(extract_profile_router, prefix="/api/v1")
+app.include_router(retrieve_router, prefix="/api/v1")
 
 
 @app.get("/health")

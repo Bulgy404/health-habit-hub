@@ -1796,7 +1796,7 @@
         "Typecheck passes"
       ],
       "priority": 109,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -1870,6 +1870,248 @@
       "priority": 113,
       "passes": false,
       "notes": ""
+    },
+    {
+      "id": "US-114",
+      "title": "Backend \u2014 tone-preserving English translation of non-English habits",
+      "description": "As a researcher, I want English translations of habits to read naturally and preserve the donor's personal tone, not just be a literal machine-translation output.",
+      "acceptanceCriteria": [
+        "After LibreTranslate produces an English draft, a second LLM step refines tone while keeping meaning identical",
+        "The refined translation is stored as hhh:translationEN on the habit node",
+        "If the LLM step fails or times out, raw LibreTranslate output is used as fallback and a warning is logged",
+        "Unit test: mock LLM + LibreTranslate, assert translationEN is set and differs from a known bad literal translation",
+        "Typecheck/lint passes"
+      ],
+      "priority": 114,
+      "passes": false,
+      "notes": "Requires LLM service integration; reuse existing LLM endpoint from US-091\u2013US-100 area"
+    },
+    {
+      "id": "US-115",
+      "title": "Backend \u2014 German translation for English-donated habits",
+      "description": "As a German-speaking user, I want to see habits donated in English displayed in German, so I can read the full catalogue in my language.",
+      "acceptanceCriteria": [
+        "insertDonateData calls donation.translate('de', config) when data.language starts with 'en'",
+        "German translation (tone-refined) stored as hhh:translationDE on the habit node",
+        "Backfill migration script scripts/backfill-de-translations.js back-fills hhh:translationDE for all existing habits without it",
+        "Integration test: donate an English habit and assert both hhh:value (original EN) and hhh:translationDE exist in Neo4j",
+        "Typecheck/lint passes"
+      ],
+      "priority": 115,
+      "passes": false,
+      "notes": "Also resolves audit finding US-127"
+    },
+    {
+      "id": "US-116",
+      "title": "Backend \u2014 habits API returns original + translations",
+      "description": "As a Flutter developer, I want the GET habits endpoint to include both the original text and available translations so the app can display the correct language without a second request.",
+      "acceptanceCriteria": [
+        "GET /api/v1/habits response includes original, translationEN, and translationDE fields per habit (null if not available)",
+        "Optional ?lang=en|de query parameter sets a displayText convenience field in the response",
+        "Existing integration tests updated; new test covers ?lang=de response",
+        "Typecheck/lint passes"
+      ],
+      "priority": 116,
+      "passes": false,
+      "notes": "Also resolves audit finding US-128"
+    },
+    {
+      "id": "US-117",
+      "title": "Flutter \u2014 i18n scaffold (flutter_localizations + ARB files)",
+      "description": "As a developer, I need the Flutter project wired for localisation so that all UI strings can be translated without touching widget code.",
+      "acceptanceCriteria": [
+        "pubspec.yaml adds flutter_localizations and intl dependencies",
+        "l10n.yaml created at mobile/l10n.yaml with arb-dir: lib/l10n, template-arb-file: app_en.arb",
+        "mobile/lib/l10n/app_en.arb and app_de.arb created with at least one placeholder key each",
+        "MaterialApp in main.dart sets localizationsDelegates and supportedLocales (en, de)",
+        "flutter gen-l10n runs without errors",
+        "Typecheck/lint passes"
+      ],
+      "priority": 117,
+      "passes": false,
+      "notes": "Foundation story \u2014 must land before US-118, US-119, US-121, US-122, US-123, US-124, US-130"
+    },
+    {
+      "id": "US-118",
+      "title": "Flutter \u2014 extract all hardcoded English UI strings",
+      "description": "As a developer, I want every user-visible string in the Flutter app referenced via AppLocalizations.of(context) so that swapping language requires only an ARB file change.",
+      "acceptanceCriteria": [
+        "All hardcoded strings in donate_screen.dart, explore_screen.dart, admin_settings_screen.dart, and profile_screen.dart replaced with localisation keys",
+        "app_en.arb contains every key with its English value",
+        "No Text('...') literal with a user-visible string remains in any of the above files",
+        "flutter gen-l10n and flutter analyze pass with no warnings",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 118,
+      "passes": false,
+      "notes": "Depends on US-117"
+    },
+    {
+      "id": "US-119",
+      "title": "Flutter \u2014 German translations (de.arb)",
+      "description": "As a German-speaking user, I want the app UI to appear fully in German when the language is set to German.",
+      "acceptanceCriteria": [
+        "app_de.arb provides a German value for every key present in app_en.arb",
+        "No key is missing (flutter gen-l10n produces no warnings about missing translations)",
+        "Spot-check: 'Donate a Habit' \u2192 'Gewohnheit spenden', 'Settings' \u2192 'Einstellungen', 'Explore Habits' \u2192 'Gewohnheiten entdecken'",
+        "Verify in browser using dev-browser skill (switch locale to de and confirm German strings appear)"
+      ],
+      "priority": 119,
+      "passes": false,
+      "notes": "Depends on US-118"
+    },
+    {
+      "id": "US-120",
+      "title": "Backend \u2014 user preferredLanguage field + API endpoint",
+      "description": "As a Flutter app, I need to persist the user's chosen language on the backend so the preference is consistent across devices.",
+      "acceptanceCriteria": [
+        "User profile schema gains optional preferredLanguage field accepting 'en' or 'de' (default 'en')",
+        "GET /api/v1/users/me response includes preferredLanguage",
+        "PUT /api/v1/users/me accepts { preferredLanguage: 'en'|'de' } and updates the field; returns 400 for unsupported values",
+        "Integration test covers GET and PUT",
+        "Typecheck/lint passes"
+      ],
+      "priority": 120,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-121",
+      "title": "Flutter \u2014 user settings screen with language toggle",
+      "description": "As a user, I want a settings screen where I can switch the app language between German and English.",
+      "acceptanceCriteria": [
+        "A Settings screen accessible from main navigation contains a Language row with a dropdown showing English / Deutsch",
+        "Selecting a language calls PUT /api/v1/users/me with the new preferredLanguage",
+        "A success snackbar confirms the change; a failure snackbar shows on API error",
+        "The screen is also accessible from the user profile area",
+        "Typecheck/lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 121,
+      "passes": false,
+      "notes": "Depends on US-117, US-120"
+    },
+    {
+      "id": "US-122",
+      "title": "Flutter \u2014 apply language preference on startup",
+      "description": "As a user, I want my saved language preference applied immediately when I open the app, without manually re-selecting it each session.",
+      "acceptanceCriteria": [
+        "On startup after auth, the app fetches GET /api/v1/users/me and reads preferredLanguage",
+        "The Flutter locale is set to the returned value before the main scaffold renders (no flash of wrong language)",
+        "If the API call fails, the app defaults to 'en'",
+        "Language changes made in settings take effect immediately without requiring a restart",
+        "Typecheck/lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 122,
+      "passes": false,
+      "notes": "Depends on US-120, US-121"
+    },
+    {
+      "id": "US-123",
+      "title": "Flutter \u2014 explore screen displays habits in user's language",
+      "description": "As a German-speaking user, I want habits in the explore feed to appear in German so I can read and annotate them naturally.",
+      "acceptanceCriteria": [
+        "ExploreScreen passes current locale as ?lang=en|de to GET /api/v1/habits",
+        "Habits are displayed using the displayText field returned by the API",
+        "If a habit has no translation in the requested language, the original text is shown with a language indicator",
+        "Typecheck/lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 123,
+      "passes": false,
+      "notes": "Depends on US-116, US-122"
+    },
+    {
+      "id": "US-124",
+      "title": "Flutter \u2014 donation survey renders in user's language",
+      "description": "As a user, I want the habit donation survey to appear in my chosen language so I can donate habits without switching mental context.",
+      "acceptanceCriteria": [
+        "DonateScreen passes current locale as ?lang=de|en when fetching GET /api/v1/surveys/{id}/render",
+        "Backend survey render endpoint reads lang parameter and returns survey JSON with labels in requested language",
+        "Switching language in settings and reopening the donate screen loads the survey in the new language",
+        "Typecheck/lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 124,
+      "passes": false,
+      "notes": "Depends on US-122; also resolves audit finding US-129"
+    },
+    {
+      "id": "US-125",
+      "title": "CI \u2014 fix Neo4j health-check in backend-integration job",
+      "description": "As a CI maintainer, I need the backend-integration job's Neo4j service container to use a reliable health-check so integration tests don't run against an unready database.",
+      "acceptanceCriteria": [
+        "backend-integration Neo4j service --health-cmd changed to: wget -q -O /dev/null http://localhost:7474 || exit 1",
+        "CI passes for a push to a branch that exercises the integration job",
+        "No other jobs in ci.yml still use cypher-shell as a health-check"
+      ],
+      "priority": 125,
+      "passes": false,
+      "notes": "Audit finding: same root cause as ontology-test was fixed for, but backend-integration was missed"
+    },
+    {
+      "id": "US-126",
+      "title": "Backend \u2014 remove unused deeplx npm dependency",
+      "description": "As a developer, I want the dependency list to only contain packages that are actually used so that npm audit results are accurate and install times stay short.",
+      "acceptanceCriteria": [
+        "deeplx removed from app/package.json and app/package-lock.json regenerated",
+        "npm ci and all existing tests pass",
+        "grep -r 'deeplx' app/ returns no results"
+      ],
+      "priority": 126,
+      "passes": false,
+      "notes": "Audit finding: deeplx listed in package.json but never imported; LibreTranslate HTTP is used instead"
+    },
+    {
+      "id": "US-127",
+      "title": "Backend \u2014 English habits never get a German translation stored",
+      "description": "As a German-speaking user, I want to see habits originally donated in English in German, but the backend currently skips translation entirely for English-origin habits.",
+      "acceptanceCriteria": [
+        "Resolved when US-115 acceptance criteria are fully met",
+        "This story tracks the audit finding explicitly for visibility"
+      ],
+      "priority": 127,
+      "passes": false,
+      "notes": "Audit finding: insertDonateData only calls translate() when language is not English; English habits have no translationDE. Resolved by US-115."
+    },
+    {
+      "id": "US-128",
+      "title": "Backend \u2014 habits explore API has no language parameter",
+      "description": "As a developer, I need the habits API to accept a ?lang= parameter so the Flutter explore screen can request habits in the user's language.",
+      "acceptanceCriteria": [
+        "Resolved when US-116 acceptance criteria are fully met",
+        "This story tracks the audit finding explicitly for visibility"
+      ],
+      "priority": 128,
+      "passes": false,
+      "notes": "Audit finding: GET /api/v1/habits returns no displayText field and accepts no lang parameter. Resolved by US-116."
+    },
+    {
+      "id": "US-129",
+      "title": "Flutter \u2014 DonateScreen sends no language to survey render endpoint",
+      "description": "As a developer, I need the donation survey to be fetched with the user's language so the form renders in the correct language.",
+      "acceptanceCriteria": [
+        "Resolved when US-124 acceptance criteria are fully met",
+        "This story tracks the audit finding explicitly for visibility"
+      ],
+      "priority": 129,
+      "passes": false,
+      "notes": "Audit finding: donate_screen.dart calls surveyService.fetchSurvey with no locale; German users see English survey form. Resolved by US-124."
+    },
+    {
+      "id": "US-130",
+      "title": "Flutter \u2014 admin settings screen strings not covered by i18n effort",
+      "description": "As an admin, I want the admin settings screen to respect the app language so the UI is consistent regardless of which language is active.",
+      "acceptanceCriteria": [
+        "All user-visible strings in admin_settings_screen.dart and any other file under lib/screens/admin/ added to app_en.arb and app_de.arb",
+        "Replaced with AppLocalizations.of(context) calls",
+        "flutter gen-l10n and flutter analyze pass",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 130,
+      "passes": false,
+      "notes": "Audit finding: admin screens excluded from US-118 scope but also contain hardcoded English strings"
     }
   ]
 }
