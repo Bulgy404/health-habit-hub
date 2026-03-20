@@ -1063,3 +1063,13 @@
   - Mock DB `collection()` must handle unknown collection names gracefully (return empty find/findOne) to avoid errors from other routers sharing the same mock db
   - Seed script uses `$setOnInsert: { createdAt }` so `createdAt` is only written on first insert, not overwritten on re-runs
 ---
+
+## 2026-03-20 - US-104
+- What was implemented: Extended `app/routes/questionnaireResponsesRouter.js` — added `GET /me` (all responses for authenticated user, ordered by `submitted_at` DESC) and `GET /me/:slug` (most recent response for a specific questionnaire slug, 404 if none). Added eager non-blocking `createIndex({ userId: 1, questionnaireSlug: 1, submitted_at: -1 })` call on router init (errors swallowed so mock DBs don't break). userId always from `req.user.sub` (JWT sub claim); no client-supplied userId accepted. Created `app/tests/integration/questionnaire-responses.routes.test.js` with 9 tests: auth enforcement on all 3 endpoints, validation (missing slug / answers), submit SLIQ → fetch by slug → verify answers match, ordering check, user isolation (user B cannot see user A's responses).
+- Files changed: app/routes/questionnaireResponsesRouter.js (add GET /me, GET /me/:slug, createIndex), app/tests/integration/questionnaire-responses.routes.test.js (new — 9 tests), prd.json (US-104 passes=true)
+- **Learnings for future iterations:**
+  - `createIndex` called eagerly at router init (non-blocking `.then().catch()`) is the pattern here — no dedicated migration/seed step; errors swallowed so in-memory mock DBs work without a `createIndex` stub (but the mock DB in the test does implement a no-op `createIndex` to be safe)
+  - Mock DB `find()` must return a fluent builder (`sort()` → `limit()` → `toArray()`), not an async directly — required to test chained MongoDB queries
+  - `sort({ submitted_at: -1 })` in mock requires special handling since `submitted_at` is a `Date` object — compare `.getTime()` not raw value
+  - The `GET /me` and `GET /me/:slug` routes must be registered before any wildcard routes (they are, since Express matches in order); note `/me` must come before `/:slug` if ever a `:slug` route is added at root level
+---
