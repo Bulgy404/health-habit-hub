@@ -225,6 +225,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                       ),
                       Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text(
+                              'Health Questionnaires',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  context.push('/questionnaire/sliq'),
+                              icon: const Icon(Icons.assignment),
+                              label: const Text('SLIQ — Lifestyle Index'),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize:
+                                    const Size(double.infinity, 48),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            OutlinedButton.icon(
+                              onPressed: () =>
+                                  context.push('/questionnaire/rand-36'),
+                              icon: const Icon(Icons.health_and_safety),
+                              label:
+                                  const Text('RAND-36 — Health Survey'),
+                              style: OutlinedButton.styleFrom(
+                                minimumSize:
+                                    const Size(double.infinity, 48),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
                         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                         child: OutlinedButton.icon(
                           onPressed: () =>

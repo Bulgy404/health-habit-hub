@@ -12,6 +12,7 @@ import 'screens/admin/admin_participants_screen.dart';
 import 'screens/admin/admin_settings_screen.dart';
 import 'screens/admin/admin_shell_screen.dart';
 import 'screens/admin/admin_surveys_screen.dart';
+import 'features/questionnaire/questionnaire_screen.dart';
 import 'screens/donate_screen.dart';
 import 'screens/explore_screen.dart';
 import 'screens/login_screen.dart';
@@ -78,6 +79,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/onboarding/restore',
         builder: (context, state) => const RestoreScreen(),
+      ),
+      GoRoute(
+        path: '/questionnaire/:slug',
+        builder: (context, state) => QuestionnaireScreen(
+          slug: state.pathParameters['slug'] ?? '',
+        ),
+        routes: [
+          GoRoute(
+            path: 'confirmation',
+            builder: (context, state) => QuestionnaireConfirmationScreen(
+              slug: state.pathParameters['slug'] ?? '',
+            ),
+          ),
+        ],
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
