@@ -11,6 +11,7 @@ import { createHabitsRouter } from './habitsRouter.js';
 import { createAdminRouter } from './adminRouter.js';
 import { createOnboardRouter } from './onboardRouter.js';
 import { createQuestionnairesRouter } from './questionnairesRouter.js';
+import { createQuestionnaireResponsesRouter } from './questionnaireResponsesRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 import { swaggerSpec } from '../swagger.js';
 
@@ -164,6 +165,13 @@ export function createV1Router({
     '/questionnaires',
     requireRole('participant', 'admin', 'researcher'),
     createQuestionnairesRouter({ db })
+  );
+
+  // Questionnaire responses: require participant, admin, or researcher role
+  router.use(
+    '/questionnaire-responses',
+    requireRole('participant', 'admin', 'researcher'),
+    createQuestionnaireResponsesRouter({ db })
   );
 
   return router;
