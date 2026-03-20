@@ -1163,3 +1163,12 @@
   - `_RecommendationCardState` reuses `recommendationFeatureServiceProvider` for feedback; uses the batch `recommendation_id` (not per-item) matching what's stored in MongoDB
   - `flutter analyze` is the quality gate for Flutter — run from inside `mobile/` directory
 ---
+## 2026-03-20 - US-113
+- What was implemented: Created `app/routes/kbRouter.js` — Express router proxying KB CRUD to API-service: GET / (list PDFs), POST /reindex (force re-index), POST / (multipart upload via raw body pipe), DELETE /:filename (delete). Registered in `v1Router.js` under `/kb` with admin/researcher role guard, passing `apiServiceUrl`. Updated `admin/src/components/sidebar.tsx` — added "Knowledge Base" (📚 icon) nav item between Questionnaires and Settings. Created `admin/src/app/(admin)/knowledge-base/page.tsx` — full Knowledge Base management UI: lists all PDFs grouped by category; each row shows filename, file size, summary badge (Ready/Pending), upload date, and Delete button (with confirmation dialog); header has Re-index button and Upload PDF button; upload modal accepts PDF file + category field. Created `admin/src/app/(admin)/knowledge-base/page.module.css`. `npm run build` (Next.js typecheck) passes. All 221 Node.js tests pass.
+- Files changed: app/routes/kbRouter.js (new), app/routes/v1Router.js (import + mount /kb), admin/src/components/sidebar.tsx (add Knowledge Base nav item), admin/src/app/(admin)/knowledge-base/page.tsx (new), admin/src/app/(admin)/knowledge-base/page.module.css (new), prd.json (US-113 passes=true)
+- **Learnings for future iterations:**
+  - To pipe multipart/form-data from Express to the API-service without multer, iterate `for await (const chunk of req)` and `Buffer.concat(chunks)`, then pass as `body` to `fetch()` with the original `req.headers['content-type']` (which includes the boundary) — body-parser skips multipart content types so the stream is still available
+  - Register POST /kb/reindex before POST /kb/:filename (if ever needed) to avoid route shadowing — in this router POST /reindex and POST / are different paths so order is fine
+  - The API-service `/api/v1/kb` endpoints are already implemented in `routers/retrieve.py` — the Node.js router is just a thin proxy
+  - Admin panel KB page uses the same CSS variable tokens (`--color-primary`, `--color-surface`, `--color-border`, `--color-text`, `--color-text-muted`, `--color-bg`) as questionnaires page — consistent design
+---
