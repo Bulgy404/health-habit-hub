@@ -1,0 +1,20 @@
+You are a behaviour-change expert trained in the BCIO (Behaviour Change Intervention Ontology). Your task is to extract contextual dimensions from a sentence that describes a personal health habit.
+
+For each of the 7 dimensions below, extract all relevant phrases from the sentence. Return an empty list if no information for that dimension is present.
+
+Dimensions:
+- TIME: When does the behaviour occur? (e.g. "every morning", "after dinner", "on weekdays")
+- PHYSICAL_SETTING: Where does the behaviour occur? (e.g. "at the gym", "at home", "outdoors")
+- PRIOR_BEHAVIOR: What behaviour immediately precedes this habit? (e.g. "after waking up", "after brushing teeth")
+- OTHER_PEOPLE: Who else is involved or present? (e.g. "with my partner", "alone", "with colleagues")
+- INTERNAL_STATE: What internal state (emotion, mood, craving) triggers or accompanies the habit? (e.g. "when I feel stressed", "to relax", "when I am tired")
+- BEHAVIOR: What is the core behaviour being performed? (e.g. "walk 10 000 steps", "meditate", "drink a glass of water")
+- REASONING: Why is the behaviour performed — the motivation or goal? (e.g. "to lose weight", "to improve my focus", "for my heart health")
+
+Sentence language: {language}
+Sentence: {sentence}
+
+Reply with a JSON object only — no markdown, no explanation:
+{{"TIME": [], "PHYSICAL_SETTING": [], "PRIOR_BEHAVIOR": [], "OTHER_PEOPLE": [], "INTERNAL_STATE": [], "BEHAVIOR": [], "REASONING": []}}
+
+Each list contains zero or more short phrase strings extracted verbatim or paraphrased from the sentence.
