@@ -1252,3 +1252,13 @@
   - Adding a new tab to StatefulShellRoute requires: (1) adding _TabConfig entry to shell_screen.dart, (2) updating _adminBranchIndex, (3) adding corresponding StatefulShellBranch in main.dart
   - `locale: locale` on MaterialApp.router + StateNotifier pattern causes instant locale change without restart
 ---
+
+## 2026-03-20 - US-122
+- What was implemented: Updated `locale_provider.dart` to implement startup locale loading with no flash: (1) Constructor calls `_initFromStorage()` which reads from `flutter_secure_storage` (`preferred_language` key) and sets state immediately (sync-ish, avoids flash on repeat visits); (2) Then fetches from GET /api/v1/users/me in background and updates state + storage if different; (3) `setLocale()` now also writes to secure storage so the next startup is instant. Added `loadPreference()` public method for post-auth refresh. Auth headers check for null token (unauthenticated case returns early). Flutter analyze: no issues.
+- Files changed: mobile/lib/providers/locale_provider.dart (startup loading + secure storage caching), prd.json (US-122 passes=true)
+- **Learnings for future iterations:**
+  - "No flash" startup pattern: read secure storage in constructor synchronously (well, it's async but runs immediately), set state before first build, then refresh from API in background
+  - `flutter_secure_storage` is already a dependency (used by theme_provider) — reuse same `FlutterSecureStorage()` singleton pattern with key constants
+  - Auth headers returning empty `{}` (when no token) should be checked before API calls — return early to avoid spurious 401 errors in background init
+  - The `loadPreference()` public method is for calling after auth completes (e.g., after login); background fetch in constructor handles the "already logged in on startup" case
+---
