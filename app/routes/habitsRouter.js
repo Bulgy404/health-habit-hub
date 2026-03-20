@@ -2,7 +2,12 @@ import express from 'express';
 import neo4j from 'neo4j-driver';
 import { randomUUID } from 'node:crypto';
 
-export function createHabitsRouter({ db, neo4jRun, apiServiceUrl } = {}) {
+export function createHabitsRouter({
+  db,
+  neo4jRun,
+  apiServiceUrl,
+  libreTranslateUrl,
+} = {}) {
   const router = express.Router();
 
   async function getDb() {
@@ -36,6 +41,76 @@ export function createHabitsRouter({ db, neo4jRun, apiServiceUrl } = {}) {
     if (typeof val === 'object' && typeof val.toNumber === 'function')
       return val.toNumber();
     return Number(val);
+  }
+
+  // Returns English translation refined for tone, or null for English habits.
+  // Falls back to raw LibreTranslate output if the LLM refinement step fails.
+  async function translateAndRefine(sentence, language, apiBase, translateUrl) {
+    if (!language || language.startsWith('en')) return null;
+
+    // Step 1: LibreTranslate — get raw English draft
+    let draft;
+    try {
+      const ltRes = await fetch(translateUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          q: sentence,
+          source: language,
+          target: 'en',
+          format: 'text',
+        }),
+      });
+      if (!ltRes.ok) {
+        console.warn(
+          `[translate] LibreTranslate returned ${ltRes.status} — skipping translationEN`
+        );
+        return null;
+      }
+      const ltData = await ltRes.json();
+      draft = ltData.translatedText;
+    } catch (err) {
+      console.warn(
+        `[translate] LibreTranslate error: ${err.message} — skipping translationEN`
+      );
+      return null;
+    }
+
+    // Step 2: LLM tone refinement
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      let refineRes;
+      try {
+        refineRes = await fetch(`${apiBase}/api/v1/llm/refine-translation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            original: sentence,
+            raw_translation: draft,
+            language,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      if (!refineRes.ok) {
+        console.warn(
+          `[translate] LLM refine-translation returned ${refineRes.status} — using raw LibreTranslate output`
+        );
+        return draft;
+      }
+
+      const refineData = await refineRes.json();
+      return refineData.refined_translation || draft;
+    } catch (err) {
+      console.warn(
+        `[translate] LLM refinement error/timeout: ${err.message} — using raw LibreTranslate output`
+      );
+      return draft;
+    }
   }
 
   // GET /api/v1/habits – base route
@@ -323,6 +398,10 @@ export function createHabitsRouter({ db, neo4jRun, apiServiceUrl } = {}) {
     const uuid = randomUUID();
     const apiBase =
       apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
+    const translateUrl =
+      libreTranslateUrl ||
+      process.env.LIBRE_TRANSLATE_URL ||
+      `http://${process.env.TRANSLATE_HOST || 'localhost'}:${process.env.TRANSLATE_PORT || '5000'}${process.env.TRANSLATE_PATH || '/translate'}`;
 
     const DIMENSIONS = [
       'TIME',
@@ -400,11 +479,20 @@ export function createHabitsRouter({ db, neo4jRun, apiServiceUrl } = {}) {
       const bcioData = await bcioRes.json();
       const mappings = bcioData.mappings || [];
 
+      // Translate non-English habits to English (tone-preserving)
+      const translationEN = await translateAndRefine(
+        sentence,
+        language,
+        apiBase,
+        translateUrl
+      );
+
       // Write to Neo4j — 1. Create Habit node
       const createdAt = new Date().toISOString();
       await queryNeo4j(
         `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: $language,
-           is_habit: true, confidence: $confidence, userID: $userID, created_at: $created_at})`,
+           is_habit: true, confidence: $confidence, userID: $userID, created_at: $created_at,
+           translationEN: $translationEN})`,
         {
           uuid,
           sentence,
@@ -412,6 +500,7 @@ export function createHabitsRouter({ db, neo4jRun, apiServiceUrl } = {}) {
           confidence: classified.confidence,
           userID,
           created_at: createdAt,
+          translationEN: translationEN || null,
         }
       );
 

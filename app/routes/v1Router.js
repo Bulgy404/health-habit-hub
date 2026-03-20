@@ -22,6 +22,7 @@ export function createV1Router({
   serviceChecks,
   recommenderUrl,
   apiServiceUrl,
+  libreTranslateUrl,
   db,
   neo4jRun,
   keycloak,
@@ -147,7 +148,7 @@ export function createV1Router({
   router.use(
     '/habits',
     requireRole('participant', 'admin', 'researcher'),
-    createHabitsRouter({ db, neo4jRun, apiServiceUrl })
+    createHabitsRouter({ db, neo4jRun, apiServiceUrl, libreTranslateUrl })
   );
 
   // Recommend routes: require participant, admin, or researcher role
