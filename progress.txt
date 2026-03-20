@@ -1108,3 +1108,13 @@
   - Cache the full `result.model_dump()` JSON (not just the LLM output) so cache hits reconstruct the complete response without re-querying Neo4j
   - Python 3.9 supports `tuple[List[str], str]` return type hints only in quotes or with `from __future__ import annotations` — use the import
 ---
+
+## 2026-03-20 - US-108
+- What was implemented: Created `API-service/routers/extract_profile.py` — POST /api/v1/llm/extract-profile endpoint (M3.2 User Profile Extractor). Request: {user_id, goal}. Fetches user's most recent SLIQ and RAND-36 questionnaire responses from the Node.js backend via `GET /api/v1/questionnaire-responses/me/:slug` using `httpx.AsyncClient` with a service auth token (SERVICE_AUTH_TOKEN env var). If questionnaire data is unavailable, gracefully falls back to empty JSON objects. LLM prompt (prompts/extract_profile.txt) instructs the model to produce profile_summary (≤80 words), profile_detailed (80–200 words), and rag_query (single retrieval sentence). Redis caching keyed on SHA-256(user_id||goal) with prefix `extract_profile:`. Fallback on LLM parse error returns goal as rag_query. Registered router in main.py. Created `API-service/tests/test_extract_profile.py` with 4 tests: normal flow, missing questionnaire data, invalid LLM JSON fallback, Redis cache hit. All 19 API-service tests pass.
+- Files changed: API-service/routers/extract_profile.py (new), API-service/prompts/extract_profile.txt (new), API-service/tests/test_extract_profile.py (new), API-service/main.py (add router import + include), prd.json (US-108 passes=true)
+- **Learnings for future iterations:**
+  - For inter-service HTTP calls from API-service (Python) to Node.js backend, use `httpx.AsyncClient` (already in requirements.txt). Pass a service auth token via `Authorization: Bearer <SERVICE_AUTH_TOKEN>` and the target user ID via `X-Service-User-Id` header
+  - SERVICE_AUTH_TOKEN env var must be set in the deployment environment; when not set, questionnaire fetch is skipped gracefully (logs a warning)
+  - BACKEND_URL defaults to `http://app:3000` (Docker service name for Node.js backend)
+  - The `_fetch_questionnaire_response` function is injectable in tests by patching `routers.extract_profile._fetch_questionnaire_response` — no need to mock httpx directly
+---
