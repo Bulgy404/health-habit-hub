@@ -1118,3 +1118,15 @@
   - BACKEND_URL defaults to `http://app:3000` (Docker service name for Node.js backend)
   - The `_fetch_questionnaire_response` function is injectable in tests by patching `routers.extract_profile._fetch_questionnaire_response` — no need to mock httpx directly
 ---
+
+## 2026-03-20 - US-109
+- What was implemented: Created `API-service/routers/retrieve.py` — POST /api/v1/llm/retrieve (M3.3 RAG Retrieval) plus KB CRUD (GET/POST/DELETE /api/v1/kb, POST /api/v1/kb/reindex). In-memory vector index keyed by filename with SHA-256 file-hash change detection. PDF text extracted via `pypdf`, chunked (500 chars, 100 char overlap), embedded via OpenAI text-embedding-3-small (same `_embed_texts` pattern as map_bcio.py). One-time LLM summaries generated per PDF and cached in `API-service/kb/_meta/<filename>.summary.json`. Cosine similarity search returns top-k sources. `API-service/kb/` directory created with `.gitkeep` files. `API-service/prompts/summarize_pdf.txt` added. `pypdf>=4.0.0` and `python-multipart>=0.0.9` added to requirements.txt (multipart required by FastAPI File/Form uploads). 13 new tests in `tests/test_retrieve.py`. All 32 tests pass. Pyright: 0 errors.
+- Files changed: API-service/routers/retrieve.py (new), API-service/tests/test_retrieve.py (new), API-service/prompts/summarize_pdf.txt (new), API-service/kb/.gitkeep (new), API-service/kb/_meta/.gitkeep (new), API-service/requirements.txt (add pypdf + python-multipart), API-service/main.py (add retrieve_router), prd.json (US-109 passes=true)
+- **Learnings for future iterations:**
+  - FastAPI File/Form upload routes require `python-multipart` to be installed — add it to requirements.txt whenever using `UploadFile` or `Form()`
+  - Module-level `asyncio.Lock()` works fine in Python 3.9+ without a running event loop at import time
+  - For patchable path variables in tests, declare `_KB_DIR: Path = ...` as a typed module-level variable and use `patch.object(retrieve_module, "_KB_DIR", tmp_path)` — cleaner than patching `Path` itself
+  - The `import routers.retrieve as _self` pattern inside functions (to access `_self._KB_DIR`) allows test-time patching of module variables; avoids stale closure captures
+  - Route order: `POST /kb/reindex` must be registered before `DELETE /kb/{filename}` to ensure FastAPI's routing resolves the literal "reindex" segment correctly for POST requests
+  - pypdf `PdfReader.pages[i].extract_text()` can return None for image-only PDFs — always apply `or ""` guard
+---
