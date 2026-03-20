@@ -1,3 +1,13 @@
+## 2026-03-20 - US-098
+- What was implemented: Created `API-service/prompts/classify_context.txt` with a BCIO-based 7-dimension context extraction prompt. Created `API-service/routers/classify_context.py` with POST /api/v1/llm/classify-context endpoint — request: {uuid, sentence, language}, response: all 7 context dimensions (TIME, PHYSICAL_SETTING, PRIOR_BEHAVIOR, OTHER_PEOPLE, INTERNAL_STATE, BEHAVIOR, REASONING) as lists of strings. Redis caching uses same key strategy as classify_habit (SHA-256 of sentence||language with prefix `classify_context:`). Updated `API-service/main.py` to include the new router.
+- Files changed: API-service/prompts/classify_context.txt (new), API-service/routers/classify_context.py (new), API-service/tests/test_classify_context.py (new), API-service/main.py (add router import + include), prd.json (US-098 passes=true)
+- **Learnings for future iterations:**
+  - The classify_context router follows the exact same structure as classify_habit — Redis graceful fallback, SHA-256 cache key, Pydantic models, `_parse_llm_response` helper that returns empty dim lists on LLM JSON errors
+  - `_REDIS_URL` and `_REDIS_TTL` env vars are shared by all routers but each router has its own `_redis` module-level singleton — they do not share the connection object
+  - For the response model, Pydantic allows `**dims` dict unpacking directly in the constructor when field names match dict keys
+  - The 7 BCIO dimensions to always include: TIME, PHYSICAL_SETTING, PRIOR_BEHAVIOR, OTHER_PEOPLE, INTERNAL_STATE, BEHAVIOR, REASONING
+---
+
 ## 2026-03-18 - US-094
 - What was implemented: Changed CFBundleName from 'hhh' to 'Health Habit Hub' in mobile/ios/Runner/Info.plist (CFBundleDisplayName was already 'Health Habit Hub'). Changed android:label from 'hhh' to 'Health Habit Hub' in mobile/android/app/src/main/AndroidManifest.xml. pubspec.yaml `name: hhh` left unchanged (Dart package identifier).
 - Files changed: mobile/ios/Runner/Info.plist (CFBundleName), mobile/android/app/src/main/AndroidManifest.xml (android:label), prd.json (US-094 passes=true)
