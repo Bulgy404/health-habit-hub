@@ -1141,3 +1141,14 @@
   - The `recommendation_feedback` collection is written by US-111 (Feedback Collector) — reading from it in US-110 is safe even if the collection doesn't exist yet (motor returns an empty cursor).
   - `_store_recommendation` and `_fetch_prior_feedback` are extracted as helper functions so tests can patch them independently without touching the MongoDB client.
 ---
+
+## 2026-03-20 - US-111
+- What was implemented: Created `app/routes/recommendationsRouter.js` with two endpoints: (1) `POST /api/v1/recommendations/:recommendation_id/feedback` — validates comment, looks up the recommendation in MongoDB to get goal, inserts `{recommendation_id, userId, goal, comment, created_at}` into `recommendation_feedback` collection, then deletes the Redis cache key `recommend:{SHA256(user_id||goal)}` (graceful — Redis failure is non-fatal); (2) `GET /api/v1/recommendations/me` — queries `recommendations` collection by userId, joins with `recommendation_feedback` by `recommendation_id` (using `$in`), and returns each recommendation with `feedback: [{comment, created_at}]` attached. Added `redis@4` npm package for Redis client. Registered router in `v1Router.js` under `/recommendations` with participant/admin/researcher role guard; `v1Router` accepts `redisClient` and `redisUrl` injected params for testing. Integration test file `recommendations.routes.test.js` covers: auth enforcement, validation, 404 for unknown recommendation, feedback storage in MongoDB, Redis cache invalidation, empty GET response, and GET with feedback attached. All 221 tests pass.
+- Files changed: app/routes/recommendationsRouter.js (new), app/routes/v1Router.js (add redisClient/redisUrl params, mount recommendationsRouter), app/tests/integration/recommendations.routes.test.js (new), app/package.json (add redis@4), app/package-lock.json (regenerated), prd.json (US-111 passes=true)
+- **Learnings for future iterations:**
+  - Redis cache key matches Python: `recommend:{SHA256(user_id||goal)}` — use `createHash('sha256').update(`${userId}||${goal}`).digest('hex')` with `node:crypto`
+  - Redis connection is lazy/optional: inject `redisClient` (or `null` to disable) for tests; production creates client from `REDIS_URL` env or `redis://localhost:6379`
+  - The `redis@4` npm package supports ESM and async/await natively; import via `import('redis')` (dynamic) to allow injection pattern in tests
+  - POST /recommendations/:id/feedback must look up the recommendation document first to get the `goal` field (needed to compute the Redis key); return 404 if not found
+  - In-memory MongoDB mock pattern for tests: `find()` must handle both simple field equality and `{$in: [...]}` queries; `sort()` and `toArray()` chain off `find()`
+---
