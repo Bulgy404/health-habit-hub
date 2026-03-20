@@ -1203,3 +1203,13 @@
   - Backfill script pattern: query Neo4j for `(h:Habit) WHERE h.language STARTS WITH 'en' AND h.translationDE IS NULL`, then SET translationDE for each
   - Test isolation: use distinct mock hostnames (e.g. `mock-api-service-de`, `mock-libretranslate-de`) to avoid cross-test fetch mock collisions
 ---
+
+## 2026-03-20 - US-117
+- What was implemented: Added `flutter_localizations` (sdk) and `intl: ^0.20.2` to `pubspec.yaml` dependencies; added `generate: true` to the `flutter:` section. Created `mobile/l10n.yaml` with `arb-dir: lib/l10n`, `template-arb-file: app_en.arb`, `output-localization-file: app_localizations.dart`, `output-dir: lib/l10n`. Created `mobile/lib/l10n/app_en.arb` (keys: appTitle, donateHabit, exploreHabits, settings, profile) and `mobile/lib/l10n/app_de.arb` (same keys in German). Ran `flutter gen-l10n` — generated `app_localizations.dart`, `app_localizations_en.dart`, `app_localizations_de.dart` in `lib/l10n/`. Updated `main.dart`: added `flutter_localizations` and `l10n/app_localizations.dart` imports; added `localizationsDelegates` (AppLocalizations.delegate + 3 Global* delegates) and `supportedLocales` (en, de) to `MaterialApp.router`. `flutter analyze`: no issues.
+- Files changed: mobile/pubspec.yaml (add deps + generate:true), mobile/pubspec.lock (updated), mobile/l10n.yaml (new), mobile/lib/l10n/app_en.arb (new), mobile/lib/l10n/app_de.arb (new), mobile/lib/l10n/app_localizations.dart (generated), mobile/lib/l10n/app_localizations_en.dart (generated), mobile/lib/l10n/app_localizations_de.dart (generated), mobile/lib/main.dart (imports + MaterialApp delegates), prd.json (US-117 passes=true)
+- **Learnings for future iterations:**
+  - `intl` version must match what `flutter_localizations` from the SDK pins — check with `flutter pub deps | grep intl`; as of Flutter 3.29+ it's `0.20.2`, not `0.19.0`
+  - `synthetic-package` option in l10n.yaml is deprecated and must be removed (Flutter 3.27+); `output-dir: lib/l10n` is the correct way to place generated files in-tree
+  - Generated files (`app_localizations*.dart`) live in `mobile/lib/l10n/` alongside the ARBs and are importable as `package:hhh/l10n/app_localizations.dart`
+  - Import order in main.dart: `flutter_localizations` before `flutter_riverpod`, then local `l10n/app_localizations.dart` at end of import block
+---

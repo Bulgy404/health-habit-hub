@@ -1,0 +1,23 @@
+{
+  "@@locale": "en",
+  "appTitle": "Health Habit Hub",
+  "@appTitle": {
+    "description": "The application title"
+  },
+  "donateHabit": "Donate a Habit",
+  "@donateHabit": {
+    "description": "Label for the donate habit screen/action"
+  },
+  "exploreHabits": "Explore Habits",
+  "@exploreHabits": {
+    "description": "Label for the explore habits screen"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Label for the settings screen"
+  },
+  "profile": "Profile",
+  "@profile": {
+    "description": "Label for the profile screen"
+  }
+}
