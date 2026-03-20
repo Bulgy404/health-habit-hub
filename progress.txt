@@ -1032,3 +1032,13 @@
   - FastAPI routers go in `routers/` sub-package; need an `__init__.py`; register with `app.include_router(router, prefix="/api/v1")` in main.py
   - Tests use `pytest-asyncio` with `@pytest.mark.asyncio`; use `ASGITransport` from `httpx` for in-process FastAPI testing (no server needed)
 ---
+
+## 2026-03-20 - US-101
+- What was implemented: Created `scripts/migrate-habits-bcio.js` — a standalone Node.js script (ESM, uses native fetch) that back-fills BCIO enrichment for existing Neo4j `Habit` nodes. Queries `MATCH (h:Habit) WHERE h.migrated_to_bcio IS NULL OR h.migrated_to_bcio = false`; for each habit calls M1.2 (`POST /api/v1/llm/classify-context`) then M1.3 (`POST /api/v1/llm/map-bcio`); MERGEs `Context` nodes + `HAS_CONTEXT` relationships and `BCIOConcept` nodes + `MAPS_TO` relationships exactly as US-100 does; sets `migrated_to_bcio: true` and `migrated_at: <ISO>` on the `Habit` node. Supports `--dry-run` flag. Individual failures are logged with UUID + error message and do not abort the run; exits code 1 if any failed. Configured via `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `API_SERVICE_URL` env vars. Created `docs/migration.md` documenting both migration scripts (migrate-habits-bcio.js and migrate-group-labels.cypher) with usage, env vars, expected output, and idempotency notes. All 196 tests still pass.
+- Files changed: scripts/migrate-habits-bcio.js (new), docs/migration.md (new), prd.json (US-101 passes=true)
+- **Learnings for future iterations:**
+  - Migration scripts in this repo live in `scripts/` and use ESM (`import` syntax) — no `package.json` in scripts/; run with `node scripts/<file>` from repo root (node finds neo4j-driver in app/node_modules via node_modules resolution)
+  - The `--dry-run` pattern: `const DRY_RUN = process.argv.includes('--dry-run')` at top; wrap all write operations in `if (!DRY_RUN) { ... }` blocks and log what would be written
+  - Prettier is enforced repo-wide — always run `npx prettier --write <file>` from repo root after writing new scripts; the prettier version will be auto-installed if not cached
+  - Neo4j session: open once for all habits (not per-habit), close in finally block; reuse the same session for all queries to avoid connection overhead
+---
