@@ -1687,8 +1687,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 103,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created mobile/lib/features/questionnaire/ module with: questionnaire_models.dart (QuestionnaireDefinition, Question, QuestionOption, QuestionType enum), questionnaire_service.dart (fetch + submit via Dio), questionnaire_provider.dart (StateNotifierProvider keyed by slug for multi-step form state), questionnaire_form_widget.dart (paged form rendering single_choice, multi_choice, scale, text question types; required validation; progress indicator; Save & Continue / Submit buttons), questionnaire_screen.dart (generic screen + confirmation screen). Added POST /api/v1/questionnaire-responses to Node.js backend (saves userId, questionnaireSlug, answers, submitted_at to form_responses MongoDB collection). Added /questionnaire/:slug and /questionnaire/:slug/confirmation routes to main.dart. Added SLIQ and RAND-36 navigation buttons to profile_screen.dart. Flutter analyze: no issues. All 240 backend tests pass (7 pre-existing failures on external services)."
     },
     {
       "id": "US-104",
