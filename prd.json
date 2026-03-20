@@ -1609,7 +1609,7 @@
       ],
       "priority": 99,
       "passes": true,
-      "notes": "Created API-service/data/bcio.owl (minimal stub with 32 representative BCIO concepts across 7 dimensions). Created API-service/routers/map_bcio.py: POST /api/v1/llm/map-bcio — parses OWL at startup via stdlib xml.etree.ElementTree, builds embedding index using OpenAI text-embedding-3-small (or BAAI/bge-m3 via sentence-transformers if installed), caches in _INDEX dict keyed by SHA-256 file hash (rebuilt on file change), computes cosine similarity via numpy. EMBEDDING_MODEL and BCIO_MIN_CONFIDENCE (default 0.75) are env-configurable. Added numpy>=1.26.0 to requirements.txt. Registered router in main.py. Created 5 unit tests in API-service/tests/test_map_bcio.py — all pass."
+      "notes": "Created API-service/data/bcio.owl (minimal stub with 32 representative BCIO concepts across 7 dimensions). Created API-service/routers/map_bcio.py: POST /api/v1/llm/map-bcio \u2014 parses OWL at startup via stdlib xml.etree.ElementTree, builds embedding index using OpenAI text-embedding-3-small (or BAAI/bge-m3 via sentence-transformers if installed), caches in _INDEX dict keyed by SHA-256 file hash (rebuilt on file change), computes cosine similarity via numpy. EMBEDDING_MODEL and BCIO_MIN_CONFIDENCE (default 0.75) are env-configurable. Added numpy>=1.26.0 to requirements.txt. Registered router in main.py. Created 5 unit tests in API-service/tests/test_map_bcio.py \u2014 all pass."
     },
     {
       "id": "US-100",
@@ -1630,7 +1630,7 @@
       ],
       "priority": 100,
       "passes": true,
-      "notes": "Added POST /api/v1/habits/donate to habitsRouter.js. Route orchestrates M1.1→M1.2→M1.3 via fetch to API-service (configurable via apiServiceUrl injection or API_SERVICE_URL env). Non-habits stored in MongoDB habits collection with is_habit:false. Habits trigger Neo4j writes: CREATE Habit node, MERGE Context nodes with HAS_CONTEXT relationships, MERGE BCIOConcept nodes with MAPS_TO relationships. BCIOConcept nodes are MERGEd by bcio_concept_id so two users with similar habits share one node. Integration tests in habits.donate.test.js cover auth, validation, non-habit path, valid habit path, Neo4j Habit node creation, and the shared BCIOConcept test."
+      "notes": "Added POST /api/v1/habits/donate to habitsRouter.js. Route orchestrates M1.1\u2192M1.2\u2192M1.3 via fetch to API-service (configurable via apiServiceUrl injection or API_SERVICE_URL env). Non-habits stored in MongoDB habits collection with is_habit:false. Habits trigger Neo4j writes: CREATE Habit node, MERGE Context nodes with HAS_CONTEXT relationships, MERGE BCIOConcept nodes with MAPS_TO relationships. BCIOConcept nodes are MERGEd by bcio_concept_id so two users with similar habits share one node. Integration tests in habits.donate.test.js cover auth, validation, non-habit path, valid habit path, Neo4j Habit node creation, and the shared BCIOConcept test."
     },
     {
       "id": "US-101",
@@ -1649,7 +1649,7 @@
       ],
       "priority": 101,
       "passes": true,
-      "notes": "Created scripts/migrate-habits-bcio.js — reads all Habit nodes where migrated_to_bcio is absent/false, calls M1.2 classify-context then M1.3 map-bcio for each, MERGEs Context/BCIOConcept nodes and relationships, marks each Habit with migrated_to_bcio:true and migrated_at. Supports --dry-run flag. Logs Processed N/Total — M succeeded, K failed. Exits 1 if any failures. Created docs/migration.md with full run instructions."
+      "notes": "Created scripts/migrate-habits-bcio.js \u2014 reads all Habit nodes where migrated_to_bcio is absent/false, calls M1.2 classify-context then M1.3 map-bcio for each, MERGEs Context/BCIOConcept nodes and relationships, marks each Habit with migrated_to_bcio:true and migrated_at. Supports --dry-run flag. Logs Processed N/Total \u2014 M succeeded, K failed. Exits 1 if any failures. Created docs/migration.md with full run instructions."
     },
     {
       "id": "US-102",
@@ -1704,7 +1704,7 @@
       ],
       "priority": 104,
       "passes": true,
-      "notes": "Added GET /me and GET /me/:slug endpoints to questionnaireResponsesRouter.js. createIndex({ userId: 1, questionnaireSlug: 1, submitted_at: -1 }) called eagerly (non-blocking, errors swallowed for mock-DB compatibility). userId always extracted from req.user.sub (JWT sub claim). Integration test covers: auth enforcement, submit SLIQ → fetch by slug → verify answers, ordering by most recent first, user isolation (user B cannot see user A's responses). 9 new tests pass; 249 total with 7 pre-existing external-service failures."
+      "notes": "Added GET /me and GET /me/:slug endpoints to questionnaireResponsesRouter.js. createIndex({ userId: 1, questionnaireSlug: 1, submitted_at: -1 }) called eagerly (non-blocking, errors swallowed for mock-DB compatibility). userId always extracted from req.user.sub (JWT sub claim). Integration test covers: auth enforcement, submit SLIQ \u2192 fetch by slug \u2192 verify answers, ordering by most recent first, user isolation (user B cannot see user A's responses). 9 new tests pass; 249 total with 7 pre-existing external-service failures."
     },
     {
       "id": "US-105",
@@ -1721,8 +1721,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 105,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Next.js 14 App Router app in admin/. Keycloak OIDC via next-auth (hhh-admin confidential client). Role guard in middleware (admin/researcher only). Sidebar with Questionnaires + Settings. npm run build passes."
     },
     {
       "id": "US-106",
