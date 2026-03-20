@@ -1280,3 +1280,11 @@
   - `Uri.parse(url).replace(queryParameters: {...})` is the Dart way to append query params to an existing URI
   - Survey render endpoint returns `jsonSchema` verbatim — locale/i18n of the actual questions is SurveyJS client-side (e.g. using SurveyJS locale setting); the `lang` field in the response tells the client which locale to activate
 ---
+
+## 2026-03-20 - US-125
+- What was implemented: Changed the backend-integration job's Neo4j service `--health-cmd` in `.github/workflows/ci.yml` from `cypher-shell -u neo4j -p password 'RETURN 1'` to `wget -q -O /dev/null http://localhost:7474 || exit 1`. The `cypher-shell` command fails in CI because the tool is not available in the Neo4j 5 community Docker image path, but the HTTP port 7474 is available once Neo4j is ready. No other jobs used cypher-shell as a health-check (the ontology-test job already used wget).
+- Files changed: .github/workflows/ci.yml (backend-integration Neo4j --health-cmd), prd.json (US-125 passes=true)
+- **Learnings for future iterations:**
+  - Neo4j 5-community Docker image does NOT have `cypher-shell` in the PATH available for health-check commands — use `wget -q -O /dev/null http://localhost:7474 || exit 1` instead
+  - The ontology-test job already had the correct wget health-check; only backend-integration was using the broken cypher-shell one
+---

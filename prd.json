@@ -2047,7 +2047,7 @@
         "No other jobs in ci.yml still use cypher-shell as a health-check"
       ],
       "priority": 125,
-      "passes": false,
+      "passes": true,
       "notes": "Audit finding: same root cause as ontology-test was fixed for, but backend-integration was missed"
     },
     {
