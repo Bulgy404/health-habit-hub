@@ -46,6 +46,21 @@ class HabitService {
     return HabitStats.fromJson(response.data ?? {});
   }
 
+  /// Returns donated habits from the authenticated graph, with display text
+  /// resolved in [lang] (e.g. 'en' or 'de').
+  Future<List<HabitNode>> fetchDonatedHabits(String lang) async {
+    final headers = await _authHeaders();
+    final response = await _dio.get<List<dynamic>>(
+      '$_baseUrl/habits',
+      queryParameters: {'lang': lang},
+      options: Options(headers: headers),
+    );
+    return (response.data ?? [])
+        .cast<Map<String, dynamic>>()
+        .map((json) => HabitNode.fromDonatedJson(json, lang))
+        .toList();
+  }
+
   /// Submits an anonymous annotation of [type] ('helpful' or 'iDoThis') for
   /// habit [id]. Returns the updated annotation counts.
   Future<Map<String, int>> annotateHabit(String id, String type) async {
