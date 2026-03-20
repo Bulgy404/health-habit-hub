@@ -1629,8 +1629,8 @@
         "Typecheck passes"
       ],
       "priority": 100,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added POST /api/v1/habits/donate to habitsRouter.js. Route orchestrates M1.1→M1.2→M1.3 via fetch to API-service (configurable via apiServiceUrl injection or API_SERVICE_URL env). Non-habits stored in MongoDB habits collection with is_habit:false. Habits trigger Neo4j writes: CREATE Habit node, MERGE Context nodes with HAS_CONTEXT relationships, MERGE BCIOConcept nodes with MAPS_TO relationships. BCIOConcept nodes are MERGEd by bcio_concept_id so two users with similar habits share one node. Integration tests in habits.donate.test.js cover auth, validation, non-habit path, valid habit path, Neo4j Habit node creation, and the shared BCIOConcept test."
     },
     {
       "id": "US-101",

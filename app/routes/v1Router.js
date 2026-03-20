@@ -17,6 +17,7 @@ export function createV1Router({
   jwksUrl,
   serviceChecks,
   recommenderUrl,
+  apiServiceUrl,
   db,
   neo4jRun,
   keycloak,
@@ -140,7 +141,7 @@ export function createV1Router({
   router.use(
     '/habits',
     requireRole('participant', 'admin', 'researcher'),
-    createHabitsRouter({ db, neo4jRun })
+    createHabitsRouter({ db, neo4jRun, apiServiceUrl })
   );
 
   // Recommend routes: require participant, admin, or researcher role
