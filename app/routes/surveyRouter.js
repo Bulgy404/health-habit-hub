@@ -176,6 +176,31 @@ export function createSurveyRouter({ db } = {}) {
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
+  // GET /api/v1/surveys/:id/render?lang=en|de
+  // Returns the survey definition with the requested locale for client-side
+  // SurveyJS rendering. Defaults to 'en' when lang is absent or unsupported.
+  router.get('/:id/render', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const lang = ['en', 'de'].includes(req.query.lang)
+        ? req.query.lang
+        : 'en';
+      const database = await getDb();
+      const survey = await database.collection('surveys').findOne({ id });
+      if (!survey) {
+        return res.status(404).json({ error: 'Survey not found' });
+      }
+      res.json({
+        id: survey.id,
+        title: survey.title,
+        lang,
+        jsonSchema: survey.jsonSchema || {},
+      });
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // GET /api/v1/surveys/:id
   router.get('/:id', async (req, res) => {
     try {

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/locale_provider.dart';
 import '../services/survey_service.dart';
 
 /// Habit-donation survey screen.
@@ -39,9 +40,14 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
   Future<void> _initSurvey() async {
     final surveyService = ref.read(surveyServiceProvider);
     final authService = ref.read(authServiceProvider);
+    final lang = ref.read(localeProvider).languageCode;
     try {
       final survey = await surveyService.fetchSurvey('habit-donation');
       final token = await authService.getAccessToken();
+
+      final renderUri = Uri.parse(
+        '$_baseUrl/surveys/${survey.id}/render',
+      ).replace(queryParameters: {'lang': lang});
 
       final controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -53,7 +59,7 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
           onPageFinished: (_) => _injectCompletionHook(),
         ))
         ..loadRequest(
-          Uri.parse('$_baseUrl/surveys/${survey.id}/render'),
+          renderUri,
           headers:
               token != null ? {'Authorization': 'Bearer $token'} : const {},
         );
