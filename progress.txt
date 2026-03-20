@@ -1296,3 +1296,10 @@
   - `npm uninstall <pkg>` both removes from package.json AND removes from node_modules AND updates package-lock.json in one command
   - deeplx was a legacy translation package; LibreTranslate HTTP is the translation mechanism now
 ---
+
+## 2026-03-20 - US-127, US-128, US-129
+- What was implemented: Marked three audit-finding tracker stories as passing — all were already resolved by previously completed stories: US-127 (English habit DE translation) resolved by US-115 (passes=true), US-128 (habits API lang param) resolved by US-116 (passes=true), US-129 (DonateScreen locale) resolved by US-124 (passes=true). No code changes needed.
+- Files changed: prd.json (US-127, US-128, US-129 passes=true)
+- **Learnings for future iterations:**
+  - Audit-finding tracker stories (US-127/128/129) are just visibility markers — check if the referenced resolution story already passes=true before implementing anything
+---
