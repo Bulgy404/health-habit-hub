@@ -979,3 +979,14 @@
   - Heart shape: parametric `x = 16 sin³(t)`, `y = -(13 cos(t) − 5 cos(2t) − 2 cos(3t) − cos(4t))` scaled by `size/17`
   - `flutter pub run flutter_launcher_icons` regenerates all platform icons from `image_path` in pubspec.yaml; the WARNING about alpha channel on iOS does not block success
 ---
+
+## 2026-03-20 - US-096
+- What was implemented: Created API-service/requirements.txt (fastapi, uvicorn, openai, python-dotenv). Created API-service/llm_client.py — async chat_complete(messages, model, temperature) helper that reads OPENAI_API_KEY, LLM_MODEL (default gpt-4o-mini), LLM_TEMPERATURE (default 0.2) from env; logs a warning if key is placeholder but does not crash; uses openai.AsyncOpenAI. Created API-service/main.py — minimal FastAPI app with /health endpoint. Created API-service/pyrightconfig.json to suppress false-positive missing import errors (packages not installed locally, installed in Docker). Added OPENAI_API_KEY=REPLACE_WITH_YOUR_OPENAI_API_KEY, LLM_MODEL, LLM_TEMPERATURE to stack.env with explanatory comments. No SCADS references existed in API-service to remove.
+- Files changed: API-service/requirements.txt (new), API-service/llm_client.py (new), API-service/main.py (new), API-service/pyrightconfig.json (new), stack.env (added OpenAI section), prd.json (US-096 passes=true)
+- **Learnings for future iterations:**
+  - API-service/ starts with only a Dockerfile — all Python source files (main.py, requirements.txt) must be created from scratch
+  - `openai.AsyncOpenAI` accepts a placeholder API key without crashing at import time; errors only occur when an actual API call is made
+  - pyrightconfig.json with `"reportMissingImports": "none"` is the correct way to suppress false-positive import errors for packages installed only inside Docker
+  - Python 3.11 union syntax (`X | Y`) is supported at runtime but pyright may flag it if pythonVersion is not set — always specify pythonVersion in pyrightconfig.json
+  - The docker-compose.yml `recommender` service builds from `./API-service` and reads `stack.env` — new env vars added to stack.env are automatically available to the service
+---
