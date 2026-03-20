@@ -990,3 +990,14 @@
   - Python 3.11 union syntax (`X | Y`) is supported at runtime but pyright may flag it if pythonVersion is not set — always specify pythonVersion in pyrightconfig.json
   - The docker-compose.yml `recommender` service builds from `./API-service` and reads `stack.env` — new env vars added to stack.env are automatically available to the service
 ---
+
+## 2026-03-20 - US-097
+- What was implemented: Added `POST /api/v1/llm/classify-habit` endpoint to API-service. Created `API-service/routers/classify_habit.py` with Pydantic request/response models, SHA-256-keyed Redis caching (TTL from `REDIS_TTL_SECONDS` env, default 86400), graceful Redis fallback (logs warning, continues without cache), and LLM call via existing `chat_complete` helper. Created `API-service/prompts/classify_habit.txt` with structured prompt that returns JSON `{"is_habit": bool, "confidence": float}`. Updated `main.py` to include the router under `/api/v1`. Added `redis[asyncio]`, `httpx`, `pytest`, `pytest-asyncio` to `requirements.txt`. Created 3 unit tests covering: habit → true, non-habit → false, cache hit skips LLM call.
+- Files changed: API-service/main.py (import + include_router), API-service/requirements.txt (add redis/httpx/pytest), API-service/prompts/classify_habit.txt (new), API-service/routers/__init__.py (new), API-service/routers/classify_habit.py (new), API-service/tests/__init__.py (new), API-service/tests/test_classify_habit.py (new), prd.json (US-097 passes=true)
+- **Learnings for future iterations:**
+  - Python 3.9 (system Python on macOS) does NOT support `X | None` union type annotation syntax at runtime — always use `Optional[X]` from `typing`, or add `from __future__ import annotations` at the top of the file
+  - `redis.asyncio.Redis.ping()` is not typed as a coroutine in pyright stubs — suppress with `# type: ignore[misc]` rather than changing the code
+  - `aioredis.from_url()` returns a connected `Redis` client; place the `ping()` call inside `try/except` to detect unavailability; if ping raises, return `None` so all callers use LLM directly
+  - FastAPI routers go in `routers/` sub-package; need an `__init__.py`; register with `app.include_router(router, prefix="/api/v1")` in main.py
+  - Tests use `pytest-asyncio` with `@pytest.mark.asyncio`; use `ASGITransport` from `httpx` for in-process FastAPI testing (no server needed)
+---
