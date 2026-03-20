@@ -1,3 +1,14 @@
+## 2026-03-20 - US-099
+- What was implemented: Created `API-service/data/bcio.owl` — a minimal OWL stub with 32 representative BCIO concepts across TIME, PHYSICAL_SETTING, OTHER_PEOPLE, INTERNAL_STATE, BEHAVIOR, REASONING, and PRIOR_BEHAVIOR dimensions. Created `API-service/routers/map_bcio.py` with POST /api/v1/llm/map-bcio endpoint — request: {uuid, context_phrases: {dimension: [phrase]}}, response: {mappings: [{phrase, dimension, bcio_concept_id, bcio_concept_label, confidence}]}. Parsing via stdlib xml.etree.ElementTree. Embedding via OpenAI text-embedding-3-small (or BAAI/bge-m3 via sentence-transformers). In-memory index cached by SHA-256 of bcio.owl; rebuilt on file change. Cosine similarity via numpy. EMBEDDING_MODEL and BCIO_MIN_CONFIDENCE (default 0.75) env-configurable. Added numpy>=1.26.0 to requirements.txt. Registered router in main.py.
+- Files changed: API-service/data/bcio.owl (new), API-service/routers/map_bcio.py (new), API-service/tests/test_map_bcio.py (new), API-service/requirements.txt (add numpy), API-service/main.py (add router), prd.json (US-099 passes=true)
+- **Learnings for future iterations:**
+  - OWL files are standard XML; stdlib `xml.etree.ElementTree` is sufficient — no rdflib needed. Namespace constants: `{http://www.w3.org/2002/07/owl#}Class`, `{http://www.w3.org/1999/02/22-rdf-syntax-ns#}about`, `{http://www.w3.org/2000/01/rdf-schema#}label`
+  - The in-memory embedding index uses a SHA-256 hash of the OWL file bytes to detect changes — compare `_INDEX["hash"]` to current hash before returning cached index
+  - Tests mock both `_get_index` (returning a fake index with known unit vectors) and `_embed_texts` (returning matching unit vectors) — cosine similarity between identical unit vectors is 1.0 which is always > 0.75
+  - numpy cosine similarity: `np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))` — guard against zero-norm vectors
+  - Batch all phrase embeddings in a single `_embed_texts` call to minimise API round-trips
+---
+
 ## 2026-03-20 - US-098
 - What was implemented: Created `API-service/prompts/classify_context.txt` with a BCIO-based 7-dimension context extraction prompt. Created `API-service/routers/classify_context.py` with POST /api/v1/llm/classify-context endpoint — request: {uuid, sentence, language}, response: all 7 context dimensions (TIME, PHYSICAL_SETTING, PRIOR_BEHAVIOR, OTHER_PEOPLE, INTERNAL_STATE, BEHAVIOR, REASONING) as lists of strings. Redis caching uses same key strategy as classify_habit (SHA-256 of sentence||language with prefix `classify_context:`). Updated `API-service/main.py` to include the new router.
 - Files changed: API-service/prompts/classify_context.txt (new), API-service/routers/classify_context.py (new), API-service/tests/test_classify_context.py (new), API-service/main.py (add router import + include), prd.json (US-098 passes=true)
