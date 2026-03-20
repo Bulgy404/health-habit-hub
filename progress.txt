@@ -1288,3 +1288,11 @@
   - Neo4j 5-community Docker image does NOT have `cypher-shell` in the PATH available for health-check commands — use `wget -q -O /dev/null http://localhost:7474 || exit 1` instead
   - The ontology-test job already had the correct wget health-check; only backend-integration was using the broken cypher-shell one
 ---
+
+## 2026-03-20 - US-126
+- What was implemented: Ran `npm uninstall deeplx` in `app/` — removed the `deeplx` package (and its 24 transitive dependencies) from `package.json` and regenerated `package-lock.json`. Confirmed no source files reference `deeplx` (only `package.json` had it). All 244 tests pass.
+- Files changed: app/package.json (deeplx removed), app/package-lock.json (regenerated), prd.json (US-126 passes=true)
+- **Learnings for future iterations:**
+  - `npm uninstall <pkg>` both removes from package.json AND removes from node_modules AND updates package-lock.json in one command
+  - deeplx was a legacy translation package; LibreTranslate HTTP is the translation mechanism now
+---

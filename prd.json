@@ -2060,7 +2060,7 @@
         "grep -r 'deeplx' app/ returns no results"
       ],
       "priority": 126,
-      "passes": false,
+      "passes": true,
       "notes": "Audit finding: deeplx listed in package.json but never imported; LibreTranslate HTTP is used instead"
     },
     {
