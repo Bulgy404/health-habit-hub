@@ -1183,3 +1183,14 @@
   - The API-service `/api/v1/kb` endpoints are already implemented in `routers/retrieve.py` — the Node.js router is just a thin proxy
   - Admin panel KB page uses the same CSS variable tokens (`--color-primary`, `--color-surface`, `--color-border`, `--color-text`, `--color-text-muted`, `--color-bg`) as questionnaires page — consistent design
 ---
+
+## 2026-03-20 - US-115
+- What was implemented: Created `API-service/prompts/refine_translation_de.txt` — German-specific prompt instructing LLM to refine a literal machine translation into natural, tone-preserving German. Created `API-service/routers/refine_translation_de.py` with POST `/api/v1/llm/refine-translation-de` (request: `{original, raw_translation}`, response: `{refined_translation}`); falls back to `raw_translation` when LLM returns empty string. Registered router in `API-service/main.py`. Added `translateToGerman(sentence, language, apiBase, translateUrl)` helper in `app/routes/habitsRouter.js`: (1) skips when `language` does NOT start with 'en'; (2) calls LibreTranslate source=en target=de for German draft; (3) calls `/api/v1/llm/refine-translation-de` with 10 s AbortController timeout; (4) warns and falls back to raw draft if LLM fails or times out. Updated Habit node CREATE cypher to include `translationDE: $translationDE` (null for non-English habits). Created `app/tests/integration/habits.de-translation.test.js` (3 tests: refined German stored, non-English habit gets null, LLM failure falls back to raw). Created `API-service/tests/test_refine_translation_de.py` (2 tests). Created `scripts/backfill-de-translations.js` migration script. All 227 Node.js tests pass; 2 Python tests pass; lint/format pass.
+- Files changed: API-service/prompts/refine_translation_de.txt (new), API-service/routers/refine_translation_de.py (new), API-service/tests/test_refine_translation_de.py (new), API-service/main.py (register router), app/routes/habitsRouter.js (add translateToGerman helper, translationDE in CREATE), app/tests/integration/habits.de-translation.test.js (new), scripts/backfill-de-translations.js (new), prd.json (US-115 passes=true)
+- **Learnings for future iterations:**
+  - German translation uses a separate `/api/v1/llm/refine-translation-de` endpoint with a German-specific prompt; request omits `language` field (always EN→DE)
+  - `translateToGerman` mirrors `translateAndRefine` but inverts the language guard: skips when language does NOT start with 'en'
+  - LibreTranslate EN→DE: same POST pattern but `source: 'en', target: 'de'`
+  - Backfill script pattern: query Neo4j for `(h:Habit) WHERE h.language STARTS WITH 'en' AND h.translationDE IS NULL`, then SET translationDE for each
+  - Test isolation: use distinct mock hostnames (e.g. `mock-api-service-de`, `mock-libretranslate-de`) to avoid cross-test fetch mock collisions
+---
