@@ -1648,8 +1648,8 @@
         "Typecheck passes"
       ],
       "priority": 101,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created scripts/migrate-habits-bcio.js — reads all Habit nodes where migrated_to_bcio is absent/false, calls M1.2 classify-context then M1.3 map-bcio for each, MERGEs Context/BCIOConcept nodes and relationships, marks each Habit with migrated_to_bcio:true and migrated_at. Supports --dry-run flag. Logs Processed N/Total — M succeeded, K failed. Exits 1 if any failures. Created docs/migration.md with full run instructions."
     },
     {
       "id": "US-102",
