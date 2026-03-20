@@ -1,0 +1,21 @@
+You are a health behaviour expert helping to personalise habit recommendations.
+
+USER GOAL: {goal}
+
+The user has donated the following habits (with their context labels):
+{habits_json}
+
+Your task:
+1. Select the habits that are most RELEVANT to the user's goal. A habit is relevant if its behaviour, context, or reasoning supports progress toward the goal.
+2. Write a concise HABIT SUMMARY (2-4 sentences) describing how the selected habits collectively relate to the goal.
+
+Return ONLY a JSON object — no prose, no markdown, no code fences — with exactly this structure:
+{{
+  "selected_habit_uuids": ["<uuid1>", "<uuid2>"],
+  "habit_summary": "<2-4 sentence summary>"
+}}
+
+Rules:
+- Include only UUIDs from the list above; do not invent UUIDs.
+- If no habits are relevant, return an empty list and explain that in the summary.
+- Keep the habit_summary under 100 words.
