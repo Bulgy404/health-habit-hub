@@ -43,6 +43,75 @@ export function createHabitsRouter({
     return Number(val);
   }
 
+  // Returns German translation refined for tone, or null for non-English habits.
+  // Falls back to raw LibreTranslate output if the LLM refinement step fails.
+  async function translateToGerman(sentence, language, apiBase, translateUrl) {
+    if (!language || !language.startsWith('en')) return null;
+
+    // Step 1: LibreTranslate — get raw German draft
+    let draft;
+    try {
+      const ltRes = await fetch(translateUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          q: sentence,
+          source: 'en',
+          target: 'de',
+          format: 'text',
+        }),
+      });
+      if (!ltRes.ok) {
+        console.warn(
+          `[translate] LibreTranslate returned ${ltRes.status} — skipping translationDE`
+        );
+        return null;
+      }
+      const ltData = await ltRes.json();
+      draft = ltData.translatedText;
+    } catch (err) {
+      console.warn(
+        `[translate] LibreTranslate error: ${err.message} — skipping translationDE`
+      );
+      return null;
+    }
+
+    // Step 2: LLM tone refinement into German
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      let refineRes;
+      try {
+        refineRes = await fetch(`${apiBase}/api/v1/llm/refine-translation-de`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            original: sentence,
+            raw_translation: draft,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      if (!refineRes.ok) {
+        console.warn(
+          `[translate] LLM refine-translation-de returned ${refineRes.status} — using raw LibreTranslate output`
+        );
+        return draft;
+      }
+
+      const refineData = await refineRes.json();
+      return refineData.refined_translation || draft;
+    } catch (err) {
+      console.warn(
+        `[translate] LLM German refinement error/timeout: ${err.message} — using raw LibreTranslate output`
+      );
+      return draft;
+    }
+  }
+
   // Returns English translation refined for tone, or null for English habits.
   // Falls back to raw LibreTranslate output if the LLM refinement step fails.
   async function translateAndRefine(sentence, language, apiBase, translateUrl) {
@@ -487,12 +556,20 @@ export function createHabitsRouter({
         translateUrl
       );
 
+      // Translate English habits to German (tone-preserving)
+      const translationDE = await translateToGerman(
+        sentence,
+        language,
+        apiBase,
+        translateUrl
+      );
+
       // Write to Neo4j — 1. Create Habit node
       const createdAt = new Date().toISOString();
       await queryNeo4j(
         `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: $language,
            is_habit: true, confidence: $confidence, userID: $userID, created_at: $created_at,
-           translationEN: $translationEN})`,
+           translationEN: $translationEN, translationDE: $translationDE})`,
         {
           uuid,
           sentence,
@@ -501,6 +578,7 @@ export function createHabitsRouter({
           userID,
           created_at: createdAt,
           translationEN: translationEN || null,
+          translationDE: translationDE || null,
         }
       );
 
