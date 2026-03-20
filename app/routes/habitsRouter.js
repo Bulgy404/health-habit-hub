@@ -182,9 +182,41 @@ export function createHabitsRouter({
     }
   }
 
-  // GET /api/v1/habits – base route
-  router.get('/', (_req, res) => {
-    res.json({ ok: true });
+  // GET /api/v1/habits
+  // Returns all donated habits with original, translationEN, translationDE fields.
+  // Optional ?lang=en|de adds a displayText convenience field.
+  router.get('/', async (req, res) => {
+    try {
+      const { lang } = req.query;
+      const records = await queryNeo4j(`
+        MATCH (h:Habit)
+        RETURN h.uuid AS uuid,
+               h.sentence AS original,
+               h.language AS language,
+               h.translationEN AS translationEN,
+               h.translationDE AS translationDE
+      `);
+
+      const habits = records.map((r) => {
+        const habit = {
+          uuid: r.uuid || null,
+          original: r.original || null,
+          language: r.language || null,
+          translationEN: r.translationEN || null,
+          translationDE: r.translationDE || null,
+        };
+        if (lang === 'en') {
+          habit.displayText = habit.translationEN || habit.original;
+        } else if (lang === 'de') {
+          habit.displayText = habit.translationDE || habit.original;
+        }
+        return habit;
+      });
+
+      res.json(habits);
+    } catch {
+      res.status(500).json({ error: 'Internal server error' });
+    }
   });
 
   /**

@@ -60,13 +60,16 @@ before(async () => {
   };
 
   const testApp = express();
+  testApp.use(express.json());
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
+  const mockNeo4jRun = async () => [];
   const v1Router = createV1Router({
     jwksUrl: 'http://keycloak/jwks',
     serviceChecks: {
       neo4jCheck: okCheck,
       mongoCheck: okCheck,
     },
+    neo4jRun: mockNeo4jRun,
   });
   testApp.use('/api/v1', v1Router);
 

@@ -113,11 +113,11 @@ after(async () => {
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
-test('GET /habits returns { ok: true }', async () => {
+test('GET /habits returns array of donated habits', async () => {
   const res = await fetch(`${baseUrl}/habits`);
   assert.strictEqual(res.status, 200);
   const data = await res.json();
-  assert.deepStrictEqual(data, { ok: true });
+  assert.ok(Array.isArray(data));
 });
 
 test('GET /habits/public returns habit list with annotation counts', async () => {
