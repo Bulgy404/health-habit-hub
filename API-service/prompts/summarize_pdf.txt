@@ -1,0 +1,6 @@
+You are a scientific literature assistant. Summarize the following excerpt from the academic paper "{filename}" in 3–5 concise sentences. Focus on the main research question, methodology, key findings, and relevance to behaviour change and healthy habits.
+
+Excerpt:
+{text}
+
+Reply with the summary only — no preamble, no headings, no bullet points.
