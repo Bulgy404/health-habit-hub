@@ -1957,7 +1957,7 @@
         "Verify in browser using dev-browser skill (switch locale to de and confirm German strings appear)"
       ],
       "priority": 119,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-118"
     },
     {
