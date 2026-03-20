@@ -1042,3 +1042,13 @@
   - Prettier is enforced repo-wide — always run `npx prettier --write <file>` from repo root after writing new scripts; the prettier version will be auto-installed if not cached
   - Neo4j session: open once for all habits (not per-habit), close in finally block; reuse the same session for all queries to avoid connection overhead
 ---
+
+## 2026-03-20 - US-102
+- What was implemented: Created `mongo/seed/questionnaires.json` with full SLIQ (4 questions: diet, physical activity, smoking, alcohol) and RAND-36 (36 questions covering physical functioning, role limitations, pain, emotional well-being, energy, social functioning, general health). Created `mongo/seed/seed-questionnaires.js` — upserts by slug using `$set`+`$setOnInsert` so re-runs are safe. Created `app/routes/questionnairesRouter.js` with `GET /` (returns active questionnaires with questionCount summary) and `GET /:slug` (returns full definition; 404 for inactive or missing). Registered in `v1Router.js` under `/questionnaires` with participant/admin/researcher role guard. 8 integration tests added covering auth enforcement, active-only filtering, full definition structure, 36-question count, 404 for unknown/inactive slugs, and role rejection. All 204 tests pass (up from 196).
+- Files changed: mongo/seed/questionnaires.json (new), mongo/seed/seed-questionnaires.js (new), app/routes/questionnairesRouter.js (new), app/routes/v1Router.js (add import + /questionnaires mount), app/tests/integration/questionnaires.routes.test.js (new), prd.json (US-102 passes=true)
+- **Learnings for future iterations:**
+  - The questionnairesRouter follows the same factory injection pattern as surveyRouter: `{ db }` injected for tests, falls back to `import('../models/survey.js').connect()` at runtime
+  - `GET /questionnaires` returns only `active: true` documents — inactive questionnaires must return 404 from `GET /:slug` too (pass `active: true` in the `findOne` query)
+  - Mock DB `collection()` must handle unknown collection names gracefully (return empty find/findOne) to avoid errors from other routers sharing the same mock db
+  - Seed script uses `$setOnInsert: { createdAt }` so `createdAt` is only written on first insert, not overwritten on re-runs
+---
