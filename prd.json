@@ -1988,7 +1988,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 121,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-117, US-120"
     },
     {

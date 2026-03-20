@@ -1242,3 +1242,13 @@
   - PUT /me uses `{ $set: { userId, ...update } }` with `upsert: true` — this creates the record on first PUT
   - Prettier formatting in the app/ directory: run `npx prettier --write` in the app/ dir specifically (not in the project root)
 ---
+
+## 2026-03-20 - US-121
+- What was implemented: Created `mobile/lib/providers/locale_provider.dart` — StateNotifierProvider<LocaleNotifier, Locale> holding current locale; `setLocale(locale)` calls PUT /api/v1/users/me with `preferredLanguage` and updates state on success, returning bool. Created `mobile/lib/screens/user_settings_screen.dart` — Settings screen with Language dropdown (English / Deutsch) using InputDecorator + DropdownButtonHideUnderline + DropdownButton to avoid deprecated DropdownButtonFormField.value; shows success/failure snackbar. Updated `main.dart`: import user_settings_screen + locale_provider, added `locale: ref.watch(localeProvider)` to MaterialApp.router, added `/settings` StatefulShellBranch (branch 4, before admin). Updated `shell_screen.dart`: added Settings tab (icon: Icons.settings, path: /settings), updated _adminBranchIndex from 4 to 5. Updated `profile_screen.dart`: added gear icon in AppBar actions that pushes `/settings`. Flutter analyze: no issues.
+- Files changed: mobile/lib/providers/locale_provider.dart (new), mobile/lib/screens/user_settings_screen.dart (new), mobile/lib/main.dart (import, locale, /settings branch), mobile/lib/screens/shell_screen.dart (Settings tab + adminBranchIndex=5), mobile/lib/screens/profile_screen.dart (AppBar settings icon), prd.json (US-121 passes=true)
+- **Learnings for future iterations:**
+  - `DropdownButtonFormField` `value` property is deprecated in Flutter 3.33+ — use `InputDecorator` + `DropdownButtonHideUnderline` + `DropdownButton` with `isDense: true` instead
+  - `curly_braces_in_flow_control_structures` lint requires braces around single-statement if blocks even for early returns
+  - Adding a new tab to StatefulShellRoute requires: (1) adding _TabConfig entry to shell_screen.dart, (2) updating _adminBranchIndex, (3) adding corresponding StatefulShellBranch in main.dart
+  - `locale: locale` on MaterialApp.router + StateNotifier pattern causes instant locale change without restart
+---

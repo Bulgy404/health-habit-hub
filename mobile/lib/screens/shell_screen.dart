@@ -18,11 +18,12 @@ class ShellScreen extends ConsumerWidget {
     _TabConfig(label: 'Explore', icon: Icons.hub, path: '/explore'),
     _TabConfig(label: 'Recommend', icon: Icons.recommend, path: '/recommend'),
     _TabConfig(label: 'Profile', icon: Icons.person, path: '/profile'),
+    _TabConfig(label: 'Settings', icon: Icons.settings, path: '/settings'),
     _TabConfig(label: 'Admin', icon: Icons.admin_panel_settings, path: '/admin'),
   ];
 
   /// Branch indices in the StatefulShellRoute match _allTabs order.
-  static const int _adminBranchIndex = 4;
+  static const int _adminBranchIndex = 5;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
