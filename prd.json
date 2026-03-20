@@ -2004,7 +2004,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 122,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-120, US-121"
     },
     {
