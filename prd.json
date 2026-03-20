@@ -1898,7 +1898,7 @@
         "Typecheck/lint passes"
       ],
       "priority": 115,
-      "passes": false,
+      "passes": true,
       "notes": "Also resolves audit finding US-127"
     },
     {
