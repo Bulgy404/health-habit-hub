@@ -230,6 +230,33 @@ services:
     depends_on:
       - proxy
 
+  admin:
+    image: hhh/admin
+    container_name: h3-admin
+    build: ./admin
+    restart: on-failure:3
+    env_file:
+      - stack.env
+    environment:
+      - NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
+      - KEYCLOAK_CLIENT_ID=hhh-admin
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET:-hhh-admin-secret-change-me}
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/hhh
+    ports:
+      - ${ADMIN_HOST_PORT:-3001}:3001
+    networks:
+      - h3-proxy
+    depends_on:
+      - proxy
+      - keycloak
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.admin.rule=Host(`admin.${PATH_SUFFIX:-localhost}`)
+      - traefik.http.routers.admin.entrypoints=web
+      - traefik.http.routers.admin.service=admin
+      - traefik.http.services.admin.loadbalancer.server.port=3001
+
   backup:
     image: hhh/backup
     build: ./backup-service
