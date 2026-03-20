@@ -1703,8 +1703,8 @@
         "Typecheck/lint passes"
       ],
       "priority": 104,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added GET /me and GET /me/:slug endpoints to questionnaireResponsesRouter.js. createIndex({ userId: 1, questionnaireSlug: 1, submitted_at: -1 }) called eagerly (non-blocking, errors swallowed for mock-DB compatibility). userId always extracted from req.user.sub (JWT sub claim). Integration test covers: auth enforcement, submit SLIQ → fetch by slug → verify answers, ordering by most recent first, user isolation (user B cannot see user A's responses). 9 new tests pass; 249 total with 7 pre-existing external-service failures."
     },
     {
       "id": "US-105",
