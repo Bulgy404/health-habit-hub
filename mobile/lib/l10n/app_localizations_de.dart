@@ -165,4 +165,319 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get dark => 'Dunkel';
+
+  @override
+  String get cancel => 'Abbrechen';
+
+  @override
+  String get delete => 'Löschen';
+
+  @override
+  String get create => 'Erstellen';
+
+  @override
+  String get apply => 'Anwenden';
+
+  @override
+  String get adminDeviceSessions => 'Gerätesitzungen';
+
+  @override
+  String get adminRevokeSessionTitle => 'Sitzung widerrufen?';
+
+  @override
+  String adminRevokeSessionContent(String participantId) {
+    return 'Sitzung für Teilnehmer $participantId widerrufen?\nDieser wird sofort abgemeldet.';
+  }
+
+  @override
+  String get adminRevoke => 'Widerrufen';
+
+  @override
+  String get adminSessionRevoked => 'Sitzung widerrufen';
+
+  @override
+  String get adminFailedToRevokeSession =>
+      'Sitzung konnte nicht widerrufen werden';
+
+  @override
+  String get adminNoActiveSessions => 'Keine aktiven Sitzungen';
+
+  @override
+  String get adminFailedToLoadSessions =>
+      'Sitzungen konnten nicht geladen werden';
+
+  @override
+  String get adminColParticipantId => 'Teilnehmer-ID';
+
+  @override
+  String get adminColDeviceType => 'Gerätetyp';
+
+  @override
+  String get adminColAppVersion => 'App-Version';
+
+  @override
+  String get adminColLastSeen => 'Zuletzt gesehen';
+
+  @override
+  String get adminColSessionId => 'Sitzungs-ID';
+
+  @override
+  String get adminColActions => 'Aktionen';
+
+  @override
+  String get adminDonatedHabits => 'Gespendete Gewohnheiten';
+
+  @override
+  String get adminAutoRefreshOn => 'Auto-Aktualisierung ein';
+
+  @override
+  String get adminAutoRefreshOff => 'Auto-Aktualisierung aus';
+
+  @override
+  String get adminCouldNotOpenExportUrl =>
+      'Export-URL konnte nicht geöffnet werden';
+
+  @override
+  String get adminCsvExportFailed => 'CSV-Export fehlgeschlagen';
+
+  @override
+  String get adminAllDates => 'Alle Daten';
+
+  @override
+  String get adminGroup => 'Gruppe';
+
+  @override
+  String get adminCategory => 'Kategorie';
+
+  @override
+  String get adminAll => 'Alle';
+
+  @override
+  String get adminClearDateRange => 'Datumsbereich löschen';
+
+  @override
+  String get adminCsv => 'CSV';
+
+  @override
+  String get adminNoHabitDonationsFound => 'Keine Gewohnheitsspenden gefunden';
+
+  @override
+  String get adminFailedToLoadHabitDonations =>
+      'Gewohnheitsspenden konnten nicht geladen werden';
+
+  @override
+  String adminParticipantTitle(String participantId) {
+    return 'Teilnehmer $participantId';
+  }
+
+  @override
+  String get adminExportJson => 'JSON exportieren';
+
+  @override
+  String get adminFailedToExportProgress =>
+      'Fortschrittsdaten konnten nicht exportiert werden.';
+
+  @override
+  String get adminProfileCard => 'Profil';
+
+  @override
+  String get adminProfileNotYetCompleted => 'Noch nicht abgeschlossen';
+
+  @override
+  String adminSurveysCompleted(int count) {
+    return 'Abgeschlossene Umfragen ($count)';
+  }
+
+  @override
+  String get adminNoSurveysCompletedYet => 'Noch keine Umfragen abgeschlossen.';
+
+  @override
+  String adminHabitsDonated(int count) {
+    return 'Gespendete Gewohnheiten ($count)';
+  }
+
+  @override
+  String get adminNoHabitsDonatedYet => 'Noch keine Gewohnheiten gespendet.';
+
+  @override
+  String adminHabitsDonatedDetail(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count Gewohnheiten gespendet. Einzelheiten sind im Gewohnheits-Monitor verfügbar.',
+      one:
+          '1 Gewohnheit gespendet. Einzelheiten sind im Gewohnheits-Monitor verfügbar.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adminRecommendations => 'Empfehlungen';
+
+  @override
+  String get adminAccepted => 'Akzeptiert';
+
+  @override
+  String get adminDismissed => 'Abgelehnt';
+
+  @override
+  String get adminTimeline => 'Zeitverlauf';
+
+  @override
+  String get adminNoTimelineEventsYet => 'Noch keine Zeitverlauf-Ereignisse.';
+
+  @override
+  String get adminTimelineEnrolled => 'Eingeschrieben';
+
+  @override
+  String get adminTimelineSurveyCompleted => 'Umfrage abgeschlossen';
+
+  @override
+  String get adminTimelineRecommendationAccepted => 'Empfehlung akzeptiert';
+
+  @override
+  String get adminTimelineRecommendationDismissed => 'Empfehlung abgelehnt';
+
+  @override
+  String get adminFailedToLoadParticipantProgress =>
+      'Teilnehmerfortschritt konnte nicht geladen werden.';
+
+  @override
+  String get adminParticipants => 'Teilnehmer';
+
+  @override
+  String get adminNoParticipantsFound => 'Keine Teilnehmer gefunden.';
+
+  @override
+  String get adminSearchByUsername => 'Nach Benutzername suchen…';
+
+  @override
+  String get adminAllGroups => 'Alle Gruppen';
+
+  @override
+  String get adminColUsername => 'Benutzername';
+
+  @override
+  String get adminColEnrolled => 'Eingeschrieben';
+
+  @override
+  String get adminColLastActive => 'Zuletzt aktiv';
+
+  @override
+  String get adminColSurveysPercent => 'Umfragen %';
+
+  @override
+  String get adminDeleteParticipant => 'Teilnehmer löschen';
+
+  @override
+  String get adminFailedToUpdateGroup =>
+      'Gruppe konnte nicht aktualisiert werden.';
+
+  @override
+  String get adminDeleteParticipantTitle => 'Teilnehmer löschen';
+
+  @override
+  String get adminDeleteParticipantContent =>
+      'Dadurch werden die Teilnehmerdaten anonymisiert. Dies kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get adminFailedToDeleteParticipant =>
+      'Teilnehmer konnte nicht gelöscht werden.';
+
+  @override
+  String adminParticipantCreated(String username) {
+    return 'Teilnehmer $username erstellt';
+  }
+
+  @override
+  String get adminCreateParticipantTooltip => 'Teilnehmer erstellen';
+
+  @override
+  String get adminFailedToLoadParticipants =>
+      'Teilnehmer konnten nicht geladen werden.';
+
+  @override
+  String get adminPrevious => 'Zurück';
+
+  @override
+  String get adminNext => 'Weiter';
+
+  @override
+  String get adminCreateParticipantTitle => 'Teilnehmer erstellen';
+
+  @override
+  String get adminStudyGroup => 'Studiengruppe';
+
+  @override
+  String get adminTokenCardFormat => 'Token-Karten-Format';
+
+  @override
+  String get adminQrAndPrint => 'QR + Druck';
+
+  @override
+  String get adminFailedToCreateParticipant =>
+      'Teilnehmer konnte nicht erstellt werden. Bitte erneut versuchen.';
+
+  @override
+  String get adminSurveys => 'Umfragen';
+
+  @override
+  String get adminFailedToUpdateStatus =>
+      'Status konnte nicht aktualisiert werden';
+
+  @override
+  String get adminNewSurveyTooltip => 'Neue Umfrage';
+
+  @override
+  String get adminNoSurveysFound => 'Keine Umfragen gefunden';
+
+  @override
+  String get adminFailedToLoadSurveys =>
+      'Umfragen konnten nicht geladen werden';
+
+  @override
+  String get adminPublish => 'Veröffentlichen';
+
+  @override
+  String get adminArchive => 'Archivieren';
+
+  @override
+  String get adminNewSurveyTitle => 'Neue Umfrage';
+
+  @override
+  String get adminSurveyTitleLabel => 'Titel';
+
+  @override
+  String get adminSurveyTypeLabel => 'Typ';
+
+  @override
+  String get adminTitleIsRequired => 'Titel ist erforderlich';
+
+  @override
+  String get adminFailedToCreateSurvey =>
+      'Umfrage konnte nicht erstellt werden';
+
+  @override
+  String get adminSurveyEditor => 'Umfrage-Editor';
+
+  @override
+  String get adminInvalidJson =>
+      'Ungültiges JSON — bitte vor dem Speichern korrigieren';
+
+  @override
+  String get adminSurveySaved => 'Umfrage gespeichert';
+
+  @override
+  String get adminFailedToSaveSurvey =>
+      'Umfrage konnte nicht gespeichert werden';
+
+  @override
+  String get adminFailedToLoadSurvey => 'Umfrage konnte nicht geladen werden';
+
+  @override
+  String get adminJsonSchema => 'JSON-Schema';
+
+  @override
+  String get adminAssignToGroups => 'Gruppen zuweisen';
 }

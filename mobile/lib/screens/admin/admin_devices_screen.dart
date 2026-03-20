@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/admin_session.dart';
 import '../../services/admin_service.dart';
 
@@ -56,22 +57,22 @@ class _AdminDevicesScreenState extends ConsumerState<AdminDevicesScreen> {
   }
 
   Future<void> _revokeSession(AdminSession session) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Revoke session?'),
+        title: Text(l10n.adminRevokeSessionTitle),
         content: Text(
-          'Revoke session for participant ${session.participantId}?\n'
-          'They will be logged out immediately.',
+          l10n.adminRevokeSessionContent(session.participantId),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Revoke'),
+            child: Text(l10n.adminRevoke),
           ),
         ],
       ),
@@ -84,13 +85,13 @@ class _AdminDevicesScreenState extends ConsumerState<AdminDevicesScreen> {
           _sessions = _sessions.where((s) => s.id != session.id).toList();
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Session revoked')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.adminSessionRevoked)),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to revoke session')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.adminFailedToRevokeSession)),
         );
       }
     }
@@ -98,13 +99,14 @@ class _AdminDevicesScreenState extends ConsumerState<AdminDevicesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Device Sessions'),
+        title: Text(l10n.adminDeviceSessions),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
             onPressed: _load,
           ),
         ],
@@ -136,6 +138,7 @@ class _SessionsBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final androidCount =
         sessions.where((s) => s.deviceType.toLowerCase() == 'android').length;
     final iosCount =
@@ -144,7 +147,7 @@ class _SessionsBody extends StatelessWidget {
         sessions.where((s) => s.deviceType.toLowerCase() == 'web').length;
 
     if (sessions.isEmpty) {
-      return const Center(child: Text('No active sessions'));
+      return Center(child: Text(l10n.adminNoActiveSessions));
     }
 
     return SingleChildScrollView(
@@ -271,17 +274,18 @@ class _SessionsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return DataTable(
       headingRowColor: WidgetStateProperty.all(
         Theme.of(context).colorScheme.surfaceContainerHighest,
       ),
-      columns: const [
-        DataColumn(label: Text('Participant ID')),
-        DataColumn(label: Text('Device Type')),
-        DataColumn(label: Text('App Version')),
-        DataColumn(label: Text('Last Seen')),
-        DataColumn(label: Text('Session ID')),
-        DataColumn(label: Text('Actions')),
+      columns: [
+        DataColumn(label: Text(l10n.adminColParticipantId)),
+        DataColumn(label: Text(l10n.adminColDeviceType)),
+        DataColumn(label: Text(l10n.adminColAppVersion)),
+        DataColumn(label: Text(l10n.adminColLastSeen)),
+        DataColumn(label: Text(l10n.adminColSessionId)),
+        DataColumn(label: Text(l10n.adminColActions)),
       ],
       rows: sessions.map((s) {
         final truncatedId = s.id.length > 12
@@ -301,7 +305,7 @@ class _SessionsTable extends StatelessWidget {
             DataCell(
               TextButton(
                 onPressed: () => onRevoke(s),
-                child: const Text('Revoke'),
+                child: Text(l10n.adminRevoke),
               ),
             ),
           ],
@@ -322,13 +326,14 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Failed to load sessions'),
+          Text(l10n.adminFailedToLoadSessions),
           const SizedBox(height: 8),
-          ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
+          ElevatedButton(onPressed: onRetry, child: Text(l10n.retry)),
         ],
       ),
     );

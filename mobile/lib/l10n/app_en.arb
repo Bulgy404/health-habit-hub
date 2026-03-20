@@ -206,5 +206,407 @@
   "dark": "Dark",
   "@dark": {
     "description": "Theme mode option: dark"
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Label for the cancel button"
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Label for the delete button"
+  },
+  "create": "Create",
+  "@create": {
+    "description": "Label for the create button"
+  },
+  "apply": "Apply",
+  "@apply": {
+    "description": "Label for the apply filters button"
+  },
+  "adminDeviceSessions": "Device Sessions",
+  "@adminDeviceSessions": {
+    "description": "AppBar title for the admin device sessions screen"
+  },
+  "adminRevokeSessionTitle": "Revoke session?",
+  "@adminRevokeSessionTitle": {
+    "description": "Dialog title when confirming session revocation"
+  },
+  "adminRevokeSessionContent": "Revoke session for participant {participantId}?\nThey will be logged out immediately.",
+  "@adminRevokeSessionContent": {
+    "description": "Dialog body when confirming session revocation",
+    "placeholders": {
+      "participantId": {
+        "type": "String"
+      }
+    }
+  },
+  "adminRevoke": "Revoke",
+  "@adminRevoke": {
+    "description": "Button label to revoke a device session"
+  },
+  "adminSessionRevoked": "Session revoked",
+  "@adminSessionRevoked": {
+    "description": "Snackbar message when session is successfully revoked"
+  },
+  "adminFailedToRevokeSession": "Failed to revoke session",
+  "@adminFailedToRevokeSession": {
+    "description": "Snackbar message when session revocation fails"
+  },
+  "adminNoActiveSessions": "No active sessions",
+  "@adminNoActiveSessions": {
+    "description": "Empty state message on device sessions screen"
+  },
+  "adminFailedToLoadSessions": "Failed to load sessions",
+  "@adminFailedToLoadSessions": {
+    "description": "Error message when device sessions fail to load"
+  },
+  "adminColParticipantId": "Participant ID",
+  "@adminColParticipantId": {
+    "description": "Column header for participant ID in device sessions table"
+  },
+  "adminColDeviceType": "Device Type",
+  "@adminColDeviceType": {
+    "description": "Column header for device type in device sessions table"
+  },
+  "adminColAppVersion": "App Version",
+  "@adminColAppVersion": {
+    "description": "Column header for app version in device sessions table"
+  },
+  "adminColLastSeen": "Last Seen",
+  "@adminColLastSeen": {
+    "description": "Column header for last seen timestamp in device sessions table"
+  },
+  "adminColSessionId": "Session ID",
+  "@adminColSessionId": {
+    "description": "Column header for session ID in device sessions table"
+  },
+  "adminColActions": "Actions",
+  "@adminColActions": {
+    "description": "Column header for actions in admin tables"
+  },
+  "adminDonatedHabits": "Donated Habits",
+  "@adminDonatedHabits": {
+    "description": "AppBar title for the admin donated habits screen"
+  },
+  "adminAutoRefreshOn": "Auto-refresh on",
+  "@adminAutoRefreshOn": {
+    "description": "Tooltip when auto-refresh is enabled"
+  },
+  "adminAutoRefreshOff": "Auto-refresh off",
+  "@adminAutoRefreshOff": {
+    "description": "Tooltip when auto-refresh is disabled"
+  },
+  "adminCouldNotOpenExportUrl": "Could not open export URL",
+  "@adminCouldNotOpenExportUrl": {
+    "description": "Snackbar message when CSV export URL cannot be opened"
+  },
+  "adminCsvExportFailed": "CSV export failed",
+  "@adminCsvExportFailed": {
+    "description": "Snackbar message when CSV export fails"
+  },
+  "adminAllDates": "All dates",
+  "@adminAllDates": {
+    "description": "Label shown on date range button when no date range is selected"
+  },
+  "adminGroup": "Group",
+  "@adminGroup": {
+    "description": "Label for the group dropdown filter"
+  },
+  "adminCategory": "Category",
+  "@adminCategory": {
+    "description": "Label for the category dropdown filter"
+  },
+  "adminAll": "All",
+  "@adminAll": {
+    "description": "Option label meaning all groups or all categories"
+  },
+  "adminClearDateRange": "Clear date range",
+  "@adminClearDateRange": {
+    "description": "Tooltip for the clear date range button"
+  },
+  "adminCsv": "CSV",
+  "@adminCsv": {
+    "description": "Label for the CSV export button"
+  },
+  "adminNoHabitDonationsFound": "No habit donations found",
+  "@adminNoHabitDonationsFound": {
+    "description": "Empty state message on donated habits screen"
+  },
+  "adminFailedToLoadHabitDonations": "Failed to load habit donations",
+  "@adminFailedToLoadHabitDonations": {
+    "description": "Error message when habit donations fail to load"
+  },
+  "adminParticipantTitle": "Participant {participantId}",
+  "@adminParticipantTitle": {
+    "description": "AppBar title for the participant detail screen",
+    "placeholders": {
+      "participantId": {
+        "type": "String"
+      }
+    }
+  },
+  "adminExportJson": "Export JSON",
+  "@adminExportJson": {
+    "description": "Tooltip for the export JSON button on participant detail screen"
+  },
+  "adminFailedToExportProgress": "Failed to export progress data.",
+  "@adminFailedToExportProgress": {
+    "description": "Snackbar message when exporting participant progress data fails"
+  },
+  "adminProfileCard": "Profile",
+  "@adminProfileCard": {
+    "description": "Card title for the profile section on participant detail screen"
+  },
+  "adminProfileNotYetCompleted": "Not yet completed",
+  "@adminProfileNotYetCompleted": {
+    "description": "Status text when participant profile is not yet completed"
+  },
+  "adminSurveysCompleted": "Surveys Completed ({count})",
+  "@adminSurveysCompleted": {
+    "description": "Section header showing how many surveys were completed",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminNoSurveysCompletedYet": "No surveys completed yet.",
+  "@adminNoSurveysCompletedYet": {
+    "description": "Empty state for surveys section on participant detail screen"
+  },
+  "adminHabitsDonated": "Habits Donated ({count})",
+  "@adminHabitsDonated": {
+    "description": "Section header showing how many habits were donated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminNoHabitsDonatedYet": "No habits donated yet.",
+  "@adminNoHabitsDonatedYet": {
+    "description": "Empty state for habits section when no habits donated"
+  },
+  "adminHabitsDonatedDetail": "{count, plural, =1{1 habit donated. Individual habit details are available in the Habits Monitor.} other{{count} habits donated. Individual habit details are available in the Habits Monitor.}}",
+  "@adminHabitsDonatedDetail": {
+    "description": "Detail text for habits section when habits have been donated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminRecommendations": "Recommendations",
+  "@adminRecommendations": {
+    "description": "Section heading for recommendations on participant detail screen"
+  },
+  "adminAccepted": "Accepted",
+  "@adminAccepted": {
+    "description": "Label for accepted recommendations count chip"
+  },
+  "adminDismissed": "Dismissed",
+  "@adminDismissed": {
+    "description": "Label for dismissed recommendations count chip"
+  },
+  "adminTimeline": "Timeline",
+  "@adminTimeline": {
+    "description": "Section heading for the timeline on participant detail screen"
+  },
+  "adminNoTimelineEventsYet": "No timeline events yet.",
+  "@adminNoTimelineEventsYet": {
+    "description": "Empty state for timeline section on participant detail screen"
+  },
+  "adminTimelineEnrolled": "Enrolled",
+  "@adminTimelineEnrolled": {
+    "description": "Timeline event label for enrollment"
+  },
+  "adminTimelineSurveyCompleted": "Survey completed",
+  "@adminTimelineSurveyCompleted": {
+    "description": "Timeline event label for survey completion"
+  },
+  "adminTimelineRecommendationAccepted": "Recommendation accepted",
+  "@adminTimelineRecommendationAccepted": {
+    "description": "Timeline event label for recommendation accepted"
+  },
+  "adminTimelineRecommendationDismissed": "Recommendation dismissed",
+  "@adminTimelineRecommendationDismissed": {
+    "description": "Timeline event label for recommendation dismissed"
+  },
+  "adminFailedToLoadParticipantProgress": "Failed to load participant progress.",
+  "@adminFailedToLoadParticipantProgress": {
+    "description": "Error message when participant progress fails to load"
+  },
+  "adminParticipants": "Participants",
+  "@adminParticipants": {
+    "description": "AppBar title for the admin participants screen"
+  },
+  "adminNoParticipantsFound": "No participants found.",
+  "@adminNoParticipantsFound": {
+    "description": "Empty state message on participants screen"
+  },
+  "adminSearchByUsername": "Search by username…",
+  "@adminSearchByUsername": {
+    "description": "Hint text for the participant search field"
+  },
+  "adminAllGroups": "All groups",
+  "@adminAllGroups": {
+    "description": "Dropdown option to show all groups"
+  },
+  "adminColUsername": "Username",
+  "@adminColUsername": {
+    "description": "Column header for username in participants table"
+  },
+  "adminColEnrolled": "Enrolled",
+  "@adminColEnrolled": {
+    "description": "Column header for enrolled date in participants table"
+  },
+  "adminColLastActive": "Last Active",
+  "@adminColLastActive": {
+    "description": "Column header for last active date in participants table"
+  },
+  "adminColSurveysPercent": "Surveys %",
+  "@adminColSurveysPercent": {
+    "description": "Column header for survey completion percentage in participants table"
+  },
+  "adminDeleteParticipant": "Delete participant",
+  "@adminDeleteParticipant": {
+    "description": "Tooltip for delete participant button"
+  },
+  "adminFailedToUpdateGroup": "Failed to update group.",
+  "@adminFailedToUpdateGroup": {
+    "description": "Snackbar message when updating participant group fails"
+  },
+  "adminDeleteParticipantTitle": "Delete Participant",
+  "@adminDeleteParticipantTitle": {
+    "description": "Dialog title when confirming participant deletion"
+  },
+  "adminDeleteParticipantContent": "This will anonymize participant data. Cannot be undone.",
+  "@adminDeleteParticipantContent": {
+    "description": "Dialog body when confirming participant deletion"
+  },
+  "adminFailedToDeleteParticipant": "Failed to delete participant.",
+  "@adminFailedToDeleteParticipant": {
+    "description": "Snackbar message when participant deletion fails"
+  },
+  "adminParticipantCreated": "Participant {username} created",
+  "@adminParticipantCreated": {
+    "description": "Snackbar message when a new participant is created",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "adminCreateParticipantTooltip": "Create participant",
+  "@adminCreateParticipantTooltip": {
+    "description": "Tooltip for the create participant floating action button"
+  },
+  "adminFailedToLoadParticipants": "Failed to load participants.",
+  "@adminFailedToLoadParticipants": {
+    "description": "Error message when participants list fails to load"
+  },
+  "adminPrevious": "Previous",
+  "@adminPrevious": {
+    "description": "Label for the previous page button in pagination"
+  },
+  "adminNext": "Next",
+  "@adminNext": {
+    "description": "Label for the next page button in pagination"
+  },
+  "adminCreateParticipantTitle": "Create Participant",
+  "@adminCreateParticipantTitle": {
+    "description": "Dialog title for creating a new participant"
+  },
+  "adminStudyGroup": "Study group",
+  "@adminStudyGroup": {
+    "description": "Label for the study group dropdown in create participant dialog"
+  },
+  "adminTokenCardFormat": "Token card format",
+  "@adminTokenCardFormat": {
+    "description": "Label for the token card format dropdown in create participant dialog"
+  },
+  "adminQrAndPrint": "QR + Print",
+  "@adminQrAndPrint": {
+    "description": "Option label for QR + Print token card format in create participant dialog"
+  },
+  "adminFailedToCreateParticipant": "Failed to create participant. Please try again.",
+  "@adminFailedToCreateParticipant": {
+    "description": "Error message when participant creation fails"
+  },
+  "adminSurveys": "Surveys",
+  "@adminSurveys": {
+    "description": "AppBar title for the admin surveys screen"
+  },
+  "adminFailedToUpdateStatus": "Failed to update status",
+  "@adminFailedToUpdateStatus": {
+    "description": "Snackbar message when updating survey status fails"
+  },
+  "adminNewSurveyTooltip": "New survey",
+  "@adminNewSurveyTooltip": {
+    "description": "Tooltip for the new survey floating action button"
+  },
+  "adminNoSurveysFound": "No surveys found",
+  "@adminNoSurveysFound": {
+    "description": "Empty state message on surveys screen"
+  },
+  "adminFailedToLoadSurveys": "Failed to load surveys",
+  "@adminFailedToLoadSurveys": {
+    "description": "Error message when surveys fail to load"
+  },
+  "adminPublish": "Publish",
+  "@adminPublish": {
+    "description": "Button label to publish a survey"
+  },
+  "adminArchive": "Archive",
+  "@adminArchive": {
+    "description": "Button label to archive a survey"
+  },
+  "adminNewSurveyTitle": "New Survey",
+  "@adminNewSurveyTitle": {
+    "description": "Dialog title for creating a new survey"
+  },
+  "adminSurveyTitleLabel": "Title",
+  "@adminSurveyTitleLabel": {
+    "description": "Label for the title field in the new survey dialog"
+  },
+  "adminSurveyTypeLabel": "Type",
+  "@adminSurveyTypeLabel": {
+    "description": "Label for the type dropdown in the new survey dialog"
+  },
+  "adminTitleIsRequired": "Title is required",
+  "@adminTitleIsRequired": {
+    "description": "Validation message when survey title is empty"
+  },
+  "adminFailedToCreateSurvey": "Failed to create survey",
+  "@adminFailedToCreateSurvey": {
+    "description": "Error message when survey creation fails"
+  },
+  "adminSurveyEditor": "Survey Editor",
+  "@adminSurveyEditor": {
+    "description": "Fallback AppBar title for the survey editor screen"
+  },
+  "adminInvalidJson": "Invalid JSON — please fix before saving",
+  "@adminInvalidJson": {
+    "description": "Snackbar message when survey JSON is invalid"
+  },
+  "adminSurveySaved": "Survey saved",
+  "@adminSurveySaved": {
+    "description": "Snackbar message when survey is saved successfully"
+  },
+  "adminFailedToSaveSurvey": "Failed to save survey",
+  "@adminFailedToSaveSurvey": {
+    "description": "Snackbar message when saving survey fails"
+  },
+  "adminFailedToLoadSurvey": "Failed to load survey",
+  "@adminFailedToLoadSurvey": {
+    "description": "Error message when a single survey fails to load"
+  },
+  "adminJsonSchema": "JSON Schema",
+  "@adminJsonSchema": {
+    "description": "Label for the JSON schema text field in the survey editor"
+  },
+  "adminAssignToGroups": "Assign to Groups",
+  "@adminAssignToGroups": {
+    "description": "Section heading for group assignment chips in the survey editor"
   }
 }

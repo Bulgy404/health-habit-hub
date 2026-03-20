@@ -2110,7 +2110,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 130,
-      "passes": false,
+      "passes": true,
       "notes": "Audit finding: admin screens excluded from US-118 scope but also contain hardcoded English strings"
     }
   ]

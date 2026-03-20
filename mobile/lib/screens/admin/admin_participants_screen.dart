@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/admin_participant.dart';
 import '../../services/admin_service.dart';
 
@@ -141,24 +142,23 @@ class _AdminParticipantsScreenState
       await _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to update group.')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.adminFailedToUpdateGroup)),
         );
       }
     }
   }
 
   Future<void> _confirmDelete(AdminParticipant p) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Participant'),
-        content: const Text(
-          'This will anonymize participant data. Cannot be undone.',
-        ),
+        title: Text(l10n.adminDeleteParticipantTitle),
+        content: Text(l10n.adminDeleteParticipantContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -166,7 +166,7 @@ class _AdminParticipantsScreenState
               foregroundColor: Theme.of(ctx).colorScheme.onError,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -180,7 +180,7 @@ class _AdminParticipantsScreenState
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to delete participant.')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.adminFailedToDeleteParticipant)),
         );
       }
     }
@@ -194,7 +194,7 @@ class _AdminParticipantsScreenState
           // Show snackbar
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Participant $username created')),
+              SnackBar(content: Text(AppLocalizations.of(context)!.adminParticipantCreated(username))),
             );
           }
           // Open token card URL
@@ -212,20 +212,21 @@ class _AdminParticipantsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Participants'),
+        title: Text(l10n.adminParticipants),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
             onPressed: _load,
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateDialog,
-        tooltip: 'Create participant',
+        tooltip: l10n.adminCreateParticipantTooltip,
         child: const Icon(Icons.person_add),
       ),
       body: _loading
@@ -242,7 +243,7 @@ class _AdminParticipantsScreenState
                     ),
                     Expanded(
                       child: _filtered.isEmpty
-                          ? const Center(child: Text('No participants found.'))
+                          ? Center(child: Text(l10n.adminNoParticipantsFound))
                           : SingleChildScrollView(
                               scrollDirection: Axis.vertical,
                               child: SingleChildScrollView(
@@ -297,6 +298,7 @@ class _FilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       child: Row(
@@ -304,11 +306,11 @@ class _FilterBar extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: searchController,
-              decoration: const InputDecoration(
-                hintText: 'Search by username…',
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: l10n.adminSearchByUsername,
+                prefixIcon: const Icon(Icons.search),
                 isDense: true,
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
               onChanged: onSearch,
             ),
@@ -316,12 +318,12 @@ class _FilterBar extends StatelessWidget {
           const SizedBox(width: 12),
           DropdownButton<String>(
             value: groupFilter,
-            items: const [
-              DropdownMenuItem(value: 'All', child: Text('All groups')),
-              DropdownMenuItem(value: 'G1', child: Text('G1')),
-              DropdownMenuItem(value: 'G2', child: Text('G2')),
-              DropdownMenuItem(value: 'G3', child: Text('G3')),
-              DropdownMenuItem(value: 'G4', child: Text('G4')),
+            items: [
+              DropdownMenuItem(value: 'All', child: Text(l10n.adminAllGroups)),
+              const DropdownMenuItem(value: 'G1', child: Text('G1')),
+              const DropdownMenuItem(value: 'G2', child: Text('G2')),
+              const DropdownMenuItem(value: 'G3', child: Text('G3')),
+              const DropdownMenuItem(value: 'G4', child: Text('G4')),
             ],
             onChanged: onGroupFilter,
           ),
@@ -356,17 +358,18 @@ class _ParticipantsTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return DataTable(
       headingRowColor: WidgetStateProperty.all(
         Theme.of(context).colorScheme.surfaceContainerHighest,
       ),
-      columns: const [
-        DataColumn(label: Text('Username')),
-        DataColumn(label: Text('Group')),
-        DataColumn(label: Text('Enrolled')),
-        DataColumn(label: Text('Last Active')),
-        DataColumn(label: Text('Surveys %')),
-        DataColumn(label: Text('Actions')),
+      columns: [
+        DataColumn(label: Text(l10n.adminColUsername)),
+        DataColumn(label: Text(l10n.adminGroup)),
+        DataColumn(label: Text(l10n.adminColEnrolled)),
+        DataColumn(label: Text(l10n.adminColLastActive)),
+        DataColumn(label: Text(l10n.adminColSurveysPercent)),
+        DataColumn(label: Text(l10n.adminColActions)),
       ],
       rows: rows
           .map(
@@ -398,7 +401,7 @@ class _ParticipantsTable extends StatelessWidget {
                 DataCell(
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
-                    tooltip: 'Delete participant',
+                    tooltip: l10n.adminDeleteParticipant,
                     color: Theme.of(context).colorScheme.error,
                     onPressed: () => onDelete(p),
                   ),
@@ -432,6 +435,7 @@ class _PaginationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final from = totalItems == 0 ? 0 : page * pageSize + 1;
     final to = ((page + 1) * pageSize).clamp(0, totalItems);
 
@@ -448,13 +452,13 @@ class _PaginationBar extends StatelessWidget {
           TextButton.icon(
             onPressed: onPrev,
             icon: const Icon(Icons.chevron_left),
-            label: const Text('Previous'),
+            label: Text(l10n.adminPrevious),
           ),
           const SizedBox(width: 8),
           TextButton.icon(
             onPressed: onNext,
             icon: const Icon(Icons.chevron_right),
-            label: const Text('Next'),
+            label: Text(l10n.adminNext),
             iconAlignment: IconAlignment.end,
           ),
         ],
@@ -474,18 +478,19 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.error_outline, size: 64, color: Colors.red),
           const SizedBox(height: 16),
-          const Text('Failed to load participants.'),
+          Text(l10n.adminFailedToLoadParticipants),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ],
       ),
@@ -525,13 +530,15 @@ class _CreateParticipantDialogState extends State<_CreateParticipantDialog> {
   String? _error;
 
   static const _groups = ['G1', 'G2', 'G3', 'G4'];
-  static const _formats = [
-    ('both', 'QR + Print'),
-    ('qr', 'QR only'),
-    ('print', 'Print only'),
+
+  List<(String, String)> _formats(AppLocalizations l10n) => [
+    ('both', l10n.adminQrAndPrint),
+    ('qr', l10n.qrOnly),
+    ('print', l10n.printOnly),
   ];
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _loading = true;
       _error = null;
@@ -552,7 +559,7 @@ class _CreateParticipantDialogState extends State<_CreateParticipantDialog> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Failed to create participant. Please try again.';
+          _error = l10n.adminFailedToCreateParticipant;
         });
       }
     }
@@ -560,13 +567,15 @@ class _CreateParticipantDialogState extends State<_CreateParticipantDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final formats = _formats(l10n);
     return AlertDialog(
-      title: const Text('Create Participant'),
+      title: Text(l10n.adminCreateParticipantTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Study group'),
+          Text(l10n.adminStudyGroup),
           const SizedBox(height: 4),
           InputDecorator(
             decoration: const InputDecoration(
@@ -592,7 +601,7 @@ class _CreateParticipantDialogState extends State<_CreateParticipantDialog> {
             ),
           ),
           const SizedBox(height: 16),
-          const Text('Token card format'),
+          Text(l10n.adminTokenCardFormat),
           const SizedBox(height: 4),
           InputDecorator(
             decoration: const InputDecoration(
@@ -606,7 +615,7 @@ class _CreateParticipantDialogState extends State<_CreateParticipantDialog> {
                 value: _format,
                 isDense: true,
                 isExpanded: true,
-                items: _formats
+                items: formats
                     .map(
                       (f) =>
                           DropdownMenuItem(value: f.$1, child: Text(f.$2)),
@@ -633,7 +642,7 @@ class _CreateParticipantDialogState extends State<_CreateParticipantDialog> {
       actions: [
         TextButton(
           onPressed: _loading ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _loading ? null : _submit,
@@ -643,7 +652,7 @@ class _CreateParticipantDialogState extends State<_CreateParticipantDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Create'),
+              : Text(l10n.create),
         ),
       ],
     );

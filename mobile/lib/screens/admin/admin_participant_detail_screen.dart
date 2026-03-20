@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/participant_progress.dart';
 import '../../services/admin_service.dart';
 
@@ -68,6 +69,7 @@ class _AdminParticipantDetailScreenState
   }
 
   Future<void> _exportJson() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _exporting = true);
     try {
       final service = ref.read(adminServiceProvider);
@@ -82,7 +84,7 @@ class _AdminParticipantDetailScreenState
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to export progress data.')),
+          SnackBar(content: Text(l10n.adminFailedToExportProgress)),
         );
       }
     } finally {
@@ -135,16 +137,16 @@ class _AdminParticipantDetailScreenState
     }
   }
 
-  String _timelineLabel(String type) {
+  String _timelineLabel(AppLocalizations l10n, String type) {
     switch (type) {
       case 'enrolled':
-        return 'Enrolled';
+        return l10n.adminTimelineEnrolled;
       case 'survey_completed':
-        return 'Survey completed';
+        return l10n.adminTimelineSurveyCompleted;
       case 'recommendation_accepted':
-        return 'Recommendation accepted';
+        return l10n.adminTimelineRecommendationAccepted;
       case 'recommendation_dismissed':
-        return 'Recommendation dismissed';
+        return l10n.adminTimelineRecommendationDismissed;
       default:
         return type;
     }
@@ -152,9 +154,10 @@ class _AdminParticipantDetailScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text('Participant ${widget.participantId}'),
+        title: Text(l10n.adminParticipantTitle(widget.participantId)),
         actions: [
           if (_exporting)
             const Padding(
@@ -168,12 +171,12 @@ class _AdminParticipantDetailScreenState
           else
             IconButton(
               icon: const Icon(Icons.download),
-              tooltip: 'Export JSON',
+              tooltip: l10n.adminExportJson,
               onPressed: _exportJson,
             ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: l10n.refresh,
             onPressed: _load,
           ),
         ],
@@ -213,7 +216,7 @@ class _ProgressBody extends StatelessWidget {
   final String Function(DateTime?) formatDateTime;
   final IconData Function(String) timelineIcon;
   final Color Function(BuildContext, String) timelineColor;
-  final String Function(String) timelineLabel;
+  final String Function(AppLocalizations, String) timelineLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -255,6 +258,7 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
@@ -272,14 +276,14 @@ class _ProfileCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Profile',
+                    l10n.adminProfileCard,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     profile.completed
-                        ? 'Completed on ${formatDate(profile.completedAt)}'
-                        : 'Not yet completed',
+                        ? l10n.completedOn(formatDate(profile.completedAt))
+                        : l10n.adminProfileNotYetCompleted,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -307,6 +311,7 @@ class _SurveysSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -318,14 +323,14 @@ class _SurveysSection extends StatelessWidget {
                 const Icon(Icons.assignment_turned_in),
                 const SizedBox(width: 8),
                 Text(
-                  'Surveys Completed (${surveys.length})',
+                  l10n.adminSurveysCompleted(surveys.length),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
             ),
             if (surveys.isEmpty) ...[
               const SizedBox(height: 12),
-              const Text('No surveys completed yet.'),
+              Text(l10n.adminNoSurveysCompletedYet),
             ] else ...[
               const SizedBox(height: 8),
               ...surveys.map(
@@ -359,11 +364,12 @@ class _HabitsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: ExpansionTile(
         leading: const Icon(Icons.volunteer_activism),
         title: Text(
-          'Habits Donated ($habitsCount)',
+          l10n.adminHabitsDonated(habitsCount),
           style: Theme.of(context).textTheme.titleMedium,
         ),
         childrenPadding:
@@ -373,9 +379,8 @@ class _HabitsSection extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               habitsCount == 0
-                  ? 'No habits donated yet.'
-                  : '$habitsCount habit${habitsCount == 1 ? '' : 's'} donated. '
-                      'Individual habit details are available in the Habits Monitor.',
+                  ? l10n.adminNoHabitsDonatedYet
+                  : l10n.adminHabitsDonatedDetail(habitsCount),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
@@ -396,6 +401,7 @@ class _RecommendationsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -407,7 +413,7 @@ class _RecommendationsCard extends StatelessWidget {
                 const Icon(Icons.recommend),
                 const SizedBox(width: 8),
                 Text(
-                  'Recommendations',
+                  l10n.adminRecommendations,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
@@ -418,7 +424,7 @@ class _RecommendationsCard extends StatelessWidget {
                 Expanded(
                   child: _CountChip(
                     icon: Icons.thumb_up,
-                    label: 'Accepted',
+                    label: l10n.adminAccepted,
                     count: recommendations.accepted,
                     color: Colors.teal,
                   ),
@@ -427,7 +433,7 @@ class _RecommendationsCard extends StatelessWidget {
                 Expanded(
                   child: _CountChip(
                     icon: Icons.thumb_down,
-                    label: 'Dismissed',
+                    label: l10n.adminDismissed,
                     count: recommendations.dismissed,
                     color: Theme.of(context).colorScheme.error,
                   ),
@@ -506,10 +512,11 @@ class _TimelineSection extends StatelessWidget {
   final String Function(DateTime?) formatDateTime;
   final IconData Function(String) timelineIcon;
   final Color Function(BuildContext, String) timelineColor;
-  final String Function(String) timelineLabel;
+  final String Function(AppLocalizations, String) timelineLabel;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -521,14 +528,14 @@ class _TimelineSection extends StatelessWidget {
                 const Icon(Icons.timeline),
                 const SizedBox(width: 8),
                 Text(
-                  'Timeline',
+                  l10n.adminTimeline,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ],
             ),
             if (timeline.isEmpty) ...[
               const SizedBox(height: 12),
-              const Text('No timeline events yet.'),
+              Text(l10n.adminNoTimelineEventsYet),
             ] else ...[
               const SizedBox(height: 8),
               ...timeline.asMap().entries.map((entry) {
@@ -573,7 +580,7 @@ class _TimelineSection extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                timelineLabel(item.type),
+                                timelineLabel(l10n, item.type),
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium
@@ -623,18 +630,19 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.error_outline, size: 64, color: Colors.red),
           const SizedBox(height: 16),
-          const Text('Failed to load participant progress.'),
+          Text(l10n.adminFailedToLoadParticipantProgress),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
+            label: Text(l10n.retry),
           ),
         ],
       ),
