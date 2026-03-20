@@ -13,6 +13,7 @@ import { createOnboardRouter } from './onboardRouter.js';
 import { createQuestionnairesRouter } from './questionnairesRouter.js';
 import { createQuestionnaireResponsesRouter } from './questionnaireResponsesRouter.js';
 import { createRecommendationsRouter } from './recommendationsRouter.js';
+import { createKbRouter } from './kbRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 import { swaggerSpec } from '../swagger.js';
 
@@ -182,6 +183,13 @@ export function createV1Router({
     '/recommendations',
     requireRole('participant', 'admin', 'researcher'),
     createRecommendationsRouter({ db, redisClient, redisUrl })
+  );
+
+  // Knowledge base routes: require admin or researcher role
+  router.use(
+    '/kb',
+    requireRole('admin', 'researcher'),
+    createKbRouter({ apiServiceUrl })
   );
 
   return router;
