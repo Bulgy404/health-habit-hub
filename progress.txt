@@ -1,3 +1,14 @@
+## 2026-03-21 - US-134
+- What was implemented: Senior DevOps engineer review of both GitHub Actions workflows — `.github/workflows/ci.yml` (10 jobs) and `.github/workflows/deploy.yml` (2 jobs). Report written to `tasks/review-cicd.md` covering 8 sections with 4 Critical, 8 Major, and 7 Minor findings. Every finding tied to specific job/step with concrete fix instructions.
+- Files changed: tasks/review-cicd.md (new), prd.json (US-134 passes=true)
+- **Learnings for future iterations:**
+  - All three `actions/checkout@v6`, `actions/setup-node@v6`, and `actions/upload-artifact@v6` in ci.yml are non-existent versions — the latest stable are all `@v4`. Every CI job is currently broken at the action-resolution step before any code runs.
+  - `API-service/` (Python FastAPI) has zero CI coverage — no lint, no type-check, no test job — despite having test files written in US-098/099/114.
+  - `admin/` Next.js panel and its Dockerfile are not validated in any CI job and not included in Docker build validation or release artifacts.
+  - The `deploy.yml` tag-push path (lines 10-12) bypasses CI entirely — tagging a broken commit triggers a production deploy with zero gating.
+  - Fuseki service is not started in the integration test job despite Fuseki-backed routes existing in the backend.
+---
+
 ## 2026-03-21 - US-133
 - What was implemented: Senior data engineer review of the Neo4j/ontology layer — `neo4j/init/constraints.cypher`, `app/utils/Neo4jDatabase.js`, `app/utils/config.js`, `Ontology.ttl`, `fuseki/init/schema.ttl`, `fuseki/init/data.ttl`, `scripts/migrate-group-labels.cypher`, and all embedded Cypher in `habitsRouter.js` + `adminRouter.js`. Report written to `tasks/review-neo4j.md` covering 7 sections with 5 Critical, 8 Major, and 6 Minor findings. Every finding tied to specific file and line range.
 - Files changed: tasks/review-neo4j.md (new), prd.json (US-133 passes=true)
