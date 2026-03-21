@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/exceptions.dart';
 import '../models/habit_node.dart';
 import '../models/habit_stats.dart';
 import '../providers/auth_provider.dart';
@@ -50,15 +51,20 @@ class HabitService {
   /// resolved in [lang] (e.g. 'en' or 'de').
   Future<List<HabitNode>> fetchDonatedHabits(String lang) async {
     final headers = await _authHeaders();
-    final response = await _dio.get<List<dynamic>>(
-      '$_baseUrl/habits',
-      queryParameters: {'lang': lang},
-      options: Options(headers: headers),
-    );
-    return (response.data ?? [])
-        .cast<Map<String, dynamic>>()
-        .map((json) => HabitNode.fromDonatedJson(json, lang))
-        .toList();
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '$_baseUrl/habits',
+        queryParameters: {'lang': lang},
+        options: Options(headers: headers),
+      );
+      return (response.data ?? [])
+          .cast<Map<String, dynamic>>()
+          .map((json) => HabitNode.fromDonatedJson(json, lang))
+          .toList();
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      rethrow;
+    }
   }
 
   /// Submits an anonymous annotation of [type] ('helpful' or 'iDoThis') for

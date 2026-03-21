@@ -346,7 +346,7 @@ Only LTR languages (`en`, `de`) are supported. Not an immediate concern, but sho
 | # | Finding | File | Description | Resolution (US-137) |
 |---|---------|------|-------------|---------------------|
 | C-1 | Q-1 | All service files | Replace silent `catch (_) {}` with logging and typed exceptions | **RESOLVED** — Added `debugPrint('ERROR in ...: $e\n$st')` to all silent `catch (_) {}` blocks in `donate_screen.dart` and `locale_provider.dart`. Service files propagate exceptions correctly; screens now log before swallowing. |
-| C-2 | T-1 | `mobile/test/` | Add unit tests for all five service classes | **DEFERRED** — Requires `mockito` code-gen setup and `http_mock_adapter` integration that is a story in itself. Added to backlog as a dedicated testing story. |
+| C-2 | T-1 | `mobile/test/` | Add unit tests for all five service classes | **RESOLVED (US-154)** — Added `http_mock_adapter: ^0.6.1` to dev_dependencies. Created `test/services/habit_service_test.dart` (verifies `?lang=` query param + 401 → `UnauthorisedException`), `test/services/stats_service_test.dart` (stats response parsing), and `test/services/recommendation_service_test.dart` (happy path + 500 error). All 8 tests pass. |
 | C-3 | S-1 | `donate_screen.dart:26` | Replace hard-coded API URL with `AppConfig.apiBaseUrl` | **RESOLVED** — Changed `static const _baseUrl = 'https://api.hhh.tu-dresden.de/api/v1'` to `final _baseUrl = AppConfig.apiBaseUrl`. Hard-coded URL removed. |
 
 ### Major (address within the next sprint)
