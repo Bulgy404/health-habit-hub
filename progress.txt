@@ -1556,3 +1556,10 @@
   - `FullHttpRequestMatcher` also matches `headers` — since `_StubAuthService` returns `null` for an unauthenticated stub and the stats/no-auth tests have no Authorization header, the mock must not set `headers:` constraint (or it must match the actual headers including auth)
   - `server.throws(statusCode, DioException(...))` is the correct way to simulate error responses in http_mock_adapter; the `response.statusCode` on the inner `DioException` is what the service's `e.response?.statusCode` check reads
 ---
+## 2026-03-21 - US-155
+- What was implemented: Fixed MongoDB restore path mismatch in `backup-service/restore.sh`. Changed `$RESTORE_DIR/mongodb` to `$RESTORE_DIR/mongo` on lines 48 and 55 to match the `--out="$BACKUP_DIR/$DATE/mongo"` path used in `backup-service/backup.sh:79`. Added a sync comment above the mongorestore call in restore.sh and above the mongodump call in backup.sh noting the directory names must stay in sync.
+- Files changed: backup-service/restore.sh (mongodb → mongo, added sync comment), backup-service/backup.sh (added sync comment), tasks/review-infrastructure.md (M5 marked ✅ Resolved US-155), prd.json (US-155 passes=true)
+- **Learnings for future iterations:**
+  - The backup-service/ directory contains its OWN restore.sh (the original), separate from scripts/restore.sh (a more modern version created in a later story) — both exist; the bug was in backup-service/restore.sh which is actually mounted into the Docker backup service container
+  - The `RESTORE_DIR` variable in backup-service/restore.sh is a temp dir set to `/tmp/restore-$$`; the archive is extracted there and the subdirectory names directly correspond to what backup.sh creates inside `$BACKUP_DIR/$DATE/`
+---
