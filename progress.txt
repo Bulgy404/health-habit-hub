@@ -1507,3 +1507,13 @@
   - The `release` job (build artifacts, upload to GitHub Release) is safe to keep on `push: tags: v*` — it's not a production deploy, so bypassing CI is acceptable risk; only the `deploy` job (SSH prod deploy) needs gating
   - Removing `branches: master` from the workflow_run filter means it fires for ALL CI completions (PRs, feature branches, tags) — the deploy job's `if` condition must be tight enough to filter correctly
 ---
+
+## 2026-03-21 - US-150
+- What was implemented: Added `_esc()` method to `DbClient` in `SparqlDatabase.js` (identical to `Neo4jDatabase.js:187-194`) and applied it to all 10 user-controlled string literal interpolation points: `userId` in `addDonor()`; `donation.value`, `donation.language`, `donation.source` in `addHabit()`; `context.data`, `donation.language`, `donation.source` in `_appendContext()`; `behavior.data`, `donation.language`, `donation.source` in `_appendBehavior()`. IRI fragments (`context.value`, `experimentalSetting.group`) are safe — `context.value` only passes the `type==='context'` filter if the label name is a recognized key (TimeReference, PhysicalSetting, People, InternalState, PriorBehavior, Reasoning), and `experimentalSetting.group` comes from static conditional logic yielding Group1–4 or undefined. Added Resolution note to the SPARQL injection finding in tasks/review-backend.md. All 247 tests pass; lint passes.
+- Files changed: app/utils/SparqlDatabase.js (_esc() method + 10 escaped interpolations), tasks/review-backend.md (Resolution note), prd.json (US-150 passes=true)
+- **Learnings for future iterations:**
+  - SPARQL `INSERT DATA` does NOT support bind parameters — string escaping is the correct fix for literal values (escape `\`, `"`, `\n`, `\r`)
+  - IRI fragment injection (`hhh:${value}`) is safe when the value is constrained by the label-type mapping in `Donation` constructor — only recognized label names get `type==='context'` and pass the filter
+  - `Neo4jDatabase.js` already had the correct `_esc()` pattern; `SparqlDatabase.js` was missing it — always verify both SPARQL and Neo4j clients when fixing injection issues
+  - `SparqlDatabase.test.js` integration tests use `ENABLE_INTEGRATION=1` flag and skip without a live Fuseki — unit assertions for escaping should use the `addHabit`/`_appendBehavior` etc. methods directly without needing Fuseki
+---
