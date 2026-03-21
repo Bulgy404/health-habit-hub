@@ -1,6 +1,22 @@
 import express from 'express';
-import { randomUUID, randomBytes, createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { generateTokenCard } from '../services/token_card_service.js';
+import {
+  listParticipants,
+  createParticipant,
+  assignGroup,
+  getParticipant,
+  softDeleteParticipant,
+} from '../services/adminParticipantService.js';
+import {
+  getHabitsFeed,
+  buildHabitsCSV,
+} from '../services/adminHabitService.js';
+import {
+  getParticipantProgress,
+  getSettings,
+  updateSetting,
+} from '../services/adminStatsService.js';
 
 // Production Keycloak admin client (reads config from env)
 function createKeycloakClient() {
@@ -94,10 +110,6 @@ function createKeycloakClient() {
   };
 }
 
-function randomPassword() {
-  return randomBytes(12).toString('base64url');
-}
-
 const DEFAULT_SETTINGS = [{ key: 'token_card_format', value: 'both' }];
 
 async function seedDefaultSettings(database) {
@@ -112,15 +124,6 @@ async function seedDefaultSettings(database) {
     }
   }
 }
-
-// Whitelist of valid Neo4j group labels — used to prevent Cypher label injection
-// in the PATCH /participants/:id/group route (SET d:`${newLabel}`)
-const VALID_GROUPS = new Set([
-  'hhh__Group1',
-  'hhh__Group2',
-  'hhh__Group3',
-  'hhh__Group4',
-]);
 
 export function createAdminRouter({
   db,
@@ -271,20 +274,7 @@ export function createAdminRouter({
   router.get('/participants', async (req, res) => {
     try {
       const database = await getDb();
-      const participants = await database
-        .collection('participants')
-        .find({ deletedAt: { $exists: false } })
-        .toArray();
-
-      const result = participants.map((p) => ({
-        userId: p.userId,
-        username: p.username,
-        group: p.group || null,
-        enrolledAt: p.enrolledAt,
-        lastActive: p.lastActive || null,
-        surveyCompletionPct: p.surveyCompletionPct || 0,
-      }));
-
+      const result = await listParticipants({ db: database });
       res.json(result);
     } catch (err) {
       console.error('[route] Error:', err);
@@ -297,27 +287,8 @@ export function createAdminRouter({
     try {
       const database = await getDb();
       const kc = getKeycloak();
-
-      const userId = randomUUID();
-      const username = `p-${userId}`;
-      const password = randomPassword();
-
-      await kc.createUser({ userId, username, password });
-      await kc.assignRole(userId, 'participant');
-
-      const now = new Date();
-      await database.collection('participants').insertOne({
-        userId,
-        username,
-        password,
-        group: null,
-        enrolledAt: now,
-        lastActive: null,
-        surveyCompletionPct: 0,
-      });
-
-      const tokenCardUrl = `/api/v1/admin/participants/${userId}/token-card`;
-      res.json({ userId, username, password, tokenCardUrl });
+      const result = await createParticipant({ db: database, kc });
+      res.json(result);
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
@@ -412,41 +383,19 @@ export function createAdminRouter({
 
       const database = await getDb();
       const kc = getKeycloak();
+      const result = await assignGroup({
+        db: database,
+        neo4jRun,
+        kc,
+        id,
+        group,
+      });
 
-      await kc.updateUserAttribute(id, 'group', group);
-
-      const result = await database
-        .collection('participants')
-        .updateOne(
-          { userId: id, deletedAt: { $exists: false } },
-          { $set: { group } }
-        );
-
-      if (result.matchedCount === 0) {
+      if (result === null) {
         return res.status(404).json({ error: 'Participant not found' });
       }
 
-      if (neo4jRun) {
-        const labelMap = {
-          G1: 'hhh__Group1',
-          G2: 'hhh__Group2',
-          G3: 'hhh__Group3',
-          G4: 'hhh__Group4',
-        };
-        const newLabel = labelMap[group];
-        if (!VALID_GROUPS.has(newLabel)) {
-          return res.status(400).json({ error: 'Invalid group' });
-        }
-        const cypher = [
-          'MATCH (d:hhh__Donor {hhh__id: $userId})',
-          'REMOVE d:hhh__Group1 REMOVE d:hhh__Group2 REMOVE d:hhh__Group3 REMOVE d:hhh__Group4',
-          `SET d:\`${newLabel}\``,
-          'RETURN d',
-        ].join(' ');
-        await neo4jRun(cypher, { userId: id }).catch(() => {});
-      }
-
-      res.json({ ok: true, userId: id, group });
+      res.json(result);
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
@@ -525,9 +474,7 @@ export function createAdminRouter({
       }
 
       const database = await getDb();
-      const participant = await database
-        .collection('participants')
-        .findOne({ userId: id, deletedAt: { $exists: false } });
+      const participant = await getParticipant({ db: database, id });
 
       if (!participant) {
         return res.status(404).json({ error: 'Participant not found' });
@@ -589,14 +536,7 @@ export function createAdminRouter({
   router.get('/settings', async (req, res) => {
     try {
       const database = await getDb();
-      const docs = await database
-        .collection('admin_settings')
-        .find({})
-        .toArray();
-      const result = {};
-      for (const doc of docs) {
-        result[doc.key] = doc.value;
-      }
+      const result = await getSettings({ db: database });
       res.json(result);
     } catch (err) {
       console.error('[route] Error:', err);
@@ -673,14 +613,8 @@ export function createAdminRouter({
         return res.status(400).json({ error: 'Missing value' });
       }
       const database = await getDb();
-      await database
-        .collection('admin_settings')
-        .updateOne(
-          { key },
-          { $set: { value, updatedAt: new Date() } },
-          { upsert: true }
-        );
-      res.json({ ok: true, key, value });
+      const result = await updateSetting({ db: database, key, value });
+      res.json(result);
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
@@ -776,87 +710,17 @@ export function createAdminRouter({
     try {
       const { id } = req.params;
       const database = await getDb();
+      const result = await getParticipantProgress({
+        db: database,
+        neo4jRun,
+        id,
+      });
 
-      const participant = await database
-        .collection('participants')
-        .findOne({ userId: id, deletedAt: { $exists: false } });
-
-      if (!participant) {
+      if (result === null) {
         return res.status(404).json({ error: 'Participant not found' });
       }
 
-      const surveyResponses = await database
-        .collection('survey_responses')
-        .find({ participantId: id })
-        .toArray();
-
-      let habitsCount = 0;
-      if (neo4jRun) {
-        try {
-          const records = await neo4jRun(
-            'MATCH (h:Habit {userID: $userId}) RETURN count(h) AS cnt',
-            { userId: id }
-          );
-          const cnt = records[0]?.cnt;
-          habitsCount =
-            typeof cnt?.toNumber === 'function' ? cnt.toNumber() : (cnt ?? 0);
-        } catch (err) {
-          console.error('[route] Error:', err);
-          // Neo4j unavailable; habitsCount stays 0
-        }
-      } else {
-        const habitDocs = await database
-          .collection('habit_donations')
-          .find({ participantId: id })
-          .toArray();
-        habitsCount = habitDocs.length;
-      }
-
-      const recDocs = await database
-        .collection('recommendations_log')
-        .find({ participantId: id })
-        .toArray();
-      const accepted = recDocs.filter((r) => r.type === 'accepted').length;
-      const dismissed = recDocs.filter((r) => r.type === 'dismissed').length;
-
-      const timeline = [];
-      if (participant.enrolledAt) {
-        timeline.push({
-          type: 'enrolled',
-          timestamp: participant.enrolledAt,
-          detail: 'Participant enrolled',
-        });
-      }
-      for (const sr of surveyResponses) {
-        timeline.push({
-          type: 'survey_completed',
-          timestamp: sr.completedAt,
-          detail: sr.surveyTitle || sr.surveyId,
-        });
-      }
-      for (const rec of recDocs) {
-        timeline.push({
-          type: `recommendation_${rec.type}`,
-          timestamp: rec.timestamp,
-          detail: rec.recommendationId || '',
-        });
-      }
-      timeline.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-      res.json({
-        profile: {
-          completed: participant.profileCompleted || false,
-          completedAt: participant.profileCompletedAt || null,
-        },
-        surveys: surveyResponses.map((sr) => ({
-          id: sr.surveyId,
-          title: sr.surveyTitle || '',
-          completedAt: sr.completedAt,
-        })),
-        habitsCount,
-        recommendations: { accepted, dismissed },
-        timeline,
-      });
+      res.json(result);
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
@@ -933,40 +797,13 @@ export function createAdminRouter({
       }
 
       const database = await getDb();
-      const filter = {};
-      if (group) filter.group = group;
-      if (category) filter.category = category;
-      if (from || to) {
-        filter.donatedAt = {};
-        if (from) filter.donatedAt.$gte = new Date(from);
-        if (to) filter.donatedAt.$lte = new Date(to);
-      }
-
-      const docs = await database
-        .collection('habit_donations')
-        .find(filter)
-        .toArray();
-
-      const escape = (v) => {
-        const s = v == null ? '' : String(v);
-        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-          return `"${s.replace(/"/g, '""')}"`;
-        }
-        return s;
-      };
-
-      const header = 'participantId,habitName,category,donatedAt';
-      const rows = docs.map((d) =>
-        [
-          d.participantId,
-          d.habitName,
-          d.category,
-          d.donatedAt instanceof Date ? d.donatedAt.toISOString() : d.donatedAt,
-        ]
-          .map(escape)
-          .join(',')
-      );
-      const csv = [header, ...rows].join('\n');
+      const csv = await buildHabitsCSV({
+        db: database,
+        group,
+        category,
+        from,
+        to,
+      });
 
       res.set({
         'Content-Type': 'text/csv',
@@ -1046,37 +883,17 @@ export function createAdminRouter({
   router.get('/habits/feed', async (req, res) => {
     try {
       const { group, from, to, category, page = '1', limit = '20' } = req.query;
-      const pageNum = Math.max(1, parseInt(page, 10) || 1);
-      const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
-      const skip = (pageNum - 1) * limitNum;
-
       const database = await getDb();
-      const filter = {};
-      if (group) filter.group = group;
-      if (category) filter.category = category;
-      if (from || to) {
-        filter.donatedAt = {};
-        if (from) filter.donatedAt.$gte = new Date(from);
-        if (to) filter.donatedAt.$lte = new Date(to);
-      }
-
-      const collection = database.collection('habit_donations');
-      const [total, paginated] = await Promise.all([
-        collection.countDocuments(filter),
-        collection.find(filter).skip(skip).limit(limitNum).toArray(),
-      ]);
-
-      res.json({
-        total,
-        page: pageNum,
-        limit: limitNum,
-        results: paginated.map((d) => ({
-          participantId: d.participantId,
-          habitName: d.habitName,
-          category: d.category,
-          donatedAt: d.donatedAt,
-        })),
+      const result = await getHabitsFeed({
+        db: database,
+        group,
+        category,
+        from,
+        to,
+        page: parseInt(page, 10) || 1,
+        limit: parseInt(limit, 10) || 20,
       });
+      res.json(result);
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
@@ -1771,22 +1588,13 @@ export function createAdminRouter({
     try {
       const { id } = req.params;
       const database = await getDb();
+      const result = await softDeleteParticipant({ db: database, id });
 
-      const hash = createHash('sha256').update(id).digest('hex').slice(0, 8);
-      const anonymizedUsername = `deleted-${hash}`;
-
-      const result = await database
-        .collection('participants')
-        .updateOne(
-          { userId: id, deletedAt: { $exists: false } },
-          { $set: { deletedAt: new Date(), username: anonymizedUsername } }
-        );
-
-      if (result.matchedCount === 0) {
+      if (result === null) {
         return res.status(404).json({ error: 'Participant not found' });
       }
 
-      res.json({ ok: true });
+      res.json(result);
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
