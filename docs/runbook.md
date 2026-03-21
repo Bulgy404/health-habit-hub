@@ -19,6 +19,12 @@ and is annotated with the expected output.
 9. [Adding an Admin User](#adding-an-admin-user)
 10. [Checking Service Health](#checking-service-health)
 11. [Troubleshooting](#troubleshooting)
+    - [Keycloak 401 errors](#keycloak-401-errors--jwks-url-misconfigured)
+    - [Neo4j connection refused — container not ready](#neo4j-connection-refused--container-not-ready)
+    - [Neo4j failed to start — data directory permissions](#neo4j-failed-to-start--data-directory-permissions)
+    - [Flutter web blank page — CORS issue](#flutter-web-blank-page--cors-issue)
+    - [Recommender service unreachable](#recommender-service-unreachable--container-name-resolution)
+    - [LibreTranslate down or returning empty translations](#libretranslate-down-or-returning-empty-translations)
 
 ---
 
@@ -609,6 +615,115 @@ bash scripts/deploy-recommender.sh
 
 If the container name `recommender` cannot be resolved, ensure both services share the same
 Docker network (check `docker-compose.yml` `networks:` section for `h3-app` and `recommender`).
+
+---
+
+---
+
+### Neo4j failed to start — data directory permissions
+
+**Symptom:** `h3-neo4j` enters a restart loop; logs show
+`ERROR Failed to start Neo4j: Store unavailable` or `java.io.IOException: Permission denied`.
+
+**Diagnosis:**
+```bash
+docker compose --env-file stack.env.local logs --tail=30 h3-neo4j | grep -i "error\|permission"
+# Look for: "Permission denied" or "Cannot open file"
+
+# Check host directory ownership
+ls -la /mnt/data/appdata/hhh/neo4j/
+# Expected: owned by UID 7474 (neo4j user inside container)
+```
+
+**Fix:**
+```bash
+# Stop the container
+docker compose --env-file stack.env.local stop h3-neo4j
+
+# Correct ownership (neo4j user = UID 7474)
+sudo chown -R 7474:7474 /mnt/data/appdata/hhh/neo4j
+
+# Restart
+docker compose --env-file stack.env.local up -d h3-neo4j
+
+# Verify startup
+docker compose --env-file stack.env.local logs -f h3-neo4j | grep -E "Started|Bolt enabled|ERROR"
+# Expected: "Bolt enabled on 0.0.0.0:7687."
+```
+
+If Neo4j still fails to start after fixing permissions, check disk space:
+```bash
+df -h /mnt/data/
+# Neo4j needs at least 1 GB free for a fresh start
+```
+
+---
+
+### LibreTranslate down or returning empty translations
+
+**Symptom 1:** Habit donation succeeds but `translationEN` or `translationDE` is `null`
+even for non-English or English habits respectively.  App logs show
+`WARN [habitsRouter] translateAndRefine failed, falling back to raw translation` or
+`WARN [habitsRouter] translateToGerman failed`.
+
+**Symptom 2:** `h3-translate` is in a restart loop or shows `unhealthy`.
+
+**Diagnosis:**
+```bash
+# Check container status
+docker compose --env-file stack.env.local ps h3-translate
+# Expected: Up (healthy)
+
+# Check LibreTranslate logs for startup errors
+docker compose --env-file stack.env.local logs --tail=50 h3-translate
+# Common errors:
+#   "Permission denied" on /home/libretranslate/.local → UID 1032 issue
+#   "No module named argostranslate" → language pack not downloaded
+
+# Test LibreTranslate directly from inside the app container
+docker compose --env-file stack.env.local exec h3-app \
+  wget -qO- "http://translate:5000/translate" \
+  --post-data '{"q":"Hello","source":"en","target":"de","format":"text"}' \
+  --header 'Content-Type: application/json' 2>&1 | head -c 200
+# Expected: {"translatedText":"Hallo"}
+```
+
+**Fix — UID 1032 volume permission issue:**
+```bash
+# Stop LibreTranslate
+docker compose --env-file stack.env.local stop h3-translate
+
+# Fix ownership (libretranslate user = UID 1032)
+sudo chown -R 1032:1032 /mnt/data/appdata/hhh/translate
+
+# Restart
+docker compose --env-file stack.env.local up -d h3-translate
+
+# Watch logs for successful language pack loading
+docker compose --env-file stack.env.local logs -f h3-translate | grep -E "Loaded|Error|ready"
+# Expected: "Loaded en -> de" and "Loaded de -> en" (and ja variants if LT_LOAD_ONLY includes ja)
+```
+
+**Fix — LibreTranslate is up but translations are empty (LLM refinement failing):**
+
+LibreTranslate itself is healthy but the LLM refinement step in the API-service is failing.
+The backend falls back to the raw (unrefined) LibreTranslate output, so `translationEN`/`translationDE`
+will be populated with unrefined machine translations rather than null.
+
+```bash
+# Check the API-service (recommender) logs
+docker compose --env-file stack.env.local logs --tail=50 h3-recommender | grep -E "error|ERROR|refine"
+# Common cause: OPENAI_API_KEY not set or rate-limited
+
+# Verify the env var is present
+docker compose --env-file stack.env.local exec h3-recommender env | grep OPENAI_API_KEY
+# Expected: OPENAI_API_KEY=sk-...
+```
+
+Update `stack.env.local` with a valid key and redeploy the recommender:
+```bash
+bash scripts/deploy-recommender.sh
+```
 
 ---
 

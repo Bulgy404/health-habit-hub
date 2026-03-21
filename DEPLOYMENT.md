@@ -73,6 +73,10 @@ MONGO_PASSWORD=<your-secure-mongo-password>
 MONGO_EXPRESS_PASSWORD=<your-secure-mongo-express-password>
 NEO4J_PASSWORD=<your-secure-neo4j-password>
 
+# Keycloak (identity provider)
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=<your-secure-keycloak-admin-password>
+
 # Traefik Dashboard (generate: htpasswd -nb admin your-password)
 TRAEFIK_DASHBOARD_AUTH=<your-htpasswd-hash>
 
@@ -83,6 +87,9 @@ RECAPTCHA_SECRETKEY=<your-production-secret-key>
 # Mailjet (from Mailjet dashboard)
 MAIL_USER=<mailjet-api-key>
 MAIL_PASS=<mailjet-secret-key>
+
+# OpenAI (for habit classification, BCIO mapping, translation refinement)
+OPENAI_API_KEY=<your-openai-api-key>
 ```
 
 #### Optional Overrides:
@@ -92,24 +99,49 @@ ALERT_WEBHOOK_URL=<your-webhook-url>
 
 # Backup retention
 BACKUP_RETENTION_DAYS=14
+
+# LibreTranslate language pack settings
+LT_LOAD_ONLY=de,en,ja   # comma-separated ISO codes; controls which language packs are loaded
+LT_REQ_LIMIT=0           # max chars per request (0 = unlimited)
+
+# LLM model and sampling
+LLM_MODEL=gpt-4o-mini    # or gpt-4o for higher accuracy
+LLM_TEMPERATURE=0.2      # 0.0 = deterministic, 1.0 = creative
 ```
 
-### Step 5: Deploy
+### Step 5: Pre-deploy Volume Permissions
+
+LibreTranslate runs as UID 1032 inside the container.  Before the first deploy you
+must create the host directory with the correct ownership so the language model
+downloads succeed:
+
+```bash
+sudo mkdir -p /mnt/data/appdata/hhh/translate
+sudo chown -R 1032:1032 /mnt/data/appdata/hhh/translate
+```
+
+Failure to do this will cause `h3-translate` to start but fail to persist language
+packs, resulting in empty translation responses.
+
+### Step 6: Deploy
 1. Click **Deploy the stack**
-2. Wait for deployment (5-10 minutes for initial setup)
+2. Wait for deployment (5-10 minutes for initial setup; Keycloak first-boot takes ~90 s)
 3. Monitor container logs for any errors
 
 ## Post-Deployment Verification
 
 ### 1. Check Container Status
 All containers should be running:
-- `h3-proxy` (Traefik)
-- `h3-app` (Node.js application)
-- `h3-fuseki` (RDF database)
-- `h3-mongo` (MongoDB)
+- `h3-proxy` (Traefik reverse proxy)
+- `h3-app` (Node.js backend API)
+- `h3-fuseki` (Apache Jena Fuseki RDF/SPARQL database)
+- `h3-mongo` (MongoDB — survey responses, recommendations, user preferences)
 - `h3-mongo-express` (MongoDB web UI)
-- `h3-neo4j` (Graph database)
-- `h3-translate` (LibreTranslate)
+- `h3-neo4j` (Neo4j graph database — habit graph, BCIO ontology)
+- `h3-translate` (LibreTranslate — EN↔DE habit translation)
+- `h3-keycloak` (Keycloak identity provider — authentication and authorisation)
+- `h3-recommender` (Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement)
+- `h3-admin` (Next.js admin panel — study management UI)
 - `h3-backup` (Backup service)
 
 ### 2. Verify SSL Certificate
@@ -125,7 +157,41 @@ All containers should be running:
 - [ ] Neo4j browser: http://localhost:7474 (via SSH tunnel)
 - [ ] Traefik dashboard: https://habit.wiwi.tu-dresden.de/dashboard
 
-### 4. Test Backup System
+### 4. Run One-time Migration Scripts (first deploy of this branch only)
+
+#### 4a. Backfill German translations for existing English habits
+
+Habit nodes donated before this branch was deployed do not have a `translationDE` field.
+Run the backfill script to populate German translations via LibreTranslate + LLM refinement:
+
+```bash
+docker exec h3-app node scripts/backfill-de-translations.js
+```
+
+Dry-run mode (preview changes without writing):
+
+```bash
+docker exec h3-app node scripts/backfill-de-translations.js --dry-run
+```
+
+Expected output:
+```
+[backfill] 0 habits already have translationDE. Found 42 to translate.
+[backfill] Processed 1/42: <uuid> → "Jeden Morgen joggen"
+...
+[backfill] Done. 42 updated, 0 failed.
+```
+
+If any habits fail, the script logs them and exits with code 1.  Re-run after fixing
+the underlying cause (usually LibreTranslate or the API-service being unhealthy).
+
+#### 4b. Backfill BCIO enrichment for existing habits (optional)
+
+```bash
+docker exec h3-app node scripts/migrate-habits-bcio.js
+```
+
+### 5. Test Backup System
 Check backup logs:
 ```bash
 docker logs h3-backup
@@ -159,12 +225,15 @@ Port 80/443
 Traefik (h3-proxy)
    ↓
 h3-proxy network (bridge)
-   ├── h3-app (Node.js)
-   ├── h3-fuseki (RDF)
+   ├── h3-app (Node.js backend API)
+   ├── h3-admin (Next.js admin panel)
+   ├── h3-recommender (Python FastAPI — LLM/BCIO)
+   ├── h3-keycloak (Keycloak — Port 8080 exposed for admin UI)
+   ├── h3-fuseki (RDF/SPARQL)
    ├── h3-mongo (MongoDB)
    ├── h3-mongo-express (MongoDB UI)
-   ├── h3-neo4j (Graph) - Port 7474/7687 exposed for SSH tunnel
-   ├── h3-translate (LibreTranslate)
+   ├── h3-neo4j (Graph DB — Port 7474/7687 exposed for SSH tunnel)
+   ├── h3-translate (LibreTranslate — UID 1032, volume chown required)
    └── h3-backup (Backup service)
 ```
 
@@ -318,7 +387,10 @@ docker volume ls | grep h3-
 
 | Service | URL | Authentication |
 |---------|-----|----------------|
-| Main App | https://habit.wiwi.tu-dresden.de | None |
+| Backend API | https://habit.wiwi.tu-dresden.de/api/v1/ | Keycloak JWT |
+| Flutter Web App | https://habit.wiwi.tu-dresden.de | Keycloak PKCE |
+| Admin Panel | https://habit.wiwi.tu-dresden.de/admin | Keycloak (admin/researcher role) |
+| Keycloak Admin UI | https://habit.wiwi.tu-dresden.de/auth/admin | Keycloak admin credentials |
 | Mongo Express | https://habit.wiwi.tu-dresden.de/mongo | Basic Auth (admin) |
 | Fuseki | https://habit.wiwi.tu-dresden.de/fuseki | Basic Auth (admin) |
 | Translation | https://habit.wiwi.tu-dresden.de/translate | None |

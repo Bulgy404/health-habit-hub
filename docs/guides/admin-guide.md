@@ -29,6 +29,7 @@ Use this checklist when launching a new cohort of participants.
 6. [Tracking Participant Progress](#6-tracking-participant-progress)
 7. [Revoking Device Sessions](#7-revoking-device-sessions)
 8. [Configuring Token Card Format in Settings](#8-configuring-token-card-format-in-settings)
+9. [Language Settings for Participants](#9-language-settings-for-participants)
 
 ---
 
@@ -280,4 +281,29 @@ The token card PDF layout — logo, font size, QR code position, and colour sche
 
 ---
 
-*Health Habit Hub — Admin Guide v1.0 · TU Dresden · 2024*
+## 9. Language Settings for Participants
+
+The app supports English and German (Deutsch). Each participant can independently set their preferred display language. The language preference is stored server-side (MongoDB `users` collection) and is applied to all habit display text (`displayText` field), questionnaire labels, and UI strings.
+
+### How Participants Change Their Language
+
+**Step 1.** In the mobile app, the participant taps the **Settings** tab (gear icon in the bottom navigation bar).
+
+**Step 2.** On the Settings screen, a **Language** dropdown shows the current language selection.
+
+**Step 3.** The participant selects **English** or **Deutsch**. The change is saved immediately and a confirmation snackbar ("Settings saved") appears.
+
+**Step 4.** The app UI and all habit translations switch to the selected language without requiring a restart.
+
+| Setting | Description |
+|---|---|
+| English | All UI strings and habit display text in English. Donated habits are shown using the English translation (`translationEN`) if available, otherwise the original text. |
+| Deutsch | All UI strings and habit display text in German. Donated habits are shown using the German translation (`translationDE`) if available, otherwise the original text. |
+
+> **Note for admins:** You cannot set a participant's language preference from the admin panel. Language is a personal preference configured by each participant in their own Settings screen. If a participant reports seeing content in the wrong language, ask them to open Settings and re-select their preferred language.
+
+> **Technical note:** The backend stores the preference as `preferredLanguage: 'en'` or `preferredLanguage: 'de'` in the `users` MongoDB collection (keyed by Keycloak subject ID). The `GET /api/v1/habits?lang=de` query parameter is set automatically by the Flutter app based on the stored preference — it does not need to be configured manually.
+
+---
+
+*Health Habit Hub — Admin Guide v1.1 · TU Dresden · 2026*

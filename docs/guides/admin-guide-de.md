@@ -29,6 +29,8 @@ Verwenden Sie diese Checkliste beim Start einer neuen Teilnehmerkohorte.
 6. [Teilnehmerfortschritt verfolgen](#6-teilnehmerfortschritt-verfolgen)
 7. [Gerätesitzungen widerrufen](#7-gerätesitzungen-widerrufen)
 8. [Token-Karten-Format in den Einstellungen konfigurieren](#8-token-karten-format-in-den-einstellungen-konfigurieren)
+9. [Spracheinstellungen fuer Teilnehmer](#9-spracheinstellungen-fuer-teilnehmer)
+8. [Token-Karten-Format in den Einstellungen konfigurieren](#8-token-karten-format-in-den-einstellungen-konfigurieren)
 
 ---
 
@@ -280,4 +282,27 @@ Das Token-Karten-PDF-Layout — Logo, Schriftgroesse, QR-Code-Position und Farbs
 
 ---
 
-*Health Habit Hub — Administrationshandbuch v1.0 · TU Dresden · 2024*
+## 9. Spracheinstellungen fuer Teilnehmer
+
+Die App unterstuetzt Englisch und Deutsch. Jeder Teilnehmer kann seine bevorzugte Anzeigesprache unabhaengig einstellen. Die Sprachpraeferenz wird serverseitig gespeichert (MongoDB-Collection `users`) und wird auf alle Anzeige-Texte von Gewohnheiten (Feld `displayText`), Fragebogen-Bezeichnungen und Benutzeroberflaechen-Texte angewendet.
+
+### Wie Teilnehmer ihre Sprache aendern
+
+**Schritt 1.** In der mobilen App tippt der Teilnehmer auf den **Einstellungen**-Tab (Zahnrad-Symbol in der unteren Navigationsleiste).
+
+**Schritt 2.** Auf dem Einstellungsbildschirm zeigt ein **Sprache**-Dropdown die aktuell ausgewaehlte Sprache an.
+
+**Schritt 3.** Der Teilnehmer waehlt **English** oder **Deutsch**. Die Aenderung wird sofort gespeichert und eine Bestaetigung ("Einstellungen gespeichert") erscheint.
+
+**Schritt 4.** Die App-Oberflaeche und alle Gewohnheits-Uebersetzungen wechseln zur ausgewaehlten Sprache ohne Neustart.
+
+| Einstellung | Beschreibung |
+|---|---|
+| English | Alle Texte und Gewohnheits-Anzeigetexte auf Englisch. Gespendete Gewohnheiten werden mit englischer Uebersetzung (`translationEN`) angezeigt, falls vorhanden, sonst Originaltext. |
+| Deutsch | Alle Texte und Gewohnheits-Anzeigetexte auf Deutsch. Gespendete Gewohnheiten werden mit deutscher Uebersetzung (`translationDE`) angezeigt, falls vorhanden, sonst Originaltext. |
+
+> **Hinweis fuer Admins:** Die Sprachpraeferenz eines Teilnehmers kann nicht aus dem Admin-Panel heraus gesetzt werden. Sprache ist eine persoenliche Einstellung, die jeder Teilnehmer in seinem eigenen Einstellungsbildschirm konfiguriert. Falls ein Teilnehmer meldet, dass Inhalte in der falschen Sprache angezeigt werden, bitten Sie ihn, Einstellungen zu oeffnen und die bevorzugte Sprache erneut auszuwaehlen.
+
+---
+
+*Health Habit Hub — Administrationshandbuch v1.1 · TU Dresden · 2026*
