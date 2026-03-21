@@ -1583,3 +1583,12 @@
   - keycloak in local mode uses `KC_DB=dev-file` and `start-dev` — no separate postgres dependency needed
   - `env_file: .env` on all services means a single `.env` file covers all service configuration for local dev
 ---
+
+## 2026-03-21 - US-158
+- What was implemented: Added nodemon dev workflow to the backend. Added `"dev": "nodemon app.js"` to scripts in `app/package.json`. Added `nodemon` (^3.1.14) to `devDependencies`. Created `app/nodemon.json` watching `controllers/`, `routes/`, `services/`, `middleware/`, `utils/` directories with 500ms delay. npm run lint passes.
+- Files changed: app/package.json (dev script + nodemon devDependency), app/package-lock.json (nodemon installed), app/nodemon.json (new), prd.json (US-158 passes=true)
+- **Learnings for future iterations:**
+  - nodemon.json `watch` array uses directory names relative to `app/` (not glob patterns) — nodemon handles the recursive watch automatically
+  - The `delay` field is in milliseconds in nodemon.json (500 = 0.5s)
+  - `npm install --save-dev nodemon@^3.1.0` resolves to 3.1.14 (latest stable); package.json is updated to `^3.1.14` by npm
+---

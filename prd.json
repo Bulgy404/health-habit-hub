@@ -2539,7 +2539,7 @@
         "npm run lint still passes"
       ],
       "priority": 158,
-      "passes": false,
+      "passes": true,
       "notes": "Used inside docker-compose.local.yml and also for running backend directly on host."
     },
     {
