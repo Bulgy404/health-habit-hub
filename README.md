@@ -95,6 +95,48 @@ npm run lint
 npm run format
 ```
 
+---
+
+## Backend (Node.js/Express)
+
+The backend lives in `app/`. It is an ES-module Node.js 22 + Express application.
+
+### npm Scripts
+
+| Script | Description |
+|---|---|
+| `npm test` | Run all unit + integration tests with Jest (requires no live services — all injected via factory pattern) |
+| `npm run lint` | ESLint check (`eslint .`) |
+| `npm run format` | Prettier write (`prettier --write .`) |
+| `npm run format:check` | Prettier check (CI mode) |
+| `node app.js` | Start the server directly |
+
+### Key Environment Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `3000` | Express listen port |
+| `NEO4J_URI` | `bolt://neo4j:7687` | Neo4j Bolt connection URI |
+| `NEO4J_USER` | `neo4j` | Neo4j username |
+| `NEO4J_PASSWORD` | `password` | Neo4j password |
+| `MONGO_URL` | `mongodb://mongo:27017` | MongoDB connection string |
+| `MONGO_DB` | `hhh` | MongoDB database name |
+| `KEYCLOAK_JWKS_URL` | — | Full URL to Keycloak JWKS endpoint (e.g. `http://keycloak:8080/realms/hhh/protocol/openid-connect/certs`) |
+| `KEYCLOAK_URL` | `http://keycloak:8080` | Keycloak base URL (used by onboard and admin routes) |
+| `KEYCLOAK_REALM` | `hhh` | Keycloak realm name |
+| `KEYCLOAK_CLIENT_ID` | `hhh-flutter` | Public client ID for participant token exchange |
+| `KEYCLOAK_ADMIN_CLIENT_ID` | `hhh-backend` | Confidential client ID for admin operations |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET` | — | Secret for the `hhh-backend` confidential client |
+| `API_SERVICE_URL` | `http://recommender:8000` | URL of the Python API-service (recommender + LLM endpoints) |
+| `LIBRE_TRANSLATE_URL` | — | Full URL to LibreTranslate `/translate` endpoint. If absent, falls back to `http://{TRANSLATE_HOST}:{TRANSLATE_PORT}{TRANSLATE_PATH}` |
+| `TRANSLATE_HOST` | `localhost` | LibreTranslate host (fallback if `LIBRE_TRANSLATE_URL` not set) |
+| `TRANSLATE_PORT` | `5000` | LibreTranslate port (fallback) |
+| `TRANSLATE_PATH` | `/translate` | LibreTranslate path (fallback) |
+| `RECOMMENDER_URL` | `http://recommender:8000` | URL of the Python recommender service for the `/recommend` proxy |
+| `REDIS_URL` | `redis://localhost:6379` | Redis URL for recommendation result caching |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Rate limiter window in milliseconds |
+| `RATE_LIMIT_MAX` | `100` | Maximum requests per window per user |
+
 **Access**:
 - App: http://localhost
 - Traefik: http://localhost:8080
