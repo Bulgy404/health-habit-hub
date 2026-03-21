@@ -1,3 +1,13 @@
+## 2026-03-21 - US-132
+- What was implemented: Senior Node.js engineer review of the entire `app/` directory — all routes, controllers, middleware, utils, tests (30 test files). Report written to `tasks/review-backend.md` covering 9 sections with 24 prioritised findings. Every finding tied to specific file and line range.
+- Files changed: tasks/review-backend.md (new), prd.json (US-132 passes=true)
+- **Learnings for future iterations:**
+  - Critical backend findings: (1) Neo4j driver created and destroyed on every query in `habitsRouter.js:22-36` — no connection pooling; (2) IDOR on `/recommend/:userId` — any participant can fetch another's recommendations (`recommendRouter.js:66-72`); (3) no JWT audience/issuer validation in `auth.js:80-95`; (4) internal recommendations endpoint has zero auth (`internalRouter.js`); (5) rate limiter runs before auth so per-user limits never work (`v1Router.js:128-132`); (6) JWKS cached forever with no refresh mechanism (`auth.js:31-39`)
+  - Major: `createdAt` vs `created_at` naming inconsistency across Neo4j/MongoDB; survey form submitted but `survey_id` not validated against DB; `translateAndRefine` silently swallows all LLM errors without alerting
+  - The factory injection pattern (`createHabitsRouter({db, neo4jRun, apiServiceUrl})`) is excellent — makes all routers fully testable without live services
+  - 30 test files with real JWT crypto in test assertions is a genuine strength
+---
+
 ## 2026-03-21 - US-131
 - What was implemented: Senior engineer review of the Flutter mobile app (`mobile/lib/` — 55 Dart files, `mobile/test/` — 9 test files). Report written to `tasks/review-flutter.md` covering architecture, code quality, error handling, testing, security, i18n readiness, what is done well, and prioritised improvements (Critical/Major/Minor). Every finding tied to specific file and line range.
 - Files changed: tasks/review-flutter.md (new), prd.json (US-131 passes=true)
