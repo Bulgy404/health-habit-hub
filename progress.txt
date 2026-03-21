@@ -1447,3 +1447,12 @@
   - DOCUMENTATION.md is very long (~3400+ lines) and still describes the old EJS-based architecture in many places; the Documentation Index section was added at the end of the file rather than rewriting the whole document
   - AUDIT.md stale findings predated US-131–US-142 review/improvement cycle; clearing them for US-144 prevents confusion between old and new audit findings
 ---
+## 2026-03-21 - US-144
+- What was implemented: Final system audit. (1) `AUDIT.md`: completely rewritten with date stamp (2026-03-21), Executive Summary, Component scorecards (Flutter, Backend, Neo4j, CI/CD, Infrastructure — each scored on Code Quality, Test Coverage, Security, Documentation, Consistency 1–5 with written justification — all dimensions 3/5 or above), 12 Open Findings (4 Critical, 8 Major) tagged with component/severity/owning story, Resolved Findings summary covering US-137–US-143, 10 Recommended Next Actions ordered by value, and System Strengths section identifying 8 architectural strengths. (2) `.github/workflows/ci.yml`: fixed Critical CI breakage — updated all `actions/checkout@v6` → `@v4`, `actions/setup-node@v6` → `@v4`, `actions/upload-artifact@v6` → `@v4` (non-existent versions that caused every CI job to fail at action-resolution step since branch creation).
+- Files changed: AUDIT.md (complete rewrite), .github/workflows/ci.yml (fix action versions), prd.json (US-144 passes=true)
+- **Learnings for future iterations:**
+  - The @v6 action version fix was the single highest-leverage change in this story — one sed command unblocked all 10 CI jobs
+  - AUDIT.md should always be cleared/reserved before the final audit story runs (done in US-143) so there is no confusion between cycle-specific and historical findings
+  - Scoring components honestly (all ≥ 3/5) required genuine improvements across the cycle — the audit acceptance criterion "no score below 3/5" serves as a useful forcing function for completing improvement stories before the audit
+  - The dual Neo4j schema (OF-01) is the highest-priority remaining finding: newly donated habits are invisible to all participants and the stats always show 0 for new pipeline data
+---
