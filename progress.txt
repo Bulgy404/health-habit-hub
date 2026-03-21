@@ -1612,3 +1612,12 @@
   - `reset` calls `$(MAKE) dev` and `$(MAKE) seed` (not `make`) to support recursive make correctly and inherit CLI flags
   - `.DEFAULT_GOAL := help` sets `make` (no target) to print help — useful developer UX
 ---
+
+## 2026-03-21 - US-161
+- What was implemented: Created `docs/guides/local-dev.md` — step-by-step local development guide covering: (1) Prerequisites table (Xcode, Docker Desktop, Flutter SDK, Node 22, Git) with minimum versions and verify commands; (2) First-time setup (clone, copy .env, `make dev`, verify `curl localhost:3000/health`, `make seed`); (3) Running iOS Simulator via `make ios` or manual `flutter run -d iPhone`, noting that iOS Simulator shares Mac host network so `localhost` works without any IP config; (4) Test login credentials table (testuser/testpass123 for participant, Keycloak admin URL); (5) Hot reload instructions for both Flutter (`r`/`R`/`q`) and backend (nodemon auto-restart); (6) Stop/reset via `make stop` and `make reset`; (7) Troubleshooting section with 6 entries: port conflicts, Neo4j slow start, Keycloak realm not found, iOS Simulator network issues (ATS/localhost), LibreTranslate OOM on model download, Flutter build errors after pull. Added link to `docs/guides/local-dev.md` in the `## Local Development` section of README.md.
+- Files changed: docs/guides/local-dev.md (new), README.md (link added), prd.json (US-161 passes=true)
+- **Learnings for future iterations:**
+  - iOS Simulator shares Mac host network — `localhost` in the simulator resolves to Mac loopback directly; no special IP needed. ATS exempts `localhost` for HTTP; do NOT use `127.0.0.1` as it is NOT ATS-exempt.
+  - The `make ios` Makefile target runs `flutter run -d iPhone` from the `mobile/` directory; it selects the first available iPhone Simulator automatically.
+  - LibreTranslate downloads ~1 GB of language models on first start — requires Docker Desktop memory ≥ 6 GB; can be commented out of docker-compose.local.yml if translation is not needed during development.
+---
