@@ -28,10 +28,11 @@
 **Finding:** The deploy job triggers on `workflow_run` for the `"CI"` workflow on branch `master`. However, `workflow_run` receives the conclusion of the outermost workflow, not the `ci-passed` gate job. If `ci-passed` is skipped or the workflow name changes, deploys will proceed on partial CI success. The `ci-passed` gate job exists in `ci.yml` but is not referenced by the deploy trigger — the deploy only checks `github.event.workflow_run.conclusion == 'success'`, which means the entire CI workflow must succeed. This is correct *in principle*, but relies on the CI workflow name matching exactly `"CI"` (it does — `name: CI` on line 1 of ci.yml). This is fragile: a rename breaks the link silently.
 **Fix:** Document this coupling. Consider using `workflow_dispatch` with status check requirements on the branch protection rule instead.
 
-### C5 — `deploy.yml` tag-push path bypasses CI entirely (Major)
+### C5 — `deploy.yml` tag-push path bypasses CI entirely (Major) ✅ Resolved (US-149)
 **File:** `deploy.yml:10-12, 19-21`
 **Finding:** When triggered by a `push` on `refs/tags/v*`, the deploy job runs unconditionally — it does not check that CI passed on the commit the tag points to. An engineer can push a tag on a broken commit and trigger a production deploy with zero CI gating.
 **Fix:** Remove the direct tag-push deploy trigger or add a mandatory environment protection rule that blocks deployment until CI passes on the tagged commit.
+**Resolution:** CI workflow now runs on tag pushes (`tags: ["v*"]` added to ci.yml). The `deploy` job's `push: tags` trigger is removed; it now runs exclusively via `workflow_run` with an explicit check that `conclusion == 'success'` and that `head_branch` is either `master` or a `v*` tag. The `release` job (artifact build/upload) retains its `push: tags` trigger since it does not deploy to production infrastructure.
 
 ### C6 — `Fuseki` service not started for integration tests (Major)
 **File:** `ci.yml:81-139`
@@ -183,7 +184,7 @@
 | ID | Location | Issue |
 |---|---|---|
 | C4 | `deploy.yml:5-9` | Deploy trigger fragile — coupled to CI workflow name string |
-| C5 | `deploy.yml:10-12` | Tag-push deploy bypasses CI gating entirely |
+| C5 | `deploy.yml:10-12` | Tag-push deploy bypasses CI gating entirely | ✅ Resolved (US-149) |
 | C6 | `ci.yml:81-139` | Fuseki not started in integration tests — Fuseki routes untested |
 | R1 | `ci.yml:127-139` | No timeout on integration tests — runaway test blocks runner |
 | R2 | `deploy.yml:33` | No post-deploy health check — broken deploys go undetected |

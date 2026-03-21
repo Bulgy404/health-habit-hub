@@ -2404,7 +2404,7 @@
         "tasks/review-cicd.md updated marking OF-04 as resolved"
       ],
       "priority": 149,
-      "passes": false,
+      "passes": true,
       "notes": "Resolves OF-04. Note: workflow_run triggers do not receive pull_request context \u2014 extract tag from github.event.workflow_run.head_branch."
     },
     {
