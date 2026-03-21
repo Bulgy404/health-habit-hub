@@ -43,16 +43,18 @@ echo "Extracting backup archive..."
 tar -xzf "$BACKUP_FILE" -C "$RESTORE_DIR"
 
 # Restore MongoDB
+# NOTE: This path must match the --out directory used in backup.sh (currently "mongo").
+# If backup.sh changes its output directory name, update this path to match.
 echo ""
 echo "1/3 Restoring MongoDB..."
-if [ -d "$RESTORE_DIR/mongodb" ]; then
+if [ -d "$RESTORE_DIR/mongo" ]; then
   mongorestore \
     --host=mongo:27017 \
     --username="$MONGO_USER" \
     --password="$MONGO_PASSWORD" \
     --authenticationDatabase=admin \
     --drop \
-    "$RESTORE_DIR/mongodb" \
+    "$RESTORE_DIR/mongo" \
     --quiet
   echo "✓ MongoDB restored"
 else

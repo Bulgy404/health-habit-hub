@@ -193,7 +193,7 @@ Logs are written to Docker's default JSON-file driver with no rotation configura
 | M2 | Neo4j unrestricted wildcard procedure allowlist | `docker-compose.yml:168–169` | Replace `n10s.*` with explicit procedure list |
 | M3 | No CPU/memory resource limits | Both compose files | Add `deploy.resources.limits` per service |
 | M4 | LibreTranslate `LT_REQ_LIMIT=0` | `docker-compose.prod.yml:179` | Set `LT_REQ_LIMIT=100` or add Traefik rateLimit |
-| M5 | `backup/restore.sh` MongoDB path mismatch | `restore.sh:48` | Change `mongodb` → `mongo` |
+| M5 | `backup/restore.sh` MongoDB path mismatch | `restore.sh:48` | ✅ Resolved (US-155) — Changed `mongodb` → `mongo`; sync comments added to both files |
 | M6 | `stack.env` committed with deployment values | `stack.env`, `.gitignore` | Gitignore; keep only `stack.env.example` |
 | M7 | Neo4j backup causes daily container stop | `backup.sh:104–130` | Document maintenance window; evaluate fs-level snapshot |
 | M8 | Named volumes unbounded | Both compose files | Add disk monitoring; document expected sizes |
