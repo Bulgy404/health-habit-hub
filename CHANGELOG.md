@@ -7,6 +7,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-03-21
+
+### Added
+
+**Habit donation pipeline (M1)**
+- `POST /api/v1/habits/donate` — end-to-end habit donation: creates `Habit` node in Neo4j with BCIO context enrichment via API-service (`classify-context` + `map-bcio`); non-habits stored in MongoDB `habits` collection
+- `GET /api/v1/habits` — returns all donated `Habit` nodes with `uuid`, `original`, `language`, `translationEN`, `translationDE`; `?lang=en|de` query parameter adds `displayText` convenience field
+
+**Translation pipeline**
+- Automatic English habit refinement: LibreTranslate EN draft → LLM tone refinement via `POST /api/v1/llm/refine-translation`; stored as `translationEN` on Habit node
+- Automatic German habit refinement: LibreTranslate DE draft → LLM tone refinement via `POST /api/v1/llm/refine-translation-de`; stored as `translationDE` on Habit node
+- `scripts/backfill-de-translations.js` — migration script to back-fill `translationDE` for all existing English Habit nodes (supports `--dry-run`)
+
+**Python API-service (recommender)**
+- `POST /api/v1/llm/classify-habit` — classifies a sentence as a habit or non-habit with confidence score
+- `POST /api/v1/llm/classify-context` — extracts 7 BCIO context dimensions from a habit sentence
+- `POST /api/v1/llm/map-bcio` — maps extracted context phrases to BCIO concepts via embedding similarity
+- `POST /api/v1/llm/refine-translation` — refines a raw EN machine translation into natural English
+- `POST /api/v1/llm/refine-translation-de` — refines a raw DE machine translation into natural German
+- Redis LLM response caching (SHA-256 keyed, configurable TTL)
+- `API-service/data/bcio.owl` — 32-concept BCIO stub OWL file for embedding-based concept mapping
+
+**Questionnaire system**
+- `GET /api/v1/questionnaires` and `GET /api/v1/questionnaires/:slug` — serve questionnaire definitions from MongoDB
+- `POST /api/v1/questionnaire-responses` — store questionnaire answers (indexed on userId + slug + submitted_at)
+- `GET /api/v1/questionnaire-responses/me` and `GET /api/v1/questionnaire-responses/me/:slug` — retrieve own responses
+- Flutter `questionnaire_screen.dart` — step-by-step form for SLIQ, RAND-36 and custom questionnaires; all 4 question types (singleChoice, multiChoice, scale, text)
+
+**User preferences**
+- `GET /api/v1/users/me` and `PUT /api/v1/users/me` — read/write `preferredLanguage` ('en' or 'de') per user; stored in MongoDB `users` collection
+- Flutter `user_settings_screen.dart` — Settings tab with Language dropdown; persists preference server-side
+- Flutter `locale_provider.dart` — `StateNotifierProvider` driving `MaterialApp.router locale`; calls `PUT /api/v1/users/me` on change
+
+**Recommendations**
+- `GET /api/v1/recommendations/me` — retrieve personalised habit recommendations for the authenticated user
+- `POST /api/v1/recommendations/:recommendation_id/feedback` — accept or dismiss a recommendation
+- Flutter recommendation screen with rationale, citations, accept/dismiss actions, and local history cache
+
+**Onboarding**
+- `POST /api/v1/onboard` — unauthenticated endpoint; creates Keycloak user with random UUID username and 32-byte hex password; returns JWT pair (rate-limited to 5 req/hour per IP)
+- Flutter passphrase screen — BIP39-style 36-word mnemonic encoding credentials; copy-to-clipboard and checkbox gate before Continue
+- Flutter restore screen — enter passphrase to recover credentials on a new device
+
+**Admin panel (Next.js)**
+- `admin/` — Next.js 14 App Router admin panel at `/admin`
+- Keycloak OIDC login (NextAuth v4, `hhh-admin` confidential client); middleware blocks non-admin/researcher users with `/access-denied` redirect
+- Sidebar layout with Questionnaires and Settings pages
+- `admin` service added to `docker-compose.yml` as `h3-admin` on port 3001
+
+**Knowledge base**
+- `GET|POST /api/v1/kb` — list and upload documents to the knowledge base (proxied to API-service); restricted to admin/researcher roles
+- `POST /api/v1/kb/reindex` — trigger KB reindex
+- `DELETE /api/v1/kb/:filename` — remove a KB document
+
+**Security improvements**
+- JWT audience (`KEYCLOAK_JWT_AUDIENCE`) and issuer (`KEYCLOAK_JWT_ISSUER`) validation added to `app/middleware/auth.js`
+- IDOR fix on `GET /api/v1/recommend/:userId` — participants can now only access their own recommendations
+- `internalRouter.js` routes now protected by `INTERNAL_API_SECRET` secret header check
+- Rate limiter moved to run after authentication middleware (per-user limiting now works correctly)
+- JWKS cache refresh: `app/middleware/auth.js` re-fetches keys on 401 JWK-not-found to handle key rotation
+- Consistent error response shape `{ error: '...' }` across all v1 routes
+- Consistent `console.error('[route] Error:', err)` logging in all catch blocks
+
+**Tests**
+- Backend: 247 passing tests (up from 186 in v1.0.0)
+- Flutter: `flutter analyze` zero issues; `flutter test` passes (23 pre-existing `MaterialApp` widget-test failures from missing l10n delegates fixed progressively)
+
+**Documentation**
+- `docs/api/openapi.yaml` — 14 new paths documented (onboard, habits, questionnaires, questionnaire-responses, recommendations, users, KB)
+- `docs/api/hhh-postman-collection.json` — 7 new request folders for all new endpoints
+- `docs/data-model.md` — Neo4j schema for new `Habit`/`Context`/`BCIOConcept` labels; 6 new MongoDB collections documented
+- `README.md` — backend npm scripts table and 18-variable env var reference added
+- `docs/guides/admin-guide.md` and `admin-guide-de.md` — Section 9: Language Settings for Participants
+
+### Changed
+
+- Flutter `donate_screen.dart` — replaced hard-coded production API URL with `AppConfig.apiBaseUrl`
+- Flutter `main.dart` — GoRouter auth guard added; unauthenticated users redirected from protected routes to `/onboarding/welcome`
+- Flutter `goal_input_screen.dart` — replaced legacy `Navigator.push()` with `context.push()` (GoRouter)
+- Flutter `pubspec.yaml` — pinned `flutter_appauth: 8.0.3` and `flutter_secure_storage: 9.2.4` to exact versions
+- `.env.example` — updated with all env vars used across services, each with a one-line description
+
+### Fixed
+
+- Silent `catch (_) {}` blocks across `donate_screen.dart` and `locale_provider.dart` replaced with `debugPrint` error logging
+- Null-safety: defensive `(json['field'] ?? '').toString()` in `Survey.fromJson`, `Recommendation.fromJson`, `RagCitation.fromJson`
+- `surveyController.js` error shape standardised from `{ status: 'error', message }` to `{ error: 'Server error' }` consistent with all other v1 routes
+
 ## [1.0.0] - 2026-03-16
 
 ### Added
@@ -93,5 +181,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - G3/G4 ontology indistinguishability: groups 3 and 4 previously shared indistinct URIs, making study-group queries ambiguous; each group now has a unique URI and label in `Ontology.ttl`
 
-[unreleased]: https://github.com/your-org/health-habit-hub/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/your-org/health-habit-hub/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/your-org/health-habit-hub/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/your-org/health-habit-hub/releases/tag/v1.0.0
