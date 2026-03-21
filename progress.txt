@@ -1438,3 +1438,12 @@
   - The LibreTranslate UID 1032 constraint is documented in `docker-compose.prod.yml:169-183` but was not surfaced anywhere accessible to ops — the key fact is `sudo chown -R 1032:1032 /mnt/data/appdata/hhh/translate` must run before first deploy
   - CHANGELOG sections should map 1:1 to PRD phases; the 1.1.0 entry covers ~40 US stories — keeping it grouped by functional area (donation, translation, questionnaires, etc.) is more readable than listing individual stories
 ---
+
+## 2026-03-21 - US-143
+- What was implemented: Updated all architecture documentation. (1) `docs/architecture.md`: completely rewritten with an updated Mermaid component diagram showing all 11 services (including new API-service and Admin Panel), three new sequence diagrams (end-to-end donation pipeline, language/locale flow, auth flow), data storage rationale table, admin panel auth section, and updated per-service reference table; also updated Neo4j schema section to document Habit/Context/BCIOConcept nodes vs legacy hhh__ nodes. (2) `docs/migration.md`: added new "Schema Changes in ralph/hhh-platform-unified" section documenting translationEN/translationDE on Habit nodes (US-114), preferredLanguage in MongoDB users collection, and missing Neo4j uniqueness constraints/indexes for new schema labels. (3) `AUDIT.md`: cleared all stale AUDIT-001+ findings (superseded by US-131–US-136 reviews) and reserved the file for US-144 final audit output. (4) `DOCUMENTATION.md`: added "Documentation Index" section listing every file in docs/ with a one-line description, organised into Root-Level, docs/ Architecture & Design, docs/api/, docs/guides/, docs/ User Manuals, and docs/assets/ categories.
+- Files changed: docs/architecture.md, docs/migration.md, AUDIT.md, DOCUMENTATION.md, prd.json (US-143 passes=true)
+- **Learnings for future iterations:**
+  - The existing architecture.md was accurate for the old EJS/server-rendered app but did not reflect the Admin Panel (Next.js), API-service (FastAPI), or the new donation pipeline sequence — needed full rewrite
+  - DOCUMENTATION.md is very long (~3400+ lines) and still describes the old EJS-based architecture in many places; the Documentation Index section was added at the end of the file rather than rewriting the whole document
+  - AUDIT.md stale findings predated US-131–US-142 review/improvement cycle; clearing them for US-144 prevents confusion between old and new audit findings
+---
