@@ -20,6 +20,7 @@ and is annotated with the expected output.
 10. [Checking Service Health](#checking-service-health)
 11. [Troubleshooting](#troubleshooting)
     - [Keycloak 401 errors](#keycloak-401-errors--jwks-url-misconfigured)
+    - [Keycloak DB unavailable — PostgreSQL not ready](#keycloak-db-unavailable--postgresql-not-ready)
     - [Neo4j connection refused — container not ready](#neo4j-connection-refused--container-not-ready)
     - [Neo4j failed to start — data directory permissions](#neo4j-failed-to-start--data-directory-permissions)
     - [Flutter web blank page — CORS issue](#flutter-web-blank-page--cors-issue)
@@ -724,6 +725,77 @@ Update `stack.env.local` with a valid key and redeploy the recommender:
 ```bash
 bash scripts/deploy-recommender.sh
 ```
+
+---
+
+### Keycloak DB unavailable — PostgreSQL not ready
+
+**Symptom:** `h3-keycloak` fails to start or enters a restart loop; Keycloak logs show
+`Unable to connect to datasource` or `Connection refused` pointing to `keycloak-db:5432`.
+
+**Diagnosis:**
+```bash
+# Check whether the keycloak-db container is running and healthy
+docker compose --env-file stack.env.local ps h3-keycloak-db
+# Expected: Up (healthy)
+
+# If not healthy, inspect the PostgreSQL logs
+docker compose --env-file stack.env.local logs --tail=30 h3-keycloak-db
+# Common errors:
+#   "FATAL: password authentication failed" → KC_DB_PASSWORD mismatch
+#   "database 'keycloak' does not exist" → volume was wiped, re-init required
+
+# Verify the credentials env vars are set correctly in the Keycloak container
+docker compose --env-file stack.env.local exec h3-keycloak env | grep KC_DB
+# Expected:
+#   KC_DB=postgres
+#   KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
+#   KC_DB_USERNAME=keycloak
+#   KC_DB_PASSWORD=<your-password>
+
+# Test connectivity from the Keycloak container to the DB
+docker compose --env-file stack.env.local exec h3-keycloak \
+  sh -c 'nc -zv keycloak-db 5432 && echo OK || echo FAIL'
+# Expected: OK
+```
+
+**Fix — keycloak-db not started or unhealthy:**
+```bash
+# Start the database first
+docker compose --env-file stack.env.local up -d h3-keycloak-db
+
+# Wait for it to become healthy (check every 5 seconds)
+for i in $(seq 1 12); do
+  STATUS=$(docker inspect --format='{{.State.Health.Status}}' h3-keycloak-db 2>/dev/null)
+  [ "$STATUS" = "healthy" ] && echo "DB healthy." && break
+  echo "Waiting for DB... ($i/12)"; sleep 5
+done
+
+# Then start Keycloak
+docker compose --env-file stack.env.local up -d h3-keycloak
+```
+
+**Fix — password mismatch between keycloak-db and Keycloak:**
+```bash
+# Stop both services
+docker compose --env-file stack.env.local stop h3-keycloak h3-keycloak-db
+
+# Remove the database volume to force re-initialisation with the correct password
+docker volume rm h3-keycloak-db-data
+
+# Ensure KC_DB_USERNAME and KC_DB_PASSWORD are consistent in stack.env.local
+# Then restart both services
+docker compose --env-file stack.env.local up -d h3-keycloak-db h3-keycloak
+
+# After Keycloak starts, verify the realm was imported
+curl -s -o /dev/null -w "%{http_code}" \
+  http://localhost:8080/realms/hhh/.well-known/openid-configuration
+# Expected: 200
+```
+
+> **Note:** Removing `h3-keycloak-db-data` destroys all Keycloak data (users, sessions,
+> client secrets).  Re-create any manually provisioned users and rotate client secrets
+> after volume re-initialisation.
 
 ---
 

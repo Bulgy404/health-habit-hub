@@ -188,7 +188,36 @@ Old `hhh__Habit` nodes are left in place.  Existing
 `hhh__Donor-[:hhh__donates]->hhh__Habit` relationships are preserved and
 mirrored as `hhh__Donor-[:DONATED]->:Habit` on the new nodes.
 
-#### 4b. Backfill German translations for existing English habits
+#### 4b. Re-import Keycloak realm (first deploy after Keycloak DB migration)
+
+If you are upgrading an existing deployment that previously used Keycloak with the
+embedded dev-file store (`KC_DB=dev-file`), the new PostgreSQL database will be
+empty on first boot.  Keycloak will attempt to import the realm automatically via
+`--import-realm`, but the import is skipped when a realm with the same name already
+exists.  On a **fresh PostgreSQL database** the realm is always imported.
+
+After deploying with the PostgreSQL-backed Keycloak for the first time, verify the
+realm is present:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" \
+  http://localhost:8080/realms/hhh/.well-known/openid-configuration
+# Expected: 200
+```
+
+If the realm is missing (e.g., migrating from an existing dev-file install), re-run
+the deploy script to force-import it:
+
+```bash
+bash scripts/deploy-keycloak.sh
+```
+
+> **Note:** Any users, credentials, or client secrets created in the old dev-file
+> Keycloak instance are **not** automatically migrated to the PostgreSQL database.
+> Re-create them manually via the Keycloak admin console or re-run participant
+> provisioning scripts.
+
+#### 4d. Backfill German translations for existing English habits
 
 Habit nodes donated before this branch was deployed do not have a `translationDE` field.
 Run the backfill script to populate German translations via LibreTranslate + LLM refinement:
@@ -214,7 +243,7 @@ Expected output:
 If any habits fail, the script logs them and exits with code 1.  Re-run after fixing
 the underlying cause (usually LibreTranslate or the API-service being unhealthy).
 
-#### 4c. Backfill BCIO enrichment for existing habits (optional)
+#### 4e. Backfill BCIO enrichment for existing habits (optional)
 
 ```bash
 docker exec h3-app node scripts/migrate-habits-bcio.js
