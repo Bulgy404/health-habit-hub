@@ -170,6 +170,21 @@ Beim Spenden mehrerer Gewohnheiten hintereinander oder innerhalb einer Browser-S
 
 In Bearbeitung (Hier wird nur angedeutet, dass der spendenden Person eine Visualisierung präsentiert wird, die die eigene Datenspende mit der Gesamtheit aller Datenspenden in Beziehung setzt.)
 
+## Einstellungen
+
+### Sprache
+
+Die Health-Habit-Hub-App unterstützt **Englisch** und **Deutsch**. Die Anzeigesprache kann jederzeit über den **Einstellungen**-Bildschirm geändert werden, der über die untere Navigationsleiste (Zahnrad-Symbol) erreichbar ist.
+
+**So ändern Sie die Sprache:**
+
+1. Tippen Sie auf das **Einstellungen**-Symbol in der unteren Navigationsleiste.
+2. Tippen Sie auf das **Sprache**-Dropdown-Menü.
+3. Wählen Sie **English** oder **Deutsch**.
+4. Die App wechselt sofort zur gewählten Sprache. Am unteren Bildschirmrand erscheint eine Bestätigungsmeldung.
+
+Die gewählte Sprache wird in Ihrem Konto gespeichert und beim nächsten Öffnen der App automatisch wiederhergestellt. Sie bestimmt außerdem die Sprache des Gewohnheits-Erhebungsformulars im Spenden-Bereich.
+
 ## Datenschutz und Informationssicherheit
 
 In Bearbeitung

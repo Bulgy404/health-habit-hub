@@ -225,6 +225,9 @@ cd mobile
 # Fetch Flutter dependencies
 flutter pub get
 
+# Regenerate localisation files (must run whenever app_en.arb or app_de.arb change)
+flutter gen-l10n
+
 # List available devices — confirm Chrome is available
 flutter devices
 # Expected line: Chrome (web)    • chrome  • web-javascript • Google Chrome ...
@@ -239,6 +242,18 @@ flutter run -d chrome \
 ```
 
 Flutter will compile the web app (first run takes ~60–90 s) and open Chrome automatically.
+
+### Donation flow (WebView)
+
+The **Donate** tab renders the habit-donation survey inside a `WebView` (package `webview_flutter`). The flow is:
+
+1. Flutter calls `GET /api/v1/surveys/habit-donation` to resolve the survey ID.
+2. The WebView loads `GET /api/v1/surveys/:id/render?lang=<en|de>` — a server-rendered SurveyJS page.
+3. When the participant submits, the SurveyJS page fires a `window.SurveyComplete.postMessage(json)` JS bridge message.
+4. Flutter validates the JSON payload and calls `POST /api/v1/surveys/:id/responses` with the Bearer token.
+5. On success, GoRouter navigates to `/explore`.
+
+Because the donation form is server-rendered, changes to the survey definition only require redeploying the backend — no Flutter rebuild is needed. The `lang` query parameter selects the survey language, which follows the locale chosen in the Settings screen.
 
 | Platform | Screenshot |
 |----------|-----------|
@@ -309,14 +324,20 @@ Tests:       186 passed, 186 total
 
 ```bash
 cd mobile
+
+# Always regenerate l10n before running tests
+flutter gen-l10n
+
 flutter test
 ```
 
-Expected output:
+Expected output ends with a line like:
 
 ```
-00:15 +42: All tests passed!
+All tests passed!
 ```
+
+> **Note:** A small number of widget tests that omit `AppLocalizations.delegate` will report failures. These are pre-existing gaps not caused by your changes. Run `flutter analyze` to confirm no analysis errors.
 
 ### Ontology / SPARQL tests
 
@@ -398,6 +419,16 @@ docker compose exec keycloak \
 ### Flutter dependencies out of date
 
 After a `git pull`, run `flutter pub get` in `mobile/` to refresh packages.
+
+### Missing localisation methods after editing ARB files
+
+If you add a key to `lib/l10n/app_en.arb` or `lib/l10n/app_de.arb` without regenerating, `flutter analyze` or `flutter test` will fail with `undefined method` errors:
+
+```bash
+cd mobile && flutter gen-l10n
+```
+
+This regenerates `lib/l10n/app_localizations.dart` and its language variants. Always run this step before `flutter analyze` or `flutter test` when ARB files have changed.
 
 ---
 

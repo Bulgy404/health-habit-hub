@@ -1399,3 +1399,22 @@
   - When using `Promise.all([collection.countDocuments(filter), collection.find(filter).skip(n).limit(m).toArray()])`, mock must implement both `countDocuments()` and a chainable cursor with `.skip()`, `.limit()`, `.toArray()`
   - perl bulk catch replacement: `perl -i -pe 's/^(\s*)\} catch \{$/$1} catch (err) {\n$1  console.error("[route] Error:", err);/'` preserves indentation and works on all nesting levels
 ---
+
+## 2026-03-21 - US-139
+- What was implemented: Consistency pass across the full codebase. (1) Error response shape: fixed `surveyController.js` `submitSurvey` — was using `{ status: 'error', message: err.message }`, changed to `{ error: 'Server error' }` with `console.error('[route] Error:', err)` — now consistent with all v1 routes. (2) Flutter pubspec.yaml: pinned security-sensitive packages to exact resolved versions: `flutter_appauth: 8.0.3` (was `^8.0.1`) and `flutter_secure_storage: 9.2.4` (was `^9.2.3`). (3) Verified locale codes: `'en'`/`'de'` ISO 639-1 codes used identically across Flutter, backend, LibreTranslate calls — already consistent. (4) Verified error shape: all v1 routes use `{ error: '...' }` consistently after US-138. (5) Verified logging: all v1 catch blocks use `console.error('[route] Error:', err)` consistently after US-138. (6) Updated `tasks/review-system-coherence.md` with Resolution notes for all 6 Critical, 10 Major, and 10 Minor findings — added Section 9 with field mapping table, locale consistency confirmation, error shape audit, logging audit, and Flutter dep pinning summary. Quality: 247/247 backend tests pass, flutter analyze zero issues, ESLint clean.
+- Files changed: app/controllers/surveyController.js (error shape + console.error), mobile/pubspec.yaml (pin flutter_appauth + flutter_secure_storage), tasks/review-system-coherence.md (Resolution notes + Section 9), prd.json (US-139 passes=true)
+- **Learnings for future iterations:**
+  - `surveyController.js` is in `app/controllers/` (not `app/routes/`) — the US-138 batch perl replacement only targeted `app/routes/*.js`. Always check controllers separately when doing a catch-block audit.
+  - Pinning Flutter deps: read resolved version from `pubspec.lock` (not the constraint in pubspec.yaml) before pinning — the lock file has the actual installed version (e.g., `^8.0.1` resolved to `8.0.3`).
+  - `flutter pub get` runs automatically when pubspec.yaml changes and modifies `pubspec.lock` — the 2 dependency changes (test_api, matcher) shown in `flutter analyze` output are transitive and expected.
+  - The consistency review in Section 9 of review-system-coherence.md is the canonical field-mapping reference for Flutter↔Backend↔Neo4j — update it whenever API contracts change.
+---
+
+## 2026-03-21 - US-140
+- What was implemented: Updated Flutter and mobile documentation. (1) docs/guides/developer-onboarding.md: added `flutter gen-l10n` step after `flutter pub get` in section 5, added `flutter gen-l10n` to Flutter test section, added "Donation flow (WebView)" subsection explaining the JS bridge flow, added "Missing localisation methods after editing ARB files" pitfall entry, corrected Flutter test expected output to remove stale exact count. (2) docs/MANUAL-en.md: added "Settings / Language" section describing the language dropdown in the Settings screen (navigation, steps, persistence, survey language effect). (3) docs/MANUAL-de.md: added German equivalent "Einstellungen / Sprache" section. (4) docs/guides/flutter-architecture.md: new file covering overview, folder structure, routing, state management, localisation pipeline, auth token management, AppConfig env vars, services layer, WebView donation flow, and testing.
+- Files changed: docs/guides/developer-onboarding.md, docs/MANUAL-en.md, docs/MANUAL-de.md, docs/guides/flutter-architecture.md (new), prd.json (US-140 passes=true)
+- **Learnings for future iterations:**
+  - MANUAL-en/de.md describe the OLD web-browser flow (EJS experiment groups 1-4); the native Flutter app replaces that UI — do NOT update the experiment-group screenshots section as it describes backend study logic, not the Flutter screens
+  - The donation screen is WebView-based (server-rendered SurveyJS), not a native Flutter form — document it as such to avoid confusion for future developers
+  - flutter gen-l10n must always precede flutter analyze and flutter test — this is now documented in two places in the onboarding guide
+---
