@@ -18,9 +18,9 @@ class Survey {
 
   factory Survey.fromJson(Map<String, dynamic> json) {
     return Survey(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      type: json['type'] as String,
+      id: (json['id'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      type: (json['type'] ?? '').toString(),
       jsonSchema: (json['jsonSchema'] as Map<String, dynamic>?) ?? {},
       assignedGroups: (json['assignedGroups'] as List<dynamic>?)
               ?.cast<String>() ??

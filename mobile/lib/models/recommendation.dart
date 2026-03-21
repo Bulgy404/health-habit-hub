@@ -7,8 +7,8 @@ class RagCitation {
 
   factory RagCitation.fromJson(Map<String, dynamic> json) {
     return RagCitation(
-      sourceTitle: json['sourceTitle'] as String,
-      excerpt: json['excerpt'] as String,
+      sourceTitle: (json['sourceTitle'] ?? '').toString(),
+      excerpt: (json['excerpt'] ?? '').toString(),
     );
   }
 
@@ -39,11 +39,11 @@ class Recommendation {
   factory Recommendation.fromJson(Map<String, dynamic> json) {
     final ragJson = json['ragCitation'] as Map<String, dynamic>?;
     return Recommendation(
-      id: json['id'] as String,
-      habitName: json['habitName'] as String,
-      category: json['category'] as String,
-      confidenceScore: (json['confidenceScore'] as num).toDouble(),
-      rationale: json['rationale'] as String,
+      id: (json['id'] ?? '').toString(),
+      habitName: (json['habitName'] ?? '').toString(),
+      category: (json['category'] ?? '').toString(),
+      confidenceScore: ((json['confidenceScore'] as num?) ?? 0).toDouble(),
+      rationale: (json['rationale'] ?? '').toString(),
       ragCitation: ragJson != null ? RagCitation.fromJson(ragJson) : null,
     );
   }

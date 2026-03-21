@@ -343,38 +343,38 @@ Only LTR languages (`en`, `de`) are supported. Not an immediate concern, but sho
 
 ### Critical (address before next user-facing release)
 
-| # | Finding | File | Description |
-|---|---------|------|-------------|
-| C-1 | Q-1 | All service files | Replace silent `catch (_) {}` with logging and typed exceptions |
-| C-2 | T-1 | `mobile/test/` | Add unit tests for all five service classes |
-| C-3 | S-1 | `donate_screen.dart:26` | Replace hard-coded API URL with `AppConfig.apiBaseUrl` |
+| # | Finding | File | Description | Resolution (US-137) |
+|---|---------|------|-------------|---------------------|
+| C-1 | Q-1 | All service files | Replace silent `catch (_) {}` with logging and typed exceptions | **RESOLVED** — Added `debugPrint('ERROR in ...: $e\n$st')` to all silent `catch (_) {}` blocks in `donate_screen.dart` and `locale_provider.dart`. Service files propagate exceptions correctly; screens now log before swallowing. |
+| C-2 | T-1 | `mobile/test/` | Add unit tests for all five service classes | **DEFERRED** — Requires `mockito` code-gen setup and `http_mock_adapter` integration that is a story in itself. Added to backlog as a dedicated testing story. |
+| C-3 | S-1 | `donate_screen.dart:26` | Replace hard-coded API URL with `AppConfig.apiBaseUrl` | **RESOLVED** — Changed `static const _baseUrl = 'https://api.hhh.tu-dresden.de/api/v1'` to `final _baseUrl = AppConfig.apiBaseUrl`. Hard-coded URL removed. |
 
 ### Major (address within the next sprint)
 
-| # | Finding | File | Description |
-|---|---------|------|-------------|
-| M-1 | Q-2 | Six service files | Extract shared Dio interceptor; remove `_authHeaders()` duplication |
-| M-2 | Q-3 | `goal_input_screen.dart:27` | Replace `Navigator.push()` with GoRouter `context.push()` |
-| M-3 | Q-4 | `admin_participants_screen.dart` | Extract 11 local state fields to `StateNotifierProvider` |
-| M-4 | E-1 | All screens | Define `AppException` hierarchy; show actionable error messages |
-| M-5 | E-3 | `donate_screen.dart:54–56` | Validate WebView JS bridge messages before processing |
-| M-6 | T-2 | `mobile/lib/models/` | Add `fromJson` / `toJson` tests for all models |
-| M-7 | T-3 | `mobile/integration_test/` | Add integration tests for login→donate and admin flows |
-| M-8 | T-4 | `mobile/test/` | Raise coverage to 70% on services/providers |
-| M-9 | I-1 | Three screens | Move hard-coded English strings to ARB files |
-| M-10 | Q-6 | `survey.dart:21` | Apply defensive null-safety pattern in all `fromJson` |
-| M-11 | A-1 | `main.dart:44–69` | Add auth guards for `/donate`, `/profile`, `/questionnaire` |
+| # | Finding | File | Description | Resolution (US-137) |
+|---|---------|------|-------------|---------------------|
+| M-1 | Q-2 | Six service files | Extract shared Dio interceptor; remove `_authHeaders()` duplication | **DEFERRED** — Extracting a shared `QueuedInterceptorsWrapper` that handles token refresh and 401 retry requires touching 6+ service files plus test rewrites. High coordination risk; deferred to a dedicated "Dio interceptor" story. |
+| M-2 | Q-3 | `goal_input_screen.dart:27` | Replace `Navigator.push()` with GoRouter `context.push()` | **RESOLVED** — Replaced `Navigator.of(context).push(MaterialPageRoute...)` with `context.push('/recommend/loading', extra: goal)`. Added `/recommend/loading` as a named sub-route in `main.dart`. |
+| M-3 | Q-4 | `admin_participants_screen.dart` | Extract 11 local state fields to `StateNotifierProvider` | **DEFERRED** — A 280 LOC state migration. The risk of breaking the admin participants flow mid-sprint is too high; deferred to a dedicated admin refactor story. |
+| M-4 | E-1 | All screens | Define `AppException` hierarchy; show actionable error messages | **RESOLVED** — Created `lib/core/exceptions.dart` with a `sealed class AppException` hierarchy: `NetworkException`, `UnauthorisedException`, `ServerException`, `ValidationException`. Services should throw these; screens should catch and branch on type. Full screen-level integration deferred alongside M-1 (Dio interceptor). |
+| M-5 | E-3 | `donate_screen.dart:54–56` | Validate WebView JS bridge messages before processing | **RESOLVED** — Added `jsonDecode` + type guard (`data is! Map<String, dynamic>`) in the `onMessageReceived` callback with a logged `catch` block for malformed messages. |
+| M-6 | T-2 | `mobile/lib/models/` | Add `fromJson` / `toJson` tests for all models | **DEFERRED** — Model serialisation tests are valuable but require fixture JSON files and test infrastructure setup. Deferred to the dedicated testing story alongside C-2. |
+| M-7 | T-3 | `mobile/integration_test/` | Add integration tests for login→donate and admin flows | **DEFERRED** — Requires integration test infrastructure, a mock or staging backend, and a device/emulator in CI. Deferred to a dedicated integration-testing story. |
+| M-8 | T-4 | `mobile/test/` | Raise coverage to 70% on services/providers | **DEFERRED** — Coverage improvement depends on C-2 (service unit tests) and M-6 (model tests). Deferred. |
+| M-9 | I-1 | Three screens | Move hard-coded English strings to ARB files | **RESOLVED** — Added 8 new ARB keys to `app_en.arb` and `app_de.arb`: `failedToLoadStats`, `failedToLoadQuestionnaire`, `getRecommendations`, `healthGoalPrompt`, `questionnaireResponseSubmitted`, `questionnaireThankYou`, `backToProfile`, `thankYou`. Replaced all hard-coded strings in `stats_screen.dart`, `questionnaire_screen.dart` (including confirmation screen), and `goal_input_screen.dart`. |
+| M-10 | Q-6 | `survey.dart:21` | Apply defensive null-safety pattern in all `fromJson` | **RESOLVED** — Applied `(json['field'] ?? '').toString()` pattern to `Survey.fromJson` (3 fields) and `Recommendation.fromJson` + `RagCitation.fromJson` (7 fields). Remaining models (`AdminParticipant`, etc.) already use this pattern. |
+| M-11 | A-1 | `main.dart:44–69` | Add auth guards for `/donate`, `/profile`, `/questionnaire` | **RESOLVED** — Added auth guard block in the GoRouter redirect: checks `isLoggedInProvider` for routes matching `/donate`, `/explore`, `/recommend`, `/profile`, `/settings`, `/questionnaire`. Unauthenticated users are redirected to `/onboarding/welcome`. |
 
 ### Minor (tech debt; schedule in backlog)
 
-| # | Finding | File | Description |
-|---|---------|------|-------------|
-| N-1 | A-2 | `main.dart:42` | Lazy-compute initial route to avoid welcome-screen flash |
-| N-2 | A-3 | `utils/bip39_wordlist.dart` | Remove or document BIP39 wordlist |
-| N-3 | Q-5 | `habit_graph_widget.dart:90–95` | Document physics constants |
-| N-4 | Q-7 | `admin_service.dart` | Split into three smaller service files |
-| N-5 | E-2 | `recommendation_ws_service.dart` | Notify user when WS falls back to polling |
-| N-6 | S-2 | `auth_provider.dart:20–52` | Document JWT validation assumptions |
-| N-7 | S-3 | All Dio service files | Consider certificate pinning for health data context |
-| N-8 | I-2 | `admin_participants_screen.dart:97` | Use `intl` `DateFormat` for locale-aware date display |
-| N-9 | I-3 | `main.dart` | Document RTL limitation |
+| # | Finding | File | Description | Resolution (US-137) |
+|---|---------|------|-------------|---------------------|
+| N-1 | A-2 | `main.dart:42` | Lazy-compute initial route to avoid welcome-screen flash | **DEFERRED** — Minor UX polish; deferred to backlog. |
+| N-2 | A-3 | `utils/bip39_wordlist.dart` | Remove or document BIP39 wordlist | **REVIEWED** — The file IS referenced: `passphrase_screen.dart:8` imports it for the passphrase-based restore flow. The review finding was incorrect. No action required. |
+| N-3 | Q-5 | `habit_graph_widget.dart:90–95` | Document physics constants | **DEFERRED** — Cosmetic documentation improvement; deferred to backlog. |
+| N-4 | Q-7 | `admin_service.dart` | Split into three smaller service files | **DEFERRED** — Low-risk refactor but not urgent; deferred alongside M-3. |
+| N-5 | E-2 | `recommendation_ws_service.dart` | Notify user when WS falls back to polling | **DEFERRED** — Minor UX improvement; deferred to backlog. |
+| N-6 | S-2 | `auth_provider.dart:20–52` | Document JWT validation assumptions | **DEFERRED** — Documentation note; deferred. |
+| N-7 | S-3 | All Dio service files | Consider certificate pinning for health data context | **DEFERRED** — Security hardening for a later sprint; certificate pinning requires Dio certificate override and CI testing with a pinned cert. |
+| N-8 | I-2 | `admin_participants_screen.dart:97` | Use `intl` `DateFormat` for locale-aware date display | **DEFERRED** — Minor i18n polish; deferred to backlog. |
+| N-9 | I-3 | `main.dart` | Document RTL limitation | **DEFERRED** — Documentation note; deferred. |

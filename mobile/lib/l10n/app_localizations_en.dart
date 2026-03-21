@@ -463,4 +463,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adminAssignToGroups => 'Assign to Groups';
+
+  @override
+  String get failedToLoadStats => 'Failed to load stats';
+
+  @override
+  String get failedToLoadQuestionnaire => 'Failed to load questionnaire.';
+
+  @override
+  String get getRecommendations => 'Get Recommendations';
+
+  @override
+  String get healthGoalPrompt => 'What health goal would you like to work on?';
+
+  @override
+  String get questionnaireResponseSubmitted => 'Response submitted!';
+
+  @override
+  String get questionnaireThankYou =>
+      'Thank you for completing the questionnaire. Your answers help personalise your habit recommendations.';
+
+  @override
+  String get backToProfile => 'Back to Profile';
+
+  @override
+  String get thankYou => 'Thank You';
 }

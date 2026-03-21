@@ -48,8 +48,9 @@ class LocaleNotifier extends StateNotifier<Locale> {
         state = Locale(lang);
         await _storage.write(key: _kLocaleKey, value: lang);
       }
-    } catch (_) {
-      // Silently keep current state (storage or default).
+    } catch (e, st) {
+      debugPrint('LocaleNotifier._fetchFromApi: $e\n$st');
+      // Keep current state (storage or default).
     }
   }
 
@@ -77,7 +78,8 @@ class LocaleNotifier extends StateNotifier<Locale> {
       state = locale;
       await _storage.write(key: _kLocaleKey, value: langCode);
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('LocaleNotifier.setLocale: $e\n$st');
       return false;
     }
   }

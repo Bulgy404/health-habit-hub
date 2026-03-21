@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/habit_stats.dart';
 import '../services/habit_service.dart';
 
@@ -69,7 +70,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 12),
-            Text('Failed to load stats',
+            Text(AppLocalizations.of(context)!.failedToLoadStats,
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             ElevatedButton.icon(

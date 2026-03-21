@@ -16,6 +16,7 @@ import 'screens/admin/admin_shell_screen.dart';
 import 'screens/admin/admin_surveys_screen.dart';
 import 'features/questionnaire/questionnaire_screen.dart';
 import 'features/recommendation/goal_input_screen.dart';
+import 'features/recommendation/loading_screen.dart';
 import 'screens/donate_screen.dart';
 import 'screens/explore_screen.dart';
 import 'screens/login_screen.dart';
@@ -55,9 +56,29 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
+      // Auth guard: unauthenticated users may not access app screens.
+      const protectedPrefixes = [
+        '/donate',
+        '/explore',
+        '/recommend',
+        '/profile',
+        '/settings',
+        '/questionnaire',
+      ];
+      final location = state.matchedLocation;
+      if (protectedPrefixes.any((p) => location.startsWith(p))) {
+        try {
+          final isLoggedIn = await ref.read(isLoggedInProvider.future);
+          if (!isLoggedIn) {
+            return '/onboarding/welcome';
+          }
+        } catch (_) {
+          return '/onboarding/welcome';
+        }
+      }
+
       // Onboarding bypass: if the user has already completed onboarding,
       // skip the welcome and login screens and go straight to the app.
-      final location = state.matchedLocation;
       if (location.startsWith('/onboarding/welcome') ||
           location == '/login') {
         if (await isOnboardingComplete()) {
@@ -123,6 +144,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/recommend',
                 builder: (context, state) => const GoalInputScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'loading',
+                    builder: (context, state) => RecommendationLoadingScreen(
+                      goal: state.extra as String? ?? '',
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

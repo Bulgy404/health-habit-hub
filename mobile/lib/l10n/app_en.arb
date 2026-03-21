@@ -608,5 +608,37 @@
   "adminAssignToGroups": "Assign to Groups",
   "@adminAssignToGroups": {
     "description": "Section heading for group assignment chips in the survey editor"
+  },
+  "failedToLoadStats": "Failed to load stats",
+  "@failedToLoadStats": {
+    "description": "Error message when stats fail to load on explore screen"
+  },
+  "failedToLoadQuestionnaire": "Failed to load questionnaire.",
+  "@failedToLoadQuestionnaire": {
+    "description": "Error message when questionnaire fails to load"
+  },
+  "getRecommendations": "Get Recommendations",
+  "@getRecommendations": {
+    "description": "AppBar title and button label for the recommendation input screen"
+  },
+  "healthGoalPrompt": "What health goal would you like to work on?",
+  "@healthGoalPrompt": {
+    "description": "Prompt asking the user to describe their health goal"
+  },
+  "questionnaireResponseSubmitted": "Response submitted!",
+  "@questionnaireResponseSubmitted": {
+    "description": "Heading on the questionnaire confirmation screen"
+  },
+  "questionnaireThankYou": "Thank you for completing the questionnaire. Your answers help personalise your habit recommendations.",
+  "@questionnaireThankYou": {
+    "description": "Body text on the questionnaire confirmation screen"
+  },
+  "backToProfile": "Back to Profile",
+  "@backToProfile": {
+    "description": "Button label to navigate back to the profile screen"
+  },
+  "thankYou": "Thank You",
+  "@thankYou": {
+    "description": "AppBar title for confirmation screens"
   }
 }

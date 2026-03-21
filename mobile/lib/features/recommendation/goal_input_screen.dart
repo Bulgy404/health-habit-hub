@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
-import 'loading_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Screen where the user types a health goal and triggers recommendation
 /// generation. Navigates to [RecommendationLoadingScreen] on submit.
@@ -24,17 +25,14 @@ class _GoalInputScreenState extends State<GoalInputScreen> {
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final goal = _controller.text.trim();
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => RecommendationLoadingScreen(goal: goal),
-      ),
-    );
+    context.push('/recommend/loading', extra: goal);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Get Recommendations')),
+      appBar: AppBar(title: Text(l10n.getRecommendations)),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -43,7 +41,7 @@ class _GoalInputScreenState extends State<GoalInputScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'What health goal would you like to work on?',
+                l10n.healthGoalPrompt,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 16),
@@ -67,7 +65,7 @@ class _GoalInputScreenState extends State<GoalInputScreen> {
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: _submit,
-                child: const Text('Get Recommendations'),
+                child: Text(l10n.getRecommendations),
               ),
             ],
           ),
