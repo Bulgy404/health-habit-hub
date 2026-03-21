@@ -1,0 +1,5 @@
+{
+  "watch": ["controllers/", "routes/", "services/", "middleware/", "utils/"],
+  "ext": "js",
+  "delay": 500
+}

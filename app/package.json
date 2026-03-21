@@ -1,6 +1,7 @@
 {
   "scripts": {
     "start": "node app.js",
+    "dev": "nodemon app.js",
     "format:check": "npx prettier --check .",
     "format:fix": "npx prettier --write .",
     "lint": "npx eslint .",
@@ -48,6 +49,7 @@
     "eslint-plugin-html": "^8.1.1",
     "eslint-plugin-json": "^4.0.0",
     "globals": "^15.3.0",
+    "nodemon": "^3.1.14",
     "prettier": "^3.3.0"
   }
 }
