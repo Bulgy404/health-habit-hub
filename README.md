@@ -80,6 +80,8 @@ Internet (80/443) → Traefik (SSL) → Node.js App → Databases
 
 ## Local Development
 
+**Full step-by-step guide (iOS Simulator + local backend):** [docs/guides/local-dev.md](docs/guides/local-dev.md)
+
 ```bash
 # Start with hot-reload
 docker-compose watch
