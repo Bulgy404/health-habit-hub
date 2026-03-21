@@ -2568,7 +2568,7 @@
         "make help runs successfully"
       ],
       "priority": 160,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-157, US-158, US-159."
     },
     {

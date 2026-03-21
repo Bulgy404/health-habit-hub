@@ -1603,3 +1603,12 @@
   - The `delay` field is in milliseconds in nodemon.json (500 = 0.5s)
   - `npm install --save-dev nodemon@^3.1.0` resolves to 3.1.14 (latest stable); package.json is updated to `^3.1.14` by npm
 ---
+
+## 2026-03-21 - US-160
+- What was implemented: Created `Makefile` at repo root with 8 targets: `help` (default, lists all targets with descriptions), `dev` (docker compose local up -d), `stop` (docker compose down), `seed` (cd app && npm run seed), `logs` (docker compose logs -f app), `logs-all` (docker compose logs -f), `ios` (cd mobile && flutter run -d iPhone), `reset` (stop + down -v + dev + seed). Each target has a `## comment` on the same line so `make help` can extract and display them with colour formatting.
+- Files changed: Makefile (new), prd.json (US-160 passes=true)
+- **Learnings for future iterations:**
+  - `make help` grep pattern requires the `## comment` to be on the SAME LINE as the target (e.g. `dev: ## description`), not on a separate preceding line — separate-line comments are not matched by the standard `grep -E '^[a-zA-Z_-]+:.*?## .*$$'` pattern
+  - `reset` calls `$(MAKE) dev` and `$(MAKE) seed` (not `make`) to support recursive make correctly and inherit CLI flags
+  - `.DEFAULT_GOAL := help` sets `make` (no target) to print help — useful developer UX
+---
