@@ -1468,3 +1468,13 @@
   - Scoring components honestly (all ≥ 3/5) required genuine improvements across the cycle — the audit acceptance criterion "no score below 3/5" serves as a useful forcing function for completing improvement stories before the audit
   - The dual Neo4j schema (OF-01) is the highest-priority remaining finding: newly donated habits are invisible to all participants and the stats always show 0 for new pipeline data
 ---
+
+## 2026-03-21 - US-146
+- What was implemented: Updated all backend routes that queried the old `hhh__Habit` Neo4j schema to use the new `Habit` schema. (1) `habitsRouter.js` GET /public: replaced `MATCH (h:hhh__Habit) OPTIONAL MATCH (h)-[:hhh__hasBehavior]->()-[:hhh__partOf]->(es)` with `MATCH (h:Habit) RETURN h.uuid AS id, h.sentence AS name, null AS category, null AS bcioClass`. (2) `habitsRouter.js` GET /stats total query: `MATCH (h:hhh__Habit)` → `MATCH (h:Habit)`; byCategory query: replaced hhh__Group label pattern with `WITH h.language AS cat, count(h) AS cnt`. (3) `adminRouter.js` participant habit count: `MATCH (h:hhh__Habit {hhh__source: $userId})` → `MATCH (h:Habit {userID: $userId})`. (4) `habit.controller.test.js` mock: changed `cypher.includes('hhh__Habit')` guard to `cypher.includes('h.sentence AS name')` so /public tests pass. All 247 tests pass; lint passes; `grep -rn 'hhh__Habit' app/` returns no results.
+- Files changed: app/routes/habitsRouter.js, app/routes/adminRouter.js, app/tests/unit/habit.controller.test.js, prd.json (US-146 passes=true)
+- **Learnings for future iterations:**
+  - New `Habit` nodes store participant ID as `userID` (not `hhh__source`) — admin habit-count query must use `{userID: $userId}`
+  - `GET /public` category field is now always `null` since new `Habit` nodes have no study-group relationship; downstream consumers should treat category as optional
+  - Stats `byCategory` now groups by `h.language` (ISO 639-1 codes like 'en', 'de') rather than `hhh__GroupN` labels
+  - The `.replace('hhh__', '')` call in byCategory mapping is now a no-op for language-code values but harmless to keep
+---
