@@ -782,7 +782,7 @@ export function createAdminRouter({
       if (neo4jRun) {
         try {
           const records = await neo4jRun(
-            'MATCH (h:hhh__Habit {hhh__source: $userId}) RETURN count(h) AS cnt',
+            'MATCH (h:Habit {userID: $userId}) RETURN count(h) AS cnt',
             { userId: id }
           );
           const cnt = records[0]?.cnt;

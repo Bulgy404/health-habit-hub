@@ -239,11 +239,10 @@ export function createHabitsRouter({
       const database = await getDb();
 
       const records = await queryNeo4j(`
-        MATCH (h:hhh__Habit)
-        OPTIONAL MATCH (h)-[:hhh__hasBehavior]->()-[:hhh__partOf]->(es)
-        RETURN h.hhh__id AS id,
-               h.hhh__value AS name,
-               head([l IN labels(es) WHERE l =~ 'hhh__Group\\d+']) AS category,
+        MATCH (h:Habit)
+        RETURN h.uuid AS id,
+               h.sentence AS name,
+               null AS category,
                null AS bcioClass
       `);
 
@@ -423,12 +422,11 @@ export function createHabitsRouter({
   router.get('/stats', async (req, res) => {
     try {
       const [totalRecords, catRecords, database] = await Promise.all([
-        queryNeo4j('MATCH (h:hhh__Habit) RETURN count(h) AS total'),
+        queryNeo4j('MATCH (h:Habit) RETURN count(h) AS total'),
         queryNeo4j(`
-          MATCH (h:hhh__Habit)
-          OPTIONAL MATCH (h)-[:hhh__hasBehavior]->()-[:hhh__partOf]->(es)
-          WITH head([l IN labels(es) WHERE l =~ 'hhh__Group\\d+']) AS cat, count(h) AS cnt
-          RETURN coalesce(cat, 'Uncategorized') AS category, cnt AS count
+          MATCH (h:Habit)
+          WITH h.language AS cat, count(h) AS cnt
+          RETURN coalesce(cat, 'unknown') AS category, cnt AS count
         `),
         getDb(),
       ]);

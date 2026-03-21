@@ -62,18 +62,18 @@ function createMockNeo4jRun() {
         { category: 'hhh__Group2', count: { toNumber: () => 2 } },
       ];
     }
-    if (cypher.includes('hhh__Habit')) {
+    if (cypher.includes('h.sentence AS name')) {
       return [
         {
           id: 'habit-1',
           name: 'Morning Walk',
-          category: 'hhh__Group1',
+          category: null,
           bcioClass: null,
         },
         {
           id: 'habit-2',
           name: 'Drink Water',
-          category: 'hhh__Group2',
+          category: null,
           bcioClass: null,
         },
       ];
