@@ -1517,3 +1517,13 @@
   - `Neo4jDatabase.js` already had the correct `_esc()` pattern; `SparqlDatabase.js` was missing it — always verify both SPARQL and Neo4j clients when fixing injection issues
   - `SparqlDatabase.test.js` integration tests use `ENABLE_INTEGRATION=1` flag and skip without a live Fuseki — unit assertions for escaping should use the `addHabit`/`_appendBehavior` etc. methods directly without needing Fuseki
 ---
+
+## 2026-03-21 - US-151
+- What was implemented: Added `VALID_GROUPS` constant (`new Set(['hhh__Group1','hhh__Group2','hhh__Group3','hhh__Group4'])`) to `adminRouter.js` above the factory function. Added second-layer validation inside the neo4jRun block: after `newLabel = labelMap[group]`, checks `VALID_GROUPS.has(newLabel)` and returns HTTP 400 `{ error: 'Invalid group' }` if not present — preventing any Cypher string with the label from being constructed. Added unit test in `admin.controller.test.js` that starts a fresh Express server with a tracked `neo4jRun` mock, sends a malicious group string (`G1\`; MATCH (n) DETACH DELETE n //`), asserts HTTP 400, and asserts neo4jRun was never called. Updated `AUDIT.md` to mark OF-06 as resolved. All 248 tests pass; lint/prettier pass.
+- Files changed: app/routes/adminRouter.js (VALID_GROUPS constant + newLabel validation), app/tests/unit/admin.controller.test.js (malicious input test), AUDIT.md (OF-06 resolved), prd.json (US-151 passes=true)
+- **Learnings for future iterations:**
+  - The injection site is `adminRouter.js` line ~440: `SET d:\`${newLabel}\`` — backtick-quoted label in Cypher; the existing `group` → `['G1'..'G4']` check already prevents exploitation, but a second defense-in-depth guard on the actual label string is required by the story
+  - `VALID_GROUPS` should be declared at module scope (before `createAdminRouter`) so it is not re-created on every request
+  - Unit test for injection must use its own server instance with `neo4jRun` injected — the shared `before()` server uses no `neo4jRun`, so a second server is the cleanest approach
+  - Prettier formats the test file on first `npm test` run — always run `npm test` (not just `node --test`) to catch format violations before committing
+---
