@@ -1497,3 +1497,13 @@
   - New Habit/Context schema (donate pipeline) was completely missing from constraints.cypher — only old `hhh__` schema was covered. Always check both schemas when adding constraints.
   - `IF NOT EXISTS` guards are mandatory on all constraint/index statements in this file so the init script is safe to re-run on an existing database.
 ---
+
+## 2026-03-21 - US-149
+- What was implemented: Gated tag-push production deploys behind CI. Added `tags: ["v*"]` to `ci.yml`'s `on.push` so CI runs when a v* tag is pushed. In `deploy.yml`: removed the `branches: master` filter from `workflow_run` so the trigger fires for tag CI completions too; removed the `(github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))` path from the deploy job's `if` condition; added a "Verify CI passed" first step that explicitly exits 1 if `conclusion != 'success'`; updated the deploy job `if` to allow deployment only when `head_branch == 'master'` or `startsWith(head_branch, 'v')`. The `release` job (Flutter APK/web artifact upload) retains its `push: tags: v*` trigger since it does not deploy to production infrastructure. Updated `tasks/review-cicd.md` marking C5 as resolved (US-149).
+- Files changed: .github/workflows/ci.yml (add tags trigger), .github/workflows/deploy.yml (remove push:tags from deploy job, add explicit CI check step, rework if condition), tasks/review-cicd.md (C5 resolved), prd.json (US-149 passes=true)
+- **Learnings for future iterations:**
+  - When CI only runs on branch pushes (not tag pushes), `workflow_run` with `branches: master` never fires for tag-triggered events — you MUST add `tags: ["v*"]` to ci.yml's `on.push` first
+  - For tag-triggered CI runs, `github.event.workflow_run.head_branch` contains the tag name (e.g., "v1.2.3") — use `startsWith(..., 'v')` to detect release tags
+  - The `release` job (build artifacts, upload to GitHub Release) is safe to keep on `push: tags: v*` — it's not a production deploy, so bypassing CI is acceptable risk; only the `deploy` job (SSH prod deploy) needs gating
+  - Removing `branches: master` from the workflow_run filter means it fires for ALL CI completions (PRs, feature branches, tags) — the deploy job's `if` condition must be tight enough to filter correctly
+---
