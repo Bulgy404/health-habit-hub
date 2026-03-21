@@ -2511,6 +2511,251 @@
       "priority": 156,
       "passes": true,
       "notes": "Resolves OF-12. Independent of other stories. Router file currently 1200+ lines with inline business logic."
+    },
+    {
+      "id": "US-157",
+      "title": "Create docker-compose.local.yml optimised for Mac development",
+      "description": "As a developer, I want a Docker Compose file tuned for local Mac development so I can start all services quickly without Traefik, TLS, or production-only overhead.",
+      "acceptanceCriteria": [
+        "docker-compose.local.yml created at repo root with services: app, mongo, neo4j, keycloak, translate, recommender, fuseki \u2014 excluding proxy, backup, admin, mongo-express",
+        "All services expose ports directly to Mac host: app\u21923000, mongo\u219227017, neo4j\u21927474+7687, keycloak\u21928080, translate\u21925000, recommender\u21928001, fuseki\u21923030",
+        "app service uses 'command: node --watch app.js' for built-in hot-reload",
+        "All services use env_file: .env",
+        "docker compose -f docker-compose.local.yml config validates without errors"
+      ],
+      "priority": 157,
+      "passes": true,
+      "notes": "Local dev only. iOS Simulator shares Mac network stack so localhost works directly. AppConfig defaults already point to localhost:3000."
+    },
+    {
+      "id": "US-158",
+      "title": "Add nodemon dev script to backend package.json",
+      "description": "As a developer, I want 'npm run dev' in app/ to start the backend with file-watching so code changes take effect immediately without manually restarting the container.",
+      "acceptanceCriteria": [
+        "nodemon added to app/package.json devDependencies",
+        "'dev': 'nodemon app.js' added to scripts section",
+        "nodemon.json created in app/ watching controllers/, routes/, services/, middleware/, utils/ with 500ms delay",
+        "npm run dev starts the server and restarts within 1 second of saving any .js file under app/",
+        "npm run lint still passes"
+      ],
+      "priority": 158,
+      "passes": false,
+      "notes": "Used inside docker-compose.local.yml and also for running backend directly on host."
+    },
+    {
+      "id": "US-159",
+      "title": "Create full local seed script",
+      "description": "As a developer, I want a single seed command that populates MongoDB, Neo4j, and creates a Keycloak test user so the app is immediately usable after starting services.",
+      "acceptanceCriteria": [
+        "scripts/seed-local.js created that seeds: (1) MongoDB \u2014 upserts SLIQ and RAND-36 questionnaires; (2) Neo4j \u2014 applies constraints.cypher then seeds 4 Group nodes, 1 test Donor (userId: dev-user-1), 2 Habit nodes; (3) Keycloak \u2014 creates testuser/testpass123 with participant role via Admin REST API",
+        "Script reads MONGO_HOST, NEO4J_HTTP, NEO4J_USER, NEO4J_PASSWORD, KEYCLOAK_URL, KEYCLOAK_ADMIN, KEYCLOAK_ADMIN_PASSWORD from environment",
+        "Script is idempotent \u2014 safe to run multiple times without duplicating data",
+        "Script exits 0 on success, 1 with clear error message on failure",
+        "'seed': 'node ../scripts/seed-local.js' added to app/package.json scripts"
+      ],
+      "priority": 159,
+      "passes": false,
+      "notes": "Neo4j can take 40-60s to start \u2014 seed script must poll HTTP API with retries before proceeding."
+    },
+    {
+      "id": "US-160",
+      "title": "Create Makefile with dev, seed, stop, logs, ios, and reset targets",
+      "description": "As a developer, I want a Makefile at the repo root so I can start, seed, stop, and tail logs with single memorable commands.",
+      "acceptanceCriteria": [
+        "Makefile created at repo root with targets: make dev (docker compose local up), make stop (docker compose down), make seed (cd app && npm run seed), make logs (tail app logs), make logs-all (tail all logs), make ios (flutter run -d iPhone), make reset (stop + wipe volumes + dev + seed)",
+        "Each target has ## comment shown by make help",
+        "make help target prints all available targets and descriptions",
+        "make help runs successfully"
+      ],
+      "priority": 160,
+      "passes": false,
+      "notes": "Depends on US-157, US-158, US-159."
+    },
+    {
+      "id": "US-161",
+      "title": "Write local development setup guide",
+      "description": "As a new developer, I want a step-by-step guide to running the iOS Simulator against a local backend so I can test the full app flow without needing server access.",
+      "acceptanceCriteria": [
+        "docs/guides/local-dev.md created covering: Prerequisites (Xcode, Docker Desktop, Flutter SDK, Node 22), First-time setup (copy .env, make dev, make seed, verify curl localhost:3000/health), Running iOS Simulator (make ios or manual flutter run command, note that iOS Simulator reaches Mac localhost directly), Test login credentials (testuser/testpass123), Hot reload instructions, Stopping and resetting",
+        "Troubleshooting section with at least 5 entries: port conflicts, Neo4j slow start, Keycloak realm not found, iOS Simulator network issue, LibreTranslate OOM on model download",
+        "Every command in the guide works on a clean Mac from scratch",
+        "Guide linked from README.md in the Development section"
+      ],
+      "priority": 161,
+      "passes": false,
+      "notes": "iOS Simulator shares Mac host network \u2014 localhost works without any special IP. AppConfig defaults already correct."
+    },
+    {
+      "id": "US-162",
+      "title": "Ralph \u2014 clean code review of the Flutter app",
+      "description": "As a team lead, I want Ralph to review the Flutter codebase specifically for clean code violations so that spaghetti code, god widgets, and DRY violations are identified before they compound.",
+      "acceptanceCriteria": [
+        "Ralph reads every file under mobile/lib/ with clean code focus",
+        "Findings written to tasks/review-flutter-clean.md covering: God widgets, Long methods (>40 lines), Deep nesting (>3 levels), DRY violations, Mixed concerns, Dead code, What follows clean code well, Prioritised findings (Critical/Major/Minor) with suggested fix per finding",
+        "Every finding includes file path, line range, violation type, suggested fix",
+        "Report saved and committed"
+      ],
+      "priority": 162,
+      "passes": false,
+      "notes": "Clean-code-focused review. Run in parallel with US-163, US-164, US-165."
+    },
+    {
+      "id": "US-163",
+      "title": "Ralph \u2014 clean code review of the Node.js backend",
+      "description": "As a team lead, I want Ralph to review the backend specifically for clean code violations \u2014 fat routes, inline Cypher, mixed concerns, and copy-pasted error handling.",
+      "acceptanceCriteria": [
+        "Ralph reads every file under app/ with clean code focus",
+        "Findings written to tasks/review-backend-clean.md covering: Fat routes (handlers doing more than validate\u2192service\u2192respond), Long functions (>40 lines), Inline Cypher/SPARQL/Mongo in routes, Copy-pasted error handling, Naming violations, Dead code, What follows clean code well, Prioritised findings (Critical/Major/Minor)",
+        "Every finding includes file, line range, violation type, suggested fix",
+        "Report saved and committed"
+      ],
+      "priority": 163,
+      "passes": false,
+      "notes": "Clean-code-focused review. Run in parallel with US-162, US-164, US-165."
+    },
+    {
+      "id": "US-164",
+      "title": "Ralph \u2014 clean code review of the Neo4j/data layer",
+      "description": "As a team lead, I want Ralph to review the Neo4j query layer and ontology scripts for clean code violations \u2014 repeated patterns, magic strings, and mixed concerns.",
+      "acceptanceCriteria": [
+        "Ralph reads app/utils/Neo4jDatabase.js, app/utils/SparqlDatabase.js, all utils files containing Cypher, and all .cypher files",
+        "Findings written to tasks/review-neo4j-clean.md covering: Magic strings (hard-coded RDF prefixes/labels), Repeated query patterns, Long functions (>40 lines), Mixed concerns (functions that build Turtle + call API + parse result), What follows clean code well, Prioritised findings (Critical/Major/Minor)",
+        "Every finding includes file, line range, violation type, suggested fix",
+        "Report saved and committed"
+      ],
+      "priority": 164,
+      "passes": false,
+      "notes": "Run in parallel with US-162, US-163, US-165."
+    },
+    {
+      "id": "US-165",
+      "title": "Ralph \u2014 clean code review of CI/CD and infrastructure scripts",
+      "description": "As a team lead, I want Ralph to review shell scripts, Makefile, and CI YAML for clean code violations \u2014 unreadable one-liners, copy-pasted job steps, and scripts without error handling.",
+      "acceptanceCriteria": [
+        "Ralph reads .github/workflows/ci.yml, .github/workflows/deploy.yml, Makefile, and all files under scripts/",
+        "Findings written to tasks/review-infra-clean.md covering: Copy-pasted CI job steps, Shell scripts without set -euo pipefail, Long shell functions (>40 lines), Magic values (hard-coded ports/images/timeouts), What follows clean code well, Prioritised findings (Critical/Major/Minor)",
+        "Every finding includes file, line range, violation type, suggested fix",
+        "Report saved and committed"
+      ],
+      "priority": 165,
+      "passes": false,
+      "notes": "Run in parallel with US-162, US-163, US-164."
+    },
+    {
+      "id": "US-166",
+      "title": "Ralph \u2014 cross-component clean code coherence review",
+      "description": "As a team lead, I want Ralph to synthesise all four clean code reviews and identify patterns that appear across multiple components \u2014 the same smell in Flutter, backend, and scripts simultaneously.",
+      "acceptanceCriteria": [
+        "Ralph reads all four review files (review-flutter-clean.md, review-backend-clean.md, review-neo4j-clean.md, review-infra-clean.md)",
+        "Findings written to tasks/review-clean-coherence.md covering: Cross-cutting smell patterns (smells in 3+ components), Naming inconsistencies across layers, Most impactful single refactoring, Recommended fix order by max improvement/min risk",
+        "Report saved and committed"
+      ],
+      "priority": 166,
+      "passes": false,
+      "notes": "Depends on US-162, US-163, US-164, US-165 all complete. Feeds US-167, US-168, US-169."
+    },
+    {
+      "id": "US-167",
+      "title": "Ralph \u2014 apply clean code improvements to the Flutter app",
+      "description": "As a developer, I want Ralph to refactor all Critical and Major clean code findings in the Flutter codebase so every file respects SRP, DRY, and size limits.",
+      "acceptanceCriteria": [
+        "Every Critical and Major finding from tasks/review-flutter-clean.md resolved or deferred with written reason",
+        "Auth header duplication extracted to a single Dio interceptor used by all service files",
+        "God widgets split: UI in widget, state in Riverpod Notifier, API calls in service layer",
+        "Any function > 40 lines broken into named sub-functions",
+        "Deep nesting (>3 levels) flattened using early returns or extracted functions",
+        "Dead imports and unreachable code removed",
+        "flutter analyze passes with zero warnings",
+        "flutter test --coverage passes with no existing test broken",
+        "tasks/review-flutter-clean.md updated with Resolution note per finding"
+      ],
+      "priority": 167,
+      "passes": false,
+      "notes": "Depends on US-166. Can run in parallel with US-168 and US-169."
+    },
+    {
+      "id": "US-168",
+      "title": "Ralph \u2014 apply clean code improvements to the backend",
+      "description": "As a developer, I want Ralph to refactor all Critical and Major clean code findings in the backend so routes are thin, business logic is in services, and there is no copy-pasted code.",
+      "acceptanceCriteria": [
+        "Every Critical and Major finding from tasks/review-backend-clean.md resolved or deferred with written reason",
+        "Any remaining inline Cypher in route files moved to the data-access layer",
+        "Copy-pasted try/catch replaced with a shared asyncHandler Express wrapper or equivalent",
+        "Any function > 40 lines in service files broken into named sub-functions",
+        "Unused require() statements removed",
+        "Magic string literals extracted to named constants at top of file",
+        "npm run lint passes",
+        "All unit and integration tests pass",
+        "tasks/review-backend-clean.md updated with Resolution notes"
+      ],
+      "priority": 168,
+      "passes": false,
+      "notes": "Depends on US-166. Can run in parallel with US-167 and US-169."
+    },
+    {
+      "id": "US-169",
+      "title": "Ralph \u2014 apply clean code improvements to the Neo4j/data layer",
+      "description": "As a developer, I want Ralph to refactor the Neo4j and SPARQL query layer so query strings are separated from business logic, magic strings are named constants, and no function mixes multiple concerns.",
+      "acceptanceCriteria": [
+        "Every Critical and Major finding from tasks/review-neo4j-clean.md resolved or deferred with written reason",
+        "RDF namespace prefixes extracted to a PREFIXES constant at top of Neo4jDatabase.js",
+        "Functions that build Turtle, call the import API, and parse results split into three separate named functions",
+        "Repeated Cypher fragments extracted to a shared query builder or constant",
+        "Any function > 40 lines broken into named sub-functions",
+        "All existing Neo4j-related tests pass",
+        "npm run lint passes",
+        "tasks/review-neo4j-clean.md updated with Resolution notes"
+      ],
+      "priority": 169,
+      "passes": false,
+      "notes": "Depends on US-166. Can run in parallel with US-167 and US-168."
+    },
+    {
+      "id": "US-170",
+      "title": "Ralph \u2014 consistency and dead code pass across all layers",
+      "description": "As a developer, I want Ralph to make a final sweep removing all dead code, fixing naming inconsistencies from the coherence review, and enforcing coding conventions across every layer.",
+      "acceptanceCriteria": [
+        "All dead code removed: unused imports, unreachable functions, commented-out code blocks, unused env vars",
+        "Naming inconsistencies from tasks/review-clean-coherence.md resolved \u2014 same concept uses same name in Flutter models, backend response shapes, and Neo4j property names",
+        "Copy-pasted CI steps extracted to reusable GitHub Actions composite action or step template where identified",
+        "All scripts under scripts/ begin with #!/usr/bin/env bash and set -euo pipefail (or #!/usr/bin/env node with explicit process.exit(1) on error)",
+        "flutter analyze, npm run lint, and all tests pass",
+        "tasks/review-clean-coherence.md updated with Resolution notes"
+      ],
+      "priority": 170,
+      "passes": false,
+      "notes": "Depends on US-167, US-168, US-169. Single focused pass \u2014 no new features."
+    },
+    {
+      "id": "US-171",
+      "title": "Ralph \u2014 update all documentation to reflect clean code changes",
+      "description": "As a developer, I want all documentation updated after the refactoring cycle so guides and architecture docs describe the post-refactor structure.",
+      "acceptanceCriteria": [
+        "docs/guides/flutter-architecture.md updated to reflect any new file structure from refactoring (new interceptors, notifiers, utilities)",
+        "docs/guides/developer-onboarding.md updated with any new make targets or script commands added this cycle",
+        "docs/api/openapi.yaml updated if any response shapes changed during refactoring",
+        "docs/architecture.md updated if any service boundaries changed",
+        "CHANGELOG.md gains a new version entry documenting the clean code refactor cycle",
+        "DOCUMENTATION.md updated if new files added to docs/"
+      ],
+      "priority": 171,
+      "passes": false,
+      "notes": "Depends on US-167, US-168, US-169, US-170. Can run in parallel with US-172 prep but must complete before US-172."
+    },
+    {
+      "id": "US-172",
+      "title": "Ralph \u2014 final clean code system audit",
+      "description": "As a project owner, I want a clean-code-focused audit report after all refactoring and documentation work is complete so I have an objective measure of code quality improvement.",
+      "acceptanceCriteria": [
+        "Ralph re-reads all four clean code review files and current codebase state after all improvements",
+        "AUDIT.md updated (new section appended, dated) with: Clean Code Scorecard (Flutter/Backend/Neo4j/CI-Scripts scored 1-5 on SRP adherence, DRY adherence, function size, naming clarity, dead code absence), Before/After metrics (max function length, files over 300 lines, DRY violations), Remaining deferred findings with reason, Resolved findings list",
+        "AUDIT.md committed with date stamp",
+        "All CI jobs pass on the branch after audit commit",
+        "No component scores below 4/5 on any Clean Code dimension"
+      ],
+      "priority": 172,
+      "passes": false,
+      "notes": "Final story in this cycle. Depends on US-171 (and transitively all review and improvement stories)."
     }
   ]
 }
