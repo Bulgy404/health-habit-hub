@@ -3320,6 +3320,69 @@ services:
 
 ---
 
+## Documentation Index
+
+All files under `docs/` and the root markdown files, with a one-line description of each.
+
+### Root-Level Documentation
+
+| File | Description |
+|---|---|
+| `README.md` | Project overview, quick-start commands, environment variable reference, and links to further docs |
+| `DOCUMENTATION.md` | This file — comprehensive consolidated documentation covering architecture, development, deployment, testing, API reference, and changelog |
+| `AUDIT.md` | Authoritative system audit report (written by US-144; reserved) |
+| `CHANGELOG.md` | Version history and notable changes per release |
+| `DEPLOYMENT.md` | Step-by-step production deployment guide including server setup, SSL, and Traefik configuration |
+
+### `docs/` — Architecture & Design
+
+| File | Description |
+|---|---|
+| `docs/architecture.md` | System component diagram (Mermaid), per-service reference table, end-to-end donation pipeline, auth flow, language/locale flow, data storage rationale, and ontology reference |
+| `docs/data-model.md` | Neo4j graph schema (both legacy `hhh__` and new `Habit`/`Context`/`BCIOConcept` schemas), MongoDB collection schemas with field tables and example documents |
+| `docs/migration.md` | Database migration scripts — `migrate-habits-bcio.js`, `migrate-group-labels.cypher`, and schema changes introduced in `ralph/hhh-platform-unified` (`translationEN`/`translationDE`, `preferredLanguage`, Neo4j constraints) |
+| `docs/runbook.md` | Operational runbook — common operational tasks, health checks, backup/restore procedures, and incident response steps |
+
+### `docs/api/` — API Reference
+
+| File | Description |
+|---|---|
+| `docs/api/openapi.yaml` | OpenAPI 3.0 specification for all `/api/v1/*` endpoints including auth, habits, questionnaires, recommendations, users, and knowledge base |
+| `docs/api/hhh-postman-collection.json` | Postman collection with request examples and expected responses for all API endpoints |
+
+### `docs/guides/` — Guides
+
+| File | Description |
+|---|---|
+| `docs/guides/developer-onboarding.md` | Step-by-step onboarding guide for new developers — environment setup, first run, test execution, and code conventions |
+| `docs/guides/flutter-architecture.md` | Flutter app architecture guide — provider tree, routing (GoRouter), screen structure, service layer, and l10n conventions |
+| `docs/guides/admin-guide.md` | English admin guide — managing participants, questionnaires, habit exports, and Keycloak user administration |
+| `docs/guides/admin-guide-de.md` | German-language version of the admin guide |
+| `docs/guides/participant-guide.md` | English participant guide — how to install the app, log in with a token card, donate habits, and view recommendations |
+| `docs/guides/participant-guide-de.md` | German-language version of the participant guide |
+
+### `docs/` — User Manuals
+
+| File | Description |
+|---|---|
+| `docs/MANUAL-en.md` | Full English user manual for study participants |
+| `docs/MANUAL-de.md` | Full German user manual for study participants |
+| `docs/MANUAL-ja.md` | Full Japanese user manual for study participants |
+
+### `docs/assets/` — Diagrams & Screenshots
+
+| Path | Description |
+|---|---|
+| `docs/assets/Architecture.svg` | Legacy architecture SVG diagram |
+| `docs/assets/2x2ExperimentDesign.png` | 2×2 factorial experimental design overview |
+| `docs/assets/Palette.json` | Colour palette definition used by the mobile UI |
+| `docs/assets/manual/` | Screenshots used in the MANUAL-*.md user manuals (dp-*, rp-*, sp_exp_g*) |
+| `docs/assets/screenshots/admin/` | Admin panel workflow screenshots (01–08 steps) |
+| `docs/assets/screenshots/participant/` | Participant app screenshots on Android, iOS, and Chrome |
+| `docs/assets/screenshots/developer/` | Developer tooling screenshots (flutter-web-chrome, npm-test-passing) |
+
+---
+
 ## Additional Resources
 
 ### Documentation for Other Languages
