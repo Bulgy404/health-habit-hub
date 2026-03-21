@@ -2,8 +2,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/models/habit_stats.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/screens/stats_screen.dart';
@@ -62,6 +64,13 @@ Widget _buildSubject(HabitService service) {
     // StatsScreen is normally nested inside ExploreScreen's TabBarView.
     // Wrap in a large SizedBox to prevent layout overflow in tests.
     child: MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
       home: Scaffold(
         body: SizedBox(
           height: 2400,

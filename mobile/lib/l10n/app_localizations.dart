@@ -943,6 +943,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Assign to Groups'**
   String get adminAssignToGroups;
+
+  /// Error message when stats fail to load on explore screen
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load stats'**
+  String get failedToLoadStats;
+
+  /// Error message when questionnaire fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load questionnaire.'**
+  String get failedToLoadQuestionnaire;
+
+  /// AppBar title and button label for the recommendation input screen
+  ///
+  /// In en, this message translates to:
+  /// **'Get Recommendations'**
+  String get getRecommendations;
+
+  /// Prompt asking the user to describe their health goal
+  ///
+  /// In en, this message translates to:
+  /// **'What health goal would you like to work on?'**
+  String get healthGoalPrompt;
+
+  /// Heading on the questionnaire confirmation screen
+  ///
+  /// In en, this message translates to:
+  /// **'Response submitted!'**
+  String get questionnaireResponseSubmitted;
+
+  /// Body text on the questionnaire confirmation screen
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for completing the questionnaire. Your answers help personalise your habit recommendations.'**
+  String get questionnaireThankYou;
+
+  /// Button label to navigate back to the profile screen
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Profile'**
+  String get backToProfile;
+
+  /// AppBar title for confirmation screens
+  ///
+  /// In en, this message translates to:
+  /// **'Thank You'**
+  String get thankYou;
 }
 
 class _AppLocalizationsDelegate

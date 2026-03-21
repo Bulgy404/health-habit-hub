@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../config/app_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/locale_provider.dart';
 import '../services/survey_service.dart';
@@ -23,7 +24,7 @@ class DonateScreen extends ConsumerStatefulWidget {
 }
 
 class _DonateScreenState extends ConsumerState<DonateScreen> {
-  static const _baseUrl = 'https://api.hhh.tu-dresden.de/api/v1';
+  final _baseUrl = AppConfig.apiBaseUrl;
 
   WebViewController? _controller;
   String? _surveyId;
@@ -53,7 +54,15 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..addJavaScriptChannel(
           'SurveyComplete',
-          onMessageReceived: (msg) => _onSurveyComplete(msg.message),
+          onMessageReceived: (msg) {
+            try {
+              final data = jsonDecode(msg.message);
+              if (data is! Map<String, dynamic>) return;
+              _onSurveyComplete(msg.message);
+            } catch (e) {
+              debugPrint('SurveyComplete: invalid message ignored: $e');
+            }
+          },
         )
         ..setNavigationDelegate(NavigationDelegate(
           onPageFinished: (_) => _injectCompletionHook(),
@@ -71,7 +80,8 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
           _loading = false;
         });
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('ERROR in DonateScreen._initSurvey: $e\n$st');
       if (mounted) {
         setState(() {
           _loading = false;
@@ -112,7 +122,8 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
         );
         context.pop();
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('ERROR in DonateScreen._onSurveyComplete: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.submissionFailed)),

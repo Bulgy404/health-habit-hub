@@ -140,5 +140,13 @@
   "adminFailedToSaveSurvey": "Umfrage konnte nicht gespeichert werden",
   "adminFailedToLoadSurvey": "Umfrage konnte nicht geladen werden",
   "adminJsonSchema": "JSON-Schema",
-  "adminAssignToGroups": "Gruppen zuweisen"
+  "adminAssignToGroups": "Gruppen zuweisen",
+  "failedToLoadStats": "Statistiken konnten nicht geladen werden",
+  "failedToLoadQuestionnaire": "Fragebogen konnte nicht geladen werden.",
+  "getRecommendations": "Empfehlungen erhalten",
+  "healthGoalPrompt": "An welchem Gesundheitsziel möchten Sie arbeiten?",
+  "questionnaireResponseSubmitted": "Antwort eingereicht!",
+  "questionnaireThankYou": "Vielen Dank für das Ausfüllen des Fragebogens. Ihre Antworten helfen dabei, Ihre Gewohnheitsempfehlungen zu personalisieren.",
+  "backToProfile": "Zurück zum Profil",
+  "thankYou": "Vielen Dank"
 }

@@ -480,4 +480,31 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get adminAssignToGroups => 'Gruppen zuweisen';
+
+  @override
+  String get failedToLoadStats => 'Statistiken konnten nicht geladen werden';
+
+  @override
+  String get failedToLoadQuestionnaire =>
+      'Fragebogen konnte nicht geladen werden.';
+
+  @override
+  String get getRecommendations => 'Empfehlungen erhalten';
+
+  @override
+  String get healthGoalPrompt =>
+      'An welchem Gesundheitsziel möchten Sie arbeiten?';
+
+  @override
+  String get questionnaireResponseSubmitted => 'Antwort eingereicht!';
+
+  @override
+  String get questionnaireThankYou =>
+      'Vielen Dank für das Ausfüllen des Fragebogens. Ihre Antworten helfen dabei, Ihre Gewohnheitsempfehlungen zu personalisieren.';
+
+  @override
+  String get backToProfile => 'Zurück zum Profil';
+
+  @override
+  String get thankYou => 'Vielen Dank';
 }

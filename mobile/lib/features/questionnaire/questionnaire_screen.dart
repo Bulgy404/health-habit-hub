@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'questionnaire_form_widget.dart';
 import 'questionnaire_service.dart';
 
@@ -17,6 +18,7 @@ class QuestionnaireScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final definitionAsync = ref.watch(questionnaireProvider(slug));
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
@@ -36,13 +38,13 @@ class QuestionnaireScreen extends ConsumerWidget {
                 const Icon(Icons.error_outline, size: 48, color: Colors.red),
                 const SizedBox(height: 12),
                 Text(
-                  'Failed to load questionnaire.',
+                  l10n.failedToLoadQuestionnaire,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 8),
                 FilledButton(
                   onPressed: () => ref.invalidate(questionnaireProvider(slug)),
-                  child: const Text('Retry'),
+                  child: Text(l10n.retry),
                 ),
               ],
             ),
@@ -66,8 +68,9 @@ class QuestionnaireConfirmationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('Thank You')),
+      appBar: AppBar(title: Text(l10n.thankYou)),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -81,21 +84,20 @@ class QuestionnaireConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Response submitted!',
+                l10n.questionnaireResponseSubmitted,
                 style: Theme.of(context).textTheme.headlineSmall,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Text(
-                'Thank you for completing the questionnaire. '
-                'Your answers help personalise your habit recommendations.',
+                l10n.questionnaireThankYou,
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
               FilledButton(
                 onPressed: () => context.go('/profile'),
-                child: const Text('Back to Profile'),
+                child: Text(l10n.backToProfile),
               ),
             ],
           ),
