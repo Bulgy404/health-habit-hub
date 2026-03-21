@@ -47,9 +47,7 @@ export async function submitSurvey(req, res) {
       : `${basepath}/`;
     res.redirect(`${normalizedBasepath}${req.lang}/thanks`);
   } catch (err) {
-    res.status(500).json({
-      status: 'error',
-      message: err.message,
-    });
+    console.error('[route] Error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 }

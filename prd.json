@@ -2248,8 +2248,8 @@
         "tasks/review-system-coherence.md updated with Resolution notes for all naming/consistency findings"
       ],
       "priority": 139,
-      "passes": false,
-      "notes": "Depends on US-136. Can run in parallel with US-137 and US-138."
+      "passes": true,
+      "notes": "Fixed surveyController.submitSurvey error response shape from { status: \"error\", message } to { error: ... }. Pinned flutter_appauth to 8.0.3 and flutter_secure_storage to 9.2.4 in pubspec.yaml. All 247 backend tests pass, flutter analyze zero issues. Updated tasks/review-system-coherence.md with Resolution notes for all 6 Critical, 10 Major, and 10 Minor cross-cutting findings. Field mapping table documented for Flutter/Backend/Neo4j. Locale code consistency verified. Error shape consistent across all v1 routes. Logging style consistent in v1 routes after US-138."
     },
     {
       "id": "US-140",
