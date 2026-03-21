@@ -1083,6 +1083,518 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Onboard",
+      "item": [
+        {
+          "name": "POST /onboard",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/onboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["onboard"]
+            },
+            "description": "Anonymous self-registration. Creates a Keycloak participant account and immediately returns JWT tokens. Rate limited to 5 requests per IP per hour."
+          },
+          "response": [
+            {
+              "name": "201 – Account created",
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"access_token\":\"eyJ...\",\"refresh_token\":\"eyJ...\",\"expires_in\":300,\"username\":\"3fa85f64-...\",\"password\":\"5f2d8e...\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Habits – Donate Pipeline",
+      "item": [
+        {
+          "name": "GET /habits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/habits?lang=en",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits"],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "en",
+                  "description": "Optional: en or de — adds displayText field"
+                }
+              ]
+            },
+            "description": "Returns all Habit nodes (new schema) with uuid, original sentence, language, translationEN, translationDE. Add ?lang=en or ?lang=de for a displayText convenience field."
+          },
+          "response": [
+            {
+              "name": "200 – Habit list",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[{\"uuid\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"original\":\"Ich gehe täglich 30 Minuten spazieren\",\"language\":\"de\",\"translationEN\":\"I walk for 30 minutes every day\",\"translationDE\":null,\"displayText\":\"I walk for 30 minutes every day\"}]"
+            }
+          ]
+        },
+        {
+          "name": "POST /habits/donate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"sentence\":\"I go for a 30-minute walk every morning before breakfast\",\"language\":\"en\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/habits/donate",
+              "host": ["{{baseUrl}}"],
+              "path": ["habits", "donate"]
+            },
+            "description": "Donates a habit through the three-stage pipeline: classify-habit → classify-context → map-bcio. Writes a Habit node to Neo4j with translationEN/DE fields."
+          },
+          "response": [
+            {
+              "name": "201 – Habit donated",
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"is_habit\":true,\"uuid\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"message\":\"Thank you! Your habit has been successfully donated.\"}"
+            },
+            {
+              "name": "200 – Not a habit",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"is_habit\":false,\"message\":\"Thank you for your contribution. This sentence was not identified as a habit and has been noted for review.\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Questionnaires",
+      "item": [
+        {
+          "name": "GET /questionnaires",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/questionnaires",
+              "host": ["{{baseUrl}}"],
+              "path": ["questionnaires"]
+            },
+            "description": "List all active questionnaire definitions (slug, title, description, version, questionCount)."
+          },
+          "response": [
+            {
+              "name": "200 – Questionnaire list",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[{\"slug\":\"sliq\",\"title\":\"Short Lifestyle Indicator Questions\",\"version\":\"1.0\",\"questionCount\":12}]"
+            }
+          ]
+        },
+        {
+          "name": "GET /questionnaires/:slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/questionnaires/sliq",
+              "host": ["{{baseUrl}}"],
+              "path": ["questionnaires", "sliq"]
+            },
+            "description": "Get the full questionnaire definition (all questions and options) for the given slug."
+          },
+          "response": [
+            {
+              "name": "200 – Questionnaire",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"slug\":\"sliq\",\"title\":\"Short Lifestyle Indicator Questions\",\"version\":\"1.0\",\"questions\":[{\"id\":\"sliq_diet\",\"text\":\"How would you rate your diet?\",\"type\":\"singleChoice\"}]}"
+            }
+          ]
+        },
+        {
+          "name": "POST /questionnaire-responses",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"questionnaireSlug\":\"sliq\",\"answers\":{\"sliq_diet\":\"2\",\"sliq_activity\":\"3\"}}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/questionnaire-responses",
+              "host": ["{{baseUrl}}"],
+              "path": ["questionnaire-responses"]
+            },
+            "description": "Submit answers for a questionnaire. Saved to the form_responses MongoDB collection."
+          },
+          "response": [
+            {
+              "name": "201 – Response saved",
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"id\":\"65a1b2c3d4e5f6a7b8c9d0f2\"}"
+            }
+          ]
+        },
+        {
+          "name": "GET /questionnaire-responses/me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/questionnaire-responses/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["questionnaire-responses", "me"]
+            },
+            "description": "Get all questionnaire responses submitted by the authenticated user, most recent first."
+          },
+          "response": [
+            {
+              "name": "200 – All responses",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[{\"userId\":\"3fa85f64-...\",\"questionnaireSlug\":\"sliq\",\"answers\":{\"sliq_diet\":\"2\"},\"submitted_at\":\"2026-03-20T10:00:00.000Z\"}]"
+            }
+          ]
+        },
+        {
+          "name": "GET /questionnaire-responses/me/:slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/questionnaire-responses/me/sliq",
+              "host": ["{{baseUrl}}"],
+              "path": ["questionnaire-responses", "me", "sliq"]
+            },
+            "description": "Get the most recent response for a specific questionnaire slug."
+          },
+          "response": [
+            {
+              "name": "200 – Most recent response",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"userId\":\"3fa85f64-...\",\"questionnaireSlug\":\"sliq\",\"answers\":{\"sliq_diet\":\"2\"},\"submitted_at\":\"2026-03-20T10:00:00.000Z\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Recommendations",
+      "item": [
+        {
+          "name": "GET /recommendations/me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/recommendations/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommendations", "me"]
+            },
+            "description": "Get all past recommendations for the authenticated user with their feedback comments."
+          },
+          "response": [
+            {
+              "name": "200 – Recommendations",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "[{\"recommendation_id\":\"rec-morning-walk-001\",\"userId\":\"3fa85f64-...\",\"goal\":\"exercise more\",\"generated_at\":\"2026-03-20T09:00:00.000Z\",\"feedback\":[{\"comment\":\"Very helpful!\",\"created_at\":\"2026-03-20T10:00:00.000Z\"}]}]"
+            }
+          ]
+        },
+        {
+          "name": "POST /recommendations/:id/feedback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"comment\":\"This recommendation was very helpful for my morning routine\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/recommendations/rec-morning-walk-001/feedback",
+              "host": ["{{baseUrl}}"],
+              "path": ["recommendations", "rec-morning-walk-001", "feedback"]
+            },
+            "description": "Submit free-text feedback for a recommendation. Also invalidates the Redis recommendation cache."
+          },
+          "response": [
+            {
+              "name": "201 – Feedback saved",
+              "status": "Created",
+              "code": 201,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"ok\":true}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "GET /users/me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Get the authenticated user's preferences. Returns {userId, preferredLanguage:\"en\"} by default if no record exists."
+          },
+          "response": [
+            {
+              "name": "200 – User preferences",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"userId\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"preferredLanguage\":\"de\"}"
+            }
+          ]
+        },
+        {
+          "name": "PUT /users/me",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"preferredLanguage\":\"de\"}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            },
+            "description": "Update user preferences. Currently supports preferredLanguage (en or de)."
+          },
+          "response": [
+            {
+              "name": "200 – Updated preferences",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"userId\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"preferredLanguage\":\"de\"}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Knowledge Base",
+      "item": [
+        {
+          "name": "GET /kb",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/kb",
+              "host": ["{{baseUrl}}"],
+              "path": ["kb"]
+            },
+            "description": "List all PDFs in the knowledge base (admin/researcher only). Proxied to API-service."
+          },
+          "response": [
+            {
+              "name": "200 – KB files",
+              "status": "OK",
+              "code": 200,
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\"files\":[\"bcio-taxonomy.pdf\",\"intervention-guidelines.pdf\"]}"
+            }
+          ]
+        },
+        {
+          "name": "POST /kb",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "PDF file to upload"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kb",
+              "host": ["{{baseUrl}}"],
+              "path": ["kb"]
+            },
+            "description": "Upload a PDF to the knowledge base (admin/researcher only). Proxied to API-service."
+          },
+          "response": []
+        },
+        {
+          "name": "POST /kb/reindex",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/kb/reindex",
+              "host": ["{{baseUrl}}"],
+              "path": ["kb", "reindex"]
+            },
+            "description": "Force full re-index of all knowledge base PDFs (admin/researcher only). Proxied to API-service."
+          },
+          "response": []
+        },
+        {
+          "name": "DELETE /kb/:filename",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/kb/bcio-taxonomy.pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["kb", "bcio-taxonomy.pdf"]
+            },
+            "description": "Delete a PDF from the knowledge base by filename (admin/researcher only). Proxied to API-service."
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

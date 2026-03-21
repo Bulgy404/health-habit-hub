@@ -197,6 +197,55 @@ components:
               count:
                 type: integer
                 example: 7
+    DonatedHabit:
+      type: object
+      description: A habit node from the donate pipeline (new schema, label Habit).
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        original:
+          type: string
+          description: Free-text habit sentence as submitted by the participant
+          example: I go for a 30-minute walk every morning before breakfast
+        language:
+          type: string
+          description: ISO 639-1 source language of the habit
+          example: en
+        translationEN:
+          type: string
+          nullable: true
+          description: LLM-refined English translation (null for English habits)
+          example: null
+        translationDE:
+          type: string
+          nullable: true
+          description: LLM-refined German translation (null if not yet available)
+          example: Ich gehe jeden Morgen vor dem Frühstück 30 Minuten spazieren
+        displayText:
+          type: string
+          nullable: true
+          description: >-
+            Convenience field — populated only when ?lang=en or ?lang=de is supplied.
+            Uses the relevant translation with fallback to original.
+          example: I go for a 30-minute walk every morning before breakfast
+    UserPreferences:
+      type: object
+      description: User-level settings stored in the users MongoDB collection.
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Keycloak sub claim
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        preferredLanguage:
+          type: string
+          enum:
+            - en
+            - de
+          description: UI display language preference
+          example: de
 security:
   - bearerAuth: []
 paths:
@@ -1901,6 +1950,809 @@ paths:
                 error: Unauthorized
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /onboard:
+    post:
+      summary: Anonymous self-registration
+      description: >-
+        Creates a new Keycloak user with the participant role and immediately
+        exchanges credentials for a JWT. No prior authentication required. Rate
+        limited to 5 requests per IP per hour.
+      tags:
+        - Onboard
+      security: []
+      responses:
+        '201':
+          description: Account created and tokens issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  expires_in:
+                    type: integer
+                    example: 300
+                  username:
+                    type: string
+                    example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  password:
+                    type: string
+                    example: 5f2d8e…(random hex)
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Keycloak is unreachable or account creation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /habits:
+    get:
+      summary: List all donated habits
+      description: >-
+        Returns all Habit nodes from the donation pipeline with uuid, original sentence,
+        language, translationEN, and translationDE fields. Pass ?lang=en or ?lang=de
+        to receive a displayText convenience field (translation with fallback to original).
+      tags:
+        - Habits
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: lang
+          schema:
+            type: string
+            enum:
+              - en
+              - de
+          description: >-
+            If supplied, adds a displayText field — translationEN (with fallback to
+            original) for en, translationDE (with fallback to original) for de.
+      responses:
+        '200':
+          description: Array of donated habits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DonatedHabit'
+              example:
+                - uuid: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  original: Ich gehe täglich 30 Minuten spazieren
+                  language: de
+                  translationEN: I walk for 30 minutes every day
+                  translationDE: null
+                  displayText: I walk for 30 minutes every day
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /habits/donate:
+    post:
+      summary: Donate a habit
+      description: >-
+        Orchestrates the three-stage habit donation pipeline:
+        (1) classify-habit — determines whether the submission is a valid habit;
+        (2) classify-context — extracts contextual dimensions (TIME, PHYSICAL_SETTING, etc.);
+        (3) map-bcio — maps context phrases to BCIO ontology concepts.
+        The Habit node is written to Neo4j with translationEN and translationDE fields
+        produced by LibreTranslate + LLM refinement. Non-habit submissions are saved
+        to MongoDB for review.
+      tags:
+        - Habits
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sentence
+                - language
+              properties:
+                sentence:
+                  type: string
+                  maxLength: 1000
+                  description: Free-text habit description
+                  example: I go for a 30-minute walk every morning before breakfast
+                language:
+                  type: string
+                  description: >-
+                    ISO 639-1 language code of the submitted sentence.
+                    Supported: en, de, fr, es, it, pt, nl, pl, ru, zh
+                  example: en
+      responses:
+        '201':
+          description: Habit classified as valid and stored in Neo4j
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  is_habit:
+                    type: boolean
+                    example: true
+                  uuid:
+                    type: string
+                    format: uuid
+                  message:
+                    type: string
+                    example: Thank you! Your habit has been successfully donated.
+        '200':
+          description: Submission was not classified as a habit; saved for review
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  is_habit:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+        '400':
+          description: Missing or invalid sentence or language
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: sentence and language are required
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Upstream API-service (habit classifier, context extractor, or BCIO mapper) failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /questionnaires:
+    get:
+      summary: List active questionnaire definitions
+      description: Returns all active questionnaire definitions (slug, title, description, version, question count).
+      tags:
+        - Questionnaires
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of active questionnaire definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    slug:
+                      type: string
+                      example: sliq
+                    title:
+                      type: string
+                      example: Short Lifestyle Indicator Questions
+                    description:
+                      type: string
+                      nullable: true
+                    version:
+                      type: string
+                      example: '1.0'
+                    questionCount:
+                      type: integer
+                      example: 12
+              example:
+                - slug: sliq
+                  title: Short Lifestyle Indicator Questions
+                  version: '1.0'
+                  questionCount: 12
+                - slug: rand-36
+                  title: RAND-36 Health Survey
+                  version: '1.0'
+                  questionCount: 36
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /questionnaires/{slug}:
+    get:
+      summary: Get a questionnaire definition by slug
+      description: Returns the full questionnaire definition including all questions and options.
+      tags:
+        - Questionnaires
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+          description: Questionnaire slug (e.g. sliq, rand-36)
+          example: sliq
+      responses:
+        '200':
+          description: Full questionnaire definition
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  slug:
+                    type: string
+                  title:
+                    type: string
+                  description:
+                    type: string
+                    nullable: true
+                  version:
+                    type: string
+                  questions:
+                    type: array
+                    items:
+                      type: object
+              example:
+                slug: sliq
+                title: Short Lifestyle Indicator Questions
+                version: '1.0'
+                questions:
+                  - id: sliq_diet
+                    text: How would you rate your diet?
+                    type: singleChoice
+                    options:
+                      - label: Poor
+                        value: '1'
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Questionnaire not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /questionnaire-responses:
+    post:
+      summary: Submit a questionnaire response
+      description: Saves the authenticated user's answers for a questionnaire to the form_responses MongoDB collection.
+      tags:
+        - Questionnaires
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - questionnaireSlug
+                - answers
+              properties:
+                questionnaireSlug:
+                  type: string
+                  example: sliq
+                answers:
+                  type: object
+                  additionalProperties: true
+                  description: Map of questionId to answer value
+                  example:
+                    sliq_diet: '2'
+                    sliq_activity: '3'
+      responses:
+        '201':
+          description: Response saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: MongoDB ObjectId of the inserted document
+        '400':
+          description: Missing required fields (questionnaireSlug or answers)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /questionnaire-responses/me:
+    get:
+      summary: Get all questionnaire responses for the authenticated user
+      description: Returns all responses submitted by the authenticated user, ordered by most recent first.
+      tags:
+        - Questionnaires
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of form responses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    userId:
+                      type: string
+                    questionnaireSlug:
+                      type: string
+                    answers:
+                      type: object
+                      additionalProperties: true
+                    submitted_at:
+                      type: string
+                      format: date-time
+              example:
+                - userId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  questionnaireSlug: sliq
+                  answers:
+                    sliq_diet: '2'
+                  submitted_at: '2026-03-20T10:00:00.000Z'
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /questionnaire-responses/me/{slug}:
+    get:
+      summary: Get the most recent response for a specific questionnaire
+      description: Returns the most recent response submitted by the authenticated user for the given questionnaire slug.
+      tags:
+        - Questionnaires
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+          description: Questionnaire slug (e.g. sliq, rand-36)
+          example: sliq
+      responses:
+        '200':
+          description: The most recent response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                  questionnaireSlug:
+                    type: string
+                  answers:
+                    type: object
+                    additionalProperties: true
+                  submitted_at:
+                    type: string
+                    format: date-time
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No response found for this questionnaire slug
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /recommendations/me:
+    get:
+      summary: Get all past recommendations for the authenticated user
+      description: >-
+        Returns all recommendations stored in MongoDB for the authenticated user,
+        ordered by most recent first. Each recommendation includes any feedback
+        comments submitted by the user.
+      tags:
+        - Recommendations
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of recommendations with feedback
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    recommendation_id:
+                      type: string
+                    userId:
+                      type: string
+                    goal:
+                      type: string
+                    generated_at:
+                      type: string
+                      format: date-time
+                    feedback:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          comment:
+                            type: string
+                          created_at:
+                            type: string
+                            format: date-time
+              example:
+                - recommendation_id: rec-morning-walk-001
+                  userId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                  goal: exercise more
+                  generated_at: '2026-03-20T09:00:00.000Z'
+                  feedback:
+                    - comment: Very helpful, will try this!
+                      created_at: '2026-03-20T10:00:00.000Z'
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /recommendations/{recommendation_id}/feedback:
+    post:
+      summary: Submit feedback for a recommendation
+      description: >-
+        Saves a free-text feedback comment for the specified recommendation and
+        invalidates the Redis recommendation cache for the (user, goal) pair so the
+        next request fetches fresh recommendations.
+      tags:
+        - Recommendations
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: recommendation_id
+          required: true
+          schema:
+            type: string
+          description: Recommendation identifier
+          example: rec-morning-walk-001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - comment
+              properties:
+                comment:
+                  type: string
+                  description: Free-text feedback comment
+                  example: This recommendation was very helpful for my morning routine
+      responses:
+        '201':
+          description: Feedback saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '400':
+          description: Missing or empty comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: comment is required
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Recommendation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /users/me:
+    get:
+      summary: Get the authenticated user's settings
+      description: >-
+        Returns the user's stored preferences (e.g. preferredLanguage). Returns a
+        default record {userId, preferredLanguage:"en"} if no record exists yet.
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+              example:
+                userId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                preferredLanguage: de
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update the authenticated user's settings
+      description: Updates user-level preferences. Currently supports preferredLanguage (en or de).
+      tags:
+        - Users
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                preferredLanguage:
+                  type: string
+                  enum:
+                    - en
+                    - de
+                  example: de
+      responses:
+        '200':
+          description: Updated user preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '400':
+          description: Invalid preferredLanguage value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: 'preferredLanguage must be one of: en, de'
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /kb:
+    get:
+      summary: List knowledge base PDFs
+      description: Returns a list of all PDFs stored in the knowledge base (proxied to API-service).
+      tags:
+        - Knowledge Base
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of PDF filenames
+          content:
+            application/json:
+              schema:
+                type: object
+              example:
+                files:
+                  - bcio-taxonomy.pdf
+                  - intervention-guidelines.pdf
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Knowledge base service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Upload a PDF to the knowledge base
+      description: Uploads a PDF file to the knowledge base (proxied to API-service). Triggers automatic re-indexing.
+      tags:
+        - Knowledge Base
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF file to upload
+      responses:
+        '200':
+          description: PDF uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Knowledge base service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /kb/reindex:
+    post:
+      summary: Force full re-index of the knowledge base
+      description: Triggers a full re-index of all PDFs in the knowledge base (proxied to API-service).
+      tags:
+        - Knowledge Base
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Re-index triggered
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Knowledge base service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /kb/{filename}:
+    delete:
+      summary: Delete a PDF from the knowledge base
+      description: Removes the specified PDF from the knowledge base (proxied to API-service).
+      tags:
+        - Knowledge Base
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+          description: Filename of the PDF to delete
+          example: bcio-taxonomy.pdf
+      responses:
+        '200':
+          description: PDF deleted
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Knowledge base service unavailable
           content:
             application/json:
               schema:

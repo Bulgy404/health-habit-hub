@@ -23,15 +23,73 @@ This document is the canonical reference for all data stores in the Health Habit
 
 ## 1. Neo4j Graph Database
 
-Neo4j stores the habit knowledge graph. Nodes and relationships are created by the neosemantics (n10s) plugin when the HHH/BCIO ontology is imported via Fuseki, and are augmented at runtime as participants donate habits.
+Neo4j stores the habit knowledge graph. There are **two coexisting schemas** in the same database:
 
-### 1.1 Node Labels & Properties
+- **New schema** (`Habit`, `Context`, `BCIOConcept`) — created by the donate pipeline (`POST /api/v1/habits/donate`). This is the active schema for all new data.
+- **Old schema** (`hhh__Habit`, `hhh__Donor`, …) — created by the neosemantics (n10s) plugin when the HHH/BCIO ontology is imported via Fuseki. Used by the `/habits/public` and `/habits/stats` endpoints.
+
+> **Important:** These two schemas are disjoint datasets in the same database. The stats and public-list endpoints query the old `hhh__` schema; the donate pipeline writes to the new schema. A migration script is needed to reconcile them.
+
+### 1.1 New Schema (Donate Pipeline)
+
+#### `Habit`
+
+Created by `POST /api/v1/habits/donate`. Each donated habit that is classified as valid becomes one `Habit` node.
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `uuid` | String | Yes | UUID — uniqueness constraint `habit_uuid_unique` (needed, not yet created) |
+| `sentence` | String | Yes | Free-text habit description as submitted by the participant |
+| `language` | String | Yes | ISO 639-1 source language code (e.g. `en`, `de`) |
+| `is_habit` | Boolean | Yes | Always `true` for nodes in Neo4j (non-habits go to MongoDB only) |
+| `confidence` | Float | No | Classifier confidence score from the habit-classification step |
+| `userID` | String | Yes | Keycloak `sub` of the donating participant |
+| `created_at` | String | Yes | ISO-8601 timestamp of donation |
+| `translationEN` | String | No | LLM-refined English translation; `null` for English-language habits |
+| `translationDE` | String | No | LLM-refined German translation; `null` until produced by translate pipeline |
+
+---
+
+#### `Context`
+
+Extracted contextual phrases linked to a `Habit`. Created/merged by `classify-context` step.
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `text` | String | Yes | Free-text context phrase (e.g. "before breakfast") |
+| `dimension` | String | Yes | Context dimension: `TIME`, `PHYSICAL_SETTING`, `PRIOR_BEHAVIOR`, `OTHER_PEOPLE`, `INTERNAL_STATE`, `BEHAVIOR`, or `REASONING` |
+
+Uniqueness is enforced on `(text, dimension)` — an index on this pair is needed.
+
+---
+
+#### `BCIOConcept`
+
+BCIO ontology concepts mapped from context phrases. Created/merged by `map-bcio` step.
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `bcio_concept_id` | String | Yes | BCIO concept identifier (e.g. `BCIO:0000042`) |
+| `bcio_concept_label` | String | No | Human-readable BCIO concept label |
+
+---
+
+#### New Relationship Types
+
+| Relationship | From | To | Properties | Description |
+|---|---|---|---|---|
+| `HAS_CONTEXT` | `Habit` | `Context` | `dimension` (String) | Links a habit to its extracted context phrases |
+| `MAPS_TO` | `Context` | `BCIOConcept` | `confidence` (Float), `phrase` (String), `dimension` (String) | Links a context phrase to its BCIO concept mapping |
+
+---
+
+### 1.2 Old Schema (n10s / Ontology Import)
 
 All labels and property names use the `hhh__` prefix (neosemantics convention for namespace `http://example.com/hhh#`).
 
 #### `hhh__Donor`
 
-Represents a study participant who donates habits.
+Represents a study participant who donates habits (old schema, used by `/habits/public` and `/habits/stats`).
 
 | Property | Type | Required | Description |
 |---|---|---|---|
@@ -119,7 +177,7 @@ Generic RDF resource nodes created by n10s for any ontology class not mapped to 
 
 ---
 
-### 1.2 Relationship Types
+### 1.3 Relationship Types (Old Schema)
 
 All relationship types use the `hhh__` prefix.
 
@@ -133,7 +191,7 @@ All relationship types use the `hhh__` prefix.
 
 ---
 
-### 1.3 Annotated Cypher Queries
+### 1.4 Annotated Cypher Queries
 
 #### Q1 — Count habits donated by each study group
 
@@ -490,7 +548,13 @@ MongoDB stores operational data: survey definitions, participant records, profil
 | `habit_donations` | Habit donation log (denormalized from Neo4j) | No |
 | `habit_annotations` | Anonymous crowd annotations (helpful / iDoThis) | No |
 | `admin_settings` | Key-value platform configuration | No |
-| `recommendations_log` | Accepted/dismissed recommendation events | No |
+| `recommendations_log` | Accepted/dismissed recommendation events (legacy) | No |
+| `users` | Per-user preferences (preferredLanguage) | No |
+| `questionnaires` | Questionnaire definitions (slug, title, questions) | No |
+| `form_responses` | Questionnaire form submissions from participants | No |
+| `recommendations` | Recommendation records from the Python recommender | No |
+| `recommendation_feedback` | Free-text feedback on individual recommendations | No |
+| `habits` | Non-habit submissions saved for manual review | No |
 
 ---
 
@@ -725,6 +789,102 @@ Tracks whether participants accepted or dismissed recommendations from the Pytho
   "timestamp": { "$date": "2025-09-14T08:30:00Z" }
 }
 ```
+
+---
+
+#### `users`
+
+Per-user preferences. Created/upserted by `PUT /api/v1/users/me`. If no record exists, `GET /api/v1/users/me` returns a default `{userId, preferredLanguage: "en"}` without persisting it.
+
+| Field | BSON Type | Required | Description |
+|---|---|---|---|
+| `_id` | ObjectId | Auto | MongoDB document ID |
+| `userId` | String | Yes | Keycloak `sub` (unique) |
+| `preferredLanguage` | String | Yes | `"en"` or `"de"` |
+
+**Example document:**
+```json
+{
+  "_id": { "$oid": "65a1b2c3d4e5f6a7b8c9d0f1" },
+  "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "preferredLanguage": "de"
+}
+```
+
+---
+
+#### `questionnaires`
+
+Questionnaire definitions. Loaded from seed data or admin tooling. Only documents with `active: true` are returned to clients.
+
+| Field | BSON Type | Required | Description |
+|---|---|---|---|
+| `_id` | ObjectId | Auto | MongoDB document ID |
+| `slug` | String | Yes | URL-safe identifier (e.g. `sliq`, `rand-36`) |
+| `title` | String | Yes | Human-readable questionnaire title |
+| `description` | String | No | Short description shown to participants |
+| `version` | String | Yes | Schema version string (e.g. `"1.0"`) |
+| `questions` | Array | Yes | Array of question objects (type, id, text, options) |
+| `active` | Boolean | Yes | `true` means visible to participants |
+
+---
+
+#### `form_responses`
+
+Questionnaire responses submitted by participants via `POST /api/v1/questionnaire-responses`.
+
+| Field | BSON Type | Required | Description |
+|---|---|---|---|
+| `_id` | ObjectId | Auto | MongoDB document ID |
+| `userId` | String | Yes | Keycloak `sub` of the submitting participant |
+| `questionnaireSlug` | String | Yes | Slug of the completed questionnaire |
+| `answers` | Object | Yes | Map of `questionId → answer value` |
+| `submitted_at` | Date | Yes | Timestamp of submission |
+
+Compound index on `(userId, questionnaireSlug, submitted_at DESC)` is created at router startup.
+
+**Example document:**
+```json
+{
+  "_id": { "$oid": "65a1b2c3d4e5f6a7b8c9d0f2" },
+  "userId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "questionnaireSlug": "sliq",
+  "answers": {
+    "sliq_diet": "2",
+    "sliq_activity": "3"
+  },
+  "submitted_at": { "$date": "2026-03-20T10:00:00Z" }
+}
+```
+
+---
+
+#### `recommendations`
+
+Recommendation records generated by the Python recommender service. Written by the API-service; read by `GET /api/v1/recommendations/me`.
+
+| Field | BSON Type | Required | Description |
+|---|---|---|---|
+| `_id` | ObjectId | Auto | MongoDB document ID |
+| `recommendation_id` | String | Yes | Stable identifier for the recommendation |
+| `userId` | String | Yes | Keycloak `sub` of the participant |
+| `goal` | String | Yes | The habit goal text used to generate recommendations |
+| `generated_at` | Date | Yes | Timestamp of generation |
+
+---
+
+#### `recommendation_feedback`
+
+Free-text feedback comments on individual recommendations, written by `POST /api/v1/recommendations/:id/feedback`.
+
+| Field | BSON Type | Required | Description |
+|---|---|---|---|
+| `_id` | ObjectId | Auto | MongoDB document ID |
+| `recommendation_id` | String | Yes | References `recommendations.recommendation_id` |
+| `userId` | String | Yes | Keycloak `sub` of the submitting participant |
+| `goal` | String | Yes | Denormalised goal (copied from the recommendation) |
+| `comment` | String | Yes | Free-text feedback comment |
+| `created_at` | Date | Yes | Timestamp of submission |
 
 ---
 
