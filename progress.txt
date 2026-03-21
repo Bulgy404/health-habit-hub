@@ -1,3 +1,14 @@
+## 2026-03-21 - US-136
+- What was implemented: Cross-component coherence review synthesising all five individual component reports (US-131–US-135) against the live codebase. Report written to `tasks/review-system-coherence.md` covering 8 sections: API contract alignment, auth flow end-to-end, language/locale consistency, error message consistency, test strategy coherence, naming consistency, what is well-integrated, and prioritised cross-cutting improvements (6 Critical, 10 Major, 10 Minor).
+- Files changed: tasks/review-system-coherence.md (new), prd.json (US-136 passes=true)
+- **Learnings for future iterations:**
+  - The most severe cross-cutting issue is the dual Neo4j schema — `Habit` (new donate pipeline) and `hhh__Habit` (old n10s pipeline) co-exist in the same DB, causing stats and public lists to always show 0 for newly donated habits. US-137/138/139 must resolve this as a prerequisite for any meaningful stats.
+  - Silent error swallowing is systemic at BOTH layers: backend catch blocks log nothing, and Flutter catch blocks discard everything. Together they create a complete production debugging blackout — an error in the Neo4j donate pipeline surfaces as nothing to the user.
+  - The `donate_screen.dart:26` hard-coded production URL means any testing on staging/dev silently hits production data — this must be fixed before any test deployment.
+  - The CI has been entirely broken for the entire branch (`@v6` action versions do not exist) — all quality checks are unverified. Fix action versions before attempting any further CI-dependent work.
+  - What IS coherent and safe to rely on: (1) `realm_access.roles` JWT claim path is consistent across Flutter, backend, and admin panel; (2) `preferredLanguage` field name is consistent end-to-end; (3) `displayText` API convention is clean and consistently consumed by Flutter; (4) ISO 639-1 `'en'`/`'de'` codes are consistent everywhere in the live code path.
+---
+
 ## 2026-03-21 - US-134
 - What was implemented: Senior DevOps engineer review of both GitHub Actions workflows — `.github/workflows/ci.yml` (10 jobs) and `.github/workflows/deploy.yml` (2 jobs). Report written to `tasks/review-cicd.md` covering 8 sections with 4 Critical, 8 Major, and 7 Minor findings. Every finding tied to specific job/step with concrete fix instructions.
 - Files changed: tasks/review-cicd.md (new), prd.json (US-134 passes=true)
