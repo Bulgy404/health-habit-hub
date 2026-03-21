@@ -1,3 +1,17 @@
+## 2026-03-21 - US-165
+- What was implemented: Reviewed `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `Makefile`, and all 11 files under `scripts/`. Report written to `tasks/review-infra-clean.md` covering: 3 Critical, 8 Major, 9 Minor findings. Positive findings section documents what is well-written. Prioritised fix order table included.
+- Files changed: tasks/review-infra-clean.md (new), prd.json (US-165 passes=true)
+- **Learnings for future iterations:**
+  - `deploy.yml:47` uses `actions/checkout@v6` which doesn't exist — will break the release job on any `v*` tag push; should be `@v4`
+  - 3 deploy scripts (`deploy-backend.sh`, `deploy-recommender.sh`, `deploy-keycloak.sh`) use deprecated `docker-compose` (v1 hyphen CLI) — removed from Docker 27+; correct form is `docker compose` (space, v2 plugin)
+  - `deploy-keycloak.sh:52-53` extracts the Keycloak admin token with brittle `grep | cut` instead of `jq -r '.access_token'` — compare to `restore.sh` which uses jq correctly
+  - `parseCypherStatements()` is copy-pasted verbatim between `run-migration.js` and `seed-local.js` — extract to `scripts/lib/cypher-utils.mjs`
+  - `wait_healthy()` and `run()` dry-run wrapper are copy-pasted across the 4 sub-deploy scripts — extract to `scripts/lib/common.sh`
+  - `deploy-full.sh` polls the backend health URL after deploying Keycloak and Recommender (wrong service being checked)
+  - `generate-spec.js` has a dead 44-line custom `toYaml()` function that is never called — `js-yaml` is imported and used instead
+  - `ontology-test` CI job embeds ~65 lines of Bash + Python directly in YAML — should be extracted to `tests/ontology/setup.py`
+---
+
 ## 2026-03-21 - US-164
 - What was implemented: Reviewed `app/utils/Neo4jDatabase.js`, `app/utils/SparqlDatabase.js`, all service/route files containing inline Cypher (`habitsRouter.js`, `adminParticipantService.js`, `adminStatsService.js`), and all `.cypher` files for clean code violations. Report written to `tasks/review-neo4j-clean.md` covering: 3 Critical, 7 Major, 5 Minor findings. Positive findings section documents what is well-written. Prioritised fix order table included.
 - Files changed: tasks/review-neo4j-clean.md (new), prd.json (US-164 passes=true)
