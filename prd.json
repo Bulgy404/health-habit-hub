@@ -2435,7 +2435,7 @@
         "Lint passes"
       ],
       "priority": 151,
-      "passes": false,
+      "passes": true,
       "notes": "Resolves OF-06. Admin role required to reach this endpoint but injection risk still applies."
     },
     {

@@ -115,7 +115,7 @@ Unresolved Critical and Major findings after this cycle, ordered by severity and
 | ID | Component | Finding | Owning Story |
 |---|---|---|---|
 | OF-05 | Backend | **SPARQL injection** in `SparqlDatabase.js` — attacker-controlled string interpolated directly into SPARQL query. | Post-US-144 |
-| OF-06 | Backend | **Cypher label injection** in admin group-change route — dynamic label interpolation in admin router. Requires `admin` role but still a code smell. | Post-US-144 |
+| OF-06 | Backend | **Cypher label injection** in admin group-change route — dynamic label interpolation in admin router. Requires `admin` role but still a code smell. | ✅ Resolved US-151 |
 | OF-07 | Neo4j | **No index on `Context(text, dimension)`**: N-duplicate context merges on every donation without index; performance degrades as data grows. | Post-US-144 |
 | OF-08 | CI/CD | **Python API-service has no CI job**: 2 test files (test_classify_context.py, test_refine_translation.py, test_map_bcio.py) executed nowhere in CI. | Post-US-144 |
 | OF-09 | CI/CD | **Admin Next.js panel has no CI job**: build and type-check not validated; no Dockerfile validation for admin image. | Post-US-144 |
