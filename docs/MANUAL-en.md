@@ -170,6 +170,21 @@ When donating several habits in succession or within a browser session, the addi
 
 In progress (Here it is only indicated that the donor is presented with a visualization that relates their own data donation to the totality of all data donations).
 
+## Settings
+
+### Language
+
+The Health-Habit-Hub app supports **English** and **German**. You can change the display language at any time from the **Settings** screen, which is accessible via the bottom navigation bar (the gear icon).
+
+**To change the language:**
+
+1. Tap the **Settings** icon in the bottom navigation bar.
+2. Tap the **Language** dropdown.
+3. Select **English** or **Deutsch**.
+4. The app immediately switches to the selected language. A confirmation message appears at the bottom of the screen.
+
+The selected language is saved to your account so it is remembered the next time you open the app. It also controls the language of the habit-donation survey shown in the Donate screen.
+
 ## Data protection and information security
 
 In progress
