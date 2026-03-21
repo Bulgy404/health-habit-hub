@@ -1,3 +1,14 @@
+## 2026-03-21 - US-133
+- What was implemented: Senior data engineer review of the Neo4j/ontology layer — `neo4j/init/constraints.cypher`, `app/utils/Neo4jDatabase.js`, `app/utils/config.js`, `Ontology.ttl`, `fuseki/init/schema.ttl`, `fuseki/init/data.ttl`, `scripts/migrate-group-labels.cypher`, and all embedded Cypher in `habitsRouter.js` + `adminRouter.js`. Report written to `tasks/review-neo4j.md` covering 7 sections with 5 Critical, 8 Major, and 6 Minor findings. Every finding tied to specific file and line range.
+- Files changed: tasks/review-neo4j.md (new), prd.json (US-133 passes=true)
+- **Learnings for future iterations:**
+  - The codebase has TWO incompatible Neo4j schemas: old n10s/RDF-mapped nodes (`hhh__Habit`, `hhh__Donor`, `hhh__hasBehavior`) from `Neo4jDatabase.js`, and new raw-Cypher nodes (`Habit`, `Context`, `BCIOConcept`, `HAS_CONTEXT`, `MAPS_TO`) from `habitsRouter.js`. Stats and public-list endpoints query old schema; donate creates new schema — they are disjoint datasets in the same DB.
+  - `neo4j/init/constraints.cypher` only covers old `hhh__` schema. New `Habit` label has no uniqueness constraint on `uuid` and no index on `Context(text, dimension)` — both needed urgently.
+  - `scripts/migrate-group-labels.cypher:48` uses `exists()` which was deprecated Neo4j 4.2 and removed in Neo4j 5.0 — migration is broken on current Neo4j.
+  - `Ontology.ttl:43` declares `hasTranslation` with `rdfs:domain hhh:Behavior`, but `Neo4jDatabase.js:406` uses it on `Habit` nodes — OWL domain violation.
+  - `hhh:language` range declared `rdf:langString` but stored as plain string — invalid Turtle syntax in data.ttl.
+---
+
 ## 2026-03-21 - US-132
 - What was implemented: Senior Node.js engineer review of the entire `app/` directory — all routes, controllers, middleware, utils, tests (30 test files). Report written to `tasks/review-backend.md` covering 9 sections with 24 prioritised findings. Every finding tied to specific file and line range.
 - Files changed: tasks/review-backend.md (new), prd.json (US-132 passes=true)
