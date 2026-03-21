@@ -20,7 +20,8 @@ export function createKbRouter({ apiServiceUrl } = {}) {
       const upstream = await fetch(`${serviceUrl}/api/v1/kb`);
       const data = await upstream.json();
       res.status(upstream.status).json(data);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(502).json({ error: 'Knowledge base service unavailable' });
     }
   });
@@ -33,7 +34,8 @@ export function createKbRouter({ apiServiceUrl } = {}) {
       });
       const data = await upstream.json();
       res.status(upstream.status).json(data);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(502).json({ error: 'Knowledge base service unavailable' });
     }
   });
@@ -53,7 +55,8 @@ export function createKbRouter({ apiServiceUrl } = {}) {
       });
       const data = await upstream.json();
       res.status(upstream.status).json(data);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(502).json({ error: 'Knowledge base service unavailable' });
     }
   });
@@ -67,7 +70,8 @@ export function createKbRouter({ apiServiceUrl } = {}) {
       );
       const data = await upstream.json();
       res.status(upstream.status).json(data);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(502).json({ error: 'Knowledge base service unavailable' });
     }
   });

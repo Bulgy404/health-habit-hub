@@ -124,12 +124,14 @@ export function createV1Router({
   // Public: anonymous self-registration (rate limited separately, no JWT required)
   router.use('/onboard', createOnboardRouter({ keycloak }));
 
-  // Apply rate limiting and input sanitization to all authenticated routes
-  router.use(limiter);
+  // Sanitize request bodies before auth (general protection)
   router.use(sanitizeBody);
 
   // All routes below require a valid JWT
   router.use(authenticate);
+
+  // Apply rate limiting after auth so req.user.sub is available for per-user keying
+  router.use(limiter);
 
   // Admin routes: require admin or researcher role
   router.use(

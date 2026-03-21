@@ -18,7 +18,8 @@ export function createQuestionnaireResponsesRouter({ db } = {}) {
           { userId: 1, questionnaireSlug: 1, submitted_at: -1 },
           { background: true }
         );
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       // Index creation errors are non-fatal (e.g. mock DBs may not support it)
     }
   }
@@ -91,7 +92,8 @@ export function createQuestionnaireResponsesRouter({ db } = {}) {
       });
 
       res.status(201).json({ id: result.insertedId });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -125,8 +127,10 @@ export function createQuestionnaireResponsesRouter({ db } = {}) {
         .sort({ submitted_at: -1 })
         .toArray();
 
-      res.json(responses);
-    } catch {
+      // Strip internal MongoDB _id from response
+      res.json(responses.map(({ _id, ...rest }) => rest));
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -176,7 +180,8 @@ export function createQuestionnaireResponsesRouter({ db } = {}) {
       }
 
       res.json(responses[0]);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

@@ -31,7 +31,8 @@ export function createRecommendationsRouter({
       client.on('error', () => {}); // suppress unhandled errors
       await client.connect();
       return client;
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       return null;
     }
   }
@@ -78,12 +79,14 @@ export function createRecommendationsRouter({
           const key = cacheKey(userId, rec.goal);
           await redis.del(key);
         }
-      } catch {
+      } catch (err) {
+        console.error('[route] Error:', err);
         // Redis failure is non-fatal
       }
 
       return res.status(201).json({ ok: true });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       return res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -135,7 +138,8 @@ export function createRecommendationsRouter({
       }));
 
       return res.json(result);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       return res.status(500).json({ error: 'Internal server error' });
     }
   });

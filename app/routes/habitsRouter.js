@@ -16,23 +16,27 @@ export function createHabitsRouter({
     return connect();
   }
 
-  // Returns Array<Object> — either from injected neo4jRun or real Neo4j driver
+  // Long-lived Neo4j driver — created once per router instance, reusing the connection pool
+  const _neo4jDriver = neo4jRun
+    ? null
+    : neo4j.driver(
+        process.env.NEO4J_URI || 'bolt://neo4j:7687',
+        neo4j.auth.basic(
+          process.env.NEO4J_USER || 'neo4j',
+          process.env.NEO4J_PASSWORD || 'password'
+        )
+      );
+
+  // Returns Array<Object> — either from injected neo4jRun or reusing the shared driver
   async function queryNeo4j(cypher, params = {}) {
     if (neo4jRun) return neo4jRun(cypher, params);
-    const driver = neo4j.driver(
-      process.env.NEO4J_URI || 'bolt://neo4j:7687',
-      neo4j.auth.basic(
-        process.env.NEO4J_USER || 'neo4j',
-        process.env.NEO4J_PASSWORD || 'password'
-      )
-    );
-    const session = driver.session();
+    const session = _neo4jDriver.session();
     try {
       const result = await session.run(cypher, params);
       return result.records.map((r) => r.toObject());
     } finally {
       await session.close();
-      await driver.close();
+      // Driver is NOT closed here — it lives for the lifetime of the process
     }
   }
 
@@ -43,27 +47,42 @@ export function createHabitsRouter({
     return Number(val);
   }
 
-  // Returns German translation refined for tone, or null for non-English habits.
+  // Unified translation helper — translates sentence from `sourceLang` to `targetLang` via
+  // LibreTranslate (step 1) then refines tone with LLM (step 2).
+  // Returns the refined translation string, or null if LibreTranslate is unavailable.
   // Falls back to raw LibreTranslate output if the LLM refinement step fails.
-  async function translateToGerman(sentence, language, apiBase, translateUrl) {
-    if (!language || !language.startsWith('en')) return null;
-
-    // Step 1: LibreTranslate — get raw German draft
+  async function translate(
+    sentence,
+    sourceLang,
+    targetLang,
+    llmEndpoint,
+    apiBase,
+    translateUrl
+  ) {
+    // Step 1: LibreTranslate with 10-second timeout (matching LLM timeout)
     let draft;
     try {
-      const ltRes = await fetch(translateUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          q: sentence,
-          source: 'en',
-          target: 'de',
-          format: 'text',
-        }),
-      });
+      const ltController = new AbortController();
+      const ltTimeout = setTimeout(() => ltController.abort(), 10000);
+      let ltRes;
+      try {
+        ltRes = await fetch(translateUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            q: sentence,
+            source: sourceLang,
+            target: targetLang,
+            format: 'text',
+          }),
+          signal: ltController.signal,
+        });
+      } finally {
+        clearTimeout(ltTimeout);
+      }
       if (!ltRes.ok) {
         console.warn(
-          `[translate] LibreTranslate returned ${ltRes.status} — skipping translationDE`
+          `[translate] LibreTranslate returned ${ltRes.status} — skipping translation${targetLang.toUpperCase()}`
         );
         return null;
       }
@@ -71,23 +90,24 @@ export function createHabitsRouter({
       draft = ltData.translatedText;
     } catch (err) {
       console.warn(
-        `[translate] LibreTranslate error: ${err.message} — skipping translationDE`
+        `[translate] LibreTranslate error: ${err.message} — skipping translation${targetLang.toUpperCase()}`
       );
       return null;
     }
 
-    // Step 2: LLM tone refinement into German
+    // Step 2: LLM tone refinement with 10-second timeout
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
       let refineRes;
       try {
-        refineRes = await fetch(`${apiBase}/api/v1/llm/refine-translation-de`, {
+        refineRes = await fetch(`${apiBase}${llmEndpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             original: sentence,
             raw_translation: draft,
+            language: sourceLang,
           }),
           signal: controller.signal,
         });
@@ -97,77 +117,7 @@ export function createHabitsRouter({
 
       if (!refineRes.ok) {
         console.warn(
-          `[translate] LLM refine-translation-de returned ${refineRes.status} — using raw LibreTranslate output`
-        );
-        return draft;
-      }
-
-      const refineData = await refineRes.json();
-      return refineData.refined_translation || draft;
-    } catch (err) {
-      console.warn(
-        `[translate] LLM German refinement error/timeout: ${err.message} — using raw LibreTranslate output`
-      );
-      return draft;
-    }
-  }
-
-  // Returns English translation refined for tone, or null for English habits.
-  // Falls back to raw LibreTranslate output if the LLM refinement step fails.
-  async function translateAndRefine(sentence, language, apiBase, translateUrl) {
-    if (!language || language.startsWith('en')) return null;
-
-    // Step 1: LibreTranslate — get raw English draft
-    let draft;
-    try {
-      const ltRes = await fetch(translateUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          q: sentence,
-          source: language,
-          target: 'en',
-          format: 'text',
-        }),
-      });
-      if (!ltRes.ok) {
-        console.warn(
-          `[translate] LibreTranslate returned ${ltRes.status} — skipping translationEN`
-        );
-        return null;
-      }
-      const ltData = await ltRes.json();
-      draft = ltData.translatedText;
-    } catch (err) {
-      console.warn(
-        `[translate] LibreTranslate error: ${err.message} — skipping translationEN`
-      );
-      return null;
-    }
-
-    // Step 2: LLM tone refinement
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
-      let refineRes;
-      try {
-        refineRes = await fetch(`${apiBase}/api/v1/llm/refine-translation`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            original: sentence,
-            raw_translation: draft,
-            language,
-          }),
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timeout);
-      }
-
-      if (!refineRes.ok) {
-        console.warn(
-          `[translate] LLM refine-translation returned ${refineRes.status} — using raw LibreTranslate output`
+          `[translate] LLM ${llmEndpoint} returned ${refineRes.status} — using raw LibreTranslate output`
         );
         return draft;
       }
@@ -180,6 +130,31 @@ export function createHabitsRouter({
       );
       return draft;
     }
+  }
+
+  // Convenience wrappers kept for clarity
+  async function translateToGerman(sentence, language, apiBase, translateUrl) {
+    if (!language || !language.startsWith('en')) return null;
+    return translate(
+      sentence,
+      'en',
+      'de',
+      '/api/v1/llm/refine-translation-de',
+      apiBase,
+      translateUrl
+    );
+  }
+
+  async function translateAndRefine(sentence, language, apiBase, translateUrl) {
+    if (!language || language.startsWith('en')) return null;
+    return translate(
+      sentence,
+      language,
+      'en',
+      '/api/v1/llm/refine-translation',
+      apiBase,
+      translateUrl
+    );
   }
 
   // GET /api/v1/habits
@@ -214,7 +189,8 @@ export function createHabitsRouter({
       });
 
       res.json(habits);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -293,7 +269,8 @@ export function createHabitsRouter({
       }));
 
       res.json(habits);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -394,7 +371,8 @@ export function createHabitsRouter({
       }
 
       res.json({ habitId, annotationCounts: counts });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -480,7 +458,8 @@ export function createHabitsRouter({
         .sort((a, b) => a.date.localeCompare(b.date));
 
       res.json({ total, byCategory, byDay });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -493,6 +472,33 @@ export function createHabitsRouter({
       return res
         .status(400)
         .json({ error: 'sentence and language are required' });
+    }
+
+    // Input length and language validation
+    const SUPPORTED_LANGUAGES = [
+      'en',
+      'de',
+      'fr',
+      'es',
+      'it',
+      'pt',
+      'nl',
+      'pl',
+      'ru',
+      'zh',
+    ];
+    if (typeof sentence !== 'string' || sentence.length > 1000) {
+      return res.status(400).json({
+        error: 'sentence must be a string of at most 1000 characters',
+      });
+    }
+    if (
+      typeof language !== 'string' ||
+      !SUPPORTED_LANGUAGES.includes(language.slice(0, 2).toLowerCase())
+    ) {
+      return res.status(400).json({
+        error: `language must be a supported ISO 639-1 code (${SUPPORTED_LANGUAGES.join(', ')})`,
+      });
     }
 
     const userID = req.user?.sub;
@@ -614,34 +620,34 @@ export function createHabitsRouter({
         }
       );
 
-      // 2. MERGE Context nodes and HAS_CONTEXT relationships
+      // 2. MERGE Context nodes and HAS_CONTEXT relationships (batched with UNWIND)
+      const contextRows = [];
       for (const [dimension, phrases] of Object.entries(contextPhrases)) {
         for (const phrase of phrases) {
-          await queryNeo4j(
-            `MERGE (c:Context {text: $text, dimension: $dimension})
-             WITH c
-             MATCH (h:Habit {uuid: $habitUuid})
-             MERGE (h)-[:HAS_CONTEXT {dimension: $dimension}]->(c)`,
-            { text: phrase, dimension, habitUuid: uuid }
-          );
+          contextRows.push({ text: phrase, dimension });
         }
       }
-
-      // 3. MERGE BCIOConcept nodes and MAPS_TO relationships
-      for (const mapping of mappings) {
+      if (contextRows.length > 0) {
         await queryNeo4j(
-          `MERGE (b:BCIOConcept {bcio_concept_id: $bcio_concept_id})
-           ON CREATE SET b.bcio_concept_label = $bcio_concept_label
-           WITH b
-           MATCH (c:Context {text: $phrase, dimension: $dimension})
-           MERGE (c)-[:MAPS_TO {confidence: $confidence, phrase: $phrase, dimension: $dimension}]->(b)`,
-          {
-            bcio_concept_id: mapping.bcio_concept_id,
-            bcio_concept_label: mapping.bcio_concept_label,
-            phrase: mapping.phrase,
-            dimension: mapping.dimension,
-            confidence: mapping.confidence,
-          }
+          `UNWIND $rows AS row
+           MERGE (c:Context {text: row.text, dimension: row.dimension})
+           WITH c, row
+           MATCH (h:Habit {uuid: $habitUuid})
+           MERGE (h)-[:HAS_CONTEXT {dimension: row.dimension}]->(c)`,
+          { rows: contextRows, habitUuid: uuid }
+        );
+      }
+
+      // 3. MERGE BCIOConcept nodes and MAPS_TO relationships (batched with UNWIND)
+      if (mappings.length > 0) {
+        await queryNeo4j(
+          `UNWIND $mappings AS m
+           MERGE (b:BCIOConcept {bcio_concept_id: m.bcio_concept_id})
+           ON CREATE SET b.bcio_concept_label = m.bcio_concept_label
+           WITH b, m
+           MATCH (c:Context {text: m.phrase, dimension: m.dimension})
+           MERGE (c)-[:MAPS_TO {confidence: m.confidence, phrase: m.phrase, dimension: m.dimension}]->(b)`,
+          { mappings }
         );
       }
 
@@ -650,7 +656,8 @@ export function createHabitsRouter({
         uuid,
         message: 'Thank you! Your habit has been successfully donated.',
       });
-    } catch {
+    } catch (err) {
+      console.error('[donate] Unexpected error:', err);
       return res.status(500).json({ error: 'Internal server error' });
     }
   });

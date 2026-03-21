@@ -99,23 +99,34 @@ function createStatefulNeo4jMock() {
     }
 
     if (cypher.includes('MERGE (c:Context')) {
-      const key = `${params.text}:${params.dimension}`;
-      if (!contextNodes.has(key)) {
-        contextNodes.set(key, {
-          text: params.text,
-          dimension: params.dimension,
-        });
+      // UNWIND batch: params.rows is an array of {text, dimension}
+      const rows = params.rows || [
+        { text: params.text, dimension: params.dimension },
+      ];
+      for (const row of rows) {
+        const key = `${row.text}:${row.dimension}`;
+        if (!contextNodes.has(key)) {
+          contextNodes.set(key, { text: row.text, dimension: row.dimension });
+        }
       }
       return [];
     }
 
     if (cypher.includes('MERGE (b:BCIOConcept')) {
-      const id = params.bcio_concept_id;
-      if (!bcioNodes.has(id)) {
-        bcioNodes.set(id, {
-          bcio_concept_id: id,
+      // UNWIND batch: params.mappings is an array of {bcio_concept_id, bcio_concept_label, ...}
+      const mappings = params.mappings || [
+        {
+          bcio_concept_id: params.bcio_concept_id,
           bcio_concept_label: params.bcio_concept_label,
-        });
+        },
+      ];
+      for (const m of mappings) {
+        if (!bcioNodes.has(m.bcio_concept_id)) {
+          bcioNodes.set(m.bcio_concept_id, {
+            bcio_concept_id: m.bcio_concept_id,
+            bcio_concept_label: m.bcio_concept_label,
+          });
+        }
       }
       return [];
     }
@@ -393,8 +404,13 @@ test('Two users donating similar habits share a single BCIOConcept node', async 
   );
 
   // Verify both merge calls used the same concept id
+  // UNWIND batches: check params.mappings array (or fallback to params.bcio_concept_id for non-batched)
   const mergedIds = bcioCyphers
-    .map((e) => e.params.bcio_concept_id)
+    .flatMap((e) => {
+      if (e.params.mappings)
+        return e.params.mappings.map((m) => m.bcio_concept_id);
+      return [e.params.bcio_concept_id];
+    })
     .filter((id) => id === 'BCIO:0000042');
   assert.ok(
     mergedIds.length >= 2,

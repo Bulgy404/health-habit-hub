@@ -93,11 +93,54 @@ function createMockDb() {
             }
             results.push({ ...doc });
           }
-          return {
-            async toArray() {
-              return results;
-            },
-          };
+          // Chainable cursor supporting skip/limit/sort
+          function makeCursor(rows) {
+            let _skip = 0;
+            let _limit = null;
+            const cursor = {
+              skip(n) {
+                _skip = n;
+                return cursor;
+              },
+              limit(n) {
+                _limit = n;
+                return cursor;
+              },
+              sort() {
+                return cursor;
+              },
+              async toArray() {
+                const sliced =
+                  _limit !== null
+                    ? rows.slice(_skip, _skip + _limit)
+                    : rows.slice(_skip);
+                return sliced;
+              },
+            };
+            return cursor;
+          }
+          return makeCursor(results);
+        },
+        async countDocuments(query) {
+          const allResults = [];
+          for (const [, doc] of store) {
+            if (query && query.group !== undefined && doc.group !== query.group)
+              continue;
+            if (
+              query &&
+              query.category !== undefined &&
+              doc.category !== query.category
+            )
+              continue;
+            if (query && query.donatedAt) {
+              if (query.donatedAt.$gte && doc.donatedAt < query.donatedAt.$gte)
+                continue;
+              if (query.donatedAt.$lte && doc.donatedAt > query.donatedAt.$lte)
+                continue;
+            }
+            allResults.push(doc);
+          }
+          return allResults.length;
         },
         async findOne(query) {
           for (const [, doc] of store) {

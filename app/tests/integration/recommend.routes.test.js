@@ -157,8 +157,9 @@ test('GET /api/v1/recommend/:userId returns 403 for no-role token', async () => 
 // ── Proxy fixtures ────────────────────────────────────────────────────────────
 
 test('GET /api/v1/recommend/:userId proxies to recommender and returns fixture', async () => {
+  // IDOR: participant token has sub='user-rec-test', so userId in URL must match
   const token = makeToken(['participant']);
-  const res = await get('/api/v1/recommend/user123', token);
+  const res = await get('/api/v1/recommend/user-rec-test', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.deepStrictEqual(body, FIXTURE_RECOMMEND);
@@ -177,8 +178,9 @@ test('POST /api/v1/recommend/classify proxies to recommender and returns fixture
 });
 
 test('GET /api/v1/recommend/:userId/history proxies to recommender and returns fixture', async () => {
+  // IDOR: participant token has sub='user-rec-test', so userId in URL must match
   const token = makeToken(['participant']);
-  const res = await get('/api/v1/recommend/user123/history', token);
+  const res = await get('/api/v1/recommend/user-rec-test/history', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.deepStrictEqual(body, FIXTURE_HISTORY);
@@ -189,4 +191,17 @@ test('Proxy preserves Authorization header to downstream recommender', async () 
   const token = makeToken(['admin']);
   const res = await get('/api/v1/recommend/admin-user', token);
   assert.strictEqual(res.status, 200);
+});
+
+test('GET /api/v1/recommend/:userId returns 403 when participant accesses another user', async () => {
+  // IDOR: participant sub='user-rec-test' cannot access 'other-user'
+  const token = makeToken(['participant']);
+  const res = await get('/api/v1/recommend/other-user', token);
+  assert.strictEqual(res.status, 403);
+});
+
+test('GET /api/v1/recommend/:userId/history returns 403 when participant accesses another user', async () => {
+  const token = makeToken(['participant']);
+  const res = await get('/api/v1/recommend/other-user/history', token);
+  assert.strictEqual(res.status, 403);
 });
