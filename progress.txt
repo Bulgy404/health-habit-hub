@@ -1527,3 +1527,13 @@
   - Unit test for injection must use its own server instance with `neo4jRun` injected — the shared `before()` server uses no `neo4jRun`, so a second server is the cleanest approach
   - Prettier formats the test file on first `npm test` run — always run `npm test` (not just `node --test`) to catch format violations before committing
 ---
+
+## 2026-03-21 - US-152
+- What was implemented: Added `python-api-test` job (job 10) to `.github/workflows/ci.yml`. Job uses ubuntu-latest, `actions/setup-python@v5` with Python 3.11 and pip cache (`cache-dependency-path: API-service/requirements.txt`), installs `pip install -r requirements.txt`, and runs `pytest tests/ -v` with `OPENAI_API_KEY=placeholder` env var (prevents warning noise — no real key needed since all tests mock the LLM client). Job added to `ci-passed` gate's `needs` list. Updated `tasks/review-cicd.md` marking CV1 (referenced as OF-08 in PRD) as `✅ Resolved (US-152)` in both the finding body and the summary table.
+- Files changed: .github/workflows/ci.yml (new python-api-test job, updated ci-passed needs), tasks/review-cicd.md (CV1 marked resolved), prd.json (US-152 passes=true)
+- **Learnings for future iterations:**
+  - All Python API-service tests use `unittest.mock` patches — no Redis service container needed; `_get_redis` is patched to return `None` or a mock in every test
+  - `OPENAI_API_KEY` is read at module import time in `llm_client.py` — setting it to any non-empty placeholder suppresses the warning log without requiring a real key
+  - `actions/setup-python@v5` `cache: pip` requires `cache-dependency-path` pointing to the requirements file, otherwise it caches nothing useful
+  - `pytest tests/ -v` must be run from `API-service/` as working-directory so that `from main import app` resolves correctly (main.py is at API-service root, not project root)
+---
