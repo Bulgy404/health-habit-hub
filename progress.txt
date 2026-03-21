@@ -1351,3 +1351,16 @@
 - Files changed: mobile/lib/l10n/app_en.arb, mobile/lib/l10n/app_de.arb, mobile/lib/screens/admin/admin_devices_screen.dart, mobile/lib/screens/admin/admin_habits_screen.dart, mobile/lib/screens/admin/admin_participant_detail_screen.dart, mobile/lib/screens/admin/admin_participants_screen.dart, mobile/lib/screens/admin/admin_surveys_screen.dart, mobile/lib/l10n/app_localizations_en.dart, mobile/lib/l10n/app_localizations_de.dart, prd.json
 - **Learnings for future iterations:**
   - Always run flutter gen-l10n after modifying ARB files to regenerate the Dart localization classes before running flutter analyze
+
+## 2026-03-21 - US-135
+- What was implemented: Senior infrastructure engineer review of `docker-compose.yml`, `docker-compose.prod.yml`, `.env.example`, `stack.env`, all 5 Dockerfiles (app, admin, API-service, fuseki, backup-service), `backup-service/backup.sh`, and `backup-service/restore.sh`. Report written to `tasks/review-infrastructure.md` covering 7 sections with 5 Critical, 9 Major, and 7 Minor findings. Every finding tied to specific file and line range.
+- Files changed: tasks/review-infrastructure.md (new), prd.json (US-135 passes=true)
+- **Learnings for future iterations:**
+  - Critical infrastructure findings: (1) Keycloak uses `KC_DB=dev-file` in `docker-compose.prod.yml:246` — not production-ready; (2) `.env` with real credentials is in Git history despite US-071; all those secrets need rotation; (3) Traefik `--api.insecure=true` + `--api.debug=true` in dev config expose dashboard without auth; (4) docker-compose.yml defaults include `MONGO_PASSWORD=admin`, `KEYCLOAK_ADMIN_PASSWORD=admin`, `NEXTAUTH_SECRET=change-me-in-production`; (5) `stack.env` (production env template) is committed to Git
+  - `backup-service/restore.sh:48` looks for `$RESTORE_DIR/mongodb/` but `backup.sh:79` creates `$RESTORE_DIR/mongo/` — MongoDB restore is silently skipped on every run
+  - Fuseki, the Python recommender, and the Next.js admin all have NO healthcheck stanzas — `depends_on: condition: service_healthy` cannot gate on them
+  - Neo4j procedure allowlist is a wildcard `n10s.*` — `n10s.rdf.import.fetch` can load external URLs from any authenticated Neo4j user
+  - LibreTranslate `LT_REQ_LIMIT=0` in production means unlimited unauthenticated requests
+  - `mongo` image in dev compose is unpinned (`:latest`); prod correctly pins to `mongo:7.0`
+  - Positives: all images run as non-root users; backup covers all 4 databases with alerting; dev/prod separation via override file is clean; Traefik TLS + ACME correctly configured in prod
+---
