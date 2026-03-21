@@ -2420,7 +2420,7 @@
         "Lint passes"
       ],
       "priority": 150,
-      "passes": false,
+      "passes": true,
       "notes": "Resolves OF-05. If Fuseki SPARQL endpoint does not support bind parameters in all query forms, use the whitelist approach as safe fallback."
     },
     {

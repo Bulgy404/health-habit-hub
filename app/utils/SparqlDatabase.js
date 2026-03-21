@@ -193,6 +193,17 @@ class DbClient {
     });
   }
 
+  // Escape a string for safe embedding inside a SPARQL string literal.
+  // Prevents injection via user-controlled values (double quotes, backslashes, newlines).
+  _esc(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\n/g, '\\n')
+      .replace(/\r/g, '\\r');
+  }
+
   async insertData(query) {
     try {
       await this.client.query.update(query);
@@ -282,7 +293,7 @@ class DbClient {
   addDonor(query, donor, userId) {
     return (query += `
       hhh:Donor-${donor.id} rdf:type owl:NamedIndividual , hhh:Donor ;
-        hhh:donates hhh:Habit-${donor.donation.id} ; hhh:userId "${userId}"^^xsd:token ;
+        hhh:donates hhh:Habit-${donor.donation.id} ; hhh:userId "${this._esc(userId)}"^^xsd:token ;
         hhh:id "${donor.id}"^^xsd:token .
     `);
   }
@@ -300,9 +311,9 @@ class DbClient {
         ${behaviorStatement}
         hhh:habitStrength "${donation.habitStrength}"^^xsd:integer ;
         hhh:id "${donation.id}"^^xsd:token ;
-        hhh:language "${donation.language}" ;
-        hhh:source "${donation.source}"^^rdfs:Literal ;
-        hhh:value "${donation.value}" .
+        hhh:language "${this._esc(donation.language)}" ;
+        hhh:source "${this._esc(donation.source)}"^^rdfs:Literal ;
+        hhh:value "${this._esc(donation.value)}" .
     `);
   }
 
@@ -342,9 +353,9 @@ class DbClient {
             ${translationStatement}
             hhh:partOf hhh:ExperimentalSetting-${experimentalSetting.id} ;
             hhh:id "${context.id}"^^xsd:token ;
-            hhh:language "${donation.language}" ;
-            hhh:source "${donation.source}"^^rdfs:Literal ;
-            hhh:value "${context.data}" .
+            hhh:language "${this._esc(donation.language)}" ;
+            hhh:source "${this._esc(donation.source)}"^^rdfs:Literal ;
+            hhh:value "${this._esc(context.data)}" .
           `;
       })
       .join('');
@@ -397,9 +408,9 @@ class DbClient {
             ${maybeHasContext}${translationStatement}
             hhh:partOf hhh:ExperimentalSetting-${experimentalSetting.id} ;
             hhh:id "${behavior.id}"^^xsd:token ;
-            hhh:language "${donation.language}" ;
-            hhh:source "${donation.source}"^^rdfs:Literal ;
-            hhh:value "${behavior.data}" .
+            hhh:language "${this._esc(donation.language)}" ;
+            hhh:source "${this._esc(donation.source)}"^^rdfs:Literal ;
+            hhh:value "${this._esc(behavior.data)}" .
           `;
       })
       .join('');

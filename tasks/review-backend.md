@@ -121,6 +121,7 @@ The same pattern exists in `app/utils/healthCheck.js:18-31` for the health check
 - **No Cypher injection risk.** All Cypher queries use parameterized queries (`$params`). The string interpolation at `app/routes/adminRouter.js:429` (`` `SET d:\`${newLabel}\`` ``) is safe because `newLabel` comes from a hardcoded `labelMap` with only 4 entries, not from user input.
 
 - **SPARQL injection risk in `SparqlDatabase.js`.** The `addHabit()` method at `app/utils/SparqlDatabase.js:290-307` interpolates `donation.value` directly into SPARQL: `hhh:value "${donation.value}"`. User-supplied habit text containing double quotes or backslashes could break the query or inject SPARQL. The Neo4j equivalent (`Neo4jDatabase.js:187-194`) has an `_esc()` method that escapes these characters, but `SparqlDatabase.js` has no such protection.
+  **Resolution (US-150):** Added `_esc()` method to `DbClient` (identical to `Neo4jDatabase.js:187-194`) and applied it to all 10 user-controlled string literal interpolation points: `userId` in `addDonor()`; `donation.value`, `donation.language`, `donation.source` in `addHabit()`; `context.data`, `donation.language`, `donation.source` in `_appendContext()`; `behavior.data`, `donation.language`, `donation.source` in `_appendBehavior()`. IRI fragments (`context.value`, `experimentalSetting.group`) are safe — they are derived from static mappings and never reach the SPARQL string with user-controlled values.
 
 ---
 
