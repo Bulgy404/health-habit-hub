@@ -75,6 +75,8 @@ async function verifyToken(token) {
 
 // ── Test server ───────────────────────────────────────────────────────────────
 
+const TEST_INTERNAL_SECRET = 'test-internal-secret';
+
 let httpServer;
 let baseUrl;
 let wsUrl;
@@ -85,7 +87,10 @@ before(async () => {
 
   const srv = createServer(app);
   const { broadcast } = createRecommendationWsServer(srv, { verifyToken });
-  app.use('/api/internal', createInternalRouter({ broadcast }));
+  app.use(
+    '/api/internal',
+    createInternalRouter({ broadcast, internalSecret: TEST_INTERNAL_SECRET })
+  );
 
   httpServer = srv;
   await new Promise((resolve) => srv.listen(0, '127.0.0.1', resolve));
@@ -154,7 +159,10 @@ test('authenticated socket receives broadcast message', async () => {
 
   const res = await fetch(`${baseUrl}/api/internal/recommendations`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Internal-Secret': TEST_INTERNAL_SECRET,
+    },
     body: JSON.stringify({ userId, recommendation: FIXTURE }),
   });
   assert.strictEqual(res.status, 200);
@@ -169,16 +177,31 @@ test('authenticated socket receives broadcast message', async () => {
 test('POST /api/internal/recommendations returns 400 without userId', async () => {
   const res = await fetch(`${baseUrl}/api/internal/recommendations`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Internal-Secret': TEST_INTERNAL_SECRET,
+    },
     body: JSON.stringify({ recommendation: { id: 'x' } }),
   });
   assert.strictEqual(res.status, 400);
 });
 
-test('broadcast to unknown userId is a no-op', async () => {
+test('POST /api/internal/recommendations returns 403 without secret', async () => {
   const res = await fetch(`${baseUrl}/api/internal/recommendations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId: 'user1', recommendation: { id: 'x' } }),
+  });
+  assert.strictEqual(res.status, 403);
+});
+
+test('broadcast to unknown userId is a no-op', async () => {
+  const res = await fetch(`${baseUrl}/api/internal/recommendations`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Internal-Secret': TEST_INTERNAL_SECRET,
+    },
     body: JSON.stringify({ userId: 'nobody', recommendation: { id: 'x' } }),
   });
   assert.strictEqual(res.status, 200);

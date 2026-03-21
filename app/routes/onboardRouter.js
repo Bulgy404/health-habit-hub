@@ -108,7 +108,8 @@ export function createOnboardRouter({ keycloak } = {}) {
         username,
         password,
       });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       return res
         .status(502)
         .json({ error: 'Keycloak is unreachable. Please try again later.' });

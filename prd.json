@@ -2230,7 +2230,7 @@
         "tasks/review-backend.md updated with Resolution notes"
       ],
       "priority": 138,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-136. Can run in parallel with US-137 and US-139. Also executes US-126 if not already done."
     },
     {

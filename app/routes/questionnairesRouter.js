@@ -52,7 +52,8 @@ export function createQuestionnairesRouter({ db } = {}) {
           questionCount: Array.isArray(q.questions) ? q.questions.length : 0,
         }))
       );
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -112,7 +113,8 @@ export function createQuestionnairesRouter({ db } = {}) {
         version: doc.version,
         questions: doc.questions || [],
       });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

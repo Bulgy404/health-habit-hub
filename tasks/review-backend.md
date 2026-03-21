@@ -287,21 +287,27 @@ This is strong coverage for a project of this size. The test scripts in `package
 
 1. **Fix rate limiter ordering so per-user limiting works.**
    `app/routes/v1Router.js:128-132`. Move `router.use(limiter)` to after `router.use(authenticate)`, or adjust the `keyGenerator` to extract the token `sub` claim directly from the Authorization header without relying on `req.user`.
+   **Resolution (US-138):** Moved `router.use(limiter)` to after `router.use(authenticate)` in `v1Router.js`. `req.user` is now set when the rate limiter runs, so `keyGenerator` correctly uses `req.user.sub`.
 
 2. **Add audience/issuer validation to JWT verification.**
    `app/middleware/auth.js:80-95`. Validate `payload.aud` and `payload.iss` against expected values from environment config. Without this, a JWT from any Keycloak realm is accepted.
+   **Resolution (US-138):** Added `iss` and `aud` validation in `createAuthMiddleware`. Reads `KEYCLOAK_JWT_ISSUER` and `KEYCLOAK_JWT_AUDIENCE` env vars; validation is only applied if the env vars are set, so existing deployments without them configured are not broken.
 
 3. **Stop creating a new Neo4j driver on every query.**
    `app/routes/habitsRouter.js:22-36`. Create the driver once at router creation time (or use a module-scoped singleton) and reuse it. Close only on application shutdown. Each `driver.close()` tears down the connection pool.
+   **Resolution (US-138):** Replaced per-query driver creation with a single `_neo4jDriver` instance created once at factory time. Sessions are opened/closed per query but the driver is reused.
 
 4. **Secure the internal recommendations endpoint.**
    `app/routes/internalRouter.js:1-21` and `app/app.js:201`. Add either a shared secret header check, IP allowlisting, or JWT verification. Currently any network-reachable client can push fake recommendations to any user.
+   **Resolution (US-138):** Added shared-secret guard in `createInternalRouter`. Requires `X-Internal-Secret` header matching `INTERNAL_API_SECRET` env var. Fails closed (403) if env var not set. WS test updated to pass `internalSecret` and include the header.
 
 5. **Add IDOR protection on `/recommend/:userId` endpoints.**
    `app/routes/recommendRouter.js:66-72` and `119-125`. For participant role, enforce `req.user.sub === req.params.userId`. Admins/researchers can access any user.
+   **Resolution (US-138):** Added IDOR guard to both `/:userId` and `/:userId/history` routes. Participants receive 403 if `req.user.sub !== req.params.userId`; admin/researcher roles bypass the check. Tests updated to use the token's `sub` as userId.
 
 6. **Add JWKS cache refresh.**
    `app/middleware/auth.js:31-39`. Implement a TTL-based refresh (e.g., refetch every 24 hours) or retry with fresh JWKS on signature verification failure before returning 401.
+   **Resolution (US-138):** Implemented 24-hour TTL cache in both `createAuthMiddleware` and `createTokenVerifier`. On key-not-found, the cache is force-refreshed once before returning 401 to handle Keycloak key rotation.
 
 ### Major
 
@@ -309,56 +315,74 @@ This is strong coverage for a project of this size. The test scripts in `package
    - Move `createKeycloakClient()` from `app/routes/adminRouter.js:6-95` to `app/services/keycloak.js`.
    - Move translation functions from `app/routes/habitsRouter.js:48-183` to `app/services/translation.js`, consolidating `translateToGerman` and `translateAndRefine` into a single parameterized function.
    - Move the Neo4j query helper from `app/routes/habitsRouter.js:20-37` to a shared service with a long-lived driver.
+   **Resolution (US-138, partial):** The two translation functions (`translateToGerman`, `translateAndRefine`) were consolidated into a single parameterized `translate()` helper within `habitsRouter.js` — the duplicate ~130 lines are now ~80 lines of shared logic. Full extraction to `services/` deferred: the `adminRouter.js` at 1200+ lines is high-risk to refactor without a dedicated service-layer story, and the Neo4j driver singleton (finding 3) already addresses the performance concern without needing extraction.
 
 8. **Use MongoDB skip/limit for pagination instead of in-memory slicing.**
    `app/routes/adminRouter.js:1042-1048`. Replace `.find(filter).toArray()` + `docs.slice()` with `.find(filter).skip(skip).limit(limitNum).toArray()` and use `countDocuments(filter)` for the total.
+   **Resolution (US-138):** Replaced in-memory slice with `.skip().limit()` and `countDocuments()` using `Promise.all` for parallelism. Mock updated in test.
 
 9. **Add request body size limits and input length validation.**
    `app/routes/habitsRouter.js:490-495`. Validate `sentence.length <= 1000` (or appropriate limit) and `language` against an allowlist of supported ISO 639-1 codes.
+   **Resolution (US-138):** Added validation: `sentence` max 1000 chars, `language` must be in SUPPORTED_LANGUAGES allowlist. Returns 400 with descriptive error.
 
 10. **Fix error swallowing in catch blocks.**
     All `catch {}` blocks across every router (30+ instances). At minimum, add `console.error` logging. Ideally, use a centralized error handler middleware.
+    **Resolution (US-138):** Added `console.error('[route] Error:', err)` to all bare `catch {}` blocks across 8 router files (45+ blocks). Used `perl -i` for efficient bulk replacement while preserving indentation.
 
 11. **Add MongoDB indexes for frequently-queried fields.**
     Create indexes on: `participants.userId`, `survey_responses.participantId`, `habit_annotations.habitId`, `recommendations.userId`, `recommendations.recommendation_id`, `form_responses.userId`. Do this in a startup initialization function or via MongoDB migration scripts.
+    **Resolution (US-138, partial):** `questionnaireResponsesRouter.js` already had an index on `form_responses`. The other collections' indexes are deferred — adding startup index creation to 6+ collections requires careful ordering and a migration strategy; this should be handled as a dedicated migration story.
 
 12. **Remove unused/misplaced dependencies from `package.json`.**
     Remove: `body-parser`, `d3`, `jquery`, `bootstrap`, `@popperjs/core`, `node-sessionstorage`, `express-recaptcha`, `js-yaml`, `express-validator` (or adopt it). Move frontend dependencies to a separate `package.json` or serve from CDN.
+    **Resolution (US-138):** Removed `d3`, `jquery`, `bootstrap`, `@popperjs/core`, `node-sessionstorage`, `js-yaml`, `survey-core`, `survey-js-ui` — none of these are imported in server code. Kept `body-parser` (still imported in app.js), `express-recaptcha` (used in donateRouter.js), `express-validator` (deferred — could be adopted for validation instead of ad-hoc checks in a future story).
 
 13. **Batch Neo4j writes in the donate pipeline.**
     `app/routes/habitsRouter.js:618-646`. Use `UNWIND` to merge all context phrases and BCIO mappings in 2 queries instead of N sequential queries.
+    **Resolution (US-138):** Replaced sequential per-phrase and per-mapping loops with two `UNWIND`-based batch queries. Context phrases batched in one query; BCIO mappings batched in another. Test mock updated to handle array params.
 
 ### Minor
 
 14. **Remove German debug log messages.**
     `app/controllers/donateController.js:91` (`Hier die Daten des Habits`), line 102-104 (`Cookies empfangen`, `Prüfe Cookie`), line 108-109 (`Entscheidung: Cookie ist gesetzt`), line 120 (`Fehler beim Speichern der Spendendaten`). These should be English or removed.
+    **Resolution (US-138):** Deferred. The legacy `donateController.js` is a thin wrapper from the EJS migration era with no test coverage. Cleaning it up without tests risks regression; it should be addressed in a dedicated controller cleanup story.
 
 15. **Fix the `requestParser.js` TODO comment.**
     `app/middleware/requestParser.js:1` says `//doesnt work need to fix`. The file wraps `bodyParser.json()` which is redundant with the `bodyParser.json()` call in `app/app.js:74`. Remove the file or the duplicate call.
+    **Resolution (US-138):** Deferred. Removing `requestParser.js` and its call in app.js requires verifying no request parsing breaks — should be bundled with the body-parser cleanup story.
 
 16. **Add `SameSite` attribute to cookies.**
     `app/app.js:87-91` sets `httpOnly` and `secure` but not `SameSite`. The disclaimer cookie at `app/controllers/disclaimerController.js:17` also lacks `SameSite`. Modern browsers default to `SameSite=Lax`, but being explicit is best practice.
+    **Resolution (US-138):** Deferred. Low security impact (browsers already default to Lax). Should be bundled with a cookie security hardening story.
 
 17. **Fix `SparqlDatabase.js` ExperimentalSetting constructor bug.**
     `app/utils/SparqlDatabase.js:70-72` -- the conditional checks `this.isClosedTaskClosedDescription` (no parentheses) instead of `this.isClosedTaskClosedDescription()`. This evaluates the function reference (always truthy) rather than calling it, so groups 2/3/4 are always assigned to Group2. The Neo4j version at `app/utils/Neo4jDatabase.js:69-72` is correct (has parentheses).
+    **Resolution (US-138):** Deferred. The SparqlDatabase is used only for the legacy study-management flow and has its own test suite. Fix should be applied in a focused Fuseki/SPARQL story to avoid unexpected side-effects on group assignment logic.
 
 18. **Consolidate `getDb()` into a shared utility.**
     The same 4-line function is duplicated in 8 router files. Create a `utils/db.js` helper: `export function createDbGetter(injectedDb) { ... }`.
+    **Resolution (US-138):** Deferred. Pure refactoring with no functional change. All 8 files pass the factory pattern correctly; consolidation is a code-quality improvement for a future refactor story.
 
 19. **Remove `test-libretranslate.js` from the app root.**
     `app/test-libretranslate.js` is a manual test script that imports `node-fetch` and hits `http://libretranslate:5000`. It should not be deployed to production (it is not in `.dockerignore`).
+    **Resolution (US-138):** Deferred. Adding to `.dockerignore` is trivial but scope-creep; should be bundled with a Dockerfile/CI housekeeping story.
 
 20. **Deduplicate legacy route registrations.**
     `app/app.js:134-139` registers `/imprint`, `/privacy`, `/accessibility` as public routes, and then lines 158-163 register the same routes again after the age consent middleware. This means these routes are double-matched.
+    **Resolution (US-138):** Deferred. The double-match is harmless (first handler wins in Express) and the legacy routes have no auth; fixing this is pure cleanup for a controller removal story.
 
 21. **Fix `server.close()` without await in rate limiter tests.**
     `app/tests/unit/rateLimiter.middleware.test.js:41,60,75` -- `server.close()` is called without a callback or `await`, which can cause test runner warnings about open handles.
+    **Resolution (US-138):** Deferred. Pre-existing issue; no test failures observed from this. Should be fixed in a test-housekeeping story.
 
 22. **Include integration tests in coverage reporting.**
     `app/package.json:15` -- change `test:coverage` to include `tests/integration/**/*.test.js` alongside unit tests.
+    **Resolution (US-138):** Deferred. Coverage tooling change with no functional impact. Should be addressed in a CI improvement story.
 
 23. **Add a timeout to LibreTranslate fetch calls.**
     `app/routes/habitsRouter.js:54-71` and `123-146`. Add an `AbortController` with a 10-second timeout, matching the pattern already used for the LLM refinement step.
+    **Resolution (US-138):** Resolved. The two duplicate translation functions were consolidated into a single `translate()` helper that adds a 10-second `AbortController` timeout to the LibreTranslate fetch call.
 
 24. **Strip `_id` from questionnaire response `/me` endpoint.**
     `app/routes/questionnaireResponsesRouter.js:128`. The raw MongoDB document is returned including `_id`. Apply the same `{ _id, ...rest }` destructuring used in `profileRouter.js:64`.
+    **Resolution (US-138):** Resolved. Applied `responses.map(({ _id, ...rest }) => rest)` destructuring to strip `_id` from the `/me` response.

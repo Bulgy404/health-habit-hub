@@ -277,7 +277,8 @@ export function createAdminRouter({
       }));
 
       res.json(result);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -308,7 +309,8 @@ export function createAdminRouter({
 
       const tokenCardUrl = `/api/v1/admin/participants/${userId}/token-card`;
       res.json({ userId, username, password, tokenCardUrl });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -433,7 +435,8 @@ export function createAdminRouter({
       }
 
       res.json({ ok: true, userId: id, group });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -532,7 +535,8 @@ export function createAdminRouter({
         'Content-Length': pdfBuffer.length,
       });
       res.send(pdfBuffer);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -582,7 +586,8 @@ export function createAdminRouter({
         result[doc.key] = doc.value;
       }
       res.json(result);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -664,7 +669,8 @@ export function createAdminRouter({
           { upsert: true }
         );
       res.json({ ok: true, key, value });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -782,7 +788,8 @@ export function createAdminRouter({
           const cnt = records[0]?.cnt;
           habitsCount =
             typeof cnt?.toNumber === 'function' ? cnt.toNumber() : (cnt ?? 0);
-        } catch {
+        } catch (err) {
+          console.error('[route] Error:', err);
           // Neo4j unavailable; habitsCount stays 0
         }
       } else {
@@ -838,7 +845,8 @@ export function createAdminRouter({
         recommendations: { accepted, dismissed },
         timeline,
       });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -953,7 +961,8 @@ export function createAdminRouter({
         'Content-Disposition': 'attachment; filename="habits-feed.csv"',
       });
       res.send(csv);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1039,13 +1048,11 @@ export function createAdminRouter({
         if (to) filter.donatedAt.$lte = new Date(to);
       }
 
-      const docs = await database
-        .collection('habit_donations')
-        .find(filter)
-        .toArray();
-
-      const total = docs.length;
-      const paginated = docs.slice(skip, skip + limitNum);
+      const collection = database.collection('habit_donations');
+      const [total, paginated] = await Promise.all([
+        collection.countDocuments(filter),
+        collection.find(filter).skip(skip).limit(limitNum).toArray(),
+      ]);
 
       res.json({
         total,
@@ -1058,7 +1065,8 @@ export function createAdminRouter({
           donatedAt: d.donatedAt,
         })),
       });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1106,7 +1114,8 @@ export function createAdminRouter({
       const kc = getKeycloak();
       const sessions = await kc.listSessions();
       res.json(sessions);
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1157,7 +1166,8 @@ export function createAdminRouter({
       const kc = getKeycloak();
       await kc.revokeSession(sessionId);
       res.json({ ok: true });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1257,7 +1267,8 @@ export function createAdminRouter({
           assignedGroups: s.assignedGroups || [],
         }))
       );
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1288,7 +1299,8 @@ export function createAdminRouter({
         status: 'draft',
         assignedGroups: doc.assignedGroups,
       });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1370,7 +1382,8 @@ export function createAdminRouter({
         return res.status(404).json({ error: 'Survey not found' });
       }
       res.json({ ok: true, id });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1452,7 +1465,8 @@ export function createAdminRouter({
         return res.status(404).json({ error: 'Survey not found' });
       }
       res.json({ ok: true, id, status });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1544,7 +1558,8 @@ export function createAdminRouter({
         return res.status(404).json({ error: 'Survey not found' });
       }
       res.json({ ok: true, id, assignedGroups: groups });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1570,7 +1585,8 @@ export function createAdminRouter({
           updatedAt: q.updatedAt || q.createdAt || null,
         }))
       );
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1604,7 +1620,8 @@ export function createAdminRouter({
       };
       await database.collection('questionnaires').insertOne(doc);
       res.status(201).json({ ok: true, slug });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1627,7 +1644,8 @@ export function createAdminRouter({
         return res.status(404).json({ error: 'Questionnaire not found' });
       }
       res.json({ ok: true, slug });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1648,7 +1666,8 @@ export function createAdminRouter({
         return res.status(404).json({ error: 'Questionnaire not found' });
       }
       res.json({ ok: true, slug, active });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1684,7 +1703,8 @@ export function createAdminRouter({
         return res.status(404).json({ error: 'Questionnaire not found' });
       }
       res.json({ ok: true, slug, deleted: true });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -1755,7 +1775,8 @@ export function createAdminRouter({
       }
 
       res.json({ ok: true });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

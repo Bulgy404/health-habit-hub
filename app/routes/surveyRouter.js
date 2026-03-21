@@ -112,7 +112,8 @@ export function createSurveyRouter({ db } = {}) {
           assignedGroups: s.assignedGroups || [],
         }))
       );
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.json([]);
     }
   });
@@ -196,7 +197,8 @@ export function createSurveyRouter({ db } = {}) {
         lang,
         jsonSchema: survey.jsonSchema || {},
       });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -218,7 +220,8 @@ export function createSurveyRouter({ db } = {}) {
         jsonSchema: survey.jsonSchema || {},
         assignedGroups: survey.assignedGroups || [],
       });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -307,7 +310,8 @@ export function createSurveyRouter({ db } = {}) {
       res
         .status(201)
         .json({ ok: true, surveyId: id, completedAt: result.completedAt });
-    } catch {
+    } catch (err) {
+      console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

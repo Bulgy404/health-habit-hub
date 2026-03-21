@@ -1,5 +1,8 @@
 import { createPublicKey, createVerify } from 'node:crypto';
 
+// JWKS keys are refreshed every 24 hours (TTL) or on verification failure
+const JWKS_TTL_MS = 24 * 60 * 60 * 1000;
+
 function base64urlDecode(str) {
   str = str.replace(/-/g, '+').replace(/_/g, '/');
   while (str.length % 4) str += '=';
@@ -29,23 +32,38 @@ function verifyJwtSignature(signingInput, signature, jwk) {
 export function createTokenVerifier({ jwksUrl } = {}) {
   const url = jwksUrl || process.env.KEYCLOAK_JWKS_URL;
   let cachedKeys = null;
+  let lastFetchedAt = 0;
 
   async function fetchJwks() {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to fetch JWKS: ${res.status}`);
     const { keys } = await res.json();
     cachedKeys = keys;
+    lastFetchedAt = Date.now();
     return keys;
+  }
+
+  async function getKeys(forceRefresh = false) {
+    const expired = Date.now() - lastFetchedAt > JWKS_TTL_MS;
+    if (!cachedKeys || expired || forceRefresh) return fetchJwks();
+    return cachedKeys;
   }
 
   return async function verifyToken(token) {
     const { header, payload, signature, signingInput } = parseJwt(token);
     const now = Math.floor(Date.now() / 1000);
     if (payload.exp && payload.exp < now) throw new Error('Token expired');
-    const keys = cachedKeys || (await fetchJwks());
-    const key = keys.find(
+    let keys = await getKeys();
+    let key = keys.find(
       (k) => k.kid === header.kid || (!header.kid && k.use === 'sig')
     );
+    // On key-not-found, try a fresh JWKS fetch (Keycloak may have rotated keys)
+    if (!key) {
+      keys = await getKeys(true);
+      key = keys.find(
+        (k) => k.kid === header.kid || (!header.kid && k.use === 'sig')
+      );
+    }
     if (!key) throw new Error('Key not found');
     const valid = verifyJwtSignature(signingInput, signature, key);
     if (!valid) throw new Error('Invalid signature');
@@ -53,16 +71,31 @@ export function createTokenVerifier({ jwksUrl } = {}) {
   };
 }
 
-export function createAuthMiddleware({ jwksUrl } = {}) {
+export function createAuthMiddleware({
+  jwksUrl,
+  expectedIssuer,
+  expectedAudience,
+} = {}) {
   const url = jwksUrl || process.env.KEYCLOAK_JWKS_URL;
+  const issuer = expectedIssuer || process.env.KEYCLOAK_JWT_ISSUER || null;
+  const audience =
+    expectedAudience || process.env.KEYCLOAK_JWT_AUDIENCE || null;
   let cachedKeys = null;
+  let lastFetchedAt = 0;
 
   async function fetchJwks() {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to fetch JWKS: ${res.status}`);
     const { keys } = await res.json();
     cachedKeys = keys;
+    lastFetchedAt = Date.now();
     return keys;
+  }
+
+  async function getKeys(forceRefresh = false) {
+    const expired = Date.now() - lastFetchedAt > JWKS_TTL_MS;
+    if (!cachedKeys || expired || forceRefresh) return fetchJwks();
+    return cachedKeys;
   }
 
   const ready = fetchJwks().catch((err) =>
@@ -78,10 +111,31 @@ export function createAuthMiddleware({ jwksUrl } = {}) {
     const token = authHeader.slice(7);
     try {
       const { header, payload, signature, signingInput } = parseJwt(token);
-      const keys = cachedKeys || (await fetchJwks());
-      const key = keys.find(
+
+      // Validate issuer if configured
+      if (issuer && payload.iss !== issuer) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      // Validate audience if configured
+      if (audience) {
+        const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+        if (!aud.includes(audience)) {
+          return res.status(401).json({ error: 'Unauthorized' });
+        }
+      }
+
+      let keys = await getKeys();
+      let key = keys.find(
         (k) => k.kid === header.kid || (!header.kid && k.use === 'sig')
       );
+      // On key-not-found, try a fresh JWKS fetch (Keycloak may have rotated keys)
+      if (!key) {
+        keys = await getKeys(true);
+        key = keys.find(
+          (k) => k.kid === header.kid || (!header.kid && k.use === 'sig')
+        );
+      }
       if (!key) return res.status(401).json({ error: 'Unauthorized' });
 
       const valid = verifyJwtSignature(signingInput, signature, key);
