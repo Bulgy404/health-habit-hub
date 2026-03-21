@@ -1,3 +1,13 @@
+## 2026-03-21 - US-156
+- What was implemented: Extracted business logic from `adminRouter.js` into three focused service modules. `app/services/adminParticipantService.js` — `listParticipants`, `createParticipant`, `assignGroup`, `getParticipant`, `softDeleteParticipant`. `app/services/adminHabitService.js` — `getHabitsFeed`, `buildHabitsCSV`. `app/services/adminStatsService.js` — `getParticipantProgress`, `getSettings`, `updateSetting`. Each service accepts `{ neo4jRun, db }` (plus `kc` where Keycloak is needed). `adminRouter.js` reduced from ~1799 to route definitions + thin controller calls — no inline Cypher strings or business logic remain in the router. Removed now-redundant `randomPassword()`, `VALID_GROUPS`, `randomBytes`, `createHash` from the router. Created `app/tests/unit/admin.services.test.js` with 17 unit tests covering all three services using mocked `neo4jRun`. Updated `tasks/review-backend.md` to mark OF-12 as ✅ Resolved. All 265 tests pass; lint and Prettier pass.
+- Files changed: app/routes/adminRouter.js (refactored), app/services/adminHabitService.js (new), app/services/adminParticipantService.js (new), app/services/adminStatsService.js (new), app/tests/unit/admin.services.test.js (new), tasks/review-backend.md (OF-12 resolved), prd.json (US-156 passes=true)
+- **Learnings for future iterations:**
+  - Service functions accept `{ db, neo4jRun, kc, ... }` — the router calls them with `neo4jRun` from the factory closure directly, no re-wrapping needed
+  - `adminParticipantService.assignGroup` handles Keycloak + MongoDB + Neo4j atomically; the router only needs to pass `kc: getKeycloak()` and `neo4jRun` from the factory — the VALID_GROUPS and GROUP_LABEL_MAP constants live inside the service, not the router
+  - Prettier formatting check runs before lint in `npm test` — always run `npx prettier --write` on new files in app/ before committing
+  - The service files existed as untracked stubs before this story; they needed to be completed and wired up, not created from scratch
+---
+
 ## 2026-03-21 - US-153
 - What was implemented: Added `admin-build` job (job 11) to `.github/workflows/ci.yml` — Node 22, npm cache keyed on `admin/package-lock.json`, `npm ci` in `admin/`, `npx tsc --noEmit` (typecheck), and `npm run build`. Added `docker build -f admin/Dockerfile -t hhh-admin admin/` step to the existing `docker-build` job. Added `admin-build` to the `ci-passed` gate's `needs` list. Updated `tasks/review-cicd.md` to mark CV2 and CV3 as ✅ Resolved (US-153).
 - Files changed: .github/workflows/ci.yml (admin-build job + docker-build step + ci-passed needs), tasks/review-cicd.md (CV2/CV3 resolved), prd.json (US-153 passes=true)

@@ -2509,7 +2509,7 @@
         "Lint passes"
       ],
       "priority": 156,
-      "passes": false,
+      "passes": true,
       "notes": "Resolves OF-12. Independent of other stories. Router file currently 1200+ lines with inline business logic."
     }
   ]
