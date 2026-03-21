@@ -217,41 +217,94 @@ Collections used: `participants`, `surveys`, `survey_responses`, `habits`, `habi
 
 ### Critical (must be resolved before any user-facing release)
 
-| # | Area | Finding | Impact |
-|---|------|---------|--------|
-| X-C1 | CI/CD | `actions/checkout@v6`, `actions/setup-node@v6`, `actions/upload-artifact@v6` all non-existent — CI completely broken | All quality checks unverified; any commit could ship broken code |
-| X-C2 | Backend + Flutter | Silent `catch {}` on both sides creates a production debugging blackout | Errors invisible in all environments |
-| X-C3 | Neo4j + Backend + Flutter | Dual Neo4j schema — `Habit` (donate) vs `hhh__Habit` (public/stats) — disjoint datasets | Stats always 0; explore graph never shows donated habits |
-| X-C4 | Flutter | `donate_screen.dart:26` hard-codes production URL — staging/dev donations hit production | Dev/staging tests corrupt production data |
-| X-C5 | Backend | JWT `aud`/`iss` not validated — tokens from any Keycloak realm accepted | Security boundary gap across all backend endpoints |
-| X-C6 | CI/CD | Python API-service tests never run in CI despite existing in the repo | Full M1.1→M1.2→M1.3 donation pipeline unverified |
+| # | Area | Finding | Impact | Resolution |
+|---|------|---------|--------|-----------|
+| X-C1 | CI/CD | `actions/checkout@v6`, `actions/setup-node@v6`, `actions/upload-artifact@v6` all non-existent — CI completely broken | All quality checks unverified; any commit could ship broken code | ✅ Resolved in US-125: action versions pinned to `@v4` across all CI jobs |
+| X-C2 | Backend + Flutter | Silent `catch {}` on both sides creates a production debugging blackout | Errors invisible in all environments | ✅ Resolved in US-137 (Flutter: `debugPrint` added to all silent catches) and US-138 (Backend: `console.error('[route] Error:', err)` added to all 45+ catch blocks). US-139: `surveyController.submitSurvey` also fixed. |
+| X-C3 | Neo4j + Backend + Flutter | Dual Neo4j schema — `Habit` (donate) vs `hhh__Habit` (public/stats) — disjoint datasets | Stats always 0; explore graph never shows donated habits | ⚠ Deferred: full schema migration requires coordinated data migration. Flutter `ExploreScreen` updated in US-123 to call `GET /api/v1/habits` (new schema) instead of `/habits/public` (old schema). Stats endpoint migration deferred to post-launch. |
+| X-C4 | Flutter | `donate_screen.dart:26` hard-codes production URL — staging/dev donations hit production | Dev/staging tests corrupt production data | ✅ Resolved in US-137: replaced with `AppConfig.apiBaseUrl`. |
+| X-C5 | Backend | JWT `aud`/`iss` not validated — tokens from any Keycloak realm accepted | Security boundary gap across all backend endpoints | ✅ Resolved in US-138: `iss` and `aud` validation added to `auth.js` (env-gated via `KEYCLOAK_JWT_ISSUER` / `KEYCLOAK_JWT_AUDIENCE`). |
+| X-C6 | CI/CD | Python API-service tests never run in CI despite existing in the repo | Full M1.1→M1.2→M1.3 donation pipeline unverified | ⚠ Deferred: adding a Python CI job is a CI/CD story. Tracked in `tasks/review-cicd.md` (CV1). |
 
 ### Major (address within the next sprint)
 
-| # | Area | Finding | Impact |
-|---|------|---------|--------|
-| X-M1 | Backend + Flutter | Rate limiter runs before auth; per-user limits never enforced | Unlimited donations per user; DoS risk |
-| X-M2 | Flutter | Zero service-layer tests — auth, survey, habit, recommendation services untested | Token refresh, WebSocket, PKCE failures invisible |
-| X-M3 | Flutter + Backend | No E2E test crossing Flutter→backend boundary | API contract never automatically verified |
-| X-M4 | Backend + Flutter | Error shape consistent on server (`{ error }`) but Flutter never parses it | 400/500 errors show no actionable message to users |
-| X-M5 | Flutter | Hard-coded English strings in 3 screens visible to German users | Core i18n promise broken |
-| X-M6 | Backend | Neo4j driver created and destroyed per query in production (no connection pooling) | 200-500ms overhead per request; connection leak under load |
-| X-M7 | Infrastructure | Keycloak uses `dev-file` DB in production — no clustering, no failover | Auth system vulnerable to disk hiccup or JVM crash |
-| X-M8 | Backend | Rate limiter ordering: `req.user` is undefined when `keyGenerator` runs | All rate limits are IP-based, not user-based |
-| X-M9 | Neo4j + Backend | No constraint on `Habit.uuid`, no index on `Context(text, dimension)` | Concurrent duplicate Habit nodes; O(n) MERGE scans |
-| X-M10 | Infrastructure | `.env` with real credentials present in Git history | All production secrets must be rotated |
+| # | Area | Finding | Impact | Resolution |
+|---|------|---------|--------|-----------|
+| X-M1 | Backend + Flutter | Rate limiter runs before auth; per-user limits never enforced | Unlimited donations per user; DoS risk | ✅ Resolved in US-138: `router.use(limiter)` moved to after `router.use(authenticate)` in `v1Router.js`. |
+| X-M2 | Flutter | Zero service-layer tests — auth, survey, habit, recommendation services untested | Token refresh, WebSocket, PKCE failures invisible | ⚠ Deferred: adding Flutter service-layer unit tests is a separate testing story. |
+| X-M3 | Flutter + Backend | No E2E test crossing Flutter→backend boundary | API contract never automatically verified | ⚠ Deferred: E2E tests require a running stack and are out of scope for this consistency pass. |
+| X-M4 | Backend + Flutter | Error shape consistent on server (`{ error }`) but Flutter never parses it | 400/500 errors show no actionable message to users | ⚠ Partially resolved: US-137 added `debugPrint` error logging in Flutter. Full user-facing error display deferred. The `AppException` sealed class (US-137 M-4) provides the type hierarchy for future error surfacing. |
+| X-M5 | Flutter | Hard-coded English strings in 3 screens visible to German users | Core i18n promise broken | ✅ Resolved in US-137: 8 new ARB keys added; `goal_input_screen.dart`, `stats_screen.dart`, and `questionnaire_screen.dart` now use `AppLocalizations`. |
+| X-M6 | Backend | Neo4j driver created and destroyed per query in production (no connection pooling) | 200-500ms overhead per request; connection leak under load | ✅ Resolved in US-138: single `_neo4jDriver` instance created at factory scope in `habitsRouter.js`. |
+| X-M7 | Infrastructure | Keycloak uses `dev-file` DB in production — no clustering, no failover | Auth system vulnerable to disk hiccup or JVM crash | ⚠ Deferred: requires Keycloak PostgreSQL backend migration. Tracked in `tasks/review-infrastructure.md`. |
+| X-M8 | Backend | Rate limiter ordering: `req.user` is undefined when `keyGenerator` runs | All rate limits are IP-based, not user-based | ✅ Resolved in US-138 (same fix as X-M1): rate limiter now runs after `authenticate`. |
+| X-M9 | Neo4j + Backend | No constraint on `Habit.uuid`, no index on `Context(text, dimension)` | Concurrent duplicate Habit nodes; O(n) MERGE scans | ⚠ Deferred: requires a Neo4j migration. Tracked in `tasks/review-neo4j.md`. |
+| X-M10 | Infrastructure | `.env` with real credentials present in Git history | All production secrets must be rotated | ⚠ Deferred: secret rotation is an ops task outside code scope. Tracked in `tasks/review-infrastructure.md`. |
 
 ### Minor (schedule in backlog)
 
-| # | Area | Finding | Impact |
-|---|------|---------|--------|
-| X-N1 | Flutter | JWT role extraction from unverified payload — admin tab visibility based on unsigned claim | Client-side access control gap (not a backend security gap) |
-| X-N2 | Flutter + Backend | Language field (`Habit.language`) dropped in Flutter `HabitNode` model | Client cannot display original language metadata |
-| X-N3 | Neo4j + Backend | `createdAt` vs `created_at` naming inconsistency across Neo4j and MongoDB | Date sorting and field access requires knowing collection |
-| X-N4 | Backend | MongoDB collection names undocumented — implicit strings across 8+ routers | Navigation and maintenance burden |
-| X-N5 | Backend | Coverage measured only for unit tests — integration test coverage invisible | Coverage metric misleadingly low |
-| X-N6 | Flutter + Backend | `GET /api/v1/questionnaire-responses/me` returns `_id` field Flutter ignores | Informal contract mismatch; noise in API response |
-| X-N7 | Ontology | `hhh:language` declared `rdf:langString` but stored as `xsd:string` | OWL range violation flagged by any reasoner |
-| X-N8 | Infra + Backend | Neo4j n10s wildcard `procedures.unrestricted=n10s.*` allows external URL imports | Any authenticated Neo4j user can import arbitrary RDF |
-| X-N9 | Infra | LibreTranslate `LT_REQ_LIMIT=0` in production — unlimited requests per IP | Translation service saturation risk |
-| X-N10 | Infra + Backend | backup/restore.sh MongoDB path mismatch (`mongo/` vs `mongodb/`) | MongoDB silently skipped on every restore |
+| # | Area | Finding | Impact | Resolution |
+|---|------|---------|--------|-----------|
+| X-N1 | Flutter | JWT role extraction from unverified payload — admin tab visibility based on unsigned claim | Client-side access control gap (not a backend security gap) | ⚠ Accepted: client-side role display is not a security boundary (backend enforces roles). Documented in `tasks/review-flutter.md`. |
+| X-N2 | Flutter + Backend | Language field (`Habit.language`) dropped in Flutter `HabitNode` model | Client cannot display original language metadata | ⚠ Accepted by product decision: `displayText` server-resolved convenience field is the intended abstraction. A locale change triggers a fresh `GET /api/v1/habits?lang=` call rather than local field switching. Documented mapping: `Habit.language` (Neo4j) → `language` (API) → not stored in `HabitNode` (Flutter drops it intentionally). |
+| X-N3 | Neo4j + Backend | `createdAt` vs `created_at` naming inconsistency across Neo4j and MongoDB | Date sorting and field access requires knowing collection | ⚠ Accepted: `created_at` is used for Neo4j `Habit` nodes; `createdAt` is MongoDB-native. Neither is exposed to Flutter in the current API surface. Fix deferred to next schema pass. |
+| X-N4 | Backend | MongoDB collection names undocumented — implicit strings across 8+ routers | Navigation and maintenance burden | ⚠ Deferred: a `collections.js` constants file would address this. Scheduled in backlog. |
+| X-N5 | Backend | Coverage measured only for unit tests — integration test coverage invisible | Coverage metric misleadingly low | ⚠ Deferred: `c8` scope expansion is a CI/CD story. |
+| X-N6 | Flutter + Backend | `GET /api/v1/questionnaire-responses/me` returns `_id` field Flutter ignores | Informal contract mismatch; noise in API response | ✅ Resolved in US-138: `_id` stripped from `/me` endpoint response (`questionnaireResponsesRouter.js`). |
+| X-N7 | Ontology | `hhh:language` declared `rdf:langString` but stored as `xsd:string` | OWL range violation flagged by any reasoner | ⚠ Deferred: ontology fix requires updating `Ontology.ttl` and `fuseki/init/schema.ttl`. No runtime impact; tracked in `tasks/review-neo4j.md`. |
+| X-N8 | Infra + Backend | Neo4j n10s wildcard `procedures.unrestricted=n10s.*` allows external URL imports | Any authenticated Neo4j user can import arbitrary RDF | ⚠ Deferred: tracked in `tasks/review-infrastructure.md`. |
+| X-N9 | Infra | LibreTranslate `LT_REQ_LIMIT=0` in production — unlimited requests per IP | Translation service saturation risk | ⚠ Deferred: tracked in `tasks/review-infrastructure.md`. |
+| X-N10 | Infra + Backend | backup/restore.sh MongoDB path mismatch (`mongo/` vs `mongodb/`) | MongoDB silently skipped on every restore | ⚠ Deferred: tracked in `tasks/review-infrastructure.md`. |
+
+---
+
+## 9. US-139 Naming and Consistency Pass — Summary
+
+**Completed by US-139 (2026-03-21):**
+
+### API Contract Field Mapping (AC-1 and AC-2)
+
+| Field | Neo4j property | Backend JSON key | Flutter field | Notes |
+|-------|---------------|-----------------|---------------|-------|
+| Habit identifier | `Habit.uuid` | `uuid` | `HabitNode.uuid` | ✅ Consistent end-to-end |
+| Habit text | `Habit.sentence` | `original` | `HabitNode.original` | ✅ Aliased at DB→API boundary (intentional) |
+| Language code | `Habit.language` | `language` | — (not in model) | ⚠ Flutter drops — product decision: `displayText` abstraction makes it unnecessary |
+| Display text | — (server computed) | `displayText` | `HabitNode.name` | ✅ Consistent; server resolves locale at request time |
+| English translation | `Habit.translationEN` | `translationEN` | — (not in model) | ⚠ Flutter uses `displayText` only; retained in API for future client-side switching |
+| German translation | `Habit.translationDE` | `translationDE` | — (not in model) | ⚠ Same as above |
+| User preference | `users.preferredLanguage` | `preferredLanguage` | `locale_provider` key | ✅ Consistent end-to-end |
+| User identifier | `Habit.userID` | JWT `sub` | `authProvider.sub` | ✅ Consistent |
+| Neo4j timestamp | `Habit.created_at` | not exposed | — | ⚠ Uses snake_case; MongoDB uses `createdAt` — no Flutter exposure |
+
+### Locale Code Consistency (AC-3)
+
+ISO 639-1 two-character lowercase codes `'en'` and `'de'` are used identically in:
+- Flutter `locale_provider.dart` (SUPPORTED_LANGUAGES list, PUT /users/me payload)
+- Backend `usersRouter.js` (SUPPORTED_LANGUAGES allowlist)
+- Backend `habitsRouter.js` (LibreTranslate `source`/`target` params, `language.startsWith('en')` skip logic)
+- `GET /api/v1/habits?lang=en|de` query parameter
+
+No `en-US`, `EN`, or `de-DE` variants appear in the live code paths.
+
+### Error Response Shape (AC-4)
+
+All v1 API routes use `{ error: '...' }` with appropriate HTTP status codes. Confirmed consistent across:
+`habitsRouter.js`, `questionnairesRouter.js`, `usersRouter.js`, `profileRouter.js`, `kbRouter.js`, `recommendationsRouter.js`, `recommendRouter.js`, `internalRouter.js`, `adminRouter.js`, `surveyRouter.js`, `questionnaireResponsesRouter.js`, `onboardRouter.js`.
+
+Legacy controller `surveyController.js` `submitSurvey` was using `{ status: 'error', message }` — fixed in US-139 to `{ error: 'Server error' }`.
+
+### Logging Style (AC-5)
+
+All v1 route catch blocks (45+) use `console.error('[route] Error:', err)` consistently after US-138. Legacy controllers use ad-hoc logging — these are not part of the v1 API surface and are out of scope for this pass.
+
+### Flutter Dependency Pinning (AC-6)
+
+Security-sensitive packages pinned to exact resolved versions in `pubspec.yaml`:
+- `flutter_appauth: 8.0.3` (was `^8.0.1`)
+- `flutter_secure_storage: 9.2.4` (was `^9.2.3`)
+
+### Linter Results (AC-7)
+
+- `flutter analyze`: **No issues found** (ran in 8.6s)
+- Backend ESLint: **No issues** (zero warnings/errors)
+- Backend tests: **247/247 pass**
