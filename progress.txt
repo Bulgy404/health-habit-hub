@@ -1,3 +1,17 @@
+## 2026-03-21 - US-163
+- What was implemented: Reviewed all JS files under `app/` for clean code violations. Report written to `tasks/review-backend-clean.md` covering: 8 Critical, 8 Major, 7 Minor findings with file path, line range, violation type, and suggested fix for every entry. Positive findings section documents what is well-written. Prioritised fix order table included.
+- Files changed: tasks/review-backend-clean.md (new), prd.json (US-163 passes=true)
+- **Learnings for future iterations:**
+  - `getDb()` helper is copy-pasted verbatim in 8 route files (habitsRouter, recommendationsRouter, questionnaireResponsesRouter, questionnairesRouter, usersRouter, profileRouter, surveyRouter, adminRouter) — BK-C4 is the highest-DRY-value fix in the backend
+  - `middleware/auth.js` has two exported functions (`createTokenVerifier` and `createAuthMiddleware`) that duplicate JWKS caching logic — `createAuthMiddleware` should compose `createTokenVerifier` internally
+  - `donateRouter.js` logs reCAPTCHA key metadata at module load time (line 35-45) and has a dead `/submit-form` route with `console.log(req.body)` — both are clean code and security concerns
+  - 4 `catch (_err)` blocks in usersRouter.js and profileRouter.js silently discard errors with no logging — contrast with the correct `console.error('[route] Error:', err)` pattern used in all other routes
+  - POST /habits/donate at lines 467-661 of habitsRouter.js is a 143-line god handler — the highest-priority SRP violation in the codebase
+  - The `translate()` function in habitsRouter.js (lines 54-133) is 80 lines with 4 nesting levels and should be split into `fetchLibreTranslation()` and `refineLLMTranslation()`
+  - `_buildDonationTurtle()` in Neo4jDatabase.js (lines 327-476) is 149 lines; the `iri()` helper is redefined as a local const on every call at line 337
+  - 8 debug `console.log` statements in app.js middleware fire on every request (lines 107, 108, 126, 144, 165, 167, 170, 172)
+---
+
 ## 2026-03-21 - US-162
 - What was implemented: Reviewed all 56 Dart files under `mobile/lib/` for clean code violations. Report written to `tasks/review-flutter-clean.md` covering: 3 Critical, 11 Major, 14 Minor findings with file path, line range, violation type, and suggested fix for every entry. Positive findings section documents what is well-written. Prioritised fix order table included.
 - Files changed: tasks/review-flutter-clean.md (new), prd.json (US-162 passes=true)
