@@ -159,7 +159,36 @@ All containers should be running:
 
 ### 4. Run One-time Migration Scripts (first deploy of this branch only)
 
-#### 4a. Backfill German translations for existing English habits
+#### 4a. Migrate legacy hhh__Habit nodes to new Habit schema
+
+All existing `hhh__Habit` nodes (from the old n10s/RDF pipeline) must be
+copied into the new `Habit` schema before the stats and explore-feed endpoints
+will show historical donations.  Run this once after the first deploy of this
+branch:
+
+```bash
+docker exec h3-app node scripts/run-migration.js
+```
+
+Expected output:
+```
+[migration] Found 42 hhh__Habit node(s): 42 to migrate, 0 already exist.
+[migration] Running step 1/2…
+[migration] Running step 2/2…
+[migration] Done. Migrated 42 habits, skipped 0 (already exist).
+```
+
+The script is **idempotent** — running it again produces:
+```
+[migration] Found 42 hhh__Habit node(s): 0 to migrate, 42 already exist.
+[migration] Done. Migrated 0 habits, skipped 42 (already exist).
+```
+
+Old `hhh__Habit` nodes are left in place.  Existing
+`hhh__Donor-[:hhh__donates]->hhh__Habit` relationships are preserved and
+mirrored as `hhh__Donor-[:DONATED]->:Habit` on the new nodes.
+
+#### 4b. Backfill German translations for existing English habits
 
 Habit nodes donated before this branch was deployed do not have a `translationDE` field.
 Run the backfill script to populate German translations via LibreTranslate + LLM refinement:
@@ -185,7 +214,7 @@ Expected output:
 If any habits fail, the script logs them and exits with code 1.  Re-run after fixing
 the underlying cause (usually LibreTranslate or the API-service being unhealthy).
 
-#### 4b. Backfill BCIO enrichment for existing habits (optional)
+#### 4c. Backfill BCIO enrichment for existing habits (optional)
 
 ```bash
 docker exec h3-app node scripts/migrate-habits-bcio.js
