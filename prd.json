@@ -2449,7 +2449,7 @@
         "tasks/review-cicd.md updated marking OF-08 as resolved"
       ],
       "priority": 152,
-      "passes": false,
+      "passes": true,
       "notes": "Resolves OF-08. Check whether API-service/tests/ requires env vars (REDIS_URL, model paths) and set them in the CI job env block."
     },
     {

@@ -100,7 +100,7 @@
 
 ## 5. Coverage
 
-### CV1 — Python API-service has no CI coverage (Critical)
+### CV1 — Python API-service has no CI coverage (Critical) ✅ Resolved (US-152)
 **File:** `ci.yml` — missing
 **Finding:** `API-service/` (the Python FastAPI recommender) has no CI job at all — no lint, no type-check, no tests. The test files written in US-098, US-099, US-114 exist but are never executed in CI. Bugs in the LLM classification, BCIO mapping, or translation refinement routes will not be caught automatically.
 **Fix:** Add a `python-test` job that:
@@ -113,6 +113,7 @@
 - run: pytest tests/ -v
   working-directory: API-service
 ```
+**Resolution:** Added `python-api-test` job (job 10) to `ci.yml` using Python 3.11, pip cache, `pip install -r API-service/requirements.txt`, and `pytest tests/ -v` with `OPENAI_API_KEY=placeholder`. Job added to `ci-passed` gate needs list.
 
 ### CV2 — Admin Next.js panel has no CI coverage (Major)
 **File:** `ci.yml` — missing
@@ -177,7 +178,7 @@
 | C1 | `ci.yml` everywhere | `actions/checkout@v6` does not exist — all jobs broken |
 | C2 | `ci.yml` everywhere | `actions/setup-node@v6` does not exist — all Node.js jobs broken |
 | C3 | `ci.yml:73,209` | `actions/upload-artifact@v6` does not exist |
-| CV1 | `ci.yml` missing | No CI coverage for Python API-service |
+| CV1 | `ci.yml` missing | No CI coverage for Python API-service | ✅ Resolved (US-152) |
 
 ### Major
 
