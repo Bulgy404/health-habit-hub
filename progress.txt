@@ -1546,3 +1546,13 @@
   - `actions/setup-python@v5` `cache: pip` requires `cache-dependency-path` pointing to the requirements file, otherwise it caches nothing useful
   - `pytest tests/ -v` must be run from `API-service/` as working-directory so that `from main import app` resolves correctly (main.py is at API-service root, not project root)
 ---
+
+## 2026-03-21 - US-154
+- What was implemented: Added `http_mock_adapter: ^0.6.1` to `mobile/pubspec.yaml` dev_dependencies. Added 401→`UnauthorisedException` try-catch in `HabitService.fetchDonatedHabits` (imports `core/exceptions.dart`). Created `mobile/test/services/habit_service_test.dart` (3 tests: `?lang=en` sent as query param, `lang=de` forwarded, 401 throws `UnauthorisedException`), `mobile/test/services/stats_service_test.dart` (2 tests: full stats parse + empty-response graceful defaults), `mobile/test/services/recommendation_service_test.dart` (3 tests: happy path with ragCitation, empty list, 500 → DioException). All 8 tests pass; `flutter analyze` reports no issues. Updated `tasks/review-flutter.md` row C-2/T-1 from DEFERRED to RESOLVED.
+- Files changed: mobile/pubspec.yaml (http_mock_adapter dev dep), mobile/pubspec.lock, mobile/lib/services/habit_service.dart (401 handling + exceptions import), mobile/test/services/habit_service_test.dart (new), mobile/test/services/stats_service_test.dart (new), mobile/test/services/recommendation_service_test.dart (new), tasks/review-flutter.md (C-2 resolved), prd.json (US-154 passes=true)
+- **Learnings for future iterations:**
+  - `http_mock_adapter` DioAdapter matches routes by exact string: register the FULL URL (e.g. `'http://localhost:3000/api/v1/habits'`) not just the path (`'/habits'`) because services call `_dio.get('$_baseUrl/...')` with absolute URLs — the adapter's `doesRouteMatch` does `actual == expected` string comparison, so relative paths never match absolute request paths
+  - Create Dio without `baseUrl` in service tests; let the mock just use the same absolute URL the service constructs
+  - `FullHttpRequestMatcher` also matches `headers` — since `_StubAuthService` returns `null` for an unauthenticated stub and the stats/no-auth tests have no Authorization header, the mock must not set `headers:` constraint (or it must match the actual headers including auth)
+  - `server.throws(statusCode, DioException(...))` is the correct way to simulate error responses in http_mock_adapter; the `response.statusCode` on the inner `DioException` is what the service's `e.response?.statusCode` check reads
+---
