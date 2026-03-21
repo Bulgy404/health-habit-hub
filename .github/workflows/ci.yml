@@ -350,7 +350,32 @@ jobs:
         run: docker build ./backup-service
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # 10. GATE – all jobs must pass before deploy can proceed
+  # 10. PYTHON API-SERVICE – pytest
+  # ─────────────────────────────────────────────────────────────────────────────
+  python-api-test:
+    name: Python API-service – tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: API-service/requirements.txt
+
+      - name: Install dependencies
+        working-directory: API-service
+        run: pip install -r requirements.txt
+
+      - name: Run pytest
+        working-directory: API-service
+        env:
+          OPENAI_API_KEY: placeholder
+        run: pytest tests/ -v
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 11. GATE – all jobs must pass before deploy can proceed
   # ─────────────────────────────────────────────────────────────────────────────
   ci-passed:
     name: All checks passed
@@ -365,5 +390,6 @@ jobs:
       - flutter-build-web
       - ontology-test
       - docker-build
+      - python-api-test
     steps:
       - run: echo "All CI jobs passed."
