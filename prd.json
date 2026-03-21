@@ -2582,7 +2582,7 @@
         "Guide linked from README.md in the Development section"
       ],
       "priority": 161,
-      "passes": false,
+      "passes": true,
       "notes": "iOS Simulator shares Mac host network \u2014 localhost works without any special IP. AppConfig defaults already correct."
     },
     {
