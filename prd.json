@@ -2112,6 +2112,218 @@
       "priority": 130,
       "passes": true,
       "notes": "Audit finding: admin screens excluded from US-118 scope but also contain hardcoded English strings"
+    },
+    {
+      "id": "US-131",
+      "title": "Ralph \u2014 senior review of the Flutter mobile app",
+      "description": "As a team lead, I want Ralph to review the Flutter codebase as a senior mobile engineer would, so that structural issues, anti-patterns, and inconsistencies are surfaced before further features land.",
+      "acceptanceCriteria": [
+        "Ralph reads every file under mobile/lib/ and mobile/test/",
+        "Findings written to tasks/review-flutter.md covering: Architecture, Code quality, Error handling, Testing, Security, i18n readiness, What is done well, Prioritised improvements (Critical/Major/Minor)",
+        "Every finding tied to a specific file and line range",
+        "Report saved and committed"
+      ],
+      "priority": 131,
+      "passes": true,
+      "notes": "Review-only story \u2014 produces tasks/review-flutter.md. Run in parallel with US-132 through US-135."
+    },
+    {
+      "id": "US-132",
+      "title": "Ralph \u2014 senior review of the Node.js backend",
+      "description": "As a team lead, I want Ralph to review the backend as a senior Node.js engineer would, covering API design, service layer structure, data access patterns, auth middleware, and test coverage.",
+      "acceptanceCriteria": [
+        "Ralph reads every file under app/ (controllers, routes, services, middleware, utils, tests)",
+        "Findings written to tasks/review-backend.md covering: API design, Service/controller split, Data access, Auth & security, Translation pipeline, Testing, Dependencies, What is done well, Prioritised improvements (Critical/Major/Minor)",
+        "Every finding tied to file + line range",
+        "Report saved and committed"
+      ],
+      "priority": 132,
+      "passes": false,
+      "notes": "Review-only story \u2014 produces tasks/review-backend.md. Run in parallel with US-131, US-133\u2013US-135."
+    },
+    {
+      "id": "US-133",
+      "title": "Ralph \u2014 senior review of the Neo4j ontology and database layer",
+      "description": "As a team lead, I want Ralph to review the ontology design, Cypher queries, n10s configuration, and init scripts as a senior data engineer would, so that schema inconsistencies and query anti-patterns are caught.",
+      "acceptanceCriteria": [
+        "Ralph reads neo4j/init/, all Cypher in app/utils/Neo4jDatabase.js, app/utils/config.js, and any OWL/Turtle ontology files",
+        "Findings written to tasks/review-neo4j.md covering: Ontology design, Cypher quality, n10s configuration, Data integrity, Translation storage, What is done well, Prioritised improvements (Critical/Major/Minor)",
+        "Every finding tied to file + line range",
+        "Report saved and committed"
+      ],
+      "priority": 133,
+      "passes": false,
+      "notes": "Review-only story \u2014 produces tasks/review-neo4j.md. Run in parallel with US-131, US-132, US-134, US-135."
+    },
+    {
+      "id": "US-134",
+      "title": "Ralph \u2014 senior review of CI/CD pipelines",
+      "description": "As a team lead, I want Ralph to review every GitHub Actions workflow as a senior DevOps engineer would, checking for reliability, speed, security, and correctness.",
+      "acceptanceCriteria": [
+        "Ralph reads .github/workflows/ci.yml and .github/workflows/deploy.yml in full",
+        "Findings written to tasks/review-cicd.md covering: Correctness, Reliability, Security, Speed, Coverage, Action versions, What is done well, Prioritised improvements (Critical/Major/Minor)",
+        "Every finding tied to specific job/step",
+        "Report saved and committed"
+      ],
+      "priority": 134,
+      "passes": false,
+      "notes": "Review-only story \u2014 produces tasks/review-cicd.md. Run in parallel with US-131\u2013US-133, US-135."
+    },
+    {
+      "id": "US-135",
+      "title": "Ralph \u2014 senior review of Docker and infrastructure configuration",
+      "description": "As a team lead, I want Ralph to review the Docker Compose files, Traefik config, env files, and volume/network design as a senior infrastructure engineer would.",
+      "acceptanceCriteria": [
+        "Ralph reads docker-compose.yml, docker-compose.prod.yml, .env.example, and any Traefik/Nginx config files",
+        "Findings written to tasks/review-infrastructure.md covering: Service configuration, Networking, Secrets management, Volumes, Production readiness, What is done well, Prioritised improvements (Critical/Major/Minor)",
+        "Every finding tied to specific file and service/section",
+        "Report saved and committed"
+      ],
+      "priority": 135,
+      "passes": false,
+      "notes": "Review-only story \u2014 produces tasks/review-infrastructure.md. Run in parallel with US-131\u2013US-134."
+    },
+    {
+      "id": "US-136",
+      "title": "Ralph \u2014 cross-component coherence review",
+      "description": "As a team lead, I want Ralph to review the system as a whole after the individual component reviews, identifying integration seams, inconsistencies that only appear across boundaries, and architectural decisions that should be revisited.",
+      "acceptanceCriteria": [
+        "Ralph reads all five individual review reports (US-131\u2013US-135) and cross-references with the actual code",
+        "Findings written to tasks/review-system-coherence.md covering: API contract alignment, Auth flow end-to-end, Language/locale consistency, Error message consistency, Test strategy coherence, Naming consistency across Flutter/backend/Neo4j, What is coherent and well-integrated, Prioritised cross-cutting improvements (Critical/Major/Minor)",
+        "Report saved and committed"
+      ],
+      "priority": 136,
+      "passes": false,
+      "notes": "Depends on US-131, US-132, US-133, US-134, US-135 all being complete. Feeds into US-137, US-138, US-139."
+    },
+    {
+      "id": "US-137",
+      "title": "Ralph \u2014 apply improvements to the Flutter app",
+      "description": "As a developer, I want Ralph to implement the Critical and Major improvements identified in the Flutter review (US-131) and the coherence review (US-136), so the mobile codebase is cleaner and more maintainable.",
+      "acceptanceCriteria": [
+        "Every Critical finding from tasks/review-flutter.md resolved or explicitly deferred with written reason",
+        "Every Major finding resolved or deferred",
+        "Dead code and unused imports removed",
+        "Duplicate widget logic extracted into shared components",
+        "Consistent error-handling pattern used everywhere",
+        "flutter analyze passes with zero warnings",
+        "flutter test --coverage passes with no existing test broken",
+        "tasks/review-flutter.md updated with Resolution note per finding"
+      ],
+      "priority": 137,
+      "passes": false,
+      "notes": "Depends on US-136. Can run in parallel with US-138 and US-139."
+    },
+    {
+      "id": "US-138",
+      "title": "Ralph \u2014 apply improvements to the Node.js backend",
+      "description": "As a developer, I want Ralph to implement the Critical and Major improvements identified in the backend review (US-132) and the coherence review (US-136).",
+      "acceptanceCriteria": [
+        "Every Critical and Major finding from tasks/review-backend.md resolved or explicitly deferred with written reason",
+        "Fat controller logic moved into service layer where identified",
+        "All HTTP responses use a consistent shape across all routes",
+        "Input validation added at every route that currently lacks it",
+        "All Cypher strings audited for deprecated syntax and corrected",
+        "Missing try/catch blocks added around Neo4j calls",
+        "npm run lint passes",
+        "All existing unit and integration tests pass",
+        "tasks/review-backend.md updated with Resolution notes"
+      ],
+      "priority": 138,
+      "passes": false,
+      "notes": "Depends on US-136. Can run in parallel with US-137 and US-139. Also executes US-126 if not already done."
+    },
+    {
+      "id": "US-139",
+      "title": "Ralph \u2014 consistency pass across the full codebase",
+      "description": "As a developer, I want Ralph to make a single focused pass ensuring naming, patterns, and conventions are consistent across Flutter, backend, and Neo4j so the codebase reads as if written by one person.",
+      "acceptanceCriteria": [
+        "Flutter model field names match backend API response field names (or explicit mapping documented)",
+        "Backend field names match Neo4j property names (or mapping documented)",
+        "Locale codes ('en', 'de') used identically in Flutter, backend, LibreTranslate calls, and ontology IRIs",
+        "Error response shape identical across all backend routes",
+        "Logging style consistent across backend (same log levels, same structured fields)",
+        "Flutter pubspec.yaml critical dependency versions pinned (no loose ^ on security-sensitive packages)",
+        "All files pass their respective linters with zero warnings",
+        "tasks/review-system-coherence.md updated with Resolution notes for all naming/consistency findings"
+      ],
+      "priority": 139,
+      "passes": false,
+      "notes": "Depends on US-136. Can run in parallel with US-137 and US-138."
+    },
+    {
+      "id": "US-140",
+      "title": "Ralph \u2014 update Flutter and mobile documentation",
+      "description": "As a new mobile developer, I want the Flutter documentation to accurately describe the current architecture, setup steps, and test commands, so I can be productive without asking team members.",
+      "acceptanceCriteria": [
+        "docs/guides/developer-onboarding.md updated with current Flutter version, flutter gen-l10n setup step, correct test commands, and description of WebView-based donation flow",
+        "docs/MANUAL-en.md and docs/MANUAL-de.md updated to reflect the new language toggle in settings",
+        "New docs/guides/flutter-architecture.md created describing folder structure, state management, localisation pipeline, and auth token management",
+        "No documentation references a screen, widget, or command that no longer exists"
+      ],
+      "priority": 140,
+      "passes": false,
+      "notes": "Depends on US-137, US-138, US-139. Can run in parallel with US-141, US-142, US-143."
+    },
+    {
+      "id": "US-141",
+      "title": "Ralph \u2014 update backend and API documentation",
+      "description": "As a backend developer or API consumer, I want the backend docs and OpenAPI spec to exactly match the current API so I can integrate without reading source code.",
+      "acceptanceCriteria": [
+        "docs/api/openapi.yaml updated to include all routes added in this branch, correct request/response schemas including translationEN, translationDE, displayText, preferredLanguage fields, and the standard error response schema",
+        "docs/api/hhh-postman-collection.json regenerated or updated to match the OpenAPI spec",
+        "README.md backend section updated with correct npm scripts and env var list",
+        "docs/data-model.md updated to reflect the current Neo4j schema including hhh:translationEN, hhh:translationDE, hhh:preferredLanguage on Donor nodes",
+        "No endpoint documented in OpenAPI that does not exist in router files",
+        "No endpoint in router files missing from OpenAPI"
+      ],
+      "priority": 141,
+      "passes": false,
+      "notes": "Depends on US-137, US-138, US-139. Can run in parallel with US-140, US-142, US-143."
+    },
+    {
+      "id": "US-142",
+      "title": "Ralph \u2014 update infrastructure and deployment documentation",
+      "description": "As a DevOps engineer or new team member, I want the deployment and infrastructure docs to describe exactly how to bring up the system in development and production.",
+      "acceptanceCriteria": [
+        "DEPLOYMENT.md updated with current Docker Compose service list, LibreTranslate env vars, UID 1032 volume permission note, and step-by-step production bring-up including the backfill migration script from US-115",
+        "docs/guides/admin-guide.md and admin-guide-de.md updated with the new language setting screen",
+        "docs/runbook.md updated with runbook entries for LibreTranslate down and Neo4j failed-to-start",
+        ".env.example updated to include every env var currently used, each with a one-line comment",
+        "CHANGELOG.md entry added for all changes in this PRD branch"
+      ],
+      "priority": 142,
+      "passes": false,
+      "notes": "Depends on US-137, US-138, US-139. Can run in parallel with US-140, US-141, US-143."
+    },
+    {
+      "id": "US-143",
+      "title": "Ralph \u2014 update architecture documentation",
+      "description": "As any team member, I want the architecture documentation to give an accurate high-level picture of how the system components interact, so that design decisions are clear and onboarding is faster.",
+      "acceptanceCriteria": [
+        "docs/architecture.md updated with a Mermaid component diagram (Flutter \u2194 Backend API \u2194 Neo4j/MongoDB \u2194 LibreTranslate \u2194 Keycloak), end-to-end donation pipeline description, language/locale flow, auth flow, and data storage rationale",
+        "docs/migration.md updated with schema migrations introduced in this branch (translationEN/DE fields, preferredLanguage)",
+        "AUDIT.md cleared of stale findings and reserved for US-144 output",
+        "DOCUMENTATION.md updated to list every file in docs/ with a one-line description"
+      ],
+      "priority": 143,
+      "passes": false,
+      "notes": "Depends on US-137, US-138, US-139. Can run in parallel with US-140, US-141, US-142."
+    },
+    {
+      "id": "US-144",
+      "title": "Ralph \u2014 final system audit",
+      "description": "As a project owner, I want a comprehensive, authoritative audit report of the full Health Habit Hub system after all review, improvement, and documentation work is complete, so I know the true health of the platform and what remains to be addressed.",
+      "acceptanceCriteria": [
+        "Ralph re-reads all component reviews, coherence review, and current codebase state after all improvements",
+        "AUDIT.md written with: Executive Summary, Component scorecards (Flutter/Backend/Neo4j/CI-CD/Infrastructure each scored 1-5 on Code Quality, Test Coverage, Security, Documentation, Consistency with written justification), Open findings (unresolved Critical/Major tagged with component, severity, owning US), Resolved findings (summary of what was fixed this cycle), Recommended next actions (ordered by value), System strengths",
+        "AUDIT.md committed with date stamp in document header",
+        "All CI jobs pass on the branch after the audit commit",
+        "No component scores below 3/5 on any dimension"
+      ],
+      "priority": 144,
+      "passes": false,
+      "notes": "Final story \u2014 depends on US-140, US-141, US-142, US-143 (and transitively all review and improvement stories). Must run last."
     }
   ]
 }
