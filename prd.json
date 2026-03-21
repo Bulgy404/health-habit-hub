@@ -2388,7 +2388,7 @@
         "docs/runbook.md gains a 'Keycloak DB unavailable' troubleshooting entry"
       ],
       "priority": 148,
-      "passes": false,
+      "passes": true,
       "notes": "Resolves OF-03. Independent of other stories. Requires operator to re-import Keycloak realm JSON on first deploy."
     },
     {
