@@ -349,6 +349,9 @@ jobs:
       - name: Build backup-service
         run: docker build ./backup-service
 
+      - name: Build admin (Next.js)
+        run: docker build -f admin/Dockerfile -t hhh-admin admin/
+
   # ─────────────────────────────────────────────────────────────────────────────
   # 10. PYTHON API-SERVICE – pytest
   # ─────────────────────────────────────────────────────────────────────────────
@@ -375,7 +378,34 @@ jobs:
         run: pytest tests/ -v
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # 11. GATE – all jobs must pass before deploy can proceed
+  # 11. ADMIN – typecheck & build (Next.js)
+  # ─────────────────────────────────────────────────────────────────────────────
+  admin-build:
+    name: Admin – typecheck & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+
+      - name: Install dependencies
+        working-directory: admin
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: admin
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: admin
+        run: npm run build
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 12. GATE – all jobs must pass before deploy can proceed
   # ─────────────────────────────────────────────────────────────────────────────
   ci-passed:
     name: All checks passed
@@ -391,5 +421,6 @@ jobs:
       - ontology-test
       - docker-build
       - python-api-test
+      - admin-build
     steps:
       - run: echo "All CI jobs passed."
