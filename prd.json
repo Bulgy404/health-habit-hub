@@ -2324,6 +2324,193 @@
       "priority": 144,
       "passes": true,
       "notes": "Final story \u2014 depends on US-140, US-141, US-142, US-143 (and transitively all review and improvement stories). Must run last."
+    },
+    {
+      "id": "US-145",
+      "title": "Neo4j \u2014 migrate legacy hhh__Habit nodes into the new Habit schema",
+      "description": "As a developer, I want all existing hhh__Habit nodes copied into the new Habit schema so that historical donations are not lost and endpoints can be unified on a single schema.",
+      "acceptanceCriteria": [
+        "Migration script created at scripts/migrate-hhh-habit-to-habit.cypher",
+        "Field mapping: hhh:id/uri\u2192uuid, hhh:value\u2192value, hhh:language\u2192language, hhh:habitStrength\u2192habitStrength; translationEN/translationDE/bcioClass/dimension/confidence left null; createdAt set to datetime() at migration time",
+        "Existing hhh__Donor-[:hhh__donates]->hhh__Habit relationships preserved as (d)-[:DONATED]->(newHabit:Habit); hhh__Donor nodes not removed",
+        "Script uses MERGE on uuid \u2014 fully idempotent, no duplicates on repeated runs",
+        "Script prints summary: 'Migrated X habits, skipped Y (already exist)'",
+        "Companion scripts/run-migration.js executes the Cypher file against configured Neo4j and logs summary",
+        "DEPLOYMENT.md updated with post-deploy migration step",
+        "Verified: running against Neo4j with seeded hhh__Habit data produces correct Habit nodes"
+      ],
+      "priority": 145,
+      "passes": true,
+      "notes": "OF-01 part 1. Must complete before US-146. Migration is Cypher-only for portability. Old hhh__Habit nodes are left in place."
+    },
+    {
+      "id": "US-146",
+      "title": "Backend \u2014 update stats and public-list endpoints to query new Habit schema",
+      "description": "As a participant, I want the habit explore feed and stats to show all donated habits including those migrated from the old schema, so the app does not appear empty.",
+      "acceptanceCriteria": [
+        "Every route containing MATCH (h:hhh__Habit) or MATCH (d:hhh__Donor)-[:hhh__donates] identified and listed in PR description",
+        "Each identified route updated to query (h:Habit) and (d)-[:DONATED]->(h:Habit) instead",
+        "GET /api/v1/habits (public list) returns both newly donated habits and migrated legacy habits",
+        "GET /api/v1/stats reflects the merged dataset",
+        "Existing integration tests updated to seed Habit nodes (not hhh__Habit) and still pass",
+        "grep -r 'hhh__Habit' app/ returns no results after this story",
+        "Lint passes"
+      ],
+      "priority": 146,
+      "passes": false,
+      "notes": "OF-01 part 2. Depends on US-145. Use grep -rn 'hhh__Habit|hhh__donates' app/ to find all affected routes."
+    },
+    {
+      "id": "US-147",
+      "title": "Neo4j \u2014 add uniqueness constraint on Habit.uuid and index on Context(text, dimension)",
+      "description": "As a developer, I want Neo4j to enforce uniqueness on Habit.uuid and index Context(text, dimension) so duplicate nodes are impossible and context MERGE performance does not degrade as the dataset grows.",
+      "acceptanceCriteria": [
+        "neo4j/init/constraints.cypher gains: CREATE CONSTRAINT habit_uuid IF NOT EXISTS FOR (h:Habit) REQUIRE h.uuid IS UNIQUE",
+        "neo4j/init/constraints.cypher gains: CREATE INDEX context_text_dim IF NOT EXISTS FOR (c:Context) ON (c.text, c.dimension)",
+        "Both statements are idempotent (IF NOT EXISTS guards present)",
+        "Ontology test suite (tests/ontology/test-ontology.sh) still passes after constraint file change",
+        "Verified locally: attempting to CREATE (:Habit {uuid: 'duplicate'}) twice raises a constraint violation"
+      ],
+      "priority": 147,
+      "passes": false,
+      "notes": "Resolves OF-02 and OF-07. Can run alongside US-146."
+    },
+    {
+      "id": "US-148",
+      "title": "Infrastructure \u2014 migrate Keycloak to PostgreSQL in production",
+      "description": "As an operator, I want Keycloak in production to use a PostgreSQL database instead of the embedded dev-file store so user and realm data survives container restarts and is backup-safe.",
+      "acceptanceCriteria": [
+        "docker-compose.prod.yml adds a keycloak-db postgres:16-alpine service with KC_DB_USERNAME/KC_DB_PASSWORD env vars and keycloak-db-data volume",
+        "Keycloak service updated: KC_DB=postgres, KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak, depends_on keycloak-db with service_healthy condition",
+        "keycloak-db-data volume declared in top-level volumes block",
+        ".env.example gains KC_DB_USERNAME and KC_DB_PASSWORD with placeholder values and comment",
+        "DEPLOYMENT.md updated with Keycloak DB migration note: realm JSON must be re-imported on first deploy",
+        "docs/runbook.md gains a 'Keycloak DB unavailable' troubleshooting entry"
+      ],
+      "priority": 148,
+      "passes": false,
+      "notes": "Resolves OF-03. Independent of other stories. Requires operator to re-import Keycloak realm JSON on first deploy."
+    },
+    {
+      "id": "US-149",
+      "title": "CI/CD \u2014 gate tag-push deploys on CI passing",
+      "description": "As a team lead, I want production deploys to only happen after all CI checks pass so a broken tagged commit cannot reach production.",
+      "acceptanceCriteria": [
+        "deploy.yml on.push.tags trigger removed or subordinated",
+        "Deploy job uses workflow_run trigger on CI workflow completing successfully",
+        "Deploy job first step exits if github.event.workflow_run.conclusion != 'success'",
+        "Deploy only runs when triggering ref is a v* tag (checked via github.event.workflow_run.head_branch)",
+        "Verified: pushing a failing commit with a v* tag does not trigger a deploy",
+        "tasks/review-cicd.md updated marking OF-04 as resolved"
+      ],
+      "priority": 149,
+      "passes": false,
+      "notes": "Resolves OF-04. Note: workflow_run triggers do not receive pull_request context \u2014 extract tag from github.event.workflow_run.head_branch."
+    },
+    {
+      "id": "US-150",
+      "title": "Backend \u2014 fix SPARQL injection in SparqlDatabase.js",
+      "description": "As a security engineer, I want all SPARQL queries in SparqlDatabase.js to use parameterised or whitelist-validated values so an attacker cannot inject malicious SPARQL through user-controlled input.",
+      "acceptanceCriteria": [
+        "Every location where a user-controlled string is interpolated into a SPARQL query identified and listed in PR description",
+        "Each location fixed using bind parameters or strict whitelist validation returning 400 for unlisted values",
+        "No string concatenation of user input into SPARQL query strings remains",
+        "Existing integration tests still pass",
+        "tasks/review-backend.md updated marking OF-05 as resolved",
+        "Lint passes"
+      ],
+      "priority": 150,
+      "passes": false,
+      "notes": "Resolves OF-05. If Fuseki SPARQL endpoint does not support bind parameters in all query forms, use the whitelist approach as safe fallback."
+    },
+    {
+      "id": "US-151",
+      "title": "Backend \u2014 fix Cypher label injection in admin group-change route",
+      "description": "As a security engineer, I want the admin group-change endpoint to validate the group label against a whitelist before using it in a Cypher query so dynamic label interpolation cannot be exploited.",
+      "acceptanceCriteria": [
+        "Exact location in adminRouter.js where group label is interpolated into Cypher string identified",
+        "VALID_GROUPS constant defined: new Set(['hhh__Group1','hhh__Group2','hhh__Group3','hhh__Group4'])",
+        "Route returns HTTP 400 { error: 'Invalid group' } if supplied label not in VALID_GROUPS before any Cypher is constructed",
+        "Unit test: supplying a malicious string as group name returns 400 and executes no Cypher",
+        "Lint passes"
+      ],
+      "priority": 151,
+      "passes": false,
+      "notes": "Resolves OF-06. Admin role required to reach this endpoint but injection risk still applies."
+    },
+    {
+      "id": "US-152",
+      "title": "CI/CD \u2014 add Python API-service CI job",
+      "description": "As a CI maintainer, I want the Python API-service tests to run in CI on every push so regressions in the classifier, BCIO mapper, and translation refiner are caught before merge.",
+      "acceptanceCriteria": [
+        "New python-api-test job added to ci.yml: ubuntu-latest, Python 3.11 with pip cache, pip install -r API-service/requirements.txt, Redis service container if required, pytest API-service/tests/ -v",
+        "All existing Python tests pass in the new job (test_classify_context.py, test_refine_translation.py, test_map_bcio.py)",
+        "ci-passed gate job gains python-api-test in its needs list",
+        "tasks/review-cicd.md updated marking OF-08 as resolved"
+      ],
+      "priority": 152,
+      "passes": false,
+      "notes": "Resolves OF-08. Check whether API-service/tests/ requires env vars (REDIS_URL, model paths) and set them in the CI job env block."
+    },
+    {
+      "id": "US-153",
+      "title": "CI/CD \u2014 add Admin Next.js panel CI job",
+      "description": "As a CI maintainer, I want the admin Next.js panel to be type-checked and built in CI on every push so TypeScript errors and broken builds are caught before merge.",
+      "acceptanceCriteria": [
+        "New admin-build job added to ci.yml: Node 22 with npm cache for admin/package-lock.json, npm ci in admin/, npx tsc --noEmit with zero errors, npm run build succeeds",
+        "Docker build job gains admin image step: docker build -f admin/Dockerfile -t hhh-admin admin/",
+        "ci-passed gate gains admin-build in its needs list",
+        "tasks/review-cicd.md updated marking OF-09 as resolved"
+      ],
+      "priority": 153,
+      "passes": false,
+      "notes": "Resolves OF-09. Independent of other stories."
+    },
+    {
+      "id": "US-154",
+      "title": "Flutter \u2014 add unit tests for service layer",
+      "description": "As a developer, I want unit tests for all Flutter Dio service classes so regressions in API call logic, response parsing, and error handling are caught without running a live backend.",
+      "acceptanceCriteria": [
+        "Test files created using http_mock_adapter or Mockito for: HabitService (fetchHabits(lang) asserts ?lang= param sent; 401 throws UnauthorisedException), StatsService (successful parse of stats response shape), RecommendationService (happy path and 500 error path)",
+        "Each test file at mobile/test/services/<service>_test.dart",
+        "flutter test mobile/test/services/ passes with zero failures",
+        "tasks/review-flutter.md updated marking OF-10 as resolved"
+      ],
+      "priority": 154,
+      "passes": false,
+      "notes": "Resolves OF-10. Independent of other stories."
+    },
+    {
+      "id": "US-155",
+      "title": "Infrastructure \u2014 fix MongoDB restore path mismatch",
+      "description": "As an operator, I want restore.sh to look in the same directory that backup.sh creates so MongoDB data is actually restored when the script is run.",
+      "acceptanceCriteria": [
+        "Mismatch confirmed: backup.sh writes to $RESTORE_DIR/mongo/, restore.sh reads from $RESTORE_DIR/mongodb/",
+        "restore.sh fixed to read from $RESTORE_DIR/mongo/ matching backup.sh",
+        "A comment added above the path in both files noting they must stay in sync",
+        "Dry-run or manual verification confirms restore.sh no longer skips MongoDB",
+        "tasks/review-infrastructure.md updated marking OF-11 as resolved"
+      ],
+      "priority": 155,
+      "passes": false,
+      "notes": "Resolves OF-11. One-line fix. Currently every MongoDB restore silently skips."
+    },
+    {
+      "id": "US-156",
+      "title": "Backend \u2014 extract adminRouter.js business logic into service layer",
+      "description": "As a developer, I want the 1200+ line adminRouter.js split into focused service modules so the file is maintainable, testable, and consistent with the factory-injection pattern used by other routers.",
+      "acceptanceCriteria": [
+        "Business logic extracted into: app/services/adminParticipantService.js (participant management), app/services/adminHabitService.js (habit moderation), app/services/adminStatsService.js (stats aggregation)",
+        "Each service accepts a { neo4jRun, db } dependency object matching the factory-injection pattern",
+        "adminRouter.js reduced to route definitions and thin controller calls only \u2014 no inline business logic or Cypher strings remain in the router file",
+        "All existing admin integration tests pass unchanged",
+        "New unit tests added for at least one function in each service file using mocked neo4jRun",
+        "tasks/review-backend.md updated marking OF-12 as resolved",
+        "Lint passes"
+      ],
+      "priority": 156,
+      "passes": false,
+      "notes": "Resolves OF-12. Independent of other stories. Router file currently 1200+ lines with inline business logic."
     }
   ]
 }
