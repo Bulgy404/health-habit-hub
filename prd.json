@@ -2138,7 +2138,7 @@
         "Report saved and committed"
       ],
       "priority": 132,
-      "passes": false,
+      "passes": true,
       "notes": "Review-only story \u2014 produces tasks/review-backend.md. Run in parallel with US-131, US-133\u2013US-135."
     },
     {
