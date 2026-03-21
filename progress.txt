@@ -1,3 +1,15 @@
+## 2026-03-21 - US-164
+- What was implemented: Reviewed `app/utils/Neo4jDatabase.js`, `app/utils/SparqlDatabase.js`, all service/route files containing inline Cypher (`habitsRouter.js`, `adminParticipantService.js`, `adminStatsService.js`), and all `.cypher` files for clean code violations. Report written to `tasks/review-neo4j-clean.md` covering: 3 Critical, 7 Major, 5 Minor findings. Positive findings section documents what is well-written. Prioritised fix order table included.
+- Files changed: tasks/review-neo4j-clean.md (new), prd.json (US-164 passes=true)
+- **Learnings for future iterations:**
+  - `SparqlDatabase.js:70-72` has a critical bug: `isClosedTaskClosedDescription`, `isOpenTaskClosedDescription`, `isOpenTaskOpenDescription` are referenced without `()` — truthy function references mean all non-Group1 donations are silently assigned to Group2. Neo4jDatabase.js has the same class written correctly.
+  - `translate()` function is copy-pasted in full between `Neo4jDatabase.js` and `SparqlDatabase.js` — the Neo4j version takes `config` as a parameter while the Fuseki version reads a module-level singleton, masking the duplication
+  - `ExperimentalSetting`, `Donor`, `Label`, `Donation` domain model classes are duplicated across both database files — should be in `app/models/donation.js`
+  - `_buildDonationTurtle` in Neo4jDatabase.js is 149 lines with mixed concerns; `iri()` helper is re-created as a local const on every call at line 337
+  - `new Donor(donation)` at Neo4jDatabase.js:261 is dead code — the donor UUID is generated fresh inside `_buildDonationTurtle` at line 338
+  - `migrate-group-labels.cypher` Step 2 uses deprecated Neo4j 5 `exists()` function at line 48
+---
+
 ## 2026-03-21 - US-163
 - What was implemented: Reviewed all JS files under `app/` for clean code violations. Report written to `tasks/review-backend-clean.md` covering: 8 Critical, 8 Major, 7 Minor findings with file path, line range, violation type, and suggested fix for every entry. Positive findings section documents what is well-written. Prioritised fix order table included.
 - Files changed: tasks/review-backend-clean.md (new), prd.json (US-163 passes=true)
