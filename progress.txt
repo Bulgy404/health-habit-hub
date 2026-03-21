@@ -1,3 +1,13 @@
+## 2026-03-21 - US-148
+- What was implemented: Migrated Keycloak in docker-compose.prod.yml from embedded dev-file store to PostgreSQL. Added `keycloak-db` service (postgres:16-alpine) with `KC_DB_USERNAME`/`KC_DB_PASSWORD` env vars, `keycloak-db-data` named volume, and a `pg_isready` healthcheck. Updated `keycloak` service: replaced `KC_DB=dev-file` with `KC_DB=postgres`, `KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak`, `KC_DB_USERNAME`/`KC_DB_PASSWORD`; added `depends_on: keycloak-db: condition: service_healthy`; removed the host-path data volume `/mnt/data/appdata/hhh/keycloak:/opt/keycloak/data` (PostgreSQL replaces file storage). Declared `keycloak-db-data` in top-level volumes block. Added `KC_DB_USERNAME`/`KC_DB_PASSWORD` to `.env.example` (with placeholder values and comment) and to `stack.env` (production Portainer env file). Added section 4b to `DEPLOYMENT.md` explaining realm re-import requirement for first deploy after migration. Added "Keycloak DB unavailable — PostgreSQL not ready" troubleshooting entry to `docs/runbook.md` covering diagnosis commands and two fix paths (DB not started / password mismatch). Also updated the runbook Table of Contents. All 247 tests pass; lint passes.
+- Files changed: docker-compose.prod.yml (keycloak-db service + keycloak postgres config + volumes), .env.example (KC_DB_USERNAME/KC_DB_PASSWORD), stack.env (KC_DB_USERNAME/KC_DB_PASSWORD), DEPLOYMENT.md (new section 4b, renumbered 4b→4c, 4c→4d, 4c→4e), docs/runbook.md (ToC + new troubleshooting entry), prd.json (US-148 passes=true)
+- **Learnings for future iterations:**
+  - Keycloak `depends_on: keycloak-db: condition: service_healthy` requires a healthcheck on the postgres service — `pg_isready -U ${KC_DB_USERNAME} -d keycloak` is the correct check; without it, Compose ignores the health condition
+  - Removing `KC_DB=dev-file` and the host volume `/opt/keycloak/data` is correct; the import volume (`./keycloak/hhh-realm.json:/opt/keycloak/data/import/hhh-realm.json:ro`) is a different path and must be kept for realm auto-import
+  - `stack.env` is the Portainer production env file (distinct from `.env.example`); both must be updated when adding new env vars
+  - Existing Keycloak users/credentials are NOT migrated automatically when switching from dev-file to Postgres — operators must re-create them manually; document this explicitly
+---
+
 ## 2026-03-21 - US-145
 - What was implemented: Created `scripts/migrate-hhh-habit-to-habit.cypher` — idempotent Cypher migration that (1) MERGE's each `hhh__Habit` node into a new `Habit` node using `coalesce(h.hhh__id, h.uri)` as the `uuid`; maps `hhh__value` → `sentence`, `hhh__language` → `language` (defaulting to 'de'), `hhh__habitStrength` → `habitStrength`; sets `translationEN/translationDE/bcioClass/dimension/confidence` to null; sets `created_at` to `toString(datetime())` and `migrated_from_hhh = true` on new nodes; (2) MERGE's `hhh__Donor-[:DONATED]->:Habit` for every existing `hhh__Donor-[:hhh__donates]->hhh__Habit` triple. Created `scripts/run-migration.js` — Node.js ESM script that runs a pre-flight count query (total/toMigrate/alreadyExist), parses the Cypher file, runs each statement, and prints `Migrated X habits, skipped Y (already exist)`. Updated `DEPLOYMENT.md` with a new section 4a documenting the post-deploy migration step, with expected output for first-run and idempotent re-runs; renumbered old 4a/4b as 4b/4c. All 247 tests pass; lint passes.
 - Files changed: scripts/migrate-hhh-habit-to-habit.cypher (new), scripts/run-migration.js (new), DEPLOYMENT.md (new 4a section), prd.json (US-145 passes=true)
@@ -1477,4 +1487,13 @@
   - `GET /public` category field is now always `null` since new `Habit` nodes have no study-group relationship; downstream consumers should treat category as optional
   - Stats `byCategory` now groups by `h.language` (ISO 639-1 codes like 'en', 'de') rather than `hhh__GroupN` labels
   - The `.replace('hhh__', '')` call in byCategory mapping is now a no-op for language-code values but harmless to keep
+---
+
+## 2026-03-21 - US-147
+- What was implemented: Added two new statements to `neo4j/init/constraints.cypher`: (1) `CREATE CONSTRAINT habit_uuid IF NOT EXISTS FOR (h:Habit) REQUIRE h.uuid IS UNIQUE` — prevents duplicate Habit nodes from the donate pipeline; (2) `CREATE INDEX context_text_dim IF NOT EXISTS FOR (c:Context) ON (c.text, c.dimension)` — speeds up MERGE lookups by text+dimension during habit donation. Both statements use IF NOT EXISTS guards, making them fully idempotent. All 247 backend tests pass unchanged.
+- Files changed: neo4j/init/constraints.cypher (added constraint + index for new Habit/Context schema), prd.json (US-147 passes=true)
+- **Learnings for future iterations:**
+  - The `tests/ontology/test-ontology.sh` suite only runs Cypher queries against a live Neo4j instance — it does NOT parse or validate constraints.cypher syntax. So changes to that file cannot break the ontology test suite directly.
+  - New Habit/Context schema (donate pipeline) was completely missing from constraints.cypher — only old `hhh__` schema was covered. Always check both schemas when adding constraints.
+  - `IF NOT EXISTS` guards are mandatory on all constraint/index statements in this file so the init script is safe to re-run on an existing database.
 ---
