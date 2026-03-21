@@ -31,3 +31,11 @@ CREATE INDEX group4_idx IF NOT EXISTS FOR (n:hhh__Group4) ON (n.uri);
 // Additional indexes for Group1 and Group2 (Group3/Group4 already indexed above):
 CREATE INDEX group1_idx IF NOT EXISTS FOR (n:hhh__Group1) ON (n.uri);
 CREATE INDEX group2_idx IF NOT EXISTS FOR (n:hhh__Group2) ON (n.uri);
+
+// Uniqueness constraint on Habit.uuid (new donate-pipeline schema)
+CREATE CONSTRAINT habit_uuid IF NOT EXISTS
+  FOR (h:Habit) REQUIRE h.uuid IS UNIQUE;
+
+// Composite index on Context(text, dimension) for fast MERGE lookups
+CREATE INDEX context_text_dim IF NOT EXISTS
+  FOR (c:Context) ON (c.text, c.dimension);
