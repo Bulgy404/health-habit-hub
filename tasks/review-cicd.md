@@ -190,8 +190,8 @@
 | R1 | `ci.yml:127-139` | No timeout on integration tests — runaway test blocks runner |
 | R2 | `deploy.yml:33` | No post-deploy health check — broken deploys go undetected |
 | S1 | `ci.yml` missing | No secret scanning step |
-| CV2 | `ci.yml` missing | Admin Next.js has no CI job |
-| CV3 | `ci.yml:331-348` | `docker-build` job omits admin image |
+| CV2 | `ci.yml` missing | Admin Next.js has no CI job | ✅ Resolved (US-153) |
+| CV3 | `ci.yml:331-348` | `docker-build` job omits admin image | ✅ Resolved (US-153) |
 
 ### Minor
 
