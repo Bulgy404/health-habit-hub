@@ -1673,3 +1673,14 @@
   - The `make ios` Makefile target runs `flutter run -d iPhone` from the `mobile/` directory; it selects the first available iPhone Simulator automatically.
   - LibreTranslate downloads ~1 GB of language models on first start — requires Docker Desktop memory ≥ 6 GB; can be commented out of docker-compose.local.yml if translation is not needed during development.
 ---
+
+## 2026-03-21 - US-166
+- What was implemented: Synthesised all four component clean code reviews (Flutter, Backend, Neo4j, CI/CD) into a single cross-component coherence report at `tasks/review-clean-coherence.md`. Identified 6 cross-cutting smell patterns (hardcoded config, duplication, silent errors, SRP violations, long methods, inline queries), 7 naming inconsistencies across layers, the single most impactful refactoring (centralise `getDb()` + `_authHeaders()`), and a 4-phase fix order by max improvement/min risk.
+- Files changed: tasks/review-clean-coherence.md (new), prd.json (US-166 passes=true)
+- **Learnings for future iterations:**
+  - The single highest-urgency fix is Neo4j C3: missing `()` on 3 method references in `SparqlDatabase.js` causes silent data corruption (all non-Group-1 donors silently assigned to Group2)
+  - `getDb()` dedup (Backend, 8 files) is the keystone refactoring — doing it first unblocks mocking and enables safe extraction of god handlers
+  - `_authHeaders()` (Flutter, 6 files) and `getDb()` (Backend, 8 files) are parallel problems that can be fixed in the same PR window
+  - Phase 1 quick wins (~80 min total) fix 3 prod-breaking bugs: CI checkout action version, docker-compose v1 CLI, SparqlDatabase group assignment
+  - Cross-cutting patterns: all four components show code duplication and silent error swallowing; addressing them systematically eliminates ~1,000 LOC
+---
