@@ -2492,8 +2492,8 @@
         "tasks/review-infrastructure.md updated marking OF-11 as resolved"
       ],
       "priority": 155,
-      "passes": false,
-      "notes": "Resolves OF-11. One-line fix. Currently every MongoDB restore silently skips."
+      "passes": true,
+      "notes": "Resolves OF-11. Changed restore.sh:48 from $RESTORE_DIR/mongodb to $RESTORE_DIR/mongo matching backup.sh:79. Added sync comments to both files."
     },
     {
       "id": "US-156",

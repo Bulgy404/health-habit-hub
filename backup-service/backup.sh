@@ -70,6 +70,8 @@ log "=========================================="
 mkdir -p "$BACKUP_DIR/$DATE"
 
 # 1. Backup MongoDB
+# NOTE: The --out directory name ("mongo") must stay in sync with the restore path in restore.sh.
+# If you rename this directory, update restore.sh to match.
 log "1/5 Backing up MongoDB..."
 if mongodump \
   --host=mongo:27017 \
