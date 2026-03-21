@@ -1,3 +1,15 @@
+## 2026-03-21 - US-162
+- What was implemented: Reviewed all 56 Dart files under `mobile/lib/` for clean code violations. Report written to `tasks/review-flutter-clean.md` covering: 3 Critical, 11 Major, 14 Minor findings with file path, line range, violation type, and suggested fix for every entry. Positive findings section documents what is well-written. Prioritised fix order table included.
+- Files changed: tasks/review-flutter-clean.md (new), prd.json (US-162 passes=true)
+- **Learnings for future iterations:**
+  - `lib/screens/profile_screen.dart:28` has a hardcoded production API URL (`https://api.hhh.tu-dresden.de/api/v1`) — not fixed by US-137; must be fixed before any staging/dev deploy
+  - `_authHeaders()` pattern is duplicated in 6 service files: `habit_service`, `survey_service`, `recommendation_service`, `admin_service`, `questionnaire_service`, `auth_service` — candidates for a shared `AuthHeadersMixin`
+  - `_OfflineBanner` private widget is duplicated in `donate_screen.dart` and `profile_screen.dart` — extract to `lib/widgets/offline_banner.dart`
+  - `AdminService` is a god service with 16 public methods across 6 domains — splitting it would improve testability and cohesion
+  - `admin_participants_screen.dart` and `admin_habits_screen.dart` are god widgets (500–661 lines) — the largest refactoring candidates in the mobile codebase
+  - Silent `catch (_) {}` blocks remain in `explore_screen.dart`, `recommend_screen.dart`, and `admin_habits_screen.dart` — US-137 fixed `donate_screen` and `locale_provider` but not these
+---
+
 ## 2026-03-21 - US-159
 - What was implemented: Created `scripts/seed-local.js` — idempotent seed script that (1) MongoDB: upserts SLIQ and RAND-36 questionnaires from `mongo/seed/questionnaires.json` using replaceOne+upsert; (2) Neo4j: polls HTTP API until ready (30 attempts × 3s = 90s max), applies constraints.cypher, seeds 4 Group nodes (`hhh__ExperimentalSetting:hhh__Group1-4`), 1 test Donor (`dev-user-1`), 2 Habit nodes via MERGE; (3) Keycloak: gets master-realm admin token via admin-cli password grant, creates testuser/testpass123 in `hhh` realm, assigns participant role — all steps check existence before acting. Added `"seed": "node ../scripts/seed-local.js"` to `app/package.json` scripts. All 265 tests pass.
 - Files changed: scripts/seed-local.js (new), app/package.json (seed script added), prd.json (US-159 passes=true)
