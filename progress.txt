@@ -1573,3 +1573,13 @@
   - The backup-service/ directory contains its OWN restore.sh (the original), separate from scripts/restore.sh (a more modern version created in a later story) — both exist; the bug was in backup-service/restore.sh which is actually mounted into the Docker backup service container
   - The `RESTORE_DIR` variable in backup-service/restore.sh is a temp dir set to `/tmp/restore-$$`; the archive is extracted there and the subdirectory names directly correspond to what backup.sh creates inside `$BACKUP_DIR/$DATE/`
 ---
+
+## 2026-03-21 - US-157
+- What was implemented: Created `docker-compose.local.yml` at repo root for Mac local development. Includes: app, mongo, neo4j, keycloak, translate, recommender, fuseki. Excludes: proxy (Traefik), backup, admin, mongo-express. All services expose ports directly (app→3000, mongo→27017, neo4j→7474+7687, keycloak→8080, translate→5000, recommender→8001, fuseki→3030). app service uses `command: node --watch app.js` for built-in hot-reload. All services use `env_file: .env`. Named volumes use `-local-` suffix to avoid colliding with production volume names. Keycloak uses `KC_DB=dev-file` (simple, no separate postgres needed for local dev). `docker compose -f docker-compose.local.yml config` validates without errors.
+- Files changed: docker-compose.local.yml (new), prd.json (US-157 passes=true)
+- **Learnings for future iterations:**
+  - Local volumes use `-local-` suffix (e.g., `neo4j-local-data`) to avoid name collisions with production volumes from docker-compose.yml
+  - recommender internal port is 8000 (FastAPI default) but mapped to 8001 on the Mac host to avoid conflicts
+  - keycloak in local mode uses `KC_DB=dev-file` and `start-dev` — no separate postgres dependency needed
+  - `env_file: .env` on all services means a single `.env` file covers all service configuration for local dev
+---
