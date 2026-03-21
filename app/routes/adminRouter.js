@@ -113,6 +113,15 @@ async function seedDefaultSettings(database) {
   }
 }
 
+// Whitelist of valid Neo4j group labels — used to prevent Cypher label injection
+// in the PATCH /participants/:id/group route (SET d:`${newLabel}`)
+const VALID_GROUPS = new Set([
+  'hhh__Group1',
+  'hhh__Group2',
+  'hhh__Group3',
+  'hhh__Group4',
+]);
+
 export function createAdminRouter({
   db,
   neo4jRun,
@@ -425,6 +434,9 @@ export function createAdminRouter({
           G4: 'hhh__Group4',
         };
         const newLabel = labelMap[group];
+        if (!VALID_GROUPS.has(newLabel)) {
+          return res.status(400).json({ error: 'Invalid group' });
+        }
         const cypher = [
           'MATCH (d:hhh__Donor {hhh__id: $userId})',
           'REMOVE d:hhh__Group1 REMOVE d:hhh__Group2 REMOVE d:hhh__Group3 REMOVE d:hhh__Group4',

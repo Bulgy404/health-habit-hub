@@ -285,6 +285,56 @@ test('PUT /admin/settings/:key - missing value returns 400', async () => {
   assert.deepStrictEqual(data, { error: 'Missing value' });
 });
 
+test('PATCH /admin/participants/:id/group - malicious group string returns 400 and executes no Cypher', async () => {
+  let neo4jCalled = false;
+  const mockNeo4jRun = async () => {
+    neo4jCalled = true;
+    return { records: [] };
+  };
+
+  const injectionDb = createMockDb();
+  injectionDb._seed('participants', [
+    {
+      userId: 'p-inj',
+      username: 'p-inj',
+      group: 'G1',
+      enrolledAt: new Date(),
+      password: 'x',
+    },
+  ]);
+  const injectionApp = express();
+  injectionApp.use(express.json());
+  injectionApp.use(
+    '/admin',
+    createAdminRouter({
+      db: injectionDb,
+      neo4jRun: mockNeo4jRun,
+      keycloak: createMockKeycloak(),
+      tokenCardService: createMockTokenCardService(),
+    })
+  );
+  const injectionServer = createServer(injectionApp);
+  await new Promise((resolve) =>
+    injectionServer.listen(0, '127.0.0.1', resolve)
+  );
+  const injUrl = `http://127.0.0.1:${injectionServer.address().port}`;
+
+  const res = await fetch(`${injUrl}/admin/participants/p-inj/group`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ group: 'G1`; MATCH (n) DETACH DELETE n //' }),
+  });
+
+  assert.strictEqual(res.status, 400);
+  assert.strictEqual(
+    neo4jCalled,
+    false,
+    'neo4jRun must not be called for malicious input'
+  );
+
+  await new Promise((resolve) => injectionServer.close(resolve));
+});
+
 test('GET /admin/surveys returns survey list', async () => {
   const res = await fetch(`${baseUrl}/admin/surveys`);
   assert.strictEqual(res.status, 200);
