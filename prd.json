@@ -2554,8 +2554,8 @@
         "'seed': 'node ../scripts/seed-local.js' added to app/package.json scripts"
       ],
       "priority": 159,
-      "passes": false,
-      "notes": "Neo4j can take 40-60s to start \u2014 seed script must poll HTTP API with retries before proceeding."
+      "passes": true,
+      "notes": "Created scripts/seed-local.js using createRequire to load mongodb from app/node_modules (scripts/ has no node_modules). Uses Neo4j HTTP API (fetch) for polling + queries. Uses Keycloak master-realm admin-cli grant. All operations idempotent. Added 'seed' npm script to app/package.json."
     },
     {
       "id": "US-160",
