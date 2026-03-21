@@ -2322,7 +2322,7 @@
         "No component scores below 3/5 on any dimension"
       ],
       "priority": 144,
-      "passes": false,
+      "passes": true,
       "notes": "Final story \u2014 depends on US-140, US-141, US-142, US-143 (and transitively all review and improvement stories). Must run last."
     }
   ]
