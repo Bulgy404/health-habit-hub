@@ -5,6 +5,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HEALTH_URL="${HEALTH_URL:-http://localhost:3000/api/v1/health}"
+KEYCLOAK_HEALTH_URL="${KEYCLOAK_HEALTH_URL:-http://localhost:8080/health/ready}"
 HEALTH_TIMEOUT=60
 DRY_RUN=false
 DRY_RUN_FLAG=""
@@ -102,22 +103,16 @@ fi
 # 2. Deploy Keycloak
 run_step "Keycloak" "${SCRIPT_DIR}/deploy-keycloak.sh"
 
-# Health check
+# Health check — poll Keycloak's own health endpoint
 if [ "$DRY_RUN" = true ]; then
-  log "[dry-run] Would poll health check at ${HEALTH_URL}"
+  log "[dry-run] Would poll Keycloak health check at ${KEYCLOAK_HEALTH_URL}"
 else
-  wait_healthy "$HEALTH_URL" "$HEALTH_TIMEOUT"
+  wait_healthy "$KEYCLOAK_HEALTH_URL" "$HEALTH_TIMEOUT"
 fi
 
 # 3. Deploy recommender
 run_step "Recommender" "${SCRIPT_DIR}/deploy-recommender.sh"
-
-# Health check
-if [ "$DRY_RUN" = true ]; then
-  log "[dry-run] Would poll health check at ${HEALTH_URL}"
-else
-  wait_healthy "$HEALTH_URL" "$HEALTH_TIMEOUT"
-fi
+# No health check — recommender does not expose a public health endpoint
 
 # 4. Deploy Flutter web
 run_step "Flutter Web" "${SCRIPT_DIR}/deploy-flutter-web.sh"

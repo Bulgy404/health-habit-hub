@@ -40,8 +40,8 @@ for arg in "$@"; do
 done
 
 echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Deploying backend (app)..."
-run docker-compose build app
-run docker-compose up -d app
+run docker compose build app
+run docker compose up -d app
 
 if [ "$DRY_RUN" = true ]; then
   echo "[dry-run] Would wait for health check at $HEALTH_URL"

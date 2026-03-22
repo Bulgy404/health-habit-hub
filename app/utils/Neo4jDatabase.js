@@ -11,7 +11,7 @@
 // =============================================================================
 
 import neo4j from 'neo4j-driver';
-import { v4 as uuid } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { escapeStringLiteral } from './translate.js';
 import { ExperimentalSetting, Donation } from '../models/donation.js';
 
@@ -281,7 +281,7 @@ ${iri(`Habit-${t.id}`)} rdf:type owl:NamedIndividual , hhh:Habit ;
 
     triples += origContexts
       .map((origCtx) => {
-        const tid = uuid();
+        const tid = randomUUID();
         const tLabel = translatedLabelsByValue.get(origCtx.value);
         const translatedData = tLabel ? tLabel.data : origCtx.data;
         return `
@@ -299,7 +299,7 @@ ${iri(`Context-${tid}`)} hhh:hasTranslation ${iri(`Context-${origCtx.id}`)} .
 
     triples += origBehaviors
       .map((origBeh) => {
-        const tid = uuid();
+        const tid = randomUUID();
         const tLabel = translatedLabelsByValue.get(origBeh.value);
         const translatedData = tLabel ? tLabel.data : origBeh.data;
         return `
@@ -323,7 +323,7 @@ ${iri(`Behavior-${tid}`)} hhh:hasTranslation ${iri(`Behavior-${origBeh.id}`)} .
    * Each section is produced by a dedicated named method.
    */
   _buildDonationTurtle(donation, experimentalSetting, userId, timestamp) {
-    const donorId = uuid();
+    const donorId = randomUUID();
     return {
       prefixes: PREFIXES,
       habitTriples: this._habitTriples(donation),

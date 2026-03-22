@@ -15,7 +15,7 @@ import { config } from './config.js';
 import { escapeStringLiteral } from './translate.js';
 import { ExperimentalSetting, Donor, Donation } from '../models/donation.js';
 
-class DbClient {
+class SparqlDbClient {
   constructor(config) {
     this.client = new SparqlClient({
       updateUrl: config.getDbEndpoint(),
@@ -238,4 +238,4 @@ class DbClient {
   }
 }
 
-export { DbClient };
+export { SparqlDbClient };

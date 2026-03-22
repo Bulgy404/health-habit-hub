@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { DbClient } from '../utils/SparqlDatabase.js';
+import { SparqlDbClient } from '../utils/SparqlDatabase.js';
 import SparqlClient from 'sparql-http-client';
 import { ExperimentGroup } from '../models/experimentGroup.js';
 
@@ -19,9 +19,9 @@ const sparqlClientTestConfig = {
   ],
 };
 
-test('Create instance of DbClient', () => {
-  const dbClient = new DbClient(sparqlClientTestConfig);
-  assert(dbClient instanceof DbClient);
+test('Create instance of SparqlDbClient', () => {
+  const dbClient = new SparqlDbClient(sparqlClientTestConfig);
+  assert(dbClient instanceof SparqlDbClient);
   assert(dbClient.client instanceof SparqlClient);
   assert.strictEqual(
     dbClient.client.query.endpoint.updateUrl,
@@ -52,7 +52,7 @@ test('Insert open data (integration)', async (t) => {
     inputValue: 'I eat a banana',
     experimentGroup: openExperimentGroup,
   };
-  const dbClient = new DbClient(sparqlClientTestConfig);
+  const dbClient = new SparqlDbClient(sparqlClientTestConfig);
   try {
     await dbClient.insertDonateData(data, 'sparql-open-test-user');
   } finally {
@@ -76,7 +76,7 @@ test('Insert closed data (integration)', async (t) => {
       { name: 'TimeReference', value: 'morning' },
     ],
   };
-  const dbClient = new DbClient(sparqlClientTestConfig);
+  const dbClient = new SparqlDbClient(sparqlClientTestConfig);
   try {
     await dbClient.insertDonateData(data, 'sparql-closed-test-user');
   } finally {

@@ -1,0 +1,24 @@
+name: 'Setup Node.js application'
+description: 'Checkout, set up Node.js 22 with npm cache, and install dependencies'
+
+inputs:
+  working-directory:
+    description: 'Directory containing package-lock.json and where npm ci is run'
+    required: false
+    default: 'app'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: npm
+        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+    - name: Install dependencies
+      working-directory: ${{ inputs.working-directory }}
+      shell: bash
+      run: npm ci
