@@ -1868,3 +1868,13 @@
   - `enrolledAt` from MongoDB comes back as an ISO string in JSON responses — safe to pass directly to `fmtDate()`
   - `studyCodeUsed` null means the participant skipped code entry (enrolled in default study) — display as 'direct/default'
 ---
+
+## 2026-03-22 - US-184
+- What was implemented: Added `NotificationsTab` React component in `admin/src/app/(admin)/studies/page.tsx`. Compose form has: Title (max 50 chars with live counter), Body (max 200 chars with live counter), Target dropdown (all participants or specific group from study.groups), Send time toggle (Now / Schedule — datetime-local input shown when Schedule selected). On Send: POST /api/v1/admin/notifications/send with { studyId, groupId?, title, body, data }; shows toast "Sent to N participants". On Schedule: POST /api/v1/admin/notifications/schedule with { scheduledAt: ISO8601 }; shows "Scheduled for [datetime]" toast, refreshes scheduled list. Scheduled sub-section loads on mount from GET /api/v1/admin/notifications/scheduled?studyId=..., filters client-side to matching studyId, lists items with title/body/meta, Cancel button calls DELETE /api/v1/admin/notifications/scheduled/:id. Added `NOTIFICATIONS_BASE` constant, `ScheduledNotification` interface, CSS for notificationsTab, notifSection, notifForm, notifFormRow, toastMsg, notifEmpty, scheduledList/Item/ItemMain/Title/Body/Meta. Updated `ModalTab` type to include "notifications", added Notifications tab button, updated tab rendering. `npx tsc --noEmit` and `npm run build` pass.
+- Files changed: admin/src/app/(admin)/studies/page.tsx (NotificationsTab component + ModalTab update + constants + interface), admin/src/app/(admin)/studies/page.module.css (notifications tab styles), prd.json (US-184 passes=true)
+- **Learnings for future iterations:**
+  - The GET /api/v1/admin/notifications/scheduled endpoint returns ALL pending notifications (not filtered by studyId) — filter client-side with `.filter(n => n.studyId === study.id)` since the backend doesn't accept a query param
+  - `datetime-local` input `min` attribute should be `new Date().toISOString().slice(0, 16)` to prevent scheduling in the past
+  - The POST /send body field `data` must be included (even as empty object `{}`) for firebase-admin multicast call to not error
+  - `charHint` helper class (small, muted, font-weight 400) is useful for character counters alongside form labels — reusable pattern in admin UI
+---

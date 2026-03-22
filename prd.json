@@ -2956,7 +2956,7 @@
         "Admin panel runs without new JS console errors"
       ],
       "priority": 184,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-177 and US-178."
     },
     {
