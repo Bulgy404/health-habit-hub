@@ -187,7 +187,7 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
     await storage.write(key: _kRefreshToken, value: _refreshToken);
     await storage.write(key: kOnboardingCompleteKey, value: 'true');
     if (!mounted) return;
-    context.go('/donate');
+    context.go('/onboarding/study-code');
   }
 
   void _copyToClipboard() {
