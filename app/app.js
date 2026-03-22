@@ -168,7 +168,12 @@ import createV1Router from './routes/index.js';
 import { createInternalRouter } from './routes/internalRouter.js';
 import { createRecommendationWsServer } from './ws/recommendationWs.js';
 import { createTokenVerifier } from './middleware/auth.js';
+import { startNotificationScheduler } from './services/notificationService.js';
+import { makeGetDb } from './utils/getDb.js';
 app.use('/api/v1', createV1Router());
+
+// Start scheduled notification dispatcher (runs every 60 s)
+startNotificationScheduler({ getDb: makeGetDb() });
 
 app.use(cookieParser());
 app.use(contextPath, router);
