@@ -19,6 +19,14 @@ import {
   getSettings,
   updateSetting,
 } from '../services/adminStatsService.js';
+import {
+  listStudies,
+  createStudy,
+  getStudy,
+  updateStudy,
+  softDeleteStudy,
+  setDefaultStudy,
+} from '../services/studyService.js';
 
 const DEFAULT_SETTINGS = [{ key: 'token_card_format', value: 'both' }];
 
@@ -1500,6 +1508,126 @@ export function createAdminRouter({
       }
 
       res.json(result);
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ── Study CRUD routes ─────────────────────────────────────────────────────
+
+  // GET /api/v1/admin/studies — paginated list with participant count
+  router.get('/studies', async (req, res) => {
+    try {
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(
+        100,
+        Math.max(1, parseInt(req.query.limit, 10) || 20)
+      );
+      const database = await getDb();
+      const result = await listStudies({ db: database, page, limit });
+      res.json(result);
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/v1/admin/studies — create a new study
+  router.post('/studies', async (req, res) => {
+    try {
+      const { name, description, groups, questionnaires } = req.body;
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ error: 'name is required' });
+      }
+      if (!Array.isArray(groups) || groups.length === 0) {
+        return res
+          .status(400)
+          .json({ error: 'groups must be a non-empty array' });
+      }
+      const database = await getDb();
+      const study = await createStudy({
+        db: database,
+        name,
+        description,
+        groups,
+        questionnaires,
+      });
+      res.status(201).json({
+        id: study._id.toString(),
+        name: study.name,
+        description: study.description,
+        isDefault: study.isDefault,
+        isActive: study.isActive,
+        groups: study.groups,
+        questionnaires: (study.questionnaires || []).map((id) => id.toString()),
+        createdAt: study.createdAt,
+        updatedAt: study.updatedAt,
+      });
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/studies/:id — get a single study
+  router.get('/studies/:id', async (req, res) => {
+    try {
+      const database = await getDb();
+      const study = await getStudy({ db: database, id: req.params.id });
+      if (!study) return res.status(404).json({ error: 'Study not found' });
+      res.json(study);
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PUT /api/v1/admin/studies/:id — update a study
+  router.put('/studies/:id', async (req, res) => {
+    try {
+      const database = await getDb();
+      const result = await updateStudy({
+        db: database,
+        id: req.params.id,
+        updates: req.body,
+      });
+      if (result.notFound)
+        return res.status(404).json({ error: 'Study not found' });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // DELETE /api/v1/admin/studies/:id — soft-delete a study
+  router.delete('/studies/:id', async (req, res) => {
+    try {
+      const database = await getDb();
+      const result = await softDeleteStudy({ db: database, id: req.params.id });
+      if (result.notFound)
+        return res.status(404).json({ error: 'Study not found' });
+      if (result.conflict) {
+        return res
+          .status(409)
+          .json({ error: 'Study has enrolled participants' });
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PUT /api/v1/admin/studies/:id/default — mark study as default
+  router.put('/studies/:id/default', async (req, res) => {
+    try {
+      const database = await getDb();
+      const result = await setDefaultStudy({ db: database, id: req.params.id });
+      if (result.notFound)
+        return res.status(404).json({ error: 'Study not found' });
+      res.json({ ok: true });
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
