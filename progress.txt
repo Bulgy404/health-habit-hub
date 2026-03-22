@@ -1812,3 +1812,13 @@
   - `handleDeactivate` catches the thrown error from `apiFetch` and returns `{ error: msg }` instead of re-throwing — caller checks the return value to show inline error without closing the modal
   - Admin build uses `npx tsc --noEmit` for typecheck then `npm run build` — both pass with the new page
 ---
+
+## 2026-03-22 - US-179
+- What was implemented: Added "Codes" tab to study edit modal in `admin/src/app/(admin)/studies/page.tsx`. Tab is shown only for existing studies. "Generate Codes" form has group select (from study.groups), quantity 1-100 input, optional max redemptions, optional expiry datetime-local. On submit, calls POST /api/v1/admin/studies/:id/codes and shows generated codes as chips with a "Copy All" button (writes to clipboard). Existing codes table shows code (monospace), group label, redemptions/max, expiry, and Revoke action (DELETE /api/v1/admin/studies/:id/codes/:code). Revoke button is disabled with strikethrough tooltip text if redemptionCount > 0. Paginated (10 per page) with prev/next buttons. Also fixed pre-existing bug: `StudySummary._id` → `id` to match the backend `listStudies` response which returns `id: s._id.toString()`. `StudyGroup` interface updated to include `id` and `index`. Added tabs CSS and codes-tab CSS to page.module.css.
+- Files changed: admin/src/app/(admin)/studies/page.tsx (tabs + CodesTab component + _id→id fix), admin/src/app/(admin)/studies/page.module.css (tabs + codes CSS), prd.json (US-179 passes=true)
+- **Learnings for future iterations:**
+  - `listStudies` backend returns `id: s._id.toString()` (not `_id`) — frontend `StudySummary` should use `id`, not `_id`
+  - `listCodes` backend returns `groupId` string only; group label must be looked up from `study.groups` in the frontend
+  - POST /codes returns `{ codes: StudyCode[] }` where each code is a full object; extract `.code` string field for the clipboard display
+  - Tab pattern: add `activeTab` state to modal; use `.tabs` + `.tab` + `.tabActive` CSS; only show footer when on "details" tab; Codes tab manages its own loading/error state independently
+---
