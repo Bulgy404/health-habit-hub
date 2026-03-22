@@ -471,6 +471,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedToLoadQuestionnaire => 'Failed to load questionnaire.';
 
   @override
+  String get noQuestionnairesAssigned =>
+      'No questionnaires are assigned to your study yet.';
+
+  @override
   String get getRecommendations => 'Get Recommendations';
 
   @override

@@ -58,6 +58,24 @@ class Question {
   }
 }
 
+/// Lightweight summary of a questionnaire assigned to the participant's study.
+///
+/// Returned by GET /api/v1/participant/questionnaires.
+@immutable
+class ParticipantQuestionnaire {
+  final String slug;
+  final String title;
+
+  const ParticipantQuestionnaire({required this.slug, required this.title});
+
+  factory ParticipantQuestionnaire.fromJson(Map<String, dynamic> json) {
+    return ParticipantQuestionnaire(
+      slug: json['slug'] as String,
+      title: json['title'] as String,
+    );
+  }
+}
+
 @immutable
 class QuestionnaireDefinition {
   final String slug;
