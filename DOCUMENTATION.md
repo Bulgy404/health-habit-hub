@@ -3356,6 +3356,7 @@ All files under `docs/` and the root markdown files, with a one-line description
 |---|---|
 | `docs/guides/developer-onboarding.md` | Step-by-step onboarding guide for new developers — environment setup, first run, test execution, and code conventions |
 | `docs/guides/flutter-architecture.md` | Flutter app architecture guide — provider tree, routing (GoRouter), screen structure, service layer, and l10n conventions |
+| `docs/guides/local-dev.md` | Comprehensive local development reference — Docker service URLs, make targets, hot-reload workflow, and database connection details |
 | `docs/guides/admin-guide.md` | English admin guide — managing participants, questionnaires, habit exports, and Keycloak user administration |
 | `docs/guides/admin-guide-de.md` | German-language version of the admin guide |
 | `docs/guides/participant-guide.md` | English participant guide — how to install the app, log in with a token card, donate habits, and view recommendations |

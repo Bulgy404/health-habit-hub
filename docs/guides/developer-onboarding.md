@@ -301,6 +301,17 @@ flutter run \
 
 ## 7. Run All Tests
 
+### Seed the local database
+
+After services are up, run the idempotent seed script to create test users, questionnaires, Neo4j constraints, and default groups:
+
+```bash
+cd app
+npm run seed
+```
+
+This creates a Keycloak test account (`testuser` / `testpass123` in the `hhh` realm), seeds SLIQ and RAND-36 questionnaires into MongoDB, creates the four `hhh__ExperimentalSetting` Group nodes in Neo4j, and applies Neo4j constraints. The script is safe to re-run — all steps use MERGE or upsert semantics.
+
 ### Node.js backend tests
 
 ```bash
@@ -312,8 +323,7 @@ npm test
 Expected output:
 
 ```
-Test Suites: 12 passed, 12 total
-Tests:       186 passed, 186 total
+Tests:       265 passed, 265 total
 ```
 
 | Terminal | Screenshot |
@@ -510,8 +520,7 @@ cd app && npm test -- --passWithNoTests 2>&1 | tail -5
 Expected last lines:
 
 ```
-Tests:       186 passed, 186 total
-Test Suites: 12 passed, 12 total
+Tests:       265 passed, 265 total
 ```
 
 ---

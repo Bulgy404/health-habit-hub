@@ -87,6 +87,21 @@ graph TD
 
 ---
 
+## Node.js Backend — Internal Module Structure
+
+The `app/` service is internally organized into the following layers (as of the v1.2.0 clean-code refactor):
+
+| Directory | Purpose |
+|---|---|
+| `app/routes/` | Thin Express routers — parameter extraction, auth middleware, delegating to services |
+| `app/services/` | Business logic: `habitDonationService.js`, `adminParticipantService.js`, `adminHabitService.js`, `adminStatsService.js`, `keycloakAdminClient.js` |
+| `app/db/` | Named Cypher query modules: `habitQueries.js`, `adminQueries.js` |
+| `app/models/` | Domain model classes: `donation.js` (Donor, Label, Donation, ExperimentalSetting) |
+| `app/middleware/` | Express middleware: `auth.js` (JWT/JWKS), `roles.js` (ROLES constants, isPrivileged) |
+| `app/utils/` | Infrastructure helpers: `Neo4jDatabase.js`, `SparqlDatabase.js`, `getDb.js`, `translate.js`, `constants.js` |
+
+---
+
 ## End-to-End Donation Pipeline
 
 The donation pipeline ingests a habit sentence from the Flutter app, enriches it with BCIO context classifications and machine translations, and persists everything to Neo4j.
