@@ -22,6 +22,7 @@ import 'screens/explore_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding/passphrase_screen.dart';
 import 'screens/onboarding/restore_screen.dart';
+import 'screens/onboarding/study_code_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/shell_screen.dart';
@@ -104,6 +105,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/onboarding/restore',
         builder: (context, state) => const RestoreScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/study-code',
+        builder: (context, state) => const StudyCodeScreen(),
       ),
       GoRoute(
         path: '/questionnaire/:slug',
