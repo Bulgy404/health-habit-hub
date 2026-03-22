@@ -19,8 +19,18 @@ interface StudySummary {
   isActive: boolean;
   isDefault: boolean;
   groups: StudyGroup[];
+  questionnaires: string[];
   participantCount: number;
   createdAt: string | null;
+}
+
+interface QuestionnaireSummary {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  isLibrary: boolean;
+  active: boolean;
 }
 
 interface StudyCode {
@@ -60,6 +70,10 @@ const API_BASE =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
   "/admin/studies";
 
+const QUESTIONNAIRES_API =
+  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
+  "/admin/questionnaires";
+
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
     ...opts,
@@ -76,6 +90,152 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
     );
   }
   return res.json();
+}
+
+// ── Questionnaires tab ────────────────────────────────────────────────────────
+
+function QuestionnairesTab({
+  study,
+  token,
+  onSaved,
+}: {
+  study: StudySummary;
+  token: string;
+  onSaved: () => void;
+}) {
+  const [allQuestionnaires, setAllQuestionnaires] = useState<QuestionnaireSummary[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(
+    new Set(study.questionnaires ?? [])
+  );
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError("");
+    apiFetch(QUESTIONNAIRES_API, token)
+      .then((data) => {
+        if (!cancelled) {
+          setAllQuestionnaires(
+            Array.isArray(data) ? (data as QuestionnaireSummary[]) : []
+          );
+        }
+      })
+      .catch((err) => {
+        if (!cancelled)
+          setLoadError(err instanceof Error ? err.message : "Failed to load questionnaires");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [token]);
+
+  function toggleId(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setSaved(false);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError("");
+    setSaved(false);
+    try {
+      await apiFetch(`${API_BASE}/${study.id}`, token, {
+        method: "PUT",
+        body: JSON.stringify({ questionnaires: Array.from(selected) }),
+      });
+      setSaved(true);
+      onSaved();
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const library = allQuestionnaires.filter((q) => q.isLibrary);
+  const custom = allQuestionnaires.filter((q) => !q.isLibrary);
+
+  return (
+    <div className={styles.questionnairesTab}>
+      {loadError && <div className={styles.errorMsg}>{loadError}</div>}
+      {loading ? (
+        <div className={styles.loadingState}>Loading…</div>
+      ) : allQuestionnaires.length === 0 ? (
+        <div className={styles.emptyState}>
+          No questionnaires available. Create some in the Questionnaires section.
+        </div>
+      ) : (
+        <>
+          {library.length > 0 && (
+            <div className={styles.qSection}>
+              <p className={styles.qSectionTitle}>Library questionnaires</p>
+              <div className={styles.qList}>
+                {library.map((q) => (
+                  <label key={q.id} className={styles.qItem}>
+                    <input
+                      type="checkbox"
+                      className={styles.qCheckbox}
+                      checked={selected.has(q.id)}
+                      onChange={() => toggleId(q.id)}
+                    />
+                    <span className={styles.qTitle}>{q.title}</span>
+                    {!q.active && (
+                      <span className={styles.qInactive}>inactive</span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          {custom.length > 0 && (
+            <div className={styles.qSection}>
+              <p className={styles.qSectionTitle}>Custom questionnaires</p>
+              <div className={styles.qList}>
+                {custom.map((q) => (
+                  <label key={q.id} className={styles.qItem}>
+                    <input
+                      type="checkbox"
+                      className={styles.qCheckbox}
+                      checked={selected.has(q.id)}
+                      onChange={() => toggleId(q.id)}
+                    />
+                    <span className={styles.qTitle}>{q.title}</span>
+                    {!q.active && (
+                      <span className={styles.qInactive}>inactive</span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          {saveError && <div className={styles.errorMsg}>{saveError}</div>}
+          <div className={styles.qFooter}>
+            {saved && (
+              <span className={styles.savedMsg}>Saved!</span>
+            )}
+            <button
+              className={styles.saveBtn}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 // ── Codes tab ─────────────────────────────────────────────────────────────────
@@ -368,7 +528,7 @@ function CodesTab({
 
 // ── Study form modal ──────────────────────────────────────────────────────────
 
-type ModalTab = "details" | "codes";
+type ModalTab = "details" | "questionnaires" | "codes";
 
 function StudyModal({
   initial,
@@ -428,7 +588,6 @@ function StudyModal({
         name: name.trim(),
         description: description.trim(),
         groups: groupLabels.slice(0, groupCount).map((label) => ({ label })),
-        questionnaires: [],
       };
       if (isEdit) {
         await apiFetch(`${API_BASE}/${initial!.id}`, token, {
@@ -503,6 +662,12 @@ function StudyModal({
               onClick={() => setActiveTab("details")}
             >
               Details
+            </button>
+            <button
+              className={`${styles.tab} ${activeTab === "questionnaires" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("questionnaires")}
+            >
+              Questionnaires
             </button>
             <button
               className={`${styles.tab} ${activeTab === "codes" ? styles.tabActive : ""}`}
@@ -581,6 +746,14 @@ function StudyModal({
                 </div>
               </div>
             </>
+          ) : activeTab === "questionnaires" ? (
+            initial && (
+              <QuestionnairesTab
+                study={initial}
+                token={token}
+                onSaved={onSaved}
+              />
+            )
           ) : (
             initial && <CodesTab study={initial} token={token} />
           )}
