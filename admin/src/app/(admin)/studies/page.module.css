@@ -730,6 +730,121 @@
   font-size: 0.8rem;
 }
 
+/* ── Notifications tab ─────────────────────────────────────────────────────── */
+
+.notificationsTab {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.notifSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.notifSectionTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.notifForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.notifFormRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.875rem;
+}
+
+.notifFormFooter {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.charHint {
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.toastMsg {
+  padding: 0.75rem 1rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  color: #15803d;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.notifEmpty {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  background: #f8fafc;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.scheduledList {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.scheduledItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.scheduledItem:last-child {
+  border-bottom: none;
+}
+
+.scheduledItemMain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.scheduledTitle {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scheduledBody {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scheduledMeta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
 /* ── Confirmation dialog ────────────────────────────────────────────────────── */
 
 .confirmDialog {
