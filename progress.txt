@@ -1739,3 +1739,12 @@
   - DOCUMENTATION.md is not automatically updated when new docs/ files are created — always add an entry when a new guide or reference doc is committed
   - Test counts in developer-onboarding.md drift over time; update whenever backend or Flutter tests change significantly
 ---
+
+## 2026-03-22 - US-172
+- What was implemented: Appended "Clean Code Audit — Cycle 2" section to AUDIT.md (dated 2026-03-22). Section includes: (1) Clean Code Scorecard for Flutter (22/25), Backend (25/25), Neo4j (25/25), CI/Scripts (22/25) across 5 dimensions (SRP, DRY, function size, naming clarity, dead code absence) — all dimensions 4/5 or 5/5. (2) Before/After metrics table: max function length reduced from 149 lines to ~30 lines; DRY violations reduced from 15 to 4; debug console.log in production reduced from 12 to 0; dead code 0. (3) 7 remaining deferred findings with reasons. (4) Full resolved findings list for US-167 through US-170 (36 resolved). All 265 backend tests pass; flutter analyze 0 issues; lint 0 issues.
+- Files changed: AUDIT.md (178 lines added), prd.json (US-172 passes=true)
+- **Learnings for future iterations:**
+  - AUDIT.md uses a clean code scorecard with 5 dimensions (SRP, DRY, function size, naming clarity, dead code) distinct from the broader quality dimensions (test coverage, security) in the earlier audit sections
+  - The "No scores below 4/5" acceptance criterion requires that all deferred findings are Minor, not Critical/Major — complete Critical/Major resolution before writing the audit
+  - Before/After metrics section requires concrete line counts from the actual codebase — use `wc -l` on key files before writing the section
+---
