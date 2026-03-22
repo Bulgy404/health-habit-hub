@@ -228,6 +228,54 @@ Apply to all 6 service classes. Delete 6 local `_authHeaders()` copies.
 | CI/CD | 3 | 8 | 6 major | 4–6 hrs |
 | **Total** | **13** | **34** | **18 major** | **28–36 hrs** |
 
+---
+
+## Resolution Notes (US-170 — 2026-03-22)
+
+### Scripts — Shebang and set -euo pipefail
+- `restore.sh` changed from `#!/bin/bash` → `#!/usr/bin/env bash` ✅
+- All bash scripts (deploy-backend.sh, deploy-recommender.sh, deploy-keycloak.sh, deploy-full.sh, restore.sh) already had `set -euo pipefail` ✅
+- All node scripts (add-mongo-validators.js, backfill-de-translations.js, generate-spec.js, migrate-habits-bcio.js, run-migration.js, seed-local.js, version-check.js) already had `#!/usr/bin/env node` ✅
+- `generate-spec.js` wrapped in try/catch with `process.exit(1)` on error ✅
+
+### Dead Code Removed
+- `generate-spec.js`: Removed dead 44-line `toYaml()` function (js-yaml was imported and used instead) ✅
+
+### Naming Inconsistencies Resolved
+- **UUID generation**: Replaced `import { v4 as uuid } from 'uuid'` with `import { randomUUID } from 'node:crypto'` in `app/utils/Neo4jDatabase.js` and `app/routes/surveyRouter.js` ✅
+- **Database class names**: Renamed `DbClient` → `SparqlDbClient` in `app/utils/SparqlDatabase.js`, `app/controllers/donateController.js`, `app/tests/SparqlDatabase.test.js`, `app/tests/FusekiDatabase.integration.test.js` ✅
+- **Timestamp format**: Updated `restore.sh` from local-time `date +'%Y-%m-%d %H:%M:%S'` to UTC ISO `date -u '+%Y-%m-%dT%H:%M:%SZ'` to match all other scripts ✅
+- **Profile URL**: Already resolved in US-167 ✅
+
+### Deploy Scripts — docker-compose → docker compose (Docker v2 CLI)
+- `deploy-backend.sh`: `docker-compose` → `docker compose` ✅
+- `deploy-recommender.sh`: `docker-compose` → `docker compose` ✅
+- `deploy-keycloak.sh`: `docker-compose` → `docker compose` + token extraction `grep|cut` → `jq -r '.access_token'` ✅
+
+### Deploy Orchestrator — Wrong Health Check URLs Fixed
+- `deploy-full.sh`: After Keycloak deploy now polls `${KEYCLOAK_HEALTH_URL:-http://localhost:8080/health/ready}` instead of backend URL ✅
+- After Recommender deploy: health check removed (recommender has no public health endpoint) ✅
+
+### CI — Checkout Version Fixed
+- `deploy.yml`: `actions/checkout@v6` → `actions/checkout@v4` ✅
+
+### CI — Composite Actions Extracted
+- Created `.github/actions/setup-node-app/action.yml`: parameterized `working-directory` input (default: `app`), replaces 3 copy-pasted steps (checkout@v4 + setup-node@v4 + npm ci) across 5 jobs ✅
+- Created `.github/actions/setup-flutter/action.yml`: replaces 3 copy-pasted steps (checkout@v4 + flutter-action@v2 + flutter pub get) across 3 jobs ✅
+- Updated `ci.yml`: jobs `backend-lint`, `backend-unit`, `backend-integration`, `backend-security`, `admin-build` now use `setup-node-app` composite action; jobs `flutter-analyze`, `flutter-test`, `flutter-build-web` now use `setup-flutter` composite action ✅
+
+### Quality Checks
+- `npm test`: 265/265 pass ✅
+- `flutter analyze`: 0 issues ✅
+- `npx eslint .`: 0 issues ✅
+
+### Deferred (not in US-170 scope)
+- Phase 2 deduplication (getDb, AuthHeadersMixin, translateText shared util): addressed in US-167/168/169
+- Phase 3 SRP refactoring (god handlers, AdminService split): higher risk, deferred to future cycle
+- Phase 4 config centralisation (SUPPORTED_LANGUAGES → constants.js): addressed in US-169
+
+---
+
 ## Key Interdependencies
 
 1. **Phase 1 must complete first** — fixes the three prod-breaking bugs (broken CI, Docker v1, group data corruption).

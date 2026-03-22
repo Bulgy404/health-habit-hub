@@ -21,7 +21,7 @@ for arg in "$@"; do
 done
 
 echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Deploying recommender service..."
-run docker-compose build recommender
-run docker-compose up -d recommender
+run docker compose build recommender
+run docker compose up -d recommender
 
 echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Recommender deployed successfully."

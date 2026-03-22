@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DbClient } from '../utils/SparqlDatabase.js';
+import { SparqlDbClient } from '../utils/SparqlDatabase.js';
 
 function getFusekiConfig() {
   const host = process.env.FUSEKI_HOST || 'localhost';
@@ -28,7 +28,7 @@ async function canReachFuseki() {
   }
 }
 
-test('Sparql DbClient constructs with test config', () => {
+test('Sparql SparqlDbClient constructs with test config', () => {
   const { endpoint, host, port, dataset, user, password } = getFusekiConfig();
   const cfg = {
     getDbEndpoint: () => endpoint,
@@ -39,7 +39,7 @@ test('Sparql DbClient constructs with test config', () => {
       ['path', `/${dataset}`],
     ],
   };
-  const c = new DbClient(cfg);
+  const c = new SparqlDbClient(cfg);
   assert.ok(c);
 });
 
@@ -62,7 +62,7 @@ test('Insert and verify with Fuseki (integration)', async () => {
     ],
   };
 
-  const client = new DbClient(cfg);
+  const client = new SparqlDbClient(cfg);
   const uid = 'fuseki-test-user-e2e';
 
   const data = {

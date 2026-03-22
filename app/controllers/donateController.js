@@ -1,7 +1,7 @@
 import contexts from '../models/contexts.js';
 import { ExperimentGroup } from '../models/experimentGroup.js';
 import { getLanguageMessages } from '../utils/localization.js';
-import { DbClient } from '../utils/SparqlDatabase.js';
+import { SparqlDbClient } from '../utils/SparqlDatabase.js';
 import { config } from '../utils/config.js';
 
 function getExperimentGroupFromQuery(req) {
@@ -78,10 +78,10 @@ export async function saveDonateData(req, res) {
   console.log(`Received donate data for user ${userId}:`, req.body);
   let dbClient;
   if (config.graphBackend === 'neo4j') {
-    const { Neo4jDbClient } = await import('../utils/Neo4jDatabase.js');
-    dbClient = new Neo4jDbClient(config);
+    const { Neo4jSparqlDbClient } = await import('../utils/Neo4jDatabase.js');
+    dbClient = new Neo4jSparqlDbClient(config);
   } else {
-    dbClient = new DbClient(config);
+    dbClient = new SparqlDbClient(config);
   }
   const data = {
     ...req.body,

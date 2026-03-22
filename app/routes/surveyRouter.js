@@ -1,6 +1,6 @@
 import cookieParser from 'cookie-parser';
 import express from 'express';
-import { v4 as uuid } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { makeGetDb } from '../utils/getDb.js';
 import { isPrivileged } from '../middleware/roles.js';
 import { renderSurvey, submitSurvey } from '../controllers/surveyController.js';
@@ -11,7 +11,7 @@ legacyRouter.use(cookieParser());
 legacyRouter.use((req, res, next) => {
   let userId = req.cookies.userId;
   if (!userId) {
-    userId = uuid();
+    userId = randomUUID();
     res.cookie('userId', userId, {
       maxAge: 365 * 24 * 60 * 60 * 1000,
       httpOnly: true,

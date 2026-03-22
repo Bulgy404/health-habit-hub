@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
@@ -35,11 +35,11 @@ fi
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] Extracting backup archive..."
+echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Extracting backup archive..."
 tar -xzf "$ARCHIVE" -C "$WORK_DIR"
 
 # 1. Restore MongoDB
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] 1/3 Restoring MongoDB..."
+echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] 1/3 Restoring MongoDB..."
 if [ -d "$WORK_DIR/mongo" ]; then
   mongorestore \
     --host=mongo:27017 \
@@ -49,16 +49,16 @@ if [ -d "$WORK_DIR/mongo" ]; then
     --drop \
     "$WORK_DIR/mongo" \
     --quiet 2>/dev/null
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✓ MongoDB restored"
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] ✓ MongoDB restored"
 else
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠ Warning: mongo/ directory not found in backup, skipping"
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] ⚠ Warning: mongo/ directory not found in backup, skipping"
 fi
 
 # 2. Restore Neo4j
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] 2/3 Restoring Neo4j..."
+echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] 2/3 Restoring Neo4j..."
 if [ -f "$WORK_DIR/neo4j/neo4j.dump" ]; then
   # Stop Neo4j for restore
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')]   Stopping Neo4j..."
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')]   Stopping Neo4j..."
   docker stop h3-neo4j >/dev/null 2>&1 || true
   sleep 2
 
@@ -80,15 +80,15 @@ if [ -f "$WORK_DIR/neo4j/neo4j.dump" ]; then
   docker volume rm neo4j-restore-temp >/dev/null 2>&1 || true
 
   # Restart Neo4j
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')]   Restarting Neo4j..."
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')]   Restarting Neo4j..."
   docker start h3-neo4j >/dev/null 2>&1 || true
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✓ Neo4j restored"
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] ✓ Neo4j restored"
 else
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠ Warning: neo4j/neo4j.dump not found in backup, skipping"
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] ⚠ Warning: neo4j/neo4j.dump not found in backup, skipping"
 fi
 
 # 3. Restore Keycloak realm
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] 3/3 Restoring Keycloak realm..."
+echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] 3/3 Restoring Keycloak realm..."
 if [ -f "$WORK_DIR/keycloak/hhh-realm.json" ]; then
   if [ -n "$KEYCLOAK_ADMIN_PASSWORD" ]; then
     KC_TOKEN=$(curl -sf -X POST \
@@ -109,18 +109,18 @@ if [ -f "$WORK_DIR/keycloak/hhh-realm.json" ]; then
         -H "Content-Type: application/json" \
         -d "@$WORK_DIR/keycloak/hhh-realm.json" \
         2>/dev/null
-      echo "[$(date +'%Y-%m-%d %H:%M:%S')] ✓ Keycloak realm restored"
+      echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] ✓ Keycloak realm restored"
     else
-      echo "[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: Could not obtain Keycloak admin token"
+      echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] ERROR: Could not obtain Keycloak admin token"
       exit 1
     fi
   else
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠ Warning: KEYCLOAK_ADMIN_PASSWORD not set, skipping Keycloak restore"
+    echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] ⚠ Warning: KEYCLOAK_ADMIN_PASSWORD not set, skipping Keycloak restore"
   fi
 else
-  echo "[$(date +'%Y-%m-%d %H:%M:%S')] ⚠ Warning: keycloak/hhh-realm.json not found in backup, skipping"
+  echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] ⚠ Warning: keycloak/hhh-realm.json not found in backup, skipping"
 fi
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] =========================================="
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] Restore from ${TIMESTAMP} completed."
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] =========================================="
+echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] =========================================="
+echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Restore from ${TIMESTAMP} completed."
+echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] =========================================="

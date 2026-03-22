@@ -1,0 +1,17 @@
+name: 'Setup Flutter'
+description: 'Checkout, set up Flutter stable with pub cache, and install pub dependencies'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/checkout@v4
+
+    - uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        cache: true
+
+    - name: Install dependencies
+      working-directory: mobile
+      shell: bash
+      run: flutter pub get

@@ -30,7 +30,7 @@ if [ "$DRY_RUN" = true ]; then
   echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Deploying Keycloak (dry-run)..."
   echo "[dry-run] Get admin token from ${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token"
   echo "[dry-run] Import/update realm 'hhh' from $REALM_FILE via ${KEYCLOAK_URL}/admin/realms"
-  echo "[dry-run] docker-compose restart keycloak"
+  echo "[dry-run] docker compose restart keycloak"
   echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Keycloak deployment complete (dry-run)."
   exit 0
 fi
@@ -50,7 +50,7 @@ TOKEN=$(curl -sf -X POST \
   "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "client_id=admin-cli&grant_type=password&username=${KEYCLOAK_ADMIN}&password=${KEYCLOAK_ADMIN_PASSWORD}" \
-  | grep -o '"access_token":"[^"]*"' | cut -d'"' -f4)
+  | jq -r '.access_token')
 
 if [ -z "$TOKEN" ]; then
   echo "ERROR: Failed to obtain Keycloak admin token" >&2
@@ -83,6 +83,6 @@ else
 fi
 
 echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Restarting Keycloak service..."
-docker-compose restart keycloak
+docker compose restart keycloak
 
 echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Keycloak deployed successfully."

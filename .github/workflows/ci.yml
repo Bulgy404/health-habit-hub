@@ -20,17 +20,7 @@ jobs:
     name: Backend – lint & format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-
-      - name: Install dependencies
-        working-directory: app
-        run: npm ci
+      - uses: ./.github/actions/setup-node-app
 
       - name: Format check
         working-directory: app
@@ -47,17 +37,7 @@ jobs:
     name: Backend – unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-
-      - name: Install dependencies
-        working-directory: app
-        run: npm ci
+      - uses: ./.github/actions/setup-node-app
 
       - name: Run unit tests with coverage
         working-directory: app
@@ -114,17 +94,7 @@ jobs:
           --health-retries 15
 
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-
-      - name: Install dependencies
-        working-directory: app
-        run: npm ci
+      - uses: ./.github/actions/setup-node-app
 
       - name: Run integration tests
         working-directory: app
@@ -147,17 +117,7 @@ jobs:
     name: Backend – security audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-
-      - name: Install dependencies
-        working-directory: app
-        run: npm ci
+      - uses: ./.github/actions/setup-node-app
 
       - name: Audit dependencies
         working-directory: app
@@ -170,16 +130,7 @@ jobs:
     name: Flutter – analyze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Install dependencies
-        working-directory: mobile
-        run: flutter pub get
+      - uses: ./.github/actions/setup-flutter
 
       - name: Analyze
         working-directory: mobile
@@ -192,16 +143,7 @@ jobs:
     name: Flutter – widget tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Install dependencies
-        working-directory: mobile
-        run: flutter pub get
+      - uses: ./.github/actions/setup-flutter
 
       - name: Run all widget tests with coverage
         working-directory: mobile
@@ -220,16 +162,7 @@ jobs:
     name: Flutter – build web
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Install dependencies
-        working-directory: mobile
-        run: flutter pub get
+      - uses: ./.github/actions/setup-flutter
 
       - name: Build Flutter web
         working-directory: mobile
@@ -384,17 +317,9 @@ jobs:
     name: Admin – typecheck & build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: ./.github/actions/setup-node-app
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: admin/package-lock.json
-
-      - name: Install dependencies
-        working-directory: admin
-        run: npm ci
+          working-directory: admin
 
       - name: Typecheck
         working-directory: admin
