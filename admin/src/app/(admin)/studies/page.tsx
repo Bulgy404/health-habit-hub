@@ -1,23 +1,34 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import styles from "./page.module.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface StudyGroup {
+  id: string;
   label: string;
+  index: number;
 }
 
 interface StudySummary {
-  _id: string;
+  id: string;
   name: string;
   description: string;
   isActive: boolean;
   isDefault: boolean;
   groups: StudyGroup[];
   participantCount: number;
+  createdAt: string | null;
+}
+
+interface StudyCode {
+  code: string;
+  groupId: string;
+  maxRedemptions: number | null;
+  redemptionCount: number;
+  expiresAt: string | null;
   createdAt: string | null;
 }
 
@@ -29,6 +40,17 @@ function fmtDate(iso: string | null): string {
     day: "2-digit",
     month: "short",
     year: "numeric",
+  });
+}
+
+function fmtDateTime(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -56,7 +78,297 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   return res.json();
 }
 
+// ── Codes tab ─────────────────────────────────────────────────────────────────
+
+function CodesTab({
+  study,
+  token,
+}: {
+  study: StudySummary;
+  token: string;
+}) {
+  const [codes, setCodes] = useState<StudyCode[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const [loadingCodes, setLoadingCodes] = useState(false);
+  const [codesError, setCodesError] = useState("");
+
+  // Generate form state
+  const [genGroupId, setGenGroupId] = useState(
+    study.groups[0]?.id ?? ""
+  );
+  const [genCount, setGenCount] = useState(1);
+  const [genMaxRed, setGenMaxRed] = useState("");
+  const [genExpiry, setGenExpiry] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState("");
+  const [generatedCodes, setGeneratedCodes] = useState<string[]>([]);
+  const [copied, setCopied] = useState(false);
+
+  // Revoke state
+  const [revoking, setRevoking] = useState<string | null>(null);
+
+  const fetchCodes = useCallback(
+    async (p: number) => {
+      setLoadingCodes(true);
+      setCodesError("");
+      try {
+        const data = await apiFetch(
+          `${API_BASE}/${study.id}/codes?page=${p}&limit=${limit}`,
+          token
+        );
+        setCodes((data as { codes: StudyCode[] }).codes ?? []);
+        setTotal((data as { total: number }).total ?? 0);
+      } catch (err) {
+        setCodesError(
+          err instanceof Error ? err.message : "Failed to load codes"
+        );
+      } finally {
+        setLoadingCodes(false);
+      }
+    },
+    [study.id, token]
+  );
+
+  useEffect(() => {
+    fetchCodes(page);
+  }, [fetchCodes, page]);
+
+  function groupLabel(groupId: string): string {
+    const g = study.groups.find((grp) => grp.id === groupId);
+    return g ? g.label || `Group ${g.index}` : groupId;
+  }
+
+  async function handleGenerate() {
+    if (!genGroupId) {
+      setGenError("Please select a group.");
+      return;
+    }
+    setGenerating(true);
+    setGenError("");
+    setGeneratedCodes([]);
+    try {
+      const payload: Record<string, unknown> = {
+        groupId: genGroupId,
+        count: genCount,
+      };
+      if (genMaxRed) payload.maxRedemptions = parseInt(genMaxRed, 10);
+      if (genExpiry) payload.expiresAt = genExpiry;
+      const data = await apiFetch(`${API_BASE}/${study.id}/codes`, token, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const newCodes: string[] = (
+        (data as { codes: StudyCode[] }).codes ?? []
+      ).map((c) => (typeof c === "string" ? c : c.code));
+      setGeneratedCodes(newCodes);
+      // Refresh list from page 1
+      setPage(1);
+      await fetchCodes(1);
+    } catch (err) {
+      setGenError(err instanceof Error ? err.message : "Generate failed");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleCopyAll() {
+    await navigator.clipboard.writeText(generatedCodes.join("\n"));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function handleRevoke(code: string) {
+    setRevoking(code);
+    try {
+      await apiFetch(`${API_BASE}/${study.id}/codes/${code}`, token, {
+        method: "DELETE",
+      });
+      await fetchCodes(page);
+    } catch {
+      // ignore — button is disabled when redeemed so errors are unexpected
+    } finally {
+      setRevoking(null);
+    }
+  }
+
+  const totalPages = Math.ceil(total / limit);
+
+  return (
+    <div className={styles.codesTab}>
+      {/* Generate form */}
+      <div className={styles.genSection}>
+        <h3 className={styles.genTitle}>Generate Codes</h3>
+        <div className={styles.genForm}>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Group</label>
+            <select
+              className={styles.select}
+              value={genGroupId}
+              onChange={(e) => setGenGroupId(e.target.value)}
+            >
+              {study.groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.label || `Group ${g.index}`}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Quantity (1–100)</label>
+            <input
+              className={styles.input}
+              type="number"
+              min={1}
+              max={100}
+              value={genCount}
+              onChange={(e) =>
+                setGenCount(Math.min(100, Math.max(1, Number(e.target.value))))
+              }
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Max redemptions (optional)</label>
+            <input
+              className={styles.input}
+              type="number"
+              min={1}
+              value={genMaxRed}
+              onChange={(e) => setGenMaxRed(e.target.value)}
+              placeholder="Unlimited"
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Expiry date/time (optional)</label>
+            <input
+              className={styles.input}
+              type="datetime-local"
+              value={genExpiry}
+              onChange={(e) => setGenExpiry(e.target.value)}
+            />
+          </div>
+        </div>
+        {genError && <div className={styles.errorMsg}>{genError}</div>}
+        <button
+          className={styles.saveBtn}
+          onClick={handleGenerate}
+          disabled={generating}
+        >
+          {generating ? "Generating…" : "Generate Codes"}
+        </button>
+
+        {generatedCodes.length > 0 && (
+          <div className={styles.genResult}>
+            <div className={styles.genResultHeader}>
+              <span className={styles.genResultTitle}>
+                {generatedCodes.length} code
+                {generatedCodes.length !== 1 ? "s" : ""} generated
+              </span>
+              <button className={styles.copyAllBtn} onClick={handleCopyAll}>
+                {copied ? "Copied!" : "Copy All"}
+              </button>
+            </div>
+            <div className={styles.codeList}>
+              {generatedCodes.map((c) => (
+                <span key={c} className={styles.codeChip}>
+                  {c}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Codes table */}
+      <div className={styles.codesTableSection}>
+        <h3 className={styles.genTitle}>Existing Codes</h3>
+        {codesError && <div className={styles.errorMsg}>{codesError}</div>}
+        {loadingCodes ? (
+          <div className={styles.loadingState}>Loading…</div>
+        ) : codes.length === 0 ? (
+          <div className={styles.emptyState}>No codes yet.</div>
+        ) : (
+          <>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Group</th>
+                    <th>Redemptions</th>
+                    <th>Expiry</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {codes.map((c) => (
+                    <tr key={c.code}>
+                      <td>
+                        <span className={styles.codeText}>{c.code}</span>
+                      </td>
+                      <td>{groupLabel(c.groupId)}</td>
+                      <td>
+                        {c.redemptionCount}/
+                        {c.maxRedemptions ?? "∞"}
+                      </td>
+                      <td>{fmtDateTime(c.expiresAt)}</td>
+                      <td>
+                        {c.redemptionCount > 0 ? (
+                          <span
+                            className={styles.revokeDisabled}
+                            title="Cannot revoke a redeemed code"
+                          >
+                            Revoke
+                          </span>
+                        ) : (
+                          <button
+                            className={styles.revokeBtn}
+                            onClick={() => handleRevoke(c.code)}
+                            disabled={revoking === c.code}
+                          >
+                            {revoking === c.code ? "…" : "Revoke"}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {totalPages > 1 && (
+              <div className={styles.pagination}>
+                <button
+                  className={styles.pageBtn}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                >
+                  ‹ Prev
+                </button>
+                <span className={styles.pageInfo}>
+                  Page {page} of {totalPages} ({total} total)
+                </span>
+                <button
+                  className={styles.pageBtn}
+                  onClick={() =>
+                    setPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={page >= totalPages}
+                >
+                  Next ›
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Study form modal ──────────────────────────────────────────────────────────
+
+type ModalTab = "details" | "codes";
 
 function StudyModal({
   initial,
@@ -74,6 +386,7 @@ function StudyModal({
   onDeactivate: (id: string) => Promise<{ error?: string } | void>;
 }) {
   const isEdit = initial !== null;
+  const [activeTab, setActiveTab] = useState<ModalTab>("details");
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(
     initial?.description ?? ""
@@ -118,7 +431,7 @@ function StudyModal({
         questionnaires: [],
       };
       if (isEdit) {
-        await apiFetch(`${API_BASE}/${initial!._id}`, token, {
+        await apiFetch(`${API_BASE}/${initial!.id}`, token, {
           method: "PUT",
           body: JSON.stringify(payload),
         });
@@ -141,7 +454,7 @@ function StudyModal({
     setSettingDefault(true);
     setError("");
     try {
-      await onSetDefault(initial._id);
+      await onSetDefault(initial.id);
       onSaved();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to set default");
@@ -155,7 +468,7 @@ function StudyModal({
     setDeactivating(true);
     setError("");
     try {
-      const result = await onDeactivate(initial._id);
+      const result = await onDeactivate(initial.id);
       if (result && (result as { error?: string }).error) {
         setError((result as { error: string }).error);
       } else {
@@ -183,109 +496,134 @@ function StudyModal({
           </button>
         </div>
 
-        <div className={styles.modalBody}>
-          {error && <div className={styles.errorMsg}>{error}</div>}
-
-          {isEdit && initial?.isDefault && (
-            <div className={styles.defaultBadgeRow}>
-              <span className={styles.badgeDefault}>Default study</span>
-            </div>
-          )}
-
-          <div className={styles.formGrid}>
-            <div className={`${styles.formGroup} ${styles.formFull}`}>
-              <label className={styles.label}>Name *</label>
-              <input
-                className={styles.input}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Autumn 2025 Cohort"
-              />
-            </div>
-
-            <div className={`${styles.formGroup} ${styles.formFull}`}>
-              <label className={styles.label}>Description</label>
-              <textarea
-                className={styles.textarea}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional description for this study"
-              />
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Number of groups</label>
-              <select
-                className={styles.select}
-                value={groupCount}
-                onChange={(e) =>
-                  handleGroupCountChange(Number(e.target.value))
-                }
-              >
-                <option value={1}>1</option>
-                <option value={2}>2</option>
-                <option value={3}>3</option>
-                <option value={4}>4</option>
-              </select>
-            </div>
-          </div>
-
-          <div className={styles.groupLabelsSection}>
-            <p className={styles.groupLabelsTitle}>Group labels</p>
-            <div className={styles.groupLabelsGrid}>
-              {Array.from({ length: groupCount }).map((_, i) => (
-                <div key={i} className={styles.formGroup}>
-                  <label className={styles.label}>Group {i + 1}</label>
-                  <input
-                    className={styles.input}
-                    value={groupLabels[i] ?? ""}
-                    onChange={(e) =>
-                      handleGroupLabelChange(i, e.target.value)
-                    }
-                    placeholder={`Group ${i + 1}`}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.modalFooter}>
-          {isEdit && (
-            <div className={styles.modalFooterLeft}>
-              {!initial?.isDefault && (
-                <button
-                  className={styles.defaultBtn}
-                  onClick={handleSetDefault}
-                  disabled={settingDefault}
-                >
-                  {settingDefault ? "Setting…" : "Set as Default"}
-                </button>
-              )}
-              {initial?.isActive && (
-                <button
-                  className={styles.deactivateBtn}
-                  onClick={handleDeactivate}
-                  disabled={deactivating}
-                >
-                  {deactivating ? "Deactivating…" : "Deactivate"}
-                </button>
-              )}
-            </div>
-          )}
-          <div className={styles.modalFooterRight}>
-            <button className={styles.cancelBtn} onClick={onClose}>
-              Cancel
+        {isEdit && (
+          <div className={styles.tabs}>
+            <button
+              className={`${styles.tab} ${activeTab === "details" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("details")}
+            >
+              Details
             </button>
             <button
-              className={styles.saveBtn}
-              onClick={handleSave}
-              disabled={saving}
+              className={`${styles.tab} ${activeTab === "codes" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("codes")}
             >
-              {saving ? "Saving…" : isEdit ? "Save changes" : "Create"}
+              Codes
             </button>
           </div>
+        )}
+
+        <div className={styles.modalBody}>
+          {activeTab === "details" ? (
+            <>
+              {error && <div className={styles.errorMsg}>{error}</div>}
+
+              {isEdit && initial?.isDefault && (
+                <div className={styles.defaultBadgeRow}>
+                  <span className={styles.badgeDefault}>Default study</span>
+                </div>
+              )}
+
+              <div className={styles.formGrid}>
+                <div className={`${styles.formGroup} ${styles.formFull}`}>
+                  <label className={styles.label}>Name *</label>
+                  <input
+                    className={styles.input}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Autumn 2025 Cohort"
+                  />
+                </div>
+
+                <div className={`${styles.formGroup} ${styles.formFull}`}>
+                  <label className={styles.label}>Description</label>
+                  <textarea
+                    className={styles.textarea}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Optional description for this study"
+                  />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Number of groups</label>
+                  <select
+                    className={styles.select}
+                    value={groupCount}
+                    onChange={(e) =>
+                      handleGroupCountChange(Number(e.target.value))
+                    }
+                  >
+                    <option value={1}>1</option>
+                    <option value={2}>2</option>
+                    <option value={3}>3</option>
+                    <option value={4}>4</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className={styles.groupLabelsSection}>
+                <p className={styles.groupLabelsTitle}>Group labels</p>
+                <div className={styles.groupLabelsGrid}>
+                  {Array.from({ length: groupCount }).map((_, i) => (
+                    <div key={i} className={styles.formGroup}>
+                      <label className={styles.label}>Group {i + 1}</label>
+                      <input
+                        className={styles.input}
+                        value={groupLabels[i] ?? ""}
+                        onChange={(e) =>
+                          handleGroupLabelChange(i, e.target.value)
+                        }
+                        placeholder={`Group ${i + 1}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            initial && <CodesTab study={initial} token={token} />
+          )}
         </div>
+
+        {activeTab === "details" && (
+          <div className={styles.modalFooter}>
+            {isEdit && (
+              <div className={styles.modalFooterLeft}>
+                {!initial?.isDefault && (
+                  <button
+                    className={styles.defaultBtn}
+                    onClick={handleSetDefault}
+                    disabled={settingDefault}
+                  >
+                    {settingDefault ? "Setting…" : "Set as Default"}
+                  </button>
+                )}
+                {initial?.isActive && (
+                  <button
+                    className={styles.deactivateBtn}
+                    onClick={handleDeactivate}
+                    disabled={deactivating}
+                  >
+                    {deactivating ? "Deactivating…" : "Deactivate"}
+                  </button>
+                )}
+              </div>
+            )}
+            <div className={styles.modalFooterRight}>
+              <button className={styles.cancelBtn} onClick={onClose}>
+                Cancel
+              </button>
+              <button
+                className={styles.saveBtn}
+                onClick={handleSave}
+                disabled={saving}
+              >
+                {saving ? "Saving…" : isEdit ? "Save changes" : "Create"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -416,7 +754,7 @@ export default function StudiesPage() {
               ) : (
                 studies.map((study) => (
                   <tr
-                    key={study._id}
+                    key={study.id}
                     className={styles.clickableRow}
                     onClick={() => handleOpenEdit(study)}
                   >
