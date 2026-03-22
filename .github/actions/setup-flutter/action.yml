@@ -4,8 +4,6 @@ description: 'Checkout, set up Flutter stable with pub cache, and install pub de
 runs:
   using: 'composite'
   steps:
-    - uses: actions/checkout@v4
-
     - uses: subosito/flutter-action@v2
       with:
         channel: stable

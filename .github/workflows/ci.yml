@@ -12,6 +12,9 @@ on:
       - master
       - rapid_dev
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
   # 1. BACKEND – lint & format (fast gate, no services)
@@ -20,6 +23,7 @@ jobs:
     name: Backend – lint & format
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node-app
 
       - name: Format check
@@ -37,6 +41,7 @@ jobs:
     name: Backend – unit tests
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node-app
 
       - name: Run unit tests with coverage
@@ -94,6 +99,7 @@ jobs:
           --health-retries 15
 
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node-app
 
       - name: Run integration tests
@@ -117,6 +123,7 @@ jobs:
     name: Backend – security audit
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node-app
 
       - name: Audit dependencies
@@ -130,6 +137,7 @@ jobs:
     name: Flutter – analyze
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-flutter
 
       - name: Analyze
@@ -143,6 +151,7 @@ jobs:
     name: Flutter – widget tests
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-flutter
 
       - name: Run all widget tests with coverage
@@ -162,6 +171,7 @@ jobs:
     name: Flutter – build web
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-flutter
 
       - name: Build Flutter web
@@ -317,6 +327,7 @@ jobs:
     name: Admin – typecheck & build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-node-app
         with:
           working-directory: admin
