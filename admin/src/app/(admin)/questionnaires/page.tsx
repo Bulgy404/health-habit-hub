@@ -6,6 +6,7 @@ import styles from "./page.module.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+type Tab = "library" | "custom";
 type QuestionType = "single_choice" | "multi_choice" | "scale" | "text";
 
 interface Question {
@@ -17,11 +18,13 @@ interface Question {
 }
 
 interface QuestionnaireSummary {
+  id: string;
   slug: string;
   title: string;
   description: string;
   version: string;
   active: boolean;
+  isLibrary: boolean;
   questionCount: number;
   updatedAt: string | null;
 }
@@ -51,6 +54,7 @@ function fmtDate(iso: string | null): string {
 // ── API helpers ───────────────────────────────────────────────────────────────
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/questionnaires";
+const PARTICIPANT_API = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/questionnaires";
 
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
@@ -63,7 +67,9 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+    const err = new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
   }
   return res.json();
 }
@@ -199,7 +205,7 @@ function QuestionCard({
   );
 }
 
-// ── Form modal ────────────────────────────────────────────────────────────────
+// ── Form modal (create / edit custom) ─────────────────────────────────────────
 
 function QuestionnaireModal({
   initial,
@@ -275,16 +281,16 @@ function QuestionnaireModal({
   }
 
   async function handleSave() {
-    if (!title.trim() || !slug.trim()) {
-      setError("Title and slug are required.");
+    if (!title.trim()) {
+      setError("Title is required.");
       return;
     }
     setSaving(true);
     setError("");
     try {
-      const payload = { slug, title, description, version, questions };
+      const payload = { slug: slug || undefined, title, description, version, questions };
       if (isEdit) {
-        await apiFetch(`${API_BASE}/${initial!.slug}`, token, {
+        await apiFetch(`${API_BASE}/${initial!.id}`, token, {
           method: "PUT",
           body: JSON.stringify(payload),
         });
@@ -326,12 +332,12 @@ function QuestionnaireModal({
               />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Slug *</label>
+              <label className={styles.label}>Slug</label>
               <input
                 className={styles.input}
                 value={slug}
                 onChange={(e) => handleSlugChange(e.target.value)}
-                placeholder="e.g. sliq"
+                placeholder="e.g. sliq (auto-generated)"
                 disabled={isEdit}
               />
             </div>
@@ -397,14 +403,110 @@ function QuestionnaireModal({
   );
 }
 
+// ── Preview modal (read-only, for library questionnaires) ─────────────────────
+
+function QuestionnairePreviewModal({
+  questionnaire,
+  token,
+  onClose,
+}: {
+  questionnaire: QuestionnaireSummary;
+  token: string;
+  onClose: () => void;
+}) {
+  const [detail, setDetail] = useState<QuestionnaireDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setError("");
+      try {
+        const data = (await apiFetch(`${PARTICIPANT_API}/${questionnaire.slug}`, token)) as QuestionnaireDetail;
+        const questions: Question[] = (data.questions ?? []).map((q: Partial<Question> & { id?: string }) => ({
+          id: q.id ?? crypto.randomUUID(),
+          type: (q.type ?? "text") as QuestionType,
+          text: q.text ?? "",
+          required: q.required ?? false,
+          options: Array.isArray(q.options) ? q.options : [],
+        }));
+        setDetail({ ...questionnaire, questions });
+      } catch {
+        setError("Failed to load questionnaire details.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [questionnaire, token]);
+
+  return (
+    <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          <span className={styles.modalTitle}>{questionnaire.title}</span>
+          <button className={styles.closeBtn} onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <div className={styles.modalBody}>
+          {questionnaire.description && (
+            <p className={styles.previewDescription}>{questionnaire.description}</p>
+          )}
+          <div className={styles.previewMeta}>
+            <span>Version {questionnaire.version}</span>
+            <span className={`${styles.badge} ${styles.badgeLibrary}`}>Library</span>
+          </div>
+
+          {loading ? (
+            <div className={styles.loadingState}>Loading questions…</div>
+          ) : error ? (
+            <div className={styles.errorMsg}>{error}</div>
+          ) : detail && detail.questions.length > 0 ? (
+            <div className={styles.previewQuestions}>
+              {detail.questions.map((q, i) => (
+                <div key={q.id} className={styles.previewQuestion}>
+                  <div className={styles.previewQuestionHeader}>
+                    <span className={styles.questionIndex}>Q{i + 1}</span>
+                    <span className={styles.previewQType}>{q.type.replace("_", " ")}</span>
+                    {q.required && <span className={styles.previewRequired}>Required</span>}
+                  </div>
+                  <p className={styles.previewQText}>{q.text || <em>(no text)</em>}</p>
+                  {q.options.length > 0 && (
+                    <ul className={styles.previewOptions}>
+                      {q.options.map((opt, oi) => (
+                        <li key={oi}>{opt}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyQuestions}>No questions defined.</div>
+          )}
+        </div>
+
+        <div className={styles.modalFooter}>
+          <button className={styles.saveBtn} onClick={onClose}>
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Confirm delete dialog ─────────────────────────────────────────────────────
 
 function ConfirmDeleteDialog({
-  slug,
+  title,
   onCancel,
   onConfirm,
 }: {
-  slug: string;
+  title: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -413,8 +515,7 @@ function ConfirmDeleteDialog({
       <div className={styles.confirmDialog}>
         <p className={styles.confirmTitle}>Delete questionnaire?</p>
         <p className={styles.confirmText}>
-          You are about to delete <strong>{slug}</strong>. If participants have already submitted responses, the
-          questionnaire will be deactivated instead of deleted.
+          You are about to delete <strong>{title}</strong>. This action cannot be undone.
         </p>
         <div className={styles.confirmActions}>
           <button className={styles.cancelBtn} onClick={onCancel}>
@@ -435,14 +536,18 @@ export default function QuestionnairesPage() {
   const { data: session } = useSession();
   const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
 
+  const [tab, setTab] = useState<Tab>("library");
   const [questionnaires, setQuestionnaires] = useState<QuestionnaireSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<QuestionnaireDetail | null>(null);
-  const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<QuestionnaireSummary | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<QuestionnaireSummary | null>(null);
   const [actionError, setActionError] = useState("");
+  // IDs known to be assigned to an active study (delete blocked)
+  const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set());
 
   const fetchList = useCallback(async () => {
     if (!token) return;
@@ -462,25 +567,18 @@ export default function QuestionnairesPage() {
     fetchList();
   }, [fetchList]);
 
-  async function handleOpenEdit(slug: string) {
+  async function handleOpenEdit(q: QuestionnaireSummary) {
     setActionError("");
     try {
-      // Fetch full detail from the participant-facing route
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/questionnaires/" + slug;
-      const data = (await apiFetch(apiUrl, token)) as QuestionnaireDetail;
-      // Fetch active status from admin list
-      const found = questionnaires.find((q) => q.slug === slug);
+      const data = (await apiFetch(`${PARTICIPANT_API}/${q.slug}`, token)) as QuestionnaireDetail;
       setEditTarget({
-        ...data,
-        active: found?.active ?? true,
-        questionCount: data.questions?.length ?? 0,
-        updatedAt: found?.updatedAt ?? null,
-        questions: (data.questions ?? []).map((q: Partial<Question> & { id?: string }) => ({
-          id: q.id ?? crypto.randomUUID(),
-          type: (q.type ?? "text") as QuestionType,
-          text: q.text ?? "",
-          required: q.required ?? false,
-          options: Array.isArray(q.options) ? q.options : [],
+        ...q,
+        questions: (data.questions ?? []).map((qq: Partial<Question> & { id?: string }) => ({
+          id: qq.id ?? crypto.randomUUID(),
+          type: (qq.type ?? "text") as QuestionType,
+          text: qq.text ?? "",
+          required: qq.required ?? false,
+          options: Array.isArray(qq.options) ? qq.options : [],
         })),
       });
       setModalOpen(true);
@@ -506,47 +604,53 @@ export default function QuestionnairesPage() {
     await fetchList();
   }
 
-  async function handleToggleActive(slug: string, current: boolean) {
+  async function handleDelete(q: QuestionnaireSummary) {
+    setDeleteTarget(null);
     setActionError("");
     try {
-      await apiFetch(`${API_BASE}/${slug}/active`, token, {
-        method: "PATCH",
-        body: JSON.stringify({ active: !current }),
-      });
+      await apiFetch(`${API_BASE}/${q.id}`, token, { method: "DELETE" });
       await fetchList();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Toggle failed");
+      const status = (err as Error & { status?: number }).status;
+      if (status === 409) {
+        setAssignedIds((prev) => { const next = new Set(prev); next.add(q.id); return next; });
+        setActionError(`"${q.title}" is assigned to an active study and cannot be deleted.`);
+      } else {
+        setActionError(err instanceof Error ? err.message : "Delete failed");
+      }
     }
   }
 
-  async function handleDelete(slug: string) {
-    setDeleteSlug(null);
-    setActionError("");
-    try {
-      const result = (await apiFetch(`${API_BASE}/${slug}`, token, { method: "DELETE" })) as {
-        deactivated?: boolean;
-        responseCount?: number;
-      };
-      if (result.deactivated) {
-        setActionError(
-          `"${slug}" has ${result.responseCount} response(s) and cannot be hard-deleted. It has been deactivated instead.`
-        );
-      }
-      await fetchList();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Delete failed");
-    }
-  }
+  const libraryQuestionnaires = questionnaires.filter((q) => q.isLibrary);
+  const customQuestionnaires = questionnaires.filter((q) => !q.isLibrary);
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <div className={styles.headerText}>
           <h1 className={styles.title}>Questionnaires</h1>
-          <p className={styles.subtitle}>Manage questionnaire definitions for study participants.</p>
+          <p className={styles.subtitle}>Browse the library and manage custom questionnaires for your studies.</p>
         </div>
-        <button className={styles.addButton} onClick={handleOpenCreate}>
-          + Add Questionnaire
+        {tab === "custom" && (
+          <button className={styles.addButton} onClick={handleOpenCreate}>
+            + Add Questionnaire
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className={styles.tabs}>
+        <button
+          className={`${styles.tab} ${tab === "library" ? styles.tabActive : ""}`}
+          onClick={() => { setTab("library"); setActionError(""); }}
+        >
+          Library
+        </button>
+        <button
+          className={`${styles.tab} ${tab === "custom" ? styles.tabActive : ""}`}
+          onClick={() => { setTab("custom"); setActionError(""); }}
+        >
+          Custom
         </button>
       </div>
 
@@ -557,63 +661,119 @@ export default function QuestionnairesPage() {
       ) : error ? (
         <div className={styles.errorMsg}>{error}</div>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Slug</th>
-                <th>Status</th>
-                <th>Questions</th>
-                <th>Version</th>
-                <th>Last updated</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {questionnaires.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <div className={styles.emptyState}>No questionnaires yet. Click &quot;Add Questionnaire&quot; to create one.</div>
-                  </td>
-                </tr>
-              ) : (
-                questionnaires.map((q) => (
-                  <tr key={q.slug}>
-                    <td>{q.title}</td>
-                    <td>
-                      <span className={styles.slugCell}>{q.slug}</span>
-                    </td>
-                    <td>
-                      <span className={`${styles.badge} ${q.active ? styles.badgeActive : styles.badgeInactive}`}>
-                        {q.active ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-                    <td>{q.questionCount}</td>
-                    <td>{q.version}</td>
-                    <td>{fmtDate(q.updatedAt)}</td>
-                    <td>
-                      <div className={styles.actions}>
-                        <button className={styles.actionBtn} onClick={() => handleOpenEdit(q.slug)}>
-                          Edit
-                        </button>
-                        <button className={styles.actionBtn} onClick={() => handleToggleActive(q.slug, q.active)}>
-                          {q.active ? "Deactivate" : "Activate"}
-                        </button>
-                        <button
-                          className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
-                          onClick={() => setDeleteSlug(q.slug)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
+        <>
+          {/* Library tab */}
+          {tab === "library" && (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Slug</th>
+                    <th>Questions</th>
+                    <th>Version</th>
+                    <th>Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {libraryQuestionnaires.length === 0 ? (
+                    <tr>
+                      <td colSpan={5}>
+                        <div className={styles.emptyState}>No library questionnaires found.</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    libraryQuestionnaires.map((q) => (
+                      <tr key={q.id}>
+                        <td>{q.title}</td>
+                        <td>
+                          <span className={styles.slugCell}>{q.slug}</span>
+                        </td>
+                        <td>{q.questionCount}</td>
+                        <td>{q.version}</td>
+                        <td>
+                          <div className={styles.actions}>
+                            <button
+                              className={styles.actionBtn}
+                              onClick={() => { setPreviewTarget(q); setActionError(""); }}
+                            >
+                              Preview
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Custom tab */}
+          {tab === "custom" && (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Slug</th>
+                    <th>Status</th>
+                    <th>Questions</th>
+                    <th>Version</th>
+                    <th>Last updated</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customQuestionnaires.length === 0 ? (
+                    <tr>
+                      <td colSpan={7}>
+                        <div className={styles.emptyState}>
+                          No custom questionnaires yet. Click &quot;Add Questionnaire&quot; to create one.
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    customQuestionnaires.map((q) => {
+                      const isAssigned = assignedIds.has(q.id);
+                      return (
+                        <tr key={q.id}>
+                          <td>{q.title}</td>
+                          <td>
+                            <span className={styles.slugCell}>{q.slug ?? "—"}</span>
+                          </td>
+                          <td>
+                            <span className={`${styles.badge} ${q.active ? styles.badgeActive : styles.badgeInactive}`}>
+                              {q.active ? "Active" : "Inactive"}
+                            </span>
+                          </td>
+                          <td>{q.questionCount}</td>
+                          <td>{q.version}</td>
+                          <td>{fmtDate(q.updatedAt)}</td>
+                          <td>
+                            <div className={styles.actions}>
+                              <button className={styles.actionBtn} onClick={() => handleOpenEdit(q)}>
+                                Edit
+                              </button>
+                              <button
+                                className={`${styles.actionBtn} ${styles.actionBtnDanger} ${isAssigned ? styles.actionBtnDisabled : ""}`}
+                                onClick={() => { if (!isAssigned) { setDeleteTarget(q); setActionError(""); } }}
+                                disabled={isAssigned}
+                                title={isAssigned ? "Assigned to an active study — cannot delete" : undefined}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
 
       {modalOpen && (
@@ -625,11 +785,19 @@ export default function QuestionnairesPage() {
         />
       )}
 
-      {deleteSlug && (
+      {previewTarget && (
+        <QuestionnairePreviewModal
+          questionnaire={previewTarget}
+          token={token}
+          onClose={() => setPreviewTarget(null)}
+        />
+      )}
+
+      {deleteTarget && (
         <ConfirmDeleteDialog
-          slug={deleteSlug}
-          onCancel={() => setDeleteSlug(null)}
-          onConfirm={() => handleDelete(deleteSlug)}
+          title={deleteTarget.title}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => handleDelete(deleteTarget)}
         />
       )}
     </div>

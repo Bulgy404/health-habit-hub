@@ -2897,7 +2897,7 @@
         "Admin panel runs without new JS console errors"
       ],
       "priority": 180,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-176. Can be developed in parallel with US-178, US-179, US-181, US-182, US-183, US-184."
     },
     {
