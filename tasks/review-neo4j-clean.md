@@ -170,3 +170,54 @@ In practice the `else if (isClosedTaskClosedDescription)` branch is always taken
 | 8        | M4  | Removes escape duplication | Low | XS |
 | 9        | M7  | Moves constants to shared file | Low | XS |
 | 10       | m1–m5 | Minor cleanups | Low | XS–S |
+
+---
+
+## Resolution Notes (US-169, 2026-03-22)
+
+All Critical and Major findings resolved. Minor findings resolved or deferred as noted.
+
+### C3 ✅ Resolved
+Extracted all four domain model classes (`ExperimentalSetting`, `Donor`, `Label`, `Donation`) to `app/models/donation.js`. The new `ExperimentalSetting` constructor calls all four `isX()` methods with `()`. Both `Neo4jDatabase.js` and `SparqlDatabase.js` now import from the shared model file, giving a single source of truth with the correct implementation.
+
+### C1 ✅ Resolved
+Created `app/utils/translate.js` exporting `translateText(text, from, to, endpoint, retries)`. Both database files now import from this shared module. `Donation.translate(targetLanguage, endpoint)` accepts an explicit endpoint URL, removing the global-config dependency in `SparqlDatabase.js` and the config-object dependency in `Neo4jDatabase.js`.
+
+### C2 ✅ Resolved
+Declared `const HHH_NS = 'http://example.com/hhh#'` at module level in `Neo4jDatabase.js`. The `@prefix` line in `PREFIXES` now uses `HHH_NS`. The namespace URI appears in exactly one place in that file.
+
+### M1 ✅ Resolved
+`_buildDonationTurtle` split into six named private methods: `_habitTriples`, `_experimentalSettingTriples`, `_donorTriples`, `_contextTriples`, `_behaviorContent`, `_translationTriples`. `_buildDonationTurtle` is now a short orchestrator that calls each and assembles the return object. No method exceeds 40 lines.
+
+### M2 ✅ Resolved
+`iri()` moved to module level as `const iri = (local) => \`<${HHH_NS}${local}>\``. It is no longer re-created on every `_buildDonationTurtle` call.
+
+### M3 ✅ Resolved
+All four domain model classes extracted to `app/models/donation.js`. Both database files import from there.
+
+### M4 ✅ Resolved
+`escapeStringLiteral(str)` exported from `app/utils/translate.js`. Both `Neo4jDbClient._esc` and `DbClient._esc` delegate to it.
+
+### M5 ✅ Resolved
+Removed the dead `new Donor(donation)` call at line 261 of `Neo4jDatabase.js`. The donor UUID is generated inside `_donorTriples` (now called from `_buildDonationTurtle`) and passed down cleanly.
+
+### M6 ✅ Resolved
+Created `app/db/habitQueries.js` with `getAllHabits`, `getPublicHabits`, `getHabitTotal`, `getHabitsByCategory`. Created `app/db/adminQueries.js` with `assignGroupLabel` and `countHabitsByUser`. Route handlers and service functions now call these named functions; no inline Cypher strings remain in `habitsRouter.js`, `adminParticipantService.js`, or `adminStatsService.js`.
+
+### M7 ✅ Resolved
+`SUPPORTED_LANGUAGES` moved to `app/utils/constants.js` and imported in `habitsRouter.js`. `DIMENSIONS` moved to `app/utils/constants.js` and imported in `habitDonationService.js` (already at module scope after US-168; now in the shared constants file).
+
+### m1 ✅ Resolved
+Replaced `exists((h)<-[:hhh__partOf]-(ctx))` with `(h)<-[:hhh__partOf]-(ctx)` in `scripts/migrate-group-labels.cypher`. The deprecated Neo4j 5 `exists()` predicate wrapper is removed; the Boolean pattern expression is used directly.
+
+### m2 ✅ Resolved
+Removed `console.debug(insertQuery)` from `SparqlDatabase.js:insertDonateData`.
+
+### m3 ✅ Resolved
+Added `console.error('[n10s] Import failed — label: ..., status: ..., payload: ...')` in `Neo4jDbClient._importTurtle` when `terminationStatus !== 'OK'`.
+
+### m4 ✅ Resolved
+Added dual-schema comment blocks at the top of both `Neo4jDatabase.js` and `SparqlDatabase.js` explaining the coexistence of the old RDF/n10s schema and the new direct-Cypher schema, and pointing to the migration script.
+
+### m5 ✅ Resolved (via C1)
+The shared `translateText` helper takes an explicit `endpoint` URL parameter in both files, eliminating the inconsistency between the Neo4j version (config object) and the Fuseki version (global singleton).

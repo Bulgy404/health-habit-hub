@@ -1,3 +1,5 @@
+import { countHabitsByUser } from '../db/adminQueries.js';
+
 /**
  * Build a chronological timeline of participant events.
  * @param {object} participant - Participant document
@@ -55,13 +57,7 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
   let habitsCount = 0;
   if (neo4jRun) {
     try {
-      const records = await neo4jRun(
-        'MATCH (h:Habit {userID: $userId}) RETURN count(h) AS cnt',
-        { userId: id }
-      );
-      const cnt = records[0]?.cnt;
-      habitsCount =
-        typeof cnt?.toNumber === 'function' ? cnt.toNumber() : (cnt ?? 0);
+      habitsCount = await countHabitsByUser(neo4jRun, id);
     } catch (err) {
       console.error('[adminStatsService] Neo4j error:', err);
       // Neo4j unavailable; habitsCount stays 0

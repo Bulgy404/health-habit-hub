@@ -1,178 +1,44 @@
+// =============================================================================
+// Dual-schema note
+// =============================================================================
+// This file writes donation data into the **old RDF/n10s schema** using the
+// hhh__ namespace (e.g. hhh__Habit, hhh__Donor, hhh__Group1).  The newer
+// direct-Cypher schema (Habit, Context, BCIOConcept nodes written by
+// habitDonationService.js) coexists in the same Neo4j database.
+// Run scripts/migrate-hhh-habit-to-habit.cypher to migrate old nodes to the
+// new schema.  See neo4j/init/constraints.cypher for the full index/constraint
+// definitions for both schemas.
+// =============================================================================
+
 import neo4j from 'neo4j-driver';
-import fetch from 'node-fetch';
 import { v4 as uuid } from 'uuid';
+import { escapeStringLiteral } from './translate.js';
+import { ExperimentalSetting, Donation } from '../models/donation.js';
 
-// Share the same shape as SparqlDatabase but target Neo4j
+// ---------------------------------------------------------------------------
+// RDF namespace constants — defined once at module level (not per-call).
+// ---------------------------------------------------------------------------
+const HHH_NS = 'http://example.com/hhh#';
 
-// function to translate text using LibreTranslate API
-async function translate(text, from, to, config, retries = 3) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+/** Build a full IRI reference from a local name in the hhh namespace. */
+const iri = (local) => `<${HHH_NS}${local}>`;
 
-      const response = await fetch(config.getTranslateApiEndpoint(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          q: text,
-          source: from,
-          target: to,
-          format: 'text',
-          alternatives: 0,
-        }),
-        signal: controller.signal,
-      });
+/**
+ * Turtle prefix block shared across all import payloads.
+ * Extracted as a named constant so the namespace URI appears in exactly
+ * one place (see HHH_NS above).
+ */
+const PREFIXES = `@prefix hhh: <${HHH_NS}> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+`;
 
-      clearTimeout(timeout);
-
-      if (response.ok) {
-        const translation = await response.json();
-        return translation.translatedText;
-      }
-
-      throw new Error(
-        `Translation failed: ${response.status} ${response.statusText}`
-      );
-    } catch (error) {
-      console.warn(
-        `Translation attempt ${attempt}/${retries} failed:`,
-        error.message
-      );
-
-      // If this is the last attempt, or it's not a connection error, return original text
-      if (attempt === retries || !error.message.includes('ECONNREFUSED')) {
-        console.error(
-          `Translation service unavailable after ${retries} attempts. Returning original text.`
-        );
-        return text; // Return original text as fallback
-      }
-
-      // Wait before retrying (exponential backoff)
-      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-}
-
-class ExperimentalSetting {
-  id;
-  description;
-  task;
-  group;
-
-  constructor(setting) {
-    this.id = uuid();
-    this.description = setting.closedDescription ? 'closed' : 'open';
-    this.task = setting.closedTask ? 'closed' : 'open';
-    if (this.isClosedTaskOpenDescription()) this.group = 'Group1';
-    else if (this.isClosedTaskClosedDescription()) this.group = 'Group2';
-    else if (this.isOpenTaskClosedDescription()) this.group = 'Group3';
-    else if (this.isOpenTaskOpenDescription()) this.group = 'Group4';
-  }
-
-  isClosedTaskClosedDescription() {
-    return this.task === 'closed' && this.description === 'closed';
-  }
-  isClosedTaskOpenDescription() {
-    return this.task === 'closed' && this.description === 'open';
-  }
-  isOpenTaskOpenDescription() {
-    return this.task === 'open' && this.description === 'open';
-  }
-  isOpenTaskClosedDescription() {
-    return this.task === 'open' && this.description === 'closed';
-  }
-}
-
-class Donor {
-  id;
-  donation;
-  constructor(donation) {
-    this.id = uuid();
-    this.donation = donation;
-  }
-}
-
-class Label {
-  id;
-  type;
-  value;
-  data;
-  constructor(type, value, data) {
-    this.id = uuid();
-    this.type = type; // 'context' | 'behavior'
-    this.value = value; // label name
-    this.data = data; // label text
-  }
-}
-
-class Donation {
-  id;
-  value;
-  labels;
-  language;
-  source;
-  translation;
-  habitStrength;
-
-  constructor(value, language, labels, source, habitStrength) {
-    this.id = uuid();
-    this.value = value;
-    this.language = language;
-    this.labels = labels.map(
-      (label) =>
-        new Label(
-          {
-            TimeReference: 'context',
-            PhysicalSetting: 'context',
-            People: 'context',
-            InternalState: 'context',
-            PriorBehavior: 'context',
-            Reasoning: 'context',
-            Behavior: 'behavior',
-          }[label.name],
-          label.name,
-          label.value
-        )
-    );
-    this.source = source;
-    const hs = parseInt(habitStrength, 10);
-    this.habitStrength = Number.isFinite(hs) ? hs : 0;
-  }
-
-  hasLabels() {
-    return this.labels && this.labels.length > 0;
-  }
-
-  async translate(targetLanguage, config) {
-    const translatedValue = await translate(
-      this.value,
-      this.language,
-      targetLanguage,
-      config
-    );
-    const translatedLabels = this.hasLabels()
-      ? await Promise.all(
-          this.labels.map(async (label) =>
-            translate(label.data, this.language, targetLanguage, config)
-          )
-        )
-      : [];
-
-    const labelsCopy = this.labels.map((label, index) =>
-      Object.assign({ name: label.value, value: translatedLabels[index] })
-    );
-    this.translation = new Donation(
-      translatedValue,
-      targetLanguage,
-      labelsCopy,
-      'translation',
-      this.habitStrength
-    );
-    return this.translation;
-  }
-}
+// ---------------------------------------------------------------------------
+// Neo4j client
+// ---------------------------------------------------------------------------
 
 class Neo4jDbClient {
   constructor(config) {
@@ -184,13 +50,9 @@ class Neo4jDbClient {
     this.n10sConfigured = false;
   }
 
+  /** Delegate to the shared escapeStringLiteral utility (M4). */
   _esc(str) {
-    if (str == null) return '';
-    return String(str)
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r');
+    return escapeStringLiteral(str);
   }
 
   async close() {
@@ -203,40 +65,36 @@ class Neo4jDbClient {
       defaultAccessMode: neo4j.session.WRITE,
     });
     try {
-      // Ensure required uniqueness constraint for n10s
       try {
         await session.run(
           `CREATE CONSTRAINT n10s_unique_uri IF NOT EXISTS FOR (r:Resource) REQUIRE r.uri IS UNIQUE`
         );
       } catch {
-        // console.warn('n10s: constraint creation warning');
+        // constraint may already exist
       }
 
-      // If graph config exists this will throw; we'll ignore and continue
       await session.run(
         `CALL n10s.graphconfig.init({ handleVocabUris: 'SHORTEN', keepLangTag: true, handleMultival: 'ARRAY' })`
       );
     } catch {
-      // If already configured, that's fine
+      // already configured — ignore
     }
-    // Ensure namespace prefix for hhh is registered for cleaner mapping
+
     try {
       await session.run(`CALL n10s.nsprefixes.add($prefix,$ns)`, {
         prefix: 'hhh',
-        ns: 'http://example.com/hhh#',
+        ns: HHH_NS,
       });
     } catch {
       // ignore
     }
 
-    // Import the ontology (classes/properties) for schema awareness.
-    // Using Ontology.ttl as the primary ontology file.
     try {
       await session.run(`CALL n10s.rdf.import.fetch($url,'Turtle')`, {
         url: 'file:///import/Ontology.ttl',
       });
     } catch {
-      // console.warn('n10s: Ontology.ttl import failed');
+      // ontology import is best-effort
     } finally {
       await session.close();
     }
@@ -258,14 +116,15 @@ class Neo4jDbClient {
       userId,
       parseInt(data.habitStrength, 10)
     );
-    new Donor(donation);
     const timestamp = new Date().toISOString();
 
     if (mustTranslate) {
-      await donation.translate(NORMALIZE_LANG, this.config);
+      await donation.translate(
+        NORMALIZE_LANG,
+        this.config.getTranslateApiEndpoint()
+      );
     }
 
-    // Build Turtle payload aligned with the RDF schema (hhh namespace)
     const parts = this._buildDonationTurtle(
       donation,
       experimentalSetting,
@@ -308,7 +167,8 @@ class Neo4jDbClient {
     }
   }
 
-  async _importTurtle(session, payload, _label) {
+  /** Call n10s.rdf.import.inline and log a detailed error on non-OK status. */
+  async _importTurtle(session, payload, label) {
     const res = await session.run(
       `CALL n10s.rdf.import.inline($payload, 'Turtle')`,
       { payload }
@@ -317,27 +177,19 @@ class Neo4jDbClient {
     const status =
       first.terminationStatus || first['terminationStatus'] || 'UNKNOWN';
     if (status !== 'OK') {
-      await session.run(`CALL n10s.rdf.preview.inline($payload, 'Turtle')`, {
-        payload,
-      });
+      console.error(
+        `[n10s] Import failed — label: ${label}, status: ${status}, payload (first 200 chars): ${payload.slice(0, 200)}`
+      );
     }
     return status === 'OK';
   }
 
-  _buildDonationTurtle(donation, experimentalSetting, userId, timestamp) {
-    const prefixes = `
-@prefix hhh: <http://example.com/hhh#> .
-@prefix owl: <http://www.w3.org/2002/07/owl#> .
-@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix xml: <http://www.w3.org/XML/1998/namespace> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-`;
+  // ---------------------------------------------------------------------------
+  // Turtle building — each section is a dedicated named method (M1).
+  // ---------------------------------------------------------------------------
 
-    const iri = (local) => `<http://example.com/hhh#${local}>`;
-    const donorId = uuid();
-
-    const habitTriples = `
+  _habitTriples(donation) {
+    return `
 ${iri(`Habit-${donation.id}`)} rdf:type owl:NamedIndividual , hhh:Habit ;
   hhh:habitStrength "${donation.habitStrength}"^^xsd:integer ;
   hhh:id "${donation.id}"^^xsd:string ;
@@ -345,27 +197,31 @@ ${iri(`Habit-${donation.id}`)} rdf:type owl:NamedIndividual , hhh:Habit ;
   hhh:source "${this._esc(donation.source)}"^^xsd:string ;
   hhh:value "${this._esc(donation.value)}" .
 `;
+  }
 
-    const experimentalSettingTriples = `
-${iri(`ExperimentalSetting-${experimentalSetting.id}`)} rdf:type owl:NamedIndividual , hhh:${experimentalSetting.group} .
+  _experimentalSettingTriples(setting) {
+    return `
+${iri(`ExperimentalSetting-${setting.id}`)} rdf:type owl:NamedIndividual , hhh:${setting.group} .
 `;
+  }
 
-    const donorTriples = `
+  _donorTriples(donorId, donation, userId, timestamp) {
+    return `
 ${iri(`Donor-${donorId}`)} rdf:type owl:NamedIndividual , hhh:Donor ;
   hhh:donates ${iri(`Habit-${donation.id}`)} ;
   hhh:userId "${userId}"^^xsd:string ;
   hhh:timestamp "${timestamp}"^^xsd:dateTime ;
   hhh:id "${donorId}"^^xsd:string .
 `;
+  }
 
+  _contextTriples(donation, setting) {
     const contexts = donation.labels.filter((l) => l.type === 'context');
-    const behaviors = donation.labels.filter((l) => l.type === 'behavior');
-
-    const contextTriples = contexts
+    return contexts
       .map(
         (c) => `
 ${iri(`Context-${c.id}`)} rdf:type owl:NamedIndividual , hhh:${c.value} ;
-  hhh:partOf ${iri(`ExperimentalSetting-${experimentalSetting.id}`)} ;
+  hhh:partOf ${iri(`ExperimentalSetting-${setting.id}`)} ;
   hhh:id "${c.id}"^^xsd:string ;
   hhh:language "${this._esc(donation.language)}" ;
   hhh:source "${this._esc(donation.source)}"^^xsd:string ;
@@ -373,6 +229,12 @@ ${iri(`Context-${c.id}`)} rdf:type owl:NamedIndividual , hhh:${c.value} ;
 `
       )
       .join('');
+  }
+
+  /** Returns { behaviorTriples, habitBehaviorLinks }. */
+  _behaviorContent(donation, setting) {
+    const contexts = donation.labels.filter((l) => l.type === 'context');
+    const behaviors = donation.labels.filter((l) => l.type === 'behavior');
 
     const behaviorTriples = behaviors
       .map((b) => {
@@ -380,7 +242,7 @@ ${iri(`Context-${c.id}`)} rdf:type owl:NamedIndividual , hhh:${c.value} ;
         const hasCtx = ctxList ? `\n  hhh:hasContext ${ctxList} ;` : '';
         return `
 ${iri(`Behavior-${b.id}`)} rdf:type owl:NamedIndividual , hhh:Behavior ;${hasCtx}
-  hhh:partOf ${iri(`ExperimentalSetting-${experimentalSetting.id}`)} ;
+  hhh:partOf ${iri(`ExperimentalSetting-${setting.id}`)} ;
   hhh:id "${b.id}"^^xsd:string ;
   hhh:language "${this._esc(donation.language)}" ;
   hhh:source "${this._esc(donation.source)}"^^xsd:string ;
@@ -389,7 +251,6 @@ ${iri(`Behavior-${b.id}`)} rdf:type owl:NamedIndividual , hhh:Behavior ;${hasCtx
       })
       .join('');
 
-    // Link habit to behaviors if present
     const habitBehaviorLinks = behaviors.length
       ? `${iri(`Habit-${donation.id}`)} hhh:hasBehavior ${behaviors
           .map((b) => iri(`Behavior-${b.id}`))
@@ -397,12 +258,13 @@ ${iri(`Behavior-${b.id}`)} rdf:type owl:NamedIndividual , hhh:Behavior ;${hasCtx
 `
       : '';
 
-    let translationTriples = '';
-    if (donation.translation) {
-      const t = donation.translation;
+    return { behaviorTriples, habitBehaviorLinks };
+  }
 
-      // Create bidirectional Habit-Habit translation links
-      translationTriples += `
+  _translationTriples(donation, setting) {
+    if (!donation.translation) return '';
+    const t = donation.translation;
+    let triples = `
 ${iri(`Habit-${donation.id}`)} hhh:hasTranslation ${iri(`Habit-${t.id}`)} .
 ${iri(`Habit-${t.id}`)} hhh:hasTranslation ${iri(`Habit-${donation.id}`)} .
 ${iri(`Habit-${t.id}`)} rdf:type owl:NamedIndividual , hhh:Habit ;
@@ -413,65 +275,67 @@ ${iri(`Habit-${t.id}`)} rdf:type owl:NamedIndividual , hhh:Habit ;
   hhh:value "${this._esc(t.value)}" .
 `;
 
-      // Get original contexts and behaviors
-      const origContexts = donation.labels.filter((l) => l.type === 'context');
-      const origBehaviors = donation.labels.filter(
-        (l) => l.type === 'behavior'
-      );
+    const origContexts = donation.labels.filter((l) => l.type === 'context');
+    const origBehaviors = donation.labels.filter((l) => l.type === 'behavior');
+    const translatedLabelsByValue = new Map(t.labels.map((l) => [l.value, l]));
 
-      // Create a map of translated labels by their label value (type name)
-      const translatedLabelsByValue = new Map(
-        t.labels.map((l) => [l.value, l])
-      );
-
-      // Translate each context's data separately - only the context description, not the full habit
-      translationTriples += origContexts
-        .map((origCtx) => {
-          const tid = uuid();
-          const tLabel = translatedLabelsByValue.get(origCtx.value);
-          const translatedContextData = tLabel ? tLabel.data : origCtx.data;
-          return `
+    triples += origContexts
+      .map((origCtx) => {
+        const tid = uuid();
+        const tLabel = translatedLabelsByValue.get(origCtx.value);
+        const translatedData = tLabel ? tLabel.data : origCtx.data;
+        return `
 ${iri(`Context-${tid}`)} rdf:type owl:NamedIndividual , hhh:${origCtx.value} ;
-  hhh:partOf ${iri(`ExperimentalSetting-${experimentalSetting.id}`)} ;
+  hhh:partOf ${iri(`ExperimentalSetting-${setting.id}`)} ;
   hhh:id "${tid}"^^xsd:string ;
   hhh:language "${this._esc(t.language)}" ;
   hhh:source "${this._esc(t.source)}"^^xsd:string ;
-  hhh:value "${this._esc(translatedContextData)}" .
+  hhh:value "${this._esc(translatedData)}" .
 ${iri(`Context-${origCtx.id}`)} hhh:hasTranslation ${iri(`Context-${tid}`)} .
 ${iri(`Context-${tid}`)} hhh:hasTranslation ${iri(`Context-${origCtx.id}`)} .
 `;
-        })
-        .join('');
+      })
+      .join('');
 
-      // Translate behavior - store ONLY the translated behavior value, not the full habit
-      translationTriples += origBehaviors
-        .map((origBeh) => {
-          const tid = uuid();
-          const tLabel = translatedLabelsByValue.get(origBeh.value);
-          const translatedBehaviorData = tLabel ? tLabel.data : origBeh.data;
-          return `
+    triples += origBehaviors
+      .map((origBeh) => {
+        const tid = uuid();
+        const tLabel = translatedLabelsByValue.get(origBeh.value);
+        const translatedData = tLabel ? tLabel.data : origBeh.data;
+        return `
 ${iri(`Behavior-${tid}`)} rdf:type owl:NamedIndividual , hhh:Behavior ;
-  hhh:partOf ${iri(`ExperimentalSetting-${experimentalSetting.id}`)} ;
+  hhh:partOf ${iri(`ExperimentalSetting-${setting.id}`)} ;
   hhh:id "${tid}"^^xsd:string ;
   hhh:language "${this._esc(t.language)}" ;
   hhh:source "${this._esc(t.source)}"^^xsd:string ;
-  hhh:value "${this._esc(translatedBehaviorData)}" .
+  hhh:value "${this._esc(translatedData)}" .
 ${iri(`Behavior-${origBeh.id}`)} hhh:hasTranslation ${iri(`Behavior-${tid}`)} .
 ${iri(`Behavior-${tid}`)} hhh:hasTranslation ${iri(`Behavior-${origBeh.id}`)} .
 `;
-        })
-        .join('');
-    }
+      })
+      .join('');
 
+    return triples;
+  }
+
+  /**
+   * Orchestrates building all Turtle sections for a donation.
+   * Each section is produced by a dedicated named method.
+   */
+  _buildDonationTurtle(donation, experimentalSetting, userId, timestamp) {
+    const donorId = uuid();
     return {
-      prefixes,
-      experimentalSettingTriples,
-      habitTriples,
-      donorTriples,
-      contextTriples,
-      behaviorTriples,
-      habitBehaviorLinks,
-      translationTriples,
+      prefixes: PREFIXES,
+      habitTriples: this._habitTriples(donation),
+      experimentalSettingTriples:
+        this._experimentalSettingTriples(experimentalSetting),
+      donorTriples: this._donorTriples(donorId, donation, userId, timestamp),
+      contextTriples: this._contextTriples(donation, experimentalSetting),
+      ...this._behaviorContent(donation, experimentalSetting),
+      translationTriples: this._translationTriples(
+        donation,
+        experimentalSetting
+      ),
     };
   }
 }

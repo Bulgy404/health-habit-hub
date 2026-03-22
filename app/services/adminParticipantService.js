@@ -1,4 +1,5 @@
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
+import { assignGroupLabel } from '../db/adminQueries.js';
 
 // Whitelist of valid Neo4j group labels (prevents Cypher label injection)
 const VALID_GROUPS = new Set([
@@ -95,13 +96,7 @@ export async function assignGroup({ db, neo4jRun, kc, id, group }) {
   if (neo4jRun) {
     const newLabel = GROUP_LABEL_MAP[group];
     if (VALID_GROUPS.has(newLabel)) {
-      const cypher = [
-        'MATCH (d:hhh__Donor {hhh__id: $userId})',
-        'REMOVE d:hhh__Group1 REMOVE d:hhh__Group2 REMOVE d:hhh__Group3 REMOVE d:hhh__Group4',
-        `SET d:\`${newLabel}\``,
-        'RETURN d',
-      ].join(' ');
-      await neo4jRun(cypher, { userId: id }).catch(() => {});
+      await assignGroupLabel(neo4jRun, id, newLabel);
     }
   }
 
