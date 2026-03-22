@@ -640,5 +640,9 @@
   "thankYou": "Thank You",
   "@thankYou": {
     "description": "AppBar title for confirmation screens"
+  },
+  "noQuestionnairesAssigned": "No questionnaires assigned to your study.",
+  "@noQuestionnairesAssigned": {
+    "description": "Empty state message shown on the profile screen when the participant's study has no questionnaires"
   }
 }

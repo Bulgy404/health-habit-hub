@@ -956,12 +956,6 @@ abstract class AppLocalizations {
   /// **'Failed to load questionnaire.'**
   String get failedToLoadQuestionnaire;
 
-  /// Message shown when the participant's study has no questionnaires assigned
-  ///
-  /// In en, this message translates to:
-  /// **'No questionnaires are assigned to your study yet.'**
-  String get noQuestionnairesAssigned;
-
   /// AppBar title and button label for the recommendation input screen
   ///
   /// In en, this message translates to:
@@ -997,6 +991,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Thank You'**
   String get thankYou;
+
+  /// Empty state message shown on the profile screen when the participant's study has no questionnaires
+  ///
+  /// In en, this message translates to:
+  /// **'No questionnaires assigned to your study.'**
+  String get noQuestionnairesAssigned;
 }
 
 class _AppLocalizationsDelegate

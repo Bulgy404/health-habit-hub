@@ -489,10 +489,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Fragebogen konnte nicht geladen werden.';
 
   @override
-  String get noQuestionnairesAssigned =>
-      'Ihrer Studie sind noch keine Fragebögen zugewiesen.';
-
-  @override
   String get getRecommendations => 'Empfehlungen erhalten';
 
   @override
@@ -511,4 +507,8 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get thankYou => 'Vielen Dank';
+
+  @override
+  String get noQuestionnairesAssigned =>
+      'Keine Fragebögen für Ihre Studie zugewiesen.';
 }
