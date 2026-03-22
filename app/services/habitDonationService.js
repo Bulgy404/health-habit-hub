@@ -1,0 +1,231 @@
+/**
+ * habitDonationService — orchestrates the M1.1 → M1.2 → M1.3 habit donation pipeline.
+ *
+ * Responsibilities:
+ *  - Classify habit (M1.1)
+ *  - Extract context dimensions (M1.2)
+ *  - Map BCIO concepts (M1.3)
+ *  - Translate habit sentence
+ *  - Write Habit, Context, and BCIOConcept nodes to Neo4j
+ */
+
+const DIMENSIONS = [
+  'TIME',
+  'PHYSICAL_SETTING',
+  'PRIOR_BEHAVIOR',
+  'OTHER_PEOPLE',
+  'INTERNAL_STATE',
+  'BEHAVIOR',
+  'REASONING',
+];
+
+/** Classify whether sentence is a habit and return { is_habit, confidence }. */
+async function classifyHabit(sentence, language, userID, apiBase) {
+  const res = await fetch(`${apiBase}/api/v1/llm/classify-habit`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sentence, language, user_id: userID }),
+  });
+  if (!res.ok)
+    throw Object.assign(new Error('Habit classification failed'), {
+      status: 502,
+    });
+  return res.json();
+}
+
+/** Extract context dimension phrases for the habit. */
+async function extractContext(uuid, sentence, language, apiBase) {
+  const res = await fetch(`${apiBase}/api/v1/llm/classify-context`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uuid, sentence, language }),
+  });
+  if (!res.ok)
+    throw Object.assign(new Error('Context extraction failed'), {
+      status: 502,
+    });
+  const context = await res.json();
+  const contextPhrases = {};
+  for (const dim of DIMENSIONS) {
+    if (Array.isArray(context[dim]) && context[dim].length > 0) {
+      contextPhrases[dim] = context[dim];
+    }
+  }
+  return contextPhrases;
+}
+
+/** Map BCIO concepts for the given context phrases. */
+async function mapBcio(uuid, contextPhrases, apiBase) {
+  const res = await fetch(`${apiBase}/api/v1/llm/map-bcio`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uuid, context_phrases: contextPhrases }),
+  });
+  if (!res.ok)
+    throw Object.assign(new Error('BCIO mapping failed'), { status: 502 });
+  const data = await res.json();
+  return data.mappings || [];
+}
+
+/** Write Habit node, Context nodes, and BCIOConcept nodes to Neo4j. */
+async function writeToNeo4j(
+  {
+    uuid,
+    sentence,
+    language,
+    confidence,
+    userID,
+    translationEN,
+    translationDE,
+    contextPhrases,
+    mappings,
+  },
+  queryNeo4j
+) {
+  const createdAt = new Date().toISOString();
+
+  await queryNeo4j(
+    `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: $language,
+       is_habit: true, confidence: $confidence, userID: $userID, created_at: $created_at,
+       translationEN: $translationEN, translationDE: $translationDE})`,
+    {
+      uuid,
+      sentence,
+      language,
+      confidence,
+      userID,
+      created_at: createdAt,
+      translationEN: translationEN || null,
+      translationDE: translationDE || null,
+    }
+  );
+
+  const contextRows = [];
+  for (const [dimension, phrases] of Object.entries(contextPhrases)) {
+    for (const phrase of phrases) {
+      contextRows.push({ text: phrase, dimension });
+    }
+  }
+  if (contextRows.length > 0) {
+    await queryNeo4j(
+      `UNWIND $rows AS row
+       MERGE (c:Context {text: row.text, dimension: row.dimension})
+       WITH c, row
+       MATCH (h:Habit {uuid: $habitUuid})
+       MERGE (h)-[:HAS_CONTEXT {dimension: row.dimension}]->(c)`,
+      { rows: contextRows, habitUuid: uuid }
+    );
+  }
+
+  if (mappings.length > 0) {
+    await queryNeo4j(
+      `UNWIND $mappings AS m
+       MERGE (b:BCIOConcept {bcio_concept_id: m.bcio_concept_id})
+       ON CREATE SET b.bcio_concept_label = m.bcio_concept_label
+       WITH b, m
+       MATCH (c:Context {text: m.phrase, dimension: m.dimension})
+       MERGE (c)-[:MAPS_TO {confidence: m.confidence, phrase: m.phrase, dimension: m.dimension}]->(b)`,
+      { mappings }
+    );
+  }
+}
+
+/**
+ * Donate a habit: classify → extract context → map BCIO → translate → persist.
+ *
+ * @param {object} params
+ * @param {string} params.uuid         - Generated UUID for the new Habit node
+ * @param {string} params.sentence     - Habit sentence from the user
+ * @param {string} params.language     - ISO 639-1 language code
+ * @param {string} params.userID       - Keycloak sub claim of the donating user
+ * @param {Function} params.queryNeo4j - Neo4j query function (cypher, params) => rows
+ * @param {Function} params.getDb      - Async getter for MongoDB database instance
+ * @param {string} params.apiBase      - Base URL for the recommender/LLM API service
+ * @param {Function} params.translate  - translate(sentence, src, tgt, endpoint, base, url) => string|null
+ * @param {string} params.translateUrl - LibreTranslate endpoint URL
+ *
+ * @returns {{ is_habit: boolean, uuid?: string, message: string }}
+ */
+export async function donateHabit({
+  uuid,
+  sentence,
+  language,
+  userID,
+  queryNeo4j,
+  getDb,
+  apiBase,
+  translate,
+  translateUrl,
+}) {
+  const classified = await classifyHabit(sentence, language, userID, apiBase);
+
+  if (!classified.is_habit) {
+    const database = await getDb();
+    await database.collection('habits').insertOne({
+      sentence,
+      language,
+      is_habit: false,
+      userID,
+      created_at: new Date(),
+    });
+    return {
+      is_habit: false,
+      message:
+        'Thank you for your contribution. This sentence was not identified as a habit and has been noted for review.',
+    };
+  }
+
+  const contextPhrases = await extractContext(
+    uuid,
+    sentence,
+    language,
+    apiBase
+  );
+  const mappings = await mapBcio(uuid, contextPhrases, apiBase);
+
+  const [translationEN, translationDE] = await Promise.all([
+    // Translate non-English habits to English
+    language && !language.startsWith('en')
+      ? translate(
+          sentence,
+          language,
+          'en',
+          '/api/v1/llm/refine-translation',
+          apiBase,
+          translateUrl
+        )
+      : Promise.resolve(null),
+    // Translate English habits to German
+    language && language.startsWith('en')
+      ? translate(
+          sentence,
+          'en',
+          'de',
+          '/api/v1/llm/refine-translation-de',
+          apiBase,
+          translateUrl
+        )
+      : Promise.resolve(null),
+  ]);
+
+  await writeToNeo4j(
+    {
+      uuid,
+      sentence,
+      language,
+      confidence: classified.confidence,
+      userID,
+      translationEN,
+      translationDE,
+      contextPhrases,
+      mappings,
+    },
+    queryNeo4j
+  );
+
+  return {
+    is_habit: true,
+    uuid,
+    message: 'Thank you! Your habit has been successfully donated.',
+  };
+}

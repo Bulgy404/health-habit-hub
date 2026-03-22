@@ -1,6 +1,8 @@
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import { v4 as uuid } from 'uuid';
+import { makeGetDb } from '../utils/getDb.js';
+import { isPrivileged } from '../middleware/roles.js';
 import { renderSurvey, submitSurvey } from '../controllers/surveyController.js';
 
 // Legacy static router (kept for backward compat with old non-v1 routes)
@@ -24,16 +26,46 @@ legacyRouter.post('/:id/complete', submitSurvey);
 
 export default legacyRouter;
 
+function formatSurvey(s) {
+  return {
+    id: s.id,
+    title: s.title,
+    type: s.type,
+    status: s.status,
+    assignedGroups: s.assignedGroups || [],
+  };
+}
+
+/**
+ * Return surveys visible to the calling user.
+ * Admins and researchers see all surveys. Participants see published surveys for their group.
+ * @param {{ db: object, user: object }} params
+ * @returns {Promise<Array>}
+ */
+async function getSurveysForUser({ db, user }) {
+  if (isPrivileged(user)) {
+    const docs = await db.collection('surveys').find({}).toArray();
+    return docs.map(formatSurvey);
+  }
+  const userId = user?.sub;
+  let group = null;
+  if (userId) {
+    const participant = await db
+      .collection('participants')
+      .findOne({ userId, deletedAt: { $exists: false } });
+    group = participant?.group || null;
+  }
+  const filter = { status: 'published' };
+  if (group) filter.assignedGroups = group;
+  const docs = await db.collection('surveys').find(filter).toArray();
+  return docs.map(formatSurvey);
+}
+
 // Factory for v1 router: returns surveys filtered by group for participants,
 // and all surveys for admin/researcher.
 export function createSurveyRouter({ db } = {}) {
   const router = express.Router();
-
-  async function getDb() {
-    if (db) return db;
-    const { connect } = await import('../models/survey.js');
-    return connect();
-  }
+  const getDb = makeGetDb(db);
 
   /**
    * @swagger
@@ -69,49 +101,11 @@ export function createSurveyRouter({ db } = {}) {
   // GET /api/v1/surveys – participant sees only published surveys for their group
   router.get('/', async (req, res) => {
     try {
-      const database = await getDb();
-      const roles = req.user?.realm_access?.roles || [];
-      const isAdminOrResearcher =
-        roles.includes('admin') || roles.includes('researcher');
-
-      if (isAdminOrResearcher) {
-        const docs = await database.collection('surveys').find({}).toArray();
-        return res.json(
-          docs.map((s) => ({
-            id: s.id,
-            title: s.title,
-            type: s.type,
-            status: s.status,
-            assignedGroups: s.assignedGroups || [],
-          }))
-        );
-      }
-
-      // For participants: look up their group from the participants collection
-      const userId = req.user?.sub;
-      let group = null;
-      if (userId) {
-        const participant = await database
-          .collection('participants')
-          .findOne({ userId, deletedAt: { $exists: false } });
-        group = participant?.group || null;
-      }
-
-      // Return published surveys assigned to the caller's group
-      const filter = { status: 'published' };
-      if (group) {
-        filter.assignedGroups = group;
-      }
-      const docs = await database.collection('surveys').find(filter).toArray();
-      res.json(
-        docs.map((s) => ({
-          id: s.id,
-          title: s.title,
-          type: s.type,
-          status: s.status,
-          assignedGroups: s.assignedGroups || [],
-        }))
-      );
+      const surveys = await getSurveysForUser({
+        db: await getDb(),
+        user: req.user,
+      });
+      res.json(surveys);
     } catch (err) {
       console.error('[route] Error:', err);
       res.json([]);

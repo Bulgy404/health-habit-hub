@@ -1,13 +1,9 @@
 import express from 'express';
+import { makeGetDb } from '../utils/getDb.js';
 
 export function createProfileRouter({ db } = {}) {
   const router = express.Router();
-
-  async function getDb() {
-    if (db) return db;
-    const { connect } = await import('../models/survey.js');
-    return connect();
-  }
+  const getDb = makeGetDb(db);
 
   /**
    * @swagger
@@ -63,7 +59,8 @@ export function createProfileRouter({ db } = {}) {
       if (!profile) return res.status(404).json({ error: 'Profile not found' });
       const { _id, ...rest } = profile;
       res.json(rest);
-    } catch (_err) {
+    } catch (err) {
+      console.error('[profileRouter] Error in GET /:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -142,7 +139,8 @@ export function createProfileRouter({ db } = {}) {
         .findOne({ userId: req.user.sub });
       const { _id, ...rest } = profile;
       res.json(rest);
-    } catch (_err) {
+    } catch (err) {
+      console.error('[profileRouter] Error in POST /:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

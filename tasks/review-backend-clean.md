@@ -240,40 +240,40 @@ router.post('/submit-form', recaptcha.middleware.verify, async (req, res) => {
 
 ### Critical (fix before next production deploy)
 
-| ID | File | Lines | Issue |
-|----|------|-------|-------|
-| BK-C1 | `routes/habitsRouter.js` | 467–661 | POST /habits/donate is a 143-line god handler — violates SRP, untestable |
-| BK-C2 | `routes/habitsRouter.js` | 54–133 | `translate()` is 80 lines with 4 levels of nesting — splits into two functions |
-| BK-C4 | 8 route files | various | `getDb()` helper copy-pasted 8 times — single change breaks all if not synced |
-| BK-C5 | `middleware/auth.js` | 32–158 | JWKS caching logic duplicated in two exports of the same security-critical file |
-| BK-C6 | `onboardRouter.js:28`, `adminRouter.js:28` | — | Keycloak admin token fetch implemented twice independently |
-| BK-C7 | `routes/donateRouter.js` | 35–45 | reCAPTCHA key printed to stdout at module load time (logs secret key length) |
-| BK-C8 | `routes/donateRouter.js` | 69, 79, 83 | Emoji debug logs fire on every POST /donate/data request |
-| BK-C9 | `routes/donateRouter.js` | 92–110 | Dead `/submit-form` route with commented-out stubs, `console.log(req.body)` |
+| ID | File | Lines | Issue | Resolution (US-168) |
+|----|------|-------|-------|---------------------|
+| BK-C1 | `routes/habitsRouter.js` | 467–661 | POST /habits/donate is a 143-line god handler — violates SRP, untestable | ✅ Extracted to `services/habitDonationService.js`; route handler is now 20 lines |
+| BK-C2 | `routes/habitsRouter.js` | 54–133 | `translate()` is 80 lines with 4 levels of nesting — splits into two functions | ✅ Split into `fetchLibreTranslation()` and `refineLLMTranslation()`; `translate()` is 10-line orchestrator |
+| BK-C4 | 8 route files | various | `getDb()` helper copy-pasted 8 times — single change breaks all if not synced | ✅ Extracted to `utils/getDb.js` (`makeGetDb`); all 8 route files use it |
+| BK-C5 | `middleware/auth.js` | 32–158 | JWKS caching logic duplicated in two exports of the same security-critical file | ✅ `createAuthMiddleware` now composes `createTokenVerifier` internally; single JWKS cache |
+| BK-C6 | `onboardRouter.js:28`, `adminRouter.js:28` | — | Keycloak admin token fetch implemented twice independently | ✅ Both now use `services/keycloakAdminClient.js` |
+| BK-C7 | `routes/donateRouter.js` | 35–45 | reCAPTCHA key printed to stdout at module load time (logs secret key length) | ✅ Removed |
+| BK-C8 | `routes/donateRouter.js` | 69, 79, 83 | Emoji debug logs fire on every POST /donate/data request | ✅ Removed |
+| BK-C9 | `routes/donateRouter.js` | 92–110 | Dead `/submit-form` route with commented-out stubs, `console.log(req.body)` | ✅ Removed |
 
 ### Major
 
-| ID | File | Lines | Issue |
-|----|------|-------|-------|
-| BK-M1 | `routes/surveyRouter.js` | 70–119 | GET /surveys mixes role check + DB lookup + filter + map inline (50 lines) |
-| BK-M2 | `utils/Neo4jDatabase.js` | 327–476 | `_buildDonationTurtle` is 149 lines; `iri()` redefined on every call |
-| BK-M3 | `routes/adminRouter.js` | 22–111 | `createKeycloakClient` is 88 lines at module scope; fetches admin token on every KC operation (no caching) |
-| BK-M4 | `services/adminStatsService.js` | 7–88 | `getParticipantProgress` is 80 lines — timeline builder extractable |
-| BK-M5 | `routes/habitsRouter.js` | 166–649 | 4+ inline Cypher strings in route handlers (violates route/data-access separation) |
-| BK-M6 | `routes/usersRouter.js`, `routes/profileRouter.js` | 26, 58, 66, 145 | 4 `catch (_err)` blocks discard errors with no logging |
-| BK-M7 | multiple | — | Role strings ('admin', 'researcher', 'participant') as magic strings across 3+ files |
-| BK-M8 | `routes/recommendationsRouter.js` | 31 | Redis error event suppressed with empty handler — all Redis errors silently swallowed |
+| ID | File | Lines | Issue | Resolution (US-168) |
+|----|------|-------|-------|---------------------|
+| BK-M1 | `routes/surveyRouter.js` | 70–119 | GET /surveys mixes role check + DB lookup + filter + map inline (50 lines) | ✅ Extracted to `getSurveysForUser({ db, user })` function; route handler is 5 lines |
+| BK-M2 | `utils/Neo4jDatabase.js` | 327–476 | `_buildDonationTurtle` is 149 lines; `iri()` redefined on every call | ⏭ Deferred — isolated to Neo4jDatabase.js with no test coverage; risk of regression outweighs benefit for this iteration. Tracked as future work. |
+| BK-M3 | `routes/adminRouter.js` | 22–111 | `createKeycloakClient` is 88 lines at module scope; fetches admin token on every KC operation (no caching) | ✅ Removed from adminRouter; replaced with `createKeycloakAdminClient()` which caches token with 55s TTL |
+| BK-M4 | `services/adminStatsService.js` | 7–88 | `getParticipantProgress` is 80 lines — timeline builder extractable | ✅ Extracted `buildTimeline(participant, surveyResponses, recDocs)` helper |
+| BK-M5 | `routes/habitsRouter.js` | 166–649 | 4+ inline Cypher strings in route handlers (violates route/data-access separation) | ✅ POST /donate Cypher moved to `habitDonationService.js`; GET handlers' Cypher is thin read-only queries (acceptable in route layer per project pattern) |
+| BK-M6 | `routes/usersRouter.js`, `routes/profileRouter.js` | 26, 58, 66, 145 | 4 `catch (_err)` blocks discard errors with no logging | ✅ Replaced with `catch (err) { console.error('[router] Error:', err); }` |
+| BK-M7 | multiple | — | Role strings ('admin', 'researcher', 'participant') as magic strings across 3+ files | ✅ Extracted `middleware/roles.js` with `ROLES` constants and `isPrivileged(user)` helper; used in surveyRouter, recommendRouter |
+| BK-M8 | `routes/recommendationsRouter.js` | 31 | Redis error event suppressed with empty handler — all Redis errors silently swallowed | ✅ Changed to `console.warn('[redis] client error:', err.message)` |
 
 ### Minor
 
-| ID | File | Lines | Issue |
-|----|------|-------|-------|
-| BK-m1 | `routes/habitsRouter.js` | 476–487 | `SUPPORTED_LANGUAGES` array allocated inside handler on every request |
-| BK-m2 | `routes/donateRouter.js` | 4 | Uses `uuid` npm package while all other routes use `node:crypto.randomUUID` |
-| BK-m3 | `routes/surveyRouter.js` | 7–25 | `legacyRouter` and `createSurveyRouter` in same file with mismatched default export |
-| BK-m4 | `app.js` | 101–103 | Debug test route `/test-disclaimer` exposed in production |
-| BK-m5 | `utils/Neo4jDatabase.js` | 212, 238 | Commented-out `console.warn` silences n10s setup errors completely |
-| BK-m6 | `app.js` | 107, 108, 126, 144, 165, 167, 170, 172 | 8 debug `console.log` statements fire on every request |
+| ID | File | Lines | Issue | Resolution (US-168) |
+|----|------|-------|-------|---------------------|
+| BK-m1 | `routes/habitsRouter.js` | 476–487 | `SUPPORTED_LANGUAGES` array allocated inside handler on every request | ✅ Moved to module scope |
+| BK-m2 | `routes/donateRouter.js` | 4 | Uses `uuid` npm package while all other routes use `node:crypto.randomUUID` | ✅ Replaced with `randomUUID` from `node:crypto` |
+| BK-m3 | `routes/surveyRouter.js` | 7–25 | `legacyRouter` and `createSurveyRouter` in same file with mismatched default export | ⏭ Deferred — low value / high rename risk; the legacy router is a one-line stub and no consumers import it by filename |
+| BK-m4 | `app.js` | 101–103 | Debug test route `/test-disclaimer` exposed in production | ✅ Removed |
+| BK-m5 | `utils/Neo4jDatabase.js` | 212, 238 | Commented-out `console.warn` silences n10s setup errors completely | ⏭ Deferred — tracked in BK-M2 scope; Neo4jDatabase.js refactor deferred |
+| BK-m6 | `app.js` | 107, 108, 126, 144, 165, 167, 170, 172 | 8 debug `console.log` statements fire on every request | ✅ Removed all 8 |
 
 ---
 

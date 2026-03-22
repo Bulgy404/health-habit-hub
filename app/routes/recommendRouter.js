@@ -1,4 +1,5 @@
 import express from 'express';
+import { isPrivileged } from '../middleware/roles.js';
 
 async function proxyToRecommender(req, res, targetUrl) {
   const headers = {};
@@ -65,10 +66,7 @@ export function createRecommendRouter({ recommenderUrl } = {}) {
   // GET /api/v1/recommend/:userId/history → Python GET /recommend/:userId/history
   router.get('/:userId/history', async (req, res) => {
     // IDOR guard: participants can only access their own history
-    const roles = req.user?.realm_access?.roles || [];
-    const isPrivileged =
-      roles.includes('admin') || roles.includes('researcher');
-    if (!isPrivileged && req.user?.sub !== req.params.userId) {
+    if (!isPrivileged(req.user) && req.user?.sub !== req.params.userId) {
       return res.status(403).json({ error: 'Forbidden' });
     }
     await proxyToRecommender(
@@ -125,10 +123,7 @@ export function createRecommendRouter({ recommenderUrl } = {}) {
   // GET /api/v1/recommend/:userId → Python GET /recommend/:userId
   router.get('/:userId', async (req, res) => {
     // IDOR guard: participants can only access their own recommendations
-    const roles = req.user?.realm_access?.roles || [];
-    const isPrivileged =
-      roles.includes('admin') || roles.includes('researcher');
-    if (!isPrivileged && req.user?.sub !== req.params.userId) {
+    if (!isPrivileged(req.user) && req.user?.sub !== req.params.userId) {
       return res.status(403).json({ error: 'Forbidden' });
     }
     await proxyToRecommender(

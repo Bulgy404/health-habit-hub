@@ -2689,7 +2689,7 @@
         "tasks/review-backend-clean.md updated with Resolution notes"
       ],
       "priority": 168,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-166. Can run in parallel with US-167 and US-169."
     },
     {
@@ -2759,13 +2759,13 @@
     },
     {
       "id": "US-173",
-      "title": "Data model — Study, Group, Enrollment, StudyCode",
+      "title": "Data model \u2014 Study, Group, Enrollment, StudyCode",
       "description": "As a developer, I need a data model that represents studies, their groups, participant enrollments, and redeemable study codes so that all subsequent features have a stable foundation.",
       "acceptanceCriteria": [
         "MongoDB collection 'studies' with schema: _id, name, description, isDefault (boolean, unique when true), isActive, groups (array of { id, label, index: 1-4 }), questionnaires (array of refs), createdAt, updatedAt",
         "MongoDB collection 'studyCodes' with schema: _id, code (string, unique, format HHH-XXXXX), studyId, groupId, maxRedemptions (null = unlimited), redemptionCount, expiresAt, createdAt",
         "MongoDB collection 'enrollments' with schema: _id, userId (Keycloak UUID), studyId, groupId, studyCodeUsed (string or null), enrolledAt",
-        "Unique index on enrollments(userId) — one active enrollment per user",
+        "Unique index on enrollments(userId) \u2014 one active enrollment per user",
         "Unique index on studyCodes(code)",
         "Sparse unique index on studies(isDefault) where isDefault = true",
         "Migration/seed script in scripts/ creates the default study with 4 groups on a clean install",
@@ -2777,15 +2777,15 @@
     },
     {
       "id": "US-174",
-      "title": "Backend — Study CRUD API",
+      "title": "Backend \u2014 Study CRUD API",
       "description": "As an admin, I want REST endpoints to create, read, update, and delete studies (including their group configuration) so I can manage the study catalogue.",
       "acceptanceCriteria": [
-        "GET /api/v1/admin/studies — returns paginated list of all studies with participant count per study",
-        "POST /api/v1/admin/studies — creates a new study; body: { name, description, groups: [{ label }], questionnaires: [] }; returns 201",
-        "GET /api/v1/admin/studies/:id — returns full study document including groups and questionnaire refs",
-        "PUT /api/v1/admin/studies/:id — updates name, description, isActive, groups (additive only — groups cannot be removed if participants enrolled), questionnaire assignment",
-        "DELETE /api/v1/admin/studies/:id — soft-deletes (sets isActive: false); returns 409 if study has enrolled participants",
-        "PUT /api/v1/admin/studies/:id/default — marks study as default; clears isDefault on previously default study atomically",
+        "GET /api/v1/admin/studies \u2014 returns paginated list of all studies with participant count per study",
+        "POST /api/v1/admin/studies \u2014 creates a new study; body: { name, description, groups: [{ label }], questionnaires: [] }; returns 201",
+        "GET /api/v1/admin/studies/:id \u2014 returns full study document including groups and questionnaire refs",
+        "PUT /api/v1/admin/studies/:id \u2014 updates name, description, isActive, groups (additive only \u2014 groups cannot be removed if participants enrolled), questionnaire assignment",
+        "DELETE /api/v1/admin/studies/:id \u2014 soft-deletes (sets isActive: false); returns 409 if study has enrolled participants",
+        "PUT /api/v1/admin/studies/:id/default \u2014 marks study as default; clears isDefault on previously default study atomically",
         "All routes protected by admin JWT middleware",
         "All routes return consistent error shapes",
         "npm run lint passes; existing tests still pass"
@@ -2796,14 +2796,14 @@
     },
     {
       "id": "US-175",
-      "title": "Backend — Study code generation and redemption API",
+      "title": "Backend \u2014 Study code generation and redemption API",
       "description": "As an admin, I want to generate short alphanumeric enrollment codes and as a participant I want to redeem one at onboarding so the system assigns me to the correct study and group automatically.",
       "acceptanceCriteria": [
-        "POST /api/v1/admin/studies/:id/codes — generates 1-100 codes; body: { count, groupId, maxRedemptions, expiresAt }; format HHH-XXXXX (5 uppercase alphanumeric chars), generated with crypto.randomBytes",
-        "GET /api/v1/admin/studies/:id/codes — returns paginated list of codes with redemptionCount, expiresAt, groupId",
-        "DELETE /api/v1/admin/studies/:id/codes/:code — revokes a code; returns 409 if already redeemed",
-        "POST /api/v1/onboarding/redeem-code — authenticated participant endpoint; validates code, creates enrollment, increments redemptionCount, returns { studyId, groupId, studyName, groupLabel }; returns 409 if user already enrolled",
-        "POST /api/v1/onboarding/skip-code — enrolls user in default study with round-robin group assignment; idempotent",
+        "POST /api/v1/admin/studies/:id/codes \u2014 generates 1-100 codes; body: { count, groupId, maxRedemptions, expiresAt }; format HHH-XXXXX (5 uppercase alphanumeric chars), generated with crypto.randomBytes",
+        "GET /api/v1/admin/studies/:id/codes \u2014 returns paginated list of codes with redemptionCount, expiresAt, groupId",
+        "DELETE /api/v1/admin/studies/:id/codes/:code \u2014 revokes a code; returns 409 if already redeemed",
+        "POST /api/v1/onboarding/redeem-code \u2014 authenticated participant endpoint; validates code, creates enrollment, increments redemptionCount, returns { studyId, groupId, studyName, groupLabel }; returns 409 if user already enrolled",
+        "POST /api/v1/onboarding/skip-code \u2014 enrolls user in default study with round-robin group assignment; idempotent",
         "Code redemption is case-insensitive (hhh-ab12c equals HHH-AB12C)",
         "Codes past maxRedemptions return 410 Gone",
         "npm run lint passes; existing tests still pass"
@@ -2814,16 +2814,16 @@
     },
     {
       "id": "US-176",
-      "title": "Backend — Questionnaire library and custom questionnaire API",
+      "title": "Backend \u2014 Questionnaire library and custom questionnaire API",
       "description": "As an admin, I want to manage a shared questionnaire library and create custom questionnaires so I can assign the right surveys to each study.",
       "acceptanceCriteria": [
         "MongoDB 'questionnaires' collection extended with isLibrary (boolean) flag; existing SLIQ and RAND-36 marked isLibrary: true",
-        "GET /api/v1/admin/questionnaires — returns all questionnaires; ?library=true filters to library items",
-        "POST /api/v1/admin/questionnaires — creates a custom questionnaire; returns 201",
-        "PUT /api/v1/admin/questionnaires/:id — updates questionnaire; returns 403 if isLibrary",
-        "DELETE /api/v1/admin/questionnaires/:id — deletes if not isLibrary and not assigned to active study",
+        "GET /api/v1/admin/questionnaires \u2014 returns all questionnaires; ?library=true filters to library items",
+        "POST /api/v1/admin/questionnaires \u2014 creates a custom questionnaire; returns 201",
+        "PUT /api/v1/admin/questionnaires/:id \u2014 updates questionnaire; returns 403 if isLibrary",
+        "DELETE /api/v1/admin/questionnaires/:id \u2014 deletes if not isLibrary and not assigned to active study",
         "Study questionnaire assignment handled by PUT /api/v1/admin/studies/:id with questionnaires: [id, ...]",
-        "GET /api/v1/participant/questionnaires — returns questionnaires for the authenticated participant's enrolled study",
+        "GET /api/v1/participant/questionnaires \u2014 returns questionnaires for the authenticated participant's enrolled study",
         "npm run lint passes; existing tests still pass"
       ],
       "priority": 176,
@@ -2832,16 +2832,16 @@
     },
     {
       "id": "US-177",
-      "title": "Backend — Push notification API (immediate and scheduled)",
+      "title": "Backend \u2014 Push notification API (immediate and scheduled)",
       "description": "As an admin, I want to send push notifications to all participants in a study or a specific group, either immediately or at a scheduled future time, so I can coordinate study activities.",
       "acceptanceCriteria": [
         "firebase-admin package added to app/package.json; FIREBASE_SERVICE_ACCOUNT_JSON env var documented in .env.example and README",
-        "POST /api/v1/participant/register-token — upserts FCM token for authenticated user into deviceTokens collection",
-        "POST /api/v1/admin/notifications/send — body: { studyId, groupId (optional), title, body, data }; sends immediately to matching participants; returns { sent: N, failed: N }",
-        "POST /api/v1/admin/notifications/schedule — same body plus { scheduledAt: ISO8601 }; stores in scheduledNotifications collection",
+        "POST /api/v1/participant/register-token \u2014 upserts FCM token for authenticated user into deviceTokens collection",
+        "POST /api/v1/admin/notifications/send \u2014 body: { studyId, groupId (optional), title, body, data }; sends immediately to matching participants; returns { sent: N, failed: N }",
+        "POST /api/v1/admin/notifications/schedule \u2014 same body plus { scheduledAt: ISO8601 }; stores in scheduledNotifications collection",
         "node-cron job runs every 60 seconds, dispatches due scheduled notifications and marks them sent",
-        "GET /api/v1/admin/notifications/scheduled — returns pending scheduled notifications",
-        "DELETE /api/v1/admin/notifications/scheduled/:id — cancels a pending notification",
+        "GET /api/v1/admin/notifications/scheduled \u2014 returns pending scheduled notifications",
+        "DELETE /api/v1/admin/notifications/scheduled/:id \u2014 cancels a pending notification",
         "Invalid/unregistered FCM tokens silently removed from deviceTokens",
         "npm run lint passes; existing tests still pass"
       ],
@@ -2851,7 +2851,7 @@
     },
     {
       "id": "US-178",
-      "title": "Admin UI — Study list and study creation/edit form",
+      "title": "Admin UI \u2014 Study list and study creation/edit form",
       "description": "As an admin, I want a study management page listing all studies with their status, and a form to create or edit a study, so I can maintain the study catalogue from the browser.",
       "acceptanceCriteria": [
         "New 'Studies' section visible in the admin panel navigation sidebar",
@@ -2871,7 +2871,7 @@
     },
     {
       "id": "US-179",
-      "title": "Admin UI — Study code generation and management view",
+      "title": "Admin UI \u2014 Study code generation and management view",
       "description": "As an admin, I want to generate and manage enrollment codes for a study so I can distribute codes to participants before the study starts.",
       "acceptanceCriteria": [
         "'Codes' tab on study detail page shows paginated table: code, group assigned, redemptions/max, expiry date, revoke action",
@@ -2886,7 +2886,7 @@
     },
     {
       "id": "US-180",
-      "title": "Admin UI — Questionnaire library and custom questionnaire editor",
+      "title": "Admin UI \u2014 Questionnaire library and custom questionnaire editor",
       "description": "As an admin, I want to browse the questionnaire library and create custom questionnaires so I can assign the right surveys to each study.",
       "acceptanceCriteria": [
         "'Questionnaires' section in admin navigation shows library + custom questionnaires in separate tabs",
@@ -2902,7 +2902,7 @@
     },
     {
       "id": "US-181",
-      "title": "Admin UI — Assign questionnaires to a study",
+      "title": "Admin UI \u2014 Assign questionnaires to a study",
       "description": "As an admin, I want to select which questionnaires are active for a specific study so participants in that study see the right surveys.",
       "acceptanceCriteria": [
         "'Questionnaires' tab on study detail page shows all available questionnaires (library + custom) as a checkable list",
@@ -2917,12 +2917,12 @@
     },
     {
       "id": "US-182",
-      "title": "Admin UI — Default study configuration",
+      "title": "Admin UI \u2014 Default study configuration",
       "description": "As an admin, I want a clear view of which study is the default so I can ensure participants without a code land in the intended experience.",
       "acceptanceCriteria": [
         "Studies list shows a 'Default' badge on the current default study",
         "'Set as Default' button visible on detail page of any non-default study; triggers confirmation dialog before saving",
-        "Default study cannot be deactivated while it is the default — button shows tooltip explaining why",
+        "Default study cannot be deactivated while it is the default \u2014 button shows tooltip explaining why",
         "On initial install (seed), system ships with a pre-configured default study named 'Default Study' with Groups 1-4 and SLIQ + RAND-36 assigned",
         "Admin panel runs without new JS console errors"
       ],
@@ -2932,7 +2932,7 @@
     },
     {
       "id": "US-183",
-      "title": "Admin UI — Participant enrollment dashboard (per study)",
+      "title": "Admin UI \u2014 Participant enrollment dashboard (per study)",
       "description": "As an admin, I want to see which participants are enrolled in a study and their group assignment so I can monitor recruitment and balance.",
       "acceptanceCriteria": [
         "'Participants' tab on study detail page shows paginated table: user ID (or display name if available), group label, enrolled date, code used (or 'direct/default')",
@@ -2946,11 +2946,11 @@
     },
     {
       "id": "US-184",
-      "title": "Admin UI — Push notification composer",
+      "title": "Admin UI \u2014 Push notification composer",
       "description": "As an admin, I want to compose and send (or schedule) a push notification to a study's participants so I can communicate time-sensitive study events.",
       "acceptanceCriteria": [
         "'Notifications' tab on study detail page",
-        "Compose form: Title (max 50 chars), Body (max 200 chars), Target (all participants in study vs. specific group — dropdown), Send time (Now / Schedule — datetime picker when Schedule selected)",
+        "Compose form: Title (max 50 chars), Body (max 200 chars), Target (all participants in study vs. specific group \u2014 dropdown), Send time (Now / Schedule \u2014 datetime picker when Schedule selected)",
         "'Send' calls the appropriate backend endpoint; success shows toast with 'Sent to N participants' or 'Scheduled for [datetime]'",
         "'Scheduled' sub-section lists pending notifications with Cancel button",
         "Admin panel runs without new JS console errors"
@@ -2961,7 +2961,7 @@
     },
     {
       "id": "US-185",
-      "title": "App — Study code entry screen in onboarding",
+      "title": "App \u2014 Study code entry screen in onboarding",
       "description": "As a participant, I want to be prompted to enter a study code during app onboarding so that I can be enrolled in the correct study and group before the app experience begins.",
       "acceptanceCriteria": [
         "New onboarding step inserted between the personal-code display step and the main app experience",
@@ -2970,7 +2970,7 @@
         "On submit: calls POST /api/v1/onboarding/redeem-code; on success stores studyId and groupId in local secure storage / app state",
         "On error: shows inline error message (invalid code, expired, already used)",
         "On skip: calls POST /api/v1/onboarding/skip-code to enrol in default study",
-        "Screen shown only once — if user is already enrolled it is skipped on subsequent launches",
+        "Screen shown only once \u2014 if user is already enrolled it is skipped on subsequent launches",
         "flutter analyze passes with zero warnings",
         "flutter test passes"
       ],
@@ -2980,7 +2980,7 @@
     },
     {
       "id": "US-186",
-      "title": "App — Study-specific questionnaire display",
+      "title": "App \u2014 Study-specific questionnaire display",
       "description": "As a participant, I want to see the questionnaires configured for my enrolled study so that I complete the right surveys.",
       "acceptanceCriteria": [
         "Questionnaire list fetched from GET /api/v1/participant/questionnaires (study-scoped endpoint from US-176) instead of a static list",
@@ -2994,7 +2994,7 @@
     },
     {
       "id": "US-187",
-      "title": "App — Push notification integration",
+      "title": "App \u2014 Push notification integration",
       "description": "As a participant, I want to receive push notifications from the research team so I am reminded of study activities and deadlines.",
       "acceptanceCriteria": [
         "firebase_messaging Flutter package added to mobile/pubspec.yaml",

@@ -1,4 +1,38 @@
 /**
+ * Build a chronological timeline of participant events.
+ * @param {object} participant - Participant document
+ * @param {Array} surveyResponses - Survey response documents
+ * @param {Array} recDocs - Recommendation log documents
+ * @returns {Array} Sorted timeline events
+ */
+function buildTimeline(participant, surveyResponses, recDocs) {
+  const timeline = [];
+  if (participant.enrolledAt) {
+    timeline.push({
+      type: 'enrolled',
+      timestamp: participant.enrolledAt,
+      detail: 'Participant enrolled',
+    });
+  }
+  for (const sr of surveyResponses) {
+    timeline.push({
+      type: 'survey_completed',
+      timestamp: sr.completedAt,
+      detail: sr.surveyTitle || sr.surveyId,
+    });
+  }
+  for (const rec of recDocs) {
+    timeline.push({
+      type: `recommendation_${rec.type}`,
+      timestamp: rec.timestamp,
+      detail: rec.recommendationId || '',
+    });
+  }
+  timeline.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  return timeline;
+}
+
+/**
  * Aggregate progress statistics for a single participant.
  * Returns null if the participant is not found.
  * @param {{ db: object, neo4jRun: Function|null, id: string }} deps
@@ -47,29 +81,7 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
   const accepted = recDocs.filter((r) => r.type === 'accepted').length;
   const dismissed = recDocs.filter((r) => r.type === 'dismissed').length;
 
-  const timeline = [];
-  if (participant.enrolledAt) {
-    timeline.push({
-      type: 'enrolled',
-      timestamp: participant.enrolledAt,
-      detail: 'Participant enrolled',
-    });
-  }
-  for (const sr of surveyResponses) {
-    timeline.push({
-      type: 'survey_completed',
-      timestamp: sr.completedAt,
-      detail: sr.surveyTitle || sr.surveyId,
-    });
-  }
-  for (const rec of recDocs) {
-    timeline.push({
-      type: `recommendation_${rec.type}`,
-      timestamp: rec.timestamp,
-      detail: rec.recommendationId || '',
-    });
-  }
-  timeline.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const timeline = buildTimeline(participant, surveyResponses, recDocs);
 
   return {
     profile: {

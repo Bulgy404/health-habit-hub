@@ -98,31 +98,20 @@ router.use((req, res, next) => {
 // Middleware for serving static files
 router.use(staticFileMiddleware);
 
-app.get('/test-disclaimer', (req, res) => {
-  res.send('Disclaimer Test Route Reached ✅');
-});
-
 // Either sets req.lang to the already set route language parameter or gets the preferred browser language. Default value is 'en'.
 router.use('/:lng(' + validLanguageCodes + ')?/', (req, res, next) => {
-  console.log('Disclaimer route middleware hit');
-  console.log('Language use: ', req.url);
-
-  //console.log('Route language parameter:', req.params.lng);
   req.lang = 'en';
 
   if (req.params.lng) {
     req.lang = req.params.lng;
   } else {
     const lang = req.acceptsLanguages(getLanguageCodes());
-    console.debug('Accepted browser language:', lang);
-
     if (lang) {
       req.lang = lang;
     }
   }
   res.locals.currentLanguage = req.lang;
   res.locals.messages = getLanguageMessages(req.lang);
-  console.debug('Application language:', req.lang);
   next();
 });
 
@@ -141,7 +130,6 @@ router.use(
 // Routes
 // Redirects all requests to '/donate' if the language parameter (lng) is already set
 router.get('/:lng(' + validLanguageCodes + ')?/', (req, res) => {
-  console.log('Redirecting to donate');
   const targetPath = path.join(contextPath, req.lang, 'donate');
   res.redirect(301, targetPath);
 });
@@ -163,13 +151,9 @@ router.use(
 );
 // Intercepts all calls of '/' and checks whether a language (req.lang) is already set. If not, this parameter is set.
 router.use((req, res, next) => {
-  console.log('Path: ', req.url);
   if (req.url.startsWith('/' + req.lang + '/')) {
     next();
   } else {
-    console.log('Redirecting');
-    let p = path.join(contextPath, req.lang, req.url);
-    console.log('Redirect-Path', p);
     res.redirect(307, path.join(contextPath, req.lang, req.url));
   }
 });
@@ -191,7 +175,6 @@ app.use(contextPath, router);
 
 // Catch-all route for unmatched routes
 app.use((req, res) => {
-  console.log('❓ Reached unmatched route:', req.originalUrl);
   res.status(404).send('404 - Not Found');
 });
 

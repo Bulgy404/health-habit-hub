@@ -1,5 +1,7 @@
 import express from 'express';
 import { randomUUID } from 'node:crypto';
+import { makeGetDb } from '../utils/getDb.js';
+import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import { generateTokenCard } from '../services/token_card_service.js';
 import {
   listParticipants,
@@ -17,98 +19,6 @@ import {
   getSettings,
   updateSetting,
 } from '../services/adminStatsService.js';
-
-// Production Keycloak admin client (reads config from env)
-function createKeycloakClient() {
-  const base = process.env.KEYCLOAK_URL || 'http://keycloak:8080';
-  const realm = process.env.KEYCLOAK_REALM || 'hhh';
-  const clientId = process.env.KEYCLOAK_ADMIN_CLIENT_ID || 'hhh-backend';
-  const clientSecret = process.env.KEYCLOAK_ADMIN_CLIENT_SECRET || '';
-
-  async function getAdminToken() {
-    const res = await fetch(
-      `${base}/realms/${realm}/protocol/openid-connect/token`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          client_id: clientId,
-          client_secret: clientSecret,
-        }),
-      }
-    );
-    const data = await res.json();
-    return data.access_token;
-  }
-
-  return {
-    async createUser({ userId, username, password }) {
-      const token = await getAdminToken();
-      await fetch(`${base}/admin/realms/${realm}/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          id: userId,
-          username,
-          enabled: true,
-          credentials: [
-            { type: 'password', value: password, temporary: false },
-          ],
-          attributes: { group: [] },
-        }),
-      });
-    },
-    async assignRole(userId, roleName) {
-      const token = await getAdminToken();
-      // Fetch role by name
-      const rolesRes = await fetch(
-        `${base}/admin/realms/${realm}/roles/${roleName}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const role = await rolesRes.json();
-      await fetch(
-        `${base}/admin/realms/${realm}/users/${userId}/role-mappings/realm`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify([role]),
-        }
-      );
-    },
-    async updateUserAttribute(userId, key, value) {
-      const token = await getAdminToken();
-      await fetch(`${base}/admin/realms/${realm}/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ attributes: { [key]: [value] } }),
-      });
-    },
-    async listSessions() {
-      const token = await getAdminToken();
-      const res = await fetch(`${base}/admin/realms/${realm}/sessions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return res.json();
-    },
-    async revokeSession(sessionId) {
-      const token = await getAdminToken();
-      await fetch(`${base}/admin/realms/${realm}/sessions/${sessionId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    },
-  };
-}
 
 const DEFAULT_SETTINGS = [{ key: 'token_card_format', value: 'both' }];
 
@@ -132,12 +42,7 @@ export function createAdminRouter({
   tokenCardService,
 } = {}) {
   const router = express.Router();
-
-  async function getDb() {
-    if (db) return db;
-    const { connect } = await import('../models/survey.js');
-    return connect();
-  }
+  const getDb = makeGetDb(db);
 
   // Seed default settings asynchronously on router creation
   getDb()
@@ -145,7 +50,7 @@ export function createAdminRouter({
     .catch(() => {});
 
   function getKeycloak() {
-    return keycloak || createKeycloakClient();
+    return keycloak || createKeycloakAdminClient();
   }
 
   function getTokenCardService() {
