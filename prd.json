@@ -2791,7 +2791,7 @@
         "npm run lint passes; existing tests still pass"
       ],
       "priority": 174,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-173. Can be developed in parallel with US-175, US-176, US-177."
     },
     {

@@ -1758,3 +1758,14 @@
   - The script follows the same `createRequire(resolve(__dirname, '../app/package.json'))` pattern as `seed-local.js` for loading mongodb from app/node_modules
   - `ensureIndexes` is idempotent — MongoDB's `createIndex` is a no-op if the index already exists with the same definition
 ---
+
+## 2026-03-22 - US-174
+- What was implemented: Created `app/services/studyService.js` with 6 functions — `listStudies` (paginated, with enrollment count via $group aggregation), `createStudy` (generates ObjectId for each group), `getStudy`, `updateStudy` (additive groups: appends new groups, never removes), `softDeleteStudy` (409 if enrollments exist), `setDefaultStudy` (clears all isDefault, sets new one). Added 6 study routes to `adminRouter.js` under `/studies`: GET (list), POST (create, 201), GET /:id, PUT /:id, DELETE /:id, PUT /:id/default. Added 11 unit tests in `app/tests/unit/study.service.test.js` using an in-memory mock DB. All 276 tests pass.
+- Files changed: app/services/studyService.js (new), app/routes/adminRouter.js (import + 6 routes), app/tests/unit/study.service.test.js (new), prd.json (US-174 passes=true)
+- **Learnings for future iterations:**
+  - `ObjectId` is exported from `app/models/survey.js` — import it as `import { ObjectId } from '../models/survey.js'`
+  - Study group IDs are `new ObjectId()` (generated at creation time, not strings) — PUT /studies/:id/default cannot simply clear and re-set with `updateMany` on `isDefault: true` if the partial unique index is in play; clear first, then set
+  - The mock DB's `aggregate()` for `$group` needs to reference `doc[field]` not the full `$field` string — strip the `$` prefix
+  - Route pattern for admin sub-resources: add them inline to `adminRouter.js`, import the service at the top — no sub-router needed for small sets of routes
+  - `softDeleteStudy` checks enrollment count before soft-deleting; `409 Conflict` is the right status when the business rule blocks deletion
+---
