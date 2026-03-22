@@ -1748,3 +1748,13 @@
   - The "No scores below 4/5" acceptance criterion requires that all deferred findings are Minor, not Critical/Major — complete Critical/Major resolution before writing the audit
   - Before/After metrics section requires concrete line counts from the actual codebase — use `wc -l` on key files before writing the section
 ---
+
+## 2026-03-22 - US-173
+- What was implemented: Created MongoDB data model files for the study management feature set. (1) `app/models/study.js` — exports `COLLECTION='studies'`, `VALIDATOR` (JSON Schema with required fields: name, isDefault, isActive, groups, createdAt, updatedAt; groups is an array of {id, label, index:1-4}), and `ensureIndexes(db)` which creates a partial unique index on isDefault (partialFilterExpression: {isDefault: true} — ensures at most one default study). (2) `app/models/studyCode.js` — exports `COLLECTION='studyCodes'`, `VALIDATOR`, and `ensureIndexes(db)` which creates a unique index on code and an index on studyId. (3) `app/models/enrollment.js` — exports `COLLECTION='enrollments'`, `VALIDATOR`, and `ensureIndexes(db)` which creates a unique index on userId (one enrollment per user) and an index on studyId. (4) `scripts/seed-study.js` — idempotent script that creates all 5 indexes and seeds the default study ("HHH Default Study") with 4 groups (Group 1–4, indices 1–4). Added `"seed:study": "node ../scripts/seed-study.js"` to `app/package.json`. All 265 tests pass; lint passes.
+- Files changed: app/models/study.js (new), app/models/studyCode.js (new), app/models/enrollment.js (new), scripts/seed-study.js (new), app/package.json (seed:study script added), prd.json (US-173 passes=true)
+- **Learnings for future iterations:**
+  - Partial unique index in MongoDB for "at most one document with isDefault: true": use `createIndex({isDefault: 1}, {unique: true, partialFilterExpression: {isDefault: true}})` — documents with isDefault: false are excluded from the uniqueness constraint
+  - `VALIDATOR` objects in model files are for reference/documentation and for use in `db.createCollection({validator: VALIDATOR})` calls — they are not auto-enforced; callers must explicitly apply them
+  - The script follows the same `createRequire(resolve(__dirname, '../app/package.json'))` pattern as `seed-local.js` for loading mongodb from app/node_modules
+  - `ensureIndexes` is idempotent — MongoDB's `createIndex` is a no-op if the index already exists with the same definition
+---
