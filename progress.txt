@@ -1822,3 +1822,22 @@
   - POST /codes returns `{ codes: StudyCode[] }` where each code is a full object; extract `.code` string field for the clipboard display
   - Tab pattern: add `activeTab` state to modal; use `.tabs` + `.tab` + `.tabActive` CSS; only show footer when on "details" tab; Codes tab manages its own loading/error state independently
 ---
+
+## 2026-03-22 - US-180
+- What was implemented: Refactored the admin questionnaires page to split into Library and Custom tabs. Library tab shows SLIQ and RAND-36 in a read-only table with a Preview action that opens a modal showing all questions. Custom tab shows custom questionnaires with Create, Edit, Delete actions. Delete button is disabled (with tooltip) for questionnaires known to be assigned to an active study — the 409 from the backend marks the ID in a local Set and disables the button. Fixed PUT and DELETE API calls to use MongoDB ObjectId (`id` from GET response) instead of `slug` (the backend uses `/:id` routes, not `/:slug`). Added CSS for tabs, disabled button state, library badge, and preview modal.
+- Files changed: admin/src/app/(admin)/questionnaires/page.tsx (refactored with tabs + preview modal + fix PUT/DELETE to use id), admin/src/app/(admin)/questionnaires/page.module.css (tab + preview + disabled styles), prd.json (US-180 passes=true)
+- **Learnings for future iterations:**
+  - Admin questionnaire backend uses `/:id` (MongoDB ObjectId) for PUT and DELETE, but `/:slug/active` for PATCH — always use `id` from the GET list for mutating operations
+  - To spread a Set into another Set in TypeScript with `downlevelIteration` disabled, use `const next = new Set(prev); next.add(item); return next;` pattern instead of `new Set([...prev, item])`
+  - The GET /admin/questionnaires response includes `isLibrary: boolean` — filter on this to split library vs. custom in the UI
+  - Library questionnaire full questions must be fetched from the participant-facing `/questionnaires/:slug` endpoint since there is no GET /admin/questionnaires/:id endpoint
+---
+
+## 2026-03-22 - US-181
+- What was implemented: Added a "Questionnaires" tab to the study detail modal in the Admin UI. The tab fetches all available questionnaires (library + custom) from `GET /api/v1/admin/questionnaires`, displays them as a checkable list grouped by type, pre-checks those already assigned to the study, and saves via `PUT /api/v1/admin/studies/:id` with the updated questionnaires array. Changes are reflected immediately without page reload. Also fixed the Details tab `handleSave` which was sending `questionnaires: []` (would have wiped assignments on every details save).
+- Files changed: admin/src/app/(admin)/studies/page.tsx (QuestionnairesTab component + ModalTab type + tabs UI + StudySummary type + QUESTIONNAIRES_API constant + handleSave fix), admin/src/app/(admin)/studies/page.module.css (qSection, qList, qItem, qCheckbox, qTitle, qInactive, qFooter, savedMsg styles)
+- **Learnings for future iterations:**
+  - The `StudySummary` interface was missing the `questionnaires: string[]` field even though the backend `listStudies` already returned it — always check both the interface and the API response shape
+  - Details tab `handleSave` was including `questionnaires: []` in the PUT payload — this would silently wipe questionnaire assignments on every details save; removed it so questionnaires are only modified via the Questionnaires tab
+  - The `onSaved` callback in `QuestionnairesTab` refreshes the parent list without closing the modal — this is intentional so the user stays on the tab after saving
+---
