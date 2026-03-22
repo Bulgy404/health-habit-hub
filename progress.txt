@@ -1857,3 +1857,14 @@
   - `seedDefaultStudy()` must run AFTER `seedMongo()` so questionnaire documents exist before the study references their ObjectIds
   - When reading ObjectId from mongodb via appRequire, use `const { ObjectId } = appRequire('mongodb')` inside the function — not at module level — to avoid import order issues
 ---
+
+## 2026-03-22 - US-183
+- What was implemented: Added `listStudyParticipants` function to `app/services/studyService.js` — fetches paginated enrollments for a study, builds per-group summary, maps groupId to label using study.groups. Added `GET /api/v1/admin/studies/:id/participants?page=N&limit=N` route in `adminRouter.js`. Added `ParticipantsTab` React component in `admin/src/app/(admin)/studies/page.tsx` — shows summary pill row (total enrolled + count per group), paginated table (userId, groupLabel, enrolledAt, codeUsed or 'direct/default'), and Download CSV button that fetches all records (up to 500) and triggers a browser download. Updated `ModalTab` type to include `"participants"`, added tab button in modal header, wired tab rendering in modal body. Added CSS for participants tab styles in `page.module.css`. All 320 backend tests pass; `npx tsc --noEmit` and `npm run build` pass.
+- Files changed: app/services/studyService.js (listStudyParticipants), app/routes/adminRouter.js (new route + import), admin/src/app/(admin)/studies/page.tsx (ParticipantsTab component + ModalTab update + tab rendering), admin/src/app/(admin)/studies/page.module.css (participants tab styles), prd.json (US-183 passes=true)
+- **Learnings for future iterations:**
+  - The `listStudyParticipants` function queries the `enrollments` collection by `studyId` (ObjectId) — sort by `enrolledAt: -1` gives most-recent-first
+  - Group label lookup: `study.groups[].id` is an ObjectId stored in MongoDB; compare with `g.id.toString()` against `e.groupId?.toString()` from enrollment document
+  - CSV download done client-side: fetch with `limit=500`, build CSV string, create Blob + object URL, programmatically click `<a>` — no server CSV endpoint needed
+  - `enrolledAt` from MongoDB comes back as an ISO string in JSON responses — safe to pass directly to `fmtDate()`
+  - `studyCodeUsed` null means the participant skipped code entry (enrolled in default study) — display as 'direct/default'
+---
