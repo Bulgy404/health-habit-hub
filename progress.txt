@@ -1730,3 +1730,12 @@
   - `node:crypto`'s `randomUUID()` is available in Node 15.6+ and needs no npm dependency — prefer over `uuid` package for UUID v4 generation in server code
   - Composite actions that include `actions/checkout@v4` as a step work correctly in jobs without a prior checkout; the job step list simply starts with the composite action instead of a standalone checkout step
 ---
+
+## 2026-03-22 - US-171
+- What was implemented: Updated all documentation to reflect the clean code refactor cycle (US-162 to US-170). (1) docs/guides/flutter-architecture.md — folder structure updated with auth_interceptor.dart, dio_provider.dart (core/), offline_banner.dart (widgets/); Section 6 Auth Token Management rewritten to describe DioProvider + AuthInterceptor pattern instead of removed _authHeaders() pattern. (2) docs/guides/developer-onboarding.md — backend test count updated from 186 to 265; added "Seed the local database" step describing npm run seed (added in US-159 but undocumented). (3) docs/architecture.md — added "Node.js Backend Internal Module Structure" reference table documenting the new routes/services/db/models/middleware/utils layers. (4) CHANGELOG.md — new [1.2.0] entry documenting all clean-code refactor changes across Flutter, backend, Neo4j, and CI. (5) DOCUMENTATION.md — added missing docs/guides/local-dev.md entry (file was created in US-161 but not indexed). docs/api/openapi.yaml left unchanged — no API response shapes were altered during the refactor cycle.
+- Files changed: docs/guides/flutter-architecture.md, docs/guides/developer-onboarding.md, docs/architecture.md, CHANGELOG.md, DOCUMENTATION.md, prd.json (US-171 passes=true)
+- **Learnings for future iterations:**
+  - When reviewing "no response shapes changed" — verify by checking git diff on openapi.yaml across the refactor commits before skipping it; if in doubt, read and compare
+  - DOCUMENTATION.md is not automatically updated when new docs/ files are created — always add an entry when a new guide or reference doc is committed
+  - Test counts in developer-onboarding.md drift over time; update whenever backend or Flutter tests change significantly
+---
