@@ -42,6 +42,15 @@ interface StudyCode {
   createdAt: string | null;
 }
 
+interface ScheduledNotification {
+  _id: string;
+  studyId: string;
+  groupId?: string;
+  title: string;
+  body: string;
+  scheduledAt: string;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string | null): string {
@@ -73,6 +82,10 @@ const API_BASE =
 const QUESTIONNAIRES_API =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
   "/admin/questionnaires";
+
+const NOTIFICATIONS_BASE =
+  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
+  "/admin/notifications";
 
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
@@ -728,9 +741,249 @@ function ParticipantsTab({
   );
 }
 
+// ── Notifications tab ─────────────────────────────────────────────────────────
+
+function NotificationsTab({
+  study,
+  token,
+}: {
+  study: StudySummary;
+  token: string;
+}) {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [targetGroupId, setTargetGroupId] = useState("all");
+  const [sendMode, setSendMode] = useState<"now" | "schedule">("now");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [toast, setToast] = useState("");
+
+  const [scheduled, setScheduled] = useState<ScheduledNotification[]>([]);
+  const [loadingScheduled, setLoadingScheduled] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState("");
+
+  const fetchScheduled = useCallback(async () => {
+    setLoadingScheduled(true);
+    setCancelError("");
+    try {
+      const data = await apiFetch(
+        `${NOTIFICATIONS_BASE}/scheduled?studyId=${study.id}`,
+        token
+      );
+      const items = Array.isArray(data)
+        ? data
+        : (data as { notifications?: ScheduledNotification[] }).notifications ?? [];
+      setScheduled(items.filter((n: ScheduledNotification) => n.studyId === study.id));
+    } catch {
+      // non-critical — scheduled list may be empty
+    } finally {
+      setLoadingScheduled(false);
+    }
+  }, [study.id, token]);
+
+  useEffect(() => {
+    fetchScheduled();
+  }, [fetchScheduled]);
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 4000);
+  }
+
+  async function handleSend() {
+    if (!title.trim()) { setSendError("Title is required."); return; }
+    if (!body.trim()) { setSendError("Body is required."); return; }
+    if (sendMode === "schedule" && !scheduledAt) {
+      setSendError("Scheduled time is required.");
+      return;
+    }
+    setSending(true);
+    setSendError("");
+    try {
+      const payload: Record<string, unknown> = {
+        studyId: study.id,
+        title: title.trim(),
+        body: body.trim(),
+        data: {},
+      };
+      if (targetGroupId !== "all") payload.groupId = targetGroupId;
+      if (sendMode === "schedule") payload.scheduledAt = new Date(scheduledAt).toISOString();
+
+      const endpoint = sendMode === "now"
+        ? `${NOTIFICATIONS_BASE}/send`
+        : `${NOTIFICATIONS_BASE}/schedule`;
+      const result = await apiFetch(endpoint, token, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      if (sendMode === "now") {
+        const r = result as { sent?: number; failed?: number };
+        showToast(`Sent to ${r.sent ?? 0} participant${(r.sent ?? 0) !== 1 ? "s" : ""}${r.failed ? ` (${r.failed} failed)` : ""}`);
+      } else {
+        showToast(`Scheduled for ${new Date(scheduledAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}`);
+        await fetchScheduled();
+      }
+      setTitle("");
+      setBody("");
+      setTargetGroupId("all");
+      setSendMode("now");
+      setScheduledAt("");
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : "Send failed");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleCancel(id: string) {
+    setCancellingId(id);
+    setCancelError("");
+    try {
+      await apiFetch(`${NOTIFICATIONS_BASE}/scheduled/${id}`, token, {
+        method: "DELETE",
+      });
+      setScheduled((prev) => prev.filter((n) => n._id !== id));
+    } catch (err) {
+      setCancelError(err instanceof Error ? err.message : "Cancel failed");
+    } finally {
+      setCancellingId(null);
+    }
+  }
+
+  return (
+    <div className={styles.notificationsTab}>
+      {/* Compose form */}
+      <div className={styles.notifSection}>
+        <p className={styles.notifSectionTitle}>Compose notification</p>
+        {sendError && <div className={styles.errorMsg}>{sendError}</div>}
+        {toast && <div className={styles.toastMsg}>{toast}</div>}
+
+        <div className={styles.notifForm}>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>
+              Title <span className={styles.charHint}>({title.length}/50)</span>
+            </label>
+            <input
+              className={styles.input}
+              value={title}
+              onChange={(e) => setTitle(e.target.value.slice(0, 50))}
+              placeholder="Notification title"
+              maxLength={50}
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label className={styles.label}>
+              Body <span className={styles.charHint}>({body.length}/200)</span>
+            </label>
+            <textarea
+              className={styles.textarea}
+              value={body}
+              onChange={(e) => setBody(e.target.value.slice(0, 200))}
+              placeholder="Notification body text"
+              maxLength={200}
+              rows={3}
+            />
+          </div>
+
+          <div className={styles.notifFormRow}>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Target</label>
+              <select
+                className={styles.select}
+                value={targetGroupId}
+                onChange={(e) => setTargetGroupId(e.target.value)}
+              >
+                <option value="all">All participants</option>
+                {study.groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Send time</label>
+              <select
+                className={styles.select}
+                value={sendMode}
+                onChange={(e) => setSendMode(e.target.value as "now" | "schedule")}
+              >
+                <option value="now">Now</option>
+                <option value="schedule">Schedule</option>
+              </select>
+            </div>
+          </div>
+
+          {sendMode === "schedule" && (
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Scheduled date &amp; time</label>
+              <input
+                className={styles.input}
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+          )}
+
+          <div className={styles.notifFormFooter}>
+            <button
+              className={styles.saveBtn}
+              onClick={handleSend}
+              disabled={sending}
+            >
+              {sending ? "Sending…" : sendMode === "now" ? "Send" : "Schedule"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Scheduled notifications */}
+      <div className={styles.notifSection}>
+        <p className={styles.notifSectionTitle}>Scheduled</p>
+        {cancelError && <div className={styles.errorMsg}>{cancelError}</div>}
+        {loadingScheduled ? (
+          <div className={styles.loadingState}>Loading…</div>
+        ) : scheduled.length === 0 ? (
+          <div className={styles.notifEmpty}>No pending scheduled notifications.</div>
+        ) : (
+          <div className={styles.scheduledList}>
+            {scheduled.map((n) => (
+              <div key={n._id} className={styles.scheduledItem}>
+                <div className={styles.scheduledItemMain}>
+                  <span className={styles.scheduledTitle}>{n.title}</span>
+                  <span className={styles.scheduledBody}>{n.body}</span>
+                  <span className={styles.scheduledMeta}>
+                    {n.groupId
+                      ? study.groups.find((g) => g.id === n.groupId)?.label ?? n.groupId
+                      : "All participants"}
+                    {" · "}
+                    {fmtDateTime(n.scheduledAt)}
+                  </span>
+                </div>
+                <button
+                  className={styles.revokeBtn}
+                  onClick={() => handleCancel(n._id)}
+                  disabled={cancellingId === n._id}
+                >
+                  {cancellingId === n._id ? "…" : "Cancel"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Study form modal ──────────────────────────────────────────────────────────
 
-type ModalTab = "details" | "questionnaires" | "codes" | "participants";
+type ModalTab = "details" | "questionnaires" | "codes" | "participants" | "notifications";
 
 function StudyModal({
   initial,
@@ -889,6 +1142,12 @@ function StudyModal({
             >
               Participants
             </button>
+            <button
+              className={`${styles.tab} ${activeTab === "notifications" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("notifications")}
+            >
+              Notifications
+            </button>
           </div>
         )}
 
@@ -970,8 +1229,10 @@ function StudyModal({
             )
           ) : activeTab === "codes" ? (
             initial && <CodesTab study={initial} token={token} />
-          ) : (
+          ) : activeTab === "participants" ? (
             initial && <ParticipantsTab study={initial} token={token} />
+          ) : (
+            initial && <NotificationsTab study={initial} token={token} />
           )}
         </div>
 
