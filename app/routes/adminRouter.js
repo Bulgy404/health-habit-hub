@@ -1646,6 +1646,12 @@ export function createAdminRouter({
       const result = await softDeleteStudy({ db: database, id: req.params.id });
       if (result.notFound)
         return res.status(404).json({ error: 'Study not found' });
+      if (result.isDefault) {
+        return res.status(409).json({
+          error:
+            'Cannot deactivate the default study. Set another study as default first.',
+        });
+      }
       if (result.conflict) {
         return res
           .status(409)

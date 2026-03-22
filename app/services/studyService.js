@@ -171,6 +171,8 @@ export async function softDeleteStudy({ db, id }) {
   const existing = await db.collection(STUDIES).findOne({ _id: oid });
   if (!existing) return { notFound: true };
 
+  if (existing.isDefault) return { isDefault: true };
+
   const enrollmentCount = await db
     .collection(ENROLLMENTS)
     .countDocuments({ studyId: oid });

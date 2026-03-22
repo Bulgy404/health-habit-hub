@@ -185,6 +185,58 @@ async function seedMongo() {
   }
 }
 
+// ── Default study seeding ──────────────────────────────────────────────────
+
+async function seedDefaultStudy() {
+  console.log('\n[mongo] Seeding default study...');
+  const mongoUrl = `mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/?authSource=${MONGO_AUTH_SOURCE}`;
+  const client = new MongoClient(mongoUrl, {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 10000,
+  });
+  try {
+    await client.connect();
+    const db = client.db(MONGO_DB);
+    const studies = db.collection('studies');
+    const questionnaires = db.collection('questionnaires');
+
+    // Check if a default study already exists
+    const existing = await studies.findOne({ isDefault: true });
+    if (existing) {
+      console.log(`[mongo]   default study already exists ("${existing.name}"), skipping.`);
+      return;
+    }
+
+    // Resolve SLIQ and RAND-36 questionnaire IDs
+    const sliq = await questionnaires.findOne({ slug: 'sliq' });
+    const rand36 = await questionnaires.findOne({ slug: 'rand-36' });
+    const qIds = [sliq?._id, rand36?._id].filter(Boolean);
+
+    const { ObjectId } = appRequire('mongodb');
+    const now = new Date();
+    const doc = {
+      name: 'Default Study',
+      description: 'Pre-configured default study. Participants without a study code are enrolled here.',
+      isDefault: true,
+      isActive: true,
+      groups: [
+        { id: new ObjectId(), label: 'Group 1', index: 1 },
+        { id: new ObjectId(), label: 'Group 2', index: 2 },
+        { id: new ObjectId(), label: 'Group 3', index: 3 },
+        { id: new ObjectId(), label: 'Group 4', index: 4 },
+      ],
+      questionnaires: qIds,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await studies.insertOne(doc);
+    console.log(`[mongo]   default study "Default Study" created (questionnaires: ${qIds.length})`);
+  } finally {
+    await client.close();
+  }
+}
+
 // ── Neo4j seeding ──────────────────────────────────────────────────────────
 
 async function seedNeo4j() {
@@ -435,6 +487,7 @@ async function main() {
   console.log('=== Health Habit Hub — Local Seed Script ===');
   try {
     await seedMongo();
+    await seedDefaultStudy();
     await seedNeo4j();
     await seedKeycloak();
     console.log('\n✓ All seed steps completed successfully.');

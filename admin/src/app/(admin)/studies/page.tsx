@@ -562,6 +562,7 @@ function StudyModal({
   const [error, setError] = useState("");
   const [deactivating, setDeactivating] = useState(false);
   const [settingDefault, setSettingDefault] = useState(false);
+  const [confirmDefaultOpen, setConfirmDefaultOpen] = useState(false);
 
   function handleGroupCountChange(n: number) {
     setGroupCount(n);
@@ -608,8 +609,13 @@ function StudyModal({
     }
   }
 
-  async function handleSetDefault() {
+  function handleSetDefaultClick() {
+    setConfirmDefaultOpen(true);
+  }
+
+  async function handleSetDefaultConfirm() {
     if (!initial) return;
+    setConfirmDefaultOpen(false);
     setSettingDefault(true);
     setError("");
     try {
@@ -759,6 +765,29 @@ function StudyModal({
           )}
         </div>
 
+        {confirmDefaultOpen && (
+          <div className={styles.confirmDialog}>
+            <p className={styles.confirmMsg}>
+              Set <strong>{initial?.name}</strong> as the default study?
+              Participants without a study code will be enrolled here.
+            </p>
+            <div className={styles.confirmActions}>
+              <button
+                className={styles.cancelBtn}
+                onClick={() => setConfirmDefaultOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className={styles.defaultBtn}
+                onClick={handleSetDefaultConfirm}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        )}
+
         {activeTab === "details" && (
           <div className={styles.modalFooter}>
             {isEdit && (
@@ -766,20 +795,30 @@ function StudyModal({
                 {!initial?.isDefault && (
                   <button
                     className={styles.defaultBtn}
-                    onClick={handleSetDefault}
+                    onClick={handleSetDefaultClick}
                     disabled={settingDefault}
                   >
                     {settingDefault ? "Setting…" : "Set as Default"}
                   </button>
                 )}
                 {initial?.isActive && (
-                  <button
-                    className={styles.deactivateBtn}
-                    onClick={handleDeactivate}
-                    disabled={deactivating}
-                  >
-                    {deactivating ? "Deactivating…" : "Deactivate"}
-                  </button>
+                  initial?.isDefault ? (
+                    <button
+                      className={styles.deactivateBtn}
+                      disabled
+                      title="Cannot deactivate the default study. Set another study as default first."
+                    >
+                      Deactivate
+                    </button>
+                  ) : (
+                    <button
+                      className={styles.deactivateBtn}
+                      onClick={handleDeactivate}
+                      disabled={deactivating}
+                    >
+                      {deactivating ? "Deactivating…" : "Deactivate"}
+                    </button>
+                  )
                 )}
               </div>
             )}
