@@ -317,6 +317,27 @@ test('softDeleteStudy succeeds when no enrollments', async () => {
   assert.equal(result.deleted, true);
 });
 
+test('softDeleteStudy returns isDefault when study is the default', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const id = new ObjectId();
+  const db = makeDb({
+    studies: [
+      {
+        _id: id,
+        name: 'S',
+        isDefault: true,
+        isActive: true,
+        groups: [],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+  });
+  const result = await softDeleteStudy({ db, id: id.toString() });
+  assert.equal(result.isDefault, true);
+});
+
 // ── setDefaultStudy ───────────────────────────────────────────────────────────
 
 test('setDefaultStudy marks a study as default', async () => {
