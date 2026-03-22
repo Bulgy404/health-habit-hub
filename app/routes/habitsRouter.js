@@ -3,19 +3,13 @@ import neo4j from 'neo4j-driver';
 import { randomUUID } from 'node:crypto';
 import { makeGetDb } from '../utils/getDb.js';
 import { donateHabit } from '../services/habitDonationService.js';
-
-const SUPPORTED_LANGUAGES = [
-  'en',
-  'de',
-  'fr',
-  'es',
-  'it',
-  'pt',
-  'nl',
-  'pl',
-  'ru',
-  'zh',
-];
+import { SUPPORTED_LANGUAGES } from '../utils/constants.js';
+import {
+  getAllHabits,
+  getPublicHabits,
+  getHabitTotal,
+  getHabitsByCategory,
+} from '../db/habitQueries.js';
 
 export function createHabitsRouter({
   db,
@@ -175,14 +169,7 @@ export function createHabitsRouter({
   router.get('/', async (req, res) => {
     try {
       const { lang } = req.query;
-      const records = await queryNeo4j(`
-        MATCH (h:Habit)
-        RETURN h.uuid AS uuid,
-               h.sentence AS original,
-               h.language AS language,
-               h.translationEN AS translationEN,
-               h.translationDE AS translationDE
-      `);
+      const records = await getAllHabits(queryNeo4j);
 
       const habits = records.map((r) => {
         const habit = {
@@ -250,13 +237,7 @@ export function createHabitsRouter({
     try {
       const database = await getDb();
 
-      const records = await queryNeo4j(`
-        MATCH (h:Habit)
-        RETURN h.uuid AS id,
-               h.sentence AS name,
-               null AS category,
-               null AS bcioClass
-      `);
+      const records = await getPublicHabits(queryNeo4j);
 
       const annotations = await database
         .collection('habit_annotations')
@@ -434,12 +415,8 @@ export function createHabitsRouter({
   router.get('/stats', async (req, res) => {
     try {
       const [totalRecords, catRecords, database] = await Promise.all([
-        queryNeo4j('MATCH (h:Habit) RETURN count(h) AS total'),
-        queryNeo4j(`
-          MATCH (h:Habit)
-          WITH h.language AS cat, count(h) AS cnt
-          RETURN coalesce(cat, 'unknown') AS category, cnt AS count
-        `),
+        getHabitTotal(queryNeo4j),
+        getHabitsByCategory(queryNeo4j),
         getDb(),
       ]);
 

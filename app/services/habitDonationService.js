@@ -9,15 +9,7 @@
  *  - Write Habit, Context, and BCIOConcept nodes to Neo4j
  */
 
-const DIMENSIONS = [
-  'TIME',
-  'PHYSICAL_SETTING',
-  'PRIOR_BEHAVIOR',
-  'OTHER_PEOPLE',
-  'INTERNAL_STATE',
-  'BEHAVIOR',
-  'REASONING',
-];
+import { DIMENSIONS } from '../utils/constants.js';
 
 /** Classify whether sentence is a habit and return { is_habit, confidence }. */
 async function classifyHabit(sentence, language, userID, apiBase) {

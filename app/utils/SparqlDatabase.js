@@ -1,187 +1,19 @@
+// =============================================================================
+// Dual-schema note
+// =============================================================================
+// This file writes donation data into the **old RDF/Fuseki (SPARQL) schema**
+// using the hhh namespace (e.g. hhh:Habit, hhh:Donor, hhh:Group1).
+// It coexists with Neo4jDatabase.js which writes the same schema into Neo4j
+// via n10s, and with habitDonationService.js which writes the newer
+// direct-Cypher schema (Habit, Context, BCIOConcept nodes).
+// Run scripts/migrate-hhh-habit-to-habit.cypher to migrate old Neo4j nodes to
+// the new schema.
+// =============================================================================
+
 import SparqlClient from 'sparql-http-client';
-import fetch from 'node-fetch';
-import { v4 as uuid } from 'uuid';
 import { config } from './config.js';
-
-// function to translate text using LibreTranslate API
-async function translate(text, from, to, retries = 3) {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
-      const response = await fetch(config.getTranslateApiEndpoint(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          q: text,
-          source: from,
-          target: to,
-          format: 'text',
-          alternatives: 0,
-        }),
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      if (response.ok) {
-        const translation = await response.json();
-        return translation.translatedText;
-      }
-
-      throw new Error(
-        `Translation failed: ${response.status} ${response.statusText}`
-      );
-    } catch (error) {
-      console.warn(
-        `Translation attempt ${attempt}/${retries} failed:`,
-        error.message
-      );
-
-      // If this is the last attempt, or it's not a connection error, throw
-      if (attempt === retries || !error.message.includes('ECONNREFUSED')) {
-        console.error(
-          `Translation service unavailable after ${retries} attempts. Returning original text.`
-        );
-        return text; // Return original text as fallback
-      }
-
-      // Wait before retrying (exponential backoff)
-      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-      await new Promise((resolve) => setTimeout(resolve, delay));
-    }
-  }
-}
-
-class ExperimentalSetting {
-  id;
-  description;
-  task;
-  group;
-
-  constructor(setting) {
-    this.id = uuid();
-    this.description = setting.closedDescription ? 'closed' : 'open';
-    this.task = setting.closedTask ? 'closed' : 'open';
-    if (this.isClosedTaskOpenDescription()) this.group = 'Group1';
-    else if (this.isClosedTaskClosedDescription) this.group = 'Group2';
-    else if (this.isOpenTaskClosedDescription) this.group = 'Group3';
-    else if (this.isOpenTaskOpenDescription) this.group = 'Group4';
-  }
-
-  isClosedTaskClosedDescription() {
-    return this.task === 'closed' && this.description === 'closed';
-  }
-
-  isClosedTaskOpenDescription() {
-    return this.task === 'closed' && this.description === 'open';
-  }
-
-  isOpenTaskOpenDescription() {
-    return this.task === 'open' && this.description === 'open';
-  }
-
-  isOpenTaskClosedDescription() {
-    return this.task === 'open' && this.description === 'closed';
-  }
-}
-
-class Donor {
-  id;
-  donation;
-  constructor(donation) {
-    this.id = uuid();
-    this.donation = donation;
-  }
-}
-
-class Label {
-  id;
-  type;
-  value;
-  data;
-
-  constructor(type, value, data) {
-    this.id = uuid();
-    this.type = type;
-    this.value = value;
-    this.data = data;
-  }
-}
-
-class Donation {
-  id;
-  value;
-  labels;
-  language;
-  source;
-  translation;
-  habitStrength;
-
-  constructor(value, language, labels, source, habitStrength) {
-    this.id = uuid();
-    this.value = value;
-    this.language = language;
-    // NOTE: Label type is derived from a static mapping of BCIO context categories.
-    // Behavior is the only non-context type; all others map to 'context'.
-    this.labels = (labels || []).map(
-      (label) =>
-        new Label(
-          {
-            TimeReference: 'context',
-            PhysicalSetting: 'context',
-            People: 'context',
-            InternalState: 'context',
-            PriorBehavior: 'context',
-            Reasoning: 'context',
-            Behavior: 'behavior',
-          }[label.name],
-          label.name,
-          label.value
-        )
-    );
-    this.source = source;
-    const hs = parseInt(habitStrength, 10);
-    this.habitStrength = Number.isFinite(hs) ? hs : 0;
-  }
-
-  hasLabels() {
-    return this.labels && this.labels.length > 0;
-  }
-
-  async translate(targetLanguage) {
-    // Translation functions
-    const translateValue = async () =>
-      await translate(this.value, this.language, targetLanguage);
-    const translateLabels = async () =>
-      await Promise.all(
-        this.labels.map(
-          async (label) =>
-            await translate(label.data, this.language, targetLanguage)
-        )
-      );
-
-    // Perform translation
-    const translatedValue = await translateValue();
-    const translatedLabels = this.hasLabels() ? await translateLabels() : [];
-    const labelsCopy = this.labels.map((label, index) =>
-      Object.assign({ name: label.value, value: translatedLabels[index] })
-    );
-
-    // Remember translated donation
-    this.translation = new Donation(
-      translatedValue,
-      targetLanguage,
-      labelsCopy,
-      'translation',
-      this.habitStrength
-    );
-    return this.translation;
-  }
-}
+import { escapeStringLiteral } from './translate.js';
+import { ExperimentalSetting, Donor, Donation } from '../models/donation.js';
 
 class DbClient {
   constructor(config) {
@@ -193,15 +25,9 @@ class DbClient {
     });
   }
 
-  // Escape a string for safe embedding inside a SPARQL string literal.
-  // Prevents injection via user-controlled values (double quotes, backslashes, newlines).
+  /** Delegate to the shared escapeStringLiteral utility (M4). */
   _esc(str) {
-    if (str == null) return '';
-    return String(str)
-      .replace(/\\/g, '\\\\')
-      .replace(/"/g, '\\"')
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r');
+    return escapeStringLiteral(str);
   }
 
   async insertData(query) {
@@ -209,17 +35,14 @@ class DbClient {
       await this.client.query.update(query);
       console.log('Data inserted successfully');
     } catch (error) {
-      console.debug(query);
       console.error('Error inserting data:', error.message);
     }
   }
 
   async insertDonateData(data, userId) {
     // NOTE: NORMALIZE_LANG is hardcoded to 'en' as the canonical storage language.
-    // This could be moved to an environment variable if multi-language normalization is needed.
     const NORMALIZE_LANG = 'en';
 
-    // Input data
     const mustTranslate = !data.language
       .toLowerCase()
       .startsWith(NORMALIZE_LANG);
@@ -235,12 +58,12 @@ class DbClient {
     let insertQuery = '';
 
     if (mustTranslate) {
-      await donation.translate(NORMALIZE_LANG);
+      await donation.translate(
+        NORMALIZE_LANG,
+        config.getTranslateApiEndpoint()
+      );
     }
 
-    // Removed debug delay that could keep event loop alive during tests
-
-    // Create SPARQL query
     insertQuery = this.addExperimentalSetting(insertQuery, experimentalSetting);
     insertQuery = this.addHabit(insertQuery, donation);
     insertQuery = this.addDonor(insertQuery, donor, userId);
@@ -260,8 +83,6 @@ class DbClient {
 
     insertQuery = this.addEnvelope(insertQuery);
 
-    // Execute SPARQL query
-    console.debug(insertQuery);
     await this.insertData(insertQuery);
   }
 
@@ -275,7 +96,7 @@ class DbClient {
       PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
       PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
       BASE <http://www.w3.org/2002/07/owl#>
-    
+
       INSERT DATA {
     ` +
       query +

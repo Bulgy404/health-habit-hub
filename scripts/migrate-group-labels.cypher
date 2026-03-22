@@ -45,7 +45,7 @@ MATCH (d:hhh__Donor)-[:hhh__donates]->(h:hhh__Habit)
 WHERE d.hhh__group IS NULL
 MATCH (ctx)-[:hhh__partOf]->(es)
 WHERE (ctx)-[:hhh__partOf]->() AND any(lbl IN labels(es) WHERE lbl STARTS WITH 'hhh__Group')
-  AND exists((h)<-[:hhh__partOf]-(ctx))   // ctx belongs to same experimental setting tree
+  AND (h)<-[:hhh__partOf]-(ctx)   // ctx belongs to same experimental setting tree
 WITH d, [lbl IN labels(es) WHERE lbl STARTS WITH 'hhh__Group'][0] AS grp
 SET d.hhh__group = grp;
 
