@@ -64,7 +64,8 @@ class _AdminParticipantsScreenState
           _page = 0;
         });
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('ERROR in AdminParticipantsScreen._load: $e\n$st');
       if (mounted) {
         setState(() {
           _loading = false;

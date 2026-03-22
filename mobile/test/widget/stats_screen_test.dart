@@ -9,8 +9,11 @@ import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/models/habit_stats.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/screens/stats_screen.dart';
+import 'package:dio/dio.dart';
 import 'package:hhh/services/auth_service.dart';
 import 'package:hhh/services/habit_service.dart';
+
+final _fakeDio = Dio();
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -31,11 +34,11 @@ class _FakeHabitService extends HabitService {
   _FakeHabitService.throwing()
       : shouldThrow = true,
         stats = null,
-        super(authService: _FakeAuthService());
+        super(dio: _fakeDio);
 
   _FakeHabitService.withStats(this.stats)
       : shouldThrow = false,
-        super(authService: _FakeAuthService());
+        super(dio: _fakeDio);
 
   @override
   Future<HabitStats> fetchStats() async {
@@ -48,8 +51,7 @@ class _FakeHabitService extends HabitService {
 class _LoadingHabitService extends HabitService {
   final Completer<HabitStats> _completer;
 
-  _LoadingHabitService(this._completer)
-      : super(authService: _FakeAuthService());
+  _LoadingHabitService(this._completer) : super(dio: _fakeDio);
 
   @override
   Future<HabitStats> fetchStats() => _completer.future;

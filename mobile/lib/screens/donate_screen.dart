@@ -10,6 +10,7 @@ import '../config/app_config.dart';
 import '../providers/auth_provider.dart';
 import '../providers/locale_provider.dart';
 import '../services/survey_service.dart';
+import '../widgets/offline_banner.dart';
 
 /// Habit-donation survey screen.
 ///
@@ -24,7 +25,7 @@ class DonateScreen extends ConsumerStatefulWidget {
 }
 
 class _DonateScreenState extends ConsumerState<DonateScreen> {
-  final _baseUrl = AppConfig.apiBaseUrl;
+  static const _baseUrl = AppConfig.apiBaseUrl;
 
   WebViewController? _controller;
   String? _surveyId;
@@ -38,6 +39,35 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
     _initSurvey();
   }
 
+  Uri _buildSurveyUri(String surveyId, String lang) {
+    return Uri.parse('$_baseUrl/surveys/$surveyId/render')
+        .replace(queryParameters: {'lang': lang});
+  }
+
+  WebViewController _buildWebController(Uri uri, String? token) {
+    return WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..addJavaScriptChannel(
+        'SurveyComplete',
+        onMessageReceived: (msg) {
+          try {
+            final data = jsonDecode(msg.message);
+            if (data is! Map<String, dynamic>) return;
+            _onSurveyComplete(msg.message);
+          } catch (e) {
+            debugPrint('SurveyComplete: invalid message ignored: $e');
+          }
+        },
+      )
+      ..setNavigationDelegate(NavigationDelegate(
+        onPageFinished: (_) => _injectCompletionHook(),
+      ))
+      ..loadRequest(
+        uri,
+        headers: token != null ? {'Authorization': 'Bearer $token'} : const {},
+      );
+  }
+
   Future<void> _initSurvey() async {
     final surveyService = ref.read(surveyServiceProvider);
     final authService = ref.read(authServiceProvider);
@@ -45,33 +75,8 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
     try {
       final survey = await surveyService.fetchSurvey('habit-donation');
       final token = await authService.getAccessToken();
-
-      final renderUri = Uri.parse(
-        '$_baseUrl/surveys/${survey.id}/render',
-      ).replace(queryParameters: {'lang': lang});
-
-      final controller = WebViewController()
-        ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..addJavaScriptChannel(
-          'SurveyComplete',
-          onMessageReceived: (msg) {
-            try {
-              final data = jsonDecode(msg.message);
-              if (data is! Map<String, dynamic>) return;
-              _onSurveyComplete(msg.message);
-            } catch (e) {
-              debugPrint('SurveyComplete: invalid message ignored: $e');
-            }
-          },
-        )
-        ..setNavigationDelegate(NavigationDelegate(
-          onPageFinished: (_) => _injectCompletionHook(),
-        ))
-        ..loadRequest(
-          renderUri,
-          headers:
-              token != null ? {'Authorization': 'Bearer $token'} : const {},
-        );
+      final uri = _buildSurveyUri(survey.id, lang);
+      final controller = _buildWebController(uri, token);
 
       if (mounted) {
         setState(() {
@@ -136,18 +141,22 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(AppLocalizations.of(context)!.donateHabit)),
+      appBar: AppBar(title: Text(l10n.donateHabit)),
       body: Stack(
         children: [
           if (_offline)
-            _OfflineBanner(onRetry: () {
-              setState(() {
-                _loading = true;
-                _offline = false;
-              });
-              _initSurvey();
-            })
+            OfflineBanner(
+              message: l10n.couldNotLoadSurvey,
+              onRetry: () {
+                setState(() {
+                  _loading = true;
+                  _offline = false;
+                });
+                _initSurvey();
+              },
+            )
           else if (_loading)
             const Center(child: CircularProgressIndicator())
           else if (_controller != null)
@@ -159,58 +168,6 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
             ),
         ],
       ),
-    );
-  }
-}
-
-class _OfflineBanner extends StatelessWidget {
-  const _OfflineBanner({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          color: Colors.orange,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              const Icon(Icons.wifi_off, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(
-                l10n.noConnection,
-                style: const TextStyle(color: Colors.white, fontSize: 15),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.couldNotLoadSurvey,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: onRetry,
-                  icon: const Icon(Icons.refresh),
-                  label: Text(l10n.retry),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

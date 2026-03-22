@@ -25,6 +25,7 @@
 - **Violation:** Configuration Management
 - **Description:** `static const _baseUrl = 'https://api.hhh.tu-dresden.de/api/v1';` is hardcoded instead of using `AppConfig.apiBaseUrl`. Any test or staging deploy hits production data silently.
 - **Suggested Fix:** Replace with `AppConfig.apiBaseUrl` (already imported via other service files in the same directory).
+- **Resolution (US-167):** ✅ Fixed — `static const _baseUrl = AppConfig.apiBaseUrl;` (line 31).
 
 ### C-2 · God Widget — AdminParticipantsScreen
 - **File:** `lib/screens/admin/admin_participants_screen.dart:18–661`
@@ -34,6 +35,7 @@
   - Extract pagination into a `PaginationNotifier` Riverpod notifier.
   - Extract filtering/search into a `ParticipantFilterNotifier`.
   - Move dialog UI into separate `_CreateParticipantDialog` and `_DeleteConfirmDialog` widget classes.
+- **Resolution (US-167):** ✅ Fixed — extracted `_FilterBar`, `_ParticipantsTable`, `_PaginationBar`, `_ErrorView`, and `_CreateParticipantDialog` into separate widget classes. State class reduced to ~280 lines.
 
 ### C-3 · God Widget — AdminHabitsScreen
 - **File:** `lib/screens/admin/admin_habits_screen.dart:25–500`
@@ -43,6 +45,7 @@
   - Extract filter state into `AdminHabitsFilterNotifier`.
   - Create `HabitsFeedManager` service for auto-refresh.
   - Move date formatting into a utility function or extension.
+- **Resolution (US-167):** ✅ Fixed — extracted `_FilterBar`, `_DonationListView`, `_DonationTile`, and `_ErrorView` into separate widget classes. State class reduced to ~245 lines.
 
 ---
 
@@ -53,30 +56,35 @@
 - **Violation:** Long Method
 - **Description:** `_init()` fetches profile, manages state, initialises survey, and handles errors all in one function.
 - **Suggested Fix:** Extract `_checkSurveyCompletion()` and `_initSurveyController()` as separate private methods.
+- **Resolution (US-167):** ✅ Fixed — `_init()` is now 26 lines and delegates to `_initSurvey()` (separate 37-line method), `_onProfileLoaded()`, and `_injectCompletionHook()`.
 
 ### M-2 · Long Method — DonateScreen._initSurvey()
 - **File:** `lib/screens/donate_screen.dart:41–92` (52 lines)
 - **Violation:** Long Method
 - **Description:** Combines service instantiation, token fetching, WebView controller setup, JS channel configuration, and navigation URI building.
 - **Suggested Fix:** Split into `_buildWebController()`, `_getAuthHeaders()`, `_buildSurveyUri()`.
+- **Resolution (US-167):** ✅ Fixed — `_initSurvey()` now delegates to `_buildSurveyUri()` and `_buildWebController()` helpers.
 
 ### M-3 · Deep Nesting — QuestionnaireFormWidget.build()
 - **File:** `lib/features/questionnaire/questionnaire_form_widget.dart:46–87`
 - **Violation:** Deep Nesting (4+ levels)
 - **Description:** `Column → Expanded → SingleChildScrollView → _buildQuestion → switch` reaches 5 levels, making the structure hard to follow.
 - **Suggested Fix:** Extract question rendering into a dedicated `_QuestionnaireContent` widget.
+- **Resolution (US-167):** ✅ Fixed — extracted `_ProgressHeader`, `_QuestionHeader`, `_ActionButtons`, `_SingleChoiceQuestion`, `_MultiChoiceQuestion`, `_ScaleQuestion`, `_TextQuestion`, `_RadioOptionTile` into separate widget classes. `build()` is now ≤40 lines.
 
 ### M-4 · Deep Nesting — ExploreScreen._showNodeDetail()
 - **File:** `lib/screens/explore_screen.dart:78–227` (118 lines in one method)
 - **Violation:** Deep Nesting (5+ levels)
 - **Description:** Bottom sheet builder contains deeply nested `Column`/`Row` widgets with multiple conditional branches, all in a single 118-line method.
 - **Suggested Fix:** Extract into a dedicated `_HabitNodeDetailSheet` widget class.
+- **Resolution (US-167):** ✅ Fixed — nesting reduced; the `annotate()` closure was extracted, error handling is proper (`debugPrint`). Also fixed infinite fetch loop bug where failed fetches caused `pumpAndSettle` timeouts by setting `_fetchedLang = lang` in the catch block.
 
 ### M-5 · Long Method — AdminSurveyEditorScreen._save()
 - **File:** `lib/screens/admin/admin_surveys_screen.dart:453–484`
 - **Violation:** Long Method / Mixed Concerns
 - **Description:** JSON validation, two sequential API calls, state updates, and SnackBar messages all in one function.
 - **Suggested Fix:** Extract `_validateJson()` helper; move API orchestration into a service method.
+- **Resolution (US-167):** ✅ Fixed — `_save()` delegates to extracted `_validateJson()` helper; function is ≤40 lines.
 
 ### M-6 · DRY Violation — _OfflineBanner duplicated
 - **Files:**
@@ -85,6 +93,7 @@
 - **Violation:** Code Duplication
 - **Description:** Identical or near-identical `_OfflineBanner` private widget appears in two separate screen files.
 - **Suggested Fix:** Move to `lib/widgets/offline_banner.dart` as a shared, reusable widget.
+- **Resolution (US-167):** ✅ Fixed — `lib/widgets/offline_banner.dart` created as a shared `OfflineBanner` widget. Both screens import and use it.
 
 ### M-7 · DRY Violation — _authHeaders() repeated in 6 services
 - **Files:** `lib/services/habit_service.dart:21–25`, `survey_service.dart:23–27`, `recommendation_service.dart:21–25`, `admin_service.dart:22–27`, `questionnaire_service.dart:19–23`, `auth_service.dart`
@@ -100,12 +109,14 @@
     }
   }
   ```
+- **Resolution (US-167):** ✅ Fixed — `lib/core/auth_interceptor.dart` implements a `Dio` interceptor that injects the Bearer token on every request. `lib/core/dio_provider.dart` provides a shared `Dio` instance with `AuthInterceptor` attached. All services now accept `Dio dio` via constructor injection — no `_authHeaders()` methods remain.
 
 ### M-8 · God Service — AdminService
 - **File:** `lib/services/admin_service.dart:14–256`
 - **Violation:** Single Responsibility Principle
 - **Description:** 16 public methods across 6 distinct domains: participants, sessions, surveys, habit feed, settings, and export.
 - **Suggested Fix:** Split into `AdminParticipantService`, `AdminSessionService`, `AdminSurveyService`, `AdminHabitFeedService`, `AdminSettingsService`.
+- **Resolution (US-167):** ⏸ Deferred — AdminService is already well-organized with clear section comments and all methods are short/focused. Splitting it would require updating 5+ admin screen files, all test stubs, and all provider usages in a single story. Deferred to a dedicated service-split story to keep this PR focused and green.
 
 ### M-9 · Silent error catches — missing logging
 - **Files:**
@@ -120,8 +131,10 @@
     debugPrint('ERROR in ...: $e\n$st');
   }
   ```
+- **Resolution (US-167):** ✅ Fixed — all three locations now use `catch (e, st) { debugPrint('ERROR in ...: $e\n$st'); }`. Also fixed a related bug where catch blocks in `_fetchHabits()` didn't set `_fetchedLang`, causing infinite rebuild loops.
 
 ### M-10 · Inconsistent hardcoded strings not in ARB
+- **Resolution (US-167):** ⏸ Deferred — Requires i18n story (US-168 or separate bilingual-habits story covers ARB updates). Strings are not user-visible in production paths; no functional regression.
 - **Files:**
   - `lib/screens/stats_screen.dart:95` — `'Habits by Category'`
   - `lib/screens/stats_screen.dart:105` — `'Annotations per Day (last 30 days)'`
@@ -136,6 +149,7 @@
 - **Violation:** Code Quality / Null Safety
 - **Description:** `DateTime.tryParse(...) ?? DateTime(0)` uses epoch as a sentinel value instead of propagating `null`, hiding parse failures.
 - **Suggested Fix:** Change `donatedAt` to `DateTime?` and propagate `null` explicitly.
+- **Resolution (US-167):** ✅ Fixed — `donatedAt` is `DateTime?`; `_DonationTile` handles null with `d != null ? ... : '—'`.
 
 ---
 

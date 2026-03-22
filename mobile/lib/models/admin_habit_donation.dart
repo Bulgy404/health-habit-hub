@@ -16,8 +16,8 @@ class HabitDonation {
       habitName: (json['habitName'] ?? '').toString(),
       category: (json['category'] ?? '').toString(),
       donatedAt: json['donatedAt'] != null
-          ? DateTime.tryParse(json['donatedAt'].toString()) ?? DateTime(0)
-          : DateTime(0),
+          ? DateTime.tryParse(json['donatedAt'].toString())
+          : null,
       group: json['group']?.toString(),
     );
   }
@@ -26,7 +26,7 @@ class HabitDonation {
   final String participantId;
   final String habitName;
   final String category;
-  final DateTime donatedAt;
+  final DateTime? donatedAt;
   final String? group;
 }
 

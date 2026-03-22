@@ -8,29 +8,24 @@ import '../models/admin_survey.dart';
 import '../models/participant_progress.dart';
 import '../providers/auth_provider.dart';
 import '../config/app_config.dart';
+import '../core/dio_provider.dart';
 import '../services/auth_service.dart';
 
 /// Service for admin API endpoints.
 class AdminService {
   static const _baseUrl = AppConfig.apiBaseUrl;
 
-  AdminService(this._authService);
+  AdminService({required Dio dio, required AuthService authService})
+      : _dio = dio,
+        _authService = authService;
 
+  final Dio _dio;
   final AuthService _authService;
-  final Dio _dio = Dio();
-
-  Future<Options> _authOptions() async {
-    final token = await _authService.getAccessToken();
-    return Options(
-      headers: token != null ? {'Authorization': 'Bearer $token'} : {},
-    );
-  }
 
   /// Returns all non-deleted participants.
   Future<List<AdminParticipant>> fetchParticipants() async {
     final response = await _dio.get<List<dynamic>>(
       '$_baseUrl/admin/participants',
-      options: await _authOptions(),
     );
     final data = response.data ?? [];
     return data
@@ -51,7 +46,6 @@ class AdminService {
     final response = await _dio.post<Map<String, dynamic>>(
       '$_baseUrl/admin/participants',
       data: {'group': group, 'tokenCardFormat': tokenCardFormat},
-      options: await _authOptions(),
     );
     return response.data ?? {};
   }
@@ -63,7 +57,6 @@ class AdminService {
     await _dio.patch<void>(
       '$_baseUrl/admin/participants/$id/group',
       data: {'group': group},
-      options: await _authOptions(),
     );
   }
 
@@ -73,7 +66,6 @@ class AdminService {
   Future<void> deleteParticipant(String id) async {
     await _dio.delete<void>(
       '$_baseUrl/admin/participants/$id',
-      options: await _authOptions(),
     );
   }
 
@@ -83,7 +75,6 @@ class AdminService {
   Future<ParticipantProgress> fetchParticipantProgress(String id) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '$_baseUrl/admin/participants/$id/progress',
-      options: await _authOptions(),
     );
     return ParticipantProgress.fromJson(response.data ?? {});
   }
@@ -100,7 +91,6 @@ class AdminService {
   Future<List<AdminSession>> fetchSessions() async {
     final response = await _dio.get<List<dynamic>>(
       '$_baseUrl/admin/sessions',
-      options: await _authOptions(),
     );
     final data = response.data ?? [];
     return data
@@ -112,7 +102,6 @@ class AdminService {
   Future<void> revokeSession(String sessionId) async {
     await _dio.delete<void>(
       '$_baseUrl/admin/sessions/$sessionId',
-      options: await _authOptions(),
     );
   }
 
@@ -124,7 +113,6 @@ class AdminService {
   Future<List<AdminSurvey>> fetchSurveys() async {
     final response = await _dio.get<List<dynamic>>(
       '$_baseUrl/admin/surveys',
-      options: await _authOptions(),
     );
     final data = response.data ?? [];
     return data
@@ -140,7 +128,6 @@ class AdminService {
     final response = await _dio.post<Map<String, dynamic>>(
       '$_baseUrl/admin/surveys',
       data: {'title': title, 'type': type},
-      options: await _authOptions(),
     );
     return AdminSurvey.fromJson(response.data ?? {});
   }
@@ -150,7 +137,6 @@ class AdminService {
     await _dio.put<void>(
       '$_baseUrl/admin/surveys/$id',
       data: data,
-      options: await _authOptions(),
     );
   }
 
@@ -159,7 +145,6 @@ class AdminService {
     await _dio.patch<void>(
       '$_baseUrl/admin/surveys/$id/status',
       data: {'status': status},
-      options: await _authOptions(),
     );
   }
 
@@ -168,7 +153,6 @@ class AdminService {
     await _dio.patch<void>(
       '$_baseUrl/admin/surveys/$id/groups',
       data: {'groups': groups},
-      options: await _authOptions(),
     );
   }
 
@@ -177,10 +161,6 @@ class AdminService {
   // ---------------------------------------------------------------------------
 
   /// Returns a paginated list of habit donations with optional filters.
-  ///
-  /// [group] – one of G1–G4 (omit to show all groups).
-  /// [category] – filter by habit category.
-  /// [dateFrom] / [dateTo] – ISO-8601 date strings (YYYY-MM-DD).
   Future<HabitsFeedResult> fetchHabitsFeed({
     String? group,
     String? category,
@@ -202,7 +182,6 @@ class AdminService {
     final response = await _dio.get<Map<String, dynamic>>(
       '$_baseUrl/admin/habits/feed',
       queryParameters: queryParams,
-      options: await _authOptions(),
     );
     return HabitsFeedResult.fromJson(response.data ?? {});
   }
@@ -212,24 +191,18 @@ class AdminService {
   // ---------------------------------------------------------------------------
 
   /// Returns all admin settings as a flat {key: value} map.
-  ///
-  /// Calls GET /api/v1/admin/settings.
   Future<Map<String, dynamic>> fetchSettings() async {
     final response = await _dio.get<Map<String, dynamic>>(
       '$_baseUrl/admin/settings',
-      options: await _authOptions(),
     );
     return response.data ?? {};
   }
 
   /// Updates a single admin setting.
-  ///
-  /// Calls PUT /api/v1/admin/settings/:key with body {value}.
   Future<void> updateSetting(String key, String value) async {
     await _dio.put<void>(
       '$_baseUrl/admin/settings/$key',
       data: {'value': value},
-      options: await _authOptions(),
     );
   }
 
@@ -257,5 +230,8 @@ class AdminService {
 
 /// Riverpod provider for [AdminService].
 final adminServiceProvider = Provider<AdminService>((ref) {
-  return AdminService(ref.read(authServiceProvider));
+  return AdminService(
+    dio: ref.watch(dioProvider),
+    authService: ref.watch(authServiceProvider),
+  );
 });

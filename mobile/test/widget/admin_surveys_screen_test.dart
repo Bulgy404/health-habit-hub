@@ -1,15 +1,20 @@
 // Widget tests for AdminSurveysScreen.
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/models/admin_survey.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/screens/admin/admin_surveys_screen.dart';
 import 'package:hhh/services/admin_service.dart';
 import 'package:hhh/services/auth_service.dart';
+
+final _fakeDio = Dio();
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -32,24 +37,24 @@ class _FakeAdminService extends AdminService {
       : shouldThrow = false,
         surveys = const [],
         _completer = Completer<List<AdminSurvey>>(),
-        super(_FakeAuthService());
+        super(dio: _fakeDio, authService: _FakeAuthService());
 
   _FakeAdminService.throwing()
       : shouldThrow = true,
         surveys = const [],
         _completer = null,
-        super(_FakeAuthService());
+        super(dio: _fakeDio, authService: _FakeAuthService());
 
   _FakeAdminService.empty()
       : shouldThrow = false,
         surveys = const [],
         _completer = null,
-        super(_FakeAuthService());
+        super(dio: _fakeDio, authService: _FakeAuthService());
 
   _FakeAdminService.withData(this.surveys)
       : shouldThrow = false,
         _completer = null,
-        super(_FakeAuthService());
+        super(dio: _fakeDio, authService: _FakeAuthService());
 
   @override
   Future<List<AdminSurvey>> fetchSurveys() {
@@ -87,7 +92,16 @@ Widget _buildSubject(AdminService service) {
       authServiceProvider.overrideWithValue(_FakeAuthService()),
       adminServiceProvider.overrideWithValue(service),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
+      routerConfig: router,
+    ),
   );
 }
 

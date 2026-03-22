@@ -51,6 +51,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       if (mounted) {
         setState(() {
           _error = e.toString();
+          _fetchedLang = lang; // prevent infinite refetch on repeated build
           _loading = false;
         });
       }
@@ -106,7 +107,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               });
               // Update bottom sheet display.
               setSheetState(() => node = updated);
-            } catch (_) {
+            } catch (e, st) {
+              debugPrint('ERROR in ExploreScreen._showNodeDetail annotate: $e\n$st');
               if (ctx.mounted) {
                 ScaffoldMessenger.of(ctx).showSnackBar(
                   SnackBar(content: Text(l10n.couldNotSubmitAnnotation)),

@@ -6,10 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hhh/models/recommendation.dart';
 import 'package:hhh/providers/auth_provider.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/screens/recommend_screen.dart';
 import 'package:hhh/services/auth_service.dart';
 import 'package:hhh/services/recommendation_service.dart';
 import 'package:hhh/services/recommendation_ws_service.dart';
+
+final _fakeDio = Dio();
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -30,16 +35,16 @@ class _FakeRecommendationService extends RecommendationService {
   _FakeRecommendationService.empty()
       : shouldThrow = false,
         data = const [],
-        super(authService: _FakeAuthService());
+        super(dio: _fakeDio);
 
   _FakeRecommendationService.throwing()
       : shouldThrow = true,
         data = const [],
-        super(authService: _FakeAuthService());
+        super(dio: _fakeDio);
 
   _FakeRecommendationService.withData(this.data)
       : shouldThrow = false,
-        super(authService: _FakeAuthService());
+        super(dio: _fakeDio);
 
   @override
   Future<List<Recommendation>> fetchRecommendations(String userId) async {
@@ -78,7 +83,16 @@ Widget _buildSubject({
         return ws;
       }),
     ],
-    child: const MaterialApp(home: RecommendScreen()),
+    child: MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
+      home: const RecommendScreen(),
+    ),
   );
 }
 

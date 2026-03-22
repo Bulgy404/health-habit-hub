@@ -154,7 +154,9 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
     final service = ref.read(recommendationServiceProvider);
     try {
       await service.acceptRecommendation(rec.id);
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('ERROR in RecommendScreen._accept: $e\n$st');
+    }
     _removeItem(index);
   }
 
@@ -163,7 +165,9 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
     final service = ref.read(recommendationServiceProvider);
     try {
       await service.dismissRecommendation(rec.id);
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('ERROR in RecommendScreen._dismiss: $e\n$st');
+    }
     _removeItem(index);
   }
 

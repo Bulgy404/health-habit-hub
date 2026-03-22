@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:integration_test/integration_test.dart';
 
+import 'package:dio/dio.dart';
 import 'package:hhh/main.dart' show routerProvider;
 import 'package:hhh/models/recommendation.dart';
 import 'package:hhh/models/survey.dart';
@@ -60,7 +61,7 @@ class _FakeAuthService extends AuthService {
 }
 
 class _FakeSurveyService extends SurveyService {
-  _FakeSurveyService() : super(authService: _FakeAuthService());
+  _FakeSurveyService() : super(dio: Dio());
 
   static const _mockSurvey = Survey(
     id: 'habit-donation',
@@ -110,7 +111,7 @@ class _FakeRecommendationService extends RecommendationService {
     ),
   ];
 
-  _FakeRecommendationService() : super(authService: _FakeAuthService());
+  _FakeRecommendationService() : super(dio: Dio());
 
   @override
   Future<List<Recommendation>> fetchRecommendations(String userId) async =>
