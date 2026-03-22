@@ -2772,7 +2772,7 @@
         "npm run lint passes"
       ],
       "priority": 173,
-      "passes": false,
+      "passes": true,
       "notes": "Foundation for all study management features. Must complete before US-174 through US-177."
     },
     {
