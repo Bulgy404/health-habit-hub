@@ -1802,3 +1802,13 @@
   - Scheduled notification collection: `sent: false` field allows efficient polling with compound filter `{ sent: false, scheduledAt: { $lte: now } }`
   - Mock `makeDb` in tests: parameter destructuring uses short names (`scheduled`); tests must use the same short name, not computed keys like `[COLLECTION_SCHEDULED]`
 ---
+
+## 2026-03-22 - US-178
+- What was implemented: Created `admin/src/app/(admin)/studies/page.tsx` — full Studies management page with: paginated study list table (name, status, default badge, group count, participant count, created date); "New Study" button opening a create modal with Name, Description, number-of-groups select (1-4), and per-group label inputs; clicking a row opens the same modal pre-filled for editing (Save calls PUT); "Set as Default" button in edit modal calls PUT /api/v1/admin/studies/:id/default and is hidden when study is already default; "Deactivate" button calls DELETE and surfaces inline error message when API returns 409 (participants enrolled); all API errors shown via inline `errorMsg` div. Created matching `page.module.css`. Added "Studies" (🔬) nav item to `admin/src/components/sidebar.tsx` as the first entry.
+- Files changed: admin/src/app/(admin)/studies/page.tsx (new), admin/src/app/(admin)/studies/page.module.css (new), admin/src/components/sidebar.tsx (Studies nav item added), prd.json (US-178 passes=true)
+- **Learnings for future iterations:**
+  - Studies API returns either an array directly or `{ studies: [] }` — guard with `Array.isArray(data) ? data : data.studies ?? []`
+  - Modal footer uses `modalFooterLeft` (Set as Default / Deactivate) and `modalFooterRight` (Cancel / Save) with `margin-left: auto` on right group to push buttons to opposite ends
+  - `handleDeactivate` catches the thrown error from `apiFetch` and returns `{ error: msg }` instead of re-throwing — caller checks the return value to show inline error without closing the modal
+  - Admin build uses `npx tsc --noEmit` for typecheck then `npm run build` — both pass with the new page
+---
