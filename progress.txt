@@ -1780,3 +1780,25 @@
   - The in-memory test mock needs `insertMany`, `deleteOne`, and `$inc` support in `updateOne` — extend the standard `makeDb` helper pattern from `study.service.test.js`
   - Code case-insensitivity: call `.toUpperCase()` before all DB lookups — format is always stored uppercase in the DB
 ---
+## 2026-03-22 - US-176
+- What was implemented: Questionnaire library and custom questionnaire API. All routes were already implemented in adminRouter.js (GET/POST/PUT/DELETE /admin/questionnaires) and participantRouter.js (GET /participant/questionnaires). Fixed Prettier formatting in adminRouter.js and admin.questionnaire.library.test.js. Added `isLibrary: true` to mongo/seed/questionnaires.json for SLIQ and RAND-36. Added backfill updateMany in seed-local.js to retroactively set isLibrary on existing questionnaires. Wired up participantRouter to v1Router at /participant mount.
+- Files changed: app/routes/adminRouter.js (prettier fix), app/routes/v1Router.js (mount participantRouter), mongo/seed/questionnaires.json (isLibrary: true on SLIQ and RAND-36), scripts/seed-local.js (backfill isLibrary), app/tests/integration/admin.questionnaire.library.test.js (new — 16 tests all pass), prd.json (US-176 passes=true)
+- **Learnings for future iterations:**
+  - The questionnaire CRUD routes were already committed to adminRouter.js in a prior iteration; US-176 was mostly about the isLibrary flag in the seed data and integration tests
+  - participantRouter.js was an untracked file (not yet wired into v1Router.js) — always check git status for untracked files when a story depends on a prior router being mounted
+  - When Prettier formatting check fails, run `npx prettier --write <file>` from the app/ directory; the format:check runs before lint and test so a formatting failure blocks everything
+  - The mock DB `matchesFilter` for `$in` on ObjectId arrays: the mock uses `.toString()` comparison which works correctly for matching `questionnaires: [new ObjectId(id)]` filter patterns
+---
+
+## 2026-03-22 - US-177
+- What was implemented: Push notification backend using Firebase Cloud Messaging (FCM). (1) Added `firebase-admin` and `node-cron` to app/package.json. (2) Created `app/services/notificationService.js` with: `getFirebaseMessaging()` (lazy Firebase init from FIREBASE_SERVICE_ACCOUNT_JSON env var; returns null in no-op mode when unset), `sendToTokens()` (batch FCM sends via sendEach, tracks sent/failed/invalidTokens), `removeInvalidTokens()` (purges stale tokens from deviceTokens collection), `sendStudyNotification()` (finds enrolled participants, fetches their tokens, sends, removes invalid), `dispatchDueNotifications()` (picks up pending scheduled notifications with scheduledAt ≤ now and marks them sent), `startNotificationScheduler()` (node-cron task running every 60 s). (3) Added `POST /api/v1/participant/register-token` to `participantRouter.js` — upserts FCM token by userId. (4) Added 4 admin notification routes to `adminRouter.js`: POST /admin/notifications/send (immediate), POST /admin/notifications/schedule (creates scheduledNotifications doc), GET /admin/notifications/scheduled (lists pending), DELETE /admin/notifications/scheduled/:id (cancels pending). (5) Wired `startNotificationScheduler` in `app.js` (not in the router to avoid keeping test processes alive). (6) Documented FIREBASE_SERVICE_ACCOUNT_JSON in `.env.example`. (7) Created 11 unit tests in `tests/unit/notification.service.test.js` — all pass.
+- Files changed: app/services/notificationService.js (new), app/routes/participantRouter.js (register-token route added), app/routes/adminRouter.js (4 notification routes + imports), app/app.js (scheduler startup), app/package.json + package-lock.json (firebase-admin, node-cron), app/tests/unit/notification.service.test.js (new — 11 tests), .env.example (FIREBASE_SERVICE_ACCOUNT_JSON doc), prd.json (US-177 passes=true)
+- **Learnings for future iterations:**
+  - node-cron tasks keep the Node.js event loop alive — do NOT start the scheduler inside a router factory that gets imported in unit tests; start it in app.js instead
+  - Firebase `admin.messaging().sendEach(messages)` (not deprecated `sendMulticast`) — one message per token object; `batchResponse.responses[i].error.code` identifies invalid/unregistered tokens
+  - FIREBASE_SERVICE_ACCOUNT_JSON is the full JSON string of the service account key file; Firebase init reads it with `JSON.parse(raw)` then `admin.credential.cert(serviceAccount)`
+  - `getFirebaseMessaging()` returns null when env var is absent — all notification calls are no-ops in dev/test without Firebase credentials
+  - FCM data payload values must all be strings — use `Object.fromEntries(Object.entries(data).map(([k, v]) => [k, String(v)]))` when constructing the data map
+  - Scheduled notification collection: `sent: false` field allows efficient polling with compound filter `{ sent: false, scheduledAt: { $lte: now } }`
+  - Mock `makeDb` in tests: parameter destructuring uses short names (`scheduled`); tests must use the same short name, not computed keys like `[COLLECTION_SCHEDULED]`
+---

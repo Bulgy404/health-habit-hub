@@ -2846,7 +2846,7 @@
         "npm run lint passes; existing tests still pass"
       ],
       "priority": 177,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-173. Requires Firebase project setup and FIREBASE_SERVICE_ACCOUNT_JSON credential. Can be developed in parallel with US-174, US-175, US-176."
     },
     {
