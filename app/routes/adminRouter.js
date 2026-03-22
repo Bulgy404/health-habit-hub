@@ -1,5 +1,6 @@
 import express from 'express';
 import { randomUUID } from 'node:crypto';
+import { ObjectId } from 'mongodb';
 import { makeGetDb } from '../utils/getDb.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import { generateTokenCard } from '../services/token_card_service.js';
@@ -1317,17 +1318,21 @@ export function createAdminRouter({
   router.get('/questionnaires', async (req, res) => {
     try {
       const database = await getDb();
+      const query = {};
+      if (req.query.library === 'true') query.isLibrary = true;
       const docs = await database
         .collection('questionnaires')
-        .find({})
+        .find(query)
         .toArray();
       res.json(
         docs.map((q) => ({
+          id: q._id.toString(),
           slug: q.slug,
           title: q.title,
           description: q.description || '',
           version: q.version || '1',
           active: q.active !== false,
+          isLibrary: q.isLibrary === true,
           questionCount: Array.isArray(q.questions) ? q.questions.length : 0,
           updatedAt: q.updatedAt || q.createdAt || null,
         }))
@@ -1342,55 +1347,76 @@ export function createAdminRouter({
   router.post('/questionnaires', async (req, res) => {
     try {
       const { slug, title, description, version, questions } = req.body;
-      if (!slug || !title) {
-        return res.status(400).json({ error: 'slug and title are required' });
+      if (!title) {
+        return res.status(400).json({ error: 'title is required' });
       }
       const database = await getDb();
-      const existing = await database
-        .collection('questionnaires')
-        .findOne({ slug });
-      if (existing) {
-        return res
-          .status(409)
-          .json({ error: 'Questionnaire with this slug already exists' });
+      if (slug) {
+        const existing = await database
+          .collection('questionnaires')
+          .findOne({ slug });
+        if (existing) {
+          return res
+            .status(409)
+            .json({ error: 'Questionnaire with this slug already exists' });
+        }
       }
       const now = new Date();
       const doc = {
-        slug,
+        slug: slug || null,
         title,
         description: description || '',
         version: version || '1',
         active: true,
+        isLibrary: false,
         questions: Array.isArray(questions) ? questions : [],
         createdAt: now,
         updatedAt: now,
       };
-      await database.collection('questionnaires').insertOne(doc);
-      res.status(201).json({ ok: true, slug });
+      const result = await database.collection('questionnaires').insertOne(doc);
+      res.status(201).json({
+        ok: true,
+        id: result.insertedId.toString(),
+        slug: slug || null,
+      });
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
 
-  // PUT /api/v1/admin/questionnaires/:slug
-  router.put('/questionnaires/:slug', async (req, res) => {
+  // PUT /api/v1/admin/questionnaires/:id
+  router.put('/questionnaires/:id', async (req, res) => {
     try {
-      const { slug } = req.params;
-      const { title, description, version, questions } = req.body;
+      const { id } = req.params;
+      let oid;
+      try {
+        oid = new ObjectId(id);
+      } catch {
+        return res.status(404).json({ error: 'Questionnaire not found' });
+      }
       const database = await getDb();
+      const existing = await database
+        .collection('questionnaires')
+        .findOne({ _id: oid });
+      if (!existing) {
+        return res.status(404).json({ error: 'Questionnaire not found' });
+      }
+      if (existing.isLibrary === true) {
+        return res
+          .status(403)
+          .json({ error: 'Cannot modify a library questionnaire' });
+      }
+      const { title, description, version, questions } = req.body;
       const update = { updatedAt: new Date() };
       if (title !== undefined) update.title = title;
       if (description !== undefined) update.description = description;
       if (version !== undefined) update.version = version;
       if (questions !== undefined) update.questions = questions;
-      const result = await database
+      await database
         .collection('questionnaires')
-        .updateOne({ slug }, { $set: update });
-      if (result.matchedCount === 0) {
-        return res.status(404).json({ error: 'Questionnaire not found' });
-      }
-      res.json({ ok: true, slug });
+        .updateOne({ _id: oid }, { $set: update });
+      res.json({ ok: true, id });
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
@@ -1419,37 +1445,39 @@ export function createAdminRouter({
     }
   });
 
-  // DELETE /api/v1/admin/questionnaires/:slug
-  router.delete('/questionnaires/:slug', async (req, res) => {
+  // DELETE /api/v1/admin/questionnaires/:id
+  router.delete('/questionnaires/:id', async (req, res) => {
     try {
-      const { slug } = req.params;
-      const database = await getDb();
-      const responseCount = await database
-        .collection('form_responses')
-        .countDocuments({ questionnaireSlug: slug });
-      if (responseCount > 0) {
-        // Has responses: deactivate only
-        await database
-          .collection('questionnaires')
-          .updateOne(
-            { slug },
-            { $set: { active: false, updatedAt: new Date() } }
-          );
-        return res.json({
-          ok: true,
-          slug,
-          deleted: false,
-          deactivated: true,
-          responseCount,
-        });
-      }
-      const result = await database
-        .collection('questionnaires')
-        .deleteOne({ slug });
-      if (result.deletedCount === 0) {
+      const { id } = req.params;
+      let oid;
+      try {
+        oid = new ObjectId(id);
+      } catch {
         return res.status(404).json({ error: 'Questionnaire not found' });
       }
-      res.json({ ok: true, slug, deleted: true });
+      const database = await getDb();
+      const existing = await database
+        .collection('questionnaires')
+        .findOne({ _id: oid });
+      if (!existing) {
+        return res.status(404).json({ error: 'Questionnaire not found' });
+      }
+      if (existing.isLibrary === true) {
+        return res
+          .status(403)
+          .json({ error: 'Cannot delete a library questionnaire' });
+      }
+      // Check if assigned to any active study
+      const studyCount = await database
+        .collection('studies')
+        .countDocuments({ questionnaires: oid, isActive: true });
+      if (studyCount > 0) {
+        return res
+          .status(409)
+          .json({ error: 'Questionnaire is assigned to an active study' });
+      }
+      await database.collection('questionnaires').deleteOne({ _id: oid });
+      res.json({ ok: true, id, deleted: true });
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
