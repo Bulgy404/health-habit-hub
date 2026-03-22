@@ -189,6 +189,76 @@ export async function softDeleteStudy({ db, id }) {
 }
 
 /**
+ * List participants enrolled in a study (paginated).
+ * Returns summary (total, perGroup) and a page of enrollment rows.
+ * @param {{ db: object, id: string, page?: number, limit?: number }} deps
+ */
+export async function listStudyParticipants({ db, id, page = 1, limit = 20 }) {
+  let oid;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return { notFound: true };
+  }
+
+  const study = await db.collection(STUDIES).findOne({ _id: oid });
+  if (!study) return { notFound: true };
+
+  const total = await db
+    .collection(ENROLLMENTS)
+    .countDocuments({ studyId: oid });
+
+  const skip = (page - 1) * limit;
+  const enrollments = await db
+    .collection(ENROLLMENTS)
+    .find({ studyId: oid })
+    .sort({ enrolledAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .toArray();
+
+  // Build group label lookup from study.groups
+  const groupMap = {};
+  for (const g of study.groups || []) {
+    groupMap[g.id.toString()] = g.label || `Group ${g.index}`;
+  }
+
+  // Count per group for summary
+  const groupCounts = await db
+    .collection(ENROLLMENTS)
+    .aggregate([
+      { $match: { studyId: oid } },
+      { $group: { _id: '$groupId', count: { $sum: 1 } } },
+    ])
+    .toArray();
+
+  const perGroup = (study.groups || []).map((g) => {
+    const found = groupCounts.find(
+      (c) => c._id?.toString() === g.id.toString()
+    );
+    return {
+      groupId: g.id.toString(),
+      groupLabel: g.label || `Group ${g.index}`,
+      count: found?.count ?? 0,
+    };
+  });
+
+  return {
+    total,
+    page,
+    limit,
+    summary: { total, perGroup },
+    participants: enrollments.map((e) => ({
+      userId: e.userId,
+      groupId: e.groupId?.toString() ?? null,
+      groupLabel: groupMap[e.groupId?.toString()] ?? '—',
+      enrolledAt: e.enrolledAt,
+      codeUsed: e.studyCodeUsed ?? null,
+    })),
+  };
+}
+
+/**
  * Mark a study as default, clearing isDefault on the previous default atomically.
  * @param {{ db: object, id: string }} deps
  */

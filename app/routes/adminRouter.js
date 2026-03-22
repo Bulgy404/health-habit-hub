@@ -27,6 +27,7 @@ import {
   updateStudy,
   softDeleteStudy,
   setDefaultStudy,
+  listStudyParticipants,
 } from '../services/studyService.js';
 import {
   createCodes,
@@ -1746,6 +1747,30 @@ export function createAdminRouter({
           .status(409)
           .json({ error: 'Code has already been redeemed' });
       res.json({ ok: true });
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/studies/:id/participants — list enrolled participants
+  router.get('/studies/:id/participants', async (req, res) => {
+    try {
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(
+        500,
+        Math.max(1, parseInt(req.query.limit, 10) || 20)
+      );
+      const database = await getDb();
+      const result = await listStudyParticipants({
+        db: database,
+        id: req.params.id,
+        page,
+        limit,
+      });
+      if (result.notFound)
+        return res.status(404).json({ error: 'Study not found' });
+      res.json(result);
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
