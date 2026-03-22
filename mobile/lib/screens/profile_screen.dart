@@ -9,6 +9,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
+import '../features/questionnaire/questionnaire_service.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/survey_service.dart';
@@ -228,40 +229,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           onEdit: _startEdit,
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              l10n.healthQuestionnaires,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 8),
-                            OutlinedButton.icon(
-                              onPressed: () =>
-                                  context.push('/questionnaire/sliq'),
-                              icon: const Icon(Icons.assignment),
-                              label: Text(l10n.sliqLifestyleIndex),
-                              style: OutlinedButton.styleFrom(
-                                minimumSize:
-                                    const Size(double.infinity, 48),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            OutlinedButton.icon(
-                              onPressed: () =>
-                                  context.push('/questionnaire/rand-36'),
-                              icon: const Icon(Icons.health_and_safety),
-                              label: Text(l10n.rand36HealthSurvey),
-                              style: OutlinedButton.styleFrom(
-                                minimumSize:
-                                    const Size(double.infinity, 48),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      _StudyQuestionnairesSection(l10n: l10n),
                       Padding(
                         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
                         child: OutlinedButton.icon(
@@ -341,6 +309,72 @@ class _ProfileSummaryCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Study-specific questionnaire section — fetched from the backend.
+// ---------------------------------------------------------------------------
+
+class _StudyQuestionnairesSection extends ConsumerWidget {
+  const _StudyQuestionnairesSection({required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final questionnairesAsync = ref.watch(participantQuestionnairesProvider);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.healthQuestionnaires,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          questionnairesAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stackTrace) => Text(
+              l10n.failedToLoadQuestionnaire,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            data: (questionnaires) {
+              if (questionnaires.isEmpty) {
+                return Text(
+                  l10n.noQuestionnairesAssigned,
+                  style: TextStyle(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withAlpha(153),
+                  ),
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final q in questionnaires) ...[
+                    OutlinedButton.icon(
+                      onPressed: () =>
+                          context.push('/questionnaire/${q.slug}'),
+                      icon: const Icon(Icons.assignment),
+                      label: Text(q.title),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }

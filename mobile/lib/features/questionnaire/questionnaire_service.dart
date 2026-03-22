@@ -31,6 +31,17 @@ class QuestionnaireService {
       },
     );
   }
+
+  /// Returns the questionnaires assigned to the participant's enrolled study.
+  Future<List<ParticipantQuestionnaire>> fetchParticipantQuestionnaires() async {
+    final response = await _dio.get<List<dynamic>>(
+      '$_baseUrl/participant/questionnaires',
+    );
+    return (response.data ?? [])
+        .cast<Map<String, dynamic>>()
+        .map(ParticipantQuestionnaire.fromJson)
+        .toList();
+  }
 }
 
 final questionnaireServiceProvider = Provider<QuestionnaireService>((ref) {
@@ -41,4 +52,10 @@ final questionnaireProvider =
     FutureProvider.family<QuestionnaireDefinition, String>((ref, slug) async {
   final service = ref.watch(questionnaireServiceProvider);
   return service.fetchQuestionnaire(slug);
+});
+
+final participantQuestionnairesProvider =
+    FutureProvider<List<ParticipantQuestionnaire>>((ref) async {
+  final service = ref.watch(questionnaireServiceProvider);
+  return service.fetchParticipantQuestionnaires();
 });
