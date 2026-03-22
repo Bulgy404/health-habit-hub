@@ -6,6 +6,7 @@ import { signOut, useSession } from "next-auth/react";
 import styles from "./sidebar.module.css";
 
 const NAV_ITEMS = [
+  { href: "/studies", label: "Studies", icon: "🔬" },
   { href: "/questionnaires", label: "Questionnaires", icon: "📋" },
   { href: "/knowledge-base", label: "Knowledge Base", icon: "📚" },
   { href: "/settings", label: "Settings", icon: "⚙️" },
