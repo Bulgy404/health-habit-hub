@@ -557,3 +557,86 @@
   font-size: 0.85rem;
   color: var(--color-text-muted);
 }
+
+/* ── Questionnaires tab ─────────────────────────────────────────────────────── */
+
+.questionnairesTab {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.qSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.qSectionTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 0.25rem;
+}
+
+.qList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.qItem {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 0.875rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.qItem:last-child {
+  border-bottom: none;
+}
+
+.qItem:hover {
+  background: #f8fafc;
+}
+
+.qCheckbox {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.qTitle {
+  font-size: 0.9rem;
+  flex: 1;
+}
+
+.qInactive {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  background: #f1f5f9;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  padding: 0.1rem 0.5rem;
+}
+
+.qFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
+.savedMsg {
+  font-size: 0.85rem;
+  color: #16a34a;
+  font-weight: 500;
+}
