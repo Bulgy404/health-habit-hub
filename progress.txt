@@ -1769,3 +1769,14 @@
   - Route pattern for admin sub-resources: add them inline to `adminRouter.js`, import the service at the top — no sub-router needed for small sets of routes
   - `softDeleteStudy` checks enrollment count before soft-deleting; `409 Conflict` is the right status when the business rule blocks deletion
 ---
+
+## 2026-03-22 - US-175
+- What was implemented: Created `app/services/studyCodeService.js` with 5 exported functions: `createCodes` (generates HHH-XXXXX codes using crypto.randomBytes, caps at 100), `listCodes` (paginated), `revokeCode` (409 if already redeemed), `redeemCode` (case-insensitive, 409 if already enrolled, 410 if exhausted/expired), `skipCode` (round-robin group assignment on default study, idempotent). Created `app/routes/studyEnrollRouter.js` with `POST /redeem-code` and `POST /skip-code` endpoints (authenticated, requires req.user.sub). Updated `adminRouter.js` to add `POST/GET/DELETE /studies/:id/codes` routes and import from studyCodeService. Updated `v1Router.js` to mount `createStudyEnrollRouter` at `/onboarding` after the `authenticate` middleware. Created `app/tests/unit/study.code.service.test.js` with 16 unit tests. All 293 tests pass; lint passes.
+- Files changed: app/services/studyCodeService.js (new), app/routes/studyEnrollRouter.js (new), app/routes/adminRouter.js (added imports + 3 routes), app/routes/v1Router.js (added /onboarding mount), app/tests/unit/study.code.service.test.js (new), prd.json (US-175 passes=true)
+- **Learnings for future iterations:**
+  - Authenticated onboarding routes need to be mounted AFTER `router.use(authenticate)` in v1Router.js — the existing `/onboard` path is a public route; new authenticated onboarding routes were placed at `/onboarding` (with 'ing') to avoid conflict
+  - `studyCodes` collection name comes from `COLLECTION` export in `app/models/studyCode.js`; `enrollments` from `app/models/enrollment.js`
+  - Round-robin group assignment: aggregate enrollments by groupId for the target study, pick the group with the fewest enrollments
+  - The in-memory test mock needs `insertMany`, `deleteOne`, and `$inc` support in `updateOne` — extend the standard `makeDb` helper pattern from `study.service.test.js`
+  - Code case-insensitivity: call `.toUpperCase()` before all DB lookups — format is always stored uppercase in the DB
+---
