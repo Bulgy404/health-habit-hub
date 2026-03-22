@@ -15,6 +15,7 @@ import { createQuestionnaireResponsesRouter } from './questionnaireResponsesRout
 import { createRecommendationsRouter } from './recommendationsRouter.js';
 import { createKbRouter } from './kbRouter.js';
 import { createUsersRouter } from './usersRouter.js';
+import { createStudyEnrollRouter } from './studyEnrollRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 import { swaggerSpec } from '../swagger.js';
 
@@ -201,6 +202,13 @@ export function createV1Router({
     '/kb',
     requireRole('admin', 'researcher'),
     createKbRouter({ apiServiceUrl })
+  );
+
+  // Authenticated onboarding code routes: require participant role
+  router.use(
+    '/onboarding',
+    requireRole('participant', 'admin', 'researcher'),
+    createStudyEnrollRouter({ db })
   );
 
   return router;

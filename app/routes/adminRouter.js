@@ -27,6 +27,11 @@ import {
   softDeleteStudy,
   setDefaultStudy,
 } from '../services/studyService.js';
+import {
+  createCodes,
+  listCodes,
+  revokeCode,
+} from '../services/studyCodeService.js';
 
 const DEFAULT_SETTINGS = [{ key: 'token_card_format', value: 'both' }];
 
@@ -1627,6 +1632,80 @@ export function createAdminRouter({
       const result = await setDefaultStudy({ db: database, id: req.params.id });
       if (result.notFound)
         return res.status(404).json({ error: 'Study not found' });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // ── Study code routes ─────────────────────────────────────────────────────
+
+  // POST /api/v1/admin/studies/:id/codes — generate enrollment codes
+  router.post('/studies/:id/codes', async (req, res) => {
+    try {
+      const { count, groupId, maxRedemptions, expiresAt } = req.body;
+      if (!groupId || typeof groupId !== 'string') {
+        return res.status(400).json({ error: 'groupId is required' });
+      }
+      const database = await getDb();
+      const result = await createCodes({
+        db: database,
+        studyId: req.params.id,
+        groupId,
+        count,
+        maxRedemptions,
+        expiresAt,
+      });
+      if (result.notFound)
+        return res.status(404).json({ error: 'Study not found' });
+      if (result.groupNotFound)
+        return res.status(404).json({ error: 'Group not found in study' });
+      res.status(201).json({ codes: result.codes });
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/studies/:id/codes — list codes for a study
+  router.get('/studies/:id/codes', async (req, res) => {
+    try {
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(
+        100,
+        Math.max(1, parseInt(req.query.limit, 10) || 20)
+      );
+      const database = await getDb();
+      const result = await listCodes({
+        db: database,
+        studyId: req.params.id,
+        page,
+        limit,
+      });
+      if (result.notFound)
+        return res.status(404).json({ error: 'Study not found' });
+      res.json(result);
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // DELETE /api/v1/admin/studies/:id/codes/:code — revoke a code
+  router.delete('/studies/:id/codes/:code', async (req, res) => {
+    try {
+      const database = await getDb();
+      const result = await revokeCode({
+        db: database,
+        studyId: req.params.id,
+        code: req.params.code,
+      });
+      if (result.notFound) return res.status(404).json({ error: 'Not found' });
+      if (result.conflict)
+        return res
+          .status(409)
+          .json({ error: 'Code has already been redeemed' });
       res.json({ ok: true });
     } catch (err) {
       console.error('[route] Error:', err);
