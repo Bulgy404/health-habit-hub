@@ -192,7 +192,7 @@
       ],
       "priority": 12,
       "passes": true,
-      "notes": "bcio.owl not present in repo — BCIO classes merged inline from BCT Taxonomy v1 (Michie et al. 2013). 134 total owl:Class entries (15 HHH + 119 BCIO). concepts_all_merged.jsonl also absent; uncertain HHH↔BCIO mappings annotated with rdfs:comment 'TODO: domain-review'."
+      "notes": "bcio.owl not present in repo \u2014 BCIO classes merged inline from BCT Taxonomy v1 (Michie et al. 2013). 134 total owl:Class entries (15 HHH + 119 BCIO). concepts_all_merged.jsonl also absent; uncertain HHH\u2194BCIO mappings annotated with rdfs:comment 'TODO: domain-review'."
     },
     {
       "id": "US-013",
@@ -373,7 +373,7 @@
         "File mobile/lib/screens/recommend_screen.dart created",
         "Fetches recommendations via RecommendationService on screen open",
         "Cards enter with FadeTransition + SlideTransition (bottom-up, 300ms stagger)",
-        "Empty state widget shown with message 'No recommendations yet — complete your profile first'",
+        "Empty state widget shown with message 'No recommendations yet \u2014 complete your profile first'",
         "Loading skeleton shown during fetch",
         "Error state with retry button",
         "Accept/Dismiss calls service endpoint and removes card from list with AnimatedList",
@@ -566,7 +566,7 @@
       ],
       "priority": 34,
       "passes": true,
-      "notes": "Admin survey CRUD added to adminRouter.js (GET/POST /surveys, PUT /surveys/:id, PATCH /surveys/:id/status, PATCH /surveys/:id/groups). surveyRouter.js converted to factory with createSurveyRouter({db}) — GET / returns published+group-filtered surveys for participants, all surveys for admin/researcher. v1Router updated to use factory. 20 integration tests in admin.surveys.test.js all green."
+      "notes": "Admin survey CRUD added to adminRouter.js (GET/POST /surveys, PUT /surveys/:id, PATCH /surveys/:id/status, PATCH /surveys/:id/groups). surveyRouter.js converted to factory with createSurveyRouter({db}) \u2014 GET / returns published+group-filtered surveys for participants, all surveys for admin/researcher. v1Router updated to use factory. 20 integration tests in admin.surveys.test.js all green."
     },
     {
       "id": "US-035",
@@ -592,7 +592,7 @@
       "description": "As an admin, I want a dialog to create a new participant and immediately download their token card so that I can enrol participants quickly.",
       "acceptanceCriteria": [
         "FloatingActionButton on participant list screen opens AlertDialog",
-        "Dialog shows: group selector (G1–G4 dropdown), token card format selector (QR / Print / Both)",
+        "Dialog shows: group selector (G1\u2013G4 dropdown), token card format selector (QR / Print / Both)",
         "Create button calls POST /api/v1/admin/participants and then GET /:id/token-card",
         "PDF opens in device browser or triggers download (url_launcher)",
         "Success snackbar: 'Participant p-xxxx created'",
@@ -634,7 +634,7 @@
       ],
       "priority": 38,
       "passes": true,
-      "notes": "Created admin_participant_detail_screen.dart (AdminParticipantDetailScreen — ConsumerStatefulWidget; fetches GET /api/v1/admin/participants/:id/progress via AdminService.fetchParticipantProgress(); shows ProfileCard (check/cross icon + completedAt), SurveysSection (list with timestamps), HabitsSection (ExpansionTile showing count + detail note), RecommendationsCard (accepted/dismissed count chips), TimelineSection (vertical timeline with icons per event type); Export JSON button fetches progress and calls Share.share(jsonString) via share_plus; back navigation via GoRouter nested route); created participant_progress.dart model (ParticipantProgress/ProfileStatus/SurveyEntry/RecommendationCounts/TimelineEntry + toJson()); added fetchParticipantProgress() to AdminService; added share_plus: ^10.1.0 to pubspec.yaml; updated main.dart to replace _PlaceholderScreen with AdminParticipantDetailScreen; dart analyze: no issues."
+      "notes": "Created admin_participant_detail_screen.dart (AdminParticipantDetailScreen \u2014 ConsumerStatefulWidget; fetches GET /api/v1/admin/participants/:id/progress via AdminService.fetchParticipantProgress(); shows ProfileCard (check/cross icon + completedAt), SurveysSection (list with timestamps), HabitsSection (ExpansionTile showing count + detail note), RecommendationsCard (accepted/dismissed count chips), TimelineSection (vertical timeline with icons per event type); Export JSON button fetches progress and calls Share.share(jsonString) via share_plus; back navigation via GoRouter nested route); created participant_progress.dart model (ParticipantProgress/ProfileStatus/SurveyEntry/RecommendationCounts/TimelineEntry + toJson()); added fetchParticipantProgress() to AdminService; added share_plus: ^10.1.0 to pubspec.yaml; updated main.dart to replace _PlaceholderScreen with AdminParticipantDetailScreen; dart analyze: no issues."
     },
     {
       "id": "US-039",
@@ -647,13 +647,13 @@
         "Tap survey row navigates to editor screen",
         "Editor screen: full-width monospace JSON TextField pre-populated with survey jsonSchema",
         "Save button calls PUT /api/v1/admin/surveys/:id with updated JSON",
-        "Group assignment checkboxes (G1–G4) below editor",
+        "Group assignment checkboxes (G1\u2013G4) below editor",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 39,
       "passes": true,
-      "notes": "Created mobile/lib/models/admin_survey.dart (AdminSurvey with id/title/type/status/assignedGroups/jsonSchema; fromJson handles _id||id fallback). Created mobile/lib/screens/admin/admin_surveys_screen.dart with AdminSurveysScreen (list view with ListTile per survey showing title, type chip, group chips, status badge, Publish/Archive TextButtons; FAB opens _CreateSurveyDialog with title TextField + type DropdownButton; taps push /admin/surveys/:id with extra=AdminSurvey) and AdminSurveyEditorScreen (full-width monospace JSON TextField pre-populated from survey.jsonSchema; FilterChip row for G1–G4 group assignment; Save button calls updateSurvey+updateSurveyGroups). Added survey methods to AdminService: fetchSurveys, createSurvey, updateSurvey, updateSurveyStatus, updateSurveyGroups. Added /admin/surveys and /admin/surveys/:id routes to main.dart. dart analyze: no issues."
+      "notes": "Created mobile/lib/models/admin_survey.dart (AdminSurvey with id/title/type/status/assignedGroups/jsonSchema; fromJson handles _id||id fallback). Created mobile/lib/screens/admin/admin_surveys_screen.dart with AdminSurveysScreen (list view with ListTile per survey showing title, type chip, group chips, status badge, Publish/Archive TextButtons; FAB opens _CreateSurveyDialog with title TextField + type DropdownButton; taps push /admin/surveys/:id with extra=AdminSurvey) and AdminSurveyEditorScreen (full-width monospace JSON TextField pre-populated from survey.jsonSchema; FilterChip row for G1\u2013G4 group assignment; Save button calls updateSurvey+updateSurveyGroups). Added survey methods to AdminService: fetchSurveys, createSurvey, updateSurvey, updateSurveyStatus, updateSurveyGroups. Added /admin/surveys and /admin/surveys/:id routes to main.dart. dart analyze: no issues."
     },
     {
       "id": "US-040",
@@ -721,7 +721,7 @@
       ],
       "priority": 43,
       "passes": true,
-      "notes": "Created admin_shell_screen.dart (AdminShellScreen — StatelessWidget; NavigationRail with 5 destinations: Participants/Surveys/Habits/Devices/Settings; active item detected via GoRouterState.of(context).matchedLocation.startsWith(section.path); context.go(path) on destination tap; Row(NavigationRail + VerticalDivider + Expanded(child))). Converted GoRouter from top-level global to routerProvider (Provider<GoRouter>) so redirect guard can use ref.read(userRolesProvider.future); redirect returns '/' for /admin/* paths when user lacks admin/researcher role. Added ShellRoute inside admin StatefulShellBranch (initialLocation: '/admin/participants') — ShellRoute builder wraps child in AdminShellScreen; admin sub-routes (/admin/participants, /admin/surveys, /admin/habits, /admin/devices, /admin/settings) use absolute paths; detail routes (:id) nested within. Converted HhhApp from StatelessWidget to ConsumerWidget watching routerProvider. dart analyze lib/: no issues."
+      "notes": "Created admin_shell_screen.dart (AdminShellScreen \u2014 StatelessWidget; NavigationRail with 5 destinations: Participants/Surveys/Habits/Devices/Settings; active item detected via GoRouterState.of(context).matchedLocation.startsWith(section.path); context.go(path) on destination tap; Row(NavigationRail + VerticalDivider + Expanded(child))). Converted GoRouter from top-level global to routerProvider (Provider<GoRouter>) so redirect guard can use ref.read(userRolesProvider.future); redirect returns '/' for /admin/* paths when user lacks admin/researcher role. Added ShellRoute inside admin StatefulShellBranch (initialLocation: '/admin/participants') \u2014 ShellRoute builder wraps child in AdminShellScreen; admin sub-routes (/admin/participants, /admin/surveys, /admin/habits, /admin/devices, /admin/settings) use absolute paths; detail routes (:id) nested within. Converted HhhApp from StatelessWidget to ConsumerWidget watching routerProvider. dart analyze lib/: no issues."
     },
     {
       "id": "US-044",
@@ -732,11 +732,11 @@
         "Each controller test mocks MongoDB and Neo4j (no live connections)",
         "Auth middleware tests: valid JWT passes, expired JWT returns 401, wrong role returns 403",
         "npm test exits 0",
-        "Coverage: app/middleware/ and app/controllers/ ≥ 80% lines covered (nyc report)"
+        "Coverage: app/middleware/ and app/controllers/ \u2265 80% lines covered (nyc report)"
       ],
       "priority": 44,
       "passes": true,
-      "notes": "Created 6 new unit test files: requireRole.middleware.test.js (6 tests — required role/no role/missing user/multiple roles), survey.controller.test.js (6 tests — admin gets all/participant filtered/get by id/404/submit results/submit 404), habit.controller.test.js (5 tests — base route/public habits/annotate valid/annotate invalid 400/stats), admin.controller.test.js (15 tests — participants CRUD/group update/token-card PDF/settings/surveys), auth.tokenVerifier.test.js (5 tests — valid JWT/expired/invalid sig/unknown kid/malformed), legacy.survey.controller.test.js (2 tests — error paths when MongoDB unavailable). Added c8 as devDependency for coverage; test:coverage script reports middleware/ at 99.1%, controllers/ at 45.28% (legacy surveyController.js requires live MongoDB for happy path), routes/ (habitsRouter 91.27%, surveyRouter 88.72%). Pre-existing test failures (BackupConfiguration/Fuseki/Neo4j/LibreTranslate) remain from before this story. 55 unit tests pass."
+      "notes": "Created 6 new unit test files: requireRole.middleware.test.js (6 tests \u2014 required role/no role/missing user/multiple roles), survey.controller.test.js (6 tests \u2014 admin gets all/participant filtered/get by id/404/submit results/submit 404), habit.controller.test.js (5 tests \u2014 base route/public habits/annotate valid/annotate invalid 400/stats), admin.controller.test.js (15 tests \u2014 participants CRUD/group update/token-card PDF/settings/surveys), auth.tokenVerifier.test.js (5 tests \u2014 valid JWT/expired/invalid sig/unknown kid/malformed), legacy.survey.controller.test.js (2 tests \u2014 error paths when MongoDB unavailable). Added c8 as devDependency for coverage; test:coverage script reports middleware/ at 99.1%, controllers/ at 45.28% (legacy surveyController.js requires live MongoDB for happy path), routes/ (habitsRouter 91.27%, surveyRouter 88.72%). Pre-existing test failures (BackupConfiguration/Fuseki/Neo4j/LibreTranslate) remain from before this story. 55 unit tests pass."
     },
     {
       "id": "US-045",
@@ -772,7 +772,7 @@
     },
     {
       "id": "US-047",
-      "title": "Flutter integration test: login → survey → recommendation flow",
+      "title": "Flutter integration test: login \u2192 survey \u2192 recommendation flow",
       "description": "As a developer, I want an end-to-end integration test that drives a complete participant journey so that critical user flows are regression-tested.",
       "acceptanceCriteria": [
         "mobile/integration_test/participant_flow_test.dart created",
@@ -783,7 +783,7 @@
       ],
       "priority": 47,
       "passes": true,
-      "notes": "Created mobile/integration_test/participant_flow_test.dart using integration_test package with Riverpod provider overrides for all services (FakeAuthService, FakeSurveyService, FakeRecommendationService). Test drives full app: login screen → enter credentials → tap Login → NavigationBar appears → Donate a Habit screen → tap Recommend → Morning Walk and Mindful Breathing cards visible. Added integration_test SDK dependency to pubspec.yaml. flutter analyze reports no issues. Test requires a connected device/emulator to run (flutter test -d <device>); macOS desktop project not configured in this repo."
+      "notes": "Created mobile/integration_test/participant_flow_test.dart using integration_test package with Riverpod provider overrides for all services (FakeAuthService, FakeSurveyService, FakeRecommendationService). Test drives full app: login screen \u2192 enter credentials \u2192 tap Login \u2192 NavigationBar appears \u2192 Donate a Habit screen \u2192 tap Recommend \u2192 Morning Walk and Mindful Breathing cards visible. Added integration_test SDK dependency to pubspec.yaml. flutter analyze reports no issues. Test requires a connected device/emulator to run (flutter test -d <device>); macOS desktop project not configured in this repo."
     },
     {
       "id": "US-048",
@@ -816,7 +816,7 @@
       ],
       "priority": 49,
       "passes": true,
-      "notes": "Created scripts/deploy-full.sh: calls sub-scripts in order (backend→keycloak→recommender→flutter-web), polls /api/v1/health (60s timeout) between each step, passes --dry-run to sub-scripts, timestamps every log line, warns if CHANGELOG.md version has no matching git tag, set -euo pipefail ensures non-zero exit on any failure."
+      "notes": "Created scripts/deploy-full.sh: calls sub-scripts in order (backend\u2192keycloak\u2192recommender\u2192flutter-web), polls /api/v1/health (60s timeout) between each step, passes --dry-run to sub-scripts, timestamps every log line, warns if CHANGELOG.md version has no matching git tag, set -euo pipefail ensures non-zero exit on any failure."
     },
     {
       "id": "US-050",
@@ -889,7 +889,7 @@
         "docs/guides/participant-guide.md created",
         "Sections with numbered steps: 1) Accessing the app (Android APK / iOS / browser URL), 2) Logging in with token card (QR scan + manual entry), 3) Completing your profile, 4) Donating a habit, 5) Exploring the habit graph and annotating nodes, 6) Understanding your recommendations (rationale + citation), 7) Updating your profile",
         "Each section has at least one screenshot in docs/assets/screenshots/participant/ named descriptively (e.g. 01-login-android.png)",
-        "Screenshots taken on Android emulator, iOS simulator, and Chrome browser — each labelled in the markdown",
+        "Screenshots taken on Android emulator, iOS simulator, and Chrome browser \u2014 each labelled in the markdown",
         "Written in plain English, no technical jargon",
         "docs/guides/participant-guide.pdf generated (pandoc or similar)"
       ],
@@ -910,7 +910,7 @@
       ],
       "priority": 55,
       "passes": true,
-      "notes": "Created docs/guides/participant-guide-de.md with all 7 sections translated to German. LibreTranslate not running locally — translation produced directly (reviewed for accuracy). Same screenshot references as English guide. Generated docs/guides/participant-guide-de.pdf via pandoc (LaTeX engine, warnings only)."
+      "notes": "Created docs/guides/participant-guide-de.md with all 7 sections translated to German. LibreTranslate not running locally \u2014 translation produced directly (reviewed for accuracy). Same screenshot references as English guide. Generated docs/guides/participant-guide-de.pdf via pandoc (LaTeX engine, warnings only)."
     },
     {
       "id": "US-056",
@@ -925,7 +925,7 @@
       ],
       "priority": 56,
       "passes": true,
-      "notes": "Created docs/guides/admin-guide.md with Quick Start checklist (8 steps) and all 8 sections. Placeholder PNGs generated in docs/assets/screenshots/admin/ (13 files). Callout annotations listed as numbered descriptions in markdown tables. Generated docs/guides/admin-guide.pdf via pandoc (LaTeX engine, ToC reference warnings only — PDF created successfully)."
+      "notes": "Created docs/guides/admin-guide.md with Quick Start checklist (8 steps) and all 8 sections. Placeholder PNGs generated in docs/assets/screenshots/admin/ (13 files). Callout annotations listed as numbered descriptions in markdown tables. Generated docs/guides/admin-guide.pdf via pandoc (LaTeX engine, ToC reference warnings only \u2014 PDF created successfully)."
     },
     {
       "id": "US-057",
@@ -949,10 +949,10 @@
         "docs/architecture.md created",
         "System overview Mermaid diagram: all Docker services (Traefik, Node.js backend, Flutter web, Python recommender, Keycloak, Neo4j, Fuseki, MongoDB, Mongo Express, LibreTranslate, backup) with arrows showing data flow and port numbers",
         "Per-service table: service name, technology, purpose, internal port, external URL (if any), key env vars",
-        "Sequence diagram (Mermaid): Keycloak PKCE login flow (Flutter → Keycloak → Flutter → backend)",
-        "Sequence diagram (Mermaid): habit donation flow (Flutter → backend → MongoDB + Neo4j)",
-        "Sequence diagram (Mermaid): recommendation request flow (Flutter → backend → Python recommender → Neo4j → backend → Flutter)",
-        "Ontology section: HHH namespace, BCIO integration point, G1–G4 encoding, 2 example Cypher + 2 SPARQL queries"
+        "Sequence diagram (Mermaid): Keycloak PKCE login flow (Flutter \u2192 Keycloak \u2192 Flutter \u2192 backend)",
+        "Sequence diagram (Mermaid): habit donation flow (Flutter \u2192 backend \u2192 MongoDB + Neo4j)",
+        "Sequence diagram (Mermaid): recommendation request flow (Flutter \u2192 backend \u2192 Python recommender \u2192 Neo4j \u2192 backend \u2192 Flutter)",
+        "Ontology section: HHH namespace, BCIO integration point, G1\u2013G4 encoding, 2 example Cypher + 2 SPARQL queries"
       ],
       "priority": 58,
       "passes": true,
@@ -967,7 +967,7 @@
         "Neo4j section: table of all node labels (with properties + types), table of all relationship types; 10 annotated Cypher queries (habits by group, habits by BCIO category, donation timeline, top annotated habits, G3 vs G4 habits, etc.)",
         "Fuseki/SPARQL section: namespace prefix table (hhh:, bcio:, owl:, rdfs:); 10 example SPARQL queries",
         "MongoDB section: all collections (results, profiles, habit_annotations, admin_settings, surveys) with JSON schema tables and one example document each",
-        "G1–G4 encoding explanation: how to unambiguously query each group after migration",
+        "G1\u2013G4 encoding explanation: how to unambiguously query each group after migration",
         "Anonymisation model: table showing what data is stored vs removed/anonymized on soft-delete"
       ],
       "priority": 59,
@@ -1026,7 +1026,7 @@
       "description": "As a stakeholder, I want a maintained changelog and a deploy guard that warns about missing version bumps so that every release is documented.",
       "acceptanceCriteria": [
         "CHANGELOG.md created at repo root following Keep a Changelog format (https://keepachangelog.com)",
-        "Version 1.0.0 entry dated with today's date; sections: Added (all phases 0–11 summarized), Changed (old Node.js views retired), Fixed (G3/G4 ontology bug)",
+        "Version 1.0.0 entry dated with today's date; sections: Added (all phases 0\u201311 summarized), Changed (old Node.js views retired), Fixed (G3/G4 ontology bug)",
         "scripts/deploy-full.sh checks: current git tag matches latest version in CHANGELOG.md; if not, prints WARNING: Version not bumped since last deploy and continues (does not block deploy)",
         "npm run version-check script added to package.json that performs the same check and exits non-zero if mismatched"
       ],
@@ -1043,7 +1043,7 @@
         "In .github/workflows/ci.yml: remove the fuseki service container from the backend-integration job (route integration tests do not use Fuseki directly)",
         "In .github/workflows/ci.yml: remove the ENABLE_INTEGRATION env var from the backend-integration job (that flag is for DB-level tests in tests/, not route tests in tests/integration/)",
         "In .github/workflows/ci.yml: fix Fuseki Docker image tag in the ontology-test job from stain/jena-fuseki:4.9.0 (tag does not exist on Docker Hub) to stain/jena-fuseki:5.1.0",
-        "In .github/workflows/ci.yml: remove the pinned flutter-version: \"3.32.0\" from all Flutter jobs (flutter-analyze, flutter-test, flutter-build-web) — that version ships Dart 3.8.0 which violates pubspec.yaml sdk: >=3.10.0; keep channel: stable so it always uses latest stable Flutter",
+        "In .github/workflows/ci.yml: remove the pinned flutter-version: \"3.32.0\" from all Flutter jobs (flutter-analyze, flutter-test, flutter-build-web) \u2014 that version ships Dart 3.8.0 which violates pubspec.yaml sdk: >=3.10.0; keep channel: stable so it always uses latest stable Flutter",
         "In .github/workflows/deploy.yml: remove the pinned flutter-version: \"3.32.0\" from the release job for the same reason",
         "All 8 CI jobs (backend-lint, backend-unit, backend-integration, backend-security, flutter-analyze, flutter-test, flutter-build-web, ontology-test) pass on the ralph/hhh-platform-unified branch",
         "Commit and push changes to branch ralph/hhh-platform-unified"
@@ -1057,7 +1057,7 @@
       "title": "Fix remaining CI failures: stale Flutter test and cypher-shell install",
       "description": "As a developer, I want all CI jobs to pass so the pipeline is fully green.",
       "acceptanceCriteria": [
-        "Delete mobile/test/widget_test.dart — it is the auto-generated counter smoke test that has no relevance to this project and causes flutter test to fail",
+        "Delete mobile/test/widget_test.dart \u2014 it is the auto-generated counter smoke test that has no relevance to this project and causes flutter test to fail",
         "In .github/workflows/ci.yml ontology-test job: replace the wget download of cypher-shell-5.latest.zip (URL returns HTTP error / exit code 8) with installation via the official Neo4j APT repository: add Neo4j GPG key, add neo4j apt source, run apt-get install -y cypher-shell",
         "The flutter-test CI job passes with 0 failures after widget_test.dart is removed",
         "The ontology-test CI job successfully installs cypher-shell and reaches the wait-for-services step without error",
@@ -1077,7 +1077,7 @@
         "In .github/workflows/ci.yml ontology-test job: remove 'Waiting for Fuseki...' from the wait-for-services step",
         "In .github/workflows/ci.yml ontology-test job: remove FUSEKI_URL and FUSEKI_DATASET from the env block of the 'Run ontology test suite' step",
         "In tests/ontology/test-ontology.sh: remove the run_sparql helper function and the assert_sparql_count helper function",
-        "In tests/ontology/test-ontology.sh: remove Test 4 ('All hhh:Habit instances have rdfs:label in Fuseki') and Test 5 ('Fuseki has >= 100 owl:Class entries') — these are the only two SPARQL-based tests; the remaining 3 Cypher-based tests must stay",
+        "In tests/ontology/test-ontology.sh: remove Test 4 ('All hhh:Habit instances have rdfs:label in Fuseki') and Test 5 ('Fuseki has >= 100 owl:Class entries') \u2014 these are the only two SPARQL-based tests; the remaining 3 Cypher-based tests must stay",
         "The ontology-test CI job passes using only Neo4j",
         "Commit and push changes to branch ralph/hhh-platform-unified"
       ],
@@ -1108,8 +1108,8 @@
       "title": "Fix ontology CI: group node seed data not found after seeding",
       "description": "As a developer, I want the ontology test suite to correctly verify group nodes so the CI ontology job is fully green.",
       "acceptanceCriteria": [
-        "Investigate why the 4 group-node tests (Group1–Group4) return 'got 0 rows' after the seed step — likely causes: (a) the multi-statement MERGE block passed as a single shell argument has shell-quoting issues due to YAML indentation, OR (b) n10s.graphconfig.init creates constraints that conflict with the MERGE labels, OR (c) n10s.onto.import.fetch via file:// URI fails silently leaving the graph in an inconsistent state",
-        "Fix the seed step in .github/workflows/ci.yml: split the single multi-statement cypher-shell call into separate cypher-shell calls — one per MERGE statement — to avoid any shell-quoting or multi-statement parsing issues",
+        "Investigate why the 4 group-node tests (Group1\u2013Group4) return 'got 0 rows' after the seed step \u2014 likely causes: (a) the multi-statement MERGE block passed as a single shell argument has shell-quoting issues due to YAML indentation, OR (b) n10s.graphconfig.init creates constraints that conflict with the MERGE labels, OR (c) n10s.onto.import.fetch via file:// URI fails silently leaving the graph in an inconsistent state",
+        "Fix the seed step in .github/workflows/ci.yml: split the single multi-statement cypher-shell call into separate cypher-shell calls \u2014 one per MERGE statement \u2014 to avoid any shell-quoting or multi-statement parsing issues",
         "Fix the assert_cypher_count function in tests/ontology/test-ontology.sh: the current logic counts lines starting with a digit (grep -cE '^[0-9]') rather than parsing the actual returned count value; rewrite it to correctly extract the integer value from the cypher-shell --format plain output (header line is the column name, second line is the value) and compare that value against the expected minimum",
         "The 4 group-node tests (Group1 nodes exist, Group2 nodes exist, Group3 nodes exist, Group4 nodes exist) all PASS in the ontology-test CI job",
         "The 2 existing passing tests (No donors missing group assignment, No orphaned hhh__Habit nodes) continue to pass",
@@ -1124,10 +1124,10 @@
       "title": "Add Docker build validation to CI and fix docker-compose.yml dev issues",
       "description": "As a developer, I want Dockerfile regressions caught in CI and local dev to work correctly.",
       "acceptanceCriteria": [
-        "Add a new CI job 'docker-build' in .github/workflows/ci.yml that runs 'docker build' for all four custom images: ./app (Node.js), ./API-service (Python recommender), ./fuseki, ./backup-service — job fails if any build fails",
+        "Add a new CI job 'docker-build' in .github/workflows/ci.yml that runs 'docker build' for all four custom images: ./app (Node.js), ./API-service (Python recommender), ./fuseki, ./backup-service \u2014 job fails if any build fails",
         "Add 'docker-build' to the needs list of the ci-passed gate job",
         "In docker-compose.yml: remove 'user: root' from the app service (Dockerfile already sets USER node)",
-        "In docker-compose.yml: fix depends_on — remove 'app' from mongo's depends_on (mongo does not depend on app); remove 'app' from translate's depends_on (translate does not depend on app)",
+        "In docker-compose.yml: fix depends_on \u2014 remove 'app' from mongo's depends_on (mongo does not depend on app); remove 'app' from translate's depends_on (translate does not depend on app)",
         "In docker-compose.yml: replace hardcoded MONGO_INITDB_ROOT_PASSWORD=admin with MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-admin} and MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin} to match the pattern used in docker-compose.prod.yml",
         "Commit and push to branch ralph/hhh-platform-unified"
       ],
@@ -1140,12 +1140,12 @@
       "title": "Full repo audit: identify and document all code quality issues",
       "description": "As a developer, I want a thorough professional audit of the entire repository so that every inconsistency, gap, and clean code violation is tracked as an actionable user story.",
       "acceptanceCriteria": [
-        "Act as a senior software engineer and audit the ENTIRE repository — every directory, every file type: Node.js backend (app/), Flutter app (mobile/), Python recommender (API-service/), Docker/compose files, shell scripts, CI/CD workflows, documentation, and configuration files",
+        "Act as a senior software engineer and audit the ENTIRE repository \u2014 every directory, every file type: Node.js backend (app/), Flutter app (mobile/), Python recommender (API-service/), Docker/compose files, shell scripts, CI/CD workflows, documentation, and configuration files",
         "For each problem found, write a concise entry in a new file AUDIT.md at the repo root. Each entry must include: file path(s), description of the problem, why it violates clean code / best practice, and the suggested fix",
         "Categories to check: hardcoded secrets or credentials, inconsistent environment variable usage across docker-compose.yml vs docker-compose.prod.yml vs stack.env, dead code or unused imports/variables, missing error handling, inconsistent naming conventions (camelCase vs snake_case vs PascalCase used incorrectly), duplicate logic that should be shared, missing or incorrect TypeScript/Dart types, TODO/FIXME/HACK comments left in code, outdated or mismatched dependency versions (package.json vs Dockerfile Node version vs CI node version), missing .gitignore entries for generated files, API endpoints without input validation, inconsistent HTTP status codes, missing rate limiting on any unprotected endpoints, Flutter services with hardcoded base URLs that should be configurable, shell scripts without set -euo pipefail, Docker images pinned to 'latest' (unpinned), docker-compose services missing health checks, missing or stale documentation, and any other issues a professional would flag in a code review",
-        "After completing AUDIT.md, add one new user story to prd.json for EACH distinct problem found — each story must have a clear title, description, and verifiable acceptance criteria following the existing prd.json format with sequential IDs starting from US-071",
+        "After completing AUDIT.md, add one new user story to prd.json for EACH distinct problem found \u2014 each story must have a clear title, description, and verifiable acceptance criteria following the existing prd.json format with sequential IDs starting from US-071",
         "Keep each generated user story small enough to complete in one Ralph iteration (one focused fix, not a sweeping refactor)",
-        "Do not fix anything yet — only audit, document, and create the user stories",
+        "Do not fix anything yet \u2014 only audit, document, and create the user stories",
         "Commit AUDIT.md and the updated prd.json to branch ralph/hhh-platform-unified"
       ],
       "priority": 70,
@@ -1173,7 +1173,7 @@
       "title": "Replace hardcoded production API URLs in Flutter services with configurable env vars",
       "description": "As a developer, I need Flutter service files to read API base URLs from compile-time environment variables so that dev, staging, and production builds can point to different backends without code changes.",
       "acceptanceCriteria": [
-        "Create mobile/lib/config/app_config.dart with constants: apiBaseUrl, keycloakUrl, wsBaseUrl — each using String.fromEnvironment with a localhost default",
+        "Create mobile/lib/config/app_config.dart with constants: apiBaseUrl, keycloakUrl, wsBaseUrl \u2014 each using String.fromEnvironment with a localhost default",
         "Replace hardcoded URL strings in mobile/lib/services/auth_service.dart, recommendation_service.dart, habit_service.dart, admin_service.dart, survey_service.dart, recommendation_ws_service.dart with references to AppConfig constants",
         "Update docs/guides/developer-onboarding.md to document --dart-define flags for each environment variable",
         "flutter analyze lib/ exits 0 with no issues"
@@ -1218,9 +1218,9 @@
       "description": "As a developer, I want the dead npm polyfill packages `fs` and `path` removed from the backend dependencies so that the package.json only contains packages actually used.",
       "acceptanceCriteria": [
         "Remove 'fs' and 'path' entries from dependencies in app/package.json",
-        "Run npm ci in app/ — exits 0",
-        "Run npm test in app/ — all tests still pass",
-        "Verify no app/ source file imports these as npm packages (grep for require('fs') or require('path') — any remaining uses are Node.js builtins, which is fine)"
+        "Run npm ci in app/ \u2014 exits 0",
+        "Run npm test in app/ \u2014 all tests still pass",
+        "Verify no app/ source file imports these as npm packages (grep for require('fs') or require('path') \u2014 any remaining uses are Node.js builtins, which is fine)"
       ],
       "priority": 75,
       "passes": true,
@@ -1248,7 +1248,7 @@
         "API-service/Dockerfile creates a non-root user (addgroup + adduser or useradd)",
         "USER directive switches to the non-root user before the CMD/ENTRYPOINT",
         "docker build ./API-service exits 0",
-        "No other Dockerfile changes — minimal diff"
+        "No other Dockerfile changes \u2014 minimal diff"
       ],
       "priority": 77,
       "passes": true,
@@ -1325,7 +1325,7 @@
       "title": "Backend: anonymous self-registration endpoint",
       "description": "As the app, I want to auto-create a Keycloak account on first launch without the user supplying any credentials.",
       "acceptanceCriteria": [
-        "Add POST /api/v1/onboard as a public (unauthenticated) Express route — no JWT required",
+        "Add POST /api/v1/onboard as a public (unauthenticated) Express route \u2014 no JWT required",
         "The route creates a new Keycloak user via the Keycloak Admin REST API with: username = crypto.randomUUID(), password = 32 random hex bytes (crypto.randomBytes(32).toString('hex'))",
         "The route immediately performs a Keycloak direct-grant token exchange (grant_type=password) with the new credentials and returns the access_token, refresh_token, expires_in, username, and password in the response body",
         "Rate limit this endpoint to 5 requests per IP per hour (separate from the general rate limiter) to prevent account farming",
@@ -1344,8 +1344,8 @@
       "acceptanceCriteria": [
         "Create mobile/lib/screens/onboarding/welcome_screen.dart shown only on first app launch (check a flag in flutter_secure_storage)",
         "The welcome screen has: HHH/HabShare logo, a short one-paragraph description of the study, and a 'Get Started' button",
-        "Tapping Get Started shows a 3-step PageView walkthrough: Step 1 – Donate a Habit (explain the habit donation flow with an icon), Step 2 – Explore & Annotate (explain the graph explorer), Step 3 – Get Recommendations (explain the recommendation engine)",
-        "Each walkthrough step has an illustration/icon, a title, and 2–3 sentence description",
+        "Tapping Get Started shows a 3-step PageView walkthrough: Step 1 \u2013 Donate a Habit (explain the habit donation flow with an icon), Step 2 \u2013 Explore & Annotate (explain the graph explorer), Step 3 \u2013 Get Recommendations (explain the recommendation engine)",
+        "Each walkthrough step has an illustration/icon, a title, and 2\u20133 sentence description",
         "A 'Next' button advances pages; on the last page the button reads 'Continue' and navigates to the passphrase generation screen (US-085)",
         "A Skip link is visible on all pages except the last and jumps directly to Continue",
         "If the onboarding flag is already set in secure storage (returning user), the welcome screen is bypassed entirely",
@@ -1362,7 +1362,7 @@
       "acceptanceCriteria": [
         "Create mobile/lib/screens/onboarding/passphrase_screen.dart",
         "On arrival at this screen, call POST /api/v1/onboard to auto-create a Keycloak user; show a loading spinner while waiting",
-        "On success, derive a human-readable passphrase from the returned username and password: encode both as a single BIP39-style mnemonic using the standard English BIP39 wordlist (add the bip39 or similar Dart package, or include the wordlist as an asset) — the passphrase must be at least 12 words",
+        "On success, derive a human-readable passphrase from the returned username and password: encode both as a single BIP39-style mnemonic using the standard English BIP39 wordlist (add the bip39 or similar Dart package, or include the wordlist as an asset) \u2014 the passphrase must be at least 12 words",
         "Display the passphrase as a grid of numbered words in a clearly readable style with a warning banner: 'Write these words down. This is the only way to recover your account if you lose your phone.'",
         "Show a 'Copy to clipboard' button and a 'I have written it down' confirmation checkbox",
         "The 'Continue' button is disabled until the checkbox is checked",
@@ -1394,12 +1394,12 @@
     {
       "id": "US-087",
       "title": "Flutter: remove username/password login screen, wire passphrase onboarding as entry point",
-      "description": "As a user, I should never see a username/password login form — the passphrase flow replaces it entirely.",
+      "description": "As a user, I should never see a username/password login form \u2014 the passphrase flow replaces it entirely.",
       "acceptanceCriteria": [
-        "Remove or repurpose mobile/lib/screens/login_screen.dart — the username/password form fields should no longer appear in the normal user flow",
-        "Update the app router (main.dart / go_router config) so that: first launch → welcome_screen → passphrase_screen → shell_screen; returning user (token in secure storage) → shell_screen directly",
+        "Remove or repurpose mobile/lib/screens/login_screen.dart \u2014 the username/password form fields should no longer appear in the normal user flow",
+        "Update the app router (main.dart / go_router config) so that: first launch \u2192 welcome_screen \u2192 passphrase_screen \u2192 shell_screen; returning user (token in secure storage) \u2192 shell_screen directly",
         "The auth_service.dart PKCE login flow (FlutterAppAuth) is replaced by the direct token storage approach from US-085/086 for regular users",
-        "Admin users (those with the admin Keycloak role) retain the ability to log in — add a hidden 'Admin login' text button on the welcome screen that triggers the existing PKCE browser flow for admins only",
+        "Admin users (those with the admin Keycloak role) retain the ability to log in \u2014 add a hidden 'Admin login' text button on the welcome screen that triggers the existing PKCE browser flow for admins only",
         "Update login_screen_test.dart or remove it if the screen no longer exists; ensure all widget tests still pass",
         "flutter analyze passes"
       ],
@@ -1414,11 +1414,11 @@
       "acceptanceCriteria": [
         "Add the Figtree font from Google Fonts (add google_fonts package to pubspec.yaml) and set it as the app's default TextTheme font",
         "Define a ThemeData in main.dart using the HabShare brand colors: primary #45b700 (green), primaryDark #237c00, surface/card background #dadada, accent/secondary #e679ab (pink), scaffoldBackgroundColor white",
-        "Update all primary buttons app-wide to use: background #45b700, white text, borderRadius 20px, bold font — with an outlined variant (transparent background, green border, green text)",
+        "Update all primary buttons app-wide to use: background #45b700, white text, borderRadius 20px, bold font \u2014 with an outlined variant (transparent background, green border, green text)",
         "Update all Card widgets app-wide to use: borderRadius 20px, border 2px solid primary green, boxShadow matching the website's 0px 4px 4px rgba(0,0,0,0.25)",
         "Update the app bar / navigation bar to use the dark charcoal background #454446 with white text and icons, matching the site's navbar",
-        "Apply the green badge/label style (#4cd49e → #51d075 gradient) to status chips and category labels in the explore and recommend screens",
-        "Do not change any layout logic or screen structure — only colors, typography, and shape/shadow styling",
+        "Apply the green badge/label style (#4cd49e \u2192 #51d075 gradient) to status chips and category labels in the explore and recommend screens",
+        "Do not change any layout logic or screen structure \u2014 only colors, typography, and shape/shadow styling",
         "flutter analyze passes",
         "Verify in browser using dev-browser skill"
       ],
@@ -1465,10 +1465,10 @@
       "title": "Design and implement minimalistic app icon representing health habits and graph databases",
       "description": "As a user, I want a bold, minimalistic app icon that is immediately recognisable on a crowded home screen and communicates the app's theme of health habits connected by a graph network.",
       "acceptanceCriteria": [
-        "Design concept: a single bold node (circle) with 3–4 thick connecting edges radiating outward, where the terminal nodes are small leaf or heart shapes — keeping the total shape count under 8 so it reads clearly at 60×60px on a home screen",
-        "Color palette: primary node and edges in HabShare green (#45b700) on a clean white or very dark charcoal (#454446) background — maximum 2 colors so it is distinguishable at small sizes",
-        "NO fine-grained details, gradients, or text — the icon must read as a clear silhouette at 29×29px (notification) and 1024×1024px (App Store) without looking cluttered",
-        "Generate the master icon as a 1024×1024 PNG at mobile/assets/icon/app_icon.png using Python (Pillow) — the generation script must be committed at mobile/assets/icon/generate_icon.py so the icon is fully reproducible",
+        "Design concept: a single bold node (circle) with 3\u20134 thick connecting edges radiating outward, where the terminal nodes are small leaf or heart shapes \u2014 keeping the total shape count under 8 so it reads clearly at 60\u00d760px on a home screen",
+        "Color palette: primary node and edges in HabShare green (#45b700) on a clean white or very dark charcoal (#454446) background \u2014 maximum 2 colors so it is distinguishable at small sizes",
+        "NO fine-grained details, gradients, or text \u2014 the icon must read as a clear silhouette at 29\u00d729px (notification) and 1024\u00d71024px (App Store) without looking cluttered",
+        "Generate the master icon as a 1024\u00d71024 PNG at mobile/assets/icon/app_icon.png using Python (Pillow) \u2014 the generation script must be committed at mobile/assets/icon/generate_icon.py so the icon is fully reproducible",
         "Add flutter_launcher_icons: ^0.14.0 to pubspec.yaml dev_dependencies and a flutter_launcher_icons config: image_path: assets/icon/app_icon.png, android: true, ios: true, web.generate: true",
         "Run flutter pub run flutter_launcher_icons to generate all platform icon sizes",
         "Verify generated icons exist: android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png and ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json",
@@ -1476,7 +1476,7 @@
       ],
       "priority": 91,
       "passes": true,
-      "notes": "Generated 1024x1024 PNG icon with Python/Pillow: charcoal (#454446) circular background with a graph network of 9 nodes (5 heart-shaped, 4 circle-with-highlight) in HabShare green (#45b700) connected by white edges. Added flutter_launcher_icons: ^0.14.0 to dev_dependencies. Added flutter_launcher_icons config + assets section to pubspec.yaml. Ran flutter pub run flutter_launcher_icons — generated Android mipmap-*, iOS AppIcon.appiconset, and web icons. flutter analyze passes with no issues."
+      "notes": "Generated 1024x1024 PNG icon with Python/Pillow: charcoal (#454446) circular background with a graph network of 9 nodes (5 heart-shaped, 4 circle-with-highlight) in HabShare green (#45b700) connected by white edges. Added flutter_launcher_icons: ^0.14.0 to dev_dependencies. Added flutter_launcher_icons config + assets section to pubspec.yaml. Ran flutter pub run flutter_launcher_icons \u2014 generated Android mipmap-*, iOS AppIcon.appiconset, and web icons. flutter analyze passes with no issues."
     },
     {
       "id": "US-092",
@@ -1514,9 +1514,9 @@
       "description": "As a user, I want to see 'Health Habit Hub' as the app name under the icon on my home screen, not 'hhh'.",
       "acceptanceCriteria": [
         "In mobile/ios/Runner/Info.plist: set CFBundleName value to 'Health Habit Hub' (currently 'hhh')",
-        "CFBundleDisplayName in Info.plist is already 'Health Habit Hub' — leave it unchanged",
+        "CFBundleDisplayName in Info.plist is already 'Health Habit Hub' \u2014 leave it unchanged",
         "In mobile/android/app/src/main/AndroidManifest.xml: set android:label to 'Health Habit Hub' (currently 'hhh')",
-        "The pubspec.yaml `name:` field (hhh) is the Dart package identifier — do NOT change it",
+        "The pubspec.yaml `name:` field (hhh) is the Dart package identifier \u2014 do NOT change it",
         "Build and run on iOS simulator: the app name shown under the icon reads 'Health Habit Hub'",
         "flutter analyze passes"
       ],
@@ -1527,9 +1527,9 @@
     {
       "id": "US-095",
       "title": "Recheck and verify US-091 through US-094 are fully complete",
-      "description": "As a developer, I want to confirm that the icon, SdkRoot fix, and app name changes from US-091–094 are all correctly implemented and working end-to-end.",
+      "description": "As a developer, I want to confirm that the icon, SdkRoot fix, and app name changes from US-091\u2013094 are all correctly implemented and working end-to-end.",
       "acceptanceCriteria": [
-        "US-091 (icon): mobile/assets/icon/app_icon.png exists at 1024×1024px; mobile/assets/icon/generate_icon.py exists and re-running it regenerates the same PNG; generated platform icons exist at android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png and ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json; icon is visually a bold minimalistic graph node (not the default Flutter icon)",
+        "US-091 (icon): mobile/assets/icon/app_icon.png exists at 1024\u00d71024px; mobile/assets/icon/generate_icon.py exists and re-running it regenerates the same PNG; generated platform icons exist at android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png and ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json; icon is visually a bold minimalistic graph node (not the default Flutter icon)",
         "US-092 (CocoaPods): running `cd mobile/ios && pod install` completes with zero [!] warnings",
         "US-093 (SdkRoot): running `flutter build ios --no-codesign 2>&1 | grep -i sdkroot` returns no matches",
         "US-094 (app name): mobile/ios/Runner/Info.plist CFBundleName is 'Health Habit Hub'; mobile/android/app/src/main/AndroidManifest.xml android:label is 'Health Habit Hub'",
@@ -1568,7 +1568,7 @@
         "Redis caching: cache key = SHA-256 hash of (sentence, language); cache TTL configurable via env REDIS_TTL_SECONDS (default 86400)",
         "If Redis is unavailable the endpoint still functions (graceful fallback, logs warning)",
         "OpenAPI spec auto-generated by FastAPI and accessible at /docs",
-        "Unit test covers: habit sentence → is_habit=true, non-habit sentence → is_habit=false, cache hit returns cached value",
+        "Unit test covers: habit sentence \u2192 is_habit=true, non-habit sentence \u2192 is_habit=false, cache hit returns cached value",
         "Typecheck passes"
       ],
       "priority": 97,
@@ -1582,7 +1582,7 @@
       "acceptanceCriteria": [
         "POST /api/v1/llm/classify-context endpoint added",
         "Request body: { \"uuid\": string, \"sentence\": string, \"language\": string }",
-        "Response body includes all 7 context dimensions: TIME, PHYSICAL_SETTING, PRIOR_BEHAVIOR, OTHER_PEOPLE, INTERNAL_STATE, BEHAVIOR, REASONING — each as a list of strings (empty list if not present)",
+        "Response body includes all 7 context dimensions: TIME, PHYSICAL_SETTING, PRIOR_BEHAVIOR, OTHER_PEOPLE, INTERNAL_STATE, BEHAVIOR, REASONING \u2014 each as a list of strings (empty list if not present)",
         "Prompt ported from hjt branch; stored in prompts/classify_context.txt",
         "Redis caching applied (same key strategy as US-097)",
         "Unit test covers: known habit sentence produces non-empty BEHAVIOR field; non-habit input handled gracefully",
@@ -1600,8 +1600,8 @@
         "POST /api/v1/llm/map-bcio endpoint added",
         "Request body: { \"uuid\": string, \"context_phrases\": { [dimension: string]: string[] } }",
         "Response body: { \"mappings\": [{ \"phrase\": string, \"dimension\": string, \"bcio_concept_id\": string, \"bcio_concept_label\": string, \"confidence\": number }] }",
-        "Mapping uses dense vector similarity against bcio.owl concepts (BAAI/bge-m3 embeddings or OpenAI text-embedding-3-small — configurable via env EMBEDDING_MODEL)",
-        "confidence is a float 0–1 representing cosine similarity score",
+        "Mapping uses dense vector similarity against bcio.owl concepts (BAAI/bge-m3 embeddings or OpenAI text-embedding-3-small \u2014 configurable via env EMBEDDING_MODEL)",
+        "confidence is a float 0\u20131 representing cosine similarity score",
         "Only mappings above BCIO_MIN_CONFIDENCE threshold (default 0.75, env-configurable) are returned",
         "BCIO concept index built once at startup and cached in memory; rebuilt if bcio.owl changes (file hash check)",
         "Unit test: known BCIO phrase maps to correct concept with confidence > 0.75",
@@ -1609,7 +1609,7 @@
       ],
       "priority": 99,
       "passes": true,
-      "notes": "Created API-service/data/bcio.owl (minimal stub with 32 representative BCIO concepts across 7 dimensions). Created API-service/routers/map_bcio.py: POST /api/v1/llm/map-bcio — parses OWL at startup via stdlib xml.etree.ElementTree, builds embedding index using OpenAI text-embedding-3-small (or BAAI/bge-m3 via sentence-transformers if installed), caches in _INDEX dict keyed by SHA-256 file hash (rebuilt on file change), computes cosine similarity via numpy. EMBEDDING_MODEL and BCIO_MIN_CONFIDENCE (default 0.75) are env-configurable. Added numpy>=1.26.0 to requirements.txt. Registered router in main.py. Created 5 unit tests in API-service/tests/test_map_bcio.py — all pass."
+      "notes": "Created API-service/data/bcio.owl (minimal stub with 32 representative BCIO concepts across 7 dimensions). Created API-service/routers/map_bcio.py: POST /api/v1/llm/map-bcio \u2014 parses OWL at startup via stdlib xml.etree.ElementTree, builds embedding index using OpenAI text-embedding-3-small (or BAAI/bge-m3 via sentence-transformers if installed), caches in _INDEX dict keyed by SHA-256 file hash (rebuilt on file change), computes cosine similarity via numpy. EMBEDDING_MODEL and BCIO_MIN_CONFIDENCE (default 0.75) are env-configurable. Added numpy>=1.26.0 to requirements.txt. Registered router in main.py. Created 5 unit tests in API-service/tests/test_map_bcio.py \u2014 all pass."
     },
     {
       "id": "US-100",
@@ -1617,20 +1617,20 @@
       "description": "As a user, I want my donated habit stored in Neo4j as a structured graph so researchers can analyse habits and their context across the study population.",
       "acceptanceCriteria": [
         "Node.js backend gains POST /api/v1/habits/donate route (proxied through from Flutter)",
-        "Route orchestrates the full M1.1 → M1.2 → M1.3 pipeline via internal calls to API-service",
+        "Route orchestrates the full M1.1 \u2192 M1.2 \u2192 M1.3 pipeline via internal calls to API-service",
         "If M1.1 returns is_habit=false, the sentence is stored in MongoDB (habits collection) with is_habit: false and the user is informed; no Neo4j write occurs",
         "If is_habit=true: Neo4j Habit node created with properties: uuid, sentence, language, is_habit: true, confidence, userID (Keycloak sub), created_at",
         "For each non-empty context dimension, a Context node is created (or matched if identical text exists) and linked via HAS_CONTEXT { dimension } relationship",
         "For each BCIO mapping returned by M1.3: if a BCIOConcept node with that bcio_concept_id already exists, it is reused (not duplicated); a MAPS_TO { confidence, phrase, dimension } relationship is created from the Context node to the BCIOConcept node",
         "Habit node linked to MongoDB user via userID property (Keycloak sub UUID)",
-        "If two users donate similar habits that map to the same BCIO concept, they share the single BCIOConcept node — confirmed by Cypher query in a test",
+        "If two users donate similar habits that map to the same BCIO concept, they share the single BCIOConcept node \u2014 confirmed by Cypher query in a test",
         "Flutter receives success/failure response with human-readable message",
         "Integration test: donate two similar habits from two different mock users, verify one shared BCIOConcept node exists in Neo4j",
         "Typecheck passes"
       ],
       "priority": 100,
       "passes": true,
-      "notes": "Added POST /api/v1/habits/donate to habitsRouter.js. Route orchestrates M1.1→M1.2→M1.3 via fetch to API-service (configurable via apiServiceUrl injection or API_SERVICE_URL env). Non-habits stored in MongoDB habits collection with is_habit:false. Habits trigger Neo4j writes: CREATE Habit node, MERGE Context nodes with HAS_CONTEXT relationships, MERGE BCIOConcept nodes with MAPS_TO relationships. BCIOConcept nodes are MERGEd by bcio_concept_id so two users with similar habits share one node. Integration tests in habits.donate.test.js cover auth, validation, non-habit path, valid habit path, Neo4j Habit node creation, and the shared BCIOConcept test."
+      "notes": "Added POST /api/v1/habits/donate to habitsRouter.js. Route orchestrates M1.1\u2192M1.2\u2192M1.3 via fetch to API-service (configurable via apiServiceUrl injection or API_SERVICE_URL env). Non-habits stored in MongoDB habits collection with is_habit:false. Habits trigger Neo4j writes: CREATE Habit node, MERGE Context nodes with HAS_CONTEXT relationships, MERGE BCIOConcept nodes with MAPS_TO relationships. BCIOConcept nodes are MERGEd by bcio_concept_id so two users with similar habits share one node. Integration tests in habits.donate.test.js cover auth, validation, non-habit path, valid habit path, Neo4j Habit node creation, and the shared BCIOConcept test."
     },
     {
       "id": "US-101",
@@ -1641,15 +1641,15 @@
         "For each such habit: calls M1.2 (context extraction) then M1.3 (BCIO mapping) via the API-service HTTP API",
         "Creates/merges Context nodes, BCIOConcept nodes, and relationships as per US-100",
         "Sets migrated_to_bcio: true and migrated_at: <timestamp> on the Habit node after successful enrichment",
-        "Script is idempotent — safe to re-run; already-migrated nodes are skipped",
-        "Script logs progress: Processed N/Total habits — M succeeded, K failed",
+        "Script is idempotent \u2014 safe to re-run; already-migrated nodes are skipped",
+        "Script logs progress: Processed N/Total habits \u2014 M succeeded, K failed",
         "Failed habits logged with UUID and error reason; do not abort the whole run",
         "Script documented in docs/migration.md with run instructions",
         "Typecheck passes"
       ],
       "priority": 101,
       "passes": true,
-      "notes": "Created scripts/migrate-habits-bcio.js — reads all Habit nodes where migrated_to_bcio is absent/false, calls M1.2 classify-context then M1.3 map-bcio for each, MERGEs Context/BCIOConcept nodes and relationships, marks each Habit with migrated_to_bcio:true and migrated_at. Supports --dry-run flag. Logs Processed N/Total — M succeeded, K failed. Exits 1 if any failures. Created docs/migration.md with full run instructions."
+      "notes": "Created scripts/migrate-habits-bcio.js \u2014 reads all Habit nodes where migrated_to_bcio is absent/false, calls M1.2 classify-context then M1.3 map-bcio for each, MERGEs Context/BCIOConcept nodes and relationships, marks each Habit with migrated_to_bcio:true and migrated_at. Supports --dry-run flag. Logs Processed N/Total \u2014 M succeeded, K failed. Exits 1 if any failures. Created docs/migration.md with full run instructions."
     },
     {
       "id": "US-102",
@@ -1698,22 +1698,22 @@
         "form_responses MongoDB collection has an index on { userId: 1, questionnaireSlug: 1, submitted_at: -1 }",
         "GET /api/v1/questionnaire-responses/me returns all responses for the authenticated user, ordered by most recent first",
         "GET /api/v1/questionnaire-responses/me/:slug returns the most recent response for a given questionnaire slug",
-        "Backend validates JWT and extracts sub claim as userId — no client-supplied userId accepted",
-        "Integration test: submit a SLIQ response → fetch by slug → verify all answers match",
+        "Backend validates JWT and extracts sub claim as userId \u2014 no client-supplied userId accepted",
+        "Integration test: submit a SLIQ response \u2192 fetch by slug \u2192 verify all answers match",
         "Typecheck/lint passes"
       ],
       "priority": 104,
       "passes": true,
-      "notes": "Added GET /me and GET /me/:slug endpoints to questionnaireResponsesRouter.js. createIndex({ userId: 1, questionnaireSlug: 1, submitted_at: -1 }) called eagerly (non-blocking, errors swallowed for mock-DB compatibility). userId always extracted from req.user.sub (JWT sub claim). Integration test covers: auth enforcement, submit SLIQ → fetch by slug → verify answers, ordering by most recent first, user isolation (user B cannot see user A's responses). 9 new tests pass; 249 total with 7 pre-existing external-service failures."
+      "notes": "Added GET /me and GET /me/:slug endpoints to questionnaireResponsesRouter.js. createIndex({ userId: 1, questionnaireSlug: 1, submitted_at: -1 }) called eagerly (non-blocking, errors swallowed for mock-DB compatibility). userId always extracted from req.user.sub (JWT sub claim). Integration test covers: auth enforcement, submit SLIQ \u2192 fetch by slug \u2192 verify answers, ordering by most recent first, user isolation (user B cannot see user A's responses). 9 new tests pass; 249 total with 7 pre-existing external-service failures."
     },
     {
       "id": "US-105",
-      "title": "Admin panel — standalone web app scaffold",
+      "title": "Admin panel \u2014 standalone web app scaffold",
       "description": "As a researcher, I need a simple standalone admin web app so I can manage questionnaires and system settings without touching the Flutter mobile app.",
       "acceptanceCriteria": [
         "New directory admin/ at repo root containing a Next.js (App Router) project",
         "admin/ has its own Dockerfile and is added to docker-compose.yml as service h3-admin on an internal port with a Traefik label for admin.${PATH_SUFFIX:-localhost}",
-        "Admin app authenticates via Keycloak OIDC (same realm as the rest of the platform); only users with admin or researcher role can log in — others see an 'Access Denied' page",
+        "Admin app authenticates via Keycloak OIDC (same realm as the rest of the platform); only users with admin or researcher role can log in \u2014 others see an 'Access Denied' page",
         "Navigation sidebar with sections: Questionnaires, Settings (placeholder for future sections)",
         "Responsive layout suitable for desktop browser (minimum 1280px wide)",
         "App built with TypeScript; ESLint + Prettier configured",
@@ -1726,7 +1726,7 @@
     },
     {
       "id": "US-106",
-      "title": "Admin panel — questionnaire CRUD",
+      "title": "Admin panel \u2014 questionnaire CRUD",
       "description": "As a researcher, I want to create, edit, activate/deactivate, and delete questionnaire definitions from the admin panel so I can configure which forms participants see without a deployment.",
       "acceptanceCriteria": [
         "Questionnaire list page shows all questionnaires with: slug, title, active status, question count, last updated",
@@ -1789,7 +1789,7 @@
         "Request: { \"rag_query\": string }",
         "PDFs in API-service/kb/**/*.pdf are indexed on first startup; each PDF gets a one-time LLM-generated summary stored in API-service/kb/_meta/ as <filename>.summary.json",
         "Only dense vector embeddings used (OpenAI text-embedding-3-small or configured EMBEDDING_MODEL)",
-        "Vector index stored in-memory (or Milvus if already available) — configurable via env VECTOR_STORE (memory | milvus)",
+        "Vector index stored in-memory (or Milvus if already available) \u2014 configurable via env VECTOR_STORE (memory | milvus)",
         "CRUD support for KB: POST /api/v1/kb (upload PDF), GET /api/v1/kb (list), DELETE /api/v1/kb/:filename (remove + re-index)",
         "Changes to the KB directory are detected at query time (file hash check) and the index is updated incrementally",
         "Response: { \"sources\": [{ \"filename\": string, \"category\": string, \"excerpt\": string, \"score\": number }] }",
@@ -1806,7 +1806,7 @@
       "acceptanceCriteria": [
         "POST /api/v1/llm/recommend endpoint added",
         "Request: { \"user_id\": string, \"goal\": string, \"session_id\": string }",
-        "Internally orchestrates M3.1 → M3.2 → M3.3 → M3.5 in sequence (or parallel where possible)",
+        "Internally orchestrates M3.1 \u2192 M3.2 \u2192 M3.3 \u2192 M3.5 in sequence (or parallel where possible)",
         "LLM call combines: selected habits (M3.1), profile summary (M3.2), RAG sources (M3.3), and any prior feedback for same goal (M3.6 comments collection from MongoDB)",
         "Response: { \"recommendation_id\": string, \"goal\": string, \"recommendations\": [{ \"title\": string, \"body\": string, \"rationale\": string, \"sources\": [{ \"filename\", \"excerpt\" }] }], \"generated_at\": string }",
         "Recommendation stored in MongoDB recommendations collection with userId, goal, session_id, recommendations[], generated_at",
@@ -1841,7 +1841,7 @@
       "acceptanceCriteria": [
         "mobile/lib/features/recommendation/ module created",
         "Goal input screen: text field + 'Get Recommendations' button",
-        "On submit, loading screen cycles through 4 animated phases: 'Asking experts…' (book icon), 'Looking through your habits database…' (animated force-directed graph, 5–8 nodes), 'Reading academic papers…' (document with scanning line), 'Generating your personalised recommendations…' (pulsing brain/sparkle icon)",
+        "On submit, loading screen cycles through 4 animated phases: 'Asking experts\u2026' (book icon), 'Looking through your habits database\u2026' (animated force-directed graph, 5\u20138 nodes), 'Reading academic papers\u2026' (document with scanning line), 'Generating your personalised recommendations\u2026' (pulsing brain/sparkle icon)",
         "Each phase shows for a minimum of 2 seconds even if the API responds faster",
         "On completion, recommendation results screen shows cards with: title, body text, rationale, collapsible Sources section with PDF excerpt",
         "User can submit a text comment per recommendation (triggers US-111 feedback endpoint)",
@@ -1856,7 +1856,7 @@
     },
     {
       "id": "US-113",
-      "title": "Admin panel — knowledge base management",
+      "title": "Admin panel \u2014 knowledge base management",
       "description": "As a researcher, I want to manage the PDF knowledge base from the admin panel so I can add or remove academic papers without touching the server filesystem.",
       "acceptanceCriteria": [
         "Admin panel 'Knowledge Base' section (new sidebar entry) lists all PDFs in API-service/kb/ grouped by category folder",
@@ -1873,7 +1873,7 @@
     },
     {
       "id": "US-114",
-      "title": "Backend — tone-preserving English translation of non-English habits",
+      "title": "Backend \u2014 tone-preserving English translation of non-English habits",
       "description": "As a researcher, I want English translations of habits to read naturally and preserve the donor's personal tone, not just be a literal machine-translation output.",
       "acceptanceCriteria": [
         "After LibreTranslate produces an English draft, a second LLM step refines tone while keeping meaning identical",
@@ -1884,11 +1884,11 @@
       ],
       "priority": 114,
       "passes": true,
-      "notes": "Requires LLM service integration; reuse existing LLM endpoint from US-091–US-100 area"
+      "notes": "Requires LLM service integration; reuse existing LLM endpoint from US-091\u2013US-100 area"
     },
     {
       "id": "US-115",
-      "title": "Backend — German translation for English-donated habits",
+      "title": "Backend \u2014 German translation for English-donated habits",
       "description": "As a German-speaking user, I want to see habits donated in English displayed in German, so I can read the full catalogue in my language.",
       "acceptanceCriteria": [
         "insertDonateData calls donation.translate('de', config) when data.language starts with 'en'",
@@ -1903,7 +1903,7 @@
     },
     {
       "id": "US-116",
-      "title": "Backend — habits API returns original + translations",
+      "title": "Backend \u2014 habits API returns original + translations",
       "description": "As a Flutter developer, I want the GET habits endpoint to include both the original text and available translations so the app can display the correct language without a second request.",
       "acceptanceCriteria": [
         "GET /api/v1/habits response includes original, translationEN, and translationDE fields per habit (null if not available)",
@@ -1917,7 +1917,7 @@
     },
     {
       "id": "US-117",
-      "title": "Flutter — i18n scaffold (flutter_localizations + ARB files)",
+      "title": "Flutter \u2014 i18n scaffold (flutter_localizations + ARB files)",
       "description": "As a developer, I need the Flutter project wired for localisation so that all UI strings can be translated without touching widget code.",
       "acceptanceCriteria": [
         "pubspec.yaml adds flutter_localizations and intl dependencies",
@@ -1929,11 +1929,11 @@
       ],
       "priority": 117,
       "passes": true,
-      "notes": "Foundation story — must land before US-118, US-119, US-121, US-122, US-123, US-124, US-130"
+      "notes": "Foundation story \u2014 must land before US-118, US-119, US-121, US-122, US-123, US-124, US-130"
     },
     {
       "id": "US-118",
-      "title": "Flutter — extract all hardcoded English UI strings",
+      "title": "Flutter \u2014 extract all hardcoded English UI strings",
       "description": "As a developer, I want every user-visible string in the Flutter app referenced via AppLocalizations.of(context) so that swapping language requires only an ARB file change.",
       "acceptanceCriteria": [
         "All hardcoded strings in donate_screen.dart, explore_screen.dart, admin_settings_screen.dart, and profile_screen.dart replaced with localisation keys",
@@ -1948,12 +1948,12 @@
     },
     {
       "id": "US-119",
-      "title": "Flutter — German translations (de.arb)",
+      "title": "Flutter \u2014 German translations (de.arb)",
       "description": "As a German-speaking user, I want the app UI to appear fully in German when the language is set to German.",
       "acceptanceCriteria": [
         "app_de.arb provides a German value for every key present in app_en.arb",
         "No key is missing (flutter gen-l10n produces no warnings about missing translations)",
-        "Spot-check: 'Donate a Habit' → 'Gewohnheit spenden', 'Settings' → 'Einstellungen', 'Explore Habits' → 'Gewohnheiten entdecken'",
+        "Spot-check: 'Donate a Habit' \u2192 'Gewohnheit spenden', 'Settings' \u2192 'Einstellungen', 'Explore Habits' \u2192 'Gewohnheiten entdecken'",
         "Verify in browser using dev-browser skill (switch locale to de and confirm German strings appear)"
       ],
       "priority": 119,
@@ -1962,7 +1962,7 @@
     },
     {
       "id": "US-120",
-      "title": "Backend — user preferredLanguage field + API endpoint",
+      "title": "Backend \u2014 user preferredLanguage field + API endpoint",
       "description": "As a Flutter app, I need to persist the user's chosen language on the backend so the preference is consistent across devices.",
       "acceptanceCriteria": [
         "User profile schema gains optional preferredLanguage field accepting 'en' or 'de' (default 'en')",
@@ -1977,7 +1977,7 @@
     },
     {
       "id": "US-121",
-      "title": "Flutter — user settings screen with language toggle",
+      "title": "Flutter \u2014 user settings screen with language toggle",
       "description": "As a user, I want a settings screen where I can switch the app language between German and English.",
       "acceptanceCriteria": [
         "A Settings screen accessible from main navigation contains a Language row with a dropdown showing English / Deutsch",
@@ -1993,7 +1993,7 @@
     },
     {
       "id": "US-122",
-      "title": "Flutter — apply language preference on startup",
+      "title": "Flutter \u2014 apply language preference on startup",
       "description": "As a user, I want my saved language preference applied immediately when I open the app, without manually re-selecting it each session.",
       "acceptanceCriteria": [
         "On startup after auth, the app fetches GET /api/v1/users/me and reads preferredLanguage",
@@ -2009,7 +2009,7 @@
     },
     {
       "id": "US-123",
-      "title": "Flutter — explore screen displays habits in user's language",
+      "title": "Flutter \u2014 explore screen displays habits in user's language",
       "description": "As a German-speaking user, I want habits in the explore feed to appear in German so I can read and annotate them naturally.",
       "acceptanceCriteria": [
         "ExploreScreen passes current locale as ?lang=en|de to GET /api/v1/habits",
@@ -2024,7 +2024,7 @@
     },
     {
       "id": "US-124",
-      "title": "Flutter — donation survey renders in user's language",
+      "title": "Flutter \u2014 donation survey renders in user's language",
       "description": "As a user, I want the habit donation survey to appear in my chosen language so I can donate habits without switching mental context.",
       "acceptanceCriteria": [
         "DonateScreen passes current locale as ?lang=de|en when fetching GET /api/v1/surveys/{id}/render",
@@ -2039,7 +2039,7 @@
     },
     {
       "id": "US-125",
-      "title": "CI — fix Neo4j health-check in backend-integration job",
+      "title": "CI \u2014 fix Neo4j health-check in backend-integration job",
       "description": "As a CI maintainer, I need the backend-integration job's Neo4j service container to use a reliable health-check so integration tests don't run against an unready database.",
       "acceptanceCriteria": [
         "backend-integration Neo4j service --health-cmd changed to: wget -q -O /dev/null http://localhost:7474 || exit 1",
@@ -2052,7 +2052,7 @@
     },
     {
       "id": "US-126",
-      "title": "Backend — remove unused deeplx npm dependency",
+      "title": "Backend \u2014 remove unused deeplx npm dependency",
       "description": "As a developer, I want the dependency list to only contain packages that are actually used so that npm audit results are accurate and install times stay short.",
       "acceptanceCriteria": [
         "deeplx removed from app/package.json and app/package-lock.json regenerated",
@@ -2065,7 +2065,7 @@
     },
     {
       "id": "US-127",
-      "title": "Backend — English habits never get a German translation stored",
+      "title": "Backend \u2014 English habits never get a German translation stored",
       "description": "As a German-speaking user, I want to see habits originally donated in English in German, but the backend currently skips translation entirely for English-origin habits.",
       "acceptanceCriteria": [
         "Resolved when US-115 acceptance criteria are fully met",
@@ -2077,7 +2077,7 @@
     },
     {
       "id": "US-128",
-      "title": "Backend — habits explore API has no language parameter",
+      "title": "Backend \u2014 habits explore API has no language parameter",
       "description": "As a developer, I need the habits API to accept a ?lang= parameter so the Flutter explore screen can request habits in the user's language.",
       "acceptanceCriteria": [
         "Resolved when US-116 acceptance criteria are fully met",
@@ -2089,7 +2089,7 @@
     },
     {
       "id": "US-129",
-      "title": "Flutter — DonateScreen sends no language to survey render endpoint",
+      "title": "Flutter \u2014 DonateScreen sends no language to survey render endpoint",
       "description": "As a developer, I need the donation survey to be fetched with the user's language so the form renders in the correct language.",
       "acceptanceCriteria": [
         "Resolved when US-124 acceptance criteria are fully met",
@@ -2101,7 +2101,7 @@
     },
     {
       "id": "US-130",
-      "title": "Flutter — admin settings screen strings not covered by i18n effort",
+      "title": "Flutter \u2014 admin settings screen strings not covered by i18n effort",
       "description": "As an admin, I want the admin settings screen to respect the app language so the UI is consistent regardless of which language is active.",
       "acceptanceCriteria": [
         "All user-visible strings in admin_settings_screen.dart and any other file under lib/screens/admin/ added to app_en.arb and app_de.arb",
@@ -2115,7 +2115,7 @@
     },
     {
       "id": "US-131",
-      "title": "Ralph — senior review of the Flutter mobile app",
+      "title": "Ralph \u2014 senior review of the Flutter mobile app",
       "description": "As a team lead, I want Ralph to review the Flutter codebase as a senior mobile engineer would, so that structural issues, anti-patterns, and inconsistencies are surfaced before further features land.",
       "acceptanceCriteria": [
         "Ralph reads every file under mobile/lib/ and mobile/test/",
@@ -2125,11 +2125,11 @@
       ],
       "priority": 131,
       "passes": true,
-      "notes": "Review-only story — produces tasks/review-flutter.md. Run in parallel with US-132 through US-135."
+      "notes": "Review-only story \u2014 produces tasks/review-flutter.md. Run in parallel with US-132 through US-135."
     },
     {
       "id": "US-132",
-      "title": "Ralph — senior review of the Node.js backend",
+      "title": "Ralph \u2014 senior review of the Node.js backend",
       "description": "As a team lead, I want Ralph to review the backend as a senior Node.js engineer would, covering API design, service layer structure, data access patterns, auth middleware, and test coverage.",
       "acceptanceCriteria": [
         "Ralph reads every file under app/ (controllers, routes, services, middleware, utils, tests)",
@@ -2139,11 +2139,11 @@
       ],
       "priority": 132,
       "passes": true,
-      "notes": "Review-only story — produces tasks/review-backend.md. Run in parallel with US-131, US-133–US-135."
+      "notes": "Review-only story \u2014 produces tasks/review-backend.md. Run in parallel with US-131, US-133\u2013US-135."
     },
     {
       "id": "US-133",
-      "title": "Ralph — senior review of the Neo4j ontology and database layer",
+      "title": "Ralph \u2014 senior review of the Neo4j ontology and database layer",
       "description": "As a team lead, I want Ralph to review the ontology design, Cypher queries, n10s configuration, and init scripts as a senior data engineer would, so that schema inconsistencies and query anti-patterns are caught.",
       "acceptanceCriteria": [
         "Ralph reads neo4j/init/, all Cypher in app/utils/Neo4jDatabase.js, app/utils/config.js, and any OWL/Turtle ontology files",
@@ -2153,11 +2153,11 @@
       ],
       "priority": 133,
       "passes": true,
-      "notes": "Review-only story — produces tasks/review-neo4j.md. Run in parallel with US-131, US-132, US-134, US-135."
+      "notes": "Review-only story \u2014 produces tasks/review-neo4j.md. Run in parallel with US-131, US-132, US-134, US-135."
     },
     {
       "id": "US-134",
-      "title": "Ralph — senior review of CI/CD pipelines",
+      "title": "Ralph \u2014 senior review of CI/CD pipelines",
       "description": "As a team lead, I want Ralph to review every GitHub Actions workflow as a senior DevOps engineer would, checking for reliability, speed, security, and correctness.",
       "acceptanceCriteria": [
         "Ralph reads .github/workflows/ci.yml and .github/workflows/deploy.yml in full",
@@ -2167,11 +2167,11 @@
       ],
       "priority": 134,
       "passes": true,
-      "notes": "Review-only story — produces tasks/review-cicd.md. Run in parallel with US-131–US-133, US-135."
+      "notes": "Review-only story \u2014 produces tasks/review-cicd.md. Run in parallel with US-131\u2013US-133, US-135."
     },
     {
       "id": "US-135",
-      "title": "Ralph — senior review of Docker and infrastructure configuration",
+      "title": "Ralph \u2014 senior review of Docker and infrastructure configuration",
       "description": "As a team lead, I want Ralph to review the Docker Compose files, Traefik config, env files, and volume/network design as a senior infrastructure engineer would.",
       "acceptanceCriteria": [
         "Ralph reads docker-compose.yml, docker-compose.prod.yml, .env.example, and any Traefik/Nginx config files",
@@ -2181,14 +2181,14 @@
       ],
       "priority": 135,
       "passes": true,
-      "notes": "Review-only story — produces tasks/review-infrastructure.md. Run in parallel with US-131–US-134."
+      "notes": "Review-only story \u2014 produces tasks/review-infrastructure.md. Run in parallel with US-131\u2013US-134."
     },
     {
       "id": "US-136",
-      "title": "Ralph — cross-component coherence review",
+      "title": "Ralph \u2014 cross-component coherence review",
       "description": "As a team lead, I want Ralph to review the system as a whole after the individual component reviews, identifying integration seams, inconsistencies that only appear across boundaries, and architectural decisions that should be revisited.",
       "acceptanceCriteria": [
-        "Ralph reads all five individual review reports (US-131–US-135) and cross-references with the actual code",
+        "Ralph reads all five individual review reports (US-131\u2013US-135) and cross-references with the actual code",
         "Findings written to tasks/review-system-coherence.md covering: API contract alignment, Auth flow end-to-end, Language/locale consistency, Error message consistency, Test strategy coherence, Naming consistency across Flutter/backend/Neo4j, What is coherent and well-integrated, Prioritised cross-cutting improvements (Critical/Major/Minor)",
         "Report saved and committed"
       ],
@@ -2198,7 +2198,7 @@
     },
     {
       "id": "US-137",
-      "title": "Ralph — apply improvements to the Flutter app",
+      "title": "Ralph \u2014 apply improvements to the Flutter app",
       "description": "As a developer, I want Ralph to implement the Critical and Major improvements identified in the Flutter review (US-131) and the coherence review (US-136), so the mobile codebase is cleaner and more maintainable.",
       "acceptanceCriteria": [
         "Every Critical finding from tasks/review-flutter.md resolved or explicitly deferred with written reason",
@@ -2216,7 +2216,7 @@
     },
     {
       "id": "US-138",
-      "title": "Ralph — apply improvements to the Node.js backend",
+      "title": "Ralph \u2014 apply improvements to the Node.js backend",
       "description": "As a developer, I want Ralph to implement the Critical and Major improvements identified in the backend review (US-132) and the coherence review (US-136).",
       "acceptanceCriteria": [
         "Every Critical and Major finding from tasks/review-backend.md resolved or explicitly deferred with written reason",
@@ -2235,7 +2235,7 @@
     },
     {
       "id": "US-139",
-      "title": "Ralph — consistency pass across the full codebase",
+      "title": "Ralph \u2014 consistency pass across the full codebase",
       "description": "As a developer, I want Ralph to make a single focused pass ensuring naming, patterns, and conventions are consistent across Flutter, backend, and Neo4j so the codebase reads as if written by one person.",
       "acceptanceCriteria": [
         "Flutter model field names match backend API response field names (or explicit mapping documented)",
@@ -2253,7 +2253,7 @@
     },
     {
       "id": "US-140",
-      "title": "Ralph — update Flutter and mobile documentation",
+      "title": "Ralph \u2014 update Flutter and mobile documentation",
       "description": "As a new mobile developer, I want the Flutter documentation to accurately describe the current architecture, setup steps, and test commands, so I can be productive without asking team members.",
       "acceptanceCriteria": [
         "docs/guides/developer-onboarding.md updated with current Flutter version, flutter gen-l10n setup step, correct test commands, and description of WebView-based donation flow",
@@ -2267,7 +2267,7 @@
     },
     {
       "id": "US-141",
-      "title": "Ralph — update backend and API documentation",
+      "title": "Ralph \u2014 update backend and API documentation",
       "description": "As a backend developer or API consumer, I want the backend docs and OpenAPI spec to exactly match the current API so I can integrate without reading source code.",
       "acceptanceCriteria": [
         "docs/api/openapi.yaml updated to include all routes added in this branch, correct request/response schemas including translationEN, translationDE, displayText, preferredLanguage fields, and the standard error response schema",
@@ -2283,7 +2283,7 @@
     },
     {
       "id": "US-142",
-      "title": "Ralph — update infrastructure and deployment documentation",
+      "title": "Ralph \u2014 update infrastructure and deployment documentation",
       "description": "As a DevOps engineer or new team member, I want the deployment and infrastructure docs to describe exactly how to bring up the system in development and production.",
       "acceptanceCriteria": [
         "DEPLOYMENT.md updated with current Docker Compose service list, LibreTranslate env vars, UID 1032 volume permission note, and step-by-step production bring-up including the backfill migration script from US-115",
@@ -2298,10 +2298,10 @@
     },
     {
       "id": "US-143",
-      "title": "Ralph — update architecture documentation",
+      "title": "Ralph \u2014 update architecture documentation",
       "description": "As any team member, I want the architecture documentation to give an accurate high-level picture of how the system components interact, so that design decisions are clear and onboarding is faster.",
       "acceptanceCriteria": [
-        "docs/architecture.md updated with a Mermaid component diagram (Flutter ↔ Backend API ↔ Neo4j/MongoDB ↔ LibreTranslate ↔ Keycloak), end-to-end donation pipeline description, language/locale flow, auth flow, and data storage rationale",
+        "docs/architecture.md updated with a Mermaid component diagram (Flutter \u2194 Backend API \u2194 Neo4j/MongoDB \u2194 LibreTranslate \u2194 Keycloak), end-to-end donation pipeline description, language/locale flow, auth flow, and data storage rationale",
         "docs/migration.md updated with schema migrations introduced in this branch (translationEN/DE fields, preferredLanguage)",
         "AUDIT.md cleared of stale findings and reserved for US-144 output",
         "DOCUMENTATION.md updated to list every file in docs/ with a one-line description"
@@ -2312,7 +2312,7 @@
     },
     {
       "id": "US-144",
-      "title": "Ralph — final system audit",
+      "title": "Ralph \u2014 final system audit",
       "description": "As a project owner, I want a comprehensive, authoritative audit report of the full Health Habit Hub system after all review, improvement, and documentation work is complete, so I know the true health of the platform and what remains to be addressed.",
       "acceptanceCriteria": [
         "Ralph re-reads all component reviews, coherence review, and current codebase state after all improvements",
@@ -2323,17 +2323,17 @@
       ],
       "priority": 144,
       "passes": true,
-      "notes": "Final story — depends on US-140, US-141, US-142, US-143 (and transitively all review and improvement stories). Must run last."
+      "notes": "Final story \u2014 depends on US-140, US-141, US-142, US-143 (and transitively all review and improvement stories). Must run last."
     },
     {
       "id": "US-145",
-      "title": "Neo4j — migrate legacy hhh__Habit nodes into the new Habit schema",
+      "title": "Neo4j \u2014 migrate legacy hhh__Habit nodes into the new Habit schema",
       "description": "As a developer, I want all existing hhh__Habit nodes copied into the new Habit schema so that historical donations are not lost and endpoints can be unified on a single schema.",
       "acceptanceCriteria": [
         "Migration script created at scripts/migrate-hhh-habit-to-habit.cypher",
-        "Field mapping: hhh:id/uri→uuid, hhh:value→value, hhh:language→language, hhh:habitStrength→habitStrength; translationEN/translationDE/bcioClass/dimension/confidence left null; createdAt set to datetime() at migration time",
+        "Field mapping: hhh:id/uri\u2192uuid, hhh:value\u2192value, hhh:language\u2192language, hhh:habitStrength\u2192habitStrength; translationEN/translationDE/bcioClass/dimension/confidence left null; createdAt set to datetime() at migration time",
         "Existing hhh__Donor-[:hhh__donates]->hhh__Habit relationships preserved as (d)-[:DONATED]->(newHabit:Habit); hhh__Donor nodes not removed",
-        "Script uses MERGE on uuid — fully idempotent, no duplicates on repeated runs",
+        "Script uses MERGE on uuid \u2014 fully idempotent, no duplicates on repeated runs",
         "Script prints summary: 'Migrated X habits, skipped Y (already exist)'",
         "Companion scripts/run-migration.js executes the Cypher file against configured Neo4j and logs summary",
         "DEPLOYMENT.md updated with post-deploy migration step",
@@ -2345,7 +2345,7 @@
     },
     {
       "id": "US-146",
-      "title": "Backend — update stats and public-list endpoints to query new Habit schema",
+      "title": "Backend \u2014 update stats and public-list endpoints to query new Habit schema",
       "description": "As a participant, I want the habit explore feed and stats to show all donated habits including those migrated from the old schema, so the app does not appear empty.",
       "acceptanceCriteria": [
         "Every route containing MATCH (h:hhh__Habit) or MATCH (d:hhh__Donor)-[:hhh__donates] identified and listed in PR description",
@@ -2362,7 +2362,7 @@
     },
     {
       "id": "US-147",
-      "title": "Neo4j — add uniqueness constraint on Habit.uuid and index on Context(text, dimension)",
+      "title": "Neo4j \u2014 add uniqueness constraint on Habit.uuid and index on Context(text, dimension)",
       "description": "As a developer, I want Neo4j to enforce uniqueness on Habit.uuid and index Context(text, dimension) so duplicate nodes are impossible and context MERGE performance does not degrade as the dataset grows.",
       "acceptanceCriteria": [
         "neo4j/init/constraints.cypher gains: CREATE CONSTRAINT habit_uuid IF NOT EXISTS FOR (h:Habit) REQUIRE h.uuid IS UNIQUE",
@@ -2377,7 +2377,7 @@
     },
     {
       "id": "US-148",
-      "title": "Infrastructure — migrate Keycloak to PostgreSQL in production",
+      "title": "Infrastructure \u2014 migrate Keycloak to PostgreSQL in production",
       "description": "As an operator, I want Keycloak in production to use a PostgreSQL database instead of the embedded dev-file store so user and realm data survives container restarts and is backup-safe.",
       "acceptanceCriteria": [
         "docker-compose.prod.yml adds a keycloak-db postgres:16-alpine service with KC_DB_USERNAME/KC_DB_PASSWORD env vars and keycloak-db-data volume",
@@ -2393,7 +2393,7 @@
     },
     {
       "id": "US-149",
-      "title": "CI/CD — gate tag-push deploys on CI passing",
+      "title": "CI/CD \u2014 gate tag-push deploys on CI passing",
       "description": "As a team lead, I want production deploys to only happen after all CI checks pass so a broken tagged commit cannot reach production.",
       "acceptanceCriteria": [
         "deploy.yml on.push.tags trigger removed or subordinated",
@@ -2405,11 +2405,11 @@
       ],
       "priority": 149,
       "passes": true,
-      "notes": "Resolves OF-04. Note: workflow_run triggers do not receive pull_request context — extract tag from github.event.workflow_run.head_branch."
+      "notes": "Resolves OF-04. Note: workflow_run triggers do not receive pull_request context \u2014 extract tag from github.event.workflow_run.head_branch."
     },
     {
       "id": "US-150",
-      "title": "Backend — fix SPARQL injection in SparqlDatabase.js",
+      "title": "Backend \u2014 fix SPARQL injection in SparqlDatabase.js",
       "description": "As a security engineer, I want all SPARQL queries in SparqlDatabase.js to use parameterised or whitelist-validated values so an attacker cannot inject malicious SPARQL through user-controlled input.",
       "acceptanceCriteria": [
         "Every location where a user-controlled string is interpolated into a SPARQL query identified and listed in PR description",
@@ -2425,7 +2425,7 @@
     },
     {
       "id": "US-151",
-      "title": "Backend — fix Cypher label injection in admin group-change route",
+      "title": "Backend \u2014 fix Cypher label injection in admin group-change route",
       "description": "As a security engineer, I want the admin group-change endpoint to validate the group label against a whitelist before using it in a Cypher query so dynamic label interpolation cannot be exploited.",
       "acceptanceCriteria": [
         "Exact location in adminRouter.js where group label is interpolated into Cypher string identified",
@@ -2440,7 +2440,7 @@
     },
     {
       "id": "US-152",
-      "title": "CI/CD — add Python API-service CI job",
+      "title": "CI/CD \u2014 add Python API-service CI job",
       "description": "As a CI maintainer, I want the Python API-service tests to run in CI on every push so regressions in the classifier, BCIO mapper, and translation refiner are caught before merge.",
       "acceptanceCriteria": [
         "New python-api-test job added to ci.yml: ubuntu-latest, Python 3.11 with pip cache, pip install -r API-service/requirements.txt, Redis service container if required, pytest API-service/tests/ -v",
@@ -2454,7 +2454,7 @@
     },
     {
       "id": "US-153",
-      "title": "CI/CD — add Admin Next.js panel CI job",
+      "title": "CI/CD \u2014 add Admin Next.js panel CI job",
       "description": "As a CI maintainer, I want the admin Next.js panel to be type-checked and built in CI on every push so TypeScript errors and broken builds are caught before merge.",
       "acceptanceCriteria": [
         "New admin-build job added to ci.yml: Node 22 with npm cache for admin/package-lock.json, npm ci in admin/, npx tsc --noEmit with zero errors, npm run build succeeds",
@@ -2468,7 +2468,7 @@
     },
     {
       "id": "US-154",
-      "title": "Flutter — add unit tests for service layer",
+      "title": "Flutter \u2014 add unit tests for service layer",
       "description": "As a developer, I want unit tests for all Flutter Dio service classes so regressions in API call logic, response parsing, and error handling are caught without running a live backend.",
       "acceptanceCriteria": [
         "Test files created using http_mock_adapter or Mockito for: HabitService (fetchHabits(lang) asserts ?lang= param sent; 401 throws UnauthorisedException), StatsService (successful parse of stats response shape), RecommendationService (happy path and 500 error path)",
@@ -2482,7 +2482,7 @@
     },
     {
       "id": "US-155",
-      "title": "Infrastructure — fix MongoDB restore path mismatch",
+      "title": "Infrastructure \u2014 fix MongoDB restore path mismatch",
       "description": "As an operator, I want restore.sh to look in the same directory that backup.sh creates so MongoDB data is actually restored when the script is run.",
       "acceptanceCriteria": [
         "Mismatch confirmed: backup.sh writes to $RESTORE_DIR/mongo/, restore.sh reads from $RESTORE_DIR/mongodb/",
@@ -2497,12 +2497,12 @@
     },
     {
       "id": "US-156",
-      "title": "Backend — extract adminRouter.js business logic into service layer",
+      "title": "Backend \u2014 extract adminRouter.js business logic into service layer",
       "description": "As a developer, I want the 1200+ line adminRouter.js split into focused service modules so the file is maintainable, testable, and consistent with the factory-injection pattern used by other routers.",
       "acceptanceCriteria": [
         "Business logic extracted into: app/services/adminParticipantService.js (participant management), app/services/adminHabitService.js (habit moderation), app/services/adminStatsService.js (stats aggregation)",
         "Each service accepts a { neo4jRun, db } dependency object matching the factory-injection pattern",
-        "adminRouter.js reduced to route definitions and thin controller calls only — no inline business logic or Cypher strings remain in the router file",
+        "adminRouter.js reduced to route definitions and thin controller calls only \u2014 no inline business logic or Cypher strings remain in the router file",
         "All existing admin integration tests pass unchanged",
         "New unit tests added for at least one function in each service file using mocked neo4jRun",
         "tasks/review-backend.md updated marking OF-12 as resolved",
@@ -2517,8 +2517,8 @@
       "title": "Create docker-compose.local.yml optimised for Mac development",
       "description": "As a developer, I want a Docker Compose file tuned for local Mac development so I can start all services quickly without Traefik, TLS, or production-only overhead.",
       "acceptanceCriteria": [
-        "docker-compose.local.yml created at repo root with services: app, mongo, neo4j, keycloak, translate, recommender, fuseki — excluding proxy, backup, admin, mongo-express",
-        "All services expose ports directly to Mac host: app→3000, mongo→27017, neo4j→7474+7687, keycloak→8080, translate→5000, recommender→8001, fuseki→3030",
+        "docker-compose.local.yml created at repo root with services: app, mongo, neo4j, keycloak, translate, recommender, fuseki \u2014 excluding proxy, backup, admin, mongo-express",
+        "All services expose ports directly to Mac host: app\u21923000, mongo\u219227017, neo4j\u21927474+7687, keycloak\u21928080, translate\u21925000, recommender\u21928001, fuseki\u21923030",
         "app service uses 'command: node --watch app.js' for built-in hot-reload",
         "All services use env_file: .env",
         "docker compose -f docker-compose.local.yml config validates without errors"
@@ -2547,9 +2547,9 @@
       "title": "Create full local seed script",
       "description": "As a developer, I want a single seed command that populates MongoDB, Neo4j, and creates a Keycloak test user so the app is immediately usable after starting services.",
       "acceptanceCriteria": [
-        "scripts/seed-local.js created that seeds: (1) MongoDB — upserts SLIQ and RAND-36 questionnaires; (2) Neo4j — applies constraints.cypher then seeds 4 Group nodes, 1 test Donor (userId: dev-user-1), 2 Habit nodes; (3) Keycloak — creates testuser/testpass123 with participant role via Admin REST API",
+        "scripts/seed-local.js created that seeds: (1) MongoDB \u2014 upserts SLIQ and RAND-36 questionnaires; (2) Neo4j \u2014 applies constraints.cypher then seeds 4 Group nodes, 1 test Donor (userId: dev-user-1), 2 Habit nodes; (3) Keycloak \u2014 creates testuser/testpass123 with participant role via Admin REST API",
         "Script reads MONGO_HOST, NEO4J_HTTP, NEO4J_USER, NEO4J_PASSWORD, KEYCLOAK_URL, KEYCLOAK_ADMIN, KEYCLOAK_ADMIN_PASSWORD from environment",
-        "Script is idempotent — safe to run multiple times without duplicating data",
+        "Script is idempotent \u2014 safe to run multiple times without duplicating data",
         "Script exits 0 on success, 1 with clear error message on failure",
         "'seed': 'node ../scripts/seed-local.js' added to app/package.json scripts"
       ],
@@ -2583,11 +2583,11 @@
       ],
       "priority": 161,
       "passes": true,
-      "notes": "iOS Simulator shares Mac host network — localhost works without any special IP. AppConfig defaults already correct."
+      "notes": "iOS Simulator shares Mac host network \u2014 localhost works without any special IP. AppConfig defaults already correct."
     },
     {
       "id": "US-162",
-      "title": "Ralph — clean code review of the Flutter app",
+      "title": "Ralph \u2014 clean code review of the Flutter app",
       "description": "As a team lead, I want Ralph to review the Flutter codebase specifically for clean code violations so that spaghetti code, god widgets, and DRY violations are identified before they compound.",
       "acceptanceCriteria": [
         "Ralph reads every file under mobile/lib/ with clean code focus",
@@ -2601,11 +2601,11 @@
     },
     {
       "id": "US-163",
-      "title": "Ralph — clean code review of the Node.js backend",
-      "description": "As a team lead, I want Ralph to review the backend specifically for clean code violations — fat routes, inline Cypher, mixed concerns, and copy-pasted error handling.",
+      "title": "Ralph \u2014 clean code review of the Node.js backend",
+      "description": "As a team lead, I want Ralph to review the backend specifically for clean code violations \u2014 fat routes, inline Cypher, mixed concerns, and copy-pasted error handling.",
       "acceptanceCriteria": [
         "Ralph reads every file under app/ with clean code focus",
-        "Findings written to tasks/review-backend-clean.md covering: Fat routes (handlers doing more than validate→service→respond), Long functions (>40 lines), Inline Cypher/SPARQL/Mongo in routes, Copy-pasted error handling, Naming violations, Dead code, What follows clean code well, Prioritised findings (Critical/Major/Minor)",
+        "Findings written to tasks/review-backend-clean.md covering: Fat routes (handlers doing more than validate\u2192service\u2192respond), Long functions (>40 lines), Inline Cypher/SPARQL/Mongo in routes, Copy-pasted error handling, Naming violations, Dead code, What follows clean code well, Prioritised findings (Critical/Major/Minor)",
         "Every finding includes file, line range, violation type, suggested fix",
         "Report saved and committed"
       ],
@@ -2615,8 +2615,8 @@
     },
     {
       "id": "US-164",
-      "title": "Ralph — clean code review of the Neo4j/data layer",
-      "description": "As a team lead, I want Ralph to review the Neo4j query layer and ontology scripts for clean code violations — repeated patterns, magic strings, and mixed concerns.",
+      "title": "Ralph \u2014 clean code review of the Neo4j/data layer",
+      "description": "As a team lead, I want Ralph to review the Neo4j query layer and ontology scripts for clean code violations \u2014 repeated patterns, magic strings, and mixed concerns.",
       "acceptanceCriteria": [
         "Ralph reads app/utils/Neo4jDatabase.js, app/utils/SparqlDatabase.js, all utils files containing Cypher, and all .cypher files",
         "Findings written to tasks/review-neo4j-clean.md covering: Magic strings (hard-coded RDF prefixes/labels), Repeated query patterns, Long functions (>40 lines), Mixed concerns (functions that build Turtle + call API + parse result), What follows clean code well, Prioritised findings (Critical/Major/Minor)",
@@ -2629,8 +2629,8 @@
     },
     {
       "id": "US-165",
-      "title": "Ralph — clean code review of CI/CD and infrastructure scripts",
-      "description": "As a team lead, I want Ralph to review shell scripts, Makefile, and CI YAML for clean code violations — unreadable one-liners, copy-pasted job steps, and scripts without error handling.",
+      "title": "Ralph \u2014 clean code review of CI/CD and infrastructure scripts",
+      "description": "As a team lead, I want Ralph to review shell scripts, Makefile, and CI YAML for clean code violations \u2014 unreadable one-liners, copy-pasted job steps, and scripts without error handling.",
       "acceptanceCriteria": [
         "Ralph reads .github/workflows/ci.yml, .github/workflows/deploy.yml, Makefile, and all files under scripts/",
         "Findings written to tasks/review-infra-clean.md covering: Copy-pasted CI job steps, Shell scripts without set -euo pipefail, Long shell functions (>40 lines), Magic values (hard-coded ports/images/timeouts), What follows clean code well, Prioritised findings (Critical/Major/Minor)",
@@ -2643,8 +2643,8 @@
     },
     {
       "id": "US-166",
-      "title": "Ralph — cross-component clean code coherence review",
-      "description": "As a team lead, I want Ralph to synthesise all four clean code reviews and identify patterns that appear across multiple components — the same smell in Flutter, backend, and scripts simultaneously.",
+      "title": "Ralph \u2014 cross-component clean code coherence review",
+      "description": "As a team lead, I want Ralph to synthesise all four clean code reviews and identify patterns that appear across multiple components \u2014 the same smell in Flutter, backend, and scripts simultaneously.",
       "acceptanceCriteria": [
         "Ralph reads all four review files (review-flutter-clean.md, review-backend-clean.md, review-neo4j-clean.md, review-infra-clean.md)",
         "Findings written to tasks/review-clean-coherence.md covering: Cross-cutting smell patterns (smells in 3+ components), Naming inconsistencies across layers, Most impactful single refactoring, Recommended fix order by max improvement/min risk",
@@ -2656,7 +2656,7 @@
     },
     {
       "id": "US-167",
-      "title": "Ralph — apply clean code improvements to the Flutter app",
+      "title": "Ralph \u2014 apply clean code improvements to the Flutter app",
       "description": "As a developer, I want Ralph to refactor all Critical and Major clean code findings in the Flutter codebase so every file respects SRP, DRY, and size limits.",
       "acceptanceCriteria": [
         "Every Critical and Major finding from tasks/review-flutter-clean.md resolved or deferred with written reason",
@@ -2675,7 +2675,7 @@
     },
     {
       "id": "US-168",
-      "title": "Ralph — apply clean code improvements to the backend",
+      "title": "Ralph \u2014 apply clean code improvements to the backend",
       "description": "As a developer, I want Ralph to refactor all Critical and Major clean code findings in the backend so routes are thin, business logic is in services, and there is no copy-pasted code.",
       "acceptanceCriteria": [
         "Every Critical and Major finding from tasks/review-backend-clean.md resolved or deferred with written reason",
@@ -2694,7 +2694,7 @@
     },
     {
       "id": "US-169",
-      "title": "Ralph — apply clean code improvements to the Neo4j/data layer",
+      "title": "Ralph \u2014 apply clean code improvements to the Neo4j/data layer",
       "description": "As a developer, I want Ralph to refactor the Neo4j and SPARQL query layer so query strings are separated from business logic, magic strings are named constants, and no function mixes multiple concerns.",
       "acceptanceCriteria": [
         "Every Critical and Major finding from tasks/review-neo4j-clean.md resolved or deferred with written reason",
@@ -2712,11 +2712,11 @@
     },
     {
       "id": "US-170",
-      "title": "Ralph — consistency and dead code pass across all layers",
+      "title": "Ralph \u2014 consistency and dead code pass across all layers",
       "description": "As a developer, I want Ralph to make a final sweep removing all dead code, fixing naming inconsistencies from the coherence review, and enforcing coding conventions across every layer.",
       "acceptanceCriteria": [
         "All dead code removed: unused imports, unreachable functions, commented-out code blocks, unused env vars",
-        "Naming inconsistencies from tasks/review-clean-coherence.md resolved — same concept uses same name in Flutter models, backend response shapes, and Neo4j property names",
+        "Naming inconsistencies from tasks/review-clean-coherence.md resolved \u2014 same concept uses same name in Flutter models, backend response shapes, and Neo4j property names",
         "Copy-pasted CI steps extracted to reusable GitHub Actions composite action or step template where identified",
         "All scripts under scripts/ begin with #!/usr/bin/env bash and set -euo pipefail (or #!/usr/bin/env node with explicit process.exit(1) on error)",
         "flutter analyze, npm run lint, and all tests pass",
@@ -2724,11 +2724,11 @@
       ],
       "priority": 170,
       "passes": true,
-      "notes": "Depends on US-167, US-168, US-169. Single focused pass — no new features."
+      "notes": "Depends on US-167, US-168, US-169. Single focused pass \u2014 no new features."
     },
     {
       "id": "US-171",
-      "title": "Ralph — update all documentation to reflect clean code changes",
+      "title": "Ralph \u2014 update all documentation to reflect clean code changes",
       "description": "As a developer, I want all documentation updated after the refactoring cycle so guides and architecture docs describe the post-refactor structure.",
       "acceptanceCriteria": [
         "docs/guides/flutter-architecture.md updated to reflect any new file structure from refactoring (new interceptors, notifiers, utilities)",
@@ -2744,7 +2744,7 @@
     },
     {
       "id": "US-172",
-      "title": "Ralph — final clean code system audit",
+      "title": "Ralph \u2014 final clean code system audit",
       "description": "As a project owner, I want a clean-code-focused audit report after all refactoring and documentation work is complete so I have an objective measure of code quality improvement.",
       "acceptanceCriteria": [
         "Ralph re-reads all four clean code review files and current codebase state after all improvements",
@@ -2759,13 +2759,13 @@
     },
     {
       "id": "US-173",
-      "title": "Data model — Study, Group, Enrollment, StudyCode",
+      "title": "Data model \u2014 Study, Group, Enrollment, StudyCode",
       "description": "As a developer, I need a data model that represents studies, their groups, participant enrollments, and redeemable study codes so that all subsequent features have a stable foundation.",
       "acceptanceCriteria": [
         "MongoDB collection 'studies' with schema: _id, name, description, isDefault (boolean, unique when true), isActive, groups (array of { id, label, index: 1-4 }), questionnaires (array of refs), createdAt, updatedAt",
         "MongoDB collection 'studyCodes' with schema: _id, code (string, unique, format HHH-XXXXX), studyId, groupId, maxRedemptions (null = unlimited), redemptionCount, expiresAt, createdAt",
         "MongoDB collection 'enrollments' with schema: _id, userId (Keycloak UUID), studyId, groupId, studyCodeUsed (string or null), enrolledAt",
-        "Unique index on enrollments(userId) — one active enrollment per user",
+        "Unique index on enrollments(userId) \u2014 one active enrollment per user",
         "Unique index on studyCodes(code)",
         "Sparse unique index on studies(isDefault) where isDefault = true",
         "Migration/seed script in scripts/ creates the default study with 4 groups on a clean install",
@@ -2777,15 +2777,15 @@
     },
     {
       "id": "US-174",
-      "title": "Backend — Study CRUD API",
+      "title": "Backend \u2014 Study CRUD API",
       "description": "As an admin, I want REST endpoints to create, read, update, and delete studies (including their group configuration) so I can manage the study catalogue.",
       "acceptanceCriteria": [
-        "GET /api/v1/admin/studies — returns paginated list of all studies with participant count per study",
-        "POST /api/v1/admin/studies — creates a new study; body: { name, description, groups: [{ label }], questionnaires: [] }; returns 201",
-        "GET /api/v1/admin/studies/:id — returns full study document including groups and questionnaire refs",
-        "PUT /api/v1/admin/studies/:id — updates name, description, isActive, groups (additive only — groups cannot be removed if participants enrolled), questionnaire assignment",
-        "DELETE /api/v1/admin/studies/:id — soft-deletes (sets isActive: false); returns 409 if study has enrolled participants",
-        "PUT /api/v1/admin/studies/:id/default — marks study as default; clears isDefault on previously default study atomically",
+        "GET /api/v1/admin/studies \u2014 returns paginated list of all studies with participant count per study",
+        "POST /api/v1/admin/studies \u2014 creates a new study; body: { name, description, groups: [{ label }], questionnaires: [] }; returns 201",
+        "GET /api/v1/admin/studies/:id \u2014 returns full study document including groups and questionnaire refs",
+        "PUT /api/v1/admin/studies/:id \u2014 updates name, description, isActive, groups (additive only \u2014 groups cannot be removed if participants enrolled), questionnaire assignment",
+        "DELETE /api/v1/admin/studies/:id \u2014 soft-deletes (sets isActive: false); returns 409 if study has enrolled participants",
+        "PUT /api/v1/admin/studies/:id/default \u2014 marks study as default; clears isDefault on previously default study atomically",
         "All routes protected by admin JWT middleware",
         "All routes return consistent error shapes",
         "npm run lint passes; existing tests still pass"
@@ -2796,14 +2796,14 @@
     },
     {
       "id": "US-175",
-      "title": "Backend — Study code generation and redemption API",
+      "title": "Backend \u2014 Study code generation and redemption API",
       "description": "As an admin, I want to generate short alphanumeric enrollment codes and as a participant I want to redeem one at onboarding so the system assigns me to the correct study and group automatically.",
       "acceptanceCriteria": [
-        "POST /api/v1/admin/studies/:id/codes — generates 1-100 codes; body: { count, groupId, maxRedemptions, expiresAt }; format HHH-XXXXX (5 uppercase alphanumeric chars), generated with crypto.randomBytes",
-        "GET /api/v1/admin/studies/:id/codes — returns paginated list of codes with redemptionCount, expiresAt, groupId",
-        "DELETE /api/v1/admin/studies/:id/codes/:code — revokes a code; returns 409 if already redeemed",
-        "POST /api/v1/onboarding/redeem-code — authenticated participant endpoint; validates code, creates enrollment, increments redemptionCount, returns { studyId, groupId, studyName, groupLabel }; returns 409 if user already enrolled",
-        "POST /api/v1/onboarding/skip-code — enrolls user in default study with round-robin group assignment; idempotent",
+        "POST /api/v1/admin/studies/:id/codes \u2014 generates 1-100 codes; body: { count, groupId, maxRedemptions, expiresAt }; format HHH-XXXXX (5 uppercase alphanumeric chars), generated with crypto.randomBytes",
+        "GET /api/v1/admin/studies/:id/codes \u2014 returns paginated list of codes with redemptionCount, expiresAt, groupId",
+        "DELETE /api/v1/admin/studies/:id/codes/:code \u2014 revokes a code; returns 409 if already redeemed",
+        "POST /api/v1/onboarding/redeem-code \u2014 authenticated participant endpoint; validates code, creates enrollment, increments redemptionCount, returns { studyId, groupId, studyName, groupLabel }; returns 409 if user already enrolled",
+        "POST /api/v1/onboarding/skip-code \u2014 enrolls user in default study with round-robin group assignment; idempotent",
         "Code redemption is case-insensitive (hhh-ab12c equals HHH-AB12C)",
         "Codes past maxRedemptions return 410 Gone",
         "npm run lint passes; existing tests still pass"
@@ -2814,16 +2814,16 @@
     },
     {
       "id": "US-176",
-      "title": "Backend — Questionnaire library and custom questionnaire API",
+      "title": "Backend \u2014 Questionnaire library and custom questionnaire API",
       "description": "As an admin, I want to manage a shared questionnaire library and create custom questionnaires so I can assign the right surveys to each study.",
       "acceptanceCriteria": [
         "MongoDB 'questionnaires' collection extended with isLibrary (boolean) flag; existing SLIQ and RAND-36 marked isLibrary: true",
-        "GET /api/v1/admin/questionnaires — returns all questionnaires; ?library=true filters to library items",
-        "POST /api/v1/admin/questionnaires — creates a custom questionnaire; returns 201",
-        "PUT /api/v1/admin/questionnaires/:id — updates questionnaire; returns 403 if isLibrary",
-        "DELETE /api/v1/admin/questionnaires/:id — deletes if not isLibrary and not assigned to active study",
+        "GET /api/v1/admin/questionnaires \u2014 returns all questionnaires; ?library=true filters to library items",
+        "POST /api/v1/admin/questionnaires \u2014 creates a custom questionnaire; returns 201",
+        "PUT /api/v1/admin/questionnaires/:id \u2014 updates questionnaire; returns 403 if isLibrary",
+        "DELETE /api/v1/admin/questionnaires/:id \u2014 deletes if not isLibrary and not assigned to active study",
         "Study questionnaire assignment handled by PUT /api/v1/admin/studies/:id with questionnaires: [id, ...]",
-        "GET /api/v1/participant/questionnaires — returns questionnaires for the authenticated participant's enrolled study",
+        "GET /api/v1/participant/questionnaires \u2014 returns questionnaires for the authenticated participant's enrolled study",
         "npm run lint passes; existing tests still pass"
       ],
       "priority": 176,
@@ -2832,16 +2832,16 @@
     },
     {
       "id": "US-177",
-      "title": "Backend — Push notification API (immediate and scheduled)",
+      "title": "Backend \u2014 Push notification API (immediate and scheduled)",
       "description": "As an admin, I want to send push notifications to all participants in a study or a specific group, either immediately or at a scheduled future time, so I can coordinate study activities.",
       "acceptanceCriteria": [
         "firebase-admin package added to app/package.json; FIREBASE_SERVICE_ACCOUNT_JSON env var documented in .env.example and README",
-        "POST /api/v1/participant/register-token — upserts FCM token for authenticated user into deviceTokens collection",
-        "POST /api/v1/admin/notifications/send — body: { studyId, groupId (optional), title, body, data }; sends immediately to matching participants; returns { sent: N, failed: N }",
-        "POST /api/v1/admin/notifications/schedule — same body plus { scheduledAt: ISO8601 }; stores in scheduledNotifications collection",
+        "POST /api/v1/participant/register-token \u2014 upserts FCM token for authenticated user into deviceTokens collection",
+        "POST /api/v1/admin/notifications/send \u2014 body: { studyId, groupId (optional), title, body, data }; sends immediately to matching participants; returns { sent: N, failed: N }",
+        "POST /api/v1/admin/notifications/schedule \u2014 same body plus { scheduledAt: ISO8601 }; stores in scheduledNotifications collection",
         "node-cron job runs every 60 seconds, dispatches due scheduled notifications and marks them sent",
-        "GET /api/v1/admin/notifications/scheduled — returns pending scheduled notifications",
-        "DELETE /api/v1/admin/notifications/scheduled/:id — cancels a pending notification",
+        "GET /api/v1/admin/notifications/scheduled \u2014 returns pending scheduled notifications",
+        "DELETE /api/v1/admin/notifications/scheduled/:id \u2014 cancels a pending notification",
         "Invalid/unregistered FCM tokens silently removed from deviceTokens",
         "npm run lint passes; existing tests still pass"
       ],
@@ -2851,7 +2851,7 @@
     },
     {
       "id": "US-178",
-      "title": "Admin UI — Study list and study creation/edit form",
+      "title": "Admin UI \u2014 Study list and study creation/edit form",
       "description": "As an admin, I want a study management page listing all studies with their status, and a form to create or edit a study, so I can maintain the study catalogue from the browser.",
       "acceptanceCriteria": [
         "New 'Studies' section visible in the admin panel navigation sidebar",
@@ -2871,7 +2871,7 @@
     },
     {
       "id": "US-179",
-      "title": "Admin UI — Study code generation and management view",
+      "title": "Admin UI \u2014 Study code generation and management view",
       "description": "As an admin, I want to generate and manage enrollment codes for a study so I can distribute codes to participants before the study starts.",
       "acceptanceCriteria": [
         "'Codes' tab on study detail page shows paginated table: code, group assigned, redemptions/max, expiry date, revoke action",
@@ -2886,7 +2886,7 @@
     },
     {
       "id": "US-180",
-      "title": "Admin UI — Questionnaire library and custom questionnaire editor",
+      "title": "Admin UI \u2014 Questionnaire library and custom questionnaire editor",
       "description": "As an admin, I want to browse the questionnaire library and create custom questionnaires so I can assign the right surveys to each study.",
       "acceptanceCriteria": [
         "'Questionnaires' section in admin navigation shows library + custom questionnaires in separate tabs",
@@ -2902,7 +2902,7 @@
     },
     {
       "id": "US-181",
-      "title": "Admin UI — Assign questionnaires to a study",
+      "title": "Admin UI \u2014 Assign questionnaires to a study",
       "description": "As an admin, I want to select which questionnaires are active for a specific study so participants in that study see the right surveys.",
       "acceptanceCriteria": [
         "'Questionnaires' tab on study detail page shows all available questionnaires (library + custom) as a checkable list",
@@ -2912,17 +2912,17 @@
         "Admin panel runs without new JS console errors"
       ],
       "priority": 181,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-176 and US-178. Can be developed in parallel with US-179, US-180, US-182, US-183, US-184."
     },
     {
       "id": "US-182",
-      "title": "Admin UI — Default study configuration",
+      "title": "Admin UI \u2014 Default study configuration",
       "description": "As an admin, I want a clear view of which study is the default so I can ensure participants without a code land in the intended experience.",
       "acceptanceCriteria": [
         "Studies list shows a 'Default' badge on the current default study",
         "'Set as Default' button visible on detail page of any non-default study; triggers confirmation dialog before saving",
-        "Default study cannot be deactivated while it is the default — button shows tooltip explaining why",
+        "Default study cannot be deactivated while it is the default \u2014 button shows tooltip explaining why",
         "On initial install (seed), system ships with a pre-configured default study named 'Default Study' with Groups 1-4 and SLIQ + RAND-36 assigned",
         "Admin panel runs without new JS console errors"
       ],
@@ -2932,7 +2932,7 @@
     },
     {
       "id": "US-183",
-      "title": "Admin UI — Participant enrollment dashboard (per study)",
+      "title": "Admin UI \u2014 Participant enrollment dashboard (per study)",
       "description": "As an admin, I want to see which participants are enrolled in a study and their group assignment so I can monitor recruitment and balance.",
       "acceptanceCriteria": [
         "'Participants' tab on study detail page shows paginated table: user ID (or display name if available), group label, enrolled date, code used (or 'direct/default')",
@@ -2946,11 +2946,11 @@
     },
     {
       "id": "US-184",
-      "title": "Admin UI — Push notification composer",
+      "title": "Admin UI \u2014 Push notification composer",
       "description": "As an admin, I want to compose and send (or schedule) a push notification to a study's participants so I can communicate time-sensitive study events.",
       "acceptanceCriteria": [
         "'Notifications' tab on study detail page",
-        "Compose form: Title (max 50 chars), Body (max 200 chars), Target (all participants in study vs. specific group — dropdown), Send time (Now / Schedule — datetime picker when Schedule selected)",
+        "Compose form: Title (max 50 chars), Body (max 200 chars), Target (all participants in study vs. specific group \u2014 dropdown), Send time (Now / Schedule \u2014 datetime picker when Schedule selected)",
         "'Send' calls the appropriate backend endpoint; success shows toast with 'Sent to N participants' or 'Scheduled for [datetime]'",
         "'Scheduled' sub-section lists pending notifications with Cancel button",
         "Admin panel runs without new JS console errors"
@@ -2961,7 +2961,7 @@
     },
     {
       "id": "US-185",
-      "title": "App — Study code entry screen in onboarding",
+      "title": "App \u2014 Study code entry screen in onboarding",
       "description": "As a participant, I want to be prompted to enter a study code during app onboarding so that I can be enrolled in the correct study and group before the app experience begins.",
       "acceptanceCriteria": [
         "New onboarding step inserted between the personal-code display step and the main app experience",
@@ -2970,7 +2970,7 @@
         "On submit: calls POST /api/v1/onboarding/redeem-code; on success stores studyId and groupId in local secure storage / app state",
         "On error: shows inline error message (invalid code, expired, already used)",
         "On skip: calls POST /api/v1/onboarding/skip-code to enrol in default study",
-        "Screen shown only once — if user is already enrolled it is skipped on subsequent launches",
+        "Screen shown only once \u2014 if user is already enrolled it is skipped on subsequent launches",
         "flutter analyze passes with zero warnings",
         "flutter test passes"
       ],
@@ -2980,7 +2980,7 @@
     },
     {
       "id": "US-186",
-      "title": "App — Study-specific questionnaire display",
+      "title": "App \u2014 Study-specific questionnaire display",
       "description": "As a participant, I want to see the questionnaires configured for my enrolled study so that I complete the right surveys.",
       "acceptanceCriteria": [
         "Questionnaire list fetched from GET /api/v1/participant/questionnaires (study-scoped endpoint from US-176) instead of a static list",
@@ -2994,7 +2994,7 @@
     },
     {
       "id": "US-187",
-      "title": "App — Push notification integration",
+      "title": "App \u2014 Push notification integration",
       "description": "As a participant, I want to receive push notifications from the research team so I am reminded of study activities and deadlines.",
       "acceptanceCriteria": [
         "firebase_messaging Flutter package added to mobile/pubspec.yaml",
