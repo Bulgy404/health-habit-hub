@@ -1,6 +1,21 @@
 import express from 'express';
 import neo4j from 'neo4j-driver';
 import { randomUUID } from 'node:crypto';
+import { makeGetDb } from '../utils/getDb.js';
+import { donateHabit } from '../services/habitDonationService.js';
+
+const SUPPORTED_LANGUAGES = [
+  'en',
+  'de',
+  'fr',
+  'es',
+  'it',
+  'pt',
+  'nl',
+  'pl',
+  'ru',
+  'zh',
+];
 
 export function createHabitsRouter({
   db,
@@ -9,12 +24,7 @@ export function createHabitsRouter({
   libreTranslateUrl,
 } = {}) {
   const router = express.Router();
-
-  async function getDb() {
-    if (db) return db;
-    const { connect } = await import('../models/survey.js');
-    return connect();
-  }
+  const getDb = makeGetDb(db);
 
   // Long-lived Neo4j driver — created once per router instance, reusing the connection pool
   const _neo4jDriver = neo4jRun
@@ -47,26 +57,20 @@ export function createHabitsRouter({
     return Number(val);
   }
 
-  // Unified translation helper — translates sentence from `sourceLang` to `targetLang` via
-  // LibreTranslate (step 1) then refines tone with LLM (step 2).
-  // Returns the refined translation string, or null if LibreTranslate is unavailable.
-  // Falls back to raw LibreTranslate output if the LLM refinement step fails.
-  async function translate(
+  // Step 1: Call LibreTranslate with a 10-second timeout.
+  // Returns the raw translated string, or null if the service is unavailable.
+  async function fetchLibreTranslation(
     sentence,
     sourceLang,
     targetLang,
-    llmEndpoint,
-    apiBase,
     translateUrl
   ) {
-    // Step 1: LibreTranslate with 10-second timeout (matching LLM timeout)
-    let draft;
     try {
-      const ltController = new AbortController();
-      const ltTimeout = setTimeout(() => ltController.abort(), 10000);
-      let ltRes;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      let res;
       try {
-        ltRes = await fetch(translateUrl, {
+        res = await fetch(translateUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -75,33 +79,42 @@ export function createHabitsRouter({
             target: targetLang,
             format: 'text',
           }),
-          signal: ltController.signal,
+          signal: controller.signal,
         });
       } finally {
-        clearTimeout(ltTimeout);
+        clearTimeout(timeout);
       }
-      if (!ltRes.ok) {
+      if (!res.ok) {
         console.warn(
-          `[translate] LibreTranslate returned ${ltRes.status} — skipping translation${targetLang.toUpperCase()}`
+          `[translate] LibreTranslate returned ${res.status} — skipping translation${targetLang.toUpperCase()}`
         );
         return null;
       }
-      const ltData = await ltRes.json();
-      draft = ltData.translatedText;
+      const data = await res.json();
+      return data.translatedText;
     } catch (err) {
       console.warn(
         `[translate] LibreTranslate error: ${err.message} — skipping translation${targetLang.toUpperCase()}`
       );
       return null;
     }
+  }
 
-    // Step 2: LLM tone refinement with 10-second timeout
+  // Step 2: Refine the raw translation with the LLM tone endpoint.
+  // Returns the refined string, or the original draft if the LLM is unavailable.
+  async function refineLLMTranslation(
+    draft,
+    sentence,
+    sourceLang,
+    llmEndpoint,
+    apiBase
+  ) {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
-      let refineRes;
+      let res;
       try {
-        refineRes = await fetch(`${apiBase}${llmEndpoint}`, {
+        res = await fetch(`${apiBase}${llmEndpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -114,16 +127,14 @@ export function createHabitsRouter({
       } finally {
         clearTimeout(timeout);
       }
-
-      if (!refineRes.ok) {
+      if (!res.ok) {
         console.warn(
-          `[translate] LLM ${llmEndpoint} returned ${refineRes.status} — using raw LibreTranslate output`
+          `[translate] LLM ${llmEndpoint} returned ${res.status} — using raw LibreTranslate output`
         );
         return draft;
       }
-
-      const refineData = await refineRes.json();
-      return refineData.refined_translation || draft;
+      const data = await res.json();
+      return data.refined_translation || draft;
     } catch (err) {
       console.warn(
         `[translate] LLM refinement error/timeout: ${err.message} — using raw LibreTranslate output`
@@ -132,28 +143,29 @@ export function createHabitsRouter({
     }
   }
 
-  // Convenience wrappers kept for clarity
-  async function translateToGerman(sentence, language, apiBase, translateUrl) {
-    if (!language || !language.startsWith('en')) return null;
-    return translate(
+  // Unified translation: LibreTranslate → LLM tone refinement.
+  // Returns refined string, raw LibreTranslate output if LLM fails, or null if LibreTranslate fails.
+  async function translate(
+    sentence,
+    sourceLang,
+    targetLang,
+    llmEndpoint,
+    apiBase,
+    translateUrl
+  ) {
+    const draft = await fetchLibreTranslation(
       sentence,
-      'en',
-      'de',
-      '/api/v1/llm/refine-translation-de',
-      apiBase,
+      sourceLang,
+      targetLang,
       translateUrl
     );
-  }
-
-  async function translateAndRefine(sentence, language, apiBase, translateUrl) {
-    if (!language || language.startsWith('en')) return null;
-    return translate(
+    if (!draft) return null;
+    return refineLLMTranslation(
+      draft,
       sentence,
-      language,
-      'en',
-      '/api/v1/llm/refine-translation',
-      apiBase,
-      translateUrl
+      sourceLang,
+      llmEndpoint,
+      apiBase
     );
   }
 
@@ -463,7 +475,7 @@ export function createHabitsRouter({
   });
 
   // POST /api/v1/habits/donate
-  // Orchestrates M1.1 → M1.2 → M1.3 pipeline and writes to Neo4j/MongoDB
+  // Validate input then delegate to habitDonationService
   router.post('/donate', async (req, res) => {
     const { sentence, language } = req.body || {};
     if (!sentence || !language) {
@@ -471,20 +483,6 @@ export function createHabitsRouter({
         .status(400)
         .json({ error: 'sentence and language are required' });
     }
-
-    // Input length and language validation
-    const SUPPORTED_LANGUAGES = [
-      'en',
-      'de',
-      'fr',
-      'es',
-      'it',
-      'pt',
-      'nl',
-      'pl',
-      'ru',
-      'zh',
-    ];
     if (typeof sentence !== 'string' || sentence.length > 1000) {
       return res.status(400).json({
         error: 'sentence must be a string of at most 1000 characters',
@@ -499,8 +497,6 @@ export function createHabitsRouter({
       });
     }
 
-    const userID = req.user?.sub;
-    const uuid = randomUUID();
     const apiBase =
       apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
     const translateUrl =
@@ -508,153 +504,22 @@ export function createHabitsRouter({
       process.env.LIBRE_TRANSLATE_URL ||
       `http://${process.env.TRANSLATE_HOST || 'localhost'}:${process.env.TRANSLATE_PORT || '5000'}${process.env.TRANSLATE_PATH || '/translate'}`;
 
-    const DIMENSIONS = [
-      'TIME',
-      'PHYSICAL_SETTING',
-      'PRIOR_BEHAVIOR',
-      'OTHER_PEOPLE',
-      'INTERNAL_STATE',
-      'BEHAVIOR',
-      'REASONING',
-    ];
-
     try {
-      // M1.1: Classify habit
-      const classifyRes = await fetch(`${apiBase}/api/v1/llm/classify-habit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sentence, language, user_id: userID }),
-      });
-
-      if (!classifyRes.ok) {
-        return res.status(502).json({ error: 'Habit classification failed' });
-      }
-
-      const classified = await classifyRes.json();
-
-      if (!classified.is_habit) {
-        // Store non-habit in MongoDB for review
-        const database = await getDb();
-        await database.collection('habits').insertOne({
-          sentence,
-          language,
-          is_habit: false,
-          userID,
-          created_at: new Date(),
-        });
-        return res.json({
-          is_habit: false,
-          message:
-            'Thank you for your contribution. This sentence was not identified as a habit and has been noted for review.',
-        });
-      }
-
-      // M1.2: Extract context
-      const contextRes = await fetch(`${apiBase}/api/v1/llm/classify-context`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uuid, sentence, language }),
-      });
-
-      if (!contextRes.ok) {
-        return res.status(502).json({ error: 'Context extraction failed' });
-      }
-
-      const context = await contextRes.json();
-
-      // Build context_phrases: { dimension: [phrases] } (non-empty dims only)
-      const contextPhrases = {};
-      for (const dim of DIMENSIONS) {
-        if (Array.isArray(context[dim]) && context[dim].length > 0) {
-          contextPhrases[dim] = context[dim];
-        }
-      }
-
-      // M1.3: Map BCIO concepts
-      const bcioRes = await fetch(`${apiBase}/api/v1/llm/map-bcio`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uuid, context_phrases: contextPhrases }),
-      });
-
-      if (!bcioRes.ok) {
-        return res.status(502).json({ error: 'BCIO mapping failed' });
-      }
-
-      const bcioData = await bcioRes.json();
-      const mappings = bcioData.mappings || [];
-
-      // Translate non-English habits to English (tone-preserving)
-      const translationEN = await translateAndRefine(
+      const result = await donateHabit({
+        uuid: randomUUID(),
         sentence,
         language,
+        userID: req.user?.sub,
+        queryNeo4j,
+        getDb,
         apiBase,
-        translateUrl
-      );
-
-      // Translate English habits to German (tone-preserving)
-      const translationDE = await translateToGerman(
-        sentence,
-        language,
-        apiBase,
-        translateUrl
-      );
-
-      // Write to Neo4j — 1. Create Habit node
-      const createdAt = new Date().toISOString();
-      await queryNeo4j(
-        `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: $language,
-           is_habit: true, confidence: $confidence, userID: $userID, created_at: $created_at,
-           translationEN: $translationEN, translationDE: $translationDE})`,
-        {
-          uuid,
-          sentence,
-          language,
-          confidence: classified.confidence,
-          userID,
-          created_at: createdAt,
-          translationEN: translationEN || null,
-          translationDE: translationDE || null,
-        }
-      );
-
-      // 2. MERGE Context nodes and HAS_CONTEXT relationships (batched with UNWIND)
-      const contextRows = [];
-      for (const [dimension, phrases] of Object.entries(contextPhrases)) {
-        for (const phrase of phrases) {
-          contextRows.push({ text: phrase, dimension });
-        }
-      }
-      if (contextRows.length > 0) {
-        await queryNeo4j(
-          `UNWIND $rows AS row
-           MERGE (c:Context {text: row.text, dimension: row.dimension})
-           WITH c, row
-           MATCH (h:Habit {uuid: $habitUuid})
-           MERGE (h)-[:HAS_CONTEXT {dimension: row.dimension}]->(c)`,
-          { rows: contextRows, habitUuid: uuid }
-        );
-      }
-
-      // 3. MERGE BCIOConcept nodes and MAPS_TO relationships (batched with UNWIND)
-      if (mappings.length > 0) {
-        await queryNeo4j(
-          `UNWIND $mappings AS m
-           MERGE (b:BCIOConcept {bcio_concept_id: m.bcio_concept_id})
-           ON CREATE SET b.bcio_concept_label = m.bcio_concept_label
-           WITH b, m
-           MATCH (c:Context {text: m.phrase, dimension: m.dimension})
-           MERGE (c)-[:MAPS_TO {confidence: m.confidence, phrase: m.phrase, dimension: m.dimension}]->(b)`,
-          { mappings }
-        );
-      }
-
-      return res.status(201).json({
-        is_habit: true,
-        uuid,
-        message: 'Thank you! Your habit has been successfully donated.',
+        translate,
+        translateUrl,
       });
+      return res.status(result.is_habit ? 201 : 200).json(result);
     } catch (err) {
+      if (err.status === 502)
+        return res.status(502).json({ error: err.message });
       console.error('[donate] Unexpected error:', err);
       return res.status(500).json({ error: 'Internal server error' });
     }

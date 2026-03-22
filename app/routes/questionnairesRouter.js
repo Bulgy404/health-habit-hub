@@ -1,13 +1,9 @@
 import express from 'express';
+import { makeGetDb } from '../utils/getDb.js';
 
 export function createQuestionnairesRouter({ db } = {}) {
   const router = express.Router();
-
-  async function getDb() {
-    if (db) return db;
-    const { connect } = await import('../models/survey.js');
-    return connect();
-  }
+  const getDb = makeGetDb(db);
 
   /**
    * @swagger

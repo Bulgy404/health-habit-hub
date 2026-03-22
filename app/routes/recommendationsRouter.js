@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import express from 'express';
+import { makeGetDb } from '../utils/getDb.js';
 
 /**
  * Compute the same Redis cache key that API-service/routers/recommend.py uses.
@@ -15,12 +16,7 @@ export function createRecommendationsRouter({
   redisUrl,
 } = {}) {
   const router = express.Router();
-
-  async function getDb() {
-    if (db) return db;
-    const { connect } = await import('../models/survey.js');
-    return connect();
-  }
+  const getDb = makeGetDb(db);
 
   async function getRedis() {
     if (redisClient !== undefined) return redisClient; // null means disabled in tests
@@ -28,7 +24,9 @@ export function createRecommendationsRouter({
       const { createClient } = await import('redis');
       const url = redisUrl || process.env.REDIS_URL || 'redis://localhost:6379';
       const client = createClient({ url });
-      client.on('error', () => {}); // suppress unhandled errors
+      client.on('error', (err) =>
+        console.warn('[redis] client error:', err.message)
+      );
       await client.connect();
       return client;
     } catch (err) {

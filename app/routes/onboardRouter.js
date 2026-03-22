@@ -1,6 +1,7 @@
 import express from 'express';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 
 const onboardRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -25,29 +26,12 @@ export function createOnboardRouter({ keycloak } = {}) {
   const realm = process.env.KEYCLOAK_REALM || 'hhh';
   const clientId = process.env.KEYCLOAK_CLIENT_ID || 'hhh-flutter';
 
-  async function getAdminToken(kc) {
-    if (kc && typeof kc.getAdminToken === 'function') {
-      return kc.getAdminToken();
-    }
-    const adminClientId = process.env.KEYCLOAK_ADMIN_CLIENT_ID || 'hhh-backend';
-    const adminClientSecret = process.env.KEYCLOAK_ADMIN_CLIENT_SECRET || '';
-    const res = await fetch(
-      `${base}/realms/${realm}/protocol/openid-connect/token`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          client_id: adminClientId,
-          client_secret: adminClientSecret,
-        }),
-      }
-    );
-    if (!res.ok)
-      throw new Error(`Keycloak admin token fetch failed: ${res.status}`);
-    const data = await res.json();
-    return data.access_token;
-  }
+  // Use injected keycloak client (must have getAdminToken()) in tests,
+  // or the shared admin client in production.
+  const kcAdmin =
+    keycloak && typeof keycloak.getAdminToken === 'function'
+      ? keycloak
+      : createKeycloakAdminClient();
 
   router.post('/', onboardRateLimiter, async (req, res) => {
     const username = randomUUID();
@@ -55,7 +39,7 @@ export function createOnboardRouter({ keycloak } = {}) {
 
     try {
       // Step 1: get admin token and create user
-      const adminToken = await getAdminToken(keycloak);
+      const adminToken = await kcAdmin.getAdminToken();
 
       const createRes = await fetch(`${base}/admin/realms/${realm}/users`, {
         method: 'POST',

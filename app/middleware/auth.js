@@ -76,31 +76,14 @@ export function createAuthMiddleware({
   expectedIssuer,
   expectedAudience,
 } = {}) {
-  const url = jwksUrl || process.env.KEYCLOAK_JWKS_URL;
   const issuer = expectedIssuer || process.env.KEYCLOAK_JWT_ISSUER || null;
   const audience =
     expectedAudience || process.env.KEYCLOAK_JWT_AUDIENCE || null;
-  let cachedKeys = null;
-  let lastFetchedAt = 0;
 
-  async function fetchJwks() {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Failed to fetch JWKS: ${res.status}`);
-    const { keys } = await res.json();
-    cachedKeys = keys;
-    lastFetchedAt = Date.now();
-    return keys;
-  }
-
-  async function getKeys(forceRefresh = false) {
-    const expired = Date.now() - lastFetchedAt > JWKS_TTL_MS;
-    if (!cachedKeys || expired || forceRefresh) return fetchJwks();
-    return cachedKeys;
-  }
-
-  const ready = fetchJwks().catch((err) =>
-    console.warn('JWKS prefetch failed:', err.message)
-  );
+  // Reuse createTokenVerifier for all JWKS caching and signature verification.
+  // JWKS keys are fetched lazily on the first request.
+  const verifyToken = createTokenVerifier({ jwksUrl });
+  const ready = Promise.resolve();
 
   async function authMiddleware(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -110,7 +93,7 @@ export function createAuthMiddleware({
 
     const token = authHeader.slice(7);
     try {
-      const { header, payload, signature, signingInput } = parseJwt(token);
+      const payload = await verifyToken(token);
 
       // Validate issuer if configured
       if (issuer && payload.iss !== issuer) {
@@ -123,27 +106,6 @@ export function createAuthMiddleware({
         if (!aud.includes(audience)) {
           return res.status(401).json({ error: 'Unauthorized' });
         }
-      }
-
-      let keys = await getKeys();
-      let key = keys.find(
-        (k) => k.kid === header.kid || (!header.kid && k.use === 'sig')
-      );
-      // On key-not-found, try a fresh JWKS fetch (Keycloak may have rotated keys)
-      if (!key) {
-        keys = await getKeys(true);
-        key = keys.find(
-          (k) => k.kid === header.kid || (!header.kid && k.use === 'sig')
-        );
-      }
-      if (!key) return res.status(401).json({ error: 'Unauthorized' });
-
-      const valid = verifyJwtSignature(signingInput, signature, key);
-      if (!valid) return res.status(401).json({ error: 'Unauthorized' });
-
-      const now = Math.floor(Date.now() / 1000);
-      if (payload.exp && payload.exp < now) {
-        return res.status(401).json({ error: 'Unauthorized' });
       }
 
       req.user = payload;

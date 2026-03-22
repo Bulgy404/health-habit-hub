@@ -1,15 +1,11 @@
 import express from 'express';
+import { makeGetDb } from '../utils/getDb.js';
 
 const SUPPORTED_LANGUAGES = ['en', 'de'];
 
 export function createUsersRouter({ db } = {}) {
   const router = express.Router();
-
-  async function getDb() {
-    if (db) return db;
-    const { connect } = await import('../models/survey.js');
-    return connect();
-  }
+  const getDb = makeGetDb(db);
 
   // GET /api/v1/users/me – return caller's user record (creates default if absent)
   router.get('/me', async (req, res) => {
@@ -23,7 +19,8 @@ export function createUsersRouter({ db } = {}) {
       }
       // Return default without persisting
       return res.json({ userId, preferredLanguage: 'en' });
-    } catch (_err) {
+    } catch (err) {
+      console.error('[usersRouter] Error in GET /me:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -55,7 +52,8 @@ export function createUsersRouter({ db } = {}) {
       const doc = await database.collection('users').findOne({ userId });
       const { _id, ...rest } = doc;
       res.json(rest);
-    } catch (_err) {
+    } catch (err) {
+      console.error('[usersRouter] Error in PUT /me:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
