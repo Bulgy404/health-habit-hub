@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-03-22
+
+### Changed — Clean Code Refactor Cycle (US-162 to US-170)
+
+**Flutter app (`mobile/`)**
+- Extracted shared `AuthInterceptor` + `DioProvider` (`lib/core/auth_interceptor.dart`, `lib/core/dio_provider.dart`) — removed duplicated `_authHeaders()` from 6 service files
+- Extracted shared `OfflineBanner` widget to `lib/widgets/offline_banner.dart` — removed duplication between `DonateScreen` and `ProfileScreen`
+- Decomposed `AdminParticipantsScreen` into `_FilterBar`, `_ParticipantsTable`, `_PaginationBar`, `_ErrorView`, `_CreateParticipantDialog` sub-widgets
+- Decomposed `AdminHabitsScreen` into `_FilterBar`, `_DonationListView`, `_DonationTile`, `_ErrorView` sub-widgets
+- Decomposed `QuestionnaireFormWidget` into 8 named sub-widget classes
+- Split `ProfileScreen._init()` into `_init()` + `_initSurvey()` + focused helpers
+- Fixed infinite-fetch loop in `ExploreScreen` annotate closure (catch block now sets `_fetchedLang`)
+- Replaced all silent `catch(_) {}` blocks with `catch(e, st) { debugPrint(...) }` pattern
+- `HabitDonation.donatedAt` changed to `DateTime?` (null-safe)
+- `ProfileScreen` now uses `AppConfig.apiBaseUrl` (removed hardcoded production URL)
+
+**Node.js backend (`app/`)**
+- Extracted `app/utils/getDb.js` — removed 8 copy-pasted `getDb()` functions from route files
+- Extracted `app/services/habitDonationService.js` — `POST /habits/donate` handler reduced from 143 to ~20 lines
+- Split `translate()` into `fetchLibreTranslation()` + `refineLLMTranslation()` in `app/utils/translate.js`
+- Extracted `app/services/keycloakAdminClient.js` — Keycloak admin API wrapper with 55s token TTL cache
+- Extracted `app/middleware/roles.js` — `ROLES` constants + `isPrivileged()` helper
+- `createAuthMiddleware` now composes `createTokenVerifier` — single JWKS cache (no duplication)
+- Removed `console.log` debug statements from `app.js`, `donateRouter.js`; removed dead `/test-disclaimer` and `/submit-form` routes
+- Replaced `uuid` npm package with `node:crypto.randomUUID` in `donateRouter.js` and `surveyRouter.js`
+
+**Neo4j / data layer (`app/`)**
+- Extracted `app/db/habitQueries.js` and `app/db/adminQueries.js` — moved all inline Cypher strings from routers and services
+- Extracted `app/models/donation.js` — `Donor`, `Label`, `Donation`, `ExperimentalSetting` domain model classes (previously duplicated between `Neo4jDatabase.js` and `SparqlDatabase.js`)
+- Extracted `app/utils/constants.js` — shared constants (RDF namespaces, group labels, etc.)
+- `SparqlDatabase.js`: renamed `DbClient` → `SparqlDbClient` for naming consistency with `Neo4jDbClient`; fixed critical bug where `isClosedTaskClosedDescription` etc. were referenced without `()` (truthy function references)
+- Fixed deprecated `exists()` call in `scripts/migrate-group-labels.cypher` (Step 2)
+
+**CI / Scripts**
+- Added reusable GitHub Actions composite actions: `.github/actions/setup-node-app/action.yml`, `.github/actions/setup-flutter/action.yml` — eliminated ~60 lines of duplicated setup steps across CI jobs
+- `scripts/deploy-*.sh`: updated `docker-compose` → `docker compose` (Docker Compose v2 plugin CLI)
+- `scripts/deploy-keycloak.sh`: replaced brittle `grep | cut` token extraction with `jq -r '.access_token'`
+- `scripts/deploy-full.sh`: fixed health check — now polls Keycloak health endpoint (not backend) after Keycloak deploy
+- `scripts/generate-spec.js`: removed dead 44-line `toYaml()` function; added `process.exit(1)` on error
+- `scripts/restore.sh`: shebang updated to `#!/usr/bin/env bash`; timestamp format changed to UTC ISO 8601
+- `.github/workflows/deploy.yml`: updated `actions/checkout@v6` → `@v4`
+
+**Tests**
+- Backend: 265 passing tests (up from 247 in v1.1.0)
+- Flutter: `flutter analyze` zero issues; `flutter test` 49/49 passed
+
 ## [1.1.0] - 2026-03-21
 
 ### Added

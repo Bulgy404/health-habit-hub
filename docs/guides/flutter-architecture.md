@@ -46,7 +46,9 @@ mobile/
 │   ├── config/
 │   │   └── app_config.dart          # Compile-time env vars (--dart-define)
 │   ├── core/
-│   │   └── exceptions.dart          # Sealed AppException hierarchy
+│   │   ├── exceptions.dart          # Sealed AppException hierarchy
+│   │   ├── auth_interceptor.dart    # Dio interceptor: auto-attaches Bearer token
+│   │   └── dio_provider.dart        # Riverpod Provider<Dio> with auth interceptor wired in
 │   ├── features/                    # Self-contained feature modules
 │   │   ├── questionnaire/           # Questionnaire form + state + service
 │   │   └── recommendation/          # Goal input, loading, results screens
@@ -64,7 +66,8 @@ mobile/
 │   ├── services/                    # Network service classes (Dio-based)
 │   ├── utils/
 │   │   └── bip39_wordlist.dart      # BIP-39 word list (used by passphrase_screen)
-│   └── widgets/                     # Shared reusable widgets
+│   └── widgets/
+│       └── offline_banner.dart      # Shared OfflineBanner widget (used by DonateScreen, ProfileScreen)
 ├── test/
 │   ├── widget/                      # Widget tests
 │   └── unit/                        # Unit tests
@@ -237,14 +240,18 @@ final _tokenEndpoint = '${AppConfig.keycloakUrl}/realms/hhh/protocol/openid-conn
 
 ### Attaching tokens to requests
 
-Each service class calls `authService.getAccessToken()` and sets the `Authorization: Bearer <token>` header on every Dio request. This is currently done per-service in a shared `_authHeaders()` helper pattern. All six service classes follow the same pattern:
+Token attachment is handled centrally by `mobile/lib/core/auth_interceptor.dart` — a Dio `Interceptor` that calls `authService.getAccessToken()` and sets `Authorization: Bearer <token>` on every outgoing request before it is sent. The interceptor is registered on the shared `Dio` instance created in `mobile/lib/core/dio_provider.dart`:
 
 ```dart
-Future<Map<String, String>> _authHeaders() async {
-  final token = await _authService.getAccessToken();
-  return {'Authorization': 'Bearer $token'};
-}
+// dio_provider.dart
+final dioProvider = Provider<Dio>((ref) {
+  final dio = Dio();
+  dio.interceptors.add(AuthInterceptor(ref.read(authServiceProvider)));
+  return dio;
+});
 ```
+
+All service classes receive the `Dio` instance from `dioProvider` via Riverpod. The previous per-service `_authHeaders()` helper pattern has been removed — do not re-introduce it in new services.
 
 ### Logout
 

@@ -2739,7 +2739,7 @@
         "DOCUMENTATION.md updated if new files added to docs/"
       ],
       "priority": 171,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-167, US-168, US-169, US-170. Can run in parallel with US-172 prep but must complete before US-172."
     },
     {
