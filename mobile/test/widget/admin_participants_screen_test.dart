@@ -2,14 +2,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hhh/models/admin_participant.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/screens/admin/admin_participants_screen.dart';
+import 'package:dio/dio.dart';
+import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/services/admin_service.dart';
 import 'package:hhh/services/auth_service.dart';
+
+final _fakeDio = Dio();
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -32,24 +37,24 @@ class _FakeAdminService extends AdminService {
       : shouldThrow = false,
         participants = const [],
         _completer = Completer<List<AdminParticipant>>(),
-        super(_FakeAuthService());
+        super(dio: _fakeDio, authService: _FakeAuthService());
 
   _FakeAdminService.throwing()
       : shouldThrow = true,
         participants = const [],
         _completer = null,
-        super(_FakeAuthService());
+        super(dio: _fakeDio, authService: _FakeAuthService());
 
   _FakeAdminService.empty()
       : shouldThrow = false,
         participants = const [],
         _completer = null,
-        super(_FakeAuthService());
+        super(dio: _fakeDio, authService: _FakeAuthService());
 
   _FakeAdminService.withData(this.participants)
       : shouldThrow = false,
         _completer = null,
-        super(_FakeAuthService());
+        super(dio: _fakeDio, authService: _FakeAuthService());
 
   @override
   Future<List<AdminParticipant>> fetchParticipants() {
@@ -81,7 +86,16 @@ Widget _buildSubject(AdminService service) {
       authServiceProvider.overrideWithValue(_FakeAuthService()),
       adminServiceProvider.overrideWithValue(service),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
+      routerConfig: router,
+    ),
   );
 }
 

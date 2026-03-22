@@ -8,13 +8,18 @@
 // fails quickly. All tests use pumpAndSettle() to drain Dio's async timers so
 // no pending timers remain after the test.
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hhh/models/survey.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/screens/profile_screen.dart';
+import 'package:dio/dio.dart';
+import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/services/auth_service.dart';
 import 'package:hhh/services/survey_service.dart';
+
+final _fakeDio = Dio();
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -31,7 +36,7 @@ class _FakeAuthService extends AuthService {
 // Fake survey service that always throws — ProfileScreen's internal Dio call
 // will also fail, keeping the offline-banner as the visible state.
 class _FakeSurveyService extends SurveyService {
-  _FakeSurveyService() : super(authService: _FakeAuthService());
+  _FakeSurveyService() : super(dio: _fakeDio);
 
   @override
   Future<Survey> fetchSurvey(String id) =>
@@ -44,7 +49,16 @@ Widget _buildSubject() {
       authServiceProvider.overrideWithValue(_FakeAuthService()),
       surveyServiceProvider.overrideWithValue(_FakeSurveyService()),
     ],
-    child: const MaterialApp(home: ProfileScreen()),
+    child: MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
+      home: const ProfileScreen(),
+    ),
   );
 }
 

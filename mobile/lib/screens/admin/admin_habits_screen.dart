@@ -113,7 +113,8 @@ class _AdminHabitsScreenState extends ConsumerState<AdminHabitsScreen> {
           _error = false;
         });
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('ERROR in AdminHabitsScreen._load: $e\n$st');
       if (mounted) {
         setState(() {
           _loading = false;
@@ -431,10 +432,12 @@ class _DonationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final dateStr =
-        '${donation.donatedAt.year.toString().padLeft(4, '0')}-'
-        '${donation.donatedAt.month.toString().padLeft(2, '0')}-'
-        '${donation.donatedAt.day.toString().padLeft(2, '0')}';
+    final d = donation.donatedAt;
+    final dateStr = d != null
+        ? '${d.year.toString().padLeft(4, '0')}-'
+          '${d.month.toString().padLeft(2, '0')}-'
+          '${d.day.toString().padLeft(2, '0')}'
+        : '—';
     return ListTile(
       dense: true,
       title: Text(donation.habitName),

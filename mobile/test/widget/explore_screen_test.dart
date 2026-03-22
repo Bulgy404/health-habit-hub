@@ -1,14 +1,20 @@
 // Widget tests for ExploreScreen.
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hhh/models/habit_node.dart';
+import 'package:hhh/models/habit_stats.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/screens/explore_screen.dart';
 import 'package:hhh/services/auth_service.dart';
 import 'package:hhh/services/habit_service.dart';
+
+final _fakeDio = Dio();
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -29,29 +35,45 @@ class _FakeHabitService extends HabitService {
   _FakeHabitService.throwing()
       : shouldThrow = true,
         habits = const [],
-        super(authService: _FakeAuthService());
+        super(dio: _fakeDio);
 
   _FakeHabitService.empty()
       : shouldThrow = false,
         habits = const [],
-        super(authService: _FakeAuthService());
+        super(dio: _fakeDio);
 
   @override
   Future<List<HabitNode>> fetchPublicHabits() {
     if (shouldThrow) return Future.error(Exception('Network error'));
     return Future.value(habits);
   }
+
+  @override
+  Future<List<HabitNode>> fetchDonatedHabits(String lang) {
+    if (shouldThrow) return Future.error(Exception('Network error'));
+    return Future.value(habits);
+  }
+
+  @override
+  Future<HabitStats> fetchStats() =>
+      Future.value(const HabitStats(total: 0, byCategory: [], byDay: []));
 }
 
 // Service that returns a future that never completes (loading state test).
 class _LoadingHabitService extends HabitService {
   final Completer<List<HabitNode>> _completer;
 
-  _LoadingHabitService(this._completer)
-      : super(authService: _FakeAuthService());
+  _LoadingHabitService(this._completer) : super(dio: _fakeDio);
 
   @override
   Future<List<HabitNode>> fetchPublicHabits() => _completer.future;
+
+  @override
+  Future<List<HabitNode>> fetchDonatedHabits(String lang) => _completer.future;
+
+  @override
+  Future<HabitStats> fetchStats() =>
+      Future.value(const HabitStats(total: 0, byCategory: [], byDay: []));
 }
 
 Widget _buildSubject(HabitService habitService) {
@@ -60,7 +82,16 @@ Widget _buildSubject(HabitService habitService) {
       authServiceProvider.overrideWithValue(_FakeAuthService()),
       habitServiceProvider.overrideWithValue(habitService),
     ],
-    child: const MaterialApp(home: ExploreScreen()),
+    child: MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
+      home: const ExploreScreen(),
+    ),
   );
 }
 

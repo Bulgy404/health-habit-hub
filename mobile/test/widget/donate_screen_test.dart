@@ -4,14 +4,21 @@
 // channels). Tests cover loading state, offline/error state, and key widgets.
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hhh/models/survey.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/screens/donate_screen.dart';
 import 'package:hhh/services/auth_service.dart';
 import 'package:hhh/services/survey_service.dart';
+
+/// Shared no-op Dio instance for fake service constructors.
+/// Tests override surveyServiceProvider so HTTP calls never happen.
+final _fakeDio = Dio();
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -32,12 +39,12 @@ class _FakeSurveyService extends SurveyService {
   _FakeSurveyService.throwing()
       : shouldThrow = true,
         _completer = null,
-        super(authService: _FakeAuthService());
+        super(dio: _fakeDio);
 
   _FakeSurveyService.loading()
       : shouldThrow = false,
         _completer = Completer<Survey>(),
-        super(authService: _FakeAuthService());
+        super(dio: _fakeDio);
 
   @override
   Future<Survey> fetchSurvey(String id) {
@@ -52,7 +59,16 @@ Widget _buildSubject(_FakeSurveyService surveyService) {
       authServiceProvider.overrideWithValue(_FakeAuthService()),
       surveyServiceProvider.overrideWithValue(surveyService),
     ],
-    child: const MaterialApp(home: DonateScreen()),
+    child: MaterialApp(
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en')],
+      home: const DonateScreen(),
+    ),
   );
 }
 

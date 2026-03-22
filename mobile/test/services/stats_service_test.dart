@@ -2,13 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
-import 'package:hhh/services/auth_service.dart';
 import 'package:hhh/services/habit_service.dart';
-
-class _StubAuthService extends AuthService {
-  @override
-  Future<String?> getAccessToken() async => null;
-}
 
 // AppConfig.apiBaseUrl defaults to 'http://localhost:3000/api/v1' in tests.
 const _base = 'http://localhost:3000/api/v1';
@@ -21,7 +15,7 @@ void main() {
   setUp(() {
     dio = Dio();
     adapter = DioAdapter(dio: dio, matcher: const FullHttpRequestMatcher());
-    service = HabitService(dio: dio, authService: _StubAuthService());
+    service = HabitService(dio: dio);
   });
 
   group('fetchStats', () {

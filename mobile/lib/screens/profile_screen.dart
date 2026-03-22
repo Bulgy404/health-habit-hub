@@ -7,9 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import '../config/app_config.dart';
+import '../core/dio_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/survey_service.dart';
+import '../widgets/offline_banner.dart';
 
 /// Profile questionnaire screen.
 ///
@@ -25,9 +28,9 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  static const _baseUrl = 'https://api.hhh.tu-dresden.de/api/v1';
+  static const _baseUrl = AppConfig.apiBaseUrl;
 
-  final _dio = Dio();
+  late final Dio _dio;
 
   /// Whether we are still loading (checking profile or fetching survey).
   bool _loading = true;
@@ -49,14 +52,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _dio = ref.read(dioProvider);
     _init();
-  }
-
-  Future<Map<String, String>> _authHeaders() async {
-    final authService = ref.read(authServiceProvider);
-    final token = await authService.getAccessToken();
-    if (token == null) return {};
-    return {'Authorization': 'Bearer $token'};
   }
 
   Future<void> _init() async {
@@ -65,32 +62,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _offline = false;
     });
     try {
-      final headers = await _authHeaders();
-      // Check if profile already exists.
       final profileResp = await _dio.get<Map<String, dynamic>>(
         '$_baseUrl/profile',
         options: Options(
-          headers: headers,
           validateStatus: (status) => status != null && status < 500,
         ),
       );
-
       if (profileResp.statusCode == 200) {
-        // Profile already completed — parse completion date.
-        final data = profileResp.data;
-        DateTime? completedAt;
-        if (data != null && data['completedAt'] != null) {
-          completedAt = DateTime.tryParse(data['completedAt'].toString());
-        }
-        if (mounted) {
-          setState(() {
-            _completedAt = completedAt ?? DateTime.now();
-            _loading = false;
-          });
-        }
+        _onProfileLoaded(profileResp.data);
       } else {
-        // No profile yet — load the survey WebView.
-        await _initSurvey(headers);
+        await _initSurvey();
       }
     } catch (_) {
       if (mounted) {
@@ -102,7 +83,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  Future<void> _initSurvey([Map<String, String>? existingHeaders]) async {
+  void _onProfileLoaded(Map<String, dynamic>? data) {
+    if (!mounted) return;
+    DateTime? completedAt;
+    if (data != null && data['completedAt'] != null) {
+      completedAt = DateTime.tryParse(data['completedAt'].toString());
+    }
+    setState(() {
+      _completedAt = completedAt ?? DateTime.now();
+      _loading = false;
+    });
+  }
+
+  Future<void> _initSurvey() async {
     final surveyService = ref.read(surveyServiceProvider);
     final authService = ref.read(authServiceProvider);
     try {
@@ -162,11 +155,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final l10n = AppLocalizations.of(context)!;
     try {
       final answers = jsonDecode(message) as Map<String, dynamic>;
-      final headers = await _authHeaders();
       await _dio.post<void>(
         '$_baseUrl/profile',
         data: {'answers': answers, 'completedAt': DateTime.now().toIso8601String()},
-        options: Options(headers: headers),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -204,13 +195,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.myProfile),
+        title: Text(l10n.myProfile),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            tooltip: AppLocalizations.of(context)!.settings,
+            tooltip: l10n.settings,
             onPressed: () => context.push('/settings'),
           ),
         ],
@@ -221,7 +213,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Stack(
               children: [
                 if (_offline)
-                  _OfflineBanner(onRetry: _init)
+                  OfflineBanner(
+                    message: l10n.couldNotLoadProfile,
+                    onRetry: _init,
+                  )
                 else if (_loading)
                   const Center(child: CircularProgressIndicator())
                 else if (_completedAt != null && !_editing)
@@ -239,7 +234,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              AppLocalizations.of(context)!.healthQuestionnaires,
+                              l10n.healthQuestionnaires,
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 8),
@@ -247,7 +242,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               onPressed: () =>
                                   context.push('/questionnaire/sliq'),
                               icon: const Icon(Icons.assignment),
-                              label: Text(AppLocalizations.of(context)!.sliqLifestyleIndex),
+                              label: Text(l10n.sliqLifestyleIndex),
                               style: OutlinedButton.styleFrom(
                                 minimumSize:
                                     const Size(double.infinity, 48),
@@ -258,7 +253,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               onPressed: () =>
                                   context.push('/questionnaire/rand-36'),
                               icon: const Icon(Icons.health_and_safety),
-                              label: Text(AppLocalizations.of(context)!.rand36HealthSurvey),
+                              label: Text(l10n.rand36HealthSurvey),
                               style: OutlinedButton.styleFrom(
                                 minimumSize:
                                     const Size(double.infinity, 48),
@@ -273,7 +268,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           onPressed: () =>
                               context.push('/onboarding/restore'),
                           icon: const Icon(Icons.lock_reset),
-                          label: Text(AppLocalizations.of(context)!.restoreAccountOnDevice),
+                          label: Text(l10n.restoreAccountOnDevice),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size(double.infinity, 48),
                           ),
@@ -400,62 +395,6 @@ class _AppearanceSection extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Offline banner — reused pattern from DonateScreen.
-// ---------------------------------------------------------------------------
-
-class _OfflineBanner extends StatelessWidget {
-  const _OfflineBanner({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          color: Colors.orange,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              const Icon(Icons.wifi_off, color: Colors.white),
-              const SizedBox(width: 8),
-              Text(
-                l10n.noConnection,
-                style: const TextStyle(color: Colors.white, fontSize: 15),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.cloud_off, size: 64, color: Colors.grey),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.couldNotLoadProfile,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: onRetry,
-                  icon: const Icon(Icons.refresh),
-                  label: Text(l10n.retry),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
