@@ -14,9 +14,8 @@ export function createQuestionnaireResponsesRouter({ db } = {}) {
           { userId: 1, questionnaireSlug: 1, submitted_at: -1 },
           { background: true }
         );
-    } catch (err) {
-      console.error('[route] Error:', err);
-      // Index creation errors are non-fatal (e.g. mock DBs may not support it)
+    } catch {
+      // Non-fatal: mock DBs used in tests do not implement createIndex
     }
   }
 

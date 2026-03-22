@@ -1,4 +1,4 @@
-import { rateLimit } from 'express-rate-limit';
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 
 /**
  * Rate limiter: max 100 requests per 15 minutes per authenticated token (sub claim).
@@ -10,7 +10,7 @@ export const apiRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator(req) {
-    return req.user?.sub || req.ip;
+    return req.user?.sub || ipKeyGenerator(req);
   },
   handler(_req, res) {
     res
