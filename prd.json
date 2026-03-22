@@ -2927,7 +2927,7 @@
         "Admin panel runs without new JS console errors"
       ],
       "priority": 182,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-174 and US-178. Logic for default protection also belongs in the backend (US-174)."
     },
     {

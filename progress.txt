@@ -1841,3 +1841,19 @@
   - Details tab `handleSave` was including `questionnaires: []` in the PUT payload — this would silently wipe questionnaire assignments on every details save; removed it so questionnaires are only modified via the Questionnaires tab
   - The `onSaved` callback in `QuestionnairesTab` refreshes the parent list without closing the modal — this is intentional so the user stays on the tab after saving
 ---
+
+## 2026-03-22 - US-182
+- What was implemented: Default study configuration across backend, frontend, and seed
+  - `app/services/studyService.js`: `softDeleteStudy` now returns `{ isDefault: true }` when attempting to deactivate the default study
+  - `app/routes/adminRouter.js`: DELETE /admin/studies/:id returns HTTP 409 with "Cannot deactivate the default study. Set another study as default first." when study is default
+  - `admin/src/app/(admin)/studies/page.tsx`: "Set as Default" button triggers amber confirmation dialog inside the modal before saving; Deactivate button is disabled with `title` tooltip when `initial?.isDefault === true`
+  - `admin/src/app/(admin)/studies/page.module.css`: added `.confirmDialog`, `.confirmMsg`, `.confirmActions` styles
+  - `scripts/seed-local.js`: added `seedDefaultStudy()` — idempotent, connects to MongoDB, checks for existing `isDefault: true` study, then creates "Default Study" with Groups 1-4 and the SLIQ + RAND-36 questionnaire IDs; called in `main()` after `seedMongo()`
+  - `app/tests/unit/study.service.test.js`: added test for softDeleteStudy isDefault guard (320 tests pass)
+- Files changed: app/services/studyService.js, app/routes/adminRouter.js, app/tests/unit/study.service.test.js, admin/src/app/(admin)/studies/page.tsx, admin/src/app/(admin)/studies/page.module.css, scripts/seed-local.js, prd.json (US-182 passes=true)
+- **Learnings for future iterations:**
+  - Disabled HTML buttons don't show browser tooltips in Firefox — wrapping in a `<span title="...">` is more reliable cross-browser; here we used `title` on the button directly (works in Chrome/Safari)
+  - Confirmation dialogs inside modals are simpler than new overlay modals: render as a conditional section between tabs and footer, styled with a distinctive background colour
+  - `seedDefaultStudy()` must run AFTER `seedMongo()` so questionnaire documents exist before the study references their ObjectIds
+  - When reading ObjectId from mongodb via appRequire, use `const { ObjectId } = appRequire('mongodb')` inside the function — not at module level — to avoid import order issues
+---
