@@ -526,9 +526,211 @@ function CodesTab({
   );
 }
 
+// ── Participants tab ───────────────────────────────────────────────────────────
+
+interface EnrollmentRow {
+  userId: string;
+  groupId: string | null;
+  groupLabel: string;
+  enrolledAt: string | null;
+  codeUsed: string | null;
+}
+
+interface ParticipantSummary {
+  total: number;
+  perGroup: { groupId: string; groupLabel: string; count: number }[];
+}
+
+function ParticipantsTab({
+  study,
+  token,
+}: {
+  study: StudySummary;
+  token: string;
+}) {
+  const PARTICIPANTS_BASE =
+    (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
+    `/admin/studies/${study.id}/participants`;
+
+  const [rows, setRows] = useState<EnrollmentRow[]>([]);
+  const [summary, setSummary] = useState<ParticipantSummary | null>(null);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [exporting, setExporting] = useState(false);
+
+  const fetchPage = useCallback(
+    async (p: number) => {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const data = await apiFetch(
+          `${PARTICIPANTS_BASE}?page=${p}&limit=${limit}`,
+          token
+        );
+        setRows(
+          (data as { participants: EnrollmentRow[] }).participants ?? []
+        );
+        setTotal((data as { total: number }).total ?? 0);
+        setSummary(
+          (data as { summary: ParticipantSummary }).summary ?? null
+        );
+      } catch (err) {
+        setLoadError(
+          err instanceof Error ? err.message : "Failed to load participants"
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [PARTICIPANTS_BASE, token]
+  );
+
+  useEffect(() => {
+    fetchPage(page);
+  }, [fetchPage, page]);
+
+  async function handleDownloadCsv() {
+    setExporting(true);
+    try {
+      // Fetch all records (up to 500)
+      const data = await apiFetch(
+        `${PARTICIPANTS_BASE}?page=1&limit=500`,
+        token
+      );
+      const all: EnrollmentRow[] =
+        (data as { participants: EnrollmentRow[] }).participants ?? [];
+
+      const header = "User ID,Group,Enrolled At,Code Used";
+      const csvLines = all.map((r) =>
+        [
+          `"${r.userId}"`,
+          `"${r.groupLabel}"`,
+          `"${r.enrolledAt ? new Date(r.enrolledAt).toISOString() : ""}"`,
+          `"${r.codeUsed ?? "direct/default"}"`,
+        ].join(",")
+      );
+      const csv = [header, ...csvLines].join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${study.name.replace(/[^a-z0-9]/gi, "_")}_participants.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently fail on export errors
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  const totalPages = Math.ceil(total / limit);
+
+  return (
+    <div className={styles.participantsTab}>
+      {/* Summary row */}
+      {summary && (
+        <div className={styles.summaryRow}>
+          <span className={styles.summaryStat}>
+            <span className={styles.summaryStatLabel}>Total enrolled:</span>
+            <span className={styles.summaryStatValue}>{summary.total}</span>
+          </span>
+          {summary.perGroup.map((g) => (
+            <span key={g.groupId} className={styles.summaryStat}>
+              <span className={styles.summaryStatLabel}>{g.groupLabel}:</span>
+              <span className={styles.summaryStatValue}>{g.count}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Table header with CSV button */}
+      <div className={styles.participantsTableHeader}>
+        <span style={{ fontSize: "0.85rem", color: "var(--color-text-muted)" }}>
+          {total} participant{total !== 1 ? "s" : ""} enrolled
+        </span>
+        <button
+          className={styles.csvBtn}
+          onClick={handleDownloadCsv}
+          disabled={exporting || total === 0}
+        >
+          {exporting ? "Exporting…" : "Download CSV"}
+        </button>
+      </div>
+
+      {loadError && <div className={styles.errorMsg}>{loadError}</div>}
+
+      {loading ? (
+        <div className={styles.loadingState}>Loading…</div>
+      ) : rows.length === 0 ? (
+        <div className={styles.emptyState}>No participants enrolled yet.</div>
+      ) : (
+        <>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Group</th>
+                  <th>Enrolled</th>
+                  <th>Code Used</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.userId}>
+                    <td>
+                      <span className={styles.userIdCell}>{r.userId}</span>
+                    </td>
+                    <td>{r.groupLabel}</td>
+                    <td>{fmtDate(r.enrolledAt)}</td>
+                    <td>
+                      {r.codeUsed ? (
+                        <span className={styles.codePill}>{r.codeUsed}</span>
+                      ) : (
+                        <span className={styles.codeDefault}>
+                          direct/default
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {totalPages > 1 && (
+            <div className={styles.pagination}>
+              <button
+                className={styles.pageBtn}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+              >
+                ‹ Prev
+              </button>
+              <span className={styles.pageInfo}>
+                Page {page} of {totalPages} ({total} total)
+              </span>
+              <button
+                className={styles.pageBtn}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+              >
+                Next ›
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ── Study form modal ──────────────────────────────────────────────────────────
 
-type ModalTab = "details" | "questionnaires" | "codes";
+type ModalTab = "details" | "questionnaires" | "codes" | "participants";
 
 function StudyModal({
   initial,
@@ -681,6 +883,12 @@ function StudyModal({
             >
               Codes
             </button>
+            <button
+              className={`${styles.tab} ${activeTab === "participants" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("participants")}
+            >
+              Participants
+            </button>
           </div>
         )}
 
@@ -760,8 +968,10 @@ function StudyModal({
                 onSaved={onSaved}
               />
             )
-          ) : (
+          ) : activeTab === "codes" ? (
             initial && <CodesTab study={initial} token={token} />
+          ) : (
+            initial && <ParticipantsTab study={initial} token={token} />
           )}
         </div>
 
