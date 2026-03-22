@@ -148,5 +148,6 @@
   "questionnaireResponseSubmitted": "Antwort eingereicht!",
   "questionnaireThankYou": "Vielen Dank für das Ausfüllen des Fragebogens. Ihre Antworten helfen dabei, Ihre Gewohnheitsempfehlungen zu personalisieren.",
   "backToProfile": "Zurück zum Profil",
-  "thankYou": "Vielen Dank"
+  "thankYou": "Vielen Dank",
+  "noQuestionnairesAssigned": "Keine Fragebögen für Ihre Studie zugewiesen."
 }

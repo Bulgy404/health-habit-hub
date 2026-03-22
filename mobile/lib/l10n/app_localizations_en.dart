@@ -471,10 +471,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedToLoadQuestionnaire => 'Failed to load questionnaire.';
 
   @override
-  String get noQuestionnairesAssigned =>
-      'No questionnaires are assigned to your study yet.';
-
-  @override
   String get getRecommendations => 'Get Recommendations';
 
   @override
@@ -492,4 +488,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get thankYou => 'Thank You';
+
+  @override
+  String get noQuestionnairesAssigned =>
+      'No questionnaires assigned to your study.';
 }
