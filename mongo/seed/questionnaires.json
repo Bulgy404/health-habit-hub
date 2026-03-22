@@ -12,10 +12,22 @@
         "text": "How would you rate your overall diet?",
         "type": "single_choice",
         "options": [
-          { "value": "0", "label": "Very unhealthy (eat lots of junk food, very few fruits/vegetables)" },
-          { "value": "1", "label": "Unhealthy (eat some junk food, few fruits/vegetables)" },
-          { "value": "2", "label": "Reasonably healthy (limit junk food, eat some fruits/vegetables)" },
-          { "value": "3", "label": "Very healthy (rarely eat junk food, eat lots of fruits/vegetables)" }
+          {
+            "value": "0",
+            "label": "Very unhealthy (eat lots of junk food, very few fruits/vegetables)"
+          },
+          {
+            "value": "1",
+            "label": "Unhealthy (eat some junk food, few fruits/vegetables)"
+          },
+          {
+            "value": "2",
+            "label": "Reasonably healthy (limit junk food, eat some fruits/vegetables)"
+          },
+          {
+            "value": "3",
+            "label": "Very healthy (rarely eat junk food, eat lots of fruits/vegetables)"
+          }
         ],
         "required": true
       },
@@ -24,10 +36,22 @@
         "text": "How much moderate or vigorous physical activity do you do per week?",
         "type": "single_choice",
         "options": [
-          { "value": "0", "label": "None" },
-          { "value": "1", "label": "Less than 30 minutes" },
-          { "value": "2", "label": "30–149 minutes" },
-          { "value": "3", "label": "150 minutes or more" }
+          {
+            "value": "0",
+            "label": "None"
+          },
+          {
+            "value": "1",
+            "label": "Less than 30 minutes"
+          },
+          {
+            "value": "2",
+            "label": "30–149 minutes"
+          },
+          {
+            "value": "3",
+            "label": "150 minutes or more"
+          }
         ],
         "required": true
       },
@@ -36,10 +60,22 @@
         "text": "Which best describes your smoking status?",
         "type": "single_choice",
         "options": [
-          { "value": "0", "label": "I currently smoke daily" },
-          { "value": "1", "label": "I currently smoke, but not daily" },
-          { "value": "2", "label": "I used to smoke but have quit" },
-          { "value": "3", "label": "I have never smoked" }
+          {
+            "value": "0",
+            "label": "I currently smoke daily"
+          },
+          {
+            "value": "1",
+            "label": "I currently smoke, but not daily"
+          },
+          {
+            "value": "2",
+            "label": "I used to smoke but have quit"
+          },
+          {
+            "value": "3",
+            "label": "I have never smoked"
+          }
         ],
         "required": true
       },
@@ -48,14 +84,27 @@
         "text": "How many standard alcoholic drinks do you consume per week on average?",
         "type": "single_choice",
         "options": [
-          { "value": "0", "label": "14 or more drinks" },
-          { "value": "1", "label": "8–13 drinks" },
-          { "value": "2", "label": "1–7 drinks" },
-          { "value": "3", "label": "I do not drink alcohol" }
+          {
+            "value": "0",
+            "label": "14 or more drinks"
+          },
+          {
+            "value": "1",
+            "label": "8–13 drinks"
+          },
+          {
+            "value": "2",
+            "label": "1–7 drinks"
+          },
+          {
+            "value": "3",
+            "label": "I do not drink alcohol"
+          }
         ],
         "required": true
       }
-    ]
+    ],
+    "isLibrary": true
   },
   {
     "_id": "questionnaire-rand-36",
@@ -70,11 +119,26 @@
         "text": "In general, would you say your health is:",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Excellent" },
-          { "value": "2", "label": "Very good" },
-          { "value": "3", "label": "Good" },
-          { "value": "4", "label": "Fair" },
-          { "value": "5", "label": "Poor" }
+          {
+            "value": "1",
+            "label": "Excellent"
+          },
+          {
+            "value": "2",
+            "label": "Very good"
+          },
+          {
+            "value": "3",
+            "label": "Good"
+          },
+          {
+            "value": "4",
+            "label": "Fair"
+          },
+          {
+            "value": "5",
+            "label": "Poor"
+          }
         ],
         "required": true
       },
@@ -83,11 +147,26 @@
         "text": "Compared to one year ago, how would you rate your health in general now?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Much better now than one year ago" },
-          { "value": "2", "label": "Somewhat better now than one year ago" },
-          { "value": "3", "label": "About the same as one year ago" },
-          { "value": "4", "label": "Somewhat worse now than one year ago" },
-          { "value": "5", "label": "Much worse now than one year ago" }
+          {
+            "value": "1",
+            "label": "Much better now than one year ago"
+          },
+          {
+            "value": "2",
+            "label": "Somewhat better now than one year ago"
+          },
+          {
+            "value": "3",
+            "label": "About the same as one year ago"
+          },
+          {
+            "value": "4",
+            "label": "Somewhat worse now than one year ago"
+          },
+          {
+            "value": "5",
+            "label": "Much worse now than one year ago"
+          }
         ],
         "required": true
       },
@@ -96,9 +175,18 @@
         "text": "The following items are about activities you might do during a typical day. Does your health now limit you in vigorous activities, such as running, lifting heavy objects, participating in strenuous sports?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes, limited a lot" },
-          { "value": "2", "label": "Yes, limited a little" },
-          { "value": "3", "label": "No, not limited at all" }
+          {
+            "value": "1",
+            "label": "Yes, limited a lot"
+          },
+          {
+            "value": "2",
+            "label": "Yes, limited a little"
+          },
+          {
+            "value": "3",
+            "label": "No, not limited at all"
+          }
         ],
         "required": true
       },
@@ -107,9 +195,18 @@
         "text": "Does your health now limit you in moderate activities, such as moving a table, pushing a vacuum cleaner, bowling, or playing golf?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes, limited a lot" },
-          { "value": "2", "label": "Yes, limited a little" },
-          { "value": "3", "label": "No, not limited at all" }
+          {
+            "value": "1",
+            "label": "Yes, limited a lot"
+          },
+          {
+            "value": "2",
+            "label": "Yes, limited a little"
+          },
+          {
+            "value": "3",
+            "label": "No, not limited at all"
+          }
         ],
         "required": true
       },
@@ -118,9 +215,18 @@
         "text": "Does your health now limit you in lifting or carrying groceries?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes, limited a lot" },
-          { "value": "2", "label": "Yes, limited a little" },
-          { "value": "3", "label": "No, not limited at all" }
+          {
+            "value": "1",
+            "label": "Yes, limited a lot"
+          },
+          {
+            "value": "2",
+            "label": "Yes, limited a little"
+          },
+          {
+            "value": "3",
+            "label": "No, not limited at all"
+          }
         ],
         "required": true
       },
@@ -129,9 +235,18 @@
         "text": "Does your health now limit you in climbing several flights of stairs?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes, limited a lot" },
-          { "value": "2", "label": "Yes, limited a little" },
-          { "value": "3", "label": "No, not limited at all" }
+          {
+            "value": "1",
+            "label": "Yes, limited a lot"
+          },
+          {
+            "value": "2",
+            "label": "Yes, limited a little"
+          },
+          {
+            "value": "3",
+            "label": "No, not limited at all"
+          }
         ],
         "required": true
       },
@@ -140,9 +255,18 @@
         "text": "Does your health now limit you in climbing one flight of stairs?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes, limited a lot" },
-          { "value": "2", "label": "Yes, limited a little" },
-          { "value": "3", "label": "No, not limited at all" }
+          {
+            "value": "1",
+            "label": "Yes, limited a lot"
+          },
+          {
+            "value": "2",
+            "label": "Yes, limited a little"
+          },
+          {
+            "value": "3",
+            "label": "No, not limited at all"
+          }
         ],
         "required": true
       },
@@ -151,9 +275,18 @@
         "text": "Does your health now limit you in bending, kneeling, or stooping?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes, limited a lot" },
-          { "value": "2", "label": "Yes, limited a little" },
-          { "value": "3", "label": "No, not limited at all" }
+          {
+            "value": "1",
+            "label": "Yes, limited a lot"
+          },
+          {
+            "value": "2",
+            "label": "Yes, limited a little"
+          },
+          {
+            "value": "3",
+            "label": "No, not limited at all"
+          }
         ],
         "required": true
       },
@@ -162,9 +295,18 @@
         "text": "Does your health now limit you in walking more than a mile?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes, limited a lot" },
-          { "value": "2", "label": "Yes, limited a little" },
-          { "value": "3", "label": "No, not limited at all" }
+          {
+            "value": "1",
+            "label": "Yes, limited a lot"
+          },
+          {
+            "value": "2",
+            "label": "Yes, limited a little"
+          },
+          {
+            "value": "3",
+            "label": "No, not limited at all"
+          }
         ],
         "required": true
       },
@@ -173,9 +315,18 @@
         "text": "Does your health now limit you in walking several blocks?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes, limited a lot" },
-          { "value": "2", "label": "Yes, limited a little" },
-          { "value": "3", "label": "No, not limited at all" }
+          {
+            "value": "1",
+            "label": "Yes, limited a lot"
+          },
+          {
+            "value": "2",
+            "label": "Yes, limited a little"
+          },
+          {
+            "value": "3",
+            "label": "No, not limited at all"
+          }
         ],
         "required": true
       },
@@ -184,9 +335,18 @@
         "text": "Does your health now limit you in walking one block?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes, limited a lot" },
-          { "value": "2", "label": "Yes, limited a little" },
-          { "value": "3", "label": "No, not limited at all" }
+          {
+            "value": "1",
+            "label": "Yes, limited a lot"
+          },
+          {
+            "value": "2",
+            "label": "Yes, limited a little"
+          },
+          {
+            "value": "3",
+            "label": "No, not limited at all"
+          }
         ],
         "required": true
       },
@@ -195,9 +355,18 @@
         "text": "Does your health now limit you in bathing or dressing yourself?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes, limited a lot" },
-          { "value": "2", "label": "Yes, limited a little" },
-          { "value": "3", "label": "No, not limited at all" }
+          {
+            "value": "1",
+            "label": "Yes, limited a lot"
+          },
+          {
+            "value": "2",
+            "label": "Yes, limited a little"
+          },
+          {
+            "value": "3",
+            "label": "No, not limited at all"
+          }
         ],
         "required": true
       },
@@ -206,8 +375,14 @@
         "text": "During the past 4 weeks, have you cut down the amount of time you spent on work or other activities due to your physical health?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes" },
-          { "value": "2", "label": "No" }
+          {
+            "value": "1",
+            "label": "Yes"
+          },
+          {
+            "value": "2",
+            "label": "No"
+          }
         ],
         "required": true
       },
@@ -216,8 +391,14 @@
         "text": "During the past 4 weeks, have you accomplished less than you would like due to your physical health?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes" },
-          { "value": "2", "label": "No" }
+          {
+            "value": "1",
+            "label": "Yes"
+          },
+          {
+            "value": "2",
+            "label": "No"
+          }
         ],
         "required": true
       },
@@ -226,8 +407,14 @@
         "text": "During the past 4 weeks, were you limited in the kind of work or other activities due to your physical health?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes" },
-          { "value": "2", "label": "No" }
+          {
+            "value": "1",
+            "label": "Yes"
+          },
+          {
+            "value": "2",
+            "label": "No"
+          }
         ],
         "required": true
       },
@@ -236,8 +423,14 @@
         "text": "During the past 4 weeks, did you have difficulty performing the work or other activities due to your physical health (for example, it took extra effort)?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes" },
-          { "value": "2", "label": "No" }
+          {
+            "value": "1",
+            "label": "Yes"
+          },
+          {
+            "value": "2",
+            "label": "No"
+          }
         ],
         "required": true
       },
@@ -246,8 +439,14 @@
         "text": "During the past 4 weeks, have you cut down the amount of time you spent on work or other activities due to any emotional problems (such as feeling depressed or anxious)?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes" },
-          { "value": "2", "label": "No" }
+          {
+            "value": "1",
+            "label": "Yes"
+          },
+          {
+            "value": "2",
+            "label": "No"
+          }
         ],
         "required": true
       },
@@ -256,8 +455,14 @@
         "text": "During the past 4 weeks, have you accomplished less than you would like due to any emotional problems (such as feeling depressed or anxious)?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes" },
-          { "value": "2", "label": "No" }
+          {
+            "value": "1",
+            "label": "Yes"
+          },
+          {
+            "value": "2",
+            "label": "No"
+          }
         ],
         "required": true
       },
@@ -266,8 +471,14 @@
         "text": "During the past 4 weeks, did you not do work or other activities as carefully as usual due to any emotional problems (such as feeling depressed or anxious)?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Yes" },
-          { "value": "2", "label": "No" }
+          {
+            "value": "1",
+            "label": "Yes"
+          },
+          {
+            "value": "2",
+            "label": "No"
+          }
         ],
         "required": true
       },
@@ -276,11 +487,26 @@
         "text": "During the past 4 weeks, to what extent has your physical health or emotional problems interfered with your normal social activities with family, friends, neighbours, or groups?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Not at all" },
-          { "value": "2", "label": "Slightly" },
-          { "value": "3", "label": "Moderately" },
-          { "value": "4", "label": "Quite a bit" },
-          { "value": "5", "label": "Extremely" }
+          {
+            "value": "1",
+            "label": "Not at all"
+          },
+          {
+            "value": "2",
+            "label": "Slightly"
+          },
+          {
+            "value": "3",
+            "label": "Moderately"
+          },
+          {
+            "value": "4",
+            "label": "Quite a bit"
+          },
+          {
+            "value": "5",
+            "label": "Extremely"
+          }
         ],
         "required": true
       },
@@ -289,12 +515,30 @@
         "text": "How much bodily pain have you had during the past 4 weeks?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "None" },
-          { "value": "2", "label": "Very mild" },
-          { "value": "3", "label": "Mild" },
-          { "value": "4", "label": "Moderate" },
-          { "value": "5", "label": "Severe" },
-          { "value": "6", "label": "Very severe" }
+          {
+            "value": "1",
+            "label": "None"
+          },
+          {
+            "value": "2",
+            "label": "Very mild"
+          },
+          {
+            "value": "3",
+            "label": "Mild"
+          },
+          {
+            "value": "4",
+            "label": "Moderate"
+          },
+          {
+            "value": "5",
+            "label": "Severe"
+          },
+          {
+            "value": "6",
+            "label": "Very severe"
+          }
         ],
         "required": true
       },
@@ -303,11 +547,26 @@
         "text": "During the past 4 weeks, how much did pain interfere with your normal work (including both work outside the home and housework)?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Not at all" },
-          { "value": "2", "label": "A little bit" },
-          { "value": "3", "label": "Moderately" },
-          { "value": "4", "label": "Quite a bit" },
-          { "value": "5", "label": "Extremely" }
+          {
+            "value": "1",
+            "label": "Not at all"
+          },
+          {
+            "value": "2",
+            "label": "A little bit"
+          },
+          {
+            "value": "3",
+            "label": "Moderately"
+          },
+          {
+            "value": "4",
+            "label": "Quite a bit"
+          },
+          {
+            "value": "5",
+            "label": "Extremely"
+          }
         ],
         "required": true
       },
@@ -316,12 +575,30 @@
         "text": "These questions are about how you feel and how things have been with you during the past 4 weeks. How much of the time during the past 4 weeks did you feel full of pep?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "All of the time" },
-          { "value": "2", "label": "Most of the time" },
-          { "value": "3", "label": "A good bit of the time" },
-          { "value": "4", "label": "Some of the time" },
-          { "value": "5", "label": "A little of the time" },
-          { "value": "6", "label": "None of the time" }
+          {
+            "value": "1",
+            "label": "All of the time"
+          },
+          {
+            "value": "2",
+            "label": "Most of the time"
+          },
+          {
+            "value": "3",
+            "label": "A good bit of the time"
+          },
+          {
+            "value": "4",
+            "label": "Some of the time"
+          },
+          {
+            "value": "5",
+            "label": "A little of the time"
+          },
+          {
+            "value": "6",
+            "label": "None of the time"
+          }
         ],
         "required": true
       },
@@ -330,12 +607,30 @@
         "text": "How much of the time during the past 4 weeks have you been a very nervous person?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "All of the time" },
-          { "value": "2", "label": "Most of the time" },
-          { "value": "3", "label": "A good bit of the time" },
-          { "value": "4", "label": "Some of the time" },
-          { "value": "5", "label": "A little of the time" },
-          { "value": "6", "label": "None of the time" }
+          {
+            "value": "1",
+            "label": "All of the time"
+          },
+          {
+            "value": "2",
+            "label": "Most of the time"
+          },
+          {
+            "value": "3",
+            "label": "A good bit of the time"
+          },
+          {
+            "value": "4",
+            "label": "Some of the time"
+          },
+          {
+            "value": "5",
+            "label": "A little of the time"
+          },
+          {
+            "value": "6",
+            "label": "None of the time"
+          }
         ],
         "required": true
       },
@@ -344,12 +639,30 @@
         "text": "How much of the time during the past 4 weeks have you felt so down in the dumps that nothing could cheer you up?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "All of the time" },
-          { "value": "2", "label": "Most of the time" },
-          { "value": "3", "label": "A good bit of the time" },
-          { "value": "4", "label": "Some of the time" },
-          { "value": "5", "label": "A little of the time" },
-          { "value": "6", "label": "None of the time" }
+          {
+            "value": "1",
+            "label": "All of the time"
+          },
+          {
+            "value": "2",
+            "label": "Most of the time"
+          },
+          {
+            "value": "3",
+            "label": "A good bit of the time"
+          },
+          {
+            "value": "4",
+            "label": "Some of the time"
+          },
+          {
+            "value": "5",
+            "label": "A little of the time"
+          },
+          {
+            "value": "6",
+            "label": "None of the time"
+          }
         ],
         "required": true
       },
@@ -358,12 +671,30 @@
         "text": "How much of the time during the past 4 weeks have you felt calm and peaceful?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "All of the time" },
-          { "value": "2", "label": "Most of the time" },
-          { "value": "3", "label": "A good bit of the time" },
-          { "value": "4", "label": "Some of the time" },
-          { "value": "5", "label": "A little of the time" },
-          { "value": "6", "label": "None of the time" }
+          {
+            "value": "1",
+            "label": "All of the time"
+          },
+          {
+            "value": "2",
+            "label": "Most of the time"
+          },
+          {
+            "value": "3",
+            "label": "A good bit of the time"
+          },
+          {
+            "value": "4",
+            "label": "Some of the time"
+          },
+          {
+            "value": "5",
+            "label": "A little of the time"
+          },
+          {
+            "value": "6",
+            "label": "None of the time"
+          }
         ],
         "required": true
       },
@@ -372,12 +703,30 @@
         "text": "How much of the time during the past 4 weeks did you have a lot of energy?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "All of the time" },
-          { "value": "2", "label": "Most of the time" },
-          { "value": "3", "label": "A good bit of the time" },
-          { "value": "4", "label": "Some of the time" },
-          { "value": "5", "label": "A little of the time" },
-          { "value": "6", "label": "None of the time" }
+          {
+            "value": "1",
+            "label": "All of the time"
+          },
+          {
+            "value": "2",
+            "label": "Most of the time"
+          },
+          {
+            "value": "3",
+            "label": "A good bit of the time"
+          },
+          {
+            "value": "4",
+            "label": "Some of the time"
+          },
+          {
+            "value": "5",
+            "label": "A little of the time"
+          },
+          {
+            "value": "6",
+            "label": "None of the time"
+          }
         ],
         "required": true
       },
@@ -386,12 +735,30 @@
         "text": "How much of the time during the past 4 weeks have you felt downhearted and blue?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "All of the time" },
-          { "value": "2", "label": "Most of the time" },
-          { "value": "3", "label": "A good bit of the time" },
-          { "value": "4", "label": "Some of the time" },
-          { "value": "5", "label": "A little of the time" },
-          { "value": "6", "label": "None of the time" }
+          {
+            "value": "1",
+            "label": "All of the time"
+          },
+          {
+            "value": "2",
+            "label": "Most of the time"
+          },
+          {
+            "value": "3",
+            "label": "A good bit of the time"
+          },
+          {
+            "value": "4",
+            "label": "Some of the time"
+          },
+          {
+            "value": "5",
+            "label": "A little of the time"
+          },
+          {
+            "value": "6",
+            "label": "None of the time"
+          }
         ],
         "required": true
       },
@@ -400,12 +767,30 @@
         "text": "How much of the time during the past 4 weeks did you feel worn out?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "All of the time" },
-          { "value": "2", "label": "Most of the time" },
-          { "value": "3", "label": "A good bit of the time" },
-          { "value": "4", "label": "Some of the time" },
-          { "value": "5", "label": "A little of the time" },
-          { "value": "6", "label": "None of the time" }
+          {
+            "value": "1",
+            "label": "All of the time"
+          },
+          {
+            "value": "2",
+            "label": "Most of the time"
+          },
+          {
+            "value": "3",
+            "label": "A good bit of the time"
+          },
+          {
+            "value": "4",
+            "label": "Some of the time"
+          },
+          {
+            "value": "5",
+            "label": "A little of the time"
+          },
+          {
+            "value": "6",
+            "label": "None of the time"
+          }
         ],
         "required": true
       },
@@ -414,12 +799,30 @@
         "text": "How much of the time during the past 4 weeks have you been a happy person?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "All of the time" },
-          { "value": "2", "label": "Most of the time" },
-          { "value": "3", "label": "A good bit of the time" },
-          { "value": "4", "label": "Some of the time" },
-          { "value": "5", "label": "A little of the time" },
-          { "value": "6", "label": "None of the time" }
+          {
+            "value": "1",
+            "label": "All of the time"
+          },
+          {
+            "value": "2",
+            "label": "Most of the time"
+          },
+          {
+            "value": "3",
+            "label": "A good bit of the time"
+          },
+          {
+            "value": "4",
+            "label": "Some of the time"
+          },
+          {
+            "value": "5",
+            "label": "A little of the time"
+          },
+          {
+            "value": "6",
+            "label": "None of the time"
+          }
         ],
         "required": true
       },
@@ -428,12 +831,30 @@
         "text": "How much of the time during the past 4 weeks did you feel tired?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "All of the time" },
-          { "value": "2", "label": "Most of the time" },
-          { "value": "3", "label": "A good bit of the time" },
-          { "value": "4", "label": "Some of the time" },
-          { "value": "5", "label": "A little of the time" },
-          { "value": "6", "label": "None of the time" }
+          {
+            "value": "1",
+            "label": "All of the time"
+          },
+          {
+            "value": "2",
+            "label": "Most of the time"
+          },
+          {
+            "value": "3",
+            "label": "A good bit of the time"
+          },
+          {
+            "value": "4",
+            "label": "Some of the time"
+          },
+          {
+            "value": "5",
+            "label": "A little of the time"
+          },
+          {
+            "value": "6",
+            "label": "None of the time"
+          }
         ],
         "required": true
       },
@@ -442,11 +863,26 @@
         "text": "During the past 4 weeks, how much of the time has your physical health or emotional problems interfered with your social activities (like visiting with friends, relatives, etc.)?",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "All of the time" },
-          { "value": "2", "label": "Most of the time" },
-          { "value": "3", "label": "Some of the time" },
-          { "value": "4", "label": "A little of the time" },
-          { "value": "5", "label": "None of the time" }
+          {
+            "value": "1",
+            "label": "All of the time"
+          },
+          {
+            "value": "2",
+            "label": "Most of the time"
+          },
+          {
+            "value": "3",
+            "label": "Some of the time"
+          },
+          {
+            "value": "4",
+            "label": "A little of the time"
+          },
+          {
+            "value": "5",
+            "label": "None of the time"
+          }
         ],
         "required": true
       },
@@ -455,11 +891,26 @@
         "text": "I seem to get sick a little easier than other people. (True or False?)",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Definitely true" },
-          { "value": "2", "label": "Mostly true" },
-          { "value": "3", "label": "Don't know" },
-          { "value": "4", "label": "Mostly false" },
-          { "value": "5", "label": "Definitely false" }
+          {
+            "value": "1",
+            "label": "Definitely true"
+          },
+          {
+            "value": "2",
+            "label": "Mostly true"
+          },
+          {
+            "value": "3",
+            "label": "Don't know"
+          },
+          {
+            "value": "4",
+            "label": "Mostly false"
+          },
+          {
+            "value": "5",
+            "label": "Definitely false"
+          }
         ],
         "required": true
       },
@@ -468,11 +919,26 @@
         "text": "I am as healthy as anybody I know. (True or False?)",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Definitely true" },
-          { "value": "2", "label": "Mostly true" },
-          { "value": "3", "label": "Don't know" },
-          { "value": "4", "label": "Mostly false" },
-          { "value": "5", "label": "Definitely false" }
+          {
+            "value": "1",
+            "label": "Definitely true"
+          },
+          {
+            "value": "2",
+            "label": "Mostly true"
+          },
+          {
+            "value": "3",
+            "label": "Don't know"
+          },
+          {
+            "value": "4",
+            "label": "Mostly false"
+          },
+          {
+            "value": "5",
+            "label": "Definitely false"
+          }
         ],
         "required": true
       },
@@ -481,11 +947,26 @@
         "text": "I expect my health to get worse. (True or False?)",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Definitely true" },
-          { "value": "2", "label": "Mostly true" },
-          { "value": "3", "label": "Don't know" },
-          { "value": "4", "label": "Mostly false" },
-          { "value": "5", "label": "Definitely false" }
+          {
+            "value": "1",
+            "label": "Definitely true"
+          },
+          {
+            "value": "2",
+            "label": "Mostly true"
+          },
+          {
+            "value": "3",
+            "label": "Don't know"
+          },
+          {
+            "value": "4",
+            "label": "Mostly false"
+          },
+          {
+            "value": "5",
+            "label": "Definitely false"
+          }
         ],
         "required": true
       },
@@ -494,14 +975,30 @@
         "text": "My health is excellent. (True or False?)",
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "Definitely true" },
-          { "value": "2", "label": "Mostly true" },
-          { "value": "3", "label": "Don't know" },
-          { "value": "4", "label": "Mostly false" },
-          { "value": "5", "label": "Definitely false" }
+          {
+            "value": "1",
+            "label": "Definitely true"
+          },
+          {
+            "value": "2",
+            "label": "Mostly true"
+          },
+          {
+            "value": "3",
+            "label": "Don't know"
+          },
+          {
+            "value": "4",
+            "label": "Mostly false"
+          },
+          {
+            "value": "5",
+            "label": "Definitely false"
+          }
         ],
         "required": true
       }
-    ]
+    ],
+    "isLibrary": true
   }
 ]

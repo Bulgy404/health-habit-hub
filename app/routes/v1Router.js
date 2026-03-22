@@ -16,6 +16,7 @@ import { createRecommendationsRouter } from './recommendationsRouter.js';
 import { createKbRouter } from './kbRouter.js';
 import { createUsersRouter } from './usersRouter.js';
 import { createStudyEnrollRouter } from './studyEnrollRouter.js';
+import { createParticipantRouter } from './participantRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 import { swaggerSpec } from '../swagger.js';
 
@@ -209,6 +210,13 @@ export function createV1Router({
     '/onboarding',
     requireRole('participant', 'admin', 'researcher'),
     createStudyEnrollRouter({ db })
+  );
+
+  // Participant-specific routes: require participant, admin, or researcher role
+  router.use(
+    '/participant',
+    requireRole('participant', 'admin', 'researcher'),
+    createParticipantRouter({ db })
   );
 
   return router;

@@ -171,6 +171,14 @@ async function seedMongo() {
       const action = result.upsertedCount ? 'inserted' : 'updated';
       console.log(`[mongo]   questionnaire "${doc.slug}" ${action}`);
     }
+    // Backfill isLibrary: true on any existing library questionnaires missing the flag
+    const backfill = await collection.updateMany(
+      { slug: { $in: ['sliq', 'rand-36'] }, isLibrary: { $exists: false } },
+      { $set: { isLibrary: true } }
+    );
+    if (backfill.modifiedCount > 0) {
+      console.log(`[mongo]   backfilled isLibrary on ${backfill.modifiedCount} questionnaire(s)`);
+    }
     console.log('[mongo] Done.');
   } finally {
     await client.close();
