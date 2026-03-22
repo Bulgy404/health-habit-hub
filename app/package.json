@@ -17,7 +17,8 @@
     "test": "npm run format:check && npm run lint && npm run test:unitTests",
     "generate-spec": "node ../scripts/generate-spec.js",
     "version-check": "node ../scripts/version-check.js",
-    "seed": "node ../scripts/seed-local.js"
+    "seed": "node ../scripts/seed-local.js",
+    "seed:study": "node ../scripts/seed-study.js"
   },
   "dependencies": {
     "body-parser": "^1.20.2",
