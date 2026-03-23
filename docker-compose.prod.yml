@@ -201,7 +201,7 @@ services:
       start_period: 30s
 
   keycloak:
-    image: quay.io/keycloak/keycloak:24
+    image: quay.io/keycloak/keycloak:latest
     container_name: h3-2-keycloak
     restart: always
     env_file:
@@ -209,7 +209,7 @@ services:
     environment:
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
-      - KC_PROXY=edge
+      - KC_PROXY_HEADERS=xforwarded
       - KC_HOSTNAME_STRICT=false
       - KC_HTTP_RELATIVE_PATH=/auth
       - KC_DB=postgres
