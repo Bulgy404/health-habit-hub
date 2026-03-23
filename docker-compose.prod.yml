@@ -239,6 +239,16 @@ services:
       - traefik.http.routers.keycloak-v2.service=keycloak-v2
       - traefik.http.services.keycloak-v2.loadbalancer.server.port=8080
 
+  redis:
+    image: redis:7-alpine
+    container_name: h3-2-redis
+    restart: always
+    networks:
+      - h3-proxy
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+
   recommender:
     image: hhh/recommender
     container_name: h3-2-recommender
@@ -248,6 +258,8 @@ services:
       - stack.env
     networks:
       - h3-proxy
+    depends_on:
+      - redis
 
   backup:
     image: hhh/backup
@@ -286,3 +298,5 @@ volumes:
     name: h3-2-fuseki-data
   keycloak-db-data:
     name: h3-2-keycloak-db-data
+  redis-data:
+    name: h3-2-redis-data
