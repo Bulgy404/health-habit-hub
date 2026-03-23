@@ -1,0 +1,30 @@
+
+{
+  "project_info": {
+    "project_number": "427166078990",
+    "project_id": "health-habit-hub-v2",
+    "storage_bucket": "health-habit-hub-v2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:427166078990:android:a84442dfc163503096045f",
+        "android_client_info": {
+          "package_name": "de.felixreinsch.healthhabithub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpxvKlZ2PNFBAI_tDr5ua1b9tmX0nw1nk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
