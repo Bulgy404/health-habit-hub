@@ -6,7 +6,7 @@ This guide covers deploying Health Habit Hub to production using Portainer on yo
 
 **Server Details:**
 - IP: 141.76.16.16
-- Domain: habit.wiwi.tu-dresden.de
+- Domain: habit.felixreinsch.de
 - Management: Portainer
 - Auto-update: Every 5 minutes from `master` branch
 
@@ -19,14 +19,14 @@ This guide covers deploying Health Habit Hub to production using Portainer on yo
 - [ ] Docker installed (managed by Portainer)
 
 ### 2. DNS Configuration
-- [x] Domain `habit.wiwi.tu-dresden.de` resolves to `141.76.16.16`
+- [x] Domain `habit.felixreinsch.de` resolves to `141.76.16.16`
 - [x] DNS propagation complete (verified with `dig`)
 
 ### 3. External Services
 - [ ] Google reCAPTCHA keys obtained (https://www.google.com/recaptcha/admin)
   - Site key
   - Secret key
-  - Domain `habit.wiwi.tu-dresden.de` added
+  - Domain `habit.felixreinsch.de` added
 - [ ] Mailjet API credentials obtained (https://app.mailjet.com/account/api_keys)
   - API key
   - Secret key
@@ -146,16 +146,16 @@ All containers should be running:
 
 ### 2. Verify SSL Certificate
 - Check Traefik logs: Look for "certificate obtained"
-- Visit https://habit.wiwi.tu-dresden.de
+- Visit https://habit.felixreinsch.de
 - Verify valid SSL certificate (green padlock)
 
 ### 3. Test Services
-- [ ] Main application: https://habit.wiwi.tu-dresden.de
-- [ ] Mongo Express: https://habit.wiwi.tu-dresden.de/mongo
-- [ ] Fuseki (requires auth): https://habit.wiwi.tu-dresden.de/fuseki
-- [ ] Translation API: https://habit.wiwi.tu-dresden.de/translate
+- [ ] Main application: https://habit.felixreinsch.de
+- [ ] Mongo Express: https://habit.felixreinsch.de/mongo
+- [ ] Fuseki (requires auth): https://habit.felixreinsch.de/fuseki
+- [ ] Translation API: https://habit.felixreinsch.de/translate
 - [ ] Neo4j browser: http://localhost:7474 (via SSH tunnel)
-- [ ] Traefik dashboard: https://habit.wiwi.tu-dresden.de/dashboard
+- [ ] Traefik dashboard: https://habit.felixreinsch.de/dashboard
 
 ### 4. Run One-time Migration Scripts (first deploy of this branch only)
 
@@ -322,7 +322,7 @@ In Portainer:
    ```
 2. Verify DNS propagation:
    ```bash
-   dig habit.wiwi.tu-dresden.de
+   dig habit.felixreinsch.de
    ```
 3. Check Traefik logs:
    ```bash
@@ -445,15 +445,15 @@ docker volume ls | grep h3-2-
 
 | Service | URL | Authentication |
 |---------|-----|----------------|
-| Backend API | https://habit.wiwi.tu-dresden.de/api/v1/ | Keycloak JWT |
-| Flutter Web App | https://habit.wiwi.tu-dresden.de | Keycloak PKCE |
-| Admin Panel | https://habit.wiwi.tu-dresden.de/admin | Keycloak (admin/researcher role) |
-| Keycloak Admin UI | https://habit.wiwi.tu-dresden.de/auth/admin | Keycloak admin credentials |
-| Mongo Express | https://habit.wiwi.tu-dresden.de/mongo | Basic Auth (admin) |
-| Fuseki | https://habit.wiwi.tu-dresden.de/fuseki | Basic Auth (admin) |
-| Translation | https://habit.wiwi.tu-dresden.de/translate | None |
+| Backend API | https://habit.felixreinsch.de/api/v1/ | Keycloak JWT |
+| Flutter Web App | https://habit.felixreinsch.de | Keycloak PKCE |
+| Admin Panel | https://habit.felixreinsch.de/admin | Keycloak (admin/researcher role) |
+| Keycloak Admin UI | https://habit.felixreinsch.de/auth/admin | Keycloak admin credentials |
+| Mongo Express | https://habit.felixreinsch.de/mongo | Basic Auth (admin) |
+| Fuseki | https://habit.felixreinsch.de/fuseki | Basic Auth (admin) |
+| Translation | https://habit.felixreinsch.de/translate | None |
 | Neo4j Browser | via SSH tunnel (see below) | Neo4j Auth |
-| Traefik Dashboard | https://habit.wiwi.tu-dresden.de/dashboard | Basic Auth |
+| Traefik Dashboard | https://habit.felixreinsch.de/dashboard | Basic Auth |
 
 ### Accessing Neo4j Browser via SSH Tunnel
 
@@ -471,7 +471,7 @@ You can connect to the server using either the domain name or IP address:
 
 ```bash
 # Create SSH tunnel (keeps connection open)
-ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@habit.wiwi.tu-dresden.de
+ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@habit.felixreinsch.de
 ```
 
 ##### Option 2: Using IP Address
@@ -488,7 +488,7 @@ ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
 1. **Start the SSH tunnel** in a terminal window (keep it open):
    ```bash
    # Use one of the commands above
-   ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@habit.wiwi.tu-dresden.de
+   ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@habit.felixreinsch.de
    ```
 
 2. **Open Neo4j Browser** in your web browser:
@@ -564,7 +564,7 @@ ssh service@141.76.16.16 'docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${
 - Config files: `/mnt/data/appdata/hhh2/mongo/config`
 
 **Access via Mongo Express (Web UI):**
-- URL: https://habit.wiwi.tu-dresden.de/mongo
+- URL: https://habit.felixreinsch.de/mongo
 - Username: `admin` (from MONGO_EXPRESS_USER)
 - Password: (from MONGO_EXPRESS_PASSWORD in .env)
 

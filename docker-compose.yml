@@ -1,7 +1,7 @@
 services:
   proxy:
     image: traefik:v3.0
-    container_name: h3-2-2-proxy
+    container_name: h3-2-proxy
     command:
       - --api.insecure=true
       - --api.dashboard=true
@@ -29,7 +29,7 @@ services:
 
   app:
     image: hhh/app
-    container_name: h3-2-2-app
+    container_name: h3-2-app
     build: ./app
     restart: on-failure:3
     env_file:
@@ -67,7 +67,7 @@ services:
 
   fuseki:
     image: hhh/fuseki
-    container_name: h3-2-2-fuseki
+    container_name: h3-2-fuseki
     build: ./fuseki
     restart: always
     env_file:
@@ -91,7 +91,7 @@ services:
   
   mongo:
     image: mongo
-    container_name: h3-2-2-mongo
+    container_name: h3-2-mongo
     restart: unless-stopped
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
@@ -115,7 +115,7 @@ services:
 
   mongo-express:
     image: mongo-express:1.0
-    container_name: h3-2-2-mongo-express
+    container_name: h3-2-mongo-express
     restart: unless-stopped
     environment:
       - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USER:-admin}
@@ -139,7 +139,7 @@ services:
 
   translate:
     image: libretranslate/libretranslate:1.5
-    container_name: h3-2-2-translate
+    container_name: h3-2-translate
     restart: always
     ports:
       - ${LT_PORT:-5000}:5000
@@ -159,7 +159,7 @@ services:
 
   neo4j:
     image: neo4j:5
-    container_name: h3-2-2-neo4j
+    container_name: h3-2-neo4j
     restart: unless-stopped
     environment:
       - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j_password_change_me}
@@ -193,7 +193,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:24
-    container_name: h3-2-2-keycloak
+    container_name: h3-2-keycloak
     restart: unless-stopped
     env_file:
       - stack.env
@@ -218,7 +218,7 @@ services:
 
   recommender:
     image: hhh/recommender
-    container_name: h3-2-2-recommender
+    container_name: h3-2-recommender
     build: ./API-service
     restart: on-failure:3
     env_file:
@@ -232,7 +232,7 @@ services:
 
   admin:
     image: hhh/admin
-    container_name: h3-2-2-admin
+    container_name: h3-2-admin
     build: ./admin
     restart: on-failure:3
     env_file:
@@ -260,7 +260,7 @@ services:
   backup:
     image: hhh/backup
     build: ./backup-service
-    container_name: h3-2-2-backup
+    container_name: h3-2-backup
     restart: unless-stopped
     env_file:
       - .env
@@ -282,7 +282,7 @@ services:
 
 networks:
   h3-2-proxy:
-    name: h3-2-2-proxy
+    name: h3-2-proxy
 
 volumes:
   fuseki-data:
