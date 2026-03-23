@@ -4,7 +4,7 @@
 services:
   app:
     image: hhh/app
-    container_name: h3-app
+    container_name: h3-2-app
     build: ./app
     restart: on-failure:3
     env_file:
@@ -28,7 +28,7 @@ services:
 
   mongo:
     image: mongo
-    container_name: h3-mongo
+    container_name: h3-2-mongo
     restart: unless-stopped
     env_file:
       - .env
@@ -50,7 +50,7 @@ services:
 
   neo4j:
     image: neo4j:5
-    container_name: h3-neo4j
+    container_name: h3-2-neo4j
     restart: unless-stopped
     env_file:
       - .env
@@ -76,7 +76,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:24
-    container_name: h3-keycloak
+    container_name: h3-2-keycloak
     restart: unless-stopped
     env_file:
       - .env
@@ -99,7 +99,7 @@ services:
 
   translate:
     image: libretranslate/libretranslate:1.5
-    container_name: h3-translate
+    container_name: h3-2-translate
     restart: always
     env_file:
       - .env
@@ -111,7 +111,7 @@ services:
 
   recommender:
     image: hhh/recommender
-    container_name: h3-recommender
+    container_name: h3-2-recommender
     build: ./API-service
     restart: on-failure:3
     env_file:
@@ -121,7 +121,7 @@ services:
 
   fuseki:
     image: hhh/fuseki
-    container_name: h3-fuseki
+    container_name: h3-2-fuseki
     build: ./fuseki
     restart: always
     env_file:
