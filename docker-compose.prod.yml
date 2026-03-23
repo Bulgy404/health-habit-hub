@@ -1,14 +1,14 @@
 services:
   proxy:
     image: traefik:v3.0
-    container_name: h3-proxy
+    container_name: h3-2-2-proxy
     command:
       - --api.dashboard=true
       - --log.level=INFO
       - --accesslog=true
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=h3-proxy
+      - --providers.docker.network=h3-2-proxy
       # HTTP entrypoint
       - --entrypoints.web.address=:80
       - --entrypoints.web.http.redirections.entryPoint.to=websecure
@@ -26,10 +26,10 @@ services:
       - "80:80"
       - "443:443"
     networks:
-      - h3-proxy
+      - h3-2-proxy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /mnt/data/appdata/hhh/traefik-certs:/letsencrypt
+      - /mnt/data/appdata/hhh2/traefik-certs:/letsencrypt
     labels:
       - traefik.enable=true
       # Dashboard
@@ -45,7 +45,7 @@ services:
 
   app:
     image: hhh/app
-    container_name: h3-app
+    container_name: h3-2-2-app
     build: ./app
     restart: always
     env_file:
@@ -73,7 +73,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - h3-proxy
+      - h3-2-proxy
     depends_on:
       - fuseki
       - mongo
@@ -90,7 +90,7 @@ services:
 
   fuseki:
     image: hhh/fuseki
-    container_name: h3-fuseki
+    container_name: h3-2-2-fuseki
     build: ./fuseki
     restart: always
     env_file:
@@ -99,7 +99,7 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     # Fuseki base image runs as 'fuseki' user (UID 9008)
     networks:
-      - h3-proxy
+      - h3-2-proxy
     volumes:
       - fuseki-data:/fuseki
     depends_on:
@@ -117,7 +117,7 @@ services:
 
   mongo:
     image: mongo:7.0
-    container_name: h3-mongo
+    container_name: h3-2-2-mongo
     restart: always
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER}
@@ -125,11 +125,11 @@ services:
       - MONGO_INITDB_DATABASE=surveyjs
     # MongoDB runs as 'mongodb' user (UID 999) by default
     networks:
-      - h3-proxy
+      - h3-2-proxy
     volumes:
       - ./mongo/entrypoint:/docker-entrypoint-initdb.d:ro
-      - /mnt/data/appdata/hhh/mongo/db:/data/db
-      - /mnt/data/appdata/hhh/mongo/config:/data/configdb
+      - /mnt/data/appdata/hhh2/mongo/db:/data/db
+      - /mnt/data/appdata/hhh2/mongo/config:/data/configdb
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.runCommand({ping:1})"]
       interval: 30s
@@ -139,7 +139,7 @@ services:
 
   mongo-express:
     image: mongo-express:1.0
-    container_name: h3-mongo-express
+    container_name: h3-2-2-mongo-express
     restart: always
     environment:
       - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USER}
@@ -149,7 +149,7 @@ services:
       - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_EXPRESS_PASSWORD}
       - ME_CONFIG_SITE_BASEURL=/mongo/
     networks:
-      - h3-proxy
+      - h3-2-proxy
     depends_on:
       - mongo
       - proxy
@@ -164,14 +164,14 @@ services:
 
   translate:
     image: libretranslate/libretranslate:1.5
-    container_name: h3-translate
+    container_name: h3-2-2-translate
     restart: always
     # LibreTranslate runs as 'libretranslate' user (UID 1032)
     # Volume must be created with proper permissions for UID 1032
     volumes:
-      - /mnt/data/appdata/hhh/translate:/home/libretranslate/.local/share/argos-translate/packages
+      - /mnt/data/appdata/hhh2/translate:/home/libretranslate/.local/share/argos-translate/packages
     networks:
-      - h3-proxy
+      - h3-2-proxy
     env_file:
       - .env
     environment:
@@ -194,7 +194,7 @@ services:
 
   neo4j:
     image: neo4j:5
-    container_name: h3-neo4j
+    container_name: h3-2-2-neo4j
     restart: always
     environment:
       - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD}
@@ -210,13 +210,13 @@ services:
       retries: 5
       start_period: 60s
     networks:
-      - h3-proxy
+      - h3-2-proxy
     ports:
       - "7474:7474"  # Neo4j Browser HTTP
       - "7687:7687"  # Bolt protocol
     volumes:
-      - /mnt/data/appdata/hhh/neo4j/data:/data
-      - /mnt/data/appdata/hhh/neo4j/logs:/logs
+      - /mnt/data/appdata/hhh2/neo4j/data:/data
+      - /mnt/data/appdata/hhh2/neo4j/logs:/logs
       - ./fuseki/init:/import:ro
     depends_on:
       - proxy
@@ -233,14 +233,14 @@ services:
 
   keycloak-db:
     image: postgres:16-alpine
-    container_name: h3-keycloak-db
+    container_name: h3-2-2-keycloak-db
     restart: always
     environment:
       - POSTGRES_DB=keycloak
       - POSTGRES_USER=${KC_DB_USERNAME}
       - POSTGRES_PASSWORD=${KC_DB_PASSWORD}
     networks:
-      - h3-proxy
+      - h3-2-proxy
     volumes:
       - keycloak-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -252,7 +252,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:24
-    container_name: h3-keycloak
+    container_name: h3-2-2-keycloak
     restart: always
     env_file:
       - stack.env
@@ -268,7 +268,7 @@ services:
       - KC_DB_PASSWORD=${KC_DB_PASSWORD}
     command: start --import-realm
     networks:
-      - h3-proxy
+      - h3-2-proxy
     volumes:
       - ./keycloak/hhh-realm.json:/opt/keycloak/data/import/hhh-realm.json:ro
     depends_on:
@@ -291,19 +291,19 @@ services:
 
   recommender:
     image: hhh/recommender
-    container_name: h3-recommender
+    container_name: h3-2-2-recommender
     build: ./API-service
     restart: always
     env_file:
       - stack.env
     networks:
-      - h3-proxy
+      - h3-2-proxy
     depends_on:
       - proxy
 
   backup:
     image: hhh/backup
-    container_name: h3-backup
+    container_name: h3-2-2-backup
     build: ./backup-service
     restart: always
     env_file:
@@ -322,7 +322,7 @@ services:
       - fuseki-data:/fuseki:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
-      - h3-proxy
+      - h3-2-proxy
     depends_on:
       - mongo
       - fuseki
@@ -330,12 +330,12 @@ services:
     command: /bin/bash -c "echo 'Waiting 2 minutes for services to stabilize...'; sleep 120; while true; do /backup.sh; sleep 86400; done"
 
 networks:
-  h3-proxy:
-    name: h3-proxy
+  h3-2-proxy:
+    name: h3-2-2-proxy
     driver: bridge
 
 volumes:
   fuseki-data:
-    name: h3-fuseki-data
+    name: h3-2-fuseki-data
   keycloak-db-data:
-    name: h3-keycloak-db-data
+    name: h3-2-keycloak-db-data

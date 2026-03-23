@@ -49,11 +49,11 @@ This guide covers deploying Health Habit Hub to production using Portainer on yo
 
 ### Step 2: Create Stack
 1. Go to **Stacks** → **Add stack**
-2. Stack name: `health-habit-hub`
+2. Stack name: `health-habit-hub-2`
 3. Build method: **Repository**
 
 ### Step 3: Configure Git Repository
-- **Repository URL:** `https://github.com/helict/health-habit-hub`
+- **Repository URL:** `https://github.com/helict/health-habit-hub-2`
 - **Repository reference:** `refs/heads/master`
 - **Compose path:** `docker-compose.prod.yml`
 - **GitOps updates:** Enable
@@ -116,11 +116,11 @@ must create the host directory with the correct ownership so the language model
 downloads succeed:
 
 ```bash
-sudo mkdir -p /mnt/data/appdata/hhh/translate
-sudo chown -R 1032:1032 /mnt/data/appdata/hhh/translate
+sudo mkdir -p /mnt/data/appdata/hhh2/translate
+sudo chown -R 1032:1032 /mnt/data/appdata/hhh2/translate
 ```
 
-Failure to do this will cause `h3-translate` to start but fail to persist language
+Failure to do this will cause `h3-2-translate` to start but fail to persist language
 packs, resulting in empty translation responses.
 
 ### Step 6: Deploy
@@ -132,17 +132,17 @@ packs, resulting in empty translation responses.
 
 ### 1. Check Container Status
 All containers should be running:
-- `h3-proxy` (Traefik reverse proxy)
-- `h3-app` (Node.js backend API)
-- `h3-fuseki` (Apache Jena Fuseki RDF/SPARQL database)
-- `h3-mongo` (MongoDB — survey responses, recommendations, user preferences)
-- `h3-mongo-express` (MongoDB web UI)
-- `h3-neo4j` (Neo4j graph database — habit graph, BCIO ontology)
-- `h3-translate` (LibreTranslate — EN↔DE habit translation)
-- `h3-keycloak` (Keycloak identity provider — authentication and authorisation)
-- `h3-recommender` (Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement)
-- `h3-admin` (Next.js admin panel — study management UI)
-- `h3-backup` (Backup service)
+- `h3-2-proxy` (Traefik reverse proxy)
+- `h3-2-app` (Node.js backend API)
+- `h3-2-fuseki` (Apache Jena Fuseki RDF/SPARQL database)
+- `h3-2-mongo` (MongoDB — survey responses, recommendations, user preferences)
+- `h3-2-mongo-express` (MongoDB web UI)
+- `h3-2-neo4j` (Neo4j graph database — habit graph, BCIO ontology)
+- `h3-2-translate` (LibreTranslate — EN↔DE habit translation)
+- `h3-2-keycloak` (Keycloak identity provider — authentication and authorisation)
+- `h3-2-recommender` (Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement)
+- `h3-2-admin` (Next.js admin panel — study management UI)
+- `h3-2-backup` (Backup service)
 
 ### 2. Verify SSL Certificate
 - Check Traefik logs: Look for "certificate obtained"
@@ -167,7 +167,7 @@ will show historical donations.  Run this once after the first deploy of this
 branch:
 
 ```bash
-docker exec h3-app node scripts/run-migration.js
+docker exec h3-2-app node scripts/run-migration.js
 ```
 
 Expected output:
@@ -223,13 +223,13 @@ Habit nodes donated before this branch was deployed do not have a `translationDE
 Run the backfill script to populate German translations via LibreTranslate + LLM refinement:
 
 ```bash
-docker exec h3-app node scripts/backfill-de-translations.js
+docker exec h3-2-app node scripts/backfill-de-translations.js
 ```
 
 Dry-run mode (preview changes without writing):
 
 ```bash
-docker exec h3-app node scripts/backfill-de-translations.js --dry-run
+docker exec h3-2-app node scripts/backfill-de-translations.js --dry-run
 ```
 
 Expected output:
@@ -246,13 +246,13 @@ the underlying cause (usually LibreTranslate or the API-service being unhealthy)
 #### 4e. Backfill BCIO enrichment for existing habits (optional)
 
 ```bash
-docker exec h3-app node scripts/migrate-habits-bcio.js
+docker exec h3-2-app node scripts/migrate-habits-bcio.js
 ```
 
 ### 5. Test Backup System
 Check backup logs:
 ```bash
-docker logs h3-backup
+docker logs h3-2-backup
 ```
 
 Verify backup files are created:
@@ -263,14 +263,14 @@ Verify backup files are created:
 
 ### How It Works
 1. **External Traffic:**
-   - Internet → Port 80/443 → Traefik (h3-proxy)
+   - Internet → Port 80/443 → Traefik (h3-2-proxy)
 
 2. **Internal Routing:**
    - Traefik inspects Host/Path
-   - Routes to appropriate service via `h3-proxy` network
+   - Routes to appropriate service via `h3-2-proxy` network
 
 3. **Service Communication:**
-   - All services on `h3-proxy` bridge network
+   - All services on `h3-2-proxy` bridge network
    - Services use container names (mongo, fuseki, neo4j)
    - No direct internet exposure
 
@@ -280,19 +280,19 @@ Internet
    ↓
 Port 80/443
    ↓
-Traefik (h3-proxy)
+Traefik (h3-2-proxy)
    ↓
-h3-proxy network (bridge)
-   ├── h3-app (Node.js backend API)
-   ├── h3-admin (Next.js admin panel)
-   ├── h3-recommender (Python FastAPI — LLM/BCIO)
-   ├── h3-keycloak (Keycloak — Port 8080 exposed for admin UI)
-   ├── h3-fuseki (RDF/SPARQL)
-   ├── h3-mongo (MongoDB)
-   ├── h3-mongo-express (MongoDB UI)
-   ├── h3-neo4j (Graph DB — Port 7474/7687 exposed for SSH tunnel)
-   ├── h3-translate (LibreTranslate — UID 1032, volume chown required)
-   └── h3-backup (Backup service)
+h3-2-proxy network (bridge)
+   ├── h3-2-app (Node.js backend API)
+   ├── h3-2-admin (Next.js admin panel)
+   ├── h3-2-recommender (Python FastAPI — LLM/BCIO)
+   ├── h3-2-keycloak (Keycloak — Port 8080 exposed for admin UI)
+   ├── h3-2-fuseki (RDF/SPARQL)
+   ├── h3-2-mongo (MongoDB)
+   ├── h3-2-mongo-express (MongoDB UI)
+   ├── h3-2-neo4j (Graph DB — Port 7474/7687 exposed for SSH tunnel)
+   ├── h3-2-translate (LibreTranslate — UID 1032, volume chown required)
+   └── h3-2-backup (Backup service)
 ```
 
 ## Automatic Updates
@@ -307,7 +307,7 @@ h3-proxy network (bridge)
 
 ### Triggering Manual Update
 In Portainer:
-1. Go to **Stacks** → `health-habit-hub`
+1. Go to **Stacks** → `health-habit-hub-2`
 2. Click **Pull and redeploy**
 
 ## Troubleshooting
@@ -326,7 +326,7 @@ In Portainer:
    ```
 3. Check Traefik logs:
    ```bash
-   docker logs h3-proxy | grep -i certificate
+   docker logs h3-2-proxy | grep -i certificate
    ```
 
 ### Services Can't Communicate
@@ -335,7 +335,7 @@ In Portainer:
 **Solutions:**
 1. Verify all containers on same network:
    ```bash
-   docker network inspect h3-proxy
+   docker network inspect h3-2-proxy
    ```
 2. Check service names match docker-compose.prod.yml
 3. Verify environment variables in Portainer
@@ -346,7 +346,7 @@ In Portainer:
 **Solutions:**
 1. Check backup logs:
    ```bash
-   docker logs h3-backup
+   docker logs h3-2-backup
    ```
 2. Verify MongoDB credentials match
 3. Ensure `/backups` directory has write permissions
@@ -367,7 +367,7 @@ In Portainer:
 
 ### Container Logs
 View logs in Portainer:
-- **Stacks** → `health-habit-hub` → Click container → **Logs**
+- **Stacks** → `health-habit-hub-2` → Click container → **Logs**
 
 Or via CLI:
 ```bash
@@ -381,12 +381,12 @@ View in Portainer:
 ### Backup Status
 Check latest backup:
 ```bash
-docker exec h3-backup ls -lh /backups/full_backup_*.tar.gz | tail -5
+docker exec h3-2-backup ls -lh /backups/full_backup_*.tar.gz | tail -5
 ```
 
 View backup manifest:
 ```bash
-docker exec h3-backup cat /backups/backup_*.manifest | tail -20
+docker exec h3-2-backup cat /backups/backup_*.manifest | tail -20
 ```
 
 ## Maintenance
@@ -424,9 +424,9 @@ Automatic via Let's Encrypt:
 ## Support
 
 ### Logs Location
-- Traefik: `docker logs h3-proxy`
-- Application: `docker logs h3-app`
-- Backups: `docker logs h3-backup`
+- Traefik: `docker logs h3-2-proxy`
+- Application: `docker logs h3-2-app`
+- Backups: `docker logs h3-2-backup`
 - All others: `docker logs <container-name>`
 
 ### Health Checks
@@ -435,10 +435,10 @@ Automatic via Let's Encrypt:
 docker ps
 
 # Check network
-docker network inspect h3-proxy
+docker network inspect h3-2-proxy
 
 # Check volumes
-docker volume ls | grep h3-
+docker volume ls | grep h3-2-
 ```
 
 ## URLs Reference
@@ -523,13 +523,13 @@ If you need direct command-line access to Neo4j while the SSH tunnel is active:
 
 ```bash
 # In another terminal (after SSH tunnel is open):
-docker exec -it h3-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD} -a bolt://localhost:7687
+docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD} -a bolt://localhost:7687
 ```
 
 Or directly through the SSH tunnel on the server:
 ```bash
 # From your local machine
-ssh service@141.76.16.16 'docker exec -it h3-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}'
+ssh service@141.76.16.16 'docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}'
 ```
 
 #### Troubleshooting SSH Tunnel Connection
@@ -548,7 +548,7 @@ ssh service@141.76.16.16 'docker exec -it h3-neo4j cypher-shell -u neo4j -p ${NE
 **Issue: Neo4j authentication fails**
 - Verify the NEO4J_PASSWORD in Portainer matches what you're using
 - Make sure credentials are for the "neo4j" user, not another user
-- Check Neo4j container logs: `docker logs h3-neo4j | tail -20`
+- Check Neo4j container logs: `docker logs h3-2-neo4j | tail -20`
 
 **Issue: Slow or dropped connections**
 - SSH tunnels can timeout after inactivity
@@ -560,8 +560,8 @@ ssh service@141.76.16.16 'docker exec -it h3-neo4j cypher-shell -u neo4j -p ${NE
 ### MongoDB Data
 
 **Location on Server:**
-- Database files: `/mnt/data/appdata/hhh/mongo/db`
-- Config files: `/mnt/data/appdata/hhh/mongo/config`
+- Database files: `/mnt/data/appdata/hhh2/mongo/db`
+- Config files: `/mnt/data/appdata/hhh2/mongo/config`
 
 **Access via Mongo Express (Web UI):**
 - URL: https://habit.wiwi.tu-dresden.de/mongo
@@ -577,25 +577,25 @@ MongoDB is automatically initialized on first run with:
 **Backup MongoDB:**
 ```bash
 # Create backup
-docker exec h3-mongo mongodump --username admin --password ${MONGO_PASSWORD} --authenticationDatabase admin --out /tmp/backup
+docker exec h3-2-mongo mongodump --username admin --password ${MONGO_PASSWORD} --authenticationDatabase admin --out /tmp/backup
 
 # Copy backup to host
-docker cp h3-mongo:/tmp/backup ./mongo-backup-$(date +%Y%m%d)
+docker cp h3-2-mongo:/tmp/backup ./mongo-backup-$(date +%Y%m%d)
 ```
 
 **Restore MongoDB:**
 ```bash
 # Copy backup to container
-docker cp ./mongo-backup-YYYYMMDD h3-mongo:/tmp/restore
+docker cp ./mongo-backup-YYYYMMDD h3-2-mongo:/tmp/restore
 
 # Restore
-docker exec h3-mongo mongorestore --username admin --password ${MONGO_PASSWORD} --authenticationDatabase admin /tmp/restore
+docker exec h3-2-mongo mongorestore --username admin --password ${MONGO_PASSWORD} --authenticationDatabase admin /tmp/restore
 ```
 
 **Direct Access via CLI:**
 ```bash
 # Connect to MongoDB shell
-docker exec -it h3-mongo mongosh -u admin -p ${MONGO_PASSWORD} --authenticationDatabase admin
+docker exec -it h3-2-mongo mongosh -u admin -p ${MONGO_PASSWORD} --authenticationDatabase admin
 
 # List databases
 show dbs
@@ -616,8 +616,8 @@ db.results.find()
 ### Neo4j Data
 
 **Location on Server:**
-- Database files: `/mnt/data/appdata/hhh/neo4j/data`
-- Log files: `/mnt/data/appdata/hhh/neo4j/logs`
+- Database files: `/mnt/data/appdata/hhh2/neo4j/data`
+- Log files: `/mnt/data/appdata/hhh2/neo4j/logs`
 
 **Access via Browser:**
 See "Accessing Neo4j Browser via SSH Tunnel" above.
@@ -625,31 +625,31 @@ See "Accessing Neo4j Browser via SSH Tunnel" above.
 **Backup Neo4j:**
 ```bash
 # Stop Neo4j container first
-docker stop h3-neo4j
+docker stop h3-2-neo4j
 
 # Create backup
-sudo tar -czf neo4j-backup-$(date +%Y%m%d).tar.gz /mnt/data/appdata/hhh/neo4j/data
+sudo tar -czf neo4j-backup-$(date +%Y%m%d).tar.gz /mnt/data/appdata/hhh2/neo4j/data
 
 # Restart Neo4j
-docker start h3-neo4j
+docker start h3-2-neo4j
 ```
 
 **Restore Neo4j:**
 ```bash
 # Stop Neo4j container
-docker stop h3-neo4j
+docker stop h3-2-neo4j
 
 # Restore backup
 sudo tar -xzf neo4j-backup-YYYYMMDD.tar.gz -C /
 
 # Restart Neo4j
-docker start h3-neo4j
+docker start h3-2-neo4j
 ```
 
 **Direct Access via Cypher Shell:**
 ```bash
 # Connect to Neo4j Cypher shell
-docker exec -it h3-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}
+docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}
 
 # Example queries
 MATCH (n) RETURN count(n);  # Count all nodes
@@ -659,19 +659,19 @@ MATCH (n) RETURN n LIMIT 10;  # Show first 10 nodes
 ### Fuseki Data
 
 **Location on Server:**
-- RDF data: Named volume `h3-fuseki-data`
+- RDF data: Named volume `h3-2-fuseki-data`
 
 **Backup Fuseki:**
 ```bash
 # Backup is included in automated daily backups
 # Manual backup:
-docker run --rm -v h3-fuseki-data:/data -v $(pwd):/backup alpine tar czf /backup/fuseki-backup-$(date +%Y%m%d).tar.gz -C /data .
+docker run --rm -v h3-2-fuseki-data:/data -v $(pwd):/backup alpine tar czf /backup/fuseki-backup-$(date +%Y%m%d).tar.gz -C /data .
 ```
 
 **Restore Fuseki:**
 ```bash
 # Restore from backup
-docker run --rm -v h3-fuseki-data:/data -v $(pwd):/backup alpine tar xzf /backup/fuseki-backup-YYYYMMDD.tar.gz -C /data
+docker run --rm -v h3-2-fuseki-data:/data -v $(pwd):/backup alpine tar xzf /backup/fuseki-backup-YYYYMMDD.tar.gz -C /data
 ```
 
 ## Additional Notes
@@ -679,6 +679,6 @@ docker run --rm -v h3-fuseki-data:/data -v $(pwd):/backup alpine tar xzf /backup
 - Backups run daily at midnight
 - Backup retention: 14 days (configurable)
 - All data persisted in named Docker volumes or host-mounted directories
-- SSL certificates stored in `/mnt/data/appdata/hhh/traefik-certs/`
+- SSL certificates stored in `/mnt/data/appdata/hhh2/traefik-certs/`
 - MongoDB automatically initializes with sample survey data on first run
 - Neo4j requires SSH tunnel for secure browser access

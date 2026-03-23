@@ -1,7 +1,7 @@
 services:
   proxy:
     image: traefik:v3.0
-    container_name: h3-proxy
+    container_name: h3-2-2-proxy
     command:
       - --api.insecure=true
       - --api.dashboard=true
@@ -10,14 +10,14 @@ services:
       - --accesslog=true
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=h3-proxy
+      - --providers.docker.network=h3-2-proxy
       - --entrypoints.web.address=:80
     restart: always
     ports:
       - ${TRAEFIK_HOST_PORT80:-80}:80
       - ${TRAEFIK_HOST_PORT8080:-8888}:8080
     networks:
-      - h3-proxy
+      - h3-2-proxy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     labels:
@@ -29,7 +29,7 @@ services:
 
   app:
     image: hhh/app
-    container_name: h3-app
+    container_name: h3-2-2-app
     build: ./app
     restart: on-failure:3
     env_file:
@@ -44,7 +44,7 @@ services:
     ports:
       - ${APP_HOST_PORT:-3000}:3000
     networks:
-      - h3-proxy
+      - h3-2-proxy
     depends_on:
       - fuseki
       - proxy
@@ -67,7 +67,7 @@ services:
 
   fuseki:
     image: hhh/fuseki
-    container_name: h3-fuseki
+    container_name: h3-2-2-fuseki
     build: ./fuseki
     restart: always
     env_file:
@@ -77,7 +77,7 @@ services:
     ports:
       - ${FUSEKI_HOST_PORT:-3030}:3030
     networks:
-      - h3-proxy
+      - h3-2-proxy
     volumes:
       - fuseki-data:/fuseki
     depends_on:
@@ -91,7 +91,7 @@ services:
   
   mongo:
     image: mongo
-    container_name: h3-mongo
+    container_name: h3-2-2-mongo
     restart: unless-stopped
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
@@ -100,7 +100,7 @@ services:
     ports:
       - 27017:27017
     networks:
-      - h3-proxy
+      - h3-2-proxy
     volumes:
       - ./mongo/entrypoint:/docker-entrypoint-initdb.d
       - ./mongo/data:/data/db
@@ -115,7 +115,7 @@ services:
 
   mongo-express:
     image: mongo-express:1.0
-    container_name: h3-mongo-express
+    container_name: h3-2-2-mongo-express
     restart: unless-stopped
     environment:
       - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USER:-admin}
@@ -126,7 +126,7 @@ services:
     ports:
       - 8081:8081
     networks:
-      - h3-proxy
+      - h3-2-proxy
     depends_on:
       - mongo
       - proxy
@@ -139,14 +139,14 @@ services:
 
   translate:
     image: libretranslate/libretranslate:1.5
-    container_name: h3-translate
+    container_name: h3-2-2-translate
     restart: always
     ports:
       - ${LT_PORT:-5000}:5000
     volumes:
       - translate-data:/root/.local/share/argos-translate/packages
     networks:
-      - h3-proxy
+      - h3-2-proxy
     env_file:
       - .env
     tty: true
@@ -159,7 +159,7 @@ services:
 
   neo4j:
     image: neo4j:5
-    container_name: h3-neo4j
+    container_name: h3-2-2-neo4j
     restart: unless-stopped
     environment:
       - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j_password_change_me}
@@ -171,7 +171,7 @@ services:
       - ${NEO4J_HTTP_PORT:-7474}:7474
       - ${NEO4J_BOLT_PORT:-7687}:7687
     networks:
-      - h3-proxy
+      - h3-2-proxy
     volumes:
       - neo4j-data:/data
       - neo4j-logs:/logs
@@ -193,7 +193,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:24
-    container_name: h3-keycloak
+    container_name: h3-2-2-keycloak
     restart: unless-stopped
     env_file:
       - stack.env
@@ -205,7 +205,7 @@ services:
     ports:
       - "8080:8080"
     networks:
-      - h3-proxy
+      - h3-2-proxy
     volumes:
       - keycloak-data:/opt/keycloak/data
       - ./keycloak/hhh-realm.json:/opt/keycloak/data/import/hhh-realm.json:ro
@@ -218,7 +218,7 @@ services:
 
   recommender:
     image: hhh/recommender
-    container_name: h3-recommender
+    container_name: h3-2-2-recommender
     build: ./API-service
     restart: on-failure:3
     env_file:
@@ -226,13 +226,13 @@ services:
     ports:
       - ${RECOMMENDER_HOST_PORT:-8000}:8000
     networks:
-      - h3-proxy
+      - h3-2-proxy
     depends_on:
       - proxy
 
   admin:
     image: hhh/admin
-    container_name: h3-admin
+    container_name: h3-2-2-admin
     build: ./admin
     restart: on-failure:3
     env_file:
@@ -246,7 +246,7 @@ services:
     ports:
       - ${ADMIN_HOST_PORT:-3001}:3001
     networks:
-      - h3-proxy
+      - h3-2-proxy
     depends_on:
       - proxy
       - keycloak
@@ -260,7 +260,7 @@ services:
   backup:
     image: hhh/backup
     build: ./backup-service
-    container_name: h3-backup
+    container_name: h3-2-2-backup
     restart: unless-stopped
     env_file:
       - .env
@@ -273,7 +273,7 @@ services:
       - fuseki-data:/fuseki:ro
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - h3-proxy
+      - h3-2-proxy
     depends_on:
       - mongo
       - fuseki
@@ -281,17 +281,17 @@ services:
     command: /bin/bash -c "while true; do /backup.sh; sleep 86400; done"
 
 networks:
-  h3-proxy:
-    name: h3-proxy
+  h3-2-proxy:
+    name: h3-2-2-proxy
 
 volumes:
   fuseki-data:
-    name: h3-fuseki-data
+    name: h3-2-fuseki-data
   translate-data:
-    name: h3-translate-data
+    name: h3-2-translate-data
   neo4j-data:
-    name: h3-neo4j-data
+    name: h3-2-neo4j-data
   neo4j-logs:
-    name: h3-neo4j-logs
+    name: h3-2-neo4j-logs
   keycloak-data:
-    name: h3-keycloak-data
+    name: h3-2-keycloak-data
