@@ -109,6 +109,16 @@ services:
       - translate-local-data:/root/.local/share/argos-translate/packages
     tty: true
 
+  redis:
+    image: redis:7-alpine
+    container_name: h3-2-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-local-data:/data
+    command: redis-server --appendonly yes
+
   recommender:
     image: hhh/recommender
     container_name: h3-2-recommender
@@ -118,6 +128,8 @@ services:
       - .env
     ports:
       - "8001:8000"
+    depends_on:
+      - redis
 
   fuseki:
     image: hhh/fuseki
@@ -140,3 +152,4 @@ volumes:
   keycloak-local-data:
   translate-local-data:
   fuseki-local-data:
+  redis-local-data:

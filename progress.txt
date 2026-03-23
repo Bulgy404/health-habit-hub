@@ -1910,3 +1910,11 @@
   - The l10n files (app_localizations*.dart) may be reset by `flutter pub get` / code generation; always re-check after `flutter pub get` if new string getters were added
   - Testing Firebase in unit tests is not feasible without a real project — test the pure-Dart helper functions (route extraction) instead, which provide good coverage without platform dependencies
 ---
+## 2026-03-23 - US-188
+- What was implemented: Added `redis:7-alpine` service to `docker-compose.prod.yml` (named volume `h3-2-redis-data`, `--appendonly yes`, part of `h3-proxy` network) and `docker-compose.local.yml` (named volume `redis-local-data`, host port 6379, `--appendonly yes`). Added `depends_on: - redis` to the `recommender` service in both compose files. Declared `redis-local-data` in the local volumes block and `redis-data: name: h3-2-redis-data` in the prod volumes block. `REDIS_URL=redis://redis:6379/0` was already present in `.env` — no .env change required. Both compose files validate cleanly with `docker compose config`.
+- Files changed: docker-compose.prod.yml (redis service + recommender depends_on + volumes), docker-compose.local.yml (redis service + recommender depends_on + volumes), prd.json (US-188 passes=true)
+- **Learnings for future iterations:**
+  - Redis in prod compose must be in `h3-proxy` network to be reachable by the recommender container
+  - Local compose exposes port 6379 for direct host access; prod compose does not expose it externally (only internal network access)
+  - `docker compose config --quiet` is the fastest way to validate compose files without a Docker daemon
+---
