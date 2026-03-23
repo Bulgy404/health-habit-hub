@@ -3037,7 +3037,7 @@
         "Backend notificationService.js initialises Firebase and sends real FCM messages when FIREBASE_SERVICE_ACCOUNT_JSON is set to a valid service account JSON string"
       ],
       "priority": 189,
-      "passes": false,
+      "passes": true,
       "notes": "Backend Firebase (notificationService.js) already reads FIREBASE_SERVICE_ACCOUNT_JSON from .env. Flutter side requires filling in firebase_options.dart with values from Firebase Console (Project Settings \u2192 Your apps). google-services.json and GoogleService-Info.plist are NOT required when using firebase_options.dart with explicit FirebaseOptions."
     }
   ]
