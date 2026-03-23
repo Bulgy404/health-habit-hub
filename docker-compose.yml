@@ -192,7 +192,7 @@ services:
       - traefik.http.services.neo4j.loadbalancer.server.port=7474
 
   keycloak:
-    image: quay.io/keycloak/keycloak:24
+    image: quay.io/keycloak/keycloak:latest
     container_name: h3-2-keycloak
     restart: unless-stopped
     env_file:
