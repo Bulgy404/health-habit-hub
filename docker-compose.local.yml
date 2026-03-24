@@ -52,14 +52,13 @@ services:
     image: neo4j:5
     container_name: h3-2-neo4j
     restart: unless-stopped
-    env_file:
-      - .env
     environment:
       - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j_password_change_me}
       - NEO4J_PLUGINS=["n10s"]
       - NEO4J_server_directories_import=/import
       - NEO4J_dbms_security_procedures_unrestricted=n10s.*
       - NEO4J_dbms_security_procedures_allowlist=n10s.*
+      - EXTENSION_SCRIPT=/neo4j-extension.sh
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -67,6 +66,7 @@ services:
       - neo4j-local-data:/data
       - neo4j-local-logs:/logs
       - ./fuseki/init:/import:ro
+      - ./neo4j/extension.sh:/neo4j-extension.sh:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7474"]
       interval: 30s
@@ -98,13 +98,13 @@ services:
       start_period: 60s
 
   translate:
-    image: libretranslate/libretranslate:1.5
+    image: libretranslate/libretranslate:latest
     container_name: h3-2-translate
     restart: always
     env_file:
       - .env
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
       - translate-local-data:/root/.local/share/argos-translate/packages
     tty: true

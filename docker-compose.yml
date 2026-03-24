@@ -138,7 +138,7 @@ services:
       - traefik.http.services.mongo-express.loadbalancer.server.port=8081
 
   translate:
-    image: libretranslate/libretranslate:1.5
+    image: libretranslate/libretranslate:latest
     container_name: h3-2-translate
     restart: always
     ports:
@@ -167,6 +167,7 @@ services:
       - NEO4J_server_directories_import=/import
       - NEO4J_dbms_security_procedures_unrestricted=n10s.*
       - NEO4J_dbms_security_procedures_allowlist=n10s.*
+      - EXTENSION_SCRIPT=/neo4j-extension.sh
     ports:
       - ${NEO4J_HTTP_PORT:-7474}:7474
       - ${NEO4J_BOLT_PORT:-7687}:7687
@@ -176,6 +177,7 @@ services:
       - neo4j-data:/data
       - neo4j-logs:/logs
       - ./fuseki/init:/import:ro
+      - ./neo4j/extension.sh:/neo4j-extension.sh:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7474"]
       interval: 30s

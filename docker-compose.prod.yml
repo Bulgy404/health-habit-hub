@@ -115,7 +115,7 @@ services:
       - traefik.http.services.mongo-express-v2.loadbalancer.server.port=8081
 
   translate:
-    image: libretranslate/libretranslate:1.5
+    image: libretranslate/libretranslate:latest
     container_name: h3-2-translate
     restart: always
     # LibreTranslate runs as 'libretranslate' user (UID 1032)
@@ -154,6 +154,7 @@ services:
       - NEO4J_server_directories_import=/import
       - NEO4J_dbms_security_procedures_unrestricted=n10s.*
       - NEO4J_dbms_security_procedures_allowlist=n10s.*
+      - EXTENSION_SCRIPT=/neo4j-extension.sh
     # Neo4j runs as 'neo4j' user (UID 7474)
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7474"]
@@ -170,6 +171,7 @@ services:
       - /mnt/data/appdata/hhh2/neo4j/data:/data
       - /mnt/data/appdata/hhh2/neo4j/logs:/logs
       - ./fuseki/init:/import:ro
+      - ./neo4j/extension.sh:/neo4j-extension.sh:ro
     labels:
       - traefik.enable=true
       - traefik.http.routers.neo4j-v2.rule=Host(`${DOMAIN}`) && PathPrefix(`/neo4j`)
