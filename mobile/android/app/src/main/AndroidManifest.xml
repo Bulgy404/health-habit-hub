@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="The Health-Habit-Hub"
+        android:label="Health-Habit-Hub"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
