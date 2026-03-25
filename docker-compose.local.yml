@@ -1,7 +1,35 @@
-# Local Mac development — no Traefik, no TLS, no production-only services.
+# Local Mac development with direct ports plus optional Traefik/admin hostnames.
 # iOS Simulator shares the Mac network stack, so localhost works directly.
 # Usage: docker compose -f docker-compose.local.yml up
 services:
+  proxy:
+    image: traefik:v3.0
+    container_name: h3-2-proxy
+    command:
+      - --api.insecure=true
+      - --api.dashboard=true
+      - --api.debug=true
+      - --log.level=INFO
+      - --accesslog=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=h3-2-proxy
+      - --entrypoints.web.address=:80
+    restart: always
+    ports:
+      - "${TRAEFIK_HOST_PORT80:-80}:80"
+      - "${TRAEFIK_HOST_PORT8080:-8888}:8080"
+    networks:
+      - h3-2-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.proxy.rule=Host(`${PROXY_PATH:-proxy}.${PATH_SUFFIX:-localhost}`)
+      - traefik.http.routers.proxy.entrypoints=web
+      - traefik.http.routers.proxy.service=proxy
+      - traefik.http.services.proxy.loadbalancer.server.port=8080
+
   app:
     image: hhh/app
     container_name: h3-2-app
@@ -14,8 +42,11 @@ services:
       - MONGO_HOST=mongo
     ports:
       - "3000:3000"
+    networks:
+      - h3-2-proxy
     command: node --watch app.js
     depends_on:
+      - proxy
       - mongo
       - fuseki
       - neo4j
@@ -25,6 +56,12 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(`${APP_PATH:-app}.${PATH_SUFFIX:-localhost}`)
+      - traefik.http.routers.app.entrypoints=web
+      - traefik.http.routers.app.service=app
+      - traefik.http.services.app.loadbalancer.server.port=3000
 
   mongo:
     image: mongo
@@ -62,6 +99,8 @@ services:
     ports:
       - "7474:7474"
       - "7687:7687"
+    networks:
+      - h3-2-proxy
     volumes:
       - neo4j-local-data:/data
       - neo4j-local-logs:/logs
@@ -73,6 +112,14 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    depends_on:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.neo4j.rule=Host(`neo4j.${PATH_SUFFIX:-localhost}`)
+      - traefik.http.routers.neo4j.entrypoints=web
+      - traefik.http.routers.neo4j.service=neo4j
+      - traefik.http.services.neo4j.loadbalancer.server.port=7474
 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
@@ -87,6 +134,8 @@ services:
     command: start-dev --import-realm
     ports:
       - "8080:8080"
+    networks:
+      - h3-2-proxy
     volumes:
       - keycloak-local-data:/opt/keycloak/data
       - ./keycloak/hhh-realm.json:/opt/keycloak/data/import/hhh-realm.json:ro
@@ -96,6 +145,43 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    depends_on:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.keycloak.rule=Host(`keycloak.${PATH_SUFFIX:-localhost}`)
+      - traefik.http.routers.keycloak.entrypoints=web
+      - traefik.http.routers.keycloak.service=keycloak
+      - traefik.http.services.keycloak.loadbalancer.server.port=8080
+
+  admin:
+    image: hhh/admin
+    container_name: h3-2-admin
+    build: ./admin
+    restart: on-failure:3
+    env_file:
+      - .env
+    environment:
+      - NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
+      - KEYCLOAK_CLIENT_ID=hhh-admin
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET:-hhh-admin-secret-change-me}
+      - KEYCLOAK_ISSUER=http://keycloak.${PATH_SUFFIX:-localhost}/realms/hhh
+    ports:
+      - "3001:3001"
+    networks:
+      - h3-2-proxy
+    extra_hosts:
+      - "keycloak.localhost:host-gateway"
+    depends_on:
+      - proxy
+      - keycloak
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.admin.rule=Host(`admin.${PATH_SUFFIX:-localhost}`)
+      - traefik.http.routers.admin.entrypoints=web
+      - traefik.http.routers.admin.service=admin
+      - traefik.http.services.admin.loadbalancer.server.port=3001
 
   translate:
     image: libretranslate/libretranslate:latest
@@ -105,9 +191,19 @@ services:
       - .env
     ports:
       - "5001:5000"
+    networks:
+      - h3-2-proxy
     volumes:
       - translate-local-data:/root/.local/share/argos-translate/packages
     tty: true
+    depends_on:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.translate.rule=Host(`${TRANSLATE_HOST:-translate}.${PATH_SUFFIX:-localhost}`)
+      - traefik.http.routers.translate.entrypoints=web
+      - traefik.http.routers.translate.service=translate
+      - traefik.http.services.translate.loadbalancer.server.port=5000
 
   redis:
     image: redis:7-alpine
@@ -128,6 +224,8 @@ services:
       - .env
     ports:
       - "8001:8000"
+    networks:
+      - h3-2-proxy
     depends_on:
       - redis
 
@@ -142,8 +240,18 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
     ports:
       - "3030:3030"
+    networks:
+      - h3-2-proxy
     volumes:
       - fuseki-local-data:/fuseki
+    depends_on:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.fuseki.rule=Host(`${FUSEKI_PATH:-fuseki}.${PATH_SUFFIX:-localhost}`)
+      - traefik.http.routers.fuseki.entrypoints=web
+      - traefik.http.routers.fuseki.service=fuseki
+      - traefik.http.services.fuseki.loadbalancer.server.port=3030
 
 volumes:
   mongo-local-data:
@@ -153,3 +261,6 @@ volumes:
   translate-local-data:
   fuseki-local-data:
   redis-local-data:
+
+networks:
+  h3-2-proxy:
