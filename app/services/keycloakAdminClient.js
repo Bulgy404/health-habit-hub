@@ -54,7 +54,7 @@ export function createKeycloakAdminClient({
 
     async createUser({ userId, username, password }) {
       const token = await getAdminToken();
-      await fetch(`${_base}/admin/realms/${_realm}/users`, {
+      const res = await fetch(`${_base}/admin/realms/${_realm}/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,12 +64,23 @@ export function createKeycloakAdminClient({
           id: userId,
           username,
           enabled: true,
+          requiredActions: [],
           credentials: [
             { type: 'password', value: password, temporary: false },
           ],
           attributes: { group: [] },
         }),
       });
+      if (!res.ok) throw new Error(`Keycloak create user failed: ${res.status}`);
+
+      const lookupRes = await fetch(
+        `${_base}/admin/realms/${_realm}/users?username=${encodeURIComponent(username)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!lookupRes.ok)
+        throw new Error(`Keycloak user lookup failed: ${lookupRes.status}`);
+      const users = await lookupRes.json();
+      return users[0]?.id || userId;
     },
 
     async assignRole(userId, roleName) {
@@ -78,8 +89,10 @@ export function createKeycloakAdminClient({
         `${_base}/admin/realms/${_realm}/roles/${roleName}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      if (!rolesRes.ok)
+        throw new Error(`Keycloak role lookup failed: ${rolesRes.status}`);
       const role = await rolesRes.json();
-      await fetch(
+      const assignRes = await fetch(
         `${_base}/admin/realms/${_realm}/users/${userId}/role-mappings/realm`,
         {
           method: 'POST',
@@ -90,6 +103,8 @@ export function createKeycloakAdminClient({
           body: JSON.stringify([role]),
         }
       );
+      if (!assignRes.ok)
+        throw new Error(`Keycloak role assignment failed: ${assignRes.status}`);
     },
 
     async updateUserAttribute(userId, key, value) {

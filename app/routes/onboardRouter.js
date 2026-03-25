@@ -34,34 +34,18 @@ export function createOnboardRouter({ keycloak } = {}) {
       : createKeycloakAdminClient();
 
   router.post('/', onboardRateLimiter, async (req, res) => {
+    const userId = randomUUID();
     const username = randomUUID();
     const password = randomBytes(32).toString('hex');
 
     try {
-      // Step 1: get admin token and create user
-      const adminToken = await kcAdmin.getAdminToken();
-
-      const createRes = await fetch(`${base}/admin/realms/${realm}/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${adminToken}`,
-        },
-        body: JSON.stringify({
-          username,
-          enabled: true,
-          credentials: [
-            { type: 'password', value: password, temporary: false },
-          ],
-          realmRoles: ['participant'],
-        }),
+      // Keycloak assigns realm roles via a separate admin API call.
+      const keycloakUserId = await kcAdmin.createUser({
+        userId,
+        username,
+        password,
       });
-
-      if (!createRes.ok) {
-        return res
-          .status(502)
-          .json({ error: 'Failed to create account. Please try again.' });
-      }
+      await kcAdmin.assignRole(keycloakUserId || userId, 'participant');
 
       // Step 2: direct-grant token exchange
       const tokenRes = await fetch(
@@ -94,6 +78,11 @@ export function createOnboardRouter({ keycloak } = {}) {
       });
     } catch (err) {
       console.error('[route] Error:', err);
+      if (String(err?.message || '').includes('Keycloak create user failed')) {
+        return res
+          .status(502)
+          .json({ error: 'Failed to create account. Please try again.' });
+      }
       return res
         .status(502)
         .json({ error: 'Keycloak is unreachable. Please try again later.' });

@@ -45,7 +45,7 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
+      "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
       "redirectUris": [
@@ -77,6 +77,7 @@
       "description": "Confidential client for the Express backend service",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
+      "secret": "CHANGE_THIS_KEYCLOAK_BACKEND_SECRET",
       "publicClient": false,
       "standardFlowEnabled": false,
       "implicitFlowEnabled": false,
