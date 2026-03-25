@@ -2,7 +2,7 @@ import express from 'express';
 import neo4j from 'neo4j-driver';
 import { randomUUID } from 'node:crypto';
 import { makeGetDb } from '../utils/getDb.js';
-import { donateHabit } from '../services/habitDonationService.js';
+import { shareHabit } from '../services/habitDonationService.js';
 import { SUPPORTED_LANGUAGES } from '../utils/constants.js';
 import {
   getAllHabits,
@@ -451,9 +451,9 @@ export function createHabitsRouter({
     }
   });
 
-  // POST /api/v1/habits/donate
-  // Validate input then delegate to habitDonationService
-  router.post('/donate', async (req, res) => {
+  // POST /api/v1/habits/share
+  // Validate input then delegate to the habit-sharing service.
+  async function handleShareHabit(req, res) {
     const { sentence, language } = req.body || {};
     if (!sentence || !language) {
       return res
@@ -482,7 +482,7 @@ export function createHabitsRouter({
       `http://${process.env.TRANSLATE_HOST || 'localhost'}:${process.env.TRANSLATE_PORT || '5000'}${process.env.TRANSLATE_PATH || '/translate'}`;
 
     try {
-      const result = await donateHabit({
+      const result = await shareHabit({
         uuid: randomUUID(),
         sentence,
         language,
@@ -497,10 +497,13 @@ export function createHabitsRouter({
     } catch (err) {
       if (err.status === 502)
         return res.status(502).json({ error: err.message });
-      console.error('[donate] Unexpected error:', err);
+      console.error('[share] Unexpected error:', err);
       return res.status(500).json({ error: 'Internal server error' });
     }
-  });
+  }
+
+  router.post('/share', handleShareHabit);
+  router.post('/donate', handleShareHabit);
 
   return router;
 }

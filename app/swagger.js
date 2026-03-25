@@ -11,7 +11,7 @@ const options = {
       title: 'Health Habit Hub API',
       version: '1.0.0',
       description:
-        'REST API for the Health Habit Hub platform. Manages participants, surveys, habit donations, recommendations, and profiles. All endpoints (except /health) require a Keycloak JWT bearer token.',
+        'REST API for the Health Habit Hub platform. Manages participants, surveys, shared habits, recommendations, and profiles. All endpoints (except /health) require a Keycloak JWT bearer token.',
       contact: {
         name: 'HHH Development Team',
       },

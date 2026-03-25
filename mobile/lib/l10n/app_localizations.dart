@@ -104,11 +104,11 @@ abstract class AppLocalizations {
   /// **'Health Habit Hub'**
   String get appTitle;
 
-  /// Label for the donate habit screen/action
+  /// Label for the share habit screen/action
   ///
   /// In en, this message translates to:
-  /// **'Donate a Habit'**
-  String get donateHabit;
+  /// **'Share a Habit'**
+  String get shareHabit;
 
   /// Label for the explore habits screen
   ///
@@ -128,11 +128,11 @@ abstract class AppLocalizations {
   /// **'Profile'**
   String get profile;
 
-  /// Snackbar message when habit donation succeeds
+  /// Snackbar message when habit sharing succeeds
   ///
   /// In en, this message translates to:
-  /// **'Habit donated successfully!'**
-  String get habitDonatedSuccess;
+  /// **'Habit shared successfully!'**
+  String get habitSharedSuccess;
 
   /// Snackbar message when a form submission fails
   ///
@@ -494,10 +494,10 @@ abstract class AppLocalizations {
   /// **'Actions'**
   String get adminColActions;
 
-  /// AppBar title for the admin donated habits screen
+  /// AppBar title for the admin shared habits screen
   ///
   /// In en, this message translates to:
-  /// **'Donated Habits'**
+  /// **'Shared Habits'**
   String get adminDonatedHabits;
 
   /// Tooltip when auto-refresh is enabled
@@ -560,16 +560,16 @@ abstract class AppLocalizations {
   /// **'CSV'**
   String get adminCsv;
 
-  /// Empty state message on donated habits screen
+  /// Empty state message on shared habits screen
   ///
   /// In en, this message translates to:
-  /// **'No habit donations found'**
+  /// **'No shared habits found'**
   String get adminNoHabitDonationsFound;
 
-  /// Error message when habit donations fail to load
+  /// Error message when shared habits fail to load
   ///
   /// In en, this message translates to:
-  /// **'Failed to load habit donations'**
+  /// **'Failed to load shared habits'**
   String get adminFailedToLoadHabitDonations;
 
   /// AppBar title for the participant detail screen
@@ -614,22 +614,22 @@ abstract class AppLocalizations {
   /// **'No surveys completed yet.'**
   String get adminNoSurveysCompletedYet;
 
-  /// Section header showing how many habits were donated
+  /// Section header showing how many habits were shared
   ///
   /// In en, this message translates to:
-  /// **'Habits Donated ({count})'**
+  /// **'Habits Shared ({count})'**
   String adminHabitsDonated(int count);
 
-  /// Empty state for habits section when no habits donated
+  /// Empty state for habits section when no habits have been shared
   ///
   /// In en, this message translates to:
-  /// **'No habits donated yet.'**
+  /// **'No habits shared yet.'**
   String get adminNoHabitsDonatedYet;
 
-  /// Detail text for habits section when habits have been donated
+  /// Detail text for habits section when habits have been shared
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 habit donated. Individual habit details are available in the Habits Monitor.} other{{count} habits donated. Individual habit details are available in the Habits Monitor.}}'**
+  /// **'{count, plural, =1{1 habit shared. Individual habit details are available in the Habits Monitor.} other{{count} habits shared. Individual habit details are available in the Habits Monitor.}}'**
   String adminHabitsDonatedDetail(int count);
 
   /// Section heading for recommendations on participant detail screen

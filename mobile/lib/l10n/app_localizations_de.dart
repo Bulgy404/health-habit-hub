@@ -12,7 +12,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appTitle => 'Health Habit Hub';
 
   @override
-  String get donateHabit => 'Gewohnheit spenden';
+  String get shareHabit => 'Gewohnheit teilen';
 
   @override
   String get exploreHabits => 'Gewohnheiten entdecken';
@@ -24,7 +24,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profile => 'Profil';
 
   @override
-  String get habitDonatedSuccess => 'Gewohnheit erfolgreich gespendet!';
+  String get habitSharedSuccess => 'Gewohnheit erfolgreich geteilt!';
 
   @override
   String get submissionFailed =>
@@ -225,7 +225,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get adminColActions => 'Aktionen';
 
   @override
-  String get adminDonatedHabits => 'Gespendete Gewohnheiten';
+  String get adminDonatedHabits => 'Geteilte Gewohnheiten';
 
   @override
   String get adminAutoRefreshOn => 'Auto-Aktualisierung ein';
@@ -259,11 +259,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get adminCsv => 'CSV';
 
   @override
-  String get adminNoHabitDonationsFound => 'Keine Gewohnheitsspenden gefunden';
+  String get adminNoHabitDonationsFound => 'Keine geteilten Gewohnheiten gefunden';
 
   @override
   String get adminFailedToLoadHabitDonations =>
-      'Gewohnheitsspenden konnten nicht geladen werden';
+      'Geteilte Gewohnheiten konnten nicht geladen werden';
 
   @override
   String adminParticipantTitle(String participantId) {
@@ -293,11 +293,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String adminHabitsDonated(int count) {
-    return 'Gespendete Gewohnheiten ($count)';
+    return 'Geteilte Gewohnheiten ($count)';
   }
 
   @override
-  String get adminNoHabitsDonatedYet => 'Noch keine Gewohnheiten gespendet.';
+  String get adminNoHabitsDonatedYet => 'Noch keine Gewohnheiten geteilt.';
 
   @override
   String adminHabitsDonatedDetail(int count) {
@@ -305,9 +305,9 @@ class AppLocalizationsDe extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          '$count Gewohnheiten gespendet. Einzelheiten sind im Gewohnheits-Monitor verfügbar.',
+          '$count Gewohnheiten geteilt. Einzelheiten sind im Gewohnheits-Monitor verfügbar.',
       one:
-          '1 Gewohnheit gespendet. Einzelheiten sind im Gewohnheits-Monitor verfügbar.',
+          '1 Gewohnheit geteilt. Einzelheiten sind im Gewohnheits-Monitor verfügbar.',
     );
     return '$_temp0';
   }

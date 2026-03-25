@@ -69,6 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Auth guard: unauthenticated users may not access app screens.
       const protectedPrefixes = [
+        '/share',
         '/donate',
         '/explore',
         '/recommend',
@@ -93,7 +94,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (location.startsWith('/onboarding/welcome') ||
           location == '/login') {
         if (await isOnboardingComplete()) {
-          return '/donate';
+          return '/share';
         }
       }
 
@@ -141,8 +142,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: '/share',
+                builder: (context, state) => const ShareHabitScreen(),
+              ),
+              GoRoute(
                 path: '/donate',
-                builder: (context, state) => const DonateScreen(),
+                redirect: (context, state) => '/share',
               ),
             ],
           ),

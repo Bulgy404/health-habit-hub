@@ -97,7 +97,7 @@ class _RestoreScreenState extends State<RestoreScreen> {
         );
         await storage.write(key: _kOnboardingComplete, value: 'true');
         if (!mounted) return;
-        context.go('/donate');
+        context.go('/share');
       } else {
         setState(() {
           _loading = false;

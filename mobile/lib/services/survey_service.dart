@@ -21,7 +21,7 @@ class SurveyService {
     return Survey.fromJson(response.data!);
   }
 
-  /// Fetches the profile survey (type: habit-donation) assigned to the current user.
+  /// Fetches the profile survey assigned to the current user.
   Future<Survey> fetchProfileSurvey() async {
     return fetchSurvey('profile');
   }

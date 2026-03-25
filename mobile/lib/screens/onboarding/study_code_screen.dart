@@ -60,7 +60,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
     const storage = FlutterSecureStorage();
     final value = await storage.read(key: kStudyEnrolledKey);
     if (value == 'true' && mounted) {
-      context.go('/donate');
+      context.go('/share');
     }
   }
 
@@ -100,7 +100,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
       await storage.write(key: kStudyEnrolledKey, value: 'true');
 
       if (!mounted) return;
-      context.go('/donate');
+      context.go('/share');
     } on DioException catch (e) {
       if (!mounted) return;
       final statusCode = e.response?.statusCode;
@@ -149,7 +149,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
     await storage.write(key: kStudyEnrolledKey, value: 'true');
 
     if (!mounted) return;
-    context.go('/donate');
+    context.go('/share');
   }
 
   @override

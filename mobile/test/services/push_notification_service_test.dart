@@ -17,19 +17,19 @@ void main() {
       expect(route, '/explore');
     });
 
-    test('home screen navigates to /donate', () {
+    test('home screen navigates to /share', () {
       final route = routeFromNotificationPayload({'screen': 'home'});
-      expect(route, '/donate');
+      expect(route, '/share');
     });
 
-    test('unknown screen value navigates to /donate (default)', () {
+    test('unknown screen value navigates to /share (default)', () {
       final route = routeFromNotificationPayload({'screen': 'unknown_screen'});
-      expect(route, '/donate');
+      expect(route, '/share');
     });
 
-    test('missing screen field navigates to /donate (default)', () {
+    test('missing screen field navigates to /share (default)', () {
       final route = routeFromNotificationPayload({});
-      expect(route, '/donate');
+      expect(route, '/share');
     });
   });
 }

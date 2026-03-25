@@ -12,19 +12,19 @@ import '../providers/locale_provider.dart';
 import '../services/survey_service.dart';
 import '../widgets/offline_banner.dart';
 
-/// Habit-donation survey screen.
+/// Habit-sharing survey screen.
 ///
-/// Fetches the habit-donation survey from the backend, renders it via
+/// Fetches the legacy `habit-donation` survey from the backend, renders it via
 /// a [WebView] pointing at `/api/v1/surveys/:id/render`, intercepts the
 /// SurveyJS completion event, and submits the answers via [SurveyService].
-class DonateScreen extends ConsumerStatefulWidget {
-  const DonateScreen({super.key});
+class ShareHabitScreen extends ConsumerStatefulWidget {
+  const ShareHabitScreen({super.key});
 
   @override
-  ConsumerState<DonateScreen> createState() => _DonateScreenState();
+  ConsumerState<ShareHabitScreen> createState() => _ShareHabitScreenState();
 }
 
-class _DonateScreenState extends ConsumerState<DonateScreen> {
+class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   static const _baseUrl = AppConfig.apiBaseUrl;
 
   WebViewController? _controller;
@@ -86,7 +86,7 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
         });
       }
     } catch (e, st) {
-      debugPrint('ERROR in DonateScreen._initSurvey: $e\n$st');
+      debugPrint('ERROR in ShareHabitScreen._initSurvey: $e\n$st');
       if (mounted) {
         setState(() {
           _loading = false;
@@ -123,12 +123,12 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
       await surveyService.submitResult(_surveyId!, answers);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.habitDonatedSuccess)),
+          SnackBar(content: Text(l10n.habitSharedSuccess)),
         );
         context.pop();
       }
     } catch (e, st) {
-      debugPrint('ERROR in DonateScreen._onSurveyComplete: $e\n$st');
+      debugPrint('ERROR in ShareHabitScreen._onSurveyComplete: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.submissionFailed)),
@@ -143,7 +143,7 @@ class _DonateScreenState extends ConsumerState<DonateScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.donateHabit)),
+      appBar: AppBar(title: Text(l10n.shareHabit)),
       body: Stack(
         children: [
           if (_offline)

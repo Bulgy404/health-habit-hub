@@ -34,7 +34,7 @@ String routeFromNotificationPayload(Map<String, dynamic> data) {
   return switch (screen) {
     'questionnaire' => '/profile',
     'explore' => '/explore',
-    _ => '/donate',
+    _ => '/share',
   };
 }
 

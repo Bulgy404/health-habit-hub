@@ -1,4 +1,4 @@
-// Integration test: participant login → survey (donate) → recommendation flow.
+// Integration test: participant login → habit sharing survey → recommendation flow.
 //
 // Drives the full app widget tree with all network services replaced by
 // in-memory fakes via Riverpod overrides.  The test does NOT require a
@@ -135,12 +135,12 @@ final _fakeRecs = _FakeRecommendationService();
 
 /// Builds a GoRouter with all routes required for the participant flow test.
 /// Adds a `/home` route (not present in production router) that redirects
-/// to `/donate`, since [LoginScreen] calls `context.go('/home')` on success.
+/// to `/share` for the first tab after login.
 GoRouter _buildTestRouter() {
   return GoRouter(
     initialLocation: '/login',
     redirect: (context, state) {
-      if (state.matchedLocation == '/home') return '/donate';
+      if (state.matchedLocation == '/home') return '/share';
       return null;
     },
     routes: [
@@ -160,8 +160,8 @@ GoRouter _buildTestRouter() {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/donate',
-                builder: (context, state) => const DonateScreen(),
+                path: '/share',
+                builder: (context, state) => const ShareHabitScreen(),
               ),
             ],
           ),
@@ -263,17 +263,17 @@ void main() {
 
       expect(find.byType(NavigationBar), findsOneWidget,
           reason: 'NavigationBar should appear after successful login');
-      expect(find.text('Donate'), findsOneWidget);
+      expect(find.text('Share'), findsOneWidget);
       expect(find.text('Explore'), findsOneWidget);
       expect(find.text('Recommend'), findsOneWidget);
       expect(find.text('Profile'), findsOneWidget);
 
-      // ── Step 3: Donate tab active — survey screen loads ──────────────────
-      // The Donate branch is the initial location after redirect from /home.
-      expect(find.text('Donate a Habit'), findsOneWidget,
-          reason: 'DonateScreen AppBar title should be visible');
+      // ── Step 3: Share tab active — survey screen loads ───────────────────
+      // The Share branch is the initial location after redirect from /home.
+      expect(find.text('Share a Habit'), findsOneWidget,
+          reason: 'ShareHabitScreen AppBar title should be visible');
 
-      // DonateScreen uses WebView; in the headless test runner the WebView
+      // ShareHabitScreen uses WebView; in the headless test runner the WebView
       // widget renders but cannot load a real page.  The mock SurveyService
       // returns a survey immediately, so the loading spinner should resolve
       // and the screen reaches its WebView or offline state.
@@ -281,8 +281,8 @@ void main() {
       // Verify the screen is no longer stuck in the spinner-only state.
       // (Either WebViewWidget or the offline banner is shown — both are valid
       // outcomes in a headless environment.)
-      expect(find.text('Donate a Habit'), findsOneWidget,
-          reason: 'DonateScreen stays visible after init');
+      expect(find.text('Share a Habit'), findsOneWidget,
+          reason: 'ShareHabitScreen stays visible after init');
 
       // ── Step 4: Tap Recommend tab ─────────────────────────────────────────
       await tester.tap(find.text('Recommend'));
