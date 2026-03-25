@@ -83,7 +83,7 @@ mobile/
 Code for a self-contained feature lives under `features/<feature>/`. Each feature module contains:
 
 - `*_screen.dart` — UI screens
-- `*_provider.dart` — Riverpod `StateNotifierProvider` for local feature state
+- `*_provider.dart` — Riverpod providers/notifiers for local feature state
 - `*_service.dart` — network calls specific to this feature
 - `*_models.dart` — data classes used only within the feature
 
@@ -136,8 +136,8 @@ The app uses **Riverpod** (`flutter_riverpod`). All providers are declared at mo
 | `Provider` | Singleton services (e.g. `surveyServiceProvider`) |
 | `FutureProvider` | One-shot async reads (e.g. `isLoggedInProvider`) |
 | `FutureProvider.family` | Parameterised async reads (e.g. `questionnaireProvider(slug)`) |
-| `StateNotifierProvider` | Mutable local state (e.g. `localeProvider`, `questionnaireStateProvider`) |
-| `StateNotifierProvider.family` | Per-slug questionnaire answer state |
+| `NotifierProvider` | Mutable local state (e.g. `localeProvider`, `themeModeProvider`) |
+| `NotifierProvider.family` | Per-slug questionnaire answer state |
 
 ### Key providers
 
@@ -146,13 +146,13 @@ The app uses **Riverpod** (`flutter_riverpod`). All providers are declared at mo
 | `authServiceProvider` | `providers/auth_provider.dart` | Exposes `AuthService` singleton |
 | `isLoggedInProvider` | `providers/auth_provider.dart` | `FutureProvider<bool>` — used by router |
 | `localeProvider` | `providers/locale_provider.dart` | Current app locale; persists via PUT /users/me |
-| `themeProvider` | `providers/theme_provider.dart` | Light/dark theme toggle |
+| `themeModeProvider` | `providers/theme_provider.dart` | Light/dark theme toggle |
 | `surveyServiceProvider` | `services/survey_service.dart` | Survey fetch + submit |
-| `questionnaireProvider(slug)` | `features/questionnaire/questionnaire_provider.dart` | Per-slug form state (current page, answers) |
+| `questionnaireFormProvider(slug)` | `features/questionnaire/questionnaire_provider.dart` | Per-slug form state (current page, answers) |
 
 ### Locale provider
 
-`localeProvider` is a `StateNotifierProvider<LocaleNotifier, Locale>`. Calling `ref.read(localeProvider.notifier).setLocale(Locale('de'))`:
+`localeProvider` is a `NotifierProvider<LocaleNotifier, Locale>`. Calling `ref.read(localeProvider.notifier).setLocale(Locale('de'))`:
 
 1. Updates the in-memory `Locale` (triggers app rebuild via `Consumer`).
 2. Calls `PUT /api/v1/users/me` with `{"preferredLanguage": "de"}` to persist the preference to the backend.

@@ -54,7 +54,7 @@ Future<void> initLocalNotifications() async {
   const android = AndroidInitializationSettings('@mipmap/ic_launcher');
   const darwin = DarwinInitializationSettings();
   await _localNotifications.initialize(
-    const InitializationSettings(android: android, iOS: darwin),
+    settings: const InitializationSettings(android: android, iOS: darwin),
   );
 
   await _localNotifications
@@ -77,10 +77,10 @@ Future<void> showForegroundNotification(RemoteMessage message) async {
   if (notification == null) return;
 
   await _localNotifications.show(
-    notification.hashCode,
-    notification.title,
-    notification.body,
-    const NotificationDetails(
+    id: notification.hashCode,
+    title: notification.title,
+    body: notification.body,
+    notificationDetails: const NotificationDetails(
       android: AndroidNotificationDetails(
         _kAndroidChannelId,
         _kAndroidChannelName,

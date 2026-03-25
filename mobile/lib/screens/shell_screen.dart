@@ -71,7 +71,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
   @override
   Widget build(BuildContext context) {
     final rolesAsync = ref.watch(userRolesProvider);
-    final roles = rolesAsync.valueOrNull ?? [];
+    final roles = rolesAsync.value ?? <String>[];
     final isAdminOrResearcher =
         roles.contains('admin') || roles.contains('researcher');
 

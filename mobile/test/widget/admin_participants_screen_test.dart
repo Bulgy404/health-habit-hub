@@ -120,8 +120,10 @@ void main() {
 
   testWidgets('shows error state and retry button on failure', (tester) async {
     await tester.pumpWidget(_buildSubject(_FakeAdminService.throwing()));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
+    expect(find.text('Failed to load participants.'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
   });
 

@@ -20,9 +20,15 @@ class QuestionnaireFormState {
   }
 }
 
-class QuestionnaireFormNotifier
-    extends StateNotifier<QuestionnaireFormState> {
-  QuestionnaireFormNotifier() : super(const QuestionnaireFormState());
+class QuestionnaireFormNotifier extends Notifier<QuestionnaireFormState> {
+  QuestionnaireFormNotifier(this.slug);
+
+  final String slug;
+
+  @override
+  QuestionnaireFormState build() {
+    return const QuestionnaireFormState();
+  }
 
   void setAnswer(String questionId, dynamic value) {
     final updated = Map<String, dynamic>.from(state.answers);
@@ -46,7 +52,7 @@ class QuestionnaireFormNotifier
 }
 
 /// Keyed by questionnaire slug so each questionnaire has independent form state.
-final questionnaireFormProvider = StateNotifierProvider.family<
+final questionnaireFormProvider = NotifierProvider.family<
     QuestionnaireFormNotifier, QuestionnaireFormState, String>(
-  (ref, slug) => QuestionnaireFormNotifier(),
+  QuestionnaireFormNotifier.new,
 );
