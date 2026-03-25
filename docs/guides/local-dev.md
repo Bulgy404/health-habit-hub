@@ -120,6 +120,17 @@ make ios
 
 This runs `cd mobile && flutter run -d iPhone`, which selects the first available iPhone Simulator.
 
+### Running manually from the Flutter project root
+
+```bash
+cd mobile
+flutter pub get
+dart analyze
+flutter run -d iPhone
+```
+
+Use `flutter run` to start the app. `flutter pub run` and plain `dart run` do not launch this Flutter application.
+
 ### Selecting a specific simulator
 
 ```bash
@@ -282,5 +293,6 @@ If translation is not needed for your current work, you can disable it by commen
 cd mobile
 flutter pub get
 flutter gen-l10n   # regenerate localisation files
+dart analyze
 flutter run -d iPhone
 ```

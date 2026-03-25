@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,25 +14,28 @@ const _storage = FlutterSecureStorage();
 /// Holds the active app locale and persists it via the backend users API.
 ///
 /// On construction, reads the cached locale from secure storage immediately
-/// (no flash of wrong language). In the background, fetches the up-to-date
-/// preference from GET /api/v1/users/me and updates state if different.
-class LocaleNotifier extends StateNotifier<Locale> {
-  LocaleNotifier(this._ref) : super(const Locale('en')) {
-    _initFromStorage();
-  }
-
-  final Ref _ref;
+/// after build and refreshes the preference from GET /api/v1/users/me.
+class LocaleNotifier extends Notifier<Locale> {
   final _dio = Dio();
+  bool _initialized = false;
 
   static const _apiBaseUrl = AppConfig.apiBaseUrl;
+
+  @override
+  Locale build() {
+    if (!_initialized) {
+      _initialized = true;
+      scheduleMicrotask(_initFromStorage);
+    }
+    return const Locale('en');
+  }
 
   /// Load cached locale from secure storage, then refresh from API.
   Future<void> _initFromStorage() async {
     final cached = await _storage.read(key: _kLocaleKey);
-    if (cached != null && _isSupported(cached)) {
+    if (cached != null && _isSupported(cached) && ref.mounted) {
       state = Locale(cached);
     }
-    // Refresh from API in the background (only succeeds when authenticated).
     await _fetchFromApi();
   }
 
@@ -38,24 +43,24 @@ class LocaleNotifier extends StateNotifier<Locale> {
   Future<void> _fetchFromApi() async {
     try {
       final headers = await _authHeaders();
-      if (headers.isEmpty) return; // Not authenticated yet.
+      if (headers.isEmpty) return;
       final response = await _dio.get<Map<String, dynamic>>(
         '$_apiBaseUrl/users/me',
         options: Options(headers: headers),
       );
       final lang = response.data?['preferredLanguage'] as String?;
+      if (!ref.mounted) return;
       if (lang != null && _isSupported(lang) && lang != state.languageCode) {
         state = Locale(lang);
         await _storage.write(key: _kLocaleKey, value: lang);
       }
     } catch (e, st) {
       debugPrint('LocaleNotifier._fetchFromApi: $e\n$st');
-      // Keep current state (storage or default).
     }
   }
 
   Future<Map<String, String>> _authHeaders() async {
-    final authService = _ref.read(authServiceProvider);
+    final authService = ref.read(authServiceProvider);
     final token = await authService.getAccessToken();
     if (token == null) return {};
     return {'Authorization': 'Bearer $token'};
@@ -64,8 +69,6 @@ class LocaleNotifier extends StateNotifier<Locale> {
   bool _isSupported(String lang) => lang == 'en' || lang == 'de';
 
   /// Changes locale locally and calls PUT /api/v1/users/me to persist.
-  ///
-  /// Returns true on success, false on API error.
   Future<bool> setLocale(Locale locale) async {
     final langCode = locale.languageCode;
     try {
@@ -75,6 +78,7 @@ class LocaleNotifier extends StateNotifier<Locale> {
         data: {'preferredLanguage': langCode},
         options: Options(headers: headers),
       );
+      if (!ref.mounted) return false;
       state = locale;
       await _storage.write(key: _kLocaleKey, value: langCode);
       return true;
@@ -88,6 +92,6 @@ class LocaleNotifier extends StateNotifier<Locale> {
   Future<void> loadPreference() => _fetchFromApi();
 }
 
-final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>(
-  (ref) => LocaleNotifier(ref),
+final localeProvider = NotifierProvider<LocaleNotifier, Locale>(
+  LocaleNotifier.new,
 );

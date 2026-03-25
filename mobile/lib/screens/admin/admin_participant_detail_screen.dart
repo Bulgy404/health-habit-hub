@@ -77,9 +77,11 @@ class _AdminParticipantDetailScreenState
           await service.fetchParticipantProgress(widget.participantId);
       final jsonStr =
           const JsonEncoder.withIndent('  ').convert(progress.toJson());
-      await Share.share(
-        jsonStr,
-        subject: 'Participant ${widget.participantId} Progress',
+      await SharePlus.instance.share(
+        ShareParams(
+          text: jsonStr,
+          subject: 'Participant ${widget.participantId} Progress',
+        ),
       );
     } catch (_) {
       if (mounted) {

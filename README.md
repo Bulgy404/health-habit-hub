@@ -83,18 +83,23 @@ Internet (80/443) → Traefik (SSL) → Node.js App → Databases
 **Full step-by-step guide (iOS Simulator + local backend):** [docs/guides/local-dev.md](docs/guides/local-dev.md)
 
 ```bash
-# Start with hot-reload
-docker-compose watch
+# Start backend services
+make dev
+
+# Seed local development data
+make seed
+
+# Launch the Flutter app in the iOS simulator
+make ios
 
 # View logs
-docker-compose logs -f
+make logs
 
-# Run tests
+# Analyze the Flutter app
+cd mobile && dart analyze
+
+# Run backend tests
 cd app && npm test
-
-# Code quality
-npm run lint
-npm run format
 ```
 
 ---

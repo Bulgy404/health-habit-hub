@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -5,13 +7,21 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 const _kThemeModeKey = 'theme_mode';
 const _storage = FlutterSecureStorage();
 
-class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier() : super(ThemeMode.system) {
-    _load();
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  bool _initialized = false;
+
+  @override
+  ThemeMode build() {
+    if (!_initialized) {
+      _initialized = true;
+      scheduleMicrotask(_load);
+    }
+    return ThemeMode.system;
   }
 
   Future<void> _load() async {
     final value = await _storage.read(key: _kThemeModeKey);
+    if (!ref.mounted) return;
     state = switch (value) {
       'light' => ThemeMode.light,
       'dark' => ThemeMode.dark,
@@ -32,7 +42,6 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 }
 
-final themeModeProvider =
-    StateNotifierProvider<ThemeModeNotifier, ThemeMode>(
-  (ref) => ThemeModeNotifier(),
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(
+  ThemeModeNotifier.new,
 );
