@@ -4,6 +4,167 @@
 
 This guide covers deploying Health Habit Hub to production using Portainer on your server.
 
+## Local Testing
+
+Use this section when you want to run the stack on your own machine for development or manual testing.
+
+There are two local modes:
+
+1. `docker-compose.local.yml`
+   Use this for the main app backend, Keycloak, databases, and Flutter/mobile testing.
+   This mode does **not** start the Next.js admin panel or Traefik.
+2. `docker-compose.yml`
+   Use this when you also want the local admin panel and the Traefik hostnames such as `app.localhost` and `admin.localhost`.
+
+### 1. Prepare Local Environment
+
+Create a local `.env` file if you do not already have one:
+
+```bash
+cp .env.example .env
+```
+
+At minimum, set these values in `.env` before first start:
+
+```env
+KEYCLOAK_ADMIN=admin
+KEYCLOAK_ADMIN_PASSWORD=<local-keycloak-password>
+KEYCLOAK_ADMIN_CLIENT_SECRET=<local-hhh-backend-secret>
+MONGO_PASSWORD=<local-mongo-password>
+NEO4J_PASSWORD=<local-neo4j-password>
+DB_PASSWORD=<local-fuseki-password>
+ADMIN_PASSWORD=<local-fuseki-password>
+OPENAI_API_KEY=<optional-but-needed-for-recommender-features>
+```
+
+Recommended local defaults already present in `.env.example`:
+- `PATH_SUFFIX=localhost`
+- `APP_HOST_PORT=3000`
+- `TRAEFIK_HOST_PORT80=80`
+- `TRAEFIK_HOST_PORT8080=8080`
+
+Before using the full Traefik-based `docker-compose.yml`, change this in `.env` to avoid a port clash with Keycloak:
+
+```env
+TRAEFIK_HOST_PORT8080=8888
+```
+
+### 2. Clean Local Database Init
+
+If you want a completely fresh local state, stop the local stack and remove its Docker volumes first:
+
+```bash
+docker compose -f docker-compose.local.yml down -v
+docker compose down -v
+```
+
+This resets:
+- MongoDB data
+- Neo4j data
+- Fuseki data
+- Redis data
+- Keycloak local realm storage
+
+Then start again and let Keycloak re-import the realm from [`keycloak/hhh-realm.json`](/Users/felixreinsch/Github/health-habit-hub/keycloak/hhh-realm.json).
+
+### 3. Start Local Backend Stack
+
+For normal local app testing:
+
+```bash
+docker compose -f docker-compose.local.yml up -d --build
+```
+
+Check container status:
+
+```bash
+docker compose -f docker-compose.local.yml ps
+```
+
+Check backend health:
+
+```bash
+curl -s http://localhost:3000/api/v1/health | python3 -m json.tool
+```
+
+Expected local URLs in this mode:
+
+| Service | Local URL | Notes |
+|---------|-----------|-------|
+| Backend API | `http://localhost:3000/api/v1/health` | Main backend health check |
+| Keycloak | `http://localhost:8080` | Realm + admin console |
+| Keycloak Admin Console | `http://localhost:8080/admin/` | Login with `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
+| Keycloak Realm Metadata | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | Quick realm import check |
+| Fuseki | `http://localhost:3030` | Basic auth with `admin` + `ADMIN_PASSWORD` |
+| Neo4j Browser | `http://localhost:7474` | Login with `neo4j` + `NEO4J_PASSWORD` |
+| Recommender | `http://localhost:8001/docs` | FastAPI docs |
+
+### 4. Start Local Admin Panel
+
+The admin panel is **not** part of `docker-compose.local.yml`.
+
+If you want the local admin UI, start the full compose stack instead:
+
+```bash
+docker compose up -d --build
+```
+
+This starts Traefik and the Next.js admin app. Use these local URLs:
+
+| Service | Local URL |
+|---------|-----------|
+| Main app via Traefik | `http://app.localhost` |
+| Admin panel via Traefik | `http://admin.localhost` |
+| Traefik dashboard | `http://proxy.localhost` |
+| Traefik raw dashboard port | `http://localhost:8888` |
+| Keycloak admin console | `http://localhost:8080/admin/` |
+
+Notes:
+- `*.localhost` resolves locally on modern browsers, so `app.localhost` and `admin.localhost` should work without editing `/etc/hosts`.
+- The admin app uses the `hhh-admin` Keycloak client and requires a Keycloak user with the `admin` or `researcher` realm role.
+
+### 5. Create a Local Admin User in Keycloak
+
+1. Open `http://localhost:8080/admin/`
+2. Log in with:
+   - Username: value of `KEYCLOAK_ADMIN`
+   - Password: value of `KEYCLOAK_ADMIN_PASSWORD`
+3. Select realm `hhh`
+4. Go to **Users** → **Add user**
+5. Create a user, then set a password under **Credentials**
+6. Under **Role mapping**, assign realm role `admin` or `researcher`
+7. Open `http://admin.localhost` and sign in with that account
+
+### 6. Verify Onboarding / Recovery Locally
+
+After the local stack is healthy:
+
+1. Open the Flutter app or frontend you are testing
+2. Complete onboarding until the recovery passphrase is shown
+3. Save the generated passphrase
+4. Test restore/recovery using that passphrase
+
+If participant creation fails again, check:
+
+```bash
+docker logs h3-2-app --tail 100
+docker logs h3-2-keycloak --tail 100
+```
+
+### 7. Re-apply Local Keycloak Config After Reset
+
+After wiping Keycloak storage, re-run the repo deploy helper so local Keycloak picks up:
+- the realm import
+- the bare-user profile schema
+- the `hhh-backend` client secret alignment
+- the backend service-account permissions
+
+```bash
+bash scripts/deploy-keycloak.sh
+```
+
+If you are only using `docker-compose.local.yml`, this is the safest way to bring Keycloak back to the repo-expected state after a fresh reset.
+
 **Server Details:**
 - IP: 141.76.16.16
 - Domain: habit.felixreinsch.de
