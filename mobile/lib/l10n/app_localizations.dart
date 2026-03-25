@@ -494,7 +494,7 @@ abstract class AppLocalizations {
   /// **'Actions'**
   String get adminColActions;
 
-  /// AppBar title for the admin shared habits screen
+  /// AppBar title for the admin donated habits screen
   ///
   /// In en, this message translates to:
   /// **'Shared Habits'**
@@ -560,13 +560,13 @@ abstract class AppLocalizations {
   /// **'CSV'**
   String get adminCsv;
 
-  /// Empty state message on shared habits screen
+  /// Empty state message on donated habits screen
   ///
   /// In en, this message translates to:
   /// **'No shared habits found'**
   String get adminNoHabitDonationsFound;
 
-  /// Error message when shared habits fail to load
+  /// Error message when habit donations fail to load
   ///
   /// In en, this message translates to:
   /// **'Failed to load shared habits'**
@@ -614,19 +614,19 @@ abstract class AppLocalizations {
   /// **'No surveys completed yet.'**
   String get adminNoSurveysCompletedYet;
 
-  /// Section header showing how many habits were shared
+  /// Section header showing how many habits were donated
   ///
   /// In en, this message translates to:
   /// **'Habits Shared ({count})'**
   String adminHabitsDonated(int count);
 
-  /// Empty state for habits section when no habits have been shared
+  /// Empty state for habits section when no habits donated
   ///
   /// In en, this message translates to:
   /// **'No habits shared yet.'**
   String get adminNoHabitsDonatedYet;
 
-  /// Detail text for habits section when habits have been shared
+  /// Detail text for habits section when habits have been donated
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 habit shared. Individual habit details are available in the Habits Monitor.} other{{count} habits shared. Individual habit details are available in the Habits Monitor.}}'**

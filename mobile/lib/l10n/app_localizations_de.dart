@@ -259,7 +259,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get adminCsv => 'CSV';
 
   @override
-  String get adminNoHabitDonationsFound => 'Keine geteilten Gewohnheiten gefunden';
+  String get adminNoHabitDonationsFound =>
+      'Keine geteilten Gewohnheiten gefunden';
 
   @override
   String get adminFailedToLoadHabitDonations =>

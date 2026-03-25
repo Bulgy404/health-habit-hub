@@ -254,8 +254,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminNoHabitDonationsFound => 'No shared habits found';
 
   @override
-  String get adminFailedToLoadHabitDonations =>
-      'Failed to load shared habits';
+  String get adminFailedToLoadHabitDonations => 'Failed to load shared habits';
 
   @override
   String adminParticipantTitle(String participantId) {
