@@ -7,9 +7,11 @@ set -euo pipefail
 DRY_RUN=false
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REALM_FILE="$REPO_ROOT/keycloak/hhh-realm.json"
+USER_PROFILE_FILE="$REPO_ROOT/keycloak/hhh-user-profile.json"
 KEYCLOAK_URL="${KEYCLOAK_URL:-http://localhost:8080}"
 KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
 KEYCLOAK_ADMIN_PASSWORD="${KEYCLOAK_ADMIN_PASSWORD:-}"
+KEYCLOAK_ADMIN_CLIENT_SECRET="${KEYCLOAK_ADMIN_CLIENT_SECRET:-}"
 
 run() {
   if [ "$DRY_RUN" = true ]; then
@@ -30,6 +32,8 @@ if [ "$DRY_RUN" = true ]; then
   echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Deploying Keycloak (dry-run)..."
   echo "[dry-run] Get admin token from ${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token"
   echo "[dry-run] Import/update realm 'hhh' from $REALM_FILE via ${KEYCLOAK_URL}/admin/realms"
+  echo "[dry-run] Apply user profile schema from $USER_PROFILE_FILE via ${KEYCLOAK_URL}/admin/realms/hhh/users/profile"
+  echo "[dry-run] Align hhh-backend client secret and grant realm-management realm-admin to its service account"
   echo "[dry-run] docker compose restart keycloak"
   echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Keycloak deployment complete (dry-run)."
   exit 0
@@ -42,6 +46,11 @@ fi
 
 if [ ! -f "$REALM_FILE" ]; then
   echo "ERROR: Realm file not found: $REALM_FILE" >&2
+  exit 1
+fi
+
+if [ ! -f "$USER_PROFILE_FILE" ]; then
+  echo "ERROR: User profile file not found: $USER_PROFILE_FILE" >&2
   exit 1
 fi
 
@@ -81,6 +90,60 @@ else
     -d "@$REALM_FILE"
   echo "Realm created."
 fi
+
+echo "Applying bare-user profile schema..."
+curl -sf -X PUT \
+  "${KEYCLOAK_URL}/admin/realms/hhh/users/profile" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "@$USER_PROFILE_FILE"
+echo "User profile schema applied."
+
+BACKEND_CLIENT_ID=$(curl -sf \
+  -H "Authorization: Bearer $TOKEN" \
+  "${KEYCLOAK_URL}/admin/realms/hhh/clients?clientId=hhh-backend" \
+  | jq -r '.[0].id')
+
+if [ -z "$BACKEND_CLIENT_ID" ] || [ "$BACKEND_CLIENT_ID" = "null" ]; then
+  echo "ERROR: Failed to resolve hhh-backend client ID" >&2
+  exit 1
+fi
+
+if [ -n "$KEYCLOAK_ADMIN_CLIENT_SECRET" ]; then
+  echo "Aligning hhh-backend client secret from KEYCLOAK_ADMIN_CLIENT_SECRET..."
+  curl -sf -X PUT \
+    "${KEYCLOAK_URL}/admin/realms/hhh/clients/${BACKEND_CLIENT_ID}" \
+    -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$(curl -sf \
+      -H "Authorization: Bearer $TOKEN" \
+      "${KEYCLOAK_URL}/admin/realms/hhh/clients/${BACKEND_CLIENT_ID}" \
+      | jq --arg secret "$KEYCLOAK_ADMIN_CLIENT_SECRET" '.secret = $secret')"
+  echo "hhh-backend client secret aligned."
+else
+  echo "WARNING: KEYCLOAK_ADMIN_CLIENT_SECRET not set; skipping hhh-backend secret alignment."
+fi
+
+SERVICE_ACCOUNT_USER_ID=$(curl -sf \
+  -H "Authorization: Bearer $TOKEN" \
+  "${KEYCLOAK_URL}/admin/realms/hhh/clients/${BACKEND_CLIENT_ID}/service-account-user" \
+  | jq -r '.id')
+REALM_MANAGEMENT_CLIENT_ID=$(curl -sf \
+  -H "Authorization: Bearer $TOKEN" \
+  "${KEYCLOAK_URL}/admin/realms/hhh/clients?clientId=realm-management" \
+  | jq -r '.[0].id')
+REALM_ADMIN_ROLE=$(curl -sf \
+  -H "Authorization: Bearer $TOKEN" \
+  "${KEYCLOAK_URL}/admin/realms/hhh/clients/${REALM_MANAGEMENT_CLIENT_ID}/roles/realm-admin")
+
+echo "Granting realm-management realm-admin to the hhh-backend service account..."
+curl -sf -X POST \
+  "${KEYCLOAK_URL}/admin/realms/hhh/users/${SERVICE_ACCOUNT_USER_ID}/role-mappings/clients/${REALM_MANAGEMENT_CLIENT_ID}" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "[$REALM_ADMIN_ROLE]" \
+  >/dev/null || true
+echo "hhh-backend service account role ensured."
 
 echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] Restarting Keycloak service..."
 docker compose restart keycloak

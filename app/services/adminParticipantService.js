@@ -51,8 +51,8 @@ export async function createParticipant({ db, kc }) {
   const username = `p-${userId}`;
   const password = randomPassword();
 
-  await kc.createUser({ userId, username, password });
-  await kc.assignRole(userId, 'participant');
+  const keycloakUserId = await kc.createUser({ userId, username, password });
+  await kc.assignRole(keycloakUserId || userId, 'participant');
 
   const now = new Date();
   await db.collection('participants').insertOne({

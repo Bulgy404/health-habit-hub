@@ -51,6 +51,18 @@ before(async () => {
       return { ok: true, status: 201, json: async () => ({}) };
     }
 
+    if (urlStr.includes('/admin/realms/') && urlStr.includes('/roles/')) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'participant-role-id', name: 'participant' }),
+      };
+    }
+
+    if (urlStr.includes('/role-mappings/realm')) {
+      return { ok: true, status: 204, json: async () => ({}) };
+    }
+
     // Direct-grant token exchange (password grant)
     if (urlStr.includes('/protocol/openid-connect/token')) {
       return {

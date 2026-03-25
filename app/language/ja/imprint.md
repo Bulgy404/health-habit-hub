@@ -1,6 +1,6 @@
 # 印刷情報
 
-## HabShare
+## Health-Habit-Hub
 
 ドレスデン工科大学
 経営経済学部
