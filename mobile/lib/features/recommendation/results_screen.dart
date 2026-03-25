@@ -8,7 +8,7 @@ import 'recommendation_models.dart';
 ///
 /// Handles three states:
 /// - Error: shows error message with retry option
-/// - Empty: shows message to donate habits first
+/// - Empty: shows message to share habits first
 /// - Results: shows recommendation cards
 class RecommendationResultsScreen extends ConsumerWidget {
   final String goal;
@@ -75,7 +75,7 @@ class RecommendationResultsScreen extends ConsumerWidget {
             const Icon(Icons.volunteer_activism, size: 64),
             const SizedBox(height: 16),
             Text(
-              'Donate some habits first to get personalised recommendations',
+              'Share some habits first to get personalised recommendations',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,
             ),
@@ -83,7 +83,7 @@ class RecommendationResultsScreen extends ConsumerWidget {
             FilledButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.add),
-              label: const Text('Donate a habit'),
+              label: const Text('Share a habit'),
             ),
           ],
         ),

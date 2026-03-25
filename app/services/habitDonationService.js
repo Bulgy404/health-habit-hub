@@ -1,5 +1,5 @@
 /**
- * habitDonationService — orchestrates the M1.1 → M1.2 → M1.3 habit donation pipeline.
+ * habitDonationService — orchestrates the M1.1 → M1.2 → M1.3 habit sharing pipeline.
  *
  * Responsibilities:
  *  - Classify habit (M1.1)
@@ -123,7 +123,7 @@ async function writeToNeo4j(
 }
 
 /**
- * Donate a habit: classify → extract context → map BCIO → translate → persist.
+ * Share a habit: classify → extract context → map BCIO → translate → persist.
  *
  * @param {object} params
  * @param {string} params.uuid         - Generated UUID for the new Habit node
@@ -138,7 +138,7 @@ async function writeToNeo4j(
  *
  * @returns {{ is_habit: boolean, uuid?: string, message: string }}
  */
-export async function donateHabit({
+export async function shareHabit({
   uuid,
   sentence,
   language,
@@ -218,6 +218,8 @@ export async function donateHabit({
   return {
     is_habit: true,
     uuid,
-    message: 'Thank you! Your habit has been successfully donated.',
+    message: 'Thank you! Your habit has been successfully shared.',
   };
 }
+
+export const donateHabit = shareHabit;

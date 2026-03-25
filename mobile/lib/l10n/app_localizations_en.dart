@@ -12,7 +12,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Health Habit Hub';
 
   @override
-  String get donateHabit => 'Donate a Habit';
+  String get shareHabit => 'Share a Habit';
 
   @override
   String get exploreHabits => 'Explore Habits';
@@ -24,7 +24,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profile => 'Profile';
 
   @override
-  String get habitDonatedSuccess => 'Habit donated successfully!';
+  String get habitSharedSuccess => 'Habit shared successfully!';
 
   @override
   String get submissionFailed => 'Submission failed — please try again.';
@@ -218,7 +218,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminColActions => 'Actions';
 
   @override
-  String get adminDonatedHabits => 'Donated Habits';
+  String get adminDonatedHabits => 'Shared Habits';
 
   @override
   String get adminAutoRefreshOn => 'Auto-refresh on';
@@ -251,11 +251,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminCsv => 'CSV';
 
   @override
-  String get adminNoHabitDonationsFound => 'No habit donations found';
+  String get adminNoHabitDonationsFound => 'No shared habits found';
 
   @override
   String get adminFailedToLoadHabitDonations =>
-      'Failed to load habit donations';
+      'Failed to load shared habits';
 
   @override
   String adminParticipantTitle(String participantId) {
@@ -284,11 +284,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String adminHabitsDonated(int count) {
-    return 'Habits Donated ($count)';
+    return 'Habits Shared ($count)';
   }
 
   @override
-  String get adminNoHabitsDonatedYet => 'No habits donated yet.';
+  String get adminNoHabitsDonatedYet => 'No habits shared yet.';
 
   @override
   String adminHabitsDonatedDetail(int count) {
@@ -296,9 +296,9 @@ class AppLocalizationsEn extends AppLocalizations {
       count,
       locale: localeName,
       other:
-          '$count habits donated. Individual habit details are available in the Habits Monitor.',
+          '$count habits shared. Individual habit details are available in the Habits Monitor.',
       one:
-          '1 habit donated. Individual habit details are available in the Habits Monitor.',
+          '1 habit shared. Individual habit details are available in the Habits Monitor.',
     );
     return '$_temp0';
   }

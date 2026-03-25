@@ -24,7 +24,7 @@ class ShellScreen extends ConsumerStatefulWidget {
 
 class _ShellScreenState extends ConsumerState<ShellScreen> {
   static const _allTabs = [
-    _TabConfig(label: 'Donate', icon: Icons.volunteer_activism, path: '/donate'),
+    _TabConfig(label: 'Share', icon: Icons.volunteer_activism, path: '/share'),
     _TabConfig(label: 'Explore', icon: Icons.hub, path: '/explore'),
     _TabConfig(label: 'Recommend', icon: Icons.recommend, path: '/recommend'),
     _TabConfig(label: 'Profile', icon: Icons.person, path: '/profile'),

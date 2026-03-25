@@ -32,8 +32,8 @@ Widget _buildSubject(Dio dio) {
         builder: (context, state) => const StudyCodeScreen(),
       ),
       GoRoute(
-        path: '/donate',
-        builder: (context, state) => const Scaffold(body: Text('Donate')),
+        path: '/share',
+        builder: (context, state) => const Scaffold(body: Text('Share')),
       ),
     ],
   );

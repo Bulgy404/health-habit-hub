@@ -14,15 +14,15 @@ import 'package:hhh/screens/shell_screen.dart';
 
 GoRouter _buildTestRouter({List<String> roles = const []}) {
   return GoRouter(
-    initialLocation: '/donate',
+    initialLocation: '/share',
     routes: [
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => ShellScreen(navigationShell: shell),
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(
-              path: '/donate',
-              builder: (_, _) => const Scaffold(body: Text('Donate Tab')),
+              path: '/share',
+              builder: (_, _) => const Scaffold(body: Text('Share Tab')),
             ),
           ]),
           StatefulShellBranch(routes: [
@@ -73,13 +73,13 @@ Widget _buildSubject(GoRouter router, List<String> roles) {
 // ---------------------------------------------------------------------------
 
 void main() {
-  testWidgets('shows NavigationBar and Donate tab', (tester) async {
+  testWidgets('shows NavigationBar and Share tab', (tester) async {
     final router = _buildTestRouter();
     await tester.pumpWidget(_buildSubject(router, const []));
     await tester.pump(); // allow StatefulShellRoute to settle
 
     expect(find.byType(NavigationBar), findsOneWidget);
-    expect(find.text('Donate'), findsOneWidget);
+    expect(find.text('Share'), findsOneWidget);
     expect(find.text('Explore'), findsOneWidget);
     expect(find.text('Recommend'), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);

@@ -54,12 +54,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   static const List<_WalkthroughStep> _steps = [
     _WalkthroughStep(
       icon: Icons.volunteer_activism,
-      title: 'Donate a Habit',
+      title: 'Share a Habit',
       description:
           'Share your personal habits with researchers to help build a richer '
           'understanding of everyday behaviour. Your contributions are '
           'anonymised and used only for scientific research. Every habit you '
-          'donate makes the dataset more valuable for everyone.',
+          'share makes the dataset more valuable for everyone.',
     ),
     _WalkthroughStep(
       icon: Icons.account_tree,
@@ -201,7 +201,7 @@ class _WelcomePage extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           Text(
-            'HabShare',
+            'The Health-Habit-Hub',
             style: theme.textTheme.headlineLarge?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.primary,
@@ -209,8 +209,8 @@ class _WelcomePage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Welcome to HabShare — a citizen-science platform where you can '
-            'donate your habits to research, explore the global habit graph, '
+            'Welcome to The Health-Habit-Hub, a citizen-science platform where you can '
+            'share your habits for research, explore the global habit graph, '
             'and receive personalised recommendations. Together, we make '
             'behaviour science better.',
             style: theme.textTheme.bodyLarge,

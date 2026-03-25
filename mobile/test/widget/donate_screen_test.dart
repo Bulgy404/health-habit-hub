@@ -1,4 +1,4 @@
-// Widget tests for DonateScreen.
+// Widget tests for ShareHabitScreen.
 //
 // WebView rendering is not tested in unit widget tests (requires platform
 // channels). Tests cover loading state, offline/error state, and key widgets.
@@ -67,7 +67,7 @@ Widget _buildSubject(_FakeSurveyService surveyService) {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en')],
-      home: const DonateScreen(),
+      home: const ShareHabitScreen(),
     ),
   );
 }
@@ -81,7 +81,7 @@ void main() {
     await tester.pumpWidget(_buildSubject(_FakeSurveyService.loading()));
     await tester.pump();
 
-    expect(find.text('Donate a Habit'), findsOneWidget);
+    expect(find.text('Share a Habit'), findsOneWidget);
   });
 
   testWidgets('shows loading indicator while fetching survey', (tester) async {

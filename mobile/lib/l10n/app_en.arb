@@ -4,9 +4,9 @@
   "@appTitle": {
     "description": "The application title"
   },
-  "donateHabit": "Donate a Habit",
-  "@donateHabit": {
-    "description": "Label for the donate habit screen/action"
+  "shareHabit": "Share a Habit",
+  "@shareHabit": {
+    "description": "Label for the share habit screen/action"
   },
   "exploreHabits": "Explore Habits",
   "@exploreHabits": {
@@ -20,9 +20,9 @@
   "@profile": {
     "description": "Label for the profile screen"
   },
-  "habitDonatedSuccess": "Habit donated successfully!",
-  "@habitDonatedSuccess": {
-    "description": "Snackbar message when habit donation succeeds"
+  "habitSharedSuccess": "Habit shared successfully!",
+  "@habitSharedSuccess": {
+    "description": "Snackbar message when habit sharing succeeds"
   },
   "submissionFailed": "Submission failed — please try again.",
   "@submissionFailed": {
@@ -284,7 +284,7 @@
   "@adminColActions": {
     "description": "Column header for actions in admin tables"
   },
-  "adminDonatedHabits": "Donated Habits",
+  "adminDonatedHabits": "Shared Habits",
   "@adminDonatedHabits": {
     "description": "AppBar title for the admin donated habits screen"
   },
@@ -328,11 +328,11 @@
   "@adminCsv": {
     "description": "Label for the CSV export button"
   },
-  "adminNoHabitDonationsFound": "No habit donations found",
+  "adminNoHabitDonationsFound": "No shared habits found",
   "@adminNoHabitDonationsFound": {
     "description": "Empty state message on donated habits screen"
   },
-  "adminFailedToLoadHabitDonations": "Failed to load habit donations",
+  "adminFailedToLoadHabitDonations": "Failed to load shared habits",
   "@adminFailedToLoadHabitDonations": {
     "description": "Error message when habit donations fail to load"
   },
@@ -374,7 +374,7 @@
   "@adminNoSurveysCompletedYet": {
     "description": "Empty state for surveys section on participant detail screen"
   },
-  "adminHabitsDonated": "Habits Donated ({count})",
+  "adminHabitsDonated": "Habits Shared ({count})",
   "@adminHabitsDonated": {
     "description": "Section header showing how many habits were donated",
     "placeholders": {
@@ -383,11 +383,11 @@
       }
     }
   },
-  "adminNoHabitsDonatedYet": "No habits donated yet.",
+  "adminNoHabitsDonatedYet": "No habits shared yet.",
   "@adminNoHabitsDonatedYet": {
     "description": "Empty state for habits section when no habits donated"
   },
-  "adminHabitsDonatedDetail": "{count, plural, =1{1 habit donated. Individual habit details are available in the Habits Monitor.} other{{count} habits donated. Individual habit details are available in the Habits Monitor.}}",
+  "adminHabitsDonatedDetail": "{count, plural, =1{1 habit shared. Individual habit details are available in the Habits Monitor.} other{{count} habits shared. Individual habit details are available in the Habits Monitor.}}",
   "@adminHabitsDonatedDetail": {
     "description": "Detail text for habits section when habits have been donated",
     "placeholders": {
