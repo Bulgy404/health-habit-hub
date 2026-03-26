@@ -54,6 +54,7 @@ export function createKeycloakAdminClient({
 
     async createUser({ userId, username, password }) {
       const token = await getAdminToken();
+      const placeholderEmail = `${username}@local.invalid`;
       const res = await fetch(`${_base}/admin/realms/${_realm}/users`, {
         method: 'POST',
         headers: {
@@ -64,6 +65,10 @@ export function createKeycloakAdminClient({
           id: userId,
           username,
           enabled: true,
+          email: placeholderEmail,
+          emailVerified: true,
+          firstName: 'Participant',
+          lastName: userId.slice(0, 8),
           requiredActions: [],
           credentials: [
             { type: 'password', value: password, temporary: false },
