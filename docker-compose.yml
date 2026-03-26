@@ -278,6 +278,7 @@ services:
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
       - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
       - ALERT_EMAIL=${ALERT_EMAIL:-}
+      - BACKUP_EMAIL=${BACKUP_EMAIL:-}
     volumes:
       - ./backups:/backups
       - fuseki-data:/fuseki:ro

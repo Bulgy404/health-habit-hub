@@ -75,8 +75,12 @@ test('Backup script uses environment variables correctly', () => {
     'Should use ALERT_WEBHOOK_URL environment variable'
   );
   assert(
+    content.includes('BACKUP_EMAIL'),
+    'Should use BACKUP_EMAIL environment variable'
+  );
+  assert(
     content.includes('ALERT_EMAIL'),
-    'Should use ALERT_EMAIL environment variable'
+    'Should support ALERT_EMAIL as a backward-compatible alias'
   );
 
   // Check default values
@@ -112,8 +116,15 @@ test('Backup script includes alert functionality', () => {
     'Should send webhook alerts'
   );
 
-  // Check for email support
-  assert(content.includes('mail -s'), 'Should support email notifications');
+  // Check for Mailjet email support
+  assert(
+    content.includes('https://api.mailjet.com/v3.1/send'),
+    'Should support email notifications via Mailjet API'
+  );
+  assert(
+    content.includes('MAIL_USER') && content.includes('MAIL_PASS'),
+    'Should gate email alerts on Mailjet credentials'
+  );
 });
 
 test('Backup script includes all database backups', () => {
@@ -290,7 +301,7 @@ test('Backup retention defaults to 14 days', () => {
 
   // Check default retention value
   assert(
-    content.includes(':-14}') || content.includes('default 14'),
+    content.includes('RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}'),
     'Should default to 14 days retention'
   );
 });
@@ -339,6 +350,7 @@ test('Environment variables are properly documented', () => {
   const requiredEnvVars = [
     'BACKUP_RETENTION_DAYS',
     'ALERT_WEBHOOK_URL',
+    'BACKUP_EMAIL',
     'ALERT_EMAIL',
   ];
 

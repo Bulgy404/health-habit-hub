@@ -40,10 +40,16 @@ services:
     environment:
       - NODE_ENV=development
       - MONGO_HOST=mongo
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=${KEYCLOAK_REALM:-hhh}
+      - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-hhh-flutter}
+      - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-hhh-backend}
+      - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET:-CHANGE_THIS_KEYCLOAK_BACKEND_SECRET}
     ports:
       - "3000:3000"
     networks:
       - h3-2-proxy
+      - h3-2-app
     command: node --watch app.js
     depends_on:
       - proxy
@@ -85,6 +91,9 @@ services:
       retries: 5
       start_period: 30s
 
+    networks:
+      - h3-2-app
+
   neo4j:
     image: neo4j:5
     container_name: h3-2-neo4j
@@ -101,6 +110,7 @@ services:
       - "7687:7687"
     networks:
       - h3-2-proxy
+      - h3-2-app
     volumes:
       - neo4j-local-data:/data
       - neo4j-local-logs:/logs
@@ -136,9 +146,11 @@ services:
       - "8080:8080"
     networks:
       - h3-2-proxy
+      - h3-2-app
     volumes:
       - keycloak-local-data:/opt/keycloak/data
       - ./keycloak/hhh-realm.json:/opt/keycloak/data/import/hhh-realm.json:ro
+      - ./keycloak/hhh-user-profile.json:/opt/keycloak/bootstrap/hhh-user-profile.json:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
       interval: 30s
@@ -160,8 +172,11 @@ services:
     restart: "no"
     env_file:
       - .env
+    volumes:
+      - ./keycloak/hhh-user-profile.json:/opt/keycloak/bootstrap/hhh-user-profile.json:ro
     networks:
       - h3-2-proxy
+      - h3-2-app
     depends_on:
       - keycloak
     entrypoint: ["/bin/sh", "-lc"]
@@ -173,7 +188,12 @@ services:
       --password "$$KEYCLOAK_ADMIN_PASSWORD";
       do sleep 2; done &&
       /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=none &&
-      /opt/keycloak/bin/kcadm.sh update realms/hhh -s sslRequired=none'
+      /opt/keycloak/bin/kcadm.sh update realms/hhh -s sslRequired=none &&
+      /opt/keycloak/bin/kcadm.sh update users/profile -r hhh -f /opt/keycloak/bootstrap/hhh-user-profile.json &&
+      BACKEND_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-backend --fields id --format csv --noquotes) &&
+      /opt/keycloak/bin/kcadm.sh update clients/$$BACKEND_ID -r hhh -s secret="$$KEYCLOAK_ADMIN_CLIENT_SECRET" &&
+      SA_ID=$$(/opt/keycloak/bin/kcadm.sh get clients/$$BACKEND_ID/service-account-user -r hhh --fields id --format csv --noquotes) &&
+      /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$SA_ID --cclientid realm-management --rolename realm-admin'
 
   admin:
     image: hhh/admin
@@ -194,6 +214,7 @@ services:
       - "3001:3001"
     networks:
       - h3-2-proxy
+      - h3-2-app
     depends_on:
       - proxy
       - keycloak
@@ -215,6 +236,7 @@ services:
       - "5001:5000"
     networks:
       - h3-2-proxy
+      - h3-2-app
     volumes:
       - translate-local-data:/root/.local/share/argos-translate/packages
     tty: true
@@ -248,6 +270,7 @@ services:
       - "8001:8000"
     networks:
       - h3-2-proxy
+      - h3-2-app
     depends_on:
       - redis
 
@@ -264,6 +287,7 @@ services:
       - "3030:3030"
     networks:
       - h3-2-proxy
+      - h3-2-app
     volumes:
       - fuseki-local-data:/fuseki
     depends_on:
@@ -287,3 +311,5 @@ volumes:
 networks:
   h3-2-proxy:
     name: h3-2-proxy
+  h3-2-app:
+    name: h3-2-app

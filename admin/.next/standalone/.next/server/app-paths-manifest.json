@@ -3,8 +3,8 @@
   "/access-denied/page": "app/access-denied/page.js",
   "/api/auth/[...nextauth]/route": "app/api/auth/[...nextauth]/route.js",
   "/page": "app/page.js",
-  "/(admin)/settings/page": "app/(admin)/settings/page.js",
   "/(admin)/knowledge-base/page": "app/(admin)/knowledge-base/page.js",
   "/(admin)/studies/page": "app/(admin)/studies/page.js",
+  "/(admin)/settings/page": "app/(admin)/settings/page.js",
   "/(admin)/questionnaires/page": "app/(admin)/questionnaires/page.js"
 }
