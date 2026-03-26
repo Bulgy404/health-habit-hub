@@ -1,9 +1,9 @@
-# Local Mac development with direct ports plus optional Traefik/admin hostnames.
+# Local Mac development with Traefik hostnames and Docker-provider routing.
 # iOS Simulator shares the Mac network stack, so localhost works directly.
 # Usage: docker compose -f docker-compose.local.yml up
 services:
   proxy:
-    image: traefik:v3.0
+    image: traefik:v3.6.1
     container_name: h3-2-proxy
     command:
       - --api.insecure=true
@@ -22,7 +22,7 @@ services:
     networks:
       - h3-2-proxy
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
     labels:
       - traefik.enable=true
       - traefik.http.routers.proxy.rule=Host(`${PROXY_PATH:-proxy}.${PATH_SUFFIX:-localhost}`)
@@ -154,6 +154,27 @@ services:
       - traefik.http.routers.keycloak.service=keycloak
       - traefik.http.services.keycloak.loadbalancer.server.port=8080
 
+  keycloak-init:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: h3-2-keycloak-init
+    restart: "no"
+    env_file:
+      - .env
+    networks:
+      - h3-2-proxy
+    depends_on:
+      - keycloak
+    entrypoint: ["/bin/sh", "-lc"]
+    command: >
+      'until /opt/keycloak/bin/kcadm.sh config credentials
+      --server http://keycloak:8080
+      --realm master
+      --user "$$KEYCLOAK_ADMIN"
+      --password "$$KEYCLOAK_ADMIN_PASSWORD";
+      do sleep 2; done &&
+      /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=none &&
+      /opt/keycloak/bin/kcadm.sh update realms/hhh -s sslRequired=none'
+
   admin:
     image: hhh/admin
     container_name: h3-2-admin
@@ -166,16 +187,17 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
       - KEYCLOAK_CLIENT_ID=hhh-admin
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET:-hhh-admin-secret-change-me}
-      - KEYCLOAK_ISSUER=http://keycloak.${PATH_SUFFIX:-localhost}/realms/hhh
+      - KEYCLOAK_ISSUER=http://localhost:8080/realms/hhh
+      - KEYCLOAK_BROWSER_URL=http://localhost:8080
+      - KEYCLOAK_INTERNAL_URL=http://keycloak:8080
     ports:
       - "3001:3001"
     networks:
       - h3-2-proxy
-    extra_hosts:
-      - "keycloak.localhost:host-gateway"
     depends_on:
       - proxy
       - keycloak
+      - keycloak-init
     labels:
       - traefik.enable=true
       - traefik.http.routers.admin.rule=Host(`admin.${PATH_SUFFIX:-localhost}`)
@@ -264,3 +286,4 @@ volumes:
 
 networks:
   h3-2-proxy:
+    name: h3-2-proxy
