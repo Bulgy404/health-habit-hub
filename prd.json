@@ -3082,8 +3082,8 @@
         "Document the issuer/browser URL split in a comment in both compose files"
       ],
       "priority": 192,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Changed KEYCLOAK_ISSUER from http://localhost:8080/realms/hhh to http://keycloak:8080/realms/hhh in both docker-compose.local.yml and docker-compose.yml. Added inline comment documenting issuer/browser URL split. KEYCLOAK_BROWSER_URL remains localhost:8080. Both compose files validate cleanly and all 322 tests pass."
     },
     {
       "id": "US-193",
