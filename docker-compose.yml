@@ -250,7 +250,10 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
       - KEYCLOAK_CLIENT_ID=hhh-admin
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET:-hhh-admin-secret-change-me}
-      - KEYCLOAK_ISSUER=http://localhost:8080/realms/hhh
+      # KEYCLOAK_ISSUER is used server-side (NextAuth JWT validation); must use the internal Docker
+      # hostname so that token issuer claims match. KEYCLOAK_BROWSER_URL is used for the browser
+      # redirect and must remain as localhost so the host browser can reach Keycloak.
+      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/hhh
       - KEYCLOAK_BROWSER_URL=http://localhost:8080
       - KEYCLOAK_INTERNAL_URL=http://keycloak:8080
     ports:
