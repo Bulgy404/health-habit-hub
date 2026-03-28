@@ -1934,3 +1934,20 @@
   - `Firebase.initializeApp()` must be wrapped in try/catch to keep the app runnable in environments without Firebase configured (CI, web builds, etc.)
   - `notificationService.js` is lazy-initialised: it returns null if `FIREBASE_SERVICE_ACCOUNT_JSON` is absent, so the app starts in no-op mode without crashing
 ---
+
+## 2026-03-28 - US-191
+- What was implemented: Created `app/utils/surveyTargeting.js` exporting `SURVEY_TARGET_MODES`, `normalizeSurveyTargetMode`, `sanitizeSurveyTargeting`, and `canParticipantAccessSurvey`. Removed duplicate definitions from `adminRouter.js` (had `SURVEY_TARGET_MODES`, `normalizeSurveyTargetMode`, `sanitizeSurveyTargeting`) and `surveyRouter.js` (had `SURVEY_TARGET_MODES`, `normalizeSurveyTargetMode`, `canParticipantAccessSurvey`). Both routers now import from the utility. The ordering issue in surveyRouter.js (formatSurvey calling normalizeSurveyTargetMode before it was defined) is resolved by the import. All 322 tests pass.
+- Files changed: app/utils/surveyTargeting.js (new), app/routes/adminRouter.js (removed duplicates + import), app/routes/surveyRouter.js (removed duplicates + import), prd.json (US-191 passes=true)
+- **Learnings for future iterations:**
+  - surveyRouter.js uses `export default legacyRouter` near the top (line 31) but also has named functions below it — the module has both a default export (legacy router) and utility functions used internally; this is unusual but valid
+  - adminRouter.js uses named export `export function createAdminRouter(...)` — keep this pattern when adding imports at the top of the file
+---
+
+## 2026-03-28 - US-192
+- What was implemented: Fixed `KEYCLOAK_ISSUER` in both `docker-compose.local.yml` and `docker-compose.yml`. Changed value from `http://localhost:8080/realms/hhh` to `http://keycloak:8080/realms/hhh` (internal Docker hostname). Added a 3-line comment above the three KEYCLOAK_* env vars explaining the issuer/browser URL split. `KEYCLOAK_BROWSER_URL` remains `http://localhost:8080` so the host browser can reach Keycloak for the OAuth redirect.
+- Files changed: docker-compose.local.yml (KEYCLOAK_ISSUER + comment), docker-compose.yml (KEYCLOAK_ISSUER + comment), prd.json (US-192 passes=true)
+- **Learnings for future iterations:**
+  - `KEYCLOAK_ISSUER` (used by NextAuth server-side for JWT `iss` claim validation) must use the internal Docker service hostname — using `localhost` causes issuer mismatch errors inside the container
+  - `KEYCLOAK_BROWSER_URL` is the separate variable that controls the browser-side redirect URL; it must remain as `localhost` so the host machine browser can reach the Keycloak login page
+  - `docker-compose.local.yml` already had `KEYCLOAK_INTERNAL_URL=http://keycloak:8080` as a third variable — `KEYCLOAK_ISSUER` should match its host/port portion
+---
