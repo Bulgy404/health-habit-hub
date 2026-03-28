@@ -4,6 +4,10 @@ import { randomUUID } from 'node:crypto';
 import { makeGetDb } from '../utils/getDb.js';
 import { isPrivileged } from '../middleware/roles.js';
 import { renderSurvey, submitSurvey } from '../controllers/surveyController.js';
+import {
+  normalizeSurveyTargetMode,
+  canParticipantAccessSurvey,
+} from '../utils/surveyTargeting.js';
 
 // Legacy static router (kept for backward compat with old non-v1 routes)
 const legacyRouter = express.Router();
@@ -37,58 +41,12 @@ function formatSurvey(s) {
   };
 }
 
-const SURVEY_TARGET_MODES = new Set([
-  'all_participants',
-  'unassigned_only',
-  'group_assigned',
-]);
-
-function normalizeSurveyTargetMode(survey) {
-  if (SURVEY_TARGET_MODES.has(survey?.targetMode)) {
-    return survey.targetMode;
-  }
-  if (survey?.type === 'habit-donation') {
-    return 'all_participants';
-  }
-  if (
-    Array.isArray(survey?.assignedGroups) &&
-    survey.assignedGroups.length > 0
-  ) {
-    return 'group_assigned';
-  }
-  return 'unassigned_only';
-}
-
 async function getParticipantGroup(db, userId) {
   if (!userId) return null;
   const participant = await db
     .collection('participants')
     .findOne({ userId, deletedAt: { $exists: false } });
   return participant?.group || null;
-}
-
-function canParticipantAccessSurvey(survey, participantGroup) {
-  if (!survey || survey.status !== 'published') {
-    return false;
-  }
-  if (survey.type === 'habit-donation') {
-    return true;
-  }
-
-  switch (normalizeSurveyTargetMode(survey)) {
-    case 'all_participants':
-      return true;
-    case 'unassigned_only':
-      return !participantGroup;
-    case 'group_assigned':
-      return (
-        !!participantGroup &&
-        Array.isArray(survey.assignedGroups) &&
-        survey.assignedGroups.includes(participantGroup)
-      );
-    default:
-      return false;
-  }
 }
 
 async function findSurveyByIdentifier(db, identifier) {

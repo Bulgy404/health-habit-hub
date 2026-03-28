@@ -39,50 +39,12 @@ import {
   sendStudyNotification,
   COLLECTION_SCHEDULED,
 } from '../services/notificationService.js';
+import {
+  normalizeSurveyTargetMode,
+  sanitizeSurveyTargeting,
+} from '../utils/surveyTargeting.js';
 
 const DEFAULT_SETTINGS = [{ key: 'token_card_format', value: 'both' }];
-const SURVEY_TARGET_MODES = new Set([
-  'all_participants',
-  'unassigned_only',
-  'group_assigned',
-]);
-
-function normalizeSurveyTargetMode(survey) {
-  if (SURVEY_TARGET_MODES.has(survey?.targetMode)) {
-    return survey.targetMode;
-  }
-  if (survey?.type === 'habit-donation') {
-    return 'all_participants';
-  }
-  if (
-    Array.isArray(survey?.assignedGroups) &&
-    survey.assignedGroups.length > 0
-  ) {
-    return 'group_assigned';
-  }
-  return 'unassigned_only';
-}
-
-function sanitizeSurveyTargeting({ type, targetMode, assignedGroups }) {
-  const groups = Array.isArray(assignedGroups) ? assignedGroups : [];
-  const normalizedTargetMode =
-    type === 'habit-donation'
-      ? 'all_participants'
-      : targetMode ||
-        (groups.length > 0 ? 'group_assigned' : 'unassigned_only');
-
-  if (!SURVEY_TARGET_MODES.has(normalizedTargetMode)) {
-    return {
-      error:
-        'targetMode must be all_participants, unassigned_only, or group_assigned',
-    };
-  }
-
-  return {
-    targetMode: normalizedTargetMode,
-    assignedGroups: normalizedTargetMode === 'group_assigned' ? groups : [],
-  };
-}
 
 async function seedDefaultSettings(database) {
   for (const { key, value } of DEFAULT_SETTINGS) {
