@@ -1,3 +1,11 @@
+## 2026-03-28 - US-190
+- What was implemented: Ran `git rm -r --cached admin/.next/` to stop git tracking 177 build artifact files. `.gitignore` already had `admin/.next/` entry. `git ls-files admin/.next/ | wc -l` returns 0 after commit.
+- Files changed: admin/.next/ (all 177 files removed from tracking), prd.json (US-190 passes=true)
+- **Learnings for future iterations:**
+  - `admin/.next/` was already in `.gitignore` (line 8) but had been committed before the ignore rule was added — `git rm -r --cached` is needed to stop tracking files that are already ignored
+  - The standalone output directory `admin/.next/standalone/` was also tracked and is removed by the same command
+---
+
 ## 2026-03-21 - US-165
 - What was implemented: Reviewed `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `Makefile`, and all 11 files under `scripts/`. Report written to `tasks/review-infra-clean.md` covering: 3 Critical, 8 Major, 9 Minor findings. Positive findings section documents what is well-written. Prioritised fix order table included.
 - Files changed: tasks/review-infra-clean.md (new), prd.json (US-165 passes=true)
