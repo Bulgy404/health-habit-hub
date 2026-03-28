@@ -1951,3 +1951,12 @@
   - `KEYCLOAK_BROWSER_URL` is the separate variable that controls the browser-side redirect URL; it must remain as `localhost` so the host machine browser can reach the Keycloak login page
   - `docker-compose.local.yml` already had `KEYCLOAK_INTERNAL_URL=http://keycloak:8080` as a third variable — `KEYCLOAK_ISSUER` should match its host/port portion
 ---
+
+## 2026-03-28 - US-193
+- What was implemented: Changed `keycloak-init` service `depends_on` in `docker-compose.local.yml` from a plain list entry (`- keycloak`) to a map-form entry with `condition: service_healthy`. The keycloak service already had a healthcheck (`curl -f http://localhost:8080/health/ready`) so no changes were needed there. The busy-wait loop inside the keycloak-init command is kept as belt-and-suspenders.
+- Files changed: docker-compose.local.yml (keycloak-init depends_on condition), prd.json (US-193 passes=true)
+- **Learnings for future iterations:**
+  - Docker Compose list-form `depends_on` (`- service`) only waits for the container to start, not for it to be healthy. Map-form with `condition: service_healthy` waits for the healthcheck to pass.
+  - Converting from list to map form: replace `- keycloak` with `keycloak:\n  condition: service_healthy` under `depends_on`
+  - `docker compose config --quiet` (not `up --no-start`) validates YAML syntax without requiring the Docker daemon to be running
+---

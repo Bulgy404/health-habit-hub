@@ -178,7 +178,8 @@ services:
       - h3-2-proxy
       - h3-2-app
     depends_on:
-      - keycloak
+      keycloak:
+        condition: service_healthy
     entrypoint: ["/bin/sh", "-lc"]
     command: >
       'until /opt/keycloak/bin/kcadm.sh config credentials
