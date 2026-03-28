@@ -3097,7 +3097,7 @@
         "docker-compose up --no-start exits 0 (all service definitions are valid)"
       ],
       "priority": 193,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
