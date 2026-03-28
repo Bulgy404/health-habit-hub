@@ -1,5 +1,8 @@
+import { loadAppEnv } from '../loadEnv.js';
 import { config } from '../utils/config.js';
 import { Neo4jDbClient } from '../utils/Neo4jDatabase.js';
+
+loadAppEnv();
 
 // Minimal integration exercise for Neo4jDbClient
 // - Uses language 'en' to avoid translation service dependency

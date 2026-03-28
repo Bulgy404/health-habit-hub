@@ -5,8 +5,9 @@ const connections = new Map();
 
 export function createRecommendationWsServer(httpServer, { verifyToken } = {}) {
   const wss = new WebSocketServer({ noServer: true });
+  const authTimers = new WeakMap();
 
-  httpServer.on('upgrade', (request, socket, head) => {
+  function handleUpgrade(request, socket, head) {
     const url = new URL(request.url, `http://${request.headers.host}`);
     if (url.pathname !== '/ws/recommendations') {
       socket.destroy();
@@ -15,7 +16,9 @@ export function createRecommendationWsServer(httpServer, { verifyToken } = {}) {
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit('connection', ws);
     });
-  });
+  }
+
+  httpServer.on('upgrade', handleUpgrade);
 
   wss.on('connection', (ws) => {
     let authenticated = false;
@@ -25,6 +28,18 @@ export function createRecommendationWsServer(httpServer, { verifyToken } = {}) {
     const authTimer = setTimeout(() => {
       if (!authenticated) ws.terminate();
     }, 5000);
+    authTimers.set(ws, authTimer);
+
+    ws.on('close', () => {
+      clearTimeout(authTimers.get(ws));
+      authTimers.delete(ws);
+      if (!userId) return;
+      const set = connections.get(userId);
+      if (set) {
+        set.delete(ws);
+        if (set.size === 0) connections.delete(userId);
+      }
+    });
 
     ws.on('message', async (data) => {
       if (authenticated) return;
@@ -39,17 +54,10 @@ export function createRecommendationWsServer(httpServer, { verifyToken } = {}) {
         authenticated = true;
         userId = payload.sub;
         clearTimeout(authTimer);
+        authTimers.delete(ws);
 
         if (!connections.has(userId)) connections.set(userId, new Set());
         connections.get(userId).add(ws);
-
-        ws.on('close', () => {
-          const set = connections.get(userId);
-          if (set) {
-            set.delete(ws);
-            if (set.size === 0) connections.delete(userId);
-          }
-        });
       } catch {
         ws.terminate();
       }
@@ -67,5 +75,18 @@ export function createRecommendationWsServer(httpServer, { verifyToken } = {}) {
     }
   }
 
-  return { wss, broadcast };
+  function close() {
+    httpServer.off('upgrade', handleUpgrade);
+    for (const set of connections.values()) {
+      for (const ws of set) {
+        clearTimeout(authTimers.get(ws));
+        authTimers.delete(ws);
+        ws.terminate();
+      }
+    }
+    connections.clear();
+    return new Promise((resolve) => wss.close(resolve));
+  }
+
+  return { wss, broadcast, close };
 }

@@ -136,6 +136,8 @@ before(async () => {
     '/api/v1',
     createV1Router({
       jwksUrl: `http://127.0.0.1:${jwksPort}/realms/hhh/protocol/openid-connect/certs`,
+      expectedIssuer: null,
+      expectedAudience: null,
       db,
     })
   );

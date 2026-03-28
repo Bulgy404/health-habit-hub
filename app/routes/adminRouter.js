@@ -41,6 +41,48 @@ import {
 } from '../services/notificationService.js';
 
 const DEFAULT_SETTINGS = [{ key: 'token_card_format', value: 'both' }];
+const SURVEY_TARGET_MODES = new Set([
+  'all_participants',
+  'unassigned_only',
+  'group_assigned',
+]);
+
+function normalizeSurveyTargetMode(survey) {
+  if (SURVEY_TARGET_MODES.has(survey?.targetMode)) {
+    return survey.targetMode;
+  }
+  if (survey?.type === 'habit-donation') {
+    return 'all_participants';
+  }
+  if (
+    Array.isArray(survey?.assignedGroups) &&
+    survey.assignedGroups.length > 0
+  ) {
+    return 'group_assigned';
+  }
+  return 'unassigned_only';
+}
+
+function sanitizeSurveyTargeting({ type, targetMode, assignedGroups }) {
+  const groups = Array.isArray(assignedGroups) ? assignedGroups : [];
+  const normalizedTargetMode =
+    type === 'habit-donation'
+      ? 'all_participants'
+      : targetMode ||
+        (groups.length > 0 ? 'group_assigned' : 'unassigned_only');
+
+  if (!SURVEY_TARGET_MODES.has(normalizedTargetMode)) {
+    return {
+      error:
+        'targetMode must be all_participants, unassigned_only, or group_assigned',
+    };
+  }
+
+  return {
+    targetMode: normalizedTargetMode,
+    assignedGroups: normalizedTargetMode === 'group_assigned' ? groups : [],
+  };
+}
 
 async function seedDefaultSettings(database) {
   for (const { key, value } of DEFAULT_SETTINGS) {
@@ -1018,6 +1060,8 @@ export function createAdminRouter({
           title: s.title,
           type: s.type,
           status: s.status,
+          targetMode: normalizeSurveyTargetMode(s),
+          jsonSchema: s.jsonSchema || {},
           assignedGroups: s.assignedGroups || [],
         }))
       );
@@ -1030,9 +1074,17 @@ export function createAdminRouter({
   // POST /api/v1/admin/surveys
   router.post('/surveys', async (req, res) => {
     try {
-      const { title, type, jsonSchema, assignedGroups } = req.body;
+      const { title, type, jsonSchema, assignedGroups, targetMode } = req.body;
       if (!title || !type) {
         return res.status(400).json({ error: 'title and type are required' });
+      }
+      const targeting = sanitizeSurveyTargeting({
+        type,
+        targetMode,
+        assignedGroups,
+      });
+      if (targeting.error) {
+        return res.status(400).json({ error: targeting.error });
       }
       const database = await getDb();
       const id = randomUUID();
@@ -1041,7 +1093,8 @@ export function createAdminRouter({
         title,
         type,
         jsonSchema: jsonSchema || {},
-        assignedGroups: assignedGroups || [],
+        targetMode: targeting.targetMode,
+        assignedGroups: targeting.assignedGroups,
         status: 'draft',
         createdAt: new Date(),
       };
@@ -1051,6 +1104,7 @@ export function createAdminRouter({
         title,
         type,
         status: 'draft',
+        targetMode: doc.targetMode,
         assignedGroups: doc.assignedGroups,
       });
     } catch (err) {
@@ -1121,20 +1175,38 @@ export function createAdminRouter({
   router.put('/surveys/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const { title, type, jsonSchema, assignedGroups, status } = req.body;
+      const { title, type, jsonSchema, assignedGroups, status, targetMode } =
+        req.body;
       const database = await getDb();
+      const existing = await database.collection('surveys').findOne({ id });
+      if (!existing) {
+        return res.status(404).json({ error: 'Survey not found' });
+      }
       const update = { updatedAt: new Date() };
+      const nextType = type !== undefined ? type : existing.type;
+      const nextAssignedGroups =
+        assignedGroups !== undefined
+          ? assignedGroups
+          : existing.assignedGroups || [];
+      const nextTargetMode =
+        targetMode !== undefined
+          ? targetMode
+          : normalizeSurveyTargetMode(existing);
+      const targeting = sanitizeSurveyTargeting({
+        type: nextType,
+        targetMode: nextTargetMode,
+        assignedGroups: nextAssignedGroups,
+      });
+      if (targeting.error) {
+        return res.status(400).json({ error: targeting.error });
+      }
       if (title !== undefined) update.title = title;
       if (type !== undefined) update.type = type;
       if (jsonSchema !== undefined) update.jsonSchema = jsonSchema;
-      if (assignedGroups !== undefined) update.assignedGroups = assignedGroups;
+      update.targetMode = targeting.targetMode;
+      update.assignedGroups = targeting.assignedGroups;
       if (status !== undefined) update.status = status;
-      const result = await database
-        .collection('surveys')
-        .updateOne({ id }, { $set: update });
-      if (result.matchedCount === 0) {
-        return res.status(404).json({ error: 'Survey not found' });
-      }
+      await database.collection('surveys').updateOne({ id }, { $set: update });
       res.json({ ok: true, id });
     } catch (err) {
       console.error('[route] Error:', err);
@@ -1302,16 +1374,31 @@ export function createAdminRouter({
           .json({ error: 'groups must contain only G1, G2, G3, G4' });
       }
       const database = await getDb();
-      const result = await database
-        .collection('surveys')
-        .updateOne(
-          { id },
-          { $set: { assignedGroups: groups, updatedAt: new Date() } }
-        );
-      if (result.matchedCount === 0) {
+      const existing = await database.collection('surveys').findOne({ id });
+      if (!existing) {
         return res.status(404).json({ error: 'Survey not found' });
       }
-      res.json({ ok: true, id, assignedGroups: groups });
+      const targeting = sanitizeSurveyTargeting({
+        type: existing.type,
+        targetMode: 'group_assigned',
+        assignedGroups: groups,
+      });
+      await database.collection('surveys').updateOne(
+        { id },
+        {
+          $set: {
+            targetMode: targeting.targetMode,
+            assignedGroups: targeting.assignedGroups,
+            updatedAt: new Date(),
+          },
+        }
+      );
+      res.json({
+        ok: true,
+        id,
+        targetMode: targeting.targetMode,
+        assignedGroups: targeting.assignedGroups,
+      });
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });

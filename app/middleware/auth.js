@@ -76,9 +76,14 @@ export function createAuthMiddleware({
   expectedIssuer,
   expectedAudience,
 } = {}) {
-  const issuer = expectedIssuer || process.env.KEYCLOAK_JWT_ISSUER || null;
+  const issuer =
+    expectedIssuer === undefined
+      ? process.env.KEYCLOAK_JWT_ISSUER || null
+      : expectedIssuer;
   const audience =
-    expectedAudience || process.env.KEYCLOAK_JWT_AUDIENCE || null;
+    expectedAudience === undefined
+      ? process.env.KEYCLOAK_JWT_AUDIENCE || null
+      : expectedAudience;
 
   // Reuse createTokenVerifier for all JWKS caching and signature verification.
   // JWKS keys are fetched lazily on the first request.

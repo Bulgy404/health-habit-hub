@@ -250,10 +250,19 @@ The **Donate** tab renders the habit-donation survey inside a `WebView` (package
 1. Flutter calls `GET /api/v1/surveys/habit-donation` to resolve the survey ID.
 2. The WebView loads `GET /api/v1/surveys/:id/render?lang=<en|de>` — a server-rendered SurveyJS page.
 3. When the participant submits, the SurveyJS page fires a `window.SurveyComplete.postMessage(json)` JS bridge message.
-4. Flutter validates the JSON payload and calls `POST /api/v1/surveys/:id/responses` with the Bearer token.
+4. Flutter validates the JSON payload and calls `POST /api/v1/surveys/:id/results` with the Bearer token.
 5. On success, GoRouter navigates to `/explore`.
 
 Because the donation form is server-rendered, changes to the survey definition only require redeploying the backend — no Flutter rebuild is needed. The `lang` query parameter selects the survey language, which follows the locale chosen in the Settings screen.
+
+Participant survey targeting is explicit:
+
+- `habit-donation` stays available to every participant.
+- `group_assigned` surveys are filtered by the participant's study group.
+- `unassigned_only` surveys are shown only to participants without a group.
+- `all_participants` surveys are visible to everyone.
+
+The API also resolves stable aliases by survey `type`, so the mobile app can request `/surveys/profile` or `/surveys/habit-donation` even if the stored survey document uses a UUID `id`.
 
 | Platform | Screenshot |
 |----------|-----------|
@@ -392,7 +401,7 @@ Keycloak takes 30–60 s to start. If the health endpoint returns `"keycloak": {
 docker compose logs -f keycloak
 
 # Wait until you see:
-# ... Keycloak 24.x.x on JVM ... started in ...ms
+# ... Keycloak 26.5.5 on JVM ... started in ...ms
 ```
 
 Then retry `curl http://localhost:3000/api/v1/health`.

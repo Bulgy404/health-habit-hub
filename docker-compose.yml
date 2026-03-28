@@ -194,7 +194,7 @@ services:
       - traefik.http.services.neo4j.loadbalancer.server.port=7474
 
   keycloak:
-    image: quay.io/keycloak/keycloak:latest
+    image: quay.io/keycloak/keycloak:26.5.5
     container_name: h3-2-keycloak
     restart: unless-stopped
     env_file:
@@ -203,7 +203,7 @@ services:
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
       - KC_DB=dev-file
-    command: start-dev --import-realm
+    command: start --import-realm
     ports:
       - "8080:8080"
     networks:
@@ -293,7 +293,6 @@ services:
 
 networks:
   h3-2-proxy:
-    name: h3-2-proxy
     name: h3-2-proxy
 
 volumes:

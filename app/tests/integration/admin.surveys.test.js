@@ -167,6 +167,8 @@ before(async () => {
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
   const v1Router = createV1Router({
     jwksUrl: 'http://keycloak/jwks',
+    expectedIssuer: null,
+    expectedAudience: null,
     serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
     db: mockDb,
   });
@@ -265,7 +267,11 @@ test('POST /api/v1/admin/surveys - creates survey with defaults', async () => {
   const token = makeToken(['admin']);
   const res = await post(
     '/api/v1/admin/surveys',
-    { title: 'Habit Survey', type: 'habit-donation' },
+    {
+      title: 'Habit Survey',
+      type: 'habit-donation',
+      targetMode: 'all_participants',
+    },
     token
   );
   assert.strictEqual(res.status, 201);
@@ -274,6 +280,7 @@ test('POST /api/v1/admin/surveys - creates survey with defaults', async () => {
   assert.strictEqual(body.title, 'Habit Survey');
   assert.strictEqual(body.type, 'habit-donation');
   assert.strictEqual(body.status, 'draft');
+  assert.strictEqual(body.targetMode, 'all_participants');
   assert.deepStrictEqual(body.assignedGroups, []);
 });
 
@@ -296,6 +303,7 @@ test('GET /api/v1/admin/surveys - returns created survey', async () => {
   const survey = body.find((s) => s.title === 'Habit Survey');
   assert.ok(survey, 'created survey should be in list');
   assert.strictEqual(survey.status, 'draft');
+  assert.strictEqual(survey.targetMode, 'all_participants');
 });
 
 test('PATCH /api/v1/admin/surveys/:id/status - publishes survey', async () => {
@@ -304,7 +312,11 @@ test('PATCH /api/v1/admin/surveys/:id/status - publishes survey', async () => {
   // Create survey and get id
   const createRes = await post(
     '/api/v1/admin/surveys',
-    { title: 'Profile Survey', type: 'profile' },
+    {
+      title: 'Profile Survey',
+      type: 'profile',
+      targetMode: 'unassigned_only',
+    },
     adminToken
   );
   const { id } = await createRes.json();
@@ -351,7 +363,11 @@ test('PATCH /api/v1/admin/surveys/:id/groups - assigns groups', async () => {
   const adminToken = makeToken(['admin']);
   const createRes = await post(
     '/api/v1/admin/surveys',
-    { title: 'Group Survey', type: 'profile' },
+    {
+      title: 'Group Survey',
+      type: 'profile',
+      targetMode: 'group_assigned',
+    },
     adminToken
   );
   const { id } = await createRes.json();
@@ -364,6 +380,7 @@ test('PATCH /api/v1/admin/surveys/:id/groups - assigns groups', async () => {
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.strictEqual(body.ok, true);
+  assert.strictEqual(body.targetMode, 'group_assigned');
   assert.deepStrictEqual(body.assignedGroups, ['G1', 'G2']);
 });
 
@@ -394,7 +411,11 @@ test('PUT /api/v1/admin/surveys/:id - updates survey fields', async () => {
 
   const res = await put(
     `/api/v1/admin/surveys/${id}`,
-    { title: 'Updated Title', jsonSchema: { fields: [] } },
+    {
+      title: 'Updated Title',
+      jsonSchema: { fields: [] },
+      targetMode: 'all_participants',
+    },
     adminToken
   );
   assert.strictEqual(res.status, 200);

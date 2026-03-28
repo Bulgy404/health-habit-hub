@@ -76,7 +76,8 @@ export function createKeycloakAdminClient({
           attributes: { group: [] },
         }),
       });
-      if (!res.ok) throw new Error(`Keycloak create user failed: ${res.status}`);
+      if (!res.ok)
+        throw new Error(`Keycloak create user failed: ${res.status}`);
 
       const lookupRes = await fetch(
         `${_base}/admin/realms/${_realm}/users?username=${encodeURIComponent(username)}`,

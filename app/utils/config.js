@@ -1,14 +1,3 @@
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-// Get the directory of this file
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load .env from project root (two levels up from utils/)
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-
 const config = {
   path: process.env.PATH || './',
   port: process.env.PORT || 3000,

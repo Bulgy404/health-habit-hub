@@ -320,6 +320,14 @@ Screens and providers catch `AppException` to show user-facing error messages.
 
 The habit-donation survey is a server-rendered **SurveyJS** form loaded inside a Flutter `WebView` (package `webview_flutter`). This design means survey content can be updated without rebuilding the Flutter app.
 
+Survey targeting is handled in the backend via an explicit `targetMode`:
+
+- `all_participants`
+- `unassigned_only`
+- `group_assigned`
+
+`habit-donation` is always treated as `all_participants`, while the mobile app can still resolve surveys by stable type aliases such as `profile` and `habit-donation`.
+
 ### Step-by-step
 
 ```
@@ -336,8 +344,8 @@ DonateScreen.initState()
          │
          ├─► JSON validated (jsonDecode + type guard)
          │
-         └─► SurveyService.submitResponse(surveyId, answers)
-                  └─► POST /api/v1/surveys/:id/responses   (Bearer token)
+         └─► SurveyService.submitResult(surveyId, answers)
+                  └─► POST /api/v1/surveys/:id/results   (Bearer token)
                            │
                            ▼
                         context.go('/explore')
