@@ -3039,6 +3039,83 @@
       "priority": 189,
       "passes": true,
       "notes": "Backend Firebase (notificationService.js) already reads FIREBASE_SERVICE_ACCOUNT_JSON from .env. Flutter side requires filling in firebase_options.dart with values from Firebase Console (Project Settings \u2192 Your apps). google-services.json and GoogleService-Info.plist are NOT required when using firebase_options.dart with explicit FirebaseOptions."
+    },
+    {
+      "id": "US-190",
+      "title": "Remove admin/.next/ build artifacts from git tracking",
+      "description": "As a developer, I want the admin Next.js build output untracked by git so that the repository does not accumulate hundreds of binary build files on every admin rebuild.",
+      "acceptanceCriteria": [
+        "Run `git rm -r --cached admin/.next/` to stop tracking all files under admin/.next/",
+        "Commit the removal so the files are no longer tracked going forward",
+        "Confirm `git ls-files admin/.next/ | wc -l` returns 0 after the commit",
+        "Confirm admin/.next/ is present in .gitignore (already added in latest commit \u2014 verify it is there)",
+        "A fresh `npm run build` inside admin/ still produces a working build that is not staged by `git status`"
+      ],
+      "priority": 190,
+      "passes": true,
+      "notes": "Ran git rm -r --cached admin/.next/; .gitignore already had admin/.next/ entry. git ls-files admin/.next/ returns 0 after removal."
+    },
+    {
+      "id": "US-191",
+      "title": "Extract shared survey targeting logic into a utility module",
+      "description": "As a developer, I want the survey targeting constants and helper functions defined once so that adminRouter.js and surveyRouter.js cannot diverge and any future change to targeting logic only requires one edit.",
+      "acceptanceCriteria": [
+        "Create app/utils/surveyTargeting.js exporting: SURVEY_TARGET_MODES (Set), normalizeSurveyTargetMode(survey), sanitizeSurveyTargeting({ type, targetMode, assignedGroups }), canParticipantAccessSurvey(survey, participantGroup)",
+        "Remove the duplicate definitions from app/routes/adminRouter.js and app/routes/surveyRouter.js and import from the new utility instead",
+        "formatSurvey in surveyRouter.js no longer calls normalizeSurveyTargetMode before it is defined \u2014 the import resolves this ordering issue",
+        "All existing integration tests (npm test in app/) still pass without modification",
+        "No logic change: behaviour of all targeting checks is identical to before"
+      ],
+      "priority": 191,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-192",
+      "title": "Fix KEYCLOAK_ISSUER for admin service pointing to localhost",
+      "description": "As a developer running the local stack with Traefik, I want the admin NextAuth Keycloak issuer to resolve correctly inside Docker so that JWT token validation does not fail due to an issuer mismatch.",
+      "acceptanceCriteria": [
+        "In docker-compose.local.yml the admin service environment sets KEYCLOAK_ISSUER=http://keycloak:8080/realms/hhh (internal Docker hostname) not http://localhost:8080/realms/hhh",
+        "In docker-compose.yml the same fix is applied",
+        "KEYCLOAK_BROWSER_URL remains http://localhost:8080 so the browser-side redirect still works",
+        "Admin login flow succeeds end-to-end: navigating to http://admin.localhost redirects to Keycloak login and returns a valid session",
+        "Document the issuer/browser URL split in a comment in both compose files"
+      ],
+      "priority": 192,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-193",
+      "title": "Add service_healthy condition for keycloak-init dependency on keycloak",
+      "description": "As a developer, I want keycloak-init to wait for Keycloak to be healthy before starting so that the dependency is explicit and Docker Compose can fail fast if Keycloak never becomes ready.",
+      "acceptanceCriteria": [
+        "In docker-compose.local.yml the keycloak-init service depends_on.keycloak uses condition: service_healthy",
+        "The keycloak service has a healthcheck defined (already present \u2014 verify it is there)",
+        "docker-compose -f docker-compose.local.yml up keycloak-init starts only after keycloak healthcheck passes",
+        "The busy-wait loop inside the keycloak-init command may remain as belt-and-suspenders but is no longer the sole guard",
+        "docker-compose up --no-start exits 0 (all service definitions are valid)"
+      ],
+      "priority": 193,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-194",
+      "title": "Full platform audit and local stack smoke test",
+      "description": "As a developer, I want Ralph to boot the full local stack, run all automated tests, and manually probe key API endpoints so that any remaining runtime issues are discovered and recorded as new user stories in this PRD.",
+      "acceptanceCriteria": [
+        "Run `docker-compose -f docker-compose.local.yml up -d` and confirm all services reach healthy/running state (app, mongo, neo4j, fuseki, keycloak, keycloak-init, admin, proxy)",
+        "Run `cd app && npm test` and confirm all test suites pass with zero failures",
+        "Smoke-test key endpoints via curl or the Postman collection (docs/api/hhh-postman-collection.json): GET /api/v1/health, GET /api/v1/surveys, POST /api/v1/auth/register, GET /api/v1/admin/surveys",
+        "Attempt admin panel login at http://admin.localhost and confirm session is established",
+        "Check application logs for ERROR or unhandled-rejection lines during the smoke test and investigate any found",
+        "For every issue discovered during the audit that is not already covered by an existing user story, append a new user story to this prd.json following the same schema, set passes: false, and include reproduction steps in notes",
+        "After all fixes and new stories are added, re-run npm test and confirm all tests still pass"
+      ],
+      "priority": 194,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
