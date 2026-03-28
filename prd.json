@@ -3016,13 +3016,13 @@
         "redis:7-alpine service added to docker-compose.prod.yml with named volume h3-2-redis-data and appendonly persistence",
         "redis:7-alpine service added to docker-compose.local.yml with named volume redis-local-data and host port 6379",
         "recommender service in both compose files has depends_on: redis",
-        "REDIS_URL=redis://redis:6379/0 already present in .env — no additional .env change required",
+        "REDIS_URL=redis://redis:6379/0 already present in .env \u2014 no additional .env change required",
         "docker compose -f docker-compose.local.yml up starts without errors including the redis container",
         "API-service classify_habit and recommend endpoints log 'Redis connected' instead of 'Redis unavailable' when REDIS_URL points to running container"
       ],
       "priority": 188,
       "passes": true,
-      "notes": "Infrastructure only — no application code changes. REDIS_URL was already in .env. Redis is used exclusively by the Python API-service (LLM response caching); the Node app has a Redis client for cache invalidation but it is optional."
+      "notes": "Infrastructure only \u2014 no application code changes. REDIS_URL was already in .env. Redis is used exclusively by the Python API-service (LLM response caching); the Node app has a Redis client for cache invalidation but it is optional."
     },
     {
       "id": "US-189",
@@ -3032,7 +3032,7 @@
         "mobile/lib/firebase_options.dart exists with CHANGE_THIS_* placeholders for Android and iOS FirebaseOptions",
         "mobile/lib/main.dart passes options: DefaultFirebaseOptions.currentPlatform to Firebase.initializeApp()",
         "FIREBASE_SERVICE_ACCOUNT_JSON placeholder present in .env (already done)",
-        "Filling in CHANGE_THIS_* values in firebase_options.dart with real Firebase project values and setting FIREBASE_SERVICE_ACCOUNT_JSON in .env is sufficient to enable push notifications — no other code changes needed",
+        "Filling in CHANGE_THIS_* values in firebase_options.dart with real Firebase project values and setting FIREBASE_SERVICE_ACCOUNT_JSON in .env is sufficient to enable push notifications \u2014 no other code changes needed",
         "flutter analyze passes with the template firebase_options.dart (CHANGE_THIS_* values are valid Dart string literals)",
         "Backend notificationService.js initialises Firebase and sends real FCM messages when FIREBASE_SERVICE_ACCOUNT_JSON is set to a valid service account JSON string"
       ],
@@ -3067,7 +3067,7 @@
         "No logic change: behaviour of all targeting checks is identical to before"
       ],
       "priority": 191,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
