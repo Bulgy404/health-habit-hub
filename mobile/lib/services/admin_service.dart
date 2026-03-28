@@ -124,10 +124,11 @@ class AdminService {
   Future<AdminSurvey> createSurvey({
     required String title,
     required String type,
+    required String targetMode,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '$_baseUrl/admin/surveys',
-      data: {'title': title, 'type': type},
+      data: {'title': title, 'type': type, 'targetMode': targetMode},
     );
     return AdminSurvey.fromJson(response.data ?? {});
   }

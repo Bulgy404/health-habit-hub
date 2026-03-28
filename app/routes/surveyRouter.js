@@ -32,13 +32,82 @@ function formatSurvey(s) {
     title: s.title,
     type: s.type,
     status: s.status,
+    targetMode: normalizeSurveyTargetMode(s),
     assignedGroups: s.assignedGroups || [],
   };
 }
 
+const SURVEY_TARGET_MODES = new Set([
+  'all_participants',
+  'unassigned_only',
+  'group_assigned',
+]);
+
+function normalizeSurveyTargetMode(survey) {
+  if (SURVEY_TARGET_MODES.has(survey?.targetMode)) {
+    return survey.targetMode;
+  }
+  if (survey?.type === 'habit-donation') {
+    return 'all_participants';
+  }
+  if (
+    Array.isArray(survey?.assignedGroups) &&
+    survey.assignedGroups.length > 0
+  ) {
+    return 'group_assigned';
+  }
+  return 'unassigned_only';
+}
+
+async function getParticipantGroup(db, userId) {
+  if (!userId) return null;
+  const participant = await db
+    .collection('participants')
+    .findOne({ userId, deletedAt: { $exists: false } });
+  return participant?.group || null;
+}
+
+function canParticipantAccessSurvey(survey, participantGroup) {
+  if (!survey || survey.status !== 'published') {
+    return false;
+  }
+  if (survey.type === 'habit-donation') {
+    return true;
+  }
+
+  switch (normalizeSurveyTargetMode(survey)) {
+    case 'all_participants':
+      return true;
+    case 'unassigned_only':
+      return !participantGroup;
+    case 'group_assigned':
+      return (
+        !!participantGroup &&
+        Array.isArray(survey.assignedGroups) &&
+        survey.assignedGroups.includes(participantGroup)
+      );
+    default:
+      return false;
+  }
+}
+
+async function findSurveyByIdentifier(db, identifier) {
+  const byId = await db.collection('surveys').findOne({ id: identifier });
+  if (byId) return byId;
+
+  const byType = await db
+    .collection('surveys')
+    .find({ type: identifier })
+    .toArray();
+  if (byType.length === 0) return null;
+  const published = byType.find((survey) => survey.status === 'published');
+  return published || byType[0];
+}
+
 /**
  * Return surveys visible to the calling user.
- * Admins and researchers see all surveys. Participants see published surveys for their group.
+ * Admins and researchers see all surveys. Participants see published surveys
+ * based on explicit targeting rules.
  * @param {{ db: object, user: object }} params
  * @returns {Promise<Array>}
  */
@@ -47,18 +116,14 @@ async function getSurveysForUser({ db, user }) {
     const docs = await db.collection('surveys').find({}).toArray();
     return docs.map(formatSurvey);
   }
-  const userId = user?.sub;
-  let group = null;
-  if (userId) {
-    const participant = await db
-      .collection('participants')
-      .findOne({ userId, deletedAt: { $exists: false } });
-    group = participant?.group || null;
-  }
-  const filter = { status: 'published' };
-  if (group) filter.assignedGroups = group;
-  const docs = await db.collection('surveys').find(filter).toArray();
-  return docs.map(formatSurvey);
+  const group = await getParticipantGroup(db, user?.sub);
+  const docs = await db
+    .collection('surveys')
+    .find({ status: 'published' })
+    .toArray();
+  return docs
+    .filter((survey) => canParticipantAccessSurvey(survey, group))
+    .map(formatSurvey);
 }
 
 // Factory for v1 router: returns surveys filtered by group for participants,
@@ -181,9 +246,15 @@ export function createSurveyRouter({ db } = {}) {
         ? req.query.lang
         : 'en';
       const database = await getDb();
-      const survey = await database.collection('surveys').findOne({ id });
+      const survey = await findSurveyByIdentifier(database, id);
       if (!survey) {
         return res.status(404).json({ error: 'Survey not found' });
+      }
+      if (!isPrivileged(req.user)) {
+        const group = await getParticipantGroup(database, req.user?.sub);
+        if (!canParticipantAccessSurvey(survey, group)) {
+          return res.status(404).json({ error: 'Survey not found' });
+        }
       }
       res.json({
         id: survey.id,
@@ -202,15 +273,22 @@ export function createSurveyRouter({ db } = {}) {
     try {
       const { id } = req.params;
       const database = await getDb();
-      const survey = await database.collection('surveys').findOne({ id });
+      const survey = await findSurveyByIdentifier(database, id);
       if (!survey) {
         return res.status(404).json({ error: 'Survey not found' });
+      }
+      if (!isPrivileged(req.user)) {
+        const group = await getParticipantGroup(database, req.user?.sub);
+        if (!canParticipantAccessSurvey(survey, group)) {
+          return res.status(404).json({ error: 'Survey not found' });
+        }
       }
       res.json({
         id: survey.id,
         title: survey.title,
         type: survey.type,
         status: survey.status,
+        targetMode: normalizeSurveyTargetMode(survey),
         jsonSchema: survey.jsonSchema || {},
         assignedGroups: survey.assignedGroups || [],
       });
@@ -288,22 +366,30 @@ export function createSurveyRouter({ db } = {}) {
       const userId = req.user?.sub;
       const database = await getDb();
 
-      const survey = await database.collection('surveys').findOne({ id });
+      const survey = await findSurveyByIdentifier(database, id);
       if (!survey) {
         return res.status(404).json({ error: 'Survey not found' });
       }
+      if (!isPrivileged(req.user)) {
+        const group = await getParticipantGroup(database, req.user?.sub);
+        if (!canParticipantAccessSurvey(survey, group)) {
+          return res.status(404).json({ error: 'Survey not found' });
+        }
+      }
 
       const result = {
-        surveyId: id,
+        surveyId: survey.id,
         surveyTitle: survey.title || '',
         participantId: userId,
         answers: answers || {},
         completedAt: new Date(),
       };
       await database.collection('survey_responses').insertOne(result);
-      res
-        .status(201)
-        .json({ ok: true, surveyId: id, completedAt: result.completedAt });
+      res.status(201).json({
+        ok: true,
+        surveyId: survey.id,
+        completedAt: result.completedAt,
+      });
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });

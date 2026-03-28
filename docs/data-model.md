@@ -633,7 +633,8 @@ Survey definitions created by admin. Status lifecycle: `draft` â†’ `published` â
 | `type` | String | Yes | Survey category (e.g. `baseline`, `weekly`, `exit`) |
 | `jsonSchema` | Object | No | JSON Schema definition of questions |
 | `status` | String | Yes | `draft`, `published`, or `archived` |
-| `assignedGroups` | Array[String] | No | Subset of `["G1","G2","G3","G4"]` â€” empty means all groups |
+| `targetMode` | String | No | `all_participants`, `unassigned_only`, or `group_assigned` |
+| `assignedGroups` | Array[String] | No | Subset of `["G1","G2","G3","G4"]`; only used when `targetMode = "group_assigned"` |
 | `createdAt` | Date | Yes | Document creation timestamp |
 | `updatedAt` | Date | No | Last update timestamp |
 
@@ -652,11 +653,19 @@ Survey definitions created by admin. Status lifecycle: `draft` â†’ `published` â
     }
   },
   "status": "published",
-  "assignedGroups": ["G1", "G2", "G3", "G4"],
+  "targetMode": "group_assigned",
+  "assignedGroups": ["G1", "G2"],
   "createdAt": { "$date": "2025-08-20T10:00:00Z" },
   "updatedAt": { "$date": "2025-08-25T12:00:00Z" }
 }
 ```
+
+**Targeting rules:**
+
+- `habit-donation` is always available to every participant.
+- `group_assigned` surveys are visible only to matching study groups.
+- `unassigned_only` surveys are the standard/default path for participants without a group.
+- `all_participants` surveys are visible regardless of group membership.
 
 ---
 

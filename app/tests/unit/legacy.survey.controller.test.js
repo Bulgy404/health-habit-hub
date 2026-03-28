@@ -12,13 +12,18 @@ import {
   submitSurvey,
 } from '../../controllers/surveyController.js';
 
-function makeReq(params = {}, body = {}, cookies = {}) {
+function makeReq(params = {}, body = {}, cookies = {}, db = null) {
   return {
     params,
     body,
     cookies,
     lang: 'en',
-    app: { get: () => '/' },
+    app: {
+      get: (key) => {
+        if (key === 'db') return db;
+        return '/';
+      },
+    },
     userId: 'test-user',
   };
 }
@@ -50,7 +55,16 @@ function makeRes() {
 }
 
 test('renderSurvey returns 500 when database is unavailable', async () => {
-  const req = makeReq({ id: 'survey-xyz' });
+  const req = makeReq(
+    { id: 'survey-xyz' },
+    {},
+    {},
+    {
+      collection() {
+        throw new Error('database unavailable');
+      },
+    }
+  );
   const res = makeRes();
 
   await renderSurvey(req, res);
@@ -61,7 +75,16 @@ test('renderSurvey returns 500 when database is unavailable', async () => {
 });
 
 test('submitSurvey returns 500 when database is unavailable', async () => {
-  const req = makeReq({ id: 'survey-xyz' }, { answer: 'yes' });
+  const req = makeReq(
+    { id: 'survey-xyz' },
+    { answer: 'yes' },
+    {},
+    {
+      collection() {
+        throw new Error('database unavailable');
+      },
+    }
+  );
   const res = makeRes();
 
   await submitSurvey(req, res);

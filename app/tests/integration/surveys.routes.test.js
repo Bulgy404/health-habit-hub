@@ -63,12 +63,7 @@ function createMockDb() {
           const results = [];
           for (const [, doc] of store) {
             if (query && query.status && doc.status !== query.status) continue;
-            if (
-              query &&
-              query.assignedGroups &&
-              !doc.assignedGroups?.includes(query.assignedGroups)
-            )
-              continue;
+            if (query && query.type && doc.type !== query.type) continue;
             results.push({ ...doc });
           }
           return {
@@ -117,7 +112,38 @@ before(async () => {
     title: 'Health Survey',
     type: 'questionnaire',
     status: 'published',
+    targetMode: 'group_assigned',
     assignedGroups: ['G1'],
+    jsonSchema: { questions: [] },
+  });
+
+  mockDb.collection('surveys').insertOne({
+    id: 'survey-default',
+    title: 'Standard Survey',
+    type: 'questionnaire',
+    status: 'published',
+    targetMode: 'unassigned_only',
+    assignedGroups: [],
+    jsonSchema: { questions: [] },
+  });
+
+  mockDb.collection('surveys').insertOne({
+    id: 'survey-global',
+    title: 'Global Survey',
+    type: 'questionnaire',
+    status: 'published',
+    targetMode: 'all_participants',
+    assignedGroups: [],
+    jsonSchema: { questions: [] },
+  });
+
+  mockDb.collection('surveys').insertOne({
+    id: 'habit-donation',
+    title: 'Habit Donation',
+    type: 'habit-donation',
+    status: 'published',
+    targetMode: 'all_participants',
+    assignedGroups: [],
     jsonSchema: { questions: [] },
   });
 
@@ -152,6 +178,8 @@ before(async () => {
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
   const v1Router = createV1Router({
     jwksUrl: 'http://keycloak/jwks',
+    expectedIssuer: null,
+    expectedAudience: null,
     serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
     db: mockDb,
   });
@@ -216,7 +244,6 @@ test('GET /api/v1/surveys returns only published surveys for participant', async
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.ok(Array.isArray(body));
-  // Only published surveys for G1 group should appear
   assert.ok(body.length >= 1);
   body.forEach((s) => {
     assert.strictEqual(s.status, 'published');
@@ -225,9 +252,25 @@ test('GET /api/v1/surveys returns only published surveys for participant', async
     assert.ok('type' in s);
     assert.ok('assignedGroups' in s);
   });
-  // Draft survey must not appear
+  const ids = body.map((s) => s.id);
+  assert.ok(ids.includes('survey-1'));
+  assert.ok(ids.includes('survey-global'));
+  assert.ok(ids.includes('habit-donation'));
+  assert.ok(!ids.includes('survey-default'));
   const draftFound = body.find((s) => s.id === 'survey-2');
   assert.strictEqual(draftFound, undefined);
+});
+
+test('GET /api/v1/surveys returns standard and global surveys for unassigned participant', async () => {
+  const token = makeToken(['participant'], 'user-no-group');
+  const res = await get('/api/v1/surveys', token);
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  const ids = body.map((s) => s.id);
+  assert.ok(ids.includes('survey-default'));
+  assert.ok(ids.includes('survey-global'));
+  assert.ok(ids.includes('habit-donation'));
+  assert.ok(!ids.includes('survey-1'));
 });
 
 test('GET /api/v1/surveys returns all surveys for admin role', async () => {
@@ -260,8 +303,28 @@ test('GET /api/v1/surveys/:id returns survey shape for participant', async () =>
   assert.strictEqual(body.title, 'Health Survey');
   assert.ok('type' in body);
   assert.ok('status' in body);
+  assert.ok('targetMode' in body);
   assert.ok('jsonSchema' in body);
   assert.ok('assignedGroups' in body);
+});
+
+test('GET /api/v1/surveys/profile-style alias resolves by type', async () => {
+  mockDb.collection('surveys').insertOne({
+    id: 'survey-profile',
+    title: 'Profile Survey',
+    type: 'profile',
+    status: 'published',
+    targetMode: 'all_participants',
+    assignedGroups: [],
+    jsonSchema: { questions: [] },
+  });
+
+  const token = makeToken(['participant'], 'user-surveys-test');
+  const res = await get('/api/v1/surveys/profile', token);
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.strictEqual(body.type, 'profile');
+  assert.strictEqual(body.id, 'survey-profile');
 });
 
 test('GET /api/v1/surveys/:id returns 404 for unknown survey', async () => {

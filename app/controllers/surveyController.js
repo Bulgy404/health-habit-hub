@@ -1,8 +1,13 @@
 import { connect } from '../models/survey.js';
 
+async function getSurveyDb(req) {
+  const injectedDb = req.app?.get?.('db') || req.app?.locals?.db;
+  return injectedDb || connect();
+}
+
 export async function renderSurvey(req, res) {
   try {
-    const db = await connect();
+    const db = await getSurveyDb(req);
     const surveyId = req.params.id;
     console.log(
       `Attempting to find survey with id: "${surveyId}" (Type: ${typeof surveyId})`
@@ -27,7 +32,7 @@ export async function renderSurvey(req, res) {
 
 export async function submitSurvey(req, res) {
   try {
-    const db = await connect();
+    const db = await getSurveyDb(req);
     const submission = {
       surveyId: req.params.id,
       data: req.body,

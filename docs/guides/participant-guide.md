@@ -106,7 +106,7 @@ Donating a habit means sharing one of your everyday routines with the research p
 
 **Step 1.** Tap the **Donate** tab at the bottom of the screen (it looks like a gift icon).
 
-**Step 2.** The habit-donation survey will load. Depending on which study group you are in, you may see detailed instructions or just a simple text box — this is intentional.
+**Step 2.** The habit-donation survey will load for every participant. Depending on how the study is configured, you may see detailed instructions or a simpler text box, but the Donate flow itself is always available.
 
 **Step 3.** Describe your habit in the text box. Be as specific as you can: include what you do, when you do it, and where.
 

@@ -50,7 +50,7 @@ services:
     networks:
       - h3-2-proxy
       - h3-2-app
-    command: node --watch app.js
+    command: node --watch main.js
     depends_on:
       - proxy
       - mongo
@@ -132,7 +132,7 @@ services:
       - traefik.http.services.neo4j.loadbalancer.server.port=7474
 
   keycloak:
-    image: quay.io/keycloak/keycloak:latest
+    image: quay.io/keycloak/keycloak:26.5.5
     container_name: h3-2-keycloak
     restart: unless-stopped
     env_file:
@@ -167,7 +167,7 @@ services:
       - traefik.http.services.keycloak.loadbalancer.server.port=8080
 
   keycloak-init:
-    image: quay.io/keycloak/keycloak:latest
+    image: quay.io/keycloak/keycloak:26.5.5
     container_name: h3-2-keycloak-init
     restart: "no"
     env_file:

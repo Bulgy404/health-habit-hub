@@ -203,7 +203,7 @@ services:
       start_period: 30s
 
   keycloak:
-    image: quay.io/keycloak/keycloak:latest
+    image: quay.io/keycloak/keycloak:26.5.5
     container_name: h3-2-keycloak
     restart: always
     env_file:

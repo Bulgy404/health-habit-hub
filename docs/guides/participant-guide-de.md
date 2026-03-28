@@ -106,7 +106,7 @@ Eine Gewohnheit zu spenden bedeutet, eine Ihrer alltäglichen Routinen mit dem F
 
 **Schritt 1.** Tippen Sie auf die Registerkarte **Spenden** am unteren Bildschirmrand (Symbol: Geschenk).
 
-**Schritt 2.** Der Gewohnheitsspenden-Fragebogen wird geladen. Je nachdem, in welcher Studiengruppe Sie sich befinden, sehen Sie möglicherweise ausführliche Anweisungen oder nur ein einfaches Textfeld – das ist beabsichtigt.
+**Schritt 2.** Der Gewohnheitsspenden-Fragebogen wird fuer alle Teilnehmer geladen. Je nach Studienkonfiguration sehen Sie moeglicherweise ausfuehrliche Hinweise oder nur ein einfacheres Textfeld, aber der Spendenablauf selbst ist immer verfuegbar.
 
 **Schritt 3.** Beschreiben Sie Ihre Gewohnheit im Textfeld. Seien Sie so präzise wie möglich: Geben Sie an, was Sie tun, wann Sie es tun und wo.
 

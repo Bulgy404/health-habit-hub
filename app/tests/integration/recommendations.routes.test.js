@@ -160,6 +160,8 @@ before(async () => {
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
   const v1Router = createV1Router({
     jwksUrl: 'http://keycloak/jwks',
+    expectedIssuer: null,
+    expectedAudience: null,
     serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
     db: mockDb,
     redisClient: mockRedis,
@@ -279,6 +281,8 @@ test('GET /recommendations/me returns empty array when no recommendations', asyn
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
   const router = createRouter({
     jwksUrl: 'http://keycloak/jwks',
+    expectedIssuer: null,
+    expectedAudience: null,
     serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
     db: freshDb,
     redisClient: null,

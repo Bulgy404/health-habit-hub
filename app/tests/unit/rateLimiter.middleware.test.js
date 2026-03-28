@@ -15,7 +15,7 @@ function buildApp(max = 3) {
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator(req) {
-      return req.user?.sub || req.ip || '127.0.0.1';
+      return req.user?.sub || 'anonymous-test-client';
     },
     handler(_req, res) {
       res

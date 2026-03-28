@@ -22,6 +22,7 @@ function createMockDb() {
           const results = [];
           for (const [, doc] of store) {
             if (filter.status && doc.status !== filter.status) continue;
+            if (filter.type && doc.type !== filter.type) continue;
             if (
               filter.assignedGroups &&
               !doc.assignedGroups?.includes(filter.assignedGroups)

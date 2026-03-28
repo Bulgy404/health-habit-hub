@@ -180,6 +180,16 @@ class _SurveyTile extends StatelessWidget {
             padding: EdgeInsets.zero,
             visualDensity: VisualDensity.compact,
           ),
+          Chip(
+            label: Text(switch (survey.targetMode) {
+              'all_participants' => 'All participants',
+              'group_assigned' => 'Study groups',
+              _ => 'Standard only',
+            }),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+          ),
           ...survey.assignedGroups.map(
             (g) => Chip(
               label: Text(g),
@@ -252,10 +262,16 @@ class _CreateSurveyDialog extends StatefulWidget {
 class _CreateSurveyDialogState extends State<_CreateSurveyDialog> {
   final _titleController = TextEditingController();
   String _type = 'habit-donation';
+  String _targetMode = 'all_participants';
   bool _loading = false;
   String? _error;
 
   static const _types = ['habit-donation', 'profile', 'custom'];
+  static const _targetModeLabels = {
+    'all_participants': 'All participants',
+    'unassigned_only': 'Standard only',
+    'group_assigned': 'Study groups',
+  };
 
   @override
   void dispose() {
@@ -272,7 +288,11 @@ class _CreateSurveyDialogState extends State<_CreateSurveyDialog> {
     }
     setState(() { _loading = true; _error = null; });
     try {
-      await widget.service.createSurvey(title: title, type: _type);
+      await widget.service.createSurvey(
+        title: title,
+        type: _type,
+        targetMode: _type == 'habit-donation' ? 'all_participants' : _targetMode,
+      );
       if (mounted) {
         Navigator.of(context).pop();
         widget.onCreated();
@@ -307,9 +327,37 @@ class _CreateSurveyDialogState extends State<_CreateSurveyDialog> {
                 isExpanded: true,
                 onChanged: _loading
                     ? null
-                    : (v) => setState(() => _type = v ?? _type),
+                    : (v) => setState(() {
+                        _type = v ?? _type;
+                        if (_type == 'habit-donation') {
+                          _targetMode = 'all_participants';
+                        }
+                      }),
                 items: _types
                     .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .toList(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonHideUnderline(
+            child: InputDecorator(
+              decoration: const InputDecoration(labelText: 'Availability'),
+              child: DropdownButton<String>(
+                value: _type == 'habit-donation'
+                    ? 'all_participants'
+                    : _targetMode,
+                isExpanded: true,
+                onChanged: _loading || _type == 'habit-donation'
+                    ? null
+                    : (v) => setState(() => _targetMode = v ?? _targetMode),
+                items: _targetModeLabels.entries
+                    .map(
+                      (entry) => DropdownMenuItem(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      ),
+                    )
                     .toList(),
               ),
             ),
@@ -404,6 +452,7 @@ class _AdminSurveyEditorScreenState
 
   AdminSurvey? _survey;
   List<String> _selectedGroups = [];
+  String _targetMode = 'unassigned_only';
   bool _loading = true;
   bool _saving = false;
   bool _error = false;
@@ -429,6 +478,9 @@ class _AdminSurveyEditorScreenState
   void _initFromSurvey(AdminSurvey survey) {
     _survey = survey;
     _selectedGroups = List<String>.from(survey.assignedGroups);
+    _targetMode = survey.type == 'habit-donation'
+        ? 'all_participants'
+        : survey.targetMode;
     final pretty = const JsonEncoder.withIndent('  ').convert(survey.jsonSchema);
     _jsonController.text = pretty;
   }
@@ -465,8 +517,17 @@ class _AdminSurveyEditorScreenState
     setState(() => _saving = true);
     try {
       final service = ref.read(adminServiceProvider);
-      await service.updateSurvey(widget.surveyId, {'jsonSchema': parsed});
-      await service.updateSurveyGroups(widget.surveyId, _selectedGroups);
+      final effectiveTargetMode = (_survey?.type == 'habit-donation')
+          ? 'all_participants'
+          : _targetMode;
+      await service.updateSurvey(widget.surveyId, {
+        'jsonSchema': parsed,
+        'targetMode': effectiveTargetMode,
+      });
+      await service.updateSurveyGroups(
+        widget.surveyId,
+        effectiveTargetMode == 'group_assigned' ? _selectedGroups : const [],
+      );
       if (mounted) {
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -525,7 +586,15 @@ class _AdminSurveyEditorScreenState
                 )
               : _EditorBody(
                   jsonController: _jsonController,
+                  surveyType: _survey?.type ?? '',
+                  targetMode: _targetMode,
                   selectedGroups: _selectedGroups,
+                  onTargetModeChanged: (value) => setState(() {
+                    _targetMode = value;
+                    if (value != 'group_assigned') {
+                      _selectedGroups = [];
+                    }
+                  }),
                   onGroupToggle: (g, v) => setState(() {
                     if (v) {
                       _selectedGroups = [..._selectedGroups, g];
@@ -546,12 +615,18 @@ class _AdminSurveyEditorScreenState
 class _EditorBody extends StatelessWidget {
   const _EditorBody({
     required this.jsonController,
+    required this.surveyType,
+    required this.targetMode,
     required this.selectedGroups,
+    required this.onTargetModeChanged,
     required this.onGroupToggle,
   });
 
   final TextEditingController jsonController;
+  final String surveyType;
+  final String targetMode;
   final List<String> selectedGroups;
+  final ValueChanged<String> onTargetModeChanged;
   final void Function(String group, bool value) onGroupToggle;
 
   @override
@@ -573,6 +648,35 @@ class _EditorBody extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: surveyType == 'habit-donation'
+                ? 'all_participants'
+                : targetMode,
+            decoration: const InputDecoration(
+              labelText: 'Availability',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: surveyType == 'habit-donation'
+                ? null
+                : (value) {
+                    if (value != null) onTargetModeChanged(value);
+                  },
+            items: const [
+              DropdownMenuItem(
+                value: 'all_participants',
+                child: Text('All participants'),
+              ),
+              DropdownMenuItem(
+                value: 'unassigned_only',
+                child: Text('Standard only'),
+              ),
+              DropdownMenuItem(
+                value: 'group_assigned',
+                child: Text('Study groups'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           Text(
             l10n.adminAssignToGroups,
             style: const TextStyle(fontWeight: FontWeight.bold),
@@ -584,7 +688,8 @@ class _EditorBody extends StatelessWidget {
               return FilterChip(
                 label: Text(g),
                 selected: selectedGroups.contains(g),
-                onSelected: (v) => onGroupToggle(g, v),
+                onSelected:
+                    targetMode == 'group_assigned' ? (v) => onGroupToggle(g, v) : null,
               );
             }).toList(),
           ),

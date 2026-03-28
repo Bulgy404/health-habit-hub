@@ -117,17 +117,32 @@ Each participant must be assigned to exactly one study group (G1–G4). The grou
 
 ## 4. Configuring Questionnaires
 
-Questionnaires (surveys) are JSON-schema driven forms shown to participants on the Donate and Profile screens. Admins can create, edit, publish, archive, and assign questionnaires to specific study groups.
+Questionnaires (surveys) are JSON-schema driven forms shown to participants on the Donate and Profile screens. Admins can create, edit, publish, archive, and target questionnaires explicitly.
+
+Survey availability now follows four rules:
+
+- `habit-donation` is always available to every participant on the Donate screen.
+- `group_assigned` surveys are only visible to participants whose study group is listed in the survey.
+- `unassigned_only` surveys are the standard/default case for participants who have no study group yet.
+- `all_participants` surveys are visible to everyone regardless of group.
 
 ### Creating a Questionnaire
 
 **Step 1.** In the Admin panel, tap **Questionnaires** in the sidebar, then tap **+ New Questionnaire**.
 
-**Step 2.** Enter a **Title** and select a **Type**: `profile` (shown on the Profile screen) or `habit` (shown after habit donation).
+**Step 2.** Enter a **Title** and select a **Type**: `profile`, `habit-donation`, or `custom`.
 
-**Step 3.** Paste or type the **JSON Schema** that defines the form fields. The schema must follow the JSON Schema draft-07 format. Each property becomes one form field.
+**Step 3.** Choose an **Availability** mode:
 
-**Step 4.** Tap **Save as Draft**. The questionnaire is not yet visible to participants.
+- **All participants**: visible to every participant.
+- **Standard only**: visible only to participants without a study group.
+- **Study groups**: visible only to the selected groups.
+
+`habit-donation` is always forced to **All participants**.
+
+**Step 4.** Paste or type the **JSON Schema** that defines the form fields. The schema must follow the JSON Schema draft-07 format. Each property becomes one form field.
+
+**Step 5.** Tap **Save as Draft**. The questionnaire is not yet visible to participants.
 
 | Screenshot | Callout annotations |
 |---|---|
@@ -143,16 +158,18 @@ Questionnaires (surveys) are JSON-schema driven forms shown to participants on t
 
 ### Publishing and Archiving
 
-- **Publish:** Tap the **Publish** action on a Draft questionnaire. Published questionnaires are immediately visible to all assigned groups.
+- **Publish:** Tap the **Publish** action on a Draft questionnaire. Published questionnaires become visible according to their configured availability mode.
 - **Archive:** Tap **Archive** on a Published questionnaire to hide it from participants. Existing responses are retained.
 
 ### Assigning Questionnaires to Groups
 
-**Step 1.** On the questionnaire list, tap **Assign Groups** for the questionnaire.
+**Step 1.** On the questionnaire list, open a questionnaire and set **Availability** to **Study groups**.
 
 **Step 2.** Toggle on the study groups (G1–G4) that should see this questionnaire.
 
-**Step 3.** Tap **Save Assignment**.
+**Step 3.** Tap **Save**.
+
+If you want a questionnaire to appear for participants who are not assigned to any study group, set **Availability** to **Standard only** and leave the group list empty.
 
 | Screenshot | Callout annotations |
 |---|---|

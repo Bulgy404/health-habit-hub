@@ -28,7 +28,7 @@ export function createUsersRouter({ db } = {}) {
   // PUT /api/v1/users/me – update user fields (currently preferredLanguage)
   router.put('/me', async (req, res) => {
     try {
-      const { preferredLanguage } = req.body;
+      const { preferredLanguage } = req.body || {};
       if (
         preferredLanguage !== undefined &&
         !SUPPORTED_LANGUAGES.includes(preferredLanguage)

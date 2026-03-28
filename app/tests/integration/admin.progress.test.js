@@ -349,6 +349,8 @@ before(async () => {
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
   const v1Router = createV1Router({
     jwksUrl: 'http://keycloak/jwks',
+    expectedIssuer: null,
+    expectedAudience: null,
     serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
     db: mockDb,
     keycloak: mockKc,

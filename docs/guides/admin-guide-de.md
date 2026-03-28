@@ -118,17 +118,32 @@ Jeder Teilnehmer muss genau einer Studiengruppe (G1–G4) zugewiesen werden. Die
 
 ## 4. Fragebögen konfigurieren
 
-Fragebögen (Surveys) sind JSON-Schema-gesteuerte Formulare, die Teilnehmern auf den Spenden- und Profilbildschirmen angezeigt werden. Admins koennen Fragebögen erstellen, bearbeiten, veroeffentlichen, archivieren und bestimmten Studiengruppen zuweisen.
+Frageboegen (Surveys) sind JSON-Schema-gesteuerte Formulare, die Teilnehmern auf den Spenden- und Profilbildschirmen angezeigt werden. Admins koennen Frageboegen erstellen, bearbeiten, veroeffentlichen, archivieren und gezielt fuer bestimmte Teilnehmergruppen freischalten.
+
+Die Sichtbarkeit folgt jetzt vier klaren Regeln:
+
+- `habit-donation` ist fuer alle Teilnehmer immer auf dem Spenden-Bildschirm verfuegbar.
+- `group_assigned` ist nur fuer Teilnehmer sichtbar, deren Studiengruppe in der Umfrage eingetragen ist.
+- `unassigned_only` ist der Standardfall fuer Teilnehmer ohne Studiengruppe.
+- `all_participants` ist fuer alle Teilnehmer sichtbar, unabhaengig von ihrer Gruppe.
 
 ### Einen Fragebogen erstellen
 
 **Schritt 1.** Tippen Sie im Admin-Panel auf **Fragebögen** in der Seitenleiste, dann auf **+ Neuer Fragebogen**.
 
-**Schritt 2.** Geben Sie einen **Titel** ein und waehlen Sie einen **Typ** aus: `profile` (auf dem Profilbildschirm angezeigt) oder `habit` (nach der Gewohnheitsspende angezeigt).
+**Schritt 2.** Geben Sie einen **Titel** ein und waehlen Sie einen **Typ** aus: `profile`, `habit-donation` oder `custom`.
 
-**Schritt 3.** Fuegen Sie das **JSON Schema** ein oder tippen Sie es ein, das die Formularfelder definiert. Das Schema muss dem JSON Schema draft-07 Format entsprechen. Jede Eigenschaft wird zu einem Formularfeld.
+**Schritt 3.** Waehlen Sie einen **Verfuegbarkeitsmodus**:
 
-**Schritt 4.** Tippen Sie auf **Als Entwurf speichern**. Der Fragebogen ist noch nicht fuer Teilnehmer sichtbar.
+- **All participants**: fuer alle Teilnehmer sichtbar.
+- **Standard only**: nur fuer Teilnehmer ohne Studiengruppe sichtbar.
+- **Study groups**: nur fuer die ausgewaehlten Gruppen sichtbar.
+
+`habit-donation` wird immer auf **All participants** festgelegt.
+
+**Schritt 4.** Fuegen Sie das **JSON Schema** ein oder tippen Sie es ein, das die Formularfelder definiert. Das Schema muss dem JSON Schema draft-07 Format entsprechen. Jede Eigenschaft wird zu einem Formularfeld.
+
+**Schritt 5.** Tippen Sie auf **Als Entwurf speichern**. Der Fragebogen ist noch nicht fuer Teilnehmer sichtbar.
 
 | Screenshot | Beschriftungen |
 |---|---|
@@ -144,16 +159,18 @@ Fragebögen (Surveys) sind JSON-Schema-gesteuerte Formulare, die Teilnehmern auf
 
 ### Veroeffentlichen und Archivieren
 
-- **Veroeffentlichen:** Tippen Sie auf die Aktion **Veroeffentlichen** bei einem Entwurfs-Fragebogen. Veroeffentlichte Fragebögen sind sofort fuer alle zugewiesenen Gruppen sichtbar.
+- **Veroeffentlichen:** Tippen Sie auf die Aktion **Veroeffentlichen** bei einem Entwurfs-Fragebogen. Veroeffentlichte Frageboegen werden gemaess ihrem Verfuegbarkeitsmodus sichtbar.
 - **Archivieren:** Tippen Sie auf **Archivieren** bei einem veroeffentlichten Fragebogen, um ihn vor Teilnehmern zu verbergen. Vorhandene Antworten bleiben erhalten.
 
 ### Fragebögen Gruppen zuweisen
 
-**Schritt 1.** Tippen Sie in der Fragebogenliste auf **Gruppen zuweisen** fuer den jeweiligen Fragebogen.
+**Schritt 1.** Oeffnen Sie den Fragebogen und setzen Sie **Availability** auf **Study groups**.
 
 **Schritt 2.** Aktivieren Sie die Studiengruppen (G1–G4), die diesen Fragebogen sehen sollen.
 
-**Schritt 3.** Tippen Sie auf **Zuweisung speichern**.
+**Schritt 3.** Tippen Sie auf **Speichern**.
+
+Wenn ein Fragebogen fuer Teilnehmer ohne Studiengruppe sichtbar sein soll, setzen Sie **Availability** auf **Standard only** und lassen Sie die Gruppenliste leer.
 
 | Screenshot | Beschriftungen |
 |---|---|

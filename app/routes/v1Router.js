@@ -22,6 +22,8 @@ import { swaggerSpec } from '../swagger.js';
 
 export function createV1Router({
   jwksUrl,
+  expectedIssuer,
+  expectedAudience,
   serviceChecks,
   recommenderUrl,
   apiServiceUrl,
@@ -35,7 +37,11 @@ export function createV1Router({
   redisUrl,
 } = {}) {
   const router = express.Router();
-  const authenticate = createAuthMiddleware({ jwksUrl });
+  const authenticate = createAuthMiddleware({
+    jwksUrl,
+    expectedIssuer,
+    expectedAudience,
+  });
   const limiter = rateLimiter || apiRateLimiter;
 
   /**

@@ -45,6 +45,25 @@ function makeToken(roles = []) {
   });
 }
 
+function createMockDb() {
+  return {
+    collection() {
+      return {
+        find() {
+          return {
+            async toArray() {
+              return [];
+            },
+          };
+        },
+        async findOne() {
+          return null;
+        },
+      };
+    },
+  };
+}
+
 // ── Test server ───────────────────────────────────────────────────────────────
 
 let server;
@@ -65,10 +84,13 @@ before(async () => {
   const mockNeo4jRun = async () => [];
   const v1Router = createV1Router({
     jwksUrl: 'http://keycloak/jwks',
+    expectedIssuer: null,
+    expectedAudience: null,
     serviceChecks: {
       neo4jCheck: okCheck,
       mongoCheck: okCheck,
     },
+    db: createMockDb(),
     neo4jRun: mockNeo4jRun,
   });
   testApp.use('/api/v1', v1Router);

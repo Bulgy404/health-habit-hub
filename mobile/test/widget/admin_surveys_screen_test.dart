@@ -144,6 +144,7 @@ void main() {
       title: 'Baseline Survey',
       type: 'habit-donation',
       status: 'published',
+      targetMode: 'all_participants',
       assignedGroups: ['G1'],
       jsonSchema: {},
     );

@@ -208,7 +208,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["surveys"]
             },
-            "description": "List surveys. Participants see only published surveys for their group; admins/researchers see all."
+            "description": "List surveys. Participants see published surveys according to targetMode: habit-donation is always available, group_assigned surveys are filtered by study group, unassigned_only surveys are shown only to participants without a group, and all_participants surveys are visible to everyone. Admins/researchers see all."
           },
           "response": [
             {
@@ -216,7 +216,7 @@
               "status": "OK",
               "code": 200,
               "header": [{"key": "Content-Type", "value": "application/json"}],
-              "body": "[{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"assignedGroups\":[\"G1\",\"G2\"]}]"
+              "body": "[{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G2\"]}]"
             }
           ]
         },
@@ -236,7 +236,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["surveys", "{{surveyId}}"]
             },
-            "description": "Get a single survey by ID including the SurveyJS JSON schema."
+            "description": "Get a single survey by ID or stable type alias including the SurveyJS JSON schema and targetMode."
           },
           "response": [
             {
@@ -244,7 +244,7 @@
               "status": "OK",
               "code": 200,
               "header": [{"key": "Content-Type", "value": "application/json"}],
-              "body": "{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"assignedGroups\":[\"G1\",\"G2\"],\"jsonSchema\":{\"pages\":[]}}"
+              "body": "{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G2\"],\"jsonSchema\":{\"pages\":[]}}"
             },
             {
               "name": "404 – Survey not found",
@@ -719,7 +719,7 @@
               "status": "OK",
               "code": 200,
               "header": [{"key": "Content-Type", "value": "application/json"}],
-              "body": "[{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"assignedGroups\":[\"G1\",\"G2\"]}]"
+              "body": "[{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G2\"]}]"
             }
           ]
         },
@@ -741,7 +741,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"jsonSchema\":{\"pages\":[]},\"assignedGroups\":[\"G1\",\"G2\"]}",
+              "raw": "{\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"targetMode\":\"group_assigned\",\"jsonSchema\":{\"pages\":[]},\"assignedGroups\":[\"G1\",\"G2\"]}",
               "options": {"raw": {"language": "json"}}
             },
             "url": {
@@ -757,7 +757,7 @@
               "status": "Created",
               "code": 201,
               "header": [{"key": "Content-Type", "value": "application/json"}],
-              "body": "{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"draft\",\"assignedGroups\":[\"G1\",\"G2\"]}"
+              "body": "{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"draft\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G2\"]}"
             }
           ]
         },
@@ -779,7 +779,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\"title\":\"Updated Questionnaire\",\"assignedGroups\":[\"G1\",\"G2\",\"G3\"]}",
+              "raw": "{\"title\":\"Updated Questionnaire\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G2\",\"G3\"]}",
               "options": {"raw": {"language": "json"}}
             },
             "url": {
@@ -787,7 +787,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["admin", "surveys", "{{surveyId}}"]
             },
-            "description": "Update survey fields (any combination of title, type, jsonSchema, assignedGroups, status)."
+            "description": "Update survey fields (any combination of title, type, jsonSchema, targetMode, assignedGroups, status)."
           },
           "response": [
             {
@@ -863,7 +863,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["admin", "surveys", "{{surveyId}}", "groups"]
             },
-            "description": "Assign study groups to a survey."
+            "description": "Assign study groups to a survey and set its targetMode to group_assigned."
           },
           "response": [
             {
@@ -871,7 +871,7 @@
               "status": "OK",
               "code": 200,
               "header": [{"key": "Content-Type", "value": "application/json"}],
-              "body": "{\"ok\":true,\"id\":\"survey-uuid-001\",\"assignedGroups\":[\"G1\",\"G3\"]}"
+              "body": "{\"ok\":true,\"id\":\"survey-uuid-001\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G3\"]}"
             }
           ]
         }

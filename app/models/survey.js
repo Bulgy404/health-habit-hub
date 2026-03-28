@@ -1,8 +1,4 @@
 import { MongoClient, ObjectId } from 'mongodb';
-import dotenv from 'dotenv';
-import path from 'path';
-
-dotenv.config({ path: path.resolve('../.env') });
 
 const dbConfig = {
   host: process.env.MONGO_HOST || 'localhost',

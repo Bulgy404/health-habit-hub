@@ -80,13 +80,17 @@ const TEST_INTERNAL_SECRET = 'test-internal-secret';
 let httpServer;
 let baseUrl;
 let wsUrl;
+let closeWsServer;
 
 before(async () => {
   const app = express();
   app.use(express.json());
 
   const srv = createServer(app);
-  const { broadcast } = createRecommendationWsServer(srv, { verifyToken });
+  const { broadcast, close } = createRecommendationWsServer(srv, {
+    verifyToken,
+  });
+  closeWsServer = close;
   app.use(
     '/api/internal',
     createInternalRouter({ broadcast, internalSecret: TEST_INTERNAL_SECRET })
@@ -99,8 +103,9 @@ before(async () => {
   wsUrl = `ws://127.0.0.1:${port}`;
 });
 
-after(() => {
-  httpServer.close();
+after(async () => {
+  await closeWsServer();
+  await new Promise((resolve) => httpServer.close(resolve));
 });
 
 // ── Helper ────────────────────────────────────────────────────────────────────
