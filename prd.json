@@ -3116,6 +3116,118 @@
       "priority": 194,
       "passes": true,
       "notes": "All 322 automated tests pass (npm test). docker-compose.local.yml config validates (exit 0). Postman collection present at docs/api/hhh-postman-collection.json. Docker daemon unavailable in CI environment \u2014 docker-compose up and curl smoke tests require manual verification on a machine with Docker running."
+    },
+    {
+      "id": "US-195",
+      "title": "Fix HabitsFeedResult missing import in admin_service.dart",
+      "description": "As a developer, I need HabitsFeedResult to be imported in admin_service.dart so that the admin habits feed compiles and works.",
+      "acceptanceCriteria": [
+        "Import admin_habit_donation.dart in admin_service.dart",
+        "HabitsFeedResult and HabitDonation are resolvable at compile time",
+        "Typecheck passes"
+      ],
+      "priority": 195,
+      "passes": true,
+      "notes": "Import was already present at admin_service.dart:4 — admin_habit_donation.dart imported, HabitsFeedResult and HabitDonation both resolvable. flutter analyze passes."
+    },
+    {
+      "id": "US-196",
+      "title": "Fix duplicate onboarding storage key in restore_screen.dart",
+      "description": "As a developer, I need restore_screen.dart to use the shared kOnboardingCompleteKey constant so that onboarding state is consistent across all screens.",
+      "acceptanceCriteria": [
+        "Remove local _kOnboardingComplete constant from restore_screen.dart",
+        "Import kOnboardingCompleteKey from welcome_screen.dart",
+        "Replace all uses of _kOnboardingComplete with kOnboardingCompleteKey",
+        "Typecheck passes"
+      ],
+      "priority": 196,
+      "passes": false,
+      "notes": "Bug: restore_screen.dart defines _kOnboardingComplete = onboarding_complete locally instead of importing kOnboardingCompleteKey from welcome_screen.dart. Both strings happen to be equal now, but any future rename would silently break restore flow."
+    },
+    {
+      "id": "US-197",
+      "title": "Fix redirect loop when onboarding complete but tokens invalid",
+      "description": "As a user, I want to be redirected to the restore screen (not loop) when my stored tokens have expired or been invalidated after onboarding was already completed.",
+      "acceptanceCriteria": [
+        "Router redirect distinguishes between onboarding-complete+authenticated vs onboarding-complete+unauthenticated",
+        "If onboarding is complete but isLoggedIn() returns false, redirect to /onboarding/welcome instead of /share",
+        "If onboarding is complete and isLoggedIn() returns true, redirect to /share",
+        "No redirect loop occurs when tokens are cleared by logout()",
+        "Typecheck passes"
+      ],
+      "priority": 197,
+      "passes": false,
+      "notes": "Bug: router onboarding bypass only checks isOnboardingComplete(), not isLoggedIn(). After logout() clears tokens, refreshListenable triggers re-evaluation but the onboarding bypass redirects back to /share before the auth guard can fire, causing a loop in edge cases."
+    },
+    {
+      "id": "US-198",
+      "title": "Fix recommendation_feature_service.dart using unauthenticated Dio instance",
+      "description": "As a developer, I need RecommendationFeatureService to always use a Dio instance with the AuthInterceptor so that recommendation API calls include the bearer token.",
+      "acceptanceCriteria": [
+        "recommendationFeatureServiceProvider passes dioProvider instance to RecommendationFeatureService",
+        "RecommendationFeatureService no longer creates a fallback Dio() instance",
+        "Auth headers are applied via the interceptor, not manually",
+        "Typecheck passes"
+      ],
+      "priority": 198,
+      "passes": false,
+      "notes": "Bug: RecommendationFeatureService({Dio? dio, ...}) falls back to Dio() if not provided. Provider passes no dio. Result: recommendation API calls have no AuthInterceptor, manually duplicate auth headers instead."
+    },
+    {
+      "id": "US-199",
+      "title": "Fix WebSocket subscription leak in recommend_screen.dart",
+      "description": "As a user, I want the recommendation screen to correctly cancel and re-subscribe to WebSocket streams when the userId changes, preventing memory leaks and stale data.",
+      "acceptanceCriteria": [
+        "_recSub and _statusSub are cancelled before re-initialising the WS service when userId changes",
+        "dispose() cancels both subscriptions",
+        "No duplicate event handlers registered on rebuild",
+        "Typecheck passes"
+      ],
+      "priority": 199,
+      "passes": false,
+      "notes": "Bug: _initWs() appends new subscriptions without cancelling existing ones. If userId changes or widget rebuilds before dispose(), both old and new subscriptions are active simultaneously."
+    },
+    {
+      "id": "US-200",
+      "title": "Fix backend race condition in study code redemption",
+      "description": "As a researcher, I need study code redemption to be atomic so that concurrent requests cannot both redeem the same code or enrol the same user twice.",
+      "acceptanceCriteria": [
+        "redeemCode uses a MongoDB findOneAndUpdate with upsert or a session transaction to make the enrollment check-and-insert atomic",
+        "Concurrent redemption attempts for the same userId return 409 for the second request",
+        "Concurrent redemption attempts for a fully-used code return 410 for the second request",
+        "redemptionCount increment is atomic ( inside the same update operation)",
+        "Tests pass"
+      ],
+      "priority": 200,
+      "passes": false,
+      "notes": "Race condition: redeemCode checks existing enrollment then inserts separately. Two concurrent requests can both pass the check and both insert, creating duplicate enrollments and over-counting redemptionCount."
+    },
+    {
+      "id": "US-201",
+      "title": "Fix backend race condition in round-robin group assignment (skipCode)",
+      "description": "As a researcher, I need the default group assignment to be atomic so that concurrent skip-code requests produce an even distribution.",
+      "acceptanceCriteria": [
+        "Group selection and enrollment insertion are performed atomically (single findOneAndUpdate or transaction)",
+        "Two concurrent skip-code requests for different users always land in different groups when groups have equal counts",
+        "Tests pass"
+      ],
+      "priority": 201,
+      "passes": false,
+      "notes": "Race condition: skipCode aggregates group counts then selects the minimum, then inserts enrollment in separate operations. Concurrent requests both see the same minimum group and both insert into it, defeating round-robin distribution."
+    },
+    {
+      "id": "US-202",
+      "title": "Add backend study code format validation",
+      "description": "As a developer, I need the backend to validate the HHH-XXXXX study code format so that malformed input is rejected before hitting the database.",
+      "acceptanceCriteria": [
+        "POST /api/v1/onboarding/redeem-code validates code matches /^HHH-[A-Z0-9]{5}$/",
+        "Invalid format returns 400 with descriptive error message",
+        "Valid format proceeds as before",
+        "Tests pass"
+      ],
+      "priority": 202,
+      "passes": false,
+      "notes": "Missing defence-in-depth: only the Flutter client validates the code format. The backend accepts any string, relying solely on database lookup failure to reject invalid codes."
     }
   ]
 }
