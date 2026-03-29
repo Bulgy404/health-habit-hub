@@ -1,3 +1,13 @@
+## 2026-03-30 - US-197
+- What was implemented: Fixed GoRouter redirect loop when onboarding is complete but tokens are expired/cleared. Router onboarding bypass now reads `isLoggedInProvider.future` after `isOnboardingComplete()` — if authenticated redirects to `/share`, if unauthenticated returns `null` (stay on welcome) or `/onboarding/welcome` from `/login`. Also committed pre-existing changes: `AuthService` gained `onLogout` callback and `_tokenNeedsRefresh` with JWT `exp` fallback; `AuthNotifier` (ChangeNotifier) added to `auth_provider.dart` and wired as `refreshListenable` in `routerProvider`. `docker-compose.local.yml` infra fixes also committed.
+- Files changed: mobile/lib/main.dart, mobile/lib/providers/auth_provider.dart, mobile/lib/services/auth_service.dart, docker-compose.local.yml, prd.json (US-197 passes=true)
+- **Learnings for future iterations:**
+  - The GoRouter redirect loop pattern: if guard A sends to route X and guard B sends from X back to start, check both guards together — the onboarding bypass must verify both `isOnboardingComplete()` AND `isLoggedIn()` before redirecting to a protected route
+  - `AuthService.onLogout` callback pattern: pass `notifier.notifyLogout` so logout triggers router re-evaluation via `refreshListenable`; this is the correct way to propagate auth changes to GoRouter without BuildContext
+  - `_tokenNeedsRefresh` falls back to decoding JWT `exp` claim when no `_expiryKey` is stored — needed for tokens stored by onboarding/restore flows
+  - GoRouter returning `null` from redirect = stay on current location (no redirect); use this instead of returning the current path to avoid any risk of infinite redirect
+---
+
 ## 2026-03-29 - US-196
 - What was implemented: Removed local `_kOnboardingComplete = 'onboarding_complete'` constant from `restore_screen.dart`, added import for `welcome_screen.dart`, replaced the one usage with `kOnboardingCompleteKey`.
 - Files changed: mobile/lib/screens/onboarding/restore_screen.dart, prd.json (US-196 passes=true)
