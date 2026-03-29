@@ -1,3 +1,10 @@
+## 2026-03-29 - US-196
+- What was implemented: Removed local `_kOnboardingComplete = 'onboarding_complete'` constant from `restore_screen.dart`, added import for `welcome_screen.dart`, replaced the one usage with `kOnboardingCompleteKey`.
+- Files changed: mobile/lib/screens/onboarding/restore_screen.dart, prd.json (US-196 passes=true)
+- **Learnings for future iterations:**
+  - `kOnboardingCompleteKey` is defined in `welcome_screen.dart` and is the canonical shared constant for onboarding state — any screen that reads/writes onboarding complete status should import from there
+---
+
 ## 2026-03-29 - US-195
 - What was implemented: Verified that `mobile/lib/models/admin_habit_donation.dart` import is already present at line 4 of `mobile/lib/services/admin_service.dart`. Both `HabitsFeedResult` and `HabitDonation` classes are defined in the model file and referenced correctly. `flutter analyze lib/` reports 0 errors (1 info deprecation warning unrelated to this story).
 - Files changed: prd.json (US-195 passes=true)
