@@ -3156,8 +3156,8 @@
         "Typecheck passes"
       ],
       "priority": 197,
-      "passes": false,
-      "notes": "Bug: router onboarding bypass only checks isOnboardingComplete(), not isLoggedIn(). After logout() clears tokens, refreshListenable triggers re-evaluation but the onboarding bypass redirects back to /share before the auth guard can fire, causing a loop in edge cases."
+      "passes": true,
+      "notes": "Router bypass now reads isLoggedInProvider.future in addition to isOnboardingComplete(). If onboarding complete but unauthenticated, returns null (stay on welcome) or redirects to /onboarding/welcome from /login — no loop. AuthService gained onLogout callback and _tokenNeedsRefresh with JWT exp fallback. AuthNotifier wired as refreshListenable."
     },
     {
       "id": "US-198",
