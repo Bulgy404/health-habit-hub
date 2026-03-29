@@ -50,8 +50,10 @@ void main() async {
 /// GoRouter wrapped in a Riverpod Provider so the redirect guard can access
 /// auth state via [userRolesProvider] without relying on BuildContext.
 final routerProvider = Provider<GoRouter>((ref) {
+  final authNotifier = ref.watch(authNotifierProvider);
   final router = GoRouter(
     initialLocation: '/onboarding/welcome',
+    refreshListenable: authNotifier,
     // Redirect guard: admin route protection and onboarding bypass.
     redirect: (context, state) async {
       // Admin guard: only admin/researcher roles may access /admin/* routes.
@@ -91,10 +93,21 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Onboarding bypass: if the user has already completed onboarding,
       // skip the welcome and login screens and go straight to the app.
+      // Must also verify the user is authenticated: if tokens have expired
+      // or been cleared, redirecting to /share would cause a loop because
+      // the auth guard would immediately send them back to /onboarding/welcome.
       if (location.startsWith('/onboarding/welcome') ||
           location == '/login') {
         if (await isOnboardingComplete()) {
-          return '/share';
+          try {
+            final isLoggedIn = await ref.read(isLoggedInProvider.future);
+            if (isLoggedIn) return '/share';
+          } catch (_) {
+            // isLoggedIn check failed — treat as unauthenticated.
+          }
+          // Onboarding complete but unauthenticated: stay on welcome so the
+          // user can use the restore flow without looping.
+          return location == '/login' ? '/onboarding/welcome' : null;
         }
       }
 

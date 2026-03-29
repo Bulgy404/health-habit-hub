@@ -1,11 +1,21 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 
+/// ChangeNotifier that fires whenever the auth state changes (e.g. logout).
+/// Passed to GoRouter's [refreshListenable] so the redirect guard re-runs.
+class AuthNotifier extends ChangeNotifier {
+  void notifyLogout() => notifyListeners();
+}
+
+final authNotifierProvider = Provider<AuthNotifier>((ref) => AuthNotifier());
+
 /// Provides the singleton [AuthService] instance.
 final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService();
+  final notifier = ref.watch(authNotifierProvider);
+  return AuthService(onLogout: notifier.notifyLogout);
 });
 
 /// Provides the current login state as an async bool.
