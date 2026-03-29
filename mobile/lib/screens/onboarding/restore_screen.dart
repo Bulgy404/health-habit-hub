@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_config.dart';
 import 'passphrase_screen.dart';
+import 'welcome_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Secure-storage key constants (mirror passphrase_screen.dart)
@@ -13,7 +14,6 @@ const _kUsername = 'username';
 const _kPassword = 'password';
 const _kAccessToken = 'access_token';
 const _kRefreshToken = 'refresh_token';
-const _kOnboardingComplete = 'onboarding_complete';
 
 // ---------------------------------------------------------------------------
 // RestoreScreen
@@ -95,7 +95,7 @@ class _RestoreScreenState extends State<RestoreScreen> {
           key: _kRefreshToken,
           value: data['refresh_token']?.toString() ?? '',
         );
-        await storage.write(key: _kOnboardingComplete, value: 'true');
+        await storage.write(key: kOnboardingCompleteKey, value: 'true');
         if (!mounted) return;
         context.go('/share');
       } else {
