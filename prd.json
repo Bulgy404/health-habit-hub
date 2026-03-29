@@ -3141,8 +3141,8 @@
         "Typecheck passes"
       ],
       "priority": 196,
-      "passes": false,
-      "notes": "Bug: restore_screen.dart defines _kOnboardingComplete = onboarding_complete locally instead of importing kOnboardingCompleteKey from welcome_screen.dart. Both strings happen to be equal now, but any future rename would silently break restore flow."
+      "passes": true,
+      "notes": "Removed local _kOnboardingComplete constant, imported kOnboardingCompleteKey from welcome_screen.dart, and replaced all usages. flutter analyze passes."
     },
     {
       "id": "US-197",
