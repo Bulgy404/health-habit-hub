@@ -13,6 +13,12 @@ export function createStudyEnrollRouter({ db } = {}) {
       if (!code || typeof code !== 'string') {
         return res.status(400).json({ error: 'code is required' });
       }
+      if (!/^HHH-[A-Z0-9]{5}$/i.test(code.trim())) {
+        return res.status(400).json({
+          error:
+            'Invalid code format. Expected HHH-XXXXX (5 alphanumeric characters).',
+        });
+      }
       const userId = req.user?.sub;
       if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
