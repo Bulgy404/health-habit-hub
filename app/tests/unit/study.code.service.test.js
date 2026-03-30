@@ -85,6 +85,48 @@ function makeDb(initial = {}) {
           }
           return { matchedCount: 1 };
         },
+        async findOneAndUpdate(filter, update, options = {}) {
+          // Evaluate $expr: { $lt: ['$fieldA', '$fieldB'] } against a document
+          function evalExpr(doc, expr) {
+            if (expr && expr.$lt) {
+              const [a, b] = expr.$lt.map((ref) =>
+                typeof ref === 'string' && ref.startsWith('$')
+                  ? doc[ref.slice(1)]
+                  : ref
+              );
+              return a < b;
+            }
+            return true;
+          }
+
+          // Build effective filter including $expr evaluation
+          const { $expr, ...plainFilter } = filter;
+          const idx = s.findIndex(
+            (doc) =>
+              matchFilter(doc, plainFilter) && (!$expr || evalExpr(doc, $expr))
+          );
+
+          const { upsert = false, returnDocument = 'before' } = options;
+
+          if (idx === -1) {
+            if (upsert && update.$setOnInsert) {
+              s.push({ ...update.$setOnInsert });
+              // returnDocument:'before' with upsert → null (no prior document)
+              return null;
+            }
+            return null;
+          }
+
+          const before = { ...s[idx] };
+          if (update.$set) Object.assign(s[idx], update.$set);
+          if (update.$inc) {
+            for (const [k, v] of Object.entries(update.$inc)) {
+              s[idx][k] = (s[idx][k] || 0) + v;
+            }
+          }
+          // $setOnInsert only applies on upsert (new insert), not on match
+          return returnDocument === 'before' ? before : { ...s[idx] };
+        },
         aggregate(pipeline) {
           let docs = [...s];
           for (const stage of pipeline) {
@@ -449,6 +491,96 @@ test('redeemCode creates enrollment and increments counter (case-insensitive)', 
   // Verify counter incremented
   const codes = await db.collection('studyCodes').find({}).toArray();
   assert.equal(codes[0].redemptionCount, 1);
+});
+
+test('redeemCode returns exhausted atomically — second concurrent request cannot claim last slot', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  // Code with maxRedemptions:1, already at 0 — first call should succeed, second should fail
+  const db = makeDb({
+    studies: [
+      {
+        _id: studyId,
+        name: 'My Study',
+        isDefault: true,
+        isActive: true,
+        groups: [{ id: groupId, label: 'Intervention', index: 1 }],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+    studyCodes: [
+      {
+        code: 'HHH-LIMIT',
+        studyId,
+        groupId,
+        maxRedemptions: 1,
+        redemptionCount: 0,
+        expiresAt: null,
+        createdAt: new Date(),
+      },
+    ],
+  });
+
+  // Simulate sequential requests that represent concurrent attempts
+  const r1 = await redeemCode({ db, userId: 'user-1', code: 'HHH-LIMIT' });
+  const r2 = await redeemCode({ db, userId: 'user-2', code: 'HHH-LIMIT' });
+
+  assert.equal(r1.enrolled, true);
+  assert.equal(r2.exhausted, true);
+
+  // redemptionCount must be exactly 1 — no over-counting
+  const codes = await db.collection('studyCodes').find({}).toArray();
+  assert.equal(codes[0].redemptionCount, 1);
+});
+
+test('redeemCode returns alreadyEnrolled and rolls back counter for duplicate userId', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    studies: [
+      {
+        _id: studyId,
+        name: 'My Study',
+        isDefault: true,
+        isActive: true,
+        groups: [{ id: groupId, label: 'Intervention', index: 1 }],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+    studyCodes: [
+      {
+        code: 'HHH-MULTI',
+        studyId,
+        groupId,
+        maxRedemptions: null,
+        redemptionCount: 0,
+        expiresAt: null,
+        createdAt: new Date(),
+      },
+    ],
+  });
+
+  // First redemption succeeds
+  const r1 = await redeemCode({ db, userId: 'user-1', code: 'HHH-MULTI' });
+  assert.equal(r1.enrolled, true);
+
+  // Second attempt by same userId: alreadyEnrolled, counter must be rolled back to 1
+  const r2 = await redeemCode({ db, userId: 'user-1', code: 'HHH-MULTI' });
+  assert.equal(r2.alreadyEnrolled, true);
+
+  // Counter must stay at 1 (the rollback undoes the second increment)
+  const codes = await db.collection('studyCodes').find({}).toArray();
+  assert.equal(codes[0].redemptionCount, 1);
+
+  // Only one enrollment must exist
+  const enrollments = await db.collection('enrollments').find({}).toArray();
+  assert.equal(enrollments.length, 1);
 });
 
 // ── skipCode ──────────────────────────────────────────────────────────────────
