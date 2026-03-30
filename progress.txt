@@ -2070,3 +2070,12 @@
   - `throw _error!` triggers `unnecessary_non_null_assertion` lint when `_error` is typed `Exception?`; use `throw _error` (without `!`) to satisfy the analyzer
   - `_tokenNeedsRefresh()` is private but fully testable via `getAccessToken()` — seed an expired JWT without token_expiry key, no refresh_token → refresh throws → logout called → null returned
 ---
+
+## 2026-03-30 - US-206
+- What was implemented: Extracted router redirect logic from `routerProvider` in `main.dart` into a pure standalone function `redirectGuard()` in `mobile/lib/router/redirect.dart`. The function accepts injectable async callbacks for `getIsLoggedIn`, `getUserRoles`, and `getIsOnboardingComplete`, making it fully testable without platform channels or Riverpod. Updated `main.dart` to delegate to `redirectGuard()`. Created `mobile/test/router/redirect_contract_test.dart` with 6 tests covering all three guards: onboarding bypass (complete+loggedIn→/share, complete+notLoggedIn→null), auth guard (/share+notLoggedIn→/onboarding/welcome, /share+loggedIn→null), and admin guard (admin role→null, plain user→/).
+- Files changed: mobile/lib/router/redirect.dart (new), mobile/lib/main.dart (use redirectGuard), mobile/test/router/redirect_contract_test.dart (new), prd.json (US-206 passes=true)
+- **Learnings for future iterations:**
+  - Extracting the GoRouter redirect closure to a pure function with injectable callbacks is the cleanest way to unit-test redirect logic — no ProviderScope or platform channels needed
+  - Local `const` variables in Dart functions must not start with `_` (lint: `no_leading_underscores_for_local_identifiers`) — only top-level and class members use underscore-prefix for private visibility
+  - `redirectGuard` lives in `mobile/lib/router/redirect.dart`; import it in `main.dart` and pass `ref.read(...)` and `isOnboardingComplete` as callbacks
+---
