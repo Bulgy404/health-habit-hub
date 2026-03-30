@@ -3257,7 +3257,7 @@
         "Typecheck passes"
       ],
       "priority": 204,
-      "passes": false,
+      "passes": true,
       "notes": "Depends on US-203 for context. Uses http_mock_adapter already in dev_dependencies."
     },
     {
