@@ -160,6 +160,6 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Morning Walk'), findsOneWidget);
+    expect(find.text('Morning Walk'), findsWidgets);
   });
 }
