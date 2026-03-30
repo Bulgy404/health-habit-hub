@@ -11,6 +11,8 @@ on:
     branches:
       - master
       - rapid_dev
+  schedule:
+    - cron: "0 8 * * 1"
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
@@ -338,7 +340,56 @@ jobs:
         run: npm run build
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # 12. GATE – all jobs must pass before deploy can proceed
+  # 12. FLUTTER – dependency audit (outdated major versions + graph integrity)
+  # ─────────────────────────────────────────────────────────────────────────────
+  flutter-dependency-audit:
+    name: Flutter – dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - uses: ./.github/actions/setup-flutter
+
+      - name: Verify dependency graph resolves without conflicts
+        working-directory: mobile
+        run: flutter pub deps
+
+      - name: Check for breaking major-version upgrades in direct dependencies
+        # To suppress a specific outdated warning, upgrade intentionally:
+        #   flutter pub upgrade --major-versions <package>
+        # then commit the updated pubspec.yaml and pubspec.lock.
+        working-directory: mobile
+        run: |
+          flutter pub outdated --json > /tmp/pub_outdated.json
+          python3 - <<'EOF'
+          import json, sys
+
+          with open("/tmp/pub_outdated.json") as f:
+              data = json.load(f)
+
+          breaking = []
+          for pkg in data.get("packages", []):
+              if pkg.get("kind") != "direct":
+                  continue
+              current = (pkg.get("current") or {}).get("version")
+              resolvable = (pkg.get("resolvable") or {}).get("version")
+              if not current or not resolvable:
+                  continue
+              cur_major = int(current.split(".")[0])
+              res_major = int(resolvable.split(".")[0])
+              if res_major > cur_major:
+                  breaking.append(f"  {pkg['package']}: {current} -> {resolvable}")
+
+          if breaking:
+              print("Breaking major-version upgrades available for direct dependencies:")
+              print("\n".join(breaking))
+              print("Run: flutter pub upgrade --major-versions <package> to upgrade intentionally.")
+              sys.exit(1)
+          else:
+              print("No breaking major-version upgrades found.")
+          EOF
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 13. GATE – all jobs must pass before deploy can proceed
   # ─────────────────────────────────────────────────────────────────────────────
   ci-passed:
     name: All checks passed
@@ -355,5 +406,6 @@ jobs:
       - docker-build
       - python-api-test
       - admin-build
+      - flutter-dependency-audit
     steps:
       - run: echo "All CI jobs passed."

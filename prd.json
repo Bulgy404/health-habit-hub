@@ -3311,7 +3311,7 @@
         "Typecheck passes"
       ],
       "priority": 207,
-      "passes": false,
+      "passes": true,
       "notes": "CI already has backend npm audit (job backend-security). This mirrors that pattern for Flutter. flutter pub audit is not yet stable; use flutter pub outdated --json + custom parse step instead."
     },
     {
