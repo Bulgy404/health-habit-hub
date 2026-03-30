@@ -146,48 +146,84 @@ export async function revokeCode({ db, studyId, code }) {
 
 /**
  * Redeem a code for the authenticated user.
+ *
+ * Atomicity guarantees:
+ *  1. The redemptionCount increment uses findOneAndUpdate with a $expr guard so
+ *     only one concurrent request can claim the last available slot (no over-count).
+ *  2. The enrollment insert uses findOneAndUpdate with upsert + $setOnInsert so
+ *     the check-and-insert is a single atomic operation (no duplicate enrollments).
+ *     If a prior enrollment is discovered after claiming a slot, the counter is
+ *     decremented to roll back the claim.
+ *
  * @param {{ db, userId, code }} deps
  */
 export async function redeemCode({ db, userId, code }) {
   const upperCode = code.toUpperCase();
 
+  // Read-only pre-checks (non-sensitive to races — real guards below are atomic).
   const doc = await db.collection(CODES).findOne({ code: upperCode });
   if (!doc) return { notFound: true };
 
   if (doc.expiresAt && doc.expiresAt < new Date()) return { expired: true };
 
-  if (doc.maxRedemptions != null && doc.redemptionCount >= doc.maxRedemptions) {
-    return { exhausted: true };
-  }
+  // 1. Atomically claim a redemption slot.
+  //    The $expr guard ensures redemptionCount < maxRedemptions at the moment of
+  //    the increment, so two concurrent requests cannot both claim the last slot.
+  const codeFilter =
+    doc.maxRedemptions != null
+      ? {
+          code: upperCode,
+          $expr: { $lt: ['$redemptionCount', '$maxRedemptions'] },
+        }
+      : { code: upperCode };
 
-  const existing = await db.collection(ENROLLMENTS).findOne({ userId });
-  if (existing) return { alreadyEnrolled: true };
+  const claimed = await db
+    .collection(CODES)
+    .findOneAndUpdate(
+      codeFilter,
+      { $inc: { redemptionCount: 1 } },
+      { returnDocument: 'after' }
+    );
 
+  if (!claimed) return { exhausted: true };
+
+  // 2. Atomically enroll the user (upsert: insert only if userId not present).
+  //    With returnDocument:'before', a null result means the document was newly
+  //    inserted (no prior enrollment); a non-null result means one already existed.
   const study = await db.collection(STUDIES).findOne({ _id: doc.studyId });
-  if (!study) return { notFound: true };
 
-  const group = study.groups.find(
-    (g) => g.id.toString() === doc.groupId.toString()
+  const prior = await db.collection(ENROLLMENTS).findOneAndUpdate(
+    { userId },
+    {
+      $setOnInsert: {
+        userId,
+        studyId: doc.studyId,
+        groupId: doc.groupId,
+        studyCodeUsed: upperCode,
+        enrolledAt: new Date(),
+      },
+    },
+    { upsert: true, returnDocument: 'before' }
   );
 
-  await db.collection(ENROLLMENTS).insertOne({
-    userId,
-    studyId: doc.studyId,
-    groupId: doc.groupId,
-    studyCodeUsed: upperCode,
-    enrolledAt: new Date(),
-  });
+  // If a prior enrollment existed, roll back the code counter and report conflict.
+  if (prior !== null) {
+    await db
+      .collection(CODES)
+      .updateOne({ code: upperCode }, { $inc: { redemptionCount: -1 } });
+    return { alreadyEnrolled: true };
+  }
 
-  await db
-    .collection(CODES)
-    .updateOne({ code: upperCode }, { $inc: { redemptionCount: 1 } });
+  const group = study?.groups?.find(
+    (g) => g.id.toString() === doc.groupId.toString()
+  );
 
   return {
     enrolled: true,
     studyId: doc.studyId.toString(),
     groupId: doc.groupId.toString(),
-    studyName: study.name,
-    groupLabel: group ? group.label : null,
+    studyName: study?.name ?? null,
+    groupLabel: group?.label ?? null,
   };
 }
 
