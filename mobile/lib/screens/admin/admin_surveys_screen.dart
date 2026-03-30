@@ -649,7 +649,7 @@ class _EditorBody extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: surveyType == 'habit-donation'
+            initialValue: surveyType == 'habit-donation'
                 ? 'all_participants'
                 : targetMode,
             decoration: const InputDecoration(
