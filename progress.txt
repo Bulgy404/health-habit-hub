@@ -2021,3 +2021,12 @@
   - The `enrollments` collection already has a unique index on `userId` — this backs up the upsert approach at the DB level as a safety net
   - When rolling back a code counter after a duplicate enrollment is detected, use `updateOne($inc: { redemptionCount: -1 })` — this is a compensating transaction, not a full ACID transaction
 ---
+## 2026-03-30 - US-201
+- What was implemented: Fixed race condition in `skipCode` in `studyCodeService.js`. Replaced the non-atomic aggregate+select+insert pattern with: (1) `findOneAndUpdate` with `$inc: { _skipCounter: 1 }` and `returnDocument:'after'` to atomically claim a unique counter slot on the study document; (2) derive group index as `(counter - 1) % numGroups` — each concurrent request gets a different counter value and therefore a different group; (3) enrollment insert uses `findOneAndUpdate` with `upsert: true` + `$setOnInsert` to handle the case where a concurrent request enrolled the same user before the insert. Updated existing round-robin test to use counter-based logic (two sequential enrollments land in Group 1 then Group 2). Added new concurrent test verifying two `Promise.all` skip-code calls produce different groupIds. All 325 tests pass.
+- Files changed: app/services/studyCodeService.js, app/tests/unit/study.code.service.test.js, prd.json (US-201 passes=true)
+- **Learnings for future iterations:**
+  - Atomic round-robin assignment pattern: store a `_skipCounter` on the parent document, increment with `findOneAndUpdate $inc`, derive group index as `(counter - 1) % numGroups` — no separate count-query needed, no race window
+  - `returnDocument:'after'` gives the post-increment value so the first call returns counter=1 (use 1-based → subtract 1 before modulo)
+  - The `makeDb` test mock already supports `$inc` + `returnDocument:'after'` in `findOneAndUpdate`, no mock changes needed for this story
+  - The previous aggregate+select+insert pattern in `skipCode` had a classic TOCTOU race — the fix required changing the group-selection mechanism entirely, not just wrapping it in a transaction
+---
