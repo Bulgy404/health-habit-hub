@@ -2079,3 +2079,34 @@
   - Local `const` variables in Dart functions must not start with `_` (lint: `no_leading_underscores_for_local_identifiers`) — only top-level and class members use underscore-prefix for private visibility
   - `redirectGuard` lives in `mobile/lib/router/redirect.dart`; import it in `main.dart` and pass `ref.read(...)` and `isOnboardingComplete` as callbacks
 ---
+
+## 2026-03-30 - US-207
+- What was implemented: Added `flutter-dependency-audit` job to `.github/workflows/ci.yml`. Job has two steps: (1) `flutter pub deps` to verify the full dependency graph resolves without conflicts; (2) `flutter pub outdated --json` piped to an inline Python3 script that filters for `kind == "direct"` packages, compares major versions of `current` vs `resolvable`, and exits non-zero if any direct dep has a resolvable newer major version. Added inline comment explaining suppression via `flutter pub upgrade --major-versions <package>`. Added `schedule: cron "0 8 * * 1"` to workflow `on` block for weekly Monday 8am UTC runs. Added `flutter-dependency-audit` to `ci-passed` needs list (job 12, gate renumbered to 13).
+- Files changed: .github/workflows/ci.yml, prd.json (US-207 passes=true)
+- **Learnings for future iterations:**
+  - `flutter pub outdated --json` uses `kind` field values: "direct", "dev", "override", "transitive" — filter on `kind == "direct"` to limit to direct dependencies only
+  - The `current` and `resolvable` fields in the JSON can be `null` for packages with no installed version or no resolvable upgrade — guard with `(pkg.get("current") or {})` to avoid AttributeError
+  - Adding `schedule` to the `on` block runs the entire workflow on that schedule, not just one job — this is acceptable for dependency audits
+  - `flutter pub audit` command exists but was noted as not yet stable; `flutter pub outdated --json + custom parse` is the reliable alternative
+
+---
+
+## 2026-03-30 - US-208
+- What was implemented: Created `app/tests/unit/dependency.contracts.test.js` using `node:test` and `node:assert` with 5 contract tests. (1) mongodb: asserts MongoClient/Collection constructors and Collection cursor methods (find, findOne, insertOne, updateOne, deleteOne, findOneAndUpdate, aggregate). (2) ws: asserts WebSocketServer and WebSocket are constructors; validates event name strings are non-empty. (3) neo4j-driver: asserts neo4j.driver, neo4j.auth.basic are functions and creates a real driver/session to verify session.run/session.close exist (no network call, just prototype inspection). (4) express: asserts express.Router, express.json, express.urlencoded are functions. (5) uuid: asserts v4 is a function and produces a UUID string matching the canonical v4 regex. All 5 tests pass.
+- Files changed: app/tests/unit/dependency.contracts.test.js (new), prd.json (US-208 passes=true)
+- **Learnings for future iterations:**
+  - `neo4j.driver()` creates a driver without connecting — calling `driver.session()` and inspecting the prototype is safe for contract testing without a real Neo4j instance
+  - mongodb's Collection class is exported directly from 'mongodb' at the top level — no need to instantiate MongoClient to get the Collection prototype
+  - node:test with `import { test } from 'node:test'` and top-level `await import()` inside each test works cleanly for ESM contract tests
+
+---
+
+## 2026-03-30 - US-209
+- What was implemented: Created `API-service/tests/test_dependency_contracts.py` using pytest with 5 contract tests. (1) openai: asserts openai.OpenAI is a class and client.chat.completions.create is callable. (2) redis.asyncio: asserts Redis class and get/set/delete attributes exist on an instance. (3) motor: asserts AsyncIOMotorClient is a class with get_database or __getitem__ support. (4) neo4j: asserts GraphDatabase.driver is callable and AsyncGraphDatabase exists. (5) httpx: asserts AsyncClient is a class with get/post/put/delete methods. All 5 tests pass with no warnings.
+- Files changed: API-service/tests/test_dependency_contracts.py (new), prd.json (US-209 passes=true)
+- **Learnings for future iterations:**
+  - `redis.asyncio.Redis()` instantiates without arguments (defaults to localhost:6379) — do NOT call `.close()` on it in sync code since it was deprecated in 5.0.1 in favor of `aclose()` (async); just drop the close call for pure contract tests
+  - `motor.motor_asyncio.AsyncIOMotorClient` accepts a URI string without connecting immediately — safe to instantiate in a sync test for attribute inspection
+  - `openai.OpenAI(api_key="placeholder")` constructs without making network calls — safe for attribute surface testing
+
+---
