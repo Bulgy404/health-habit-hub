@@ -3212,8 +3212,8 @@
         "Tests pass"
       ],
       "priority": 201,
-      "passes": false,
-      "notes": "Race condition: skipCode aggregates group counts then selects the minimum, then inserts enrollment in separate operations. Concurrent requests both see the same minimum group and both insert into it, defeating round-robin distribution."
+      "passes": true,
+      "notes": "Fixed by replacing aggregate+select+insert with: (1) findOneAndUpdate $inc on study._skipCounter (atomic counter claim), (2) derive group index as (counter-1) % numGroups, (3) enrollment upsert with $setOnInsert for idempotent concurrent insert."
     },
     {
       "id": "US-202",
