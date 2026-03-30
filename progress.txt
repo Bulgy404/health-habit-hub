@@ -1994,3 +1994,11 @@
   - 322 tests run across 4 suites in ~811s (13 minutes); run with `--timeout` if individual tests time out
   - Postman collection lives at `docs/api/hhh-postman-collection.json`; openapi spec at `docs/api/openapi.yaml`
 ---
+
+## 2026-03-30 - US-198
+- What was implemented: Fixed `RecommendationFeatureService` to use the shared authenticated `Dio` instance from `dioProvider` (which has `AuthInterceptor` attached) instead of creating a fallback unauthenticated `Dio()`. Removed the optional `Dio?` constructor parameter and fallback instantiation, the `_authService` field, the `_authHeaders()` helper method, and the manual `Options(headers: headers)` from both API calls. Provider now passes `ref.watch(dioProvider)` as a required `dio` parameter. Typecheck passes (1 pre-existing deprecation info, 0 errors).
+- Files changed: mobile/lib/features/recommendation/recommendation_feature_service.dart, prd.json (US-198 passes=true)
+- **Learnings for future iterations:**
+  - `RecommendationFeatureService` previously duplicated the `_authHeaders()` pattern (also present in habit_service, admin_service, etc.) — after this fix it correctly delegates to `AuthInterceptor` via `dioProvider`
+  - The fix pattern for services with fallback `Dio()`: change `{Dio? dio}` to `{required Dio dio}`, remove `?? Dio()`, remove manual auth header logic, update provider to pass `ref.watch(dioProvider)`
+---
