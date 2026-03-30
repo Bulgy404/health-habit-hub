@@ -612,9 +612,9 @@ docker volume ls | grep h3-2-
 | Keycloak | https://habit.felixreinsch.de/auth/ | `http://keycloak.localhost` | `http://localhost:8080` | Realm login / admin auth |
 | Keycloak Admin UI | https://habit.felixreinsch.de/auth/admin | `http://keycloak.localhost/admin/` | `http://localhost:8080/admin/` | `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
 | Keycloak Realm Metadata | — | `http://keycloak.localhost/realms/hhh/.well-known/openid-configuration` | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | None |
-| Mongo Express | https://habit.felixreinsch.de/mongo | `http://mongo-express.localhost` | `http://localhost:8081` | Basic Auth (admin) |
+| Mongo Express | https://habit.felixreinsch.de/mongo | `http://mongo-express.localhost` with `docker compose up`; not included in `docker-compose.local.yml` | `http://localhost:8081` with `docker compose up`; not included in `docker-compose.local.yml` | Basic Auth (admin) |
 | Fuseki | https://habit.felixreinsch.de/fuseki | `http://fuseki.localhost` | `http://localhost:3030` | Basic Auth (`admin` / `ADMIN_PASSWORD`) |
-| Translation | https://habit.felixreinsch.de/translate | `http://translate.localhost` | `http://localhost:5001` in `docker-compose.local.yml`, `http://localhost:5000` in `docker-compose.yml` | None |
+| Translation | https://habit.felixreinsch.de/translate | `http://translate.localhost` when the local Traefik proxy is running | `http://localhost:5001` in `docker-compose.local.yml`, `http://localhost:5000` in `docker-compose.yml` | None |
 | Neo4j Browser | via SSH tunnel (see below) | `http://neo4j.localhost` | `http://localhost:7474` | `neo4j` / `NEO4J_PASSWORD` |
 | Recommender API docs | — | not routed via Traefik locally | `http://localhost:8001/docs` in `docker-compose.local.yml`, `http://localhost:8000/docs` in `docker-compose.yml` | None |
 | Traefik Dashboard | https://habit.felixreinsch.de/dashboard | `http://proxy.localhost` | `http://localhost:8888` | None locally; Basic Auth in production |
