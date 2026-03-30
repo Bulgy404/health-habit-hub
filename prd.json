@@ -3128,7 +3128,7 @@
       ],
       "priority": 195,
       "passes": true,
-      "notes": "Import was already present at admin_service.dart:4 — admin_habit_donation.dart imported, HabitsFeedResult and HabitDonation both resolvable. flutter analyze passes."
+      "notes": "Import was already present at admin_service.dart:4 \u2014 admin_habit_donation.dart imported, HabitsFeedResult and HabitDonation both resolvable. flutter analyze passes."
     },
     {
       "id": "US-196",
@@ -3157,7 +3157,7 @@
       ],
       "priority": 197,
       "passes": true,
-      "notes": "Router bypass now reads isLoggedInProvider.future in addition to isOnboardingComplete(). If onboarding complete but unauthenticated, returns null (stay on welcome) or redirects to /onboarding/welcome from /login — no loop. AuthService gained onLogout callback and _tokenNeedsRefresh with JWT exp fallback. AuthNotifier wired as refreshListenable."
+      "notes": "Router bypass now reads isLoggedInProvider.future in addition to isOnboardingComplete(). If onboarding complete but unauthenticated, returns null (stay on welcome) or redirects to /onboarding/welcome from /login \u2014 no loop. AuthService gained onLogout callback and _tokenNeedsRefresh with JWT exp fallback. AuthNotifier wired as refreshListenable."
     },
     {
       "id": "US-198",
@@ -3171,7 +3171,7 @@
       ],
       "priority": 198,
       "passes": true,
-      "notes": "Provider now passes ref.watch(dioProvider) to RecommendationFeatureService. Removed Dio? optional param and fallback Dio() creation. Removed _authService field and _authHeaders() manual token logic — AuthInterceptor on the shared Dio instance handles auth headers automatically."
+      "notes": "Provider now passes ref.watch(dioProvider) to RecommendationFeatureService. Removed Dio? optional param and fallback Dio() creation. Removed _authService field and _authHeaders() manual token logic \u2014 AuthInterceptor on the shared Dio instance handles auth headers automatically."
     },
     {
       "id": "US-199",
@@ -3199,7 +3199,7 @@
         "Tests pass"
       ],
       "priority": 200,
-      "passes": false,
+      "passes": true,
       "notes": "Race condition: redeemCode checks existing enrollment then inserts separately. Two concurrent requests can both pass the check and both insert, creating duplicate enrollments and over-counting redemptionCount."
     },
     {

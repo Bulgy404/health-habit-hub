@@ -2011,3 +2011,13 @@
   - `ref.listen` in `build()` is the Riverpod pattern for reacting to provider changes in `ConsumerStatefulWidget` — it does NOT trigger on every build, only when the provider value changes
   - The `_initWs()` subscription-cancel-before-resubscribe pattern was already in place; the gap was the absence of a listener to trigger re-init when the provider value changes externally
 ---
+
+## 2026-03-30 - US-200
+- What was implemented: Fixed race condition in `redeemCode` in `studyCodeService.js`. Replaced the sequential check-then-insert pattern with two atomic MongoDB operations: (1) `findOneAndUpdate` with `$expr: { $lt: ['$redemptionCount', '$maxRedemptions'] }` guard to atomically claim a redemption slot (ensures no over-counting even under concurrent requests); (2) `findOneAndUpdate` with `upsert: true` + `$setOnInsert` on enrollments to atomically check-and-insert the enrollment (returns null if newly inserted, old doc if already existed). If a prior enrollment is discovered after claiming a slot, the counter is decremented (-1) to roll back the claim. Added `findOneAndUpdate` support to the in-memory `makeDb` test mock with `$expr: { $lt }` evaluation. Added 2 new concurrent-scenario tests.
+- Files changed: app/services/studyCodeService.js, app/tests/unit/study.code.service.test.js, prd.json (US-200 passes=true)
+- **Learnings for future iterations:**
+  - MongoDB `findOneAndUpdate` with `upsert:true` + `returnDocument:'before'`: returns null if the document was upserted (newly inserted), returns the old document if it matched an existing record — use this to detect "already existed" vs "newly created" atomically
+  - To atomically check-and-increment a counter with a ceiling: use `findOneAndUpdate({ $expr: { $lt: ['$field', '$max'] } }, { $inc: { field: 1 } })` — if returns null, the ceiling was hit (or doc not found)
+  - The `enrollments` collection already has a unique index on `userId` — this backs up the upsert approach at the DB level as a safety net
+  - When rolling back a code counter after a duplicate enrollment is detected, use `updateOne($inc: { redemptionCount: -1 })` — this is a compensating transaction, not a full ACID transaction
+---
