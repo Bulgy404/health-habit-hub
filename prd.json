@@ -3349,7 +3349,7 @@
         "Typecheck passes"
       ],
       "priority": 209,
-      "passes": false,
+      "passes": true,
       "notes": "Uses pytest (already in requirements.txt). Pure attribute-existence checks \u2014 no mocking or async needed. Runs fast as part of existing pytest suite in CI (python-api-test job)."
     }
   ]
