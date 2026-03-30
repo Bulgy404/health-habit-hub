@@ -11,10 +11,9 @@ Use this section when you want to run the stack on your own machine for developm
 There are two local modes:
 
 1. `docker-compose.local.yml`
-   Use this for the main app backend, Keycloak, databases, and Flutter/mobile testing.
-   This mode does **not** start the Next.js admin panel or Traefik.
+   Use this for the local Docker development stack. It starts the backend, Keycloak, databases, Traefik, the Next.js admin panel, and the recommender with local-friendly defaults.
 2. `docker-compose.yml`
-   Use this when you also want the local admin panel and the Traefik hostnames such as `app.localhost` and `admin.localhost`.
+   Use this for the full app-like stack that mirrors the shared Docker setup more closely and also exposes services on localhost ports.
 
 ### 1. Prepare Local Environment
 
@@ -67,7 +66,7 @@ This resets:
 
 Then start again and let Keycloak re-import the realm from [`keycloak/hhh-realm.json`](/Users/felixreinsch/Github/health-habit-hub/keycloak/hhh-realm.json).
 
-### 3. Start Local Backend Stack
+### 3. Start Local Docker Dev Stack
 
 For normal local app testing:
 
@@ -91,25 +90,26 @@ Expected local URLs in this mode:
 
 | Service | Local URL | Notes |
 |---------|-----------|-------|
+| Main app via Traefik | `http://app.localhost` | Preferred browser URL for the app |
+| Admin panel via Traefik | `http://admin.localhost` | Local Next.js admin UI |
+| Traefik dashboard | `http://proxy.localhost` | Same dashboard as `http://localhost:8888` |
 | Backend API | `http://localhost:3000/api/v1/health` | Main backend health check |
 | Keycloak | `http://localhost:8080` | Realm + admin console |
 | Keycloak Admin Console | `http://localhost:8080/admin/` | Login with `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
 | Keycloak Realm Metadata | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | Quick realm import check |
+| Mongo Express | `http://localhost:8081` | Basic auth with `ME_CONFIG_BASICAUTH_*` / `.env` values |
 | Fuseki | `http://localhost:3030` | Basic auth with `admin` + `ADMIN_PASSWORD` |
+| Translation | `http://localhost:5001` | LibreTranslate in `docker-compose.local.yml` |
 | Neo4j Browser | `http://localhost:7474` | Login with `neo4j` + `NEO4J_PASSWORD` |
 | Recommender | `http://localhost:8001/docs` | FastAPI docs |
 
-### 4. Start Local Admin Panel
-
-The admin panel is **not** part of `docker-compose.local.yml`.
-
-If you want the local admin UI, start the full compose stack instead:
+### 4. Start Full Local Stack
 
 ```bash
 docker compose up -d --build
 ```
 
-This starts Traefik and the Next.js admin app. Use these local URLs:
+This stack also starts Traefik and the Next.js admin app. Use these local URLs:
 
 | Service | Local URL |
 |---------|-----------|
@@ -604,17 +604,20 @@ docker volume ls | grep h3-2-
 
 ## URLs Reference
 
-| Service | URL | Authentication |
-|---------|-----|----------------|
-| Backend API | https://habit.felixreinsch.de/api/v1/ | Keycloak JWT |
-| Flutter Web App | https://habit.felixreinsch.de | Keycloak PKCE |
-| Admin Panel | https://habit.felixreinsch.de/admin | Keycloak (admin/researcher role) |
-| Keycloak Admin UI | https://habit.felixreinsch.de/auth/admin | Keycloak admin credentials |
-| Mongo Express | https://habit.felixreinsch.de/mongo | Basic Auth (admin) |
-| Fuseki | https://habit.felixreinsch.de/fuseki | Basic Auth (admin) |
-| Translation | https://habit.felixreinsch.de/translate | None |
-| Neo4j Browser | via SSH tunnel (see below) | Neo4j Auth |
-| Traefik Dashboard | https://habit.felixreinsch.de/dashboard | Basic Auth |
+| Service | Production URL | Local Deployment | Direct Local URL / Port | Authentication |
+|---------|---------------|------------------|-------------------------|----------------|
+| Backend API | https://habit.felixreinsch.de/api/v1/ | `http://app.localhost/api/v1/` | `http://localhost:3000/api/v1/` | Keycloak JWT |
+| Flutter Web App | https://habit.felixreinsch.de | local mobile/web app build pointing to local backend | Flutter app (`make ios`) | Keycloak PKCE |
+| Admin Panel | https://habit.felixreinsch.de/admin | `http://admin.localhost` | `http://localhost:3001` | Keycloak (admin/researcher role) |
+| Keycloak | https://habit.felixreinsch.de/auth/ | `http://keycloak.localhost` | `http://localhost:8080` | Realm login / admin auth |
+| Keycloak Admin UI | https://habit.felixreinsch.de/auth/admin | `http://keycloak.localhost/admin/` | `http://localhost:8080/admin/` | `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
+| Keycloak Realm Metadata | — | `http://keycloak.localhost/realms/hhh/.well-known/openid-configuration` | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | None |
+| Mongo Express | https://habit.felixreinsch.de/mongo | `http://mongo-express.localhost` | `http://localhost:8081` | Basic Auth (admin) |
+| Fuseki | https://habit.felixreinsch.de/fuseki | `http://fuseki.localhost` | `http://localhost:3030` | Basic Auth (`admin` / `ADMIN_PASSWORD`) |
+| Translation | https://habit.felixreinsch.de/translate | `http://translate.localhost` | `http://localhost:5001` in `docker-compose.local.yml`, `http://localhost:5000` in `docker-compose.yml` | None |
+| Neo4j Browser | via SSH tunnel (see below) | `http://neo4j.localhost` | `http://localhost:7474` | `neo4j` / `NEO4J_PASSWORD` |
+| Recommender API docs | — | not routed via Traefik locally | `http://localhost:8001/docs` in `docker-compose.local.yml`, `http://localhost:8000/docs` in `docker-compose.yml` | None |
+| Traefik Dashboard | https://habit.felixreinsch.de/dashboard | `http://proxy.localhost` | `http://localhost:8888` | None locally; Basic Auth in production |
 
 ### Accessing Neo4j Browser via SSH Tunnel
 
