@@ -3184,7 +3184,7 @@
         "Typecheck passes"
       ],
       "priority": 199,
-      "passes": false,
+      "passes": true,
       "notes": "Bug: _initWs() appends new subscriptions without cancelling existing ones. If userId changes or widget rebuilds before dispose(), both old and new subscriptions are active simultaneously."
     },
     {
