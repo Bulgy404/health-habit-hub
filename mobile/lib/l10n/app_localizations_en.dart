@@ -96,6 +96,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedToSaveSettings => 'Failed to save settings';
 
   @override
+  String get privacyStatement => 'Privacy Statement';
+
+  @override
+  String get accessibilityStatement => 'Accessibility Statement';
+
+  @override
+  String get imprint => 'Imprint';
+
+  @override
+  String get couldNotLoadLegalDocument =>
+      'Could not load this document.\nPlease check your connection.';
+
+  @override
   String get save => 'Save';
 
   @override

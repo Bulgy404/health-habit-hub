@@ -21,6 +21,7 @@ import 'features/recommendation/goal_input_screen.dart';
 import 'features/recommendation/loading_screen.dart';
 import 'screens/donate_screen.dart';
 import 'screens/explore_screen.dart';
+import 'screens/legal_document_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding/passphrase_screen.dart';
 import 'screens/onboarding/restore_screen.dart';
@@ -150,6 +151,26 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/settings',
                 builder: (context, state) => const UserSettingsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'privacy',
+                    builder: (context, state) => const LegalDocumentScreen(
+                      documentType: LegalDocumentType.privacy,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'accessibility',
+                    builder: (context, state) => const LegalDocumentScreen(
+                      documentType: LegalDocumentType.accessibility,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'imprint',
+                    builder: (context, state) => const LegalDocumentScreen(
+                      documentType: LegalDocumentType.imprint,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -118,6 +118,22 @@
   "@failedToSaveSettings": {
     "description": "Snackbar message when saving settings fails"
   },
+  "privacyStatement": "Privacy Statement",
+  "@privacyStatement": {
+    "description": "Label for the privacy statement legal page"
+  },
+  "accessibilityStatement": "Accessibility Statement",
+  "@accessibilityStatement": {
+    "description": "Label for the accessibility statement legal page"
+  },
+  "imprint": "Imprint",
+  "@imprint": {
+    "description": "Label for the imprint legal page"
+  },
+  "couldNotLoadLegalDocument": "Could not load this document.\nPlease check your connection.",
+  "@couldNotLoadLegalDocument": {
+    "description": "Offline banner body for legal document screens"
+  },
   "save": "Save",
   "@save": {
     "description": "Label for the save button"

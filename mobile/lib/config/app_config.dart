@@ -10,6 +10,14 @@ abstract final class AppConfig {
     defaultValue: 'http://localhost:3000/api/v1',
   );
 
+  static String get appBaseUrl {
+    const apiSuffix = '/api/v1';
+    if (apiBaseUrl.endsWith(apiSuffix)) {
+      return apiBaseUrl.substring(0, apiBaseUrl.length - apiSuffix.length);
+    }
+    return apiBaseUrl;
+  }
+
   static const keycloakUrl = String.fromEnvironment(
     'KEYCLOAK_URL',
     defaultValue: 'http://localhost:8080',
