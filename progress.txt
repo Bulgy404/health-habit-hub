@@ -2002,3 +2002,12 @@
   - `RecommendationFeatureService` previously duplicated the `_authHeaders()` pattern (also present in habit_service, admin_service, etc.) — after this fix it correctly delegates to `AuthInterceptor` via `dioProvider`
   - The fix pattern for services with fallback `Dio()`: change `{Dio? dio}` to `{required Dio dio}`, remove `?? Dio()`, remove manual auth header logic, update provider to pass `ref.watch(dioProvider)`
 ---
+
+## 2026-03-30 - US-199
+- What was implemented: Fixed WebSocket subscription leak in `recommend_screen.dart`. The `_initWs()` method already cancelled subscriptions before re-subscribing (lines 108-109) and `dispose()` already cancelled both. The missing piece was a `ref.listen<AsyncValue<String?>>(userIdProvider, ...)` in `build()` so that if the userId changes (e.g. re-authentication), `_fetch()` is called again — which cancels old subscriptions via `_initWs` and creates new ones for the new userId.
+- Files changed: mobile/lib/screens/recommend_screen.dart, prd.json (US-199 passes=true)
+- **Learnings for future iterations:**
+  - In Riverpod 3.x, `AsyncValue<T>` does NOT have a `valueOrNull` getter — use `.whenOrNull(data: (v) => v)` instead to safely extract the value or return null
+  - `ref.listen` in `build()` is the Riverpod pattern for reacting to provider changes in `ConsumerStatefulWidget` — it does NOT trigger on every build, only when the provider value changes
+  - The `_initWs()` subscription-cancel-before-resubscribe pattern was already in place; the gap was the absence of a listener to trigger re-init when the provider value changes externally
+---
