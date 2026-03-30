@@ -97,7 +97,7 @@ Expected local URLs in this mode:
 | Keycloak | `http://localhost:8080` | Realm + admin console |
 | Keycloak Admin Console | `http://localhost:8080/admin/` | Login with `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
 | Keycloak Realm Metadata | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | Quick realm import check |
-| Mongo Express | `http://localhost:8081` | Basic auth with `ME_CONFIG_BASICAUTH_*` / `.env` values |
+| Mongo Express | not included in `docker-compose.local.yml` | Available with `docker compose up` at `http://localhost:8081` |
 | Fuseki | `http://localhost:3030` | Basic auth with `admin` + `ADMIN_PASSWORD` |
 | Translation | `http://localhost:5001` | LibreTranslate in `docker-compose.local.yml` |
 | Neo4j Browser | `http://localhost:7474` | Login with `neo4j` + `NEO4J_PASSWORD` |
