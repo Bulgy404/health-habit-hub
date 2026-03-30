@@ -229,9 +229,19 @@ export async function redeemCode({ db, userId, code }) {
 
 /**
  * Enroll user in the default study using round-robin group assignment. Idempotent.
+ *
+ * Atomicity guarantee:
+ *   Group selection uses findOneAndUpdate to atomically increment a per-study
+ *   counter (_skipCounter) and derive the group index as counter % numGroups.
+ *   Two concurrent requests each receive a unique counter value and therefore
+ *   land in different groups. The enrollment insert uses upsert + $setOnInsert
+ *   so that if a concurrent request has already enrolled the user, this request
+ *   is a no-op and returns the existing enrollment.
+ *
  * @param {{ db, userId }} deps
  */
 export async function skipCode({ db, userId }) {
+  // Fast path: user is already enrolled (idempotent).
   const existing = await db.collection(ENROLLMENTS).findOne({ userId });
   if (existing) {
     const study = await db
@@ -251,41 +261,52 @@ export async function skipCode({ db, userId }) {
     };
   }
 
+  // Atomically claim a slot by incrementing the study's round-robin counter.
+  // returnDocument:'after' gives us the post-increment value so counter >= 1.
   const study = await db
     .collection(STUDIES)
-    .findOne({ isDefault: true, isActive: true });
+    .findOneAndUpdate(
+      { isDefault: true, isActive: true },
+      { $inc: { _skipCounter: 1 } },
+      { returnDocument: 'after' }
+    );
+
   if (!study) return { noDefaultStudy: true };
   if (!study.groups || study.groups.length === 0) return { noGroups: true };
 
-  const counts = await db
-    .collection(ENROLLMENTS)
-    .aggregate([
-      { $match: { studyId: study._id } },
-      { $group: { _id: '$groupId', count: { $sum: 1 } } },
-    ])
-    .toArray();
+  // Derive group index from the counter (1-based → 0-based).
+  const idx = (study._skipCounter - 1) % study.groups.length;
+  const selectedGroup = study.groups[idx];
 
-  const countMap = Object.fromEntries(
-    counts.map((c) => [c._id.toString(), c.count])
+  // Atomically insert enrollment only if this user is not yet enrolled.
+  // If a concurrent request already enrolled this user, prior will be non-null.
+  const prior = await db.collection(ENROLLMENTS).findOneAndUpdate(
+    { userId },
+    {
+      $setOnInsert: {
+        userId,
+        studyId: study._id,
+        groupId: selectedGroup.id,
+        studyCodeUsed: null,
+        enrolledAt: new Date(),
+      },
+    },
+    { upsert: true, returnDocument: 'before' }
   );
 
-  let minCount = Infinity;
-  let selectedGroup = study.groups[0];
-  for (const g of study.groups) {
-    const cnt = countMap[g.id.toString()] || 0;
-    if (cnt < minCount) {
-      minCount = cnt;
-      selectedGroup = g;
-    }
+  if (prior !== null) {
+    // Concurrent request enrolled this user first; return their enrollment.
+    const group = study.groups.find(
+      (g) => g.id.toString() === prior.groupId.toString()
+    );
+    return {
+      enrolled: true,
+      studyId: prior.studyId.toString(),
+      groupId: prior.groupId.toString(),
+      studyName: study.name,
+      groupLabel: group ? group.label : null,
+    };
   }
-
-  await db.collection(ENROLLMENTS).insertOne({
-    userId,
-    studyId: study._id,
-    groupId: selectedGroup.id,
-    studyCodeUsed: null,
-    enrolledAt: new Date(),
-  });
 
   return {
     enrolled: true,
