@@ -30,6 +30,7 @@ import 'screens/profile_screen.dart';
 import 'screens/shell_screen.dart';
 import 'screens/user_settings_screen.dart';
 import 'providers/locale_provider.dart';
+import 'router/redirect.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -55,64 +56,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/onboarding/welcome',
     refreshListenable: authNotifier,
     // Redirect guard: admin route protection and onboarding bypass.
-    redirect: (context, state) async {
-      // Admin guard: only admin/researcher roles may access /admin/* routes.
-      if (state.matchedLocation.startsWith('/admin')) {
-        try {
-          final roles = await ref.read(userRolesProvider.future);
-          if (!roles.contains('admin') && !roles.contains('researcher')) {
-            return '/';
-          }
-        } catch (_) {
-          return '/';
-        }
-        return null;
-      }
-
-      // Auth guard: unauthenticated users may not access app screens.
-      const protectedPrefixes = [
-        '/share',
-        '/donate',
-        '/explore',
-        '/recommend',
-        '/profile',
-        '/settings',
-        '/questionnaire',
-      ];
-      final location = state.matchedLocation;
-      if (protectedPrefixes.any((p) => location.startsWith(p))) {
-        try {
-          final isLoggedIn = await ref.read(isLoggedInProvider.future);
-          if (!isLoggedIn) {
-            return '/onboarding/welcome';
-          }
-        } catch (_) {
-          return '/onboarding/welcome';
-        }
-      }
-
-      // Onboarding bypass: if the user has already completed onboarding,
-      // skip the welcome and login screens and go straight to the app.
-      // Must also verify the user is authenticated: if tokens have expired
-      // or been cleared, redirecting to /share would cause a loop because
-      // the auth guard would immediately send them back to /onboarding/welcome.
-      if (location.startsWith('/onboarding/welcome') ||
-          location == '/login') {
-        if (await isOnboardingComplete()) {
-          try {
-            final isLoggedIn = await ref.read(isLoggedInProvider.future);
-            if (isLoggedIn) return '/share';
-          } catch (_) {
-            // isLoggedIn check failed — treat as unauthenticated.
-          }
-          // Onboarding complete but unauthenticated: stay on welcome so the
-          // user can use the restore flow without looping.
-          return location == '/login' ? '/onboarding/welcome' : null;
-        }
-      }
-
-      return null;
-    },
+    redirect: (context, state) => redirectGuard(
+      location: state.matchedLocation,
+      getIsLoggedIn: () => ref.read(isLoggedInProvider.future),
+      getUserRoles: () => ref.read(userRolesProvider.future),
+      getIsOnboardingComplete: isOnboardingComplete,
+    ),
     routes: [
       GoRoute(
         path: '/login',
