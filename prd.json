@@ -3226,8 +3226,8 @@
         "Tests pass"
       ],
       "priority": 202,
-      "passes": false,
-      "notes": "Missing defence-in-depth: only the Flutter client validates the code format. The backend accepts any string, relying solely on database lookup failure to reject invalid codes."
+      "passes": true,
+      "notes": "Added /^HHH-[A-Z0-9]{5}$/i validation guard in studyEnrollRouter.js before passing the code to redeemCode(). Invalid format returns 400 with descriptive error. Case-insensitive flag allows hhh-abcde (the service already normalizes to upper). New test file study.enroll.route.test.js covers missing, wrong-prefix, wrong-length, special-chars, empty, and valid (upper + lower) cases."
     }
   ]
 }

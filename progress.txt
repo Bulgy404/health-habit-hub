@@ -2030,3 +2030,12 @@
   - The `makeDb` test mock already supports `$inc` + `returnDocument:'after'` in `findOneAndUpdate`, no mock changes needed for this story
   - The previous aggregate+select+insert pattern in `skipCode` had a classic TOCTOU race — the fix required changing the group-selection mechanism entirely, not just wrapping it in a transaction
 ---
+## 2026-03-30 - US-202
+- What was implemented: Added study code format validation to `POST /api/v1/onboarding/redeem-code` in `studyEnrollRouter.js`. Added `if (!/^HHH-[A-Z0-9]{5}$/i.test(code.trim()))` guard before calling `redeemCode()` — invalid format returns 400 with "Invalid code format. Expected HHH-XXXXX (5 alphanumeric characters)." message. Case-insensitive flag allows lowercase codes (the service already normalises to uppercase internally). Created `tests/unit/study.enroll.route.test.js` with 7 HTTP-level tests covering: missing code, wrong prefix, wrong suffix length, special chars, empty string, valid uppercase, and valid lowercase. All 332 tests pass.
+- Files changed: app/routes/studyEnrollRouter.js, app/tests/unit/study.enroll.route.test.js, prd.json (US-202 passes=true)
+- **Learnings for future iterations:**
+  - Route-level format validation should use `/i` (case-insensitive) flag when the service normalises to uppercase — this avoids a mismatched UX where `hhh-abcde` works through the service but is rejected by the route
+  - `code.trim()` before regex test prevents leading/trailing whitespace from causing a false 400 (common in copy-paste scenarios)
+  - For route unit tests: inject a fake `req.user = { sub: '...' }` middleware before the router so authentication checks pass without needing a real Keycloak
+  - The `studyEnrollRouter` test requires a minimal `makeDb` stub; the key methods needed are `findOne`, `findOneAndUpdate` (with `$inc` + upsert), and `aggregate` — no `updateOne` needed for the format-check tests
+---
