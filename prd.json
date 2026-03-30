@@ -3330,7 +3330,7 @@
         "Typecheck passes"
       ],
       "priority": 208,
-      "passes": false,
+      "passes": true,
       "notes": "Uses node:test / node:assert (native) matching existing test files like auth.middleware.test.js. Tests check API surface, not behaviour \u2014 if a major version renames or removes a method we use, the test fails immediately."
     },
     {
