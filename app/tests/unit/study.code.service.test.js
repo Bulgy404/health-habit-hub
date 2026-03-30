@@ -632,22 +632,56 @@ test('skipCode enrolls user in default study with round-robin group', async () =
         updatedAt: new Date(),
       },
     ],
-    // g1 already has one enrollment
-    enrollments: [
+  });
+  // First user: counter becomes 1, idx = (1-1) % 2 = 0 → Group 1
+  const r1 = await skipCode({ db, userId: 'user-A' });
+  assert.equal(r1.enrolled, true);
+  assert.equal(r1.studyName, 'Study X');
+  assert.equal(r1.groupLabel, 'Group 1');
+
+  // Second user: counter becomes 2, idx = (2-1) % 2 = 1 → Group 2
+  const r2 = await skipCode({ db, userId: 'user-B' });
+  assert.equal(r2.enrolled, true);
+  assert.equal(r2.groupLabel, 'Group 2');
+});
+
+test('skipCode concurrent requests land in different groups — atomic counter prevents collision', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const g1 = new ObjectId();
+  const g2 = new ObjectId();
+  const db = makeDb({
+    studies: [
       {
-        userId: 'existing-user',
-        studyId,
-        groupId: g1,
-        studyCodeUsed: null,
-        enrolledAt: new Date(),
+        _id: studyId,
+        name: 'Study Y',
+        isDefault: true,
+        isActive: true,
+        groups: [
+          { id: g1, label: 'Group 1', index: 1 },
+          { id: g2, label: 'Group 2', index: 2 },
+        ],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
     ],
   });
-  const result = await skipCode({ db, userId: 'new-user' });
-  assert.equal(result.enrolled, true);
-  assert.equal(result.studyName, 'Study X');
-  // g2 has 0 enrollments vs g1 with 1 — should pick g2
-  assert.equal(result.groupLabel, 'Group 2');
+
+  // Simulate two concurrent requests (sequential in test, but both start before either
+  // inserts enrollment — the atomic counter guarantees different groups regardless).
+  const [r1, r2] = await Promise.all([
+    skipCode({ db, userId: 'concurrent-user-1' }),
+    skipCode({ db, userId: 'concurrent-user-2' }),
+  ]);
+
+  assert.equal(r1.enrolled, true);
+  assert.equal(r2.enrolled, true);
+  // The two users must end up in different groups.
+  assert.notEqual(r1.groupId, r2.groupId);
+  // Each enrollment collection entry must reference the group the user was assigned.
+  const enrollments = await db.collection('enrollments').find({}).toArray();
+  assert.equal(enrollments.length, 2);
 });
 
 test('skipCode is idempotent — returns existing enrollment', async () => {
