@@ -1,3 +1,13 @@
+## 2026-03-30 - US-205
+- What was implemented: Created `mobile/test/core/auth_interceptor_contract_test.dart` with 4 tests covering AuthInterceptor and SurveyService. (1) AuthInterceptor injects `Authorization: Bearer <token>` when `getAccessToken()` returns a token — verified via `replyCallback(options)` capturing `options.headers['Authorization']`. (2) AuthInterceptor omits the header when `getAccessToken()` returns null. (3) SurveyService.fetchSurvey() sends GET to the correct path and deserialises Survey.fromJson. (4) SurveyService.submitResult() sends POST with `{answers: ...}` body — captured via `options.data`. Stub AuthService (`_StubAuthService`) extends `AuthService` and overrides only `getAccessToken()`.
+- Files changed: mobile/test/core/auth_interceptor_contract_test.dart (new), prd.json (US-205 passes=true)
+- **Learnings for future iterations:**
+  - `http_mock_adapter` 0.6.1's `MockServer` has no `request` getter — to inspect incoming `RequestOptions` (headers, body, path), use `server.replyCallback(statusCode, (options) { ... return data; })` instead of `server.reply()`
+  - To stub `AuthService.getAccessToken()` without mocking the full class: extend `AuthService` and override only that one method — the constructor chain still works since all other dependencies are optional with defaults
+  - `MockDataCallback` type is `dynamic Function(RequestOptions options)` — returning a plain Dart `Map` is valid and gets JSON-encoded by the adapter automatically
+
+---
+
 ## 2026-03-30 - US-197
 - What was implemented: Fixed GoRouter redirect loop when onboarding is complete but tokens are expired/cleared. Router onboarding bypass now reads `isLoggedInProvider.future` after `isOnboardingComplete()` — if authenticated redirects to `/share`, if unauthenticated returns `null` (stay on welcome) or `/onboarding/welcome` from `/login`. Also committed pre-existing changes: `AuthService` gained `onLogout` callback and `_tokenNeedsRefresh` with JWT `exp` fallback; `AuthNotifier` (ChangeNotifier) added to `auth_provider.dart` and wired as `refreshListenable` in `routerProvider`. `docker-compose.local.yml` infra fixes also committed.
 - Files changed: mobile/lib/main.dart, mobile/lib/providers/auth_provider.dart, mobile/lib/services/auth_service.dart, docker-compose.local.yml, prd.json (US-197 passes=true)
@@ -2038,4 +2048,25 @@
   - `code.trim()` before regex test prevents leading/trailing whitespace from causing a false 400 (common in copy-paste scenarios)
   - For route unit tests: inject a fake `req.user = { sub: '...' }` middleware before the router so authentication checks pass without needing a real Keycloak
   - The `studyEnrollRouter` test requires a minimal `makeDb` stub; the key methods needed are `findOne`, `findOneAndUpdate` (with `$inc` + upsert), and `aggregate` — no `updateOne` needed for the format-check tests
+---
+
+## 2026-03-30 - US-203
+- What was implemented: Created `mobile/docs/dependencies.md` — a reference table covering all 15 direct dependencies from `pubspec.yaml`. Each entry includes: package name, current version constraint, one-sentence purpose, specific classes/methods used in this codebase (with file references), and next-major-version breaking changes to watch. `flutter analyze lib/` reports 0 issues.
+- Files changed: mobile/docs/dependencies.md (new), prd.json (US-203 passes=true)
+- **Learnings for future iterations:**
+  - `mobile/docs/` did not exist before this story — create it with `mkdir -p` first
+  - The `intl` package is used indirectly via `flutter_localizations` codegen; no direct `.dart` import, but it must stay version-compatible with the Flutter SDK's pinned version
+  - `share_plus` v9+ moved from the static `Share.share(String)` API to `SharePlus.instance.share(ShareParams(...))`
+  - `web_socket_channel` v3 dropped `IOWebSocketChannel.connect` in favour of the cross-platform `WebSocketChannel.connect`
+---
+
+## 2026-03-30 - US-204
+- What was implemented: Created `mobile/test/services/auth_service_storage_contract_test.dart` with 12 contract tests for every flutter_secure_storage call made by AuthService. MockFlutterSecureStorage extends FlutterSecureStorage and records all read/write/delete calls plus seeds test data. _StubFlutterAppAuth extends FlutterAppAuth and returns a fake AuthorizationTokenResponse. Tests cover: write on login (all three keys), read in isLoggedIn and getAccessToken, delete×3 in logout, onLogout callback fires after deletes, getAccessToken returns null and calls logout when refresh throws, JWT exp decoding (expired → refresh attempted, valid → returned directly).
+- Files changed: mobile/test/services/auth_service_storage_contract_test.dart (new), prd.json (US-204 passes=true)
+- **Learnings for future iterations:**
+  - FlutterSecureStorage v10 uses `AppleOptions` (not `IOSOptions`) for iOptions/mOptions params — manual mock must use `AppleOptions?` to match the override signature
+  - `_StubFlutterAppAuth extends FlutterAppAuth` works without platform setup since `authorizeAndExchangeCode` is overridden before it hits the platform channel
+  - `AuthorizationTokenResponse` constructor takes 8 positional args (accessToken, refreshToken, expiry, idToken, tokenType, scopes, authAdditionalParams, tokenAdditionalParams) — all nullable
+  - `throw _error!` triggers `unnecessary_non_null_assertion` lint when `_error` is typed `Exception?`; use `throw _error` (without `!`) to satisfy the analyzer
+  - `_tokenNeedsRefresh()` is private but fully testable via `getAccessToken()` — seed an expired JWT without token_expiry key, no refresh_token → refresh throws → logout called → null returned
 ---
