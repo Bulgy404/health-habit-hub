@@ -244,6 +244,16 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Re-fetch (and re-init WS) when userId changes so old subscriptions are
+    // cancelled and new ones are wired to the correct user stream.
+    ref.listen<AsyncValue<String?>>(userIdProvider, (previous, next) {
+      final prevId = previous?.whenOrNull(data: (v) => v);
+      final nextId = next.whenOrNull(data: (v) => v);
+      if (prevId != nextId) {
+        _fetch();
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Recommendations'),
