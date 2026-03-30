@@ -3170,8 +3170,8 @@
         "Typecheck passes"
       ],
       "priority": 198,
-      "passes": false,
-      "notes": "Bug: RecommendationFeatureService({Dio? dio, ...}) falls back to Dio() if not provided. Provider passes no dio. Result: recommendation API calls have no AuthInterceptor, manually duplicate auth headers instead."
+      "passes": true,
+      "notes": "Provider now passes ref.watch(dioProvider) to RecommendationFeatureService. Removed Dio? optional param and fallback Dio() creation. Removed _authService field and _authHeaders() manual token logic — AuthInterceptor on the shared Dio instance handles auth headers automatically."
     },
     {
       "id": "US-199",
