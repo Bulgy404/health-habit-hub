@@ -260,6 +260,30 @@ abstract class AppLocalizations {
   /// **'Failed to save settings'**
   String get failedToSaveSettings;
 
+  /// Label for the privacy statement legal page
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Statement'**
+  String get privacyStatement;
+
+  /// Label for the accessibility statement legal page
+  ///
+  /// In en, this message translates to:
+  /// **'Accessibility Statement'**
+  String get accessibilityStatement;
+
+  /// Label for the imprint legal page
+  ///
+  /// In en, this message translates to:
+  /// **'Imprint'**
+  String get imprint;
+
+  /// Offline banner body for legal document screens
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load this document.\nPlease check your connection.'**
+  String get couldNotLoadLegalDocument;
+
   /// Label for the save button
   ///
   /// In en, this message translates to:

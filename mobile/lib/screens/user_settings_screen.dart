@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
@@ -73,6 +74,25 @@ class UserSettingsScreen extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: Text(l10n.privacyStatement),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/privacy'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.accessibility_new_outlined),
+            title: Text(l10n.accessibilityStatement),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/accessibility'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: Text(l10n.imprint),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/imprint'),
           ),
         ],
       ),

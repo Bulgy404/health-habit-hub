@@ -115,11 +115,6 @@ router.use('/:lng(' + validLanguageCodes + ')?/', (req, res, next) => {
   next();
 });
 
-import { requireAgeConsent } from './middleware/ageGateMiddleware.js';
-import disclaimerRouter from './routes/disclaimerRouter.js';
-
-// Public routes (no age check)
-router.use('/:lng(' + validLanguageCodes + ')/disclaimer', disclaimerRouter);
 router.use('/:lng(' + validLanguageCodes + ')/imprint', imprintRouter);
 router.use('/:lng(' + validLanguageCodes + ')/privacy', privacyRouter);
 router.use(
@@ -134,21 +129,12 @@ router.get('/:lng(' + validLanguageCodes + ')?/', (req, res) => {
   res.redirect(301, targetPath);
 });
 
-// Enforce age confirmation for all other routes
-router.use(requireAgeConsent);
-
 router.use('/:lng(' + validLanguageCodes + ')/reward', rewardRouter);
 router.use('/:lng(' + validLanguageCodes + ')/contact', contactRouter);
 router.use('/:lng(' + validLanguageCodes + ')/donate', donateRouter);
 router.use('/:lng(' + validLanguageCodes + ')/about', aboutRouter);
 router.use('/:lng(' + validLanguageCodes + ')/demo', demoRouter); //Probably needs to be changed like the ones on the top
 router.use('/:lng(' + validLanguageCodes + ')/thanks', thanksRouter);
-router.use('/:lng(' + validLanguageCodes + ')/imprint', imprintRouter);
-router.use('/:lng(' + validLanguageCodes + ')/privacy', privacyRouter);
-router.use(
-  '/:lng(' + validLanguageCodes + ')/accessibility',
-  accessibilityRouter
-);
 // Intercepts all calls of '/' and checks whether a language (req.lang) is already set. If not, this parameter is set.
 router.use((req, res, next) => {
   if (req.url.startsWith('/' + req.lang + '/')) {
@@ -175,7 +161,6 @@ app.use('/api/v1', express.json(), createV1Router());
 // Start scheduled notification dispatcher (runs every 60 s)
 startNotificationScheduler({ getDb: makeGetDb() });
 
-app.use(cookieParser());
 app.use(contextPath, router);
 
 // Catch-all route for unmatched routes

@@ -100,6 +100,19 @@ class AppLocalizationsDe extends AppLocalizations {
       'Einstellungen konnten nicht gespeichert werden';
 
   @override
+  String get privacyStatement => 'Datenschutzerklärung';
+
+  @override
+  String get accessibilityStatement => 'Erklärung zur Barrierefreiheit';
+
+  @override
+  String get imprint => 'Impressum';
+
+  @override
+  String get couldNotLoadLegalDocument =>
+      'Dieses Dokument konnte nicht geladen werden.\nBitte überprüfen Sie Ihre Verbindung.';
+
+  @override
   String get save => 'Speichern';
 
   @override
