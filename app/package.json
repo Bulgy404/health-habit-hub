@@ -33,7 +33,7 @@
     "mongodb": "^6.17.0",
     "neo4j-driver": "^5.22.1",
     "node-cron": "^4.2.1",
-    "nodemailer": "^7.0.5",
+    "nodemailer": "^8.0.4",
     "pdfkit": "^0.18.0",
     "qrcode": "^1.5.4",
     "redis": "^4.7.1",
