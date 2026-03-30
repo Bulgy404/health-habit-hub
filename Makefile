@@ -39,7 +39,7 @@ test-flutter: ## Flutter: analyze + widget/unit tests
 	cd mobile && flutter analyze lib/ test/ && flutter test
 
 test-python: ## Python API-service: pytest
-	cd API-service && pytest tests/ -v
+	cd API-service && python3 -m pytest tests/ -v
 
 test-admin: ## Admin: typecheck
 	cd admin && npx tsc --noEmit
