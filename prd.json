@@ -3228,6 +3228,129 @@
       "priority": 202,
       "passes": true,
       "notes": "Added /^HHH-[A-Z0-9]{5}$/i validation guard in studyEnrollRouter.js before passing the code to redeemCode(). Invalid format returns 400 with descriptive error. Case-insensitive flag allows hhh-abcde (the service already normalizes to upper). New test file study.enroll.route.test.js covers missing, wrong-prefix, wrong-length, special-chars, empty, and valid (upper + lower) cases."
+    },
+    {
+      "id": "US-203",
+      "title": "Document all Flutter mobile dependencies in mobile/docs/dependencies.md",
+      "description": "As a developer, I want a single reference document listing every Flutter dependency, the exact APIs we call, and upgrade notes so that I can safely evaluate version bumps.",
+      "acceptanceCriteria": [
+        "Create mobile/docs/dependencies.md",
+        "Table covers all 15 direct dependencies from pubspec.yaml: flutter_appauth, flutter_secure_storage, dio, flutter_riverpod, go_router, fl_chart, webview_flutter, web_socket_channel, url_launcher, share_plus, google_fonts, firebase_core, firebase_messaging, flutter_local_notifications, intl",
+        "Each entry includes: package name, current version constraint, purpose (one sentence), specific classes/methods used in this codebase, and next-major-version breaking changes to watch",
+        "Typecheck passes"
+      ],
+      "priority": 203,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-204",
+      "title": "Write contract tests for flutter_secure_storage via AuthService",
+      "description": "As a developer, I want contract tests that cover every flutter_secure_storage call made by AuthService so that a storage API change is caught immediately.",
+      "acceptanceCriteria": [
+        "Create mobile/test/services/auth_service_storage_contract_test.dart",
+        "Tests use MockFlutterSecureStorage (mockito or manual mock) to verify: write(key, value) called on login, read(key) called in getAccessToken and isLoggedIn, delete(key) called three times in logout",
+        "Test: logout() triggers onLogout callback after all deletes",
+        "Test: getAccessToken() returns null and calls logout() when refresh throws",
+        "Test: _tokenNeedsRefresh() decodes JWT exp claim correctly and returns true for expired token",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 204,
+      "passes": false,
+      "notes": "Depends on US-203 for context. Uses http_mock_adapter already in dev_dependencies."
+    },
+    {
+      "id": "US-205",
+      "title": "Write contract tests for Dio + AuthInterceptor",
+      "description": "As a developer, I want contract tests for every Dio interceptor and request pattern we use so that a Dio major version bump is caught before it reaches production.",
+      "acceptanceCriteria": [
+        "Create mobile/test/core/auth_interceptor_contract_test.dart",
+        "Uses http_mock_adapter (already in dev_dependencies) to intercept requests",
+        "Test: AuthInterceptor injects Authorization: Bearer <token> header when getAccessToken() returns a token",
+        "Test: AuthInterceptor omits Authorization header when getAccessToken() returns null",
+        "Test: SurveyService.fetchSurvey() sends GET to correct path and deserialises Survey.fromJson",
+        "Test: SurveyService.submitResult() sends POST with {answers: ...} body",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 205,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-206",
+      "title": "Write contract tests for go_router redirect logic",
+      "description": "As a developer, I want unit tests for the GoRouter redirect function so that auth guard and onboarding bypass behaviour is verified and protected against go_router API changes.",
+      "acceptanceCriteria": [
+        "Create mobile/test/router/redirect_contract_test.dart",
+        "Test: visiting /onboarding/welcome when onboarding complete + logged in redirects to /share",
+        "Test: visiting /onboarding/welcome when onboarding complete + NOT logged in returns null (stays on welcome)",
+        "Test: visiting /share when NOT logged in redirects to /onboarding/welcome",
+        "Test: visiting /share when logged in returns null (no redirect)",
+        "Test: visiting /admin/participants when role is admin returns null (no redirect)",
+        "Test: visiting /admin/participants when role is plain user redirects to /",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 206,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-207",
+      "title": "Add flutter-dependency-audit job to GitHub Actions CI",
+      "description": "As a developer, I want CI to automatically flag outdated or vulnerable Flutter dependencies on every PR and on a weekly schedule so that upgrades are never missed.",
+      "acceptanceCriteria": [
+        "Add job flutter-dependency-audit to .github/workflows/ci.yml",
+        "Job runs flutter pub outdated --json and fails if any direct dependency has a resolvable newer version at a higher major version (breaking change available)",
+        "Job runs flutter pub deps to verify the full dependency graph resolves without conflicts",
+        "Job is triggered on: push/PR to master and ralph/hhh-platform-unified, AND on a weekly schedule (cron: \"0 8 * * 1\")",
+        "Job is added to the ci-passed needs list",
+        "Add step comment in ci.yml explaining how to suppress a specific outdated warning (inline comment with flutter pub upgrade --major-versions)",
+        "Typecheck passes"
+      ],
+      "priority": 207,
+      "passes": false,
+      "notes": "CI already has backend npm audit (job backend-security). This mirrors that pattern for Flutter. flutter pub audit is not yet stable; use flutter pub outdated --json + custom parse step instead."
+    },
+    {
+      "id": "US-208",
+      "title": "Add backend dependency contract tests to app/tests/unit/",
+      "description": "As a developer, I want contract tests for the Node.js backend dependencies in app/tests/unit/ so that breaking API changes in mongodb, ws, neo4j-driver, or express are caught before they reach production.",
+      "acceptanceCriteria": [
+        "Create app/tests/unit/dependency.contracts.test.js using node:test and node:assert (matching existing test conventions)",
+        "mongodb contract: import MongoClient from mongodb and assert MongoClient, Collection, and cursor methods (find, findOne, insertOne, updateOne, deleteOne, findOneAndUpdate, aggregate, toArray, close) are functions or constructors",
+        "ws contract: import WebSocketServer and WebSocket from ws and assert both are constructors; assert event name strings used in codebase (connection, message, close, error) are valid string constants",
+        "neo4j-driver contract: import neo4j from neo4j-driver and assert neo4j.driver, neo4j.auth.basic, and session.run interface exist as functions",
+        "express contract: import express and assert express.Router, express.json, express.urlencoded are functions",
+        "uuid contract: import v4 from uuid and assert v4() produces a string matching /^[0-9a-f-]{36}$/",
+        "All assertions use node:assert.strictEqual or assert.ok \u2014 no external assertion libraries",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 208,
+      "passes": false,
+      "notes": "Uses node:test / node:assert (native) matching existing test files like auth.middleware.test.js. Tests check API surface, not behaviour \u2014 if a major version renames or removes a method we use, the test fails immediately."
+    },
+    {
+      "id": "US-209",
+      "title": "Add Python API-service dependency contract tests to API-service/tests/",
+      "description": "As a developer, I want contract tests for the Python API-service dependencies so that breaking interface changes in openai, redis, motor, or neo4j are caught by CI.",
+      "acceptanceCriteria": [
+        "Create API-service/tests/test_dependency_contracts.py using pytest (matching existing test conventions)",
+        "openai contract: import openai and assert openai.OpenAI is a class; assert client.chat.completions.create exists as a method on an OpenAI instance",
+        "redis contract: import redis.asyncio and assert Redis class exists; assert get, set, delete are attributes of a Redis instance",
+        "motor contract: import motor.motor_asyncio and assert AsyncIOMotorClient is a class; assert AsyncIOMotorClient instance has attribute get_database or __getitem__",
+        "neo4j contract: import neo4j and assert GraphDatabase.driver is callable; assert AsyncGraphDatabase is present",
+        "httpx contract: import httpx and assert httpx.AsyncClient is a class with get, post, put, delete methods",
+        "All contract tests are pure import + attribute checks \u2014 no network calls, no fixtures, no asyncio required",
+        "Tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 209,
+      "passes": false,
+      "notes": "Uses pytest (already in requirements.txt). Pure attribute-existence checks \u2014 no mocking or async needed. Runs fast as part of existing pytest suite in CI (python-api-test job)."
     }
   ]
 }
