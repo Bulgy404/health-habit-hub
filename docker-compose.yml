@@ -38,8 +38,6 @@ services:
       - NODE_ENV=production
       - NODE_OPTIONS=--no-warnings
       - MONGO_DB=surveyjs
-      - MONGO_USER=admin
-      - MONGO_PASSWORD=admin
       - MONGO_HOST=mongo
     ports:
       - ${APP_HOST_PORT:-3000}:3000
