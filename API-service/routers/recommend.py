@@ -20,7 +20,7 @@ from uuid import uuid4
 import motor.motor_asyncio
 import redis.asyncio as aioredis
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm_client import chat_complete
 from routers.extract_habits import ExtractHabitsRequest
@@ -100,9 +100,9 @@ _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class RecommendRequest(BaseModel):
-    user_id: str
-    goal: str
-    session_id: str
+    user_id: str = Field(..., max_length=128)
+    goal: str = Field(..., min_length=1, max_length=2000)
+    session_id: str = Field(..., max_length=128)
 
 
 class SourceRef(BaseModel):

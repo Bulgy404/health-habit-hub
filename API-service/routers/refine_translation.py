@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm_client import chat_complete
 
@@ -24,9 +24,9 @@ _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class RefineTranslationRequest(BaseModel):
-    original: str
-    raw_translation: str
-    language: str
+    original: str = Field(..., min_length=1, max_length=10000)
+    raw_translation: str = Field(..., min_length=1, max_length=10000)
+    language: str = Field(..., max_length=32)
 
 
 class RefineTranslationResponse(BaseModel):

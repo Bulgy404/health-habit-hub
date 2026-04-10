@@ -43,5 +43,6 @@ async def chat_complete(
         model=model or _model,
         temperature=temperature if temperature is not None else _temperature,
         messages=messages,
+        timeout=60.0,
     )
     return response.choices[0].message.content or ""

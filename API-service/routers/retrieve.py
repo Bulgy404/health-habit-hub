@@ -21,7 +21,7 @@ import numpy as np
 import openai
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm_client import chat_complete
 
@@ -270,7 +270,7 @@ async def _ensure_index() -> None:
 # Request / Response models
 # ---------------------------------------------------------------------------
 class RetrieveRequest(BaseModel):
-    rag_query: str
+    rag_query: str = Field(..., min_length=1, max_length=2000)
 
 
 class SourceItem(BaseModel):
@@ -377,6 +377,10 @@ async def upload_kb(
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
 
+    # Guard category against path traversal
+    if "/" in category or "\\" in category or ".." in category:
+        raise HTTPException(status_code=400, detail="Invalid category name.")
+
     target_dir = kb_dir / category
     target_dir.mkdir(parents=True, exist_ok=True)
     target_path = target_dir / file.filename
@@ -418,6 +422,10 @@ async def delete_kb(filename: str) -> JSONResponse:
 
     kb_dir: Path = _self._KB_DIR
     meta_dir: Path = _self._META_DIR
+
+    # Guard against path traversal: filename must be a plain name with no separators
+    if "/" in filename or "\\" in filename or ".." in filename or not filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Invalid filename.")
 
     matches = [p for p in kb_dir.rglob(filename) if "_meta" not in p.parts and p.is_file()]
     if not matches:
