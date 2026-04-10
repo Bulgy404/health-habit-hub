@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm_client import chat_complete
 
@@ -53,9 +53,9 @@ _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class ClassifyHabitRequest(BaseModel):
-    sentence: str
-    language: str
-    user_id: str
+    sentence: str = Field(..., min_length=1, max_length=2000)
+    language: str = Field(..., max_length=32)
+    user_id: str = Field(..., max_length=128)
 
 
 class ClassifyHabitResponse(BaseModel):

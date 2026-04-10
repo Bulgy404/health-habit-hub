@@ -10,7 +10,7 @@ from typing import List, Optional
 
 import redis.asyncio as aioredis
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm_client import chat_complete
 
@@ -63,9 +63,9 @@ _DIMENSIONS = [
 # Request / Response models
 # ---------------------------------------------------------------------------
 class ClassifyContextRequest(BaseModel):
-    uuid: str
-    sentence: str
-    language: str
+    uuid: str = Field(..., max_length=128)
+    sentence: str = Field(..., min_length=1, max_length=2000)
+    language: str = Field(..., max_length=32)
 
 
 class ClassifyContextResponse(BaseModel):

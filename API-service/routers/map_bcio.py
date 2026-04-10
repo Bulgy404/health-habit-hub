@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import openai
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -133,8 +133,19 @@ async def _get_index() -> Optional[Dict[str, Any]]:
 # Request / Response models
 # ---------------------------------------------------------------------------
 class MapBcioRequest(BaseModel):
-    uuid: str
+    uuid: str = Field(..., max_length=128)
     context_phrases: Dict[str, List[str]]
+
+    @field_validator("context_phrases")
+    @classmethod
+    def limit_phrase_lengths(cls, v: Dict[str, List[str]]) -> Dict[str, List[str]]:
+        for dim, phrases in v.items():
+            for phrase in phrases:
+                if len(phrase) > 2000:
+                    raise ValueError(
+                        f"Phrase in dimension '{dim}' exceeds max length of 2000 characters."
+                    )
+        return v
 
 
 class BcioMapping(BaseModel):

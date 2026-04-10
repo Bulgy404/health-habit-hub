@@ -11,7 +11,7 @@ from typing import Any, Dict, Optional
 import httpx
 import redis.asyncio as aioredis
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from llm_client import chat_complete
 
@@ -91,8 +91,8 @@ _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class ExtractProfileRequest(BaseModel):
-    user_id: str
-    goal: str
+    user_id: str = Field(..., max_length=128)
+    goal: str = Field(..., min_length=1, max_length=2000)
 
 
 class ExtractProfileResponse(BaseModel):
