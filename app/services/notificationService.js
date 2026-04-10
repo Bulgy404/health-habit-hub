@@ -160,6 +160,7 @@ export async function dispatchDueNotifications({ db }) {
     .toArray();
 
   for (const notification of due) {
+    let dispatched = false;
     try {
       await sendStudyNotification({
         db,
@@ -172,6 +173,7 @@ export async function dispatchDueNotifications({ db }) {
         body: notification.body,
         data: notification.data,
       });
+      dispatched = true;
     } catch (err) {
       console.error(
         '[notification] Error dispatching scheduled notification:',
@@ -179,12 +181,14 @@ export async function dispatchDueNotifications({ db }) {
       );
     }
 
-    await db
-      .collection(COLLECTION_SCHEDULED)
-      .updateOne(
-        { _id: notification._id },
-        { $set: { sent: true, sentAt: now } }
-      );
+    if (dispatched) {
+      await db
+        .collection(COLLECTION_SCHEDULED)
+        .updateOne(
+          { _id: notification._id },
+          { $set: { sent: true, sentAt: now } }
+        );
+    }
   }
 }
 
