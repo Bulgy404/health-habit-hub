@@ -24,3 +24,19 @@
 | P2 | docker-compose.prod.yml | neo4j (lines 167–169) | Neo4j ports 7474 and 7687 are exposed to the host on the production compose file; Neo4j Browser should not be internet-reachable | Document: remove host port bindings in prod; use Traefik routing only |
 | P2 | docker-compose.local.yml | redis (line 264) | Redis port `6379:6379` bound to all interfaces with no authentication (`redis-server --appendonly yes` only); any process on the local network can read/write the cache | Document: bind to `127.0.0.1` or add `--requirepass` for local dev |
 | P2 | docker-compose.local.yml | app.environment | `KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET:-CHANGE_THIS_KEYCLOAK_BACKEND_SECRET}` — default value is a known placeholder string | Document: operator must set before first run |
+
+## Backend Middleware & Utils
+
+| Severity | File | Line | Finding | Fix |
+|----------|------|------|---------|-----|
+| P0 | app/routes/internalRouter.js | ~16 | Timing-unsafe string equality (`!==`) on shared secret — vulnerable to timing side-channel attack | Fixed — timingSafeEqual from node:crypto |
+| P1 | app/app.js | — | No security response headers (X-Content-Type-Options, X-Frame-Options, Referrer-Policy etc.) set on any response | Fixed — securityHeaders middleware registered first in app.js |
+| P2 | app/middleware/auth.js | 91,123 | Dead code: `const ready = Promise.resolve()` created and attached as `authMiddleware.ready` but never read anywhere | Fixed — removed both lines |
+| P2 | app/middleware/requestParser.js | 1 | Stale comment "doesnt work need to fix" left in production code; `bodyParser.json()` has no body-size limit set (default is 100 kb, which may be acceptable but is undocumented intent) | Document: remove comment; explicitly set `{ limit: '100kb' }` or document that the default is intentional |
+| P2 | app/app.js | 73–74 | `bodyParser.urlencoded` and `bodyParser.json()` registered on the sub-router without explicit size limits; the API path registers `express.json()` without a limit too | Document: add `{ limit: '1mb' }` or appropriate size cap on all body parsers |
+| P2 | app/app.js | 174 | `/api/internal` router is registered AFTER `httpServer.listen()` — technically valid in Express since routing is evaluated at request time, but unconventional and fragile; a developer could assume the handler is missing | Document: move `app.use('/api/internal', ...)` before `httpServer.listen()` |
+| P2 | app/utils/config.js | 2 | `process.env.PATH` is overwritten by the `path` key — shadows the OS `PATH` environment variable name; this is a naming collision but harmless in practice since `config.path` is only used for the app base path | Document: rename to `appBasePath` or `basePath` to avoid confusion |
+| P2 | app/utils/config.js | 44 | `getDbHeader()` references `this.db.name` which does not exist in the config object (should be `this.db.path`); this method would return `undefined` for the path header if called | Document: bug — `this.db.name` should be `this.db.path`; method appears unused but could cause silent errors if called |
+| P2 | app/utils/healthCheck.js | 35–36 | Mongo connection URI is assembled from env vars inside `checkMongo()` rather than using the shared `config` object — a second source of truth for Mongo connection settings | Document: use `config.js` values for consistency |
+| P2 | app/utils/localization.js | 19 | `fs.readdirSync` and `fs.readFileSync` called synchronously at startup — blocks the event loop during boot; acceptable at startup but worth noting | Document: acceptable for startup initialisation; no action required |
+| P2 | app/middleware/staticFileMiddleware.js | 6 | `loadLanguageFiles()` is called at module load time as a side-effect, which makes the module non-idempotent and hard to test; language codes are then used to construct route regex | Document: consider accepting language codes as a parameter rather than relying on module-level side effect |

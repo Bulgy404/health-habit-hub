@@ -1,4 +1,5 @@
 import express from 'express';
+import { timingSafeEqual } from 'node:crypto';
 
 export function createInternalRouter({ broadcast, internalSecret } = {}) {
   const router = express.Router();
@@ -13,7 +14,14 @@ export function createInternalRouter({ broadcast, internalSecret } = {}) {
       );
       return res.status(403).json({ error: 'Forbidden' });
     }
-    if (req.headers['x-internal-secret'] !== secret) {
+    const provided = req.headers['x-internal-secret'];
+    const secretBuf = Buffer.from(secret);
+    const providedBuf = Buffer.from(provided || '');
+    if (
+      !provided ||
+      providedBuf.length !== secretBuf.length ||
+      !timingSafeEqual(providedBuf, secretBuf)
+    ) {
       return res.status(403).json({ error: 'Forbidden' });
     }
     next();

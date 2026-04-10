@@ -88,7 +88,6 @@ export function createAuthMiddleware({
   // Reuse createTokenVerifier for all JWKS caching and signature verification.
   // JWKS keys are fetched lazily on the first request.
   const verifyToken = createTokenVerifier({ jwksUrl });
-  const ready = Promise.resolve();
 
   async function authMiddleware(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -120,6 +119,5 @@ export function createAuthMiddleware({
     }
   }
 
-  authMiddleware.ready = ready;
   return authMiddleware;
 }
