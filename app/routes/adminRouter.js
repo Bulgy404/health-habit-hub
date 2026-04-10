@@ -217,7 +217,7 @@ export function createAdminRouter({
       const database = await getDb();
       const kc = getKeycloak();
       const result = await createParticipant({ db: database, kc });
-      res.json(result);
+      res.status(201).json(result);
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });
@@ -1940,10 +1940,25 @@ export function createAdminRouter({
 
       const { ObjectId: OId } = await import('mongodb');
 
+      let studyOid;
+      try {
+        studyOid = new OId(studyId);
+      } catch {
+        return res.status(400).json({ error: 'Invalid studyId' });
+      }
+      let groupOid = null;
+      if (groupId) {
+        try {
+          groupOid = new OId(groupId);
+        } catch {
+          return res.status(400).json({ error: 'Invalid groupId' });
+        }
+      }
+
       const database = await getDb();
       const doc = {
-        studyId: new OId(studyId),
-        groupId: groupId ? new OId(groupId) : null,
+        studyId: studyOid,
+        groupId: groupOid,
         title,
         body,
         data: data || null,
