@@ -73,3 +73,4 @@
 | — | app/routes/profileRouter.js | all | No IDOR: both GET and POST `/profile` bind to `req.user.sub` from the JWT; no userId param accepted from caller | No action required |
 | — | app/routes/onboardRouter.js | all | No IDOR: no user-owned resources; endpoint creates a new anonymous user and returns credentials | No action required |
 | — | app/routes/questionnaireResponsesRouter.js | all | No IDOR: `/me` and `/me/:slug` use `req.user.sub`; no cross-user access path | No action required |
+| P2 | app/routes/questionnaireResponsesRouter.js | POST / | `POST /questionnaire-responses` returns `{ id: result.insertedId }` — exposes MongoDB internal ObjectId as `id`; inconsistent with the _id-stripping applied to GET routes in this task | Backlog — return a stable application-level identifier or omit the field |
