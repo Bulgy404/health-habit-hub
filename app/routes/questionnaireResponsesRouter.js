@@ -174,7 +174,8 @@ export function createQuestionnaireResponsesRouter({ db } = {}) {
         return res.status(404).json({ error: 'No response found' });
       }
 
-      res.json(responses[0]);
+      const { _id, ...responseData } = responses[0];
+      res.json(responseData);
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });

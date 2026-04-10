@@ -19,9 +19,10 @@ export async function renderSurvey(req, res) {
       return res.status(404).json({ error: 'Survey not found' });
     }
 
+    const { _id, ...surveyData } = survey;
     res.json({
       status: 'ok',
-      survey,
+      survey: surveyData,
       locale: req.lang,
     });
   } catch (err) {
@@ -40,10 +41,12 @@ export async function submitSurvey(req, res) {
       userId: req.userId,
     };
     await db.collection('results').insertOne(submission);
-    console.log('Survey submission with user ID:', submission);
+    console.log('[survey] Recorded submission for surveyId:', submission.surveyId, 'userId:', submission.userId);
     res.cookie('demographicsCompleted', 'true', {
       maxAge: 365 * 24 * 60 * 60 * 1000,
       httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       path: '/',
     });
     const basepath = req.app.get('basepath') || '/';
