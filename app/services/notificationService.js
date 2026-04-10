@@ -176,7 +176,10 @@ export async function dispatchDueNotifications({ db }) {
       dispatched = true;
     } catch (err) {
       console.error(
-        '[notification] Error dispatching scheduled notification:',
+        '[notification] Error dispatching scheduled notification',
+        notification._id.toString(),
+        'studyId:', notification.studyId?.toString(),
+        'scheduledAt:', notification.scheduledAt?.toISOString(),
         err
       );
     }
