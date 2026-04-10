@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
 
 import { jsonBodyParser } from './middleware/requestParser.js';
+import { securityHeaders } from './middleware/securityHeaders.js';
 import { staticFileMiddleware } from './middleware/staticFileMiddleware.js';
 import { config } from './utils/config.js';
 import {
@@ -26,6 +27,7 @@ import privacyRouter from './routes/privacyRouter.js';
 import accessibilityRouter from './routes/accessibilityRouter.js';
 
 const app = express();
+app.use(securityHeaders);
 app.set('trust proxy', 1);
 const port = config.port;
 const contextPath = process.env.APP_BASE_PATH || '/';
