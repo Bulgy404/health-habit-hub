@@ -61,6 +61,11 @@ export function createRecommendationsRouter({
         return res.status(404).json({ error: 'Recommendation not found' });
       }
 
+      // IDOR guard: participants can only leave feedback on their own recommendations
+      if (rec.userId !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
       // Store feedback
       await database.collection('recommendation_feedback').insertOne({
         recommendation_id,
