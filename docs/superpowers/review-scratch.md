@@ -74,3 +74,18 @@
 | — | app/routes/onboardRouter.js | all | No IDOR: no user-owned resources; endpoint creates a new anonymous user and returns credentials | No action required |
 | — | app/routes/questionnaireResponsesRouter.js | all | No IDOR: `/me` and `/me/:slug` use `req.user.sub`; no cross-user access path | No action required |
 | P2 | app/routes/questionnaireResponsesRouter.js | POST / | `POST /questionnaire-responses` returns `{ id: result.insertedId }` — exposes MongoDB internal ObjectId as `id`; inconsistent with the _id-stripping applied to GET routes in this task | Backlog — return a stable application-level identifier or omit the field |
+
+## Backend Routes — Recommend, KB, StudyEnroll, Participant
+
+| Severity | File | Line | Finding | Fix |
+|----------|------|------|---------|-----|
+| — | app/routes/recommendRouter.js | 69, 126 | IDOR guard on `GET /:userId/history` and `GET /:userId` — guard confirmed present at both lines: `!isPrivileged(req.user) && req.user?.sub !== req.params.userId` blocks participants from accessing other users' recommendations | No action required — guard in place |
+| P1 | app/routes/recommendationsRouter.js | 56–62 | IDOR on `POST /:recommendation_id/feedback` — handler fetched `rec.userId` in the projection but never compared it to `req.user.sub`; any authenticated user could submit feedback on another user's recommendation (and invalidate their Redis cache) | Fixed — added ownership check after the lookup: `if (rec.userId !== userId) return res.status(403).json({ error: 'Forbidden' })` at line 63 |
+| — | app/routes/recommendRouter.js | 182, 187 | `POST /classify` and `POST /generate` — no userId param, no IDOR risk; both proxy requests to Python recommender with the caller's own JWT | No action required |
+| — | app/routes/kbRouter.js | all | No IDOR, no ObjectId construction, no user-scoped data; correctly gated to admin/researcher via `requireRole` in v1Router | No action required |
+| — | app/routes/kbRouter.js | all | `sanitizeBody` global middleware in v1Router applies before this router; multipart upload path bypasses the JSON body parser entirely (raw stream piped), so sanitization of file contents is the Python API-service's responsibility | Document — acceptable; KB upload is admin/researcher only |
+| — | app/routes/studyEnrollRouter.js | all | Duplicate enrollment: prevented atomically in `studyCodeService.redeemCode` via `findOneAndUpdate` with upsert + `$setOnInsert`; race condition between slot claim and enrollment insert handled with counter rollback (`$inc: { redemptionCount: -1 }`) | No action required — design is solid |
+| — | app/routes/studyEnrollRouter.js | all | `skipCode` path: idempotent; concurrent requests resolved via atomic `$setOnInsert` upsert; `_skipCounter` incremented atomically so each concurrent caller receives a unique group index | No action required |
+| — | app/routes/participantRouter.js | all | No IDOR: both `GET /questionnaires` and `POST /register-token` bind entirely to `req.user.sub`; no user-controlled userId param | No action required |
+| — | app/routes/participantRouter.js | 78–86 | `_id` handling: response maps `q._id.toString()` to `id` field and does not include raw `_id` in output | No action required — clean |
+| — | app/routes/participantRouter.js | 66 | `study.questionnaires` filtered with `instanceof ObjectId` before passing to `$in`; protects against corrupt data but means string IDs stored in that array would be silently dropped | Document — low risk; admin tooling should store ObjectId values in `questionnaires` array |
