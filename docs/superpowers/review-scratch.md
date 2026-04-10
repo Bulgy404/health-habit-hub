@@ -40,3 +40,16 @@
 | P2 | app/utils/healthCheck.js | 35–36 | Mongo connection URI is assembled from env vars inside `checkMongo()` rather than using the shared `config` object — a second source of truth for Mongo connection settings | Document: use `config.js` values for consistency |
 | P2 | app/utils/localization.js | 19 | `fs.readdirSync` and `fs.readFileSync` called synchronously at startup — blocks the event loop during boot; acceptable at startup but worth noting | Document: acceptable for startup initialisation; no action required |
 | P2 | app/middleware/staticFileMiddleware.js | 6 | `loadLanguageFiles()` is called at module load time as a side-effect, which makes the module non-idempotent and hard to test; language codes are then used to construct route regex | Document: consider accepting language codes as a parameter rather than relying on module-level side effect |
+
+## Backend Routes — Admin
+
+| Severity | File | Line | Finding | Fix |
+|----------|------|------|---------|-----|
+| P0 | app/db/adminQueries.js | 23 | Cypher label injection via `` SET d:`${newLabel}` `` string interpolation; callers must validate | Confirmed safe — whitelist exists in `adminParticipantService.js` lines 5–10 (VALID_GROUPS Set) and GROUP_LABEL_MAP restricts input to G1-G4 before mapping to label; `assignGroupLabel` is never called from `adminRouter.js` directly |
+| P1 | app/routes/adminRouter.js | 1945–1946 | `new OId(studyId)` and `new OId(groupId)` in `POST /notifications/schedule` without try/catch — malformed IDs throw synchronous error producing 500 instead of 400 | Fixed — each ObjectId construction wrapped in individual try/catch returning 400 |
+| P2 | app/routes/adminRouter.js | 220 | `POST /participants` returns HTTP 200 on success; should be 201 Created per REST semantics | Fixed — changed to `res.status(201).json(result)` |
+| P2 | app/services/adminParticipantService.js | 62 | Plaintext participant password stored in MongoDB (`participants` collection); needed to render the token card PDF but is a data-at-rest risk if MongoDB is compromised | Backlog — consider storing only the password hash and generating the token card at creation time; or encrypt at rest |
+| P2 | app/routes/adminRouter.js | 537–550 | `PUT /settings/:key` — the `key` URL parameter is used as-is as the MongoDB document key with no whitelist or format validation; an admin could insert arbitrary keys polluting the settings collection | Backlog — add a whitelist of valid setting keys (e.g. `['token_card_format']`) before updating |
+| P2 | app/routes/adminRouter.js | 1014–1177 | Survey CRUD (GET/POST/PUT/PATCH for `/surveys`) and questionnaire CRUD contain inline DB queries and business logic rather than delegating to a service layer | Backlog — extract to `adminSurveyService.js` and `adminQuestionnaireService.js` for testability |
+| P2 | app/routes/adminRouter.js | — | ~2050-line file; mix of Swagger docs, route handlers, and inline business logic makes the file hard to navigate | Backlog — split into domain sub-routers (surveys, notifications, studies, participants) |
+| P2 | app/routes/adminRouter.js | 1734 | `POST /studies/:id/codes` performs no validation that `count` is a positive integer; a negative or non-numeric value is forwarded to `createCodes` | Backlog — validate `count` is a positive integer before passing to service |
