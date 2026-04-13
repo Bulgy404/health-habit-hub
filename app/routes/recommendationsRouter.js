@@ -52,18 +52,13 @@ export function createRecommendationsRouter({
     try {
       const database = await getDb();
 
-      // Look up recommendation to find goal (needed for Redis key)
+      // Look up recommendation scoped by userId — wrong owner gets implicit 404
       const rec = await database
         .collection('recommendations')
-        .findOne({ recommendation_id }, { projection: { goal: 1, userId: 1 } });
+        .findOne({ recommendation_id, userId }, { projection: { goal: 1, userId: 1 } });
 
       if (!rec) {
         return res.status(404).json({ error: 'Recommendation not found' });
-      }
-
-      // IDOR guard: participants can only leave feedback on their own recommendations
-      if (rec.userId !== userId) {
-        return res.status(403).json({ error: 'Forbidden' });
       }
 
       // Store feedback
