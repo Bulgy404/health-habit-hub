@@ -1,7 +1,14 @@
 """Health Habit Hub — API-service (FastAPI)."""
 import logging
+import os
 
 from fastapi import FastAPI
+
+_secret = os.environ.get("API_SERVICE_SECRET")
+if not _secret:
+    raise RuntimeError(
+        "API_SERVICE_SECRET environment variable is required but not set."
+    )
 
 from routers.classify_context import router as classify_context_router
 from routers.classify_habit import router as classify_habit_router

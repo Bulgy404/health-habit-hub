@@ -45,6 +45,7 @@ services:
       - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-hhh-flutter}
       - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-hhh-backend}
       - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET:-CHANGE_THIS_KEYCLOAK_BACKEND_SECRET}
+      - API_SERVICE_SECRET=${API_SERVICE_SECRET}
     ports:
       - "3000:3000"
     networks:
@@ -275,6 +276,8 @@ services:
     restart: on-failure:3
     env_file:
       - .env
+    environment:
+      - API_SERVICE_SECRET=${API_SERVICE_SECRET}
     ports:
       - "8001:8000"
     networks:

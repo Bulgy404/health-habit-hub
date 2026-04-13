@@ -10,12 +10,14 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import openai
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
+
+from auth import verify_service_token
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_service_token)])
 
 # ---------------------------------------------------------------------------
 # Configuration

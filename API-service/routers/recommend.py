@@ -19,9 +19,10 @@ from uuid import uuid4
 
 import motor.motor_asyncio
 import redis.asyncio as aioredis
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from auth import verify_service_token
 from llm_client import chat_complete
 from routers.extract_habits import ExtractHabitsRequest
 from routers.extract_habits import extract_habits as _extract_habits
@@ -32,7 +33,7 @@ from routers.retrieve import retrieve as _retrieve
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_service_token)])
 
 # ---------------------------------------------------------------------------
 # Redis setup (graceful — if unavailable the endpoint still works)
