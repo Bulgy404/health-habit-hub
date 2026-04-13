@@ -24,12 +24,14 @@ Future<String?> redirectGuard({
   // ── 1. Admin guard ────────────────────────────────────────────────────────
   if (location.startsWith('/admin')) {
     try {
+      final isLoggedIn = await getIsLoggedIn();
+      if (!isLoggedIn) return '/onboarding/welcome';
       final roles = await getUserRoles();
       if (!roles.contains('admin') && !roles.contains('researcher')) {
         return '/';
       }
     } catch (_) {
-      return '/';
+      return '/onboarding/welcome';
     }
     return null;
   }

@@ -109,12 +109,17 @@ export async function getSettings({ db }) {
   return result;
 }
 
+const VALID_SETTINGS_KEYS = new Set(['token_card_format']);
+
 /**
  * Upsert a single admin setting.
  * @param {{ db: object, key: string, value: string }} deps
  * @returns {Promise<{ ok: boolean, key: string, value: string }>}
  */
 export async function updateSetting({ db, key, value }) {
+  if (!VALID_SETTINGS_KEYS.has(key)) {
+    return { error: `Unknown setting key: ${key}`, status: 400 };
+  }
   await db
     .collection('admin_settings')
     .updateOne(

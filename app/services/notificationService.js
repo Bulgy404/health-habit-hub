@@ -162,7 +162,7 @@ export async function dispatchDueNotifications({ db }) {
   for (const notification of due) {
     let dispatched = false;
     try {
-      await sendStudyNotification({
+      const result = await sendStudyNotification({
         db,
         messaging,
         studyId: notification.studyId.toString(),
@@ -173,13 +173,23 @@ export async function dispatchDueNotifications({ db }) {
         body: notification.body,
         data: notification.data,
       });
+      if (result.sent === 0 && result.failed > 0) {
+        console.warn(
+          '[notification] All sends failed for notification',
+          notification._id.toString(),
+          'failed:',
+          result.failed
+        );
+      }
       dispatched = true;
     } catch (err) {
       console.error(
         '[notification] Error dispatching scheduled notification',
         notification._id.toString(),
-        'studyId:', notification.studyId?.toString(),
-        'scheduledAt:', notification.scheduledAt?.toISOString(),
+        'studyId:',
+        notification.studyId?.toString(),
+        'scheduledAt:',
+        notification.scheduledAt?.toISOString(),
         err
       );
     }

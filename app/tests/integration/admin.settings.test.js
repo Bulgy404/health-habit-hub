@@ -244,25 +244,30 @@ test('GET /api/v1/admin/settings - reflects updated value', async () => {
   assert.strictEqual(body.token_card_format, 'print');
 });
 
-test('PUT /api/v1/admin/settings/:key - upserts new key', async () => {
+test('PUT /api/v1/admin/settings/:key - rejects unknown key', async () => {
   const token = makeToken(['admin']);
   const res = await put(
     '/api/v1/admin/settings/study_phase',
     { value: '2' },
     token
   );
+  assert.strictEqual(res.status, 400);
+  const body = await res.json();
+  assert.ok(body.error, 'should return error message');
+});
+
+test('PUT /api/v1/admin/settings/:key - updates known key', async () => {
+  const token = makeToken(['admin']);
+  const res = await put(
+    '/api/v1/admin/settings/token_card_format',
+    { value: 'print' },
+    token
+  );
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.strictEqual(body.ok, true);
-  assert.strictEqual(body.key, 'study_phase');
-  assert.strictEqual(body.value, '2');
-});
-
-test('GET /api/v1/admin/settings - includes upserted key', async () => {
-  const token = makeToken(['admin']);
-  const res = await get('/api/v1/admin/settings', token);
-  const body = await res.json();
-  assert.strictEqual(body.study_phase, '2');
+  assert.strictEqual(body.key, 'token_card_format');
+  assert.strictEqual(body.value, 'print');
 });
 
 test('PUT /api/v1/admin/settings/:key - 400 for missing value', async () => {

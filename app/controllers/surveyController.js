@@ -41,7 +41,12 @@ export async function submitSurvey(req, res) {
       userId: req.userId,
     };
     await db.collection('results').insertOne(submission);
-    console.log('[survey] Recorded submission for surveyId:', submission.surveyId, 'userId:', submission.userId);
+    console.log(
+      '[survey] Recorded submission for surveyId:',
+      submission.surveyId,
+      'userId:',
+      submission.userId
+    );
     res.cookie('demographicsCompleted', 'true', {
       maxAge: 365 * 24 * 60 * 60 * 1000,
       httpOnly: true,

@@ -543,6 +543,9 @@ export function createAdminRouter({
       }
       const database = await getDb();
       const result = await updateSetting({ db: database, key, value });
+      if (result.error) {
+        return res.status(result.status || 400).json({ error: result.error });
+      }
       res.json(result);
     } catch (err) {
       console.error('[route] Error:', err);
@@ -1734,6 +1737,16 @@ export function createAdminRouter({
   router.post('/studies/:id/codes', async (req, res) => {
     try {
       const { count, groupId, maxRedemptions, expiresAt } = req.body;
+      const parsedCount = parseInt(count, 10);
+      if (
+        !Number.isInteger(parsedCount) ||
+        parsedCount < 1 ||
+        parsedCount > 100
+      ) {
+        return res
+          .status(400)
+          .json({ error: 'count must be a positive integer ≤ 100' });
+      }
       if (!groupId || typeof groupId !== 'string') {
         return res.status(400).json({ error: 'groupId is required' });
       }
@@ -1742,7 +1755,7 @@ export function createAdminRouter({
         db: database,
         studyId: req.params.id,
         groupId,
-        count,
+        count: parsedCount,
         maxRedemptions,
         expiresAt,
       });
