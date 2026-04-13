@@ -212,13 +212,49 @@ export async function dispatchDueNotifications({ db }) {
  * @param {{ getDb: function }} params
  * @returns {object} cron task
  */
-export function startNotificationScheduler({ getDb }) {
+export function startNotificationScheduler({ getDb, redisUrl } = {}) {
   const task = cron.schedule('* * * * *', async () => {
+    // --- Redis distributed lock (55s TTL, slightly less than 60s interval) ---
+    let redis = null;
+    let lockAcquired = false;
+    if (redisUrl) {
+      try {
+        const { createClient } = await import('redis');
+        redis = createClient({ url: redisUrl });
+        redis.on('error', () => {}); // suppress unhandled error events
+        await redis.connect();
+        const lockSet = await redis.set('hhh:notif-lock', '1', {
+          NX: true,
+          PX: 55000,
+        });
+        if (!lockSet) {
+          await redis.quit();
+          return; // another instance holds the lock — skip this tick
+        }
+        lockAcquired = true;
+      } catch (redisErr) {
+        console.warn(
+          '[notification] Redis unavailable — proceeding unlocked:',
+          redisErr.message
+        );
+        redis = null;
+      }
+    }
+
     try {
       const db = await getDb();
       await dispatchDueNotifications({ db });
     } catch (err) {
       console.error('[notification] Scheduler error:', err);
+    } finally {
+      if (redis && lockAcquired) {
+        try {
+          await redis.del('hhh:notif-lock');
+        } catch (_) {
+          // ignore lock-release errors
+        }
+        await redis.quit().catch(() => {});
+      }
     }
   });
   return task;

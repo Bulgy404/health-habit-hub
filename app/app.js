@@ -161,7 +161,10 @@ import { makeGetDb } from './utils/getDb.js';
 app.use('/api/v1', express.json(), createV1Router());
 
 // Start scheduled notification dispatcher (runs every 60 s)
-startNotificationScheduler({ getDb: makeGetDb() });
+startNotificationScheduler({
+  getDb: makeGetDb(),
+  redisUrl: process.env.REDIS_URL,
+});
 
 app.use(contextPath, router);
 
