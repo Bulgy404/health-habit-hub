@@ -55,7 +55,10 @@ export function createRecommendationsRouter({
       // Look up recommendation scoped by userId — wrong owner gets implicit 404
       const rec = await database
         .collection('recommendations')
-        .findOne({ recommendation_id, userId }, { projection: { goal: 1, userId: 1 } });
+        .findOne(
+          { recommendation_id, userId },
+          { projection: { goal: 1, userId: 1 } }
+        );
 
       if (!rec) {
         return res.status(404).json({ error: 'Recommendation not found' });
