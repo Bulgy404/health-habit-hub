@@ -162,14 +162,12 @@ class SparqlDbClient {
       .filter((label) => label.type === 'context')
       .map((context) => {
         const ALLOWED_CONTEXT_TYPES = new Set([
-          'Habit',
-          'Context',
-          'Behavior',
-          'Setting',
-          'Mechanism',
-          'Target',
-          'Goal',
-          'Causal',
+          'TimeReference',
+          'PhysicalSetting',
+          'People',
+          'InternalState',
+          'PriorBehavior',
+          'Reasoning',
         ]);
         if (!ALLOWED_CONTEXT_TYPES.has(context.value)) {
           throw new Error(`Unknown SPARQL label type: ${context.value}`);
@@ -227,14 +225,7 @@ class SparqlDbClient {
       .filter((label) => label.type === 'behavior')
       .map((behavior) => {
         const ALLOWED_BEHAVIOR_TYPES = new Set([
-          'Habit',
-          'Context',
           'Behavior',
-          'Setting',
-          'Mechanism',
-          'Target',
-          'Goal',
-          'Causal',
         ]);
         if (!ALLOWED_BEHAVIOR_TYPES.has(behavior.value)) {
           throw new Error(`Unknown SPARQL label type: ${behavior.value}`);
