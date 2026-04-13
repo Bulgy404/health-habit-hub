@@ -224,9 +224,7 @@ class SparqlDbClient {
     return donation.labels
       .filter((label) => label.type === 'behavior')
       .map((behavior) => {
-        const ALLOWED_BEHAVIOR_TYPES = new Set([
-          'Behavior',
-        ]);
+        const ALLOWED_BEHAVIOR_TYPES = new Set(['Behavior']);
         if (!ALLOWED_BEHAVIOR_TYPES.has(behavior.value)) {
           throw new Error(`Unknown SPARQL label type: ${behavior.value}`);
         }

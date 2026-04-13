@@ -19,7 +19,11 @@ function makeApp(userId) {
       findOne: async ({ recommendation_id, userId: scopedUserId }) => {
         // Simulate DB: only USER_A owns REC_ID
         if (recommendation_id === REC_ID && scopedUserId === USER_A) {
-          return { recommendation_id: REC_ID, userId: USER_A, goal: 'eat better' };
+          return {
+            recommendation_id: REC_ID,
+            userId: USER_A,
+            goal: 'eat better',
+          };
         }
         return null;
       },
