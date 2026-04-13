@@ -217,13 +217,14 @@ export function startNotificationScheduler({ getDb, redisUrl } = {}) {
     // --- Redis distributed lock (55s TTL, slightly less than 60s interval) ---
     let redis = null;
     let lockAcquired = false;
+    const lockToken = Math.random().toString(36).slice(2);
     if (redisUrl) {
       try {
         const { createClient } = await import('redis');
         redis = createClient({ url: redisUrl });
         redis.on('error', () => {}); // suppress unhandled error events
         await redis.connect();
-        const lockSet = await redis.set('hhh:notif-lock', '1', {
+        const lockSet = await redis.set('hhh:notif-lock', lockToken, {
           NX: true,
           PX: 55000,
         });
@@ -249,7 +250,11 @@ export function startNotificationScheduler({ getDb, redisUrl } = {}) {
     } finally {
       if (redis && lockAcquired) {
         try {
-          await redis.del('hhh:notif-lock');
+          // Only delete if we still own the lock (compare-and-delete via Lua)
+          await redis.eval(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+            { keys: ['hhh:notif-lock'], arguments: [lockToken] }
+          );
         } catch (_) {
           // ignore lock-release errors
         }
