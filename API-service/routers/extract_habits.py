@@ -9,15 +9,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import redis.asyncio as aioredis
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from neo4j import AsyncGraphDatabase  # type: ignore[import]
 from pydantic import BaseModel, Field
 
+from auth import verify_service_token
 from llm_client import chat_complete
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_service_token)])
 
 # ---------------------------------------------------------------------------
 # Redis setup (graceful — if unavailable the endpoint still works)

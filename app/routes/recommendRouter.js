@@ -6,6 +6,9 @@ async function proxyToRecommender(req, res, targetUrl) {
   if (req.headers.authorization) {
     headers['Authorization'] = req.headers.authorization;
   }
+  if (process.env.API_SERVICE_SECRET) {
+    headers['X-Service-Auth-Token'] = process.env.API_SERVICE_SECRET;
+  }
   const fetchOptions = { method: req.method, headers };
   if (req.body && Object.keys(req.body).length > 0) {
     fetchOptions.body = JSON.stringify(req.body);

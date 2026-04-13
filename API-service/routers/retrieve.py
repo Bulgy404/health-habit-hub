@@ -19,15 +19,16 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 import openai
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from auth import verify_service_token
 from llm_client import chat_complete
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_service_token)])
 
 # ---------------------------------------------------------------------------
 # Configuration

@@ -4,14 +4,15 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from auth import verify_service_token
 from llm_client import chat_complete
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_service_token)])
 
 # ---------------------------------------------------------------------------
 # Prompt template

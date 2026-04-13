@@ -39,6 +39,7 @@ services:
       - NODE_OPTIONS=--no-warnings
       - MONGO_DB=surveyjs
       - MONGO_HOST=mongo
+      - API_SERVICE_SECRET=${API_SERVICE_SECRET}
     ports:
       - ${APP_HOST_PORT:-3000}:3000
     networks:
@@ -229,6 +230,8 @@ services:
     restart: on-failure:3
     env_file:
       - stack.env
+    environment:
+      - API_SERVICE_SECRET=${API_SERVICE_SECRET}
     ports:
       - ${RECOMMENDER_HOST_PORT:-8000}:8000
     networks:
