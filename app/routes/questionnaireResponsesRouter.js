@@ -56,8 +56,8 @@ export function createQuestionnaireResponsesRouter({ db } = {}) {
    *             schema:
    *               type: object
    *               properties:
-   *                 id:
-   *                   type: string
+   *                 ok:
+   *                   type: boolean
    *       400:
    *         description: Missing required fields
    *       401:
@@ -79,14 +79,14 @@ export function createQuestionnaireResponsesRouter({ db } = {}) {
       }
 
       const database = await getDb();
-      const result = await database.collection('form_responses').insertOne({
+      await database.collection('form_responses').insertOne({
         userId,
         questionnaireSlug,
         answers,
         submitted_at: new Date(),
       });
 
-      res.status(201).json({ id: result.insertedId });
+      res.status(201).json({ ok: true });
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });

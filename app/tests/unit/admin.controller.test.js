@@ -195,7 +195,7 @@ test('POST /admin/participants creates a new participant', async () => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ group: 'G2', tokenCardFormat: 'qr' }),
   });
-  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.status, 201);
   const data = await res.json();
   assert.ok(data.userId, 'should return userId');
   assert.ok(data.username.startsWith('p-'), 'username should start with p-');

@@ -223,8 +223,8 @@ test('Integration: submit SLIQ response → fetch by slug → verify answers mat
     answers,
   });
   assert.strictEqual(postRes.status, 201);
-  const { id } = await postRes.json();
-  assert.ok(id, 'response should have an id');
+  const { ok } = await postRes.json();
+  assert.strictEqual(ok, true, 'response should have ok: true');
 
   // Fetch by slug
   const getRes = await request(

@@ -41,7 +41,7 @@ const config = {
     return [
       ['host', this.db.host],
       ['port', this.db.port],
-      ['path', `/${this.db.name}`],
+      ['path', `/${this.db.path}`],
     ];
   },
   getTranslateApiEndpoint: function () {

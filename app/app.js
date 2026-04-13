@@ -175,6 +175,12 @@ const verifyToken = createTokenVerifier();
 const { broadcast } = createRecommendationWsServer(httpServer, { verifyToken });
 app.use('/api/internal', express.json(), createInternalRouter({ broadcast }));
 
+if (!process.env.API_SERVICE_SECRET) {
+  console.warn(
+    '[startup] API_SERVICE_SECRET is not set — Python API service is unauthenticated'
+  );
+}
+
 httpServer.listen(port, () => {
   console.log(`Server is running on http://app.localhost`);
 });

@@ -271,7 +271,7 @@ test('GET /api/v1/admin/participants returns empty array initially', async () =>
 test('POST /api/v1/admin/participants creates participant and returns credentials', async () => {
   const token = makeToken(['admin']);
   const res = await post('/api/v1/admin/participants', {}, token);
-  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.status, 201);
   const body = await res.json();
   assert.ok(body.userId, 'should have userId');
   assert.ok(body.username.startsWith('p-'), 'username should start with p-');
@@ -360,7 +360,7 @@ test('DELETE returns 404 for unknown participant', async () => {
 test('POST /api/v1/admin/participants response includes tokenCardUrl', async () => {
   const token = makeToken(['admin'], 'admin-token-url-test');
   const res = await post('/api/v1/admin/participants', {}, token);
-  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.status, 201);
   const body = await res.json();
   assert.ok(body.tokenCardUrl, 'response should include tokenCardUrl');
   assert.ok(
