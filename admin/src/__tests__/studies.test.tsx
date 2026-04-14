@@ -80,7 +80,7 @@ describe('StudiesPage', () => {
 
     // The Generate Codes section heading should appear
     await waitFor(() => {
-      expect(screen.getAllByText(/generate codes/i).length).toBeGreaterThan(0);
+      expect(screen.getByRole('heading', { name: /generate codes/i })).toBeInTheDocument();
     });
   });
 

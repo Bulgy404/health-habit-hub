@@ -8,5 +8,4 @@ const styleMock: Record<string, string> = new Proxy(
   },
 );
 
-export default styleMock;
 module.exports = styleMock;

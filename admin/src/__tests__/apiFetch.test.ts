@@ -78,12 +78,7 @@ describe('apiFetch helper', () => {
       json: jest.fn().mockResolvedValueOnce({ error: 'Conflict' }),
     } as unknown as Response);
 
-    try {
-      await apiFetch('http://api/test', 'tok');
-      fail('expected to throw');
-    } catch (err) {
-      expect((err as Error & { status?: number }).status).toBe(409);
-    }
+    await expect(apiFetch('http://api/test', 'tok')).rejects.toMatchObject({ status: 409 });
   });
 
   it('throws HTTP status message when json() rejects', async () => {
