@@ -174,6 +174,7 @@ const options = {
   apis: [
     path.join(__dirname, 'routes', 'v1Router.js'),
     path.join(__dirname, 'routes', 'adminRouter.js'),
+    path.join(__dirname, 'routes', 'admin', '*.js'),
     path.join(__dirname, 'routes', 'surveyRouter.js'),
     path.join(__dirname, 'routes', 'habitsRouter.js'),
     path.join(__dirname, 'routes', 'recommendRouter.js'),
