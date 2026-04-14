@@ -10,6 +10,7 @@ if not _secret:
         "API_SERVICE_SECRET environment variable is required but not set."
     )
 
+from deps import lifespan
 from routers.classify_context import router as classify_context_router
 from routers.classify_habit import router as classify_habit_router
 from routers.extract_habits import router as extract_habits_router
@@ -22,7 +23,7 @@ from routers.retrieve import router as retrieve_router
 
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="HHH API Service", version="1.0.0")
+app = FastAPI(title="HHH API Service", version="1.0.0", lifespan=lifespan)
 
 app.include_router(classify_habit_router, prefix="/api/v1")
 app.include_router(classify_context_router, prefix="/api/v1")

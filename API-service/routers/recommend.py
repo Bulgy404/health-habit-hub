@@ -17,12 +17,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-import motor.motor_asyncio
-import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
+from deps import get_mongo_db, get_redis
 from llm_client import chat_complete
 from routers.extract_habits import ExtractHabitsRequest
 from routers.extract_habits import extract_habits as _extract_habits
@@ -36,58 +35,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(verify_service_token)])
 
 # ---------------------------------------------------------------------------
-# Redis setup (graceful — if unavailable the endpoint still works)
+# Redis / MongoDB config
 # ---------------------------------------------------------------------------
-_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 _REDIS_TTL = int(os.getenv("REDIS_TTL_SECONDS", "86400"))
-
-_redis: Optional[aioredis.Redis] = None
-
-
-async def _get_redis() -> Optional[aioredis.Redis]:
-    global _redis
-    if _redis is not None:
-        return _redis
-    try:
-        client: aioredis.Redis = aioredis.from_url(_REDIS_URL, decode_responses=True)
-        await client.ping()  # type: ignore[misc]
-        _redis = client
-        return _redis
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Redis unavailable (%s) — caching disabled.", exc)
-        return None
-
-
-# ---------------------------------------------------------------------------
-# MongoDB setup (graceful — if unavailable, storage/feedback steps are skipped)
-# ---------------------------------------------------------------------------
-_MONGO_HOST = os.getenv("MONGO_HOST", "mongo")
-_MONGO_PORT = int(os.getenv("MONGO_PORT", "27017"))
-_MONGO_USER = os.getenv("MONGO_USER", "")
-_MONGO_PASSWORD = os.getenv("MONGO_PASSWORD", "")
-_MONGO_AUTH_SOURCE = os.getenv("MONGO_AUTH_SOURCE", "admin")
-_MONGO_DB = os.getenv("MONGO_DB", "surveyjs")
-# Allow a full URL override for testing / simpler config
-_MONGO_URL = os.getenv("MONGO_URL", "")
-
-_mongo_client: Optional[motor.motor_asyncio.AsyncIOMotorClient] = None  # type: ignore[type-arg]
-
-
-def _get_mongo_db() -> Any:
-    global _mongo_client
-    if _mongo_client is None:
-        if _MONGO_URL:
-            url = _MONGO_URL
-        elif _MONGO_USER and _MONGO_PASSWORD:
-            url = (
-                f"mongodb://{_MONGO_USER}:{_MONGO_PASSWORD}"
-                f"@{_MONGO_HOST}:{_MONGO_PORT}/"
-                f"?authSource={_MONGO_AUTH_SOURCE}"
-            )
-        else:
-            url = f"mongodb://{_MONGO_HOST}:{_MONGO_PORT}/"
-        _mongo_client = motor.motor_asyncio.AsyncIOMotorClient(url)
-    return _mongo_client[_MONGO_DB]
 
 
 # ---------------------------------------------------------------------------
@@ -161,10 +111,9 @@ def _parse_llm_response(
         return []
 
 
-async def _fetch_prior_feedback(user_id: str, goal: str) -> List[str]:
+async def _fetch_prior_feedback(user_id: str, goal: str, db: Any) -> List[str]:
     """Fetch prior feedback comments for (user_id, goal) from MongoDB."""
     try:
-        db = _get_mongo_db()
         cursor = (
             db["recommendation_feedback"]
             .find({"userId": user_id, "goal": goal}, {"comment": 1, "_id": 0})
@@ -189,10 +138,12 @@ async def _store_recommendation(
     session_id: str,
     recs: List[Dict[str, Any]],
     generated_at: str,
+    db: Any = None,
 ) -> None:
     """Persist the recommendation document to MongoDB."""
+    if db is None:
+        return
     try:
-        db = _get_mongo_db()
         await db["recommendations"].insert_one(
             {
                 "recommendation_id": recommendation_id,
@@ -211,11 +162,14 @@ async def _store_recommendation(
 # Endpoint
 # ---------------------------------------------------------------------------
 @router.post("/llm/recommend", response_model=RecommendResponse)
-async def recommend(body: RecommendRequest) -> RecommendResponse:
+async def recommend(
+    body: RecommendRequest,
+    redis_client: Optional[Any] = Depends(get_redis),
+    db: Any = Depends(get_mongo_db),
+) -> RecommendResponse:
     key = _cache_key(body.user_id, body.goal)
 
     # --- cache read ---
-    redis_client = await _get_redis()
     if redis_client is not None:
         try:
             cached = await redis_client.get(key)
@@ -236,7 +190,7 @@ async def recommend(body: RecommendRequest) -> RecommendResponse:
     retrieve_resp = await _retrieve(RetrieveRequest(rag_query=rag_query))
 
     # --- Fetch prior feedback from MongoDB (M3.6 collection) ---
-    prior_feedback = await _fetch_prior_feedback(body.user_id, body.goal)
+    prior_feedback = await _fetch_prior_feedback(body.user_id, body.goal, db)
 
     # --- Build prompt ---
     habits_json = json.dumps(
@@ -285,6 +239,7 @@ async def recommend(body: RecommendRequest) -> RecommendResponse:
         session_id=body.session_id,
         recs=recs,
         generated_at=generated_at,
+        db=db,
     )
 
     result = RecommendResponse(
