@@ -10,7 +10,12 @@ import {
 } from '../../services/adminParticipantService.js';
 import { getParticipantProgress } from '../../services/adminStatsService.js';
 
-export function createParticipantsRouter({ db, keycloak, neo4jRun } = {}) {
+export function createParticipantsRouter({
+  db,
+  keycloak,
+  neo4jRun,
+  tokenCardService: _tokenCardService,
+} = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 

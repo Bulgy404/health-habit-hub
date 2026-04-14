@@ -26,7 +26,12 @@ async function seedDefaultSettings(database) {
   }
 }
 
-export function createAdminRouter({ db, neo4jRun, keycloak } = {}) {
+export function createAdminRouter({
+  db,
+  neo4jRun,
+  keycloak,
+  tokenCardService,
+} = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -476,7 +481,10 @@ export function createAdminRouter({ db, neo4jRun, keycloak } = {}) {
   });
 
   // ── Mount domain sub-routers ──────────────────────────────────────────────
-  router.use('/', createParticipantsRouter({ db, keycloak, neo4jRun }));
+  router.use(
+    '/',
+    createParticipantsRouter({ db, neo4jRun, keycloak, tokenCardService })
+  );
   router.use('/', createSurveysRouter({ db, neo4jRun }));
   router.use('/', createStudiesRouter({ db, neo4jRun, keycloak }));
   router.use('/', createNotificationsRouter({ db }));
