@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import StudiesPage from '../app/(admin)/studies/page';
 
 jest.mock('next-auth/react', () => ({
@@ -27,6 +28,18 @@ afterEach(() => {
   jest.resetAllMocks();
 });
 
+const mockStudy = {
+  id: 'study-1',
+  name: 'Study A',
+  description: '',
+  isActive: true,
+  isDefault: false,
+  groups: [],
+  questionnaires: [],
+  participantCount: 0,
+  createdAt: null,
+};
+
 describe('StudiesPage', () => {
   it('renders without crashing', () => {
     render(<StudiesPage />);
@@ -35,5 +48,75 @@ describe('StudiesPage', () => {
   it('renders the page title', () => {
     render(<StudiesPage />);
     expect(screen.getByRole('heading', { name: /studies/i })).toBeInTheDocument();
+  });
+
+  it('detail modal tabs are reachable — Codes tab visible and clickable', async () => {
+    const user = userEvent.setup();
+
+    // First call: list load returns one study
+    // Subsequent calls (codes fetch inside CodesTab): return empty codes list
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue([mockStudy]),
+      } as unknown as Response)
+      .mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ codes: [], total: 0 }),
+      } as unknown as Response);
+
+    render(<StudiesPage />);
+
+    // Wait for study to appear and click its row to open detail modal
+    const studyName = await screen.findByText('Study A');
+    await user.click(studyName);
+
+    // Modal should open — Codes tab button should be visible
+    const codesTab = await screen.findByRole('button', { name: /^codes$/i });
+    expect(codesTab).toBeInTheDocument();
+
+    // Click Codes tab
+    await user.click(codesTab);
+
+    // The Generate Codes section heading should appear
+    await waitFor(() => {
+      expect(screen.getAllByText(/generate codes/i).length).toBeGreaterThan(0);
+    });
+  });
+
+  it('Codes tab generate form shows error when no group is selected', async () => {
+    const user = userEvent.setup();
+
+    // Study with no groups so genGroupId stays ""
+    const studyNoGroups = { ...mockStudy, groups: [] };
+
+    (global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue([studyNoGroups]),
+      } as unknown as Response)
+      .mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue({ codes: [], total: 0 }),
+      } as unknown as Response);
+
+    render(<StudiesPage />);
+
+    // Open detail modal
+    const studyName = await screen.findByText('Study A');
+    await user.click(studyName);
+
+    // Switch to Codes tab
+    const codesTab = await screen.findByRole('button', { name: /^codes$/i });
+    await user.click(codesTab);
+
+    // Wait for Generate Codes button to appear, then click it
+    const generateBtn = await screen.findByRole('button', { name: /generate codes/i });
+    await user.click(generateBtn);
+
+    // Error message about selecting a group should appear
+    await waitFor(() => {
+      expect(screen.getByText(/please select a group/i)).toBeInTheDocument();
+    });
   });
 });
