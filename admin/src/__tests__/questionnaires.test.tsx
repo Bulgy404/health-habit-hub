@@ -16,19 +16,19 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/',
 }));
 
-// Mock fetch so the page doesn't error on mount
-beforeEach(() => {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    json: jest.fn().mockResolvedValue([]),
-  } as unknown as Response);
-});
-
-afterEach(() => {
-  jest.resetAllMocks();
-});
-
 describe('QuestionnairesPage', () => {
+  // Mock fetch so the page doesn't error on mount
+  beforeEach(() => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue([]),
+    } as unknown as Response);
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
   it('renders without crashing', () => {
     render(<QuestionnairesPage />);
   });
