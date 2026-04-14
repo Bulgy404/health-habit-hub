@@ -252,6 +252,39 @@ test('GET /admin/participants/:id/token-card - unknown participant returns 404',
   assert.strictEqual(res.status, 404);
 });
 
+test('GET /admin/participants/:id/token-card - participant exists but no tokenCardPdf returns 404', async () => {
+  const noCardDb = createMockDb();
+  noCardDb._seed('participants', [
+    {
+      userId: 'p-nocard',
+      username: 'p-nocard',
+      passwordHash: '$2a$10$fakehashfortest',
+    },
+  ]);
+  const noCardApp = express();
+  noCardApp.use(express.json());
+  noCardApp.use(
+    '/admin',
+    createAdminRouter({
+      db: noCardDb,
+      keycloak: createMockKeycloak(),
+      tokenCardService: createMockTokenCardService(),
+    })
+  );
+  const noCardServer = createServer(noCardApp);
+  await new Promise((resolve) => noCardServer.listen(0, '127.0.0.1', resolve));
+  const noCardUrl = `http://127.0.0.1:${noCardServer.address().port}`;
+
+  const res = await fetch(
+    `${noCardUrl}/admin/participants/p-nocard/token-card`
+  );
+  assert.strictEqual(res.status, 404);
+  const data = await res.json();
+  assert.deepStrictEqual(data, { error: 'Token card not available' });
+
+  await new Promise((resolve) => noCardServer.close(resolve));
+});
+
 test('GET /admin/settings returns settings object', async () => {
   const res = await fetch(`${baseUrl}/admin/settings`);
   assert.strictEqual(res.status, 200);
