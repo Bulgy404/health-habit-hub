@@ -61,6 +61,12 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       )
       ..setNavigationDelegate(NavigationDelegate(
         onPageFinished: (_) => _injectCompletionHook(),
+        onNavigationRequest: (NavigationRequest request) {
+          final allowed = request.url.startsWith(AppConfig.appBaseUrl);
+          return allowed
+              ? NavigationDecision.navigate
+              : NavigationDecision.prevent;
+        },
       ))
       ..loadRequest(
         uri,

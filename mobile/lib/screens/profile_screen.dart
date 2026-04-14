@@ -111,6 +111,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         )
         ..setNavigationDelegate(NavigationDelegate(
           onPageFinished: (_) => _injectCompletionHook(),
+          onNavigationRequest: (NavigationRequest request) {
+            final allowed = request.url.startsWith(AppConfig.appBaseUrl);
+            return allowed
+                ? NavigationDecision.navigate
+                : NavigationDecision.prevent;
+          },
         ))
         ..loadRequest(
           Uri.parse('$_baseUrl/surveys/${survey.id}/render'),
