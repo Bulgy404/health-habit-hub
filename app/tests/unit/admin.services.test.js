@@ -150,7 +150,7 @@ test('createParticipant creates user in db and keycloak', async () => {
   const result = await createParticipant({ db, kc });
   assert.ok(result.userId, 'should return userId');
   assert.ok(result.username.startsWith('p-'), 'username prefixed p-');
-  assert.ok(result.password, 'should return password');
+  assert.ok(!result.password, 'should not return plaintext password');
   assert.ok(
     result.tokenCardUrl.includes(result.userId),
     'tokenCardUrl contains userId'

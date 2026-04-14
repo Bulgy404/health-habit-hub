@@ -1,5 +1,7 @@
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
+import bcrypt from 'bcryptjs';
 import { assignGroupLabel } from '../db/adminQueries.js';
+import { generateTokenCard } from './token_card_service.js';
 
 // Whitelist of valid Neo4j group labels (prevents Cypher label injection)
 const VALID_GROUPS = new Set([
@@ -44,7 +46,7 @@ export async function listParticipants({ db }) {
 /**
  * Create a new participant in Keycloak and MongoDB.
  * @param {{ db: object, kc: object }} deps
- * @returns {Promise<{ userId: string, username: string, password: string, tokenCardUrl: string }>}
+ * @returns {Promise<{ userId: string, username: string, tokenCardUrl: string }>}
  */
 export async function createParticipant({ db, kc }) {
   const userId = randomUUID();
@@ -54,11 +56,23 @@ export async function createParticipant({ db, kc }) {
   const keycloakUserId = await kc.createUser({ userId, username, password });
   await kc.assignRole(keycloakUserId || userId, 'participant');
 
+  // Generate PDF while we still have the plaintext password
+  const tokenCardPdf = await generateTokenCard(
+    userId,
+    username,
+    password,
+    'both'
+  );
+
+  // Hash password — never store plaintext
+  const passwordHash = await bcrypt.hash(password, 10);
+
   const now = new Date();
   await db.collection('participants').insertOne({
     userId,
     username,
-    password,
+    passwordHash,
+    tokenCardPdf,
     group: null,
     enrolledAt: now,
     lastActive: null,
@@ -68,7 +82,6 @@ export async function createParticipant({ db, kc }) {
   return {
     userId,
     username,
-    password,
     tokenCardUrl: `/api/v1/admin/participants/${userId}/token-card`,
   };
 }

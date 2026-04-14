@@ -139,7 +139,8 @@ before(async () => {
       username: 'p-001',
       group: 'G1',
       enrolledAt: new Date(),
-      password: 'pass123',
+      passwordHash: '$2a$10$fakehashfortest',
+      tokenCardPdf: Buffer.from('%PDF-1.4 fake token card for p-001'),
     },
   ]);
   mockDb._seed('surveys', [
@@ -237,20 +238,18 @@ test('PATCH /admin/participants/:id/group - unknown participant returns 404', as
 });
 
 test('GET /admin/participants/:id/token-card returns PDF', async () => {
-  const res = await fetch(
-    `${baseUrl}/admin/participants/p-001/token-card?format=qr`
-  );
+  const res = await fetch(`${baseUrl}/admin/participants/p-001/token-card`);
   assert.strictEqual(res.status, 200);
   assert.strictEqual(res.headers.get('content-type'), 'application/pdf');
   const buf = Buffer.from(await res.arrayBuffer());
   assert.ok(buf.toString().startsWith('%PDF'));
 });
 
-test('GET /admin/participants/:id/token-card - invalid format returns 400', async () => {
+test('GET /admin/participants/:id/token-card - unknown participant returns 404', async () => {
   const res = await fetch(
-    `${baseUrl}/admin/participants/p-001/token-card?format=invalid`
+    `${baseUrl}/admin/participants/unknown-id/token-card`
   );
-  assert.strictEqual(res.status, 400);
+  assert.strictEqual(res.status, 404);
 });
 
 test('GET /admin/settings returns settings object', async () => {
@@ -299,7 +298,7 @@ test('PATCH /admin/participants/:id/group - malicious group string returns 400 a
       username: 'p-inj',
       group: 'G1',
       enrolledAt: new Date(),
-      password: 'x',
+      passwordHash: '$2a$10$fakehashfortest',
     },
   ]);
   const injectionApp = express();
