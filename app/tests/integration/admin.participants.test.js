@@ -275,7 +275,8 @@ test('POST /api/v1/admin/participants creates participant and returns credential
   const body = await res.json();
   assert.ok(body.userId, 'should have userId');
   assert.ok(body.username.startsWith('p-'), 'username should start with p-');
-  assert.ok(body.password, 'should have password');
+  assert.ok(!body.password, 'should not return plaintext password');
+  assert.ok(body.tokenCardUrl, 'should have tokenCardUrl');
 });
 
 test('POST creates participant visible in GET list', async () => {
@@ -399,17 +400,18 @@ test('GET /api/v1/admin/participants/:id/token-card returns 404 for unknown part
   assert.strictEqual(res.status, 404);
 });
 
-test('GET /api/v1/admin/participants/:id/token-card returns 400 for invalid format', async () => {
+test('GET /api/v1/admin/participants/:id/token-card returns PDF for created participant', async () => {
   const token = makeToken(['admin'], 'admin-tokencard-format-test');
 
   const createRes = await post('/api/v1/admin/participants', {}, token);
   const { userId } = await createRes.json();
 
   const res = await get(
-    `/api/v1/admin/participants/${userId}/token-card?format=invalid`,
+    `/api/v1/admin/participants/${userId}/token-card`,
     token
   );
-  assert.strictEqual(res.status, 400);
+  assert.strictEqual(res.status, 200);
+  assert.strictEqual(res.headers.get('content-type'), 'application/pdf');
 });
 
 test('GET /api/v1/admin/participants/:id/token-card returns 401 without token', async () => {

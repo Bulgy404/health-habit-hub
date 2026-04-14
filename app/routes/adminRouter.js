@@ -3,7 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
 import { makeGetDb } from '../utils/getDb.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
-import { generateTokenCard } from '../services/token_card_service.js';
 import {
   listParticipants,
   createParticipant,
@@ -59,12 +58,7 @@ async function seedDefaultSettings(database) {
   }
 }
 
-export function createAdminRouter({
-  db,
-  neo4jRun,
-  keycloak,
-  tokenCardService,
-} = {}) {
+export function createAdminRouter({ db, neo4jRun, keycloak } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -75,10 +69,6 @@ export function createAdminRouter({
 
   function getKeycloak() {
     return keycloak || createKeycloakAdminClient();
-  }
-
-  function getTokenCardService() {
-    return tokenCardService || { generateTokenCard };
   }
 
   /**
@@ -164,7 +154,7 @@ export function createAdminRouter({
    *               $ref: '#/components/schemas/Error'
    *   post:
    *     summary: Create a new participant
-   *     description: Creates a Keycloak user with the participant role, inserts a MongoDB record, and returns credentials plus a token card URL.
+   *     description: Creates a Keycloak user with the participant role, inserts a MongoDB record, generates a token card PDF, and returns the participant identifiers plus a token card URL.
    *     tags: [Admin]
    *     security:
    *       - bearerAuth: []
@@ -178,7 +168,6 @@ export function createAdminRouter({
    *               properties:
    *                 userId: { type: string, format: uuid }
    *                 username: { type: string, example: p-a1b2c3d4 }
-   *                 password: { type: string, example: Xk9mP2rNv7wQ }
    *                 tokenCardUrl: { type: string, example: /api/v1/admin/participants/a1b2c3d4.../token-card }
    *       401:
    *         description: Missing or invalid JWT
@@ -336,7 +325,7 @@ export function createAdminRouter({
    * /admin/participants/{id}/token-card:
    *   get:
    *     summary: Download participant token card PDF
-   *     description: Generates and returns a PDF token card for the specified participant. Supports QR code only, print-text only, or both formats.
+   *     description: Returns the pre-generated PDF token card for the specified participant.
    *     tags: [Admin]
    *     security:
    *       - bearerAuth: []
@@ -349,14 +338,6 @@ export function createAdminRouter({
    *           format: uuid
    *         description: Participant userId
    *         example: a1b2c3d4-1234-5678-abcd-ef0123456789
-   *       - in: query
-   *         name: format
-   *         required: false
-   *         schema:
-   *           type: string
-   *           enum: [qr, print, both]
-   *           default: both
-   *         description: Token card output format
    *     responses:
    *       200:
    *         description: PDF token card
@@ -365,12 +346,6 @@ export function createAdminRouter({
    *             schema:
    *               type: string
    *               format: binary
-   *       400:
-   *         description: Invalid format parameter
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
    *       401:
    *         description: Missing or invalid JWT
    *         content:
@@ -384,23 +359,16 @@ export function createAdminRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    *       404:
-   *         description: Participant not found
+   *         description: Participant not found or token card not available
    *         content:
    *           application/json:
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  // GET /api/v1/admin/participants/:id/token-card – returns PDF
+  // GET /api/v1/admin/participants/:id/token-card – returns stored PDF
   router.get('/participants/:id/token-card', async (req, res) => {
     try {
       const { id } = req.params;
-      const format = req.query.format || 'both';
-
-      if (!['qr', 'print', 'both'].includes(format)) {
-        return res
-          .status(400)
-          .json({ error: "Invalid format. Must be 'qr', 'print', or 'both'" });
-      }
 
       const database = await getDb();
       const participant = await getParticipant({ db: database, id });
@@ -409,13 +377,16 @@ export function createAdminRouter({
         return res.status(404).json({ error: 'Participant not found' });
       }
 
-      const svc = getTokenCardService();
-      const pdfBuffer = await svc.generateTokenCard(
-        participant.userId,
-        participant.username,
-        participant.password || '',
-        format
-      );
+      if (!participant.tokenCardPdf) {
+        return res.status(404).json({ error: 'Token card not available' });
+      }
+
+      // MongoDB Binary → Buffer
+      const pdfBuffer = Buffer.isBuffer(participant.tokenCardPdf)
+        ? participant.tokenCardPdf
+        : Buffer.from(
+            participant.tokenCardPdf.buffer ?? participant.tokenCardPdf
+          );
 
       res.set({
         'Content-Type': 'application/pdf',
