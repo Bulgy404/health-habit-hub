@@ -73,7 +73,7 @@ export function createParticipantsRouter({
    *     security:
    *       - bearerAuth: []
    *     responses:
-   *       200:
+   *       201:
    *         description: Participant created
    *         content:
    *           application/json:
