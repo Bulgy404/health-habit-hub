@@ -12,9 +12,10 @@ Welcome to the Health Habit Hub project. This guide takes you from zero to a ful
 4. [Start Services with Docker Compose](#4-start-services-with-docker-compose)
 5. [Run Flutter App in Chrome](#5-run-flutter-app-in-chrome)
 6. [Run Flutter App in Android Emulator](#6-run-flutter-app-in-android-emulator)
-7. [Run All Tests](#7-run-all-tests)
-8. [Common Pitfalls](#8-common-pitfalls)
-9. [Verify Your Setup Checklist](#9-verify-your-setup-checklist)
+7. [Run the Admin App Locally](#7-run-the-admin-app-locally)
+8. [Run All Tests](#8-run-all-tests)
+9. [Common Pitfalls](#9-common-pitfalls)
+10. [Verify Your Setup Checklist](#10-verify-your-setup-checklist)
 
 ---
 
@@ -27,7 +28,7 @@ Install the following tools before proceeding. The table shows the minimum requi
 | **Flutter** | 3.22.0 | `flutter --version` |
 | **Docker** | 24.0.0 | `docker --version` |
 | **Docker Compose** | 2.20.0 | `docker compose version` |
-| **Node.js** | 20.0.0 | `node --version` |
+| **Node.js** | 22.0.0 | `node --version` |
 | **npm** | 10.0.0 | `npm --version` |
 | **Git** | 2.40.0 | `git --version` |
 
@@ -123,6 +124,9 @@ KEYCLOAK_ADMIN_PASSWORD=devpassword
 # ── Recommender ──────────────────────────────────────────────────────────
 RECOMMENDER_URL=http://recommender:8000
 
+# ── API Service ───────────────────────────────────────────────────────────
+API_SERVICE_SECRET=dev-secret-change-in-production
+
 # ── LibreTranslate ───────────────────────────────────────────────────────
 LT_LOAD_ONLY=de,en
 LT_REQ_LIMIT=0
@@ -151,6 +155,8 @@ MAIL_RECEIVER=dev@localhost
 # ── Traefik ──────────────────────────────────────────────────────────────
 TRAEFIK_DASHBOARD_AUTH=admin:$$apr1$$devhash
 ```
+
+`API_SERVICE_SECRET` is the shared secret between the Node.js backend and the Python API service (recommender). Any non-empty string works locally; use a strong random value in production.
 
 > **Note:** Never commit `stack.env.local` to Git — it is listed in `.gitignore`. For production deployments use the values in `stack.env` overridden in Portainer.
 
@@ -308,7 +314,48 @@ flutter run \
 
 ---
 
-## 7. Run All Tests
+## 7. Run the Admin App Locally
+
+The admin app is a Next.js application that lives in the `admin/` directory. It provides a researcher/admin interface for managing studies, participants, and questionnaires.
+
+### Install and start
+
+```bash
+cd admin
+npm install
+npm run dev  # starts Next.js dev server on http://localhost:3001
+```
+
+The dev server starts on port **3001** (separate from the Node.js backend on 3000).
+
+### Authentication
+
+The admin app connects to Keycloak for authentication. You need a Keycloak user with the `admin` or `researcher` realm role in the `hhh` realm. The Docker stack's `keycloak-init` service configures the realm automatically on first start.
+
+The following environment variables control the admin app's auth behaviour (already set in `docker-compose.local.yml` for the containerised version; set them in a local `.env.local` file inside `admin/` when running outside Docker):
+
+```ini
+NEXTAUTH_URL=http://localhost:3001
+NEXTAUTH_SECRET=any-random-string-for-local-dev
+KEYCLOAK_CLIENT_ID=hhh-admin
+KEYCLOAK_CLIENT_SECRET=hhh-admin-secret-change-me
+KEYCLOAK_ISSUER=http://localhost:8080/realms/hhh
+KEYCLOAK_BROWSER_URL=http://localhost:8080
+KEYCLOAK_INTERNAL_URL=http://localhost:8080
+```
+
+### Run the admin test suite
+
+```bash
+cd admin
+npm test
+```
+
+This runs the Jest + React Testing Library test suite located in `admin/src/__tests__/`. Tests cover middleware, auth session handling, and key page components.
+
+---
+
+## 8. Run All Tests
 
 ### Seed the local database
 
@@ -358,6 +405,28 @@ All tests passed!
 
 > **Note:** A small number of widget tests that omit `AppLocalizations.delegate` will report failures. These are pre-existing gaps not caused by your changes. Run `flutter analyze` to confirm no analysis errors.
 
+### Admin app tests
+
+```bash
+cd admin
+npm test
+```
+
+This runs the Jest + React Testing Library suite in `admin/src/__tests__/`. Expected output:
+
+```
+Tests:       X passed, X total
+```
+
+### Python API service tests
+
+The recommender/API service has its own test suite under `API-service/tests/`. Run it inside the service's Python environment:
+
+```bash
+cd API-service
+pytest tests/
+```
+
 ### Ontology / SPARQL tests
 
 ```bash
@@ -377,7 +446,7 @@ Expected output (each line is a PASS):
 
 ---
 
-## 8. Common Pitfalls
+## 9. Common Pitfalls
 
 ### Port conflicts
 
@@ -390,7 +459,7 @@ lsof -i :3000
 kill -9 <PID>
 ```
 
-Common conflicting ports: **3000** (Node.js), **8080** (Keycloak), **7474/7687** (Neo4j), **27017** (MongoDB), **3030** (Fuseki).
+Common conflicting ports: **3000** (Node.js), **3001** (Admin app), **8080** (Keycloak), **7474/7687** (Neo4j), **27017** (MongoDB), **3030** (Fuseki).
 
 ### Keycloak not ready
 
@@ -405,6 +474,15 @@ docker compose logs -f keycloak
 ```
 
 Then retry `curl http://localhost:3000/api/v1/health`.
+
+### Admin app cannot authenticate
+
+If the admin app redirects to Keycloak but login fails or loops, check that:
+
+1. Keycloak is healthy (`docker compose ps` shows `h3-keycloak` as healthy).
+2. The `hhh-admin` client exists in the `hhh` realm.
+3. Your Keycloak user has the `admin` or `researcher` realm role assigned.
+4. `KEYCLOAK_ISSUER` in your `admin/.env.local` matches the issuer claim in the Keycloak token (use `http://localhost:8080/realms/hhh` for local dev).
 
 ### Flutter web CORS errors
 
@@ -449,9 +527,25 @@ cd mobile && flutter gen-l10n
 
 This regenerates `lib/l10n/app_localizations.dart` and its language variants. Always run this step before `flutter analyze` or `flutter test` when ARB files have changed.
 
+### Node.js version too old
+
+The backend and admin app require Node.js **22 or later**. If you see syntax errors or unsupported feature warnings, check your version:
+
+```bash
+node --version
+# Must be v22.x.x or higher
+```
+
+Use a version manager such as `nvm` or `fnm` to switch versions:
+
+```bash
+nvm install 22
+nvm use 22
+```
+
 ---
 
-## 9. Verify Your Setup Checklist
+## 10. Verify Your Setup Checklist
 
 Work through each check in order. Each shows the command and expected output.
 
@@ -534,7 +628,21 @@ Tests:       265 passed, 265 total
 
 ---
 
-**Check 8 — Flutter web compiles**
+**Check 8 — Admin app tests pass**
+
+```bash
+cd admin && npm test 2>&1 | tail -5
+```
+
+Expected last lines contain:
+
+```
+Tests:       X passed, X total
+```
+
+---
+
+**Check 9 — Flutter web compiles**
 
 ```bash
 cd mobile && flutter build web --dart-define=API_BASE_URL=http://localhost:3000/api/v1 2>&1 | tail -3

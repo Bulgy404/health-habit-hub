@@ -9,8 +9,8 @@ This guide walks researchers and administrators through every day-to-day task in
 Use this checklist when launching a new cohort of participants.
 
 1. **Log in as admin** — open `https://hhh.tu-dresden.de/admin` and authenticate with your admin credentials (Section 1).
-2. **Create participant accounts** — for each participant, use *Participants → New Participant* and note the generated token (Section 2).
-3. **Download and distribute token cards** — download the printable PDF token card for each participant and hand it out physically or via post (Section 2).
+2. **Create participant accounts** — for each participant, use *Participants → New Participant*; the system immediately generates both credentials and the token card PDF (Section 2).
+3. **Download and distribute token cards** — tap Download Token Card on each participant's detail view to retrieve the ready-made PDF; print and hand it out physically or via post (Section 2).
 4. **Assign study groups** — assign each participant to one of the four study groups (G1–G4) in the participant's detail view (Section 3).
 5. **Create or publish questionnaires** — set up the baseline profile survey and any follow-up questionnaires; assign them to the correct groups (Section 4).
 6. **Verify first logins** — open the participant progress dashboard and confirm each participant's first login is registered (Section 6).
@@ -63,15 +63,20 @@ Each study participant needs an account and a printable token card with their QR
 
 **Step 3.** Fill in the **Display Name** (optional, for your reference only — participants are pseudonymised) and select the **Study Group** (you can change this later; see Section 3).
 
-**Step 4.** Tap **Create**. The system generates a pseudonymous username (e.g. `p-2024-0042`) and a one-time access token.
+**Step 4.** Tap **Create**. The system immediately:
+- Generates a pseudonymous username (e.g. `p-2024-0042`) and a random access password
+- Creates the participant's Keycloak account
+- Generates the token card PDF and stores it — no further action needed before downloading
+
+> **Note:** Participant passwords are stored internally as a bcrypt hash. Neither you nor any other admin can retrieve the raw password — it exists in readable form only on the printed token card. This is by design and requires no admin action.
 
 | Screenshot | Callout annotations |
 |---|---|
-| ![Create participant form](../assets/screenshots/admin/02-create-participant.png) | **(1)** Display Name field — researcher-visible only; not shown to the participant. **(2)** Study Group dropdown — defaults to G1; can be changed later. **(3)** Create button — generates credentials and creates the Keycloak account. |
+| ![Create participant form](../assets/screenshots/admin/02-create-participant.png) | **(1)** Display Name field — researcher-visible only; not shown to the participant. **(2)** Study Group dropdown — defaults to G1; can be changed later. **(3)** Create button — generates credentials, creates the Keycloak account, and produces the token card PDF immediately. |
 
 *Figure 2a: New participant creation form.*
 
-**Step 5.** After creation, the participant's detail view opens automatically. Tap **Download Token Card** to get a printable PDF.
+**Step 5.** After creation, the participant's detail view opens automatically. Tap **Download Token Card** to retrieve the pre-generated PDF. The download is instant — the PDF was created at the moment you tapped Create.
 
 **Step 6.** Print the token card and hand it to the participant. The card contains:
 - The study logo and participant pseudonym
@@ -80,7 +85,7 @@ Each study participant needs an account and a printable token card with their QR
 
 | Screenshot | Callout annotations |
 |---|---|
-| ![Download token card button](../assets/screenshots/admin/02-download-token-card.png) | **(1)** Participant pseudonym and internal ID. **(2)** Download Token Card button — generates the printable PDF. **(3)** Copy Credentials button — copies username:password to clipboard for digital distribution. **(4)** QR code preview showing the encoded deep link. |
+| ![Download token card button](../assets/screenshots/admin/02-download-token-card.png) | **(1)** Participant pseudonym and internal ID. **(2)** Download Token Card button — retrieves the pre-generated PDF instantly. **(3)** Copy Credentials button — copies username:password to clipboard for digital distribution. **(4)** QR code preview showing the encoded deep link. |
 
 *Figure 2b: Participant detail view after creation, showing the token card download button.*
 
@@ -273,6 +278,8 @@ If a participant loses their token card or a device is compromised, you can revo
 
 The token card PDF layout — logo, font size, QR code position, and colour scheme — can be adjusted in the admin settings without code changes.
 
+> **Note:** Token card format settings take effect for all new participants created after the settings are saved. Existing token card PDFs (generated at participant creation time) are not retroactively updated. To apply a new format to an existing participant, use **Regenerate Token** on their detail view and then re-download the token card.
+
 **Step 1.** In the Admin panel, tap **Settings** (gear icon in the sidebar footer).
 
 **Step 2.** Under **Token Card Format**, you can configure:
@@ -288,7 +295,7 @@ The token card PDF layout — logo, font size, QR code position, and colour sche
 
 **Step 3.** Tap **Preview Token Card** to see a live preview PDF with the current settings applied to a sample participant.
 
-**Step 4.** Tap **Save Settings** to persist. All subsequently downloaded token cards use the new format.
+**Step 4.** Tap **Save Settings** to persist. All subsequently created participants will have token cards generated using the new format.
 
 | Screenshot | Callout annotations |
 |---|---|
@@ -323,4 +330,4 @@ The app supports English and German (Deutsch). Each participant can independentl
 
 ---
 
-*Health Habit Hub — Admin Guide v1.1 · TU Dresden · 2026*
+*Health Habit Hub — Admin Guide v1.2 · TU Dresden · 2026*

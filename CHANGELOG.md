@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-04-16
+
+### Security
+- Participant passwords now stored as bcrypt hashes (was plaintext) — `adminParticipantService.js`
+- Timing-safe secret comparison for shared-secret endpoints; security headers middleware added to all responses
+- Shared-secret authentication added between Node.js backend and Python API service — new env var `API_SERVICE_SECRET`, new file `API-service/auth.py`
+- IDOR vulnerability closed on recommendations feedback endpoint — query now scoped by `userId`; regression test added
+- Field length limits added to all API request models in Python API service
+- LLM call timeout added to Python API service
+- Knowledge-base endpoint path traversal guard added
+- PII redacted from survey submission logs
+- `secure` and `sameSite` cookie flags added to session cookies
+- `_id` field stripped from all API responses
+- WebView navigation restricted to app origin in donate and profile screens
+
+### Added
+- Redis distributed lock on notification cron job — prevents duplicate dispatch across multiple instances
+- Jest + React Testing Library test suite for Next.js admin app (`admin/src/__tests__/`)
+- IDOR regression tests for recommendations feedback endpoint
+- Interaction tests for questionnaires, studies, and knowledge-base admin pages
+- `API-service/auth.py` — shared-secret middleware for all Python API routes
+
+### Changed
+- `adminRouter.js` refactored into domain sub-routers: `app/routes/admin/participantsRouter.js`, `studiesRouter.js`, `surveysRouter.js`, `notificationsRouter.js`
+- Token card PDF generated at participant creation time (previously generated lazily on first download)
+- Python API singletons consolidated into shared `API-service/deps.py` using FastAPI lifespan management
+- Redis compare-and-delete now uses unique per-lock token to prevent accidental lock release
+
+### Removed
+- Age-consent middleware removed from Node.js backend
+- Disclaimer routes removed from Node.js backend
+- Legal document screen added to Flutter app to replace the removed middleware/routes
+
 ## [1.2.0] - 2026-03-22
 
 ### Changed — Clean Code Refactor Cycle (US-162 to US-170)

@@ -168,7 +168,7 @@ When donating several habits in succession or within a browser session, the addi
 
 #### Step 5: Reward and visualization
 
-In progress (Here it is only indicated that the donor is presented with a visualization that relates their own data donation to the totality of all data donations).
+After submitting a habit donation, the app presents a visualization that relates your own data donation to the totality of all data donations. This gives you a sense of how your contribution fits into the broader research effort.
 
 ## Settings
 
@@ -185,13 +185,51 @@ The Health-Habit-Hub app supports **English** and **German**. You can change the
 
 The selected language is saved to your account so it is remembered the next time you open the app. It also controls the language of the habit-donation survey shown in the Donate screen.
 
+### Legal
+
+The Settings screen also provides access to the **Legal** screen. Tap **Legal** in the Settings screen to view the current terms of use, privacy policy, and imprint. By continuing to use the app, you agree to the terms shown in the Legal screen.
+
 ## Data protection and information security
 
-In progress
+### Voluntary participation and pseudonymous data
+
+Participation in the Health-Habit-Hub is entirely voluntary. You may stop participating at any time simply by no longer using the app. No formal opt-out or deletion request is required, because no personally identifiable information is collected in the first place.
+
+All habit donations are stored pseudonymously. Each donation is linked to a participant ID, not to your name or any other directly identifying information. It is therefore not possible to trace a specific donation back to an individual person.
+
+### Account credentials and login
+
+To log in to the app, you use a **username** and a **one-time token** printed on the token card you received from your study coordinator. The token card also contains a **QR code** that you can scan to log in quickly. No email address, phone number, or other personal contact information is required to create or use an account.
+
+### Data storage and transmission
+
+All data collected by the Health-Habit-Hub is stored on servers operated by TU Dresden. All communication between the app and the servers is encrypted using **HTTPS**, so your data is protected during transmission.
+
+### Summary
+
+- Participation is voluntary — stop at any time by simply not using the app.
+- No personally identifiable information is required.
+- Login uses a username and a one-time token (QR code on a card) — no email address needed.
+- Habit donations are stored pseudonymously, linked to a participant ID rather than a name.
+- Data is stored on servers operated by TU Dresden.
+- All communication is encrypted via HTTPS.
 
 ## Help and support
 
-In progress
+### Questions about the study
+
+If you have questions about the study itself — for example, about its purpose, how your data will be used, or what happens after the study ends — please contact your **study coordinator**. This is the person who gave you the token card and introduced you to the app. Your coordinator is your first point of contact for all study-related questions.
+
+### Technical problems
+
+**The app cannot connect to the server**
+Check that your device has a working internet connection, either via Wi-Fi or mobile data. If the connection appears to be working but the app still cannot connect, try closing and reopening the app. If the problem persists, inform your study coordinator.
+
+**QR code login does not work**
+If scanning the QR code on your token card fails, you can log in manually by entering your username and the token (password) printed on the card directly into the login fields on the login screen.
+
+**Other technical issues**
+The app does not have a built-in help chat. If you experience a technical problem that is not resolved by the steps above, please describe the issue to your study coordinator so it can be forwarded to the technical team.
 
 ## Glossary
 
@@ -203,7 +241,7 @@ In progress
 
 **Description**: Time is one of the most prominent contextual variables influencing habit formation. It serves as a consistent and predictable anchor, making it easier to associate specific behaviors with particular moments or periods. Temporal cues create a natural rhythm for habit repetition, reducing the reliance on conscious decision-making.
 
-**Example**: "At 6:00 AM, I go for a jog before starting my workday." when time is explicitly stated or "In the Morning I go for a quick jog" when the time is not explicitly stated. Here, the time of day acts as a trigger, ensuring the habit is performed regularly and fits seamlessly into the individual’s schedule.
+**Example**: "At 6:00 AM, I go for a jog before starting my workday." when time is explicitly stated or "In the Morning I go for a quick jog" when the time is not explicitly stated. Here, the time of day acts as a trigger, ensuring the habit is performed regularly and fits seamlessly into the individual's schedule.
 
 #### Physical Setting
 
@@ -219,7 +257,7 @@ In progress
 
 **Description**: Social context involves the people or social environment present during a habitual action. Interactions with others can significantly influence habits, either by encouraging accountability, fostering collaboration, or modeling behavior. Social cues can reinforce habits positively or negatively, depending on the dynamics.
 
-**Example**: “Whenever my colleagues take a coffee break, I join them for a quick chat.” The presence of others creates a social cue that reinforces the habit of participating in the group activity.
+**Example**: "Whenever my colleagues take a coffee break, I join them for a quick chat." The presence of others creates a social cue that reinforces the habit of participating in the group activity.
 
 ### Prior Behaviour
 
@@ -239,4 +277,18 @@ In progress
 
 ## Legal information
 
-In progress
+### Legal screen in the app
+
+The app includes a dedicated **Legal** screen that is accessible from **Settings → Legal**. This screen displays the current versions of the following documents:
+
+- **Terms of Use** — the conditions under which you may use the Health-Habit-Hub.
+- **Privacy Policy** — a description of how participant data is handled.
+- **Imprint** — the legally required publisher information.
+
+All legal documents are provided by TU Dresden. By using the app you agree to the terms shown in the Legal screen. If the documents are updated, the new versions will be available in the Legal screen the next time you open it.
+
+### Accessing the legal documents
+
+1. Tap the **Settings** icon in the bottom navigation bar.
+2. Tap **Legal**.
+3. The Legal screen opens and displays the current terms of use, privacy policy, and imprint.

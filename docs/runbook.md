@@ -15,7 +15,7 @@ and is annotated with the expected output.
 5. [Rollback](#rollback)
 6. [Backup Verification](#backup-verification)
 7. [Restore from Backup](#restore-from-backup)
-8. [Rotating Keycloak Secrets](#rotating-keycloak-secrets)
+8. [Rotating Secrets](#rotating-secrets)
 9. [Adding an Admin User](#adding-an-admin-user)
 10. [Checking Service Health](#checking-service-health)
 11. [Troubleshooting](#troubleshooting)
@@ -83,7 +83,7 @@ Cloning into 'health-habit-hub'...
 remote: Enumerating objects: ...
 ```
 
-### 2.2 Create `stack.env` from template
+### 2.2 Create `stack.env.local` from template
 
 ```bash
 cp stack.env stack.env.local
@@ -95,10 +95,17 @@ Open `stack.env.local` and replace every `CHANGE_THIS_*` placeholder:
 # Required: change all passwords before first boot
 DOMAIN=your.domain.com
 KEYCLOAK_ADMIN_PASSWORD=<strong-password>
+KC_DB_PASSWORD=<strong-password>      # Keycloak PostgreSQL DB password
 MONGO_PASSWORD=<strong-password>
 NEO4J_PASSWORD=<strong-password>
-DB_PASSWORD=<strong-password>     # Fuseki
-ADMIN_PASSWORD=<strong-password>  # application admin
+DB_PASSWORD=<strong-password>         # Fuseki
+ADMIN_PASSWORD=<strong-password>      # application admin
+API_SERVICE_SECRET=<hex-secret>       # shared secret between h3-app and h3-recommender
+```
+
+Generate a strong value for `API_SERVICE_SECRET`:
+```bash
+openssl rand -hex 32
 ```
 
 > **Critical:** Never commit `stack.env.local` to Git.  Add it to `.gitignore` if needed.
@@ -111,17 +118,18 @@ docker compose --env-file stack.env.local up -d
 
 Expected output (services pulling/building, then starting):
 ```
-[+] Running 10/10
- ✔ Container h3-traefik     Started
- ✔ Container h3-mongo       Started
- ✔ Container h3-neo4j       Started
- ✔ Container h3-fuseki      Started
- ✔ Container h3-keycloak    Started
- ✔ Container h3-recommender Started
- ✔ Container h3-app         Started
- ✔ Container h3-mongoexpress Started
+[+] Running 11/11
+ ✔ Container h3-traefik       Started
+ ✔ Container h3-mongo         Started
+ ✔ Container h3-neo4j         Started
+ ✔ Container h3-fuseki        Started
+ ✔ Container h3-keycloak      Started
+ ✔ Container h3-recommender   Started
+ ✔ Container h3-redis         Started
+ ✔ Container h3-app           Started
+ ✔ Container h3-mongoexpress  Started
  ✔ Container h3-libretranslate Started
- ✔ Container h3-backup      Started
+ ✔ Container h3-backup        Started
 ```
 
 ### 2.4 Verify all services are healthy
@@ -384,7 +392,7 @@ curl -s http://localhost:3000/api/v1/health | python3 -m json.tool
 
 ---
 
-## 8. Rotating Keycloak Secrets
+## 8. Rotating Secrets
 
 ### 8.1 Change the Keycloak admin password
 
@@ -428,6 +436,44 @@ KEYCLOAK_JWKS_URL=https://your.domain.com/auth/realms/hhh/protocol/openid-connec
 # Redeploy backend
 bash scripts/deploy-backend.sh
 ```
+
+### 8.4 Rotate `API_SERVICE_SECRET`
+
+`API_SERVICE_SECRET` is a shared secret used to authenticate requests between the Node.js
+backend (`h3-app`) and the Python recommender (`h3-recommender`).  Both services must be
+restarted together after rotation.
+
+```bash
+# 1. Generate a new secret
+NEW_SECRET=$(openssl rand -hex 32)
+echo "New secret: $NEW_SECRET"
+
+# 2. Update stack.env.local
+nano stack.env.local
+# Change the line:  API_SERVICE_SECRET=<new-secret>
+
+# 3. Restart both services simultaneously so there is no window where they hold different secrets
+docker compose --env-file stack.env.local up -d h3-app h3-recommender
+```
+
+Expected output:
+```
+[+] Running 2/2
+ ✔ Container h3-app         Started
+ ✔ Container h3-recommender Started
+```
+
+Verify both services are back up:
+```bash
+curl -s http://localhost:3000/api/v1/health | python3 -m json.tool
+# Expected: {"status":"ok", "services": {..., "recommender": {"status":"ok", ...}}}
+
+curl -s http://localhost:8000/health
+# Expected: {"status":"ok"}
+```
+
+> **Note:** There is a brief period during container restart where the recommender is
+> unavailable.  Schedule rotations during low-traffic windows.
 
 ---
 
@@ -473,10 +519,38 @@ Expected output:
 
 ## 10. Checking Service Health
 
-### Quick health check
+### Quick health check (Node.js backend aggregate)
 
 ```bash
 curl -s http://localhost:3000/api/v1/health | python3 -m json.tool
+```
+
+Expected output:
+```json
+{
+    "status": "ok",
+    "services": {
+        "neo4j":      { "status": "ok", "latencyMs": 12 },
+        "mongo":      { "status": "ok", "latencyMs":  5 },
+        "fuseki":     { "status": "ok", "latencyMs": 18 },
+        "keycloak":   { "status": "ok", "latencyMs": 30 },
+        "recommender":{ "status": "ok", "latencyMs":  8 }
+    }
+}
+```
+
+### Python recommender health check
+
+```bash
+curl -s http://localhost:8000/health
+# Expected: {"status":"ok"}
+```
+
+### Redis health check
+
+```bash
+docker compose --env-file stack.env.local exec h3-redis redis-cli ping
+# Expected: PONG
 ```
 
 ### Check individual containers
@@ -493,6 +567,12 @@ docker compose --env-file stack.env.local logs --tail=50 h3-neo4j
 
 # Check Keycloak startup
 docker compose --env-file stack.env.local logs --tail=100 h3-keycloak | grep -E "started|error|WARN"
+
+# Check recommender logs
+docker compose --env-file stack.env.local logs --tail=50 h3-recommender
+
+# Check Redis logs
+docker compose --env-file stack.env.local logs --tail=50 h3-redis
 ```
 
 ### Automated monitoring
@@ -536,194 +616,6 @@ docker compose --env-file stack.env.local exec h3-app \
 KEYCLOAK_JWKS_URL=http://keycloak:8080/realms/hhh/protocol/openid-connect/certs
 
 bash scripts/deploy-backend.sh
-```
-
----
-
-### Neo4j connection refused — container not ready
-
-**Symptom:** Health endpoint returns `{"status":"error"}` for neo4j, or app logs show
-`ServiceUnavailable: WebSocket connection failure`.
-
-**Diagnosis:**
-```bash
-docker compose --env-file stack.env.local logs --tail=30 h3-neo4j | grep -E "Started|ERROR|WARN"
-# If Neo4j is still initializing you will see: "Bolt enabled on 0.0.0.0:7687."  not yet present
-```
-
-**Fix:**
-```bash
-# Wait for Neo4j to finish initial startup (can take 30–60 s on first boot)
-docker compose --env-file stack.env.local exec h3-neo4j \
-  cypher-shell -u neo4j -p "$NEO4J_PASSWORD" "RETURN 1 AS ok;"
-# Expected: ok: 1
-
-# If stuck, restart the container
-docker compose --env-file stack.env.local restart h3-neo4j
-```
-
----
-
-### Flutter web blank page — CORS issue
-
-**Symptom:** The Flutter web app loads but API calls fail; browser console shows
-`Access-Control-Allow-Origin` errors.
-
-**Diagnosis:**
-```bash
-curl -s -I -X OPTIONS http://localhost:3000/api/v1/health \
-  -H "Origin: http://localhost:5000" | grep -i access-control
-# Expected header: Access-Control-Allow-Origin: *  (or your domain)
-```
-
-**Fix:**
-```bash
-# Check CORS config in app/app.js — ensure the CORS middleware allows your Flutter web origin
-docker compose --env-file stack.env.local exec h3-app env | grep CORS
-# Add CORS_ORIGIN=https://your.domain.com to stack.env.local if missing
-
-bash scripts/deploy-backend.sh
-```
-
----
-
-### Recommender service unreachable — container name resolution
-
-**Symptom:** `GET /api/v1/recommend/:userId` returns 502 or timeout; app logs show
-`connect ECONNREFUSED` or `getaddrinfo ENOTFOUND recommender`.
-
-**Diagnosis:**
-```bash
-# Verify the recommender container is running
-docker compose --env-file stack.env.local ps h3-recommender
-# Expected: Up (healthy) or Up N seconds
-
-# Check the RECOMMENDER_URL env var in the app
-docker compose --env-file stack.env.local exec h3-app env | grep RECOMMENDER_URL
-# Expected: RECOMMENDER_URL=http://recommender:8000
-
-# Test connectivity from inside the app container
-docker compose --env-file stack.env.local exec h3-app \
-  wget -qO- http://recommender:8000/health 2>&1 | head -c 200
-# Expected: {"status":"ok"} or similar JSON
-```
-
-**Fix:**
-```bash
-# If the recommender is stopped, restart it
-bash scripts/deploy-recommender.sh
-```
-
-If the container name `recommender` cannot be resolved, ensure both services share the same
-Docker network (check `docker-compose.yml` `networks:` section for `h3-app` and `recommender`).
-
----
-
----
-
-### Neo4j failed to start — data directory permissions
-
-**Symptom:** `h3-neo4j` enters a restart loop; logs show
-`ERROR Failed to start Neo4j: Store unavailable` or `java.io.IOException: Permission denied`.
-
-**Diagnosis:**
-```bash
-docker compose --env-file stack.env.local logs --tail=30 h3-neo4j | grep -i "error\|permission"
-# Look for: "Permission denied" or "Cannot open file"
-
-# Check host directory ownership
-ls -la /mnt/data/appdata/hhh/neo4j/
-# Expected: owned by UID 7474 (neo4j user inside container)
-```
-
-**Fix:**
-```bash
-# Stop the container
-docker compose --env-file stack.env.local stop h3-neo4j
-
-# Correct ownership (neo4j user = UID 7474)
-sudo chown -R 7474:7474 /mnt/data/appdata/hhh/neo4j
-
-# Restart
-docker compose --env-file stack.env.local up -d h3-neo4j
-
-# Verify startup
-docker compose --env-file stack.env.local logs -f h3-neo4j | grep -E "Started|Bolt enabled|ERROR"
-# Expected: "Bolt enabled on 0.0.0.0:7687."
-```
-
-If Neo4j still fails to start after fixing permissions, check disk space:
-```bash
-df -h /mnt/data/
-# Neo4j needs at least 1 GB free for a fresh start
-```
-
----
-
-### LibreTranslate down or returning empty translations
-
-**Symptom 1:** Habit donation succeeds but `translationEN` or `translationDE` is `null`
-even for non-English or English habits respectively.  App logs show
-`WARN [habitsRouter] translateAndRefine failed, falling back to raw translation` or
-`WARN [habitsRouter] translateToGerman failed`.
-
-**Symptom 2:** `h3-translate` is in a restart loop or shows `unhealthy`.
-
-**Diagnosis:**
-```bash
-# Check container status
-docker compose --env-file stack.env.local ps h3-translate
-# Expected: Up (healthy)
-
-# Check LibreTranslate logs for startup errors
-docker compose --env-file stack.env.local logs --tail=50 h3-translate
-# Common errors:
-#   "Permission denied" on /home/libretranslate/.local → UID 1032 issue
-#   "No module named argostranslate" → language pack not downloaded
-
-# Test LibreTranslate directly from inside the app container
-docker compose --env-file stack.env.local exec h3-app \
-  wget -qO- "http://translate:5000/translate" \
-  --post-data '{"q":"Hello","source":"en","target":"de","format":"text"}' \
-  --header 'Content-Type: application/json' 2>&1 | head -c 200
-# Expected: {"translatedText":"Hallo"}
-```
-
-**Fix — UID 1032 volume permission issue:**
-```bash
-# Stop LibreTranslate
-docker compose --env-file stack.env.local stop h3-translate
-
-# Fix ownership (libretranslate user = UID 1032)
-sudo chown -R 1032:1032 /mnt/data/appdata/hhh/translate
-
-# Restart
-docker compose --env-file stack.env.local up -d h3-translate
-
-# Watch logs for successful language pack loading
-docker compose --env-file stack.env.local logs -f h3-translate | grep -E "Loaded|Error|ready"
-# Expected: "Loaded en -> de" and "Loaded de -> en" (and ja variants if LT_LOAD_ONLY includes ja)
-```
-
-**Fix — LibreTranslate is up but translations are empty (LLM refinement failing):**
-
-LibreTranslate itself is healthy but the LLM refinement step in the API-service is failing.
-The backend falls back to the raw (unrefined) LibreTranslate output, so `translationEN`/`translationDE`
-will be populated with unrefined machine translations rather than null.
-
-```bash
-# Check the API-service (recommender) logs
-docker compose --env-file stack.env.local logs --tail=50 h3-recommender | grep -E "error|ERROR|refine"
-# Common cause: OPENAI_API_KEY not set or rate-limited
-
-# Verify the env var is present
-docker compose --env-file stack.env.local exec h3-recommender env | grep OPENAI_API_KEY
-# Expected: OPENAI_API_KEY=sk-...
-```
-
-Update `stack.env.local` with a valid key and redeploy the recommender:
-```bash
-bash scripts/deploy-recommender.sh
 ```
 
 ---
@@ -796,6 +688,196 @@ curl -s -o /dev/null -w "%{http_code}" \
 > **Note:** Removing `h3-keycloak-db-data` destroys all Keycloak data (users, sessions,
 > client secrets).  Re-create any manually provisioned users and rotate client secrets
 > after volume re-initialisation.
+
+---
+
+### Neo4j connection refused — container not ready
+
+**Symptom:** Health endpoint returns `{"status":"error"}` for neo4j, or app logs show
+`ServiceUnavailable: WebSocket connection failure`.
+
+**Diagnosis:**
+```bash
+docker compose --env-file stack.env.local logs --tail=30 h3-neo4j | grep -E "Started|ERROR|WARN"
+# If Neo4j is still initializing you will see: "Bolt enabled on 0.0.0.0:7687."  not yet present
+```
+
+**Fix:**
+```bash
+# Wait for Neo4j to finish initial startup (can take 30–60 s on first boot)
+docker compose --env-file stack.env.local exec h3-neo4j \
+  cypher-shell -u neo4j -p "$NEO4J_PASSWORD" "RETURN 1 AS ok;"
+# Expected: ok: 1
+
+# If stuck, restart the container
+docker compose --env-file stack.env.local restart h3-neo4j
+```
+
+---
+
+### Neo4j failed to start — data directory permissions
+
+**Symptom:** `h3-neo4j` enters a restart loop; logs show
+`ERROR Failed to start Neo4j: Store unavailable` or `java.io.IOException: Permission denied`.
+
+**Diagnosis:**
+```bash
+docker compose --env-file stack.env.local logs --tail=30 h3-neo4j | grep -i "error\|permission"
+# Look for: "Permission denied" or "Cannot open file"
+
+# Check host directory ownership
+ls -la /mnt/data/appdata/hhh/neo4j/
+# Expected: owned by UID 7474 (neo4j user inside container)
+```
+
+**Fix:**
+```bash
+# Stop the container
+docker compose --env-file stack.env.local stop h3-neo4j
+
+# Correct ownership (neo4j user = UID 7474)
+sudo chown -R 7474:7474 /mnt/data/appdata/hhh/neo4j
+
+# Restart
+docker compose --env-file stack.env.local up -d h3-neo4j
+
+# Verify startup
+docker compose --env-file stack.env.local logs -f h3-neo4j | grep -E "Started|Bolt enabled|ERROR"
+# Expected: "Bolt enabled on 0.0.0.0:7687."
+```
+
+If Neo4j still fails to start after fixing permissions, check disk space:
+```bash
+df -h /mnt/data/
+# Neo4j needs at least 1 GB free for a fresh start
+```
+
+---
+
+### Flutter web blank page — CORS issue
+
+**Symptom:** The Flutter web app loads but API calls fail; browser console shows
+`Access-Control-Allow-Origin` errors.
+
+**Diagnosis:**
+```bash
+curl -s -I -X OPTIONS http://localhost:3000/api/v1/health \
+  -H "Origin: http://localhost:5000" | grep -i access-control
+# Expected header: Access-Control-Allow-Origin: *  (or your domain)
+```
+
+**Fix:**
+```bash
+# Check CORS config in app/app.js — ensure the CORS middleware allows your Flutter web origin
+docker compose --env-file stack.env.local exec h3-app env | grep CORS
+# Add CORS_ORIGIN=https://your.domain.com to stack.env.local if missing
+
+bash scripts/deploy-backend.sh
+```
+
+---
+
+### Recommender service unreachable — container name resolution
+
+**Symptom:** `GET /api/v1/recommend/:userId` returns 502 or timeout; app logs show
+`connect ECONNREFUSED` or `getaddrinfo ENOTFOUND recommender`.
+
+**Diagnosis:**
+```bash
+# Verify the recommender container is running
+docker compose --env-file stack.env.local ps h3-recommender
+# Expected: Up (healthy) or Up N seconds
+
+# Check the RECOMMENDER_URL env var in the app
+docker compose --env-file stack.env.local exec h3-app env | grep RECOMMENDER_URL
+# Expected: RECOMMENDER_URL=http://recommender:8000
+
+# Test connectivity from inside the app container
+docker compose --env-file stack.env.local exec h3-app \
+  wget -qO- http://recommender:8000/health 2>&1 | head -c 200
+# Expected: {"status":"ok"}
+
+# Check the recommender's own health endpoint directly
+curl -s http://localhost:8000/health
+# Expected: {"status":"ok"}
+```
+
+**Fix:**
+```bash
+# If the recommender is stopped, restart it
+bash scripts/deploy-recommender.sh
+```
+
+If the container name `recommender` cannot be resolved, ensure both services share the same
+Docker network (check `docker-compose.yml` `networks:` section for `h3-app` and `recommender`).
+
+---
+
+### LibreTranslate down or returning empty translations
+
+**Symptom 1:** Habit donation succeeds but `translationEN` or `translationDE` is `null`
+even for non-English or English habits respectively.  App logs show
+`WARN [habitsRouter] translateAndRefine failed, falling back to raw translation` or
+`WARN [habitsRouter] translateToGerman failed`.
+
+**Symptom 2:** `h3-translate` is in a restart loop or shows `unhealthy`.
+
+**Diagnosis:**
+```bash
+# Check container status
+docker compose --env-file stack.env.local ps h3-translate
+# Expected: Up (healthy)
+
+# Check LibreTranslate logs for startup errors
+docker compose --env-file stack.env.local logs --tail=50 h3-translate
+# Common errors:
+#   "Permission denied" on /home/libretranslate/.local → UID 1032 issue
+#   "No module named argostranslate" → language pack not downloaded
+
+# Test LibreTranslate directly from inside the app container
+docker compose --env-file stack.env.local exec h3-app \
+  wget -qO- "http://translate:5000/translate" \
+  --post-data '{"q":"Hello","source":"en","target":"de","format":"text"}' \
+  --header 'Content-Type: application/json' 2>&1 | head -c 200
+# Expected: {"translatedText":"Hallo"}
+```
+
+**Fix — UID 1032 volume permission issue:**
+```bash
+# Stop LibreTranslate
+docker compose --env-file stack.env.local stop h3-translate
+
+# Fix ownership (libretranslate user = UID 1032)
+sudo chown -R 1032:1032 /mnt/data/appdata/hhh/translate
+
+# Restart
+docker compose --env-file stack.env.local up -d h3-translate
+
+# Watch logs for successful language pack loading
+docker compose --env-file stack.env.local logs -f h3-translate | grep -E "Loaded|Error|ready"
+# Expected: "Loaded en -> de" and "Loaded de -> en" (and ja variants if LT_LOAD_ONLY includes ja)
+```
+
+**Fix — LibreTranslate is up but translations are empty (LLM refinement failing):**
+
+LibreTranslate itself is healthy but the LLM refinement step in the API-service is failing.
+The backend falls back to the raw (unrefined) LibreTranslate output, so `translationEN`/`translationDE`
+will be populated with unrefined machine translations rather than null.
+
+```bash
+# Check the API-service (recommender) logs
+docker compose --env-file stack.env.local logs --tail=50 h3-recommender | grep -E "error|ERROR|refine"
+# Common cause: OPENAI_API_KEY not set or rate-limited
+
+# Verify the env var is present
+docker compose --env-file stack.env.local exec h3-recommender env | grep OPENAI_API_KEY
+# Expected: OPENAI_API_KEY=sk-...
+```
+
+Update `stack.env.local` with a valid key and redeploy the recommender:
+```bash
+bash scripts/deploy-recommender.sh
+```
 
 ---
 
