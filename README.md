@@ -3,211 +3,201 @@
 <img src="./app/public/pics/h3-logo.png" width="250" alt="Health Habit Hub Logo"/>
 
 **Production URL**: https://habit.wiwi.tu-dresden.de
-**Version**: 1.0.0 (October 2025)
 
-A research-focused web application for collecting and analyzing health habit data using a 2×2 experimental design with multi-database architecture.
-
----
-
-## Quick Start
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/health-habit-hub.git
-cd health-habit-hub
-
-# Configure environment
-cp .env.example .env
-
-# Start development environment
-docker-compose up -d --build
-
-# Access application
-open http://localhost
-```
-
----
-
-## Key Features
-
-- **Experimental Design**: 2×2 factorial design for habit data collection
-- **Multi-Database**: Apache Fuseki (RDF), Neo4j (Graph), MongoDB (Documents)
-- **Multi-Language**: English, German, Japanese (i18n)
-- **Automated Backups**: Daily backups with 14-day retention
-- **Production-Ready**: Docker Compose with automatic SSL via Let's Encrypt
-- **Translation API**: Integrated LibreTranslate for multilingual content
+A research platform for collecting and analysing health habit data. Participants donate habits via a mobile app; researchers manage studies and analyse results via a web admin; a Python AI service classifies habits, maps them to BCIO behaviour change techniques, and generates personalised recommendations.
 
 ---
 
 ## Architecture
 
 ```
-Internet (80/443) → Traefik (SSL) → Node.js App → Databases
-                                          ├── Apache Fuseki (RDF)
-                                          ├── Neo4j (Graph)
-                                          ├── MongoDB (Documents)
-                                          └── LibreTranslate (API)
+Internet (80/443)
+       |
+   Traefik (SSL / reverse proxy)
+       |
+   ┌───┴────────────────────────────────────────┐
+   │                                            │
+Node.js/Express backend (app/)      Next.js admin (admin/)
+       |                                        |
+       ├── Python FastAPI / AI service (API-service/)
+       |        └── Redis (recommendation cache)
+       |
+       ├── MongoDB  (surveys & responses)
+       ├── Neo4j    (habit graph)
+       ├── Apache Fuseki  (RDF/SPARQL ontology)
+       ├── Keycloak (identity provider)
+       └── LibreTranslate (EN↔DE translation)
 ```
 
-**Services**:
-- **app**: Node.js/Express application
-- **fuseki**: Apache Jena Fuseki (RDF triple store)
-- **neo4j**: Neo4j graph database
-- **mongo**: MongoDB document store
-- **translate**: LibreTranslate API
-- **proxy**: Traefik reverse proxy
-- **backup**: Automated backup service
+| Component | Location | Tech |
+|---|---|---|
+| Mobile app | `mobile/` | Flutter (iOS / Android / web), Keycloak PKCE |
+| Backend API | `app/` | Node.js 22, Express, ES modules |
+| Admin UI | `admin/` | Next.js, NextAuth, Keycloak (admin/researcher role) |
+| AI service | `API-service/` | Python, FastAPI, OpenAI LLM |
+| Proxy | — | Traefik + Let's Encrypt |
+| Backup | — | Daily automated backups, 14-day retention |
 
 ---
 
-## Documentation
+## Quick Start (local dev)
 
-**Complete documentation available in [DOCUMENTATION.md](DOCUMENTATION.md)**
-
-### Quick Links
-
-- [Quick Start Guide](DOCUMENTATION.md#quick-start)
-- [Architecture & Design](DOCUMENTATION.md#architecture--design)
-- [Development Guide](DOCUMENTATION.md#development-guide)
-- [Production Deployment](DOCUMENTATION.md#production-deployment)
-- [Backup System](DOCUMENTATION.md#backup-system)
-- [Testing](DOCUMENTATION.md#testing)
-- [User Manual](DOCUMENTATION.md#user-manual)
-- [Troubleshooting](DOCUMENTATION.md#troubleshooting)
-- [API Reference](DOCUMENTATION.md#api-reference)
-
----
-
-## Local Development
-
-**Full step-by-step guide (iOS Simulator + local backend):** [docs/guides/local-dev.md](docs/guides/local-dev.md)
+**Prerequisites**: Docker, Flutter SDK, Node.js 22, Python 3.11+.
 
 ```bash
-# Start backend services
+# 1. Clone and configure
+git clone https://github.com/felixreinsch/health-habit-hub.git
+cd health-habit-hub
+cp .env.example .env          # then fill in secrets (see Env Vars below)
+
+# 2. Start all backend services
 make dev
 
-# Seed local development data
+# 3. Seed MongoDB, Neo4j, and Keycloak with dev data
 make seed
 
-# Launch the Flutter app in the iOS simulator
+# 4. Run the Flutter app in the iOS Simulator
 make ios
+```
 
-# View logs
-make logs
+Local service URLs after `make dev`:
 
-# Analyze the Flutter app
-cd mobile && dart analyze
+| Service | URL |
+|---|---|
+| Backend API | http://localhost:3000 |
+| Admin UI | http://admin.localhost |
+| Keycloak | http://localhost:8080 |
+| Neo4j Browser | http://localhost:7474 |
+| Fuseki | http://localhost:3030 |
+| LibreTranslate | http://localhost:5001 |
+| Python AI service | http://localhost:8001 |
+| Traefik dashboard | http://localhost:8888 |
 
-# Run backend tests
-cd app && npm test
+---
+
+## Common `make` Commands
+
+| Command | Description |
+|---|---|
+| `make dev` | Start all local services via Docker Compose |
+| `make stop` | Stop all local services |
+| `make seed` | Seed MongoDB, Neo4j, and Keycloak with dev data |
+| `make logs` | Tail backend app logs |
+| `make logs-all` | Tail all service logs |
+| `make ios` | Run Flutter app on iPhone Simulator |
+| `make reset` | Wipe volumes, restart, and re-seed |
+| `make test` | Run all test suites (no Docker required) |
+
+---
+
+## Testing
+
+Run every test suite in one command:
+
+```bash
+make test
+```
+
+Or run suites individually:
+
+```bash
+# Backend: lint + unit tests + security audit
+make test-backend
+
+# Flutter: analyze + widget/unit tests
+make test-flutter
+
+# Python AI-service: pytest
+make test-python
+
+# Admin: typecheck + Jest/RTL tests
+make test-admin
+
+# Admin Jest tests directly
+cd admin && npm test
 ```
 
 ---
 
-## Backend (Node.js/Express)
+## Key Environment Variables
 
-The backend lives in `app/`. It is an ES-module Node.js 22 + Express application.
+Copy `stack.env` as a starting point for production; copy `.env.example` for local dev. Variables that **must** be overridden before running:
 
-### npm Scripts
-
-| Script | Description |
+| Variable | Description |
 |---|---|
-| `npm test` | Run all unit + integration tests with Jest (requires no live services — all injected via factory pattern) |
-| `npm run lint` | ESLint check (`eslint .`) |
-| `npm run format` | Prettier write (`prettier --write .`) |
-| `npm run format:check` | Prettier check (CI mode) |
-| `node app.js` | Start the server directly |
-
-### Key Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `PORT` | `3000` | Express listen port |
-| `NEO4J_URI` | `bolt://neo4j:7687` | Neo4j Bolt connection URI |
-| `NEO4J_USER` | `neo4j` | Neo4j username |
-| `NEO4J_PASSWORD` | `password` | Neo4j password |
-| `MONGO_URL` | `mongodb://mongo:27017` | MongoDB connection string |
-| `MONGO_DB` | `hhh` | MongoDB database name |
-| `KEYCLOAK_JWKS_URL` | — | Full URL to Keycloak JWKS endpoint (e.g. `http://keycloak:8080/realms/hhh/protocol/openid-connect/certs`) |
-| `KEYCLOAK_URL` | `http://keycloak:8080` | Keycloak base URL (used by onboard and admin routes) |
-| `KEYCLOAK_REALM` | `hhh` | Keycloak realm name |
-| `KEYCLOAK_CLIENT_ID` | `hhh-flutter` | Public client ID for participant token exchange |
-| `KEYCLOAK_ADMIN_CLIENT_ID` | `hhh-backend` | Confidential client ID for admin operations |
-| `KEYCLOAK_ADMIN_CLIENT_SECRET` | — | Secret for the `hhh-backend` confidential client |
-| `API_SERVICE_URL` | `http://recommender:8000` | URL of the Python API-service (recommender + LLM endpoints) |
-| `LIBRE_TRANSLATE_URL` | — | Full URL to LibreTranslate `/translate` endpoint. If absent, falls back to `http://{TRANSLATE_HOST}:{TRANSLATE_PORT}{TRANSLATE_PATH}` |
-| `TRANSLATE_HOST` | `localhost` | LibreTranslate host (fallback if `LIBRE_TRANSLATE_URL` not set) |
-| `TRANSLATE_PORT` | `5000` | LibreTranslate port (fallback) |
-| `TRANSLATE_PATH` | `/translate` | LibreTranslate path (fallback) |
-| `RECOMMENDER_URL` | `http://recommender:8000` | URL of the Python recommender service for the `/recommend` proxy |
-| `REDIS_URL` | `redis://localhost:6379` | Redis URL for recommendation result caching |
-| `RATE_LIMIT_WINDOW_MS` | `60000` | Rate limiter window in milliseconds |
-| `RATE_LIMIT_MAX` | `100` | Maximum requests per window per user |
-
-**Access**:
-- App: http://localhost
-- Traefik: http://localhost:8080
-- Fuseki: http://localhost/fuseki
-- Neo4j: http://localhost/neo4j
+| `NEO4J_PASSWORD` | Neo4j database password |
+| `MONGO_PASSWORD` | MongoDB root password |
+| `KEYCLOAK_ADMIN_PASSWORD` | Keycloak admin console password |
+| `KC_DB_PASSWORD` | Keycloak's PostgreSQL password |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET` | Secret for the `hhh-backend` confidential Keycloak client |
+| `API_SERVICE_SECRET` | Shared secret between Node.js backend and Python AI service |
+| `OPENAI_API_KEY` | OpenAI key used by the AI service for classification, BCIO mapping, and recommendations |
+| `REDIS_URL` | Redis connection URL (default `redis://localhost:6379`) |
+| `RECAPTCHA_SITEKEY` / `RECAPTCHA_SECRETKEY` | Google reCAPTCHA keys |
+| `MAIL_USER` / `MAIL_PASS` | Mailjet API credentials |
+| `ADMIN_PASSWORD` | Apache Fuseki admin password |
+| `LLM_MODEL` | OpenAI model name (e.g. `gpt-4o-mini`) |
+| `LLM_TEMPERATURE` | Sampling temperature (0.0–1.0) |
 
 ---
 
 ## Production Deployment
 
-See [Production Deployment Guide](DOCUMENTATION.md#production-deployment) for complete instructions.
+See [DOCUMENTATION.md](DOCUMENTATION.md) for the full deployment guide.
 
-**Quick deployment**:
-1. Configure DNS: `habit.wiwi.tu-dresden.de → 141.76.16.16`
-2. Open firewall ports: 80, 443
-3. Configure `.env` with production credentials
-4. Deploy via Portainer with `docker-compose.prod.yml`
-5. Verify SSL certificate obtained automatically
+1. Point DNS `habit.wiwi.tu-dresden.de → 141.76.16.16` and open ports 80 and 443.
+2. Configure all secrets in Portainer's environment variables (do not commit real credentials).
+3. Deploy via Portainer using the production Docker Compose file.
+4. Traefik obtains a Let's Encrypt certificate automatically.
 
-**Production URL**: https://habit.wiwi.tu-dresden.de
+Production service endpoints (all behind Traefik HTTPS):
 
-### Accessing Databases in Production
+| Path | Service |
+|---|---|
+| `/` | Flutter web app |
+| `/api/v1/` | Node.js backend |
+| `/admin` | Next.js admin UI |
+| `/fuseki` | Apache Fuseki SPARQL |
+| `/mongo` | Mongo Express |
+| `/dashboard` | Traefik dashboard |
 
-**Neo4j Browser** (requires SSH tunnel):
+**Neo4j Browser** is not publicly exposed; access via SSH tunnel:
+
 ```bash
-# Create secure tunnel to Neo4j
 ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
-
-# Then access: http://localhost:7474
-# Login with Neo4j credentials (username: neo4j, password from NEO4J_PASSWORD)
+# then open http://localhost:7474
 ```
-
-See [DEPLOYMENT.md - Neo4j SSH Tunnel](DEPLOYMENT.md#accessing-neo4j-browser-via-ssh-tunnel) for detailed instructions.
-
-**Other services** (available via https://habit.wiwi.tu-dresden.de):
-- Mongo Express: `/mongo`
-- Fuseki RDF: `/fuseki`
-- Traefik Dashboard: `/dashboard`
 
 ---
 
 ## Tech Stack
 
-**Backend**: Node.js 22, Express.js (JSON API)
-**Frontend**: Flutter 3.22 (web, Android, iOS)
-**Databases**: Apache Fuseki (RDF), Neo4j, MongoDB
-**Infrastructure**: Docker, Traefik, Let's Encrypt
-**Tools**: LibreTranslate, reCAPTCHA, Mailjet
+| Layer | Technology |
+|---|---|
+| Mobile | Flutter 3, Dart, Keycloak PKCE |
+| Backend | Node.js 22, Express, ES modules |
+| Admin | Next.js, NextAuth.js |
+| AI service | Python, FastAPI, OpenAI API |
+| Databases | MongoDB, Neo4j 5, Apache Jena Fuseki |
+| Cache / locks | Redis 7 |
+| Identity | Keycloak 26 |
+| Translation | LibreTranslate |
+| Proxy / SSL | Traefik v3, Let's Encrypt |
+| Infrastructure | Docker Compose, Portainer |
 
 ---
 
-## Requirements
+## Documentation
 
-- Docker 20.10+
-- Docker Compose 2.0+
-- 4GB RAM minimum (8GB recommended)
-- Ports 80, 443 (production)
+- [DOCUMENTATION.md](DOCUMENTATION.md) — architecture deep-dive, deployment, backup, troubleshooting
+- [docs/guides/local-dev.md](docs/guides/local-dev.md) — step-by-step local dev setup
+- [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment details
 
 ---
 
 ## Support
 
-**Documentation**: [DOCUMENTATION.md](DOCUMENTATION.md)
-**Issues**: https://github.com/felixreinsch/health-habit-hub/issues
+**Issues**: https://github.com/felixreinsch/health-habit-hub/issues  
 **Contact**: felix.reinsch@tu-dresden.de
 
 ---
@@ -215,5 +205,3 @@ See [DEPLOYMENT.md - Neo4j SSH Tunnel](DEPLOYMENT.md#accessing-neo4j-browser-via
 ## License
 
 Proprietary software for research purposes at TU Dresden.
-
-**Contact**: felix.reinsch@tu-dresden.de

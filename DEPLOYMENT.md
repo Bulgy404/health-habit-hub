@@ -2,7 +2,15 @@
 
 ## Overview
 
-This guide covers deploying Health Habit Hub to production using Portainer on your server.
+This guide covers deploying Health Habit Hub to production using Portainer on the TU Dresden server.
+
+**Production environment:**
+- URL: `https://habit.wiwi.tu-dresden.de`
+- Server IP: `141.76.16.16`
+- Management: Portainer
+- Auto-update: Every 5 minutes from `master` branch
+
+---
 
 ## Local Testing
 
@@ -10,10 +18,8 @@ Use this section when you want to run the stack on your own machine for developm
 
 There are two local modes:
 
-1. `docker-compose.local.yml`
-   Use this for the local Docker development stack. It starts the backend, Keycloak, databases, Traefik, the Next.js admin panel, and the recommender with local-friendly defaults.
-2. `docker-compose.yml`
-   Use this for the full app-like stack that mirrors the shared Docker setup more closely and also exposes services on localhost ports.
+1. `docker-compose.local.yml` — local Docker development stack. Starts the backend, Keycloak (dev-file DB), databases, Traefik, the Next.js admin panel, Redis, and the recommender with local-friendly defaults. Uses `*.localhost` hostnames via Traefik.
+2. `docker-compose.yml` — full app-like stack that mirrors the shared Docker setup more closely and also exposes services on explicit localhost ports. Uses `dev-file` Keycloak, no Redis in this mode.
 
 ### 1. Prepare Local Environment
 
@@ -33,6 +39,7 @@ MONGO_PASSWORD=<local-mongo-password>
 NEO4J_PASSWORD=<local-neo4j-password>
 DB_PASSWORD=<local-fuseki-password>
 ADMIN_PASSWORD=<local-fuseki-password>
+API_SERVICE_SECRET=<local-api-service-secret>
 OPENAI_API_KEY=<optional-but-needed-for-recommender-features>
 ```
 
@@ -64,7 +71,7 @@ This resets:
 - Redis data
 - Keycloak local realm storage
 
-Then start again and let Keycloak re-import the realm from [`keycloak/hhh-realm.json`](/Users/felixreinsch/Github/health-habit-hub/keycloak/hhh-realm.json).
+Then start again and let Keycloak re-import the realm from `keycloak/hhh-realm.json`.
 
 ### 3. Start Local Docker Dev Stack
 
@@ -97,11 +104,11 @@ Expected local URLs in this mode:
 | Keycloak | `http://localhost:8080` | Realm + admin console |
 | Keycloak Admin Console | `http://localhost:8080/admin/` | Login with `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
 | Keycloak Realm Metadata | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | Quick realm import check |
-| Mongo Express | not included in `docker-compose.local.yml` | Available with `docker compose up` at `http://localhost:8081` |
 | Fuseki | `http://localhost:3030` | Basic auth with `admin` + `ADMIN_PASSWORD` |
 | Translation | `http://localhost:5001` | LibreTranslate in `docker-compose.local.yml` |
 | Neo4j Browser | `http://localhost:7474` | Login with `neo4j` + `NEO4J_PASSWORD` |
 | Recommender | `http://localhost:8001/docs` | FastAPI docs |
+| Redis | `localhost:6379` | No auth in local mode |
 
 ### 4. Start Full Local Stack
 
@@ -118,10 +125,12 @@ This stack also starts Traefik and the Next.js admin app. Use these local URLs:
 | Traefik dashboard | `http://proxy.localhost` |
 | Traefik raw dashboard port | `http://localhost:8888` |
 | Keycloak admin console | `http://localhost:8080/admin/` |
+| Recommender API docs | `http://localhost:8000/docs` |
 
 Notes:
 - `*.localhost` resolves locally on modern browsers, so `app.localhost` and `admin.localhost` should work without editing `/etc/hosts`.
 - The admin app uses the `hhh-admin` Keycloak client and requires a Keycloak user with the `admin` or `researcher` realm role.
+- `docker-compose.yml` does not include Redis; Redis is only present in `docker-compose.local.yml` and `docker-compose.prod.yml`.
 
 ### 5. Create a Local Admin User in Keycloak
 
@@ -144,7 +153,7 @@ After the local stack is healthy:
 3. Save the generated passphrase
 4. Test restore/recovery using that passphrase
 
-If participant creation fails again, check:
+If participant creation fails, check:
 
 ```bash
 docker logs h3-2-app --tail 100
@@ -165,47 +174,62 @@ bash scripts/deploy-keycloak.sh
 
 If you are only using `docker-compose.local.yml`, this is the safest way to bring Keycloak back to the repo-expected state after a fresh reset.
 
-**Server Details:**
-- IP: 141.76.16.16
-- Domain: habit.felixreinsch.de
-- Management: Portainer
-- Auto-update: Every 5 minutes from `master` branch
+---
 
 ## Pre-Deployment Checklist
 
 ### 1. Server Prerequisites
-- [ ] Server accessible at 141.76.16.16
+- [ ] Server accessible at `141.76.16.16`
 - [ ] Portainer installed and running
 - [ ] Ports 80 and 443 open in firewall
 - [ ] Docker installed (managed by Portainer)
+- [ ] External Docker network `h3-proxy` created on the server:
+  ```bash
+  docker network create h3-proxy
+  ```
 
 ### 2. DNS Configuration
-- [x] Domain `habit.felixreinsch.de` resolves to `141.76.16.16`
-- [x] DNS propagation complete (verified with `dig`)
+- [ ] Domain `habit.wiwi.tu-dresden.de` resolves to `141.76.16.16`
+- [ ] DNS propagation complete (verified with `dig habit.wiwi.tu-dresden.de`)
 
 ### 3. External Services
-- [ ] Google reCAPTCHA keys obtained (https://www.google.com/recaptcha/admin)
+- [ ] Google reCAPTCHA keys obtained (<https://www.google.com/recaptcha/admin>)
   - Site key
   - Secret key
-  - Domain `habit.felixreinsch.de` added
-- [ ] Mailjet API credentials obtained (https://app.mailjet.com/account/api_keys)
+  - Domain `habit.wiwi.tu-dresden.de` added
+- [ ] Mailjet API credentials obtained (<https://app.mailjet.com/account/api_keys>)
   - API key
   - Secret key
   - Sender domain verified
 
-### 4. Security
-- [ ] Generate secure passwords for:
-  - Fuseki admin password
-  - MongoDB password
-  - Mongo Express password
-  - Neo4j password
-  - Traefik dashboard password (use `htpasswd -nb admin your-password`)
+### 4. Security — Generate Secure Values
+- [ ] Fuseki admin password (`ADMIN_PASSWORD`)
+- [ ] MongoDB password (`MONGO_PASSWORD`)
+- [ ] Mongo Express password (`MONGO_EXPRESS_PASSWORD`)
+- [ ] Neo4j password (`NEO4J_PASSWORD`)
+- [ ] Keycloak admin password (`KEYCLOAK_ADMIN_PASSWORD`)
+- [ ] Keycloak PostgreSQL password (`KC_DB_PASSWORD`)
+- [ ] Traefik dashboard hash: `htpasswd -nb admin your-password`
+- [ ] **API service shared secret** (`API_SERVICE_SECRET`): `openssl rand -hex 32`
+
+### 5. Volume Permissions (First Deploy Only)
+
+LibreTranslate runs as UID 1032 inside the container. Create the host directory with the correct ownership before the first deploy so language model downloads succeed:
+
+```bash
+sudo mkdir -p /mnt/data/appdata/hhh2/translate
+sudo chown -R 1032:1032 /mnt/data/appdata/hhh2/translate
+```
+
+Failure to do this will cause `h3-2-translate` to start but fail to persist language packs, resulting in empty translation responses.
+
+---
 
 ## Portainer Deployment Steps
 
 ### Step 1: Access Portainer
-1. Navigate to Portainer web interface
-2. Login with your credentials
+1. Navigate to the Portainer web interface
+2. Log in with your credentials
 3. Select your environment
 
 ### Step 2: Create Stack
@@ -224,19 +248,25 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
 
 ### Step 4: Override Environment Variables
 
-The `stack.env` file contains template values. Override these in Portainer:
+The `stack.env` file in the repository contains placeholder values. Override every `CHANGE_THIS_*` entry in Portainer's environment variable section before deploying.
 
-#### Required Overrides:
+#### Required Overrides
+
 ```env
-# Passwords (generate secure ones!)
+# Passwords — generate secure values!
 ADMIN_PASSWORD=<your-secure-fuseki-password>
 MONGO_PASSWORD=<your-secure-mongo-password>
 MONGO_EXPRESS_PASSWORD=<your-secure-mongo-express-password>
 NEO4J_PASSWORD=<your-secure-neo4j-password>
 
-# Keycloak (identity provider)
+# Keycloak
 KEYCLOAK_ADMIN=admin
 KEYCLOAK_ADMIN_PASSWORD=<your-secure-keycloak-admin-password>
+KC_DB_PASSWORD=<your-secure-keycloak-db-password>
+
+# API service shared secret — MUST match in both h3-2-app and h3-2-recommender
+# Generate with: openssl rand -hex 32
+API_SERVICE_SECRET=<your-shared-api-service-secret>
 
 # Traefik Dashboard (generate: htpasswd -nb admin your-password)
 TRAEFIK_DASHBOARD_AUTH=<your-htpasswd-hash>
@@ -249,11 +279,12 @@ RECAPTCHA_SECRETKEY=<your-production-secret-key>
 MAIL_USER=<mailjet-api-key>
 MAIL_PASS=<mailjet-secret-key>
 
-# OpenAI (for habit classification, BCIO mapping, translation refinement)
+# OpenAI (for habit classification, BCIO mapping, translation refinement, recommendations)
 OPENAI_API_KEY=<your-openai-api-key>
 ```
 
-#### Optional Overrides:
+#### Optional Overrides
+
 ```env
 # Backup alerts (Slack/Discord/Teams webhook)
 ALERT_WEBHOOK_URL=<your-webhook-url>
@@ -261,8 +292,8 @@ ALERT_WEBHOOK_URL=<your-webhook-url>
 # Backup retention
 BACKUP_RETENTION_DAYS=14
 
-# LibreTranslate language pack settings
-LT_LOAD_ONLY=de,en,ja   # comma-separated ISO codes; controls which language packs are loaded
+# LibreTranslate language packs
+LT_LOAD_ONLY=de,en,ja   # comma-separated ISO codes
 LT_REQ_LIMIT=0           # max chars per request (0 = unlimited)
 
 # LLM model and sampling
@@ -270,62 +301,55 @@ LLM_MODEL=gpt-4o-mini    # or gpt-4o for higher accuracy
 LLM_TEMPERATURE=0.2      # 0.0 = deterministic, 1.0 = creative
 ```
 
-### Step 5: Pre-deploy Volume Permissions
-
-LibreTranslate runs as UID 1032 inside the container.  Before the first deploy you
-must create the host directory with the correct ownership so the language model
-downloads succeed:
-
-```bash
-sudo mkdir -p /mnt/data/appdata/hhh2/translate
-sudo chown -R 1032:1032 /mnt/data/appdata/hhh2/translate
-```
-
-Failure to do this will cause `h3-2-translate` to start but fail to persist language
-packs, resulting in empty translation responses.
-
-### Step 6: Deploy
+### Step 5: Deploy
 1. Click **Deploy the stack**
-2. Wait for deployment (5-10 minutes for initial setup; Keycloak first-boot takes ~90 s)
-3. Monitor container logs for any errors
+2. Wait for deployment (5–10 minutes for initial setup; Keycloak first-boot takes ~90 s)
+3. Monitor container logs for errors
+
+---
 
 ## Post-Deployment Verification
 
 ### 1. Check Container Status
+
 All containers should be running:
-- `h3-2-proxy` (Traefik reverse proxy)
-- `h3-2-app` (Node.js backend API)
-- `h3-2-fuseki` (Apache Jena Fuseki RDF/SPARQL database)
-- `h3-2-mongo` (MongoDB — survey responses, recommendations, user preferences)
-- `h3-2-mongo-express` (MongoDB web UI)
-- `h3-2-neo4j` (Neo4j graph database — habit graph, BCIO ontology)
-- `h3-2-translate` (LibreTranslate — EN↔DE habit translation)
-- `h3-2-keycloak` (Keycloak identity provider — authentication and authorisation)
-- `h3-2-recommender` (Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement)
-- `h3-2-admin` (Next.js admin panel — study management UI)
-- `h3-2-backup` (Backup service)
+
+| Container | Role |
+|-----------|------|
+| `h3-2-proxy` | Traefik reverse proxy |
+| `h3-2-app` | Node.js backend API |
+| `h3-2-fuseki` | Apache Jena Fuseki RDF/SPARQL database |
+| `h3-2-mongo` | MongoDB — survey responses, recommendations, user preferences |
+| `h3-2-mongo-express` | MongoDB web UI |
+| `h3-2-neo4j` | Neo4j graph database — habit graph, BCIO ontology |
+| `h3-2-redis` | Redis — notification locks and recommendation caching |
+| `h3-2-translate` | LibreTranslate — EN↔DE habit translation |
+| `h3-2-keycloak-db` | PostgreSQL — Keycloak backend database |
+| `h3-2-keycloak` | Keycloak identity provider — authentication and authorisation |
+| `h3-2-recommender` | Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement |
+| `h3-2-admin` | Next.js admin panel — study management UI |
+| `h3-2-backup` | Backup service |
 
 ### 2. Verify SSL Certificate
-- Check Traefik logs: Look for "certificate obtained"
-- Visit https://habit.felixreinsch.de
+- Check Traefik logs: look for "certificate obtained"
+- Visit `https://habit.wiwi.tu-dresden.de`
 - Verify valid SSL certificate (green padlock)
 
 ### 3. Test Services
-- [ ] Main application: https://habit.felixreinsch.de
-- [ ] Mongo Express: https://habit.felixreinsch.de/mongo
-- [ ] Fuseki (requires auth): https://habit.felixreinsch.de/fuseki
-- [ ] Translation API: https://habit.felixreinsch.de/translate
-- [ ] Neo4j browser: http://localhost:7474 (via SSH tunnel)
-- [ ] Traefik dashboard: https://habit.felixreinsch.de/dashboard
 
-### 4. Run One-time Migration Scripts (first deploy of this branch only)
+- [ ] Main application: `https://habit.wiwi.tu-dresden.de`
+- [ ] Admin panel: `https://habit.wiwi.tu-dresden.de/admin`
+- [ ] Mongo Express: `https://habit.wiwi.tu-dresden.de/mongo`
+- [ ] Fuseki (requires auth): `https://habit.wiwi.tu-dresden.de/fuseki`
+- [ ] Translation API: `https://habit.wiwi.tu-dresden.de/translate`
+- [ ] Neo4j browser: `http://localhost:7474` (via SSH tunnel — see below)
+- [ ] Traefik dashboard: `https://habit.wiwi.tu-dresden.de/dashboard`
 
-#### 4a. Migrate legacy hhh__Habit nodes to new Habit schema
+### 4. Run One-time Migration Scripts (First Deploy of This Branch Only)
 
-All existing `hhh__Habit` nodes (from the old n10s/RDF pipeline) must be
-copied into the new `Habit` schema before the stats and explore-feed endpoints
-will show historical donations.  Run this once after the first deploy of this
-branch:
+#### 4a. Migrate Legacy `hhh__Habit` Nodes to New Habit Schema
+
+All existing `hhh__Habit` nodes (from the old n10s/RDF pipeline) must be copied into the new `Habit` schema before the stats and explore-feed endpoints will show historical donations. Run this once after the first deploy:
 
 ```bash
 docker exec h3-2-app node scripts/run-migration.js
@@ -345,20 +369,11 @@ The script is **idempotent** — running it again produces:
 [migration] Done. Migrated 0 habits, skipped 42 (already exist).
 ```
 
-Old `hhh__Habit` nodes are left in place.  Existing
-`hhh__Donor-[:hhh__donates]->hhh__Habit` relationships are preserved and
-mirrored as `hhh__Donor-[:DONATED]->:Habit` on the new nodes.
+#### 4b. Re-import Keycloak Realm (First Deploy After Keycloak DB Migration)
 
-#### 4b. Re-import Keycloak realm (first deploy after Keycloak DB migration)
+If you are upgrading an existing deployment that previously used Keycloak with the embedded dev-file store (`KC_DB=dev-file`), the new PostgreSQL database will be empty on first boot. Keycloak will attempt to import the realm automatically via `--import-realm`, but the import is skipped when a realm with the same name already exists. On a **fresh PostgreSQL database** the realm is always imported.
 
-If you are upgrading an existing deployment that previously used Keycloak with the
-embedded dev-file store (`KC_DB=dev-file`), the new PostgreSQL database will be
-empty on first boot.  Keycloak will attempt to import the realm automatically via
-`--import-realm`, but the import is skipped when a realm with the same name already
-exists.  On a **fresh PostgreSQL database** the realm is always imported.
-
-After deploying with the PostgreSQL-backed Keycloak for the first time, verify the
-realm is present:
+After deploying with the PostgreSQL-backed Keycloak for the first time, verify the realm is present:
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}" \
@@ -366,22 +381,17 @@ curl -s -o /dev/null -w "%{http_code}" \
 # Expected: 200
 ```
 
-If the realm is missing (e.g., migrating from an existing dev-file install), re-run
-the deploy script to force-import it:
+If the realm is missing, force-import it:
 
 ```bash
 bash scripts/deploy-keycloak.sh
 ```
 
-> **Note:** Any users, credentials, or client secrets created in the old dev-file
-> Keycloak instance are **not** automatically migrated to the PostgreSQL database.
-> Re-create them manually via the Keycloak admin console or re-run participant
-> provisioning scripts.
+> **Note:** Any users, credentials, or client secrets from the old dev-file Keycloak instance are **not** automatically migrated to PostgreSQL. Re-create them manually via the Keycloak admin console or re-run participant provisioning scripts.
 
-#### 4d. Backfill German translations for existing English habits
+#### 4c. Backfill German Translations for Existing English Habits
 
-Habit nodes donated before this branch was deployed do not have a `translationDE` field.
-Run the backfill script to populate German translations via LibreTranslate + LLM refinement:
+Habit nodes donated before this branch was deployed do not have a `translationDE` field. Run the backfill script to populate German translations via LibreTranslate + LLM refinement:
 
 ```bash
 docker exec h3-2-app node scripts/backfill-de-translations.js
@@ -401,79 +411,84 @@ Expected output:
 [backfill] Done. 42 updated, 0 failed.
 ```
 
-If any habits fail, the script logs them and exits with code 1.  Re-run after fixing
-the underlying cause (usually LibreTranslate or the API-service being unhealthy).
-
-#### 4e. Backfill BCIO enrichment for existing habits (optional)
+#### 4d. Backfill BCIO Enrichment for Existing Habits (Optional)
 
 ```bash
 docker exec h3-2-app node scripts/migrate-habits-bcio.js
 ```
 
 ### 5. Test Backup System
+
 Check backup logs:
 ```bash
 docker logs h3-2-backup
 ```
 
 Verify backup files are created:
-- Location: `/backups` directory
+- Location: `./backups` directory on the host (bind-mounted into the container at `/backups`)
 - Format: `full_backup_YYYYMMDD_HHMMSS.tar.gz`
+
+---
 
 ## Network Architecture
 
 ### How It Works
-1. **External Traffic:**
-   - Internet → Port 80/443 → Traefik (h3-2-proxy)
 
-2. **Internal Routing:**
-   - Traefik inspects Host/Path
-   - Routes to appropriate service via `h3-2-proxy` network
+1. **External Traffic:** Internet → Ports 80/443 → Traefik (`h3-2-proxy`)
+2. **Internal Routing:** Traefik inspects Host/Path and routes to the appropriate service via the `h3-proxy` bridge network
+3. **Service Communication:** All services share the `h3-proxy` external Docker network; they address each other by service/container name
 
-3. **Service Communication:**
-   - All services on `h3-2-proxy` bridge network
-   - Services use container names (mongo, fuseki, neo4j)
-   - No direct internet exposure
+> **Note:** In production (`docker-compose.prod.yml`) the network is named `h3-proxy` (external). It must be created on the host before the first deploy: `docker network create h3-proxy`.
+>
+> In local mode (`docker-compose.local.yml`) the network is named `h3-2-proxy` and is created by Docker Compose automatically.
 
 ### Network Diagram
+
 ```
 Internet
-   ↓
+   |
 Port 80/443
-   ↓
+   |
 Traefik (h3-2-proxy)
-   ↓
-h3-2-proxy network (bridge)
-   ├── h3-2-app (Node.js backend API)
-   ├── h3-2-admin (Next.js admin panel)
-   ├── h3-2-recommender (Python FastAPI — LLM/BCIO)
-   ├── h3-2-keycloak (Keycloak — Port 8080 exposed for admin UI)
-   ├── h3-2-fuseki (RDF/SPARQL)
-   ├── h3-2-mongo (MongoDB)
-   ├── h3-2-mongo-express (MongoDB UI)
-   ├── h3-2-neo4j (Graph DB — Port 7474/7687 exposed for SSH tunnel)
-   ├── h3-2-translate (LibreTranslate — UID 1032, volume chown required)
-   └── h3-2-backup (Backup service)
+   |
+h3-proxy network (bridge)
+   |-- h3-2-app          Node.js backend API
+   |-- h3-2-admin        Next.js admin panel
+   |-- h3-2-recommender  Python FastAPI — LLM/BCIO/recommendations
+   |-- h3-2-redis        Redis — notification locks, recommendation cache
+   |-- h3-2-keycloak     Keycloak — ports 8080 exposed for admin UI
+   |-- h3-2-keycloak-db  PostgreSQL — Keycloak database (internal only)
+   |-- h3-2-fuseki       RDF/SPARQL
+   |-- h3-2-mongo        MongoDB
+   |-- h3-2-mongo-express MongoDB UI
+   |-- h3-2-neo4j        Graph DB — ports 7474/7687 exposed for SSH tunnel
+   |-- h3-2-translate    LibreTranslate — UID 1032, volume chown required
+   `-- h3-2-backup       Backup service
 ```
+
+---
 
 ## Automatic Updates
 
 ### How It Works
-- Portainer checks `master` branch every 5 minutes
-- If changes detected:
+- Portainer polls the `master` branch every 5 minutes
+- If changes are detected:
   1. Pulls latest code
   2. Rebuilds images if needed
   3. Recreates containers
-  4. Zero-downtime for config changes
+  4. Zero-downtime for config-only changes
 
-### Triggering Manual Update
+### Triggering a Manual Update
 In Portainer:
 1. Go to **Stacks** → `health-habit-hub-2`
 2. Click **Pull and redeploy**
 
+---
+
 ## Troubleshooting
 
 ### SSL Certificate Issues
+
 **Problem:** Certificate not obtained
 
 **Solutions:**
@@ -483,7 +498,7 @@ In Portainer:
    ```
 2. Verify DNS propagation:
    ```bash
-   dig habit.felixreinsch.de
+   dig habit.wiwi.tu-dresden.de
    ```
 3. Check Traefik logs:
    ```bash
@@ -491,17 +506,25 @@ In Portainer:
    ```
 
 ### Services Can't Communicate
-**Problem:** App can't connect to MongoDB/Fuseki/Neo4j
+
+**Problem:** App can't connect to MongoDB / Fuseki / Neo4j / Redis
 
 **Solutions:**
-1. Verify all containers on same network:
+1. Verify all containers are on the same network:
    ```bash
-   docker network inspect h3-2-proxy
+   docker network inspect h3-proxy
    ```
-2. Check service names match docker-compose.prod.yml
+2. Check service names match those in `docker-compose.prod.yml` (internal hostnames are the service keys: `mongo`, `fuseki`, `neo4j`, `redis`, `recommender`)
 3. Verify environment variables in Portainer
 
+### Recommender / API Service Errors
+
+**Problem:** `h3-2-recommender` or `h3-2-app` returns auth errors on internal calls
+
+**Solution:** Ensure `API_SERVICE_SECRET` is set to the **same value** in Portainer for both services and that neither container has a stale value cached. Redeploy the stack after updating the secret.
+
 ### Backup Failures
+
 **Problem:** Backup container shows errors
 
 **Solutions:**
@@ -509,11 +532,12 @@ In Portainer:
    ```bash
    docker logs h3-2-backup
    ```
-2. Verify MongoDB credentials match
-3. Ensure `/backups` directory has write permissions
+2. Verify MongoDB credentials match (`MONGO_USER` / `MONGO_PASSWORD`)
+3. Ensure the `./backups` bind-mount directory has write permissions
 4. Check disk space
 
 ### Container Won't Start
+
 **Problem:** Container in restart loop
 
 **Solutions:**
@@ -521,14 +545,17 @@ In Portainer:
    ```bash
    docker logs <container-name>
    ```
-2. Verify environment variables set correctly
+2. Verify environment variables are set correctly in Portainer
 3. Check resource constraints (memory/CPU)
+
+---
 
 ## Monitoring
 
 ### Container Logs
+
 View logs in Portainer:
-- **Stacks** → `health-habit-hub-2` → Click container → **Logs**
+- **Stacks** → `health-habit-hub-2` → click a container → **Logs**
 
 Or via CLI:
 ```bash
@@ -537,9 +564,10 @@ docker logs -f <container-name>
 
 ### Resource Usage
 View in Portainer:
-- **Containers** → Click container → **Stats**
+- **Containers** → click a container → **Stats**
 
 ### Backup Status
+
 Check latest backup:
 ```bash
 docker exec h3-2-backup ls -lh /backups/full_backup_*.tar.gz | tail -5
@@ -550,109 +578,88 @@ View backup manifest:
 docker exec h3-2-backup cat /backups/backup_*.manifest | tail -20
 ```
 
+---
+
 ## Maintenance
 
 ### Updating Application Code
 1. Push changes to `master` branch
-2. Wait 5 minutes (or trigger manual update)
+2. Wait 5 minutes (or trigger a manual update in Portainer)
 3. Verify deployment in Portainer logs
 
 ### Rotating Passwords
-1. Generate new secure password
-2. Update in Portainer environment variables
+1. Generate a new secure value
+2. Update it in Portainer's environment variables
 3. Click **Update the stack**
-4. Restart affected containers
+4. Restart the affected containers
 
-### Backup Restoration
-See `backup-service/restore.sh` for restoration procedures.
+### Rotating `API_SERVICE_SECRET`
+Both `h3-2-app` and `h3-2-recommender` read `API_SERVICE_SECRET` at startup. After updating the value in Portainer, redeploy the entire stack (or restart both containers) so both services use the same new secret simultaneously.
 
 ### Certificate Renewal
-Automatic via Let's Encrypt:
-- Certificates auto-renew 30 days before expiry
-- Monitor Traefik logs for renewal notices
+Automatic via Let's Encrypt — certificates auto-renew 30 days before expiry. Monitor Traefik logs for renewal notices.
+
+---
 
 ## Security Best Practices
 
 - [ ] All passwords are strong and unique
-- [ ] Traefik dashboard protected with authentication
+- [ ] `API_SERVICE_SECRET` generated with `openssl rand -hex 32`
+- [ ] Traefik dashboard protected with `TRAEFIK_DASHBOARD_AUTH`
 - [ ] Regular backups verified
 - [ ] Security updates applied to base images
 - [ ] Logs monitored for suspicious activity
-- [ ] Firewall configured (only ports 80/443 open)
-- [ ] SSH key authentication enabled
-- [ ] Root login disabled
+- [ ] Firewall configured (only ports 80/443 open; SSH restricted)
+- [ ] SSH key authentication enabled, root login disabled
 
-## Support
-
-### Logs Location
-- Traefik: `docker logs h3-2-proxy`
-- Application: `docker logs h3-2-app`
-- Backups: `docker logs h3-2-backup`
-- All others: `docker logs <container-name>`
-
-### Health Checks
-```bash
-# Check all containers
-docker ps
-
-# Check network
-docker network inspect h3-2-proxy
-
-# Check volumes
-docker volume ls | grep h3-2-
-```
+---
 
 ## URLs Reference
 
-| Service | Production URL | Local Deployment | Direct Local URL / Port | Authentication |
-|---------|---------------|------------------|-------------------------|----------------|
-| Backend API | https://habit.felixreinsch.de/api/v1/ | `http://app.localhost/api/v1/` | `http://localhost:3000/api/v1/` | Keycloak JWT |
-| Flutter Web App | https://habit.felixreinsch.de | local mobile/web app build pointing to local backend | Flutter app (`make ios`) | Keycloak PKCE |
-| Admin Panel | https://habit.felixreinsch.de/admin | `http://admin.localhost` | `http://localhost:3001` | Keycloak (admin/researcher role) |
-| Keycloak | https://habit.felixreinsch.de/auth/ | `http://keycloak.localhost` | `http://localhost:8080` | Realm login / admin auth |
-| Keycloak Admin UI | https://habit.felixreinsch.de/auth/admin | `http://keycloak.localhost/admin/` | `http://localhost:8080/admin/` | `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
-| Keycloak Realm Metadata | — | `http://keycloak.localhost/realms/hhh/.well-known/openid-configuration` | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | None |
-| Mongo Express | https://habit.felixreinsch.de/mongo | `http://mongo-express.localhost` with `docker compose up`; not included in `docker-compose.local.yml` | `http://localhost:8081` with `docker compose up`; not included in `docker-compose.local.yml` | Basic Auth (admin) |
-| Fuseki | https://habit.felixreinsch.de/fuseki | `http://fuseki.localhost` | `http://localhost:3030` | Basic Auth (`admin` / `ADMIN_PASSWORD`) |
-| Translation | https://habit.felixreinsch.de/translate | `http://translate.localhost` when the local Traefik proxy is running | `http://localhost:5001` in `docker-compose.local.yml`, `http://localhost:5000` in `docker-compose.yml` | None |
-| Neo4j Browser | via SSH tunnel (see below) | `http://neo4j.localhost` | `http://localhost:7474` | `neo4j` / `NEO4J_PASSWORD` |
-| Recommender API docs | — | not routed via Traefik locally | `http://localhost:8001/docs` in `docker-compose.local.yml`, `http://localhost:8000/docs` in `docker-compose.yml` | None |
-| Traefik Dashboard | https://habit.felixreinsch.de/dashboard | `http://proxy.localhost` | `http://localhost:8888` | None locally; Basic Auth in production |
+| Service | Production URL | Local (`docker-compose.local.yml`) | Direct Local Port |
+|---------|---------------|------------------------------------|-------------------|
+| Backend API | `https://habit.wiwi.tu-dresden.de/api/v1/` | `http://app.localhost/api/v1/` | `http://localhost:3000/api/v1/` |
+| Flutter Web App | `https://habit.wiwi.tu-dresden.de` | local mobile/web build pointing to local backend | — |
+| Admin Panel | `https://habit.wiwi.tu-dresden.de/admin` | `http://admin.localhost` | `http://localhost:3001` |
+| Keycloak | `https://habit.wiwi.tu-dresden.de/auth/` | `http://keycloak.localhost` | `http://localhost:8080` |
+| Keycloak Admin UI | `https://habit.wiwi.tu-dresden.de/auth/admin` | `http://keycloak.localhost/admin/` | `http://localhost:8080/admin/` |
+| Keycloak Realm Metadata | — | `http://keycloak.localhost/realms/hhh/.well-known/openid-configuration` | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` |
+| Mongo Express | `https://habit.wiwi.tu-dresden.de/mongo` | not in `docker-compose.local.yml` | `http://localhost:8081` (with `docker compose up`) |
+| Fuseki | `https://habit.wiwi.tu-dresden.de/fuseki` | `http://fuseki.localhost` | `http://localhost:3030` |
+| Translation | `https://habit.wiwi.tu-dresden.de/translate` | `http://translate.localhost` | `http://localhost:5001` |
+| Neo4j Browser | SSH tunnel only (see below) | `http://neo4j.localhost` | `http://localhost:7474` |
+| Recommender API docs | — | not routed via Traefik locally | `http://localhost:8001/docs` |
+| Traefik Dashboard | `https://habit.wiwi.tu-dresden.de/dashboard` | `http://proxy.localhost` | `http://localhost:8888` |
 
-### Accessing Neo4j Browser via SSH Tunnel
+---
 
-Neo4j Browser requires an SSH tunnel for secure access. The database runs internally on the server but only exposures its ports through the tunnel for security.
+## Accessing Neo4j Browser via SSH Tunnel
 
-#### What is SSH Tunneling?
+Neo4j Browser requires an SSH tunnel for secure access. The container exposes ports 7474 and 7687 on the host but these are not publicly accessible through Traefik.
 
-SSH tunneling (port forwarding) creates a secure encrypted connection that forwards traffic from your local machine to the remote server. This allows you to access Neo4j's web browser and Bolt protocol securely without exposing the ports directly to the internet.
+### What is SSH Tunneling?
 
-#### Connection Methods
+SSH tunneling (port forwarding) creates a secure encrypted connection that forwards traffic from your local machine to the remote server. This lets you access Neo4j's browser and Bolt protocol without exposing those ports to the internet.
 
-You can connect to the server using either the domain name or IP address:
+### Connection Methods
 
-##### Option 1: Using Domain Name (Recommended)
+#### Option 1: Using Domain Name (Recommended)
 
 ```bash
-# Create SSH tunnel (keeps connection open)
-ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@habit.felixreinsch.de
+ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@habit.wiwi.tu-dresden.de
 ```
 
-##### Option 2: Using IP Address
+#### Option 2: Using IP Address
 
 ```bash
-# Create SSH tunnel using direct IP address
 ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
 ```
 
-**Note:** The IP address `141.76.16.16` is useful when DNS is not available or for direct server access.
+### How to Access Neo4j Browser
 
-#### How to Access Neo4j Browser
-
-1. **Start the SSH tunnel** in a terminal window (keep it open):
+1. **Start the SSH tunnel** in a terminal (keep it open):
    ```bash
-   # Use one of the commands above
-   ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@habit.felixreinsch.de
+   ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
    ```
 
 2. **Open Neo4j Browser** in your web browser:
@@ -660,189 +667,155 @@ ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
 
 3. **Authenticate** with Neo4j credentials:
    - **Username:** `neo4j`
-   - **Password:** Use the password from `NEO4J_PASSWORD` environment variable in Portainer
-   - **Connection URL:** `neo4j://localhost:7687` (will auto-populate)
+   - **Password:** value of `NEO4J_PASSWORD` in Portainer
+   - **Connection URL:** `neo4j://localhost:7687` (auto-populated)
 
-4. **Keep the SSH tunnel open** while using Neo4j Browser. The tunnel forwards traffic as follows:
+4. The tunnel maps:
    - Port 7474 (HTTP Browser): `localhost:7474` → `server:7474`
    - Port 7687 (Bolt Protocol): `localhost:7687` → `server:7687`
 
-#### SSH Tunnel Explanation
-
-The SSH command maps two ports:
-- **7474**: Neo4j HTTP browser interface
-- **7687**: Neo4j Bolt protocol (database connection)
-
-Breakdown of the command:
-```bash
-ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
-      ↓                         ↓                        ↓
-   Local→Remote            Local→Remote            Connection
-   mapping                  mapping                 credentials
-```
-
-#### Advanced: Connecting via Cypher Shell
-
-If you need direct command-line access to Neo4j while the SSH tunnel is active:
+### Advanced: Cypher Shell
 
 ```bash
-# In another terminal (after SSH tunnel is open):
+# After SSH tunnel is open, in another terminal:
 docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD} -a bolt://localhost:7687
 ```
 
-Or directly through the SSH tunnel on the server:
+Or directly via SSH (no tunnel needed):
 ```bash
-# From your local machine
 ssh service@141.76.16.16 'docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}'
 ```
 
-#### Troubleshooting SSH Tunnel Connection
+### Troubleshooting SSH Tunnel
 
-**Issue: "Connection refused" on localhost:7474**
-- Ensure the SSH tunnel is still active in your terminal
+**"Connection refused" on localhost:7474**
+- Ensure the SSH tunnel terminal is still open
 - Verify Neo4j container is running: `docker ps | grep neo4j`
-- Check if another service is using port 7474 locally: `lsof -i :7474`
+- Check if another process is using port 7474 locally: `lsof -i :7474`
 
-**Issue: SSH connection fails**
+**SSH connection fails**
 - Verify SSH key authentication is configured
-- Check server IP/domain is correct and accessible
-- Ensure firewall allows SSH connections (usually port 22)
-- Test connection first: `ssh -v service@141.76.16.16` (shows debug info)
+- Test with verbose output: `ssh -v service@141.76.16.16`
 
-**Issue: Neo4j authentication fails**
-- Verify the NEO4J_PASSWORD in Portainer matches what you're using
-- Make sure credentials are for the "neo4j" user, not another user
+**Neo4j authentication fails**
+- Verify `NEO4J_PASSWORD` in Portainer matches what you are using
 - Check Neo4j container logs: `docker logs h3-2-neo4j | tail -20`
 
-**Issue: Slow or dropped connections**
-- SSH tunnels can timeout after inactivity
-- Add keepalive option: `ssh -o ServerAliveInterval=60 -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16`
-- Consider using screen/tmux to keep tunnel persistent
+**Dropped connections after inactivity**
+- Add keepalive: `ssh -o ServerAliveInterval=60 -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16`
+- Consider running the tunnel inside `screen` or `tmux`
+
+---
 
 ## Data Access and Management
 
 ### MongoDB Data
 
-**Location on Server:**
+**Host paths:**
 - Database files: `/mnt/data/appdata/hhh2/mongo/db`
 - Config files: `/mnt/data/appdata/hhh2/mongo/config`
 
 **Access via Mongo Express (Web UI):**
-- URL: https://habit.felixreinsch.de/mongo
-- Username: `admin` (from MONGO_EXPRESS_USER)
-- Password: (from MONGO_EXPRESS_PASSWORD in .env)
+- URL: `https://habit.wiwi.tu-dresden.de/mongo`
+- Username: `admin` (from `MONGO_EXPRESS_USER`)
+- Password: value of `MONGO_EXPRESS_PASSWORD` in Portainer
 
 **Initialization:**
 MongoDB is automatically initialized on first run with:
 - Database: `surveyjs`
-- Collections: `surveys` (with sample survey), `results` (with sample responses)
 - Initialization script: `mongo/entrypoint/surveyjs-init.js`
 
 **Backup MongoDB:**
 ```bash
-# Create backup
-docker exec h3-2-mongo mongodump --username admin --password ${MONGO_PASSWORD} --authenticationDatabase admin --out /tmp/backup
+docker exec h3-2-mongo mongodump \
+  --username admin --password ${MONGO_PASSWORD} \
+  --authenticationDatabase admin --out /tmp/backup
 
-# Copy backup to host
 docker cp h3-2-mongo:/tmp/backup ./mongo-backup-$(date +%Y%m%d)
 ```
 
 **Restore MongoDB:**
 ```bash
-# Copy backup to container
 docker cp ./mongo-backup-YYYYMMDD h3-2-mongo:/tmp/restore
 
-# Restore
-docker exec h3-2-mongo mongorestore --username admin --password ${MONGO_PASSWORD} --authenticationDatabase admin /tmp/restore
+docker exec h3-2-mongo mongorestore \
+  --username admin --password ${MONGO_PASSWORD} \
+  --authenticationDatabase admin /tmp/restore
 ```
 
-**Direct Access via CLI:**
+**Direct CLI access:**
 ```bash
-# Connect to MongoDB shell
 docker exec -it h3-2-mongo mongosh -u admin -p ${MONGO_PASSWORD} --authenticationDatabase admin
-
-# List databases
-show dbs
-
-# Use surveyjs database
-use surveyjs
-
-# Show collections
-show collections
-
-# Query surveys
-db.surveys.find()
-
-# Query results
-db.results.find()
 ```
 
 ### Neo4j Data
 
-**Location on Server:**
+**Host paths:**
 - Database files: `/mnt/data/appdata/hhh2/neo4j/data`
 - Log files: `/mnt/data/appdata/hhh2/neo4j/logs`
 
-**Access via Browser:**
-See "Accessing Neo4j Browser via SSH Tunnel" above.
+**Access via Browser:** see "Accessing Neo4j Browser via SSH Tunnel" above.
 
 **Backup Neo4j:**
 ```bash
-# Stop Neo4j container first
 docker stop h3-2-neo4j
-
-# Create backup
 sudo tar -czf neo4j-backup-$(date +%Y%m%d).tar.gz /mnt/data/appdata/hhh2/neo4j/data
-
-# Restart Neo4j
 docker start h3-2-neo4j
 ```
 
 **Restore Neo4j:**
 ```bash
-# Stop Neo4j container
 docker stop h3-2-neo4j
-
-# Restore backup
 sudo tar -xzf neo4j-backup-YYYYMMDD.tar.gz -C /
-
-# Restart Neo4j
 docker start h3-2-neo4j
 ```
 
-**Direct Access via Cypher Shell:**
+**Direct Cypher access:**
 ```bash
-# Connect to Neo4j Cypher shell
 docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}
-
-# Example queries
-MATCH (n) RETURN count(n);  # Count all nodes
-MATCH (n) RETURN n LIMIT 10;  # Show first 10 nodes
 ```
 
 ### Fuseki Data
 
-**Location on Server:**
-- RDF data: Named volume `h3-2-fuseki-data`
+**Storage:** Named volume `h3-2-fuseki-data`
 
 **Backup Fuseki:**
 ```bash
-# Backup is included in automated daily backups
-# Manual backup:
-docker run --rm -v h3-2-fuseki-data:/data -v $(pwd):/backup alpine tar czf /backup/fuseki-backup-$(date +%Y%m%d).tar.gz -C /data .
+docker run --rm \
+  -v h3-2-fuseki-data:/data \
+  -v $(pwd):/backup \
+  alpine tar czf /backup/fuseki-backup-$(date +%Y%m%d).tar.gz -C /data .
 ```
 
 **Restore Fuseki:**
 ```bash
-# Restore from backup
-docker run --rm -v h3-2-fuseki-data:/data -v $(pwd):/backup alpine tar xzf /backup/fuseki-backup-YYYYMMDD.tar.gz -C /data
+docker run --rm \
+  -v h3-2-fuseki-data:/data \
+  -v $(pwd):/backup \
+  alpine tar xzf /backup/fuseki-backup-YYYYMMDD.tar.gz -C /data
 ```
+
+### Redis Data
+
+**Storage:** Named volume `h3-2-redis-data`
+
+Redis is used for:
+- Notification locks (preventing duplicate push notifications)
+- Recommendation response caching
+
+Redis data does not need to be backed up — it is a short-lived cache and will be repopulated automatically. If needed, the volume can be inspected with:
+
+```bash
+docker exec -it h3-2-redis redis-cli
+```
+
+---
 
 ## Additional Notes
 
-- Backups run daily at midnight
-- Backup retention: 14 days (configurable)
-- All data persisted in named Docker volumes or host-mounted directories
-- SSL certificates stored in `/mnt/data/appdata/hhh2/traefik-certs/`
-- MongoDB automatically initializes with sample survey data on first run
-- Neo4j requires SSH tunnel for secure browser access
+- Backups run daily (the backup container loops every 24 hours with a 2-minute startup delay)
+- Backup retention: 14 days by default (configurable via `BACKUP_RETENTION_DAYS`)
+- All persistent data is stored in named Docker volumes or host-mounted directories under `/mnt/data/appdata/hhh2/`
+- SSL certificates are stored in `/mnt/data/appdata/hhh2/traefik-certs/`
+- LibreTranslate volume at `/mnt/data/appdata/hhh2/translate` must be owned by UID 1032 before first deploy
+- Neo4j requires an SSH tunnel for browser access in production
