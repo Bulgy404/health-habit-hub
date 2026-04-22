@@ -59,7 +59,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     // Redirect guard: admin route protection and onboarding bypass.
     redirect: (context, state) => redirectGuard(
       location: state.matchedLocation,
-      getIsLoggedIn: () => ref.read(isLoggedInProvider.future),
+      getIsLoggedIn: () => ref.read(authServiceProvider).isLoggedIn(),
       getUserRoles: () => ref.read(userRolesProvider.future),
       getIsOnboardingComplete: isOnboardingComplete,
     ),
