@@ -1,109 +1,115 @@
 services:
   proxy:
     image: traefik:v3.6.1
-    container_name: h3-2-proxy
+    container_name: hhh-proxy
     command:
-      - --api.insecure=true
       - --api.dashboard=true
-      - --api.debug=true
       - --log.level=INFO
       - --accesslog=true
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=h3-2-proxy
+      - --providers.docker.network=hhh-proxy
       - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json
     restart: always
     ports:
-      - ${TRAEFIK_HOST_PORT80:-80}:80
-      - ${TRAEFIK_HOST_PORT8080:-8888}:8080
+      - "${TRAEFIK_HTTP_PORT:-80}:80"
+      - "${TRAEFIK_HTTPS_PORT:-443}:443"
     networks:
-      - h3-2-proxy
+      - hhh-proxy
     volumes:
       - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
+      - traefik-certs:/certs
     labels:
       - traefik.enable=true
-      - traefik.http.routers.proxy.rule=Host(`${PROXY_PATH:-proxy}.${PATH_SUFFIX:-localhost}`)
-      - traefik.http.routers.proxy.entrypoints=web
-      - traefik.http.routers.proxy.service=proxy
-      - traefik.http.services.proxy.loadbalancer.server.port=8080
+      - traefik.http.routers.dashboard.rule=Host(`${DOMAIN}`) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
+      - traefik.http.routers.dashboard.entrypoints=websecure
+      - traefik.http.routers.dashboard.tls.certresolver=letsencrypt
+      - traefik.http.routers.dashboard.service=api@internal
+      - traefik.http.routers.dashboard.middlewares=dashboard-auth
+      - traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}
 
   app:
     image: hhh/app
-    container_name: h3-2-app
+    container_name: hhh-app
     build: ./app
-    restart: on-failure:3
-    env_file:
-      - .env
+    restart: always
+    env_file: .env
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--no-warnings
+      - APP_BASE_PATH=${APP_BASE_PATH:-/}
       - MONGO_DB=surveyjs
       - MONGO_HOST=mongo
+      - GRAPH_BACKEND=${GRAPH_BACKEND:-neo4j}
+      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+      - NEO4J_USER=${NEO4J_USER:-neo4j}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - RECAPTCHA_SITEKEY=${RECAPTCHA_SITEKEY}
+      - RECAPTCHA_SECRETKEY=${RECAPTCHA_SECRETKEY}
+      - RECAPTCHA_USE_RECAPTCHA_DOMAIN=${RECAPTCHA_USE_RECAPTCHA_DOMAIN:-true}
       - API_SERVICE_SECRET=${API_SERVICE_SECRET}
-    ports:
-      - ${APP_HOST_PORT:-3000}:3000
     networks:
-      - h3-2-proxy
+      - hhh-proxy
     depends_on:
       - fuseki
-      - proxy
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.app.rule=Host(`${APP_PATH:-app}.${PATH_SUFFIX:-localhost}`)
-      - traefik.http.routers.app.entrypoints=web
-      - traefik.http.routers.app.service=app
-      - traefik.http.services.app.loadbalancer.server.port=3000
+      - mongo
+      - neo4j
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 30s
-    develop:
-      watch:
-        - path: ./app
-          action: rebuild
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.app.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.app.entrypoints=websecure
+      - traefik.http.routers.app.tls.certresolver=letsencrypt
+      - traefik.http.routers.app.service=app
+      - traefik.http.services.app.loadbalancer.server.port=3000
 
   fuseki:
     image: hhh/fuseki
-    container_name: h3-2-fuseki
+    container_name: hhh-fuseki
     build: ./fuseki
     restart: always
-    env_file:
-      - .env
+    env_file: .env
     environment:
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
-    ports:
-      - ${FUSEKI_HOST_PORT:-3030}:3030
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     networks:
-      - h3-2-proxy
+      - hhh-proxy
     volumes:
       - fuseki-data:/fuseki
-    depends_on:
-      - proxy
     labels:
       - traefik.enable=true
-      - traefik.http.routers.fuseki.rule=Host(`${FUSEKI_PATH:-fuseki}.${PATH_SUFFIX:-localhost}`)
-      - traefik.http.routers.fuseki.entrypoints=web
+      - traefik.http.routers.fuseki.rule=Host(`${DOMAIN}`) && PathPrefix(`/fuseki`)
+      - traefik.http.routers.fuseki.entrypoints=websecure
+      - traefik.http.routers.fuseki.tls.certresolver=letsencrypt
       - traefik.http.routers.fuseki.service=fuseki
       - traefik.http.services.fuseki.loadbalancer.server.port=3030
-  
+      - traefik.http.middlewares.fuseki-strip.stripprefix.prefixes=/fuseki
+      - traefik.http.routers.fuseki.middlewares=fuseki-strip
+
   mongo:
-    image: mongo
-    container_name: h3-2-mongo
-    restart: unless-stopped
+    image: mongo:7.0
+    container_name: hhh-mongo
+    restart: always
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
       - MONGO_INITDB_DATABASE=surveyjs
-    ports:
-      - 27017:27017
     networks:
-      - h3-2-proxy
+      - hhh-proxy
     volumes:
-      - ./mongo/entrypoint:/docker-entrypoint-initdb.d
-      - ./mongo/data:/data/db
-      - ./mongo/config:/data/configdb
+      - ./mongo/entrypoint:/docker-entrypoint-initdb.d:ro
+      - mongo-data:/data/db
+      - mongo-config:/data/configdb
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.runCommand({ping:1})"]
       interval: 30s
@@ -111,67 +117,70 @@ services:
       retries: 5
       start_period: 30s
 
-
   mongo-express:
     image: mongo-express:1.0
-    container_name: h3-2-mongo-express
-    restart: unless-stopped
+    container_name: hhh-mongo-express
+    restart: always
     environment:
       - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USER:-admin}
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASSWORD:-admin}
-      - ME_CONFIG_MONGODB_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin}@mongo:27017/
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASSWORD}
+      - ME_CONFIG_MONGODB_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD}@mongo:27017/
       - ME_CONFIG_BASICAUTH_USERNAME=${MONGO_EXPRESS_USER:-admin}
-      - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_EXPRESS_PASSWORD:-AiGhe7ahngoh5eiz}
-    ports:
-      - 8081:8081
+      - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_EXPRESS_PASSWORD}
+      - ME_CONFIG_SITE_BASEURL=/mongo/
     networks:
-      - h3-2-proxy
+      - hhh-proxy
     depends_on:
       - mongo
-      - proxy
     labels:
       - traefik.enable=true
-      - traefik.http.routers.mongo-express.rule=Host(`mongo-express.${PATH_SUFFIX:-localhost}`)
-      - traefik.http.routers.mongo-express.entrypoints=web
+      - traefik.http.routers.mongo-express.rule=Host(`${DOMAIN}`) && PathPrefix(`/mongo`)
+      - traefik.http.routers.mongo-express.entrypoints=websecure
+      - traefik.http.routers.mongo-express.tls.certresolver=letsencrypt
       - traefik.http.routers.mongo-express.service=mongo-express
       - traefik.http.services.mongo-express.loadbalancer.server.port=8081
 
   translate:
     image: libretranslate/libretranslate:latest
-    container_name: h3-2-translate
+    container_name: hhh-translate
     restart: always
-    ports:
-      - ${LT_PORT:-5000}:5000
-    volumes:
-      - translate-data:/root/.local/share/argos-translate/packages
+    user: "1032:1032"
+    env_file: .env
+    environment:
+      - LT_LOAD_ONLY=${LT_LOAD_ONLY:-de,en,ja}
+      - LT_REQ_LIMIT=${LT_REQ_LIMIT:-0}
     networks:
-      - h3-2-proxy
-    env_file:
-      - .env
-    tty: true
+      - hhh-proxy
+    volumes:
+      - translate-data:/home/libretranslate/.local/share/argos-translate/packages
+    depends_on:
+      - app
     labels:
       - traefik.enable=true
-      - traefik.http.routers.translate.rule=Host(`${TRANSLATE_HOST:-translate}.${PATH_SUFFIX:-localhost}`)
-      - traefik.http.routers.translate.entrypoints=web
+      - traefik.http.routers.translate.rule=Host(`${DOMAIN}`) && PathPrefix(`/translate`)
+      - traefik.http.routers.translate.entrypoints=websecure
+      - traefik.http.routers.translate.tls.certresolver=letsencrypt
       - traefik.http.routers.translate.service=translate
       - traefik.http.services.translate.loadbalancer.server.port=5000
+      - traefik.http.middlewares.translate-strip.stripprefix.prefixes=/translate
+      - traefik.http.routers.translate.middlewares=translate-strip
 
   neo4j:
     image: neo4j:5
-    container_name: h3-2-neo4j
-    restart: unless-stopped
+    container_name: hhh-neo4j
+    restart: always
     environment:
-      - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j_password_change_me}
+      - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD}
       - NEO4J_PLUGINS=["n10s"]
       - NEO4J_server_directories_import=/import
       - NEO4J_dbms_security_procedures_unrestricted=n10s.*
       - NEO4J_dbms_security_procedures_allowlist=n10s.*
       - EXTENSION_SCRIPT=/neo4j-extension.sh
     ports:
-      - ${NEO4J_HTTP_PORT:-7474}:7474
-      - ${NEO4J_BOLT_PORT:-7687}:7687
+      - "7474:7474"
+      - "7687:7687"
     networks:
-      - h3-2-proxy
+      - hhh-proxy
     volumes:
       - neo4j-data:/data
       - neo4j-logs:/logs
@@ -183,130 +192,160 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
-    depends_on:
-      - proxy
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.neo4j.rule=Host(`neo4j.${PATH_SUFFIX:-localhost}`)
-      - traefik.http.routers.neo4j.entrypoints=web
-      - traefik.http.routers.neo4j.service=neo4j
-      - traefik.http.services.neo4j.loadbalancer.server.port=7474
+
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: hhh-keycloak-db
+    restart: always
+    environment:
+      - POSTGRES_DB=keycloak
+      - POSTGRES_USER=${KC_DB_USERNAME:-keycloak}
+      - POSTGRES_PASSWORD=${KC_DB_PASSWORD}
+    networks:
+      - hhh-proxy
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USERNAME:-keycloak} -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.5.5
-    container_name: h3-2-keycloak
-    restart: unless-stopped
-    env_file:
-      - stack.env
+    container_name: hhh-keycloak
+    restart: always
+    env_file: .env
     environment:
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
-      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      - KC_DB=dev-file
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_PROXY_HEADERS=xforwarded
+      - KC_HOSTNAME_STRICT=false
+      - KC_HTTP_RELATIVE_PATH=/auth
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
+      - KC_DB_USERNAME=${KC_DB_USERNAME:-keycloak}
+      - KC_DB_PASSWORD=${KC_DB_PASSWORD}
     command: start --import-realm
-    ports:
-      - "8080:8080"
     networks:
-      - h3-2-proxy
+      - hhh-proxy
     volumes:
-      - keycloak-data:/opt/keycloak/data
       - ./keycloak/hhh-realm.json:/opt/keycloak/data/import/hhh-realm.json:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 120s
     labels:
       - traefik.enable=true
-      - traefik.http.routers.keycloak.rule=Host(`keycloak.${PATH_SUFFIX:-localhost}`)
-      - traefik.http.routers.keycloak.entrypoints=web
+      - traefik.http.routers.keycloak.rule=Host(`${DOMAIN}`) && PathPrefix(`/auth`)
+      - traefik.http.routers.keycloak.entrypoints=websecure
+      - traefik.http.routers.keycloak.tls.certresolver=letsencrypt
       - traefik.http.routers.keycloak.service=keycloak
       - traefik.http.services.keycloak.loadbalancer.server.port=8080
 
+  redis:
+    image: redis:7-alpine
+    container_name: hhh-redis
+    restart: always
+    networks:
+      - hhh-proxy
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+
   recommender:
     image: hhh/recommender
-    container_name: h3-2-recommender
+    container_name: hhh-recommender
     build: ./API-service
-    restart: on-failure:3
-    env_file:
-      - stack.env
+    restart: always
+    env_file: .env
     environment:
       - API_SERVICE_SECRET=${API_SERVICE_SECRET}
-    ports:
-      - ${RECOMMENDER_HOST_PORT:-8000}:8000
     networks:
-      - h3-2-proxy
+      - hhh-proxy
     depends_on:
-      - proxy
+      - redis
 
   admin:
     image: hhh/admin
-    container_name: h3-2-admin
+    container_name: hhh-admin
     build: ./admin
-    restart: on-failure:3
-    env_file:
-      - stack.env
+    restart: always
+    env_file: .env
     environment:
-      - NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
+      - NEXTAUTH_URL=https://${DOMAIN}/admin
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - KEYCLOAK_CLIENT_ID=hhh-admin
-      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET:-hhh-admin-secret-change-me}
-      # KEYCLOAK_ISSUER is used server-side (NextAuth JWT validation); must use the internal Docker
-      # hostname so that token issuer claims match. KEYCLOAK_BROWSER_URL is used for the browser
-      # redirect and must remain as localhost so the host browser can reach Keycloak.
+      - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET}
       - KEYCLOAK_ISSUER=http://keycloak:8080/realms/hhh
-      - KEYCLOAK_BROWSER_URL=http://localhost:8080
+      - KEYCLOAK_BROWSER_URL=https://${DOMAIN}/auth
       - KEYCLOAK_INTERNAL_URL=http://keycloak:8080
-    ports:
-      - ${ADMIN_HOST_PORT:-3001}:3001
     networks:
-      - h3-2-proxy
+      - hhh-proxy
     depends_on:
-      - proxy
       - keycloak
     labels:
       - traefik.enable=true
-      - traefik.http.routers.admin.rule=Host(`admin.${PATH_SUFFIX:-localhost}`)
-      - traefik.http.routers.admin.entrypoints=web
+      - traefik.http.routers.admin.rule=Host(`${DOMAIN}`) && PathPrefix(`/admin`)
+      - traefik.http.routers.admin.entrypoints=websecure
+      - traefik.http.routers.admin.tls.certresolver=letsencrypt
       - traefik.http.routers.admin.service=admin
       - traefik.http.services.admin.loadbalancer.server.port=3001
 
   backup:
     image: hhh/backup
+    container_name: hhh-backup
     build: ./backup-service
-    container_name: h3-2-backup
-    restart: unless-stopped
-    env_file:
-      - .env
+    restart: always
+    env_file: .env
     environment:
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
       - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
       - ALERT_EMAIL=${ALERT_EMAIL:-}
       - BACKUP_EMAIL=${BACKUP_EMAIL:-}
+      - MONGO_USER=${MONGO_USER:-admin}
+      - MONGO_PASSWORD=${MONGO_PASSWORD}
+      - MAIL_USER=${MAIL_USER:-}
+      - MAIL_PASS=${MAIL_PASS:-}
+      - MAIL_FROM=${MAIL_FROM:-}
     volumes:
       - ./backups:/backups
       - fuseki-data:/fuseki:ro
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
     networks:
-      - h3-2-proxy
+      - hhh-proxy
     depends_on:
       - mongo
       - fuseki
       - neo4j
-    command: /bin/bash -c "while true; do /backup.sh; sleep 86400; done"
+    command: /bin/bash -c "echo 'Waiting 2 minutes for services to stabilize...'; sleep 120; while true; do /backup.sh; sleep 86400; done"
 
 networks:
-  h3-2-proxy:
-    name: h3-2-proxy
+  hhh-proxy:
+    name: hhh-proxy
 
 volumes:
+  traefik-certs:
+    name: hhh-traefik-certs
   fuseki-data:
-    name: h3-2-fuseki-data
+    name: hhh-fuseki-data
+  mongo-data:
+    name: hhh-mongo-data
+  mongo-config:
+    name: hhh-mongo-config
   translate-data:
-    name: h3-2-translate-data
+    name: hhh-translate-data
   neo4j-data:
-    name: h3-2-neo4j-data
+    name: hhh-neo4j-data
   neo4j-logs:
-    name: h3-2-neo4j-logs
-  keycloak-data:
-    name: h3-2-keycloak-data
+    name: hhh-neo4j-logs
+  keycloak-db-data:
+    name: hhh-keycloak-db-data
+  redis-data:
+    name: hhh-redis-data

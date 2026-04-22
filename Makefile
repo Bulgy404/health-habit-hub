@@ -1,34 +1,40 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help dev stop seed logs logs-all ios reset test test-backend test-flutter test-python test-admin
+.PHONY: help \
+        dev stop seed logs logs-all ios reset \
+        test test-backend test-flutter test-python test-admin \
+        prod-up prod-stop prod-ps prod-logs prod-build prod-restart \
+        prod-keycloak prod-seed prod-update prod-cutover
+
+# ── Local development ─────────────────────────────────────
 
 help: ## Show this help message
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-12s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
-dev: ## Start all local services (docker compose local up)
-	docker compose -f docker-compose.local.yml up -d
+dev: ## Start local services (docker-compose.local.yml)
+	docker compose -f docker-compose.local.yml up -d --build
 
-stop: ## Stop all local services
+stop: ## Stop local services
 	docker compose -f docker-compose.local.yml down
 
-seed: ## Seed MongoDB, Neo4j, and Keycloak with local dev data
+seed: ## Seed local MongoDB, Neo4j, and Keycloak
 	cd app && npm run seed
 
-logs: ## Tail app service logs
+logs: ## Tail local app logs
 	docker compose -f docker-compose.local.yml logs -f app
 
-logs-all: ## Tail all service logs
+logs-all: ## Tail all local service logs
 	docker compose -f docker-compose.local.yml logs -f
 
-ios: ## Run the Flutter app on an iPhone Simulator
+ios: ## Run Flutter app on iPhone Simulator
 	cd mobile && flutter run -d iPhone
 
-reset: stop ## Stop services, wipe volumes, restart, and re-seed
+reset: stop ## Wipe local volumes, restart, and re-seed
 	docker compose -f docker-compose.local.yml down -v
 	$(MAKE) dev
 	$(MAKE) seed
 
-test: test-backend test-flutter test-python test-admin ## Run all unit tests (no Docker required)
+test: test-backend test-flutter test-python test-admin ## Run all tests
 
 test-backend: ## Backend: lint + unit tests + security audit
 	cd app && npx prettier --check . && npx eslint . && \
@@ -43,3 +49,54 @@ test-python: ## Python API-service: pytest
 
 test-admin: ## Admin: typecheck
 	cd admin && npx tsc --noEmit
+
+# ── Production (run on server) ────────────────────────────
+# All prod targets use docker-compose.yml (the default file).
+# Run these from ~/Github/health-habit-hub-v2 on the server.
+
+prod-up: ## Build images and start the production stack
+	docker compose up -d --build
+
+prod-stop: ## Stop production stack (data is preserved in volumes)
+	docker compose down
+
+prod-ps: ## Show production container status
+	docker compose ps
+
+prod-logs: ## Tail production logs  (optionally: make prod-logs SERVICE=app)
+	docker compose logs -f $(SERVICE)
+
+prod-build: ## Rebuild production images without restarting containers
+	docker compose build
+
+prod-restart: ## Restart all production services
+	docker compose restart
+
+prod-update: ## Pull latest code and redeploy (rolling update)
+	git pull
+	docker compose up -d --build
+
+prod-keycloak: ## Import realm, align secrets, grant service-account permissions
+	@KEYCLOAK_URL=https://$$(grep '^DOMAIN=' .env | cut -d= -f2-)/auth \
+	KEYCLOAK_ADMIN_PASSWORD=$$(grep '^KEYCLOAK_ADMIN_PASSWORD=' .env | cut -d= -f2-) \
+	KEYCLOAK_ADMIN_CLIENT_SECRET=$$(grep '^KEYCLOAK_ADMIN_CLIENT_SECRET=' .env | cut -d= -f2-) \
+	bash scripts/deploy-keycloak.sh
+
+prod-seed: ## Seed MongoDB, Neo4j, and Keycloak via Docker (run once after first deploy)
+	docker run --rm \
+	  --network hhh-proxy \
+	  --env-file .env \
+	  -v $(CURDIR)/app:/workspace/app \
+	  -v hhh-seed-modules:/workspace/app/node_modules \
+	  -v $(CURDIR)/scripts:/workspace/scripts \
+	  -e MONGO_HOST=mongo \
+	  -e NEO4J_HTTP=http://neo4j:7474 \
+	  -e KEYCLOAK_URL=http://keycloak:8080 \
+	  -w /workspace/app \
+	  node:20-alpine \
+	  sh -c "npm install --omit=dev --silent && node /workspace/scripts/seed-local.js"
+
+prod-cutover: ## Switch HTTP from port 18080 → 80 after old stack is stopped
+	@sed -i 's/^TRAEFIK_HTTP_PORT=.*/TRAEFIK_HTTP_PORT=80/' .env
+	docker compose up -d proxy
+	@echo "Done. HTTP traffic now redirects to HTTPS on $$(grep '^DOMAIN=' .env | cut -d= -f2-)."

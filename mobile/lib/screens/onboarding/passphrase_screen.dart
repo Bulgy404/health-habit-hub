@@ -191,10 +191,7 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
   }
 
   void _copyToClipboard() {
-    final text = _words.asMap().entries
-        .map((e) => '${e.key + 1}. ${e.value}')
-        .join('\n');
-    Clipboard.setData(ClipboardData(text: text));
+    Clipboard.setData(ClipboardData(text: _words.join(' ')));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Passphrase copied to clipboard')),
     );
