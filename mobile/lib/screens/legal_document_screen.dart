@@ -48,7 +48,7 @@ class _LegalDocumentScreenState extends ConsumerState<LegalDocumentScreen> {
 
     try {
       final response = await dio.get<Map<String, dynamic>>(
-        '${AppConfig.appBaseUrl}/$locale/${_pathSegment}',
+        '${AppConfig.appBaseUrl}/$locale/$_pathSegment',
         options: Options(
           validateStatus: (status) => status != null && status < 500,
         ),

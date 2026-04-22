@@ -34,7 +34,7 @@
     "mongodb": "^6.17.0",
     "neo4j-driver": "^5.22.1",
     "node-cron": "^4.2.1",
-    "nodemailer": "^8.0.4",
+    "nodemailer": "^8.0.5",
     "pdfkit": "^0.18.0",
     "qrcode": "^1.5.4",
     "redis": "^4.7.1",
@@ -43,6 +43,11 @@
     "swagger-ui-express": "^5.0.1",
     "uuid": "^9.0.1",
     "ws": "^8.19.0"
+  },
+  "overrides": {
+    "@tootallnate/once": "^3.0.1",
+    "lodash": "^4.17.24",
+    "protobufjs": "^7.5.5"
   },
   "type": "module",
   "devDependencies": {
