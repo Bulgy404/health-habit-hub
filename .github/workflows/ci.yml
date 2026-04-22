@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - ralph/hhh-platform-unified
+      - platform_unified
     tags:
       - "v*"
   pull_request:
