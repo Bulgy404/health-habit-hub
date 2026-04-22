@@ -40,6 +40,11 @@ router = APIRouter(dependencies=[Depends(verify_service_token)])
 _REDIS_TTL = int(os.getenv("REDIS_TTL_SECONDS", "86400"))
 
 
+async def _get_redis() -> Optional[Any]:
+    """Compatibility seam for tests and fallback cache access."""
+    return await get_redis()
+
+
 # ---------------------------------------------------------------------------
 # Prompt template
 # ---------------------------------------------------------------------------
@@ -167,6 +172,9 @@ async def recommend(
     redis_client: Optional[Any] = Depends(get_redis),
     db: Any = Depends(get_mongo_db),
 ) -> RecommendResponse:
+    if redis_client is None:
+        redis_client = await _get_redis()
+
     key = _cache_key(body.user_id, body.goal)
 
     # --- cache read ---
