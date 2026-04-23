@@ -147,10 +147,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         appBar: AppBar(title: Text(l10n.shareHabit)),
         body: OfflineBanner(
           message: l10n.couldNotLoadSurvey,
-          onRetry: () => setState(() {
-            _offline = false;
+          onRetry: () {
+            setState(() => _offline = false);
             _initSurvey();
-          }),
+          },
         ),
       );
     }

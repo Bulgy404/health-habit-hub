@@ -69,5 +69,5 @@ final habitServiceProvider = Provider<HabitService>((ref) {
 });
 
 final habitStatsProvider = FutureProvider<HabitStats>((ref) {
-  return ref.read(habitServiceProvider).fetchStats();
+  return ref.watch(habitServiceProvider).fetchStats();
 });
