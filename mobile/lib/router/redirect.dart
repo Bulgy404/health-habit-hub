@@ -42,7 +42,6 @@ Future<String?> redirectGuard({
     '/donate',
     '/explore',
     '/recommend',
-    '/profile',
     '/settings',
     '/questionnaire',
   ];
