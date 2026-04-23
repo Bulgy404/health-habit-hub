@@ -32,7 +32,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 String routeFromNotificationPayload(Map<String, dynamic> data) {
   final screen = data['screen'] as String? ?? '';
   return switch (screen) {
-    'questionnaire' => '/profile',
+    'questionnaire' => '/settings',
     'explore' => '/explore',
     _ => '/share',
   };
