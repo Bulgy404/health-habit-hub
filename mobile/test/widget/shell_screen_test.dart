@@ -39,8 +39,8 @@ GoRouter _buildTestRouter({List<String> roles = const []}) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
-              path: '/profile',
-              builder: (_, _) => const Scaffold(body: Text('Profile Tab')),
+              path: '/settings',
+              builder: (_, _) => const Scaffold(body: Text('Settings Tab')),
             ),
           ]),
           StatefulShellBranch(
@@ -81,8 +81,8 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Share'), findsOneWidget);
     expect(find.text('Explore'), findsOneWidget);
-    expect(find.text('Recommend'), findsOneWidget);
-    expect(find.text('Profile'), findsOneWidget);
+    expect(find.text('Recs'), findsOneWidget);
+    expect(find.text('Account'), findsOneWidget);
   });
 
   testWidgets('hides Admin tab for regular users', (tester) async {
