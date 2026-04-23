@@ -86,32 +86,28 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
       currentVisibleIndex = _adminBranchIndex - 1;
     }
 
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Scaffold(
       body: widget.navigationShell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentVisibleIndex,
-        indicatorColor: colorScheme.primaryContainer,
-        onDestinationSelected: (visibleIndex) {
-          // Map visible index back to branch index.
-          int branchIndex = visibleIndex;
-          if (!isAdminOrResearcher && visibleIndex >= _adminBranchIndex) {
-            branchIndex = visibleIndex + 1;
-          }
-          widget.navigationShell.goBranch(
-            branchIndex,
-            initialLocation: branchIndex == widget.navigationShell.currentIndex,
-          );
-        },
-        destinations: visibleTabs
-            .map(
-              (tab) => NavigationDestination(
-                icon: Icon(tab.icon),
-                label: tab.label,
-              ),
-            )
-            .toList(),
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
+        ),
+        child: NavigationBar(
+          selectedIndex: currentVisibleIndex,
+          onDestinationSelected: (visibleIndex) {
+            int branchIndex = visibleIndex;
+            if (!isAdminOrResearcher && visibleIndex >= _adminBranchIndex) {
+              branchIndex = visibleIndex + 1;
+            }
+            widget.navigationShell.goBranch(
+              branchIndex,
+              initialLocation: branchIndex == widget.navigationShell.currentIndex,
+            );
+          },
+          destinations: visibleTabs
+              .map((tab) => NavigationDestination(icon: Icon(tab.icon), label: tab.label))
+              .toList(),
+        ),
       ),
     );
   }

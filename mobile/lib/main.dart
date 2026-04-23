@@ -248,113 +248,124 @@ final routerProvider = Provider<GoRouter>((ref) {
 // ---------------------------------------------------------------------------
 
 // HabShare brand colors.
-const _kPrimary = Color(0xFF45b700);
-const _kPrimaryDark = Color(0xFF237c00);
-const _kAccent = Color(0xFFe679ab);
-const _kSurface = Color(0xFFdadada);
-const _kNavBar = Color(0xFF454446);
-const _kChipGreen = Color(0xFF4cd49e);
+const _kPrimary    = Color(0xFF45B700);
+const _kPrimaryDark = Color(0xFF2E8C00);
+const _kAccent     = Color(0xFFE679AB);
+const _kBg         = Color(0xFFF4F5F2);
+const _kText       = Color(0xFF111827);
+const _kMuted      = Color(0xFF6B7280);
+const _kBorder     = Color(0xFFE5E7EB);
+const _kGreenLight = Color(0xFFEDF7E5);
+// ignore: unused_element — exported for use by card widgets across screens.
+const _kCardShadow = [BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4))];
 
 ThemeData _buildLightTheme() {
   final colorScheme = ColorScheme.fromSeed(
     seedColor: _kPrimary,
     primary: _kPrimary,
     secondary: _kAccent,
-    surface: _kSurface,
+    surface: Colors.white,
     onPrimary: Colors.white,
     onSecondary: Colors.white,
     brightness: Brightness.light,
   );
 
-  // Start with a base theme using our color scheme.
   final base = ThemeData(
     useMaterial3: true,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: Colors.white,
+    scaffoldBackgroundColor: _kBg,
   );
 
-  // Extend with Google Fonts and component themes.
   return base.copyWith(
     textTheme: GoogleFonts.figtreeTextTheme(base.textTheme),
     primaryColor: _kPrimary,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: _kNavBar,
-      foregroundColor: Colors.white,
-      iconTheme: IconThemeData(color: Colors.white),
-      actionsIconTheme: IconThemeData(color: Colors.white),
+    appBarTheme: AppBarTheme(
+      backgroundColor: Colors.white,
+      foregroundColor: _kText,
+      elevation: 0,
+      shadowColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      iconTheme: const IconThemeData(color: _kText),
+      actionsIconTheme: IconThemeData(color: _kMuted),
+      titleTextStyle: GoogleFonts.figtree(
+        color: _kText,
+        fontWeight: FontWeight.w800,
+        fontSize: 17,
+      ),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: _kNavBar,
-      indicatorColor: _kPrimary,
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      indicatorColor: _kGreenLight,
       iconTheme: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
-          return const IconThemeData(color: Colors.white);
+          return const IconThemeData(color: _kPrimaryDark, size: 22);
         }
-        return IconThemeData(color: Colors.white.withAlpha(153));
+        return IconThemeData(color: _kMuted, size: 22);
       }),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
           return GoogleFonts.figtree(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
+            color: _kPrimaryDark,
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
           );
         }
-        return GoogleFonts.figtree(
-          color: Colors.white.withAlpha(153),
-          fontSize: 12,
-        );
+        return GoogleFonts.figtree(color: _kMuted, fontSize: 11);
       }),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
-        textStyle: GoogleFonts.figtree(fontWeight: FontWeight.bold),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        textStyle: GoogleFonts.figtree(fontWeight: FontWeight.w800),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+        minimumSize: const Size(double.infinity, 52),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
-        textStyle: GoogleFonts.figtree(fontWeight: FontWeight.bold),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        textStyle: GoogleFonts.figtree(fontWeight: FontWeight.w800),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+        minimumSize: const Size(double.infinity, 52),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: _kPrimary,
-        side: const BorderSide(color: _kPrimary, width: 1.5),
+        foregroundColor: _kMuted,
+        side: const BorderSide(color: _kBorder, width: 1.5),
         textStyle: GoogleFonts.figtree(fontWeight: FontWeight.w600),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: _kPrimary,
-        textStyle: GoogleFonts.figtree(),
+        textStyle: GoogleFonts.figtree(fontWeight: FontWeight.w600),
       ),
     ),
     cardTheme: CardThemeData(
-      color: _kSurface,
-      elevation: 4,
-      shadowColor: const Color(0x40000000),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: _kPrimary, width: 2),
-      ),
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: _kChipGreen,
-      labelStyle: const TextStyle(color: Colors.white),
-      selectedColor: _kPrimaryDark,
+      backgroundColor: Colors.white,
+      side: const BorderSide(color: _kBorder),
+      labelStyle: GoogleFonts.figtree(color: _kMuted, fontWeight: FontWeight.w600),
+      selectedColor: _kGreenLight,
+    ),
+    dividerTheme: const DividerThemeData(color: _kBorder, thickness: 1, space: 1),
+    listTileTheme: ListTileThemeData(
+      iconColor: _kMuted,
+      titleTextStyle: GoogleFonts.figtree(
+        color: _kText,
+        fontWeight: FontWeight.w600,
+        fontSize: 15,
+      ),
     ),
   );
 }
@@ -385,13 +396,13 @@ ThemeData _buildDarkTheme() {
     textTheme: GoogleFonts.figtreeTextTheme(base.textTheme),
     primaryColor: _kPrimary,
     appBarTheme: const AppBarTheme(
-      backgroundColor: _kNavBar,
+      backgroundColor: Color(0xFF454446),
       foregroundColor: Colors.white,
       iconTheme: IconThemeData(color: Colors.white),
       actionsIconTheme: IconThemeData(color: Colors.white),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      backgroundColor: _kNavBar,
+      backgroundColor: const Color(0xFF454446),
       indicatorColor: _kPrimary,
       iconTheme: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
@@ -459,7 +470,7 @@ ThemeData _buildDarkTheme() {
       ),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: _kChipGreen,
+      backgroundColor: const Color(0xFF4cd49e),
       labelStyle: const TextStyle(color: Colors.white),
       selectedColor: _kPrimaryDark,
     ),
