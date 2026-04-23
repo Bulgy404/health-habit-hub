@@ -132,18 +132,15 @@ class UserSettingsScreen extends ConsumerWidget {
 
           // ── Sign out ───────────────────────────────────────────────
           const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _SettingsCard(children: [
-              _SettingsRow(
-                icon: Icons.logout,
-                title: 'Sign out',
-                iconColor: const Color(0xFFDC2626),
-                titleColor: const Color(0xFFDC2626),
-                onTap: () => _confirmSignOut(context, ref, l10n),
-              ),
-            ]),
-          ),
+          _SettingsCard(children: [
+            _SettingsRow(
+              icon: Icons.logout,
+              title: 'Sign out',
+              iconColor: const Color(0xFFDC2626),
+              titleColor: const Color(0xFFDC2626),
+              onTap: () => _confirmSignOut(context, ref, l10n),
+            ),
+          ]),
         ],
       ),
     );
