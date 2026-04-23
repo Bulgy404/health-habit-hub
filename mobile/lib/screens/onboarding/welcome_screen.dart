@@ -188,53 +188,40 @@ class _WelcomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.favorite,
-            size: 96,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'The Health-Habit-Hub',
-            style: theme.textTheme.headlineLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.primary,
+          Container(
+            width: 80, height: 80,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDF7E5),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: const [BoxShadow(color: Color(0x2E45B700), blurRadius: 24, offset: Offset(0, 8))],
             ),
+            child: const Icon(Icons.favorite, size: 44, color: Color(0xFF45B700)),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Welcome to The Health-Habit-Hub, a citizen-science platform where you can '
-            'share your habits for research, explore the global habit graph, '
-            'and receive personalised recommendations. Together, we make '
-            'behaviour science better.',
-            style: theme.textTheme.bodyLarge,
+          const SizedBox(height: 28),
+          const Text(
+            'Health\nHabit Hub',
+            style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Color(0xFF111827), height: 1.1),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 48),
-          FilledButton(
-            onPressed: onGetStarted,
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(200, 52),
-            ),
-            child: const Text('Get Started'),
+          const SizedBox(height: 14),
+          const Text(
+            'A citizen-science platform where your habits help build a richer understanding of everyday behaviour.',
+            style: TextStyle(fontSize: 15, color: Color(0xFF6B7280), height: 1.55),
+            textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 40),
+          FilledButton(onPressed: onGetStarted, child: const Text('Get Started')),
           const SizedBox(height: 12),
-          TextButton(
-            onPressed: onRestore,
-            child: const Text('Restore existing account'),
-          ),
+          TextButton(onPressed: onRestore, child: const Text('Restore existing account')),
+          const SizedBox(height: 4),
           TextButton(
             onPressed: onAdminLogin,
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.outline,
-              textStyle: const TextStyle(fontSize: 11),
-            ),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFF9CA3AF), textStyle: const TextStyle(fontSize: 12)),
             child: const Text('Admin login'),
           ),
         ],
@@ -264,42 +251,39 @@ class _WalkthroughPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         children: [
-          // Skip link at top-right — hidden on the last page.
           Align(
             alignment: Alignment.topRight,
             child: onSkip != null
-                ? TextButton(
-                    onPressed: onSkip,
-                    child: const Text('Skip'),
-                  )
+                ? TextButton(onPressed: onSkip, child: const Text('Skip'))
                 : const SizedBox(height: 40),
           ),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  step.icon,
-                  size: 96,
-                  color: theme.colorScheme.primary,
+                Container(
+                  width: 80, height: 80,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEDF7E5),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: const [BoxShadow(color: Color(0x2E45B700), blurRadius: 24, offset: Offset(0, 8))],
+                  ),
+                  child: Icon(step.icon, size: 44, color: const Color(0xFF45B700)),
                 ),
                 const SizedBox(height: 32),
                 Text(
                   step.title,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF111827)),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Text(
                   step.description,
-                  style: theme.textTheme.bodyLarge,
+                  style: const TextStyle(fontSize: 15, color: Color(0xFF6B7280), height: 1.55),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -309,9 +293,6 @@ class _WalkthroughPage extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 32),
             child: FilledButton(
               onPressed: onNext,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(200, 52),
-              ),
               child: Text(isLast ? 'Continue' : 'Next'),
             ),
           ),
