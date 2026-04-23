@@ -350,10 +350,13 @@ class _WordChip extends StatelessWidget {
         children: [
           Text(
             '$number',
+            maxLines: 1,
             style: const TextStyle(fontSize: 9, color: Color(0xFF6B7280)),
           ),
           Text(
             word,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF111827)),
           ),
         ],
