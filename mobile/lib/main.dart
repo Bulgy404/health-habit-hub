@@ -256,8 +256,6 @@ const _kText       = Color(0xFF111827);
 const _kMuted      = Color(0xFF6B7280);
 const _kBorder     = Color(0xFFE5E7EB);
 const _kGreenLight = Color(0xFFEDF7E5);
-// ignore: unused_element — exported for use by card widgets across screens.
-const _kCardShadow = [BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4))];
 
 ThemeData _buildLightTheme() {
   final colorScheme = ColorScheme.fromSeed(
