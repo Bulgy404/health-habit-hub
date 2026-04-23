@@ -129,7 +129,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: const Color(0xFFE5E7EB),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -340,7 +340,7 @@ class _CategoryFilterBar extends StatelessWidget {
 
     return Container(
       height: 52,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(80),
+      color: const Color(0xFFF4F5F2),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
