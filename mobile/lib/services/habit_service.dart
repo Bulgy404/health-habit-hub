@@ -67,3 +67,7 @@ class HabitService {
 final habitServiceProvider = Provider<HabitService>((ref) {
   return HabitService(dio: ref.watch(dioProvider));
 });
+
+final habitStatsProvider = FutureProvider<HabitStats>((ref) {
+  return ref.read(habitServiceProvider).fetchStats();
+});
