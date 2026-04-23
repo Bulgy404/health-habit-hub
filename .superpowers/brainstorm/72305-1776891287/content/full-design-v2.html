@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HHH Redesign v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20,400,0,0&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0f1117;
+    font-family: -apple-system, 'Segoe UI', sans-serif;
+    color: #e8e8e8;
+    padding: 40px 24px 60px;
+  }
+  h1 { text-align: center; font-size: 22px; font-weight: 800; margin-bottom: 6px; color: #fff; }
+  .subtitle { text-align: center; color: #666; font-size: 13px; margin-bottom: 44px; }
+
+  .mi {
+    font-family: 'Material Symbols Rounded';
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    display: inline-block;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :root {
+    --green: #45b700;
+    --green-dark: #2e8c00;
+    --green-light: #edf7e5;
+    --pink: #e679ab;
+    --pink-light: #fce4f0;
+    --bg: #f4f5f2;
+    --white: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --shadow: 0 4px 20px rgba(0,0,0,0.08);
+    --shadow-green: 0 8px 28px rgba(69,183,0,0.28);
+    --r-lg: 20px;
+    --r-sm: 14px;
+    --r-pill: 100px;
+  }
+
+  .screen-row {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .screen-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .screen-name {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #45b700;
+  }
+
+  /* Phone shell */
+  .phone {
+    width: 200px;
+    height: 410px;
+    border-radius: 36px;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* App bar */
+  .app-bar {
+    background: var(--white);
+    padding: 13px 14px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .bar-title { font-size: 15px; font-weight: 800; color: var(--text); }
+  .bar-leading { display: flex; align-items: center; gap: 4px; }
+  .bar-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; }
+
+  /* Scroll body */
+  .scroll-body { flex: 1; overflow: hidden; background: var(--bg); }
+
+  /* Bottom nav */
+  .bottom-nav {
+    background: var(--white);
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    padding: 8px 0 14px;
+    flex-shrink: 0;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.05);
+  }
+  .ni {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 7.5px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .ni .mi { font-size: 20px; color: var(--muted); }
+  .ni.on .mi {
+    color: var(--green-dark);
+    background: var(--green-light);
+    border-radius: var(--r-pill);
+    padding: 2px 12px;
+  }
+  .ni.on { color: var(--green-dark); font-weight: 700; }
+
+  /* Shared */
+  .btn-green {
+    background: var(--green);
+    color: #fff;
+    border-radius: var(--r-pill);
+    font-weight: 800;
+    font-size: 11px;
+    padding: 9px 20px;
+    display: block;
+    text-align: center;
+  }
+  .btn-white {
+    background: #fff;
+    color: var(--green-dark);
+    border-radius: var(--r-pill);
+    font-weight: 800;
+    font-size: 10px;
+    padding: 6px 16px;
+    display: inline-block;
+  }
+  .btn-outline {
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    border-radius: var(--r-pill);
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 7px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+  }
+  .section-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 7px;
+    padding-left: 2px;
+  }
+
+  /* ── Welcome ── */
+  .s1 {
+    background: var(--white);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 22px;
+    text-align: center;
+  }
+  .s1-icon {
+    width: 68px; height: 68px;
+    background: var(--green-light);
+    border-radius: 22px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(69,183,0,0.18);
+    margin-bottom: 20px;
+  }
+  .s1-icon .mi { font-size: 38px; color: var(--green); }
+  .s1-title { font-size: 21px; font-weight: 800; color: var(--text); line-height: 1.15; margin-bottom: 8px; }
+  .s1-sub { font-size: 9.5px; color: var(--muted); line-height: 1.55; margin-bottom: 24px; }
+  .s1-restore { font-size: 10px; color: var(--green); font-weight: 600; margin-top: 9px; }
+  .s1-dots { display: flex; gap: 5px; justify-content: center; margin-top: 20px; }
+  .s1-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+  .s1-dot.on { width: 18px; border-radius: 3px; background: var(--green); }
+
+  /* ── Passphrase ── */
+  .s2-warn {
+    margin: 10px 12px 0;
+    background: #fffbeb;
+    border: 1px solid #fcd34d;
+    border-radius: var(--r-sm);
+    padding: 9px 10px;
+    display: flex; gap: 6px; align-items: flex-start;
+  }
+  .s2-warn .mi { font-size: 16px; color: #b45309; flex-shrink: 0; margin-top: 1px; }
+  .s2-warn .wt { font-size: 8.5px; color: #92400e; line-height: 1.4; font-weight: 600; }
+  .s2-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    margin: 8px 12px 0;
+  }
+  .s2-chip {
+    background: var(--white);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 5px 4px;
+    text-align: center;
+  }
+  .s2-chip .wn { font-size: 7px; color: var(--muted); }
+  .s2-chip .ww { font-size: 9px; font-weight: 700; color: var(--text); }
+  .s2-actions { padding: 9px 12px; display: flex; flex-direction: column; gap: 7px; }
+  .s2-check { display: flex; align-items: center; gap: 7px; font-size: 9px; color: var(--text); font-weight: 500; }
+  .s2-box { width: 14px; height: 14px; border: 1.5px solid var(--border); border-radius: 4px; flex-shrink: 0; }
+  .btn-disabled { background: var(--border); color: #9ca3af; border-radius: var(--r-pill); font-size: 10px; font-weight: 700; padding: 8px; text-align: center; }
+
+  /* ── Share ── */
+  .s3-hero {
+    margin: 12px 12px 0;
+    background: var(--green);
+    border-radius: var(--r-lg);
+    padding: 15px;
+    box-shadow: var(--shadow-green);
+    color: #fff;
+  }
+  .s3-hero .eyebrow { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.75; margin-bottom: 4px; }
+  .s3-hero .htitle { font-size: 14px; font-weight: 800; line-height: 1.25; margin-bottom: 4px; }
+  .s3-hero .hdesc { font-size: 8.5px; opacity: 0.78; line-height: 1.4; margin-bottom: 11px; }
+  .s3-stats { display: flex; gap: 6px; margin: 9px 12px 0; }
+  .s3-stat {
+    flex: 1;
+    background: var(--white);
+    border-radius: var(--r-sm);
+    box-shadow: var(--shadow);
+    padding: 9px 6px;
+    text-align: center;
+  }
+  .s3-stat .num { font-size: 16px; font-weight: 800; color: var(--green); }
+  .s3-stat .lbl { font-size: 7.5px; color: var(--muted); margin-top: 1px; }
+  .s3-list { padding: 9px 12px 0; }
+  .s3-item {
+    background: var(--white);
+    border-radius: var(--r-sm);
+    box-shadow: var(--shadow);
+    padding: 9px 10px;
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 5px;
+  }
+  .s3-item .mi { font-size: 16px; color: var(--green); }
+  .s3-item-body { flex: 1; }
+  .s3-item .it { font-size: 9px; font-weight: 600; color: var(--text); }
+  .s3-item .its { font-size: 8px; color: var(--muted); }
+  .s3-badge { background: var(--green-light); color: var(--green-dark); font-size: 7px; font-weight: 700; border-radius: 100px; padding: 2px 7px; }
+
+  /* ── Recommend ── */
+  .s4 { padding: 14px; display: flex; flex-direction: column; gap: 10px; height: 100%; }
+  .s4-icon {
+    width: 52px; height: 52px;
+    background: var(--pink-light);
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(230,121,171,0.18);
+    align-self: center;
+  }
+  .s4-icon .mi { font-size: 28px; color: var(--pink); }
+  .s4-title { font-size: 16px; font-weight: 800; color: var(--text); text-align: center; line-height: 1.2; }
+  .s4-sub { font-size: 9px; color: var(--muted); text-align: center; line-height: 1.45; }
+  .s4-input {
+    background: var(--white);
+    border-radius: var(--r-sm);
+    box-shadow: var(--shadow);
+    border: 1.5px solid var(--border);
+    padding: 10px;
+    font-size: 9px;
+    color: var(--muted);
+    min-height: 52px;
+  }
+  .s4-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+  .s4-chip {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: 100px;
+    padding: 4px 10px;
+    font-size: 8px;
+    font-weight: 600;
+    color: var(--muted);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  }
+
+  /* ── Settings + Profile (merged) ── */
+  .s5-profile {
+    margin: 12px 12px 0;
+    background: var(--green);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-green);
+    padding: 14px;
+    display: flex; align-items: center; gap: 12px;
+    color: #fff;
+  }
+  .s5-av {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .s5-av .mi { font-size: 22px; color: #fff; }
+  .s5-name { font-size: 12px; font-weight: 800; }
+  .s5-role { font-size: 8px; opacity: 0.75; margin-top: 1px; }
+  .s5-badge-w { margin-left: auto; background: rgba(255,255,255,0.2); color: #fff; font-size: 7px; font-weight: 700; border-radius: 100px; padding: 3px 9px; }
+
+  .s5-group { margin: 9px 12px 0; }
+  .s5-gl { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 5px; padding-left: 2px; }
+  .s5-card { background: var(--white); border-radius: var(--r-sm); box-shadow: var(--shadow); overflow: hidden; }
+  .s5-row {
+    display: flex; align-items: center;
+    padding: 9px 12px; gap: 9px;
+    border-bottom: 1px solid #f5f5f5;
+  }
+  .s5-row:last-child { border-bottom: none; }
+  .s5-row .mi { font-size: 18px; color: var(--muted); width: 22px; text-align: center; }
+  .s5-row .rt { font-size: 9.5px; font-weight: 600; color: var(--text); flex: 1; }
+  .s5-row .ra { font-size: 9px; color: var(--muted); }
+  .s5-row .mi.ra { font-size: 14px; }
+  .s5-row.danger .mi { color: #dc2626; }
+  .s5-row.danger .rt { color: #dc2626; }
+</style>
+</head>
+<body>
+
+<h1>Health Habit Hub — Redesign v2</h1>
+<p class="subtitle">Material icons · Profile merged into Settings · 4-tab nav</p>
+
+<div class="screen-row">
+
+  <!-- Welcome -->
+  <div class="screen-col">
+    <div class="screen-name">Welcome</div>
+    <div class="phone">
+      <div class="s1">
+        <div class="s1-icon"><span class="mi">favorite</span></div>
+        <div class="s1-title">Health<br>Habit Hub</div>
+        <div class="s1-sub">A citizen-science platform where your habits help build a richer understanding of everyday behaviour.</div>
+        <div class="btn-green" style="width:100%;">Get Started</div>
+        <div class="s1-restore">Restore existing account</div>
+        <div class="s1-dots">
+          <div class="s1-dot on"></div>
+          <div class="s1-dot"></div>
+          <div class="s1-dot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Passphrase -->
+  <div class="screen-col">
+    <div class="screen-name">Passphrase</div>
+    <div class="phone">
+      <div class="app-bar">
+        <div class="bar-leading">
+          <span class="mi" style="font-size:20px;color:var(--green);margin-right:2px;">arrow_back_ios</span>
+          <span class="bar-title" style="font-size:13px;">Recovery Passphrase</span>
+        </div>
+      </div>
+      <div class="scroll-body">
+        <div class="s2-warn">
+          <span class="mi">warning</span>
+          <div class="wt">Write these 36 words down — the only way to recover your account if you lose your phone.</div>
+        </div>
+        <div class="s2-grid">
+          <div class="s2-chip"><div class="wn">1</div><div class="ww">apple</div></div>
+          <div class="s2-chip"><div class="wn">2</div><div class="ww">bright</div></div>
+          <div class="s2-chip"><div class="wn">3</div><div class="ww">coral</div></div>
+          <div class="s2-chip"><div class="wn">4</div><div class="ww">drift</div></div>
+          <div class="s2-chip"><div class="wn">5</div><div class="ww">ember</div></div>
+          <div class="s2-chip"><div class="wn">6</div><div class="ww">frost</div></div>
+          <div class="s2-chip"><div class="wn">7</div><div class="ww">grain</div></div>
+          <div class="s2-chip"><div class="wn">8</div><div class="ww">honey</div></div>
+          <div class="s2-chip"><div class="wn">9</div><div class="ww">ivory</div></div>
+          <div class="s2-chip"><div class="wn">10</div><div class="ww">jewel</div></div>
+          <div class="s2-chip"><div class="wn">11</div><div class="ww">knoll</div></div>
+          <div class="s2-chip"><div class="wn">12</div><div class="ww">lunar</div></div>
+        </div>
+        <div class="s2-actions">
+          <div class="btn-outline">
+            <span class="mi" style="font-size:14px;">content_copy</span>
+            Copy to clipboard
+          </div>
+          <div class="s2-check">
+            <div class="s2-box"></div>
+            I have written it down
+          </div>
+          <div class="btn-disabled">Continue</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share -->
+  <div class="screen-col">
+    <div class="screen-name">Share</div>
+    <div class="phone">
+      <div class="app-bar">
+        <div class="bar-leading">
+          <div class="bar-dot"></div>
+          <span class="bar-title">Health Habit Hub</span>
+        </div>
+        <span class="mi" style="font-size:22px;color:var(--muted);">notifications</span>
+      </div>
+      <div class="scroll-body">
+        <div class="s3-hero">
+          <div class="eyebrow">Today's task</div>
+          <div class="htitle">Share a habit with science</div>
+          <div class="hdesc">Anonymous · ~2 min · Helps researchers worldwide</div>
+          <div class="btn-white">Start survey</div>
+        </div>
+        <div class="s3-stats">
+          <div class="s3-stat"><div class="num">12</div><div class="lbl">Shared</div></div>
+          <div class="s3-stat"><div class="num">4</div><div class="lbl">Weeks</div></div>
+          <div class="s3-stat">
+            <div class="num"><span class="mi" style="font-size:18px;color:var(--green);">military_tech</span></div>
+            <div class="lbl">Top 10%</div>
+          </div>
+        </div>
+        <div class="s3-list">
+          <div class="section-label">Recent activity</div>
+          <div class="s3-item">
+            <span class="mi">check_circle</span>
+            <div class="s3-item-body">
+              <div class="it">Morning run habit</div>
+              <div class="its">Shared 2 days ago</div>
+            </div>
+            <div class="s3-badge">Done</div>
+          </div>
+          <div class="s3-item">
+            <span class="mi">check_circle</span>
+            <div class="s3-item-body">
+              <div class="it">Sleep tracking</div>
+              <div class="its">Shared 5 days ago</div>
+            </div>
+            <div class="s3-badge">Done</div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="ni on"><span class="mi">volunteer_activism</span>Share</div>
+        <div class="ni"><span class="mi">hub</span>Explore</div>
+        <div class="ni"><span class="mi">lightbulb</span>Recs</div>
+        <div class="ni"><span class="mi">manage_accounts</span>Account</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommend -->
+  <div class="screen-col">
+    <div class="screen-name">Recommend</div>
+    <div class="phone">
+      <div class="app-bar">
+        <span class="bar-title">Recommendations</span>
+      </div>
+      <div class="scroll-body">
+        <div class="s4">
+          <div class="s4-icon"><span class="mi">lightbulb</span></div>
+          <div class="s4-title">What's your health goal?</div>
+          <div class="s4-sub">Describe what you want to improve and we'll suggest habits that worked for people like you.</div>
+          <div class="s4-input">e.g. I want to sleep better and reduce stress…</div>
+          <div class="section-label">Popular goals</div>
+          <div class="s4-chips">
+            <div class="s4-chip" style="border-color:var(--pink);color:var(--pink);background:var(--pink-light);">Sleep better</div>
+            <div class="s4-chip">Reduce stress</div>
+            <div class="s4-chip">More active</div>
+            <div class="s4-chip">Eat healthier</div>
+          </div>
+          <div class="btn-green">Get recommendations</div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="ni"><span class="mi">volunteer_activism</span>Share</div>
+        <div class="ni"><span class="mi">hub</span>Explore</div>
+        <div class="ni on"><span class="mi">lightbulb</span>Recs</div>
+        <div class="ni"><span class="mi">manage_accounts</span>Account</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account (Settings + Profile merged) -->
+  <div class="screen-col">
+    <div class="screen-name">Account</div>
+    <div class="phone">
+      <div class="app-bar">
+        <span class="bar-title">Account</span>
+      </div>
+      <div class="scroll-body">
+        <!-- Profile card in green -->
+        <div class="s5-profile">
+          <div class="s5-av"><span class="mi">person</span></div>
+          <div>
+            <div class="s5-name">Participant</div>
+            <div class="s5-role">Anonymous contributor</div>
+          </div>
+          <div class="s5-badge-w">Active</div>
+        </div>
+        <!-- Profile questionnaire row -->
+        <div class="s5-group">
+          <div class="s5-gl">Profile</div>
+          <div class="s5-card">
+            <div class="s5-row">
+              <span class="mi">assignment_ind</span>
+              <div class="rt">Health profile questionnaire</div>
+              <span class="mi ra">chevron_right</span>
+            </div>
+          </div>
+        </div>
+        <!-- Preferences -->
+        <div class="s5-group">
+          <div class="s5-gl">Preferences</div>
+          <div class="s5-card">
+            <div class="s5-row">
+              <span class="mi">language</span>
+              <div class="rt">Language</div>
+              <div class="ra">English</div>
+            </div>
+            <div class="s5-row">
+              <span class="mi">dark_mode</span>
+              <div class="rt">Appearance</div>
+              <div class="ra">System</div>
+            </div>
+          </div>
+        </div>
+        <!-- Legal -->
+        <div class="s5-group">
+          <div class="s5-gl">Legal</div>
+          <div class="s5-card">
+            <div class="s5-row">
+              <span class="mi">lock</span>
+              <div class="rt">Privacy Policy</div>
+              <span class="mi ra">chevron_right</span>
+            </div>
+            <div class="s5-row">
+              <span class="mi">info</span>
+              <div class="rt">Imprint</div>
+              <span class="mi ra">chevron_right</span>
+            </div>
+          </div>
+        </div>
+        <!-- Sign out -->
+        <div class="s5-group">
+          <div class="s5-card">
+            <div class="s5-row danger">
+              <span class="mi">logout</span>
+              <div class="rt">Sign out</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="ni"><span class="mi">volunteer_activism</span>Share</div>
+        <div class="ni"><span class="mi">hub</span>Explore</div>
+        <div class="ni"><span class="mi">lightbulb</span>Recs</div>
+        <div class="ni on"><span class="mi">manage_accounts</span>Account</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
