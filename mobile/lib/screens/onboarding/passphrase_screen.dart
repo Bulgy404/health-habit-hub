@@ -237,62 +237,66 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
         children: [
           // Warning banner
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.amber.shade100,
-              border: Border.all(color: Colors.amber.shade600),
-              borderRadius: BorderRadius.circular(8),
+              color: const Color(0xFFFFFBEB),
+              border: Border.all(color: const Color(0xFFFCD34D)),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: Row(
+            child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800),
-                const SizedBox(width: 8),
+                Icon(Icons.warning_amber_rounded, color: Color(0xFFB45309), size: 18),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Write these words down. '
-                    'This is the only way to recover your account '
-                    'if you lose your phone.',
-                    style: TextStyle(
-                      color: Colors.amber.shade900,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    'Write these 36 words down — the only way to recover your account if you lose your phone.',
+                    style: TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Your recovery passphrase',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '36 words — store them somewhere safe',
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-          ),
-          const SizedBox(height: 12),
           // Word grid
           _WordGrid(words: _words),
           const SizedBox(height: 16),
-          // Copy to clipboard
+          // Copy button
           OutlinedButton.icon(
             onPressed: _copyToClipboard,
-            icon: const Icon(Icons.copy),
+            icon: const Icon(Icons.content_copy, size: 16),
             label: const Text('Copy to clipboard'),
           ),
-          const SizedBox(height: 16),
-          // Confirmation checkbox
-          CheckboxListTile(
-            value: _confirmed,
-            onChanged: (v) => setState(() => _confirmed = v ?? false),
-            title: const Text('I have written it down'),
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
+          const SizedBox(height: 14),
+          // Checkbox
+          InkWell(
+            onTap: () => setState(() => _confirmed = !_confirmed),
+            borderRadius: BorderRadius.circular(8),
+            child: Row(
+              children: [
+                Container(
+                  width: 20, height: 20,
+                  decoration: BoxDecoration(
+                    color: _confirmed ? const Color(0xFF45B700) : Colors.transparent,
+                    border: Border.all(
+                      color: _confirmed ? const Color(0xFF45B700) : const Color(0xFFD1D5DB),
+                      width: 1.5,
+                    ),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: _confirmed
+                      ? const Icon(Icons.check, size: 14, color: Colors.white)
+                      : null,
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'I have written it down',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          // Continue (disabled until checkbox ticked)
+          const SizedBox(height: 16),
           FilledButton(
             onPressed: _confirmed ? _onContinue : null,
             child: const Text('Continue'),
@@ -309,50 +313,51 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
 
 class _WordGrid extends StatelessWidget {
   const _WordGrid({required this.words});
-
   final List<String> words;
 
   @override
   Widget build(BuildContext context) {
-    const cols = 3;
-    final rows = (words.length / cols).ceil();
-    return Table(
-      border: TableBorder.all(color: Colors.grey.shade300, width: 0.5),
-      children: List.generate(rows, (row) {
-        return TableRow(
-          children: List.generate(cols, (col) {
-            final idx = row * cols + col;
-            if (idx >= words.length) {
-              return const SizedBox.shrink();
-            }
-            return Padding(
-              padding:
-                  const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: '${idx + 1}. ',
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        fontSize: 11,
-                      ),
-                    ),
-                    TextSpan(
-                      text: words[idx],
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        );
-      }),
+    return GridView.count(
+      crossAxisCount: 3,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 6,
+      crossAxisSpacing: 6,
+      childAspectRatio: 2.5,
+      children: [
+        for (var i = 0; i < words.length; i++)
+          _WordChip(number: i + 1, word: words[i]),
+      ],
+    );
+  }
+}
+
+class _WordChip extends StatelessWidget {
+  const _WordChip({required this.number, required this.word});
+  final int number;
+  final String word;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 8, offset: Offset(0, 2))],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            '$number',
+            style: const TextStyle(fontSize: 9, color: Color(0xFF6B7280)),
+          ),
+          Text(
+            word,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF111827)),
+          ),
+        ],
+      ),
     );
   }
 }
