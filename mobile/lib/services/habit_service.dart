@@ -68,6 +68,8 @@ final habitServiceProvider = Provider<HabitService>((ref) {
   return HabitService(dio: ref.watch(dioProvider));
 });
 
+/// Fetches aggregated habit statistics (community totals).
+/// Cached per Riverpod lifecycle; re-evaluated when habitServiceProvider rebuilds.
 final habitStatsProvider = FutureProvider<HabitStats>((ref) {
   return ref.watch(habitServiceProvider).fetchStats();
 });
