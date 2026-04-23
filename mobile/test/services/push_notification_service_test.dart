@@ -7,9 +7,9 @@ import 'package:hhh/services/push_notification_service.dart';
 
 void main() {
   group('routeFromNotificationPayload', () {
-    test('questionnaire screen navigates to /profile', () {
+    test('questionnaire notification navigates to /settings/profile', () {
       final route = routeFromNotificationPayload({'screen': 'questionnaire'});
-      expect(route, '/profile');
+      expect(route, '/settings/profile');
     });
 
     test('explore screen navigates to /explore', () {

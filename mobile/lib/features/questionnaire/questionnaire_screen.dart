@@ -96,7 +96,7 @@ class QuestionnaireConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               FilledButton(
-                onPressed: () => context.go('/settings'),
+                onPressed: () => context.go('/settings/profile'),
                 child: Text(l10n.backToProfile),
               ),
             ],
