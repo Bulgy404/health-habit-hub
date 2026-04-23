@@ -141,17 +141,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/profile',
-                builder: (context, state) => const ProfileScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
                 path: '/settings',
                 builder: (context, state) => const UserSettingsScreen(),
                 routes: [
+                  GoRoute(
+                    path: 'profile',
+                    builder: (context, state) => const ProfileScreen(),
+                  ),
                   GoRoute(
                     path: 'privacy',
                     builder: (context, state) => const LegalDocumentScreen(
