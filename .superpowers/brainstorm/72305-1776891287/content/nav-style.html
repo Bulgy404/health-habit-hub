@@ -1,0 +1,214 @@
+<h2>How should the bottom navigation look?</h2>
+<p class="subtitle">Shown at the bottom of all main screens. Pick the style that best fits the Clean Bold direction.</p>
+
+<style>
+  .nav-row {
+    display: flex;
+    gap: 28px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 32px 0 24px;
+  }
+  .nav-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    width: 220px;
+  }
+  .nav-wrap.selected .preview-shell { box-shadow: 0 0 0 3px #45b700, 0 12px 40px rgba(0,0,0,0.18); }
+  .nav-wrap.selected .nav-label { color: #45b700; font-weight: 700; }
+
+  .preview-shell {
+    width: 220px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+    transition: box-shadow 0.18s;
+    background: #f7f8f5;
+  }
+  .preview-body {
+    padding: 18px 16px 10px;
+    min-height: 90px;
+  }
+  .preview-body .fake-title { font-size: 17px; font-weight: 800; color: #1a1a1a; margin-bottom: 6px; }
+  .preview-body .fake-card {
+    background: #45b700;
+    border-radius: 16px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .nav-label { font-size: 13px; font-weight: 600; letter-spacing: 0.03em; color: #8a8a8a; text-transform: uppercase; }
+  .nav-desc { font-size: 12px; color: #aaa; text-align: center; line-height: 1.5; max-width: 210px; }
+
+  /* Nav style A: dark bar (refined current) */
+  .nav-a {
+    background: #1f2120;
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 8px 18px;
+  }
+  .nav-a .ni {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 40px;
+  }
+  .nav-a .ni .ico { font-size: 17px; filter: grayscale(1) brightness(0.5); }
+  .nav-a .ni .lbl { font-size: 9px; color: rgba(255,255,255,0.35); font-weight: 500; }
+  .nav-a .ni.on .ico { filter: none; }
+  .nav-a .ni.on .lbl { color: #45b700; font-weight: 700; }
+  .nav-a .ni.on .ico-wrap { position: relative; }
+  .nav-a .active-pill {
+    background: rgba(69,183,0,0.18);
+    border-radius: 100px;
+    padding: 4px 12px 2px;
+    margin-bottom: -2px;
+  }
+
+  /* Nav style B: white bar, pill indicator */
+  .nav-b {
+    background: #fff;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 4px 18px;
+  }
+  .nav-b .ni {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 44px;
+  }
+  .nav-b .ni .ico { font-size: 17px; filter: grayscale(1) brightness(0.7); }
+  .nav-b .ni .lbl { font-size: 9px; color: #bbb; font-weight: 500; }
+  .nav-b .ni.on .ico-bg {
+    background: #e8f7e0;
+    border-radius: 100px;
+    padding: 4px 14px 3px;
+    margin-bottom: 1px;
+  }
+  .nav-b .ni.on .ico { filter: none; }
+  .nav-b .ni.on .lbl { color: #2e8c00; font-weight: 700; }
+
+  /* Nav style C: floating pill */
+  .nav-c-wrap {
+    background: #f7f8f5;
+    padding: 8px 14px 18px;
+  }
+  .nav-c {
+    background: #1f2120;
+    border-radius: 100px;
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 8px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.22);
+  }
+  .nav-c .ni {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 38px;
+  }
+  .nav-c .ni .ico { font-size: 16px; filter: grayscale(1) brightness(0.5); }
+  .nav-c .ni .lbl { font-size: 8px; color: rgba(255,255,255,0.3); font-weight: 500; }
+  .nav-c .ni.on .pill-bg {
+    background: #45b700;
+    border-radius: 100px;
+    padding: 3px 10px 2px;
+    margin-bottom: 1px;
+  }
+  .nav-c .ni.on .ico { filter: none; }
+  .nav-c .ni.on .lbl { color: #45b700; font-weight: 700; }
+</style>
+
+<div class="nav-row" id="navRow">
+
+  <!-- Option A: refined dark bar -->
+  <div class="nav-wrap" onclick="selectNav('a', this)">
+    <div class="preview-shell">
+      <div class="preview-body">
+        <div class="fake-title">Share a Habit</div>
+        <div class="fake-card">Start today's survey →</div>
+      </div>
+      <div class="nav-a">
+        <div class="ni on">
+          <div class="active-pill">
+            <div class="ico">🌱</div>
+          </div>
+          <div class="lbl">Share</div>
+        </div>
+        <div class="ni"><div class="ico">🔍</div><div class="lbl">Explore</div></div>
+        <div class="ni"><div class="ico">💡</div><div class="lbl">Recs</div></div>
+        <div class="ni"><div class="ico">👤</div><div class="lbl">Profile</div></div>
+        <div class="ni"><div class="ico">⚙️</div><div class="lbl">Settings</div></div>
+      </div>
+    </div>
+    <div class="nav-label">A — Refined Dark</div>
+    <div class="nav-desc">Dark bar, green pill highlight on active tab. Refined version of current style.</div>
+  </div>
+
+  <!-- Option B: white bar pill -->
+  <div class="nav-wrap" onclick="selectNav('b', this)">
+    <div class="preview-shell">
+      <div class="preview-body">
+        <div class="fake-title">Share a Habit</div>
+        <div class="fake-card">Start today's survey →</div>
+      </div>
+      <div class="nav-b">
+        <div class="ni on">
+          <div class="ico-bg"><div class="ico">🌱</div></div>
+          <div class="lbl">Share</div>
+        </div>
+        <div class="ni"><div class="ico">🔍</div><div class="lbl">Explore</div></div>
+        <div class="ni"><div class="ico">💡</div><div class="lbl">Recs</div></div>
+        <div class="ni"><div class="ico">👤</div><div class="lbl">Profile</div></div>
+        <div class="ni"><div class="ico">⚙️</div><div class="lbl">Settings</div></div>
+      </div>
+    </div>
+    <div class="nav-label">B — White + Pill</div>
+    <div class="nav-desc">White bar, soft green pill behind active icon. Light, airy, consistent with page.</div>
+  </div>
+
+  <!-- Option C: floating pill nav -->
+  <div class="nav-wrap" onclick="selectNav('c', this)">
+    <div class="preview-shell">
+      <div class="preview-body">
+        <div class="fake-title">Share a Habit</div>
+        <div class="fake-card">Start today's survey →</div>
+      </div>
+      <div class="nav-c-wrap">
+        <div class="nav-c">
+          <div class="ni on">
+            <div class="pill-bg"><div class="ico">🌱</div></div>
+            <div class="lbl">Share</div>
+          </div>
+          <div class="ni"><div class="ico">🔍</div><div class="lbl">Explore</div></div>
+          <div class="ni"><div class="ico">💡</div><div class="lbl">Recs</div></div>
+          <div class="ni"><div class="ico">👤</div><div class="lbl">Profile</div></div>
+          <div class="ni"><div class="ico">⚙️</div><div class="lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-label">C — Floating Pill</div>
+    <div class="nav-desc">Dark rounded pill floating above the page. Very modern, makes a statement.</div>
+  </div>
+
+</div>
+
+<script>
+function selectNav(choice, el) {
+  document.querySelectorAll('.nav-wrap').forEach(w => w.classList.remove('selected'));
+  el.classList.add('selected');
+  if (typeof recordChoice === 'function') recordChoice(choice, el.querySelector('.nav-label').textContent.trim());
+}
+</script>
