@@ -1,142 +1,162 @@
 #!/usr/bin/env python3
 """
-Generate the Health Habit Hub app icon (1024x1024 PNG).
+Generate the Health Habit Hub app icon (1024×1024 PNG).
 
-Design: charcoal (#454446) circle background with a graph-network of 9 nodes
-(5 heart-shaped + 4 circle-with-inner-highlight) in HabShare green (#45b700),
-connected by white anti-aliased edges with glow halos, masked to a clean circle.
+Design: Clean Bold — green gradient rounded-square background,
+white heart mark, three semi-transparent accent dots inside the heart
+representing the three H's (Health · Habit · Hub).
 
-Output: app_icon.png (in the same directory as this script)
+Output: app_icon.png (same directory as this script)
 """
 
 import math
-import os
 from pathlib import Path
-
 from PIL import Image, ImageDraw, ImageFilter
 
-# ── Constants ──────────────────────────────────────────────────────────────────
 SIZE = 1024
-BG_COLOR = (0x45, 0x44, 0x46, 255)   # charcoal
-GREEN = (0x45, 0xB7, 0x00, 255)      # HabShare green
+CX, CY = SIZE // 2, SIZE // 2
+
+# ── Design tokens ───────────────────────────────────────────────────────────────
+GREEN_LIGHT = (92, 212, 0)    # #5CD400 — top-left gradient stop
+GREEN_MID   = (61, 165, 0)    # midpoint
+GREEN_DARK  = (29, 120, 0)    # #1D7800 — bottom-right gradient stop
+GREEN_DARK_RGBA = (46, 140, 0, 77)   # #2E8C00 at 30% opacity — dot colour
 WHITE = (255, 255, 255, 255)
-TRANSPARENT = (0, 0, 0, 0)
-
-CX, CY = SIZE // 2, SIZE // 2        # canvas centre
-RING_R = 340                          # radius of node ring
-NODE_R = 54                           # node circle radius
-HEART_SCALE = 0.85                    # heart size relative to node circle
-INNER_R = 22                          # inner highlight circle radius
-
-EDGE_W = 10                           # edge stroke width
-GLOW_R = 22                           # glow blur radius
 
 
-def heart_path(cx: float, cy: float, size: float):
-    """Return a list of (x, y) points approximating a heart centred at (cx, cy)."""
+# ── Helpers ─────────────────────────────────────────────────────────────────────
+
+def create_gradient() -> Image.Image:
+    """
+    Fast diagonal gradient #5CD400 → #1D7800 via a 2×2 bilinear resize.
+    The off-diagonal corners use the midpoint colour so the result is a smooth
+    two-stop linear gradient along the main diagonal.
+    """
+    tiny = Image.new("RGBA", (2, 2))
+    tiny.putpixel((0, 0), (*GREEN_LIGHT, 255))   # top-left
+    tiny.putpixel((1, 0), (*GREEN_MID,   255))   # top-right
+    tiny.putpixel((0, 1), (*GREEN_MID,   255))   # bottom-left
+    tiny.putpixel((1, 1), (*GREEN_DARK,  255))   # bottom-right
+    return tiny.resize((SIZE, SIZE), Image.BILINEAR)
+
+
+def rounded_rect_mask(radius: int = 224) -> Image.Image:
+    """Return an L-mode mask for a rounded-square of the given corner radius."""
+    mask = Image.new("L", (SIZE, SIZE), 0)
+    d = ImageDraw.Draw(mask)
+    try:
+        d.rounded_rectangle([0, 0, SIZE - 1, SIZE - 1], radius=radius, fill=255)
+    except AttributeError:
+        # Pillow < 8.2 fallback
+        r = radius
+        d.rectangle([r, 0, SIZE - r, SIZE], fill=255)
+        d.rectangle([0, r, SIZE, SIZE - r], fill=255)
+        for x, y in [(0, 0), (SIZE - 2*r, 0), (0, SIZE - 2*r), (SIZE - 2*r, SIZE - 2*r)]:
+            d.ellipse([x, y, x + 2*r, y + 2*r], fill=255)
+    return mask
+
+
+def add_shine(canvas: Image.Image) -> None:
+    """Soft white radial highlight at top-left — gives the icon subtle depth."""
+    shine = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    d = ImageDraw.Draw(shine)
+    r = 540
+    d.ellipse([-r // 3, -r // 3, r, r], fill=(255, 255, 255, 42))
+    canvas.alpha_composite(shine.filter(ImageFilter.GaussianBlur(90)))
+
+
+def heart_points(cx: float, cy: float, size: float, steps: int = 600) -> list:
+    """
+    Parametric heart (tip-down) via the standard polar formula.
+    `size` is half the unit scale (the heart fits in ±size px roughly).
+    """
     pts = []
-    steps = 200
     for i in range(steps + 1):
         t = 2 * math.pi * i / steps
-        # Parametric heart: x = 16 sin³(t), y = -(13 cos(t) - 5 cos(2t) - 2 cos(3t) - cos(4t))
         x = 16 * math.sin(t) ** 3
-        y = -(13 * math.cos(t) - 5 * math.cos(2 * t) - 2 * math.cos(3 * t) - math.cos(4 * t))
+        y = -(13 * math.cos(t) - 5 * math.cos(2*t)
+              - 2 * math.cos(3*t) - math.cos(4*t))
         pts.append((cx + x * size / 17, cy + y * size / 17))
     return pts
 
 
-def draw_glow(layer: Image.Image, x: float, y: float, r: float, color):
-    """Draw a soft glow halo around position (x, y) with radius r."""
-    glow = Image.new("RGBA", layer.size, (0, 0, 0, 0))
-    d = ImageDraw.Draw(glow)
-    d.ellipse([x - r, y - r, x + r, y + r], fill=color)
-    glow = glow.filter(ImageFilter.GaussianBlur(radius=GLOW_R))
-    layer.alpha_composite(glow)
+def draw_heart(canvas: Image.Image, cx: float, cy: float, size: float) -> None:
+    """Draw a white heart with a soft drop shadow onto canvas."""
+    # Shadow layer
+    shadow = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(shadow)
+    sd.polygon(heart_points(cx, cy + 14, size), fill=(0, 0, 0, 65))
+    canvas.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(22)))
 
-
-def draw_edge_with_glow(canvas: Image.Image, x1, y1, x2, y2):
-    """Draw a white edge with glow between two node centres."""
-    # glow layer
-    glow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-    d = ImageDraw.Draw(glow)
-    d.line([(x1, y1), (x2, y2)], fill=(255, 255, 255, 80), width=EDGE_W + GLOW_R)
-    glow = glow.filter(ImageFilter.GaussianBlur(radius=GLOW_R // 2))
-    canvas.alpha_composite(glow)
-    # solid edge
-    d2 = ImageDraw.Draw(canvas)
-    d2.line([(x1, y1), (x2, y2)], fill=WHITE, width=EDGE_W)
-
-
-def node_positions():
-    """Return (x, y) for 9 nodes: index 0 is centre, 1-8 are on a ring."""
-    positions = [(CX, CY)]  # centre node
-    for i in range(8):
-        angle = 2 * math.pi * i / 8 - math.pi / 2  # start from top
-        x = CX + RING_R * math.cos(angle)
-        y = CY + RING_R * math.sin(angle)
-        positions.append((x, y))
-    return positions
-
-
-# Edges: (src_idx, dst_idx)  — connecting centre to all ring nodes + some ring edges
-EDGES = [
-    (0, 1), (0, 2), (0, 3), (0, 4), (0, 5), (0, 6), (0, 7), (0, 8),  # centre ↔ ring
-    (1, 2), (3, 4), (5, 6), (7, 8),  # adjacent ring pairs
-]
-
-# Which node indices use hearts (0-based); others use circle-with-inner-highlight
-HEART_NODES = {1, 3, 5, 7, 0}   # centre + 4 alternating ring nodes  → 5 hearts
-CIRCLE_NODES = {2, 4, 6, 8}     # remaining 4 ring nodes              → 4 circles
-
-
-def main():
-    canvas = Image.new("RGBA", (SIZE, SIZE), TRANSPARENT)
-
-    # ── Background circle ──────────────────────────────────────────────────────
-    bg = Image.new("RGBA", (SIZE, SIZE), TRANSPARENT)
-    bg_draw = ImageDraw.Draw(bg)
-    pad = 10
-    bg_draw.ellipse([pad, pad, SIZE - pad, SIZE - pad], fill=BG_COLOR)
-    canvas.alpha_composite(bg)
-
-    positions = node_positions()
-
-    # ── Edges ──────────────────────────────────────────────────────────────────
-    for src, dst in EDGES:
-        x1, y1 = positions[src]
-        x2, y2 = positions[dst]
-        draw_edge_with_glow(canvas, x1, y1, x2, y2)
-
-    # ── Nodes ──────────────────────────────────────────────────────────────────
+    # White fill
     d = ImageDraw.Draw(canvas)
-    for idx, (nx, ny) in enumerate(positions):
-        r = NODE_R * (1.3 if idx == 0 else 1.0)  # centre node slightly larger
+    d.polygon(heart_points(cx, cy, size), fill=WHITE)
 
-        # glow halo
-        draw_glow(canvas, nx, ny, r + 20, (*GREEN[:3], 120))
 
-        if idx in HEART_NODES:
-            # filled green heart
-            pts = heart_path(nx, ny, r * HEART_SCALE * 2)
-            d.polygon(pts, fill=GREEN)
-        else:
-            # green circle with inner white-highlight ring
-            d.ellipse([nx - r, ny - r, nx + r, ny + r], fill=GREEN)
-            inner = INNER_R * (1.3 if idx == 0 else 1.0)
-            d.ellipse(
-                [nx - inner, ny - inner, nx + inner, ny + inner],
-                fill=(255, 255, 255, 200),
-            )
+def draw_hub_dots(canvas: Image.Image, cx: float, cy: float, size: float) -> None:
+    """
+    Three semi-transparent dark-green dots inside the heart, arranged as a
+    downward-pointing triangle — representing Health, Habit, Hub.
+    Connected by faint lines to reinforce the 'hub' network metaphor.
+    """
+    # Dot centres relative to heart centre
+    scale = size / 240          # normalise to design size of 240
+    spread_x = int(60 * scale)
+    spread_y_top = int(-44 * scale)
+    spread_y_bot = int(+48 * scale)
 
-    # ── Circular mask ──────────────────────────────────────────────────────────
-    mask = Image.new("L", (SIZE, SIZE), 0)
-    ImageDraw.Draw(mask).ellipse([pad, pad, SIZE - pad, SIZE - pad], fill=255)
+    # Heart centre (visual) sits ~3 * size/17 below cy
+    hcx = int(cx)
+    hcy = int(cy + 3 * size / 17)
+
+    tl = (hcx - spread_x, hcy + spread_y_top)
+    tr = (hcx + spread_x, hcy + spread_y_top)
+    bc = (hcx,             hcy + spread_y_bot)
+
+    dot_r = int(34 * scale)
+    line_w = max(1, int(8 * scale))
+
+    # Connecting lines (very subtle)
+    line_layer = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
+    ld = ImageDraw.Draw(line_layer)
+    line_colour = (46, 140, 0, 46)
+    for a, b in [(tl, tr), (tl, bc), (tr, bc)]:
+        ld.line([a, b], fill=line_colour, width=line_w)
+    canvas.alpha_composite(line_layer)
+
+    # Dots
+    d = ImageDraw.Draw(canvas)
+    for (dx, dy) in [tl, tr, bc]:
+        d.ellipse([dx - dot_r, dy - dot_r, dx + dot_r, dy + dot_r],
+                  fill=GREEN_DARK_RGBA)
+
+
+# ── Main ────────────────────────────────────────────────────────────────────────
+
+def main() -> None:
+    # 1. Gradient background
+    canvas = create_gradient()
+
+    # 2. Shine overlay
+    add_shine(canvas)
+
+    # 3. Heart mark — centred slightly above mid-canvas for visual balance
+    heart_size = 242
+    heart_cx   = float(CX)
+    heart_cy   = float(CY) - 22.0
+    draw_heart(canvas, heart_cx, heart_cy, heart_size)
+
+    # 4. Hub accent dots inside the heart
+    draw_hub_dots(canvas, heart_cx, heart_cy, heart_size)
+
+    # 5. Apply rounded-square mask (clips everything outside the icon shape)
+    mask = rounded_rect_mask(radius=224)
     canvas.putalpha(mask)
 
-    # ── Save ───────────────────────────────────────────────────────────────────
-    out_path = Path(__file__).parent / "app_icon.png"
-    canvas.save(out_path, "PNG")
-    print(f"Saved {out_path} ({SIZE}×{SIZE})")
+    # 6. Save
+    out = Path(__file__).parent / "app_icon.png"
+    canvas.save(out, "PNG")
+    print(f"Saved {out}  ({SIZE}×{SIZE} px)")
 
 
 if __name__ == "__main__":

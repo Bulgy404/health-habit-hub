@@ -1000,5 +1000,172 @@
       }
     ],
     "isLibrary": true
+  },
+  {
+    "_id": "questionnaire-srhi",
+    "slug": "srhi",
+    "title": "Self-Report Habit Index (SRHI)",
+    "description": "A 12-item validated instrument measuring the strength of a habit. Think of your self-selected target behavior when answering each item. Rate how much you agree with each statement on a scale from 1 (Strongly disagree) to 5 (Strongly agree).",
+    "version": "1.0.0",
+    "active": true,
+    "questions": [
+      {
+        "id": "srhi_1",
+        "text": "My target behavior is something I do automatically.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      },
+      {
+        "id": "srhi_2",
+        "text": "My target behavior is something I do without thinking.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      },
+      {
+        "id": "srhi_3",
+        "text": "My target behavior is something that belongs to my (daily, weekly, monthly) routine.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      },
+      {
+        "id": "srhi_4",
+        "text": "My target behavior is something I start doing before I realize I'm doing it.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      },
+      {
+        "id": "srhi_5",
+        "text": "My target behavior is something I would find hard not to do.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      },
+      {
+        "id": "srhi_6",
+        "text": "My target behavior is something that's typically 'me'.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      },
+      {
+        "id": "srhi_7",
+        "text": "My target behavior is something I have been doing for a long time.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      },
+      {
+        "id": "srhi_8",
+        "text": "My target behavior is something I do without having to consciously remember it.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      },
+      {
+        "id": "srhi_9",
+        "text": "My target behavior is something that makes me feel weird if I do not do it.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      },
+      {
+        "id": "srhi_10",
+        "text": "My target behavior is something I do without any effort.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      },
+      {
+        "id": "srhi_11",
+        "text": "My target behavior is something I need to do.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      },
+      {
+        "id": "srhi_12",
+        "text": "My target behavior is something I do at this particular time, in this particular place.",
+        "type": "single_choice",
+        "options": [
+          { "value": "1", "label": "1 — Strongly disagree" },
+          { "value": "2", "label": "2 — Disagree" },
+          { "value": "3", "label": "3 — Neutral" },
+          { "value": "4", "label": "4 — Agree" },
+          { "value": "5", "label": "5 — Strongly agree" }
+        ],
+        "required": true
+      }
+    ],
+    "isLibrary": true
   }
 ]

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/admin_habit_donation.dart';
 import '../models/admin_participant.dart';
+import '../models/admin_questionnaire.dart';
 import '../models/admin_session.dart';
 import '../models/admin_survey.dart';
 import '../models/participant_progress.dart';
@@ -155,6 +156,60 @@ class AdminService {
       '$_baseUrl/admin/surveys/$id/groups',
       data: {'groups': groups},
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Questionnaire endpoints (native questionnaire system)
+  // ---------------------------------------------------------------------------
+
+  /// Fetches the full questionnaire definition (including questions) by id.
+  Future<Map<String, dynamic>> fetchQuestionnaireFull(String id) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '$_baseUrl/admin/questionnaires/$id',
+    );
+    return response.data ?? {};
+  }
+
+  /// Lists all questionnaires (library + custom) for admin management.
+  Future<List<AdminQuestionnaire>> fetchAdminQuestionnaires() async {
+    final response = await _dio.get<List<dynamic>>(
+      '$_baseUrl/admin/questionnaires',
+    );
+    final data = response.data ?? [];
+    return data
+        .map((e) => AdminQuestionnaire.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Creates a new custom questionnaire.
+  Future<String> createQuestionnaire({
+    required String title,
+    required String description,
+    required List<Map<String, dynamic>> questions,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '$_baseUrl/admin/questionnaires',
+      data: {'title': title, 'description': description, 'questions': questions},
+    );
+    return (response.data?['id'] ?? '').toString();
+  }
+
+  /// Updates a custom questionnaire.
+  Future<void> updateQuestionnaire(
+    String id, {
+    required String title,
+    required String description,
+    required List<Map<String, dynamic>> questions,
+  }) async {
+    await _dio.put<void>(
+      '$_baseUrl/admin/questionnaires/$id',
+      data: {'title': title, 'description': description, 'questions': questions},
+    );
+  }
+
+  /// Deletes a custom questionnaire. Throws if assigned to an active study.
+  Future<void> deleteQuestionnaire(String id) async {
+    await _dio.delete<void>('$_baseUrl/admin/questionnaires/$id');
   }
 
   // ---------------------------------------------------------------------------

@@ -21,6 +21,11 @@ class AdminShellScreen extends StatelessWidget {
       path: '/admin/surveys',
     ),
     _SectionConfig(
+      label: 'Questionnaires',
+      icon: Icons.quiz_outlined,
+      path: '/admin/questionnaires',
+    ),
+    _SectionConfig(
       label: 'Habits',
       icon: Icons.psychology,
       path: '/admin/habits',
