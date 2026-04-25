@@ -366,7 +366,9 @@ cd app
 npm run seed
 ```
 
-This creates a Keycloak test account (`testuser` / `testpass123` in the `hhh` realm), seeds SLIQ and RAND-36 questionnaires into MongoDB, creates the four `hhh__ExperimentalSetting` Group nodes in Neo4j, and applies Neo4j constraints. The script is safe to re-run — all steps use MERGE or upsert semantics.
+This creates a Keycloak test account (`testuser` / `testpass123` in the `hhh` realm), seeds SLIQ, RAND-36, and SRHI questionnaires into MongoDB, creates the four `hhh__ExperimentalSetting` Group nodes in Neo4j, and applies Neo4j constraints. The script is safe to re-run — all steps use MERGE or upsert semantics.
+
+> **Admin UI management:** After initial seeding, researchers can create and manage custom questionnaires entirely through the admin panel (web portal → **Questionnaires**, or Flutter admin → **Questionnaires**). No further seed script edits are needed. Library instruments (SLIQ, RAND-36, SRHI) are read-only and cannot be modified through the UI.
 
 ### Node.js backend tests
 

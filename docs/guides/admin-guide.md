@@ -122,18 +122,29 @@ Each participant must be assigned to exactly one study group (G1–G4). The grou
 
 ## 4. Configuring Questionnaires
 
-Questionnaires (surveys) are JSON-schema driven forms shown to participants on the Donate and Profile screens. Admins can create, edit, publish, archive, and target questionnaires explicitly.
+The platform has two questionnaire systems that serve different purposes.
 
-Survey availability now follows four rules:
+| System | Where configured | Rendered by | Use case |
+|--------|-----------------|-------------|----------|
+| **SurveyJS Forms** | Admin panel → Surveys | WebView (SurveyJS) | Habit-donation prompts, profile forms — freely designed with a JSON schema editor |
+| **Study Questionnaires** | Admin panel → Questionnaires / Web portal → Studies | Native Flutter UI | Validated research instruments (SLIQ, RAND-36, SRHI) and researcher-created questionnaires assigned to studies |
+
+---
+
+### 4a. SurveyJS Forms
+
+SurveyJS forms are JSON-schema driven forms shown to participants on the Donate and Profile screens. Admins can create, edit, publish, archive, and target them explicitly.
+
+Survey availability follows four rules:
 
 - `habit-donation` is always available to every participant on the Donate screen.
 - `group_assigned` surveys are only visible to participants whose study group is listed in the survey.
 - `unassigned_only` surveys are the standard/default case for participants who have no study group yet.
 - `all_participants` surveys are visible to everyone regardless of group.
 
-### Creating a Questionnaire
+### Creating a SurveyJS Form
 
-**Step 1.** In the Admin panel, tap **Questionnaires** in the sidebar, then tap **+ New Questionnaire**.
+**Step 1.** In the Admin panel, tap **Surveys** in the sidebar, then tap **+ New Survey**.
 
 **Step 2.** Enter a **Title** and select a **Type**: `profile`, `habit-donation`, or `custom`.
 
@@ -181,6 +192,50 @@ If you want a questionnaire to appear for participants who are not assigned to a
 | ![Assign questionnaire to groups](../assets/screenshots/admin/04-questionnaire-assign-groups.png) | **(1)** Questionnaire name shown at the top. **(2)** Group toggle checkboxes (G1–G4). **(3)** Currently assigned groups highlighted in teal. **(4)** Save Assignment button. |
 
 *Figure 4c: Assigning a questionnaire to specific study groups.*
+
+---
+
+### 4b. Study Questionnaires (Native Instrument Library)
+
+Study Questionnaires are validated research instruments and researcher-created questionnaires that are administered to participants as part of a study. They are rendered natively in the Flutter app and appear on the participant's **Profile** screen after enrolment.
+
+**Library instruments** — SLIQ, RAND-36, and SRHI are pre-loaded and read-only. They appear in the **Library** tab in both admin interfaces.
+
+**Custom questionnaires** — researchers can create and manage their own questionnaire definitions through the admin UI. No seed scripts or JSON file edits are required.
+
+#### Creating a Custom Questionnaire (Web portal — recommended)
+
+**Step 1.** In the web admin portal, navigate to **Questionnaires** in the sidebar.
+
+**Step 2.** Open the **Custom** tab and click **+ New questionnaire**.
+
+**Step 3.** Enter a **Title** and **Description**. Add questions using the visual question builder — each question has a type (Open text, Single choice, Multi choice, Scale) and an optional list of answer options.
+
+**Step 4.** Click **Save**. The questionnaire is now available to link to studies.
+
+#### Creating a Custom Questionnaire (Flutter admin panel)
+
+**Step 1.** Open the admin panel in the app and tap **Questionnaires** in the side navigation.
+
+**Step 2.** Switch to the **Custom** tab and tap the **+** button.
+
+**Step 3.** Enter a title, description, and add questions. Tap **Create**.
+
+#### Assigning Questionnaires to a Study
+
+Questionnaires are linked to participants through studies. A participant sees the questionnaires assigned to the study they are enrolled in.
+
+**Via the web admin portal:**
+
+**Step 1.** Navigate to **Studies** in the sidebar.
+
+**Step 2.** Open an existing study or create a new one.
+
+**Step 3.** Open the **Questionnaires** tab in the study editor. Check the questionnaires (library or custom) that should be administered to participants in this study.
+
+**Step 4.** Click **Save** — participants enrolled in the study will immediately see the assigned questionnaires on their Profile screen.
+
+> **No seed script required.** All questionnaire management — including adding new library instruments and custom researcher-designed questionnaires — is handled entirely through the admin UI.
 
 ---
 

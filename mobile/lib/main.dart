@@ -13,6 +13,7 @@ import 'screens/admin/admin_devices_screen.dart';
 import 'screens/admin/admin_habits_screen.dart';
 import 'screens/admin/admin_participant_detail_screen.dart';
 import 'screens/admin/admin_participants_screen.dart';
+import 'screens/admin/admin_questionnaires_screen.dart';
 import 'screens/admin/admin_settings_screen.dart';
 import 'screens/admin/admin_shell_screen.dart';
 import 'screens/admin/admin_surveys_screen.dart';
@@ -211,6 +212,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                         ),
                       ),
                     ],
+                  ),
+                  GoRoute(
+                    path: '/admin/questionnaires',
+                    builder: (context, state) =>
+                        const AdminQuestionnairesScreen(),
                   ),
                   GoRoute(
                     path: '/admin/habits',

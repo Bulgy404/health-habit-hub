@@ -123,7 +123,18 @@ Jeder Teilnehmer muss genau einer Studiengruppe (G1–G4) zugewiesen werden. Die
 
 ## 4. Fragebögen konfigurieren
 
-Fragebögen (Surveys) sind JSON-Schema-gesteuerte Formulare, die Teilnehmern auf den Spenden- und Profilbildschirmen angezeigt werden. Admins können Fragebögen erstellen, bearbeiten, veröffentlichen, archivieren und gezielt für bestimmte Teilnehmergruppen freischalten.
+Die Plattform verfügt über zwei Fragebogensysteme für unterschiedliche Zwecke.
+
+| System | Konfigurationsort | Darstellung | Verwendungszweck |
+|--------|------------------|-------------|------------------|
+| **SurveyJS-Formulare** | Admin-Panel → Surveys | WebView (SurveyJS) | Spenden-Prompts, Profilformulare — frei gestaltbar mit JSON-Schema-Editor |
+| **Studien-Fragebögen** | Admin-Panel → Questionnaires / Web-Portal → Studies | Native Flutter-UI | Validierte Messinstrumente (SLIQ, RAND-36, SRHI) und benutzerdefinierte Fragebögen für Studien |
+
+---
+
+### 4a. SurveyJS-Formulare
+
+SurveyJS-Formulare sind JSON-Schema-gesteuerte Formulare, die Teilnehmern auf den Spenden- und Profilbildschirmen angezeigt werden. Admins können Fragebögen erstellen, bearbeiten, veröffentlichen, archivieren und gezielt für bestimmte Teilnehmergruppen freischalten.
 
 Die Verfügbarkeit von Umfragen folgt nun vier Regeln:
 
@@ -134,7 +145,7 @@ Die Verfügbarkeit von Umfragen folgt nun vier Regeln:
 
 ### Einen Fragebogen erstellen
 
-**Schritt 1.** Tippen Sie im Admin-Panel auf **Fragebögen** in der Seitenleiste, dann auf **+ Neuer Fragebogen**.
+**Schritt 1.** Tippen Sie im Admin-Panel auf **Surveys** in der Seitenleiste, dann auf **+ New Survey**.
 
 **Schritt 2.** Geben Sie einen **Titel** ein und wählen Sie einen **Typ** aus: `profile`, `habit-donation` oder `custom`.
 
@@ -182,6 +193,50 @@ Wenn ein Fragebogen für Teilnehmer ohne Studiengruppe sichtbar sein soll, setze
 | ![Fragebogen Gruppen zuweisen](../assets/screenshots/admin/04-questionnaire-assign-groups.png) | **(1)** Fragebogenname oben angezeigt. **(2)** Gruppen-Toggle-Checkboxen (G1–G4). **(3)** Aktuell zugewiesene Gruppen sind türkis hervorgehoben. **(4)** Zuweisung speichern-Button. |
 
 *Abbildung 4c: Zuweisung eines Fragebogens an bestimmte Studiengruppen.*
+
+---
+
+### 4b. Studien-Fragebögen (Native Messinstrumente)
+
+Studien-Fragebögen sind validierte Messinstrumente und benutzerdefinierte Fragebögen, die Teilnehmern im Rahmen einer Studie verabreicht werden. Sie werden nativ in der Flutter-App dargestellt und erscheinen auf dem **Profil**-Bildschirm der Teilnehmenden nach der Einschreibung.
+
+**Bibliotheks-Instrumente** — SLIQ, RAND-36 und SRHI sind vorinstalliert und schreibgeschützt. Sie erscheinen im **Bibliothek**-Tab beider Admin-Oberflächen.
+
+**Benutzerdefinierte Fragebögen** — Forscher können eigene Fragebogendefinitionen vollständig über die Admin-Oberfläche erstellen und verwalten. Es sind keine Seed-Skripte oder JSON-Dateibearbeitungen erforderlich.
+
+#### Benutzerdefinierten Fragebogen erstellen (Web-Portal — empfohlen)
+
+**Schritt 1.** Im Web-Admin-Portal zu **Questionnaires** in der Seitenleiste navigieren.
+
+**Schritt 2.** Den Tab **Custom** öffnen und auf **+ New questionnaire** klicken.
+
+**Schritt 3.** Titel und Beschreibung eingeben. Fragen mit dem visuellen Fragen-Editor hinzufügen — jede Frage hat einen Typ (Freitext, Einfachauswahl, Mehrfachauswahl, Skala) und optional eine Antwortliste.
+
+**Schritt 4.** Auf **Save** klicken. Der Fragebogen steht nun zur Verknüpfung mit Studien zur Verfügung.
+
+#### Benutzerdefinierten Fragebogen erstellen (Flutter Admin-Panel)
+
+**Schritt 1.** Das Admin-Panel in der App öffnen und auf **Questionnaires** in der Seitennavigation tippen.
+
+**Schritt 2.** Zum Tab **Custom** wechseln und auf das **+**-Symbol tippen.
+
+**Schritt 3.** Titel, Beschreibung und Fragen eingeben. Auf **Create** tippen.
+
+#### Fragebögen einer Studie zuweisen
+
+Fragebögen werden Teilnehmenden über Studien zugänglich gemacht. Teilnehmende sehen die Fragebögen, die der Studie zugewiesen sind, in der sie eingeschrieben sind.
+
+**Über das Web-Admin-Portal:**
+
+**Schritt 1.** Zu **Studies** in der Seitenleiste navigieren.
+
+**Schritt 2.** Eine vorhandene Studie öffnen oder eine neue erstellen.
+
+**Schritt 3.** Den Tab **Questionnaires** im Studien-Editor öffnen. Die Fragebögen (Bibliothek oder benutzerdefiniert) auswählen, die den Teilnehmenden in dieser Studie verabreicht werden sollen.
+
+**Schritt 4.** Auf **Save** klicken — Teilnehmende, die in der Studie eingeschrieben sind, sehen die zugewiesenen Fragebögen sofort auf ihrem Profil-Bildschirm.
+
+> **Kein Seed-Skript erforderlich.** Die gesamte Fragebogenverwaltung — einschließlich neuer Bibliotheksinstrumente und benutzerdefinierter Fragebögen — erfolgt vollständig über die Admin-Oberfläche.
 
 ---
 

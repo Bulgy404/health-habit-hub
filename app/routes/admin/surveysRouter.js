@@ -479,6 +479,38 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
     }
   });
 
+  // GET /api/v1/admin/questionnaires/:id — full document including questions array
+  router.get('/questionnaires/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      let oid;
+      try {
+        oid = new ObjectId(id);
+      } catch {
+        return res.status(404).json({ error: 'Questionnaire not found' });
+      }
+      const database = await getDb();
+      const doc = await database.collection('questionnaires').findOne({ _id: oid });
+      if (!doc) {
+        return res.status(404).json({ error: 'Questionnaire not found' });
+      }
+      res.json({
+        id: doc._id.toString(),
+        slug: doc.slug || null,
+        title: doc.title,
+        description: doc.description || '',
+        version: doc.version || '1',
+        active: doc.active !== false,
+        isLibrary: doc.isLibrary === true,
+        questions: Array.isArray(doc.questions) ? doc.questions : [],
+        updatedAt: doc.updatedAt || doc.createdAt || null,
+      });
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // POST /api/v1/admin/questionnaires
   router.post('/questionnaires', async (req, res) => {
     try {
