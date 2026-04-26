@@ -154,6 +154,36 @@ export function createQuestionnaireResponsesRouter({ db } = {}) {
    *       401:
    *         description: Missing or invalid JWT
    */
+  // GET /questionnaire-responses/service/:userId/:slug
+  // Service-to-service endpoint — authenticated via X-Service-Auth-Token header.
+  // Used by the Python recommender pipeline to fetch user questionnaire data.
+  router.get('/service/:userId/:slug', async (req, res) => {
+    try {
+      const token = req.headers['x-service-auth-token'];
+      const expected = process.env.API_SERVICE_SECRET;
+      if (!token || !expected || token !== expected) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      const { userId, slug } = req.params;
+      const database = await getDb();
+      const responses = await database
+        .collection('form_responses')
+        .find({ userId, questionnaireSlug: slug })
+        .sort({ submitted_at: -1 })
+        .limit(1)
+        .toArray();
+
+      if (responses.length === 0) {
+        return res.status(404).json({ error: 'No response found' });
+      }
+      const { _id, ...responseData } = responses[0];
+      res.json(responseData);
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   router.get('/me/:slug', async (req, res) => {
     try {
       const userId = req.user?.sub;

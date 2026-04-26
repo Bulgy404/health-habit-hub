@@ -11,7 +11,6 @@ import '../config/app_config.dart';
 import '../core/dio_provider.dart';
 import '../features/questionnaire/questionnaire_service.dart';
 import '../providers/auth_provider.dart';
-import '../providers/theme_provider.dart';
 import '../services/survey_service.dart';
 import '../widgets/offline_banner.dart';
 
@@ -214,53 +213,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: Stack(
+          if (_offline)
+            OfflineBanner(
+              message: l10n.couldNotLoadProfile,
+              onRetry: _init,
+            )
+          else if (_loading)
+            const Center(child: CircularProgressIndicator())
+          else if (_completedAt != null && !_editing)
+            Column(
               children: [
-                if (_offline)
-                  OfflineBanner(
-                    message: l10n.couldNotLoadProfile,
-                    onRetry: _init,
-                  )
-                else if (_loading)
-                  const Center(child: CircularProgressIndicator())
-                else if (_completedAt != null && !_editing)
-                  Column(
-                    children: [
-                      Expanded(
-                        child: _ProfileSummaryCard(
-                          completedAt: _completedAt!,
-                          onEdit: _startEdit,
-                        ),
-                      ),
-                      _StudyQuestionnairesSection(l10n: l10n),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                        child: OutlinedButton.icon(
-                          onPressed: () =>
-                              context.push('/onboarding/restore'),
-                          icon: const Icon(Icons.lock_reset),
-                          label: Text(l10n.restoreAccountOnDevice),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(double.infinity, 48),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                else if (_controller != null)
-                  WebViewWidget(controller: _controller!),
-                if (_submitting)
-                  const ColoredBox(
-                    color: Color(0x44000000),
-                    child: Center(child: CircularProgressIndicator()),
+                Expanded(
+                  child: _ProfileSummaryCard(
+                    completedAt: _completedAt!,
+                    onEdit: _startEdit,
                   ),
+                ),
+                _StudyQuestionnairesSection(l10n: l10n),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: OutlinedButton.icon(
+                    onPressed: () => context.push('/onboarding/restore'),
+                    icon: const Icon(Icons.lock_reset),
+                    label: Text(l10n.restoreAccountOnDevice),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                    ),
+                  ),
+                ),
               ],
+            )
+          else if (_controller != null)
+            WebViewWidget(controller: _controller!),
+          if (_submitting)
+            const ColoredBox(
+              color: Color(0x44000000),
+              child: Center(child: CircularProgressIndicator()),
             ),
-          ),
-          const _AppearanceSection(),
         ],
       ),
     );
@@ -386,55 +377,3 @@ class _StudyQuestionnairesSection extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Appearance section — theme mode toggle (Light / Dark / System).
-// ---------------------------------------------------------------------------
-
-class _AppearanceSection extends ConsumerWidget {
-  const _AppearanceSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-    final themeMode = ref.watch(themeModeProvider);
-    final notifier = ref.read(themeModeProvider.notifier);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Divider(),
-          const SizedBox(height: 4),
-          Text(
-            l10n.appearance,
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          const SizedBox(height: 8),
-          SegmentedButton<ThemeMode>(
-            segments: [
-              ButtonSegment(
-                value: ThemeMode.light,
-                label: Text(l10n.light),
-                icon: const Icon(Icons.light_mode),
-              ),
-              ButtonSegment(
-                value: ThemeMode.system,
-                label: Text(l10n.system),
-                icon: const Icon(Icons.brightness_auto),
-              ),
-              ButtonSegment(
-                value: ThemeMode.dark,
-                label: Text(l10n.dark),
-                icon: const Icon(Icons.dark_mode),
-              ),
-            ],
-            selected: {themeMode},
-            onSelectionChanged: (selected) =>
-                notifier.setMode(selected.first),
-          ),
-        ],
-      ),
-    );
-  }
-}

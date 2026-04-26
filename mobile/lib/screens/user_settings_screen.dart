@@ -165,7 +165,7 @@ class UserSettingsScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
-            Container(width: 36, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2))),
+            Container(width: 36, height: 4, decoration: BoxDecoration(color: Theme.of(context).colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 16),
             for (final (code, label) in [('en', 'English'), ('de', 'Deutsch')]) ...[
               ListTile(
@@ -196,7 +196,7 @@ class UserSettingsScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
-            Container(width: 36, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(2))),
+            Container(width: 36, height: 4, decoration: BoxDecoration(color: Theme.of(context).colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 16),
             for (final (mode, label, icon) in [
               (ThemeMode.light, l10n.light, Icons.light_mode),
@@ -257,11 +257,11 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 20, 18, 6),
       child: Text(
         text.toUpperCase(),
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.8,
-          color: Color(0xFF6B7280),
+          color: Theme.of(context).colorScheme.outline,
         ),
       ),
     );
@@ -278,7 +278,7 @@ class _SettingsCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
           boxShadow: _kCardShadow,
         ),
@@ -314,7 +314,7 @@ class _SettingsRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: iconColor ?? const Color(0xFF6B7280)),
+            Icon(icon, size: 20, color: iconColor ?? Theme.of(context).colorScheme.outline),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
@@ -322,7 +322,7 @@ class _SettingsRow extends StatelessWidget {
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 15,
-                  color: titleColor ?? const Color(0xFF111827),
+                  color: titleColor ?? Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),

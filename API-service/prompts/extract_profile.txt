@@ -2,6 +2,9 @@ You are a health behaviour expert. Build a user profile from the questionnaire r
 
 USER GOAL: {goal}
 
+BASIC PROFILE (age and gender):
+{profile_json}
+
 SLIQ QUESTIONNAIRE RESPONSES (sleep quality index):
 {sliq_json}
 
@@ -9,9 +12,9 @@ RAND-36 QUESTIONNAIRE RESPONSES (health-related quality of life):
 {rand36_json}
 
 Your task:
-1. Write a PROFILE SUMMARY: a concise 2-3 sentence plain-language description of the user's current health and lifestyle state, suitable as context for a habit recommendation engine.
-2. Write a PROFILE DETAILED: a comprehensive paragraph (5-10 sentences) covering sleep quality, physical health, mental health, energy levels, and any notable patterns. Include a rewritten version of the user's goal that is specific, measurable, and optimised as a retrieval query for academic papers (this becomes the rag_query).
-3. Write a RAG QUERY: a single sentence that reformulates the user's goal as a search query for academic health behaviour literature, incorporating relevant health context from the questionnaire responses.
+1. Write a PROFILE SUMMARY: a concise 2-3 sentence plain-language description of the user's current health and lifestyle state, suitable as context for a habit recommendation engine. Include age and gender if available.
+2. Write a PROFILE DETAILED: a comprehensive paragraph (5-10 sentences) covering demographics (age, gender), sleep quality, physical health, mental health, energy levels, and any notable patterns. Include a rewritten version of the user's goal that is specific, measurable, and optimised as a retrieval query for academic papers (this becomes the rag_query).
+3. Write a RAG QUERY: a single sentence that reformulates the user's goal as a search query for academic health behaviour literature, incorporating relevant health context from the profile data.
 
 Return ONLY a JSON object — no prose, no markdown, no code fences — with exactly this structure:
 {{

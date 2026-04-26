@@ -15,6 +15,7 @@ const _kUsername = 'username';
 const _kPassword = 'password';
 const _kAccessToken = 'access_token';
 const _kRefreshToken = 'refresh_token';
+const _kExpiryKey = 'token_expiry';
 
 // ---------------------------------------------------------------------------
 // BIP39-style encode / decode helpers
@@ -83,28 +84,28 @@ Uint8List _wordsToBytes(List<String> words, int byteCount) {
   );
 }
 
-/// Derives a 36-word BIP39-style passphrase from [username] (UUID) and
-/// [password] (64-char hex string).
+/// Derives a 24-word BIP39-style passphrase from [username] (UUID) and
+/// [password] (32-char hex string).
 ///
 /// Encoding layout:
 /// * Words  0–11  (12 words) → 16-byte UUID without dashes
-/// * Words 12–35  (24 words) → 32-byte password
+/// * Words 12–23  (12 words) → 16-byte password
 List<String> passphraseFromCredentials(String username, String password) {
   final uuidBytes = _hexToBytes(username.replaceAll('-', ''));
   final passBytes = _hexToBytes(password);
   return [
     ..._bytesToWords(uuidBytes, 12),
-    ..._bytesToWords(passBytes, 24),
+    ..._bytesToWords(passBytes, 12),
   ];
 }
 
-/// Decodes a 36-word passphrase back into `(username UUID, password hex)`.
+/// Decodes a 24-word passphrase back into `(username UUID, password hex)`.
 ///
-/// Returns `null` if the list does not contain exactly 36 words.
+/// Returns `null` if the list does not contain exactly 24 words.
 (String, String)? credentialsFromPassphrase(List<String> words) {
-  if (words.length != 36) return null;
+  if (words.length != 24) return null;
   final uuidBytes = _wordsToBytes(words.sublist(0, 12), 16);
-  final passBytes = _wordsToBytes(words.sublist(12), 32);
+  final passBytes = _wordsToBytes(words.sublist(12), 16);
   final hex = _bytesToHex(uuidBytes);
   final uuid = '${hex.substring(0, 8)}-'
       '${hex.substring(8, 12)}-'
@@ -120,7 +121,7 @@ List<String> passphraseFromCredentials(String username, String password) {
 
 enum _ScreenState { loading, success, error }
 
-/// Onboarding step 2: auto-creates a Keycloak account, derives a 36-word
+/// Onboarding step 2: auto-creates a Keycloak account, derives a 24-word
 /// BIP39-style recovery passphrase, and stores credentials on confirmation.
 class PassphraseScreen extends StatefulWidget {
   const PassphraseScreen({super.key});
@@ -136,6 +137,7 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
   String _password = '';
   String _accessToken = '';
   String _refreshToken = '';
+  int _expiresIn = 300;
   bool _confirmed = false;
   String _errorMessage = '';
 
@@ -159,12 +161,14 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
       final password = data['password'] as String;
       final accessToken = data['access_token'] as String;
       final refreshToken = data['refresh_token'] as String;
+      final expiresIn = data['expires_in'] as int? ?? 300;
       setState(() {
         _state = _ScreenState.success;
         _username = username;
         _password = password;
         _accessToken = accessToken;
         _refreshToken = refreshToken;
+        _expiresIn = expiresIn;
         _words = passphraseFromCredentials(username, password);
       });
     } catch (_) {
@@ -185,9 +189,14 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
     await storage.write(key: _kPassword, value: _password);
     await storage.write(key: _kAccessToken, value: _accessToken);
     await storage.write(key: _kRefreshToken, value: _refreshToken);
+    final expiry = DateTime.now().add(Duration(seconds: _expiresIn));
+    await storage.write(key: _kExpiryKey, value: expiry.toIso8601String());
     await storage.write(key: kOnboardingCompleteKey, value: 'true');
+    // Clear any stale study enrollment from a previous install so the
+    // study-code screen is always shown for a fresh account.
+    await storage.delete(key: 'study_enrolled');
     if (!mounted) return;
-    context.go('/onboarding/study-code');
+    context.go('/onboarding/profile-setup');
   }
 
   void _copyToClipboard() {
@@ -250,7 +259,7 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Write these 36 words down — the only way to recover your account if you lose your phone.',
+                    'Write these 24 words down — the only way to recover your account if you lose your phone.',
                     style: TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                 ),

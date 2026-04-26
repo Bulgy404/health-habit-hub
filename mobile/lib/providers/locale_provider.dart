@@ -68,23 +68,27 @@ class LocaleNotifier extends Notifier<Locale> {
 
   bool _isSupported(String lang) => lang == 'en' || lang == 'de';
 
-  /// Changes locale locally and calls PUT /api/v1/users/me to persist.
+  /// Changes locale locally (immediately) and syncs to the API in the
+  /// background.  Local state and storage are updated before the network call
+  /// so a failed or slow request never blocks the UI or triggers a logout.
   Future<bool> setLocale(Locale locale) async {
-    final langCode = locale.languageCode;
+    state = locale;
+    await _storage.write(key: _kLocaleKey, value: locale.languageCode);
+    _syncLocaleToApi(locale.languageCode).ignore();
+    return true;
+  }
+
+  Future<void> _syncLocaleToApi(String langCode) async {
     try {
       final headers = await _authHeaders();
+      if (headers.isEmpty) return;
       await _dio.put<void>(
         '$_apiBaseUrl/users/me',
         data: {'preferredLanguage': langCode},
         options: Options(headers: headers),
       );
-      if (!ref.mounted) return false;
-      state = locale;
-      await _storage.write(key: _kLocaleKey, value: langCode);
-      return true;
-    } catch (e, st) {
-      debugPrint('LocaleNotifier.setLocale: $e\n$st');
-      return false;
+    } catch (e) {
+      debugPrint('LocaleNotifier._syncLocaleToApi: $e');
     }
   }
 

@@ -88,8 +88,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     return Scaffold(
       body: widget.navigationShell,
       bottomNavigationBar: DecoratedBox(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: Color(0xFFE5E7EB), width: 1)),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1)),
         ),
         child: NavigationBar(
           selectedIndex: currentVisibleIndex,

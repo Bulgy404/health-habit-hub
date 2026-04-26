@@ -89,7 +89,12 @@ class _RecommendationLoadingScreenState
   Future<void> _startApiCall() async {
     try {
       final userId = await ref.read(userIdProvider.future);
-      if (userId == null) throw Exception('Not authenticated');
+      if (userId == null) {
+        // No valid token — logout clears credentials; GoRouter will redirect
+        // to the welcome screen automatically via the auth state listener.
+        if (mounted) await ref.read(authServiceProvider).logout();
+        return;
+      }
       final service = ref.read(recommendationFeatureServiceProvider);
       final response = await service.generateRecommendations(
         userId: userId,
@@ -98,6 +103,9 @@ class _RecommendationLoadingScreenState
       );
       if (mounted) setState(() => _response = response);
     } catch (e) {
+      // 401/403 errors: the AuthInterceptor called getAccessToken() which
+      // attempted reauthentication. If that failed, logout() was already
+      // called and GoRouter redirects automatically.
       if (mounted) setState(() => _error = e);
     } finally {
       if (mounted) setState(() => _apiDone = true);

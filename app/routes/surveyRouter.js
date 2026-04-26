@@ -51,6 +51,115 @@ async function getParticipantGroup(db, userId) {
   return participant?.group || null;
 }
 
+/**
+ * Fallback SurveyJS schema for the habit-donation survey when the stored
+ * jsonSchema is empty. Provides multilingual (en/de) ratings about the
+ * donated habit's frequency, duration, and perceived health benefit.
+ * @returns {object} SurveyJS JSON schema
+ */
+function _defaultHabitDonationSchema() {
+  return {
+    locale: 'en',
+    title: {
+      en: 'Tell us about your habit',
+      de: 'Erzähl uns von deiner Gewohnheit',
+    },
+    description: {
+      en: 'A few quick questions about the habit you are donating.',
+      de: 'Ein paar kurze Fragen zur Gewohnheit, die du spendest.',
+    },
+    showProgressBar: 'top',
+    completeText: { en: 'Donate habit', de: 'Gewohnheit spenden' },
+    pages: [
+      {
+        name: 'habit_info',
+        elements: [
+          {
+            type: 'rating',
+            name: 'frequency',
+            title: {
+              en: 'How often do you do this habit?',
+              de: 'Wie oft führst du diese Gewohnheit aus?',
+            },
+            rateValues: [
+              { value: 1, text: { en: 'Rarely', de: 'Selten' } },
+              { value: 2, text: { en: 'Weekly', de: 'Wöchentlich' } },
+              {
+                value: 3,
+                text: {
+                  en: 'Several times/week',
+                  de: 'Mehrmals/Woche',
+                },
+              },
+              { value: 4, text: { en: 'Daily', de: 'Täglich' } },
+            ],
+            isRequired: true,
+          },
+          {
+            type: 'rating',
+            name: 'duration',
+            title: {
+              en: 'How long have you had this habit?',
+              de: 'Wie lange hast du diese Gewohnheit schon?',
+            },
+            rateValues: [
+              {
+                value: 1,
+                text: {
+                  en: 'Less than a month',
+                  de: 'Weniger als einen Monat',
+                },
+              },
+              {
+                value: 2,
+                text: { en: '1–3 months', de: '1–3 Monate' },
+              },
+              {
+                value: 3,
+                text: { en: '3–12 months', de: '3–12 Monate' },
+              },
+              {
+                value: 4,
+                text: {
+                  en: 'More than a year',
+                  de: 'Mehr als ein Jahr',
+                },
+              },
+            ],
+            isRequired: true,
+          },
+          {
+            type: 'rating',
+            name: 'health_benefit',
+            title: {
+              en: 'How much does this habit benefit your health?',
+              de: 'Wie sehr profitiert deine Gesundheit von dieser Gewohnheit?',
+            },
+            rateMin: 1,
+            rateMax: 5,
+            minRateDescription: { en: 'Not at all', de: 'Gar nicht' },
+            maxRateDescription: { en: 'Very much', de: 'Sehr viel' },
+            isRequired: true,
+          },
+          {
+            type: 'rating',
+            name: 'wellbeing_impact',
+            title: {
+              en: 'How much does this habit improve your overall wellbeing?',
+              de: 'Wie sehr verbessert diese Gewohnheit dein allgemeines Wohlbefinden?',
+            },
+            rateMin: 1,
+            rateMax: 5,
+            minRateDescription: { en: 'Not at all', de: 'Gar nicht' },
+            maxRateDescription: { en: 'Very much', de: 'Sehr viel' },
+            isRequired: true,
+          },
+        ],
+      },
+    ],
+  };
+}
+
 async function findSurveyByIdentifier(db, identifier) {
   const byId = await db.collection('surveys').findOne({ id: identifier });
   if (byId) return byId;
@@ -197,8 +306,10 @@ export function createSurveyRouter({ db } = {}) {
    *               $ref: '#/components/schemas/Error'
    */
   // GET /api/v1/surveys/:id/render?lang=en|de
-  // Returns the survey definition with the requested locale for client-side
-  // SurveyJS rendering. Defaults to 'en' when lang is absent or unsupported.
+  // Returns an HTML page that renders the SurveyJS survey client-side. The
+  // Flutter WebView injects JS after onPageFinished that looks for
+  // window.survey.onComplete, so this page must expose the survey model on
+  // window.survey. Defaults to 'en' when lang is absent or unsupported.
   router.get('/:id/render', async (req, res) => {
     try {
       const { id } = req.params;
@@ -216,12 +327,61 @@ export function createSurveyRouter({ db } = {}) {
           return res.status(404).json({ error: 'Survey not found' });
         }
       }
-      res.json({
-        id: survey.id,
-        title: survey.title,
-        lang,
-        jsonSchema: survey.jsonSchema || {},
-      });
+
+      const hasSchema =
+        survey.jsonSchema &&
+        typeof survey.jsonSchema === 'object' &&
+        Object.keys(survey.jsonSchema).length > 0;
+      const schema = JSON.stringify(
+        hasSchema ? survey.jsonSchema : _defaultHabitDonationSchema(),
+      );
+      const safeTitle = String(survey.title || 'Survey').replace(
+        /[<>&"']/g,
+        (c) =>
+          ({
+            '<': '&lt;',
+            '>': '&gt;',
+            '&': '&amp;',
+            '"': '&quot;',
+            "'": '&#39;',
+          })[c],
+      );
+
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(`<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>${safeTitle}</title>
+<link rel="stylesheet" href="https://unpkg.com/survey-core@1.12.28/defaultV2.min.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { padding: 12px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; color: #1a1a1a; }
+  .sv-root-modern { --primary: #45B700; }
+  #survey-container { max-width: 720px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div id="survey-container"></div>
+<script src="https://unpkg.com/survey-core@1.12.28/survey.core.min.js"></script>
+<script src="https://unpkg.com/survey-js-ui@1.12.28/survey-js-ui.min.js"></script>
+<script>
+  (function() {
+    var surveyJson = ${schema};
+    try {
+      window.survey = new Survey.Model(surveyJson);
+      window.survey.locale = ${JSON.stringify(lang)};
+      window.survey.render(document.getElementById("survey-container"));
+    } catch (e) {
+      document.getElementById("survey-container").textContent =
+        "Failed to render survey: " + (e && e.message ? e.message : e);
+    }
+  })();
+</script>
+</body>
+</html>`);
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });

@@ -14,47 +14,62 @@
 export async function getAllHabits(queryNeo4j) {
   return queryNeo4j(`
     MATCH (h:Habit)
+    OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(:Context)-[:MAPS_TO]->(b:BCIOConcept)
+    WITH h,
+         head(collect(b.bcio_concept_label)) AS bcioLabel,
+         head(collect(b.bcio_concept_id))    AS bcioId
     RETURN h.uuid AS uuid,
            h.sentence AS original,
            h.language AS language,
            h.translationEN AS translationEN,
-           h.translationDE AS translationDE
+           h.translationDE AS translationDE,
+           coalesce(bcioLabel, 'Other') AS category,
+           coalesce(bcioId, '')         AS bcioClass
   `);
 }
 
 /**
  * Return anonymized public habits (uuid + sentence, no personal data).
+ * Includes seeded example habits so the explore graph is populated from day one.
  * @param {Function} queryNeo4j
  * @returns {Promise<Array>}
  */
 export async function getPublicHabits(queryNeo4j) {
   return queryNeo4j(`
     MATCH (h:Habit)
+    OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(:Context)-[:MAPS_TO]->(b:BCIOConcept)
+    WITH h,
+         head(collect(b.bcio_concept_label)) AS bcioLabel,
+         head(collect(b.bcio_concept_id))    AS bcioId
     RETURN h.uuid AS id,
            h.sentence AS name,
-           null AS category,
-           null AS bcioClass
+           coalesce(bcioLabel, 'Other')  AS category,
+           coalesce(bcioId, '')          AS bcioClass
   `);
 }
 
 /**
- * Return the total count of Habit nodes.
+ * Return the total count of Habit nodes, excluding seeded example habits.
  * @param {Function} queryNeo4j
  * @returns {Promise<Array>} Single-element array with { total }
  */
 export async function getHabitTotal(queryNeo4j) {
-  return queryNeo4j('MATCH (h:Habit) RETURN count(h) AS total');
+  return queryNeo4j(
+    'MATCH (h:Habit) WHERE h.seeded IS NULL OR h.seeded = false RETURN count(h) AS total'
+  );
 }
 
 /**
- * Return habit counts grouped by language (used as a category proxy).
+ * Return habit counts grouped by BCIO class, excluding seeded example habits.
+ * Falls back to 'Unclassified' when no bcioClass is set.
  * @param {Function} queryNeo4j
  * @returns {Promise<Array>} Array of { category, count }
  */
 export async function getHabitsByCategory(queryNeo4j) {
   return queryNeo4j(`
     MATCH (h:Habit)
-    WITH h.language AS cat, count(h) AS cnt
-    RETURN coalesce(cat, 'unknown') AS category, cnt AS count
+    WHERE h.seeded IS NULL OR h.seeded = false
+    WITH coalesce(h.bcioClass, 'Unclassified') AS cat, count(h) AS cnt
+    RETURN cat AS category, cnt AS count
   `);
 }

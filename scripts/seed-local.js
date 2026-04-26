@@ -185,6 +185,122 @@ async function seedMongo() {
   }
 }
 
+// ── Surveys seeding ────────────────────────────────────────────────────────
+
+async function seedSurveys() {
+  console.log('\n[mongo] Seeding surveys...');
+  const mongoUrl = `mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/?authSource=${MONGO_AUTH_SOURCE}`;
+  const client = new MongoClient(mongoUrl, {
+    serverSelectionTimeoutMS: 10000,
+    socketTimeoutMS: 10000,
+  });
+  try {
+    await client.connect();
+    const db = client.db(MONGO_DB);
+    const surveys = db.collection('surveys');
+
+    const { randomUUID } = await import('node:crypto');
+    const now = new Date();
+
+    const existingDonation = await surveys.findOne({ type: 'habit-donation' });
+    if (existingDonation) {
+      console.log('[mongo]   habit-donation survey already exists, skipping.');
+    } else {
+      await surveys.insertOne({
+        id: randomUUID(),
+        title: 'Habit Donation',
+        type: 'habit-donation',
+        status: 'published',
+        targetMode: 'all_participants',
+        assignedGroups: [],
+        jsonSchema: {},
+        createdAt: now,
+        updatedAt: now,
+      });
+      console.log('[mongo]   habit-donation survey created.');
+    }
+
+    const existingProfile = await surveys.findOne({ type: 'profile' });
+    if (existingProfile) {
+      console.log('[mongo]   profile survey already exists, skipping.');
+    } else {
+      await surveys.insertOne({
+        id: randomUUID(),
+        title: 'My Profile',
+        type: 'profile',
+        status: 'published',
+        targetMode: 'all_participants',
+        assignedGroups: [],
+        jsonSchema: {
+          locale: 'en',
+          title: { en: 'Your Health Profile', de: 'Dein Gesundheitsprofil' },
+          description: {
+            en: 'Help us understand you better so we can improve our recommendations.',
+            de: 'Hilf uns, dich besser zu verstehen, damit wir unsere Empfehlungen verbessern können.',
+          },
+          showProgressBar: 'top',
+          pages: [
+            {
+              name: 'profile_info',
+              elements: [
+                {
+                  type: 'radiogroup',
+                  name: 'age_group',
+                  title: { en: 'What is your age group?', de: 'Welche Altersgruppe trifft auf dich zu?' },
+                  isRequired: true,
+                  choices: [
+                    { value: 'under_18', text: { en: 'Under 18', de: 'Unter 18' } },
+                    { value: '18_24', text: { en: '18–24', de: '18–24' } },
+                    { value: '25_34', text: { en: '25–34', de: '25–34' } },
+                    { value: '35_44', text: { en: '35–44', de: '35–44' } },
+                    { value: '45_54', text: { en: '45–54', de: '45–54' } },
+                    { value: '55_plus', text: { en: '55+', de: '55+' } },
+                  ],
+                },
+                {
+                  type: 'checkbox',
+                  name: 'health_goals',
+                  title: {
+                    en: 'What are your main health goals? (select all that apply)',
+                    de: 'Was sind deine Gesundheitsziele? (alle zutreffenden auswählen)',
+                  },
+                  choices: [
+                    { value: 'sleep', text: { en: 'Better sleep', de: 'Besserer Schlaf' } },
+                    { value: 'exercise', text: { en: 'More exercise', de: 'Mehr Bewegung' } },
+                    { value: 'nutrition', text: { en: 'Healthier eating', de: 'Gesündere Ernährung' } },
+                    { value: 'stress', text: { en: 'Stress reduction', de: 'Stressabbau' } },
+                    { value: 'mindfulness', text: { en: 'Mindfulness', de: 'Achtsamkeit' } },
+                  ],
+                },
+                {
+                  type: 'rating',
+                  name: 'habit_confidence',
+                  title: {
+                    en: 'How confident are you in building new habits?',
+                    de: 'Wie zuversichtlich bist du dabei, neue Gewohnheiten aufzubauen?',
+                  },
+                  rateMin: 1,
+                  rateMax: 5,
+                  minRateDescription: { en: 'Not at all', de: 'Gar nicht' },
+                  maxRateDescription: { en: 'Very confident', de: 'Sehr zuversichtlich' },
+                  isRequired: true,
+                },
+              ],
+            },
+          ],
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+      console.log('[mongo]   profile survey created.');
+    }
+
+    console.log('[mongo] Done.');
+  } finally {
+    await client.close();
+  }
+}
+
 // ── Default study seeding ──────────────────────────────────────────────────
 
 async function seedDefaultStudy() {
@@ -487,6 +603,7 @@ async function main() {
   console.log('=== Health Habit Hub — Local Seed Script ===');
   try {
     await seedMongo();
+    await seedSurveys();
     await seedDefaultStudy();
     await seedNeo4j();
     await seedKeycloak();

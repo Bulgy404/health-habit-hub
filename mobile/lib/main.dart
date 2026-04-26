@@ -25,6 +25,7 @@ import 'screens/explore_screen.dart';
 import 'screens/legal_document_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/onboarding/passphrase_screen.dart';
+import 'screens/onboarding/profile_setup_screen.dart';
 import 'screens/onboarding/restore_screen.dart';
 import 'screens/onboarding/study_code_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
@@ -80,6 +81,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/onboarding/restore',
         builder: (context, state) => const RestoreScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/profile-setup',
+        builder: (context, state) => const ProfileSetupScreen(),
       ),
       GoRoute(
         path: '/onboarding/study-code',
@@ -249,7 +254,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 // Brand theme
 // ---------------------------------------------------------------------------
 
-// HabShare brand colors.
+// Health Habit Hub brand colors.
 const _kPrimary    = Color(0xFF45B700);
 const _kPrimaryDark = Color(0xFF2E8C00);
 const _kAccent     = Color(0xFFE679AB);

@@ -29,7 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final authService = ref.read(authServiceProvider);
       await authService.login();
       if (mounted) {
-        context.go('/share');
+        context.go('/admin/participants');
       }
     } catch (_) {
       if (mounted) {
