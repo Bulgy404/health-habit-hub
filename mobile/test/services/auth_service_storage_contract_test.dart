@@ -3,7 +3,9 @@
 // These tests verify every storage interaction so that a flutter_secure_storage
 // API change is caught immediately.
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,6 +92,50 @@ class _StubFlutterAppAuth extends FlutterAppAuth {
     if (_error != null) throw _error;
     return _response!;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Mock HTTP adapter for Dio — returns pre-configured responses in sequence.
+// Dio automatically throws DioException for 4xx/5xx status codes.
+// ---------------------------------------------------------------------------
+
+class _MockResponse {
+  final Map<String, dynamic>? data;
+  final int statusCode;
+  const _MockResponse({this.data, this.statusCode = 200});
+}
+
+class _MockAdapter implements HttpClientAdapter {
+  final List<_MockResponse> _responses;
+  int _index = 0;
+
+  _MockAdapter(this._responses);
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async {
+    if (_index >= _responses.length) {
+      throw StateError('_MockAdapter ran out of responses (index $_index)');
+    }
+    final config = _responses[_index++];
+    return ResponseBody.fromString(
+      config.data != null ? jsonEncode(config.data) : '{}',
+      config.statusCode,
+      headers: {Headers.contentTypeHeader: [Headers.jsonContentType]},
+    );
+  }
+
+  @override
+  void close({bool force = false}) {}
+}
+
+Dio _mockDio(List<_MockResponse> responses) {
+  final dio = Dio();
+  dio.httpClientAdapter = _MockAdapter(responses);
+  return dio;
 }
 
 // ---------------------------------------------------------------------------
@@ -219,16 +265,20 @@ void main() {
       expect(token, equals(_validJwt));
     });
 
-    test('returns null and calls logout() when refresh throws', () async {
-      // Seed an expired token so _tokenNeedsRefresh() returns true.
-      // No refresh_token stored → refreshToken() will throw.
+    test(
+        'returns null and calls logout() when Keycloak rejects refresh (400) '
+        'and no stored credentials', () async {
+      // Expired token + a refresh_token so refreshToken() reaches the HTTP
+      // call, which returns 400. No username/password → reauthenticate() fails
+      // → logout() is called.
       storage.seedValue('access_token', _expiredJwt);
-      final service = AuthService(secureStorage: storage);
+      storage.seedValue('refresh_token', 'expired-refresh-token');
+      final dio = _mockDio([const _MockResponse(statusCode: 400)]);
+      final service = AuthService(secureStorage: storage, dio: dio);
 
       final result = await service.getAccessToken();
 
       expect(result, isNull);
-      // After failure, logout() must have deleted all three keys.
       final deletedKeys =
           storage.calls.where((c) => c['method'] == 'delete').map((c) => c['key'] as String).toSet();
       expect(deletedKeys, containsAll(['access_token', 'refresh_token', 'token_expiry']));
@@ -280,19 +330,128 @@ void main() {
     });
   });
 
+  // ─── reauthenticate() ──────────────────────────────────────────────────────
+
+  group('reauthenticate()', () {
+    test('returns false when no username/password stored', () async {
+      final service = AuthService(secureStorage: storage);
+      expect(await service.reauthenticate(), isFalse);
+    });
+
+    test('reads username and password keys from storage', () async {
+      storage.seedValue('username', 'user-123');
+      storage.seedValue('password', 'pass-abc');
+      // No Dio mock → HTTP will fail → returns false, but storage reads happen.
+      final service = AuthService(secureStorage: storage);
+      await service.reauthenticate();
+      final readKeys = storage.calls
+          .where((c) => c['method'] == 'read')
+          .map((c) => c['key'] as String)
+          .toSet();
+      expect(readKeys, containsAll(['username', 'password']));
+    });
+
+    test('returns true and writes access_token, refresh_token, token_expiry on 200', () async {
+      storage.seedValue('username', 'user-123');
+      storage.seedValue('password', 'pass-abc');
+      final newToken = _validJwt;
+      final dio = _mockDio([
+        _MockResponse(data: {
+          'access_token': newToken,
+          'refresh_token': 'new-refresh',
+          'expires_in': 3600,
+        }),
+      ]);
+      final service = AuthService(secureStorage: storage, dio: dio);
+
+      final result = await service.reauthenticate();
+
+      expect(result, isTrue);
+      final writes = storage.calls.where((c) => c['method'] == 'write').toList();
+      expect(writes.any((c) => c['key'] == 'access_token' && c['value'] == newToken), isTrue);
+      expect(writes.any((c) => c['key'] == 'refresh_token' && c['value'] == 'new-refresh'), isTrue);
+      expect(writes.any((c) => c['key'] == 'token_expiry'), isTrue);
+    });
+
+    test('returns false and does NOT call delete when HTTP returns 401', () async {
+      storage.seedValue('username', 'user-123');
+      storage.seedValue('password', 'pass-abc');
+      final dio = _mockDio([const _MockResponse(statusCode: 401)]);
+      final service = AuthService(secureStorage: storage, dio: dio);
+
+      final result = await service.reauthenticate();
+
+      expect(result, isFalse);
+      expect(storage.calls.where((c) => c['method'] == 'delete'), isEmpty);
+    });
+  });
+
+  // ─── getAccessToken() — reauthentication fallback ──────────────────────────
+
+  group('getAccessToken() — reauthentication fallback', () {
+    test('does NOT call logout and returns new token when refresh 400 but '
+        'reauthentication succeeds', () async {
+      storage.seedValue('access_token', _expiredJwt);
+      storage.seedValue('refresh_token', 'expired-refresh');
+      storage.seedValue('username', 'user-123');
+      storage.seedValue('password', 'pass-abc');
+      final newToken = _validJwt;
+      // First HTTP call: refresh_token grant → 400.
+      // Second HTTP call: password grant → 200 with new tokens.
+      final dio = _mockDio([
+        const _MockResponse(statusCode: 400),
+        _MockResponse(data: {
+          'access_token': newToken,
+          'refresh_token': 'new-refresh',
+          'expires_in': 3600,
+        }),
+      ]);
+      final service = AuthService(secureStorage: storage, dio: dio);
+
+      final token = await service.getAccessToken();
+
+      expect(token, equals(newToken));
+      expect(storage.calls.where((c) => c['method'] == 'delete'), isEmpty);
+    });
+
+    test('calls logout when refresh 401 AND reauthentication also fails', () async {
+      storage.seedValue('access_token', _expiredJwt);
+      storage.seedValue('refresh_token', 'expired-refresh');
+      storage.seedValue('username', 'user-123');
+      storage.seedValue('password', 'pass-abc');
+      // Both HTTP calls fail with 401.
+      final dio = _mockDio([
+        const _MockResponse(statusCode: 401),
+        const _MockResponse(statusCode: 401),
+      ]);
+      final service = AuthService(secureStorage: storage, dio: dio);
+
+      final token = await service.getAccessToken();
+
+      expect(token, isNull);
+      final deletedKeys = storage.calls
+          .where((c) => c['method'] == 'delete')
+          .map((c) => c['key'] as String)
+          .toSet();
+      expect(deletedKeys, containsAll(['access_token', 'refresh_token', 'token_expiry']));
+    });
+  });
+
   // ─── _tokenNeedsRefresh() via getAccessToken() ─────────────────────────────
 
   group('_tokenNeedsRefresh() — JWT exp decoding', () {
     test('expired JWT triggers refresh attempt (no stored expiry key)', () async {
       // Seed expired JWT, no token_expiry key → falls back to JWT exp claim.
+      // No refresh_token → refreshToken() throws plain Exception (not a
+      // DioException). Treated as a network error: stored token returned as-is.
       storage.seedValue('access_token', _expiredJwt);
-      // No refresh_token → refresh will throw → logout() called → returns null.
       final service = AuthService(secureStorage: storage);
 
       final result = await service.getAccessToken();
 
-      // Because the token was expired, refresh was attempted and failed → null.
-      expect(result, isNull);
+      // Returns stored token without logging out (non-DioException error).
+      expect(result, equals(_expiredJwt));
+      expect(storage.calls.where((c) => c['method'] == 'delete'), isEmpty);
     });
 
     test('valid JWT skips refresh (no stored expiry key)', () async {

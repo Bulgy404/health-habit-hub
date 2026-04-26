@@ -14,8 +14,8 @@ class SurveyResult {
 
   factory SurveyResult.fromJson(Map<String, dynamic> json) {
     return SurveyResult(
-      surveyId: json['surveyId'] as String,
-      userId: json['userId'] as String,
+      surveyId: json['surveyId'] as String? ?? '',
+      userId: json['userId'] as String? ?? '',
       answers: (json['answers'] as Map<String, dynamic>?) ?? {},
       completedAt: DateTime.parse(json['completedAt'] as String),
     );

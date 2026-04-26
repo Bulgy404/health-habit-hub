@@ -20,7 +20,7 @@ const _kRefreshToken = 'refresh_token';
 // ---------------------------------------------------------------------------
 
 /// Lets a returning user restore their account on a new device by entering
-/// their 36-word recovery passphrase.
+/// their 24-word recovery passphrase.
 ///
 /// The screen is reachable from:
 /// * The welcome screen's "Restore existing account" link (first-launch flow).
@@ -134,7 +134,7 @@ class _RestoreScreenState extends State<RestoreScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Enter your 36-word passphrase to restore your account on this device.',
+              'Enter your 24-word passphrase to restore your account on this device.',
               style: Theme.of(context)
                   .textTheme
                   .bodyMedium
@@ -148,7 +148,7 @@ class _RestoreScreenState extends State<RestoreScreen> {
               keyboardType: TextInputType.multiline,
               textInputAction: TextInputAction.newline,
               decoration: InputDecoration(
-                labelText: 'Recovery passphrase',
+                labelText: '24-word recovery passphrase',
                 hintText: 'word1 word2 word3 …',
                 border: const OutlineInputBorder(),
                 errorText: _error,

@@ -1,6 +1,7 @@
 """POST /api/v1/llm/extract-profile — M3.2 User Profile Extractor."""
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import logging
@@ -47,24 +48,22 @@ async def _get_redis() -> Optional[aioredis.Redis]:
 # Backend API setup — for fetching questionnaire responses
 # ---------------------------------------------------------------------------
 _BACKEND_URL = os.getenv("BACKEND_URL", "http://app:3000")
-_SERVICE_TOKEN = os.getenv("SERVICE_AUTH_TOKEN", "")
+_SERVICE_SECRET = os.getenv("API_SERVICE_SECRET", "")
 
 
 async def _fetch_questionnaire_response(user_id: str, slug: str) -> Optional[Dict[str, Any]]:
-    """Fetch the most recent questionnaire response for a user from the Node.js backend.
+    """Fetch the most recent questionnaire response for a user via the service endpoint.
 
-    Uses GET /api/v1/questionnaire-responses/me/:slug with a service auth token.
+    Uses GET /api/v1/questionnaire-responses/service/:userId/:slug authenticated
+    with X-Service-Auth-Token header (API_SERVICE_SECRET).
     Returns the response dict or None if not found / unavailable.
     """
-    if not _SERVICE_TOKEN:
-        logger.warning("SERVICE_AUTH_TOKEN not set — cannot fetch questionnaire responses.")
+    if not _SERVICE_SECRET:
+        logger.warning("API_SERVICE_SECRET not set — cannot fetch questionnaire responses.")
         return None
 
-    url = f"{_BACKEND_URL}/api/v1/questionnaire-responses/me/{slug}"
-    headers = {
-        "Authorization": f"Bearer {_SERVICE_TOKEN}",
-        "X-Service-User-Id": user_id,
-    }
+    url = f"{_BACKEND_URL}/api/v1/questionnaire-responses/service/{user_id}/{slug}"
+    headers = {"X-Service-Auth-Token": _SERVICE_SECRET}
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(url, headers=headers)
@@ -152,20 +151,25 @@ async def extract_profile(body: ExtractProfileRequest) -> ExtractProfileResponse
             logger.warning("Redis read error (%s) — falling back to backend + LLM.", exc)
 
     # --- fetch questionnaire responses ---
-    sliq_data, rand36_data = None, None
-    sliq_data = await _fetch_questionnaire_response(body.user_id, "sliq")
-    rand36_data = await _fetch_questionnaire_response(body.user_id, "rand-36")
+    sliq_data, rand36_data, profile_data = await asyncio.gather(
+        _fetch_questionnaire_response(body.user_id, "sliq"),
+        _fetch_questionnaire_response(body.user_id, "rand-36"),
+        _fetch_questionnaire_response(body.user_id, "user-profile"),
+    )
 
     sliq_json = json.dumps(sliq_data.get("answers", {}) if sliq_data else {}, ensure_ascii=False)
     rand36_json = json.dumps(
         rand36_data.get("answers", {}) if rand36_data else {}, ensure_ascii=False
     )
+    profile_answers = profile_data.get("answers", {}) if profile_data else {}
+    profile_json = json.dumps(profile_answers, ensure_ascii=False)
 
     # --- LLM call ---
     prompt = _PROMPT_TEMPLATE.format(
         goal=body.goal,
         sliq_json=sliq_json,
         rand36_json=rand36_json,
+        profile_json=profile_json,
     )
     raw = await chat_complete(
         messages=[{"role": "user", "content": prompt}],

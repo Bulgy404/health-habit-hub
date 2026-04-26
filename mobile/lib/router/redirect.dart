@@ -55,7 +55,10 @@ Future<String?> redirectGuard({
   }
 
   // ── 3. Onboarding bypass ──────────────────────────────────────────────────
-  if (location.startsWith('/onboarding/welcome') || location == '/login') {
+  // Only suppress /onboarding/welcome for users who have already onboarded.
+  // /login is intentionally excluded — it hosts the admin PKCE flow and must
+  // always be reachable regardless of participant onboarding state.
+  if (location.startsWith('/onboarding/welcome')) {
     if (await getIsOnboardingComplete()) {
       try {
         final isLoggedIn = await getIsLoggedIn();
@@ -63,9 +66,9 @@ Future<String?> redirectGuard({
       } catch (_) {
         // isLoggedIn check failed – treat as unauthenticated.
       }
-      // Onboarding complete but unauthenticated: stay on welcome so the user
-      // can use the restore flow without looping.
-      return location == '/login' ? '/onboarding/welcome' : null;
+      // Onboarding complete but not logged in — stay on welcome so the user
+      // can use the restore flow.
+      return null;
     }
   }
 

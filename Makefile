@@ -18,7 +18,7 @@ stop: ## Stop local services
 	docker compose -f docker-compose.local.yml down
 
 seed: ## Seed local MongoDB, Neo4j, and Keycloak
-	cd app && npm run seed
+	set -a && . ./.env && set +a && export KEYCLOAK_URL=http://localhost:8080 && cd app && npm run seed
 
 logs: ## Tail local app logs
 	docker compose -f docker-compose.local.yml logs -f app
@@ -26,8 +26,11 @@ logs: ## Tail local app logs
 logs-all: ## Tail all local service logs
 	docker compose -f docker-compose.local.yml logs -f
 
-ios: ## Run Flutter app on iPhone Simulator
-	cd mobile && flutter run -d iPhone
+ios: ## Run Flutter app on iPhone Simulator (run 'make dev' first)
+	cd mobile && flutter run -d iPhone \
+		--dart-define=API_BASE_URL=http://localhost:3000/api/v1 \
+		--dart-define=KEYCLOAK_URL=http://localhost:8080 \
+		--dart-define=WS_BASE_URL=ws://localhost:3000/ws
 
 reset: stop ## Wipe local volumes, restart, and re-seed
 	docker compose -f docker-compose.local.yml down -v

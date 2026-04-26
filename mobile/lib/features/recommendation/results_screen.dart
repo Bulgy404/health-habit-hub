@@ -72,18 +72,18 @@ class RecommendationResultsScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.volunteer_activism, size: 64),
+            const Icon(Icons.lightbulb_outline, size: 64),
             const SizedBox(height: 16),
             Text(
-              'Share some habits first to get personalised recommendations',
+              'No recommendations were generated. Try describing your goal in more detail — the more context you share, the better.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
               onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.add),
-              label: const Text('Share a habit'),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try again'),
             ),
           ],
         ),

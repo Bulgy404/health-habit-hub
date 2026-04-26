@@ -50,12 +50,53 @@ void main() {
 
     test(
       'visiting /onboarding/welcome when onboarding complete + NOT logged in '
-      'returns null (stays on welcome)',
+      'returns null (stays on welcome for restore flow)',
       () async {
         final result = await _guard(
           location: '/onboarding/welcome',
           isLoggedIn: false,
           onboardingComplete: true,
+        );
+        expect(result, isNull);
+      },
+    );
+
+    // /login is the admin PKCE screen and must never be intercepted by the
+    // participant onboarding bypass — even when onboarding is complete and the
+    // user is logged out (the typical state for a returning admin/researcher).
+    test(
+      'visiting /login when onboarding complete + NOT logged in '
+      'returns null (admin PKCE must always be reachable)',
+      () async {
+        final result = await _guard(
+          location: '/login',
+          isLoggedIn: false,
+          onboardingComplete: true,
+        );
+        expect(result, isNull);
+      },
+    );
+
+    test(
+      'visiting /login when onboarding complete + logged in '
+      'returns null (no bypass — admin may re-authenticate)',
+      () async {
+        final result = await _guard(
+          location: '/login',
+          isLoggedIn: true,
+          onboardingComplete: true,
+        );
+        expect(result, isNull);
+      },
+    );
+
+    test(
+      'visiting /login when onboarding NOT complete returns null',
+      () async {
+        final result = await _guard(
+          location: '/login',
+          isLoggedIn: false,
+          onboardingComplete: false,
         );
         expect(result, isNull);
       },

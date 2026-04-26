@@ -164,20 +164,40 @@ export function createHabitsRouter({
   }
 
   // GET /api/v1/habits
-  // Returns all donated habits with original, translationEN, translationDE fields.
+  // Returns all donated habits with translation and category fields.
   // Optional ?lang=en|de adds a displayText convenience field.
   router.get('/', async (req, res) => {
     try {
       const { lang } = req.query;
-      const records = await getAllHabits(queryNeo4j);
+      const [records, database] = await Promise.all([
+        getAllHabits(queryNeo4j),
+        getDb(),
+      ]);
+
+      const annotations = await database
+        .collection('habit_annotations')
+        .find({})
+        .toArray();
+
+      const countsByHabit = {};
+      for (const ann of annotations) {
+        if (!countsByHabit[ann.habitId])
+          countsByHabit[ann.habitId] = { helpful: 0, iDoThis: 0 };
+        if (ann.type === 'helpful') countsByHabit[ann.habitId].helpful++;
+        if (ann.type === 'iDoThis') countsByHabit[ann.habitId].iDoThis++;
+      }
 
       const habits = records.map((r) => {
+        const uuid = r.uuid || null;
         const habit = {
-          uuid: r.uuid || null,
+          uuid,
           original: r.original || null,
           language: r.language || null,
           translationEN: r.translationEN || null,
           translationDE: r.translationDE || null,
+          category: r.category || 'Other',
+          bcioClass: r.bcioClass || '',
+          annotationCounts: countsByHabit[uuid] || { helpful: 0, iDoThis: 0 },
         };
         if (lang === 'en') {
           habit.displayText = habit.translationEN || habit.original;

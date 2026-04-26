@@ -21,6 +21,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   bool _loading = true;
   String? _error;
   String? _selectedCategory;
+  String? _selectedNodeId;
 
   /// The language code used for the last fetch; used to detect locale changes.
   String _fetchedLang = '';
@@ -51,7 +52,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       if (mounted) {
         setState(() {
           _error = e.toString();
-          _fetchedLang = lang; // prevent infinite refetch on repeated build
+          _fetchedLang = lang;
           _loading = false;
         });
       }
@@ -77,155 +78,38 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   // ---------------------------------------------------------------------------
 
   void _showNodeDetail(HabitNode initialNode) {
-    // Find the live node (counts may have updated since the tap).
     HabitNode node =
         _allHabits.firstWhere((h) => h.id == initialNode.id, orElse: () => initialNode);
+
+    setState(() => _selectedNodeId = node.id);
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          Future<void> annotate(String type) async {
-            final l10n = AppLocalizations.of(ctx)!;
-            try {
-              final newCounts = await _habitService.annotateHabit(node.id, type);
-              final updated = HabitNode(
-                id: node.id,
-                name: node.name,
-                category: node.category,
-                bcioClass: node.bcioClass,
-                annotationCounts: newCounts,
-              );
-              // Update live list so graph reflects new counts.
-              setState(() {
-                final idx = _allHabits.indexWhere((h) => h.id == node.id);
-                if (idx != -1) _allHabits[idx] = updated;
-              });
-              // Update bottom sheet display.
-              setSheetState(() => node = updated);
-            } catch (e, st) {
-              debugPrint('ERROR in ExploreScreen._showNodeDetail annotate: $e\n$st');
-              if (ctx.mounted) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(content: Text(l10n.couldNotSubmitAnnotation)),
-                );
-              }
-            }
-          }
-
-          return Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Drag handle
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE5E7EB),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Habit name (displayText or original)
-                Text(
-                  node.name,
-                  style: Theme.of(ctx).textTheme.titleLarge,
-                ),
-                if (!node.hasTranslation && node.language.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.translate,
-                          size: 14, color: Colors.orange),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Original (${node.language})',
-                        style: const TextStyle(
-                            fontSize: 12, color: Colors.orange),
-                      ),
-                    ],
-                  ),
-                ],
-                const SizedBox(height: 12),
-
-                // Category chip
-                Wrap(
-                  spacing: 8,
-                  children: [
-                    if (node.category.isNotEmpty)
-                      Chip(
-                        label: Text(node.category.isEmpty
-                            ? AppLocalizations.of(ctx)!.unknown
-                            : node.category),
-                        avatar: const Icon(Icons.category, size: 16),
-                      ),
-                    if (node.bcioClass.isNotEmpty)
-                      Chip(
-                        label: Text(
-                          node.bcioClass.length > 40
-                              ? '…${node.bcioClass.substring(node.bcioClass.length - 40)}'
-                              : node.bcioClass,
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                        avatar: const Icon(Icons.science, size: 16),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Annotation counts
-                Text(AppLocalizations.of(ctx)!.communityAnnotations,
-                    style: Theme.of(ctx).textTheme.labelLarge),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.thumb_up_outlined, size: 18),
-                    const SizedBox(width: 6),
-                    Text(AppLocalizations.of(ctx)!.iDoThisCount('${node.annotationCounts['iDoThis'] ?? 0}')),
-                    const SizedBox(width: 24),
-                    const Icon(Icons.star_outline, size: 18),
-                    const SizedBox(width: 6),
-                    Text(AppLocalizations.of(ctx)!.helpfulCount('${node.annotationCounts['helpful'] ?? 0}')),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Action buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => annotate('iDoThis'),
-                        icon: const Icon(Icons.thumb_up),
-                        label: Text(AppLocalizations.of(ctx)!.iDoThisToo),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: () => annotate('helpful'),
-                        icon: const Icon(Icons.star),
-                        label: Text(AppLocalizations.of(ctx)!.helpful),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+      builder: (ctx) => _NodeDetailSheet(
+        initialNode: node,
+        allHabits: _allHabits,
+        habitService: _habitService,
+        onNodeUpdated: (updated) {
+          setState(() {
+            final idx = _allHabits.indexWhere((h) => h.id == updated.id);
+            if (idx != -1) _allHabits[idx] = updated;
+          });
+        },
+        onNavigateTo: (target) {
+          Navigator.of(ctx).pop();
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _showNodeDetail(target),
           );
         },
       ),
-    );
+    ).whenComplete(() {
+      if (mounted) setState(() => _selectedNodeId = null);
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -237,7 +121,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final l10n = AppLocalizations.of(context)!;
     final currentLang = ref.watch(localeProvider).languageCode;
 
-    // Refetch when locale changes.
     if (!_loading && currentLang != _fetchedLang) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _fetchHabits());
     }
@@ -253,7 +136,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 12),
-            Text(l10n.failedToLoadHabits, style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.failedToLoadHabits,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             ElevatedButton.icon(
               onPressed: _fetchHabits,
@@ -268,15 +152,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     } else {
       body = Column(
         children: [
-          // Graph occupies most of the screen
           Expanded(
             child: HabitGraphWidget(
               nodes: _filteredHabits,
               onNodeTap: _showNodeDetail,
+              selectedNodeId: _selectedNodeId,
             ),
           ),
-
-          // Category filter chips
           _CategoryFilterBar(
             categories: _categories,
             selected: _selectedCategory,
@@ -320,6 +202,304 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 }
 
 // ---------------------------------------------------------------------------
+// Node detail bottom sheet — extracted widget for clean StatefulBuilder-free code
+// ---------------------------------------------------------------------------
+
+class _NodeDetailSheet extends StatefulWidget {
+  final HabitNode initialNode;
+  final List<HabitNode> allHabits;
+  final HabitService habitService;
+  final void Function(HabitNode updated) onNodeUpdated;
+  final void Function(HabitNode target) onNavigateTo;
+
+  const _NodeDetailSheet({
+    required this.initialNode,
+    required this.allHabits,
+    required this.habitService,
+    required this.onNodeUpdated,
+    required this.onNavigateTo,
+  });
+
+  @override
+  State<_NodeDetailSheet> createState() => _NodeDetailSheetState();
+}
+
+class _NodeDetailSheetState extends State<_NodeDetailSheet> {
+  late HabitNode _node;
+  bool _annotating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _node = widget.initialNode;
+  }
+
+  Future<void> _annotate(String type) async {
+    if (_annotating) return;
+    setState(() => _annotating = true);
+    try {
+      final newCounts = await widget.habitService.annotateHabit(_node.id, type);
+      final updated = HabitNode(
+        id: _node.id,
+        name: _node.name,
+        originalText: _node.originalText,
+        category: _node.category,
+        bcioClass: _node.bcioClass,
+        annotationCounts: newCounts,
+        language: _node.language,
+        hasTranslation: _node.hasTranslation,
+      );
+      widget.onNodeUpdated(updated);
+      if (mounted) setState(() => _node = updated);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)?.couldNotSubmitAnnotation ??
+                  'Could not submit',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _annotating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    // Related: same category, different node, sorted by total annotations.
+    final related = widget.allHabits
+        .where((h) => h.id != _node.id && h.category == _node.category)
+        .toList()
+      ..sort((a, b) => b.totalAnnotations.compareTo(a.totalAnnotations));
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.55,
+      minChildSize: 0.35,
+      maxChildSize: 0.92,
+      builder: (ctx, scrollController) => ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+        children: [
+          // Drag handle
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: cs.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+
+          // Full habit text
+          Text(_node.name, style: tt.titleLarge?.copyWith(height: 1.35)),
+
+          // Translation info
+          if (_node.hasTranslation &&
+              _node.originalText.isNotEmpty &&
+              _node.originalText != _node.name) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.translate, size: 14, color: cs.outline),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Original: ${_node.originalText}',
+                    style: tt.bodySmall?.copyWith(color: cs.outline),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (!_node.hasTranslation && _node.language.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.translate, size: 14, color: cs.tertiary),
+                const SizedBox(width: 6),
+                Text(
+                  'In ${_node.language.toUpperCase()} — no translation yet',
+                  style: tt.bodySmall?.copyWith(color: cs.tertiary),
+                ),
+              ],
+            ),
+          ],
+
+          const SizedBox(height: 14),
+
+          // Category badge
+          if (_node.category.isNotEmpty)
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: cs.secondaryContainer,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.category_outlined,
+                          size: 14, color: cs.onSecondaryContainer),
+                      const SizedBox(width: 6),
+                      Text(
+                        _node.category,
+                        style: tt.labelMedium
+                            ?.copyWith(color: cs.onSecondaryContainer),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+          // Related habits in the same category
+          if (related.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Icon(Icons.hub_outlined, size: 15, color: cs.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Related habits  •  ${related.length}',
+                  style: tt.labelLarge
+                      ?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 36,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: related.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (_, i) {
+                  final rel = related[i];
+                  final label = rel.name.length > 32
+                      ? '${rel.name.substring(0, 32)}…'
+                      : rel.name;
+                  return ActionChip(
+                    label: Text(label, style: const TextStyle(fontSize: 12)),
+                    onPressed: () => widget.onNavigateTo(rel),
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  );
+                },
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 20),
+          Divider(color: cs.outlineVariant),
+          const SizedBox(height: 12),
+
+          // Community counts
+          Row(
+            children: [
+              Icon(Icons.people_outline, size: 15, color: cs.primary),
+              const SizedBox(width: 6),
+              Text(
+                l10n.communityAnnotations,
+                style: tt.labelLarge
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _CountBadge(
+                icon: Icons.thumb_up_outlined,
+                label: l10n.iDoThisCount(
+                    '${_node.annotationCounts['iDoThis'] ?? 0}'),
+                color: cs.primary,
+              ),
+              const SizedBox(width: 20),
+              _CountBadge(
+                icon: Icons.star_outline,
+                label: l10n.helpfulCount(
+                    '${_node.annotationCounts['helpful'] ?? 0}'),
+                color: cs.tertiary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _annotating ? null : () => _annotate('iDoThis'),
+                  icon: const Icon(Icons.thumb_up),
+                  label: Text(l10n.iDoThisToo),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _annotating ? null : () => _annotate('helpful'),
+                  icon: _annotating
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.star),
+                  label: Text(l10n.helpful),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Small count badge widget
+// ---------------------------------------------------------------------------
+
+class _CountBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _CountBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 5),
+        Text(label, style: Theme.of(context).textTheme.bodyMedium),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Category filter bar
 // ---------------------------------------------------------------------------
 
@@ -340,7 +520,7 @@ class _CategoryFilterBar extends StatelessWidget {
 
     return Container(
       height: 52,
-      color: const Color(0xFFF4F5F2),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
