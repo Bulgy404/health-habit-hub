@@ -156,6 +156,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
 
   Future<void> _save() async {
     if (_age == null || _gender == null) return;
+    if (!mounted) return;
     setState(() => _submitting = true);
     try {
       final dio = ref.read(dioProvider);
