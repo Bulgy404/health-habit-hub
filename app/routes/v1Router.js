@@ -17,6 +17,10 @@ import { createKbRouter } from './kbRouter.js';
 import { createUsersRouter } from './usersRouter.js';
 import { createStudyEnrollRouter } from './studyEnrollRouter.js';
 import { createParticipantRouter } from './participantRouter.js';
+import {
+  createUserProfileRouter,
+  createUserProfileServiceRouter,
+} from './userProfileRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 import { swaggerSpec } from '../swagger.js';
 
@@ -135,6 +139,9 @@ export function createV1Router({
   // Sanitize request bodies before auth (general protection)
   router.use(sanitizeBody);
 
+  // Service-to-service: user profile (no JWT required, uses X-Service-Auth-Token)
+  router.use('/user-profile', createUserProfileServiceRouter({ db }));
+
   // All routes below require a valid JWT
   router.use(authenticate);
 
@@ -223,6 +230,13 @@ export function createV1Router({
     '/participant',
     requireRole('participant', 'admin', 'researcher'),
     createParticipantRouter({ db })
+  );
+
+  // User profile: require participant, admin, or researcher role
+  router.use(
+    '/user-profile',
+    requireRole('participant', 'admin', 'researcher'),
+    createUserProfileRouter({ db })
   );
 
   return router;
