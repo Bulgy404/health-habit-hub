@@ -79,7 +79,7 @@ export function createUserProfileRouter({ db } = {}) {
       const database = await getDb();
       const doc = await database
         .collection('user_profiles')
-        .findOne({ userId: req.user.sub });
+        .findOne({ userId: req.user?.sub });
       if (!doc) return res.status(404).json({ error: 'Profile not found' });
       const { _id, ...rest } = doc;
       res.json(rest);
