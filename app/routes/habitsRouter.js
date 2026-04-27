@@ -9,6 +9,7 @@ import {
   getPublicHabits,
   getHabitTotal,
   getHabitsByCategory,
+  getHabitGraph,
 } from '../db/habitQueries.js';
 
 export function createHabitsRouter({
@@ -521,6 +522,84 @@ export function createHabitsRouter({
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
+
+  // GET /api/v1/habits/graph
+  // Returns {nodes, edges} for the Neo4j Habit↔BCIOConcept graph.
+  // Habit nodes include annotation counts joined from MongoDB.
+  router.get('/graph', async (req, res) => {
+    try {
+      const [rows, database] = await Promise.all([
+        getHabitGraph(queryNeo4j),
+        getDb(),
+      ]);
+
+      // Collect unique habits and concepts
+      const habitMap = new Map();  // habitId → row
+      const conceptMap = new Map(); // conceptId → conceptLabel
+      const edgeSet = new Set();   // 'h:<habitId>|c:<conceptId>'
+
+      for (const row of rows) {
+        if (row.habitId && !habitMap.has(row.habitId)) {
+          habitMap.set(row.habitId, row);
+        }
+        if (row.conceptId && !conceptMap.has(row.conceptId)) {
+          conceptMap.set(row.conceptId, row.conceptLabel || '');
+        }
+        if (row.habitId && row.conceptId) {
+          edgeSet.add(`h:${row.habitId}|c:${row.conceptId}`);
+        }
+      }
+
+      // Join annotation counts from MongoDB for habit nodes
+      const habitIds = [...habitMap.keys()];
+      const annotations = habitIds.length > 0
+        ? await database
+            .collection('habit_annotations')
+            .find({ habitId: { $in: habitIds } })
+            .toArray()
+        : [];
+
+      const countsByHabit = {};
+      for (const ann of annotations) {
+        if (!countsByHabit[ann.habitId])
+          countsByHabit[ann.habitId] = { helpful: 0, iDoThis: 0 };
+        if (ann.type === 'helpful') countsByHabit[ann.habitId].helpful++;
+        if (ann.type === 'iDoThis') countsByHabit[ann.habitId].iDoThis++;
+      }
+
+      // Build nodes array
+      const nodes = [
+        ...[...habitMap.values()].map((row) => ({
+          id: `h:${row.habitId}`,
+          type: 'habit',
+          label: row.habitLabel || '',
+          habitId: row.habitId,
+          originalText: row.originalText || '',
+          language: row.language || '',
+          annotationCounts: countsByHabit[row.habitId] || { helpful: 0, iDoThis: 0 },
+        })),
+        ...[...conceptMap.entries()].map(([conceptId, label]) => ({
+          id: `c:${conceptId}`,
+          type: 'concept',
+          label: label,
+          habitId: null,
+          originalText: '',
+          language: '',
+          annotationCounts: { helpful: 0, iDoThis: 0 },
+        })),
+      ];
+
+      const edges = [...edgeSet].map((key) => {
+        const [source, target] = key.split('|');
+        return { source, target };
+      });
+
+      res.json({ nodes, edges });
+    } catch (err) {
+      console.error('[route] GET /habits/graph error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
   router.post('/share', handleShareHabit);
   router.post('/donate', handleShareHabit);

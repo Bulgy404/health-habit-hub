@@ -112,6 +112,34 @@ const FIXTURE_DONATED_HABITS = [
   },
 ];
 
+const FIXTURE_GRAPH_ROWS = [
+  {
+    habitId: 'uuid-1',
+    habitLabel: 'Drink water daily',
+    originalText: 'Drink water daily',
+    language: 'en',
+    conceptId: 'bcio_001',
+    conceptLabel: 'Self-monitoring',
+  },
+  {
+    habitId: 'uuid-2',
+    habitLabel: 'I meditate daily',
+    originalText: 'Ich meditiere täglich',
+    language: 'de',
+    conceptId: 'bcio_001',
+    conceptLabel: 'Self-monitoring',
+  },
+  // Duplicate row (same habit+concept via different Context) — must be deduped
+  {
+    habitId: 'uuid-1',
+    habitLabel: 'Drink water daily',
+    originalText: 'Drink water daily',
+    language: 'en',
+    conceptId: 'bcio_001',
+    conceptLabel: 'Self-monitoring',
+  },
+];
+
 function createMockNeo4jRun() {
   return async (cypher) => {
     if (cypher.includes('count(h) AS total')) {
@@ -122,6 +150,9 @@ function createMockNeo4jRun() {
         { category: 'hhh__Group1', count: 1 },
         { category: 'hhh__Group2', count: 1 },
       ];
+    }
+    if (cypher.includes('AS conceptId')) {
+      return FIXTURE_GRAPH_ROWS;
     }
     if (cypher.includes('h.sentence AS original')) {
       return FIXTURE_DONATED_HABITS;
@@ -327,4 +358,51 @@ test('GET /api/v1/habits?lang=en adds displayText from translationEN', async () 
   assert.strictEqual(body[0].displayText, 'I go for a run every morning');
   // Second habit: German original, has translationEN
   assert.strictEqual(body[1].displayText, 'I meditate daily');
+});
+
+// ── GET /habits/graph ─────────────────────────────────────────────────────────
+
+test('GET /api/v1/habits/graph returns 401 without token', async () => {
+  const res = await get('/api/v1/habits/graph');
+  assert.strictEqual(res.status, 401);
+});
+
+test('GET /api/v1/habits/graph returns graph with nodes and edges', async () => {
+  const res = await get('/api/v1/habits/graph', makeToken());
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+
+  assert.ok(Array.isArray(body.nodes));
+  assert.ok(Array.isArray(body.edges));
+
+  const habitNodes = body.nodes.filter((n) => n.type === 'habit');
+  const conceptNodes = body.nodes.filter((n) => n.type === 'concept');
+
+  // 2 unique habits, 1 unique concept
+  assert.strictEqual(habitNodes.length, 2);
+  assert.strictEqual(conceptNodes.length, 1);
+
+  // Habit node shape
+  const h = habitNodes[0];
+  assert.ok(h.id.startsWith('h:'));
+  assert.strictEqual(h.type, 'habit');
+  assert.ok(typeof h.label === 'string');
+  assert.ok(typeof h.habitId === 'string');
+  assert.ok(typeof h.originalText === 'string');
+  assert.ok(typeof h.language === 'string');
+  assert.ok(typeof h.annotationCounts === 'object');
+  assert.ok('helpful' in h.annotationCounts);
+  assert.ok('iDoThis' in h.annotationCounts);
+
+  // Concept node shape
+  const c = conceptNodes[0];
+  assert.ok(c.id.startsWith('c:'));
+  assert.strictEqual(c.type, 'concept');
+  assert.ok(typeof c.label === 'string');
+
+  // Edges: 2 habits × 1 concept = 2 edges (duplicate deduped)
+  assert.strictEqual(body.edges.length, 2);
+  const edge = body.edges[0];
+  assert.ok(edge.source.startsWith('h:'));
+  assert.ok(edge.target.startsWith('c:'));
 });

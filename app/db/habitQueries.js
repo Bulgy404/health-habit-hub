@@ -73,3 +73,22 @@ export async function getHabitsByCategory(queryNeo4j) {
     RETURN cat AS category, cnt AS count
   `);
 }
+
+/**
+ * Return the Neo4j graph structure: Habit nodes, BCIOConcept nodes, and edges.
+ * Deduplication is done by the caller (see createHabitsRouter GET /graph).
+ * @param {Function} queryNeo4j
+ * @returns {Promise<Array>}
+ */
+export async function getHabitGraph(queryNeo4j) {
+  return queryNeo4j(`
+    MATCH (b:BCIOConcept)<-[:MAPS_TO]-(:Context)<-[:HAS_CONTEXT]-(h:Habit)
+    RETURN DISTINCT
+      h.uuid                                   AS habitId,
+      coalesce(h.translationEN, h.sentence)    AS habitLabel,
+      coalesce(h.sentence, '')                 AS originalText,
+      coalesce(h.language, '')                 AS language,
+      b.bcio_concept_id                        AS conceptId,
+      b.bcio_concept_label                     AS conceptLabel
+  `);
+}
