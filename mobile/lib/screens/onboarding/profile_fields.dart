@@ -21,10 +21,22 @@ const profileGenderOptions = [
   ('prefer_not_to_say', 'Prefer not to say'),
 ];
 
+// Exact-match lookup (used when _age is one of the bucket representative values).
 String? profileAgeLabel(int? value) => profileAgeRanges
     .where((r) => r.value == value)
     .map((r) => r.label)
     .firstOrNull;
+
+// Range-classification lookup (used when _age is a raw integer from the picker).
+String profileAgeBucketLabel(int age) {
+  if (age < 18) return 'Under 18';
+  if (age <= 24) return '18–24';
+  if (age <= 34) return '25–34';
+  if (age <= 44) return '35–44';
+  if (age <= 54) return '45–54';
+  if (age <= 64) return '55–64';
+  return '65+';
+}
 
 String? profileGenderLabel(String? value) => profileGenderOptions
     .where((o) => o.$1 == value)
