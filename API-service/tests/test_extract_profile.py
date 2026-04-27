@@ -121,7 +121,7 @@ async def test_user_profile_fields_formatted_as_readable_text():
     """profile_text passed to LLM contains human-readable label lines, not raw JSON."""
     captured_prompt = {}
 
-    async def fake_chat_complete(messages, **kwargs):
+    async def fake_chat_complete(messages, **_):
         captured_prompt["content"] = messages[0]["content"]
         return _LLM_REPLY
 
