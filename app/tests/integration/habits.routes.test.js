@@ -57,19 +57,26 @@ function createMockDb() {
         async insertOne(doc) {
           annotations.push({ ...doc });
         },
-        find(query) {
-          let results = [...annotations];
-          if (query && query.habitId !== undefined) {
-            results = results.filter((a) => a.habitId === query.habitId);
-          }
-          if (query && query.createdAt && query.createdAt.$gte) {
-            results = results.filter(
-              (a) => a.createdAt >= query.createdAt.$gte
-            );
-          }
+        find(query = {}) {
           return {
-            async toArray() {
-              return results;
+            toArray: () => {
+              const items = annotations.filter((a) => {
+                if (query.habitId === undefined) return true;
+                if (
+                  query.habitId !== null &&
+                  typeof query.habitId === 'object' &&
+                  Array.isArray(query.habitId.$in)
+                ) {
+                  return query.habitId.$in.includes(a.habitId);
+                }
+                return a.habitId === query.habitId;
+              }).filter((a) => {
+                if (query.createdAt && query.createdAt.$gte) {
+                  return a.createdAt >= query.createdAt.$gte;
+                }
+                return true;
+              });
+              return Promise.resolve(items);
             },
           };
         },
@@ -368,6 +375,9 @@ test('GET /api/v1/habits/graph returns 401 without token', async () => {
 });
 
 test('GET /api/v1/habits/graph returns graph with nodes and edges', async () => {
+  // Seed annotation for uuid-1 so the annotation join is exercised
+  await post('/api/v1/habits/uuid-1/annotate', { type: 'helpful' }, makeToken());
+
   const res = await get('/api/v1/habits/graph', makeToken());
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -393,6 +403,14 @@ test('GET /api/v1/habits/graph returns graph with nodes and edges', async () => 
   assert.ok(typeof h.annotationCounts === 'object');
   assert.ok('helpful' in h.annotationCounts);
   assert.ok('iDoThis' in h.annotationCounts);
+
+  // Verify annotation join: uuid-1 should have helpful count of 1
+  const uuid1Node = habitNodes.find((n) => n.habitId === 'uuid-1');
+  assert.strictEqual(uuid1Node.annotationCounts.helpful, 1);
+
+  // uuid-2 should have no annotations
+  const uuid2Node = habitNodes.find((n) => n.habitId === 'uuid-2');
+  assert.strictEqual(uuid2Node.annotationCounts.helpful, 0);
 
   // Concept node shape
   const c = conceptNodes[0];
