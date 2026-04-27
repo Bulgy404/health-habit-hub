@@ -31,6 +31,7 @@ import 'screens/onboarding/study_code_screen.dart';
 import 'screens/onboarding/welcome_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/shell_screen.dart';
+import 'screens/settings/personal_info_screen.dart';
 import 'screens/user_settings_screen.dart';
 import 'providers/locale_provider.dart';
 import 'router/redirect.dart';
@@ -171,6 +172,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => const LegalDocumentScreen(
                       documentType: LegalDocumentType.imprint,
                     ),
+                  ),
+                  GoRoute(
+                    path: 'personal-info',
+                    builder: (context, state) => const PersonalInfoScreen(),
                   ),
                 ],
               ),
@@ -475,7 +480,7 @@ ThemeData _buildDarkTheme() {
       ),
     ),
     chipTheme: ChipThemeData(
-      backgroundColor: const Color(0xFF4cd49e),
+      backgroundColor: kDarkSurface,
       labelStyle: const TextStyle(color: Colors.white),
       selectedColor: _kPrimaryDark,
     ),

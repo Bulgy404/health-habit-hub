@@ -86,6 +86,13 @@ class UserSettingsScreen extends ConsumerWidget {
               trailing: const Icon(Icons.chevron_right, size: 18),
               onTap: () => context.push('/settings/profile'),
             ),
+            const Divider(height: 1, indent: 52),
+            _SettingsRow(
+              icon: Icons.person_outline,
+              title: 'Personal info',
+              trailing: const Icon(Icons.chevron_right, size: 18),
+              onTap: () => context.push('/settings/personal-info'),
+            ),
           ]),
 
           // ── Preferences ────────────────────────────────────────────
