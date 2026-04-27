@@ -147,7 +147,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               'questionId': 'age',
               'questionText': 'Age',
               'value': _age,
-              'label': profileAgeLabel(_age) ?? '',
+              'label': profileAgeBucketLabel(_age!),
             },
             {
               'questionId': 'gender',
