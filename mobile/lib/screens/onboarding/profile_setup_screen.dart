@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/dio_provider.dart';
 import '../../config/app_config.dart';
+import 'profile_fields.dart';
 
 class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
@@ -16,13 +18,121 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   int? _age;
   String? _gender;
   bool _submitting = false;
+  static const int _minAge = 13;
+  static const int _maxAge = 100;
 
-  static const _genderOptions = [
-    ('male', 'Male'),
-    ('female', 'Female'),
-    ('non_binary', 'Non-binary'),
-    ('prefer_not_to_say', 'Prefer not to say'),
-  ];
+  List<int> get _ageOptions =>
+      List<int>.generate(_maxAge - _minAge + 1, (index) => _minAge + index);
+
+  Future<void> _showAgePicker() async {
+    if (_submitting) return;
+    final options = _ageOptions;
+    int tempAge = _age ?? 25;
+    if (tempAge < _minAge || tempAge > _maxAge) {
+      tempAge = 25;
+    }
+    final initialIndex = options.indexOf(tempAge);
+    final controller = FixedExtentScrollController(
+      initialItem: initialIndex < 0 ? 0 : initialIndex,
+    );
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: SizedBox(
+            height: 320,
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() => _age = tempAge);
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Done'),
+                  ),
+                ),
+                Expanded(
+                  child: CupertinoPicker(
+                    itemExtent: 36,
+                    scrollController: controller,
+                    onSelectedItemChanged: (index) {
+                      tempAge = options[index];
+                    },
+                    children: [
+                      for (final age in options)
+                        Center(child: Text(age.toString())),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    controller.dispose();
+  }
+
+  String? get _selectedGenderLabel {
+    for (final (code, label) in profileGenderOptions) {
+      if (code == _gender) return label;
+    }
+    return null;
+  }
+
+  Future<void> _showGenderPicker() async {
+    if (_submitting) return;
+    final options = profileGenderOptions;
+    String tempGender = _gender ?? options.first.$1;
+    final initialIndex = options.indexWhere(
+      (option) => option.$1 == tempGender,
+    );
+    final controller = FixedExtentScrollController(
+      initialItem: initialIndex < 0 ? 0 : initialIndex,
+    );
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: SizedBox(
+            height: 320,
+            child: Column(
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() => _gender = tempGender);
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Done'),
+                  ),
+                ),
+                Expanded(
+                  child: CupertinoPicker(
+                    itemExtent: 36,
+                    scrollController: controller,
+                    onSelectedItemChanged: (index) {
+                      tempGender = options[index].$1;
+                    },
+                    children: [
+                      for (final option in options)
+                        Center(child: Text(option.$2)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    controller.dispose();
+  }
 
   Future<void> _submit() async {
     if (_age == null || _gender == null) return;
@@ -30,10 +140,22 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     try {
       final dio = ref.read(dioProvider);
       await dio.post(
-        '${AppConfig.apiBaseUrl}/questionnaire-responses',
+        '${AppConfig.apiBaseUrl}/user-profile',
         data: {
-          'questionnaireSlug': 'user-profile',
-          'answers': {'age': _age, 'gender': _gender},
+          'fields': [
+            {
+              'questionId': 'age',
+              'questionText': 'Age',
+              'value': _age,
+              'label': profileAgeLabel(_age) ?? '',
+            },
+            {
+              'questionId': 'gender',
+              'questionText': 'Gender',
+              'value': _gender,
+              'label': profileGenderLabel(_gender) ?? '',
+            },
+          ],
         },
       );
     } catch (_) {
@@ -64,7 +186,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               const SizedBox(height: 12),
               Center(
                 child: Container(
-                  width: 72, height: 72,
+                  width: 72,
+                  height: 72,
                   decoration: BoxDecoration(
                     color: cs.primaryContainer,
                     borderRadius: BorderRadius.circular(22),
@@ -76,7 +199,11 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       ),
                     ],
                   ),
-                  child: Icon(Icons.person_outline, size: 40, color: cs.primary),
+                  child: Icon(
+                    Icons.person_outline,
+                    size: 40,
+                    color: cs.primary,
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -102,21 +229,41 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final range in _ageRanges)
-                    ChoiceChip(
-                      label: Text(range.label),
-                      selected: _age == range.value,
-                      onSelected: _submitting ? null : (_) => setState(() => _age = range.value),
-                      labelStyle: tt.bodyMedium?.copyWith(
-                        color: _age == range.value ? cs.onPrimaryContainer : cs.onSurfaceVariant,
-                        fontWeight: _age == range.value ? FontWeight.w700 : FontWeight.normal,
+              InkWell(
+                onTap: _showAgePicker,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: cs.outlineVariant),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _age == null ? 'Select age' : _age.toString(),
+                          style: tt.bodyLarge?.copyWith(
+                            color: _age == null
+                                ? cs.onSurfaceVariant
+                                : cs.onSurface,
+                            fontWeight: _age == null
+                                ? FontWeight.w500
+                                : FontWeight.w700,
+                          ),
+                        ),
                       ),
-                    ),
-                ],
+                      Icon(
+                        Icons.unfold_more_rounded,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 28),
 
@@ -126,21 +273,41 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                 style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final (code, label) in _genderOptions)
-                    ChoiceChip(
-                      label: Text(label),
-                      selected: _gender == code,
-                      onSelected: _submitting ? null : (_) => setState(() => _gender = code),
-                      labelStyle: tt.bodyMedium?.copyWith(
-                        color: _gender == code ? cs.onPrimaryContainer : cs.onSurfaceVariant,
-                        fontWeight: _gender == code ? FontWeight.w700 : FontWeight.normal,
+              InkWell(
+                onTap: _showGenderPicker,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: cs.outlineVariant),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _selectedGenderLabel ?? 'Select gender',
+                          style: tt.bodyLarge?.copyWith(
+                            color: _selectedGenderLabel == null
+                                ? cs.onSurfaceVariant
+                                : cs.onSurface,
+                            fontWeight: _selectedGenderLabel == null
+                                ? FontWeight.w500
+                                : FontWeight.w700,
+                          ),
+                        ),
                       ),
-                    ),
-                ],
+                      Icon(
+                        Icons.unfold_more_rounded,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 40),
 
@@ -150,7 +317,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                     ? const SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Text('Continue'),
               ),
@@ -161,19 +331,3 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     );
   }
 }
-
-class _AgeRange {
-  final String label;
-  final int value;
-  const _AgeRange(this.label, this.value);
-}
-
-const _ageRanges = [
-  _AgeRange('Under 18', 15),
-  _AgeRange('18–24', 21),
-  _AgeRange('25–34', 29),
-  _AgeRange('35–44', 39),
-  _AgeRange('45–54', 49),
-  _AgeRange('55–64', 59),
-  _AgeRange('65+', 67),
-];
