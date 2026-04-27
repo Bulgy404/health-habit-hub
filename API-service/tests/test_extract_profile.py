@@ -27,6 +27,15 @@ _RAND36_RESPONSE = {
     },
 }
 
+_USER_PROFILE_RESPONSE = {
+    "userId": "user-abc",
+    "fields": [
+        {"questionId": "age", "questionText": "Age", "value": 21, "label": "18–24"},
+        {"questionId": "gender", "questionText": "Gender", "value": "male", "label": "Male"},
+    ],
+    "updatedAt": "2026-04-27T10:00:00.000Z",
+}
+
 _LLM_REPLY = json.dumps({
     "profile_summary": "The user has mild sleep issues and moderate physical health.",
     "profile_detailed": (
@@ -45,13 +54,17 @@ _LLM_REPLY = json.dumps({
 
 
 @pytest.mark.asyncio
-async def test_returns_profile_with_questionnaire_data():
-    """Questionnaire data is fetched, LLM is called, profile returned."""
+async def test_returns_profile_with_questionnaire_and_user_profile_data():
+    """Questionnaire data + user profile are fetched, LLM is called, profile returned."""
     with (
         patch("routers.extract_profile._get_redis", new=AsyncMock(return_value=None)),
         patch(
             "routers.extract_profile._fetch_questionnaire_response",
             new=AsyncMock(side_effect=[_SLIQ_RESPONSE, _RAND36_RESPONSE]),
+        ),
+        patch(
+            "routers.extract_profile._fetch_user_profile",
+            new=AsyncMock(return_value=_USER_PROFILE_RESPONSE),
         ),
         patch("routers.extract_profile.chat_complete", new=AsyncMock(return_value=_LLM_REPLY)),
     ):
@@ -82,6 +95,10 @@ async def test_missing_questionnaire_data_still_returns_profile():
             "routers.extract_profile._fetch_questionnaire_response",
             new=AsyncMock(return_value=None),
         ),
+        patch(
+            "routers.extract_profile._fetch_user_profile",
+            new=AsyncMock(return_value=None),
+        ),
         patch("routers.extract_profile.chat_complete", new=AsyncMock(return_value=_LLM_REPLY)),
     ):
         async with AsyncClient(
@@ -100,12 +117,51 @@ async def test_missing_questionnaire_data_still_returns_profile():
 
 
 @pytest.mark.asyncio
+async def test_user_profile_fields_formatted_as_readable_text():
+    """profile_text passed to LLM contains human-readable label lines, not raw JSON."""
+    captured_prompt = {}
+
+    async def fake_chat_complete(messages, **kwargs):
+        captured_prompt["content"] = messages[0]["content"]
+        return _LLM_REPLY
+
+    with (
+        patch("routers.extract_profile._get_redis", new=AsyncMock(return_value=None)),
+        patch(
+            "routers.extract_profile._fetch_questionnaire_response",
+            new=AsyncMock(return_value=None),
+        ),
+        patch(
+            "routers.extract_profile._fetch_user_profile",
+            new=AsyncMock(return_value=_USER_PROFILE_RESPONSE),
+        ),
+        patch("routers.extract_profile.chat_complete", new=fake_chat_complete),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            await client.post(
+                "/api/v1/llm/extract-profile",
+                json={"user_id": "user-abc", "goal": "improve fitness"},
+            )
+
+    prompt = captured_prompt["content"]
+    assert "Age: 18–24" in prompt
+    assert "Gender: Male" in prompt
+    assert '"value": 21' not in prompt
+
+
+@pytest.mark.asyncio
 async def test_invalid_llm_json_returns_fallback():
     """Malformed LLM response returns fallback profile."""
     with (
         patch("routers.extract_profile._get_redis", new=AsyncMock(return_value=None)),
         patch(
             "routers.extract_profile._fetch_questionnaire_response",
+            new=AsyncMock(return_value=None),
+        ),
+        patch(
+            "routers.extract_profile._fetch_user_profile",
             new=AsyncMock(return_value=None),
         ),
         patch(
@@ -125,7 +181,6 @@ async def test_invalid_llm_json_returns_fallback():
     data = resp.json()
     assert "profile_summary" in data
     assert "rag_query" in data
-    # fallback rag_query should be the original goal
     assert data["rag_query"] == "improve sleep"
 
 
@@ -142,11 +197,13 @@ async def test_cache_hit_skips_backend_and_llm():
     mock_redis.get = AsyncMock(return_value=json.dumps(cached_result))
     mock_redis.setex = AsyncMock()
     mock_backend = AsyncMock()
+    mock_user_profile = AsyncMock()
     mock_llm = AsyncMock()
 
     with (
         patch("routers.extract_profile._get_redis", new=AsyncMock(return_value=mock_redis)),
         patch("routers.extract_profile._fetch_questionnaire_response", new=mock_backend),
+        patch("routers.extract_profile._fetch_user_profile", new=mock_user_profile),
         patch("routers.extract_profile.chat_complete", new=mock_llm),
     ):
         async with AsyncClient(
@@ -158,6 +215,7 @@ async def test_cache_hit_skips_backend_and_llm():
             )
 
         mock_backend.assert_not_called()
+        mock_user_profile.assert_not_called()
         mock_llm.assert_not_called()
 
     assert resp.status_code == 200

@@ -80,6 +80,31 @@ async def _fetch_questionnaire_response(user_id: str, slug: str) -> Optional[Dic
     return None
 
 
+async def _fetch_user_profile(user_id: str) -> Optional[Dict[str, Any]]:
+    if not _SERVICE_SECRET:
+        logger.warning("API_SERVICE_SECRET not set — cannot fetch user profile.")
+        return None
+
+    url = f"{_BACKEND_URL}/api/v1/user-profile/service/{user_id}"
+    headers = {"X-Service-Auth-Token": _SERVICE_SECRET}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, headers=headers)
+        if resp.status_code == 200:
+            return resp.json()
+        if resp.status_code == 404:
+            logger.info("No user profile found for user %s.", user_id)
+        else:
+            logger.warning(
+                "Unexpected status %d fetching user profile for user %s.",
+                resp.status_code,
+                user_id,
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to fetch user profile for user %s: %s", user_id, exc)
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Prompt template
 # ---------------------------------------------------------------------------
@@ -154,22 +179,28 @@ async def extract_profile(body: ExtractProfileRequest) -> ExtractProfileResponse
     sliq_data, rand36_data, profile_data = await asyncio.gather(
         _fetch_questionnaire_response(body.user_id, "sliq"),
         _fetch_questionnaire_response(body.user_id, "rand-36"),
-        _fetch_questionnaire_response(body.user_id, "user-profile"),
+        _fetch_user_profile(body.user_id),
     )
 
     sliq_json = json.dumps(sliq_data.get("answers", {}) if sliq_data else {}, ensure_ascii=False)
     rand36_json = json.dumps(
         rand36_data.get("answers", {}) if rand36_data else {}, ensure_ascii=False
     )
-    profile_answers = profile_data.get("answers", {}) if profile_data else {}
-    profile_json = json.dumps(profile_answers, ensure_ascii=False)
+    profile_text = ""
+    if profile_data and profile_data.get("fields"):
+        lines = [
+            f"{f['questionText']}: {f['label']}"
+            for f in profile_data["fields"]
+            if f.get("questionText") and f.get("label")
+        ]
+        profile_text = "\n".join(lines)
 
     # --- LLM call ---
     prompt = _PROMPT_TEMPLATE.format(
         goal=body.goal,
         sliq_json=sliq_json,
         rand36_json=rand36_json,
-        profile_json=profile_json,
+        profile_json=profile_text,
     )
     raw = await chat_complete(
         messages=[{"role": "user", "content": prompt}],
