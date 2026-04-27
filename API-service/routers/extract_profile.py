@@ -81,6 +81,11 @@ async def _fetch_questionnaire_response(user_id: str, slug: str) -> Optional[Dic
 
 
 async def _fetch_user_profile(user_id: str) -> Optional[Dict[str, Any]]:
+    """Fetch the user's structured profile from the user_profiles collection.
+
+    Uses GET /api/v1/user-profile/service/:userId authenticated
+    with X-Service-Auth-Token header.
+    """
     if not _SERVICE_SECRET:
         logger.warning("API_SERVICE_SECRET not set — cannot fetch user profile.")
         return None
