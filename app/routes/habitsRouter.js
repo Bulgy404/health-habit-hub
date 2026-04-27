@@ -523,6 +523,44 @@ export function createHabitsRouter({
     }
   }
 
+  /**
+   * @swagger
+   * /habits/graph:
+   *   get:
+   *     summary: Get the Neo4j Habit↔BCIOConcept graph
+   *     description: Returns all Habit and BCIOConcept nodes with their edges. Habit nodes include annotation counts. Habits with no BCIOConcept link are excluded.
+   *     tags: [Habits]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Graph data
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 nodes:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                 edges:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       500:
+   *         description: Internal server error
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   // GET /api/v1/habits/graph
   // Returns {nodes, edges} for the Neo4j Habit↔BCIOConcept graph.
   // Habit nodes include annotation counts joined from MongoDB.
@@ -536,7 +574,7 @@ export function createHabitsRouter({
       // Collect unique habits and concepts
       const habitMap = new Map();  // habitId → row
       const conceptMap = new Map(); // conceptId → conceptLabel
-      const edgeSet = new Set();   // 'h:<habitId>|c:<conceptId>'
+      const edgeMap = new Map();   // key → {source, target}
 
       for (const row of rows) {
         if (row.habitId && !habitMap.has(row.habitId)) {
@@ -546,7 +584,10 @@ export function createHabitsRouter({
           conceptMap.set(row.conceptId, row.conceptLabel || '');
         }
         if (row.habitId && row.conceptId) {
-          edgeSet.add(`h:${row.habitId}|c:${row.conceptId}`);
+          const edgeKey = `${row.habitId}||${row.conceptId}`;
+          if (!edgeMap.has(edgeKey)) {
+            edgeMap.set(edgeKey, { source: `h:${row.habitId}`, target: `c:${row.conceptId}` });
+          }
         }
       }
 
@@ -589,10 +630,7 @@ export function createHabitsRouter({
         })),
       ];
 
-      const edges = [...edgeSet].map((key) => {
-        const [source, target] = key.split('|');
-        return { source, target };
-      });
+      const edges = [...edgeMap.values()];
 
       res.json({ nodes, edges });
     } catch (err) {
