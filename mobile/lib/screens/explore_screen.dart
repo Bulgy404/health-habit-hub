@@ -1,12 +1,28 @@
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
+import '../models/habit_graph.dart';
 import '../models/habit_node.dart';
-import '../providers/locale_provider.dart';
+import '../providers/habit_graph_provider.dart';
 import '../services/habit_service.dart';
 import '../widgets/habit_graph_widget.dart';
 import 'stats_screen.dart';
+
+// Converts a graph habit node to the HabitNode model used by _NodeDetailSheet.
+HabitNode _toHabitNode(GraphNode node, HabitGraph graph) {
+  final concept = graph.conceptForHabit(node.id);
+  return HabitNode(
+    id: node.habitId!,
+    name: node.label,
+    originalText: node.originalText,
+    category: concept?.label ?? '',
+    bcioClass: concept?.id.replaceFirst('c:', '') ?? '',
+    annotationCounts: node.annotationCounts,
+    language: node.language,
+    hasTranslation: node.language.isNotEmpty && node.originalText != node.label,
+  );
+}
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -16,72 +32,11 @@ class ExploreScreen extends ConsumerStatefulWidget {
 }
 
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
-  late HabitService _habitService;
-  List<HabitNode> _allHabits = [];
-  bool _loading = true;
-  String? _error;
-  String? _selectedCategory;
-  String? _selectedNodeId;
-
-  /// The language code used for the last fetch; used to detect locale changes.
-  String _fetchedLang = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _habitService = ref.read(habitServiceProvider);
-    _fetchHabits();
-  }
-
-  Future<void> _fetchHabits() async {
-    final lang = ref.read(localeProvider).languageCode;
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final habits = await _habitService.fetchDonatedHabits(lang);
-      if (mounted) {
-        setState(() {
-          _allHabits = habits;
-          _fetchedLang = lang;
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _fetchedLang = lang;
-          _loading = false;
-        });
-      }
-    }
-  }
-
-  List<String> get _categories {
-    final seen = <String>{};
-    return _allHabits
-        .map((h) => h.category)
-        .where((c) => c.isNotEmpty && seen.add(c))
-        .toList()
-      ..sort();
-  }
-
-  List<HabitNode> get _filteredHabits {
-    if (_selectedCategory == null) return _allHabits;
-    return _allHabits.where((h) => h.category == _selectedCategory).toList();
-  }
-
-  // ---------------------------------------------------------------------------
-  // Node detail bottom sheet
-  // ---------------------------------------------------------------------------
-
-  void _showNodeDetail(HabitNode initialNode) {
-    HabitNode node =
-        _allHabits.firstWhere((h) => h.id == initialNode.id, orElse: () => initialNode);
-
-    setState(() => _selectedNodeId = node.id);
+  void _showHabitDetail(GraphNode graphNode, HabitGraph graph) {
+    final habitNode = _toHabitNode(graphNode, graph);
+    final allHabitNodes = graph.habitNodes
+        .map((n) => _toHabitNode(n, graph))
+        .toList();
 
     showModalBottomSheet<void>(
       context: context,
@@ -91,45 +46,50 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => _NodeDetailSheet(
-        initialNode: node,
-        allHabits: _allHabits,
-        habitService: _habitService,
-        onNodeUpdated: (updated) {
-          setState(() {
-            final idx = _allHabits.indexWhere((h) => h.id == updated.id);
-            if (idx != -1) _allHabits[idx] = updated;
-          });
-        },
+        initialNode: habitNode,
+        allHabits: allHabitNodes,
+        habitService: ref.read(habitServiceProvider),
+        onNodeUpdated: (_) {},
         onNavigateTo: (target) {
           Navigator.of(ctx).pop();
-          WidgetsBinding.instance.addPostFrameCallback(
-            (_) => _showNodeDetail(target),
-          );
+          final targetGraphNode = graph.habitNodes
+              .where((n) => n.habitId == target.id)
+              .firstOrNull;
+          if (targetGraphNode != null) {
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _showHabitDetail(targetGraphNode, graph),
+            );
+          }
         },
       ),
-    ).whenComplete(() {
-      if (mounted) setState(() => _selectedNodeId = null);
-    });
+    );
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
+  void _showConceptDetail(GraphNode conceptNode, HabitGraph graph) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _ConceptDetailSheet(
+        conceptNode: conceptNode,
+        habits: graph.habitsForConcept(conceptNode.id),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final currentLang = ref.watch(localeProvider).languageCode;
-
-    if (!_loading && currentLang != _fetchedLang) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _fetchHabits());
-    }
+    final graphAsync = ref.watch(habitGraphProvider);
 
     Widget body;
 
-    if (_loading) {
+    if (graphAsync.isLoading) {
       body = const Center(child: CircularProgressIndicator());
-    } else if (_error != null) {
+    } else if (graphAsync.hasError) {
       body = Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -140,34 +100,24 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             ElevatedButton.icon(
-              onPressed: _fetchHabits,
+              onPressed: () => ref.invalidate(habitGraphProvider),
               icon: const Icon(Icons.refresh),
               label: Text(l10n.retry),
             ),
           ],
         ),
       );
-    } else if (_allHabits.isEmpty) {
-      body = Center(child: Text(l10n.noHabitDataYet));
     } else {
-      body = Column(
-        children: [
-          Expanded(
-            child: HabitGraphWidget(
-              nodes: _filteredHabits,
-              onNodeTap: _showNodeDetail,
-              selectedNodeId: _selectedNodeId,
-            ),
-          ),
-          _CategoryFilterBar(
-            categories: _categories,
-            selected: _selectedCategory,
-            onSelect: (cat) => setState(() {
-              _selectedCategory = _selectedCategory == cat ? null : cat;
-            }),
-          ),
-        ],
-      );
+      final graph = graphAsync.value!;
+      if (graph.nodes.isEmpty) {
+        body = Center(child: Text(l10n.noHabitDataYet));
+      } else {
+        body = HabitGraphWidget(
+          graph: graph,
+          onHabitTap: (node) => _showHabitDetail(node, graph),
+          onConceptTap: (node) => _showConceptDetail(node, graph),
+        );
+      }
     }
 
     return DefaultTabController(
@@ -176,9 +126,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         appBar: AppBar(
           title: Text(l10n.exploreHabits),
           actions: [
-            if (!_loading)
+            if (!graphAsync.isLoading)
               IconButton(
-                onPressed: _fetchHabits,
+                onPressed: () => ref.invalidate(habitGraphProvider),
                 icon: const Icon(Icons.refresh),
                 tooltip: l10n.refresh,
               ),
@@ -202,7 +152,89 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Node detail bottom sheet — extracted widget for clean StatefulBuilder-free code
+// Concept detail bottom sheet
+// ---------------------------------------------------------------------------
+
+class _ConceptDetailSheet extends StatelessWidget {
+  final GraphNode conceptNode;
+  final List<GraphNode> habits;
+
+  const _ConceptDetailSheet({
+    required this.conceptNode,
+    required this.habits,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.5,
+      minChildSize: 0.3,
+      maxChildSize: 0.9,
+      builder: (ctx, scrollController) => ListView(
+        controller: scrollController,
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: cs.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFF9800),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text('Behaviour Change Concept',
+                  style: tt.labelMedium?.copyWith(color: cs.outline)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(conceptNode.label, style: tt.titleLarge),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Icon(Icons.hub_outlined, size: 15, color: cs.primary),
+              const SizedBox(width: 6),
+              Text(
+                'Related habits  •  ${habits.length}',
+                style: tt.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          for (final habit in habits) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(habit.label, style: tt.bodyMedium),
+            ),
+            Divider(height: 1, color: cs.outlineVariant),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Node detail bottom sheet (reused for habit taps)
 // ---------------------------------------------------------------------------
 
 class _NodeDetailSheet extends StatefulWidget {
@@ -257,7 +289,7 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
           SnackBar(
             content: Text(
               AppLocalizations.of(context)?.couldNotSubmitAnnotation ??
-                  'Could not submit',
+                  'Could not submit annotation',
             ),
           ),
         );
@@ -387,7 +419,7 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: related.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   final rel = related[i];
                   final label = rel.name.length > 32
@@ -414,8 +446,7 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
               const SizedBox(width: 6),
               Text(
                 l10n.communityAnnotations,
-                style: tt.labelLarge
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style: tt.labelLarge?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -495,47 +526,6 @@ class _CountBadge extends StatelessWidget {
         const SizedBox(width: 5),
         Text(label, style: Theme.of(context).textTheme.bodyMedium),
       ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Category filter bar
-// ---------------------------------------------------------------------------
-
-class _CategoryFilterBar extends StatelessWidget {
-  final List<String> categories;
-  final String? selected;
-  final void Function(String) onSelect;
-
-  const _CategoryFilterBar({
-    required this.categories,
-    required this.selected,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (categories.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      height: 52,
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        itemCount: categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (_, i) {
-          final cat = categories[i];
-          final isSelected = cat == selected;
-          return FilterChip(
-            label: Text(cat),
-            selected: isSelected,
-            onSelected: (_) => onSelect(cat),
-          );
-        },
-      ),
     );
   }
 }

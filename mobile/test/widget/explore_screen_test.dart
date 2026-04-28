@@ -1,24 +1,14 @@
 // Widget tests for ExploreScreen.
-import 'dart:async';
-
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hhh/models/habit_node.dart';
-import 'package:hhh/models/habit_stats.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hhh/l10n/app_localizations.dart';
+import 'package:hhh/models/habit_graph.dart';
 import 'package:hhh/providers/auth_provider.dart';
+import 'package:hhh/providers/habit_graph_provider.dart';
 import 'package:hhh/screens/explore_screen.dart';
 import 'package:hhh/services/auth_service.dart';
-import 'package:hhh/services/habit_service.dart';
-
-final _fakeDio = Dio();
-
-// ---------------------------------------------------------------------------
-// Fakes
-// ---------------------------------------------------------------------------
 
 class _FakeAuthService extends AuthService {
   @override
@@ -28,113 +18,109 @@ class _FakeAuthService extends AuthService {
   Future<String?> getAccessToken() async => null;
 }
 
-class _FakeHabitService extends HabitService {
-  final bool shouldThrow;
-  final List<HabitNode> habits;
-
-  _FakeHabitService.throwing()
-      : shouldThrow = true,
-        habits = const [],
-        super(dio: _fakeDio);
-
-  _FakeHabitService.empty()
-      : shouldThrow = false,
-        habits = const [],
-        super(dio: _fakeDio);
-
-  @override
-  Future<List<HabitNode>> fetchPublicHabits() {
-    if (shouldThrow) return Future.error(Exception('Network error'));
-    return Future.value(habits);
-  }
-
-  @override
-  Future<List<HabitNode>> fetchDonatedHabits(String lang) {
-    if (shouldThrow) return Future.error(Exception('Network error'));
-    return Future.value(habits);
-  }
-
-  @override
-  Future<HabitStats> fetchStats() =>
-      Future.value(const HabitStats(total: 0, byCategory: [], byDay: []));
+HabitGraph _twoNodeGraph() {
+  return HabitGraph.fromJson({
+    'nodes': [
+      {
+        'id': 'h:uuid-1',
+        'type': 'habit',
+        'label': 'Drink water',
+        'habitId': 'uuid-1',
+        'originalText': 'Drink water',
+        'language': 'en',
+        'annotationCounts': {'helpful': 0, 'iDoThis': 0},
+      },
+      {
+        'id': 'c:bcio_001',
+        'type': 'concept',
+        'label': 'Self-monitoring',
+        'habitId': null,
+        'originalText': '',
+        'language': '',
+        'annotationCounts': {'helpful': 0, 'iDoThis': 0},
+      },
+    ],
+    'edges': [
+      {'source': 'h:uuid-1', 'target': 'c:bcio_001'},
+    ],
+  });
 }
 
-// Service that returns a future that never completes (loading state test).
-class _LoadingHabitService extends HabitService {
-  final Completer<List<HabitNode>> _completer;
-
-  _LoadingHabitService(this._completer) : super(dio: _fakeDio);
-
-  @override
-  Future<List<HabitNode>> fetchPublicHabits() => _completer.future;
-
-  @override
-  Future<List<HabitNode>> fetchDonatedHabits(String lang) => _completer.future;
-
-  @override
-  Future<HabitStats> fetchStats() =>
-      Future.value(const HabitStats(total: 0, byCategory: [], byDay: []));
-}
-
-Widget _buildSubject(HabitService habitService) {
+Widget _buildWithGraph(Future<HabitGraph> Function() graphFactory) {
   return ProviderScope(
     overrides: [
       authServiceProvider.overrideWithValue(_FakeAuthService()),
-      habitServiceProvider.overrideWithValue(habitService),
+      habitGraphProvider.overrideWith((_) => graphFactory()),
     ],
-    child: MaterialApp(
-      localizationsDelegates: const [
+    child: const MaterialApp(
+      localizationsDelegates: [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('en')],
-      home: const ExploreScreen(),
+      supportedLocales: [Locale('en')],
+      home: ExploreScreen(),
     ),
   );
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
 void main() {
   testWidgets('shows Explore Habits AppBar title', (tester) async {
-    await tester.pumpWidget(_buildSubject(_FakeHabitService.empty()));
+    await tester.pumpWidget(
+      _buildWithGraph(() async => HabitGraph.empty()),
+    );
     await tester.pump();
-
     expect(find.text('Explore Habits'), findsOneWidget);
   });
 
-  testWidgets('shows loading indicator while fetching habits', (tester) async {
-    final service = _LoadingHabitService(Completer<List<HabitNode>>());
-
-    await tester.pumpWidget(_buildSubject(service));
+  testWidgets('shows loading indicator while fetching graph', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authServiceProvider.overrideWithValue(_FakeAuthService()),
+          habitGraphProvider.overrideWithValue(const AsyncLoading()),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: [Locale('en')],
+          home: ExploreScreen(),
+        ),
+      ),
+    );
     await tester.pump();
-
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
   });
 
   testWidgets('shows error state and retry button on failure', (tester) async {
-    await tester.pumpWidget(_buildSubject(_FakeHabitService.throwing()));
+    await tester.pumpWidget(
+      _buildWithGraph(
+        () => Future<HabitGraph>.error(Exception('Network error')),
+      ),
+    );
     await tester.pumpAndSettle();
-
     expect(find.text('Failed to load habits'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
   });
 
-  testWidgets('shows empty state when no habits', (tester) async {
-    await tester.pumpWidget(_buildSubject(_FakeHabitService.empty()));
+  testWidgets('shows empty state when graph has no nodes', (tester) async {
+    await tester.pumpWidget(
+      _buildWithGraph(() async => HabitGraph.empty()),
+    );
     await tester.pumpAndSettle();
-
     expect(find.text('No habit data available yet.'), findsOneWidget);
   });
 
   testWidgets('shows TabBar with Graph and Stats tabs', (tester) async {
-    await tester.pumpWidget(_buildSubject(_FakeHabitService.empty()));
+    await tester.pumpWidget(
+      _buildWithGraph(() async => HabitGraph.empty()),
+    );
     await tester.pump();
-
     expect(find.text('Graph'), findsOneWidget);
     expect(find.text('Stats'), findsOneWidget);
   });
