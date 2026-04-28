@@ -476,6 +476,10 @@ export function createHabitsRouter({
   // Validate input then delegate to the habit-sharing service.
   async function handleShareHabit(req, res) {
     const { sentence, language } = req.body || {};
+    const userId = req.user?.sub;
+    if (!userId || typeof userId !== 'string') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     if (!sentence || !language) {
       return res
         .status(400)
@@ -507,7 +511,7 @@ export function createHabitsRouter({
         uuid: randomUUID(),
         sentence,
         language,
-        userID: req.user?.sub,
+        userID: userId,
         queryNeo4j,
         getDb,
         apiBase,
@@ -519,7 +523,13 @@ export function createHabitsRouter({
       if (err.status === 502)
         return res.status(502).json({ error: err.message });
       console.error('[share] Unexpected error:', err);
-      return res.status(500).json({ error: 'Internal server error' });
+      const detail =
+        process.env.NODE_ENV !== 'production'
+          ? err?.message || String(err)
+          : undefined;
+      return res
+        .status(500)
+        .json({ error: 'Internal server error', ...(detail ? { detail } : {}) });
     }
   }
 

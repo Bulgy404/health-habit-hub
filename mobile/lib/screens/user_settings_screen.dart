@@ -7,8 +7,12 @@ import '../providers/auth_provider.dart';
 import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
 
-const _kCardShadow = [BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4))];
-const _kGreenGlow  = [BoxShadow(color: Color(0x4745B700), blurRadius: 28, offset: Offset(0, 8))];
+const _kCardShadow = [
+  BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4)),
+];
+const _kGreenGlow = [
+  BoxShadow(color: Color(0x4745B700), blurRadius: 28, offset: Offset(0, 8)),
+];
 
 class UserSettingsScreen extends ConsumerWidget {
   const UserSettingsScreen({super.key});
@@ -37,12 +41,17 @@ class UserSettingsScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 48, height: 48,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(51),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.person, color: Colors.white, size: 26),
+                    child: const Icon(
+                      Icons.person,
+                      color: Colors.white,
+                      size: 26,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -51,25 +60,39 @@ class UserSettingsScreen extends ConsumerWidget {
                       children: [
                         const Text(
                           'Participant',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           'Anonymous contributor',
-                          style: TextStyle(color: Colors.white.withAlpha(191), fontSize: 12),
+                          style: TextStyle(
+                            color: Colors.white.withAlpha(191),
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withAlpha(51),
                       borderRadius: BorderRadius.circular(100),
                     ),
                     child: const Text(
                       'Active',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                 ],
@@ -79,75 +102,93 @@ class UserSettingsScreen extends ConsumerWidget {
 
           // ── Profile section ────────────────────────────────────────
           _SectionLabel(l10n.myProfile),
-          _SettingsCard(children: [
-            _SettingsRow(
-              icon: Icons.assignment_ind,
-              title: l10n.myProfile,
-              trailing: const Icon(Icons.chevron_right, size: 18),
-              onTap: () => context.push('/settings/profile'),
-            ),
-            const Divider(height: 1, indent: 52),
-            _SettingsRow(
-              icon: Icons.person_outline,
-              title: 'Personal info',
-              trailing: const Icon(Icons.chevron_right, size: 18),
-              onTap: () => context.push('/settings/personal-info'),
-            ),
-          ]),
+          _SettingsCard(
+            children: [
+              _SettingsRow(
+                icon: Icons.assignment_ind,
+                title: l10n.myProfile,
+                trailing: const Icon(Icons.chevron_right, size: 18),
+                onTap: () => context.push('/settings/profile'),
+              ),
+              const Divider(height: 1, indent: 52),
+              _SettingsRow(
+                icon: Icons.person_outline,
+                title: 'Personal info',
+                trailing: const Icon(Icons.chevron_right, size: 18),
+                onTap: () => context.push('/settings/personal-info'),
+              ),
+            ],
+          ),
 
           // ── Preferences ────────────────────────────────────────────
           _SectionLabel(l10n.settings),
-          _SettingsCard(children: [
-            _SettingsRow(
-              icon: Icons.language,
-              title: 'Language',
-              trailing: Text(
-                currentLocale.languageCode == 'de' ? 'Deutsch' : 'English',
-                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+          _SettingsCard(
+            children: [
+              _SettingsRow(
+                icon: Icons.language,
+                title: 'Language',
+                trailing: Text(
+                  currentLocale.languageCode == 'de' ? 'Deutsch' : 'English',
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 13,
+                  ),
+                ),
+                onTap: () => _showLanguagePicker(
+                  context,
+                  ref,
+                  currentLocale.languageCode,
+                ),
               ),
-              onTap: () => _showLanguagePicker(context, ref, currentLocale.languageCode),
-            ),
-            const Divider(height: 1, indent: 52),
-            _SettingsRow(
-              icon: Icons.dark_mode,
-              title: l10n.appearance,
-              trailing: Text(
-                _themeModeLabel(themeMode, l10n),
-                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+              const Divider(height: 1, indent: 52),
+              _SettingsRow(
+                icon: Icons.dark_mode,
+                title: l10n.appearance,
+                trailing: Text(
+                  _themeModeLabel(themeMode, l10n),
+                  style: const TextStyle(
+                    color: Color(0xFF6B7280),
+                    fontSize: 13,
+                  ),
+                ),
+                onTap: () => _showAppearancePicker(context, ref, themeMode),
               ),
-              onTap: () => _showAppearancePicker(context, ref, themeMode),
-            ),
-          ]),
+            ],
+          ),
 
           // ── Legal ──────────────────────────────────────────────────
           _SectionLabel('Legal'),
-          _SettingsCard(children: [
-            _SettingsRow(
-              icon: Icons.lock_outline,
-              title: l10n.privacyStatement,
-              trailing: const Icon(Icons.chevron_right, size: 18),
-              onTap: () => context.push('/settings/privacy'),
-            ),
-            const Divider(height: 1, indent: 52),
-            _SettingsRow(
-              icon: Icons.info_outline,
-              title: l10n.imprint,
-              trailing: const Icon(Icons.chevron_right, size: 18),
-              onTap: () => context.push('/settings/imprint'),
-            ),
-          ]),
+          _SettingsCard(
+            children: [
+              _SettingsRow(
+                icon: Icons.lock_outline,
+                title: l10n.privacyStatement,
+                trailing: const Icon(Icons.chevron_right, size: 18),
+                onTap: () => context.push('/settings/privacy'),
+              ),
+              const Divider(height: 1, indent: 52),
+              _SettingsRow(
+                icon: Icons.info_outline,
+                title: l10n.imprint,
+                trailing: const Icon(Icons.chevron_right, size: 18),
+                onTap: () => context.push('/settings/imprint'),
+              ),
+            ],
+          ),
 
           // ── Sign out ───────────────────────────────────────────────
           const SizedBox(height: 8),
-          _SettingsCard(children: [
-            _SettingsRow(
-              icon: Icons.logout,
-              title: 'Sign out',
-              iconColor: const Color(0xFFDC2626),
-              titleColor: const Color(0xFFDC2626),
-              onTap: () => _confirmSignOut(context, ref, l10n),
-            ),
-          ]),
+          _SettingsCard(
+            children: [
+              _SettingsRow(
+                icon: Icons.logout,
+                title: 'Sign out',
+                iconColor: const Color(0xFFDC2626),
+                titleColor: const Color(0xFFDC2626),
+                onTap: () => _confirmSignOut(context, ref, l10n),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -161,26 +202,44 @@ class UserSettingsScreen extends ConsumerWidget {
     };
   }
 
-  void _showLanguagePicker(BuildContext context, WidgetRef ref, String current) {
+  void _showLanguagePicker(
+    BuildContext context,
+    WidgetRef ref,
+    String current,
+  ) {
     showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
-            Container(width: 36, height: 4, decoration: BoxDecoration(color: Theme.of(context).colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(sheetContext).colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             const SizedBox(height: 16),
-            for (final (code, label) in [('en', 'English'), ('de', 'Deutsch')]) ...[
+            for (final (code, label) in [
+              ('en', 'English'),
+              ('de', 'Deutsch'),
+            ]) ...[
               ListTile(
                 title: Text(label),
-                trailing: current == code ? const Icon(Icons.check, color: Color(0xFF45B700)) : null,
+                trailing: current == code
+                    ? const Icon(Icons.check, color: Color(0xFF45B700))
+                    : null,
                 onTap: () async {
-                  Navigator.of(context).pop();
-                  await ref.read(localeProvider.notifier).setLocale(Locale(code));
+                  Navigator.of(sheetContext).pop();
+                  await ref
+                      .read(localeProvider.notifier)
+                      .setLocale(Locale(code));
                 },
               ),
             ],
@@ -191,19 +250,30 @@ class UserSettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showAppearancePicker(BuildContext context, WidgetRef ref, ThemeMode current) {
+  void _showAppearancePicker(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeMode current,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => SafeArea(
+      builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
-            Container(width: 36, height: 4, decoration: BoxDecoration(color: Theme.of(context).colorScheme.outlineVariant, borderRadius: BorderRadius.circular(2))),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(sheetContext).colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             const SizedBox(height: 16),
             for (final (mode, label, icon) in [
               (ThemeMode.light, l10n.light, Icons.light_mode),
@@ -213,10 +283,13 @@ class UserSettingsScreen extends ConsumerWidget {
               ListTile(
                 leading: Icon(icon),
                 title: Text(label),
-                trailing: current == mode ? const Icon(Icons.check, color: Color(0xFF45B700)) : null,
-                onTap: () {
-                  Navigator.of(context).pop();
-                  ref.read(themeModeProvider.notifier).setMode(mode);
+                trailing: current == mode
+                    ? const Icon(Icons.check, color: Color(0xFF45B700))
+                    : null,
+                onTap: () async {
+                  Navigator.of(sheetContext).pop();
+                  await Future<void>.delayed(Duration.zero);
+                  await ref.read(themeModeProvider.notifier).setMode(mode);
                 },
               ),
             ],
@@ -227,7 +300,11 @@ class UserSettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _confirmSignOut(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  void _confirmSignOut(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -239,7 +316,9 @@ class UserSettingsScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           TextButton(
-            style: TextButton.styleFrom(foregroundColor: const Color(0xFFDC2626)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+            ),
             onPressed: () {
               Navigator.of(ctx).pop();
               ref.read(authServiceProvider).logout();
@@ -321,7 +400,11 @@ class _SettingsRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: iconColor ?? Theme.of(context).colorScheme.outline),
+            Icon(
+              icon,
+              size: 20,
+              color: iconColor ?? Theme.of(context).colorScheme.outline,
+            ),
             const SizedBox(width: 14),
             Expanded(
               child: Text(

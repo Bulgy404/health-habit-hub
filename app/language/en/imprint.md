@@ -1,6 +1,6 @@
 # Imprint
 
-## HabShare
+## Health Habit Hub
 
 Technical University of Dresden
 Faculty of Business Administration and Economics

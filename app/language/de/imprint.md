@@ -1,6 +1,6 @@
 # Impressum
 
-## HabShare
+## Health Habit Hub
 
 Technische Universität Dresden  
 Fakultät Wirtschaftswissenschaften  
