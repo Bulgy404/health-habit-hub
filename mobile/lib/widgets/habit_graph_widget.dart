@@ -18,30 +18,6 @@ double _habitRadius(GraphNode node) {
 // Custom DataConvertor for HabitGraph
 // ---------------------------------------------------------------------------
 
-/// Converts our [HabitGraph] model into the flutter_graph_view internal
-/// [Graph] representation.
-///
-/// Vertex map shape used internally:
-/// ```
-/// {
-///   'id': String,       // node.id
-///   'tag': String,      // 'concept' | 'habit'
-///   'tags': [String],   // same single-element list used for tag-based colour
-///   'data': GraphNode,  // original node reference
-///   'solid': true,      // use solid colour from [tagColor]
-///   'scale': double,    // radiusScale override (ignored — we override via tagColor/radius)
-/// }
-/// ```
-///
-/// Edge map shape:
-/// ```
-/// {
-///   'srcId': String,
-///   'dstId': String,
-///   'edgeName': 'connects',
-///   'ranking': 1,
-/// }
-/// ```
 class _HabitGraphConvertor extends MapConvertor {
   @override
   Iterable originVertexes(dynamic data) => data['vertexes'] as Iterable;
@@ -75,7 +51,7 @@ class _HabitGraphConvertor extends MapConvertor {
 /// circles whose radius scales with [GraphNode.totalAnnotations].
 /// Tapping a habit node calls [onHabitTap]; tapping a concept node calls
 /// [onConceptTap].
-class HabitGraphWidget extends StatelessWidget {
+class HabitGraphWidget extends StatefulWidget {
   final HabitGraph graph;
   final void Function(GraphNode habitNode) onHabitTap;
   final void Function(GraphNode conceptNode) onConceptTap;
@@ -87,19 +63,43 @@ class HabitGraphWidget extends StatelessWidget {
     required this.onConceptTap,
   });
 
-  /// Convert [HabitGraph] to the Map-based format expected by [MapConvertor].
+  @override
+  State<HabitGraphWidget> createState() => _HabitGraphWidgetState();
+}
+
+class _HabitGraphWidgetState extends State<HabitGraphWidget> {
+  late FlutterGraphWidget _graphWidget;
+
+  @override
+  void initState() {
+    super.initState();
+    _graphWidget = _buildGraphWidget();
+  }
+
+  @override
+  void didUpdateWidget(HabitGraphWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Rebuild only when the underlying graph data changes, not on every
+    // parent rebuild — avoids restarting the force-directed simulation.
+    if (!identical(oldWidget.graph, widget.graph)) {
+      setState(() {
+        _graphWidget = _buildGraphWidget();
+      });
+    }
+  }
+
   Map<String, dynamic> _buildGraphData() {
-    final vertexes = graph.nodes.map((node) {
+    final vertexes = widget.graph.nodes.map((node) {
       return {
         'id': node.id,
-        'tag': node.type, // 'habit' or 'concept'
+        'tag': node.type,
         'tags': [node.type],
         'data': node,
         'solid': true,
       };
     }).toList();
 
-    final edges = graph.edges.map((edge) {
+    final edges = widget.graph.edges.map((edge) {
       return {
         'srcId': edge.source,
         'dstId': edge.target,
@@ -108,14 +108,10 @@ class HabitGraphWidget extends StatelessWidget {
       };
     }).toList();
 
-    return {
-      'vertexes': vertexes,
-      'edges': edges,
-    };
+    return {'vertexes': vertexes, 'edges': edges};
   }
 
-  @override
-  Widget build(BuildContext context) {
+  FlutterGraphWidget _buildGraphWidget() {
     final data = _buildGraphData();
 
     return FlutterGraphWidget(
@@ -148,16 +144,23 @@ class HabitGraphWidget extends StatelessWidget {
         ..backgroundBuilder = (ctx) {
           return Container(color: Theme.of(ctx).colorScheme.surface);
         }
+        // widget.onHabitTap / widget.onConceptTap are read via State.widget,
+        // so they always reflect the current widget even if callbacks change.
         ..onVertexTapUp = (vertex, _) {
           final node = vertex.properties['graphNode'] as GraphNode?;
           if (node == null) return null;
           if (node.isHabit) {
-            onHabitTap(node);
+            widget.onHabitTap(node);
           } else if (node.isConcept) {
-            onConceptTap(node);
+            widget.onConceptTap(node);
           }
           return null;
         },
     );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _graphWidget;
   }
 }
