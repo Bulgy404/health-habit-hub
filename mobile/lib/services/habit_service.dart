@@ -36,10 +36,15 @@ class HabitService {
 
   /// Returns the full Habit↔BCIOConcept graph from Neo4j.
   Future<HabitGraph> fetchHabitGraph() async {
-    final response = await _dio.get<Map<String, dynamic>>(
-      '$_baseUrl/habits/graph',
-    );
-    return HabitGraph.fromJson(response.data ?? {'nodes': [], 'edges': []});
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '$_baseUrl/habits/graph',
+      );
+      return HabitGraph.fromJson(response.data ?? {'nodes': [], 'edges': []});
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      rethrow;
+    }
   }
 
   /// Returns donated habits from the authenticated graph, with display text
