@@ -9,6 +9,7 @@ import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/providers/habit_graph_provider.dart';
 import 'package:hhh/screens/explore_screen.dart';
 import 'package:hhh/services/auth_service.dart';
+import 'package:hhh/widgets/habit_graph_widget.dart';
 
 class _FakeAuthService extends AuthService {
   @override
@@ -123,5 +124,35 @@ void main() {
     await tester.pump();
     expect(find.text('Graph'), findsOneWidget);
     expect(find.text('Stats'), findsOneWidget);
+  });
+
+  testWidgets('shows HabitGraphWidget when graph has nodes', (tester) async {
+    await tester.pumpWidget(
+      _buildWithGraph(() async => _twoNodeGraph()),
+    );
+    // flutter_graph_view runs continuous physics — pump a fixed duration instead
+    // of pumpAndSettle (which would time out waiting for animations to stop).
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(HabitGraphWidget), findsOneWidget);
+  });
+
+  testWidgets('tapping concept node opens concept detail sheet', (tester) async {
+    await tester.pumpWidget(
+      _buildWithGraph(() async => _twoNodeGraph()),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    // Grab the HabitGraphWidget and invoke its onConceptTap directly —
+    // the flutter_graph_view canvas is not easily tappable in widget tests.
+    final widget = tester.widget<HabitGraphWidget>(find.byType(HabitGraphWidget));
+    final conceptNode = _twoNodeGraph().conceptNodes.first;
+    widget.onConceptTap(conceptNode);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // _ConceptDetailSheet should show the concept label.
+    expect(find.text('Self-monitoring'), findsOneWidget);
   });
 }
