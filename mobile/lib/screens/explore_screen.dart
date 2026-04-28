@@ -33,6 +33,7 @@ class ExploreScreen extends ConsumerStatefulWidget {
 
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   void _showHabitDetail(GraphNode graphNode, HabitGraph graph) {
+    assert(graphNode.isHabit, '_showHabitDetail called with non-habit node: ${graphNode.id}');
     final habitNode = _toHabitNode(graphNode, graph);
     final allHabitNodes = graph.habitNodes
         .map((n) => _toHabitNode(n, graph))
@@ -49,6 +50,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         initialNode: habitNode,
         allHabits: allHabitNodes,
         habitService: ref.read(habitServiceProvider),
+        // Annotation counts in the open sheet update via _NodeDetailSheet's
+        // own setState. The provider cache stays stale until next refresh —
+        // acceptable tradeoff to avoid re-fetching the whole graph on every tap.
         onNodeUpdated: (_) {},
         onNavigateTo: (target) {
           Navigator.of(ctx).pop();
