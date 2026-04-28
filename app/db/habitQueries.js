@@ -76,6 +76,8 @@ export async function getHabitsByCategory(queryNeo4j) {
 
 /**
  * Return the Neo4j graph structure: Habit nodes, BCIOConcept nodes, and edges.
+ * Includes seeded example habits (no `seeded` filter) so the graph is populated
+ * from day one, consistent with getPublicHabits.
  * Deduplication is done by the caller (see createHabitsRouter GET /graph).
  * @param {Function} queryNeo4j
  * @returns {Promise<Array>}
