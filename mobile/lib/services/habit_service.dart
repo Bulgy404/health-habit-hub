@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/exceptions.dart';
+import '../models/habit_graph.dart';
 import '../models/habit_node.dart';
 import '../models/habit_stats.dart';
 import '../core/dio_provider.dart';
@@ -31,6 +32,14 @@ class HabitService {
       '$_baseUrl/habits/stats',
     );
     return HabitStats.fromJson(response.data ?? {});
+  }
+
+  /// Returns the full Habit↔BCIOConcept graph from Neo4j.
+  Future<HabitGraph> fetchHabitGraph() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '$_baseUrl/habits/graph',
+    );
+    return HabitGraph.fromJson(response.data ?? {'nodes': [], 'edges': []});
   }
 
   /// Returns donated habits from the authenticated graph, with display text
