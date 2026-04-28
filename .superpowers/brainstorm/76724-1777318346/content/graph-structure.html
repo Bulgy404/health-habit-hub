@@ -1,0 +1,74 @@
+<h2>What does the graph show?</h2>
+<p class="subtitle">Neo4j has Habit nodes connected to BCIOConcept nodes via Context. Which topology do you want to render?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Habits only — real edges</h3>
+      <p>Only Habit nodes visible. Two habits are connected with an edge if they share a BCIOConcept in Neo4j. Graph looks similar to now, but edges are real database relationships, not just same-category guesses.</p>
+      <div class="mockup" style="margin-top:12px;padding:16px">
+        <svg width="100%" height="140" viewBox="0 0 320 140">
+          <!-- Concept hub (invisible) -->
+          <!-- Habit nodes -->
+          <circle cx="80" cy="70" r="14" fill="#4CAF50"/>
+          <circle cx="160" cy="30" r="10" fill="#4CAF50"/>
+          <circle cx="240" cy="70" r="16" fill="#9C27B0"/>
+          <circle cx="160" cy="110" r="12" fill="#4CAF50"/>
+          <circle cx="60" cy="110" r="8" fill="#9C27B0"/>
+          <circle cx="270" cy="30" r="9" fill="#2196F3"/>
+          <!-- Edges (shared BCIOConcept) -->
+          <line x1="80" y1="70" x2="160" y2="30" stroke="#4CAF50" stroke-width="1.5" opacity="0.5"/>
+          <line x1="80" y1="70" x2="160" y2="110" stroke="#4CAF50" stroke-width="1.5" opacity="0.5"/>
+          <line x1="160" y1="30" x2="160" y2="110" stroke="#4CAF50" stroke-width="1.5" opacity="0.5"/>
+          <line x1="240" y1="70" x2="60" y2="110" stroke="#9C27B0" stroke-width="1.5" opacity="0.5"/>
+          <text x="80" y="74" text-anchor="middle" font-size="7" fill="white">habit</text>
+          <text x="160" y="34" text-anchor="middle" font-size="7" fill="white">habit</text>
+          <text x="240" y="74" text-anchor="middle" font-size="7" fill="white">habit</text>
+          <text x="160" y="114" text-anchor="middle" font-size="7" fill="white">habit</text>
+        </svg>
+        <p style="font-size:11px;color:#888;margin:0">~200–500 habit nodes, edges = shared concept</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Habits + Concept hub nodes</h3>
+      <p>Both Habit nodes AND BCIOConcept nodes visible. Habits radiate out from their concept hubs. You can clearly see which habits belong to the same concept cluster. Concept nodes act as "stars" with habits as planets.</p>
+      <div class="mockup" style="margin-top:12px;padding:16px">
+        <svg width="100%" height="140" viewBox="0 0 320 140">
+          <!-- Concept hub nodes (larger, distinct color) -->
+          <circle cx="110" cy="70" r="20" fill="#FF9800" opacity="0.9"/>
+          <circle cx="230" cy="70" r="18" fill="#E91E63" opacity="0.9"/>
+          <text x="110" y="74" text-anchor="middle" font-size="8" fill="white" font-weight="bold">BCIO</text>
+          <text x="230" y="74" text-anchor="middle" font-size="8" fill="white" font-weight="bold">BCIO</text>
+          <!-- Habit nodes orbiting left concept -->
+          <circle cx="50" cy="35" r="10" fill="#4CAF50"/>
+          <circle cx="45" cy="100" r="8" fill="#4CAF50"/>
+          <circle cx="170" cy="35" r="9" fill="#4CAF50"/>
+          <circle cx="165" cy="105" r="11" fill="#4CAF50"/>
+          <!-- Habit nodes orbiting right concept -->
+          <circle cx="275" cy="40" r="9" fill="#9C27B0"/>
+          <circle cx="280" cy="105" r="8" fill="#9C27B0"/>
+          <!-- Edges from concepts to habits -->
+          <line x1="110" y1="70" x2="50" y2="35" stroke="#FF9800" stroke-width="1.5" opacity="0.4"/>
+          <line x1="110" y1="70" x2="45" y2="100" stroke="#FF9800" stroke-width="1.5" opacity="0.4"/>
+          <line x1="110" y1="70" x2="170" y2="35" stroke="#FF9800" stroke-width="1.5" opacity="0.4"/>
+          <line x1="110" y1="70" x2="165" y2="105" stroke="#FF9800" stroke-width="1.5" opacity="0.4"/>
+          <line x1="230" y1="70" x2="275" y2="40" stroke="#E91E63" stroke-width="1.5" opacity="0.4"/>
+          <line x1="230" y1="70" x2="280" y2="105" stroke="#E91E63" stroke-width="1.5" opacity="0.4"/>
+          <text x="50" y="38" text-anchor="middle" font-size="6" fill="white">habit</text>
+          <text x="170" y="38" text-anchor="middle" font-size="6" fill="white">habit</text>
+        </svg>
+        <p style="font-size:11px;color:#888;margin:0">Concept nodes = orange/pink hubs; habit nodes orbit them</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px;background:var(--surface-alt,#f5f5f5);border-radius:8px;padding:12px">
+  <p class="label">About the renderer</p>
+  <p style="font-size:13px;margin:0">Either option will use <strong>flutter_graph_view</strong> (richer 3D-like visuals, sphere/force layouts) as the primary renderer, with the existing custom canvas as fallback if the package doesn't support the dataset size well.</p>
+</div>

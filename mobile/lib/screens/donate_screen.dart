@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
@@ -8,8 +9,12 @@ import '../providers/locale_provider.dart';
 import '../services/habit_service.dart';
 import '../services/survey_service.dart';
 
-const _kCardShadow = [BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4))];
-const _kGreenGlow  = [BoxShadow(color: Color(0x4745B700), blurRadius: 28, offset: Offset(0, 8))];
+const _kCardShadow = [
+  BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4)),
+];
+const _kGreenGlow = [
+  BoxShadow(color: Color(0x4745B700), blurRadius: 28, offset: Offset(0, 8)),
+];
 
 class ShareHabitScreen extends ConsumerStatefulWidget {
   const ShareHabitScreen({super.key});
@@ -27,10 +32,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   bool _showSuccess = false;
   String? _notAHabitMsg;
 
-  int? _frequency;     // 1–4
-  int? _duration;      // 1–4
+  int? _frequency; // 1–4
+  int? _duration; // 1–4
   int? _healthBenefit; // 1–5
-  int? _wellbeing;     // 1–5
+  int? _wellbeing; // 1–5
 
   String? _surveyId;
   late String _lang;
@@ -50,7 +55,9 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
 
   Future<void> _loadSurveyId() async {
     try {
-      final survey = await ref.read(surveyServiceProvider).fetchSurvey('habit-donation');
+      final survey = await ref
+          .read(surveyServiceProvider)
+          .fetchSurvey('habit-donation');
       if (mounted) setState(() => _surveyId = survey.id);
     } catch (_) {
       // Survey ID optional — ratings can be skipped, habit text still donated.
@@ -73,8 +80,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    if (_frequency == null || _duration == null ||
-        _healthBenefit == null || _wellbeing == null) {
+    if (_frequency == null ||
+        _duration == null ||
+        _healthBenefit == null ||
+        _wellbeing == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please answer all questions')),
       );
@@ -124,14 +133,39 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         }
       }
 
-      if (mounted) setState(() { _submitting = false; _showSuccess = true; });
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+          _showSuccess = true;
+        });
+      }
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      debugPrint(
+        'ShareHabitScreen._submit DioException: status=$statusCode '
+        'path=${e.requestOptions.path} data=${e.response?.data}',
+      );
+      if (mounted) {
+        setState(() => _submitting = false);
+        if (statusCode == 401) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unauthorized. Please sign in again.'),
+            ),
+          );
+          return;
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
+      }
     } catch (e) {
       debugPrint('ShareHabitScreen._submit: $e');
       if (mounted) {
         setState(() => _submitting = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.submissionFailed)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
       }
     }
   }
@@ -178,16 +212,20 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                   const Text(
                     "TODAY'S TASK",
                     style: TextStyle(
-                      color: Colors.white70, fontSize: 10,
-                      fontWeight: FontWeight.w700, letterSpacing: 1,
+                      color: Colors.white70,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
                     ),
                   ),
                   const SizedBox(height: 6),
                   const Text(
                     'Share a habit with science',
                     style: TextStyle(
-                      color: Colors.white, fontSize: 18,
-                      fontWeight: FontWeight.w900, height: 1.2,
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      height: 1.2,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -200,7 +238,8 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                     onTap: () => setState(() => _surveyMode = true),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10,
+                        horizontal: 20,
+                        vertical: 10,
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -231,7 +270,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 children: [
                   _StatCard(value: '${stats.total}', label: 'Community'),
                   const SizedBox(width: 10),
-                  const _StatCard(icon: Icons.military_tech, label: 'Top habit'),
+                  const _StatCard(
+                    icon: Icons.military_tech,
+                    label: 'Top habit',
+                  ),
                 ],
               ),
             ),
@@ -278,7 +320,8 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 Text(
                   l10n.habitSharedSuccess,
                   style: const TextStyle(
-                    fontSize: 22, fontWeight: FontWeight.w900,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -318,9 +361,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 // Habit text input
                 const Text(
                   'Describe your habit',
-                  style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w800,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 4),
                 TextFormField(
@@ -329,24 +370,22 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                   maxLength: 500,
                   enabled: !_submitting,
                   decoration: InputDecoration(
-                    hintText:
-                        'e.g. I go for a 30-minute walk every morning',
+                    hintText: 'e.g. I go for a 30-minute walk every morning',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide:
-                          const BorderSide(color: Color(0xFFE5E7EB)),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide:
-                          const BorderSide(color: Color(0xFFE5E7EB)),
+                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: const BorderSide(
-                        color: Color(0xFF45B700), width: 1.5,
+                        color: Color(0xFF45B700),
+                        width: 1.5,
                       ),
                     ),
                   ),
@@ -365,8 +404,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF7ED),
                       borderRadius: BorderRadius.circular(10),
-                      border:
-                          Border.all(color: const Color(0xFFFCD34D)),
+                      border: Border.all(color: const Color(0xFFFCD34D)),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,9 +435,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 // Rating questions
                 _RatingQuestion(
                   label: 'How often do you do this habit?',
-                  options: const [
-                    'Rarely', 'Weekly', 'Several/week', 'Daily',
-                  ],
+                  options: const ['Rarely', 'Weekly', 'Several/week', 'Daily'],
                   selected: _frequency,
                   enabled: !_submitting,
                   onSelected: (v) => setState(() => _frequency = v),
@@ -408,7 +444,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 _RatingQuestion(
                   label: 'How long have you had this habit?',
                   options: const [
-                    '< 1 month', '1–3 months', '3–12 months', '> 1 year',
+                    '< 1 month',
+                    '1–3 months',
+                    '3–12 months',
+                    '> 1 year',
                   ],
                   selected: _duration,
                   enabled: !_submitting,
@@ -493,18 +532,14 @@ class _RatingQuestion extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 14, fontWeight: FontWeight.w700,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         if (caption != null)
           Padding(
             padding: const EdgeInsets.only(top: 2),
             child: Text(
               caption!,
-              style: const TextStyle(
-                fontSize: 11, color: Color(0xFF6B7280),
-              ),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
             ),
           ),
         const SizedBox(height: 8),
@@ -518,12 +553,11 @@ class _RatingQuestion extends StatelessWidget {
               onTap: enabled ? () => onSelected(value) : null,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14, vertical: 8,
+                  horizontal: 14,
+                  vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFFEDF7E5)
-                      : Colors.white,
+                  color: isSelected ? const Color(0xFFEDF7E5) : Colors.white,
                   borderRadius: BorderRadius.circular(100),
                   border: Border.all(
                     color: isSelected
@@ -537,9 +571,7 @@ class _RatingQuestion extends StatelessWidget {
                   options[i],
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: isSelected
-                        ? FontWeight.w700
-                        : FontWeight.w500,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     color: isSelected
                         ? const Color(0xFF2E8C00)
                         : const Color(0xFF374151),
@@ -591,9 +623,7 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               label,
-              style: const TextStyle(
-                fontSize: 11, color: Color(0xFF6B7280),
-              ),
+              style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
             ),
           ],
         ),

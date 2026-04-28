@@ -11,17 +11,37 @@
 
 import { DIMENSIONS } from '../utils/constants.js';
 
+function serviceHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  if (process.env.API_SERVICE_SECRET) {
+    headers['X-Service-Auth-Token'] = process.env.API_SERVICE_SECRET;
+  }
+  return headers;
+}
+
 /** Classify whether sentence is a habit and return { is_habit, confidence }. */
 async function classifyHabit(sentence, language, userID, apiBase) {
   const res = await fetch(`${apiBase}/api/v1/llm/classify-habit`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: serviceHeaders(),
     body: JSON.stringify({ sentence, language, user_id: userID }),
   });
-  if (!res.ok)
-    throw Object.assign(new Error('Habit classification failed'), {
-      status: 502,
-    });
+  if (!res.ok) {
+    let detail = '';
+    try {
+      detail = await res.text();
+    } catch {
+      // Ignore body read errors and keep generic message.
+    }
+    throw Object.assign(
+      new Error(
+        detail
+          ? `Habit classification failed (${res.status}): ${detail}`
+          : `Habit classification failed (${res.status})`
+      ),
+      { status: 502 }
+    );
+  }
   return res.json();
 }
 
@@ -29,7 +49,7 @@ async function classifyHabit(sentence, language, userID, apiBase) {
 async function extractContext(uuid, sentence, language, apiBase) {
   const res = await fetch(`${apiBase}/api/v1/llm/classify-context`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: serviceHeaders(),
     body: JSON.stringify({ uuid, sentence, language }),
   });
   if (!res.ok)
@@ -40,7 +60,12 @@ async function extractContext(uuid, sentence, language, apiBase) {
   const contextPhrases = {};
   for (const dim of DIMENSIONS) {
     if (Array.isArray(context[dim]) && context[dim].length > 0) {
-      contextPhrases[dim] = context[dim];
+      const cleaned = context[dim]
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter(Boolean);
+      if (cleaned.length > 0) {
+        contextPhrases[dim] = cleaned;
+      }
     }
   }
   return contextPhrases;
@@ -50,13 +75,38 @@ async function extractContext(uuid, sentence, language, apiBase) {
 async function mapBcio(uuid, contextPhrases, apiBase) {
   const res = await fetch(`${apiBase}/api/v1/llm/map-bcio`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: serviceHeaders(),
     body: JSON.stringify({ uuid, context_phrases: contextPhrases }),
   });
   if (!res.ok)
     throw Object.assign(new Error('BCIO mapping failed'), { status: 502 });
   const data = await res.json();
-  return data.mappings || [];
+  const rawMappings = Array.isArray(data.mappings) ? data.mappings : [];
+  // Defensive sanitization: avoid null relationship properties in Neo4j.
+  // Neo4j rejects MERGE/SET with null property values and throws, which would
+  // otherwise bubble up as a generic 500 at /habits/share.
+  return rawMappings
+    .filter((m) => m && typeof m === 'object')
+    .map((m) => ({
+      bcio_concept_id: m.bcio_concept_id,
+      bcio_concept_label: m.bcio_concept_label,
+      phrase: m.phrase,
+      dimension: m.dimension,
+      confidence:
+        typeof m.confidence === 'number' ? m.confidence : Number(m.confidence),
+    }))
+    .filter(
+      (m) =>
+        typeof m.bcio_concept_id === 'string' &&
+        m.bcio_concept_id.trim() &&
+        typeof m.bcio_concept_label === 'string' &&
+        m.bcio_concept_label.trim() &&
+        typeof m.phrase === 'string' &&
+        m.phrase.trim() &&
+        typeof m.dimension === 'string' &&
+        m.dimension.trim() &&
+        Number.isFinite(m.confidence)
+    );
 }
 
 /** Write Habit node, Context nodes, and BCIOConcept nodes to Neo4j. */
@@ -75,6 +125,12 @@ async function writeToNeo4j(
   queryNeo4j
 ) {
   const createdAt = new Date().toISOString();
+  const numericConfidence =
+    typeof confidence === 'number' ? confidence : Number(confidence);
+  const safeConfidence = Number.isFinite(numericConfidence)
+    ? numericConfidence
+    : 0;
+  const safeUserId = typeof userID === 'string' ? userID : '';
 
   await queryNeo4j(
     `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: $language,
@@ -84,8 +140,8 @@ async function writeToNeo4j(
       uuid,
       sentence,
       language,
-      confidence,
-      userID,
+      confidence: safeConfidence,
+      userID: safeUserId,
       created_at: createdAt,
       translationEN: translationEN || null,
       translationDE: translationDE || null,
@@ -95,7 +151,14 @@ async function writeToNeo4j(
   const contextRows = [];
   for (const [dimension, phrases] of Object.entries(contextPhrases)) {
     for (const phrase of phrases) {
-      contextRows.push({ text: phrase, dimension });
+      if (
+        typeof phrase === 'string' &&
+        phrase.trim() &&
+        typeof dimension === 'string' &&
+        dimension.trim()
+      ) {
+        contextRows.push({ text: phrase.trim(), dimension: dimension.trim() });
+      }
     }
   }
   if (contextRows.length > 0) {
@@ -116,7 +179,8 @@ async function writeToNeo4j(
        ON CREATE SET b.bcio_concept_label = m.bcio_concept_label
        WITH b, m
        MATCH (c:Context {text: m.phrase, dimension: m.dimension})
-       MERGE (c)-[:MAPS_TO {confidence: m.confidence, phrase: m.phrase, dimension: m.dimension}]->(b)`,
+       MERGE (c)-[r:MAPS_TO {phrase: m.phrase, dimension: m.dimension}]->(b)
+       SET r.confidence = m.confidence`,
       { mappings }
     );
   }
