@@ -34,7 +34,7 @@ class GraphNode {
   factory GraphNode.fromJson(Map<String, dynamic> json) {
     final counts = (json['annotationCounts'] as Map<String, dynamic>? ?? {})
         .map((k, v) => MapEntry(k, (v as num).toInt()));
-    return GraphNode(
+    final node = GraphNode(
       id: json['id'] as String,
       type: json['type'] as String,
       label: json['label'] as String? ?? '',
@@ -43,6 +43,9 @@ class GraphNode {
       language: json['language'] as String? ?? '',
       annotationCounts: counts,
     );
+    assert(node.type == 'habit' || node.type == 'concept',
+        'Unknown GraphNode type: ${node.type}');
+    return node;
   }
 }
 
@@ -102,10 +105,10 @@ class HabitGraph {
     return nodes.where((n) => connectedIds.contains(n.id)).toList();
   }
 
-  /// Returns the concept node that [habitId] points to, or null if none.
-  GraphNode? conceptForHabit(String habitId) {
+  /// Returns the concept node that [habitNodeId] points to, or null if none.
+  GraphNode? conceptForHabit(String habitNodeId) {
     final conceptId = edges
-        .where((e) => e.source == habitId)
+        .where((e) => e.source == habitNodeId)
         .map((e) => e.target)
         .firstOrNull;
     if (conceptId == null) return null;

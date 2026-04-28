@@ -87,5 +87,18 @@ void main() {
       expect(graph.nodes, isEmpty);
       expect(graph.edges, isEmpty);
     });
+
+    test('totalAnnotations sums all annotation counts', () {
+      final graph = HabitGraph.fromJson(rawJson);
+      // habitNode has helpful: 3, iDoThis: 1 → total = 4
+      expect(graph.habitNodes.first.totalAnnotations, 4);
+      // conceptNode has helpful: 0, iDoThis: 0 → total = 0
+      expect(graph.conceptNodes.first.totalAnnotations, 0);
+    });
+
+    test('conceptForHabit returns null for an unconnected habit', () {
+      final graph = HabitGraph.empty();
+      expect(graph.conceptForHabit('h:nonexistent'), isNull);
+    });
   });
 }
