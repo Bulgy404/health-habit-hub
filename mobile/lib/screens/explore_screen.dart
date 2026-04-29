@@ -423,7 +423,7 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: related.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (_, i) {
                   final rel = related[i];
                   final label = rel.name.length > 32

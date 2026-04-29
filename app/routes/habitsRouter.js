@@ -520,9 +520,36 @@ export function createHabitsRouter({
       });
       return res.status(result.is_habit ? 201 : 200).json(result);
     } catch (err) {
-      if (err.status === 502)
-        return res.status(502).json({ error: err.message });
-      console.error('[share] Unexpected error:', err);
+      if (err.status && Number.isInteger(err.status)) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error(
+            '[share] Upstream/service error:',
+            JSON.stringify({
+              status: err.status,
+              code: err.code || null,
+              downstreamStatus: err.downstreamStatus || null,
+              message: err.message || String(err),
+              userId,
+              language,
+              sentenceLength: sentence.length,
+            })
+          );
+        }
+        return res.status(err.status).json({
+          error: err.message || 'Service unavailable',
+          ...(err.code ? { code: err.code } : {}),
+        });
+      }
+      console.error(
+        '[share] Unexpected error:',
+        JSON.stringify({
+          message: err?.message || String(err),
+          stack: err?.stack || null,
+          userId,
+          language,
+          sentenceLength: sentence.length,
+        })
+      );
       const detail =
         process.env.NODE_ENV !== 'production'
           ? err?.message || String(err)

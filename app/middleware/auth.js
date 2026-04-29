@@ -84,6 +84,22 @@ export function createAuthMiddleware({
     expectedAudience === undefined
       ? process.env.KEYCLOAK_JWT_AUDIENCE || null
       : expectedAudience;
+  const issuers = Array.isArray(issuer)
+    ? issuer.filter(Boolean)
+    : typeof issuer === 'string'
+      ? issuer
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
+  const audiences = Array.isArray(audience)
+    ? audience.filter(Boolean)
+    : typeof audience === 'string'
+      ? audience
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
 
   // Reuse createTokenVerifier for all JWKS caching and signature verification.
   // JWKS keys are fetched lazily on the first request.
@@ -100,21 +116,53 @@ export function createAuthMiddleware({
       const payload = await verifyToken(token);
 
       // Validate issuer if configured
-      if (issuer && payload.iss !== issuer) {
+      if (issuers.length > 0 && !issuers.includes(payload.iss)) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(
+            `[auth] issuer mismatch: got="${payload.iss}" expected one of=${JSON.stringify(issuers)}`
+          );
+        }
         return res.status(401).json({ error: 'Unauthorized' });
       }
 
       // Validate audience if configured
-      if (audience) {
+      if (audiences.length > 0) {
         const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
-        if (!aud.includes(audience)) {
+        const matches = audiences.some((allowed) => aud.includes(allowed));
+        if (!matches) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn(
+              `[auth] audience mismatch: got=${JSON.stringify(aud)} expected one of=${JSON.stringify(audiences)}`
+            );
+          }
           return res.status(401).json({ error: 'Unauthorized' });
         }
       }
 
+      // Some local/dev token flows may omit `sub` but still carry a stable
+      // user identifier in `preferred_username`. Normalize here so downstream
+      // routes can reliably use req.user.sub.
+      if (
+        (payload.sub == null || payload.sub === '') &&
+        typeof payload.preferred_username === 'string' &&
+        payload.preferred_username.trim()
+      ) {
+        payload.sub = payload.preferred_username.trim();
+      } else if (
+        (payload.sub == null || payload.sub === '') &&
+        typeof payload.email === 'string' &&
+        payload.email.trim()
+      ) {
+        payload.sub = payload.email.trim();
+      }
+
       req.user = payload;
       next();
-    } catch {
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'production') {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn(`[auth] token verification failed: ${message}`);
+      }
       return res.status(401).json({ error: 'Unauthorized' });
     }
   }

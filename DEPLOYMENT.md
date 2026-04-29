@@ -40,7 +40,7 @@ NEO4J_PASSWORD=<local-neo4j-password>
 DB_PASSWORD=<local-fuseki-password>
 ADMIN_PASSWORD=<local-fuseki-password>
 API_SERVICE_SECRET=<local-api-service-secret>
-OPENAI_API_KEY=<optional-but-needed-for-recommender-features>
+LLM_API_KEY=<optional-but-needed-for-recommender-features>
 ```
 
 Recommended local defaults already present in `.env.example`:
@@ -279,8 +279,10 @@ RECAPTCHA_SECRETKEY=<your-production-secret-key>
 MAIL_USER=<mailjet-api-key>
 MAIL_PASS=<mailjet-secret-key>
 
-# OpenAI (for habit classification, BCIO mapping, translation refinement, recommendations)
-OPENAI_API_KEY=<your-openai-api-key>
+# LLM provider (for habit classification, BCIO mapping, translation refinement, recommendations)
+LLM_API_KEY=<your-api-key>
+LLM_API_BASE=https://llm.scads.ai/v1  # omit to use OpenAI directly
+LLM_MODEL=alias-ha                     # or gpt-4o-mini, alias-huge, etc.
 ```
 
 #### Optional Overrides

@@ -59,6 +59,8 @@
         "pkce.code.challenge.method": "S256"
       },
       "defaultClientScopes": [
+        "basic",
+        "openid",
         "web-origins",
         "profile",
         "roles",
@@ -87,6 +89,8 @@
       "redirectUris": [],
       "webOrigins": [],
       "defaultClientScopes": [
+        "basic",
+        "openid",
         "web-origins",
         "profile",
         "roles",
@@ -121,6 +125,8 @@
         "http://admin.localhost"
       ],
       "defaultClientScopes": [
+        "basic",
+        "openid",
         "web-origins",
         "profile",
         "roles",

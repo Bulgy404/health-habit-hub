@@ -33,13 +33,21 @@ async function classifyHabit(sentence, language, userID, apiBase) {
     } catch {
       // Ignore body read errors and keep generic message.
     }
+    const downstreamStatus = res.status;
+    const proxyStatus = downstreamStatus >= 500 || downstreamStatus === 429
+      ? 503
+      : 502;
     throw Object.assign(
       new Error(
         detail
-          ? `Habit classification failed (${res.status}): ${detail}`
-          : `Habit classification failed (${res.status})`
+          ? `Habit classification failed (${downstreamStatus}): ${detail}`
+          : `Habit classification failed (${downstreamStatus})`
       ),
-      { status: 502 }
+      {
+        status: proxyStatus,
+        code: 'classifier_unavailable',
+        downstreamStatus,
+      }
     );
   }
   return res.json();

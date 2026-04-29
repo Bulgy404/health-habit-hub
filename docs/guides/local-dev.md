@@ -124,6 +124,22 @@ This seeds:
 
 The seed script is idempotent — running it again is safe.
 
+As part of `make seed`, the setup now verifies Keycloak OIDC default scopes for
+the `hhh-flutter` client (`basic`, `openid`, `profile`, `email`, `roles`) to
+ensure access tokens consistently include stable identity claims such as `sub`.
+
+You can run this check manually at any time:
+
+```bash
+make verify-keycloak
+```
+
+If the check reports missing scopes, auto-fix them with:
+
+```bash
+make fix-keycloak
+```
+
 ---
 
 ## 3. Running the iOS Simulator

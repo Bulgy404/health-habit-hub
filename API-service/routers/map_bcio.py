@@ -26,7 +26,7 @@ _EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 _BCIO_MIN_CONFIDENCE = float(os.getenv("BCIO_MIN_CONFIDENCE", "0.75"))
 _OWL_PATH = Path(__file__).parent.parent / "data" / "bcio.owl"
 
-_api_key = os.getenv("OPENAI_API_KEY", "")
+_api_key = os.getenv("LLM_API_KEY", "")
 _openai_client = openai.AsyncOpenAI(api_key=_api_key or "placeholder")
 
 # ---------------------------------------------------------------------------

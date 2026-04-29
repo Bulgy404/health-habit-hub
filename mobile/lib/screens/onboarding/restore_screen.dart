@@ -72,6 +72,7 @@ class _RestoreScreenState extends State<RestoreScreen> {
           'client_id': 'hhh-flutter',
           'username': username,
           'password': password,
+          'scope': 'openid profile email',
         },
         options: Options(
           contentType: 'application/x-www-form-urlencoded',

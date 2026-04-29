@@ -5,23 +5,27 @@ and exposes a single async helper for all modules.
 """
 import logging
 import os
-from typing import Any, Optional
+from typing import Optional
 
 import openai
 
 logger = logging.getLogger(__name__)
 
-_api_key = os.getenv("OPENAI_API_KEY", "")
+_api_key = os.getenv("LLM_API_KEY", "")
 _model = os.getenv("LLM_MODEL", "gpt-4o-mini")
 _temperature = float(os.getenv("LLM_TEMPERATURE", "0.2"))
+_api_base = os.getenv("LLM_API_BASE")
 
-if not _api_key or _api_key == "REPLACE_WITH_YOUR_OPENAI_API_KEY":
+if not _api_key or _api_key in ("REPLACE_WITH_YOUR_API_KEY", "CHANGE_THIS_API_KEY"):
     logger.warning(
-        "OPENAI_API_KEY is not set or is a placeholder. "
+        "LLM_API_KEY is not set or is a placeholder. "
         "LLM calls will fail until a valid key is provided."
     )
 
-_client = openai.AsyncOpenAI(api_key=_api_key or "placeholder")
+_client = openai.AsyncOpenAI(
+    api_key=_api_key or "placeholder",
+    base_url=_api_base or None,
+)
 
 
 async def chat_complete(

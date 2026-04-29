@@ -317,7 +317,7 @@ jobs:
       - name: Run pytest
         working-directory: API-service
         env:
-          OPENAI_API_KEY: placeholder
+          LLM_API_KEY: placeholder
           API_SERVICE_SECRET: test-api-service-secret
         run: pytest tests/ -v
 
