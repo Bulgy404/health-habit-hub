@@ -58,6 +58,7 @@ export function createOnboardRouter({ keycloak } = {}) {
             client_id: clientId,
             username,
             password,
+            scope: 'openid profile email',
           }),
         }
       );

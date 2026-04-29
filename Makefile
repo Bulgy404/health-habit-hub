@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help \
-        dev stop seed logs logs-all ios reset \
+        dev stop seed verify-keycloak fix-keycloak logs logs-all ios reset \
         test test-backend test-flutter test-python test-admin \
         prod-up prod-stop prod-ps prod-logs prod-build prod-restart \
         prod-keycloak prod-seed prod-update prod-cutover
@@ -19,6 +19,13 @@ stop: ## Stop local services
 
 seed: ## Seed local MongoDB, Neo4j, and Keycloak
 	set -a && . ./.env && set +a && export KEYCLOAK_URL=http://localhost:8080 && cd app && npm run seed
+	$(MAKE) verify-keycloak || ( $(MAKE) fix-keycloak && $(MAKE) verify-keycloak )
+
+verify-keycloak: ## Verify hhh-flutter default scopes include stable identity claims (sub)
+	bash scripts/verify-keycloak-claims.sh
+
+fix-keycloak: ## Auto-fix missing required default scopes for hhh-flutter in local Keycloak
+	bash scripts/verify-keycloak-claims.sh --fix
 
 logs: ## Tail local app logs
 	docker compose -f docker-compose.local.yml logs -f app

@@ -131,12 +131,13 @@ Copy `stack.env` as a starting point for production; copy `.env.example` for loc
 | `KC_DB_PASSWORD` | Keycloak's PostgreSQL password |
 | `KEYCLOAK_ADMIN_CLIENT_SECRET` | Secret for the `hhh-backend` confidential Keycloak client |
 | `API_SERVICE_SECRET` | Shared secret between Node.js backend and Python AI service |
-| `OPENAI_API_KEY` | OpenAI key used by the AI service for classification, BCIO mapping, and recommendations |
+| `LLM_API_KEY` | API key for the LLM provider used by the AI service for classification, BCIO mapping, and recommendations |
 | `REDIS_URL` | Redis connection URL (default `redis://localhost:6379`) |
 | `RECAPTCHA_SITEKEY` / `RECAPTCHA_SECRETKEY` | Google reCAPTCHA keys |
 | `MAIL_USER` / `MAIL_PASS` | Mailjet API credentials |
 | `ADMIN_PASSWORD` | Apache Fuseki admin password |
-| `LLM_MODEL` | OpenAI model name (e.g. `gpt-4o-mini`) |
+| `LLM_MODEL` | Model name or alias (e.g. `alias-ha`, `gpt-4o-mini`) |
+| `LLM_API_BASE` | Base URL of the LLM provider (e.g. `https://llm.scads.ai/v1`; defaults to OpenAI) |
 | `LLM_TEMPERATURE` | Sampling temperature (0.0–1.0) |
 
 ---

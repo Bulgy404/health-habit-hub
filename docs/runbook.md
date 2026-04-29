@@ -867,11 +867,11 @@ will be populated with unrefined machine translations rather than null.
 ```bash
 # Check the API-service (recommender) logs
 docker compose --env-file stack.env.local logs --tail=50 h3-recommender | grep -E "error|ERROR|refine"
-# Common cause: OPENAI_API_KEY not set or rate-limited
+# Common cause: LLM_API_KEY not set or rate-limited
 
 # Verify the env var is present
-docker compose --env-file stack.env.local exec h3-recommender env | grep OPENAI_API_KEY
-# Expected: OPENAI_API_KEY=sk-...
+docker compose --env-file stack.env.local exec h3-recommender env | grep LLM_API_KEY
+# Expected: LLM_API_KEY=sk-...
 ```
 
 Update `stack.env.local` with a valid key and redeploy the recommender:

@@ -41,6 +41,9 @@ services:
       - NODE_ENV=development
       - MONGO_HOST=mongo
       - KEYCLOAK_URL=http://keycloak:8080
+      # Accept both internal Docker issuer and host-local issuer for iOS simulator
+      # logins that use http://localhost:8080.
+      - KEYCLOAK_JWT_ISSUER=http://keycloak:8080/realms/hhh,http://localhost:8080/realms/hhh
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-hhh}
       - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-hhh-flutter}
       - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-hhh-backend}

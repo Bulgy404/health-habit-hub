@@ -141,9 +141,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       }
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;
+      final responseData = e.response?.data;
       debugPrint(
         'ShareHabitScreen._submit DioException: status=$statusCode '
-        'path=${e.requestOptions.path} data=${e.response?.data}',
+        'path=${e.requestOptions.path} data=$responseData',
       );
       if (mounted) {
         setState(() => _submitting = false);
@@ -151,6 +152,16 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Unauthorized. Please sign in again.'),
+            ),
+          );
+          return;
+        }
+        if (statusCode == 502 || statusCode == 503) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Habit analysis is temporarily unavailable. Please try again in a moment.',
+              ),
             ),
           );
           return;

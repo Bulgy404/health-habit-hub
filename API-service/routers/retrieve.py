@@ -36,7 +36,7 @@ router = APIRouter(dependencies=[Depends(verify_service_token)])
 _EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 _TOP_K = int(os.getenv("RAG_TOP_K", "5"))
 
-_api_key = os.getenv("OPENAI_API_KEY", "")
+_api_key = os.getenv("LLM_API_KEY", "")
 _openai_client = openai.AsyncOpenAI(api_key=_api_key or "placeholder")
 
 # ---------------------------------------------------------------------------

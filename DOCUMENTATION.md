@@ -386,8 +386,9 @@ All variables are defined in `stack.env`. In production, override sensitive valu
 |----------|---------|-------------|
 | `RECOMMENDER_URL` | `http://recommender:8000` | Internal URL for the Python FastAPI service |
 | `API_SERVICE_SECRET` | — | Shared secret between Node.js backend and Python API service **(change in Portainer)** |
-| `OPENAI_API_KEY` | — | OpenAI API key for LLM calls **(required, set in Portainer)** |
-| `LLM_MODEL` | `gpt-4o-mini` | OpenAI model to use for all LLM calls |
+| `LLM_API_KEY` | — | API key for the LLM provider **(required, set in Portainer)** |
+| `LLM_API_BASE` | OpenAI | Base URL of the LLM provider (e.g. `https://llm.scads.ai/v1`) |
+| `LLM_MODEL` | `alias-ha` | Model name or alias for all LLM calls |
 | `LLM_TEMPERATURE` | `0.2` | LLM sampling temperature (0.0 = deterministic) |
 
 ### LibreTranslate

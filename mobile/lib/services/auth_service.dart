@@ -225,7 +225,15 @@ class AuthService {
       final payload =
           utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
       final claims = jsonDecode(payload) as Map<String, dynamic>;
-      return claims['sub'] as String?;
+      final sub = claims['sub'] as String?;
+      if (sub != null && sub.trim().isNotEmpty) return sub;
+      final preferredUsername = claims['preferred_username'] as String?;
+      if (preferredUsername != null && preferredUsername.trim().isNotEmpty) {
+        return preferredUsername;
+      }
+      final email = claims['email'] as String?;
+      if (email != null && email.trim().isNotEmpty) return email;
+      return null;
     } catch (_) {
       return null;
     }
