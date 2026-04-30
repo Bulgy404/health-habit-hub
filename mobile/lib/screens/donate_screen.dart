@@ -100,10 +100,17 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     final dio = ref.read(dioProvider);
 
     try {
-      // Step 1: Submit the habit text → Neo4j (counted in stats).
+      // Step 1: Submit the habit text + ratings → Neo4j (counted in stats).
       final shareResp = await dio.post<Map<String, dynamic>>(
         '${AppConfig.apiBaseUrl}/habits/share',
-        data: {'sentence': sentence, 'language': _lang},
+        data: {
+          'sentence': sentence,
+          'language': _lang,
+          'frequency': _frequency,
+          'duration': _duration,
+          'health_benefit': _healthBenefit,
+          'wellbeing_impact': _wellbeing,
+        },
       );
 
       final isHabit = shareResp.data?['is_habit'] as bool? ?? true;
@@ -197,12 +204,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       appBar: AppBar(
         title: const Text('Health Habit Hub'),
         titleSpacing: 16,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: Icon(Icons.notifications_outlined),
-          ),
-        ],
+  
       ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),

@@ -91,29 +91,31 @@ void main() {
     expect(find.text('Health Habit Hub'), findsOneWidget);
   });
 
-  testWidgets('shows hero card with Loading button while survey is fetching',
+  testWidgets('shows Start sharing button while survey is fetching',
       (tester) async {
     await tester.pumpWidget(_buildSubject(_FakeSurveyService.loading()));
     await tester.pump();
 
-    expect(find.text('Loading…'), findsOneWidget);
+    expect(find.text('Start sharing'), findsOneWidget);
   });
 
-  testWidgets('shows offline banner on network error', (tester) async {
+  testWidgets('still shows Start sharing button when survey fetch fails',
+      (tester) async {
     await tester.pumpWidget(_buildSubject(_FakeSurveyService.throwing()));
     await tester.pumpAndSettle();
 
-    expect(find.text('No connection'), findsOneWidget);
-    expect(find.text('Retry'), findsOneWidget);
+    // Survey ID is optional — errors are silently ignored so the habit
+    // can still be donated without ratings.
+    expect(find.text('Start sharing'), findsOneWidget);
   });
 
-  testWidgets('offline banner shows wifi_off icon and message', (tester) async {
+  testWidgets('tapping Start sharing enters survey mode', (tester) async {
     await tester.pumpWidget(_buildSubject(_FakeSurveyService.throwing()));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.wifi_off), findsOneWidget);
-    expect(
-        find.text('Could not load survey.\nPlease check your connection.'),
-        findsOneWidget);
+    await tester.tap(find.text('Start sharing'));
+    await tester.pump();
+
+    expect(find.text('How often do you do this habit?'), findsOneWidget);
   });
 }

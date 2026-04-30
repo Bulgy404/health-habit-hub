@@ -21,11 +21,23 @@ function serviceHeaders() {
 
 /** Classify whether sentence is a habit and return { is_habit, confidence }. */
 async function classifyHabit(sentence, language, userID, apiBase) {
-  const res = await fetch(`${apiBase}/api/v1/llm/classify-habit`, {
-    method: 'POST',
-    headers: serviceHeaders(),
-    body: JSON.stringify({ sentence, language, user_id: userID }),
-  });
+  let res;
+  try {
+    res = await fetch(`${apiBase}/api/v1/llm/classify-habit`, {
+      method: 'POST',
+      headers: serviceHeaders(),
+      body: JSON.stringify({ sentence, language, user_id: userID }),
+    });
+  } catch (err) {
+    // Connection refused / network failure — recommender may still be loading.
+    throw Object.assign(
+      new Error(
+        `Recommender service unreachable: ${err.message}. ` +
+          'It may still be building the BCIO embedding index — please retry in a moment.'
+      ),
+      { status: 503, code: 'recommender_unavailable' }
+    );
+  }
   if (!res.ok) {
     let detail = '';
     try {
@@ -34,9 +46,8 @@ async function classifyHabit(sentence, language, userID, apiBase) {
       // Ignore body read errors and keep generic message.
     }
     const downstreamStatus = res.status;
-    const proxyStatus = downstreamStatus >= 500 || downstreamStatus === 429
-      ? 503
-      : 502;
+    const proxyStatus =
+      downstreamStatus >= 500 || downstreamStatus === 429 ? 503 : 502;
     throw Object.assign(
       new Error(
         detail
@@ -55,11 +66,19 @@ async function classifyHabit(sentence, language, userID, apiBase) {
 
 /** Extract context dimension phrases for the habit. */
 async function extractContext(uuid, sentence, language, apiBase) {
-  const res = await fetch(`${apiBase}/api/v1/llm/classify-context`, {
-    method: 'POST',
-    headers: serviceHeaders(),
-    body: JSON.stringify({ uuid, sentence, language }),
-  });
+  let res;
+  try {
+    res = await fetch(`${apiBase}/api/v1/llm/classify-context`, {
+      method: 'POST',
+      headers: serviceHeaders(),
+      body: JSON.stringify({ uuid, sentence, language }),
+    });
+  } catch (err) {
+    throw Object.assign(
+      new Error(`Recommender service unreachable during context extraction: ${err.message}`),
+      { status: 503, code: 'recommender_unavailable' }
+    );
+  }
   if (!res.ok)
     throw Object.assign(new Error('Context extraction failed'), {
       status: 502,
@@ -81,11 +100,19 @@ async function extractContext(uuid, sentence, language, apiBase) {
 
 /** Map BCIO concepts for the given context phrases. */
 async function mapBcio(uuid, contextPhrases, apiBase) {
-  const res = await fetch(`${apiBase}/api/v1/llm/map-bcio`, {
-    method: 'POST',
-    headers: serviceHeaders(),
-    body: JSON.stringify({ uuid, context_phrases: contextPhrases }),
-  });
+  let res;
+  try {
+    res = await fetch(`${apiBase}/api/v1/llm/map-bcio`, {
+      method: 'POST',
+      headers: serviceHeaders(),
+      body: JSON.stringify({ uuid, context_phrases: contextPhrases }),
+    });
+  } catch (err) {
+    throw Object.assign(
+      new Error(`Recommender service unreachable during BCIO mapping: ${err.message}`),
+      { status: 503, code: 'recommender_unavailable' }
+    );
+  }
   if (!res.ok)
     throw Object.assign(new Error('BCIO mapping failed'), { status: 502 });
   const data = await res.json();
@@ -125,6 +152,10 @@ async function writeToNeo4j(
     language,
     confidence,
     userID,
+    frequency,
+    duration,
+    healthBenefit,
+    wellbeingImpact,
     translationEN,
     translationDE,
     contextPhrases,
@@ -142,17 +173,23 @@ async function writeToNeo4j(
 
   await queryNeo4j(
     `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: $language,
-       is_habit: true, confidence: $confidence, userID: $userID, created_at: $created_at,
-       translationEN: $translationEN, translationDE: $translationDE})`,
+       is_habit: true, habit_confidence: $habit_confidence, userID: $userID, created_at: $created_at,
+       translationEN: $translationEN, translationDE: $translationDE,
+       frequency: $frequency, duration: $duration,
+       health_benefit: $health_benefit, wellbeing_impact: $wellbeing_impact})`,
     {
       uuid,
       sentence,
       language,
-      confidence: safeConfidence,
+      habit_confidence: safeConfidence,
       userID: safeUserId,
       created_at: createdAt,
       translationEN: translationEN || null,
       translationDE: translationDE || null,
+      frequency: frequency ?? null,
+      duration: duration ?? null,
+      health_benefit: healthBenefit ?? null,
+      wellbeing_impact: wellbeingImpact ?? null,
     }
   );
 
@@ -186,9 +223,9 @@ async function writeToNeo4j(
        MERGE (b:BCIOConcept {bcio_concept_id: m.bcio_concept_id})
        ON CREATE SET b.bcio_concept_label = m.bcio_concept_label
        WITH b, m
-       MATCH (c:Context {text: m.phrase, dimension: m.dimension})
+       MERGE (c:Context {text: m.phrase, dimension: m.dimension})
        MERGE (c)-[r:MAPS_TO {phrase: m.phrase, dimension: m.dimension}]->(b)
-       SET r.confidence = m.confidence`,
+       SET r.mapping_confidence = m.confidence`,
       { mappings }
     );
   }
@@ -215,6 +252,10 @@ export async function shareHabit({
   sentence,
   language,
   userID,
+  frequency = null,
+  duration = null,
+  healthBenefit = null,
+  wellbeingImpact = null,
   queryNeo4j,
   getDb,
   apiBase,
@@ -224,6 +265,27 @@ export async function shareHabit({
   const classified = await classifyHabit(sentence, language, userID, apiBase);
 
   if (!classified.is_habit) {
+    const createdAt = new Date().toISOString();
+    const numericConfidence =
+      typeof classified.confidence === 'number'
+        ? classified.confidence
+        : Number(classified.confidence);
+    const safeConfidence = Number.isFinite(numericConfidence)
+      ? numericConfidence
+      : 0;
+    const safeUserId = typeof userID === 'string' ? userID : '';
+    await queryNeo4j(
+      `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: $language,
+         is_habit: false, habit_confidence: $habit_confidence, userID: $userID, created_at: $created_at})`,
+      {
+        uuid,
+        sentence,
+        language,
+        habit_confidence: safeConfidence,
+        userID: safeUserId,
+        created_at: createdAt,
+      }
+    );
     const database = await getDb();
     await database.collection('habits').insertOne({
       sentence,
@@ -279,6 +341,10 @@ export async function shareHabit({
       language,
       confidence: classified.confidence,
       userID,
+      frequency,
+      duration,
+      healthBenefit,
+      wellbeingImpact,
       translationEN,
       translationDE,
       contextPhrases,

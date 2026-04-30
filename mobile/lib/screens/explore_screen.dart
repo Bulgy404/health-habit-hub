@@ -1,26 +1,30 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
-import '../models/habit_graph.dart';
+import '../models/bubble_graph.dart';
 import '../models/habit_node.dart';
-import '../providers/habit_graph_provider.dart';
+import '../providers/annotation_state_provider.dart';
+import '../providers/bubble_graph_provider.dart';
+import '../providers/show_in_graph_provider.dart';
 import '../services/habit_service.dart';
-import '../widgets/habit_graph_widget.dart';
+import '../widgets/bubble_graph_widget.dart';
 import 'stats_screen.dart';
 
-// Converts a graph habit node to the HabitNode model used by _NodeDetailSheet.
-HabitNode _toHabitNode(GraphNode node, HabitGraph graph) {
-  final concept = graph.conceptForHabit(node.id);
+// Converts a HabitBubble to the HabitNode model used by _NodeDetailSheet.
+HabitNode _toHabitNode(HabitBubble bubble, DimensionBubble dimension) {
   return HabitNode(
-    id: node.habitId!,
-    name: node.label,
-    originalText: node.originalText,
-    category: concept?.label ?? '',
-    bcioClass: concept?.id.replaceFirst('c:', '') ?? '',
-    annotationCounts: node.annotationCounts,
-    language: node.language,
-    hasTranslation: node.language.isNotEmpty && node.originalText != node.label,
+    id: bubble.id,
+    name: bubble.label,
+    originalText: bubble.originalText,
+    category: dimension.label,
+    bcioClass: '',
+    annotationCounts: bubble.annotationCounts,
+    language: bubble.language,
+    hasTranslation:
+        bubble.originalText.isNotEmpty && bubble.originalText != bubble.label,
   );
 }
 
@@ -31,12 +35,32 @@ class ExploreScreen extends ConsumerStatefulWidget {
   ConsumerState<ExploreScreen> createState() => _ExploreScreenState();
 }
 
-class _ExploreScreenState extends ConsumerState<ExploreScreen> {
-  void _showHabitDetail(GraphNode graphNode, HabitGraph graph) {
-    assert(graphNode.isHabit, '_showHabitDetail called with non-habit node: ${graphNode.id}');
-    final habitNode = _toHabitNode(graphNode, graph);
-    final allHabitNodes = graph.habitNodes
-        .map((n) => _toHabitNode(n, graph))
+class _ExploreScreenState extends ConsumerState<ExploreScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  BubbleGraph? _graphOverride;
+  String? _pulseHabitId;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _showHabitDetail(
+    HabitBubble bubble,
+    DimensionBubble dimension,
+    BubbleGraph graph,
+  ) {
+    final habitNode = _toHabitNode(bubble, dimension);
+    final allHabitNodes = dimension.habits
+        .map((h) => _toHabitNode(h, dimension))
         .toList();
 
     showModalBottomSheet<void>(
@@ -50,18 +74,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         initialNode: habitNode,
         allHabits: allHabitNodes,
         habitService: ref.read(habitServiceProvider),
-        // Annotation counts in the open sheet update via _NodeDetailSheet's
-        // own setState. The provider cache stays stale until next refresh —
-        // acceptable tradeoff to avoid re-fetching the whole graph on every tap.
-        onNodeUpdated: (_) {},
+        onNodeUpdated: _applyNodeUpdate,
         onNavigateTo: (target) {
           Navigator.of(ctx).pop();
-          final targetGraphNode = graph.habitNodes
-              .where((n) => n.habitId == target.id)
+          final targetBubble = dimension.habits
+              .where((h) => h.id == target.id)
               .firstOrNull;
-          if (targetGraphNode != null) {
+          if (targetBubble != null) {
             WidgetsBinding.instance.addPostFrameCallback(
-              (_) => _showHabitDetail(targetGraphNode, graph),
+              (_) => _showHabitDetail(targetBubble, dimension, graph),
             );
           }
         },
@@ -69,28 +90,70 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     );
   }
 
-  void _showConceptDetail(GraphNode conceptNode, HabitGraph graph) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => _ConceptDetailSheet(
-        conceptNode: conceptNode,
-        habits: graph.habitsForConcept(conceptNode.id),
-      ),
-    );
+  void _applyNodeUpdate(HabitNode updated) {
+    final base = _graphOverride ?? ref.read(bubbleGraphProvider).value;
+    if (base == null) return;
+
+    final dimensions = base.dimensions.map((d) {
+      final habits = d.habits.map((h) {
+        if (h.id != updated.id) return h;
+        return HabitBubble(
+          id: h.id,
+          label: h.label,
+          originalText: h.originalText,
+          language: h.language,
+          annotationCounts: updated.annotationCounts,
+        );
+      }).toList();
+
+      return DimensionBubble(
+        id: d.id,
+        label: d.label,
+        habitCount: d.habitCount,
+        habits: habits,
+      );
+    }).toList();
+
+    setState(() {
+      _graphOverride = BubbleGraph(dimensions: dimensions);
+      _pulseHabitId = updated.id;
+    });
+    Future<void>.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      if (_pulseHabitId != updated.id) return;
+      setState(() => _pulseHabitId = null);
+    });
+  }
+
+  void _handleShowInGraph(HabitGraphSelection selection) {
+    final graph = _graphOverride ?? ref.read(bubbleGraphProvider).value;
+    if (graph == null) return;
+    final dimension = graph.dimensions
+        .where((d) => d.id == selection.dimensionId)
+        .firstOrNull;
+    if (dimension == null) return;
+    final habit = dimension.habits
+        .where((h) => h.id == selection.habitId)
+        .firstOrNull;
+    if (habit == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showHabitDetail(habit, dimension, graph);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final graphAsync = ref.watch(habitGraphProvider);
+    final graphAsync = ref.watch(bubbleGraphProvider);
+
+    // Handle "Show in Habit Graph" requests from the Stats tab.
+    ref.listen<HabitGraphSelection?>(showInGraphProvider, (_, selection) {
+      if (selection == null) return;
+      ref.read(showInGraphProvider.notifier).clear();
+      _handleShowInGraph(selection);
+    });
 
     Widget body;
-
     if (graphAsync.isLoading) {
       body = const Center(child: CircularProgressIndicator());
     } else if (graphAsync.hasError) {
@@ -100,11 +163,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 12),
-            Text(l10n.failedToLoadHabits,
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              l10n.failedToLoadHabits,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
-              onPressed: () => ref.invalidate(habitGraphProvider),
+              onPressed: () => ref.invalidate(bubbleGraphProvider),
               icon: const Icon(Icons.refresh),
               label: Text(l10n.retry),
             ),
@@ -112,136 +177,57 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         ),
       );
     } else {
-      final graph = graphAsync.value!;
-      if (graph.nodes.isEmpty) {
+      final graph = _graphOverride ?? graphAsync.value!;
+      if (graph.dimensions.isEmpty) {
         body = Center(child: Text(l10n.noHabitDataYet));
       } else {
-        body = HabitGraphWidget(
+        body = BubbleGraphWidget(
           graph: graph,
-          onHabitTap: (node) => _showHabitDetail(node, graph),
-          onConceptTap: (node) => _showConceptDetail(node, graph),
+          pulseHabitId: _pulseHabitId,
+          onHabitTap: (bubble, dimension) =>
+              _showHabitDetail(bubble, dimension, graph),
         );
       }
     }
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.exploreHabits),
-          actions: [
-            if (!graphAsync.isLoading)
-              IconButton(
-                onPressed: () => ref.invalidate(habitGraphProvider),
-                icon: const Icon(Icons.refresh),
-                tooltip: l10n.refresh,
-              ),
-          ],
-          bottom: TabBar(
-            tabs: [
-              Tab(icon: const Icon(Icons.hub), text: l10n.graphTab),
-              Tab(icon: const Icon(Icons.bar_chart), text: l10n.statsTab),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            body,
-            const StatsScreen(),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Concept detail bottom sheet
-// ---------------------------------------------------------------------------
-
-class _ConceptDetailSheet extends StatelessWidget {
-  final GraphNode conceptNode;
-  final List<GraphNode> habits;
-
-  const _ConceptDetailSheet({
-    required this.conceptNode,
-    required this.habits,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-
-    return DraggableScrollableSheet(
-      expand: false,
-      initialChildSize: 0.5,
-      minChildSize: 0.3,
-      maxChildSize: 0.9,
-      builder: (ctx, scrollController) => ListView(
-        controller: scrollController,
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-        children: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: cs.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.exploreHabits),
+        actions: [
+          if (!graphAsync.isLoading)
+            IconButton(
+              onPressed: () {
+                setState(() {
+                  _graphOverride = null;
+                  _pulseHabitId = null;
+                });
+                ref.invalidate(bubbleGraphProvider);
+              },
+              icon: const Icon(Icons.refresh),
+              tooltip: l10n.refresh,
             ),
-          ),
-          Row(
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFF9800),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text('Behaviour Change Concept',
-                  style: tt.labelMedium?.copyWith(color: cs.outline)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(conceptNode.label, style: tt.titleLarge),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Icon(Icons.hub_outlined, size: 15, color: cs.primary),
-              const SizedBox(width: 6),
-              Text(
-                'Related habits  •  ${habits.length}',
-                style: tt.labelLarge?.copyWith(fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          for (final habit in habits) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(habit.label, style: tt.bodyMedium),
-            ),
-            Divider(height: 1, color: cs.outlineVariant),
-          ],
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(icon: const Icon(Icons.bubble_chart), text: l10n.graphTab),
+            Tab(icon: const Icon(Icons.bar_chart), text: l10n.statsTab),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [body, const StatsScreen()],
       ),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Node detail bottom sheet (reused for habit taps)
+// Node detail bottom sheet
 // ---------------------------------------------------------------------------
 
-class _NodeDetailSheet extends StatefulWidget {
+class _NodeDetailSheet extends ConsumerStatefulWidget {
   final HabitNode initialNode;
   final List<HabitNode> allHabits;
   final HabitService habitService;
@@ -257,12 +243,12 @@ class _NodeDetailSheet extends StatefulWidget {
   });
 
   @override
-  State<_NodeDetailSheet> createState() => _NodeDetailSheetState();
+  ConsumerState<_NodeDetailSheet> createState() => _NodeDetailSheetState();
 }
 
-class _NodeDetailSheetState extends State<_NodeDetailSheet> {
+class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
   late HabitNode _node;
-  bool _annotating = false;
+  String? _loadingType; // 'iDoThis' or 'helpful' while a request is in-flight
 
   @override
   void initState() {
@@ -271,10 +257,17 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
   }
 
   Future<void> _annotate(String type) async {
-    if (_annotating) return;
-    setState(() => _annotating = true);
+    if (_loadingType != null) return;
+    final notifier = ref.read(annotationStateProvider.notifier);
+    final isRemove = notifier.isAnnotated(_node.id, type);
+    setState(() => _loadingType = type);
     try {
-      final newCounts = await widget.habitService.annotateHabit(_node.id, type);
+      final newCounts = await widget.habitService.annotateHabit(
+        _node.id,
+        type,
+        remove: isRemove,
+      );
+      notifier.toggle(_node.id, type);
       final updated = HabitNode(
         id: _node.id,
         name: _node.name,
@@ -299,7 +292,7 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
         );
       }
     } finally {
-      if (mounted) setState(() => _annotating = false);
+      if (mounted) setState(() => _loadingType = null);
     }
   }
 
@@ -309,11 +302,18 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
     final tt = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context)!;
 
-    // Related: same category, different node, sorted by total annotations.
-    final related = widget.allHabits
-        .where((h) => h.id != _node.id && h.category == _node.category)
-        .toList()
-      ..sort((a, b) => b.totalAnnotations.compareTo(a.totalAnnotations));
+    final annotationState = ref.watch(annotationStateProvider);
+    final iDoThisActive =
+        annotationState[_node.id]?.contains('iDoThis') ?? false;
+    final helpfulActive =
+        annotationState[_node.id]?.contains('helpful') ?? false;
+    final busy = _loadingType != null;
+
+    final related =
+        widget.allHabits
+            .where((h) => h.id != _node.id && h.category == _node.category)
+            .toList()
+          ..sort((a, b) => b.totalAnnotations.compareTo(a.totalAnnotations));
 
     return DraggableScrollableSheet(
       expand: false,
@@ -339,10 +339,8 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
             ),
           ),
 
-          // Full habit text
           Text(_node.name, style: tt.titleLarge?.copyWith(height: 1.35)),
 
-          // Translation info
           if (_node.hasTranslation &&
               _node.originalText.isNotEmpty &&
               _node.originalText != _node.name) ...[
@@ -376,12 +374,14 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
 
           const SizedBox(height: 14),
 
-          // Category badge
           if (_node.category.isNotEmpty)
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: cs.secondaryContainer,
                     borderRadius: BorderRadius.circular(20),
@@ -389,13 +389,17 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.category_outlined,
-                          size: 14, color: cs.onSecondaryContainer),
+                      Icon(
+                        Icons.category_outlined,
+                        size: 14,
+                        color: cs.onSecondaryContainer,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         _node.category,
-                        style: tt.labelMedium
-                            ?.copyWith(color: cs.onSecondaryContainer),
+                        style: tt.labelMedium?.copyWith(
+                          color: cs.onSecondaryContainer,
+                        ),
                       ),
                     ],
                   ),
@@ -403,47 +407,11 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
               ],
             ),
 
-          // Related habits in the same category
-          if (related.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Icon(Icons.hub_outlined, size: 15, color: cs.primary),
-                const SizedBox(width: 6),
-                Text(
-                  'Related habits  •  ${related.length}',
-                  style: tt.labelLarge
-                      ?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 36,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: related.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
-                itemBuilder: (_, i) {
-                  final rel = related[i];
-                  final label = rel.name.length > 32
-                      ? '${rel.name.substring(0, 32)}…'
-                      : rel.name;
-                  return ActionChip(
-                    label: Text(label, style: const TextStyle(fontSize: 12)),
-                    onPressed: () => widget.onNavigateTo(rel),
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                  );
-                },
-              ),
-            ),
-          ],
-
           const SizedBox(height: 20),
           Divider(color: cs.outlineVariant),
           const SizedBox(height: 12),
 
-          // Community counts
+          // Community annotation counts
           Row(
             children: [
               Icon(Icons.people_outline, size: 15, color: cs.primary),
@@ -458,48 +426,108 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
           Row(
             children: [
               _CountBadge(
-                icon: Icons.thumb_up_outlined,
+                icon: iDoThisActive ? Icons.thumb_up : Icons.thumb_up_outlined,
                 label: l10n.iDoThisCount(
-                    '${_node.annotationCounts['iDoThis'] ?? 0}'),
-                color: cs.primary,
+                  '${_node.annotationCounts['iDoThis'] ?? 0}',
+                ),
+                color: iDoThisActive ? Colors.green.shade700 : cs.primary,
               ),
               const SizedBox(width: 20),
               _CountBadge(
-                icon: Icons.star_outline,
+                icon: helpfulActive ? Icons.star : Icons.star_outline,
                 label: l10n.helpfulCount(
-                    '${_node.annotationCounts['helpful'] ?? 0}'),
-                color: cs.tertiary,
+                  '${_node.annotationCounts['helpful'] ?? 0}',
+                ),
+                color: helpfulActive ? Colors.amber : cs.tertiary,
               ),
             ],
           ),
           const SizedBox(height: 16),
 
-          // Action buttons
+          // Toggle annotation buttons — always visible near the top
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _annotating ? null : () => _annotate('iDoThis'),
-                  icon: const Icon(Icons.thumb_up),
+                  onPressed: busy ? null : () => _annotate('iDoThis'),
+                  style: iDoThisActive
+                      ? OutlinedButton.styleFrom(
+                          backgroundColor: Colors.green.shade50,
+                          foregroundColor: Colors.green.shade700,
+                          side: BorderSide(color: Colors.green.shade700),
+                        )
+                      : null,
+                  icon: _loadingType == 'iDoThis'
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          iDoThisActive
+                              ? Icons.thumb_up
+                              : Icons.thumb_up_alt_outlined,
+                        ),
                   label: Text(l10n.iDoThisToo),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: _annotating ? null : () => _annotate('helpful'),
-                  icon: _annotating
+                  onPressed: busy ? null : () => _annotate('helpful'),
+                  icon: _loadingType == 'helpful'
                       ? const SizedBox(
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.star),
+                      : Icon(
+                          helpfulActive ? Icons.star : Icons.star_outline,
+                          color: helpfulActive ? Colors.amber : null,
+                        ),
                   label: Text(l10n.helpful),
                 ),
               ),
             ],
           ),
+
+          // Related habits — bounded scrollable container, always below buttons
+          if (related.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Icon(Icons.bubble_chart_outlined, size: 15, color: cs.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Related habits  •  ${related.length}',
+                  style: tt.labelLarge?.copyWith(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            // Show at most 5 habits; scroll if there are more.
+            SizedBox(
+              height: math.min(related.length, 5) * 48.0,
+              child: ListView.builder(
+                physics: const ClampingScrollPhysics(),
+                itemCount: related.length,
+                itemBuilder: (_, i) => ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(related[i].name, style: tt.bodyMedium),
+                  trailing: Icon(
+                    Icons.arrow_forward_ios,
+                    size: 12,
+                    color: cs.outline,
+                  ),
+                  onTap: () => widget.onNavigateTo(related[i]),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -507,7 +535,7 @@ class _NodeDetailSheetState extends State<_NodeDetailSheet> {
 }
 
 // ---------------------------------------------------------------------------
-// Small count badge widget
+// Small count badge
 // ---------------------------------------------------------------------------
 
 class _CountBadge extends StatelessWidget {

@@ -10,6 +10,9 @@ import {
   getHabitTotal,
   getHabitsByCategory,
   getHabitGraph,
+  getHabitBubbleGraph,
+  getUserHabits,
+  updateHabitAnnotation,
 } from '../db/habitQueries.js';
 
 export function createHabitsRouter({
@@ -353,10 +356,11 @@ export function createHabitsRouter({
    *               $ref: '#/components/schemas/Error'
    */
   // POST /api/v1/habits/:id/annotate
-  // Stores anonymous annotation (no userId) and returns updated counts
+  // Adds or removes an anonymous annotation and returns updated counts.
+  // Body: { type: 'helpful'|'iDoThis', remove?: boolean }
   router.post('/:id/annotate', async (req, res) => {
     try {
-      const { type } = req.body || {};
+      const { type, remove = false } = req.body || {};
       if (type !== 'helpful' && type !== 'iDoThis') {
         return res
           .status(400)
@@ -365,12 +369,23 @@ export function createHabitsRouter({
 
       const database = await getDb();
       const habitId = req.params.id;
+      const delta = remove ? -1 : 1;
 
-      await database.collection('habit_annotations').insertOne({
-        habitId,
-        type,
-        createdAt: new Date(),
-      });
+      // Update MongoDB
+      if (remove) {
+        await database
+          .collection('habit_annotations')
+          .deleteOne({ habitId, type });
+      } else {
+        await database.collection('habit_annotations').insertOne({
+          habitId,
+          type,
+          createdAt: new Date(),
+        });
+      }
+
+      // Mirror counts to Neo4j
+      await updateHabitAnnotation(queryNeo4j, habitId, type, delta);
 
       const all = await database
         .collection('habit_annotations')
@@ -475,7 +490,14 @@ export function createHabitsRouter({
   // POST /api/v1/habits/share
   // Validate input then delegate to the habit-sharing service.
   async function handleShareHabit(req, res) {
-    const { sentence, language } = req.body || {};
+    const {
+      sentence,
+      language,
+      frequency,
+      duration,
+      health_benefit,
+      wellbeing_impact,
+    } = req.body || {};
     const userId = req.user?.sub;
     if (!userId || typeof userId !== 'string') {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -498,6 +520,18 @@ export function createHabitsRouter({
         error: `language must be a supported ISO 639-1 code (${SUPPORTED_LANGUAGES.join(', ')})`,
       });
     }
+    const isValidRating = (v, max) =>
+      v === undefined ||
+      v === null ||
+      (Number.isInteger(v) && v >= 1 && v <= max);
+    if (
+      !isValidRating(frequency, 4) ||
+      !isValidRating(duration, 4) ||
+      !isValidRating(health_benefit, 5) ||
+      !isValidRating(wellbeing_impact, 5)
+    ) {
+      return res.status(400).json({ error: 'Invalid rating value' });
+    }
 
     const apiBase =
       apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
@@ -512,6 +546,10 @@ export function createHabitsRouter({
         sentence,
         language,
         userID: userId,
+        frequency: frequency ?? null,
+        duration: duration ?? null,
+        healthBenefit: health_benefit ?? null,
+        wellbeingImpact: wellbeing_impact ?? null,
         queryNeo4j,
         getDb,
         apiBase,
@@ -554,9 +592,10 @@ export function createHabitsRouter({
         process.env.NODE_ENV !== 'production'
           ? err?.message || String(err)
           : undefined;
-      return res
-        .status(500)
-        .json({ error: 'Internal server error', ...(detail ? { detail } : {}) });
+      return res.status(500).json({
+        error: 'Internal server error',
+        ...(detail ? { detail } : {}),
+      });
     }
   }
 
@@ -609,9 +648,9 @@ export function createHabitsRouter({
       ]);
 
       // Collect unique habits and concepts
-      const habitMap = new Map();  // habitId → row
+      const habitMap = new Map(); // habitId → row
       const conceptMap = new Map(); // conceptId → conceptLabel
-      const edgeMap = new Map();   // key → {source, target}
+      const edgeMap = new Map(); // key → {source, target}
 
       for (const row of rows) {
         if (row.habitId && !habitMap.has(row.habitId)) {
@@ -623,19 +662,23 @@ export function createHabitsRouter({
         if (row.habitId && row.conceptId) {
           const edgeKey = `${row.habitId}||${row.conceptId}`;
           if (!edgeMap.has(edgeKey)) {
-            edgeMap.set(edgeKey, { source: `h:${row.habitId}`, target: `c:${row.conceptId}` });
+            edgeMap.set(edgeKey, {
+              source: `h:${row.habitId}`,
+              target: `c:${row.conceptId}`,
+            });
           }
         }
       }
 
       // Join annotation counts from MongoDB for habit nodes
       const habitIds = [...habitMap.keys()];
-      const annotations = habitIds.length > 0
-        ? await database
-            .collection('habit_annotations')
-            .find({ habitId: { $in: habitIds } })
-            .toArray()
-        : [];
+      const annotations =
+        habitIds.length > 0
+          ? await database
+              .collection('habit_annotations')
+              .find({ habitId: { $in: habitIds } })
+              .toArray()
+          : [];
 
       const countsByHabit = {};
       for (const ann of annotations) {
@@ -654,7 +697,10 @@ export function createHabitsRouter({
           habitId: row.habitId,
           originalText: row.originalText || '',
           language: row.language || '',
-          annotationCounts: countsByHabit[row.habitId] || { helpful: 0, iDoThis: 0 },
+          annotationCounts: countsByHabit[row.habitId] || {
+            helpful: 0,
+            iDoThis: 0,
+          },
         })),
         ...[...conceptMap.entries()].map(([conceptId, label]) => ({
           id: `c:${conceptId}`,
@@ -672,6 +718,158 @@ export function createHabitsRouter({
       res.json({ nodes, edges });
     } catch (err) {
       console.error('[route] GET /habits/graph error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/habits/bubble-graph
+  // Returns dimensions with nested habits for the bubble drill-down view.
+  const DIMENSION_LABELS = {
+    TIME: 'Time',
+    BEHAVIOR: 'Behavior',
+    PHYSICAL_SETTING: 'Location',
+    PRIOR_BEHAVIOR: 'Prior Behavior',
+    OTHER_PEOPLE: 'Social',
+    INTERNAL_STATE: 'Mental State',
+    REASONING: 'Reasoning',
+  };
+
+  router.get('/bubble-graph', async (req, res) => {
+    try {
+      const [rows, database] = await Promise.all([
+        getHabitBubbleGraph(queryNeo4j),
+        getDb(),
+      ]);
+
+      // Group habits by dimension, deduplicate within each dimension.
+      const dimensionMap = new Map();
+      for (const row of rows) {
+        if (!row.dimension || !row.habitId) continue;
+        if (!dimensionMap.has(row.dimension)) dimensionMap.set(row.dimension, new Map());
+        const habitMap = dimensionMap.get(row.dimension);
+        if (!habitMap.has(row.habitId)) {
+          habitMap.set(row.habitId, {
+            id: row.habitId,
+            label: row.habitLabel || '',
+            originalText: row.originalText || '',
+            language: row.language || '',
+          });
+        }
+      }
+
+      // Join annotation counts from MongoDB.
+      const allIds = [...new Set(rows.map((r) => r.habitId).filter(Boolean))];
+      const annotations =
+        allIds.length > 0
+          ? await database
+              .collection('habit_annotations')
+              .find({ habitId: { $in: allIds } })
+              .toArray()
+          : [];
+
+      const countsByHabit = {};
+      for (const ann of annotations) {
+        if (!countsByHabit[ann.habitId])
+          countsByHabit[ann.habitId] = { helpful: 0, iDoThis: 0 };
+        if (ann.type === 'helpful') countsByHabit[ann.habitId].helpful++;
+        if (ann.type === 'iDoThis') countsByHabit[ann.habitId].iDoThis++;
+      }
+
+      const dimensions = [...dimensionMap.entries()]
+        .map(([dimId, habitMap]) => {
+          const habits = [...habitMap.values()].map((h) => ({
+            ...h,
+            annotationCounts: countsByHabit[h.id] || { helpful: 0, iDoThis: 0 },
+          }));
+          return {
+            id: dimId,
+            label: DIMENSION_LABELS[dimId] || dimId,
+            habitCount: habits.length,
+            habits,
+          };
+        })
+        .sort((a, b) => b.habitCount - a.habitCount);
+
+      res.json({ dimensions });
+    } catch (err) {
+      console.error('[route] GET /habits/bubble-graph error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/habits/my-stats
+  // Returns the authenticated user's donated habits grouped by dimension,
+  // plus a flat list of their habits with annotation counts.
+  // BEHAVIOR dimension is excluded from the dimension summary.
+  router.get('/my-stats', async (req, res) => {
+    try {
+      const userId = req.user?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const [rows, database] = await Promise.all([
+        getUserHabits(queryNeo4j, userId),
+        getDb(),
+      ]);
+
+      // Group rows by habitId, collecting all dimensions per habit.
+      const habitMap = new Map();
+      for (const row of rows) {
+        if (!row.habitId) continue;
+        if (!habitMap.has(row.habitId)) {
+          habitMap.set(row.habitId, {
+            id: row.habitId,
+            label: row.habitLabel || '',
+            originalText: row.originalText || '',
+            language: row.language || '',
+            dimensions: [],
+          });
+        }
+        if (row.dimension) habitMap.get(row.habitId).dimensions.push(row.dimension);
+      }
+
+      // Join annotation counts from MongoDB.
+      const allIds = [...habitMap.keys()];
+      const annotations = allIds.length > 0
+        ? await database.collection('habit_annotations')
+            .find({ habitId: { $in: allIds } })
+            .toArray()
+        : [];
+
+      const countsByHabit = {};
+      for (const ann of annotations) {
+        if (!countsByHabit[ann.habitId]) countsByHabit[ann.habitId] = { helpful: 0, iDoThis: 0 };
+        if (ann.type === 'helpful') countsByHabit[ann.habitId].helpful++;
+        if (ann.type === 'iDoThis') countsByHabit[ann.habitId].iDoThis++;
+      }
+
+      const habits = [...habitMap.values()].map((h) => ({
+        ...h,
+        annotationCounts: countsByHabit[h.id] || { helpful: 0, iDoThis: 0 },
+      }));
+
+      // Dimension summary — deduplicated per habit, BEHAVIOR excluded.
+      const dimCountMap = {};
+      for (const habit of habits) {
+        const seen = new Set();
+        for (const dim of habit.dimensions) {
+          if (dim === 'BEHAVIOR' || seen.has(dim)) continue;
+          seen.add(dim);
+          dimCountMap[dim] = (dimCountMap[dim] || 0) + 1;
+        }
+      }
+      const byDimension = Object.entries(dimCountMap)
+        .map(([dim, count]) => ({
+          dimension: dim,
+          label: DIMENSION_LABELS[dim] || dim,
+          count,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      res.json({ total: habits.length, byDimension, habits });
+    } catch (err) {
+      console.error('[route] GET /habits/my-stats error:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

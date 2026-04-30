@@ -1,116 +1,102 @@
-import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../l10n/app_localizations.dart';
 import '../models/habit_stats.dart';
-import '../services/habit_service.dart';
+import '../providers/show_in_graph_provider.dart';
 
-class StatsScreen extends ConsumerStatefulWidget {
+class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});
 
   @override
-  ConsumerState<StatsScreen> createState() => _StatsScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final statsAsync = ref.watch(myStatsProvider);
 
-class _StatsScreenState extends ConsumerState<StatsScreen> {
-  late HabitService _habitService;
-  HabitStats? _stats;
-  bool _loading = true;
-  String? _error;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _habitService = ref.read(habitServiceProvider);
-    _fetchStats();
-    _timer = Timer.periodic(const Duration(seconds: 60), (_) => _fetchStats());
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _fetchStats() async {
-    setState(() {
-      _loading = _stats == null;
-      _error = null;
-    });
-    try {
-      final stats = await _habitService.fetchStats();
-      setState(() {
-        _stats = stats;
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
-
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) return const _StatsSkeleton();
-
-    if (_error != null) {
-      return Center(
+    return statsAsync.when(
+      loading: () => const _StatsSkeleton(),
+      error: (e, _) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 12),
-            Text(AppLocalizations.of(context)!.failedToLoadStats,
+            Text('Failed to load your habits',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             ElevatedButton.icon(
-              onPressed: _fetchStats,
+              onPressed: () => ref.invalidate(myStatsProvider),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
             ),
           ],
         ),
-      );
-    }
+      ),
+      data: (stats) => _StatsContent(stats: stats),
+    );
+  }
+}
 
-    final stats = _stats!;
+// ---------------------------------------------------------------------------
+// Main content
+// ---------------------------------------------------------------------------
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+class _StatsContent extends ConsumerWidget {
+  final MyStats stats;
+  const _StatsContent({required this.stats});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tt = Theme.of(context).textTheme;
+
+    return RefreshIndicator(
+      onRefresh: () async => ref.invalidate(myStatsProvider),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
           _TotalCard(total: stats.total),
-          const SizedBox(height: 24),
-          Text('Habits by Category',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 240,
-            child: stats.byCategory.isEmpty
-                ? const Center(child: Text('No category data'))
-                : _CategoryBarChart(data: stats.byCategory),
-          ),
-          const SizedBox(height: 24),
-          Text('Annotations per Day (last 30 days)',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 200,
-            child: stats.byDay.isEmpty
-                ? const Center(child: Text('No activity yet'))
-                : _DayLineChart(data: stats.byDay),
-          ),
+          if (stats.byDimension.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text('Habits by Context',
+                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 220,
+              child: _DimensionBarChart(data: stats.byDimension),
+            ),
+          ],
+          if (stats.habits.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text('My Donated Habits',
+                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            for (final habit in stats.habits)
+              _HabitCard(
+                habit: habit,
+                onShowInGraph: () {
+                  if (habit.dimensions.isEmpty) return;
+                  // Switch to Graph tab (index 0 inside ExploreScreen).
+                  DefaultTabController.of(context).animateTo(0);
+                  ref.read(showInGraphProvider.notifier).select(
+                        HabitGraphSelection(
+                          habitId: habit.id,
+                          dimensionId: habit.dimensions.first,
+                        ),
+                      );
+                },
+              ),
+          ] else ...[
+            const SizedBox(height: 48),
+            Center(
+              child: Text(
+                'No habits donated yet.\nShare your first habit!',
+                textAlign: TextAlign.center,
+                style: tt.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.outline),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
         ],
       ),
@@ -159,17 +145,18 @@ class _TotalCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Bar chart: habits by category
+// Bar chart: user's habits by context dimension
 // ---------------------------------------------------------------------------
 
-class _CategoryBarChart extends StatelessWidget {
-  final List<CategoryCount> data;
-  const _CategoryBarChart({required this.data});
+class _DimensionBarChart extends StatelessWidget {
+  final List<DimensionStat> data;
+  const _DimensionBarChart({required this.data});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final maxCount = data.map((d) => d.count).fold(0, (a, b) => a > b ? a : b);
+    final maxCount =
+        data.map((d) => d.count).fold(0, (a, b) => math.max(a, b));
 
     final groups = data.asMap().entries.map((e) {
       return BarChartGroupData(
@@ -188,22 +175,16 @@ class _CategoryBarChart extends StatelessWidget {
     return BarChart(
       BarChartData(
         barGroups: groups,
-        maxY: maxCount > 0 ? maxCount * 1.2 : 10,
+        maxY: maxCount > 0 ? maxCount * 1.3 : 5,
         gridData: const FlGridData(show: true, drawVerticalLine: false),
         borderData: FlBorderData(show: false),
         barTouchData: BarTouchData(
           touchTooltipData: BarTouchTooltipData(
             getTooltipColor: (_) => colorScheme.inverseSurface,
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              final cat = data[group.x].category;
-              return BarTooltipItem(
-                '$cat\n${rod.toY.toInt()}',
-                TextStyle(
-                  color: colorScheme.onInverseSurface,
-                  fontSize: 12,
-                ),
-              );
-            },
+            getTooltipItem: (group, _, rod, _) => BarTooltipItem(
+              '${data[group.x].label}\n${rod.toY.toInt()}',
+              TextStyle(color: colorScheme.onInverseSurface, fontSize: 12),
+            ),
           ),
         ),
         titlesData: FlTitlesData(
@@ -214,8 +195,8 @@ class _CategoryBarChart extends StatelessWidget {
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 36,
-              getTitlesWidget: (value, meta) => Text(
+              reservedSize: 32,
+              getTitlesWidget: (value, _) => Text(
                 value.toInt().toString(),
                 style: const TextStyle(fontSize: 11),
               ),
@@ -224,19 +205,18 @@ class _CategoryBarChart extends StatelessWidget {
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 44,
-              getTitlesWidget: (value, meta) {
+              reservedSize: 72,
+              getTitlesWidget: (value, _) {
                 final idx = value.toInt();
                 if (idx < 0 || idx >= data.length) {
                   return const SizedBox.shrink();
                 }
-                final label = data[idx].category;
-                final short = label.length > 6 ? label.substring(0, 6) : label;
                 return Padding(
                   padding: const EdgeInsets.only(top: 6),
                   child: RotatedBox(
                     quarterTurns: 1,
-                    child: Text(short, style: const TextStyle(fontSize: 10)),
+                    child: Text(data[idx].label,
+                        style: const TextStyle(fontSize: 10)),
                   ),
                 );
               },
@@ -249,98 +229,95 @@ class _CategoryBarChart extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Line chart: annotations per day
+// Individual habit card
 // ---------------------------------------------------------------------------
 
-class _DayLineChart extends StatelessWidget {
-  final List<DayCount> data;
-  const _DayLineChart({required this.data});
+class _HabitCard extends StatelessWidget {
+  final MyHabit habit;
+  final VoidCallback onShowInGraph;
+
+  const _HabitCard({required this.habit, required this.onShowInGraph});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final maxCount = data.map((d) => d.count).fold(0, (a, b) => a > b ? a : b);
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
 
-    final spots = data.asMap().entries.map((e) {
-      return FlSpot(e.key.toDouble(), e.value.count.toDouble());
-    }).toList();
-
-    // Show a label every ~7 days to avoid crowding
-    final step = (data.length / 5).ceil().clamp(1, 999);
-
-    return LineChart(
-      LineChartData(
-        lineBarsData: [
-          LineChartBarData(
-            spots: spots,
-            isCurved: true,
-            color: colorScheme.primary,
-            barWidth: 2,
-            dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              color: colorScheme.primary.withAlpha(40),
-            ),
-          ),
-        ],
-        minY: 0,
-        maxY: maxCount > 0 ? maxCount * 1.2 : 5,
-        gridData: const FlGridData(show: true, drawVerticalLine: false),
-        borderData: FlBorderData(show: false),
-        lineTouchData: LineTouchData(
-          touchTooltipData: LineTouchTooltipData(
-            getTooltipColor: (_) => colorScheme.inverseSurface,
-            getTooltipItems: (spots) => spots.map((spot) {
-              final idx = spot.x.toInt();
-              final label = idx >= 0 && idx < data.length
-                  ? data[idx].date
-                  : spot.x.toInt().toString();
-              return LineTooltipItem(
-                '$label\n${spot.y.toInt()}',
-                TextStyle(color: colorScheme.onInverseSurface, fontSize: 12),
-              );
-            }).toList(),
-          ),
-        ),
-        titlesData: FlTitlesData(
-          topTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles:
-              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 32,
-              getTitlesWidget: (value, meta) => Text(
-                value.toInt().toString(),
-                style: const TextStyle(fontSize: 11),
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(habit.label,
+                style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+            if (habit.dimensions.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                children: habit.dimensions
+                    .where((d) => d != 'BEHAVIOR')
+                    .map((d) => _DimChip(dimension: d))
+                    .toList(),
               ),
+            ],
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Icon(Icons.thumb_up_outlined, size: 14, color: cs.primary),
+                const SizedBox(width: 4),
+                Text('${habit.annotationCounts['iDoThis'] ?? 0}',
+                    style: tt.labelSmall),
+                const SizedBox(width: 12),
+                Icon(Icons.star_outline, size: 14, color: cs.tertiary),
+                const SizedBox(width: 4),
+                Text('${habit.annotationCounts['helpful'] ?? 0}',
+                    style: tt.labelSmall),
+                const Spacer(),
+                if (habit.dimensions.isNotEmpty)
+                  TextButton.icon(
+                    onPressed: onShowInGraph,
+                    icon: const Icon(Icons.hub_outlined, size: 14),
+                    label: const Text('Show in Graph',
+                        style: TextStyle(fontSize: 12)),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      minimumSize: Size.zero,
+                    ),
+                  ),
+              ],
             ),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 28,
-              interval: step.toDouble(),
-              getTitlesWidget: (value, meta) {
-                final idx = value.toInt();
-                if (idx < 0 || idx >= data.length) {
-                  return const SizedBox.shrink();
-                }
-                final date = data[idx].date;
-                // Show MM-DD from YYYY-MM-DD
-                final short =
-                    date.length >= 10 ? date.substring(5) : date;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child:
-                      Text(short, style: const TextStyle(fontSize: 10)),
-                );
-              },
-            ),
-          ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+class _DimChip extends StatelessWidget {
+  final String dimension;
+  const _DimChip({required this.dimension});
+
+  static const _labels = {
+    'TIME': 'Time',
+    'PHYSICAL_SETTING': 'Location',
+    'PRIOR_BEHAVIOR': 'Prior Behavior',
+    'OTHER_PEOPLE': 'Social',
+    'INTERNAL_STATE': 'Mental State',
+    'REASONING': 'Reasoning',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final label = _labels[dimension] ??
+        dimension.toLowerCase().replaceAll('_', ' ');
+    return Chip(
+      label: Text(label, style: const TextStyle(fontSize: 11)),
+      padding: EdgeInsets.zero,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: VisualDensity.compact,
     );
   }
 }
@@ -354,22 +331,21 @@ class _StatsSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return ListView(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SkeletonBox(width: double.infinity, height: 88),
-          const SizedBox(height: 24),
-          _SkeletonBox(width: 160, height: 20),
-          const SizedBox(height: 12),
-          _SkeletonBox(width: double.infinity, height: 240),
-          const SizedBox(height: 24),
-          _SkeletonBox(width: 200, height: 20),
-          const SizedBox(height: 12),
-          _SkeletonBox(width: double.infinity, height: 200),
-        ],
-      ),
+      children: [
+        _SkeletonBox(width: double.infinity, height: 88),
+        const SizedBox(height: 24),
+        _SkeletonBox(width: 160, height: 20),
+        const SizedBox(height: 12),
+        _SkeletonBox(width: double.infinity, height: 220),
+        const SizedBox(height: 24),
+        _SkeletonBox(width: 180, height: 20),
+        const SizedBox(height: 12),
+        _SkeletonBox(width: double.infinity, height: 90),
+        const SizedBox(height: 10),
+        _SkeletonBox(width: double.infinity, height: 90),
+      ],
     );
   }
 }

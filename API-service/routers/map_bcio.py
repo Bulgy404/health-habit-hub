@@ -22,12 +22,16 @@ router = APIRouter(dependencies=[Depends(verify_service_token)])
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-_EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-_BCIO_MIN_CONFIDENCE = float(os.getenv("BCIO_MIN_CONFIDENCE", "0.75"))
+_EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "Qwen/Qwen3-Embedding-4B")
+_EMBEDDING_API_BASE = os.getenv("EMBEDDING_API_BASE", os.getenv("LLM_API_BASE"))
+_EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", os.getenv("LLM_API_KEY", ""))
+_BCIO_MIN_CONFIDENCE = float(os.getenv("BCIO_MIN_CONFIDENCE", "0.6"))
 _OWL_PATH = Path(__file__).parent.parent / "data" / "bcio.owl"
 
-_api_key = os.getenv("LLM_API_KEY", "")
-_openai_client = openai.AsyncOpenAI(api_key=_api_key or "placeholder")
+_openai_client = openai.AsyncOpenAI(
+    api_key=_EMBEDDING_API_KEY or "placeholder",
+    base_url=_EMBEDDING_API_BASE or None,
+)
 
 # ---------------------------------------------------------------------------
 # OWL namespace constants
@@ -58,30 +62,12 @@ def _parse_owl_concepts(owl_path: Path) -> List[Dict[str, str]]:
 
 
 async def _embed_texts(texts: List[str]) -> List[List[float]]:
-    """Return embeddings for *texts* using the configured embedding model."""
-    if _EMBEDDING_MODEL.startswith("text-embedding"):
-        response = await _openai_client.embeddings.create(
-            model=_EMBEDDING_MODEL,
-            input=texts,
-        )
-        return [item.embedding for item in response.data]
-
-    # Optional: BAAI/bge-m3 via sentence-transformers
-    try:
-        from sentence_transformers import SentenceTransformer  # type: ignore
-
-        model = SentenceTransformer(_EMBEDDING_MODEL)
-        vecs = model.encode(texts, normalize_embeddings=True)
-        return [v.tolist() for v in vecs]
-    except ImportError:
-        logger.error(
-            "sentence-transformers not installed; falling back to text-embedding-3-small"
-        )
-        response = await _openai_client.embeddings.create(
-            model="text-embedding-3-small",
-            input=texts,
-        )
-        return [item.embedding for item in response.data]
+    """Return embeddings using the configured OpenAI-compatible embedding endpoint."""
+    response = await _openai_client.embeddings.create(
+        model=_EMBEDDING_MODEL,
+        input=texts,
+    )
+    return [item.embedding for item in response.data]
 
 
 def _cosine_similarity(a: List[float], b: List[float]) -> float:
@@ -117,8 +103,24 @@ async def _get_index() -> Optional[Dict[str, Any]]:
         return _INDEX
 
     labels = [c["label"] for c in raw_concepts]
+    total = len(labels)
+    chunk_size = int(os.getenv("EMBEDDING_CHUNK_SIZE", "200"))
+    embeddings: List[List[float]] = []
+
+    logger.info(
+        "Embedding %d BCIO concepts via %s (chunk_size=%d) …",
+        total, _EMBEDDING_MODEL, chunk_size,
+    )
     try:
-        embeddings = await _embed_texts(labels)
+        for i in range(0, total, chunk_size):
+            chunk = labels[i : i + chunk_size]
+            chunk_embeddings = await _embed_texts(chunk)
+            embeddings.extend(chunk_embeddings)
+            logger.info(
+                "BCIO embedding progress: %d / %d (%.0f%%)",
+                min(i + chunk_size, total), total,
+                min(i + chunk_size, total) / total * 100,
+            )
     except Exception as exc:  # noqa: BLE001
         logger.error("Failed to build BCIO concept embeddings: %s", exc)
         return None
@@ -127,7 +129,7 @@ async def _get_index() -> Optional[Dict[str, Any]]:
         {**c, "embedding": emb} for c, emb in zip(raw_concepts, embeddings)
     ]
     _INDEX = {"hash": file_hash, "concepts": concepts_with_embeddings}
-    logger.info("BCIO concept index built: %d concepts.", len(raw_concepts))
+    logger.info("BCIO concept index built: %d concepts.", total)
     return _INDEX
 
 
@@ -201,7 +203,7 @@ async def map_bcio(body: MapBcioRequest) -> MapBcioResponse:
                 best_score = score
                 best_concept = concept
 
-        if best_concept is not None and best_score >= _BCIO_MIN_CONFIDENCE:
+        if best_concept is not None and best_score > _BCIO_MIN_CONFIDENCE:
             mappings.append(
                 BcioMapping(
                     phrase=phrase,

@@ -39,6 +39,89 @@ class CategoryCount {
   }
 }
 
+class DimensionStat {
+  final String dimension;
+  final String label;
+  final int count;
+
+  const DimensionStat({
+    required this.dimension,
+    required this.label,
+    required this.count,
+  });
+
+  factory DimensionStat.fromJson(Map<String, dynamic> json) {
+    return DimensionStat(
+      dimension: json['dimension'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      count: (json['count'] as num? ?? 0).toInt(),
+    );
+  }
+}
+
+class MyHabit {
+  final String id;
+  final String label;
+  final String originalText;
+  final String language;
+  final List<String> dimensions;
+  final Map<String, int> annotationCounts;
+
+  const MyHabit({
+    required this.id,
+    required this.label,
+    required this.originalText,
+    required this.language,
+    required this.dimensions,
+    required this.annotationCounts,
+  });
+
+  int get totalAnnotations =>
+      annotationCounts.values.fold(0, (s, c) => s + c);
+
+  factory MyHabit.fromJson(Map<String, dynamic> json) {
+    final counts =
+        ((json['annotationCounts'] as Map<String, dynamic>?) ?? {})
+            .map((k, v) => MapEntry(k, (v as num).toInt()));
+    return MyHabit(
+      id: json['id'] as String? ?? '',
+      label: json['label'] as String? ?? '',
+      originalText: json['originalText'] as String? ?? '',
+      language: json['language'] as String? ?? '',
+      dimensions: ((json['dimensions'] as List<dynamic>?) ?? [])
+          .cast<String>()
+          .toList(),
+      annotationCounts: counts,
+    );
+  }
+}
+
+class MyStats {
+  final int total;
+  final List<DimensionStat> byDimension;
+  final List<MyHabit> habits;
+
+  const MyStats({
+    required this.total,
+    required this.byDimension,
+    required this.habits,
+  });
+
+  factory MyStats.fromJson(Map<String, dynamic> json) {
+    return MyStats(
+      total: (json['total'] as num? ?? 0).toInt(),
+      byDimension: ((json['byDimension'] as List<dynamic>?) ?? [])
+          .cast<Map<String, dynamic>>()
+          .map(DimensionStat.fromJson)
+          .toList(),
+      habits: ((json['habits'] as List<dynamic>?) ?? [])
+          .cast<Map<String, dynamic>>()
+          .map(MyHabit.fromJson)
+          .toList(),
+    );
+  }
+}
+
 class DayCount {
   final String date;
   final int count;

@@ -1,6 +1,7 @@
 """Shared lifespan-managed dependencies for the FastAPI app."""
 from __future__ import annotations
 
+import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator, Optional
@@ -9,6 +10,7 @@ import motor.motor_asyncio
 import redis.asyncio as aioredis
 from fastapi import FastAPI
 
+logger = logging.getLogger(__name__)
 
 _redis: Optional[aioredis.Redis] = None
 _mongo: Optional[motor.motor_asyncio.AsyncIOMotorClient] = None  # type: ignore[type-arg]
@@ -22,6 +24,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _redis = aioredis.from_url(redis_url, decode_responses=True)
 
     _build_mongo_client()
+
+    from routers.map_bcio import _get_index
+    try:
+        await _get_index()
+    except Exception as exc:  # noqa: BLE001
+        logger.error("BCIO index warm-up failed: %s", exc)
 
     yield
 
