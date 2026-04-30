@@ -2,7 +2,7 @@
 
 .PHONY: help \
         dev stop seed verify-keycloak fix-keycloak logs logs-all ios reset \
-        test test-backend test-flutter test-python test-admin \
+        format test test-backend test-flutter test-python test-admin test-bcio-pipeline \
         prod-up prod-stop prod-ps prod-logs prod-build prod-restart \
         prod-keycloak prod-seed prod-update prod-cutover
 
@@ -46,7 +46,10 @@ reset: stop ## Wipe local volumes, restart, and re-seed
 
 test: test-backend test-flutter test-python test-admin ## Run all tests
 
-test-backend: ## Backend: lint + unit tests + security audit
+format: ## Auto-format backend code with Prettier
+	cd app && npx prettier --write .
+
+test-backend: format ## Backend: lint + unit tests + security audit
 	cd app && npx prettier --check . && npx eslint . && \
 	node --test "tests/unit/**/*.test.js" && \
 	npm audit --audit-level=critical
@@ -55,10 +58,13 @@ test-flutter: ## Flutter: analyze + widget/unit tests
 	cd mobile && flutter analyze lib/ test/ && flutter test
 
 test-python: ## Python API-service: pytest
-	cd API-service && python3 -m pytest tests/ -v
+	set -a && . ./.env && set +a && cd API-service && python3 -m pytest tests/ -v
 
 test-admin: ## Admin: typecheck
 	cd admin && npx tsc --noEmit
+
+test-bcio-pipeline: ## Run 100 habits through the live BCIO mapping pipeline
+	set -a && . ./.env && set +a && python3 scripts/test-bcio-pipeline.py
 
 # ── Production (run on server) ────────────────────────────
 # All prod targets use docker-compose.yml (the default file).

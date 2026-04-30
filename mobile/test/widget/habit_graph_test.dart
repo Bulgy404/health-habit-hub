@@ -1,104 +1,75 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hhh/models/habit_graph.dart';
+import 'package:hhh/models/bubble_graph.dart';
 
 void main() {
-  group('HabitGraph.fromJson', () {
+  group('BubbleGraph.fromJson', () {
     final rawJson = {
-      'nodes': [
+      'dimensions': [
         {
-          'id': 'h:uuid-1',
-          'type': 'habit',
-          'label': 'Drink water daily',
-          'habitId': 'uuid-1',
-          'originalText': 'Drink water daily',
-          'language': 'en',
-          'annotationCounts': {'helpful': 3, 'iDoThis': 1},
+          'id': 'TIME',
+          'label': 'Time',
+          'habitCount': 1,
+          'habits': [
+            {
+              'id': 'uuid-1',
+              'label': 'Drink water daily',
+              'originalText': 'Drink water daily',
+              'language': 'en',
+              'annotationCounts': {'helpful': 3, 'iDoThis': 1},
+            },
+          ],
         },
         {
-          'id': 'c:bcio_001',
-          'type': 'concept',
-          'label': 'Self-monitoring',
-          'habitId': null,
-          'originalText': '',
-          'language': '',
-          'annotationCounts': {'helpful': 0, 'iDoThis': 0},
+          'id': 'BEHAVIOR',
+          'label': 'Behavior',
+          'habitCount': 0,
+          'habits': [],
         },
-      ],
-      'edges': [
-        {'source': 'h:uuid-1', 'target': 'c:bcio_001'},
       ],
     };
 
-    test('parses nodes and edges correctly', () {
-      final graph = HabitGraph.fromJson(rawJson);
-      expect(graph.nodes.length, 2);
-      expect(graph.edges.length, 1);
+    test('parses dimensions correctly', () {
+      final graph = BubbleGraph.fromJson(rawJson);
+      expect(graph.dimensions.length, 2);
     });
 
-    test('habit node has correct fields', () {
-      final graph = HabitGraph.fromJson(rawJson);
-      final habit = graph.nodes.first;
-      expect(habit.id, 'h:uuid-1');
-      expect(habit.type, 'habit');
+    test('dimension has correct fields', () {
+      final graph = BubbleGraph.fromJson(rawJson);
+      final dim = graph.dimensions.first;
+      expect(dim.id, 'TIME');
+      expect(dim.label, 'Time');
+      expect(dim.habitCount, 1);
+    });
+
+    test('habit has correct fields', () {
+      final graph = BubbleGraph.fromJson(rawJson);
+      final habit = graph.dimensions.first.habits.first;
+      expect(habit.id, 'uuid-1');
       expect(habit.label, 'Drink water daily');
-      expect(habit.habitId, 'uuid-1');
       expect(habit.originalText, 'Drink water daily');
       expect(habit.language, 'en');
       expect(habit.annotationCounts['helpful'], 3);
       expect(habit.annotationCounts['iDoThis'], 1);
     });
 
-    test('concept node has correct fields', () {
-      final graph = HabitGraph.fromJson(rawJson);
-      final concept = graph.nodes.last;
-      expect(concept.id, 'c:bcio_001');
-      expect(concept.type, 'concept');
-      expect(concept.label, 'Self-monitoring');
-      expect(concept.habitId, isNull);
+    test('totalAnnotations sums annotation counts', () {
+      final graph = BubbleGraph.fromJson(rawJson);
+      final habit = graph.dimensions.first.habits.first;
+      expect(habit.totalAnnotations, 4);
     });
 
-    test('habitNodes returns only habit-type nodes', () {
-      final graph = HabitGraph.fromJson(rawJson);
-      expect(graph.habitNodes.length, 1);
-      expect(graph.habitNodes.first.type, 'habit');
+    test('empty dimensions list when absent', () {
+      final graph = BubbleGraph.fromJson({});
+      expect(graph.dimensions, isEmpty);
     });
 
-    test('conceptNodes returns only concept-type nodes', () {
-      final graph = HabitGraph.fromJson(rawJson);
-      expect(graph.conceptNodes.length, 1);
-      expect(graph.conceptNodes.first.type, 'concept');
-    });
-
-    test('habitsForConcept returns correct habits', () {
-      final graph = HabitGraph.fromJson(rawJson);
-      final habits = graph.habitsForConcept('c:bcio_001');
-      expect(habits.length, 1);
-      expect(habits.first.id, 'h:uuid-1');
-    });
-
-    test('conceptForHabit returns correct concept node', () {
-      final graph = HabitGraph.fromJson(rawJson);
-      final concept = graph.conceptForHabit('h:uuid-1');
-      expect(concept?.id, 'c:bcio_001');
-    });
-
-    test('HabitGraph.empty() has no nodes or edges', () {
-      final graph = HabitGraph.empty();
-      expect(graph.nodes, isEmpty);
-      expect(graph.edges, isEmpty);
-    });
-
-    test('totalAnnotations sums all annotation counts', () {
-      final graph = HabitGraph.fromJson(rawJson);
-      // habitNode has helpful: 3, iDoThis: 1 → total = 4
-      expect(graph.habitNodes.first.totalAnnotations, 4);
-      // conceptNode has helpful: 0, iDoThis: 0 → total = 0
-      expect(graph.conceptNodes.first.totalAnnotations, 0);
-    });
-
-    test('conceptForHabit returns null for an unconnected habit', () {
-      final graph = HabitGraph.empty();
-      expect(graph.conceptForHabit('h:nonexistent'), isNull);
+    test('empty habits list when key is absent', () {
+      final graph = BubbleGraph.fromJson({
+        'dimensions': [
+          {'id': 'TIME', 'label': 'Time', 'habitCount': 0},
+        ],
+      });
+      expect(graph.dimensions.first.habits, isEmpty);
     });
   });
 }

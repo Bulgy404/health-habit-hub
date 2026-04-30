@@ -6,7 +6,7 @@ import 'package:hhh/services/habit_service.dart';
 const _base = 'http://localhost:3000/api/v1';
 
 void main() {
-  group('HabitService.fetchHabitGraph', () {
+  group('HabitService.fetchBubbleGraph', () {
     late Dio dio;
     late DioAdapter adapter;
     late HabitService service;
@@ -17,42 +17,35 @@ void main() {
       service = HabitService(dio: dio);
     });
 
-    test('sends GET /habits/graph and parses HabitGraph', () async {
+    test('sends GET /habits/bubble-graph and parses BubbleGraph', () async {
       adapter.onGet(
-        '$_base/habits/graph',
+        '$_base/habits/bubble-graph',
         (server) => server.reply(200, {
-          'nodes': [
+          'dimensions': [
             {
-              'id': 'h:uuid-1',
-              'type': 'habit',
-              'label': 'Drink water',
-              'habitId': 'uuid-1',
-              'originalText': 'Drink water',
-              'language': 'en',
-              'annotationCounts': {'helpful': 0, 'iDoThis': 0},
+              'id': 'TIME',
+              'label': 'Time',
+              'habitCount': 1,
+              'habits': [
+                {
+                  'id': 'uuid-1',
+                  'label': 'Drink water',
+                  'originalText': 'Drink water',
+                  'language': 'en',
+                  'annotationCounts': {'helpful': 0, 'iDoThis': 0},
+                },
+              ],
             },
-            {
-              'id': 'c:bcio_001',
-              'type': 'concept',
-              'label': 'Self-monitoring',
-              'habitId': null,
-              'originalText': '',
-              'language': '',
-              'annotationCounts': {'helpful': 0, 'iDoThis': 0},
-            },
-          ],
-          'edges': [
-            {'source': 'h:uuid-1', 'target': 'c:bcio_001'},
           ],
         }),
       );
 
-      final graph = await service.fetchHabitGraph();
+      final graph = await service.fetchBubbleGraph();
 
-      expect(graph.nodes.length, 2);
-      expect(graph.edges.length, 1);
-      expect(graph.habitNodes.first.label, 'Drink water');
-      expect(graph.conceptNodes.first.label, 'Self-monitoring');
+      expect(graph.dimensions.length, 1);
+      expect(graph.dimensions.first.id, 'TIME');
+      expect(graph.dimensions.first.habits.length, 1);
+      expect(graph.dimensions.first.habits.first.label, 'Drink water');
     });
   });
 }

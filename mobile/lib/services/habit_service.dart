@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/exceptions.dart';
-import '../models/habit_graph.dart';
+import '../models/bubble_graph.dart';
 import '../models/habit_node.dart';
-import '../models/habit_stats.dart';
+import '../models/habit_stats.dart'; // HabitStats, MyStats, etc.
 import '../core/dio_provider.dart';
 import '../config/app_config.dart';
 
@@ -26,6 +26,19 @@ class HabitService {
         .toList();
   }
 
+  /// Returns the authenticated user's donated habits + dimension breakdown.
+  Future<MyStats> fetchMyStats() async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '$_baseUrl/habits/my-stats',
+      );
+      return MyStats.fromJson(response.data ?? {});
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      rethrow;
+    }
+  }
+
   /// Returns aggregated habit statistics (total, byCategory, byDay).
   Future<HabitStats> fetchStats() async {
     final response = await _dio.get<Map<String, dynamic>>(
@@ -34,13 +47,13 @@ class HabitService {
     return HabitStats.fromJson(response.data ?? {});
   }
 
-  /// Returns the full Habit↔BCIOConcept graph from Neo4j.
-  Future<HabitGraph> fetchHabitGraph() async {
+  /// Returns the bubble-graph: dimensions → habits, for the drill-down view.
+  Future<BubbleGraph> fetchBubbleGraph() async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '$_baseUrl/habits/graph',
+        '$_baseUrl/habits/bubble-graph',
       );
-      return HabitGraph.fromJson(response.data ?? {'nodes': [], 'edges': []});
+      return BubbleGraph.fromJson(response.data ?? {'dimensions': []});
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) throw const UnauthorisedException();
       rethrow;
@@ -65,12 +78,17 @@ class HabitService {
     }
   }
 
-  /// Submits an anonymous annotation of [type] ('helpful' or 'iDoThis') for
-  /// habit [id]. Returns the updated annotation counts.
-  Future<Map<String, int>> annotateHabit(String id, String type) async {
+  /// Submits or removes an anonymous annotation of [type] ('helpful' or
+  /// 'iDoThis') for habit [id]. Pass [remove] to undo a previous annotation.
+  /// Returns the updated annotation counts.
+  Future<Map<String, int>> annotateHabit(
+    String id,
+    String type, {
+    bool remove = false,
+  }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '$_baseUrl/habits/$id/annotate',
-      data: {'type': type},
+      data: {'type': type, if (remove) 'remove': true},
     );
     return ((response.data?['annotationCounts'] as Map<String, dynamic>?) ?? {})
         .map((k, v) => MapEntry(k, (v as num).toInt()));

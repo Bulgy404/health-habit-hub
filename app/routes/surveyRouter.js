@@ -333,7 +333,7 @@ export function createSurveyRouter({ db } = {}) {
         typeof survey.jsonSchema === 'object' &&
         Object.keys(survey.jsonSchema).length > 0;
       const schema = JSON.stringify(
-        hasSchema ? survey.jsonSchema : _defaultHabitDonationSchema(),
+        hasSchema ? survey.jsonSchema : _defaultHabitDonationSchema()
       );
       const safeTitle = String(survey.title || 'Survey').replace(
         /[<>&"']/g,
@@ -344,7 +344,7 @@ export function createSurveyRouter({ db } = {}) {
             '&': '&amp;',
             '"': '&quot;',
             "'": '&#39;',
-          })[c],
+          })[c]
       );
 
       res.setHeader('Content-Type', 'text/html; charset=utf-8');

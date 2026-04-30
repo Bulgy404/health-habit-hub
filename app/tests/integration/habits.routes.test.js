@@ -60,22 +60,24 @@ function createMockDb() {
         find(query = {}) {
           return {
             toArray: () => {
-              const items = annotations.filter((a) => {
-                if (query.habitId === undefined) return true;
-                if (
-                  query.habitId !== null &&
-                  typeof query.habitId === 'object' &&
-                  Array.isArray(query.habitId.$in)
-                ) {
-                  return query.habitId.$in.includes(a.habitId);
-                }
-                return a.habitId === query.habitId;
-              }).filter((a) => {
-                if (query.createdAt && query.createdAt.$gte) {
-                  return a.createdAt >= query.createdAt.$gte;
-                }
-                return true;
-              });
+              const items = annotations
+                .filter((a) => {
+                  if (query.habitId === undefined) return true;
+                  if (
+                    query.habitId !== null &&
+                    typeof query.habitId === 'object' &&
+                    Array.isArray(query.habitId.$in)
+                  ) {
+                    return query.habitId.$in.includes(a.habitId);
+                  }
+                  return a.habitId === query.habitId;
+                })
+                .filter((a) => {
+                  if (query.createdAt && query.createdAt.$gte) {
+                    return a.createdAt >= query.createdAt.$gte;
+                  }
+                  return true;
+                });
               return Promise.resolve(items);
             },
           };
@@ -376,7 +378,11 @@ test('GET /api/v1/habits/graph returns 401 without token', async () => {
 
 test('GET /api/v1/habits/graph returns graph with nodes and edges', async () => {
   // Seed annotation for uuid-1 so the annotation join is exercised
-  await post('/api/v1/habits/uuid-1/annotate', { type: 'helpful' }, makeToken());
+  await post(
+    '/api/v1/habits/uuid-1/annotate',
+    { type: 'helpful' },
+    makeToken()
+  );
 
   const res = await get('/api/v1/habits/graph', makeToken());
   assert.strictEqual(res.status, 200);

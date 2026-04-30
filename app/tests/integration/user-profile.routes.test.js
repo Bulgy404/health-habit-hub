@@ -5,14 +5,20 @@ import { generateKeyPairSync, createSign } from 'node:crypto';
 import express from 'express';
 import { createV1Router } from '../../routes/v1Router.js';
 
-const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+});
 const pubKeyJwk = publicKey.export({ format: 'jwk' });
 pubKeyJwk.kid = 'up-key-1';
 pubKeyJwk.use = 'sig';
 const mockJwks = { keys: [pubKeyJwk] };
 
 function base64urlEncode(buf) {
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return buf
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
 }
 
 function createJwt(payload) {
@@ -71,7 +77,9 @@ const SERVICE_SECRET = 'test-service-secret-123';
 
 before(async () => {
   const jwksApp = express();
-  jwksApp.get('/realms/hhh/protocol/openid-connect/certs', (_req, res) => res.json(mockJwks));
+  jwksApp.get('/realms/hhh/protocol/openid-connect/certs', (_req, res) =>
+    res.json(mockJwks)
+  );
   jwksServer = createServer(jwksApp);
   await new Promise((resolve) => jwksServer.listen(0, '127.0.0.1', resolve));
   jwksPort = jwksServer.address().port;
@@ -123,11 +131,18 @@ function req(method, path, { token, serviceToken, body } = {}) {
 
 const VALID_FIELDS = [
   { questionId: 'age', questionText: 'Age', value: 21, label: '18–24' },
-  { questionId: 'gender', questionText: 'Gender', value: 'male', label: 'Male' },
+  {
+    questionId: 'gender',
+    questionText: 'Gender',
+    value: 'male',
+    label: 'Male',
+  },
 ];
 
 test('POST /user-profile — 401 without token', async () => {
-  const res = await req('POST', '/user-profile', { body: { fields: VALID_FIELDS } });
+  const res = await req('POST', '/user-profile', {
+    body: { fields: VALID_FIELDS },
+  });
   assert.strictEqual(res.status, 401);
 });
 
@@ -139,7 +154,10 @@ test('POST /user-profile — 400 when fields is missing', async () => {
 
 test('POST /user-profile — 400 when fields is empty array', async () => {
   const token = makeToken('u1');
-  const res = await req('POST', '/user-profile', { token, body: { fields: [] } });
+  const res = await req('POST', '/user-profile', {
+    token,
+    body: { fields: [] },
+  });
   assert.strictEqual(res.status, 400);
 });
 
@@ -156,7 +174,10 @@ test('POST /user-profile — 400 when a field is missing label', async () => {
 
 test('POST /user-profile — 200 and upserts document', async () => {
   const token = makeToken('user-post-test');
-  const res = await req('POST', '/user-profile', { token, body: { fields: VALID_FIELDS } });
+  const res = await req('POST', '/user-profile', {
+    token,
+    body: { fields: VALID_FIELDS },
+  });
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.strictEqual(body.ok, true);
@@ -166,11 +187,19 @@ test('POST /user-profile — repeat call overwrites previous fields', async () =
   const token = makeToken('user-overwrite');
   await req('POST', '/user-profile', {
     token,
-    body: { fields: [{ questionId: 'age', questionText: 'Age', value: 21, label: '18–24' }] },
+    body: {
+      fields: [
+        { questionId: 'age', questionText: 'Age', value: 21, label: '18–24' },
+      ],
+    },
   });
   const res2 = await req('POST', '/user-profile', {
     token,
-    body: { fields: [{ questionId: 'age', questionText: 'Age', value: 49, label: '45–54' }] },
+    body: {
+      fields: [
+        { questionId: 'age', questionText: 'Age', value: 49, label: '45–54' },
+      ],
+    },
   });
   assert.strictEqual(res2.status, 200);
 
@@ -207,7 +236,10 @@ test('GET /user-profile — user isolation: different users see different profil
   const tokenA = makeToken('user-iso-a');
   const tokenB = makeToken('user-iso-b');
 
-  await req('POST', '/user-profile', { token: tokenA, body: { fields: VALID_FIELDS } });
+  await req('POST', '/user-profile', {
+    token: tokenA,
+    body: { fields: VALID_FIELDS },
+  });
 
   const res = await req('GET', '/user-profile', { token: tokenB });
   assert.strictEqual(res.status, 404);

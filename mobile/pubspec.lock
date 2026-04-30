@@ -299,14 +299,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  flutter_graph_view:
-    dependency: "direct main"
-    description:
-      name: flutter_graph_view
-      sha256: ae457f5a6af7cf8139e68993b5c739df253bf6ff3cbee4e29088c48dbeb8d44b
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.1.0"
   flutter_launcher_icons:
     dependency: "direct dev"
     description:

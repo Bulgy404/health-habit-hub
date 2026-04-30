@@ -28,19 +28,6 @@
 
 Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresden (Chair of Business Informatics, esp. Health Informatics). It enables participants to donate, explore, and receive recommendations about health habits in the context of a longitudinal research study.
 
-### Research Context
-
-The platform supports an experimental study comparing four participant groups:
-
-| Group | Description |
-|-------|-------------|
-| G1    | Control — no feedback or recommendations |
-| G2    | Recommendations only |
-| G3    | Habit graph exploration only |
-| G4    | Full experience — recommendations + graph exploration |
-
-Study coordinators manage participants, questionnaires, and study data via the Next.js admin application. Researchers can export data and monitor engagement.
-
 ### Key Features
 
 - **Flutter mobile app** — cross-platform (iOS, Android, web), Keycloak PKCE login, habit donation, AI-powered recommendations, guided onboarding

@@ -36,7 +36,7 @@ export function createOnboardRouter({ keycloak } = {}) {
   router.post('/', onboardRateLimiter, async (req, res) => {
     const userId = randomUUID();
     const username = randomUUID();
-    const password = randomBytes(16).toString('hex');
+    const password = randomBytes(32).toString('hex');
 
     try {
       // Keycloak assigns realm roles via a separate admin API call.

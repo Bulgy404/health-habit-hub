@@ -490,7 +490,9 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         return res.status(404).json({ error: 'Questionnaire not found' });
       }
       const database = await getDb();
-      const doc = await database.collection('questionnaires').findOne({ _id: oid });
+      const doc = await database
+        .collection('questionnaires')
+        .findOne({ _id: oid });
       if (!doc) {
         return res.status(404).json({ error: 'Questionnaire not found' });
       }

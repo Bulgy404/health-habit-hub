@@ -62,11 +62,13 @@ export function createUserProfileRouter({ db } = {}) {
       }
 
       const database = await getDb();
-      await database.collection('user_profiles').updateOne(
-        { userId },
-        { $set: { userId, fields, updatedAt: new Date() } },
-        { upsert: true }
-      );
+      await database
+        .collection('user_profiles')
+        .updateOne(
+          { userId },
+          { $set: { userId, fields, updatedAt: new Date() } },
+          { upsert: true }
+        );
       res.json({ ok: true });
     } catch (err) {
       console.error('[userProfileRouter] POST /:', err);
