@@ -29,7 +29,7 @@ jest.mock('next/link', () => {
 describe('Sidebar', () => {
   it('shows Studies and Questionnaires for researcher', () => {
     mockedUseSession.mockReturnValue({
-      data: { roles: ['researcher'], user: { email: 'r@test.com' }, expires: '' },
+      data: { roles: ['researcher'], accessToken: '', user: { email: 'r@test.com' }, expires: '' },
       status: 'authenticated',
       update: jest.fn(),
     });
@@ -42,7 +42,7 @@ describe('Sidebar', () => {
 
   it('shows all nav items for admin', () => {
     mockedUseSession.mockReturnValue({
-      data: { roles: ['admin'], user: { email: 'a@test.com' }, expires: '' },
+      data: { roles: ['admin'], accessToken: '', user: { email: 'a@test.com' }, expires: '' },
       status: 'authenticated',
       update: jest.fn(),
     });
