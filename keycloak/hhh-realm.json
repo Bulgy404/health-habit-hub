@@ -148,6 +148,8 @@
     {
       "id": "00000000-0000-0000-0000-000000000001",
       "username": "demo-admin",
+      "firstName": "Demo",
+      "lastName": "Admin",
       "enabled": true,
       "emailVerified": true,
       "email": "demo-admin@hhh.local",
@@ -155,7 +157,7 @@
         {
           "type": "password",
           "value": "demo-admin",
-          "temporary": false
+          "temporary": true
         }
       ],
       "realmRoles": ["admin"]
@@ -163,6 +165,8 @@
     {
       "id": "00000000-0000-0000-0000-000000000002",
       "username": "demo-researcher",
+      "firstName": "Demo",
+      "lastName": "Researcher",
       "enabled": true,
       "emailVerified": true,
       "email": "demo-researcher@hhh.local",
@@ -170,7 +174,7 @@
         {
           "type": "password",
           "value": "demo-researcher",
-          "temporary": false
+          "temporary": true
         }
       ],
       "realmRoles": ["researcher"]
