@@ -2,7 +2,7 @@
 // unit-tested independently of Riverpod and flutter_secure_storage.
 //
 // [redirectGuard] encodes all three guards:
-//   1. Admin guard  – only admin/researcher roles may access /admin/* routes.
+//   1. Admin guard  – only the admin role may access /admin/* routes.
 //   2. Auth guard   – unauthenticated users may not access protected routes.
 //   3. Onboarding bypass – skip welcome/login when already onboarded + logged in.
 
@@ -27,7 +27,7 @@ Future<String?> redirectGuard({
       final isLoggedIn = await getIsLoggedIn();
       if (!isLoggedIn) return '/onboarding/welcome';
       final roles = await getUserRoles();
-      if (!roles.contains('admin') && !roles.contains('researcher')) {
+      if (!roles.contains('admin')) {
         return '/';
       }
     } catch (_) {
