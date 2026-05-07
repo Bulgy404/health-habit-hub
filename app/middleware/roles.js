@@ -4,7 +4,7 @@
  * Renaming a role requires a change in this file only.
  */
 export const ROLES = {
-  PARTICIPANT: 'participant',
+  USER: 'user',
   ADMIN: 'admin',
   RESEARCHER: 'researcher',
 };
