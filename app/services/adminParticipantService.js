@@ -54,7 +54,7 @@ export async function createParticipant({ db, kc }) {
   const password = randomPassword();
 
   const keycloakUserId = await kc.createUser({ userId, username, password });
-  await kc.assignRole(keycloakUserId || userId, 'participant');
+  await kc.assignRole(keycloakUserId || userId, 'user');
 
   // Generate PDF while we still have the plaintext password
   const tokenCardPdf = await generateTokenCard(
