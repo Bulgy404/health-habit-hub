@@ -150,7 +150,31 @@ void main() {
         final result = await _guard(
           location: '/admin/participants',
           isLoggedIn: true,
-          roles: ['participant'],
+          roles: ['user'],
+        );
+        expect(result, '/');
+      },
+    );
+
+    test(
+      'visiting /admin/participants when role is researcher redirects to /',
+      () async {
+        final result = await _guard(
+          location: '/admin/participants',
+          isLoggedIn: true,
+          roles: ['researcher'],
+        );
+        expect(result, '/');
+      },
+    );
+
+    test(
+      'visiting /admin/participants when role is user redirects to /',
+      () async {
+        final result = await _guard(
+          location: '/admin/participants',
+          isLoggedIn: true,
+          roles: ['user'],
         );
         expect(result, '/');
       },
