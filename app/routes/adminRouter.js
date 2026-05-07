@@ -10,6 +10,8 @@ import { createSurveysRouter } from './admin/surveysRouter.js';
 import { createNotificationsRouter } from './admin/notificationsRouter.js';
 import { createStudiesRouter } from './admin/studiesRouter.js';
 import { createParticipantsRouter } from './admin/participantsRouter.js';
+import { requireRole } from '../middleware/requireRole.js';
+import { ROLES } from '../middleware/auth.js';
 
 const DEFAULT_SETTINGS = [{ key: 'token_card_format', value: 'both' }];
 
@@ -114,8 +116,8 @@ export function createAdminRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  // GET /api/v1/admin/settings
-  router.get('/settings', async (req, res) => {
+  // GET /api/v1/admin/settings — admin only
+  router.get('/settings', requireRole(ROLES.ADMIN), async (req, res) => {
     try {
       const database = await getDb();
       const result = await getSettings({ db: database });
@@ -186,8 +188,8 @@ export function createAdminRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  // PUT /api/v1/admin/settings/:key
-  router.put('/settings/:key', async (req, res) => {
+  // PUT /api/v1/admin/settings/:key — admin only
+  router.put('/settings/:key', requireRole(ROLES.ADMIN), async (req, res) => {
     try {
       const { key } = req.params;
       const { value } = req.body;
