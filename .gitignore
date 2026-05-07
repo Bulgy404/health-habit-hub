@@ -20,6 +20,7 @@ yarn.lock
 # Backup files
 backups/*.tar.gz
 backups/*.manifest
+analytics/*.tar.gz
 
 # Claude Files
 .claude
@@ -37,3 +38,6 @@ tmp/
 *.swo
 *~
 Thumbs.db
+
+# Archive backups
+*.tar.gz
