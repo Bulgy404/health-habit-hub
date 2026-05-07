@@ -35,4 +35,11 @@ describe('auth jwt callback', () => {
     expect(result.roles).toEqual(['admin']);
     expect(result.accessToken).toBe('existing-token');
   });
+
+  it('extracts user role correctly', async () => {
+    const profile = { realm_access: { roles: ['user'] } };
+    const account = { access_token: 'tok-user' } as unknown as Account;
+    const result = await jwtCallback({ token: { ...baseToken }, account, profile } as never);
+    expect(result.roles).toEqual(['user']);
+  });
 });
