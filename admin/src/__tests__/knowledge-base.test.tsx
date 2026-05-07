@@ -5,13 +5,13 @@ import KnowledgeBasePage from '../app/(admin)/knowledge-base/page';
 
 jest.mock('next-auth/react', () => ({
   useSession: () => ({
-    data: { accessToken: 'test-token' },
+    data: { accessToken: 'test-token', roles: ['admin'] },
     status: 'authenticated',
   }),
 }));
 
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => '/',
 }));
