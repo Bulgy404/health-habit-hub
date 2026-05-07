@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -160,7 +161,16 @@ function ConfirmDeleteDialog({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function KnowledgeBasePage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session?.roles?.includes('admin')) {
+      router.replace('/access-denied');
+    }
+  }, [session, status, router]);
+
   const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
 
   const [entries, setEntries] = useState<KbEntry[]>([]);
