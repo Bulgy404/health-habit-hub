@@ -2,6 +2,7 @@ import express from 'express';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
+import { ROLES } from '../middleware/auth.js';
 
 const onboardRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -45,7 +46,7 @@ export function createOnboardRouter({ keycloak } = {}) {
         username,
         password,
       });
-      await kcAdmin.assignRole(keycloakUserId || userId, 'user');
+      await kcAdmin.assignRole(keycloakUserId || userId, ROLES.USER);
 
       // Step 2: direct-grant token exchange
       const tokenRes = await fetch(

@@ -1,6 +1,6 @@
 /**
  * Canonical role name constants.
- * Import these instead of using magic strings like 'admin', 'researcher', 'participant'.
+ * Import these instead of using magic strings like 'admin', 'researcher', 'user'.
  * Renaming a role requires a change in this file only.
  */
 export const ROLES = {
