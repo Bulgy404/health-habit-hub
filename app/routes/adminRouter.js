@@ -110,7 +110,7 @@ export function createAdminRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    *       403:
-   *         description: Caller does not have admin or researcher role
+   *         description: Caller does not have admin role (settings are admin-only)
    *         content:
    *           application/json:
    *             schema:
@@ -182,7 +182,7 @@ export function createAdminRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    *       403:
-   *         description: Caller does not have admin or researcher role
+   *         description: Caller does not have admin role (settings are admin-only)
    *         content:
    *           application/json:
    *             schema:
