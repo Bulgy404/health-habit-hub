@@ -60,4 +60,11 @@ describe('middleware', () => {
     expect(res.status).toBe(307);
     expect(res.headers.get('location')).toContain('/access-denied');
   });
+
+  it('passes through for researcher on /studies path', async () => {
+    mockedGetToken.mockResolvedValueOnce({ roles: ['researcher'] } as never);
+    const req = makeRequest('/studies');
+    const res = await middleware(req);
+    expect(res.status).toBe(200);
+  });
 });
