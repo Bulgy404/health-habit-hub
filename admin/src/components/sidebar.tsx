@@ -5,16 +5,26 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import styles from "./sidebar.module.css";
 
-const NAV_ITEMS = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  adminOnly?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { href: "/studies", label: "Studies", icon: "🔬" },
   { href: "/questionnaires", label: "Questionnaires", icon: "📋" },
-  { href: "/knowledge-base", label: "Knowledge Base", icon: "📚" },
-  { href: "/settings", label: "Settings", icon: "⚙️" },
+  { href: "/knowledge-base", label: "Knowledge Base", icon: "📚", adminOnly: true },
+  { href: "/settings", label: "Settings", icon: "⚙️", adminOnly: true },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
+
+  const isAdmin = (session?.roles ?? []).includes("admin");
+  const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <aside className={styles.sidebar}>
@@ -25,7 +35,7 @@ export function Sidebar() {
 
       <nav className={styles.nav}>
         <ul className={styles.navList}>
-          {NAV_ITEMS.map((item) => (
+          {visibleItems.map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}
