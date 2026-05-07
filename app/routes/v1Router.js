@@ -1,6 +1,6 @@
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
-import { createAuthMiddleware } from '../middleware/auth.js';
+import { createAuthMiddleware, ROLES } from '../middleware/auth.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { apiRateLimiter } from '../middleware/rateLimiter.js';
 import { sanitizeBody } from '../middleware/inputSanitizer.js';
@@ -151,91 +151,91 @@ export function createV1Router({
   // Admin routes: require admin or researcher role
   router.use(
     '/admin',
-    requireRole('admin', 'researcher'),
+    requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
     createAdminRouter({ db, neo4jRun, keycloak, tokenCardService })
   );
 
   // Surveys routes: require participant, admin, or researcher role
   router.use(
     '/surveys',
-    requireRole('participant', 'admin', 'researcher'),
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createSurveyRouter({ db })
   );
 
   // Habits routes: require participant, admin, or researcher role
   router.use(
     '/habits',
-    requireRole('participant', 'admin', 'researcher'),
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createHabitsRouter({ db, neo4jRun, apiServiceUrl, libreTranslateUrl })
   );
 
   // Recommend routes: require participant, admin, or researcher role
   router.use(
     '/recommend',
-    requireRole('participant', 'admin', 'researcher'),
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createRecommendRouter({ recommenderUrl })
   );
 
   // Profile routes: require participant, admin, or researcher role
   router.use(
     '/profile',
-    requireRole('participant', 'admin', 'researcher'),
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createProfileRouter({ db })
   );
 
   // Questionnaires routes: require participant, admin, or researcher role
   router.use(
     '/questionnaires',
-    requireRole('participant', 'admin', 'researcher'),
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createQuestionnairesRouter({ db })
   );
 
   // Questionnaire responses: require participant, admin, or researcher role
   router.use(
     '/questionnaire-responses',
-    requireRole('participant', 'admin', 'researcher'),
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createQuestionnaireResponsesRouter({ db })
   );
 
   // Recommendations routes: require participant, admin, or researcher role
   router.use(
     '/recommendations',
-    requireRole('participant', 'admin', 'researcher'),
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createRecommendationsRouter({ db, redisClient, redisUrl })
   );
 
   // Users routes: require participant, admin, or researcher role
   router.use(
     '/users',
-    requireRole('participant', 'admin', 'researcher'),
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createUsersRouter({ db })
   );
 
-  // Knowledge base routes: require admin or researcher role
+  // Knowledge base routes: require admin role only
   router.use(
     '/kb',
-    requireRole('admin', 'researcher'),
+    requireRole(ROLES.ADMIN),
     createKbRouter({ apiServiceUrl })
   );
 
   // Authenticated onboarding code routes: require participant role
   router.use(
     '/onboarding',
-    requireRole('participant', 'admin', 'researcher'),
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createStudyEnrollRouter({ db })
   );
 
   // Participant-specific routes: require participant, admin, or researcher role
   router.use(
     '/participant',
-    requireRole('participant', 'admin', 'researcher'),
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createParticipantRouter({ db })
   );
 
   // User profile: require participant, admin, or researcher role
   router.use(
     '/user-profile',
-    requireRole('participant', 'admin', 'researcher'),
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createUserProfileRouter({ db })
   );
 
