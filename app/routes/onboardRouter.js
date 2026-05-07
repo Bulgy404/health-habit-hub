@@ -45,7 +45,7 @@ export function createOnboardRouter({ keycloak } = {}) {
         username,
         password,
       });
-      await kcAdmin.assignRole(keycloakUserId || userId, 'participant');
+      await kcAdmin.assignRole(keycloakUserId || userId, 'user');
 
       // Step 2: direct-grant token exchange
       const tokenRes = await fetch(
