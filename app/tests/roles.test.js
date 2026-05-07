@@ -71,6 +71,15 @@ test('requireRole blocks user role from admin+researcher route', () => {
   assert.equal(res._status, 403);
 });
 
+test('requireRole blocks request with no user on req', () => {
+  const mw = requireRole(ROLES.ADMIN);
+  const req = {};
+  const res = makeRes();
+  mw(req, res, () => { throw new Error('next() should not be called'); });
+  assert.equal(res._status, 403);
+  assert.deepEqual(res._body, { error: 'Forbidden' });
+});
+
 // ── isPrivileged helper ──────────────────────────────────────────────────────
 
 test('isPrivileged returns true for admin', () => {
