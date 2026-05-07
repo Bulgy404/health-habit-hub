@@ -13,8 +13,8 @@
   "roles": {
     "realm": [
       {
-        "name": "participant",
-        "description": "Study participant role",
+        "name": "user",
+        "description": "App user role — habit donation via mobile app",
         "composite": false,
         "clientRole": false,
         "containerId": "hhh"
@@ -143,5 +143,37 @@
   "defaultRoles": [
     "offline_access",
     "uma_authorization"
+  ],
+  "users": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "username": "demo-admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "demo-admin@hhh.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin"]
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000002",
+      "username": "demo-researcher",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "demo-researcher@hhh.local",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo-researcher",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["researcher"]
+    }
   ]
 }
