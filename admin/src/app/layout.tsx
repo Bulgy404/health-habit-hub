@@ -3,8 +3,8 @@ import { Providers } from "@/components/providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HHH Admin",
-  description: "Health Habit Hub — Admin Panel",
+  title: "HHH Portal",
+  description: "Health Habit Hub — Research Portal",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

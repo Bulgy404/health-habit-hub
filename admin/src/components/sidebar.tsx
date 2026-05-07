@@ -20,7 +20,7 @@ export function Sidebar() {
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
         <span className={styles.brandIcon}>🏥</span>
-        <span className={styles.brandName}>HHH Admin</span>
+        <span className={styles.brandName}>HHH Portal</span>
       </div>
 
       <nav className={styles.nav}>
