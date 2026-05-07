@@ -197,8 +197,19 @@ services:
       /opt/keycloak/bin/kcadm.sh update users/profile -r hhh -f /opt/keycloak/bootstrap/hhh-user-profile.json &&
       BACKEND_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-backend --fields id --format csv --noquotes) &&
       /opt/keycloak/bin/kcadm.sh update clients/$$BACKEND_ID -r hhh -s secret="$$KEYCLOAK_ADMIN_CLIENT_SECRET" &&
+      ADMIN_UI_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-admin --fields id --format csv --noquotes) &&
+      /opt/keycloak/bin/kcadm.sh update clients/$$ADMIN_UI_ID -r hhh -s secret="$$KEYCLOAK_ADMIN_UI_CLIENT_SECRET" &&
       SA_ID=$$(/opt/keycloak/bin/kcadm.sh get clients/$$BACKEND_ID/service-account-user -r hhh --fields id --format csv --noquotes) &&
-      /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$SA_ID --cclientid realm-management --rolename realm-admin'
+      /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$SA_ID --cclientid realm-management --rolename realm-admin &&
+      HHH_ADMIN_USER="$${HHH_ADMIN_USER:-$$KEYCLOAK_ADMIN}" &&
+      HHH_ADMIN_ID=$$(/opt/keycloak/bin/kcadm.sh get users -r hhh -q username=$$HHH_ADMIN_USER --fields id --format csv --noquotes | head -n1) &&
+      if [ -z "$$HHH_ADMIN_ID" ]; then
+        /opt/keycloak/bin/kcadm.sh create users -r hhh -s username="$$HHH_ADMIN_USER" -s enabled=true -s emailVerified=true >/dev/null &&
+        HHH_ADMIN_ID=$$(/opt/keycloak/bin/kcadm.sh get users -r hhh -q username=$$HHH_ADMIN_USER --fields id --format csv --noquotes | head -n1);
+      fi &&
+      /opt/keycloak/bin/kcadm.sh set-password -r hhh --userid $$HHH_ADMIN_ID --new-password "$$KEYCLOAK_ADMIN_PASSWORD" --temporary=false &&
+      /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$HHH_ADMIN_ID --rolename admin &&
+      /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$HHH_ADMIN_ID --rolename researcher'
 
   admin:
     image: hhh/admin
