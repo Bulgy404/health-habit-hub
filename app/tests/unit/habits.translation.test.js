@@ -45,7 +45,7 @@ function createJwt(payload) {
   return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
 }
 
-function makeToken(sub = 'user-1', roles = ['participant']) {
+function makeToken(sub = 'user-1', roles = ['user']) {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({ sub, exp: now + 3600, iat: now, realm_access: { roles } });
 }

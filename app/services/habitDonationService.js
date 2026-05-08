@@ -75,7 +75,9 @@ async function extractContext(uuid, sentence, language, apiBase) {
     });
   } catch (err) {
     throw Object.assign(
-      new Error(`Recommender service unreachable during context extraction: ${err.message}`),
+      new Error(
+        `Recommender service unreachable during context extraction: ${err.message}`
+      ),
       { status: 503, code: 'recommender_unavailable' }
     );
   }
@@ -109,7 +111,9 @@ async function mapBcio(uuid, contextPhrases, apiBase) {
     });
   } catch (err) {
     throw Object.assign(
-      new Error(`Recommender service unreachable during BCIO mapping: ${err.message}`),
+      new Error(
+        `Recommender service unreachable during BCIO mapping: ${err.message}`
+      ),
       { status: 503, code: 'recommender_unavailable' }
     );
   }

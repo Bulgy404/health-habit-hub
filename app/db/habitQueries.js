@@ -102,7 +102,8 @@ export async function getHabitBubbleGraph(queryNeo4j) {
  * @returns {Promise<Array>} Array of { habitId, habitLabel, originalText, language, dimension }
  */
 export async function getUserHabits(queryNeo4j, userId) {
-  return queryNeo4j(`
+  return queryNeo4j(
+    `
     MATCH (h:Habit {is_habit: true, userID: $userId})-[:HAS_CONTEXT]->(c:Context)
     RETURN DISTINCT
       h.uuid                                AS habitId,
@@ -111,7 +112,9 @@ export async function getUserHabits(queryNeo4j, userId) {
       coalesce(h.language, '')              AS language,
       c.dimension                           AS dimension
     ORDER BY habitLabel
-  `, { userId });
+  `,
+    { userId }
+  );
 }
 
 /**
