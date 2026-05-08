@@ -30,8 +30,14 @@ function makeRes() {
   const res = {
     _status: null,
     _body: null,
-    status(s) { res._status = s; return res; },
-    json(b) { res._body = b; return res; },
+    status(s) {
+      res._status = s;
+      return res;
+    },
+    json(b) {
+      res._body = b;
+      return res;
+    },
   };
   return res;
 }
@@ -41,7 +47,9 @@ test('requireRole allows user with matching role', () => {
   const req = makeReq([ROLES.ADMIN]);
   const res = makeRes();
   let nextCalled = false;
-  mw(req, res, () => { nextCalled = true; });
+  mw(req, res, () => {
+    nextCalled = true;
+  });
   assert.ok(nextCalled, 'next() should have been called');
 });
 
@@ -49,7 +57,9 @@ test('requireRole blocks user without matching role', () => {
   const mw = requireRole(ROLES.ADMIN);
   const req = makeReq([ROLES.RESEARCHER]);
   const res = makeRes();
-  mw(req, res, () => { throw new Error('next() should not be called'); });
+  mw(req, res, () => {
+    throw new Error('next() should not be called');
+  });
   assert.equal(res._status, 403);
   assert.deepEqual(res._body, { error: 'Forbidden' });
 });
@@ -59,7 +69,9 @@ test('requireRole allows any of multiple accepted roles', () => {
   const req = makeReq([ROLES.RESEARCHER]);
   const res = makeRes();
   let nextCalled = false;
-  mw(req, res, () => { nextCalled = true; });
+  mw(req, res, () => {
+    nextCalled = true;
+  });
   assert.ok(nextCalled, 'next() should have been called');
 });
 
@@ -67,7 +79,9 @@ test('requireRole blocks user role from admin+researcher route', () => {
   const mw = requireRole(ROLES.ADMIN, ROLES.RESEARCHER);
   const req = makeReq([ROLES.USER]);
   const res = makeRes();
-  mw(req, res, () => { throw new Error('next() should not be called'); });
+  mw(req, res, () => {
+    throw new Error('next() should not be called');
+  });
   assert.equal(res._status, 403);
 });
 
@@ -75,7 +89,9 @@ test('requireRole blocks request with no user on req', () => {
   const mw = requireRole(ROLES.ADMIN);
   const req = {};
   const res = makeRes();
-  mw(req, res, () => { throw new Error('next() should not be called'); });
+  mw(req, res, () => {
+    throw new Error('next() should not be called');
+  });
   assert.equal(res._status, 403);
   assert.deepEqual(res._body, { error: 'Forbidden' });
 });

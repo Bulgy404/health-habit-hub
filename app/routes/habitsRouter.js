@@ -745,7 +745,8 @@ export function createHabitsRouter({
       const dimensionMap = new Map();
       for (const row of rows) {
         if (!row.dimension || !row.habitId) continue;
-        if (!dimensionMap.has(row.dimension)) dimensionMap.set(row.dimension, new Map());
+        if (!dimensionMap.has(row.dimension))
+          dimensionMap.set(row.dimension, new Map());
         const habitMap = dimensionMap.get(row.dimension);
         if (!habitMap.has(row.habitId)) {
           habitMap.set(row.habitId, {
@@ -826,20 +827,24 @@ export function createHabitsRouter({
             dimensions: [],
           });
         }
-        if (row.dimension) habitMap.get(row.habitId).dimensions.push(row.dimension);
+        if (row.dimension)
+          habitMap.get(row.habitId).dimensions.push(row.dimension);
       }
 
       // Join annotation counts from MongoDB.
       const allIds = [...habitMap.keys()];
-      const annotations = allIds.length > 0
-        ? await database.collection('habit_annotations')
-            .find({ habitId: { $in: allIds } })
-            .toArray()
-        : [];
+      const annotations =
+        allIds.length > 0
+          ? await database
+              .collection('habit_annotations')
+              .find({ habitId: { $in: allIds } })
+              .toArray()
+          : [];
 
       const countsByHabit = {};
       for (const ann of annotations) {
-        if (!countsByHabit[ann.habitId]) countsByHabit[ann.habitId] = { helpful: 0, iDoThis: 0 };
+        if (!countsByHabit[ann.habitId])
+          countsByHabit[ann.habitId] = { helpful: 0, iDoThis: 0 };
         if (ann.type === 'helpful') countsByHabit[ann.habitId].helpful++;
         if (ann.type === 'iDoThis') countsByHabit[ann.habitId].iDoThis++;
       }

@@ -1,6 +1,4 @@
 // Widget tests for StatsScreen.
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,12 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/models/habit_stats.dart';
 import 'package:hhh/providers/auth_provider.dart';
+import 'package:hhh/providers/show_in_graph_provider.dart';
 import 'package:hhh/screens/stats_screen.dart';
-import 'package:dio/dio.dart';
 import 'package:hhh/services/auth_service.dart';
-import 'package:hhh/services/habit_service.dart';
-
-final _fakeDio = Dio();
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -27,44 +22,17 @@ class _FakeAuthService extends AuthService {
   Future<String?> getAccessToken() async => null;
 }
 
-class _FakeHabitService extends HabitService {
-  final bool shouldThrow;
-  final HabitStats? stats;
+// ---------------------------------------------------------------------------
+// Builder — accepts an AsyncValue<MyStats> override so tests can inject any
+// state (loading, error, data) without going through async plumbing.
+// ---------------------------------------------------------------------------
 
-  _FakeHabitService.throwing()
-      : shouldThrow = true,
-        stats = null,
-        super(dio: _fakeDio);
-
-  _FakeHabitService.withStats(this.stats)
-      : shouldThrow = false,
-        super(dio: _fakeDio);
-
-  @override
-  Future<HabitStats> fetchStats() async {
-    if (shouldThrow) throw Exception('Network error');
-    return stats ??
-        const HabitStats(total: 0, byCategory: [], byDay: []);
-  }
-}
-
-class _LoadingHabitService extends HabitService {
-  final Completer<HabitStats> _completer;
-
-  _LoadingHabitService(this._completer) : super(dio: _fakeDio);
-
-  @override
-  Future<HabitStats> fetchStats() => _completer.future;
-}
-
-Widget _buildSubject(HabitService service) {
+Widget _buildSubject(AsyncValue<MyStats> statsState) {
   return ProviderScope(
     overrides: [
       authServiceProvider.overrideWithValue(_FakeAuthService()),
-      habitServiceProvider.overrideWithValue(service),
+      myStatsProvider.overrideWithValue(statsState),
     ],
-    // StatsScreen is normally nested inside ExploreScreen's TabBarView.
-    // Wrap in a large SizedBox to prevent layout overflow in tests.
     child: MaterialApp(
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -73,16 +41,7 @@ Widget _buildSubject(HabitService service) {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('en')],
-      home: Scaffold(
-        body: SizedBox(
-          height: 2400,
-          child: OverflowBox(
-            maxHeight: double.infinity,
-            alignment: Alignment.topCenter,
-            child: const StatsScreen(),
-          ),
-        ),
-      ),
+      home: const Scaffold(body: StatsScreen()),
     ),
   );
 }
@@ -93,8 +52,9 @@ Widget _buildSubject(HabitService service) {
 
 void main() {
   testWidgets('shows loading skeleton while fetching stats', (tester) async {
-    final completer = Completer<HabitStats>();
-    await tester.pumpWidget(_buildSubject(_LoadingHabitService(completer)));
+    await tester.pumpWidget(
+      _buildSubject(const AsyncLoading()),
+    );
     await tester.pump();
 
     // Loading skeleton uses colored Container boxes (_SkeletonBox)
@@ -103,35 +63,39 @@ void main() {
   });
 
   testWidgets('shows error state and retry button on failure', (tester) async {
-    await tester.pumpWidget(_buildSubject(_FakeHabitService.throwing()));
+    await tester.pumpWidget(
+      _buildSubject(
+        AsyncValue<MyStats>.error(Exception('Network error'), StackTrace.empty),
+      ),
+    );
     await tester.pumpAndSettle();
 
-    expect(find.text('Failed to load stats'), findsOneWidget);
+    expect(find.text('Failed to load your habits'), findsOneWidget);
     expect(find.text('Retry'), findsOneWidget);
   });
 
-  testWidgets('shows total count and section titles on success', (tester) async {
-    const stats = HabitStats(
+  testWidgets('shows total count and section title on success', (tester) async {
+    final stats = MyStats(
       total: 42,
-      byCategory: [],
-      byDay: [],
+      byDimension: [
+        const DimensionStat(dimension: 'TIME', label: 'Time', count: 5),
+      ],
+      habits: [],
     );
-    await tester
-        .pumpWidget(_buildSubject(_FakeHabitService.withStats(stats)));
+    await tester.pumpWidget(_buildSubject(AsyncData(stats)));
     await tester.pumpAndSettle();
 
     expect(find.text('42'), findsOneWidget);
     expect(find.text('habits donated'), findsOneWidget);
-    expect(find.text('Habits by Category'), findsOneWidget);
+    expect(find.text('Habits by Context'), findsOneWidget);
   });
 
-  testWidgets('shows empty chart placeholder when no category data',
+  testWidgets('shows empty habits placeholder when no habits donated',
       (tester) async {
-    const stats = HabitStats(total: 0, byCategory: [], byDay: []);
-    await tester
-        .pumpWidget(_buildSubject(_FakeHabitService.withStats(stats)));
+    const stats = MyStats(total: 0, byDimension: [], habits: []);
+    await tester.pumpWidget(_buildSubject(const AsyncData(stats)));
     await tester.pumpAndSettle();
 
-    expect(find.text('No category data'), findsOneWidget);
+    expect(find.textContaining('No habits donated yet'), findsOneWidget);
   });
 }

@@ -156,6 +156,10 @@ before(async () => {
 
   const app = express();
   app.use(express.json());
+  app.use((req, _res, next) => {
+    req.user = { sub: 'admin-test', realm_access: { roles: ['admin'] } };
+    next();
+  });
   app.use(
     '/admin',
     createAdminRouter({
