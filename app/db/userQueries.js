@@ -42,7 +42,7 @@ export async function createSubmissionWithScores(queryNeo4j, userId, questionnai
   }));
 
   await queryNeo4j(
-    `MATCH (u:User {userId: $userId})
+    `MERGE (u:User {userId: $userId})
      CREATE (s:Submission {questionnaireId: $questionnaireId, submittedAt: datetime()})
      CREATE (u)-[:SUBMITTED]->(s)
      WITH s
