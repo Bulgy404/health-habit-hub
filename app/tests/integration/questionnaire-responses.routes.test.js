@@ -35,7 +35,7 @@ function createJwt(payload) {
   return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
 }
 
-function makeToken(sub = 'user-1', roles = ['participant']) {
+function makeToken(sub = 'user-1', roles = ['user']) {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({
     sub,
@@ -111,12 +111,25 @@ function createMockDb() {
   };
 }
 
+// ── Neo4j mock ────────────────────────────────────────────────────────────────
+function createNeo4jMock() {
+  const calls = [];
+  return {
+    async neo4jRun(cypher, params = {}) {
+      calls.push({ cypher, params });
+      return [];
+    },
+    getCalls() { return calls; },
+  };
+}
+
 // ── Test server setup ─────────────────────────────────────────────────────────
 
 let server;
 let port;
 let jwksServer;
 let jwksPort;
+let neo4jMock;
 const realFetch = global.fetch;
 
 before(async () => {
@@ -129,6 +142,7 @@ before(async () => {
   await new Promise((resolve) => jwksServer.listen(0, '127.0.0.1', resolve));
   jwksPort = jwksServer.address().port;
 
+  neo4jMock = createNeo4jMock();
   const db = createMockDb();
   const app = express();
   app.use(express.json());
@@ -139,6 +153,7 @@ before(async () => {
       expectedIssuer: null,
       expectedAudience: null,
       db,
+      neo4jRun: neo4jMock.neo4jRun,
     })
   );
 
@@ -183,7 +198,7 @@ test('POST /questionnaire-responses — rejects unauthenticated requests', async
 });
 
 test('POST /questionnaire-responses — rejects missing questionnaireSlug', async () => {
-  const token = makeToken('user-1', ['participant']);
+  const token = makeToken('user-1', ['user']);
   const res = await request('POST', '/questionnaire-responses', token, {
     answers: { sliq_diet: '2' },
   });
@@ -191,7 +206,7 @@ test('POST /questionnaire-responses — rejects missing questionnaireSlug', asyn
 });
 
 test('POST /questionnaire-responses — rejects missing answers', async () => {
-  const token = makeToken('user-1', ['participant']);
+  const token = makeToken('user-1', ['user']);
   const res = await request('POST', '/questionnaire-responses', token, {
     questionnaireSlug: 'sliq',
   });
@@ -209,7 +224,7 @@ test('GET /questionnaire-responses/me/:slug — rejects unauthenticated requests
 });
 
 test('Integration: submit SLIQ response → fetch by slug → verify answers match', async () => {
-  const token = makeToken('user-sliq-test', ['participant']);
+  const token = makeToken('user-sliq-test', ['user']);
   const answers = {
     sliq_diet: '3',
     sliq_physical_activity: '2',
@@ -240,7 +255,7 @@ test('Integration: submit SLIQ response → fetch by slug → verify answers mat
 });
 
 test('GET /questionnaire-responses/me — returns all responses ordered by most recent first', async () => {
-  const token = makeToken('user-order-test', ['participant']);
+  const token = makeToken('user-order-test', ['user']);
 
   // Submit two responses for different slugs
   await request('POST', '/questionnaire-responses', token, {
@@ -272,7 +287,7 @@ test('GET /questionnaire-responses/me — returns all responses ordered by most 
 });
 
 test('GET /questionnaire-responses/me/:slug — returns 404 when no response exists', async () => {
-  const token = makeToken('user-no-response', ['participant']);
+  const token = makeToken('user-no-response', ['user']);
   const res = await request(
     'GET',
     '/questionnaire-responses/me/nonexistent',
@@ -282,8 +297,8 @@ test('GET /questionnaire-responses/me/:slug — returns 404 when no response exi
 });
 
 test('GET /questionnaire-responses/me/:slug — returns only matching user responses', async () => {
-  const tokenA = makeToken('user-a-isolation', ['participant']);
-  const tokenB = makeToken('user-b-isolation', ['participant']);
+  const tokenA = makeToken('user-a-isolation', ['user']);
+  const tokenB = makeToken('user-b-isolation', ['user']);
 
   // User A submits a response
   await request('POST', '/questionnaire-responses', tokenA, {
@@ -294,4 +309,26 @@ test('GET /questionnaire-responses/me/:slug — returns only matching user respo
   // User B should not see user A's response
   const res = await request('GET', '/questionnaire-responses/me/sliq', tokenB);
   assert.strictEqual(res.status, 404);
+});
+
+test('POST /questionnaire-responses — triggers neo4j user sync', async () => {
+  const token = makeToken('user-neo4j-sync', ['user']);
+  const callsBefore = neo4jMock.getCalls().length;
+
+  const res = await request('POST', '/questionnaire-responses', token, {
+    questionnaireSlug: 'sliq',
+    answers: { sliq_diet: '3', sliq_activity: '2' },
+  });
+  assert.strictEqual(res.status, 201);
+
+  const newCalls = neo4jMock.getCalls().slice(callsBefore);
+  assert.ok(newCalls.length >= 2, 'expected at least 2 neo4j calls (mergeUser + createSubmission)');
+  assert.ok(
+    newCalls.some(c => c.params.userId === 'user-neo4j-sync'),
+    'expected a call with the submitting userId'
+  );
+  assert.ok(
+    newCalls.some(c => c.params.questionnaireId === 'sliq'),
+    'expected a call with the questionnaireId'
+  );
 });

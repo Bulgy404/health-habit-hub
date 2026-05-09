@@ -1,9 +1,38 @@
 import express from 'express';
+import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
+import { mergeUserAndHabits, createSubmissionWithScores } from '../db/userQueries.js';
 
-export function createQuestionnaireResponsesRouter({ db } = {}) {
+export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
+
+  // Long-lived Neo4j driver — created once per router instance if not injected
+  const _neo4jDriver = neo4jRun
+    ? null
+    : neo4j.driver(
+        process.env.NEO4J_URI || 'bolt://neo4j:7687',
+        neo4j.auth.basic(
+          process.env.NEO4J_USER || 'neo4j',
+          process.env.NEO4J_PASSWORD || 'password'
+        )
+      );
+
+  async function queryNeo4j(cypher, params = {}) {
+    if (neo4jRun) return neo4jRun(cypher, params);
+    const session = _neo4jDriver.session();
+    try {
+      const result = await session.run(cypher, params);
+      return result.records.map((r) => r.toObject());
+    } finally {
+      await session.close();
+    }
+  }
+
+  async function syncUserGraph(userId, questionnaireId, answers) {
+    await mergeUserAndHabits(queryNeo4j, userId);
+    await createSubmissionWithScores(queryNeo4j, userId, questionnaireId, answers);
+  }
 
   // Ensure index on form_responses for efficient per-user queries
   async function ensureIndex(database) {
@@ -84,6 +113,11 @@ export function createQuestionnaireResponsesRouter({ db } = {}) {
         questionnaireSlug,
         answers,
         submitted_at: new Date(),
+      });
+
+      // Sync to Neo4j — non-blocking: errors are logged but never surface to the caller
+      syncUserGraph(userId, questionnaireSlug, answers).catch((err) => {
+        console.error('[questionnaire-responses] neo4j sync error:', err);
       });
 
       res.status(201).json({ ok: true });
