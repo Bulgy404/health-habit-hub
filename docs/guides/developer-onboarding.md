@@ -127,6 +127,11 @@ RECOMMENDER_URL=http://recommender:8000
 # ── API Service ───────────────────────────────────────────────────────────
 API_SERVICE_SECRET=dev-secret-change-in-production
 
+# ── LightRAG Knowledge Base ───────────────────────────────────────────────
+LIGHTRAG_URL=http://lightrag:9621
+LIGHTRAG_API_KEY=dev-lightrag-secret
+LIGHTRAG_HOST_PORT=9622
+
 # ── LibreTranslate ───────────────────────────────────────────────────────
 LT_LOAD_ONLY=de,en
 LT_REQ_LIMIT=0
@@ -156,7 +161,7 @@ MAIL_RECEIVER=dev@localhost
 TRAEFIK_DASHBOARD_AUTH=admin:$$apr1$$devhash
 ```
 
-`API_SERVICE_SECRET` is the shared secret between the Node.js backend and the Python API service (recommender). Any non-empty string works locally; use a strong random value in production.
+`API_SERVICE_SECRET` is the shared secret between the Node.js backend and the Python API service (recommender). `LIGHTRAG_API_KEY` is the bearer token that protects the LightRAG REST API — it must match between the `lightrag`, `knowledge-mcp`, and `recommender` containers. Any non-empty string works locally; use strong random values in production.
 
 > **Note:** Never commit `stack.env.local` to Git — it is listed in `.gitignore`. For production deployments use the values in `stack.env` overridden in Portainer.
 
@@ -203,14 +208,16 @@ docker compose ps
 Expected — all services should show status **running** or **healthy**:
 
 ```
-NAME                STATUS
-h3-app             running
-h3-keycloak        healthy
-h3-mongo           running
-h3-neo4j           healthy
-h3-fuseki          running
-h3-recommender     running
-h3-traefik         running
+NAME                  STATUS
+h3-app               running
+h3-keycloak          healthy
+h3-mongo             running
+h3-neo4j             healthy
+h3-fuseki            running
+h3-recommender       running
+h3-lightrag          running
+h3-knowledge-mcp     running
+h3-traefik           running
 ```
 
 ---
@@ -426,7 +433,14 @@ The recommender/API service has its own test suite under `API-service/tests/`. R
 
 ```bash
 cd API-service
-pytest tests/
+API_SERVICE_SECRET=test pytest tests/
+```
+
+The knowledge-base retrieval tests (`tests/test_retrieve.py`) mock LightRAG's HTTP endpoints using `respx` — no running LightRAG instance is needed. To run only those tests:
+
+```bash
+cd API-service
+API_SERVICE_SECRET=test pytest tests/test_retrieve.py -v
 ```
 
 ### Ontology / SPARQL tests
