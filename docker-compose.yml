@@ -259,6 +259,44 @@ services:
       - redis-data:/data
     command: redis-server --appendonly yes
 
+  lightrag:
+    image: hhh/lightrag
+    container_name: hhh-lightrag
+    build: ./lightrag
+    restart: always
+    env_file: .env
+    environment:
+      - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY}
+      - LLM_MODEL=${LLM_MODEL}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL}
+    volumes:
+      - lightrag-data:/app/data
+    networks:
+      - hhh-proxy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  knowledge-mcp:
+    image: hhh/knowledge-mcp
+    container_name: hhh-knowledge-mcp
+    build: ./knowledge-mcp
+    restart: always
+    environment:
+      - LIGHTRAG_URL=${LIGHTRAG_URL:-http://lightrag:9621}
+      - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY}
+    networks:
+      - hhh-proxy
+    depends_on:
+      - lightrag
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   recommender:
     image: hhh/recommender
     container_name: hhh-recommender
@@ -267,10 +305,13 @@ services:
     env_file: .env
     environment:
       - API_SERVICE_SECRET=${API_SERVICE_SECRET}
+      - LIGHTRAG_URL=${LIGHTRAG_URL:-http://lightrag:9621}
+      - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY}
     networks:
       - hhh-proxy
     depends_on:
       - redis
+      - lightrag
 
   admin:
     image: hhh/admin
@@ -349,3 +390,5 @@ volumes:
     name: hhh-keycloak-db-data
   redis-data:
     name: hhh-redis-data
+  lightrag-data:
+    name: hhh-lightrag-data
