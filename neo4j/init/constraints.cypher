@@ -39,3 +39,15 @@ CREATE CONSTRAINT habit_uuid IF NOT EXISTS
 // Composite index on Context(text, dimension) for fast MERGE lookups
 CREATE INDEX context_text_dim IF NOT EXISTS
   FOR (c:Context) ON (c.text, c.dimension);
+
+// User node — one node per Keycloak subject
+CREATE CONSTRAINT user_userId IF NOT EXISTS
+  FOR (u:User) REQUIRE u.userId IS UNIQUE;
+
+// QuestionItem — shared across users; (id, questionnaireId) must be unique
+CREATE CONSTRAINT question_item_unique IF NOT EXISTS
+  FOR (qi:QuestionItem) REQUIRE (qi.id, qi.questionnaireId) IS NODE KEY;
+
+// Index for trajectory queries: find all submissions for a given questionnaire, ordered by time
+CREATE INDEX submission_timeline IF NOT EXISTS
+  FOR (s:Submission) ON (s.questionnaireId, s.submittedAt);
