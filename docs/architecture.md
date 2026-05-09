@@ -2,7 +2,7 @@
 
 ## Overview
 
-Health Habit Hub (HHH) is a research platform for collecting, annotating, and recommending behavioural habits. It consists of eleven Docker services orchestrated via `docker-compose`, a Flutter mobile/web app, a Next.js admin panel, and a Python-based recommender/enrichment microservice. All HTTP traffic is routed through a Traefik reverse proxy.
+Health Habit Hub (HHH) is a research platform for collecting, annotating, and recommending behavioural habits. It consists of thirteen Docker services orchestrated via `docker-compose`, a Flutter mobile/web app, a Next.js admin panel, and a Python-based recommender/enrichment microservice. All HTTP traffic is routed through a Traefik reverse proxy.
 
 ---
 
@@ -18,7 +18,11 @@ graph TD
 
         App["Node.js Backend\n(Express)\n:3000\n/api/v1/*"]
 
-        APIService["API-service\n(Python / FastAPI)\n:8000\nLLM · translate · classify · RAG"]
+        APIService["API-service\n(Python / FastAPI)\n:8000\nLLM · translate · classify"]
+
+        LightRAG["LightRAG\n:9621\ngraph+vector KB · REST API · graph UI"]
+
+        KnowledgeMCP["knowledge-mcp\n:8002\nMCP server wrapping LightRAG"]
 
         Keycloak["Keycloak 26.5.5\n:8080\n/auth/realms/hhh"]
 
@@ -52,8 +56,10 @@ graph TD
     App -->|"MongoDB driver :27017"| Mongo
     App -->|"HTTP /api/v1/llm/*\n/api/v1/kb/*"| APIService
 
+    APIService -->|"HTTP /query\n/documents/*"| LightRAG
     APIService -->|"Bolt protocol"| Neo4j
     APIService -->|"HTTP /translate"| LibreTranslate
+    KnowledgeMCP -->|"HTTP /query\n/documents/text"| LightRAG
 
     Backup -->|"mongodump"| Mongo
     Backup -->|"tar fuseki-data"| Fuseki
@@ -70,10 +76,12 @@ graph TD
 | Service | Technology | Purpose | Internal Port | External URL (dev) | Key Env Vars |
 |---|---|---|---|---|---|
 | **proxy** | Traefik v3.0 | Reverse proxy, TLS termination, routing | 8080 (dashboard) | `proxy.localhost:8888` | `TRAEFIK_HOST_PORT80`, `TRAEFIK_HOST_PORT8080`, `PATH_SUFFIX`, `ACME_EMAIL` (prod) |
-| **app** | Node.js 20 + Express | REST API `/api/v1/*` | 3000 | `app.localhost:3000` | `MONGO_HOST`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_DB`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `KEYCLOAK_JWKS_URL`, `API_SERVICE_URL`, `LIBRE_TRANSLATE_URL` |
-| **api-service** | Python 3.11 + FastAPI | LLM inference (context classification, BCIO mapping, translation refinement, RAG recommendations), knowledge base management | 8000 | `localhost:8000` | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `OLLAMA_BASE_URL`, `REDIS_URL` |
+| **app** | Node.js 20 + Express | REST API `/api/v1/*` | 3000 | `app.localhost:3000` | `MONGO_HOST`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_DB`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `KEYCLOAK_JWKS_URL`, `API_SERVICE_URL`, `LIBRE_TRANSLATE_URL`, `ALLOWED_ORIGINS` |
+| **api-service** | Python 3.11 + FastAPI | LLM inference (context classification, BCIO mapping, translation refinement, RAG recommendations); KB CRUD proxied to LightRAG | 8000 | `localhost:8000` | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `REDIS_URL`, `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
+| **lightrag** | LightRAG 1.3.9 (Python) | Graph+vector knowledge base; builds entity graph from uploaded documents; exposes REST query API and built-in graph visualization UI | 9621 | `localhost:9622` | `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_API_BASE`, `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `LIGHTRAG_API_KEY` |
+| **knowledge-mcp** | FastMCP (Python) | MCP server wrapping LightRAG; exposes `search_knowledge` and `ingest_document` tools for AI agent use via SSE transport | 8002 | `localhost:8002` | `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
 | **keycloak** | Keycloak 26.5.5 | OIDC/OAuth2 identity provider; manages realms, users, roles | 8080 | `localhost:8080` | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KC_DB`, `KC_HTTP_RELATIVE_PATH` (prod) |
-| **admin** | Next.js 14 (App Router) | Researcher/admin web panel: questionnaire management, settings | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER` |
+| **admin** | Next.js 14 (App Router) | Researcher/admin web panel: questionnaire management, settings | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER` |
 | **fuseki** | Apache Jena Fuseki | SPARQL triplestore; stores HHH + BCIO ontology | 3030 | `fuseki.localhost:3030` | `ADMIN_PASSWORD` |
 | **neo4j** | Neo4j 5 (n10s plugin) | Graph database; stores habit graph with BCIO alignment | 7474 (HTTP), 7687 (Bolt) | `neo4j.localhost:7474` | `NEO4J_AUTH` (`user/password`), `NEO4J_PLUGINS` |
 | **mongo** | MongoDB (latest) | Document store; holds questionnaires, form responses, recommendations, user preferences | 27017 | Internal only | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`, `MONGO_INITDB_DATABASE` |
@@ -115,7 +123,7 @@ sequenceDiagram
     participant Neo4j
 
     Flutter->>Backend: POST /api/v1/habits/donate<br/>Authorization: Bearer <token><br/>{ sentence, language }
-    Backend->>Backend: Validate JWT (requireRole: participant)
+    Backend->>Backend: Validate JWT (requireRole: user)
 
     alt language ≠ "en*"
         Backend->>LibreTranslate: POST /translate<br/>{ q: sentence, source: lang, target: "en" }
@@ -215,13 +223,100 @@ sequenceDiagram
 
 | Role | Granted to | Permissions |
 |---|---|---|
-| `participant` | Study participants | Donate habits, view recommendations, submit questionnaires |
-| `researcher` | Research staff | All participant permissions + admin panel read access, questionnaire management |
-| `admin` | Platform administrators | All researcher permissions + full admin panel access, settings |
+| `user` | Study participants (end users of the Flutter app) | Donate habits, view recommendations, submit questionnaires |
+| `researcher` | Research staff | All `user` permissions + admin panel access (excluding KB and Settings), questionnaire and study management |
+| `admin` | Platform administrators | All `researcher` permissions + full admin panel access including Knowledge Base and Settings |
+
+> **Note:** The `user` role was previously named `participant`. It was renamed across `app/middleware/roles.js`, `keycloak/hhh-realm.json`, and `scripts/seed-local.js` to align with Keycloak terminology and to avoid clashing with the domain term "participant" used in study admin contexts.
 
 ### Admin Panel Auth
 
-The Next.js admin panel uses NextAuth v4 with the Keycloak provider. On each request, `src/middleware.ts` calls `getToken()` to validate the session JWT. If the decoded token's `realm_access.roles` array does not include `admin` or `researcher`, the user is redirected to `/access-denied`. The Keycloak client used is `hhh-admin` (confidential client with client secret).
+The Next.js admin panel uses NextAuth v4 with the Keycloak provider. On each request, `src/middleware.ts` calls `getToken()` to validate the session JWT and additionally logs method, path, user `sub`, roles, and request latency (visible in `docker logs h3-2-admin`). If the decoded token's `realm_access.roles` array does not include `admin` or `researcher`, the user is redirected to `/access-denied`. The Keycloak client used is `hhh-admin` (confidential client with client secret).
+
+#### Inside the JWT callback
+
+`realm_access.roles` is present on **access tokens** but absent from ID tokens (Keycloak default). The JWT callback in `admin/src/lib/auth.ts` therefore decodes roles from `account.access_token` directly rather than from the OIDC `profile` (ID token claims).
+
+#### Docker-aware OIDC endpoints
+
+Because Keycloak runs inside Docker but the browser runs on the host, the admin panel cannot rely on OIDC discovery (`wellKnown`) — the discovery document returns the internal Docker hostname (`http://keycloak:8080/...`) for the authorization endpoint, which browsers cannot resolve. The NextAuth provider instead sets endpoints explicitly:
+
+| Endpoint | Resolves to | Env var |
+|---|---|---|
+| `authorization.url` | `http://localhost:8080` | `KEYCLOAK_BROWSER_URL` |
+| `token` | `http://keycloak:8080` (internal) | `KEYCLOAK_INTERNAL_URL` |
+| `userinfo` | `http://keycloak:8080` (internal) | `KEYCLOAK_INTERNAL_URL` |
+| `jwks_endpoint` | `http://keycloak:8080` (internal) | `KEYCLOAK_INTERNAL_URL` |
+| Issuer (`iss` validator) | `http://localhost:8080/realms/hhh` | `KEYCLOAK_ISSUER` |
+
+Note that `KEYCLOAK_ISSUER` uses the **browser-facing** hostname even though token/JWKS calls go to the internal hostname. This is because Keycloak in `start-dev` mode stamps the `iss` claim on issued tokens from the browser-side Host header.
+
+#### Page-level role guards
+
+Beyond the middleware allow-list, the admin panel enforces fine-grained access control at the page level:
+
+- `/knowledge-base` and `/settings` are admin-only — `researcher` users are redirected to `/access-denied`
+- The sidebar hides the KB and Settings entries for `researcher` users so the navigation reflects what they can actually open
+- Flutter admin routes (when the admin Flutter UI is in use) are restricted to `admin` only
+
+#### Local admin user provisioning
+
+In local development, the `keycloak-init` container automatically creates a user in the `hhh` realm with both `admin` and `researcher` roles, using `HHH_ADMIN_USER` (default `admin`) as the username and `KEYCLOAK_ADMIN_PASSWORD` as the password. Demo users (`demo-admin`, `demo-researcher`) have been removed from `keycloak/hhh-realm.json`.
+
+---
+
+## Knowledge Base & RAG Pipeline
+
+The knowledge base stores academic papers and documents that inform habit recommendations. Admins upload PDF, TXT, or MD files via the admin portal. LightRAG processes each document and builds two parallel indexes:
+
+1. **Knowledge graph** — LightRAG extracts key concepts and relationships from the document text using the LLM (scads AI). For example, from a sleep paper it might extract `sleep → improves → recovery` as a graph edge. This graph captures semantic structure that pure vector search misses.
+2. **Vector index** — The same document chunks are embedded and stored for dense similarity search.
+
+When a habit recommendation is requested, the API-service calls LightRAG with `mode=hybrid`. LightRAG searches both the graph and the vector index simultaneously and returns a synthesized context string. This context is passed to the recommendation LLM alongside the user's goal to generate personalized habit suggestions.
+
+### Recommendation retrieval flow
+
+```mermaid
+sequenceDiagram
+    participant App as Node.js Backend
+    participant API as API-service (FastAPI)
+    participant LR as LightRAG
+
+    App->>API: POST /api/v1/llm/recommend<br/>{ user_id, goal, session_id }
+    API->>API: extract habits + profile (parallel LLM calls)
+    API->>LR: POST /query<br/>{ query: rag_query, mode: "hybrid", only_need_context: true }
+    LR-->>API: { response: "context from graph+vector..." }
+    API->>API: build recommendation prompt with context
+    API->>API: LLM call → parse recommendations
+    API-->>App: { recommendations: [...] }
+```
+
+### Document ingestion flow
+
+```mermaid
+sequenceDiagram
+    participant Admin as Admin Portal
+    participant App as Node.js Backend
+    participant API as API-service (FastAPI)
+    participant LR as LightRAG
+
+    Admin->>App: POST /api/v1/kb (multipart PDF/TXT/MD)
+    App->>API: POST /api/v1/kb (proxy)
+    API->>LR: POST /documents/file (multipart)
+    LR-->>API: { status: "success", message: "...processing in background" }
+    API-->>App: 201
+    App-->>Admin: 201
+
+    Note over LR: Background: extract entities,<br/>build graph, embed chunks
+```
+
+### MCP server
+
+The `knowledge-mcp` container exposes the knowledge base as Model Context Protocol tools over SSE at `http://localhost:8002/sse`. Claude Desktop or Claude Code can connect to it and call `search_knowledge` (queries LightRAG) or `ingest_document` (inserts text). Every tool call is logged to stdout with the query and LightRAG response status.
+
+### Graph visualization
+
+LightRAG's built-in web UI is served at `http://localhost:9622` (local) and can be reached via SSH tunnel on the server. The admin portal "View Graph" button links directly to this UI. It shows the entity graph built from all uploaded documents — useful for verifying that LightRAG has correctly extracted concepts.
 
 ---
 
@@ -233,6 +328,7 @@ The Next.js admin panel uses NextAuth v4 with the Keycloak provider. On each req
 | **Document DB** | MongoDB | `users` (preferences), `questionnaires`, `form_responses`, `recommendations`, `recommendation_feedback` | Flexible schema for survey/form data; no strong relational joins required |
 | **Triplestore** | Apache Jena Fuseki | BCIO ontology (`Ontology.ttl`, `schema.ttl`, `data.ttl`) | SPARQL queries over RDF graph; stores formal OWL ontology that the LLM uses for BCIO mapping |
 | **Vector search** | In-process (API-service) | Embedded BCIO concept descriptions | Fast similarity search during `map-bcio` pipeline step; no separate vector DB needed at current scale |
+| **Graph+vector KB** | LightRAG (file-based) | Knowledge graph of concepts/relationships extracted from uploaded documents + vector embeddings | Hybrid retrieval for habit recommendations; graph captures semantic relationships, vector handles dense similarity |
 
 ### Neo4j Schema (Current — `ralph/hhh-platform-unified`)
 
@@ -295,4 +391,4 @@ All alignments are marked `TODO: domain-review` in the ontology and should be va
 
 ---
 
-*Updated: 2026-03-21 | Branch: ralph/hhh-platform-unified*
+*Updated: 2026-05-09 | Branch: platform_unified — LightRAG knowledge base added*
