@@ -56,8 +56,9 @@ function UploadModal({
       setError("Please select a PDF file.");
       return;
     }
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setError("Only PDF files are accepted.");
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!["pdf", "txt", "md"].includes(ext)) {
+      setError("Only PDF, TXT, and MD files are accepted.");
       return;
     }
     setUploading(true);
@@ -99,7 +100,7 @@ function UploadModal({
 
           <div className={styles.formGroup}>
             <label className={styles.label}>PDF file *</label>
-            <input ref={fileRef} type="file" accept=".pdf" className={styles.fileInput} />
+            <input ref={fileRef} type="file" accept=".pdf,.txt,.md" className={styles.fileInput} />
           </div>
 
           <div className={styles.formGroup}>
@@ -180,7 +181,6 @@ export default function KnowledgeBasePage() {
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [deleteFilename, setDeleteFilename] = useState<string | null>(null);
-  const [reindexing, setReindexing] = useState(false);
 
   const fetchList = useCallback(async () => {
     if (!token) return;
@@ -224,25 +224,6 @@ export default function KnowledgeBasePage() {
     }
   }
 
-  async function handleReindex() {
-    setReindexing(true);
-    setError("");
-    setSuccessMsg("");
-    try {
-      const res = await fetch(`${API_BASE}/reindex`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setSuccessMsg("Knowledge base re-indexed successfully.");
-      await fetchList();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Re-index failed");
-    } finally {
-      setReindexing(false);
-    }
-  }
-
   async function handleUploaded() {
     setUploadOpen(false);
     setSuccessMsg("PDF uploaded successfully.");
@@ -268,15 +249,16 @@ export default function KnowledgeBasePage() {
           </p>
         </div>
         <div className={styles.headerActions}>
-          <button
+          <a
             className={styles.reindexButton}
-            onClick={handleReindex}
-            disabled={reindexing}
+            href="http://localhost:9622"
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            {reindexing ? "Re-indexing…" : "↻ Re-index"}
-          </button>
+            ⬡ View Graph
+          </a>
           <button className={styles.addButton} onClick={() => setUploadOpen(true)}>
-            + Upload PDF
+            + Upload Document
           </button>
         </div>
       </div>

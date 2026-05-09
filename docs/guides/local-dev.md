@@ -67,13 +67,16 @@ cp .env.example .env
 
 The default values in `.env.example` work for local development without changes. You do not need to fill in any `CHANGE_THIS_*` placeholders to run the local stack.
 
-Add the following variable to your `.env` if it is not already present:
+Add the following variables to your `.env` if they are not already present:
 
 ```
 API_SERVICE_SECRET=dev-secret-change-in-production
+LIGHTRAG_URL=http://lightrag:9621
+LIGHTRAG_API_KEY=dev-lightrag-secret
+LIGHTRAG_HOST_PORT=9622
 ```
 
-This is the shared secret used between the Node.js backend and the Python recommender API service for internal service-to-service calls. In local development, any non-empty string works.
+`API_SERVICE_SECRET` is the shared secret for internal service-to-service calls. The `LIGHTRAG_*` variables configure the knowledge base service — the defaults work for local development without changes. The graph visualization UI is served at `http://localhost:9622` when the stack is running.
 
 ### Step 3 — Start all backend services
 
@@ -93,6 +96,8 @@ This runs `docker compose -f docker-compose.local.yml up -d`, starting:
 | **keycloak** | Identity provider (Keycloak) | `localhost:8080` |
 | **redis** | Redis cache | `localhost:6379` |
 | **recommender** | Python FastAPI recommender | `localhost:8001` |
+| **lightrag** | LightRAG knowledge base (REST API + graph UI) | `localhost:9622` |
+| **knowledge-mcp** | MCP server wrapping LightRAG | `localhost:8002` |
 | **fuseki** | Apache Jena Fuseki (RDF/SPARQL) | `localhost:3030` |
 | **translate** | LibreTranslate | `localhost:5001` |
 
@@ -194,21 +199,24 @@ When the local Docker stack is running (`make dev`), the admin app is available 
 
 ### Creating a local admin user in Keycloak
 
-The `testuser` seeded by `make seed` is a regular participant. To log in to the admin panel, you need a user with the `admin` role in the `hhh` realm.
+The `testuser` seeded by `make seed` is a regular `user` (study participant) — it does not have access to the admin panel. The admin panel requires a user with the `admin` (or `researcher`) realm role in the `hhh` realm.
 
-1. Open the Keycloak admin UI at `http://localhost:8080/admin` and log in with:
-   - **Username:** `admin`
-   - **Password:** the value of `KEYCLOAK_ADMIN_PASSWORD` in your `.env` (default: `admin`)
+**This is now done automatically.** When you run `make dev`, the `keycloak-init` container creates an admin user in the `hhh` realm using values from your `.env`:
 
-2. Switch to the **hhh** realm using the dropdown in the top-left corner.
+| `.env` variable | Used as | Default |
+|---|---|---|
+| `HHH_ADMIN_USER` | Admin panel username | `admin` |
+| `KEYCLOAK_ADMIN_PASSWORD` | Admin panel password | `admin` |
 
-3. Go to **Users** → **Add user**, fill in a username and email, and click **Create**.
+The created user is automatically assigned both `admin` and `researcher` roles, so it has full access to all admin panel features.
 
-4. On the **Credentials** tab, set a password and disable the "Temporary" toggle.
+To log in to the admin panel:
 
-5. On the **Role mapping** tab, click **Assign role**, filter by **hhh** realm roles, and assign the `admin` role.
+1. Wait for `keycloak-init` to complete (it runs once on stack startup; check `docker compose -f docker-compose.local.yml logs keycloak-init`).
+2. Open `http://admin.localhost` in your browser.
+3. Sign in with the username from `HHH_ADMIN_USER` and the password from `KEYCLOAK_ADMIN_PASSWORD`.
 
-6. Navigate to `http://admin.localhost` and sign in with the new credentials.
+> **Note:** No manual Keycloak UI steps are required. If you want to change the admin username, edit `HHH_ADMIN_USER` in `.env` and re-run `make reset` (or restart the `keycloak-init` container after wiping the Keycloak volume).
 
 ### Running the admin app in watch mode (outside Docker)
 
@@ -234,10 +242,13 @@ The backend and Keycloak containers must still be running (`make dev` with the `
 
 After running `make seed`, these credentials work in both the app and the Keycloak admin UI:
 
-| Account | Username | Password | Role |
-|---|---|---|---|
-| Test participant | `testuser` | `testpass123` | `participant` |
-| Keycloak admin | `admin` | (value of `KEYCLOAK_ADMIN_PASSWORD` in `.env`) | master admin |
+| Account | Username | Password | Role | Where to log in |
+|---|---|---|---|---|
+| Test user (study participant) | `testuser` | `testpass123` | `user` (hhh realm) | Flutter app |
+| Admin panel user | value of `HHH_ADMIN_USER` (default: `admin`) | value of `KEYCLOAK_ADMIN_PASSWORD` in `.env` | `admin` + `researcher` (hhh realm) | `http://admin.localhost` |
+| Keycloak master admin | `admin` | value of `KEYCLOAK_ADMIN_PASSWORD` in `.env` | master realm admin | `http://localhost:8080/admin` |
+
+> **Note:** The admin panel user and the Keycloak master admin happen to share the same username (`admin`) by default, but they live in different realms. The admin panel user is created in the `hhh` realm by `keycloak-init`. The master admin lives in the `master` realm and only manages Keycloak itself.
 
 Keycloak admin UI: `http://localhost:8080/admin`
 
@@ -338,7 +349,15 @@ make reset
 
 ### Admin app cannot authenticate (NextAuth error)
 
-**Symptom:** Clicking "Sign in" on `http://admin.localhost` redirects to an error page, or the browser is stuck in a redirect loop.
+**Symptom:** Clicking "Sign in" on `http://admin.localhost` redirects to an error page, the browser is stuck in a redirect loop, or login lands on a Keycloak "Access Denied" page.
+
+The admin panel uses NextAuth + Keycloak with three Docker-specific environment variables. Most authentication problems trace to one of these:
+
+| Env var | Where it points | Why it matters |
+|---|---|---|
+| `KEYCLOAK_BROWSER_URL` | `http://localhost:8080` | Used by NextAuth as the **authorization** endpoint host — the browser must be able to reach it |
+| `KEYCLOAK_INTERNAL_URL` | `http://keycloak:8080` | Used by NextAuth for **token**, **userinfo**, and **JWKS** endpoints — server-to-server inside Docker |
+| `KEYCLOAK_ISSUER` | `http://localhost:8080/realms/hhh` | Must match the `iss` claim in the issued tokens. In `start-dev` mode, Keycloak stamps `iss` from the browser-side Host header, which is `localhost:8080` |
 
 **Fix 1:** Confirm the `keycloak-init` container completed successfully. The `admin` container depends on it:
 
@@ -354,10 +373,49 @@ docker compose -f docker-compose.local.yml up keycloak-init
 
 **Fix 2:** Make sure you are accessing the admin panel at `http://admin.localhost` and not `http://localhost:3001`. NextAuth's `NEXTAUTH_URL` is set to `http://admin.localhost`, so redirect URIs will not match when using the direct port.
 
-**Fix 3:** If `NEXTAUTH_SECRET` is missing or empty in `.env`, NextAuth will fail silently. Confirm `.env` contains a non-empty value:
+**Fix 3:** Browser redirects to `http://keycloak:8080/...` and fails with "site can't be reached". This means OIDC discovery (`wellKnown`) is leaking the internal Docker hostname into the browser. The current `admin/src/lib/auth.ts` no longer uses `wellKnown` and instead sets the authorization endpoint explicitly to `KEYCLOAK_BROWSER_URL`. If you see this symptom, confirm `KEYCLOAK_BROWSER_URL=http://localhost:8080` is set on the admin container and rebuild.
+
+**Fix 4:** Login succeeds at Keycloak but lands on `/access-denied`. Check the admin container logs:
+
+```bash
+docker logs h3-2-admin
+```
+
+Common causes:
+- **`iss` mismatch**: NextAuth rejects the token because `KEYCLOAK_ISSUER` does not match the `iss` claim. In `start-dev` mode the `iss` claim is `http://localhost:8080/realms/hhh`, so `KEYCLOAK_ISSUER` must use `localhost:8080` (not `keycloak:8080`).
+- **Empty `realm_access` roles**: `realm_access` lives only in the access token, not in the ID token. The JWT callback in `admin/src/lib/auth.ts` decodes roles from `account.access_token` directly. If you have customised this and read from `profile`, roles will always be empty.
+- **User has no `admin` or `researcher` role**: confirm the `keycloak-init` step ran (see Fix 1) and assigned both roles to the admin user.
+
+**Fix 5:** If `NEXTAUTH_SECRET` is missing or empty in `.env`, NextAuth will fail silently. Confirm `.env` contains a non-empty value:
 
 ```
 NEXTAUTH_SECRET=change-me-in-production
+```
+
+---
+
+### Admin panel pages fail to load (studies, questionnaires, knowledge base)
+
+**Symptom:** You can sign in to the admin panel, but pages such as Studies, Questionnaires, or Knowledge Base show empty data, spinners that never resolve, or browser console errors like `CORS policy: No 'Access-Control-Allow-Origin' header is present`.
+
+**Cause:** The admin panel runs on `http://admin.localhost` and calls the backend API at `http://localhost:3000`. These are different origins, so the backend must explicitly allow them via CORS. The `app` service reads its allow-list from the `ALLOWED_ORIGINS` env var (comma-separated). If this is missing, every browser-side request from the admin panel is blocked.
+
+**Fix:** Add the following line to `.env` (already present in `.env.example`):
+
+```
+ALLOWED_ORIGINS=http://admin.localhost,http://researcher.localhost,http://localhost:3001
+```
+
+Then restart the backend container:
+
+```bash
+docker compose -f docker-compose.local.yml restart app
+```
+
+Confirm the variable was picked up:
+
+```bash
+docker compose -f docker-compose.local.yml exec app printenv ALLOWED_ORIGINS
 ```
 
 ---
