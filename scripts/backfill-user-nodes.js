@@ -7,11 +7,12 @@
  *
  * Questionnaire history is NOT backfilled — trajectory starts from deploy date.
  *
- * Usage (run from project root):
+ * Usage (run from the app/ directory where neo4j-driver is installed):
+ *   cd app
  *   NEO4J_URI=bolt://localhost:7687 \
  *   NEO4J_USER=neo4j \
  *   NEO4J_PASSWORD=yourpassword \
- *   node scripts/backfill-user-nodes.js [--dry-run]
+ *   node ../scripts/backfill-user-nodes.js [--dry-run]
  */
 
 import neo4j from 'neo4j-driver';
