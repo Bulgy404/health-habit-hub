@@ -1,3 +1,4 @@
+import cors from 'cors';
 import express from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { createAuthMiddleware, ROLES } from '../middleware/auth.js';
@@ -41,6 +42,20 @@ export function createV1Router({
   redisUrl,
 } = {}) {
   const router = express.Router();
+
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+  router.use(
+    cors({
+      origin: allowedOrigins.length ? allowedOrigins : false,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      credentials: true,
+    })
+  );
+
   const authenticate = createAuthMiddleware({
     jwksUrl,
     expectedIssuer,
@@ -194,7 +209,7 @@ export function createV1Router({
   router.use(
     '/questionnaire-responses',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createQuestionnaireResponsesRouter({ db })
+    createQuestionnaireResponsesRouter({ db, neo4jRun })
   );
 
   // Recommendations routes: require user, admin, or researcher role
