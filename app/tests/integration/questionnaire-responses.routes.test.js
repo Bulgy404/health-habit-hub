@@ -321,6 +321,9 @@ test('POST /questionnaire-responses — triggers neo4j user sync', async () => {
   });
   assert.strictEqual(res.status, 201);
 
+  // Flush the event loop so the fire-and-forget neo4j sync can complete
+  await new Promise((resolve) => setImmediate(resolve));
+
   const newCalls = neo4jMock.getCalls().slice(callsBefore);
   assert.ok(newCalls.length >= 2, 'expected at least 2 neo4j calls (mergeUser + createSubmission)');
   assert.ok(
