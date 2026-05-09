@@ -101,6 +101,7 @@ NEO4J_PASSWORD=<strong-password>
 DB_PASSWORD=<strong-password>         # Fuseki
 ADMIN_PASSWORD=<strong-password>      # application admin
 API_SERVICE_SECRET=<hex-secret>       # shared secret between h3-app and h3-recommender
+LIGHTRAG_API_KEY=<hex-secret>         # bearer token protecting LightRAG REST API
 ```
 
 Generate a strong value for `API_SERVICE_SECRET`:
@@ -118,18 +119,20 @@ docker compose --env-file stack.env.local up -d
 
 Expected output (services pulling/building, then starting):
 ```
-[+] Running 11/11
- ✔ Container h3-traefik       Started
- ✔ Container h3-mongo         Started
- ✔ Container h3-neo4j         Started
- ✔ Container h3-fuseki        Started
- ✔ Container h3-keycloak      Started
- ✔ Container h3-recommender   Started
- ✔ Container h3-redis         Started
- ✔ Container h3-app           Started
- ✔ Container h3-mongoexpress  Started
+[+] Running 13/13
+ ✔ Container h3-traefik        Started
+ ✔ Container h3-mongo          Started
+ ✔ Container h3-neo4j          Started
+ ✔ Container h3-fuseki         Started
+ ✔ Container h3-keycloak       Started
+ ✔ Container h3-recommender    Started
+ ✔ Container h3-lightrag       Started
+ ✔ Container h3-knowledge-mcp  Started
+ ✔ Container h3-redis          Started
+ ✔ Container h3-app            Started
+ ✔ Container h3-mongoexpress   Started
  ✔ Container h3-libretranslate Started
- ✔ Container h3-backup        Started
+ ✔ Container h3-backup         Started
 ```
 
 ### 2.4 Verify all services are healthy
@@ -475,6 +478,29 @@ curl -s http://localhost:8000/health
 > **Note:** There is a brief period during container restart where the recommender is
 > unavailable.  Schedule rotations during low-traffic windows.
 
+### 8.5 Rotate `LIGHTRAG_API_KEY`
+
+`LIGHTRAG_API_KEY` is the bearer token that `lightrag`, `knowledge-mcp`, and `recommender` all share. All three must be restarted together after rotation.
+
+```bash
+# 1. Generate a new secret
+NEW_SECRET=$(openssl rand -hex 32)
+echo "New secret: $NEW_SECRET"
+
+# 2. Update stack.env.local
+nano stack.env.local
+# Change the line:  LIGHTRAG_API_KEY=<new-secret>
+
+# 3. Restart all three services simultaneously
+docker compose --env-file stack.env.local up -d h3-lightrag h3-knowledge-mcp h3-recommender
+```
+
+Verify LightRAG is back up:
+```bash
+curl -s http://localhost:9621/health
+# Expected: {"status":"ok"}
+```
+
 ---
 
 ## 9. Adding an Admin User
@@ -773,6 +799,43 @@ docker compose --env-file stack.env.local exec h3-app env | grep CORS
 # Add CORS_ORIGIN=https://your.domain.com to stack.env.local if missing
 
 bash scripts/deploy-backend.sh
+```
+
+---
+
+### LightRAG unreachable or knowledge base not responding
+
+**Symptom:** Habit recommendations return empty sources; admin portal Knowledge Base page shows errors; `POST /api/v1/llm/retrieve` returns 502.
+
+**Diagnosis:**
+```bash
+# Check LightRAG container status
+docker compose --env-file stack.env.local ps h3-lightrag
+
+# Check LightRAG health directly
+curl -s http://localhost:9621/health
+# Expected: {"status":"ok"}
+
+# Check LightRAG logs for errors
+docker compose --env-file stack.env.local logs --tail=50 h3-lightrag
+
+# Verify LIGHTRAG_URL and LIGHTRAG_API_KEY are set on recommender
+docker compose --env-file stack.env.local exec h3-recommender env | grep LIGHTRAG
+```
+
+**Fix:**
+```bash
+# Restart LightRAG and knowledge-mcp (recommender will follow via depends_on)
+docker compose --env-file stack.env.local up -d h3-lightrag h3-knowledge-mcp h3-recommender
+```
+
+> **Note:** LightRAG takes ~30 seconds to initialize its storage on first start. Wait for `{"status":"ok"}` from `curl http://localhost:9621/health` before considering it failed.
+
+**Graph visualization:**
+The LightRAG graph UI is at `http://localhost:9621` inside Docker. Access it from the server via SSH tunnel:
+```bash
+ssh -L 9622:localhost:9621 your-server
+# Then open http://localhost:9622 in your browser
 ```
 
 ---
