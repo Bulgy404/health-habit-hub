@@ -35,7 +35,12 @@ export async function mergeUserAndHabits(queryNeo4j, userId) {
  * @param {string} questionnaireId   e.g. 'sliq', 'rand-36', 'srhi'
  * @param {Object} answers           flat map { questionId: rawValue }
  */
-export async function createSubmissionWithScores(queryNeo4j, userId, questionnaireId, answers) {
+export async function createSubmissionWithScores(
+  queryNeo4j,
+  userId,
+  questionnaireId,
+  answers
+) {
   const scores = Object.entries(answers).map(([itemId, value]) => ({
     itemId,
     value: parseFloat(value) || 0,
@@ -50,5 +55,38 @@ export async function createSubmissionWithScores(queryNeo4j, userId, questionnai
      MERGE (qi:QuestionItem {id: score.itemId, questionnaireId: $questionnaireId})
      CREATE (s)-[:HAS_SCORE {value: score.value}]->(qi)`,
     { userId, questionnaireId, scores }
+  );
+}
+
+/**
+ * MERGE a User node and set profile properties derived from onboarding fields.
+ * Uses SET u += $props (map-merge) to avoid string injection while supporting
+ * dynamic property names. Date fields stored as ISO "YYYY-MM-DD" strings;
+ * numbers as JS floats; text/select as strings.
+ * No-op when all fields have null/undefined values.
+ *
+ * @param {Function} queryNeo4j
+ * @param {string} userId  Keycloak subject UUID
+ * @param {Array<{questionId: string, value: *, type: string}>} fields
+ */
+export async function setUserProfileProperties(queryNeo4j, userId, fields) {
+  const props = {};
+  for (const { questionId, value, type } of fields) {
+    if (!questionId || value === undefined || value === null) continue;
+    if (type === 'date') {
+      const d = value instanceof Date ? value : new Date(value);
+      if (!isNaN(d.getTime())) props[questionId] = d.toISOString().slice(0, 10);
+    } else if (type === 'number') {
+      const n = typeof value === 'number' ? value : parseFloat(value);
+      if (!isNaN(n)) props[questionId] = n;
+    } else {
+      props[questionId] = String(value);
+    }
+  }
+  if (Object.keys(props).length === 0) return;
+  await queryNeo4j(
+    `MERGE (u:User {userId: $userId})
+     SET u += $props`,
+    { userId, props }
   );
 }
