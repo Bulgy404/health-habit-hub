@@ -251,7 +251,7 @@ export function createV1Router({
   router.use(
     '/user-profile',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createUserProfileRouter({ db })
+    createUserProfileRouter({ db, neo4jRun })
   );
 
   return router;

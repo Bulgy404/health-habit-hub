@@ -1,5 +1,21 @@
 import express from 'express';
+import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
+import { setUserProfileProperties } from '../db/userQueries.js';
+
+function convertFieldValue(field) {
+  const { type, value } = field;
+  if (value === undefined || value === null) return field;
+  if (type === 'date') {
+    const d = value instanceof Date ? value : new Date(value);
+    return { ...field, value: isNaN(d.getTime()) ? value : d };
+  }
+  if (type === 'number') {
+    const n = typeof value === 'number' ? value : parseFloat(value);
+    return { ...field, value: isNaN(n) ? value : n };
+  }
+  return field;
+}
 
 export function createUserProfileServiceRouter({ db } = {}) {
   const router = express.Router();
@@ -28,9 +44,30 @@ export function createUserProfileServiceRouter({ db } = {}) {
   return router;
 }
 
-export function createUserProfileRouter({ db } = {}) {
+export function createUserProfileRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
+
+  const _neo4jDriver = neo4jRun
+    ? null
+    : neo4j.driver(
+        process.env.NEO4J_URI || 'bolt://neo4j:7687',
+        neo4j.auth.basic(
+          process.env.NEO4J_USER || 'neo4j',
+          process.env.NEO4J_PASSWORD || 'password'
+        )
+      );
+
+  async function queryNeo4j(cypher, params = {}) {
+    if (neo4jRun) return neo4jRun(cypher, params);
+    const session = _neo4jDriver.session();
+    try {
+      const result = await session.run(cypher, params);
+      return result.records.map((r) => r.toObject());
+    } finally {
+      await session.close();
+    }
+  }
 
   router.post('/', async (req, res) => {
     try {
@@ -39,9 +76,7 @@ export function createUserProfileRouter({ db } = {}) {
 
       const { fields } = req.body;
       if (!Array.isArray(fields) || fields.length === 0) {
-        return res
-          .status(400)
-          .json({ error: 'fields must be a non-empty array' });
+        return res.status(400).json({ error: 'fields must be a non-empty array' });
       }
       for (const f of fields) {
         if (
@@ -55,20 +90,27 @@ export function createUserProfileRouter({ db } = {}) {
           !f.label
         ) {
           return res.status(400).json({
-            error:
-              'each field must have questionId, questionText, value, and label',
+            error: 'each field must have questionId, questionText, value, and label',
           });
         }
       }
+
+      const converted = fields.map(convertFieldValue);
 
       const database = await getDb();
       await database
         .collection('user_profiles')
         .updateOne(
           { userId },
-          { $set: { userId, fields, updatedAt: new Date() } },
+          { $set: { userId, fields: converted, updatedAt: new Date() } },
           { upsert: true }
         );
+
+      // Fire-and-forget Neo4j sync
+      setUserProfileProperties(queryNeo4j, userId, converted).catch((err) =>
+        console.error('[userProfileRouter] Neo4j sync error:', err)
+      );
+
       res.json({ ok: true });
     } catch (err) {
       console.error('[userProfileRouter] POST /:', err);

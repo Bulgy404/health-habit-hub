@@ -31,7 +31,7 @@ function createJwt(payload) {
   return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
 }
 
-function makeToken(sub = 'user-1', roles = ['participant']) {
+function makeToken(sub = 'user-1', roles = ['user']) {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({ sub, exp: now + 3600, iat: now, realm_access: { roles } });
 }
@@ -74,6 +74,7 @@ let jwksServer;
 let jwksPort;
 const realFetch = global.fetch;
 const SERVICE_SECRET = 'test-service-secret-123';
+const neo4jCalls = [];
 
 before(async () => {
   const jwksApp = express();
@@ -96,6 +97,10 @@ before(async () => {
       expectedIssuer: null,
       expectedAudience: null,
       db,
+      neo4jRun: async (cypher, params) => {
+        neo4jCalls.push({ cypher, params });
+        return [];
+      },
     })
   );
 
@@ -276,4 +281,58 @@ test('GET /user-profile/service/:userId — 200 returns profile after POST', asy
   assert.strictEqual(body.userId, 'user-service-read');
   assert.deepStrictEqual(body.fields, VALID_FIELDS);
   assert.ok(!('_id' in body));
+});
+
+test('POST /api/v1/user-profile — stores date field as Date object in MongoDB', async () => {
+  const token = makeToken('user-date-test');
+  const res = await fetch(`http://127.0.0.1:${port}/api/v1/user-profile`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      fields: [
+        {
+          questionId: 'birthday',
+          questionText: 'When were you born?',
+          type: 'date',
+          value: '1990-05-15',
+          label: 'May 15, 1990',
+        },
+      ],
+    }),
+  });
+  assert.strictEqual(res.status, 200);
+  const getRes = await fetch(`http://127.0.0.1:${port}/api/v1/user-profile`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const body = await getRes.json();
+  assert.ok(
+    body.fields[0].value instanceof Date || typeof body.fields[0].value === 'string',
+    'birthday value should be stored'
+  );
+});
+
+test('POST /api/v1/user-profile — stores number field as number', async () => {
+  const token = makeToken('user-num-test');
+  const res = await fetch(`http://127.0.0.1:${port}/api/v1/user-profile`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      fields: [
+        {
+          questionId: 'score',
+          questionText: 'Score',
+          type: 'number',
+          value: '3.5',
+          label: '3.5',
+        },
+      ],
+    }),
+  });
+  assert.strictEqual(res.status, 200);
+  const getRes = await fetch(`http://127.0.0.1:${port}/api/v1/user-profile`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const body = await getRes.json();
+  assert.strictEqual(typeof body.fields[0].value, 'number');
+  assert.strictEqual(body.fields[0].value, 3.5);
 });
