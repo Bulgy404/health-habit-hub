@@ -12,7 +12,7 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
   router.get('/', async (_req, res) => {
     try {
       const database = await getDb();
-      const defs = await (await database.collection('profile_field_definitions').find({})).toArray();
+      const defs = await database.collection('profile_field_definitions').find({}).toArray();
       defs.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       res.json(defs.map(({ _id, ...d }) => d));
     } catch (err) {
@@ -67,10 +67,24 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
       const { fieldId } = req.params;
       const { label, type, options, required, order } = req.body;
       if (type !== undefined && !VALID_TYPES.includes(type)) {
-        return res.status(400).json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` });
+        return res
+          .status(400)
+          .json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` });
       }
-      if (type === 'select' && (!Array.isArray(options) || options.length === 0)) {
-        return res.status(400).json({ error: 'options must be a non-empty array when type is select' });
+      const database = await getDb();
+      const existing = await database
+        .collection('profile_field_definitions')
+        .findOne({ fieldId });
+      if (!existing) return res.status(404).json({ error: 'Not found' });
+      const effectiveType = type ?? existing.type;
+      const effectiveOptions = options ?? existing.options;
+      if (
+        effectiveType === 'select' &&
+        (!Array.isArray(effectiveOptions) || effectiveOptions.length === 0)
+      ) {
+        return res.status(400).json({
+          error: 'options must be a non-empty array when type is select',
+        });
       }
       const updates = { updatedAt: new Date() };
       if (label !== undefined) updates.label = label;
@@ -78,7 +92,6 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
       if (options !== undefined) updates.options = options;
       if (required !== undefined) updates.required = Boolean(required);
       if (order !== undefined) updates.order = Number(order) || 0;
-      const database = await getDb();
       const result = await database
         .collection('profile_field_definitions')
         .findOneAndUpdate({ fieldId }, { $set: updates }, { returnDocument: 'after' });
@@ -118,7 +131,7 @@ export function createProfileFieldDefinitionsPublicRouter({ db } = {}) {
   router.get('/', async (_req, res) => {
     try {
       const database = await getDb();
-      const defs = await (await database.collection('profile_field_definitions').find({})).toArray();
+      const defs = await database.collection('profile_field_definitions').find({}).toArray();
       defs.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       res.json(defs.map(({ _id, ...d }) => d));
     } catch (err) {
