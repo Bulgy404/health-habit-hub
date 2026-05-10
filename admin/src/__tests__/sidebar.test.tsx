@@ -52,4 +52,24 @@ describe('Sidebar', () => {
     expect(screen.getByText('Knowledge Base')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
+
+  it('shows Profile Fields for admin', () => {
+    mockedUseSession.mockReturnValue({
+      data: { roles: ['admin'], accessToken: '', user: { email: 'a@test.com' }, expires: '' },
+      status: 'authenticated',
+      update: jest.fn(),
+    });
+    render(<Sidebar />);
+    expect(screen.getByText('Profile Fields')).toBeInTheDocument();
+  });
+
+  it('does not show Profile Fields for researcher', () => {
+    mockedUseSession.mockReturnValue({
+      data: { roles: ['researcher'], accessToken: '', user: { email: 'r@test.com' }, expires: '' },
+      status: 'authenticated',
+      update: jest.fn(),
+    });
+    render(<Sidebar />);
+    expect(screen.queryByText('Profile Fields')).not.toBeInTheDocument();
+  });
 });

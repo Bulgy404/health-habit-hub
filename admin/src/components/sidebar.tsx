@@ -15,6 +15,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/studies", label: "Studies", icon: "🔬" },
   { href: "/questionnaires", label: "Questionnaires", icon: "📋" },
+  { href: "/profile-fields", label: "Profile Fields", icon: "👤", adminOnly: true },
   { href: "/knowledge-base", label: "Knowledge Base", icon: "📚", adminOnly: true },
   { href: "/settings", label: "Settings", icon: "⚙️", adminOnly: true },
 ];
