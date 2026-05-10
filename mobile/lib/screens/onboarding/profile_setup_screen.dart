@@ -15,318 +15,367 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
-  int? _age;
-  String? _gender;
+  List<ProfileFieldDefinition> _definitions = [];
+  final Map<String, dynamic> _values = {};
+  final Map<String, TextEditingController> _controllers = {};
+  bool _loading = true;
   bool _submitting = false;
-  static const int _minAge = 13;
-  static const int _maxAge = 100;
 
-  List<int> get _ageOptions =>
-      List<int>.generate(_maxAge - _minAge + 1, (index) => _minAge + index);
+  @override
+  void initState() {
+    super.initState();
+    _fetchDefinitions();
+  }
 
-  Future<void> _showAgePicker() async {
-    if (_submitting) return;
-    final options = _ageOptions;
-    int tempAge = _age ?? 25;
-    if (tempAge < _minAge || tempAge > _maxAge) {
-      tempAge = 25;
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
     }
-    final initialIndex = options.indexOf(tempAge);
+    super.dispose();
+  }
+
+  Future<void> _fetchDefinitions() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final response = await dio.get(
+        '${AppConfig.apiBaseUrl}/profile-field-definitions',
+      );
+      final List<dynamic> data = response.data as List<dynamic>;
+      setState(() {
+        _definitions = data
+            .map((e) => ProfileFieldDefinition.fromJson(e as Map<String, dynamic>))
+            .toList();
+        _loading = false;
+      });
+    } catch (_) {
+      setState(() => _loading = false);
+    }
+  }
+
+  bool get _canSubmit {
+    if (_submitting) return false;
+    return _definitions
+        .where((d) => d.required)
+        .every((d) => _values.containsKey(d.fieldId));
+  }
+
+  Future<void> _showDatePicker(ProfileFieldDefinition def) async {
+    if (_submitting) return;
+    DateTime temp = _values[def.fieldId] is DateTime
+        ? _values[def.fieldId] as DateTime
+        : DateTime(1990);
+    final controller = FixedExtentScrollController();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: SizedBox(
+          height: 320,
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    setState(() => _values[def.fieldId] = temp);
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Done'),
+                ),
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: temp,
+                  maximumDate: DateTime.now(),
+                  minimumDate: DateTime(1900),
+                  onDateTimeChanged: (dt) => temp = dt,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    controller.dispose();
+  }
+
+  Future<void> _showSelectPicker(ProfileFieldDefinition def) async {
+    if (_submitting) return;
+    final options = def.options;
+    String temp = _values[def.fieldId] as String? ?? options.first;
+    final initialIndex = options.indexOf(temp);
     final controller = FixedExtentScrollController(
       initialItem: initialIndex < 0 ? 0 : initialIndex,
     );
 
     await showModalBottomSheet<void>(
       context: context,
-      builder: (context) {
-        return SafeArea(
-          child: SizedBox(
-            height: 320,
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      setState(() => _age = tempAge);
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('Done'),
-                  ),
+      builder: (context) => SafeArea(
+        child: SizedBox(
+          height: 320,
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    setState(() => _values[def.fieldId] = temp);
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Done'),
                 ),
-                Expanded(
-                  child: CupertinoPicker(
-                    itemExtent: 36,
-                    scrollController: controller,
-                    onSelectedItemChanged: (index) {
-                      tempAge = options[index];
-                    },
-                    children: [
-                      for (final age in options)
-                        Center(child: Text(age.toString())),
-                    ],
-                  ),
+              ),
+              Expanded(
+                child: CupertinoPicker(
+                  itemExtent: 36,
+                  scrollController: controller,
+                  onSelectedItemChanged: (i) => temp = options[i],
+                  children: [
+                    for (final opt in options) Center(child: Text(opt)),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
     controller.dispose();
   }
 
-  String? get _selectedGenderLabel {
-    for (final (code, label) in profileGenderOptions) {
-      if (code == _gender) return label;
+  String _displayValue(ProfileFieldDefinition def) {
+    final val = _values[def.fieldId];
+    if (val == null) return '';
+    if (def.type == 'date' && val is DateTime) return formatDate(val);
+    return val.toString();
+  }
+
+  List<Map<String, dynamic>> _buildFields() {
+    final result = <Map<String, dynamic>>[];
+    for (final def in _definitions) {
+      final val = _values[def.fieldId];
+      if (val == null) continue;
+      dynamic submittedValue;
+      String label;
+      if (def.type == 'date' && val is DateTime) {
+        submittedValue = isoDate(val);
+        label = formatDate(val);
+      } else if (def.type == 'number') {
+        final n = double.tryParse(val.toString()) ?? 0.0;
+        submittedValue = n;
+        label = n.toString();
+      } else {
+        submittedValue = val.toString();
+        label = val.toString();
+      }
+      result.add({
+        'questionId': def.fieldId,
+        'questionText': def.label,
+        'type': def.type,
+        'value': submittedValue,
+        'label': label,
+      });
     }
-    return null;
-  }
-
-  Future<void> _showGenderPicker() async {
-    if (_submitting) return;
-    final options = profileGenderOptions;
-    String tempGender = _gender ?? options.first.$1;
-    final initialIndex = options.indexWhere(
-      (option) => option.$1 == tempGender,
-    );
-    final controller = FixedExtentScrollController(
-      initialItem: initialIndex < 0 ? 0 : initialIndex,
-    );
-
-    await showModalBottomSheet<void>(
-      context: context,
-      builder: (context) {
-        return SafeArea(
-          child: SizedBox(
-            height: 320,
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      setState(() => _gender = tempGender);
-                      Navigator.of(context).pop();
-                    },
-                    child: const Text('Done'),
-                  ),
-                ),
-                Expanded(
-                  child: CupertinoPicker(
-                    itemExtent: 36,
-                    scrollController: controller,
-                    onSelectedItemChanged: (index) {
-                      tempGender = options[index].$1;
-                    },
-                    children: [
-                      for (final option in options)
-                        Center(child: Text(option.$2)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    controller.dispose();
+    return result;
   }
 
   Future<void> _submit() async {
-    if (_age == null || _gender == null) return;
+    final fields = _buildFields();
+    if (fields.isEmpty) {
+      if (mounted) context.go('/onboarding/study-code');
+      return;
+    }
     setState(() => _submitting = true);
     try {
       final dio = ref.read(dioProvider);
       await dio.post(
         '${AppConfig.apiBaseUrl}/user-profile',
-        data: {
-          'fields': [
-            {
-              'questionId': 'age',
-              'questionText': 'Age',
-              'value': _age,
-              'label': profileAgeBucketLabel(_age!),
-            },
-            {
-              'questionId': 'gender',
-              'questionText': 'Gender',
-              'value': _gender,
-              'label': profileGenderLabel(_gender) ?? '',
-            },
-          ],
-        },
+        data: {'fields': fields},
       );
     } catch (_) {
-      // Best-effort — profile data missing is recoverable
+      // Best-effort — profile missing is recoverable
     }
     if (mounted) context.go('/onboarding/study-code');
   }
 
   void _skip() => context.go('/onboarding/study-code');
 
+  Widget _buildFieldInput(ProfileFieldDefinition def) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final hasValue = _values.containsKey(def.fieldId);
+    final displayText = hasValue ? _displayValue(def) : null;
+
+    if (def.type == 'date' || def.type == 'select') {
+      return InkWell(
+        onTap: def.type == 'date'
+            ? () => _showDatePicker(def)
+            : () => _showSelectPicker(def),
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cs.outlineVariant),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  displayText ??
+                      (def.type == 'date' ? 'Select date' : 'Select option'),
+                  style: tt.bodyLarge?.copyWith(
+                    color: displayText == null
+                        ? cs.onSurfaceVariant
+                        : cs.onSurface,
+                    fontWeight: displayText == null
+                        ? FontWeight.w500
+                        : FontWeight.w700,
+                  ),
+                ),
+              ),
+              Icon(Icons.unfold_more_rounded, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // text or number
+    final ctrl = _controllers.putIfAbsent(
+      def.fieldId,
+      () => TextEditingController(text: _values[def.fieldId]?.toString() ?? ''),
+    );
+    return TextField(
+      controller: ctrl,
+      keyboardType: def.type == 'number'
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : TextInputType.text,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: cs.surfaceContainerHighest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: cs.outlineVariant),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: cs.outlineVariant),
+        ),
+        hintText: def.type == 'number' ? 'Enter a number' : 'Enter text',
+      ),
+      onChanged: (v) {
+        if (def.type == 'number') {
+          final n = double.tryParse(v);
+          if (n != null) {
+            setState(() => _values[def.fieldId] = n);
+          } else {
+            setState(() => _values.remove(def.fieldId));
+          }
+        } else {
+          setState(() {
+            if (v.isNotEmpty) {
+              _values[def.fieldId] = v;
+            } else {
+              _values.remove(def.fieldId);
+            }
+          });
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final canSubmit = _age != null && _gender != null && !_submitting;
 
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: TextButton(onPressed: _skip, child: const Text('Skip')),
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [
-                      BoxShadow(
-                        color: cs.primary.withAlpha(0x2E),
-                        blurRadius: 20,
-                        offset: const Offset(0, 6),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Align(
+                      alignment: Alignment.topRight,
+                      child: TextButton(
+                        onPressed: _skip,
+                        child: const Text('Skip'),
                       ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.person_outline,
-                    size: 40,
-                    color: cs.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Tell us about yourself',
-                style: tt.headlineSmall?.copyWith(fontWeight: FontWeight.w900),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'This helps personalise your habit recommendations. You can skip and update later.',
-                style: tt.bodyMedium?.copyWith(
-                  color: cs.onSurfaceVariant,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-
-              // Age
-              Text(
-                'Age',
-                style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 10),
-              InkWell(
-                onTap: _showAgePicker,
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: cs.outlineVariant),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _age == null ? 'Select age' : _age.toString(),
-                          style: tt.bodyLarge?.copyWith(
-                            color: _age == null
-                                ? cs.onSurfaceVariant
-                                : cs.onSurface,
-                            fontWeight: _age == null
-                                ? FontWeight.w500
-                                : FontWeight.w700,
-                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Center(
+                      child: Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: cs.primaryContainer,
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: [
+                            BoxShadow(
+                              color: cs.primary.withAlpha(0x2E),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.person_outline,
+                          size: 40,
+                          color: cs.primary,
                         ),
                       ),
-                      Icon(
-                        Icons.unfold_more_rounded,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Tell us about yourself',
+                      style: tt.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w900),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'This helps personalise your habit recommendations. You can skip and update later.',
+                      style: tt.bodyMedium?.copyWith(
                         color: cs.onSurfaceVariant,
+                        height: 1.5,
                       ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    for (final def in _definitions) ...[
+                      Text(
+                        def.label,
+                        style: tt.titleSmall
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildFieldInput(def),
+                      const SizedBox(height: 28),
                     ],
-                  ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: _canSubmit ? _submit : null,
+                      child: _submitting
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Continue'),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 28),
-
-              // Gender
-              Text(
-                'Gender',
-                style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 10),
-              InkWell(
-                onTap: _showGenderPicker,
-                borderRadius: BorderRadius.circular(14),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: cs.outlineVariant),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _selectedGenderLabel ?? 'Select gender',
-                          style: tt.bodyLarge?.copyWith(
-                            color: _selectedGenderLabel == null
-                                ? cs.onSurfaceVariant
-                                : cs.onSurface,
-                            fontWeight: _selectedGenderLabel == null
-                                ? FontWeight.w500
-                                : FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      Icon(
-                        Icons.unfold_more_rounded,
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 40),
-
-              FilledButton(
-                onPressed: canSubmit ? _submit : null,
-                child: _submitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Continue'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
