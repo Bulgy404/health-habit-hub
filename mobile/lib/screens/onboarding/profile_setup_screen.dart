@@ -45,7 +45,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       setState(() {
         _definitions = data
             .map((e) => ProfileFieldDefinition.fromJson(e as Map<String, dynamic>))
-            .toList();
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
         _loading = false;
       });
     } catch (_) {
@@ -65,7 +66,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     DateTime temp = _values[def.fieldId] is DateTime
         ? _values[def.fieldId] as DateTime
         : DateTime(1990);
-    final controller = FixedExtentScrollController();
 
     await showModalBottomSheet<void>(
       context: context,
@@ -98,12 +98,12 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         ),
       ),
     );
-    controller.dispose();
   }
 
   Future<void> _showSelectPicker(ProfileFieldDefinition def) async {
     if (_submitting) return;
     final options = def.options;
+    if (options.isEmpty) return;
     String temp = _values[def.fieldId] as String? ?? options.first;
     final initialIndex = options.indexOf(temp);
     final controller = FixedExtentScrollController(
