@@ -35,7 +35,7 @@ function createJwt(payload) {
   return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
 }
 
-function makeToken(sub = 'user-1', roles = ['participant']) {
+function makeToken(sub = 'user-1', roles = ['user']) {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({
     sub,
@@ -86,7 +86,7 @@ function createMockDb() {
 
 function createStatefulNeo4jMock() {
   const habitNodes = [];
-  const contextNodes = new Map(); // key: `${text}:${dimension}`
+  const _contextNodes = new Map(); // key: `${text}:${dimension}` — reserved for future context MERGE tracking
   const bcioNodes = new Map(); // key: bcio_concept_id
   const cypher_log = [];
 
@@ -95,20 +95,6 @@ function createStatefulNeo4jMock() {
 
     if (cypher.includes('CREATE (h:Habit')) {
       habitNodes.push({ ...params });
-      return [];
-    }
-
-    if (cypher.includes('MERGE (c:Context')) {
-      // UNWIND batch: params.rows is an array of {text, dimension}
-      const rows = params.rows || [
-        { text: params.text, dimension: params.dimension },
-      ];
-      for (const row of rows) {
-        const key = `${row.text}:${row.dimension}`;
-        if (!contextNodes.has(key)) {
-          contextNodes.set(key, { text: row.text, dimension: row.dimension });
-        }
-      }
       return [];
     }
 

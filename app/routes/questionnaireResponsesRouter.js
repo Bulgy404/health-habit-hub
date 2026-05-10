@@ -1,7 +1,10 @@
 import express from 'express';
 import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
-import { mergeUserAndHabits, createSubmissionWithScores } from '../db/userQueries.js';
+import {
+  mergeUserAndHabits,
+  createSubmissionWithScores,
+} from '../db/userQueries.js';
 
 export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
@@ -31,7 +34,12 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
 
   async function syncUserGraph(userId, questionnaireId, answers) {
     await mergeUserAndHabits(queryNeo4j, userId);
-    await createSubmissionWithScores(queryNeo4j, userId, questionnaireId, answers);
+    await createSubmissionWithScores(
+      queryNeo4j,
+      userId,
+      questionnaireId,
+      answers
+    );
   }
 
   // Ensure index on form_responses for efficient per-user queries
