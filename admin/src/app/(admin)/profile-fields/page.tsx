@@ -58,16 +58,16 @@ export default function ProfileFieldsPage() {
 
   useEffect(() => {
     if (status === "loading") return;
-    if (!session?.roles?.includes("admin")) router.replace("/access-denied");
-  }, [session, status, router]);
-
-  useEffect(() => {
-    if (!session?.accessToken) return;
+    if (!session?.roles?.includes("admin")) {
+      router.replace("/access-denied");
+      return;
+    }
+    if (!session.accessToken) return;
     apiFetch(API_BASE, session.accessToken)
       .then(setDefs)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [session?.accessToken]);
+  }, [session, status, router]);
 
   async function handleSave() {
     if (!session?.accessToken) return;
@@ -200,7 +200,10 @@ export default function ProfileFieldsPage() {
             <select
               className={styles.formSelect}
               value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value as FieldType, options: [] })}
+              onChange={(e) => {
+                setForm({ ...form, type: e.target.value as FieldType, options: [] });
+                setNewOption("");
+              }}
             >
               {VALID_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -211,7 +214,7 @@ export default function ProfileFieldsPage() {
               <label className={styles.formLabel}>Options</label>
               <div>
                 {form.options.map((opt, i) => (
-                  <div key={i} className={styles.optionRow}>
+                  <div key={`${opt}-${i}`} className={styles.optionRow}>
                     <span>{opt}</span>
                     <button onClick={() => setForm({ ...form, options: form.options.filter((_, j) => j !== i) })}>✕</button>
                   </div>
