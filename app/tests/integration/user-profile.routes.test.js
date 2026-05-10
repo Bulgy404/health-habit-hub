@@ -285,10 +285,9 @@ test('GET /user-profile/service/:userId — 200 returns profile after POST', asy
 
 test('POST /api/v1/user-profile — stores date field as Date object in MongoDB', async () => {
   const token = makeToken('user-date-test');
-  const res = await fetch(`http://127.0.0.1:${port}/api/v1/user-profile`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
+  const res = await req('POST', '/user-profile', {
+    token,
+    body: {
       fields: [
         {
           questionId: 'birthday',
@@ -298,25 +297,25 @@ test('POST /api/v1/user-profile — stores date field as Date object in MongoDB'
           label: 'May 15, 1990',
         },
       ],
-    }),
+    },
   });
   assert.strictEqual(res.status, 200);
-  const getRes = await fetch(`http://127.0.0.1:${port}/api/v1/user-profile`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+
+  const dateSyncCall = neo4jCalls.find((c) => c.params?.userId === 'user-date-test');
+  assert.ok(dateSyncCall, 'Neo4j sync should be called for the date profile save');
+  assert.strictEqual(dateSyncCall.params.props.birthday, '1990-05-15', 'Date should be synced as YYYY-MM-DD');
+
+  const getRes = await req('GET', '/user-profile', { token });
   const body = await getRes.json();
-  assert.ok(
-    body.fields[0].value instanceof Date || typeof body.fields[0].value === 'string',
-    'birthday value should be stored'
-  );
+  // new Date('1990-05-15') parses as UTC midnight → ISO: '1990-05-15T00:00:00.000Z'
+  assert.strictEqual(body.fields[0].value, '1990-05-15T00:00:00.000Z');
 });
 
 test('POST /api/v1/user-profile — stores number field as number', async () => {
   const token = makeToken('user-num-test');
-  const res = await fetch(`http://127.0.0.1:${port}/api/v1/user-profile`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({
+  const res = await req('POST', '/user-profile', {
+    token,
+    body: {
       fields: [
         {
           questionId: 'score',
@@ -326,12 +325,16 @@ test('POST /api/v1/user-profile — stores number field as number', async () => 
           label: '3.5',
         },
       ],
-    }),
+    },
   });
   assert.strictEqual(res.status, 200);
-  const getRes = await fetch(`http://127.0.0.1:${port}/api/v1/user-profile`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+
+  const syncCall = neo4jCalls.find((c) => c.params?.userId === 'user-num-test');
+  assert.ok(syncCall, 'Neo4j sync should be called for the profile save');
+  assert.ok(syncCall.cypher.includes('SET u +='), 'Should use SET u += for property sync');
+  assert.strictEqual(syncCall.params.props.score, 3.5, 'Number field should be synced as float');
+
+  const getRes = await req('GET', '/user-profile', { token });
   const body = await getRes.json();
   assert.strictEqual(typeof body.fields[0].value, 'number');
   assert.strictEqual(body.fields[0].value, 3.5);
