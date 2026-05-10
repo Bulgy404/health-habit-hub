@@ -41,3 +41,26 @@ String isoDate(DateTime d) {
   final day = d.day.toString().padLeft(2, '0');
   return '$y-$m-$day';
 }
+
+// Used by personal_info_screen.dart (settings) which retains hardcoded age/gender pickers.
+const profileGenderOptions = [
+  ('male', 'Male'),
+  ('female', 'Female'),
+  ('non_binary', 'Non-binary'),
+  ('prefer_not_to_say', 'Prefer not to say'),
+];
+
+String profileAgeBucketLabel(int age) {
+  if (age < 18) return 'Under 18';
+  if (age <= 24) return '18–24';
+  if (age <= 34) return '25–34';
+  if (age <= 44) return '35–44';
+  if (age <= 54) return '45–54';
+  if (age <= 64) return '55–64';
+  return '65+';
+}
+
+String? profileGenderLabel(String? value) => profileGenderOptions
+    .where((o) => o.$1 == value)
+    .map((o) => o.$2)
+    .firstOrNull;
