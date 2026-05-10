@@ -22,6 +22,7 @@ import {
   createUserProfileRouter,
   createUserProfileServiceRouter,
 } from './userProfileRouter.js';
+import { createProfileFieldDefinitionsPublicRouter } from './profileFieldDefinitionsRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 import { swaggerSpec } from '../swagger.js';
 
@@ -252,6 +253,13 @@ export function createV1Router({
     '/user-profile',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createUserProfileRouter({ db, neo4jRun })
+  );
+
+  // Profile field definitions (public read): require user, admin, or researcher role
+  router.use(
+    '/profile-field-definitions',
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
+    createProfileFieldDefinitionsPublicRouter({ db })
   );
 
   return router;

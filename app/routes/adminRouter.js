@@ -12,6 +12,7 @@ import { createStudiesRouter } from './admin/studiesRouter.js';
 import { createParticipantsRouter } from './admin/participantsRouter.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { ROLES } from '../middleware/auth.js';
+import { createProfileFieldDefinitionsAdminRouter } from './profileFieldDefinitionsRouter.js';
 
 const DEFAULT_SETTINGS = [{ key: 'token_card_format', value: 'both' }];
 
@@ -490,6 +491,11 @@ export function createAdminRouter({
   router.use('/', createSurveysRouter({ db, neo4jRun }));
   router.use('/', createStudiesRouter({ db, neo4jRun, keycloak }));
   router.use('/', createNotificationsRouter({ db }));
+  router.use(
+    '/profile-field-definitions',
+    requireRole(ROLES.ADMIN),
+    createProfileFieldDefinitionsAdminRouter({ db })
+  );
 
   return router;
 }
