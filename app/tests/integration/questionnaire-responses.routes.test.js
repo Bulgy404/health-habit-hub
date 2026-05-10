@@ -119,7 +119,9 @@ function createNeo4jMock() {
       calls.push({ cypher, params });
       return [];
     },
-    getCalls() { return calls; },
+    getCalls() {
+      return calls;
+    },
   };
 }
 
@@ -325,13 +327,16 @@ test('POST /questionnaire-responses — triggers neo4j user sync', async () => {
   await new Promise((resolve) => setImmediate(resolve));
 
   const newCalls = neo4jMock.getCalls().slice(callsBefore);
-  assert.ok(newCalls.length >= 2, 'expected at least 2 neo4j calls (mergeUser + createSubmission)');
   assert.ok(
-    newCalls.some(c => c.params.userId === 'user-neo4j-sync'),
+    newCalls.length >= 2,
+    'expected at least 2 neo4j calls (mergeUser + createSubmission)'
+  );
+  assert.ok(
+    newCalls.some((c) => c.params.userId === 'user-neo4j-sync'),
     'expected a call with the submitting userId'
   );
   assert.ok(
-    newCalls.some(c => c.params.questionnaireId === 'sliq'),
+    newCalls.some((c) => c.params.questionnaireId === 'sliq'),
     'expected a call with the questionnaireId'
   );
 });
