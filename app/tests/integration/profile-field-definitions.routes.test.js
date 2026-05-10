@@ -44,7 +44,7 @@ function createMockDb() {
     collection(name) {
       const col = getCol(name);
       return {
-        async find(query = {}) {
+        find(query = {}) {
           let results = [...col];
           for (const [k, v] of Object.entries(query)) {
             results = results.filter((d) => d[k] === v);
