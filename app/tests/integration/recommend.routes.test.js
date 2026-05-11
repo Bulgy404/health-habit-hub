@@ -35,10 +35,14 @@ function createJwt(payload) {
   return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
 }
 
+const TEST_USER_ID = 'a1b2c3d4-1234-5678-abcd-ef0123456789';
+const OTHER_USER_ID = 'b9c8d7e6-4321-8765-dcba-fe9876543210';
+const ADMIN_USER_ID = 'c0d1e2f3-0000-0000-0000-000000000000';
+
 function makeToken(roles = ['user']) {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({
-    sub: 'user-rec-test',
+    sub: TEST_USER_ID,
     exp: now + 3600,
     iat: now,
     realm_access: { roles },
@@ -159,9 +163,9 @@ test('GET /api/v1/recommend/:userId returns 403 for no-role token', async () => 
 // ── Proxy fixtures ────────────────────────────────────────────────────────────
 
 test('GET /api/v1/recommend/:userId proxies to recommender and returns fixture', async () => {
-  // IDOR: participant token has sub='user-rec-test', so userId in URL must match
+  // IDOR: participant token sub matches userId in URL
   const token = makeToken(['user']);
-  const res = await get('/api/v1/recommend/user-rec-test', token);
+  const res = await get(`/api/v1/recommend/${TEST_USER_ID}`, token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.deepStrictEqual(body, FIXTURE_RECOMMEND);
@@ -180,9 +184,9 @@ test('POST /api/v1/recommend/classify proxies to recommender and returns fixture
 });
 
 test('GET /api/v1/recommend/:userId/history proxies to recommender and returns fixture', async () => {
-  // IDOR: participant token has sub='user-rec-test', so userId in URL must match
+  // IDOR: participant token sub matches userId in URL
   const token = makeToken(['user']);
-  const res = await get('/api/v1/recommend/user-rec-test/history', token);
+  const res = await get(`/api/v1/recommend/${TEST_USER_ID}/history`, token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.deepStrictEqual(body, FIXTURE_HISTORY);
@@ -191,19 +195,19 @@ test('GET /api/v1/recommend/:userId/history proxies to recommender and returns f
 test('Proxy preserves Authorization header to downstream recommender', async () => {
   // Verify by checking that a valid token gets a 200 (mock ignores auth but proxy passes it)
   const token = makeToken(['admin']);
-  const res = await get('/api/v1/recommend/admin-user', token);
+  const res = await get(`/api/v1/recommend/${ADMIN_USER_ID}`, token);
   assert.strictEqual(res.status, 200);
 });
 
 test('GET /api/v1/recommend/:userId returns 403 when participant accesses another user', async () => {
-  // IDOR: participant sub='user-rec-test' cannot access 'other-user'
+  // IDOR: participant sub=TEST_USER_ID cannot access OTHER_USER_ID
   const token = makeToken(['user']);
-  const res = await get('/api/v1/recommend/other-user', token);
+  const res = await get(`/api/v1/recommend/${OTHER_USER_ID}`, token);
   assert.strictEqual(res.status, 403);
 });
 
 test('GET /api/v1/recommend/:userId/history returns 403 when participant accesses another user', async () => {
   const token = makeToken(['user']);
-  const res = await get('/api/v1/recommend/other-user/history', token);
+  const res = await get(`/api/v1/recommend/${OTHER_USER_ID}/history`, token);
   assert.strictEqual(res.status, 403);
 });
