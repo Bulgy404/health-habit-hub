@@ -37,7 +37,6 @@ console.log('ContextPath: ', contextPath);
 const publicPath = path.join(process.cwd(), 'app/public');
 app.use(express.static(publicPath));
 
-
 const router = express.Router();
 
 app.set('basepath', contextPath);
@@ -62,7 +61,11 @@ router.use(cookieParser());
 // The donation form is additionally protected by reCAPTCHA; this double-submit
 // check satisfies static analyzers (CodeQL) and provides defense-in-depth.
 router.use((req, res, next) => {
-  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+  if (
+    req.method === 'GET' ||
+    req.method === 'HEAD' ||
+    req.method === 'OPTIONS'
+  ) {
     // Set CSRF token cookie on first visit
     if (!req.cookies._csrf) {
       const token = randomBytes(16).toString('hex');

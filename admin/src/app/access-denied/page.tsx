@@ -1,3 +1,4 @@
+import Link from "next/link";
 import styles from "./page.module.css";
 
 export default function AccessDenied() {
@@ -10,9 +11,9 @@ export default function AccessDenied() {
           You do not have permission to access the admin panel. Only users with the{" "}
           <strong>admin</strong> or <strong>researcher</strong> role can log in.
         </p>
-        <a href="/api/auth/signout" className={styles.button}>
+        <Link href="/api/auth/signout" className={styles.button}>
           Sign out
-        </a>
+        </Link>
       </div>
     </div>
   );

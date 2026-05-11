@@ -44,7 +44,7 @@ CREATE INDEX context_text_dim IF NOT EXISTS
 CREATE CONSTRAINT user_userId IF NOT EXISTS
   FOR (u:User) REQUIRE u.userId IS UNIQUE;
 
-// QuestionItem — shared across users; (id, questionnaireId) must be unique
+// QuestionItem — shared across users, composite (id + questionnaireId) must be unique
 CREATE CONSTRAINT question_item_unique IF NOT EXISTS
   FOR (qi:QuestionItem) REQUIRE (qi.id, qi.questionnaireId) IS NODE KEY;
 

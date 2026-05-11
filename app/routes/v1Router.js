@@ -156,7 +156,11 @@ export function createV1Router({
   router.use(sanitizeBody);
 
   // Service-to-service: user profile (no JWT required, uses X-Service-Auth-Token)
-  router.use('/user-profile', apiRateLimiter, createUserProfileServiceRouter({ db }));
+  router.use(
+    '/user-profile',
+    apiRateLimiter,
+    createUserProfileServiceRouter({ db })
+  );
 
   // All routes below require a valid JWT
   router.use(authenticate);
