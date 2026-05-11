@@ -1,11 +1,11 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 BACKUP_FILE=$1
 RESTORE_DIR="/tmp/restore-$$"
 
 if [ -z "$BACKUP_FILE" ]; then
-  echo "Usage: docker-compose run backup /restore.sh <backup-file>"
+  echo "Usage: docker compose run --rm backup /restore.sh <backup-file>"
   echo ""
   echo "Available backups:"
   ls -lh /backups/full_backup_*.tar.gz 2>/dev/null || echo "  No backups found"
@@ -18,103 +18,164 @@ if [ ! -f "$BACKUP_FILE" ]; then
 fi
 
 echo "=========================================="
-echo "⚠️  WARNING: DATABASE RESTORE"
+echo "WARNING: FULL SYSTEM RESTORE"
 echo "=========================================="
-echo "This will restore data from: $(basename $BACKUP_FILE)"
+echo "Restoring from: $(basename "$BACKUP_FILE")"
 echo ""
-echo "⚠️  This operation will:"
-echo "  - OVERWRITE current MongoDB data"
-echo "  - OVERWRITE current Fuseki data"
-echo "  - OVERWRITE current Neo4j data"
+echo "This operation will:"
+echo "  - STOP and OVERWRITE MongoDB data"
+echo "  - STOP and OVERWRITE LightRAG index"
+echo "  - STOP and OVERWRITE Neo4j graph data"
+echo "  - OVERWRITE Keycloak realm (if backup present)"
+echo "  - RESTART all affected containers"
 echo ""
-read -p "Type 'YES' to continue: " confirm
+read -rp "Type 'YES' to continue: " confirm
 
 if [ "$confirm" != "YES" ]; then
-  echo "Restore cancelled"
+  echo "Restore cancelled."
   exit 0
 fi
 
 echo ""
-echo "Starting restore from: $BACKUP_FILE"
-
-# Extract backup
-mkdir -p "$RESTORE_DIR"
 echo "Extracting backup archive..."
+mkdir -p "$RESTORE_DIR"
 tar -xzf "$BACKUP_FILE" -C "$RESTORE_DIR"
+echo "✓ Archive extracted"
 
-# Restore MongoDB
-# NOTE: This path must match the --out directory used in backup.sh (currently "mongo").
-# If backup.sh changes its output directory name, update this path to match.
+RESTORE_ERRORS=0
+
+log_error() {
+  local component="$1"
+  local msg="$2"
+  RESTORE_ERRORS=$((RESTORE_ERRORS + 1))
+  echo "ERROR: $component - $msg"
+}
+
+# ── 1. MongoDB ────────────────────────────────────────────────────────────────
+
 echo ""
 echo "1/3 Restoring MongoDB..."
 if [ -d "$RESTORE_DIR/mongo" ]; then
-  mongorestore \
+  if mongorestore \
     --host=mongo:27017 \
-    --username="$MONGO_USER" \
-    --password="$MONGO_PASSWORD" \
+    --username="${MONGO_USER:-}" \
+    --password="${MONGO_PASSWORD:-}" \
     --authenticationDatabase=admin \
     --drop \
     "$RESTORE_DIR/mongo" \
-    --quiet
-  echo "✓ MongoDB restored"
+    --quiet 2>/dev/null; then
+    echo "✓ MongoDB restored"
+  else
+    log_error "MongoDB" "mongorestore failed"
+  fi
 else
   echo "Warning: No MongoDB backup found in archive"
 fi
 
-# Restore Fuseki
-echo ""
-echo "2/3 Restoring Fuseki..."
-if [ -f "$RESTORE_DIR/fuseki-data.tar.gz" ] && [ -s "$RESTORE_DIR/fuseki-data.tar.gz" ]; then
-  rm -rf /fuseki/*
-  tar -xzf "$RESTORE_DIR/fuseki-data.tar.gz" -C /fuseki/
-  echo "✓ Fuseki restored"
-else
-  echo "Warning: No Fuseki backup found in archive"
-fi
+# ── 2. LightRAG index ─────────────────────────────────────────────────────────
 
-# Restore Neo4j
 echo ""
-echo "3/3 Restoring Neo4j..."
-
-# Check for new format (neo4j.dump) or old format (tar.gz)
-if [ -f "$RESTORE_DIR/neo4j.dump" ]; then
-  echo "  Stopping Neo4j for restore..."
-  if docker stop h3-neo4j >/dev/null 2>&1; then
+echo "2/3 Restoring LightRAG index..."
+if [ -f "$RESTORE_DIR/lightrag-data.tar.gz" ] && [ -s "$RESTORE_DIR/lightrag-data.tar.gz" ]; then
+  echo "  Stopping LightRAG..."
+  if docker stop hhh-lightrag >/dev/null 2>&1; then
     sleep 2
 
-    echo "  Loading Neo4j dump..."
     if docker run --rm \
-      --volumes-from h3-neo4j \
-      -v "$RESTORE_DIR:/backup" \
+      -v hhh-lightrag-data:/lightrag \
+      -v "$RESTORE_DIR:/backup:ro" \
+      alpine:latest \
+      sh -c "rm -rf /lightrag/* && tar -xzf /backup/lightrag-data.tar.gz -C /lightrag/"; then
+      echo "✓ LightRAG index restored"
+    else
+      log_error "LightRAG" "volume restore failed"
+    fi
+
+    echo "  Restarting LightRAG..."
+    docker start hhh-lightrag >/dev/null 2>&1
+    echo "✓ LightRAG restarted"
+  else
+    log_error "LightRAG" "failed to stop container"
+  fi
+else
+  echo "Warning: No LightRAG backup found in archive"
+fi
+
+# ── 3. Neo4j ──────────────────────────────────────────────────────────────────
+
+echo ""
+echo "3/3 Restoring Neo4j..."
+if [ -d "$RESTORE_DIR/neo4j" ] && [ -f "$RESTORE_DIR/neo4j/neo4j.dump" ]; then
+  echo "  Stopping Neo4j..."
+  if docker stop hhh-neo4j >/dev/null 2>&1; then
+    sleep 2
+
+    if docker run --rm \
+      --volumes-from hhh-neo4j \
+      -v "$RESTORE_DIR/neo4j:/backup:ro" \
       neo4j:5 \
       neo4j-admin database load neo4j --from-path=/backup --overwrite-destination=true 2>/dev/null; then
-      echo "✓ Neo4j restored from dump"
+      echo "✓ Neo4j restored"
     else
-      echo "ERROR: Neo4j restore failed"
+      log_error "Neo4j" "neo4j-admin load failed"
     fi
 
     echo "  Restarting Neo4j..."
-    docker start h3-neo4j >/dev/null 2>&1
+    docker start hhh-neo4j >/dev/null 2>&1
     echo "✓ Neo4j restarted"
   else
-    echo "ERROR: Failed to stop Neo4j container"
+    log_error "Neo4j" "failed to stop container"
   fi
-elif [ -f "$RESTORE_DIR/neo4j-data.tar.gz" ] && [ -s "$RESTORE_DIR/neo4j-data.tar.gz" ]; then
-  echo "⚠ Old backup format detected (file copy)"
-  echo "Note: Neo4j must be stopped before restore."
-  echo "Manual restore required: tar -xzf $RESTORE_DIR/neo4j-data.tar.gz -C /neo4j-data/"
 else
   echo "Warning: No Neo4j backup found in archive"
 fi
 
-# Cleanup
+# ── 5. Keycloak realm ─────────────────────────────────────────────────────────
+
+echo ""
+echo "Restoring Keycloak realm (if backup present)..."
+if [ -f "$RESTORE_DIR/keycloak/hhh-realm.json" ]; then
+  KEYCLOAK_HOST="${KEYCLOAK_HOST:-keycloak}"
+  KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
+
+  if [ -n "${KEYCLOAK_ADMIN_PASSWORD:-}" ]; then
+    KC_TOKEN=$(curl -sf -X POST \
+      "http://${KEYCLOAK_HOST}:8080/realms/master/protocol/openid-connect/token" \
+      -d "client_id=admin-cli&grant_type=password&username=${KEYCLOAK_ADMIN}&password=${KEYCLOAK_ADMIN_PASSWORD}" \
+      2>/dev/null | jq -r '.access_token // empty' || true)
+
+    if [ -n "$KC_TOKEN" ] && [ "$KC_TOKEN" != "null" ]; then
+      if curl -sf -X POST \
+        "http://${KEYCLOAK_HOST}:8080/admin/realms/hhh/partialImport" \
+        -H "Authorization: Bearer $KC_TOKEN" \
+        -H "Content-Type: application/json" \
+        -d @"$RESTORE_DIR/keycloak/hhh-realm.json" \
+        2>/dev/null; then
+        echo "✓ Keycloak realm restored"
+      else
+        log_error "Keycloak" "partial import API call failed"
+      fi
+    else
+      log_error "Keycloak" "failed to obtain admin token"
+    fi
+  else
+    echo "Warning: KEYCLOAK_ADMIN_PASSWORD not set, skipping Keycloak restore"
+  fi
+else
+  echo "Warning: No Keycloak backup found in archive"
+fi
+
+# ── Cleanup ───────────────────────────────────────────────────────────────────
+
 rm -rf "$RESTORE_DIR"
 
 echo ""
 echo "=========================================="
-echo "✓ Restore completed!"
+if [ $RESTORE_ERRORS -eq 0 ]; then
+  echo "✓ Restore completed successfully!"
+else
+  echo "⚠ Restore completed with $RESTORE_ERRORS error(s) — check output above"
+fi
 echo "=========================================="
 echo ""
-echo "Next steps:"
-echo "  1. Restart services: docker-compose restart"
-echo "  2. Verify data integrity"
+echo "All affected containers have been restarted."

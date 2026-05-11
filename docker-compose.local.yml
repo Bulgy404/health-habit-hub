@@ -58,7 +58,6 @@ services:
     depends_on:
       - proxy
       - mongo
-      - fuseki
       - neo4j
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
@@ -118,7 +117,7 @@ services:
     volumes:
       - neo4j-local-data:/data
       - neo4j-local-logs:/logs
-      - ./fuseki/init:/import:ro
+      - ./neo4j/import:/import:ro
       - ./neo4j/extension.sh:/neo4j-extension.sh:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7474"]
@@ -348,38 +347,12 @@ services:
       - redis
       - lightrag
 
-  fuseki:
-    image: hhh/fuseki
-    container_name: h3-2-fuseki
-    build: ./fuseki
-    restart: always
-    env_file:
-      - .env
-    environment:
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
-    ports:
-      - "3030:3030"
-    networks:
-      - h3-2-proxy
-      - h3-2-app
-    volumes:
-      - fuseki-local-data:/fuseki
-    depends_on:
-      - proxy
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.fuseki.rule=Host(`${FUSEKI_PATH:-fuseki}.${PATH_SUFFIX:-localhost}`)
-      - traefik.http.routers.fuseki.entrypoints=web
-      - traefik.http.routers.fuseki.service=fuseki
-      - traefik.http.services.fuseki.loadbalancer.server.port=3030
-
 volumes:
   mongo-local-data:
   neo4j-local-data:
   neo4j-local-logs:
   keycloak-local-data:
   translate-local-data:
-  fuseki-local-data:
   redis-local-data:
   lightrag-data:
 

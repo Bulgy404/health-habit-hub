@@ -109,7 +109,7 @@ export function createV1Router({
    * /health:
    *   get:
    *     summary: Check health of all downstream services
-   *     description: Returns the live health status and latency of neo4j, mongo, fuseki, keycloak, and the recommender service. This endpoint is unauthenticated.
+   *     description: Returns the live health status and latency of neo4j, mongo, keycloak, and the recommender service. This endpoint is unauthenticated.
    *     tags: [Health]
    *     security: []
    *     responses:
@@ -124,7 +124,6 @@ export function createV1Router({
    *               services:
    *                 neo4j: { status: ok, latencyMs: 8 }
    *                 mongo: { status: ok, latencyMs: 5 }
-   *                 fuseki: { status: ok, latencyMs: 22 }
    *                 keycloak: { status: ok, latencyMs: 30 }
    *                 recommender: { status: ok, latencyMs: 15 }
    *       503:
@@ -138,7 +137,6 @@ export function createV1Router({
    *               services:
    *                 neo4j: { status: error, latencyMs: 0 }
    *                 mongo: { status: ok, latencyMs: 5 }
-   *                 fuseki: { status: ok, latencyMs: 22 }
    *                 keycloak: { status: ok, latencyMs: 30 }
    *                 recommender: { status: ok, latencyMs: 15 }
    */

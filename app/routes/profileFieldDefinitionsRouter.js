@@ -52,11 +52,9 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
         type === 'select' &&
         (!Array.isArray(options) || options.length === 0)
       ) {
-        return res
-          .status(400)
-          .json({
-            error: 'options must be a non-empty array when type is select',
-          });
+        return res.status(400).json({
+          error: 'options must be a non-empty array when type is select',
+        });
       }
       const database = await getDb();
       const existing = await database

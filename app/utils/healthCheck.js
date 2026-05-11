@@ -73,23 +73,19 @@ async function checkHttp(url) {
 export async function checkAllServices({
   neo4jCheck = checkNeo4j,
   mongoCheck = checkMongo,
-  fusekiUrl = `http://${process.env.DB_HOST || 'fuseki'}:${process.env.DB_PORT || 3030}/${process.env.DB_PATH || 'hhh'}`,
   keycloakUrl = process.env.KEYCLOAK_URL || 'http://keycloak:8080',
   recommenderUrl = process.env.RECOMMENDER_URL || 'http://recommender:8000',
 } = {}) {
-  const [neo4jResult, mongoResult, fuseki, keycloak, recommender] =
-    await Promise.all([
-      neo4jCheck(),
-      mongoCheck(),
-      checkHttp(fusekiUrl),
-      checkHttp(`${keycloakUrl}/health`),
-      checkHttp(`${recommenderUrl}/health`),
-    ]);
+  const [neo4jResult, mongoResult, keycloak, recommender] = await Promise.all([
+    neo4jCheck(),
+    mongoCheck(),
+    checkHttp(`${keycloakUrl}/health`),
+    checkHttp(`${recommenderUrl}/health`),
+  ]);
 
   const services = {
     neo4j: neo4jResult,
     mongo: mongoResult,
-    fuseki,
     keycloak,
     recommender,
   };

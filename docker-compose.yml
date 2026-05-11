@@ -57,7 +57,6 @@ services:
     networks:
       - hhh-proxy
     depends_on:
-      - fuseki
       - mongo
       - neo4j
     healthcheck:
@@ -73,28 +72,6 @@ services:
       - traefik.http.routers.app.tls.certresolver=letsencrypt
       - traefik.http.routers.app.service=app
       - traefik.http.services.app.loadbalancer.server.port=3000
-
-  fuseki:
-    image: hhh/fuseki
-    container_name: hhh-fuseki
-    build: ./fuseki
-    restart: always
-    env_file: .env
-    environment:
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-    networks:
-      - hhh-proxy
-    volumes:
-      - fuseki-data:/fuseki
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.fuseki.rule=Host(`${DOMAIN}`) && PathPrefix(`/fuseki`)
-      - traefik.http.routers.fuseki.entrypoints=websecure
-      - traefik.http.routers.fuseki.tls.certresolver=letsencrypt
-      - traefik.http.routers.fuseki.service=fuseki
-      - traefik.http.services.fuseki.loadbalancer.server.port=3030
-      - traefik.http.middlewares.fuseki-strip.stripprefix.prefixes=/fuseki
-      - traefik.http.routers.fuseki.middlewares=fuseki-strip
 
   mongo:
     image: mongo:7.0
@@ -184,7 +161,7 @@ services:
     volumes:
       - neo4j-data:/data
       - neo4j-logs:/logs
-      - ./fuseki/init:/import:ro
+      - ./neo4j/import:/import:ro
       - ./neo4j/extension.sh:/neo4j-extension.sh:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7474"]
@@ -357,14 +334,14 @@ services:
       - MAIL_FROM=${MAIL_FROM:-}
     volumes:
       - ./backups:/backups
-      - fuseki-data:/fuseki:ro
+      - lightrag-data:/lightrag:ro
       - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
     networks:
       - hhh-proxy
     depends_on:
       - mongo
-      - fuseki
       - neo4j
+      - lightrag
     command: /bin/bash -c "echo 'Waiting 2 minutes for services to stabilize...'; sleep 120; while true; do /backup.sh; sleep 86400; done"
 
 networks:
@@ -374,8 +351,6 @@ networks:
 volumes:
   traefik-certs:
     name: hhh-traefik-certs
-  fuseki-data:
-    name: hhh-fuseki-data
   mongo-data:
     name: hhh-mongo-data
   mongo-config:
