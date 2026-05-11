@@ -1,5 +1,10 @@
-// Generated from GoogleService-Info.plist (iOS) and google-services.json (Android)
-// Firebase project: health-habit-hub-v2
+// Firebase configuration for Health Habit Hub.
+//
+// API keys are injected at compile time via --dart-define-from-file.
+// Copy mobile/firebase.json.example → mobile/firebase.json, fill in real keys, then:
+//   flutter run --dart-define-from-file=firebase.json
+//   flutter build apk --dart-define-from-file=firebase.json
+//   flutter build ios --dart-define-from-file=firebase.json
 
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
@@ -25,7 +30,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDpxvKlZ2PNFBAI_tDr5ua1b9tmX0nw1nk',
+    apiKey: String.fromEnvironment('FIREBASE_ANDROID_API_KEY'),
     appId: '1:427166078990:android:a84442dfc163503096045f',
     messagingSenderId: '427166078990',
     projectId: 'health-habit-hub-v2',
@@ -33,7 +38,7 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDKPStlguej1xEfwAcBwIFwMVHxSn9j4rY',
+    apiKey: String.fromEnvironment('FIREBASE_IOS_API_KEY'),
     appId: '1:427166078990:ios:7d1d7820096bf7a296045f',
     messagingSenderId: '427166078990',
     projectId: 'health-habit-hub-v2',
