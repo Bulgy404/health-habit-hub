@@ -37,38 +37,6 @@ console.log('ContextPath: ', contextPath);
 const publicPath = path.join(process.cwd(), 'app/public');
 app.use(express.static(publicPath));
 
-// Serve survey js core and ui files
-const vendorSurveyCoreLangMount = path.join(
-  contextPath,
-  ':lng',
-  'vendor',
-  'survey-core'
-);
-const vendorSurveyJsUiLangMount = path.join(
-  contextPath,
-  ':lng',
-  'vendor',
-  'survey-js-ui'
-);
-
-// Intentional: serves client-side survey libraries (survey-core) to the browser.
-// Restricted to disable directory indexes and deny dotfiles.
-app.use(
-  vendorSurveyCoreLangMount,
-  express.static(path.join(process.cwd(), 'node_modules/survey-core'), {
-    index: false,
-    dotfiles: 'deny',
-  })
-);
-// Intentional: serves client-side survey UI library (survey-js-ui) to the browser.
-// Restricted to disable directory indexes and deny dotfiles.
-app.use(
-  vendorSurveyJsUiLangMount,
-  express.static(path.join(process.cwd(), 'node_modules/survey-js-ui'), {
-    index: false,
-    dotfiles: 'deny',
-  })
-);
 
 const router = express.Router();
 
@@ -182,14 +150,8 @@ router.use((req, res, next) => {
   if (req.url.startsWith('/' + req.lang + '/')) {
     next();
   } else {
-    // Sanitize req.url: collapse leading slashes to prevent protocol-relative
-    // ("//evil.example") redirects and strip any chars outside a safe URL
-    // character set so the redirect stays on the same host.
-    const safeUrl = req.url
-      .replace(/^\/+/, '/')
-      .replace(/[^\w\-./=?&%+#@:,;~!*'()$]/g, '');
     const safeLang = getLanguageCodes().includes(req.lang) ? req.lang : 'en';
-    res.redirect(307, path.join(contextPath, safeLang, safeUrl));
+    res.redirect(307, path.join(contextPath, safeLang, 'donate'));
   }
 });
 
