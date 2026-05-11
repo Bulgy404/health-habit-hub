@@ -117,8 +117,8 @@ export function createAdminRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  // GET /api/v1/admin/settings — admin only
-  router.get('/settings', requireRole(ROLES.ADMIN), async (req, res) => {
+  // GET /api/v1/admin/settings — admin and researcher
+  router.get('/settings', requireRole(ROLES.ADMIN, ROLES.RESEARCHER), async (req, res) => {
     try {
       const database = await getDb();
       const result = await getSettings({ db: database });

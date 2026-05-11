@@ -372,18 +372,18 @@ test('GET /api/v1/surveys/:id/render returns survey with default lang=en', async
   const token = makeToken(['user'], 'user-surveys-test');
   const res = await get('/api/v1/surveys/survey-1/render', token);
   assert.strictEqual(res.status, 200);
-  const body = await res.json();
-  assert.strictEqual(body.id, 'survey-1');
-  assert.strictEqual(body.lang, 'en');
-  assert.ok(body.jsonSchema);
+  assert.ok(res.headers.get('content-type').includes('text/html'));
+  const html = await res.text();
+  assert.ok(html.includes('<!DOCTYPE html>'));
+  assert.ok(html.includes('"en"'));
 });
 
 test('GET /api/v1/surveys/:id/render returns lang=de when requested', async () => {
   const token = makeToken(['user'], 'user-surveys-test');
   const res = await get('/api/v1/surveys/survey-1/render?lang=de', token);
   assert.strictEqual(res.status, 200);
-  const body = await res.json();
-  assert.strictEqual(body.lang, 'de');
+  const html = await res.text();
+  assert.ok(html.includes('"de"'));
 });
 
 test('GET /api/v1/surveys/:id/render returns 404 for unknown survey', async () => {
