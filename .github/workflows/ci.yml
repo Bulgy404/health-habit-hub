@@ -3,12 +3,15 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - master
+      - ralph/hhh-platform-unified
+      - platform_unified
     tags:
       - "v*"
   pull_request:
     branches:
-      - main
+      - master
+      - rapid_dev
   schedule:
     - cron: "0 8 * * 1"
 
@@ -20,7 +23,7 @@ jobs:
     name: Backend – lint & format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
       - uses: ./.github/actions/setup-node-app
 
       - name: Format check
@@ -38,7 +41,7 @@ jobs:
     name: Backend – unit tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
       - uses: ./.github/actions/setup-node-app
 
       - name: Run unit tests with coverage
@@ -54,7 +57,7 @@ jobs:
           node --test "tests/unit/**/*.test.js"
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: backend-unit-coverage
           path: app/coverage/
@@ -96,7 +99,7 @@ jobs:
           --health-retries 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
       - uses: ./.github/actions/setup-node-app
 
       - name: Run integration tests
@@ -120,7 +123,7 @@ jobs:
     name: Backend – security audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
       - uses: ./.github/actions/setup-node-app
 
       - name: Audit dependencies
@@ -134,7 +137,7 @@ jobs:
     name: Flutter – analyze
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
       - uses: ./.github/actions/setup-flutter
 
       - name: Analyze
@@ -148,7 +151,7 @@ jobs:
     name: Flutter – widget tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
       - uses: ./.github/actions/setup-flutter
 
       - name: Run all widget tests with coverage
@@ -156,7 +159,7 @@ jobs:
         run: flutter test --coverage
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.0
         with:
           name: flutter-coverage
           path: mobile/coverage/
@@ -168,7 +171,7 @@ jobs:
     name: Flutter – build web
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
       - uses: ./.github/actions/setup-flutter
 
       - name: Build Flutter web
@@ -197,7 +200,7 @@ jobs:
           --health-retries 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
 
       - name: Wait for Neo4j HTTP API
         run: |
@@ -275,7 +278,7 @@ jobs:
     name: Docker – build images
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
 
       - name: Build app (Node.js)
         run: docker build ./app
@@ -299,9 +302,9 @@ jobs:
     name: Python API-service – tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6.0.0
         with:
           python-version: "3.11"
           cache: pip
@@ -325,7 +328,7 @@ jobs:
     name: Admin – typecheck & build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
       - uses: ./.github/actions/setup-node-app
         with:
           working-directory: admin
@@ -345,7 +348,7 @@ jobs:
     name: Flutter – dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6.0.2
       - uses: ./.github/actions/setup-flutter
 
       - name: Verify dependency graph resolves without conflicts

@@ -1,6 +1,3 @@
-# Firebase secrets — copy firebase.json.example → firebase.json and fill in real keys
-firebase.json
-
 # Miscellaneous
 *.class
 *.log
