@@ -16,6 +16,15 @@ export function createKeycloakAdminClient({
   clientSecret,
 } = {}) {
   const _base = base || process.env.KEYCLOAK_URL || 'http://keycloak:8080';
+  // Validate _base at startup so CodeQL can see the URL has been checked
+  // before being used in any fetch() call below. _base comes from server
+  // configuration (env var), not user input, but we still enforce scheme.
+  const _baseUrl = new URL(_base); // throws if invalid
+  if (!['http:', 'https:'].includes(_baseUrl.protocol)) {
+    throw new Error(
+      `KEYCLOAK_URL must use http or https, got: ${_baseUrl.protocol}`
+    );
+  }
   const _realm = realm || process.env.KEYCLOAK_REALM || 'hhh';
   const _clientId =
     clientId || process.env.KEYCLOAK_ADMIN_CLIENT_ID || 'hhh-backend';
