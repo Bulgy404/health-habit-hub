@@ -143,6 +143,9 @@ export function createKeycloakAdminClient({
     },
 
     async revokeSession(sessionId) {
+      if (!/^[0-9a-f-]{36}$/i.test(String(sessionId))) {
+        throw new Error('Invalid sessionId');
+      }
       const token = await getAdminToken();
       await fetch(`${_base}/admin/realms/${_realm}/sessions/${sessionId}`, {
         method: 'DELETE',
