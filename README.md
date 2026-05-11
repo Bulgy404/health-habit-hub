@@ -1,54 +1,328 @@
-# Health Habit Hub
+<div align="center">
+  <img src="./mobile/assets/icon/app_icon.png" width="120" alt="Health Habit Hub"/>
+  <h1>Health Habit Hub</h1>
+  <p><strong>A research platform for studying health habits.</strong></p>
 
-<img src="./app/public/pics/h3-logo.png" width="250" alt="Health Habit Hub Logo"/>
+  <p>
+    <a href="https://github.com/Bulgy404/health-habit-hub/actions/workflows/ci.yml">
+      <img src="https://github.com/Bulgy404/health-habit-hub/actions/workflows/ci.yml/badge.svg" alt="CI" />
+    </a>
+    <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20Web-brightgreen" alt="Platform" />
+    <img src="https://img.shields.io/badge/Flutter-3-02569B?logo=flutter" alt="Flutter 3" />
+    <img src="https://img.shields.io/badge/Node.js-22-339933?logo=node.js" alt="Node.js 22" />
+    <img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python" alt="Python 3.11+" />
+    <img src="https://img.shields.io/badge/license-Proprietary-lightgrey" alt="License" />
+  </p>
 
-**Production URL**: https://habit.wiwi.tu-dresden.de
+  <p>
+    <a href="https://habit.wiwi.tu-dresden.de"><strong>habit.wiwi.tu-dresden.de</strong></a>
+    &nbsp;·&nbsp;
+    <a href="DOCUMENTATION.md">Docs</a>
+    &nbsp;·&nbsp;
+    <a href="DEPLOYMENT.md">Deployment</a>
+    &nbsp;·&nbsp;
+    <a href="CHANGELOG.md">Changelog</a>
+  </p>
+</div>
 
-A research platform for collecting and analysing health habit data. Participants donate habits via a mobile app; researchers manage studies and analyse results via a web admin; a Python AI service classifies habits, maps them to BCIO behaviour change techniques, and generates personalised recommendations.
+---
+
+## Table of Contents
+
+- [What it is](#what-it-is)
+- [Roles](#roles)
+- [Architecture](#architecture)
+- [Data Stores](#data-stores)
+- [Habit Donation Flow](#habit-donation-flow)
+- [Questionnaire Flow](#questionnaire-flow)
+- [Recommendation Flow](#recommendation-flow)
+- [Knowledge Base Flow](#knowledge-base-flow)
+- [The Big Picture](#the-big-picture)
+- [Quick Start](#quick-start)
+- [Tech Stack](#tech-stack)
+- [Documentation](#documentation)
+
+---
+
+## What it is
+
+Health Habit Hub is a research platform for studying health habits. Participants describe their personal health habits through a mobile app. The system stores, classifies, and organises those habits using a knowledge graph, then generates personalised recommendations using LLMs grounded in a researcher-curated knowledge base.
+
+Researchers and admins manage studies, questionnaires, and the knowledge base through a web portal.
+
+---
+
+## Roles
+
+| Role | What they do |
+|---|---|
+| `user` | Mobile app participant — donates habits, fills questionnaires, receives recommendations |
+| `researcher` | Admin portal — reads data, views participant progress, limited write access |
+| `admin` | Admin portal — full access: manage participants, upload KB documents, configure studies |
 
 ---
 
 ## Architecture
 
 ```
-Internet (80/443)
-       |
-   Traefik (SSL / reverse proxy)
-       |
-   ┌───┴────────────────────────────────────────┐
-   │                                            │
-Node.js/Express backend (app/)      Next.js admin (admin/)
-       |                                        |
-       ├── Python FastAPI / AI service (API-service/)
-       |        └── Redis (recommendation cache)
-       |
-       ├── MongoDB  (surveys & responses)
-       ├── Neo4j    (habit graph)
-       ├── Apache Fuseki  (RDF/SPARQL ontology)
-       ├── Keycloak (identity provider)
-       └── LibreTranslate (EN↔DE translation)
+Flutter mobile app
+      │  HTTPS via Traefik
+      ▼
+┌─────────────┐   ┌──────────────────┐
+│  Node.js    │   │  Next.js Admin   │
+│  Express    │   │  Panel           │
+│  :3000      │   │  :3001           │
+└──────┬──────┘   └────────┬─────────┘
+       │                   │
+       │   both talk to:   │
+       ▼                   ▼
+┌──────────────────────────────────────────────────┐
+│  Keycloak     auth / identity      :8080/auth    │
+├──────────────────────────────────────────────────┤
+│  Neo4j        habit + user graph   bolt://7687   │
+├──────────────────────────────────────────────────┤
+│  MongoDB      questionnaires, surveys, profiles  │
+├──────────────────────────────────────────────────┤
+│  Fuseki       RDF ontology store                 │
+└────────────────────────┬─────────────────────────┘
+                         │
+                         ▼
+          ┌──────────────────────────────┐
+          │  Python FastAPI              │
+          │  API-service / recommender   │
+          │  :8000                       │
+          │                             │
+          │  · habit classification     │
+          │  · BCIO ontology mapping    │
+          │  · LLM recommendation       │
+          └──────────┬──────────────────┘
+                     │
+           ┌─────────┴──────────┐
+           ▼                    ▼
+        LightRAG              Redis
+        knowledge base        LLM response cache
+        + RAG
 ```
 
-| Component | Location | Tech |
-|---|---|---|
-| Mobile app | `mobile/` | Flutter (iOS / Android / web), Keycloak PKCE |
-| Backend API | `app/` | Node.js 22, Express, ES modules |
-| Admin UI | `admin/` | Next.js, NextAuth, Keycloak (admin/researcher role) |
-| AI service | `API-service/` | Python, FastAPI, OpenAI LLM |
-| Proxy | — | Traefik + Let's Encrypt |
-| Backup | — | Daily automated backups, 14-day retention |
+Traefik sits in front of everything as the reverse proxy and TLS terminator. Internally, services communicate by container name.
 
 ---
 
-## Quick Start (local dev)
+## Data Stores
 
-**Prerequisites**: Docker, Flutter SDK, Node.js 22, Python 3.11+.
+| Store | What lives there |
+|---|---|
+| **Neo4j** | Habits, Context nodes, BCIOConcept nodes, User nodes, Submission nodes, QuestionItem nodes |
+| **MongoDB** | Questionnaire answers (`form_responses`), user profiles (`user_profiles`), surveys, study data |
+| **Fuseki** | Legacy habit triples using the RDF/n10s schema; coexists alongside Neo4j |
+| **LightRAG** | Researcher-uploaded documents processed into an entity-relation knowledge graph and vector index |
+| **Redis** | LLM recommendation cache keyed by user + context hash |
+
+---
+
+## Habit Donation Flow
+
+A user enters a habit — for example:
+
+> *I go for a 30-min walk after dinner.*
+
+```
+User enters habit
+      │
+      ▼
+Flutter mobile app
+      │
+      └─ POST /api/v1/habits/donate
+                │
+                ▼
+         Node.js backend
+                │
+                ├─ Validates JWT via Keycloak
+                │
+                └─ Sends habit to Python API-service for classification
+                          │
+                          ├─ Detects language
+                          ├─ Translates to English if needed (LibreTranslate)
+                          ├─ Classifies context dimensions via LLM:
+                          │     TIME · BEHAVIOR · PHYSICAL_SETTING
+                          │     PRIOR_BEHAVIOR · OTHER_PEOPLE · etc.
+                          └─ Maps contexts to BCIO ontology concepts
+                               via embedding similarity (Qwen3-Embedding-4B)
+                                    │
+                                    ▼
+                             Writes classified habit to Neo4j
+```
+
+### Neo4j representation
+
+```cypher
+(Habit {uuid, sentence, userID, language})
+  -[:HAS_CONTEXT]->
+(Context {text, dimension})
+  -[:MAPS_TO]->
+(BCIOConcept {bcio_concept_id, bcio_concept_label})
+```
+
+Each habit is classified into one or more context dimensions and mapped to a BCIO ontology concept, making the graph semantically queryable.
+
+| Habit fragment | Context dimension |
+|---|---|
+| `after dinner` | `TIME` |
+| `walking` | `BEHAVIOR` |
+
+---
+
+## Questionnaire Flow
+
+Users periodically complete validated questionnaires:
+
+| Questionnaire | Items | Purpose |
+|---|---:|---|
+| `SLIQ` | 4 | Diet, physical activity, smoking, and alcohol lifestyle index |
+| `RAND-36` | 36 | General health survey across eight subscales |
+| `SRHI` | 12 | Self-Report Habit Index |
+
+```
+User fills questionnaire in Flutter app
+      │
+      ▼
+POST /api/v1/questionnaire-responses
+      │
+      ├─ MongoDB → insert into form_responses
+      └─ Neo4j   → async, non-blocking graph write
+```
+
+### MongoDB document
+
+```json
+{
+  "userId": "user-123",
+  "questionnaireSlug": "sliq",
+  "answers": { "sliq_diet": 3 },
+  "submitted_at": "2026-05-10T12:00:00Z"
+}
+```
+
+### Neo4j graph structure
+
+```cypher
+MERGE (u:User {userId: $userId})
+CREATE (s:Submission {questionnaireId: 'sliq', submittedAt: $submittedAt})
+CREATE (u)-[:SUBMITTED]->(s)
+MERGE (qi:QuestionItem {id: 'sliq_diet', questionnaireId: 'sliq'})
+CREATE (s)-[:HAS_SCORE {value: 3.0}]->(qi)
+```
+
+Multiple submissions over time build a longitudinal trajectory in the graph, queryable in chronological order. Any new questionnaire added by a researcher reuses the same code path without backend changes.
+
+---
+
+## Recommendation Flow
+
+```
+User requests recommendations in Flutter app
+      │
+      ▼
+POST /api/v1/recommend  →  Node.js  →  Python API-service /recommend
+                                               │
+                              ┌────────────────┴────────────────┐
+                              ▼                                 ▼
+                       extract_habits                    extract_profile
+                       Query Neo4j:                      Fetch SLIQ + RAND-36
+                                                         from MongoDB +
+                       MATCH (h:Habit {                  user_profile fields
+                         is_habit: true,
+                         userID: $uid                    LLM summarises into:
+                       })-[:HAS_CONTEXT]->(c)            · profile_summary
+                                                         · rag_query
+                              │
+                              └────────────────┬────────────────┘
+                                               │
+                                               ▼
+                                    LightRAG hybrid retrieval
+                                    POST /query { mode: "hybrid" }
+                                               │
+                                    ┌──────────┴──────────┐
+                                    ▼                     ▼
+                             graph traversal       vector similarity
+                                               │
+                                               ▼
+                                          LLM call
+                                          (gpt-4o-mini / alias-ha)
+                                               │
+                                    Inputs:
+                                    · user's habits
+                                    · profile summary
+                                    · knowledge base excerpts
+                                               │
+                                               ▼
+                                    Personalised recommendation text
+                                               │
+                              ┌────────────────┴────────────────┐
+                              ▼                                 ▼
+                          MongoDB                            Redis
+                     recommendations collection         cache (user + context hash)
+```
+
+Every recommendation is grounded in three sources of truth:
+
+1. **User habits** — stored in Neo4j, semantically enriched via BCIO
+2. **User profile** — derived from questionnaire scores and profile data
+3. **Research knowledge** — retrieved from the LightRAG knowledge base
+
+---
+
+## Knowledge Base Flow
+
+Admins upload research documents through the admin panel. LightRAG processes them into a queryable knowledge graph used at recommendation time.
+
+```
+Admin uploads PDF via admin panel
+      │
+      ▼
+POST /api/v1/kb  →  Node.js  →  Python API-service  →  LightRAG
+                                                              │
+                                                   ┌──────────┴──────────┐
+                                                   ▼                     ▼
+                                            Chunk + embed          Extract entities
+                                            (Qwen3-Embedding-4B    and relations
+                                             2560-dim vectors)     via LLM
+                                                   │                     │
+                                                   └──────────┬──────────┘
+                                                              ▼
+                                                    Knowledge graph
+                                                    + vector index
+```
+
+At recommendation time, LightRAG queries this index in **hybrid mode** — combining vector similarity over chunk embeddings with graph traversal over the entity-relation graph — and returns the most relevant excerpts.
+
+This is what distinguishes HHH recommendations from generic LLM output: they are grounded in specific research documents curated by the research team.
+
+---
+
+## The Big Picture
+
+Health Habit Hub is fundamentally a **research data collection and analysis tool disguised as a personal health app**.
+
+Participants donate their habits and health profile data. Researchers receive a structured, queryable graph of behaviours mapped to validated ontologies. The LLM layer turns that structured data into useful, evidence-grounded recommendations for the participant.
+
+```
+Better participation  →  Richer graph  →  Better recommendations  →  More participation
+```
+
+> Health Habit Hub combines mobile habit donation, questionnaire-based profiling, ontology-based semantic enrichment, graph-based research infrastructure, and RAG-supported recommendation generation into one integrated platform for studying and supporting health habit formation.
+
+---
+
+## Quick Start
+
+**Prerequisites:** Docker, Flutter SDK, Node.js 22, Python 3.11+
 
 ```bash
 # 1. Clone and configure
-git clone https://github.com/felixreinsch/health-habit-hub.git
+git clone https://github.com/Bulgy404/health-habit-hub.git
 cd health-habit-hub
-cp .env.example .env          # then fill in secrets (see Env Vars below)
+cp .env.example .env          # fill in secrets — see .env.example for reference
 
 # 2. Start all backend services
 make dev
@@ -56,118 +330,36 @@ make dev
 # 3. Seed MongoDB, Neo4j, and Keycloak with dev data
 make seed
 
-# 4. Run the Flutter app in the iOS Simulator
-make ios
+# 4. Run the Flutter app
+make ios          # iPhone Simulator
+# or open mobile/ in Android Studio for Android / web
 ```
 
 Local service URLs after `make dev`:
 
 | Service | URL |
 |---|---|
+| Flutter web | http://localhost |
 | Backend API | http://localhost:3000 |
 | Admin UI | http://admin.localhost |
 | Keycloak | http://localhost:8080 |
 | Neo4j Browser | http://localhost:7474 |
 | Fuseki | http://localhost:3030 |
+| LightRAG | http://localhost:9621 |
 | LibreTranslate | http://localhost:5001 |
 | Python AI service | http://localhost:8001 |
 | Traefik dashboard | http://localhost:8888 |
 
----
-
-## Common `make` Commands
+### Common commands
 
 | Command | Description |
 |---|---|
-| `make dev` | Start all local services via Docker Compose |
-| `make stop` | Stop all local services |
-| `make seed` | Seed MongoDB, Neo4j, and Keycloak with dev data |
-| `make logs` | Tail backend app logs |
-| `make logs-all` | Tail all service logs |
-| `make ios` | Run Flutter app on iPhone Simulator |
-| `make reset` | Wipe volumes, restart, and re-seed |
-| `make test` | Run all test suites (no Docker required) |
-
----
-
-## Testing
-
-Run every test suite in one command:
-
-```bash
-make test
-```
-
-Or run suites individually:
-
-```bash
-# Backend: lint + unit tests + security audit
-make test-backend
-
-# Flutter: analyze + widget/unit tests
-make test-flutter
-
-# Python AI-service: pytest
-make test-python
-
-# Admin: typecheck + Jest/RTL tests
-make test-admin
-
-# Admin Jest tests directly
-cd admin && npm test
-```
-
----
-
-## Key Environment Variables
-
-Copy `stack.env` as a starting point for production; copy `.env.example` for local dev. Variables that **must** be overridden before running:
-
-| Variable | Description |
-|---|---|
-| `NEO4J_PASSWORD` | Neo4j database password |
-| `MONGO_PASSWORD` | MongoDB root password |
-| `KEYCLOAK_ADMIN_PASSWORD` | Keycloak admin console password |
-| `KC_DB_PASSWORD` | Keycloak's PostgreSQL password |
-| `KEYCLOAK_ADMIN_CLIENT_SECRET` | Secret for the `hhh-backend` confidential Keycloak client |
-| `API_SERVICE_SECRET` | Shared secret between Node.js backend and Python AI service |
-| `LLM_API_KEY` | API key for the LLM provider used by the AI service for classification, BCIO mapping, and recommendations |
-| `REDIS_URL` | Redis connection URL (default `redis://localhost:6379`) |
-| `RECAPTCHA_SITEKEY` / `RECAPTCHA_SECRETKEY` | Google reCAPTCHA keys |
-| `MAIL_USER` / `MAIL_PASS` | Mailjet API credentials |
-| `ADMIN_PASSWORD` | Apache Fuseki admin password |
-| `LLM_MODEL` | Model name or alias (e.g. `alias-ha`, `gpt-4o-mini`) |
-| `LLM_API_BASE` | Base URL of the LLM provider (e.g. `https://llm.scads.ai/v1`; defaults to OpenAI) |
-| `LLM_TEMPERATURE` | Sampling temperature (0.0–1.0) |
-
----
-
-## Production Deployment
-
-See [DOCUMENTATION.md](DOCUMENTATION.md) for the full deployment guide.
-
-1. Point DNS `habit.wiwi.tu-dresden.de → 141.76.16.16` and open ports 80 and 443.
-2. Configure all secrets in Portainer's environment variables (do not commit real credentials).
-3. Deploy via Portainer using the production Docker Compose file.
-4. Traefik obtains a Let's Encrypt certificate automatically.
-
-Production service endpoints (all behind Traefik HTTPS):
-
-| Path | Service |
-|---|---|
-| `/` | Flutter web app |
-| `/api/v1/` | Node.js backend |
-| `/admin` | Next.js admin UI |
-| `/fuseki` | Apache Fuseki SPARQL |
-| `/mongo` | Mongo Express |
-| `/dashboard` | Traefik dashboard |
-
-**Neo4j Browser** is not publicly exposed; access via SSH tunnel:
-
-```bash
-ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
-# then open http://localhost:7474
-```
+| `make dev` | Start all services |
+| `make stop` | Stop all services |
+| `make seed` | Seed databases |
+| `make reset` | Wipe volumes, restart, re-seed |
+| `make logs` | Tail backend logs |
+| `make test` | Run all test suites |
 
 ---
 
@@ -175,11 +367,12 @@ ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
 
 | Layer | Technology |
 |---|---|
-| Mobile | Flutter 3, Dart, Keycloak PKCE |
+| Mobile / Web | Flutter 3, Dart, Riverpod, GoRouter, Firebase |
 | Backend | Node.js 22, Express, ES modules |
-| Admin | Next.js, NextAuth.js |
-| AI service | Python, FastAPI, OpenAI API |
-| Databases | MongoDB, Neo4j 5, Apache Jena Fuseki |
+| Admin | Next.js, NextAuth.js, TypeScript |
+| AI service | Python 3.11, FastAPI, OpenAI-compatible LLM API |
+| Knowledge RAG | LightRAG (graph + vector), FastMCP |
+| Databases | MongoDB 7, Neo4j 5, Apache Jena Fuseki, PostgreSQL 16 |
 | Cache / locks | Redis 7 |
 | Identity | Keycloak 26 |
 | Translation | LibreTranslate |
@@ -190,19 +383,14 @@ ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
 
 ## Documentation
 
-- [DOCUMENTATION.md](DOCUMENTATION.md) — architecture deep-dive, deployment, backup, troubleshooting
-- [docs/guides/local-dev.md](docs/guides/local-dev.md) — step-by-step local dev setup
-- [DEPLOYMENT.md](DEPLOYMENT.md) — production deployment details
+| Document | Description |
+|---|---|
+| [DOCUMENTATION.md](DOCUMENTATION.md) | Architecture deep-dive, backup, troubleshooting |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Production deployment guide |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
+| [AUDIT.md](AUDIT.md) | Security audit log |
+| [docs/guides/local-dev.md](docs/guides/local-dev.md) | Step-by-step local dev setup |
 
 ---
 
-## Support
-
-**Issues**: https://github.com/felixreinsch/health-habit-hub/issues  
-**Contact**: felix.reinsch@tu-dresden.de
-
----
-
-## License
-
-Proprietary software for research purposes at TU Dresden.
+**Contact:** felix.reinsch@tu-dresden.de &nbsp;·&nbsp; **Issues:** https://github.com/Bulgy404/health-habit-hub/issues &nbsp;·&nbsp; Proprietary — research use at TU Dresden
