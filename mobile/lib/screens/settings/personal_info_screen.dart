@@ -14,16 +14,10 @@ class PersonalInfoScreen extends ConsumerStatefulWidget {
 }
 
 class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
-  int? _age;
+  DateTime? _birthday;
   String? _gender;
   bool _loading = true;
   bool _submitting = false;
-
-  static const int _minAge = 13;
-  static const int _maxAge = 100;
-
-  List<int> get _ageOptions =>
-      List<int>.generate(_maxAge - _minAge + 1, (i) => _minAge + i);
 
   @override
   void initState() {
@@ -36,15 +30,21 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
       final dio = ref.read(dioProvider);
       final res = await dio.get('${AppConfig.apiBaseUrl}/user-profile');
       final fields = (res.data['fields'] as List<dynamic>?) ?? [];
-      int? age;
+      DateTime? birthday;
       String? gender;
       for (final f in fields) {
-        if (f['questionId'] == 'age') age = (f['value'] as num?)?.toInt();
+        if (f['questionId'] == 'birthday') {
+          final raw = f['value'];
+          if (raw is String) {
+            final parsed = DateTime.tryParse(raw);
+            if (parsed != null) birthday = parsed;
+          }
+        }
         if (f['questionId'] == 'gender') gender = f['value'] as String?;
       }
       if (mounted) {
         setState(() {
-          _age = age;
+          _birthday = birthday;
           _gender = gender;
           _loading = false;
         });
@@ -54,15 +54,9 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
     }
   }
 
-  Future<void> _showAgePicker() async {
+  Future<void> _showBirthdayPicker() async {
     if (_submitting) return;
-    final options = _ageOptions;
-    int tempAge = _age ?? 25;
-    if (tempAge < _minAge || tempAge > _maxAge) tempAge = 25;
-    final initialIndex = options.indexOf(tempAge);
-    final controller = FixedExtentScrollController(
-      initialItem: initialIndex < 0 ? 0 : initialIndex,
-    );
+    DateTime temp = _birthday ?? DateTime(1990);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -75,22 +69,19 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    setState(() => _age = tempAge);
+                    setState(() => _birthday = temp);
                     Navigator.of(context).pop();
                   },
                   child: const Text('Done'),
                 ),
               ),
               Expanded(
-                child: CupertinoPicker(
-                  itemExtent: 36,
-                  scrollController: controller,
-                  onSelectedItemChanged: (index) {
-                    tempAge = options[index];
-                  },
-                  children: [
-                    for (final age in options) Center(child: Text(age.toString())),
-                  ],
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: temp,
+                  maximumDate: DateTime.now(),
+                  minimumDate: DateTime(1900),
+                  onDateTimeChanged: (dt) => temp = dt,
                 ),
               ),
             ],
@@ -98,7 +89,6 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
         ),
       ),
     );
-    controller.dispose();
   }
 
   String? get _selectedGenderLabel {
@@ -155,7 +145,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
   }
 
   Future<void> _save() async {
-    if (_age == null || _gender == null) return;
+    if (_birthday == null || _gender == null) return;
     if (!mounted) return;
     setState(() => _submitting = true);
     try {
@@ -165,14 +155,16 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
         data: {
           'fields': [
             {
-              'questionId': 'age',
-              'questionText': 'Age',
-              'value': _age,
-              'label': profileAgeBucketLabel(_age!),
+              'questionId': 'birthday',
+              'questionText': 'When were you born?',
+              'type': 'date',
+              'value': isoDate(_birthday!),
+              'label': formatDate(_birthday!),
             },
             {
               'questionId': 'gender',
-              'questionText': 'Gender',
+              'questionText': 'What is your gender?',
+              'type': 'select',
               'value': _gender,
               'label': profileGenderLabel(_gender) ?? '',
             },
@@ -200,7 +192,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final canSave = _age != null && _gender != null && !_submitting;
+    final canSave = _birthday != null && _gender != null && !_submitting;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Personal info')),
@@ -212,12 +204,12 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Age',
+                    'Birthday',
                     style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 10),
                   InkWell(
-                    onTap: _showAgePicker,
+                    onTap: _showBirthdayPicker,
                     borderRadius: BorderRadius.circular(14),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -233,12 +225,14 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              _age == null ? 'Select age' : _age.toString(),
+                              _birthday == null
+                                  ? 'Select birthday'
+                                  : formatDate(_birthday!),
                               style: tt.bodyLarge?.copyWith(
-                                color: _age == null
+                                color: _birthday == null
                                     ? cs.onSurfaceVariant
                                     : cs.onSurface,
-                                fontWeight: _age == null
+                                fontWeight: _birthday == null
                                     ? FontWeight.w500
                                     : FontWeight.w700,
                               ),
