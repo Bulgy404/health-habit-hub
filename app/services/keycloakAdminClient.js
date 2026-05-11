@@ -147,7 +147,8 @@ export function createKeycloakAdminClient({
         throw new Error('Invalid sessionId');
       }
       const token = await getAdminToken();
-      await fetch(`${_base}/admin/realms/${_realm}/sessions/${sessionId}`, {
+      const safeId = encodeURIComponent(String(sessionId));
+      await fetch(`${_base}/admin/realms/${_realm}/sessions/${safeId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
