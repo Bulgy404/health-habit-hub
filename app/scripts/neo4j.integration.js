@@ -9,9 +9,6 @@ loadAppEnv();
 // - Inserts a sample donation and exits on success
 
 async function main() {
-  // Ensure backend is set to neo4j for clarity (client doesn't depend on it)
-  config.graphBackend = 'neo4j';
-
   const client = new Neo4jDbClient(config);
 
   const sample = {

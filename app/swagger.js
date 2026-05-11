@@ -67,7 +67,6 @@ const options = {
               properties: {
                 neo4j: { $ref: '#/components/schemas/ServiceStatus' },
                 mongo: { $ref: '#/components/schemas/ServiceStatus' },
-                fuseki: { $ref: '#/components/schemas/ServiceStatus' },
                 keycloak: { $ref: '#/components/schemas/ServiceStatus' },
                 recommender: { $ref: '#/components/schemas/ServiceStatus' },
               },

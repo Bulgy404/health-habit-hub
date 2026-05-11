@@ -135,19 +135,17 @@ export function createParticipantRouter({ db } = {}) {
       }
 
       const database = await getDb();
-      await database
-        .collection(COLLECTION_DEVICE_TOKENS)
-        .updateOne(
-          { userId: String(userId) },
-          {
-            $set: {
-              userId: String(userId),
-              token: String(token),
-              updatedAt: new Date(),
-            },
+      await database.collection(COLLECTION_DEVICE_TOKENS).updateOne(
+        { userId: String(userId) },
+        {
+          $set: {
+            userId: String(userId),
+            token: String(token),
+            updatedAt: new Date(),
           },
-          { upsert: true }
-        );
+        },
+        { upsert: true }
+      );
 
       res.json({ ok: true });
     } catch (err) {

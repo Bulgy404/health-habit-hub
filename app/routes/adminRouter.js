@@ -118,16 +118,20 @@ export function createAdminRouter({
    *               $ref: '#/components/schemas/Error'
    */
   // GET /api/v1/admin/settings — admin and researcher
-  router.get('/settings', requireRole(ROLES.ADMIN, ROLES.RESEARCHER), async (req, res) => {
-    try {
-      const database = await getDb();
-      const result = await getSettings({ db: database });
-      res.json(result);
-    } catch (err) {
-      console.error('[route] Error:', err);
-      res.status(500).json({ error: 'Internal server error' });
+  router.get(
+    '/settings',
+    requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
+    async (req, res) => {
+      try {
+        const database = await getDb();
+        const result = await getSettings({ db: database });
+        res.json(result);
+      } catch (err) {
+        console.error('[route] Error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
-  });
+  );
 
   /**
    * @swagger

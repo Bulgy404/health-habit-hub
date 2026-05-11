@@ -116,19 +116,17 @@ export function createUserProfileRouter({ db, neo4jRun } = {}) {
       const converted = fields.map(convertFieldValue);
 
       const database = await getDb();
-      await database
-        .collection('user_profiles')
-        .updateOne(
-          { userId: String(userId) },
-          {
-            $set: {
-              userId: String(userId),
-              fields: converted,
-              updatedAt: new Date(),
-            },
+      await database.collection('user_profiles').updateOne(
+        { userId: String(userId) },
+        {
+          $set: {
+            userId: String(userId),
+            fields: converted,
+            updatedAt: new Date(),
           },
-          { upsert: true }
-        );
+        },
+        { upsert: true }
+      );
 
       // Fire-and-forget Neo4j sync
       setUserProfileProperties(queryNeo4j, userId, converted).catch((err) =>

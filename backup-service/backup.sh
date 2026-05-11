@@ -86,17 +86,17 @@ else
   log_error "MongoDB" "mongodump failed"
 fi
 
-# 2. Backup Fuseki
-log "2/5 Backing up Fuseki (RDF data)..."
-if [ -d "/fuseki" ] && [ "$(ls -A /fuseki 2>/dev/null)" ]; then
-  if tar -czf "$BACKUP_DIR/$DATE/fuseki-data.tar.gz" -C /fuseki . 2>/dev/null; then
-    log "✓ Fuseki backup completed"
+# 2. Backup LightRAG index
+log "2/5 Backing up LightRAG index..."
+if [ -d "/lightrag" ] && [ "$(ls -A /lightrag 2>/dev/null)" ]; then
+  if tar -czf "$BACKUP_DIR/$DATE/lightrag-data.tar.gz" -C /lightrag . 2>/dev/null; then
+    log "✓ LightRAG backup completed"
   else
-    log_error "Fuseki" "tar archive failed"
+    log_error "LightRAG" "tar archive failed"
   fi
 else
-  log "⚠ Warning: Fuseki volume is empty or not mounted"
-  touch "$BACKUP_DIR/$DATE/fuseki-data.tar.gz"
+  log "⚠ Warning: LightRAG volume is empty or not mounted"
+  touch "$BACKUP_DIR/$DATE/lightrag-data.tar.gz"
 fi
 
 # 3. Backup Neo4j using native dump
@@ -194,7 +194,7 @@ rm -rf "$BACKUP_DIR/$DATE"
 cat > "$BACKUP_DIR/backup_$DATE.manifest" <<EOF
 Backup Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 MongoDB: $([ $BACKUP_ERRORS -eq 0 ] && echo "✓" || echo "Check logs")
-Fuseki: ✓
+LightRAG: ✓
 Neo4j: $([ $BACKUP_ERRORS -eq 0 ] && echo "✓" || echo "Check logs")
 Keycloak: $([ -n "$KEYCLOAK_ADMIN_PASSWORD" ] && echo "✓" || echo "Skipped (no credentials)")
 Size: $BACKUP_SIZE

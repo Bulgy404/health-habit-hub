@@ -134,11 +134,11 @@ test('Backup script includes all database backups', () => {
   // Check for MongoDB backup
   assert(content.includes('mongodump'), 'Should include MongoDB backup');
 
-  // Check for Fuseki backup
+  // Check for LightRAG backup
   assert(
-    content.includes('Backing up Fuseki') ||
-      content.includes('fuseki-data.tar.gz'),
-    'Should include Fuseki backup'
+    content.includes('Backing up LightRAG') ||
+      content.includes('lightrag-data.tar.gz'),
+    'Should include LightRAG backup'
   );
 
   // Check for Neo4j backup

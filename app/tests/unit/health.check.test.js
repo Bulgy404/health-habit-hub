@@ -41,7 +41,6 @@ test('checkAllServices returns ok when all services up', async () => {
     assert.strictEqual(result.status, 'ok');
     assert.ok(result.services.neo4j);
     assert.ok(result.services.mongo);
-    assert.ok(result.services.fuseki);
     assert.ok(result.services.keycloak);
     assert.ok(result.services.recommender);
     assert.strictEqual(result.services.neo4j.status, 'ok');
@@ -82,7 +81,6 @@ test('checkAllServices returns ok when only non-critical services are down', asy
     assert.strictEqual(result.status, 'ok');
     assert.strictEqual(result.services.neo4j.status, 'ok');
     assert.strictEqual(result.services.mongo.status, 'ok');
-    assert.strictEqual(result.services.fuseki.status, 'error');
     assert.strictEqual(result.services.keycloak.status, 'error');
     assert.strictEqual(result.services.recommender.status, 'error');
   });
