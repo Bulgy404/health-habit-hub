@@ -1,5 +1,6 @@
 import cookieParser from 'cookie-parser';
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { randomUUID } from 'node:crypto';
 import { makeGetDb } from '../utils/getDb.js';
 import { isPrivileged } from '../middleware/roles.js';
@@ -9,8 +10,16 @@ import {
   canParticipantAccessSurvey,
 } from '../utils/surveyTargeting.js';
 
+const legacyRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Legacy static router (kept for backward compat with old non-v1 routes)
 const legacyRouter = express.Router();
+legacyRouter.use(legacyRateLimiter);
 legacyRouter.use(cookieParser());
 legacyRouter.use((req, res, next) => {
   let userId = req.cookies.userId;

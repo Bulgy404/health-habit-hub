@@ -9,6 +9,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: read
+
 jobs:
   deploy:
     name: Deploy to production
@@ -17,7 +20,7 @@ jobs:
     if: >-
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
-      (github.event.workflow_run.head_branch == 'master' ||
+      (github.event.workflow_run.head_branch == 'main' ||
        startsWith(github.event.workflow_run.head_branch, 'v'))
     steps:
       - name: Verify CI passed
@@ -42,6 +45,8 @@ jobs:
   release:
     name: Build and upload release artifacts
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     steps:
       - uses: actions/checkout@v4

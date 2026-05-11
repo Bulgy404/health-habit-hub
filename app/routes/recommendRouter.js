@@ -1,6 +1,13 @@
 import express from 'express';
 import { isPrivileged } from '../middleware/roles.js';
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUserId(id) {
+  return typeof id === 'string' && UUID_RE.test(id);
+}
+
 async function proxyToRecommender(req, res, targetUrl) {
   const headers = {};
   if (req.headers.authorization) {
@@ -68,6 +75,9 @@ export function createRecommendRouter({ recommenderUrl } = {}) {
    */
   // GET /api/v1/recommend/:userId/history → Python GET /recommend/:userId/history
   router.get('/:userId/history', async (req, res) => {
+    if (!isValidUserId(req.params.userId)) {
+      return res.status(400).json({ error: 'Invalid userId' });
+    }
     // IDOR guard: participants can only access their own history
     if (!isPrivileged(req.user) && req.user?.sub !== req.params.userId) {
       return res.status(403).json({ error: 'Forbidden' });
@@ -125,6 +135,9 @@ export function createRecommendRouter({ recommenderUrl } = {}) {
    */
   // GET /api/v1/recommend/:userId → Python GET /recommend/:userId
   router.get('/:userId', async (req, res) => {
+    if (!isValidUserId(req.params.userId)) {
+      return res.status(400).json({ error: 'Invalid userId' });
+    }
     // IDOR guard: participants can only access their own recommendations
     if (!isPrivileged(req.user) && req.user?.sub !== req.params.userId) {
       return res.status(403).json({ error: 'Forbidden' });

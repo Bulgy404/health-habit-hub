@@ -10,8 +10,8 @@
     "test": "jest"
   },
   "dependencies": {
-    "next": "14.2.35",
-    "next-auth": "4.24.7",
+    "next": "^15.5.18",
+    "next-auth": "^4.24.14",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
@@ -29,7 +29,7 @@
     "@types/react-dom": "^18",
     "babel-jest": "^30.3.0",
     "eslint": "^8",
-    "eslint-config-next": "14.2.35",
+    "eslint-config-next": "^15.5.18",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
     "prettier": "^3.3.0",
