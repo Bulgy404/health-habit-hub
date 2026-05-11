@@ -3,6 +3,8 @@ import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
 import { setUserProfileProperties } from '../db/userQueries.js';
 
+const VALID_FIELD_TYPES = new Set(['text', 'number', 'date', 'select']);
+
 function convertFieldValue(field) {
   const { type, value } = field;
   if (value === undefined || value === null) return field;
@@ -76,7 +78,9 @@ export function createUserProfileRouter({ db, neo4jRun } = {}) {
 
       const { fields } = req.body;
       if (!Array.isArray(fields) || fields.length === 0) {
-        return res.status(400).json({ error: 'fields must be a non-empty array' });
+        return res
+          .status(400)
+          .json({ error: 'fields must be a non-empty array' });
       }
       for (const f of fields) {
         if (
@@ -90,8 +94,12 @@ export function createUserProfileRouter({ db, neo4jRun } = {}) {
           !f.label
         ) {
           return res.status(400).json({
-            error: 'each field must have questionId, questionText, value, and label',
+            error:
+              'each field must have questionId, questionText, value, and label',
           });
+        }
+        if (f.type !== undefined && !VALID_FIELD_TYPES.has(f.type)) {
+          return res.status(400).json({ error: `Invalid field type: ${f.type}` });
         }
       }
 
