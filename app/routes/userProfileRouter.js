@@ -107,7 +107,9 @@ export function createUserProfileRouter({ db, neo4jRun } = {}) {
           });
         }
         if (f.type !== undefined && !VALID_FIELD_TYPES.has(f.type)) {
-          return res.status(400).json({ error: `Invalid field type: ${f.type}` });
+          return res
+            .status(400)
+            .json({ error: `Invalid field type: ${f.type}` });
         }
       }
 
@@ -118,7 +120,13 @@ export function createUserProfileRouter({ db, neo4jRun } = {}) {
         .collection('user_profiles')
         .updateOne(
           { userId: String(userId) },
-          { $set: { userId: String(userId), fields: converted, updatedAt: new Date() } },
+          {
+            $set: {
+              userId: String(userId),
+              fields: converted,
+              updatedAt: new Date(),
+            },
+          },
           { upsert: true }
         );
 

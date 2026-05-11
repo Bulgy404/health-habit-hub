@@ -60,5 +60,9 @@ test('setUserProfileProperties skips fields with null or undefined value', async
   await setUserProfileProperties(mockRun, 'user-xyz', [
     { questionId: 'birthday', value: null, type: 'date' },
   ]);
-  assert.strictEqual(calls.length, 0, 'Should not call Neo4j when no valid fields');
+  assert.strictEqual(
+    calls.length,
+    0,
+    'Should not call Neo4j when no valid fields'
+  );
 });

@@ -120,7 +120,10 @@ export async function saveDonateData(req, res) {
     }
   } catch (error) {
     console.log('[donateController] Save failure context:', { data, userId });
-    console.error('[donateController] Fehler beim Speichern der Spendendaten:', error);
+    console.error(
+      '[donateController] Fehler beim Speichern der Spendendaten:',
+      error
+    );
     res.status(500).json({ error: 'Fehler beim Speichern der Daten.' });
   }
 }
