@@ -5,15 +5,23 @@ import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const ALPHABET_LEN = ALPHABET.length;
+// Rejection-sampling threshold: discard bytes >= largest multiple of ALPHABET_LEN
+// that fits in a byte (256), eliminating modulo bias.
+const REJECTION_THRESHOLD = 256 - (256 % ALPHABET_LEN);
 
 function generateCode() {
-  const buf = randomBytes(5);
-  return (
-    'HHH-' +
-    Array.from(buf)
-      .map((b) => ALPHABET[b % ALPHABET.length])
-      .join('')
-  );
+  const chars = [];
+  while (chars.length < 5) {
+    const buf = randomBytes(10);
+    for (const b of buf) {
+      if (b < REJECTION_THRESHOLD) {
+        chars.push(ALPHABET[b % ALPHABET_LEN]);
+        if (chars.length === 5) break;
+      }
+    }
+  }
+  return 'HHH-' + chars.join('');
 }
 
 async function generateUniqueCodes(db, count) {

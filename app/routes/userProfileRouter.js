@@ -1,7 +1,15 @@
 import express from 'express';
 import neo4j from 'neo4j-driver';
+import { rateLimit } from 'express-rate-limit';
 import { makeGetDb } from '../utils/getDb.js';
 import { setUserProfileProperties } from '../db/userQueries.js';
+
+const serviceRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const VALID_FIELD_TYPES = new Set(['text', 'number', 'date', 'select']);
 
@@ -23,7 +31,7 @@ export function createUserProfileServiceRouter({ db } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
-  router.get('/service/:userId', async (req, res) => {
+  router.get('/service/:userId', serviceRateLimiter, async (req, res) => {
     try {
       const token = req.headers['x-service-auth-token'];
       const expected = process.env.API_SERVICE_SECRET;

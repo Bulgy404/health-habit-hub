@@ -24,6 +24,8 @@ router.use((req, res, next) => {
     res.cookie('userId', userId, {
       maxAge: 365 * 24 * 60 * 60 * 1000,
       httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
     });
   }
   // Make userId available on the request object for subsequent handlers
