@@ -35,7 +35,7 @@ function createJwt(payload) {
   return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
 }
 
-function makeToken(roles = ['participant'], sub = 'user-profile-test') {
+function makeToken(roles = ['user'], sub = 'user-profile-test') {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({
     sub,
@@ -159,7 +159,7 @@ test('GET /api/v1/profile returns 403 for token with no roles', async () => {
 // ── 404 when profile not set ──────────────────────────────────────────────────
 
 test('GET /api/v1/profile returns 404 when no profile exists', async () => {
-  const token = makeToken(['participant'], 'user-no-profile');
+  const token = makeToken(['user'], 'user-no-profile');
   const res = await get('/api/v1/profile', token);
   assert.strictEqual(res.status, 404);
   const body = await res.json();
@@ -169,7 +169,7 @@ test('GET /api/v1/profile returns 404 when no profile exists', async () => {
 // ── POST creates / updates profile ────────────────────────────────────────────
 
 test('POST /api/v1/profile upserts and returns profile', async () => {
-  const token = makeToken(['participant'], 'user-upsert-test');
+  const token = makeToken(['user'], 'user-upsert-test');
   const answers = { q1: 'yes', q2: 'no' };
   const completedAt = '2026-03-15T10:00:00.000Z';
 
@@ -184,7 +184,7 @@ test('POST /api/v1/profile upserts and returns profile', async () => {
 // ── GET returns previously stored profile ─────────────────────────────────────
 
 test('GET /api/v1/profile returns stored profile after POST', async () => {
-  const token = makeToken(['participant'], 'user-get-after-post');
+  const token = makeToken(['user'], 'user-get-after-post');
   const answers = { mood: 'good' };
 
   // Create profile
@@ -201,7 +201,7 @@ test('GET /api/v1/profile returns stored profile after POST', async () => {
 // ── POST is idempotent (upsert) ───────────────────────────────────────────────
 
 test('POST /api/v1/profile overwrites existing profile on repeat call', async () => {
-  const token = makeToken(['participant'], 'user-repeat-post');
+  const token = makeToken(['user'], 'user-repeat-post');
 
   await post('/api/v1/profile', { answers: { q1: 'first' } }, token);
   const res = await post(

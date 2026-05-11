@@ -37,7 +37,7 @@ function createJwt(payload) {
 
 const USER_ID = 'user-recs-test';
 
-function makeToken(roles = ['participant']) {
+function makeToken(roles = ['user']) {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({
     sub: USER_ID,
@@ -212,7 +212,7 @@ test('GET /recommendations/me returns 401 without token', async () => {
 // ── Validation ────────────────────────────────────────────────────────────────
 
 test('POST /recommendations/:id/feedback returns 400 when comment is missing', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await post('/api/v1/recommendations/rec-001/feedback', {}, token);
   assert.strictEqual(res.status, 400);
   const body = await res.json();
@@ -220,7 +220,7 @@ test('POST /recommendations/:id/feedback returns 400 when comment is missing', a
 });
 
 test('POST /recommendations/:id/feedback returns 404 for unknown recommendation', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await post(
     '/api/v1/recommendations/unknown-rec/feedback',
     { comment: 'test' },
@@ -232,7 +232,7 @@ test('POST /recommendations/:id/feedback returns 404 for unknown recommendation'
 // ── Feedback storage ──────────────────────────────────────────────────────────
 
 test('POST /recommendations/:id/feedback stores feedback in MongoDB', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await post(
     '/api/v1/recommendations/rec-001/feedback',
     { comment: 'Very helpful recommendation!' },
@@ -259,7 +259,7 @@ test('POST /recommendations/:id/feedback invalidates Redis cache for (user_id, g
   const key = `recommend:${createHash('sha256').update(`${USER_ID}||exercise more`).digest('hex')}`;
   mockRedis.store[key] = JSON.stringify({ cached: true });
 
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   await post(
     '/api/v1/recommendations/rec-001/feedback',
     { comment: 'clear cache' },
@@ -292,7 +292,7 @@ test('GET /recommendations/me returns empty array when no recommendations', asyn
   await new Promise((resolve) => freshServer.listen(0, '127.0.0.1', resolve));
   const freshBase = `http://127.0.0.1:${freshServer.address().port}`;
 
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await fetch(`${freshBase}/api/v1/recommendations/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -303,7 +303,7 @@ test('GET /recommendations/me returns empty array when no recommendations', asyn
 });
 
 test('GET /recommendations/me returns recommendations with feedback attached', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await get('/api/v1/recommendations/me', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();

@@ -215,7 +215,7 @@ test('GET /api/v1/admin/questionnaires - 401 without token', async () => {
 });
 
 test('GET /api/v1/admin/questionnaires - 403 for participant role', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await get('/api/v1/admin/questionnaires', token);
   assert.strictEqual(res.status, 403);
 });
@@ -418,7 +418,7 @@ test('GET /api/v1/participant/questionnaires - 401 without token', async () => {
 });
 
 test('GET /api/v1/participant/questionnaires - 404 when not enrolled', async () => {
-  const token = makeToken(['participant'], 'unenrolled-user');
+  const token = makeToken(['user'], 'unenrolled-user');
   const res = await get('/api/v1/participant/questionnaires', token);
   assert.strictEqual(res.status, 404);
 });
@@ -461,7 +461,7 @@ test('GET /api/v1/participant/questionnaires - returns study questionnaires for 
     },
   ]);
 
-  const participantToken = makeToken(['participant'], 'enrolled-user');
+  const participantToken = makeToken(['user'], 'enrolled-user');
   const res = await get('/api/v1/participant/questionnaires', participantToken);
   assert.strictEqual(res.status, 200);
   const body = await res.json();

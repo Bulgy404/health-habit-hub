@@ -390,7 +390,7 @@ test('GET /api/v1/admin/participants/:id/progress - 401 without token', async ()
 });
 
 test('GET /api/v1/admin/participants/:id/progress - 403 for participant role', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await get(
     `/api/v1/admin/participants/${PARTICIPANT_ID}/progress`,
     token

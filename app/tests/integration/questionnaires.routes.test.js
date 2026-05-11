@@ -35,7 +35,7 @@ function createJwt(payload) {
   return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
 }
 
-function makeToken(sub = 'user-1', roles = ['participant']) {
+function makeToken(sub = 'user-1', roles = ['user']) {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({
     sub,
@@ -211,7 +211,7 @@ test('GET /questionnaires — rejects unauthenticated requests', async () => {
 });
 
 test('GET /questionnaires — returns active questionnaires for participant', async () => {
-  const token = makeToken('user-1', ['participant']);
+  const token = makeToken('user-1', ['user']);
   const res = await get('/questionnaires', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -223,7 +223,7 @@ test('GET /questionnaires — returns active questionnaires for participant', as
 });
 
 test('GET /questionnaires — each entry has required fields', async () => {
-  const token = makeToken('user-1', ['participant']);
+  const token = makeToken('user-1', ['user']);
   const res = await get('/questionnaires', token);
   const body = await res.json();
   for (const q of body) {
@@ -240,7 +240,7 @@ test('GET /questionnaires — each entry has required fields', async () => {
 });
 
 test('GET /questionnaires/:slug — returns full definition for sliq', async () => {
-  const token = makeToken('user-1', ['participant']);
+  const token = makeToken('user-1', ['user']);
   const res = await get('/questionnaires/sliq', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -257,7 +257,7 @@ test('GET /questionnaires/:slug — returns full definition for sliq', async () 
 });
 
 test('GET /questionnaires/:slug — returns 36 questions for rand-36', async () => {
-  const token = makeToken('user-1', ['participant']);
+  const token = makeToken('user-1', ['user']);
   const res = await get('/questionnaires/rand-36', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -266,7 +266,7 @@ test('GET /questionnaires/:slug — returns 36 questions for rand-36', async () 
 });
 
 test('GET /questionnaires/:slug — returns 404 for unknown slug', async () => {
-  const token = makeToken('user-1', ['participant']);
+  const token = makeToken('user-1', ['user']);
   const res = await get('/questionnaires/nonexistent', token);
   assert.strictEqual(res.status, 404);
   const body = await res.json();
@@ -274,7 +274,7 @@ test('GET /questionnaires/:slug — returns 404 for unknown slug', async () => {
 });
 
 test('GET /questionnaires/:slug — returns 404 for inactive questionnaire', async () => {
-  const token = makeToken('user-1', ['participant']);
+  const token = makeToken('user-1', ['user']);
   const res = await get('/questionnaires/inactive-q', token);
   assert.strictEqual(res.status, 404);
 });
