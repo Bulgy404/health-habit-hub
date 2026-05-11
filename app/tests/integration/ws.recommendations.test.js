@@ -36,7 +36,7 @@ function createJwt(payload) {
   return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
 }
 
-function makeToken(sub = 'user-ws-test', roles = ['participant']) {
+function makeToken(sub = 'user-ws-test', roles = ['user']) {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({
     sub,

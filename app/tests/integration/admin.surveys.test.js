@@ -473,7 +473,7 @@ test('GET /api/v1/surveys - participant sees only published surveys for their gr
     { userId: 'participant-g1', group: 'G1', enrolledAt: new Date() },
   ]);
 
-  const participantToken = makeToken(['participant'], 'participant-g1');
+  const participantToken = makeToken(['user'], 'participant-g1');
   const res = await get('/api/v1/surveys', participantToken);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -508,7 +508,7 @@ test('GET /api/v1/surveys - participant does not see surveys for other groups', 
     adminToken
   );
 
-  const participantToken = makeToken(['participant'], 'participant-g2');
+  const participantToken = makeToken(['user'], 'participant-g2');
   const res = await get('/api/v1/surveys', participantToken);
   assert.strictEqual(res.status, 200);
   const body = await res.json();

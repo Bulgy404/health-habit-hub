@@ -35,7 +35,7 @@ function createJwt(payload) {
   return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
 }
 
-function makeToken(roles = ['participant']) {
+function makeToken(roles = ['user']) {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({
     sub: 'user-rec-test',
@@ -160,7 +160,7 @@ test('GET /api/v1/recommend/:userId returns 403 for no-role token', async () => 
 
 test('GET /api/v1/recommend/:userId proxies to recommender and returns fixture', async () => {
   // IDOR: participant token has sub='user-rec-test', so userId in URL must match
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await get('/api/v1/recommend/user-rec-test', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -168,7 +168,7 @@ test('GET /api/v1/recommend/:userId proxies to recommender and returns fixture',
 });
 
 test('POST /api/v1/recommend/classify proxies to recommender and returns fixture', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await post(
     '/api/v1/recommend/classify',
     { text: 'go for a run' },
@@ -181,7 +181,7 @@ test('POST /api/v1/recommend/classify proxies to recommender and returns fixture
 
 test('GET /api/v1/recommend/:userId/history proxies to recommender and returns fixture', async () => {
   // IDOR: participant token has sub='user-rec-test', so userId in URL must match
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await get('/api/v1/recommend/user-rec-test/history', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -197,13 +197,13 @@ test('Proxy preserves Authorization header to downstream recommender', async () 
 
 test('GET /api/v1/recommend/:userId returns 403 when participant accesses another user', async () => {
   // IDOR: participant sub='user-rec-test' cannot access 'other-user'
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await get('/api/v1/recommend/other-user', token);
   assert.strictEqual(res.status, 403);
 });
 
 test('GET /api/v1/recommend/:userId/history returns 403 when participant accesses another user', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await get('/api/v1/recommend/other-user/history', token);
   assert.strictEqual(res.status, 403);
 });

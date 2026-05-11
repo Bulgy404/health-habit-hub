@@ -144,7 +144,7 @@ test('GET /api/v1/admin returns 401 with no token', async () => {
 // ── 403 – wrong role ──────────────────────────────────────────────────────────
 
 test('GET /api/v1/admin returns 403 for participant role', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await get('/api/v1/admin', token);
   assert.strictEqual(res.status, 403);
 });
@@ -164,13 +164,13 @@ test('GET /api/v1/habits returns 403 for token with no roles', async () => {
 // ── 200 – correct role ────────────────────────────────────────────────────────
 
 test('GET /api/v1/surveys returns 200 for participant role', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await get('/api/v1/surveys', token);
   assert.strictEqual(res.status, 200);
 });
 
 test('GET /api/v1/habits returns 200 for participant role', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await get('/api/v1/habits', token);
   assert.strictEqual(res.status, 200);
 });

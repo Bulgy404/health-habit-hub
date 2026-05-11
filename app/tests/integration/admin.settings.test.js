@@ -185,7 +185,7 @@ test('GET /api/v1/admin/settings - 401 without token', async () => {
 });
 
 test('GET /api/v1/admin/settings - 403 for participant role', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await get('/api/v1/admin/settings', token);
   assert.strictEqual(res.status, 403);
 });
@@ -207,7 +207,7 @@ test('PUT /api/v1/admin/settings/:key - 401 without token', async () => {
 });
 
 test('PUT /api/v1/admin/settings/:key - 403 for participant role', async () => {
-  const token = makeToken(['participant']);
+  const token = makeToken(['user']);
   const res = await put(
     '/api/v1/admin/settings/token_card_format',
     { value: 'qr' },

@@ -35,7 +35,7 @@ function createJwt(payload) {
   return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
 }
 
-function makeToken(roles = ['participant'], sub = 'user-surveys-test') {
+function makeToken(roles = ['user'], sub = 'user-surveys-test') {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({
     sub,
@@ -239,7 +239,7 @@ test('POST /api/v1/surveys/:id/results returns 401 without token', async () => {
 // ── GET /api/v1/surveys – participant view ────────────────────────────────────
 
 test('GET /api/v1/surveys returns only published surveys for participant', async () => {
-  const token = makeToken(['participant'], 'user-surveys-test');
+  const token = makeToken(['user'], 'user-surveys-test');
   const res = await get('/api/v1/surveys', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -262,7 +262,7 @@ test('GET /api/v1/surveys returns only published surveys for participant', async
 });
 
 test('GET /api/v1/surveys returns standard and global surveys for unassigned participant', async () => {
-  const token = makeToken(['participant'], 'user-no-group');
+  const token = makeToken(['user'], 'user-no-group');
   const res = await get('/api/v1/surveys', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -295,7 +295,7 @@ test('GET /api/v1/surveys returns all surveys for researcher role', async () => 
 // ── GET /api/v1/surveys/:id ───────────────────────────────────────────────────
 
 test('GET /api/v1/surveys/:id returns survey shape for participant', async () => {
-  const token = makeToken(['participant'], 'user-surveys-test');
+  const token = makeToken(['user'], 'user-surveys-test');
   const res = await get('/api/v1/surveys/survey-1', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -319,7 +319,7 @@ test('GET /api/v1/surveys/profile-style alias resolves by type', async () => {
     jsonSchema: { questions: [] },
   });
 
-  const token = makeToken(['participant'], 'user-surveys-test');
+  const token = makeToken(['user'], 'user-surveys-test');
   const res = await get('/api/v1/surveys/profile', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -328,7 +328,7 @@ test('GET /api/v1/surveys/profile-style alias resolves by type', async () => {
 });
 
 test('GET /api/v1/surveys/:id returns 404 for unknown survey', async () => {
-  const token = makeToken(['participant'], 'user-surveys-test');
+  const token = makeToken(['user'], 'user-surveys-test');
   const res = await get('/api/v1/surveys/nonexistent', token);
   assert.strictEqual(res.status, 404);
   const body = await res.json();
@@ -338,7 +338,7 @@ test('GET /api/v1/surveys/:id returns 404 for unknown survey', async () => {
 // ── POST /api/v1/surveys/:id/results ─────────────────────────────────────────
 
 test('POST /api/v1/surveys/:id/results stores response and returns 201', async () => {
-  const token = makeToken(['participant'], 'user-surveys-test');
+  const token = makeToken(['user'], 'user-surveys-test');
   const res = await post(
     '/api/v1/surveys/survey-1/results',
     { answers: { q1: 'yes' } },
@@ -352,7 +352,7 @@ test('POST /api/v1/surveys/:id/results stores response and returns 201', async (
 });
 
 test('POST /api/v1/surveys/:id/results returns 404 for unknown survey', async () => {
-  const token = makeToken(['participant'], 'user-surveys-test');
+  const token = makeToken(['user'], 'user-surveys-test');
   const res = await post(
     '/api/v1/surveys/nonexistent/results',
     { answers: {} },
@@ -369,7 +369,7 @@ test('GET /api/v1/surveys/:id/render returns 401 without token', async () => {
 });
 
 test('GET /api/v1/surveys/:id/render returns survey with default lang=en', async () => {
-  const token = makeToken(['participant'], 'user-surveys-test');
+  const token = makeToken(['user'], 'user-surveys-test');
   const res = await get('/api/v1/surveys/survey-1/render', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -379,7 +379,7 @@ test('GET /api/v1/surveys/:id/render returns survey with default lang=en', async
 });
 
 test('GET /api/v1/surveys/:id/render returns lang=de when requested', async () => {
-  const token = makeToken(['participant'], 'user-surveys-test');
+  const token = makeToken(['user'], 'user-surveys-test');
   const res = await get('/api/v1/surveys/survey-1/render?lang=de', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -387,7 +387,7 @@ test('GET /api/v1/surveys/:id/render returns lang=de when requested', async () =
 });
 
 test('GET /api/v1/surveys/:id/render returns 404 for unknown survey', async () => {
-  const token = makeToken(['participant'], 'user-surveys-test');
+  const token = makeToken(['user'], 'user-surveys-test');
   const res = await get('/api/v1/surveys/nonexistent/render', token);
   assert.strictEqual(res.status, 404);
 });

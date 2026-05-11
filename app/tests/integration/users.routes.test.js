@@ -35,7 +35,7 @@ function createJwt(payload) {
   return `${signingInput}.${base64urlEncode(sign.sign(privateKey))}`;
 }
 
-function makeToken(roles = ['participant'], sub = 'user-test') {
+function makeToken(roles = ['user'], sub = 'user-test') {
   const now = Math.floor(Date.now() / 1000);
   return createJwt({
     sub,
@@ -160,7 +160,7 @@ test('GET /api/v1/users/me returns 403 for token with no roles', async () => {
 // ── GET returns default preferredLanguage ─────────────────────────────────────
 
 test('GET /api/v1/users/me returns default preferredLanguage en when no record exists', async () => {
-  const token = makeToken(['participant'], 'user-get-default');
+  const token = makeToken(['user'], 'user-get-default');
   const res = await get('/api/v1/users/me', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -171,7 +171,7 @@ test('GET /api/v1/users/me returns default preferredLanguage en when no record e
 // ── PUT updates preferredLanguage ─────────────────────────────────────────────
 
 test('PUT /api/v1/users/me updates preferredLanguage to de', async () => {
-  const token = makeToken(['participant'], 'user-put-de');
+  const token = makeToken(['user'], 'user-put-de');
   const res = await put('/api/v1/users/me', { preferredLanguage: 'de' }, token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -179,7 +179,7 @@ test('PUT /api/v1/users/me updates preferredLanguage to de', async () => {
 });
 
 test('PUT /api/v1/users/me updates preferredLanguage to en', async () => {
-  const token = makeToken(['participant'], 'user-put-en');
+  const token = makeToken(['user'], 'user-put-en');
   const res = await put('/api/v1/users/me', { preferredLanguage: 'en' }, token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
@@ -187,7 +187,7 @@ test('PUT /api/v1/users/me updates preferredLanguage to en', async () => {
 });
 
 test('GET /api/v1/users/me returns updated preferredLanguage after PUT', async () => {
-  const token = makeToken(['participant'], 'user-get-after-put');
+  const token = makeToken(['user'], 'user-get-after-put');
   await put('/api/v1/users/me', { preferredLanguage: 'de' }, token);
   const res = await get('/api/v1/users/me', token);
   assert.strictEqual(res.status, 200);
@@ -198,7 +198,7 @@ test('GET /api/v1/users/me returns updated preferredLanguage after PUT', async (
 // ── PUT rejects unsupported values ────────────────────────────────────────────
 
 test('PUT /api/v1/users/me returns 400 for unsupported preferredLanguage', async () => {
-  const token = makeToken(['participant'], 'user-put-invalid');
+  const token = makeToken(['user'], 'user-put-invalid');
   const res = await put('/api/v1/users/me', { preferredLanguage: 'fr' }, token);
   assert.strictEqual(res.status, 400);
   const body = await res.json();
@@ -206,7 +206,7 @@ test('PUT /api/v1/users/me returns 400 for unsupported preferredLanguage', async
 });
 
 test('PUT /api/v1/users/me returns 400 for empty string preferredLanguage', async () => {
-  const token = makeToken(['participant'], 'user-put-empty');
+  const token = makeToken(['user'], 'user-put-empty');
   const res = await put('/api/v1/users/me', { preferredLanguage: '' }, token);
   assert.strictEqual(res.status, 400);
   const body = await res.json();
