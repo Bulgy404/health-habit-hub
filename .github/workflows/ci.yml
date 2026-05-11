@@ -309,9 +309,6 @@ jobs:
       - name: Build recommender (Python)
         run: docker build ./API-service
 
-      - name: Build fuseki
-        run: docker build ./fuseki
-
       - name: Build backup-service
         run: docker build ./backup-service
 
