@@ -375,7 +375,7 @@ export function createHabitsRouter({
       if (remove) {
         await database
           .collection('habit_annotations')
-          .deleteOne({ habitId, type });
+          .deleteOne({ habitId: String(habitId), type: String(type) });
       } else {
         await database.collection('habit_annotations').insertOne({
           habitId,

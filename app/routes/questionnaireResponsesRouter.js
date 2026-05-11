@@ -160,7 +160,7 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       const database = await getDb();
       const responses = await database
         .collection('form_responses')
-        .find({ userId })
+        .find({ userId: String(userId) })
         .sort({ submitted_at: -1 })
         .toArray();
 
@@ -237,7 +237,7 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       const database = await getDb();
       const responses = await database
         .collection('form_responses')
-        .find({ userId, questionnaireSlug: slug })
+        .find({ userId: String(userId), questionnaireSlug: String(slug) })
         .sort({ submitted_at: -1 })
         .limit(1)
         .toArray();

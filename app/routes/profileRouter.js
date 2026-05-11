@@ -55,7 +55,7 @@ export function createProfileRouter({ db } = {}) {
       const database = await getDb();
       const profile = await database
         .collection('profiles')
-        .findOne({ userId: req.user.sub });
+        .findOne({ userId: String(req.user.sub) });
       if (!profile) return res.status(404).json({ error: 'Profile not found' });
       const { _id, ...rest } = profile;
       res.json(rest);
@@ -123,10 +123,10 @@ export function createProfileRouter({ db } = {}) {
       const { answers, completedAt } = req.body;
       const now = new Date();
       await database.collection('profiles').updateOne(
-        { userId: req.user.sub },
+        { userId: String(req.user.sub) },
         {
           $set: {
-            userId: req.user.sub,
+            userId: String(req.user.sub),
             answers: answers || {},
             completedAt: completedAt ? new Date(completedAt) : now,
             updatedAt: now,
@@ -136,7 +136,7 @@ export function createProfileRouter({ db } = {}) {
       );
       const profile = await database
         .collection('profiles')
-        .findOne({ userId: req.user.sub });
+        .findOne({ userId: String(req.user.sub) });
       const { _id, ...rest } = profile;
       res.json(rest);
     } catch (err) {

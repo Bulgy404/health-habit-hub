@@ -4,10 +4,15 @@
  * Applied to all POST/PUT requests.
  */
 
-const HTML_TAG_RE = /<[^>]*>/g;
+// Bounded HTML tag regex (avoids unbounded backtracking / ReDoS risk).
+const HTML_TAG_RE = /<[^>]{0,2000}>/g;
 
 function stripHtml(value) {
-  if (typeof value === 'string') return value.replace(HTML_TAG_RE, '');
+  if (typeof value === 'string') {
+    // Strip tags first, then any bare angle brackets left over from
+    // truncated/incomplete tag sequences (e.g. "</", "<", ">").
+    return value.replace(HTML_TAG_RE, '').replace(/[<>]/g, '');
+  }
   if (Array.isArray(value)) return value.map(stripHtml);
   if (value !== null && typeof value === 'object') {
     const out = {};

@@ -48,7 +48,7 @@ export function createParticipantRouter({ db } = {}) {
 
       const enrollment = await database
         .collection(ENROLLMENTS)
-        .findOne({ userId });
+        .findOne({ userId: String(userId) });
 
       if (!enrollment) {
         return res.status(404).json({ error: 'Not enrolled in any study' });
@@ -138,8 +138,8 @@ export function createParticipantRouter({ db } = {}) {
       await database
         .collection(COLLECTION_DEVICE_TOKENS)
         .updateOne(
-          { userId },
-          { $set: { userId, token, updatedAt: new Date() } },
+          { userId: String(userId) },
+          { $set: { userId: String(userId), token: String(token), updatedAt: new Date() } },
           { upsert: true }
         );
 

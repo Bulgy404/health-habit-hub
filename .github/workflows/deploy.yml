@@ -16,6 +16,8 @@ jobs:
   deploy:
     name: Deploy to production
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     # Only deploy when CI passed on master (continuous) or on a v* tag (release)
     if: >-
       github.event_name == 'workflow_run' &&

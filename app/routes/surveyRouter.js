@@ -56,7 +56,7 @@ async function getParticipantGroup(db, userId) {
   if (!userId) return null;
   const participant = await db
     .collection('participants')
-    .findOne({ userId, deletedAt: { $exists: false } });
+    .findOne({ userId: String(userId), deletedAt: { $exists: false } });
   return participant?.group || null;
 }
 

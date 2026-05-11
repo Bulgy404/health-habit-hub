@@ -11,7 +11,7 @@ export function createUsersRouter({ db } = {}) {
   router.get('/me', async (req, res) => {
     try {
       const database = await getDb();
-      const userId = req.user.sub;
+      const userId = String(req.user.sub);
       const doc = await database.collection('users').findOne({ userId });
       if (doc) {
         const { _id, ...rest } = doc;
@@ -38,7 +38,7 @@ export function createUsersRouter({ db } = {}) {
         });
       }
       const database = await getDb();
-      const userId = req.user.sub;
+      const userId = String(req.user.sub);
       const update = {};
       if (preferredLanguage !== undefined)
         update.preferredLanguage = preferredLanguage;

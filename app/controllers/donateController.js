@@ -75,7 +75,10 @@ export function showDonateForm(req, res) {
 
 export async function saveDonateData(req, res) {
   const userId = req.userId;
-  console.log(`Received donate data for user ${userId}:`, req.body);
+  console.log('[donateController] Received donate data:', {
+    userId,
+    body: req.body,
+  });
   let dbClient;
   if (config.graphBackend === 'neo4j') {
     const { Neo4jSparqlDbClient } = await import('../utils/Neo4jDatabase.js');
@@ -116,8 +119,8 @@ export async function saveDonateData(req, res) {
       res.redirect(`${normalizedBasepath}${redirectLang}/survey/1`);
     }
   } catch (error) {
-    console.log(data, userId);
-    console.error('Fehler beim Speichern der Spendendaten:', error);
+    console.log('[donateController] Save failure context:', { data, userId });
+    console.error('[donateController] Fehler beim Speichern der Spendendaten:', error);
     res.status(500).json({ error: 'Fehler beim Speichern der Daten.' });
   }
 }

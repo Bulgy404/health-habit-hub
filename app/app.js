@@ -4,6 +4,7 @@ import express from 'express';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
+import { randomBytes } from 'node:crypto';
 
 import { jsonBodyParser } from './middleware/requestParser.js';
 import { securityHeaders } from './middleware/securityHeaders.js';
@@ -50,13 +51,23 @@ const vendorSurveyJsUiLangMount = path.join(
   'survey-js-ui'
 );
 
+// Intentional: serves client-side survey libraries (survey-core) to the browser.
+// Restricted to disable directory indexes and deny dotfiles.
 app.use(
   vendorSurveyCoreLangMount,
-  express.static(path.join(process.cwd(), 'node_modules/survey-core'))
+  express.static(path.join(process.cwd(), 'node_modules/survey-core'), {
+    index: false,
+    dotfiles: 'deny',
+  })
 );
+// Intentional: serves client-side survey UI library (survey-js-ui) to the browser.
+// Restricted to disable directory indexes and deny dotfiles.
 app.use(
   vendorSurveyJsUiLangMount,
-  express.static(path.join(process.cwd(), 'node_modules/survey-js-ui'))
+  express.static(path.join(process.cwd(), 'node_modules/survey-js-ui'), {
+    index: false,
+    dotfiles: 'deny',
+  })
 );
 
 const router = express.Router();
@@ -76,6 +87,33 @@ router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json()); // Added to parse JSON bodies
 
 router.use(cookieParser());
+
+// CSRF double-submit cookie middleware for form routes.
+// Note: /api/v1/* routes use JWT auth (CSRF-resistant) and are mounted on
+// `app`, not on this `router`, so they are not affected by this middleware.
+// The donation form is additionally protected by reCAPTCHA; this double-submit
+// check satisfies static analyzers (CodeQL) and provides defense-in-depth.
+router.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    // Set CSRF token cookie on first visit
+    if (!req.cookies._csrf) {
+      const token = randomBytes(16).toString('hex');
+      res.cookie('_csrf', token, {
+        httpOnly: false,
+        sameSite: 'strict',
+        secure: process.env.NODE_ENV === 'production',
+      });
+    }
+    return next();
+  }
+  // For state-changing requests, verify double-submit
+  const cookieToken = req.cookies._csrf;
+  const bodyToken = req.body?._csrf || req.headers['x-csrf-token'];
+  if (!cookieToken || !bodyToken || cookieToken !== bodyToken) {
+    return res.status(403).send('Invalid CSRF token');
+  }
+  next();
+});
 
 // Middleware for parsing form data in the request body
 router.use(jsonBodyParser);
@@ -127,7 +165,9 @@ router.use(
 // Routes
 // Redirects all requests to '/donate' if the language parameter (lng) is already set
 router.get('/:lng(' + validLanguageCodes + ')?/', (req, res) => {
-  const targetPath = path.join(contextPath, req.lang, 'donate');
+  // Sanitize lang to a known-good language code to keep redirect on same host.
+  const safeLang = getLanguageCodes().includes(req.lang) ? req.lang : 'en';
+  const targetPath = path.join(contextPath, safeLang, 'donate');
   res.redirect(301, targetPath);
 });
 
@@ -142,7 +182,14 @@ router.use((req, res, next) => {
   if (req.url.startsWith('/' + req.lang + '/')) {
     next();
   } else {
-    res.redirect(307, path.join(contextPath, req.lang, req.url));
+    // Sanitize req.url: collapse leading slashes to prevent protocol-relative
+    // ("//evil.example") redirects and strip any chars outside a safe URL
+    // character set so the redirect stays on the same host.
+    const safeUrl = req.url
+      .replace(/^\/+/, '/')
+      .replace(/[^\w\-./=?&%+#@:,;~!*'()$]/g, '');
+    const safeLang = getLanguageCodes().includes(req.lang) ? req.lang : 'en';
+    res.redirect(307, path.join(contextPath, safeLang, safeUrl));
   }
 });
 

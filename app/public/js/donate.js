@@ -39,7 +39,7 @@ function markSelection(context, editable) {
 }
 
 function removeAllHighlights(editable) {
-  editable.innerHTML = editable.innerText;
+  editable.textContent = editable.innerText;
 }
 
 /**
@@ -54,7 +54,8 @@ function cleanUpHabitInput(editable) {
   });
 
   for (const child of editable.children) {
-    child.innerHTML = child.textContent;
+    const t = child.textContent;
+    child.textContent = t;
   }
 }
 

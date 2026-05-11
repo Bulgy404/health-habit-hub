@@ -201,10 +201,10 @@ export async function redeemCode({ db, userId, code }) {
   const study = await db.collection(STUDIES).findOne({ _id: doc.studyId });
 
   const prior = await db.collection(ENROLLMENTS).findOneAndUpdate(
-    { userId },
+    { userId: String(userId) },
     {
       $setOnInsert: {
-        userId,
+        userId: String(userId),
         studyId: doc.studyId,
         groupId: doc.groupId,
         studyCodeUsed: upperCode,
@@ -250,7 +250,7 @@ export async function redeemCode({ db, userId, code }) {
  */
 export async function skipCode({ db, userId }) {
   // Fast path: user is already enrolled (idempotent).
-  const existing = await db.collection(ENROLLMENTS).findOne({ userId });
+  const existing = await db.collection(ENROLLMENTS).findOne({ userId: String(userId) });
   if (existing) {
     const study = await db
       .collection(STUDIES)
@@ -289,10 +289,10 @@ export async function skipCode({ db, userId }) {
   // Atomically insert enrollment only if this user is not yet enrolled.
   // If a concurrent request already enrolled this user, prior will be non-null.
   const prior = await db.collection(ENROLLMENTS).findOneAndUpdate(
-    { userId },
+    { userId: String(userId) },
     {
       $setOnInsert: {
-        userId,
+        userId: String(userId),
         studyId: study._id,
         groupId: selectedGroup.id,
         studyCodeUsed: null,

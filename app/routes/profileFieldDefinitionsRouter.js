@@ -38,7 +38,7 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
         return res.status(400).json({ error: 'options must be a non-empty array when type is select' });
       }
       const database = await getDb();
-      const existing = await database.collection('profile_field_definitions').findOne({ fieldId });
+      const existing = await database.collection('profile_field_definitions').findOne({ fieldId: String(fieldId) });
       if (existing) {
         return res.status(409).json({ error: `fieldId '${fieldId}' already exists` });
       }

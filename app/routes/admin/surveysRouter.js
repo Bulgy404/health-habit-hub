@@ -524,7 +524,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
       if (slug) {
         const existing = await database
           .collection('questionnaires')
-          .findOne({ slug });
+          .findOne({ slug: String(slug) });
         if (existing) {
           return res
             .status(409)
