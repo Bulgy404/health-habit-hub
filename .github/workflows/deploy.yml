@@ -13,11 +13,11 @@ jobs:
   deploy:
     name: Deploy to production
     runs-on: ubuntu-latest
-    # Only deploy when CI passed on main (continuous) or on a v* tag (release)
+    # Only deploy when CI passed on master (continuous) or on a v* tag (release)
     if: >-
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.conclusion == 'success' &&
-      (github.event.workflow_run.head_branch == 'main' ||
+      (github.event.workflow_run.head_branch == 'master' ||
        startsWith(github.event.workflow_run.head_branch, 'v'))
     steps:
       - name: Verify CI passed
