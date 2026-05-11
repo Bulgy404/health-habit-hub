@@ -250,7 +250,9 @@ export async function redeemCode({ db, userId, code }) {
  */
 export async function skipCode({ db, userId }) {
   // Fast path: user is already enrolled (idempotent).
-  const existing = await db.collection(ENROLLMENTS).findOne({ userId: String(userId) });
+  const existing = await db
+    .collection(ENROLLMENTS)
+    .findOne({ userId: String(userId) });
   if (existing) {
     const study = await db
       .collection(STUDIES)

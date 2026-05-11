@@ -7,14 +7,20 @@ import { createV1Router } from '../../routes/v1Router.js';
 
 // ── Key material ────────────────────────────────────────────────────────────
 
-const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+});
 const pubKeyJwk = publicKey.export({ format: 'jwk' });
 pubKeyJwk.kid = 'pfd-key-1';
 pubKeyJwk.use = 'sig';
 const mockJwks = { keys: [pubKeyJwk] };
 
 function base64urlEncode(buf) {
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return buf
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
 }
 
 function createJwt(payload) {
@@ -49,7 +55,11 @@ function createMockDb() {
           for (const [k, v] of Object.entries(query)) {
             results = results.filter((d) => d[k] === v);
           }
-          return { async toArray() { return results; } };
+          return {
+            async toArray() {
+              return results;
+            },
+          };
         },
         async findOne(query) {
           for (const [k, v] of Object.entries(query)) {
@@ -118,7 +128,8 @@ before(async () => {
 
   global.fetch = async (url, opts) => {
     const u = typeof url === 'string' ? url : url.toString();
-    if (u.includes('mock-keycloak')) return { ok: true, json: async () => mockJwks };
+    if (u.includes('mock-keycloak'))
+      return { ok: true, json: async () => mockJwks };
     return realFetch(u, opts);
   };
 
@@ -162,19 +173,25 @@ test('GET /admin/profile-field-definitions — 401 without token', async () => {
 });
 
 test('GET /admin/profile-field-definitions — 403 for user role', async () => {
-  const res = await req('GET', '/api/v1/admin/profile-field-definitions', { token: USER_TOKEN });
+  const res = await req('GET', '/api/v1/admin/profile-field-definitions', {
+    token: USER_TOKEN,
+  });
   assert.strictEqual(res.status, 403);
 });
 
 test('GET /admin/profile-field-definitions — 403 for researcher role', async () => {
-  const res = await req('GET', '/api/v1/admin/profile-field-definitions', { token: RESEARCHER_TOKEN });
+  const res = await req('GET', '/api/v1/admin/profile-field-definitions', {
+    token: RESEARCHER_TOKEN,
+  });
   assert.strictEqual(res.status, 403);
 });
 
 // ── Admin CRUD ───────────────────────────────────────────────────────────────
 
 test('GET /admin/profile-field-definitions — 200 empty array initially', async () => {
-  const res = await req('GET', '/api/v1/admin/profile-field-definitions', { token: ADMIN_TOKEN });
+  const res = await req('GET', '/api/v1/admin/profile-field-definitions', {
+    token: ADMIN_TOKEN,
+  });
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.ok(Array.isArray(body));
@@ -199,7 +216,14 @@ test('POST /admin/profile-field-definitions — 400 with invalid type', async ()
 test('POST /admin/profile-field-definitions — 400 for select type without options', async () => {
   const res = await req('POST', '/api/v1/admin/profile-field-definitions', {
     token: ADMIN_TOKEN,
-    body: { fieldId: 'mood', label: 'Mood', type: 'select', options: [], required: false, order: 1 },
+    body: {
+      fieldId: 'mood',
+      label: 'Mood',
+      type: 'select',
+      options: [],
+      required: false,
+      order: 1,
+    },
   });
   assert.strictEqual(res.status, 400);
 });
@@ -225,36 +249,52 @@ test('POST /admin/profile-field-definitions — 409 on duplicate fieldId', async
 });
 
 test('PUT /admin/profile-field-definitions/:fieldId — 200 updates label', async () => {
-  const res = await req('PUT', '/api/v1/admin/profile-field-definitions/height', {
-    token: ADMIN_TOKEN,
-    body: { label: 'Height in cm' },
-  });
+  const res = await req(
+    'PUT',
+    '/api/v1/admin/profile-field-definitions/height',
+    {
+      token: ADMIN_TOKEN,
+      body: { label: 'Height in cm' },
+    }
+  );
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.strictEqual(body.label, 'Height in cm');
 });
 
 test('PUT /admin/profile-field-definitions/:fieldId — 404 for unknown fieldId', async () => {
-  const res = await req('PUT', '/api/v1/admin/profile-field-definitions/unknown_field', {
-    token: ADMIN_TOKEN,
-    body: { label: 'Whatever' },
-  });
+  const res = await req(
+    'PUT',
+    '/api/v1/admin/profile-field-definitions/unknown_field',
+    {
+      token: ADMIN_TOKEN,
+      body: { label: 'Whatever' },
+    }
+  );
   assert.strictEqual(res.status, 404);
 });
 
 test('DELETE /admin/profile-field-definitions/:fieldId — 200 removes definition', async () => {
-  const res = await req('DELETE', '/api/v1/admin/profile-field-definitions/height', {
-    token: ADMIN_TOKEN,
-  });
+  const res = await req(
+    'DELETE',
+    '/api/v1/admin/profile-field-definitions/height',
+    {
+      token: ADMIN_TOKEN,
+    }
+  );
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.strictEqual(body.ok, true);
 });
 
 test('DELETE /admin/profile-field-definitions/:fieldId — 404 for unknown fieldId', async () => {
-  const res = await req('DELETE', '/api/v1/admin/profile-field-definitions/height', {
-    token: ADMIN_TOKEN,
-  });
+  const res = await req(
+    'DELETE',
+    '/api/v1/admin/profile-field-definitions/height',
+    {
+      token: ADMIN_TOKEN,
+    }
+  );
   assert.strictEqual(res.status, 404);
 });
 
@@ -269,9 +309,18 @@ test('GET /profile-field-definitions — 200 for user role', async () => {
   // Seed one definition first via admin
   await req('POST', '/api/v1/admin/profile-field-definitions', {
     token: ADMIN_TOKEN,
-    body: { fieldId: 'mood', label: 'Mood', type: 'select', options: ['Happy', 'Sad'], required: false, order: 1 },
+    body: {
+      fieldId: 'mood',
+      label: 'Mood',
+      type: 'select',
+      options: ['Happy', 'Sad'],
+      required: false,
+      order: 1,
+    },
   });
-  const res = await req('GET', '/api/v1/profile-field-definitions', { token: USER_TOKEN });
+  const res = await req('GET', '/api/v1/profile-field-definitions', {
+    token: USER_TOKEN,
+  });
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.ok(Array.isArray(body));
@@ -281,14 +330,33 @@ test('GET /profile-field-definitions — 200 for user role', async () => {
 test('GET /profile-field-definitions — sorted by order', async () => {
   await req('POST', '/api/v1/admin/profile-field-definitions', {
     token: ADMIN_TOKEN,
-    body: { fieldId: 'zzz_last', label: 'Last', type: 'text', options: [], required: false, order: 99 },
+    body: {
+      fieldId: 'zzz_last',
+      label: 'Last',
+      type: 'text',
+      options: [],
+      required: false,
+      order: 99,
+    },
   });
   await req('POST', '/api/v1/admin/profile-field-definitions', {
     token: ADMIN_TOKEN,
-    body: { fieldId: 'aaa_first', label: 'First', type: 'text', options: [], required: false, order: 1 },
+    body: {
+      fieldId: 'aaa_first',
+      label: 'First',
+      type: 'text',
+      options: [],
+      required: false,
+      order: 1,
+    },
   });
-  const res = await req('GET', '/api/v1/profile-field-definitions', { token: USER_TOKEN });
+  const res = await req('GET', '/api/v1/profile-field-definitions', {
+    token: USER_TOKEN,
+  });
   const body = await res.json();
   const orders = body.map((d) => d.order);
-  assert.deepStrictEqual(orders, [...orders].sort((a, b) => a - b));
+  assert.deepStrictEqual(
+    orders,
+    [...orders].sort((a, b) => a - b)
+  );
 });

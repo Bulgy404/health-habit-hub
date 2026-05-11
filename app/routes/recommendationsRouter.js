@@ -56,7 +56,10 @@ export function createRecommendationsRouter({
       const rec = await database
         .collection('recommendations')
         .findOne(
-          { recommendation_id: String(recommendation_id), userId: String(userId) },
+          {
+            recommendation_id: String(recommendation_id),
+            userId: String(userId),
+          },
           { projection: { goal: 1, userId: 1 } }
         );
 

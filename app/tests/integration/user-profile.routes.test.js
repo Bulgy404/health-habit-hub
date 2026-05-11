@@ -301,9 +301,18 @@ test('POST /api/v1/user-profile — stores date field as Date object in MongoDB'
   });
   assert.strictEqual(res.status, 200);
 
-  const dateSyncCall = neo4jCalls.find((c) => c.params?.userId === 'user-date-test');
-  assert.ok(dateSyncCall, 'Neo4j sync should be called for the date profile save');
-  assert.strictEqual(dateSyncCall.params.props.birthday, '1990-05-15', 'Date should be synced as YYYY-MM-DD');
+  const dateSyncCall = neo4jCalls.find(
+    (c) => c.params?.userId === 'user-date-test'
+  );
+  assert.ok(
+    dateSyncCall,
+    'Neo4j sync should be called for the date profile save'
+  );
+  assert.strictEqual(
+    dateSyncCall.params.props.birthday,
+    '1990-05-15',
+    'Date should be synced as YYYY-MM-DD'
+  );
 
   const getRes = await req('GET', '/user-profile', { token });
   const body = await getRes.json();
@@ -331,8 +340,15 @@ test('POST /api/v1/user-profile — stores number field as number', async () => 
 
   const syncCall = neo4jCalls.find((c) => c.params?.userId === 'user-num-test');
   assert.ok(syncCall, 'Neo4j sync should be called for the profile save');
-  assert.ok(syncCall.cypher.includes('SET u +='), 'Should use SET u += for property sync');
-  assert.strictEqual(syncCall.params.props.score, 3.5, 'Number field should be synced as float');
+  assert.ok(
+    syncCall.cypher.includes('SET u +='),
+    'Should use SET u += for property sync'
+  );
+  assert.strictEqual(
+    syncCall.params.props.score,
+    3.5,
+    'Number field should be synced as float'
+  );
 
   const getRes = await req('GET', '/user-profile', { token });
   const body = await getRes.json();
