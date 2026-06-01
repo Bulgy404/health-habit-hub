@@ -62,7 +62,7 @@ export async function cancelCampaign({ db, id }) {
     .collection(COLLECTION)
     .findOneAndUpdate(
       { _id: oid, sentAt: null },
-      { $set: { status: 'draft' } },
+      { $set: { status: 'cancelled' } },
       { returnDocument: 'after' }
     );
   return result ? { cancelled: true } : { notFound: true };
