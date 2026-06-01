@@ -441,9 +441,29 @@ Fake data characteristics:
 
 ---
 
-## 10. Open Questions (for implementation)
+## 10. Resolved Design Decisions
 
-1. **SRHI item wording** — confirm exact German and English item translations for the 12 SRHI items (Verplanken & Orbell 2003). Needs domain expert sign-off before seeding `questionnaire`-style item definitions.
-2. **Behavior option list** — final list of `behaviorOptions` for the study (study specifies walking, light jogging, cycling, structured calisthenics, yoga). Public list can be broader — confirm with Jeannette Stark.
-3. **Cue pool content** — pre-rated low/high quality cues (WP A.3 output). Initial seed data needed from the research group before WP B platform pretest.
-4. **Notification strategy** — cue-aware push reminders (e.g., "After dinner — time for your walk?") require Firebase FCM. `push_notification_service.dart` and `notificationService.js` exist; decide whether reminder content references the cue text and who configures the send time.
+1. **SRHI item wording** — resolved. Use the validated German/English translations from Mena et al. (2023, https://link.springer.com/article/10.1007/s11469-023-01057-3). Stem: “Behavior X is something…” / “Verhalten X ist etwas…”
+
+| Item | English | German |
+|---:|---|---|
+| 1 | I do frequently | das ich häufig tue |
+| 2 | I do automatically | das ich automatisch tue |
+| 3 | I do without having to consciously remember | das ich tue, ohne mich bewusst erinnern zu müssen |
+| 4 | that makes me feel weird if I do not do it | bei dem ich mich komisch fühle, wenn ich es nicht tue |
+| 5 | I do without thinking | das ich tue, ohne darüber nachzudenken |
+| 6 | that would require effort not to do it | das mich Anstrengung kosten würde, es nicht zu tun |
+| 7 | that belongs to my daily, weekly, or monthly routine | das zu meiner täglichen, wöchentlichen oder monatlichen Routine gehört |
+| 8 | I start doing before I realize I’m doing it | mit dem ich anfange, ohne zu bemerken, dass ich es tue |
+| 9 | I would find hard not to do | das mir schwerfallen würde, es nicht zu tun |
+| 10 | I have no need to think about doing | worüber ich nicht nachdenken muss, um es zu tun |
+| 11 | that’s typically “me” | das typisch für mich ist |
+| 12 | I have been doing for a long time | das ich schon seit langer Zeit mache |
+
+These items are seeded as a hardcoded constant in the backend (not configurable — the SRHI is a validated instrument and must not be modified).
+
+2. **Behavior option list** — resolved. Initial list: `walking`, `light_jogging`, `cycling`, `structured_calisthenics`, `yoga`. This list is **configurable via admin portal** per study group (`cueConfig.behaviorOptions`). The public default group starts with all five options.
+
+3. **Cue pool seed data** — resolved. The implementation generates realistic seed cues for development/testing. Low-quality cues have low stability/salience/specificity ratings (e.g., “When I feel like it”, “When I have some free time”). High-quality cues have high ratings on all three dimensions (e.g., “After dinner each evening”, “After my morning coffee, at home”). The cue pool is fully manageable via the admin portal `/cue-pools` page.
+
+4. **Notification strategy** — resolved. Cue-aware push reminders are delivered **server-side via Firebase Admin SDK** (existing Firebase project). The Node.js backend calls FCM directly — no third-party service needed. Reminder time is set per-intention by the participant (with a default configurable by researchers in the admin portal). Reminder content references the user’s cue text: *”[Cue] — time for your [behavior].”* e.g. *”After dinner — time for your walk.”* The existing `notificationService.js` and `push_notification_service.dart` are extended rather than replaced.
