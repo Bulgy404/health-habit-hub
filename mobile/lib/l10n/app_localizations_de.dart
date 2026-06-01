@@ -525,4 +525,119 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get noQuestionnairesAssigned =>
       'Keine Fragebögen für Ihre Studie zugewiesen.';
+
+  @override
+  String get myHabitsTab => 'Meine Gewohnheiten';
+
+  @override
+  String get newHabit => 'Neue Gewohnheit';
+
+  @override
+  String get noHabitsYet =>
+      'Noch keine Gewohnheiten.\nTippe auf „Neue Gewohnheit“, um eine zu beginnen.';
+
+  @override
+  String get logToday => 'Heute eintragen';
+
+  @override
+  String get loggedToday => 'Eingetragen ✓';
+
+  @override
+  String get pickBehaviorTitle => 'Welche Gewohnheit möchtest du aufbauen?';
+
+  @override
+  String get setCueTitle => 'Stichworteingabe';
+
+  @override
+  String get setCuePreRatedInstruction =>
+      'Deine Studienbedingung gibt dir folgende(n) Hinweisreiz(e) vor. Lies sie sorgfältig – das ist der Moment, in dem du handeln wirst.';
+
+  @override
+  String get setCueSelfSelectedInstruction =>
+      'Beschreibe einen konkreten Moment, der regelmäßig in deinem Alltag vorkommt.';
+
+  @override
+  String get setCuePlaceholder => 'z.B. Nach dem Abendessen';
+
+  @override
+  String get setCueTooShort =>
+      'Bitte beschreibe deinen Hinweisreiz mit mindestens 10 Zeichen.';
+
+  @override
+  String get confirmPlanTitle => 'Dein Plan';
+
+  @override
+  String get confirmPlanSubtitle =>
+      'Lies deine Implementierungsintention und bestätige sie.';
+
+  @override
+  String get durationLabel => 'Dauer (Minuten)';
+
+  @override
+  String get createHabit => 'Gewohnheit erstellen';
+
+  @override
+  String get habitLimitReached =>
+      'Du hast die Gewohnheitsgrenze für deine Studienbedingung erreicht.';
+
+  @override
+  String get srhiCheckInTitle => 'Wöchentliches Gewohnheits-Check-in';
+
+  @override
+  String get srhiCheckInSubtitle => 'Dauert ca. 2 Minuten.';
+
+  @override
+  String get srhiStartButton => 'Check-in starten';
+
+  @override
+  String get srhiFormTitle => 'Gewohnheits-Check-in';
+
+  @override
+  String srhiStem(String behavior) {
+    return 'Mein $behavior ist etwas,';
+  }
+
+  @override
+  String get srhiSubmit => 'Absenden';
+
+  @override
+  String get srhiSubmitIncomplete =>
+      'Bitte bewerte alle 12 Aussagen, bevor du absendest.';
+
+  @override
+  String weekLabel(int n) {
+    return 'Woche $n';
+  }
+
+  @override
+  String get habitDetailTitle => 'Gewohnheitsdetails';
+
+  @override
+  String get abandonHabit => 'Gewohnheit aufgeben';
+
+  @override
+  String get abandonConfirm =>
+      'Bist du sicher, dass du diese Gewohnheit aufgeben möchtest? Dies kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get confirm => 'Bestätigen';
+
+  @override
+  String get heatmapTitle => 'Aktivitätsprotokoll';
+
+  @override
+  String get trajectoryTitle => 'Gewohnheitsstärke';
+
+  @override
+  String get enactedLabel => 'Umgesetzt';
+
+  @override
+  String get missedLabel => 'Verpasst';
+
+  @override
+  String get noLogsYet => 'Noch keine Aktivität eingetragen.';
+
+  @override
+  String get noTrajectoryYet =>
+      'SRHI-Daten erscheinen nach deinem ersten wöchentlichen Check-in.';
 }

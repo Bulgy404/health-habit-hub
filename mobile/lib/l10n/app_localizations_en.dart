@@ -504,4 +504,119 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get noQuestionnairesAssigned =>
       'No questionnaires assigned to your study.';
+
+  @override
+  String get myHabitsTab => 'My Habits';
+
+  @override
+  String get newHabit => 'New Habit';
+
+  @override
+  String get noHabitsYet =>
+      'No habits yet.\nTap \"New Habit\" to start forming one.';
+
+  @override
+  String get logToday => 'Log today';
+
+  @override
+  String get loggedToday => 'Logged ✓';
+
+  @override
+  String get pickBehaviorTitle => 'What habit do you want to form?';
+
+  @override
+  String get setCueTitle => 'Set your cue';
+
+  @override
+  String get setCuePreRatedInstruction =>
+      'Your study condition assigns the following cue(s). Read them carefully — this is when you will act.';
+
+  @override
+  String get setCueSelfSelectedInstruction =>
+      'Describe a specific moment that happens regularly in your life.';
+
+  @override
+  String get setCuePlaceholder => 'e.g. After dinner each evening';
+
+  @override
+  String get setCueTooShort =>
+      'Please describe your cue in at least 10 characters.';
+
+  @override
+  String get confirmPlanTitle => 'Your plan';
+
+  @override
+  String get confirmPlanSubtitle =>
+      'Read your implementation intention and confirm.';
+
+  @override
+  String get durationLabel => 'Duration (minutes)';
+
+  @override
+  String get createHabit => 'Create habit';
+
+  @override
+  String get habitLimitReached =>
+      'You have reached the habit limit for your study condition.';
+
+  @override
+  String get srhiCheckInTitle => 'Weekly habit check-in';
+
+  @override
+  String get srhiCheckInSubtitle => 'Takes about 2 minutes.';
+
+  @override
+  String get srhiStartButton => 'Start check-in';
+
+  @override
+  String get srhiFormTitle => 'Habit check-in';
+
+  @override
+  String srhiStem(String behavior) {
+    return 'My $behavior is something…';
+  }
+
+  @override
+  String get srhiSubmit => 'Submit';
+
+  @override
+  String get srhiSubmitIncomplete =>
+      'Please rate all 12 items before submitting.';
+
+  @override
+  String weekLabel(int n) {
+    return 'Week $n';
+  }
+
+  @override
+  String get habitDetailTitle => 'Habit detail';
+
+  @override
+  String get abandonHabit => 'Abandon habit';
+
+  @override
+  String get abandonConfirm =>
+      'Are you sure you want to abandon this habit? This cannot be undone.';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get heatmapTitle => 'Activity log';
+
+  @override
+  String get trajectoryTitle => 'Habit strength';
+
+  @override
+  String get enactedLabel => 'Enacted';
+
+  @override
+  String get missedLabel => 'Missed';
+
+  @override
+  String get noLogsYet => 'No activity logged yet.';
+
+  @override
+  String get noTrajectoryYet =>
+      'SRHI data will appear after your first weekly check-in.';
 }
