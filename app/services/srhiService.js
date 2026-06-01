@@ -74,17 +74,15 @@ export async function submitSrhi({
     SRHI_ITEM_IDS.length;
   const now = new Date();
 
-  const result = await db
-    .collection(COLLECTION)
-    .findOneAndUpdate(
-      {
-        intentionId: oid,
-        weekNumber: parseInt(weekNumber, 10),
-        submittedAt: null,
-      },
-      { $set: { items, score, submittedAt: now } },
-      { returnDocument: 'after' }
-    );
+  const result = await db.collection(COLLECTION).findOneAndUpdate(
+    {
+      intentionId: oid,
+      weekNumber: parseInt(weekNumber, 10),
+      submittedAt: null,
+    },
+    { $set: { items, score, submittedAt: now } },
+    { returnDocument: 'after' }
+  );
   if (!result) return { notFound: true };
 
   await db
@@ -98,6 +96,7 @@ export async function getTrajectory({ db, intentionId, userId }) {
   const docs = await db
     .collection(COLLECTION)
     .find({ intentionId: oid, userId })
+    .sort({ weekNumber: 1 })
     .toArray();
   return docs.map((d) => ({
     weekNumber: d.weekNumber,
