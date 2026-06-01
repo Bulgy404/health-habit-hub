@@ -1,0 +1,137 @@
+import { ObjectId } from 'mongodb';
+import { COLLECTION } from '../models/notificationCampaign.js';
+import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
+
+const DEVICE_TOKENS = 'deviceTokens';
+
+export async function createCampaign({
+  db,
+  createdBy,
+  studyId,
+  title,
+  body,
+  targetType,
+  targetIds = [],
+  scheduledFor = null,
+}) {
+  const now = new Date();
+  const doc = {
+    studyId: studyId ? new ObjectId(studyId) : null,
+    createdBy,
+    title,
+    body,
+    targetType,
+    targetIds,
+    scheduledFor: scheduledFor ? new Date(scheduledFor) : null,
+    sentAt: null,
+    recipientCount: null,
+    status: 'draft',
+    createdAt: now,
+  };
+  const result = await db.collection(COLLECTION).insertOne(doc);
+  return { id: result.insertedId.toString(), ...doc };
+}
+
+export async function listCampaigns({
+  db,
+  studyId,
+  status,
+  page = 1,
+  limit = 20,
+}) {
+  const filter = {};
+  if (studyId) filter.studyId = new ObjectId(studyId);
+  if (status) filter.status = status;
+  const docs = await db
+    .collection(COLLECTION)
+    .find(filter)
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .toArray();
+  return docs.map(serialize);
+}
+
+export async function cancelCampaign({ db, id }) {
+  let oid;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return { notFound: true };
+  }
+  const result = await db
+    .collection(COLLECTION)
+    .findOneAndUpdate(
+      { _id: oid, sentAt: null },
+      { $set: { status: 'draft' } },
+      { returnDocument: 'after' }
+    );
+  return result ? { cancelled: true } : { notFound: true };
+}
+
+/**
+ * Resolve target user FCM tokens and dispatch via injected `send` callback.
+ * `send` is injected so tests can mock it; production passes the Firebase sender.
+ * @param {{ db, id: string, send: (tokens: string[], title: string, body: string) => Promise<number> }} deps
+ */
+export async function sendCampaign({ db, id, send }) {
+  let oid;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return { notFound: true };
+  }
+  const campaign = await db.collection(COLLECTION).findOne({ _id: oid });
+  if (!campaign) return { notFound: true };
+
+  let userIds = [];
+  if (campaign.targetType === 'individual') {
+    userIds = campaign.targetIds;
+  } else if (campaign.targetType === 'group') {
+    const enrollments = await db
+      .collection(ENROLLMENTS)
+      .find({
+        groupId: { $in: campaign.targetIds.map((gid) => new ObjectId(gid)) },
+      })
+      .toArray();
+    userIds = enrollments.map((e) => e.userId);
+  } else {
+    const filter = campaign.studyId ? { studyId: campaign.studyId } : {};
+    const enrollments = await db.collection(ENROLLMENTS).find(filter).toArray();
+    userIds = enrollments.map((e) => e.userId);
+  }
+
+  const tokenDocs = await db
+    .collection(DEVICE_TOKENS)
+    .find({ userId: { $in: userIds } })
+    .toArray();
+  const tokens = tokenDocs.map((t) => t.token).filter(Boolean);
+
+  const recipientCount =
+    tokens.length > 0 ? await send(tokens, campaign.title, campaign.body) : 0;
+  const now = new Date();
+  await db
+    .collection(COLLECTION)
+    .findOneAndUpdate(
+      { _id: oid },
+      { $set: { sentAt: now, recipientCount, status: 'sent' } },
+      { returnDocument: 'after' }
+    );
+  return { recipientCount, sentAt: now };
+}
+
+function serialize(doc) {
+  return {
+    id: doc._id.toString(),
+    studyId: doc.studyId?.toString() ?? null,
+    createdBy: doc.createdBy,
+    title: doc.title,
+    body: doc.body,
+    targetType: doc.targetType,
+    targetIds: doc.targetIds,
+    scheduledFor: doc.scheduledFor,
+    sentAt: doc.sentAt,
+    recipientCount: doc.recipientCount,
+    status: doc.status,
+    createdAt: doc.createdAt,
+  };
+}
