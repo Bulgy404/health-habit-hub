@@ -26,12 +26,13 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
   static const _allTabs = [
     _TabConfig(label: 'Share',   icon: Icons.volunteer_activism,    path: '/share'),
     _TabConfig(label: 'Explore', icon: Icons.hub,                   path: '/explore'),
+    _TabConfig(label: 'Habits',  icon: Icons.self_improvement,      path: '/habits'),
     _TabConfig(label: 'Recs',    icon: Icons.lightbulb,             path: '/recommend'),
     _TabConfig(label: 'Account', icon: Icons.manage_accounts,       path: '/settings'),
     _TabConfig(label: 'Admin',   icon: Icons.admin_panel_settings,  path: '/admin'),
   ];
 
-  static const int _adminBranchIndex = 4;
+  static const int _adminBranchIndex = 5;
 
   @override
   void initState() {
