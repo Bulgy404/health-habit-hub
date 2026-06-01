@@ -10,6 +10,15 @@ interface StudyGroup {
   id: string;
   label: string;
   index: number;
+  cueConfig?: CueConfig | null;
+}
+
+interface CueConfig {
+  cueCount: "single" | "multi";
+  cueSource: "low_quality" | "high_quality" | "self_selected";
+  cuePoolId: string | null;
+  behaviorOptions: string[];
+  maxHabits: number | null;
 }
 
 interface StudySummary {
@@ -43,12 +52,14 @@ interface StudyCode {
 }
 
 interface ScheduledNotification {
-  _id: string;
+  id: string;
   studyId: string;
-  groupId?: string;
+  targetIds: string[];
+  targetType: string;
   title: string;
   body: string;
-  scheduledAt: string;
+  scheduledFor: string;
+  status: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -86,6 +97,14 @@ const QUESTIONNAIRES_API =
 const NOTIFICATIONS_BASE =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
   "/admin/notifications";
+
+const BEHAVIOR_OPTIONS = [
+  { key: "walking", label: "Walking" },
+  { key: "light_jogging", label: "Light jogging" },
+  { key: "cycling", label: "Cycling" },
+  { key: "structured_calisthenics", label: "Structured calisthenics" },
+  { key: "yoga", label: "Yoga" },
+];
 
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
@@ -573,6 +592,7 @@ function ParticipantsTab({
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [exportingZip, setExportingZip] = useState(false);
 
   const fetchPage = useCallback(
     async (p: number) => {
@@ -640,6 +660,31 @@ function ParticipantsTab({
     }
   }
 
+  const EXPORT_BASE =
+    (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
+    `/admin/studies/${study.id}/export`;
+
+  async function handleExportZip() {
+    setExportingZip(true);
+    try {
+      const res = await fetch(EXPORT_BASE, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${study.name.replace(/[^a-z0-9]/gi, "_")}_research_export.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silently fail
+    } finally {
+      setExportingZip(false);
+    }
+  }
+
   const totalPages = Math.ceil(total / limit);
 
   return (
@@ -671,6 +716,13 @@ function ParticipantsTab({
           disabled={exporting || total === 0}
         >
           {exporting ? "Exporting…" : "Download CSV"}
+        </button>
+        <button
+          className={styles.csvBtn}
+          onClick={handleExportZip}
+          disabled={exportingZip || total === 0}
+        >
+          {exportingZip ? "Exporting…" : "Export ZIP (R-ready)"}
         </button>
       </div>
 
@@ -769,15 +821,15 @@ function NotificationsTab({
     setCancelError("");
     try {
       const data = await apiFetch(
-        `${NOTIFICATIONS_BASE}/scheduled?studyId=${study.id}`,
+        `${NOTIFICATIONS_BASE}?studyId=${study.id}&status=scheduled`,
         token
       );
       const items = Array.isArray(data)
         ? data
-        : (data as { notifications?: ScheduledNotification[] }).notifications ?? [];
-      setScheduled(items.filter((n: ScheduledNotification) => n.studyId === study.id));
+        : (data as { campaigns?: ScheduledNotification[] }).campaigns ?? data;
+      setScheduled(Array.isArray(items) ? items : []);
     } catch {
-      // non-critical — scheduled list may be empty
+      // non-critical
     } finally {
       setLoadingScheduled(false);
     }
@@ -806,31 +858,32 @@ function NotificationsTab({
         studyId: study.id,
         title: title.trim(),
         body: body.trim(),
-        data: {},
+        targetType: targetGroupId === "all" ? "all_enrolled" : "group",
+        targetIds: targetGroupId === "all" ? [] : [targetGroupId],
       };
-      if (targetGroupId !== "all") payload.groupId = targetGroupId;
-      if (sendMode === "schedule") payload.scheduledAt = new Date(scheduledAt).toISOString();
+      if (sendMode === "schedule") {
+        payload.scheduledFor = new Date(scheduledAt).toISOString();
+      }
 
-      const endpoint = sendMode === "now"
-        ? `${NOTIFICATIONS_BASE}/send`
-        : `${NOTIFICATIONS_BASE}/schedule`;
-      const result = await apiFetch(endpoint, token, {
+      const result = await apiFetch(NOTIFICATIONS_BASE, token, {
         method: "POST",
         body: JSON.stringify(payload),
       });
 
       if (sendMode === "now") {
-        const r = result as { sent?: number; failed?: number };
-        showToast(`Sent to ${r.sent ?? 0} participant${(r.sent ?? 0) !== 1 ? "s" : ""}${r.failed ? ` (${r.failed} failed)` : ""}`);
+        const r = result as { recipientCount?: number };
+        showToast(`Sent to ${r.recipientCount ?? 0} participant${(r.recipientCount ?? 0) !== 1 ? "s" : ""}`);
       } else {
-        showToast(`Scheduled for ${new Date(scheduledAt).toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}`);
+        showToast(
+          `Scheduled for ${new Date(scheduledAt).toLocaleString("en-GB", {
+            day: "2-digit", month: "short", year: "numeric",
+            hour: "2-digit", minute: "2-digit",
+          })}`
+        );
         await fetchScheduled();
       }
-      setTitle("");
-      setBody("");
-      setTargetGroupId("all");
-      setSendMode("now");
-      setScheduledAt("");
+      setTitle(""); setBody(""); setTargetGroupId("all");
+      setSendMode("now"); setScheduledAt("");
     } catch (err) {
       setSendError(err instanceof Error ? err.message : "Send failed");
     } finally {
@@ -842,10 +895,8 @@ function NotificationsTab({
     setCancellingId(id);
     setCancelError("");
     try {
-      await apiFetch(`${NOTIFICATIONS_BASE}/scheduled/${id}`, token, {
-        method: "DELETE",
-      });
-      setScheduled((prev) => prev.filter((n) => n._id !== id));
+      await apiFetch(`${NOTIFICATIONS_BASE}/${id}`, token, { method: "DELETE" });
+      setScheduled((prev) => prev.filter((n) => n.id !== id));
     } catch (err) {
       setCancelError(err instanceof Error ? err.message : "Cancel failed");
     } finally {
@@ -953,24 +1004,24 @@ function NotificationsTab({
         ) : (
           <div className={styles.scheduledList}>
             {scheduled.map((n) => (
-              <div key={n._id} className={styles.scheduledItem}>
+              <div key={n.id} className={styles.scheduledItem}>
                 <div className={styles.scheduledItemMain}>
                   <span className={styles.scheduledTitle}>{n.title}</span>
                   <span className={styles.scheduledBody}>{n.body}</span>
                   <span className={styles.scheduledMeta}>
-                    {n.groupId
-                      ? study.groups.find((g) => g.id === n.groupId)?.label ?? n.groupId
+                    {n.targetType === "group" && n.targetIds.length > 0
+                      ? study.groups.find((g) => n.targetIds.includes(g.id))?.label ?? n.targetIds[0]
                       : "All participants"}
                     {" · "}
-                    {fmtDateTime(n.scheduledAt)}
+                    {fmtDateTime(n.scheduledFor)}
                   </span>
                 </div>
                 <button
                   className={styles.revokeBtn}
-                  onClick={() => handleCancel(n._id)}
-                  disabled={cancellingId === n._id}
+                  onClick={() => handleCancel(n.id)}
+                  disabled={cancellingId === n.id}
                 >
-                  {cancellingId === n._id ? "…" : "Cancel"}
+                  {cancellingId === n.id ? "…" : "Cancel"}
                 </button>
               </div>
             ))}
@@ -981,9 +1032,183 @@ function NotificationsTab({
   );
 }
 
+// ── Cue config tab ────────────────────────────────────────────────────────────
+
+function CueConfigTab({
+  study,
+  token,
+}: {
+  study: StudySummary;
+  token: string;
+}) {
+  const [groupStates, setGroupStates] = useState<
+    Record<string, CueConfig & { saving: boolean; saved: boolean; error: string }>
+  >(() =>
+    Object.fromEntries(
+      study.groups.map((g) => [
+        g.id,
+        {
+          cueCount: g.cueConfig?.cueCount ?? "multi",
+          cueSource: g.cueConfig?.cueSource ?? "high_quality",
+          cuePoolId: g.cueConfig?.cuePoolId ?? null,
+          behaviorOptions:
+            g.cueConfig?.behaviorOptions ?? BEHAVIOR_OPTIONS.map((b) => b.key),
+          maxHabits: g.cueConfig?.maxHabits ?? null,
+          saving: false,
+          saved: false,
+          error: "",
+        },
+      ])
+    )
+  );
+
+  function update(
+    groupId: string,
+    patch: Partial<(typeof groupStates)[string]>
+  ) {
+    setGroupStates((prev) => ({
+      ...prev,
+      [groupId]: { ...prev[groupId], ...patch, saved: false },
+    }));
+  }
+
+  function toggleBehavior(groupId: string, key: string) {
+    const current = groupStates[groupId].behaviorOptions;
+    const next = current.includes(key)
+      ? current.filter((k) => k !== key)
+      : [...current, key];
+    update(groupId, { behaviorOptions: next });
+  }
+
+  async function handleSave(groupId: string) {
+    const s = groupStates[groupId];
+    update(groupId, { saving: true, error: "" });
+    try {
+      await apiFetch(
+        `${API_BASE}/${study.id}/groups/${groupId}/cue-config`,
+        token,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            cueCount: s.cueCount,
+            cueSource: s.cueSource,
+            cuePoolId: s.cuePoolId,
+            behaviorOptions: s.behaviorOptions,
+            maxHabits: s.maxHabits,
+          }),
+        }
+      );
+      update(groupId, { saving: false, saved: true });
+    } catch (err) {
+      update(groupId, {
+        saving: false,
+        error: err instanceof Error ? err.message : "Save failed",
+      });
+    }
+  }
+
+  if (study.groups.length === 0) {
+    return (
+      <div className={styles.emptyState}>
+        No groups defined. Add groups in the Details tab first.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {study.groups.map((g) => {
+        const s = groupStates[g.id];
+        if (!s) return null;
+        return (
+          <div key={g.id} className={styles.cueConfigGroup}>
+            <p className={styles.cueConfigGroupLabel}>
+              {g.label || `Group ${g.index}`}
+            </p>
+            {s.error && <div className={styles.errorMsg}>{s.error}</div>}
+            <div className={styles.formGrid}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Cue count</label>
+                <select
+                  className={styles.select}
+                  value={s.cueCount}
+                  onChange={(e) =>
+                    update(g.id, {
+                      cueCount: e.target.value as "single" | "multi",
+                    })
+                  }
+                >
+                  <option value="single">Single cue</option>
+                  <option value="multi">Multi-cue</option>
+                </select>
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Cue source</label>
+                <select
+                  className={styles.select}
+                  value={s.cueSource}
+                  onChange={(e) =>
+                    update(g.id, {
+                      cueSource: e.target.value as CueConfig["cueSource"],
+                    })
+                  }
+                >
+                  <option value="low_quality">Low quality (pre-rated)</option>
+                  <option value="high_quality">High quality (pre-rated)</option>
+                  <option value="self_selected">Self-selected</option>
+                </select>
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Max habits</label>
+                <select
+                  className={styles.select}
+                  value={s.maxHabits ?? ""}
+                  onChange={(e) =>
+                    update(g.id, {
+                      maxHabits: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                >
+                  <option value="">Unlimited (public)</option>
+                  <option value="1">1 (study participant)</option>
+                </select>
+              </div>
+            </div>
+            <div className={styles.formGroup} style={{ marginTop: "0.75rem" }}>
+              <label className={styles.label}>Allowed behaviors</label>
+              <div className={styles.behaviorCheckboxes}>
+                {BEHAVIOR_OPTIONS.map((b) => (
+                  <label key={b.key} className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={s.behaviorOptions.includes(b.key)}
+                      onChange={() => toggleBehavior(g.id, b.key)}
+                    />
+                    {b.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className={styles.cueConfigFooter}>
+              {s.saved && <span className={styles.savedMsg}>Saved!</span>}
+              <button
+                className={styles.saveBtn}
+                onClick={() => handleSave(g.id)}
+                disabled={s.saving}
+              >
+                {s.saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Study form modal ──────────────────────────────────────────────────────────
 
-type ModalTab = "details" | "questionnaires" | "codes" | "participants" | "notifications";
+type ModalTab = "details" | "questionnaires" | "codes" | "participants" | "notifications" | "cue-config";
 
 function StudyModal({
   initial,
@@ -1148,6 +1373,12 @@ function StudyModal({
             >
               Notifications
             </button>
+            <button
+              className={`${styles.tab} ${activeTab === "cue-config" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("cue-config")}
+            >
+              Cue Config
+            </button>
           </div>
         )}
 
@@ -1231,6 +1462,8 @@ function StudyModal({
             initial && <CodesTab study={initial} token={token} />
           ) : activeTab === "participants" ? (
             initial && <ParticipantsTab study={initial} token={token} />
+          ) : activeTab === "cue-config" ? (
+            initial && <CueConfigTab study={initial} token={token} />
           ) : (
             initial && <NotificationsTab study={initial} token={token} />
           )}
