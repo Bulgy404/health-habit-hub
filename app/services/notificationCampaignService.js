@@ -25,7 +25,7 @@ export async function createCampaign({
     scheduledFor: scheduledFor ? new Date(scheduledFor) : null,
     sentAt: null,
     recipientCount: null,
-    status: 'draft',
+    status: scheduledFor ? 'scheduled' : 'draft',
     createdAt: now,
   };
   const result = await db.collection(COLLECTION).insertOne(doc);

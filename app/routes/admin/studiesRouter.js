@@ -8,6 +8,7 @@ import {
   softDeleteStudy,
   setDefaultStudy,
   listStudyParticipants,
+  updateGroupCueConfig,
 } from '../../services/studyService.js';
 import {
   createCodes,
@@ -104,6 +105,38 @@ export function createStudiesRouter({
       if (result.notFound)
         return res.status(404).json({ error: 'Study not found' });
       res.json({ ok: true });
+    } catch (err) {
+      console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // PATCH /api/v1/admin/studies/:id/groups/:groupId/cue-config
+  router.patch('/studies/:id/groups/:groupId/cue-config', async (req, res) => {
+    try {
+      const { cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits } =
+        req.body;
+      if (!cueCount || !cueSource) {
+        return res
+          .status(400)
+          .json({ error: 'cueCount and cueSource are required' });
+      }
+      const database = await getDb();
+      const result = await updateGroupCueConfig({
+        db: database,
+        studyId: req.params.id,
+        groupId: req.params.groupId,
+        cueConfig: {
+          cueCount,
+          cueSource,
+          cuePoolId: cuePoolId ?? null,
+          behaviorOptions: behaviorOptions ?? [],
+          maxHabits: maxHabits ?? null,
+        },
+      });
+      if (result.notFound)
+        return res.status(404).json({ error: 'Study or group not found' });
+      res.json({ updated: true });
     } catch (err) {
       console.error('[route] Error:', err);
       res.status(500).json({ error: 'Internal server error' });

@@ -261,6 +261,44 @@ export async function listStudyParticipants({ db, id, page = 1, limit = 20 }) {
 }
 
 /**
+ * Update the cueConfig for a specific group within a study.
+ * Fetches the study first, updates the matching group in the array, then persists.
+ * @param {{ db, studyId: string, groupId: string, cueConfig: object }} deps
+ */
+export async function updateGroupCueConfig({
+  db,
+  studyId,
+  groupId,
+  cueConfig,
+}) {
+  let studyOid, groupOid;
+  try {
+    studyOid = new ObjectId(studyId);
+    groupOid = new ObjectId(groupId);
+  } catch {
+    return { notFound: true };
+  }
+
+  const study = await db.collection(STUDIES).findOne({ _id: studyOid });
+  if (!study) return { notFound: true };
+
+  const groups = study.groups || [];
+  const groupIndex = groups.findIndex(
+    (g) => g.id?.toString() === groupOid.toString()
+  );
+  if (groupIndex === -1) return { notFound: true };
+
+  groups[groupIndex] = { ...groups[groupIndex], cueConfig };
+
+  const result = await db
+    .collection(STUDIES)
+    .updateOne({ _id: studyOid }, { $set: { groups, updatedAt: new Date() } });
+
+  if (result.matchedCount === 0) return { notFound: true };
+  return { updated: true };
+}
+
+/**
  * Mark a study as default, clearing isDefault on the previous default atomically.
  * @param {{ db: object, id: string }} deps
  */

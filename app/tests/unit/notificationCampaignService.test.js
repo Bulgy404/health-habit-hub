@@ -65,6 +65,21 @@ test('createCampaign: stores campaign with draft status', async () => {
   assert.ok(result.id);
 });
 
+test('createCampaign: sets status scheduled when scheduledFor is provided', async () => {
+  const db = makeDb();
+  const result = await createCampaign({
+    db,
+    createdBy: 'r1',
+    studyId: null,
+    title: 'Reminder',
+    body: 'Check in',
+    targetType: 'all_enrolled',
+    targetIds: [],
+    scheduledFor: new Date(Date.now() + 86400000).toISOString(),
+  });
+  assert.equal(result.status, 'scheduled');
+});
+
 test('sendCampaign: dispatches to provided mock sender', async () => {
   const id = new ObjectId();
   const db = makeDb(
