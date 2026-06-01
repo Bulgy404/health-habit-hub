@@ -1,0 +1,172 @@
+// mobile/lib/features/my_habits/new_habit_screen_2_cue.dart
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../l10n/app_localizations.dart';
+import 'my_habits_models.dart';
+
+class SetCueScreen extends StatefulWidget {
+  const SetCueScreen({
+    required this.behaviorKey,
+    required this.behaviorLabel,
+    required this.config,
+    super.key,
+  });
+
+  final String behaviorKey;
+  final String behaviorLabel;
+  final HabitConfig config;
+
+  @override
+  State<SetCueScreen> createState() => _SetCueScreenState();
+}
+
+class _SetCueScreenState extends State<SetCueScreen> {
+  final _cue1Controller = TextEditingController();
+  final _cue2Controller = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _cue1Controller.dispose();
+    _cue2Controller.dispose();
+    super.dispose();
+  }
+
+  void _onNext() {
+    final l10n = AppLocalizations.of(context)!;
+    final isPreRated = widget.config.cueSource != 'self_selected';
+
+    if (!isPreRated) {
+      if (_cue1Controller.text.trim().length < 10) {
+        setState(() => _error = l10n.setCueTooShort);
+        return;
+      }
+      if (widget.config.cueCount == 'multi' &&
+          _cue2Controller.text.trim().length < 10) {
+        setState(() => _error = l10n.setCueTooShort);
+        return;
+      }
+    }
+
+    setState(() => _error = null);
+
+    final List<IntentionCue> cues;
+    if (isPreRated) {
+      cues = [
+        IntentionCue(
+          text: 'Your assigned cue for ${widget.behaviorLabel}',
+          source: 'pre_rated',
+        ),
+        if (widget.config.cueCount == 'multi')
+          const IntentionCue(
+            text: 'at your usual location',
+            source: 'pre_rated',
+          ),
+      ];
+    } else {
+      cues = [
+        IntentionCue(
+          text: _cue1Controller.text.trim(),
+          source: 'self_selected',
+        ),
+        if (widget.config.cueCount == 'multi' &&
+            _cue2Controller.text.trim().isNotEmpty)
+          IntentionCue(
+            text: _cue2Controller.text.trim(),
+            source: 'self_selected',
+          ),
+      ];
+    }
+
+    context.push(
+      '/habits/new/confirm',
+      extra: {
+        'behaviorKey': widget.behaviorKey,
+        'behaviorLabel': widget.behaviorLabel,
+        'config': widget.config,
+        'cues': cues,
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isPreRated = widget.config.cueSource != 'self_selected';
+    final isMulti = widget.config.cueCount == 'multi';
+
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.setCueTitle)),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isPreRated
+                  ? l10n.setCuePreRatedInstruction
+                  : l10n.setCueSelfSelectedInstruction,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 20),
+            if (isPreRated) ...[
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.location_on),
+                  title: Text('Your assigned cue for ${widget.behaviorLabel}'),
+                  subtitle: Text(
+                    isMulti
+                        ? 'Cue 1 of 2 (assigned by study)'
+                        : 'Assigned by study',
+                  ),
+                ),
+              ),
+              if (isMulti)
+                const Card(
+                  child: ListTile(
+                    leading: Icon(Icons.add_location),
+                    title: Text('at your usual location'),
+                    subtitle: Text('Cue 2 of 2 (assigned by study)'),
+                  ),
+                ),
+            ] else ...[
+              TextField(
+                controller: _cue1Controller,
+                decoration: InputDecoration(
+                  labelText: isMulti ? 'Cue 1' : 'Your cue',
+                  hintText: l10n.setCuePlaceholder,
+                  border: const OutlineInputBorder(),
+                ),
+                maxLength: 200,
+                onChanged: (_) => setState(() => _error = null),
+              ),
+              if (isMulti) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _cue2Controller,
+                  decoration: const InputDecoration(
+                    labelText: 'Cue 2 (optional context)',
+                    hintText: 'e.g. at home on weekdays',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLength: 200,
+                  onChanged: (_) => setState(() => _error = null),
+                ),
+              ],
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(_error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ],
+            const Spacer(),
+            FilledButton(
+              onPressed: _onNext,
+              child: const Text('Next'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
