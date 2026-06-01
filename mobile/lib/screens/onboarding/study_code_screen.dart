@@ -60,7 +60,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
     const storage = FlutterSecureStorage();
     final value = await storage.read(key: kStudyEnrolledKey);
     if (value == 'true' && mounted) {
-      context.go('/habits/new/behavior');
+      context.go('/share');
     }
   }
 
@@ -149,7 +149,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
     await storage.write(key: kStudyEnrolledKey, value: 'true');
 
     if (!mounted) return;
-    context.go('/habits/new/behavior');
+    context.go('/share');
   }
 
   @override
