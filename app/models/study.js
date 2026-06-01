@@ -46,6 +46,22 @@ export const VALIDATOR = {
             id: { bsonType: 'objectId' },
             label: { bsonType: 'string' },
             index: { bsonType: 'int', minimum: 1, maximum: 4 },
+            cueConfig: {
+              bsonType: ['object', 'null'],
+              properties: {
+                cueCount: { bsonType: 'string', enum: ['single', 'multi'] },
+                cueSource: {
+                  bsonType: 'string',
+                  enum: ['low_quality', 'high_quality', 'self_selected'],
+                },
+                cuePoolId: { bsonType: ['objectId', 'null'] },
+                behaviorOptions: {
+                  bsonType: 'array',
+                  items: { bsonType: 'string' },
+                },
+                maxHabits: { bsonType: ['int', 'null'] },
+              },
+            },
           },
         },
       },

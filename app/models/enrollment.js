@@ -26,6 +26,22 @@ export const VALIDATOR = {
       groupId: { bsonType: 'objectId' },
       studyCodeUsed: { bsonType: ['string', 'null'] },
       enrolledAt: { bsonType: 'date' },
+      lastActiveAt: { bsonType: ['date', 'null'] },
+      droppedOutAt: { bsonType: ['date', 'null'] },
+      reactivations: { bsonType: 'array', items: { bsonType: 'date' } },
+      cueConfig: {
+        bsonType: ['object', 'null'],
+        properties: {
+          cueCount: { bsonType: 'string', enum: ['single', 'multi'] },
+          cueSource: {
+            bsonType: 'string',
+            enum: ['low_quality', 'high_quality', 'self_selected'],
+          },
+          cuePoolId: { bsonType: ['objectId', 'null'] },
+          behaviorOptions: { bsonType: 'array', items: { bsonType: 'string' } },
+          maxHabits: { bsonType: ['int', 'null'] },
+        },
+      },
     },
   },
 };
@@ -43,4 +59,9 @@ export async function ensureIndexes(db) {
   );
   // Index for fetching all enrollments belonging to a study.
   await col.createIndex({ studyId: 1 }, { name: 'enrollments_studyId' });
+  // Index for filtering dropouts.
+  await col.createIndex(
+    { droppedOutAt: 1 },
+    { name: 'enrollments_droppedOutAt', sparse: true }
+  );
 }
