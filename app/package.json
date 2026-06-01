@@ -20,6 +20,7 @@
     "seed:study": "node ../scripts/seed-study.js"
   },
   "dependencies": {
+    "adm-zip": "^0.5.17",
     "bcryptjs": "^3.0.3",
     "body-parser": "^1.20.2",
     "cookie-parser": "^1.4.6",
