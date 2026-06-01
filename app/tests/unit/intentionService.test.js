@@ -70,7 +70,7 @@ test('createIntention: creates with status active', async () => {
   });
   assert.equal(result.status, 'active');
   assert.equal(result.userId, 'u1');
-  assert.ok(result._id);
+  assert.ok(result.id);
 });
 
 test('createIntention: enforces maxHabits=1', async () => {
