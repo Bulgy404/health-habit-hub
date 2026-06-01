@@ -17,6 +17,13 @@ import 'screens/admin/admin_questionnaires_screen.dart';
 import 'screens/admin/admin_settings_screen.dart';
 import 'screens/admin/admin_shell_screen.dart';
 import 'screens/admin/admin_surveys_screen.dart';
+import 'features/my_habits/my_habits_screen.dart';
+import 'features/my_habits/new_habit_screen_1_behavior.dart';
+import 'features/my_habits/new_habit_screen_2_cue.dart';
+import 'features/my_habits/new_habit_screen_3_confirm.dart';
+import 'features/my_habits/habit_detail_screen.dart';
+import 'features/my_habits/srhi_form_screen.dart';
+import 'features/my_habits/my_habits_models.dart';
 import 'features/questionnaire/questionnaire_screen.dart';
 import 'features/recommendation/goal_input_screen.dart';
 import 'features/recommendation/loading_screen.dart';
@@ -126,6 +133,70 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/explore',
                 builder: (context, state) => const ExploreScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/habits',
+                builder: (context, state) => const MyHabitsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'new/behavior',
+                    builder: (context, state) => const PickBehaviorScreen(),
+                  ),
+                  GoRoute(
+                    path: 'new/cue',
+                    builder: (context, state) {
+                      final extra = state.extra as Map<String, dynamic>;
+                      return SetCueScreen(
+                        behaviorKey: extra['behaviorKey'] as String,
+                        behaviorLabel: extra['behaviorLabel'] as String,
+                        config: extra['config'] as HabitConfig,
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'new/confirm',
+                    builder: (context, state) {
+                      final extra = state.extra as Map<String, dynamic>;
+                      return ConfirmPlanScreen(
+                        behaviorKey: extra['behaviorKey'] as String,
+                        behaviorLabel: extra['behaviorLabel'] as String,
+                        config: extra['config'] as HabitConfig,
+                        cues: (extra['cues'] as List<dynamic>)
+                            .cast<IntentionCue>(),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: ':intentionId',
+                    builder: (context, state) => HabitDetailScreen(
+                      intentionId: state.pathParameters['intentionId']!,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'srhi/:weekNumber',
+                        builder: (context, state) {
+                          final extra = state.extra as Map<String, dynamic>?;
+                          return SrhiFormScreen(
+                            intentionId:
+                                state.pathParameters['intentionId']!,
+                            weekNumber: int.parse(
+                                state.pathParameters['weekNumber']!),
+                            behaviorLabel:
+                                extra?['behaviorLabel'] as String? ?? '',
+                            srhiItems: (extra?['srhiItems']
+                                        as List<dynamic>?)
+                                    ?.cast<SrhiItem>() ??
+                                const [],
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
