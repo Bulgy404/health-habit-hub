@@ -23,6 +23,12 @@ import {
   createUserProfileServiceRouter,
 } from './userProfileRouter.js';
 import { createProfileFieldDefinitionsPublicRouter } from './profileFieldDefinitionsRouter.js';
+import { createIntentionsRouter } from './intentionsRouter.js';
+import { createSrhiRouter } from './srhiRouter.js';
+import { createHabitConfigRouter } from './habitConfigRouter.js';
+import { createCuePoolRouter } from './cuePoolRouter.js';
+import { createStudyExportRouter } from './studyExportRouter.js';
+import { createNotificationCampaignRouter } from './notificationCampaignRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 import { swaggerSpec } from '../swagger.js';
 
@@ -185,6 +191,48 @@ export function createV1Router({
     '/habits',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createHabitsRouter({ db, neo4jRun, apiServiceUrl, libreTranslateUrl })
+  );
+
+  // Implementation intentions (user + admin + researcher)
+  router.use(
+    '/habits/intentions',
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
+    createIntentionsRouter({ db })
+  );
+
+  // SRHI measurement (user + admin + researcher)
+  router.use(
+    '/srhi',
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
+    createSrhiRouter({ db })
+  );
+
+  // Resolved habit config (user + admin + researcher)
+  router.use(
+    '/me/habit-config',
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
+    createHabitConfigRouter({ db })
+  );
+
+  // Cue pool management (admin + researcher only)
+  router.use(
+    '/admin/cue-pools',
+    requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
+    createCuePoolRouter({ db })
+  );
+
+  // Study data export (admin + researcher only)
+  router.use(
+    '/admin/studies/:id/export',
+    requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
+    createStudyExportRouter({ db })
+  );
+
+  // Researcher notification campaigns (admin + researcher only)
+  router.use(
+    '/admin/notifications',
+    requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
+    createNotificationCampaignRouter({ db })
   );
 
   // Recommend routes: require user, admin, or researcher role

@@ -12,6 +12,20 @@ export function createNotificationCampaignRouter({ db, fcmSend } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
+  const send =
+    fcmSend ??
+    (async (tokens, title, body) => {
+      const { getFirebaseMessaging } = await import(
+        '../services/notificationService.js'
+      );
+      const messaging = await getFirebaseMessaging();
+      const result = await messaging.sendEachForMulticast({
+        tokens,
+        notification: { title, body },
+      });
+      return result.successCount;
+    });
+
   router.get('/', async (req, res) => {
     try {
       const { studyId, status, page, limit } = req.query;
@@ -54,7 +68,7 @@ export function createNotificationCampaignRouter({ db, fcmSend } = {}) {
         scheduledFor: scheduledFor ?? null,
       });
       if (!scheduledFor) {
-        await sendCampaign({ db: database, id: campaign.id, send: fcmSend });
+        await sendCampaign({ db: database, id: campaign.id, send: send });
       }
       res.status(201).json(campaign);
     } catch (err) {
