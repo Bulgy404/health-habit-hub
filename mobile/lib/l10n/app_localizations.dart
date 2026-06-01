@@ -1021,6 +1021,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No questionnaires assigned to your study.'**
   String get noQuestionnairesAssigned;
+
+  /// Bottom nav tab label for My Habits
+  ///
+  /// In en, this message translates to:
+  /// **'My Habits'**
+  String get myHabitsTab;
+
+  /// Button to start new habit flow
+  ///
+  /// In en, this message translates to:
+  /// **'New Habit'**
+  String get newHabit;
+
+  /// Empty state for My Habits tab
+  ///
+  /// In en, this message translates to:
+  /// **'No habits yet.\nTap \"New Habit\" to start forming one.'**
+  String get noHabitsYet;
+
+  /// Button on habit card to log today's enactment
+  ///
+  /// In en, this message translates to:
+  /// **'Log today'**
+  String get logToday;
+
+  /// Shown on habit card when today is already logged
+  ///
+  /// In en, this message translates to:
+  /// **'Logged ✓'**
+  String get loggedToday;
+
+  /// Screen 1 of new habit flow
+  ///
+  /// In en, this message translates to:
+  /// **'What habit do you want to form?'**
+  String get pickBehaviorTitle;
+
+  /// Screen 2 of new habit flow
+  ///
+  /// In en, this message translates to:
+  /// **'Set your cue'**
+  String get setCueTitle;
+
+  /// Instruction shown for pre-rated cues
+  ///
+  /// In en, this message translates to:
+  /// **'Your study condition assigns the following cue(s). Read them carefully — this is when you will act.'**
+  String get setCuePreRatedInstruction;
+
+  /// Instruction shown for self-selected cues
+  ///
+  /// In en, this message translates to:
+  /// **'Describe a specific moment that happens regularly in your life.'**
+  String get setCueSelfSelectedInstruction;
+
+  /// Hint text for self-selected cue input
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. After dinner each evening'**
+  String get setCuePlaceholder;
+
+  /// Validation error for too-short cue text
+  ///
+  /// In en, this message translates to:
+  /// **'Please describe your cue in at least 10 characters.'**
+  String get setCueTooShort;
+
+  /// Screen 3 of new habit flow
+  ///
+  /// In en, this message translates to:
+  /// **'Your plan'**
+  String get confirmPlanTitle;
+
+  /// Subtitle on confirm plan screen
+  ///
+  /// In en, this message translates to:
+  /// **'Read your implementation intention and confirm.'**
+  String get confirmPlanSubtitle;
+
+  /// Label for duration input in new habit flow
+  ///
+  /// In en, this message translates to:
+  /// **'Duration (minutes)'**
+  String get durationLabel;
+
+  /// Submit button on confirm plan screen
+  ///
+  /// In en, this message translates to:
+  /// **'Create habit'**
+  String get createHabit;
+
+  /// Error when maxHabits is exceeded
+  ///
+  /// In en, this message translates to:
+  /// **'You have reached the habit limit for your study condition.'**
+  String get habitLimitReached;
+
+  /// Title on SRHI prompt card
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly habit check-in'**
+  String get srhiCheckInTitle;
+
+  /// Subtitle on SRHI prompt card
+  ///
+  /// In en, this message translates to:
+  /// **'Takes about 2 minutes.'**
+  String get srhiCheckInSubtitle;
+
+  /// Button on SRHI prompt card
+  ///
+  /// In en, this message translates to:
+  /// **'Start check-in'**
+  String get srhiStartButton;
+
+  /// AppBar title on SRHI form screen
+  ///
+  /// In en, this message translates to:
+  /// **'Habit check-in'**
+  String get srhiFormTitle;
+
+  /// Stem sentence for SRHI items
+  ///
+  /// In en, this message translates to:
+  /// **'My {behavior} is something…'**
+  String srhiStem(String behavior);
+
+  /// Submit button on SRHI form screen
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get srhiSubmit;
+
+  /// Error shown when SRHI form is incomplete
+  ///
+  /// In en, this message translates to:
+  /// **'Please rate all 12 items before submitting.'**
+  String get srhiSubmitIncomplete;
+
+  /// Week label in SRHI trajectory
+  ///
+  /// In en, this message translates to:
+  /// **'Week {n}'**
+  String weekLabel(int n);
+
+  /// AppBar title on habit detail screen
+  ///
+  /// In en, this message translates to:
+  /// **'Habit detail'**
+  String get habitDetailTitle;
+
+  /// Menu action to abandon a habit
+  ///
+  /// In en, this message translates to:
+  /// **'Abandon habit'**
+  String get abandonHabit;
+
+  /// Confirmation dialog body for abandon
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to abandon this habit? This cannot be undone.'**
+  String get abandonConfirm;
+
+  /// Confirm button in dialogs
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirm;
+
+  /// Section title above the heatmap
+  ///
+  /// In en, this message translates to:
+  /// **'Activity log'**
+  String get heatmapTitle;
+
+  /// Section title above SRHI trajectory chart
+  ///
+  /// In en, this message translates to:
+  /// **'Habit strength'**
+  String get trajectoryTitle;
+
+  /// Legend label for heatmap enacted cells
+  ///
+  /// In en, this message translates to:
+  /// **'Enacted'**
+  String get enactedLabel;
+
+  /// Legend label for heatmap missed cells
+  ///
+  /// In en, this message translates to:
+  /// **'Missed'**
+  String get missedLabel;
+
+  /// Empty state for heatmap
+  ///
+  /// In en, this message translates to:
+  /// **'No activity logged yet.'**
+  String get noLogsYet;
+
+  /// Empty state for trajectory chart
+  ///
+  /// In en, this message translates to:
+  /// **'SRHI data will appear after your first weekly check-in.'**
+  String get noTrajectoryYet;
 }
 
 class _AppLocalizationsDelegate
