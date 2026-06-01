@@ -8,6 +8,7 @@ import {
   updateStudy,
   softDeleteStudy,
   setDefaultStudy,
+  updateGroupCueConfig,
 } from '../../services/studyService.js';
 
 // ── Minimal in-memory DB ──────────────────────────────────────────────────────
@@ -339,6 +340,60 @@ test('softDeleteStudy returns isDefault when study is the default', async () => 
 });
 
 // ── setDefaultStudy ───────────────────────────────────────────────────────────
+
+// ── updateGroupCueConfig ──────────────────────────────────────────────────────
+
+test('updateGroupCueConfig: sets cueConfig on a specific group', async () => {
+  const { ObjectId } = await import('mongodb');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    studies: [
+      {
+        _id: studyId,
+        name: 'CuB Study',
+        isDefault: false,
+        isActive: true,
+        groups: [{ id: groupId, label: 'C3', index: 1, cueConfig: null }],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+  });
+  const cueConfig = {
+    cueCount: 'single',
+    cueSource: 'high_quality',
+    cuePoolId: null,
+    behaviorOptions: ['walking', 'yoga'],
+    maxHabits: 1,
+  };
+  const result = await updateGroupCueConfig({
+    db,
+    studyId: studyId.toString(),
+    groupId: groupId.toString(),
+    cueConfig,
+  });
+  assert.equal(result.updated, true);
+});
+
+test('updateGroupCueConfig: returns notFound for missing study', async () => {
+  const { ObjectId } = await import('mongodb');
+  const db = makeDb({ studies: [] });
+  const result = await updateGroupCueConfig({
+    db,
+    studyId: new ObjectId().toString(),
+    groupId: new ObjectId().toString(),
+    cueConfig: {
+      cueCount: 'single',
+      cueSource: 'high_quality',
+      cuePoolId: null,
+      behaviorOptions: [],
+      maxHabits: null,
+    },
+  });
+  assert.equal(result.notFound, true);
+});
 
 test('setDefaultStudy marks a study as default', async () => {
   const { ObjectId } = await import('../../models/survey.js');
