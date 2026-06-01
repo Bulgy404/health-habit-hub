@@ -42,7 +42,7 @@ class MyHabitsScreen extends ConsumerWidget {
               );
             },
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
         ],
       ),
@@ -65,7 +65,7 @@ class MyHabitsScreen extends ConsumerWidget {
               },
               loading: () =>
                   const SliverToBoxAdapter(child: SizedBox.shrink()),
-              error: (_, __) =>
+              error: (_, _) =>
                   const SliverToBoxAdapter(child: SizedBox.shrink()),
             ),
             intentionsAsync.when(
@@ -159,7 +159,7 @@ class _HabitCard extends ConsumerWidget {
     final logsMap = logsAsync.when(
       data: (logs) => {for (final l in logs) l.date: l.enacted},
       loading: () => <String, bool>{},
-      error: (_, __) => <String, bool>{},
+      error: (_, _) => <String, bool>{},
     );
 
     final today = DateTime.now();
@@ -213,7 +213,7 @@ class _HabitCard extends ConsumerWidget {
                   );
                 },
                 loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
               ),
               const SizedBox(height: 12),
               Align(
