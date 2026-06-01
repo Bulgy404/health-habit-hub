@@ -67,6 +67,7 @@ export async function createStudy({
     id: new ObjectId(),
     label: g.label,
     index: i + 1,
+    cueConfig: g.cueConfig ?? null,
   }));
   const questionnaireIds = questionnaires.map((id) => new ObjectId(id));
 
@@ -143,6 +144,7 @@ export async function updateStudy({ db, id, updates }) {
         id: new ObjectId(),
         label: g.label,
         index: existingGroups.length + i + 1,
+        cueConfig: g.cueConfig ?? null,
       }));
     $set.groups = [...existingGroups, ...newGroups];
   }
