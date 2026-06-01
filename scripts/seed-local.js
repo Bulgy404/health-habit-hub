@@ -597,6 +597,149 @@ async function seedKeycloak() {
   console.log('[keycloak] Done.');
 }
 
+// ── DFG study test seed data ──────────────────────────────────────────────
+
+const CUE_CONFIGS = {
+  c1: { cueCount: 'single', cueSource: 'low_quality',  maxHabits: 1, behaviorOptions: ['walking','light_jogging','cycling','structured_calisthenics','yoga'] },
+  c2: { cueCount: 'multi',  cueSource: 'low_quality',  maxHabits: 1, behaviorOptions: ['walking','light_jogging','cycling','structured_calisthenics','yoga'] },
+  c3: { cueCount: 'single', cueSource: 'high_quality', maxHabits: 1, behaviorOptions: ['walking','light_jogging','cycling','structured_calisthenics','yoga'] },
+  c4: { cueCount: 'multi',  cueSource: 'high_quality', maxHabits: 1, behaviorOptions: ['walking','light_jogging','cycling','structured_calisthenics','yoga'] },
+  c5: { cueCount: 'single', cueSource: 'self_selected', maxHabits: 1, behaviorOptions: ['walking','light_jogging','cycling','structured_calisthenics','yoga'] },
+  c6: { cueCount: 'multi',  cueSource: 'self_selected', maxHabits: 1, behaviorOptions: ['walking','light_jogging','cycling','structured_calisthenics','yoga'] },
+};
+
+const EXAMPLE_CUES = {
+  low_quality_single:  [{ text: 'When I have some free time in the evening', source: 'pre_rated', cueId: null }],
+  low_quality_multi:   [{ text: 'When I get home in the evening', source: 'pre_rated', cueId: null }, { text: 'and have some free time', source: 'pre_rated', cueId: null }],
+  high_quality_single: [{ text: 'After dinner each evening', source: 'pre_rated', cueId: null }],
+  high_quality_multi:  [{ text: 'After dinner each evening', source: 'pre_rated', cueId: null }, { text: 'at home on weekdays', source: 'pre_rated', cueId: null }],
+  self_selected_single: [{ text: 'After my morning coffee', source: 'self_selected', cueId: null }],
+  self_selected_multi:  [{ text: 'After my morning coffee', source: 'self_selected', cueId: null }, { text: 'on workdays at home', source: 'self_selected', cueId: null }],
+};
+
+function fakeSrhiScore(week, seed) {
+  const asymptote = 3.5 + (seed % 3) * 0.5;
+  const rate = 0.12;
+  return Math.min(
+    7,
+    parseFloat(
+      (asymptote * (1 - Math.exp(-rate * week)) + 1.5 + (Math.random() - 0.5) * 0.4).toFixed(2)
+    )
+  );
+}
+
+async function seedTestParticipant(db) {
+  const { ObjectId } = appRequire('mongodb');
+  const conditions = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'];
+  const dropDays = { c4: 30, c6: 45 };
+
+  for (const cond of conditions) {
+    const userId = `test-${cond}`;
+    const cueConfig = CUE_CONFIGS[cond];
+    const cueKey = `${cueConfig.cueSource}_${cueConfig.cueCount}`;
+    const cues = EXAMPLE_CUES[cueKey] ?? EXAMPLE_CUES['high_quality_single'];
+    const enrolledAt = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000);
+
+    await db.collection('enrollments').updateOne(
+      { userId },
+      { $setOnInsert: { userId, studyId: null, groupId: null, studyCodeUsed: null, enrolledAt, cueConfig } },
+      { upsert: true }
+    );
+
+    const intentionId = new ObjectId();
+    await db.collection('implementation_intentions').updateOne(
+      { userId, status: 'active' },
+      {
+        $setOnInsert: {
+          _id: intentionId,
+          userId,
+          enrollmentId: null,
+          studyId: null,
+          groupId: null,
+          behaviorKey: 'walking',
+          behaviorLabel: 'Walking',
+          durationMinutes: 20,
+          cues,
+          intentionStatement: `${cues.map((c) => c.text).join(', ')}, I will go for a 20-min walk.`,
+          status: 'active',
+          createdAt: enrolledAt,
+          updatedAt: enrolledAt,
+        },
+      },
+      { upsert: true }
+    );
+
+    const intention = await db.collection('implementation_intentions').findOne({ userId, status: 'active' });
+
+    const dropDay = dropDays[cond] ?? Infinity;
+    for (let d = 0; d < 56; d++) {
+      if (d >= dropDay) continue;
+      const enacted = Math.random() < 0.8;
+      const date = new Date(enrolledAt.getTime() + d * 86400000);
+      const dateStr = date.toISOString().split('T')[0];
+      await db.collection('daily_behavior_logs').updateOne(
+        { intentionId: intention._id, date: dateStr },
+        { $setOnInsert: { intentionId: intention._id, userId, date: dateStr, enacted, loggedAt: date } },
+        { upsert: true }
+      );
+    }
+
+    for (let w = 1; w <= 8; w++) {
+      const scheduledFor = new Date(enrolledAt.getTime() + (w - 1) * 7 * 86400000);
+      const missed = dropDays[cond] != null && (w - 1) * 7 >= dropDays[cond];
+      const score = missed ? null : fakeSrhiScore(w, conditions.indexOf(cond));
+      const items = missed
+        ? null
+        : Object.fromEntries(
+            Array.from({ length: 12 }, (_, i) => [
+              `srhi_${i + 1}`,
+              Math.min(7, Math.max(1, Math.round(score + (Math.random() - 0.5)))),
+            ])
+          );
+      await db.collection('srhi_responses').updateOne(
+        { intentionId: intention._id, weekNumber: w },
+        {
+          $setOnInsert: {
+            intentionId: intention._id,
+            userId,
+            studyId: null,
+            groupId: null,
+            weekNumber: w,
+            scheduledFor,
+            submittedAt: missed ? null : new Date(scheduledFor.getTime() + 86400000),
+            items,
+            score,
+            createdAt: scheduledFor,
+          },
+        },
+        { upsert: true }
+      );
+    }
+
+    if (dropDays[cond] != null) {
+      await db.collection('enrollments').updateOne(
+        { userId },
+        {
+          $set: {
+            droppedOutAt: new Date(enrolledAt.getTime() + dropDays[cond] * 86400000),
+            lastActiveAt: new Date(enrolledAt.getTime() + (dropDays[cond] - 1) * 86400000),
+          },
+        }
+      );
+    }
+
+    console.log(`  ✓ seeded test-${cond}`);
+  }
+
+  const pubId = 'test-public';
+  await db.collection('enrollments').updateOne(
+    { userId: pubId },
+    { $setOnInsert: { userId: pubId, studyId: null, groupId: null, studyCodeUsed: null, enrolledAt: new Date(), cueConfig: null } },
+    { upsert: true }
+  );
+  console.log('  ✓ seeded test-public');
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -605,6 +748,21 @@ async function main() {
     await seedMongo();
     await seedSurveys();
     await seedDefaultStudy();
+    {
+      const mongoUrl = `mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/?authSource=${MONGO_AUTH_SOURCE}`;
+      const client = new MongoClient(mongoUrl, {
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 10000,
+      });
+      try {
+        await client.connect();
+        const db = client.db(MONGO_DB);
+        console.log('\n[mongo] Seeding DFG test participants...');
+        await seedTestParticipant(db);
+      } finally {
+        await client.close();
+      }
+    }
     await seedNeo4j();
     await seedKeycloak();
     console.log('\n✓ All seed steps completed successfully.');
