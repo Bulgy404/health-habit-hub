@@ -46,7 +46,7 @@ export const VALIDATOR = {
       recipientCount: { bsonType: ['int', 'null'] },
       status: {
         bsonType: 'string',
-        enum: ['draft', 'scheduled', 'sent', 'failed'],
+        enum: ['draft', 'scheduled', 'sent', 'failed', 'cancelled'],
       },
       createdAt: { bsonType: 'date' },
     },
