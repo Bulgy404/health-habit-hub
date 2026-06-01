@@ -36,7 +36,7 @@ export async function createIntention({
     updatedAt: now,
   };
   const result = await db.collection(COLLECTION).insertOne(doc);
-  return { ...doc, _id: result.insertedId };
+  return serialize({ ...doc, _id: result.insertedId });
 }
 
 export async function listIntentions({ db, userId }) {
