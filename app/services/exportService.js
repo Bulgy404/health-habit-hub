@@ -21,7 +21,9 @@ export async function buildSrhiCsv({ db, studyId }) {
     return {
       userId: r.userId,
       studyId: r.studyId?.toString() ?? 'NA',
-      groupLabel: e.cueConfig?.cueSource ?? 'NA',
+      groupLabel: e.cueConfig
+        ? `${e.cueConfig.cueSource}/${e.cueConfig.cueCount}`
+        : 'NA',
       cueSource: e.cueConfig?.cueSource ?? 'NA',
       cueCount: e.cueConfig?.cueCount ?? 'NA',
       weekNumber: r.weekNumber,
@@ -60,7 +62,9 @@ export async function buildDailyLogsCsv({ db, studyId }) {
     return {
       userId: l.userId,
       studyId: intention.studyId?.toString() ?? 'NA',
-      groupLabel: e.cueConfig?.cueSource ?? 'NA',
+      groupLabel: e.cueConfig
+        ? `${e.cueConfig.cueSource}/${e.cueConfig.cueCount}`
+        : 'NA',
       cueSource: e.cueConfig?.cueSource ?? 'NA',
       cueCount: e.cueConfig?.cueCount ?? 'NA',
       date: l.date,
@@ -80,7 +84,9 @@ export async function buildDropoutCsv({ db, studyId }) {
   const records = enrollments.map((e) => ({
     userId: e.userId,
     studyId: e.studyId?.toString() ?? 'NA',
-    groupLabel: e.cueConfig?.cueSource ?? 'NA',
+    groupLabel: e.cueConfig
+      ? `${e.cueConfig.cueSource}/${e.cueConfig.cueCount}`
+      : 'NA',
     enrolledAt: e.enrolledAt?.toISOString() ?? 'NA',
     lastActiveDate: e.lastActiveAt?.toISOString() ?? 'NA',
     droppedOutAt: e.droppedOutAt?.toISOString() ?? 'NA',
