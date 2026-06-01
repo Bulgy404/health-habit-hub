@@ -70,6 +70,7 @@ Three hypotheses drive the data requirements:
 │  /cue-pools                  manage pre-rated cues       │
 │  /studies/:id/groups/:gid/cue-config  attach cue pool   │
 │  /studies/:id/export         research data export        │
+│  /notifications              researcher messaging center │
 │  /settings  (extended)       public default cue config   │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -334,7 +335,65 @@ Tapping opens a full-screen 12-item form with 1–7 sliders. After submission: s
 
 ---
 
-## 7. Research Data Export
+## 7. Researcher Notification Center
+
+Researchers can compose and send push notifications to individual participants or entire study groups directly from the admin panel. Firebase FCM delivers to both Android and iOS (FCM wraps APNs for iOS — one integration covers both platforms).
+
+### 7.1 MongoDB collection: `notification_campaigns`
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | |
+| `studyId` | ObjectId\|null | Scoped to a study, or null for platform-wide |
+| `createdBy` | string | Keycloak sub of the researcher |
+| `title` | string | Notification title (max 65 chars) |
+| `body` | string | Notification body (max 240 chars) |
+| `targetType` | string | `"individual"`, `"group"`, `"all_enrolled"` |
+| `targetIds` | string[] | userIds (individual) or groupIds (group); empty = all enrolled |
+| `scheduledFor` | Date\|null | null = send immediately on creation |
+| `sentAt` | Date\|null | Set when delivery is triggered |
+| `recipientCount` | number | How many devices were targeted |
+| `status` | string | `"draft"`, `"scheduled"`, `"sent"`, `"failed"` |
+| `createdAt` | Date | |
+
+### 7.2 API endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/v1/admin/notifications` | Create campaign (send immediately or schedule) |
+| `GET` | `/api/v1/admin/notifications` | List campaigns (paginated, filterable by study/status) |
+| `GET` | `/api/v1/admin/notifications/:id` | Campaign detail + delivery status |
+| `DELETE` | `/api/v1/admin/notifications/:id` | Cancel a scheduled campaign (before `sentAt`) |
+
+Sending resolves target userIds → FCM device tokens (stored in `users` collection as `fcmToken`, updated by the Flutter app on login) → calls Firebase Admin SDK `messaging.sendEachForMulticast()` in batches of 500.
+
+### 7.3 Admin panel `/notifications` page (`researcher` + `admin`)
+
+**Campaign composer:**
+- Title and body fields with character counters
+- Target selector: individual (search by participant ID) / study group (dropdown) / all enrolled in a study
+- Schedule toggle: send now vs. pick date/time
+- Preview: shows the notification as it will appear on device
+
+**Campaign history table:**
+- Columns: title, target, status, scheduled/sent time, recipient count
+- Filter by study and status
+- Cancel button for scheduled campaigns not yet sent
+
+**Default reminder time** (also on this page): researchers set the platform-wide default reminder time for habit cue reminders (e.g. 19:00). Participants can override per-intention. Stored in `admin_settings` as `default_reminder_time`.
+
+### 7.4 Notification types
+
+Two distinct notification types share the same FCM infrastructure:
+
+| Type | Triggered by | Content |
+|---|---|---|
+| **Habit reminder** | Daily cron at participant's reminder time | Cue-aware: *"[Cue] — time for your [behavior]."* Automated, not researcher-composed. |
+| **Researcher message** | Admin panel campaign | Researcher-composed title + body. Used for study check-ins, instructions, encouragement. |
+
+---
+
+## 9. Research Data Export
 
 `GET /api/v1/admin/studies/:id/export` returns a ZIP with three R-ready CSV files.
 
@@ -378,7 +437,7 @@ reactivations: Date[]
 
 ---
 
-## 8. Testing Strategy
+## 10. Testing Strategy
 
 ### 8.1 Backend unit tests (Jest)
 
@@ -428,7 +487,7 @@ Fake data characteristics:
 
 ---
 
-## 9. What Does Not Change
+## 11. What Does Not Change
 
 - Habit donation flow (`POST /api/v1/habits/donate`, Neo4j pipeline)
 - Habit exploration and annotations
@@ -441,7 +500,7 @@ Fake data characteristics:
 
 ---
 
-## 10. Resolved Design Decisions
+## 12. Resolved Design Decisions
 
 1. **SRHI item wording** — resolved. Use the validated German/English translations from Mena et al. (2023, https://link.springer.com/article/10.1007/s11469-023-01057-3). Stem: “Behavior X is something…” / “Verhalten X ist etwas…”
 
