@@ -1,0 +1,63 @@
+import { ObjectId } from 'mongodb';
+import { COLLECTION } from '../models/cuePool.js';
+
+export async function createCue({
+  db,
+  text,
+  quality,
+  dimensions,
+  domain,
+  language,
+}) {
+  const doc = {
+    text,
+    quality,
+    dimensions,
+    domain,
+    language,
+    createdAt: new Date(),
+  };
+  const result = await db.collection(COLLECTION).insertOne(doc);
+  return { id: result.insertedId.toString(), ...doc };
+}
+
+export async function listCues({
+  db,
+  quality,
+  language,
+  page = 1,
+  limit = 50,
+}) {
+  const filter = {};
+  if (quality) filter.quality = quality;
+  if (language) filter.language = language;
+  const skip = (page - 1) * limit;
+  const [docs, total] = await Promise.all([
+    db.collection(COLLECTION).find(filter).skip(skip).limit(limit).toArray(),
+    db.collection(COLLECTION).countDocuments(filter),
+  ]);
+  return { total, page, limit, cues: docs.map(serialize) };
+}
+
+export async function deleteCue({ db, id }) {
+  let oid;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return { notFound: true };
+  }
+  const result = await db.collection(COLLECTION).deleteOne({ _id: oid });
+  return result.deletedCount === 0 ? { notFound: true } : { deleted: true };
+}
+
+function serialize(doc) {
+  return {
+    id: doc._id.toString(),
+    text: doc.text,
+    quality: doc.quality,
+    dimensions: doc.dimensions,
+    domain: doc.domain,
+    language: doc.language,
+    createdAt: doc.createdAt,
+  };
+}
