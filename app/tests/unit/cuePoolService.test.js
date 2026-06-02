@@ -6,6 +6,7 @@ import {
   listCues,
   deleteCue,
   pickAssignedCues,
+  importCues,
 } from '../../services/cuePoolService.js';
 
 function makeDb(cues = []) {
@@ -139,4 +140,56 @@ test('pickAssignedCues: returns empty array when pool is empty', async () => {
   const db = makePoolDb([]);
   const result = await pickAssignedCues({ db, cueSource: 'high_quality', cueCount: 'single' });
   assert.deepEqual(result, []);
+});
+
+// --- importCues ---
+
+function makeImportDb() {
+  const inserted = [];
+  return {
+    inserted,
+    collection(name) {
+      if (name !== 'cue_pools') throw new Error(`unexpected: ${name}`);
+      return {
+        insertMany: async (docs) => {
+          inserted.push(...docs);
+          return { insertedCount: docs.length };
+        },
+      };
+    },
+  };
+}
+
+test('importCues: inserts valid rows and returns count', async () => {
+  const mockDb = makeImportDb();
+  const rows = [
+    { text: 'After dinner', quality: 'high', stability: 5, salience: 5, specificity: 5, domain: 'physical_activity', language: 'en' },
+    { text: 'On weekends', quality: 'low', stability: 2, salience: 2, specificity: 2, domain: 'physical_activity', language: 'de' },
+  ];
+  const result = await importCues({ db: mockDb, rows });
+  assert.equal(result.inserted, 2);
+  assert.equal(result.skipped, 0);
+  assert.equal(mockDb.inserted.length, 2);
+  assert.equal(mockDb.inserted[0].text, 'After dinner');
+  assert.equal(mockDb.inserted[0].quality, 'high');
+  assert.deepEqual(mockDb.inserted[0].dimensions, { stability: 5, salience: 5, specificity: 5 });
+});
+
+test('importCues: skips rows with missing required fields', async () => {
+  const mockDb = makeImportDb();
+  const rows = [
+    { text: '', quality: 'high', stability: 5, salience: 5, specificity: 5, domain: 'physical_activity', language: 'en' },
+    { text: 'Valid cue', quality: 'low', stability: 3, salience: 3, specificity: 3, domain: 'physical_activity', language: 'en' },
+    { text: 'Bad quality', quality: 'medium', stability: 3, salience: 3, specificity: 3, domain: 'physical_activity', language: 'en' },
+  ];
+  const result = await importCues({ db: mockDb, rows });
+  assert.equal(result.inserted, 1);
+  assert.equal(result.skipped, 2);
+});
+
+test('importCues: returns inserted 0 for empty rows array', async () => {
+  const mockDb = makeImportDb();
+  const result = await importCues({ db: mockDb, rows: [] });
+  assert.equal(result.inserted, 0);
+  assert.equal(result.skipped, 0);
 });

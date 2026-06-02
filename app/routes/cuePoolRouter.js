@@ -1,7 +1,7 @@
 // app/routes/cuePoolRouter.js
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
-import { createCue, listCues, deleteCue } from '../services/cuePoolService.js';
+import { createCue, listCues, deleteCue, importCues } from '../services/cuePoolService.js';
 
 export function createCuePoolRouter({ db } = {}) {
   const router = express.Router();
@@ -47,6 +47,22 @@ export function createCuePoolRouter({ db } = {}) {
       res.status(201).json(result);
     } catch (err) {
       console.error('[cue-pools] POST /:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/v1/admin/cue-pools/import
+  router.post('/import', async (req, res) => {
+    try {
+      const { cues } = req.body;
+      if (!Array.isArray(cues)) {
+        return res.status(400).json({ error: 'cues must be an array' });
+      }
+      const database = await getDb();
+      const result = await importCues({ db: database, rows: cues });
+      res.status(201).json(result);
+    } catch (err) {
+      console.error('[cue-pools] POST /import:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
