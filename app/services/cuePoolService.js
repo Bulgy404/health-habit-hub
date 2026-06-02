@@ -54,7 +54,12 @@ export async function deleteCue({ db, id }) {
  * Randomly pick 1 or 2 pre-rated cues from the pool matching the quality tier.
  * Returns [] for self_selected (user provides their own cue).
  */
-export async function pickAssignedCues({ db, cueSource, cueCount, cuePoolId = null }) {
+export async function pickAssignedCues({
+  db,
+  cueSource,
+  cueCount,
+  cuePoolId = null,
+}) {
   if (cueSource === 'self_selected') return [];
 
   const qualityMap = { low_quality: 'low', high_quality: 'high' };
@@ -64,7 +69,11 @@ export async function pickAssignedCues({ db, cueSource, cueCount, cuePoolId = nu
   const n = cueCount === 'multi' ? 2 : 1;
   const match = { quality };
   if (cuePoolId) {
-    try { match._id = new ObjectId(cuePoolId); } catch { /* ignore invalid id */ }
+    try {
+      match._id = new ObjectId(cuePoolId);
+    } catch {
+      /* ignore invalid id */
+    }
   }
 
   const docs = await db
@@ -72,7 +81,7 @@ export async function pickAssignedCues({ db, cueSource, cueCount, cuePoolId = nu
     .aggregate([{ $match: match }, { $sample: { size: n } }])
     .toArray();
 
-  return docs.map(d => ({
+  return docs.map((d) => ({
     text: d.text,
     source: 'pre_rated',
     cueId: d._id.toString(),
@@ -112,7 +121,9 @@ export async function importCues({ db, rows }) {
     const language = (row.language ?? '').trim();
 
     const validQuality = ['low', 'high'].includes(quality);
-    const validDims = [stability, salience, specificity].every(n => n >= 1 && n <= 5);
+    const validDims = [stability, salience, specificity].every(
+      (n) => n >= 1 && n <= 5
+    );
 
     if (!text || !validQuality || !validDims || !domain || !language) {
       skipped++;

@@ -1,7 +1,12 @@
 // app/routes/cuePoolRouter.js
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
-import { createCue, listCues, deleteCue, importCues } from '../services/cuePoolService.js';
+import {
+  createCue,
+  listCues,
+  deleteCue,
+  importCues,
+} from '../services/cuePoolService.js';
 
 export function createCuePoolRouter({ db } = {}) {
   const router = express.Router();
@@ -29,11 +34,9 @@ export function createCuePoolRouter({ db } = {}) {
     try {
       const { text, quality, dimensions, domain, language } = req.body;
       if (!text || !quality || !dimensions || !domain || !language) {
-        return res
-          .status(400)
-          .json({
-            error: 'text, quality, dimensions, domain, language required',
-          });
+        return res.status(400).json({
+          error: 'text, quality, dimensions, domain, language required',
+        });
       }
       const database = await getDb();
       const result = await createCue({

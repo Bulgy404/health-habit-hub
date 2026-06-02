@@ -1,10 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { ObjectId } from 'mongodb';
-import {
-  buildSrhiCsv,
-  buildDropoutCsv,
-} from '../../services/exportService.js';
+import { buildSrhiCsv, buildDropoutCsv } from '../../services/exportService.js';
 
 function makeDb({
   srhi = [],

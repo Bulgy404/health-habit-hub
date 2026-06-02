@@ -8,14 +8,20 @@ import { createV1Router } from '../../routes/v1Router.js';
 
 // ── Key material ──────────────────────────────────────────────────────────────
 
-const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+});
 const pubKeyJwk = publicKey.export({ format: 'jwk' });
 pubKeyJwk.kid = 'srhi-key-1';
 pubKeyJwk.use = 'sig';
 const mockJwks = { keys: [pubKeyJwk] };
 
 function base64urlEncode(buf) {
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return buf
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
 }
 
 function createJwt(payload) {
@@ -46,17 +52,33 @@ function createMockDb() {
             srhiWindows.push({ _id: new ObjectId(), ...doc });
           },
           async insertMany(docs) {
-            docs.forEach((d) => srhiWindows.push({ _id: new ObjectId(), ...d }));
+            docs.forEach((d) =>
+              srhiWindows.push({ _id: new ObjectId(), ...d })
+            );
           },
           find(q = {}) {
             const filtered = srhiWindows.filter((w) => {
               if (q.userId && w.userId !== q.userId) return false;
-              if ('submittedAt' in q && q.submittedAt === null && w.submittedAt !== null) return false;
-              if (q.intentionId && w.intentionId?.toString() !== q.intentionId?.toString()) return false;
+              if (
+                'submittedAt' in q &&
+                q.submittedAt === null &&
+                w.submittedAt !== null
+              )
+                return false;
+              if (
+                q.intentionId &&
+                w.intentionId?.toString() !== q.intentionId?.toString()
+              )
+                return false;
               if (q.scheduledFor) {
-                const sf = w.scheduledFor instanceof Date ? w.scheduledFor : new Date(w.scheduledFor);
-                if (q.scheduledFor.$lte && sf > q.scheduledFor.$lte) return false;
-                if (q.scheduledFor.$gte && sf < q.scheduledFor.$gte) return false;
+                const sf =
+                  w.scheduledFor instanceof Date
+                    ? w.scheduledFor
+                    : new Date(w.scheduledFor);
+                if (q.scheduledFor.$lte && sf > q.scheduledFor.$lte)
+                  return false;
+                if (q.scheduledFor.$gte && sf < q.scheduledFor.$gte)
+                  return false;
               }
               return true;
             });
@@ -67,15 +89,27 @@ function createMockDb() {
           },
           async findOneAndUpdate(q, update, opts) {
             const idx = srhiWindows.findIndex((w) => {
-              if (q.intentionId && w.intentionId?.toString() !== q.intentionId?.toString()) return false;
+              if (
+                q.intentionId &&
+                w.intentionId?.toString() !== q.intentionId?.toString()
+              )
+                return false;
               if (q.userId && w.userId !== q.userId) return false;
-              if (q.weekNumber !== undefined && w.weekNumber !== q.weekNumber) return false;
-              if ('submittedAt' in q && q.submittedAt === null && w.submittedAt !== null) return false;
+              if (q.weekNumber !== undefined && w.weekNumber !== q.weekNumber)
+                return false;
+              if (
+                'submittedAt' in q &&
+                q.submittedAt === null &&
+                w.submittedAt !== null
+              )
+                return false;
               return true;
             });
             if (idx === -1) return null;
             if (update.$set) Object.assign(srhiWindows[idx], update.$set);
-            return opts?.returnDocument === 'after' ? { ...srhiWindows[idx] } : null;
+            return opts?.returnDocument === 'after'
+              ? { ...srhiWindows[idx] }
+              : null;
           },
         };
       }
@@ -83,7 +117,10 @@ function createMockDb() {
       return {
         insertOne: async () => ({}),
         insertMany: async () => ({}),
-        find: () => ({ sort: () => ({ toArray: async () => [] }), toArray: async () => [] }),
+        find: () => ({
+          sort: () => ({ toArray: async () => [] }),
+          toArray: async () => [],
+        }),
         findOne: async () => null,
         countDocuments: async () => 0,
         updateOne: async () => ({ matchedCount: 0 }),
@@ -138,7 +175,11 @@ async function get(path, token) {
 async function post(path, body, token) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  return fetch(`${baseUrl}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  return fetch(`${baseUrl}${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
 }
 
 const SRHI = '/api/v1/srhi';
@@ -151,7 +192,9 @@ test('GET /srhi/due returns 401 without token', async () => {
 });
 
 test('POST /srhi/:intentionId/week/:weekNumber returns 401 without token', async () => {
-  const res = await post(`${SRHI}/507f1f77bcf86cd799439011/week/1`, { items: {} });
+  const res = await post(`${SRHI}/507f1f77bcf86cd799439011/week/1`, {
+    items: {},
+  });
   assert.strictEqual(res.status, 401);
 });
 
@@ -256,12 +299,17 @@ test('GET /srhi/:intentionId/trajectory returns 200 with history', async () => {
     weekNumber: 1,
     scheduledFor: new Date(),
     submittedAt: new Date(),
-    items: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`srhi_${i + 1}`, 4])),
+    items: Object.fromEntries(
+      Array.from({ length: 12 }, (_, i) => [`srhi_${i + 1}`, 4])
+    ),
     score: 4,
     createdAt: new Date(),
   });
 
-  const res = await get(`${SRHI}/${intentionId}/trajectory`, makeToken(['user'], userId));
+  const res = await get(
+    `${SRHI}/${intentionId}/trajectory`,
+    makeToken(['user'], userId)
+  );
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.ok(Array.isArray(body));

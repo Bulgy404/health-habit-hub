@@ -11,7 +11,12 @@ const studyCueConfig = {
   maxHabits: 1,
 };
 
-function makeDb({ enrollment = null, study = null, adminSettings = [], cuePools = [] } = {}) {
+function makeDb({
+  enrollment = null,
+  study = null,
+  adminSettings = [],
+  cuePools = [],
+} = {}) {
   return {
     collection(name) {
       if (name === 'enrollments')
@@ -73,16 +78,30 @@ test('resolveHabitConfig: no enrollment returns hardcoded fallback', async () =>
 test('resolveHabitConfig: pre-rated study participant gets assignedCues from pool', async () => {
   const db = {
     collection(name) {
-      if (name === 'enrollments') return {
-        findOne: async () => ({
-          groupId: 'g1', studyId: 's1',
-          cueConfig: { cueCount: 'single', cueSource: 'high_quality', cuePoolId: null, behaviorOptions: ['walking'], maxHabits: 1 },
-        }),
-      };
-      if (name === 'cue_pools') return {
-        aggregate: () => ({ toArray: async () => [{ _id: 'pool-1', text: 'After dinner', quality: 'high' }] }),
-      };
-      if (name === 'admin_settings') return { find: () => ({ toArray: async () => [] }) };
+      if (name === 'enrollments')
+        return {
+          findOne: async () => ({
+            groupId: 'g1',
+            studyId: 's1',
+            cueConfig: {
+              cueCount: 'single',
+              cueSource: 'high_quality',
+              cuePoolId: null,
+              behaviorOptions: ['walking'],
+              maxHabits: 1,
+            },
+          }),
+        };
+      if (name === 'cue_pools')
+        return {
+          aggregate: () => ({
+            toArray: async () => [
+              { _id: 'pool-1', text: 'After dinner', quality: 'high' },
+            ],
+          }),
+        };
+      if (name === 'admin_settings')
+        return { find: () => ({ toArray: async () => [] }) };
       throw new Error(`unexpected: ${name}`);
     },
   };
@@ -95,16 +114,26 @@ test('resolveHabitConfig: pre-rated study participant gets assignedCues from poo
 test('resolveHabitConfig: self_selected participant gets empty assignedCues', async () => {
   const db = {
     collection(name) {
-      if (name === 'enrollments') return {
-        findOne: async () => ({
-          groupId: 'g1', studyId: 's1',
-          cueConfig: { cueCount: 'single', cueSource: 'self_selected', cuePoolId: null, behaviorOptions: ['walking'], maxHabits: 1 },
-        }),
-      };
-      if (name === 'cue_pools') return {
-        aggregate: () => ({ toArray: async () => [] }),
-      };
-      if (name === 'admin_settings') return { find: () => ({ toArray: async () => [] }) };
+      if (name === 'enrollments')
+        return {
+          findOne: async () => ({
+            groupId: 'g1',
+            studyId: 's1',
+            cueConfig: {
+              cueCount: 'single',
+              cueSource: 'self_selected',
+              cuePoolId: null,
+              behaviorOptions: ['walking'],
+              maxHabits: 1,
+            },
+          }),
+        };
+      if (name === 'cue_pools')
+        return {
+          aggregate: () => ({ toArray: async () => [] }),
+        };
+      if (name === 'admin_settings')
+        return { find: () => ({ toArray: async () => [] }) };
       throw new Error(`unexpected: ${name}`);
     },
   };
@@ -116,9 +145,25 @@ test('resolveHabitConfig: public user gets empty assignedCues', async () => {
   // Extend the existing makeDb pattern with cue_pools support
   const db = {
     collection(name) {
-      if (name === 'enrollments') return { findOne: async () => ({ groupId: 'g0', studyId: 's0', cueConfig: null }) };
-      if (name === 'admin_settings') return { find: () => ({ toArray: async () => [{ key: 'default_cue_count', value: 'multi' }, { key: 'default_cue_source', value: 'high_quality' }] }) };
-      if (name === 'cue_pools') return { aggregate: () => ({ toArray: async () => [] }) };
+      if (name === 'enrollments')
+        return {
+          findOne: async () => ({
+            groupId: 'g0',
+            studyId: 's0',
+            cueConfig: null,
+          }),
+        };
+      if (name === 'admin_settings')
+        return {
+          find: () => ({
+            toArray: async () => [
+              { key: 'default_cue_count', value: 'multi' },
+              { key: 'default_cue_source', value: 'high_quality' },
+            ],
+          }),
+        };
+      if (name === 'cue_pools')
+        return { aggregate: () => ({ toArray: async () => [] }) };
       throw new Error(`unexpected: ${name}`);
     },
   };

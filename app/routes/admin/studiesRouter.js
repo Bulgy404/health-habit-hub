@@ -15,7 +15,11 @@ import {
   listCodes,
   revokeCode,
 } from '../../services/studyCodeService.js';
-import { getWeeklyActiveRate, getMeanSrhiTrajectory, getDropoutCurve } from '../../services/studyAnalyticsService.js';
+import {
+  getWeeklyActiveRate,
+  getMeanSrhiTrajectory,
+  getDropoutCurve,
+} from '../../services/studyAnalyticsService.js';
 
 export function createStudiesRouter({
   db,
@@ -295,11 +299,12 @@ export function createStudiesRouter({
   router.get('/studies/:id/analytics', async (req, res) => {
     try {
       const database = await getDb();
-      const [weeklyActiveRate, srhiTrajectory, dropoutCurve] = await Promise.all([
-        getWeeklyActiveRate({ db: database, studyId: req.params.id }),
-        getMeanSrhiTrajectory({ db: database, studyId: req.params.id }),
-        getDropoutCurve({ db: database, studyId: req.params.id }),
-      ]);
+      const [weeklyActiveRate, srhiTrajectory, dropoutCurve] =
+        await Promise.all([
+          getWeeklyActiveRate({ db: database, studyId: req.params.id }),
+          getMeanSrhiTrajectory({ db: database, studyId: req.params.id }),
+          getDropoutCurve({ db: database, studyId: req.params.id }),
+        ]);
       res.json({ weeklyActiveRate, srhiTrajectory, dropoutCurve });
     } catch (err) {
       console.error('[studies] GET /:id/analytics:', err);
