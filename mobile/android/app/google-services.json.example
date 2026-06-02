@@ -1,4 +1,3 @@
-
 {
   "project_info": {
     "project_number": "427166078990",
@@ -16,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDpxvKlZ2PNFBAI_tDr5ua1b9tmX0nw1nk"
+          "current_key": "YOUR_ANDROID_API_KEY"
         }
       ],
       "services": {
