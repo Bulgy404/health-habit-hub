@@ -30,6 +30,11 @@ Use this checklist when launching a new cohort of participants.
 7. [Revoking Device Sessions](#7-revoking-device-sessions)
 8. [Configuring Token Card Format in Settings](#8-configuring-token-card-format-in-settings)
 9. [Language Settings for Participants](#9-language-settings-for-participants)
+10. [Managing the Cue Pool](#10-managing-the-cue-pool)
+11. [Configuring Study Conditions (Cue Config)](#11-configuring-study-conditions-cue-config)
+12. [Viewing Study Analytics](#12-viewing-study-analytics)
+13. [Sending Researcher Notifications](#13-sending-researcher-notifications)
+14. [Configuring Public Default Cue Settings](#14-configuring-public-default-cue-settings)
 
 ---
 
@@ -382,6 +387,141 @@ The app supports English and German (Deutsch). Each participant can independentl
 > **Note for admins:** You cannot set a participant's language preference from the admin panel. Language is a personal preference configured by each participant in their own Settings screen. If a participant reports seeing content in the wrong language, ask them to open Settings and re-select their preferred language.
 
 > **Technical note:** The backend stores the preference as `preferredLanguage: 'en'` or `preferredLanguage: 'de'` in the `users` MongoDB collection (keyed by Keycloak subject ID). The `GET /api/v1/habits?lang=de` query parameter is set automatically by the Flutter app based on the stored preference — it does not need to be configured manually.
+
+---
+
+## 10. Managing the Cue Pool
+
+The Cue Pool is a library of pre-rated contextual cues used by the recommendation engine. It is accessible to both `admin` and `researcher` roles via **Cue Pools** in the left sidebar.
+
+### Viewing and Filtering Cues
+
+The list shows each cue's text, a quality badge (high / low), dimension scores (stability, salience, specificity on a 1–5 scale), domain, and language. Use the **Quality** and **Language** dropdowns above the list to filter the displayed rows.
+
+### Creating a Single Cue
+
+**Step 1.** Tap **+ New Cue**.
+
+**Step 2.** Fill in the form:
+
+| Field | Valid values |
+|---|---|
+| Text | Free text — the cue sentence |
+| Quality | `low` or `high` |
+| Domain | e.g. `health`, `fitness`, `nutrition` |
+| Language | e.g. `en`, `de` |
+| Stability | Integer 1–5 |
+| Salience | Integer 1–5 |
+| Specificity | Integer 1–5 |
+
+**Step 3.** Tap **Save**. The cue appears in the list immediately.
+
+### Bulk CSV Import
+
+**Step 1.** Tap **Import CSV** and select a `.csv` file from your computer.
+
+The file must include these columns (order does not matter):
+
+```
+text,quality,stability,salience,specificity,domain,language
+```
+
+Valid values: `quality` must be `low` or `high`; dimension scores must be integers 1–5.
+
+**Step 2.** After upload, a result dialog shows the number of rows **inserted** and **skipped** (skipped rows have validation errors and are reported individually).
+
+### Deleting a Cue
+
+Tap the **Delete** (trash) icon on any cue row and confirm the dialog. Deletion is immediate and permanent.
+
+---
+
+## 11. Configuring Study Conditions (Cue Config)
+
+Each study group can have its own cue delivery settings. These are managed from the **Cue Config** tab inside a study's edit modal.
+
+**Step 1.** In the Admin panel, navigate to **Studies**.
+
+**Step 2.** Open a study by clicking its row, then click the **Cue Config** tab.
+
+**Step 3.** For each group listed, configure the following settings:
+
+| Setting | Options | Description |
+|---|---|---|
+| Cue count | Single / Multi | Whether participants see one cue or multiple cues per session |
+| Cue source | `low_quality` / `high_quality` / `self_selected` | Pool from which cues are drawn |
+| Allowed behaviors | Checklist | Behavior types participants may log for this group |
+| Max habits | 1 / Unlimited | `1` restricts participants to study conditions; Unlimited mirrors the public app experience |
+
+**Step 4.** Tap the **Save** button for each group individually. Settings for other groups are unaffected.
+
+---
+
+## 12. Viewing Study Analytics
+
+The **Analytics** tab inside a study's edit modal provides live statistics for a running study.
+
+**Step 1.** Navigate to **Studies** and open a study.
+
+**Step 2.** Click the **Analytics** tab.
+
+The tab contains three panels:
+
+| Panel | What it shows |
+|---|---|
+| Weekly Active Rate | Bar chart showing the percentage of enrolled participants per group who logged at least one behavior in the last 7 days |
+| SRHI Trajectory | Line chart showing the mean SRHI habit-strength score (1–7 scale) per week, with one line per study condition |
+| Cumulative Dropout | Table listing each participant marked as dropped out, with their dropout date and a running total per group |
+
+All data is fetched live on tab open — refresh the tab to update the figures.
+
+---
+
+## 13. Sending Researcher Notifications
+
+Push notifications can be sent to study participants from the **Notifications** tab inside a study's edit modal. This is available to `admin` and `researcher` roles.
+
+### Composing and Sending a Notification
+
+**Step 1.** Navigate to **Studies**, open a study, and click the **Notifications** tab.
+
+**Step 2.** Enter a **Title** and **Body** for the push notification.
+
+**Step 3.** Choose the target audience:
+
+| Target option | Who receives it |
+|---|---|
+| All enrolled | Every participant currently enrolled in the study |
+| Specific group | Only participants in the selected group (e.g. G1) |
+| All enrolled in study | Synonym for "All enrolled" — included for clarity in multi-study setups |
+
+**Step 4.** Choose when to send:
+- **Send immediately** — tap **Send Now**; delivery begins within seconds.
+- **Schedule** — enable the date/time picker, set the desired date and time, then tap **Schedule**.
+
+### Managing Scheduled Campaigns
+
+Pending campaigns are listed in the lower section of the Notifications tab. Each row shows the scheduled date/time, target, and status. To cancel a pending campaign, tap **Cancel** on its row.
+
+---
+
+## 14. Configuring Public Default Cue Settings
+
+The **Public Default Cue Config** section in Settings controls the cue experience for app-store users who are not enrolled in any study. Only `admin` accounts can modify these settings.
+
+**Step 1.** In the Admin panel, tap **Settings** (gear icon in the sidebar footer).
+
+**Step 2.** Scroll to the **Public Default Cue Config** section.
+
+**Step 3.** Adjust the settings as needed:
+
+| Setting | Options | Description |
+|---|---|---|
+| Default cue count | Single / Multi | Number of cues shown per session to public users |
+| Default cue source | `low_quality` / `high_quality` / `self_selected` | Pool from which cues are drawn for public users |
+| Default reminder time | Time picker (HH:MM) | Daily reminder push notification time for public users |
+
+**Step 4.** Tap **Save Settings**. Changes take effect immediately for all public users on their next session — no app restart or re-enrolment is required.
 
 ---
 
