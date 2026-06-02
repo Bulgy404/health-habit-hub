@@ -38,21 +38,21 @@ describe('KnowledgeBasePage', () => {
     expect(screen.getByRole('heading', { name: /knowledge base/i })).toBeInTheDocument();
   });
 
-  it('renders Upload PDF button', () => {
+  it('renders Upload Document button', () => {
     render(<KnowledgeBasePage />);
-    expect(screen.getByRole('button', { name: /upload pdf/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /upload document/i })).toBeInTheDocument();
   });
 
-  it('renders Re-index button', () => {
+  it('renders View Graph link', () => {
     render(<KnowledgeBasePage />);
-    expect(screen.getByRole('button', { name: /re-index/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /view graph/i })).toBeInTheDocument();
   });
 
-  it('opens upload modal when "Upload PDF" button is clicked', async () => {
+  it('opens upload modal when "Upload Document" button is clicked', async () => {
     const user = userEvent.setup();
     render(<KnowledgeBasePage />);
 
-    await user.click(screen.getByRole('button', { name: /upload pdf/i }));
+    await user.click(screen.getByRole('button', { name: /upload document/i }));
 
     // Modal title should appear
     expect(screen.getByText('Upload PDF', { selector: 'span' })).toBeInTheDocument();
@@ -91,11 +91,11 @@ describe('KnowledgeBasePage', () => {
     const { container } = render(<KnowledgeBasePage />);
 
     // Open the upload modal
-    await user.click(screen.getByRole('button', { name: /upload pdf/i }));
+    await user.click(screen.getByRole('button', { name: /upload document/i }));
 
     // jsdom's file input is read-only; override `files` on the DOM element via Object.defineProperty
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(['content'], 'test.txt', { type: 'text/plain' });
+    const file = new File(['content'], 'test.xlsx', { type: 'application/vnd.ms-excel' });
     const fileList = {
       0: file,
       length: 1,
@@ -110,7 +110,7 @@ describe('KnowledgeBasePage', () => {
 
     // Error should appear
     await waitFor(() => {
-      expect(screen.getByText(/only pdf files are accepted/i)).toBeInTheDocument();
+      expect(screen.getByText(/only pdf, txt, and md files are accepted/i)).toBeInTheDocument();
     });
   });
 });
