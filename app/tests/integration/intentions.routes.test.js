@@ -158,12 +158,13 @@ function createMockDb() {
           find: () => ({ toArray: async () => adminSettings }),
         };
       }
-      // fallback for any other collections (e.g. habit_annotations)
+      // fallback for any other collections (e.g. habit_annotations, cue_pools)
       return {
         insertOne: async () => ({}),
         find: () => ({ toArray: async () => [] }),
         findOne: async () => null,
         countDocuments: async () => 0,
+        aggregate: () => ({ toArray: async () => [] }),
       };
     },
   };
