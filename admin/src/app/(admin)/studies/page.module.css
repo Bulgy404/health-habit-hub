@@ -874,3 +874,27 @@
 .behaviorCheckboxes { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
 .checkboxLabel { display: flex; align-items: center; gap: 0.35rem; font-size: 0.875rem; cursor: pointer; }
 .savedMsg { font-size: 0.8rem; color: var(--color-success, #16a34a); }
+
+/* ── Analytics tab ──────────────────────────────────────────────────────────── */
+.analyticsTab { padding: 0.5rem 0; }
+.analyticsSection { border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+.analyticsSectionTitle { font-weight: 600; font-size: 0.9rem; margin: 0 0 0.2rem; color: var(--color-text); }
+.analyticsSectionDesc { font-size: 0.78rem; color: var(--color-text-muted); margin: 0 0 0.75rem; }
+.barChart { display: flex; flex-direction: column; gap: 0.5rem; }
+.barRow { display: flex; align-items: center; gap: 0.5rem; }
+.barLabel { font-size: 0.8rem; font-weight: 600; width: 40px; flex-shrink: 0; color: var(--color-text); }
+.barTrack { flex: 1; height: 12px; background: var(--color-surface-alt); border-radius: 6px; overflow: hidden; }
+.barFill { height: 100%; border-radius: 6px; transition: width 0.3s; }
+.barValue { font-size: 0.8rem; font-weight: 600; color: var(--color-text); width: 36px; text-align: right; }
+.barSub { font-size: 0.75rem; color: var(--color-text-muted); width: 48px; }
+.lineChartWrap { overflow-x: auto; }
+.lineChart { width: 100%; min-width: 300px; }
+.chartLegend { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.5rem; }
+.legendItem { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--color-text); }
+.legendDot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.dropoutList { display: flex; flex-direction: column; gap: 0.35rem; }
+.dropoutRow { display: flex; gap: 1rem; font-size: 0.8rem; align-items: center; padding: 0.25rem 0; border-bottom: 1px solid var(--color-border); }
+.dropoutRow:last-child { border-bottom: none; }
+.dropoutDate { color: var(--color-text-muted); width: 90px; flex-shrink: 0; }
+.dropoutGroup { font-weight: 600; color: var(--color-text); width: 50px; }
+.dropoutCount { color: var(--color-text-muted); }
