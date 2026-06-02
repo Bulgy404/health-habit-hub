@@ -90,3 +90,47 @@ function serialize(doc) {
     createdAt: doc.createdAt,
   };
 }
+
+/**
+ * Bulk-insert cues from a parsed row array.
+ * Each row: { text, quality, stability, salience, specificity, domain, language }
+ * Skips rows with missing/invalid required fields.
+ */
+export async function importCues({ db, rows }) {
+  if (!rows || rows.length === 0) return { inserted: 0, skipped: 0 };
+
+  const valid = [];
+  let skipped = 0;
+
+  for (const row of rows) {
+    const text = (row.text ?? '').trim();
+    const quality = (row.quality ?? '').trim();
+    const stability = parseInt(row.stability, 10);
+    const salience = parseInt(row.salience, 10);
+    const specificity = parseInt(row.specificity, 10);
+    const domain = (row.domain ?? '').trim();
+    const language = (row.language ?? '').trim();
+
+    const validQuality = ['low', 'high'].includes(quality);
+    const validDims = [stability, salience, specificity].every(n => n >= 1 && n <= 5);
+
+    if (!text || !validQuality || !validDims || !domain || !language) {
+      skipped++;
+      continue;
+    }
+
+    valid.push({
+      text,
+      quality,
+      dimensions: { stability, salience, specificity },
+      domain,
+      language,
+      createdAt: new Date(),
+    });
+  }
+
+  if (valid.length === 0) return { inserted: 0, skipped };
+
+  const result = await db.collection(COLLECTION).insertMany(valid);
+  return { inserted: result.insertedCount, skipped };
+}
