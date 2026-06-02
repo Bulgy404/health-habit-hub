@@ -28,6 +28,7 @@ class HabitConfig {
     required this.behaviorOptions,
     this.maxHabits,
     required this.srhiItems,
+    this.assignedCues = const [],
   });
 
   /// 'single' or 'multi'
@@ -44,6 +45,9 @@ class HabitConfig {
 
   final List<SrhiItem> srhiItems;
 
+  /// Cues pre-assigned by the study coordinator (empty for self-selected).
+  final List<IntentionCue> assignedCues;
+
   factory HabitConfig.fromJson(Map<String, dynamic> json) => HabitConfig(
         cueCount: json['cueCount'] as String? ?? 'multi',
         cueSource: json['cueSource'] as String? ?? 'high_quality',
@@ -55,6 +59,11 @@ class HabitConfig {
         srhiItems: (json['srhiItems'] as List<dynamic>?)
                 ?.cast<Map<String, dynamic>>()
                 .map(SrhiItem.fromJson)
+                .toList() ??
+            const [],
+        assignedCues: (json['assignedCues'] as List<dynamic>?)
+                ?.cast<Map<String, dynamic>>()
+                .map(IntentionCue.fromJson)
                 .toList() ??
             const [],
       );
