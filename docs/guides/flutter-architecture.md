@@ -14,8 +14,9 @@ This document describes the architecture of the Health Habit Hub Flutter mobile 
 6. [Auth Token Management](#6-auth-token-management)
 7. [Configuration and Environment Variables](#7-configuration-and-environment-variables)
 8. [Services Layer](#8-services-layer)
-9. [Donation Flow (WebView)](#9-donation-flow-webview)
-10. [Testing](#10-testing)
+9. [My Habits Feature](#9-my-habits-feature)
+10. [Donation Flow (WebView)](#10-donation-flow-webview)
+11. [Testing](#11-testing)
 
 ---
 
@@ -51,7 +52,8 @@ mobile/
 │   │   └── dio_provider.dart        # Riverpod Provider<Dio> with auth interceptor wired in
 │   ├── features/                    # Self-contained feature modules
 │   │   ├── questionnaire/           # Questionnaire form + state + service
-│   │   └── recommendation/          # Goal input, loading, results screens
+│   │   ├── recommendation/          # Goal input, loading, results screens
+│   │   └── my_habits/               # Habit tracking: intentions, SRHI check-ins, heatmap (DFG study + public)
 │   ├── l10n/                        # Localisation (ARB files + generated code)
 │   │   ├── app_en.arb               # English strings (source of truth)
 │   │   ├── app_de.arb               # German strings
@@ -67,7 +69,10 @@ mobile/
 │   ├── utils/
 │   │   └── bip39_wordlist.dart      # BIP-39 word list (used by passphrase_screen)
 │   └── widgets/
-│       └── offline_banner.dart      # Shared OfflineBanner widget (used by DonateScreen, ProfileScreen)
+│       ├── offline_banner.dart      # Shared OfflineBanner widget (used by DonateScreen, ProfileScreen)
+│       ├── day_strip_widget.dart    # DayStripWidget — 7-day enacted row with DayCell
+│       ├── habit_heatmap_widget.dart # HabitHeatmapWidget — GitHub-style calendar grid with HeatmapCell
+│       └── srhi_sparkline_widget.dart # SrhiSparklineWidget — fl_chart mini LineChart for SRHI trajectory
 ├── test/
 │   ├── widget/                      # Widget tests
 │   └── unit/                        # Unit tests
@@ -112,6 +117,12 @@ Navigation uses **GoRouter** configured in `main.dart` via a `RouterNotifier`/`r
 | `/questionnaire/:slug` | `QuestionnaireScreen` | Generic questionnaire by slug |
 | `/questionnaire/:slug/confirmation` | `QuestionnaireConfirmationScreen` | Post-submit confirmation |
 | `/admin/*` | `AdminShellScreen` + sub-routes | Admin panel (role-guarded) |
+| `/habits` | `MyHabitsScreen` | Tab root: SRHI prompt card + habit card list |
+| `/habits/new/behavior` | `NewHabitScreen1Behavior` | Pick behavior from `habitConfig.behaviorOptions` |
+| `/habits/new/cue` | `NewHabitScreen2Cue` | Select pre-rated or free-text cue |
+| `/habits/new/confirm` | `NewHabitScreen3Confirm` | Confirm if-then statement, pick duration, submit |
+| `/habits/:intentionId` | `HabitDetailScreen` | Heatmap + SRHI trajectory + abandon action |
+| `/habits/:intentionId/srhi/:weekNumber` | `SrhiFormScreen` | 12-item 1–7 slider SRHI check-in form |
 
 ### Auth guard
 
@@ -149,6 +160,11 @@ The app uses **Riverpod** (`flutter_riverpod`). All providers are declared at mo
 | `themeModeProvider` | `providers/theme_provider.dart` | Light/dark theme toggle |
 | `surveyServiceProvider` | `services/survey_service.dart` | Survey fetch + submit |
 | `questionnaireFormProvider(slug)` | `features/questionnaire/questionnaire_provider.dart` | Per-slug form state (current page, answers) |
+| `habitConfigProvider` | `features/my_habits/my_habits_provider.dart` | `FutureProvider<HabitConfig>` — assigned cues, SRHI items, behavior options, maxHabits |
+| `intentionsProvider` | `features/my_habits/my_habits_provider.dart` | `FutureProvider<List<Intention>>` — user's active intentions |
+| `dueSrhiProvider` | `features/my_habits/my_habits_provider.dart` | `FutureProvider<List<SrhiWindow>>` — pending SRHI check-in windows |
+| `intentionLogsProvider(id)` | `features/my_habits/my_habits_provider.dart` | `FutureProvider.family` — daily logs for a given intention |
+| `srhiTrajectoryProvider(id)` | `features/my_habits/my_habits_provider.dart` | `FutureProvider.family` — SRHI score history for a given intention |
 
 ### Locale provider
 
@@ -302,6 +318,7 @@ Service classes in `mobile/lib/services/` are thin wrappers around **Dio** HTTP 
 | `AdminService` | `adminServiceProvider` | Admin CRUD for participants, habits, surveys |
 | `RecommendationService` | `recommendationServiceProvider` | REST-based recommendation fetch |
 | `RecommendationWsService` | `recommendationWsServiceProvider` | WebSocket-based real-time recommendation stream |
+| `MyHabitsService` | `myHabitsServiceProvider` | Habit config, intentions CRUD, daily logs, SRHI submit/trajectory |
 
 ### Error handling
 
@@ -316,7 +333,56 @@ Screens and providers catch `AppException` to show user-facing error messages.
 
 ---
 
-## 9. Donation Flow (WebView)
+## 9. My Habits Feature
+
+### Purpose
+
+The My Habits feature supports two user populations:
+
+- **DFG study participants** — after redeeming a study code during onboarding they are routed directly to `/habits/new/behavior` to create their first intention. Their habit config (including pre-rated `assignedCues` and SRHI items) is set by the study coordinator.
+- **Public users** — may also create habits; they skip the study-code step and arrive at `/habits/new/behavior` from the Habits tab. They self-select cues via free-text inputs.
+
+### Provider strategy
+
+All reads use `FutureProvider` (or `FutureProvider.family` for parameterised fetches). There is no mutable `Notifier` for server-side state; after a mutation (create intention, submit log, submit SRHI) the service call is awaited and then the relevant provider is refreshed with `ref.invalidate()`, which triggers a fresh fetch.
+
+### New habit creation flow (3 screens)
+
+```
+NewHabitScreen1Behavior   pick a behavior from habitConfig.behaviorOptions
+        │
+        ▼
+NewHabitScreen2Cue        select a pre-rated cue (assignedCues) or enter free-text
+        │
+        ▼
+NewHabitScreen3Confirm    review the if-then statement, pick duration, POST /habits/intentions
+        │
+        └─► /habits  (invalidates intentionsProvider)
+```
+
+The "New Habit" button on `MyHabitsScreen` is hidden when `intentions.length >= habitConfig.maxHabits`.
+
+### SRHI check-in flow
+
+`MyHabitsScreen` shows a prompt card when `dueSrhiProvider` returns one or more pending windows. Tapping the card navigates to `/habits/:intentionId/srhi/:weekNumber`. `SrhiFormScreen` renders all 12 SRHI items as 1–7 sliders; the submit button is gated until every slider has been moved. On submit it calls `POST /api/v1/srhi/:id/week/:n` and then invalidates `dueSrhiProvider` and `srhiTrajectoryProvider(id)`.
+
+### API endpoints
+
+| Endpoint | Direction | Purpose |
+|----------|-----------|---------|
+| `GET /api/v1/me/habit-config` | read | Load `HabitConfig` (cues, items, options, maxHabits) |
+| `GET /api/v1/habits/intentions` | read | List user intentions |
+| `POST /api/v1/habits/intentions` | write | Create new intention |
+| `PATCH /api/v1/habits/intentions/:id/status` | write | Abandon / pause intention |
+| `GET /api/v1/habits/intentions/:id/logs` | read | Daily log history |
+| `POST /api/v1/habits/intentions/:id/logs` | write | Record daily enactment |
+| `GET /api/v1/srhi/due` | read | Pending SRHI windows |
+| `POST /api/v1/srhi/:id/week/:n` | write | Submit SRHI check-in |
+| `GET /api/v1/srhi/:id/trajectory` | read | SRHI score history |
+
+---
+
+## 10. Donation Flow (WebView)
 
 The habit-donation survey is a server-rendered **SurveyJS** form loaded inside a Flutter `WebView` (package `webview_flutter`). This design means survey content can be updated without rebuilding the Flutter app.
 
@@ -359,7 +425,7 @@ The `lang` query parameter on the render URL comes from `localeProvider` (the us
 
 ---
 
-## 10. Testing
+## 11. Testing
 
 ### Widget and unit tests
 
