@@ -18,7 +18,7 @@ function makeDb(campaigns = [], deviceTokens = []) {
             cStore.push(saved);
             return { insertedId: saved._id };
           },
-          async findOneAndUpdate(filter, update, opts) {
+          async findOneAndUpdate(filter, update, _opts) {
             const idx = cStore.findIndex(
               (d) => d._id?.toString() === filter._id?.toString()
             );
