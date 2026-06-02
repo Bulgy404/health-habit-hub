@@ -5,6 +5,7 @@ import {
   createCue,
   listCues,
   deleteCue,
+  pickAssignedCues,
 } from '../../services/cuePoolService.js';
 
 function makeDb(cues = []) {
@@ -86,4 +87,56 @@ test('deleteCue: removes a cue by id', async () => {
   ]);
   const result = await deleteCue({ db, id: id.toString() });
   assert.equal(result.deleted, true);
+});
+
+// --- pickAssignedCues ---
+
+function makePoolDb(cues = []) {
+  return {
+    collection(name) {
+      if (name !== 'cue_pools') throw new Error(`unexpected: ${name}`);
+      return {
+        aggregate(pipeline) {
+          const matchStage = pipeline.find(s => s.$match)?.$match ?? {};
+          const sampleN = pipeline.find(s => s.$sample)?.$sample?.size ?? 1;
+          const filtered = cues.filter(c =>
+            !matchStage.quality || c.quality === matchStage.quality
+          );
+          return { toArray: async () => filtered.slice(0, sampleN) };
+        },
+      };
+    },
+  };
+}
+
+test('pickAssignedCues: returns empty array for self_selected source', async () => {
+  const db = makePoolDb([]);
+  const result = await pickAssignedCues({ db, cueSource: 'self_selected', cueCount: 'single' });
+  assert.deepEqual(result, []);
+});
+
+test('pickAssignedCues: returns one cue for single count', async () => {
+  const db = makePoolDb([
+    { _id: 'c1', text: 'After dinner', quality: 'high', dimensions: { stability: 5, salience: 5, specificity: 5 }, domain: 'physical_activity', language: 'en' },
+  ]);
+  const result = await pickAssignedCues({ db, cueSource: 'high_quality', cueCount: 'single' });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].text, 'After dinner');
+  assert.equal(result[0].source, 'pre_rated');
+});
+
+test('pickAssignedCues: returns two cues for multi count', async () => {
+  const db = makePoolDb([
+    { _id: 'c1', text: 'After dinner', quality: 'low', dimensions: { stability: 2, salience: 2, specificity: 2 }, domain: 'physical_activity', language: 'en' },
+    { _id: 'c2', text: 'On weekends', quality: 'low', dimensions: { stability: 2, salience: 2, specificity: 2 }, domain: 'physical_activity', language: 'en' },
+  ]);
+  const result = await pickAssignedCues({ db, cueSource: 'low_quality', cueCount: 'multi' });
+  assert.equal(result.length, 2);
+  assert.ok(result.every(c => c.source === 'pre_rated'));
+});
+
+test('pickAssignedCues: returns empty array when pool is empty', async () => {
+  const db = makePoolDb([]);
+  const result = await pickAssignedCues({ db, cueSource: 'high_quality', cueCount: 'single' });
+  assert.deepEqual(result, []);
 });
