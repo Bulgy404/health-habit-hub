@@ -15,7 +15,6 @@ function makeDb(responses = []) {
       if (name === 'srhi_responses')
         return {
           find(filter = {}) {
-            const now = new Date();
             const results = store.filter((d) => {
               if (filter.userId && d.userId !== filter.userId) return false;
               if (filter.submittedAt === null && d.submittedAt !== null)
@@ -36,7 +35,7 @@ function makeDb(responses = []) {
           async insertMany(docs) {
             store.push(...docs);
           },
-          async findOneAndUpdate(filter, update, opts) {
+          async findOneAndUpdate(filter, update, _opts) {
             const idx = store.findIndex(
               (d) =>
                 d.intentionId?.toString() === filter.intentionId?.toString() &&

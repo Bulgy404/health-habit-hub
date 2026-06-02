@@ -3,7 +3,6 @@ import assert from 'node:assert';
 import { ObjectId } from 'mongodb';
 import {
   createIntention,
-  listIntentions,
   updateIntentionStatus,
 } from '../../services/intentionService.js';
 

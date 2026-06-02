@@ -1,11 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { ObjectId } from 'mongodb';
-import {
-  upsertLog,
-  getLogs,
-  touchEnrollmentActivity,
-} from '../../services/dailyLogService.js';
+import { upsertLog } from '../../services/dailyLogService.js';
 
 function makeDb() {
   const logs = [];

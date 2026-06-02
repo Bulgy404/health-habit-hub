@@ -3,7 +3,6 @@ import assert from 'node:assert';
 import { ObjectId } from 'mongodb';
 import {
   buildSrhiCsv,
-  buildDailyLogsCsv,
   buildDropoutCsv,
 } from '../../services/exportService.js';
 
@@ -16,13 +15,13 @@ function makeDb({
   return {
     collection(name) {
       if (name === 'srhi_responses')
-        return { find: (f) => ({ toArray: async () => srhi }) };
+        return { find: (_f) => ({ toArray: async () => srhi }) };
       if (name === 'daily_behavior_logs')
-        return { find: (f) => ({ toArray: async () => logs }) };
+        return { find: (_f) => ({ toArray: async () => logs }) };
       if (name === 'enrollments')
-        return { find: (f) => ({ toArray: async () => enrollments }) };
+        return { find: (_f) => ({ toArray: async () => enrollments }) };
       if (name === 'implementation_intentions')
-        return { find: (f) => ({ toArray: async () => intentions }) };
+        return { find: (_f) => ({ toArray: async () => intentions }) };
       throw new Error(`unexpected: ${name}`);
     },
   };
