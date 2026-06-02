@@ -16,6 +16,7 @@ This document is the canonical reference for all data stores in the Health Habit
 3. [MongoDB](#3-mongodb)
    - [Collections Overview](#31-collections-overview)
    - [Collection Schemas & Example Documents](#32-collection-schemas--example-documents)
+   - [DFG Study Collections](#33-dfg-study-collections)
 4. [G1–G4 Study Group Encoding](#4-g1g4-study-group-encoding)
 5. [Anonymisation Model](#5-anonymisation-model)
 
@@ -555,6 +556,11 @@ MongoDB stores operational data: survey definitions, participant records, profil
 | `recommendations` | Recommendation records from the Python recommender | No |
 | `recommendation_feedback` | Free-text feedback on individual recommendations | No |
 | `habits` | Non-habit submissions saved for manual review | No |
+| `implementation_intentions` | Habit plans created by DFG study participants | No |
+| `daily_behavior_logs` | Per-intention daily enactment logs | No |
+| `srhi_responses` | Weekly SRHI habit-strength measurements | No |
+| `cue_pools` | Pre-rated contextual cues for study conditions | No |
+| `notification_campaigns` | Researcher-composed push notification campaigns | No |
 
 ---
 
@@ -894,6 +900,118 @@ Free-text feedback comments on individual recommendations, written by `POST /api
 | `goal` | String | Yes | Denormalised goal (copied from the recommendation) |
 | `comment` | String | Yes | Free-text feedback comment |
 | `created_at` | Date | Yes | Timestamp of submission |
+
+---
+
+### 3.3 DFG Study Collections
+
+These five collections are created and managed by the DFG study module. They share the same MongoDB database as the core collections.
+
+---
+
+#### `implementation_intentions`
+
+One document per implementation intention (habit plan) created by a user.
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | |
+| `userId` | String | Keycloak `sub` |
+| `enrollmentId` | ObjectId\|null | Links to enrollment if study participant |
+| `studyId` | ObjectId\|null | |
+| `groupId` | ObjectId\|null | |
+| `behaviorKey` | String | e.g. `"walking"` |
+| `behaviorLabel` | String | e.g. `"Walking"` |
+| `durationMinutes` | Int | Target session duration |
+| `cues` | Array | `[{text, source, cueId?}]` — 1 or 2 cues; source: `"pre_rated"` or `"self_selected"` |
+| `intentionStatement` | String | Full if-then statement e.g. `"After dinner, I will walk for 20 minutes."` |
+| `status` | String | `"active"`, `"paused"`, `"completed"`, `"abandoned"` |
+| `createdAt` | Date | |
+| `updatedAt` | Date | |
+
+Indexes: `{userId, status}`, `{enrollmentId}` (sparse)
+
+---
+
+#### `daily_behavior_logs`
+
+One document per (intention, date) pair — idempotent upsert.
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | |
+| `intentionId` | ObjectId | |
+| `userId` | String | |
+| `date` | String | `"YYYY-MM-DD"` |
+| `enacted` | Boolean | `true` = enacted, `false` = explicit miss |
+| `loggedAt` | Date | |
+
+Indexes: `{intentionId, date}` unique, `{userId, date}`
+
+---
+
+#### `srhi_responses`
+
+One document per (intention, weekNumber) — SRHI measurement window.
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | |
+| `intentionId` | ObjectId | |
+| `userId` | String | |
+| `studyId` | ObjectId\|null | |
+| `groupId` | ObjectId\|null | |
+| `weekNumber` | Int | 1-based week number from intention creation |
+| `scheduledFor` | Date | When this window opens |
+| `submittedAt` | Date\|null | `null` = pending |
+| `items` | Object\|null | `{srhi_1: 1-7, ..., srhi_12: 1-7}` |
+| `score` | Double\|null | Mean of 12 items (1–7 scale) |
+| `createdAt` | Date | |
+
+Indexes: `{intentionId, weekNumber}` unique, `{userId, submittedAt}`
+
+The 12 SRHI items are the validated Self-Report Habit Index (Verplanken & Orbell, 2003) — item text is returned by `GET /api/v1/me/habit-config` as `srhiItems`.
+
+---
+
+#### `cue_pools`
+
+Pre-rated contextual cues for study conditions.
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | |
+| `text` | String | Cue text e.g. `"After dinner each evening"` |
+| `quality` | String | `"low"` or `"high"` |
+| `dimensions` | Object | `{stability: 1-5, salience: 1-5, specificity: 1-5}` |
+| `domain` | String | e.g. `"physical_activity"` |
+| `language` | String | `"en"` or `"de"` |
+| `createdAt` | Date | |
+
+Indexes: `{quality, domain, language}`
+
+---
+
+#### `notification_campaigns`
+
+Researcher-composed push notification campaigns.
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | |
+| `studyId` | ObjectId\|null | Scoped to a study, or `null` for platform-wide |
+| `createdBy` | String | Keycloak `sub` of researcher |
+| `title` | String | Max 65 chars |
+| `body` | String | Max 240 chars |
+| `targetType` | String | `"individual"`, `"group"`, or `"all_enrolled"` |
+| `targetIds` | String[] | userIds or groupIds |
+| `scheduledFor` | Date\|null | `null` = send immediately on creation |
+| `sentAt` | Date\|null | |
+| `recipientCount` | Int\|null | |
+| `status` | String | `"draft"`, `"scheduled"`, `"sent"`, `"failed"` |
+| `createdAt` | Date | |
+
+Indexes: `{status, scheduledFor}`, `{studyId}` (sparse)
 
 ---
 
