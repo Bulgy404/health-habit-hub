@@ -22,6 +22,9 @@ backups/*.tar.gz
 backups/*.manifest
 analytics/*.tar.gz
 
+# Test coverage output
+app/coverage/
+
 # Claude Files
 .claude
 
