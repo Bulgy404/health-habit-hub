@@ -15,6 +15,7 @@ import {
   listCodes,
   revokeCode,
 } from '../../services/studyCodeService.js';
+import { getWeeklyActiveRate, getMeanSrhiTrajectory, getDropoutCurve } from '../../services/studyAnalyticsService.js';
 
 export function createStudiesRouter({
   db,
@@ -286,6 +287,22 @@ export function createStudiesRouter({
       res.json(result);
     } catch (err) {
       console.error('[route] Error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/studies/:id/analytics
+  router.get('/studies/:id/analytics', async (req, res) => {
+    try {
+      const database = await getDb();
+      const [weeklyActiveRate, srhiTrajectory, dropoutCurve] = await Promise.all([
+        getWeeklyActiveRate({ db: database, studyId: req.params.id }),
+        getMeanSrhiTrajectory({ db: database, studyId: req.params.id }),
+        getDropoutCurve({ db: database, studyId: req.params.id }),
+      ]);
+      res.json({ weeklyActiveRate, srhiTrajectory, dropoutCurve });
+    } catch (err) {
+      console.error('[studies] GET /:id/analytics:', err);
       res.status(500).json({ error: 'Internal server error' });
     }
   });
