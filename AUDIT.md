@@ -131,18 +131,18 @@ The platform is in reasonably healthy shape for a research-stage system. The mos
 | F-030 | P2 | Backend | `app/middleware/requestParser.js` | Stale "doesnt work need to fix" comment; body parser size limits not explicitly set | Documented |
 | F-031 | P2 | Backend | `app/app.js` | `/api/internal` router registered after `httpServer.listen()` — fragile ordering | Documented |
 | F-032 | P2 | Backend | `app/utils/SparqlDatabase.js` | User-controlled `context.value` interpolated into SPARQL IRI — defended in practice by `LABEL_TYPE_MAP` but no explicit allowlist assertion | Documented |
-| F-033 | P2 | Backend | `app/routes/adminRouter.js` | `PUT /settings/:key` allows arbitrary key insertion into `admin_settings` collection | Backlog |
-| F-034 | P2 | Backend | `app/routes/adminRouter.js` | `POST /studies/:id/codes` — `count` not validated as positive integer | Backlog |
+| F-033 | P2 | Backend | `app/routes/adminRouter.js` | `PUT /settings/:key` allows arbitrary key insertion into `admin_settings` collection | Fixed |
+| F-034 | P2 | Backend | `app/routes/adminRouter.js` | `POST /studies/:id/codes` — `count` not validated as positive integer | Fixed |
 | F-035 | P2 | Backend | `app/routes/adminRouter.js` | Multiple POST endpoints return 200 instead of 201 | Backlog |
-| F-036 | P2 | Backend | `app/routes/adminRouter.js` | ~2050-line file with inline business logic; dynamic `import('mongodb')` inside route handler | Backlog |
+| F-036 | P2 | Backend | `app/routes/adminRouter.js` | ~2050-line file with inline business logic; dynamic `import('mongodb')` inside route handler | Partially fixed — split into admin sub-routers; root file still 505 lines |
 | F-037 | P2 | Backend | `app/routes/questionnaireResponsesRouter.js` | `POST /questionnaire-responses` returns `insertedId` — MongoDB internal ObjectId leaked | Backlog |
 | F-038 | P2 | Backend | `app/routes/recommendationsRouter.js` | IDOR guard has no `isPrivileged` bypass; `findOne` not scoped by `userId` | Backlog |
 | F-039 | P2 | Backend | `app/tests/integration/recommendations.routes.test.js` | No negative IDOR regression test for F-008 fix | Backlog |
-| F-040 | P2 | Backend | `app/services/notificationService.js` | No concurrency guard on 60s cron — duplicate dispatch if loop exceeds 60s | Backlog |
+| F-040 | P2 | Backend | `app/services/notificationService.js` | No concurrency guard on 60s cron — duplicate dispatch if loop exceeds 60s | Fixed — Redis distributed lock with 55s TTL |
 | F-041 | P2 | Backend | `app/services/notificationService.js` | Zero-delivery case (all tokens fail softly) not distinguished from successful dispatch | Backlog |
 | F-042 | P2 | Backend | `app/services/adminParticipantService.js` | Plaintext password already tracked under F-005 | (see F-005) |
 | F-043 | P2 | Python | `API-service/routers/*.py` | Prompt injection: user-controlled text interpolated into prompt templates without delimiters | Documented |
-| F-044 | P2 | Python | `API-service/routers/*.py` | `_redis` / `_mongo_client` / `_openai_client` singletons duplicated across routers | Backlog |
+| F-044 | P2 | Python | `API-service/routers/*.py` | `_redis` / `_mongo_client` / `_openai_client` singletons duplicated across routers | Fixed — consolidated into `API-service/deps.py` |
 | F-045 | P2 | Admin | `admin/src/lib/auth.ts` | `session.accessToken` exposed to client via `useSession()` — visible in React DevTools | Documented |
 | F-046 | P2 | Admin | `admin/package.json` | `next: "14.2.4"` — not latest patch; should be kept up-to-date | Backlog |
 | F-047 | P2 | Flutter | `mobile/lib/screens/donate_screen.dart` | WebView JS bridge (`SurveyComplete`) lacks `onNavigationRequest` origin guard | Backlog |
@@ -154,25 +154,15 @@ The platform is in reasonably healthy shape for a research-stage system. The mos
 
 ## 5. Backlog (Unfixed — Priority Order)
 
-1. **[P1] Plaintext participant password in MongoDB and API response** (F-005) — `adminParticipantService.js` stores the raw password in the `participants` collection and returns it in the `POST /participants` response. Fix: generate the token card PDF at creation time, return only `tokenCardUrl`, store only a bcrypt hash. Assign a dedicated US.
+1. **[P2] SPARQL IRI injection defence-in-depth** (F-032) — add an explicit allowlist assertion in `SparqlDatabase.js:_appendContext` / `_appendBehavior` even though `LABEL_TYPE_MAP` provides a practical guard today.
 
-2. **[P1] Python API service has no authentication** (F-022) — relies entirely on Docker network isolation. Add an `X-Service-Auth-Token` header check as defence-in-depth for the case where network boundaries are misconfigured. Verify prod compose has no exposed port.
+2. **[P2] Recommendations IDOR hardening** (F-038) — scope `findOne({ recommendation_id, userId })` so 404 masks IDOR attempts; decide whether to add `isPrivileged` bypass; add IDOR regression test (F-039).
 
-3. **[P2] SPARQL IRI injection defence-in-depth** (F-032) — add an explicit allowlist assertion in `SparqlDatabase.js:_appendContext` / `_appendBehavior` even though `LABEL_TYPE_MAP` provides a practical guard today.
+3. **[P2] Flutter WebView origin guard** (F-047, F-048) — add `NavigationDelegate.onNavigationRequest` to block navigation outside of `AppConfig.apiBaseUrl` in `donate_screen.dart` and `profile_screen.dart`.
 
-4. **[P2] Recommendations IDOR hardening** (F-038) — scope `findOne({ recommendation_id, userId })` so 404 masks IDOR attempts; decide whether to add `isPrivileged` bypass; add IDOR regression test (F-039).
+4. **[P2] `adminRouter.js` further decomposition** (F-036) — root file still ~505 lines; extract remaining inline business logic to service layer.
 
-5. **[P2] Notification cron concurrency guard** (F-040) — add a processing lock (e.g. Redis `SET NX PX`) so duplicate dispatch cannot occur if a tick overruns.
-
-6. **[P2] Flutter WebView origin guard** (F-047, F-048) — add `NavigationDelegate.onNavigationRequest` to block navigation outside of `AppConfig.apiBaseUrl` in `donate_screen.dart` and `profile_screen.dart`.
-
-7. **[P2] `PUT /settings/:key` key whitelist** (F-033) — add a whitelist of valid setting keys at the route and service layers.
-
-8. **[P2] `adminRouter.js` decomposition** (F-036) — split into domain sub-routers and extract inline DB queries to service layer.
-
-9. **[P2] Python API singleton cleanup** (F-044) — create `API-service/deps.py` with lifespan-managed Redis, Mongo, and OpenAI clients; inject via FastAPI `Depends()`.
-
-10. **[P2] Next.js admin test coverage** — no test files exist under `admin/src`; add unit tests for auth edge cases and component behaviour.
+**Previously backlogged, now fixed:** F-005 (bcrypt passwords), F-022 (Python auth via `auth.py`), F-033 (settings key allowlist in `adminStatsService.js`), F-034 (count validation in `studiesRouter.js`), F-040 (Redis cron lock), F-044 (consolidated into `deps.py`).
 
 ---
 
