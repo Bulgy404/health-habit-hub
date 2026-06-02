@@ -20,10 +20,9 @@ class HabitDetailScreen extends ConsumerWidget {
     final logsAsync = ref.watch(intentionLogsProvider(intentionId));
     final trajectoryAsync = ref.watch(srhiTrajectoryProvider(intentionId));
 
-    final intention = intentionsAsync.value?.firstWhere(
-      (i) => i.id == intentionId,
-      orElse: () => throw StateError('not found'),
-    );
+    final intention = intentionsAsync.value
+        ?.where((i) => i.id == intentionId)
+        .firstOrNull;
 
     return Scaffold(
       appBar: AppBar(

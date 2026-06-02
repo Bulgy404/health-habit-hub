@@ -34,9 +34,7 @@ class MyHabitsScreen extends ConsumerWidget {
               if (limitReached) return const SizedBox.shrink();
               return TextButton(
                 onPressed: () {
-                  try {
-                    context.push('/habits/new/behavior');
-                  } catch (_) {}
+                  context.push('/habits/new/behavior');
                 },
                 child: Text(l10n.newHabit),
               );
@@ -59,8 +57,19 @@ class MyHabitsScreen extends ConsumerWidget {
                 if (windows.isEmpty) {
                   return const SliverToBoxAdapter(child: SizedBox.shrink());
                 }
+                final first = windows.first;
+                final srhiItems =
+                    configAsync.value?.srhiItems ?? const <SrhiItem>[];
+                final matchedIntention = intentionsAsync.value
+                    ?.where((i) => i.id == first.intentionId)
+                    .firstOrNull;
+                final behaviorLabel = matchedIntention?.behaviorLabel ?? '';
                 return SliverToBoxAdapter(
-                  child: _SrhiPromptCard(windows: windows),
+                  child: _SrhiPromptCard(
+                    windows: windows,
+                    srhiItems: srhiItems,
+                    behaviorLabel: behaviorLabel,
+                  ),
                 );
               },
               loading: () =>
@@ -115,8 +124,14 @@ class MyHabitsScreen extends ConsumerWidget {
 }
 
 class _SrhiPromptCard extends StatelessWidget {
-  const _SrhiPromptCard({required this.windows});
+  const _SrhiPromptCard({
+    required this.windows,
+    required this.srhiItems,
+    required this.behaviorLabel,
+  });
   final List<SrhiWindow> windows;
+  final List<SrhiItem> srhiItems;
+  final String behaviorLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -132,13 +147,13 @@ class _SrhiPromptCard extends StatelessWidget {
         subtitle: Text(l10n.srhiCheckInSubtitle),
         trailing: FilledButton(
           style: FilledButton.styleFrom(minimumSize: Size.zero),
-          onPressed: () {
-            try {
-              context.push(
-                '/habits/${first.intentionId}/srhi/${first.weekNumber}',
-              );
-            } catch (_) {}
-          },
+          onPressed: () => context.push(
+            '/habits/${first.intentionId}/srhi/${first.weekNumber}',
+            extra: {
+              'behaviorLabel': behaviorLabel,
+              'srhiItems': srhiItems,
+            },
+          ),
           child: Text(l10n.srhiStartButton),
         ),
       ),
@@ -172,9 +187,7 @@ class _HabitCard extends ConsumerWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () {
-          try {
-            context.push('/habits/${intention.id}');
-          } catch (_) {}
+          context.push('/habits/${intention.id}');
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -227,12 +240,22 @@ class _HabitCard extends ConsumerWidget {
                   onPressed: todayLogged
                       ? null
                       : () async {
-                          await ref.read(myHabitsServiceProvider).logDay(
-                                intentionId: intention.id,
-                                date: todayStr,
-                                enacted: true,
+                          try {
+                            await ref.read(myHabitsServiceProvider).logDay(
+                                  intentionId: intention.id,
+                                  date: todayStr,
+                                  enacted: true,
+                                );
+                            ref.invalidate(intentionLogsProvider(intention.id));
+                          } catch (_) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'Failed to log — please try again.')),
                               );
-                          ref.invalidate(intentionLogsProvider(intention.id));
+                            }
+                          }
                         },
                   child: Text(todayLogged ? l10n.loggedToday : l10n.logToday),
                 ),
