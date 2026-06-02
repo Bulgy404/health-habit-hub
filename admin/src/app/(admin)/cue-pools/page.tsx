@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import styles from "./page.module.css";
 
@@ -64,6 +64,11 @@ export default function CuePoolsPage() {
 
   const [deleting, setDeleting] = useState<string | null>(null);
 
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ inserted: number; skipped: number } | null>(null);
+  const [importError, setImportError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const fetchCues = useCallback(
     async (p: number) => {
       if (!token) return;
@@ -126,6 +131,45 @@ export default function CuePoolsPage() {
     }
   }
 
+  async function handleImportCsv(file: File) {
+    setImporting(true);
+    setImportError("");
+    setImportResult(null);
+    try {
+      const text = await file.text();
+      const lines = text.trim().split("\n").filter(Boolean);
+      if (lines.length < 2) {
+        setImportError("CSV must have a header row and at least one data row.");
+        setImporting(false);
+        return;
+      }
+      const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+      const required = ["text", "quality", "stability", "salience", "specificity", "domain", "language"];
+      const missing = required.filter(h => !headers.includes(h));
+      if (missing.length > 0) {
+        setImportError(`Missing columns: ${missing.join(", ")}`);
+        setImporting(false);
+        return;
+      }
+      const cues = lines.slice(1).map(line => {
+        const vals = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
+        return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
+      });
+      const data = await apiFetch(
+        (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/cue-pools/import",
+        token,
+        { method: "POST", body: JSON.stringify({ cues }) }
+      );
+      setImportResult(data as { inserted: number; skipped: number });
+      await fetchCues(1); setPage(1);
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
   async function handleDelete(id: string) {
     setDeleting(id);
     try {
@@ -149,12 +193,28 @@ export default function CuePoolsPage() {
             Manage pre-rated contextual cues for study conditions.
           </p>
         </div>
-        <button
-          className={styles.addButton}
-          onClick={() => setShowForm((v) => !v)}
-        >
-          {showForm ? "Cancel" : "+ Add Cue"}
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImportCsv(file);
+            }}
+          />
+          <button
+            className={styles.importButton}
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+          >
+            {importing ? "Importing…" : "Import CSV"}
+          </button>
+          <button className={styles.addButton} onClick={() => setShowForm((v) => !v)}>
+            {showForm ? "Cancel" : "+ Add Cue"}
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -279,6 +339,13 @@ export default function CuePoolsPage() {
       </div>
 
       {error && <div className={styles.errorMsg}>{error}</div>}
+
+      {importResult && (
+        <div className={styles.importResult}>
+          Imported {importResult.inserted} cue{importResult.inserted !== 1 ? "s" : ""}{importResult.skipped > 0 ? `, ${importResult.skipped} skipped (invalid)` : ""}.
+        </div>
+      )}
+      {importError && <div className={styles.errorMsg}>{importError}</div>}
 
       {loading ? (
         <div className={styles.loadingState}>Loading…</div>

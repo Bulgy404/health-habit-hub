@@ -37,4 +37,9 @@ describe('CuePoolsPage', () => {
     render(<CuePoolsPage />);
     expect(await screen.findByText(/no cues yet/i)).toBeInTheDocument();
   });
+
+  it('renders the Import CSV button', () => {
+    render(<CuePoolsPage />);
+    expect(screen.getByRole('button', { name: /import csv/i })).toBeInTheDocument();
+  });
 });

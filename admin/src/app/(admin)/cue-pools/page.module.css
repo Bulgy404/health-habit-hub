@@ -37,3 +37,7 @@
 .pageBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 .pageInfo { font-size: 0.8rem; color: var(--color-text-muted); }
 .dimBadge { font-size: 0.75rem; color: var(--color-text-muted); white-space: nowrap; }
+.importButton { padding: 0.5rem 1rem; background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); border-radius: 6px; cursor: pointer; font-size: 0.875rem; white-space: nowrap; }
+.importButton:hover { background: var(--color-surface-alt); }
+.importButton:disabled { opacity: 0.5; cursor: not-allowed; }
+.importResult { padding: 0.6rem 1rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; font-size: 0.875rem; margin-bottom: 0.75rem; }
