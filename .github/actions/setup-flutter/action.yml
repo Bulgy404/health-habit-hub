@@ -9,6 +9,13 @@ runs:
         channel: stable
         cache: true
 
+    - name: Stub Firebase config files for CI
+      shell: bash
+      run: |
+        cp mobile/lib/firebase_options.dart.example mobile/lib/firebase_options.dart
+        cp mobile/android/app/google-services.json.example mobile/android/app/google-services.json
+        cp mobile/ios/Runner/GoogleService-Info.plist.example mobile/ios/Runner/GoogleService-Info.plist
+
     - name: Install dependencies
       working-directory: mobile
       shell: bash
