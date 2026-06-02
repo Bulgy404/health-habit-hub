@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase config — contains API keys, must not be committed
+# Get the real files via: flutterfire configure
+# Or copy from team secrets vault
+lib/firebase_options.dart
+android/app/google-services.json
+ios/GoogleService-Info.plist
+ios/Runner/GoogleService-Info.plist
