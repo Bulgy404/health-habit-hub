@@ -81,7 +81,7 @@ graph TD
 | **lightrag** | LightRAG 1.3.9 (Python) | Graph+vector knowledge base; builds entity graph from uploaded documents; exposes REST query API and built-in graph visualization UI | 9621 | `localhost:9622` | `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_API_BASE`, `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `LIGHTRAG_API_KEY` |
 | **knowledge-mcp** | FastMCP (Python) | MCP server wrapping LightRAG; exposes `search_knowledge` and `ingest_document` tools for AI agent use via SSE transport | 8002 | `localhost:8002` | `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
 | **keycloak** | Keycloak 26.5.5 | OIDC/OAuth2 identity provider; manages realms, users, roles | 8080 | `localhost:8080` | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KC_DB`, `KC_HTTP_RELATIVE_PATH` (prod) |
-| **admin** | Next.js 14 (App Router) | Researcher/admin web panel: questionnaire management, settings | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER` |
+| **admin** | Next.js 14 (App Router) | Researcher/admin web panel: questionnaire management, settings, cue pools, study analytics, notification campaigns | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER` |
 | **fuseki** | Apache Jena Fuseki | SPARQL triplestore; stores HHH + BCIO ontology | 3030 | `fuseki.localhost:3030` | `ADMIN_PASSWORD` |
 | **neo4j** | Neo4j 5 (n10s plugin) | Graph database; stores habit graph with BCIO alignment | 7474 (HTTP), 7687 (Bolt) | `neo4j.localhost:7474` | `NEO4J_AUTH` (`user/password`), `NEO4J_PLUGINS` |
 | **mongo** | MongoDB (latest) | Document store; holds questionnaires, form responses, recommendations, user preferences | 27017 | Internal only | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`, `MONGO_INITDB_DATABASE` |
@@ -102,7 +102,7 @@ The `app/` service is internally organized into the following layers (as of the 
 | Directory | Purpose |
 |---|---|
 | `app/routes/` | Thin Express routers — parameter extraction, auth middleware, delegating to services |
-| `app/services/` | Business logic: `habitDonationService.js`, `adminParticipantService.js`, `adminHabitService.js`, `adminStatsService.js`, `keycloakAdminClient.js` |
+| `app/services/` | Business logic: `habitDonationService.js`, `adminParticipantService.js`, `adminHabitService.js`, `adminStatsService.js`, `keycloakAdminClient.js`; DFG study services: `habitConfigService.js`, `intentionService.js`, `dailyLogService.js`, `srhiService.js`, `cuePoolService.js`, `exportService.js`, `notificationCampaignService.js`, `studyAnalyticsService.js` |
 | `app/db/` | Named Cypher query modules: `habitQueries.js`, `adminQueries.js` |
 | `app/models/` | Domain model classes: `donation.js` (Donor, Label, Donation, ExperimentalSetting) |
 | `app/middleware/` | Express middleware: `auth.js` (JWT/JWKS), `roles.js` (ROLES constants, isPrivileged) |
@@ -325,7 +325,7 @@ LightRAG's built-in web UI is served at `http://localhost:9622` (local) and can 
 | Store | Technology | What is stored | Why |
 |---|---|---|---|
 | **Graph DB** | Neo4j 5 | `Habit`, `Context`, `BCIOConcept` nodes and `HAS_CONTEXT`, `MAPS_TO` relationships | Graph traversal for habit similarity, BCIO alignment queries, and recommender reads |
-| **Document DB** | MongoDB | `users` (preferences), `questionnaires`, `form_responses`, `recommendations`, `recommendation_feedback` | Flexible schema for survey/form data; no strong relational joins required |
+| **Document DB** | MongoDB | `users` (preferences), `questionnaires`, `form_responses`, `recommendations`, `recommendation_feedback`; DFG collections: `implementation_intentions`, `daily_behavior_logs`, `srhi_responses`, `cue_pools`, `notification_campaigns` | Flexible schema for survey/form data; no strong relational joins required |
 | **Triplestore** | Apache Jena Fuseki | BCIO ontology (`Ontology.ttl`, `schema.ttl`, `data.ttl`) | SPARQL queries over RDF graph; stores formal OWL ontology that the LLM uses for BCIO mapping |
 | **Vector search** | In-process (API-service) | Embedded BCIO concept descriptions | Fast similarity search during `map-bcio` pipeline step; no separate vector DB needed at current scale |
 | **Graph+vector KB** | LightRAG (file-based) | Knowledge graph of concepts/relationships extracted from uploaded documents + vector embeddings | Hybrid retrieval for habit recommendations; graph captures semantic relationships, vector handles dense similarity |
@@ -390,5 +390,50 @@ All alignments are marked `TODO: domain-review` in the ontology and should be va
 | `hhh:Group4` | Opened-Ended | Both sections are free-text |
 
 ---
+
+## DFG Study Module
+
+### Purpose
+
+The DFG study module (DFG CuB — Contextual Cues for Habit Formation) extends the platform with a longitudinal research protocol. Participants form implementation intentions, log daily behaviour, and complete weekly SRHI (Self-Report Habit Index) check-ins. Researchers configure per-group cue pools and receive automated analytics and CSV exports.
+
+### Architecture Overview
+
+The module is layered on top of the existing Node.js backend and MongoDB. A single resolved-config endpoint (`GET /me/habit-config`) returns the cue configuration for the participant's study group (or the public default), together with pre-rated cues drawn randomly from the assigned pool and the SRHI item list. This drives the Flutter "My Habits" tab.
+
+Data flow:
+
+1. **Intention creation** — participant selects a behaviour, trigger cue, and time; `intentionService.js` persists the intention and enforces the per-study `maxHabits` cap.
+2. **Daily logging** — participant marks habit done/not-done; `dailyLogService.js` performs an idempotent upsert keyed on `(intentionId, date)`.
+3. **SRHI check-in** — `srhiService.js` computes the next due window per intention and accepts a 12-item response; scores are stored for trajectory analysis.
+4. **Export** — `exportService.js` builds three CSVs (SRHI responses, daily logs, dropouts) bundled as a ZIP for researcher download.
+
+### API Route Groups
+
+| Route prefix | Description |
+|---|---|
+| `GET /me/habit-config` | Resolved cue config + assigned cues + SRHI items for the authenticated user |
+| `/habits/intentions` | Implementation intention CRUD and status updates |
+| `/habits/intentions/:id/logs` | Daily behaviour log creation and history |
+| `/srhi/*` | SRHI due-window query, weekly submission, and trajectory history |
+| `/admin/cue-pools` | Cue pool CRUD and bulk CSV import |
+| `/admin/studies/:id/analytics` | Per-group weekly active rate, SRHI trajectory, dropout curve |
+| `/admin/studies/:id/export` | Research data ZIP download (3 CSVs) |
+| `/admin/notifications` | Researcher FCM notification campaign management |
+| `/admin/studies/:id/groups/:groupId/cue-config` | Per-group cue source, count, and behaviour config |
+
+### New MongoDB Collections
+
+| Collection | Purpose |
+|---|---|
+| `implementation_intentions` | Participant intentions (behaviour, cue, time, status) |
+| `daily_behavior_logs` | Idempotent daily done/not-done logs keyed on intention + date |
+| `srhi_responses` | Weekly SRHI submissions with computed composite score |
+| `cue_pools` | Named pools of pre-rated contextual cues; supports per-group assignment |
+| `notification_campaigns` | Researcher-authored FCM push campaigns with schedule and target group |
+
+---
+
+*Updated: 2026-06-02 | DFG study module added*
 
 *Updated: 2026-05-09 | Branch: platform_unified — LightRAG knowledge base added*
