@@ -8,14 +8,20 @@ import { createV1Router } from '../../routes/v1Router.js';
 
 // ── Key material ──────────────────────────────────────────────────────────────
 
-const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+});
 const pubKeyJwk = publicKey.export({ format: 'jwk' });
 pubKeyJwk.kid = 'intent-key-1';
 pubKeyJwk.use = 'sig';
 const mockJwks = { keys: [pubKeyJwk] };
 
 function base64urlEncode(buf) {
-  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return buf
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
 }
 
 function createJwt(payload) {
@@ -69,11 +75,14 @@ function createMockDb() {
             };
           },
           async findOne(q) {
-            return intentions.find((i) => {
-              if (q._id && i._id.toString() !== q._id.toString()) return false;
-              if (q.userId && i.userId !== q.userId) return false;
-              return true;
-            }) ?? null;
+            return (
+              intentions.find((i) => {
+                if (q._id && i._id.toString() !== q._id.toString())
+                  return false;
+                if (q.userId && i.userId !== q.userId) return false;
+                return true;
+              }) ?? null
+            );
           },
           async updateOne(q, update) {
             const idx = intentions.findIndex((i) => {
@@ -93,7 +102,17 @@ function createMockDb() {
             });
             if (idx === -1) return null;
             if (update.$set) Object.assign(intentions[idx], update.$set);
-            return opts?.returnDocument === 'after' ? { ...intentions[idx] } : { ...intentions[idx], ...Object.fromEntries(Object.entries(update.$set ?? {}).map(([k]) => [k, intentions[idx][k]])) };
+            return opts?.returnDocument === 'after'
+              ? { ...intentions[idx] }
+              : {
+                  ...intentions[idx],
+                  ...Object.fromEntries(
+                    Object.entries(update.$set ?? {}).map(([k]) => [
+                      k,
+                      intentions[idx][k],
+                    ])
+                  ),
+                };
           },
         };
       }
@@ -101,32 +120,50 @@ function createMockDb() {
         return {
           async findOneAndUpdate(q, update, opts) {
             const idx = logs.findIndex(
-              (l) => l.intentionId?.toString() === q.intentionId?.toString() && l.date === q.date
+              (l) =>
+                l.intentionId?.toString() === q.intentionId?.toString() &&
+                l.date === q.date
             );
             if (idx === -1 && opts?.upsert) {
-              const doc = { ...update.$setOnInsert, intentionId: q.intentionId, date: q.date };
+              const doc = {
+                ...update.$setOnInsert,
+                intentionId: q.intentionId,
+                date: q.date,
+              };
               logs.push(doc);
               return opts?.returnDocument === 'after' ? doc : null;
             }
-            if (idx !== -1 && update.$set) Object.assign(logs[idx], update.$set);
+            if (idx !== -1 && update.$set)
+              Object.assign(logs[idx], update.$set);
             return opts?.returnDocument === 'after' ? { ...logs[idx] } : null;
           },
           async updateOne(q, update, opts) {
             const idx = logs.findIndex(
-              (l) => l.intentionId?.toString() === q.intentionId?.toString() && l.date === q.date
+              (l) =>
+                l.intentionId?.toString() === q.intentionId?.toString() &&
+                l.date === q.date
             );
             if (idx === -1 && opts?.upsert) {
-              logs.push({ ...update.$setOnInsert, intentionId: q.intentionId, date: q.date });
+              logs.push({
+                ...update.$setOnInsert,
+                intentionId: q.intentionId,
+                date: q.date,
+              });
               return { upsertedCount: 1 };
             }
-            if (idx !== -1 && update.$set) Object.assign(logs[idx], update.$set);
+            if (idx !== -1 && update.$set)
+              Object.assign(logs[idx], update.$set);
             return { matchedCount: idx === -1 ? 0 : 1 };
           },
           find(q = {}) {
             return {
               toArray: async () =>
                 logs.filter((l) => {
-                  if (q.intentionId && l.intentionId?.toString() !== q.intentionId?.toString()) return false;
+                  if (
+                    q.intentionId &&
+                    l.intentionId?.toString() !== q.intentionId?.toString()
+                  )
+                    return false;
                   return true;
                 }),
             };
@@ -135,21 +172,33 @@ function createMockDb() {
       }
       if (name === 'srhi_responses') {
         return {
-          async insertOne(doc) { srhiWindows.push({ ...doc }); },
-          async insertMany(docs) { docs.forEach((d) => srhiWindows.push({ ...d })); },
+          async insertOne(doc) {
+            srhiWindows.push({ ...doc });
+          },
+          async insertMany(docs) {
+            docs.forEach((d) => srhiWindows.push({ ...d }));
+          },
           find(q = {}) {
             return {
-              sort: () => ({ toArray: async () => srhiWindows.filter((w) => {
-                if (q.intentionId && w.intentionId?.toString() !== q.intentionId?.toString()) return false;
-                return true;
-              }) }),
+              sort: () => ({
+                toArray: async () =>
+                  srhiWindows.filter((w) => {
+                    if (
+                      q.intentionId &&
+                      w.intentionId?.toString() !== q.intentionId?.toString()
+                    )
+                      return false;
+                    return true;
+                  }),
+              }),
             };
           },
         };
       }
       if (name === 'enrollments') {
         return {
-          findOne: async (q) => enrollments.find((e) => e.userId === q.userId) ?? null,
+          findOne: async (q) =>
+            enrollments.find((e) => e.userId === q.userId) ?? null,
           updateOne: async () => ({ matchedCount: 0 }),
         };
       }
@@ -215,13 +264,21 @@ async function get(path, token) {
 async function post(path, body, token) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  return fetch(`${baseUrl}${path}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  return fetch(`${baseUrl}${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
 }
 
 async function patch(path, body, token) {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  return fetch(`${baseUrl}${path}`, { method: 'PATCH', headers, body: JSON.stringify(body) });
+  return fetch(`${baseUrl}${path}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(body),
+  });
 }
 
 const INTENTIONS = '/api/v1/habits/intentions';
@@ -229,7 +286,9 @@ const validBody = {
   behaviorKey: 'walking',
   behaviorLabel: 'Walking',
   durationMinutes: 20,
-  cues: [{ text: 'After dinner each evening', source: 'pre_rated', cueId: null }],
+  cues: [
+    { text: 'After dinner each evening', source: 'pre_rated', cueId: null },
+  ],
   intentionStatement: 'After dinner each evening, I will go for a 20-min walk.',
 };
 
@@ -263,7 +322,11 @@ test('POST /habits/intentions returns 400 when required fields missing', async (
 });
 
 test('POST /habits/intentions creates intention and returns 201', async () => {
-  const res = await post(INTENTIONS, validBody, makeToken(['user'], 'creator-user'));
+  const res = await post(
+    INTENTIONS,
+    validBody,
+    makeToken(['user'], 'creator-user')
+  );
   assert.strictEqual(res.status, 201);
   const body = await res.json();
   assert.ok(body._id || body.id);
@@ -285,19 +348,31 @@ test('POST /habits/intentions returns created intention in subsequent GET', asyn
 // ── PATCH status ──────────────────────────────────────────────────────────────
 
 test('PATCH /habits/intentions/:id/status returns 400 for invalid status', async () => {
-  const res = await patch(`${INTENTIONS}/507f1f77bcf86cd799439011/status`, { status: 'unknown' }, makeToken());
+  const res = await patch(
+    `${INTENTIONS}/507f1f77bcf86cd799439011/status`,
+    { status: 'unknown' },
+    makeToken()
+  );
   assert.strictEqual(res.status, 400);
 });
 
 test('PATCH /habits/intentions/:id/status returns 404 for nonexistent intention', async () => {
-  const res = await patch(`${INTENTIONS}/507f1f77bcf86cd799439011/status`, { status: 'paused' }, makeToken());
+  const res = await patch(
+    `${INTENTIONS}/507f1f77bcf86cd799439011/status`,
+    { status: 'paused' },
+    makeToken()
+  );
   assert.strictEqual(res.status, 404);
 });
 
 // ── POST logs ────────────────────────────────────────────────────────────────
 
 test('POST /habits/intentions/:id/logs returns 400 when date missing', async () => {
-  const res = await post(`${INTENTIONS}/507f1f77bcf86cd799439011/logs`, { enacted: true }, makeToken());
+  const res = await post(
+    `${INTENTIONS}/507f1f77bcf86cd799439011/logs`,
+    { enacted: true },
+    makeToken()
+  );
   assert.strictEqual(res.status, 400);
 });
 

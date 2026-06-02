@@ -44,12 +44,10 @@ export function createIntentionsRouter({ db } = {}) {
         !cues?.length ||
         !intentionStatement
       ) {
-        return res
-          .status(400)
-          .json({
-            error:
-              'behaviorKey, behaviorLabel, durationMinutes, cues, and intentionStatement are required',
-          });
+        return res.status(400).json({
+          error:
+            'behaviorKey, behaviorLabel, durationMinutes, cues, and intentionStatement are required',
+        });
       }
       const database = await getDb();
       const userId = req.user.sub;
@@ -128,11 +126,9 @@ export function createIntentionsRouter({ db } = {}) {
     try {
       const { date, enacted } = req.body;
       if (!date || typeof enacted !== 'boolean')
-        return res
-          .status(400)
-          .json({
-            error: 'date (YYYY-MM-DD) and enacted (boolean) are required',
-          });
+        return res.status(400).json({
+          error: 'date (YYYY-MM-DD) and enacted (boolean) are required',
+        });
       const database = await getDb();
       await upsertLog({
         db: database,

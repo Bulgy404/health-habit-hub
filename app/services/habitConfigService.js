@@ -40,7 +40,8 @@ export async function resolveHabitConfig({ db, userId }) {
     cueCount = enrollment.cueConfig.cueCount;
     cueSource = enrollment.cueConfig.cueSource;
     cuePoolId = enrollment.cueConfig.cuePoolId ?? null;
-    behaviorOptions = enrollment.cueConfig.behaviorOptions ?? DEFAULT_BEHAVIOR_KEYS;
+    behaviorOptions =
+      enrollment.cueConfig.behaviorOptions ?? DEFAULT_BEHAVIOR_KEYS;
     maxHabits = enrollment.cueConfig.maxHabits ?? null;
   } else {
     const settings = await readAdminSettings(db);
@@ -51,7 +52,19 @@ export async function resolveHabitConfig({ db, userId }) {
     maxHabits = null;
   }
 
-  const assignedCues = await pickAssignedCues({ db, cueSource, cueCount, cuePoolId });
+  const assignedCues = await pickAssignedCues({
+    db,
+    cueSource,
+    cueCount,
+    cuePoolId,
+  });
 
-  return { cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits, assignedCues };
+  return {
+    cueCount,
+    cueSource,
+    cuePoolId,
+    behaviorOptions,
+    maxHabits,
+    assignedCues,
+  };
 }

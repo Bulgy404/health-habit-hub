@@ -10,9 +10,14 @@ const SRHI = 'srhi_responses';
  */
 export async function getWeeklyActiveRate({ db, studyId }) {
   let oid;
-  try { oid = new ObjectId(studyId); } catch { return []; }
+  try {
+    oid = new ObjectId(studyId);
+  } catch {
+    return [];
+  }
 
-  const enrollments = await db.collection(ENROLLMENTS)
+  const enrollments = await db
+    .collection(ENROLLMENTS)
     .find({ studyId: oid })
     .toArray();
 
@@ -31,7 +36,8 @@ export async function getWeeklyActiveRate({ db, studyId }) {
 
   const results = [];
   for (const { groupId, userIds } of Object.values(byGroup)) {
-    const activeDocs = await db.collection(DAILY_LOGS)
+    const activeDocs = await db
+      .collection(DAILY_LOGS)
       .aggregate([
         { $match: { userId: { $in: userIds }, date: { $gte: cutoffStr } } },
         { $group: { _id: '$userId' } },
@@ -39,7 +45,12 @@ export async function getWeeklyActiveRate({ db, studyId }) {
       .toArray();
     const active = activeDocs.length;
     const enrolled = userIds.length;
-    results.push({ groupId, enrolled, active, rate: enrolled > 0 ? active / enrolled : 0 });
+    results.push({
+      groupId,
+      enrolled,
+      active,
+      rate: enrolled > 0 ? active / enrolled : 0,
+    });
   }
   return results;
 }
@@ -49,11 +60,22 @@ export async function getWeeklyActiveRate({ db, studyId }) {
  */
 export async function getMeanSrhiTrajectory({ db, studyId }) {
   let oid;
-  try { oid = new ObjectId(studyId); } catch { return []; }
+  try {
+    oid = new ObjectId(studyId);
+  } catch {
+    return [];
+  }
 
-  const docs = await db.collection(SRHI)
+  const docs = await db
+    .collection(SRHI)
     .aggregate([
-      { $match: { studyId: oid, submittedAt: { $ne: null }, score: { $ne: null } } },
+      {
+        $match: {
+          studyId: oid,
+          submittedAt: { $ne: null },
+          score: { $ne: null },
+        },
+      },
       {
         $group: {
           _id: { groupId: '$groupId', weekNumber: '$weekNumber' },
@@ -65,7 +87,7 @@ export async function getMeanSrhiTrajectory({ db, studyId }) {
     ])
     .toArray();
 
-  return docs.map(d => ({
+  return docs.map((d) => ({
     groupId: d._id.groupId?.toString() ?? null,
     weekNumber: d._id.weekNumber,
     meanScore: Math.round(d.meanScore * 100) / 100,
@@ -78,9 +100,14 @@ export async function getMeanSrhiTrajectory({ db, studyId }) {
  */
 export async function getDropoutCurve({ db, studyId }) {
   let oid;
-  try { oid = new ObjectId(studyId); } catch { return []; }
+  try {
+    oid = new ObjectId(studyId);
+  } catch {
+    return [];
+  }
 
-  const dropped = await db.collection(ENROLLMENTS)
+  const dropped = await db
+    .collection(ENROLLMENTS)
     .find({ studyId: oid, droppedOutAt: { $ne: null } })
     .toArray();
 
