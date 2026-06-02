@@ -38,6 +38,10 @@ tmp/
 *.swo
 *~
 Thumbs.db
+*.tsbuildinfo
+
+# Claude planning artifacts
+docs/superpowers/
 
 # Archive backups
 *.tar.gz
