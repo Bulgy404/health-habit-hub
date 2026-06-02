@@ -42,6 +42,7 @@ class _SetCueScreenState extends State<SetCueScreen> {
         return;
       }
       if (widget.config.cueCount == 'multi' &&
+          _cue2Controller.text.trim().isNotEmpty &&
           _cue2Controller.text.trim().length < 10) {
         setState(() => _error = l10n.setCueTooShort);
         return;
@@ -52,17 +53,16 @@ class _SetCueScreenState extends State<SetCueScreen> {
 
     final List<IntentionCue> cues;
     if (isPreRated) {
-      cues = [
-        IntentionCue(
-          text: 'Your assigned cue for ${widget.behaviorLabel}',
-          source: 'pre_rated',
-        ),
-        if (widget.config.cueCount == 'multi')
-          const IntentionCue(
-            text: 'at your usual location',
+      if (widget.config.assignedCues.isNotEmpty) {
+        cues = widget.config.assignedCues;
+      } else {
+        cues = [
+          IntentionCue(
+            text: 'Your assigned cue for ${widget.behaviorLabel}',
             source: 'pre_rated',
           ),
-      ];
+        ];
+      }
     } else {
       cues = [
         IntentionCue(
@@ -110,25 +110,31 @@ class _SetCueScreenState extends State<SetCueScreen> {
             ),
             const SizedBox(height: 20),
             if (isPreRated) ...[
-              Card(
-                child: ListTile(
-                  leading: const Icon(Icons.location_on),
-                  title: Text('Your assigned cue for ${widget.behaviorLabel}'),
-                  subtitle: Text(
-                    isMulti
-                        ? 'Cue 1 of 2 (assigned by study)'
-                        : 'Assigned by study',
-                  ),
-                ),
-              ),
-              if (isMulti)
+              if (widget.config.assignedCues.isEmpty)
                 const Card(
                   child: ListTile(
-                    leading: Icon(Icons.add_location),
-                    title: Text('at your usual location'),
-                    subtitle: Text('Cue 2 of 2 (assigned by study)'),
+                    leading: Icon(Icons.hourglass_empty),
+                    title: Text('No cues available yet'),
+                    subtitle: Text('Your study coordinator will assign cues soon'),
                   ),
-                ),
+                )
+              else
+                ...widget.config.assignedCues.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final cue = entry.value;
+                  final total = widget.config.assignedCues.length;
+                  return Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.location_on),
+                      title: Text(cue.text),
+                      subtitle: Text(
+                        total > 1
+                            ? 'Cue ${index + 1} of $total (assigned by study)'
+                            : 'Assigned by study',
+                      ),
+                    ),
+                  );
+                }),
             ] else ...[
               TextField(
                 controller: _cue1Controller,
