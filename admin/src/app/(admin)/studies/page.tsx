@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import styles from "./page.module.css";
-import { AnalyticsTab } from "./analytics-tab";
+import { AnalyticsTab } from "../../../components/studies-analytics-tab";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

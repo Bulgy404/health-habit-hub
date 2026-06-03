@@ -13,7 +13,7 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/studies',
 }));
 
-import { AnalyticsTab } from '../app/(admin)/studies/analytics-tab';
+import { AnalyticsTab } from '../components/studies-analytics-tab';
 
 const mockStudy = {
   id: 'study-1',
