@@ -13,7 +13,7 @@ import os
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -56,9 +56,9 @@ async def _lightrag(
         resp = await client.request(method, url, headers=hdrs, json=json, content=content)
     logger.info("LightRAG %s %s → %d", method, path, resp.status_code)
     if resp.status_code >= 500:
-        raise HTTPException(status_code=502, detail=f"LightRAG error: {resp.text[:200]}")
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"LightRAG error: {resp.text[:200]}")
     if resp.status_code == 404:
-        raise HTTPException(status_code=404, detail="Document not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
     resp.raise_for_status()
     return resp.json()
 
@@ -105,7 +105,7 @@ async def retrieve(body: RetrieveRequest) -> RetrieveResponse:
         raise
     except Exception as exc:
         logger.error("retrieve failed: %s", exc)
-        raise HTTPException(status_code=500, detail="Retrieval service unavailable.") from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Retrieval service unavailable.") from exc
 
     context: str = data.get("response") or ""
     if not context.strip():
@@ -134,7 +134,7 @@ async def list_kb() -> list[KbEntry]:
         raise
     except Exception as exc:
         logger.error("list_kb failed: %s", exc)
-        raise HTTPException(status_code=500, detail="Could not reach LightRAG.") from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not reach LightRAG.") from exc
 
     statuses: dict[str, list[dict[str, object]]] = data.get("statuses", {})  # type: ignore[assignment]
     entries: list[KbEntry] = []
@@ -164,13 +164,13 @@ async def upload_kb(
     category: str = Form(default="general"),
 ) -> JSONResponse:
     if not file.filename:
-        raise HTTPException(status_code=400, detail="No filename provided.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No filename provided.")
 
     logger.info("upload_kb filename=%s category=%s", file.filename, category)
     suffix = "." + file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
     if suffix not in _SUPPORTED_EXTENSIONS:
         raise HTTPException(
-            status_code=400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Unsupported file type. Accepted: {', '.join(_SUPPORTED_EXTENSIONS)}",
         )
 
@@ -189,12 +189,12 @@ async def upload_kb(
             )
         logger.info("upload_kb → LightRAG %d", resp.status_code)
         if resp.status_code >= 400:
-            raise HTTPException(status_code=400, detail=resp.json().get("detail", "Upload failed."))
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=resp.json().get("detail", "Upload failed."))
     except HTTPException:
         raise
     except Exception as exc:
         logger.error("upload_kb failed: %s", exc)
-        raise HTTPException(status_code=500, detail="Could not reach LightRAG.") from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not reach LightRAG.") from exc
 
     return JSONResponse(
         {"message": f"Uploaded '{file.filename}' — processing in background."},
@@ -208,7 +208,7 @@ async def upload_kb(
 @router.delete("/kb/{filename}", status_code=200)
 async def delete_kb(filename: str) -> JSONResponse:
     if "/" in filename or "\\" in filename or ".." in filename:
-        raise HTTPException(status_code=400, detail="Invalid filename.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename.")
 
     # Fetch document list to find the doc_id matching this filename
     try:
@@ -217,7 +217,7 @@ async def delete_kb(filename: str) -> JSONResponse:
         raise
     except Exception as exc:
         logger.error("delete_kb list failed: %s", exc)
-        raise HTTPException(status_code=500, detail="Could not reach LightRAG.") from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not reach LightRAG.") from exc
 
     statuses: dict[str, list[dict[str, object]]] = data.get("statuses", {})  # type: ignore[assignment]
     doc_id: Optional[str] = None
@@ -231,7 +231,7 @@ async def delete_kb(filename: str) -> JSONResponse:
             break
 
     if not doc_id:
-        raise HTTPException(status_code=404, detail=f"Document '{filename}' not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document '{filename}' not found.")
 
     try:
         await _lightrag(
@@ -243,6 +243,6 @@ async def delete_kb(filename: str) -> JSONResponse:
         raise
     except Exception as exc:
         logger.error("delete_kb delete failed: %s", exc)
-        raise HTTPException(status_code=500, detail="Could not reach LightRAG.") from exc
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not reach LightRAG.") from exc
 
     return JSONResponse({"message": f"Deleted '{filename}'."})

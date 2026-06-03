@@ -10,7 +10,7 @@ from typing import Optional
 from uuid import uuid4
 
 import redis.asyncio as aioredis
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
@@ -112,11 +112,8 @@ async def classify_habit(body: ClassifyHabitRequest) -> ClassifyHabitResponse:
     except Exception as exc:  # noqa: BLE001
         logger.error("LLM classify_habit call failed: %s", exc)
         raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "Classifier unavailable",
-                "code": "llm_unavailable",
-            },
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Classifier unavailable — see server logs for details.",
         ) from exc
 
     try:
@@ -126,11 +123,8 @@ async def classify_habit(body: ClassifyHabitRequest) -> ClassifyHabitResponse:
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
         logger.error("LLM returned unexpected format: %r (%s)", raw, exc)
         raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "Classifier returned invalid response",
-                "code": "llm_invalid_response",
-            },
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Classifier returned invalid response — see server logs for details.",
         ) from exc
 
     # --- cache write ---
