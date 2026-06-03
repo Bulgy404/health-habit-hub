@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
 from llm_client import chat_complete
+from routers._llm_helpers import call_llm_with_fallback, load_prompt_template
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +17,7 @@ router = APIRouter(dependencies=[Depends(verify_service_token)])
 # ---------------------------------------------------------------------------
 # Prompt template
 # ---------------------------------------------------------------------------
-_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "refine_translation.txt"
-_PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
+_PROMPT_TEMPLATE = load_prompt_template("prompts/refine_translation.txt")
 
 
 # ---------------------------------------------------------------------------
@@ -45,14 +44,11 @@ async def refine_translation(body: RefineTranslationRequest) -> RefineTranslatio
         raw_translation=body.raw_translation,
     )
 
-    raw = await chat_complete(
-        messages=[{"role": "user", "content": prompt}],
+    refined = await call_llm_with_fallback(
+        prompt=prompt,
+        fallback=body.raw_translation,
         temperature=0.3,
+        llm_func=chat_complete,
     )
-
-    refined = raw.strip()
-    if not refined:
-        logger.warning("LLM returned empty response — falling back to raw_translation.")
-        refined = body.raw_translation
 
     return RefineTranslationResponse(refined_translation=refined)
