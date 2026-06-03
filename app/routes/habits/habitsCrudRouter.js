@@ -10,7 +10,7 @@ import {
 
 // Step 1: Call LibreTranslate with a 10-second timeout.
 // Returns the raw translated string, or null if the service is unavailable.
-export async function fetchLibreTranslation(
+async function fetchLibreTranslation(
   sentence,
   sourceLang,
   targetLang,
@@ -53,7 +53,7 @@ export async function fetchLibreTranslation(
 
 // Step 2: Refine the raw translation with the LLM tone endpoint.
 // Returns the refined string, or the original draft if the LLM is unavailable.
-export async function refineLLMTranslation(
+async function refineLLMTranslation(
   draft,
   sentence,
   sourceLang,
@@ -96,7 +96,7 @@ export async function refineLLMTranslation(
 
 // Unified translation: LibreTranslate → LLM tone refinement.
 // Returns refined string, raw LibreTranslate output if LLM fails, or null if LibreTranslate fails.
-export async function translate(
+async function translate(
   sentence,
   sourceLang,
   targetLang,
