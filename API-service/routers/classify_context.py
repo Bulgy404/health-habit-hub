@@ -29,6 +29,7 @@ _redis: Optional[aioredis.Redis] = None
 
 
 async def _get_redis() -> Optional[aioredis.Redis]:
+    """Return a module-level Redis client, initialising lazily; returns None if unavailable."""
     global _redis
     if _redis is not None:
         return _redis
@@ -64,12 +65,16 @@ _DIMENSIONS = [
 # Request / Response models
 # ---------------------------------------------------------------------------
 class ClassifyContextRequest(BaseModel):
+    """Input payload for the classify-context endpoint."""
+
     uuid: str = Field(..., max_length=128)
     sentence: str = Field(..., min_length=1, max_length=2000)
     language: str = Field(..., max_length=32)
 
 
 class ClassifyContextResponse(BaseModel):
+    """Classified context dimensions for a single habit sentence."""
+
     uuid: str
     sentence: str
     language: str
@@ -86,11 +91,13 @@ class ClassifyContextResponse(BaseModel):
 # Helper: cache key
 # ---------------------------------------------------------------------------
 def _cache_key(sentence: str, language: str) -> str:
+    """Build a deterministic Redis key from sentence and language."""
     digest = hashlib.sha256(f"{sentence}||{language}".encode()).hexdigest()
     return f"classify_context:{digest}"
 
 
 def _empty_dimensions() -> dict:
+    """Return a dict with all BCIO dimensions mapped to empty lists."""
     return {dim: [] for dim in _DIMENSIONS}
 
 
@@ -113,6 +120,17 @@ def _parse_llm_response(raw: str) -> dict:
 # ---------------------------------------------------------------------------
 @router.post("/llm/classify-context", response_model=ClassifyContextResponse)
 async def classify_context(body: ClassifyContextRequest) -> ClassifyContextResponse:
+    """Classify a habit sentence into BCIO context dimensions using an LLM.
+
+    Args:
+        body: Validated request payload containing the habit sentence and language.
+
+    Returns:
+        ClassifyContextResponse with phrase lists for each of the 7 BCIO dimensions.
+
+    Raises:
+        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+    """
     key = _cache_key(body.sentence, body.language)
 
     # --- cache read ---

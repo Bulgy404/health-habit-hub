@@ -24,11 +24,15 @@ _PROMPT_TEMPLATE = load_prompt_template("prompts/refine_translation_de.txt")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class RefineTranslationDeRequest(BaseModel):
+    """Input payload for the German-specific refine-translation-de endpoint."""
+
     original: str = Field(..., min_length=1, max_length=10000)
     raw_translation: str = Field(..., min_length=1, max_length=10000)
 
 
 class RefineTranslationDeResponse(BaseModel):
+    """LLM-refined German translation preserving the tone and style of the original text."""
+
     refined_translation: str
 
 
@@ -37,6 +41,18 @@ class RefineTranslationDeResponse(BaseModel):
 # ---------------------------------------------------------------------------
 @router.post("/llm/refine-translation-de", response_model=RefineTranslationDeResponse)
 async def refine_translation_de(body: RefineTranslationDeRequest) -> RefineTranslationDeResponse:
+    """Refine a German machine translation to match the tone and style of the original.
+
+    Args:
+        body: Validated request payload with original text and raw German translation.
+
+    Returns:
+        RefineTranslationDeResponse with the LLM-refined German translation string.
+        Falls back to raw_translation if the LLM returns an empty response.
+
+    Raises:
+        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+    """
     prompt = _PROMPT_TEMPLATE.format(
         original=body.original,
         raw_translation=body.raw_translation,

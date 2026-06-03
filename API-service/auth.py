@@ -1,3 +1,4 @@
+"""Service-to-service authentication — verifies shared-secret tokens on every incoming request."""
 import hmac
 import os
 
