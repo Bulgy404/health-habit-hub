@@ -10,7 +10,7 @@ const ALPHABET_LEN = ALPHABET.length;
 // that fits in a byte (256), eliminating modulo bias.
 const REJECTION_THRESHOLD = 256 - (256 % ALPHABET_LEN);
 
-function generateCode() {
+function _generateCode() {
   const chars = [];
   while (chars.length < 5) {
     const buf = randomBytes(10);
@@ -24,11 +24,11 @@ function generateCode() {
   return 'HHH-' + chars.join('');
 }
 
-async function generateUniqueCodes(db, count) {
+async function _generateUniqueCodes(db, count) {
   const codes = [];
   const seen = new Set();
   while (codes.length < count) {
-    const code = generateCode();
+    const code = _generateCode();
     if (seen.has(code)) continue;
     const existing = await db.collection(CODES).findOne({ code });
     if (!existing) {
@@ -66,7 +66,7 @@ export async function createCodes({
   if (!group) return { groupNotFound: true };
 
   const cnt = Math.min(100, Math.max(1, parseInt(count, 10) || 1));
-  const codes = await generateUniqueCodes(db, cnt);
+  const codes = await _generateUniqueCodes(db, cnt);
   const now = new Date();
   const maxRed = maxRedemptions != null ? parseInt(maxRedemptions, 10) : null;
   const exp = expiresAt ? new Date(expiresAt) : null;
