@@ -6,7 +6,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends
@@ -28,7 +28,7 @@ _BACKEND_URL = os.getenv("BACKEND_URL", "http://app:3000")
 _SERVICE_SECRET = os.getenv("API_SERVICE_SECRET", "")
 
 
-async def _fetch_questionnaire_response(user_id: str, slug: str) -> Optional[Dict[str, Any]]:
+async def _fetch_questionnaire_response(user_id: str, slug: str) -> Optional[dict[str, object]]:
     """Fetch the most recent questionnaire response for a user via the service endpoint.
 
     Uses GET /api/v1/questionnaire-responses/service/:userId/:slug authenticated
@@ -57,7 +57,7 @@ async def _fetch_questionnaire_response(user_id: str, slug: str) -> Optional[Dic
     return None
 
 
-async def _fetch_user_profile(user_id: str) -> Optional[Dict[str, Any]]:
+async def _fetch_user_profile(user_id: str) -> Optional[dict[str, object]]:
     """Fetch the user's structured profile from the user_profiles collection.
 
     Uses GET /api/v1/user-profile/service/:userId authenticated
@@ -115,7 +115,7 @@ def _cache_key(user_id: str, goal: str) -> str:
     return make_cache_key("extract_profile", user_id, goal)
 
 
-def _parse_llm_response(raw: str) -> Optional[Dict[str, str]]:
+def _parse_llm_response(raw: str) -> Optional[dict[str, str]]:
     """Parse LLM JSON response; returns None on error."""
     try:
         parsed = json.loads(raw.strip())

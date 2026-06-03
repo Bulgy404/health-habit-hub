@@ -6,7 +6,7 @@ import logging
 import os
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Optional
 
 import numpy as np
 import openai
@@ -43,14 +43,14 @@ _OWL_NS = "http://www.w3.org/2002/07/owl#"
 # ---------------------------------------------------------------------------
 # In-memory concept index: {"hash": str, "concepts": [{"id", "label", "embedding"}]}
 # ---------------------------------------------------------------------------
-_INDEX: Optional[Dict[str, Any]] = None
+_INDEX: Optional[dict[str, object]] = None
 
 
-def _parse_owl_concepts(owl_path: Path) -> List[Dict[str, str]]:
+def _parse_owl_concepts(owl_path: Path) -> list[dict[str, str]]:
     """Parse an OWL file and return a list of {id, label} dicts."""
     tree = ET.parse(str(owl_path))
     root = tree.getroot()
-    concepts: List[Dict[str, str]] = []
+    concepts: list[dict[str, str]] = []
     for cls in root.iter(f"{{{_OWL_NS}}}Class"):
         concept_id = cls.get(f"{{{_RDF_NS}}}about", "")
         if not concept_id:
@@ -61,7 +61,7 @@ def _parse_owl_concepts(owl_path: Path) -> List[Dict[str, str]]:
     return concepts
 
 
-async def _embed_texts(texts: List[str]) -> List[List[float]]:
+async def _embed_texts(texts: list[str]) -> list[list[float]]:
     """Return embeddings using the configured OpenAI-compatible embedding endpoint."""
     response = await _openai_client.embeddings.create(
         model=_EMBEDDING_MODEL,
@@ -70,7 +70,7 @@ async def _embed_texts(texts: List[str]) -> List[List[float]]:
     return [item.embedding for item in response.data]
 
 
-def _cosine_similarity(a: List[float], b: List[float]) -> float:
+def _cosine_similarity(a: list[float], b: list[float]) -> float:
     """Cosine similarity between two float vectors."""
     vec_a = np.array(a, dtype=np.float32)
     vec_b = np.array(b, dtype=np.float32)
@@ -81,7 +81,7 @@ def _cosine_similarity(a: List[float], b: List[float]) -> float:
     return float(np.dot(vec_a, vec_b) / (norm_a * norm_b))
 
 
-async def _get_index() -> Optional[Dict[str, Any]]:
+async def _get_index() -> Optional[dict[str, object]]:
     """Return the BCIO concept index, rebuilding it when bcio.owl changes."""
     global _INDEX
 
@@ -105,7 +105,7 @@ async def _get_index() -> Optional[Dict[str, Any]]:
     labels = [c["label"] for c in raw_concepts]
     total = len(labels)
     chunk_size = int(os.getenv("EMBEDDING_CHUNK_SIZE", "200"))
-    embeddings: List[List[float]] = []
+    embeddings: list[list[float]] = []
 
     logger.info(
         "Embedding %d BCIO concepts via %s (chunk_size=%d) …",
@@ -125,7 +125,7 @@ async def _get_index() -> Optional[Dict[str, Any]]:
         logger.error("Failed to build BCIO concept embeddings: %s", exc)
         return None
 
-    concepts_with_embeddings: List[Dict[str, Any]] = [
+    concepts_with_embeddings: list[dict[str, object]] = [
         {**c, "embedding": emb} for c, emb in zip(raw_concepts, embeddings)
     ]
     _INDEX = {"hash": file_hash, "concepts": concepts_with_embeddings}
@@ -138,11 +138,11 @@ async def _get_index() -> Optional[Dict[str, Any]]:
 # ---------------------------------------------------------------------------
 class MapBcioRequest(BaseModel):
     uuid: str = Field(..., max_length=128)
-    context_phrases: Dict[str, List[str]]
+    context_phrases: dict[str, list[str]]
 
     @field_validator("context_phrases")
     @classmethod
-    def limit_phrase_lengths(cls, v: Dict[str, List[str]]) -> Dict[str, List[str]]:
+    def limit_phrase_lengths(cls, v: dict[str, list[str]]) -> dict[str, list[str]]:
         for dim, phrases in v.items():
             for phrase in phrases:
                 if len(phrase) > 2000:
@@ -161,7 +161,7 @@ class BcioMapping(BaseModel):
 
 
 class MapBcioResponse(BaseModel):
-    mappings: List[BcioMapping]
+    mappings: list[BcioMapping]
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +174,7 @@ async def map_bcio(body: MapBcioRequest) -> MapBcioResponse:
         return MapBcioResponse(mappings=[])
 
     # Collect all non-empty (phrase, dimension) pairs
-    phrase_dim_pairs: List[Tuple[str, str]] = [
+    phrase_dim_pairs: list[tuple[str, str]] = [
         (phrase.strip(), dimension)
         for dimension, phrases in body.context_phrases.items()
         for phrase in phrases
@@ -192,11 +192,11 @@ async def map_bcio(body: MapBcioRequest) -> MapBcioResponse:
         return MapBcioResponse(mappings=[])
 
     concepts = index["concepts"]
-    mappings: List[BcioMapping] = []
+    mappings: list[BcioMapping] = []
 
     for (phrase, dimension), phrase_emb in zip(phrase_dim_pairs, phrase_embeddings):
         best_score = -1.0
-        best_concept: Optional[Dict[str, Any]] = None
+        best_concept: Optional[dict[str, object]] = None
         for concept in concepts:
             score = _cosine_similarity(phrase_emb, concept["embedding"])
             if score > best_score:
