@@ -1,8 +1,6 @@
 import express from 'express';
 import { getHabitGraph, getHabitBubbleGraph } from '../../db/habitQueries.js';
 
-// GET /api/v1/habits/bubble-graph
-// Returns dimensions with nested habits for the bubble drill-down view.
 const DIMENSION_LABELS = {
   TIME: 'Time',
   BEHAVIOR: 'Behavior',
@@ -148,6 +146,8 @@ export function createHabitsGraphRouter({ queryNeo4j, getDb } = {}) {
     }
   });
 
+  // GET /api/v1/habits/bubble-graph
+  // Returns dimensions with nested habits for the bubble drill-down view.
   router.get('/bubble-graph', async (req, res) => {
     try {
       const [rows, database] = await Promise.all([
