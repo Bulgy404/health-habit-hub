@@ -6,7 +6,7 @@ import logging
 import os
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 import numpy as np
 import openai
@@ -210,14 +210,14 @@ async def map_bcio(body: MapBcioRequest) -> MapBcioResponse:
         logger.error("Failed to embed context phrases: %s", exc)
         return MapBcioResponse(mappings=[])
 
-    concepts = index["concepts"]
+    concepts = cast(list[dict[str, object]], index["concepts"])
     mappings: list[BcioMapping] = []
 
     for (phrase, dimension), phrase_emb in zip(phrase_dim_pairs, phrase_embeddings):
         best_score = -1.0
         best_concept: Optional[dict[str, object]] = None
         for concept in concepts:
-            score = _cosine_similarity(phrase_emb, concept["embedding"])
+            score = _cosine_similarity(phrase_emb, cast(list[float], concept["embedding"]))
             if score > best_score:
                 best_score = score
                 best_concept = concept

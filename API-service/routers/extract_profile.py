@@ -6,7 +6,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 import httpx
 from fastapi import APIRouter, Depends
@@ -187,7 +187,7 @@ async def extract_profile(body: ExtractProfileRequest) -> ExtractProfileResponse
     if profile_data and profile_data.get("fields"):
         lines = [
             f"{f['questionText']}: {f['label']}"
-            for f in profile_data["fields"]
+            for f in cast(list[dict[str, object]], profile_data["fields"])
             if f.get("questionText") and f.get("label")
         ]
         profile_text = "\n".join(lines)
