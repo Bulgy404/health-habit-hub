@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
 import logging
 import os
@@ -10,38 +9,16 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import httpx
-import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
 from llm_client import chat_complete
+from routers._cache import _REDIS_TTL, get_redis as _get_redis, make_cache_key
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(verify_service_token)])
-
-# ---------------------------------------------------------------------------
-# Redis setup (graceful — if unavailable the endpoint still works)
-# ---------------------------------------------------------------------------
-_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-_REDIS_TTL = int(os.getenv("REDIS_TTL_SECONDS", "86400"))
-
-_redis: Optional[aioredis.Redis] = None
-
-
-async def _get_redis() -> Optional[aioredis.Redis]:
-    global _redis
-    if _redis is not None:
-        return _redis
-    try:
-        client: aioredis.Redis = aioredis.from_url(_REDIS_URL, decode_responses=True)
-        await client.ping()  # type: ignore[misc]
-        _redis = client
-        return _redis
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Redis unavailable (%s) — caching disabled.", exc)
-        return None
 
 
 # ---------------------------------------------------------------------------
@@ -135,8 +112,7 @@ class ExtractProfileResponse(BaseModel):
 # Helper: cache key
 # ---------------------------------------------------------------------------
 def _cache_key(user_id: str, goal: str) -> str:
-    digest = hashlib.sha256(f"{user_id}||{goal}".encode()).hexdigest()
-    return f"extract_profile:{digest}"
+    return make_cache_key("extract_profile", user_id, goal)
 
 
 def _parse_llm_response(raw: str) -> Optional[Dict[str, str]]:
