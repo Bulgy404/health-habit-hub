@@ -1,18 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import styles from "./page.module.css";
-
-interface Cue {
-  id: string;
-  text: string;
-  quality: "low" | "high";
-  dimensions: { stability: number; salience: number; specificity: number };
-  domain: string;
-  language: string;
-  createdAt: string | null;
-}
+import { useCuePoolsData } from "./useCuePoolsData";
 
 const API_BASE =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
@@ -56,15 +47,16 @@ export default function CuePoolsPage() {
   const token =
     (session as { accessToken?: string } | null)?.accessToken ?? "";
 
-  const [cues, setCues] = useState<Cue[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const limit = 25;
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
   const [filterQuality, setFilterQuality] = useState("");
   const [filterLang, setFilterLang] = useState("");
+
+  const { cues, total, loading, error, limit, refetch: fetchCues } = useCuePoolsData(
+    token,
+    page,
+    filterQuality,
+    filterLang,
+  );
 
   const [showForm, setShowForm] = useState(false);
   const [newText, setNewText] = useState("");
@@ -83,35 +75,6 @@ export default function CuePoolsPage() {
   const [importResult, setImportResult] = useState<{ inserted: number; skipped: number } | null>(null);
   const [importError, setImportError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const fetchCues = useCallback(
-    async (p: number) => {
-      if (!token) return;
-      setLoading(true);
-      setError("");
-      try {
-        const params = new URLSearchParams({
-          page: String(p),
-          limit: String(limit),
-        });
-        if (filterQuality) params.set("quality", filterQuality);
-        if (filterLang) params.set("language", filterLang);
-        const data = await apiFetch(`${API_BASE}?${params}`, token);
-        setCues((data as { cues: Cue[] }).cues ?? []);
-        setTotal((data as { total: number }).total ?? 0);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load cues");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [token, filterQuality, filterLang]
-  );
-
-  useEffect(() => {
-    setPage(1);
-    fetchCues(1);
-  }, [fetchCues]);
 
   async function handleCreate() {
     if (!newText.trim()) {
@@ -332,7 +295,7 @@ export default function CuePoolsPage() {
           <select
             className={styles.select}
             value={filterQuality}
-            onChange={(e) => setFilterQuality(e.target.value)}
+            onChange={(e) => { setFilterQuality(e.target.value); setPage(1); }}
           >
             <option value="">All</option>
             <option value="high">High</option>
@@ -344,7 +307,7 @@ export default function CuePoolsPage() {
           <select
             className={styles.select}
             value={filterLang}
-            onChange={(e) => setFilterLang(e.target.value)}
+            onChange={(e) => { setFilterLang(e.target.value); setPage(1); }}
           >
             <option value="">All</option>
             <option value="en">English</option>
