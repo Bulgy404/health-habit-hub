@@ -161,6 +161,12 @@ function ConfirmDeleteDialog({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+/**
+ * Displays and manages PDF documents in the knowledge base used for habit
+ * recommendations, grouped by category. Supports uploading and deleting files.
+ *
+ * @returns The knowledge base management page.
+ */
 export default function KnowledgeBasePage() {
   const { data: session, status } = useSession();
   const router = useRouter();

@@ -21,6 +21,12 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/settings", label: "Settings", icon: "⚙️", adminOnly: true },
 ];
 
+/**
+ * Fixed-position navigation sidebar showing links to all admin sections.
+ * Admin-only items are hidden for non-admin users.
+ *
+ * @returns The admin navigation sidebar.
+ */
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();

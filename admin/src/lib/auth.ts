@@ -15,6 +15,10 @@ declare module "next-auth/jwt" {
   }
 }
 
+/**
+ * NextAuth configuration object with Keycloak OAuth provider.
+ * Extracts Keycloak realm roles and the access token into the session.
+ */
 export const authOptions: AuthOptions = {
   providers: [
     {
