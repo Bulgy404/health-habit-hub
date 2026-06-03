@@ -1,19 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface KbEntry {
-  filename: string;
-  category: string;
-  file_size: number;
-  has_summary: boolean;
-  upload_date: string;
-}
+import { useKnowledgeBaseData } from "./useKnowledgeBaseData";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -180,39 +171,16 @@ export default function KnowledgeBasePage() {
 
   const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
 
-  const [entries, setEntries] = useState<KbEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { entries, loading, error: loadError, refetch } = useKnowledgeBaseData(token);
+  const [actionError, setActionError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [deleteFilename, setDeleteFilename] = useState<string | null>(null);
 
-  const fetchList = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch(API_BASE, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as KbEntry[];
-      setEntries(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load knowledge base");
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    fetchList();
-  }, [fetchList]);
-
   async function handleDelete(filename: string) {
     setDeleteFilename(null);
-    setError("");
+    setActionError("");
     setSuccessMsg("");
     try {
       const res = await fetch(`${API_BASE}/${encodeURIComponent(filename)}`, {
@@ -224,20 +192,22 @@ export default function KnowledgeBasePage() {
         throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
       }
       setSuccessMsg(`"${filename}" deleted successfully.`);
-      await fetchList();
+      await refetch();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      setActionError(err instanceof Error ? err.message : "Delete failed");
     }
   }
 
   async function handleUploaded() {
     setUploadOpen(false);
     setSuccessMsg("PDF uploaded successfully.");
-    await fetchList();
+    await refetch();
   }
 
+  const error = loadError || actionError;
+
   // Group entries by category
-  const grouped = entries.reduce<Record<string, KbEntry[]>>((acc, entry) => {
+  const grouped = entries.reduce<Record<string, typeof entries>>((acc, entry) => {
     const cat = entry.category;
     if (!acc[cat]) acc[cat] = [];
     acc[cat].push(entry);

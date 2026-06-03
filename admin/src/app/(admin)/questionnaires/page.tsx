@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import styles from "./page.module.css";
+import { useQuestionnairesData } from "./useQuestionnairesData";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -552,9 +553,7 @@ export default function QuestionnairesPage() {
   const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
 
   const [tab, setTab] = useState<Tab>("library");
-  const [questionnaires, setQuestionnaires] = useState<QuestionnaireSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { questionnaires, loading, error, refetch: fetchList } = useQuestionnairesData(token);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<QuestionnaireDetail | null>(null);
@@ -563,24 +562,6 @@ export default function QuestionnairesPage() {
   const [actionError, setActionError] = useState("");
   // IDs known to be assigned to an active study (delete blocked)
   const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set());
-
-  const fetchList = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    setError("");
-    try {
-      const data = await apiFetch(API_BASE, token);
-      setQuestionnaires(data as QuestionnaireSummary[]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load questionnaires");
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    fetchList();
-  }, [fetchList]);
 
   async function handleOpenEdit(q: QuestionnaireSummary) {
     setActionError("");
