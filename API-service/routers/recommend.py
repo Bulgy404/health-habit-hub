@@ -58,17 +58,23 @@ _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class RecommendRequest(BaseModel):
+    """Input payload for the recommend endpoint."""
+
     user_id: str = Field(..., max_length=128)
     goal: str = Field(..., min_length=1, max_length=2000)
     session_id: str = Field(..., max_length=128)
 
 
 class SourceRef(BaseModel):
+    """A reference to a knowledge-base source used in a recommendation."""
+
     filename: str
     excerpt: str
 
 
 class RecommendationItem(BaseModel):
+    """A single personalised habit recommendation with rationale and source references."""
+
     title: str
     body: str
     rationale: str
@@ -76,6 +82,8 @@ class RecommendationItem(BaseModel):
 
 
 class RecommendResponse(BaseModel):
+    """Full recommendation response with metadata and a list of recommendation items."""
+
     recommendation_id: str
     goal: str
     recommendations: list[RecommendationItem]
@@ -86,6 +94,7 @@ class RecommendResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 def _cache_key(user_id: str, goal: str) -> str:
+    """Build a deterministic Redis key for a user+goal recommendation pair."""
     digest = hashlib.sha256(f"{user_id}||{goal}".encode()).hexdigest()
     return f"recommend:{digest}"
 
@@ -174,6 +183,24 @@ async def recommend(
     redis_client: Optional[aioredis.Redis] = Depends(get_redis),
     db: AsyncIOMotorDatabase = Depends(get_mongo_db),
 ) -> RecommendResponse:
+    """Orchestrate the M3 pipeline and generate personalised habit recommendations.
+
+    Runs M3.1 (extract-habits) + M3.2 (extract-profile) in parallel, then M3.3 (retrieve)
+    for RAG context, fetches prior feedback, and calls the LLM to produce recommendations.
+    Results are cached in Redis and persisted to MongoDB.
+
+    Args:
+        body: Validated request payload with user_id, goal, and session_id.
+        redis_client: Injected Redis connection for cache read/write (optional, degrades gracefully).
+        db: Injected MongoDB connection from FastAPI's dependency system.
+
+    Returns:
+        RecommendResponse with a unique recommendation_id, goal, recommendations list,
+        and generated_at timestamp.
+
+    Raises:
+        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+    """
     if redis_client is None:
         redis_client = await _get_redis()
 

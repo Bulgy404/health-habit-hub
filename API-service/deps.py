@@ -19,6 +19,7 @@ _mongo: Optional[motor.motor_asyncio.AsyncIOMotorClient] = None  # type: ignore[
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """FastAPI lifespan context: initialise Redis, MongoDB, and warm up the BCIO index on startup."""
     global _redis, _mongo
 
     redis_url = os.environ.get("REDIS_URL", "redis://redis:6379")
@@ -41,6 +42,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 def _build_mongo_client() -> None:
+    """Construct the shared AsyncIOMotorClient from environment variables and store it globally."""
     global _mongo
     mongo_url = os.environ.get("MONGO_URL", "")
     mongo_host = os.environ.get("MONGO_HOST", "mongo")
@@ -63,10 +65,19 @@ def _build_mongo_client() -> None:
 
 
 async def get_redis() -> Optional[aioredis.Redis]:
+    """FastAPI dependency: return the shared Redis client, or None if not initialised."""
     return _redis
 
 
 async def get_mongo_db() -> AsyncIOMotorDatabase:  # type: ignore[type-arg]
+    """FastAPI dependency: return the configured MongoDB database handle.
+
+    Returns:
+        AsyncIOMotorDatabase for the database named by MONGO_DB (default: "surveyjs").
+
+    Raises:
+        AssertionError: If called before the lifespan initialises the MongoDB client.
+    """
     assert _mongo is not None, "MongoDB client not initialised"
     db_name = os.environ.get("MONGO_DB", "surveyjs")
     return _mongo[db_name]

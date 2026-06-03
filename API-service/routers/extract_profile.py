@@ -98,11 +98,15 @@ _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class ExtractProfileRequest(BaseModel):
+    """Input payload for the extract-profile endpoint."""
+
     user_id: str = Field(..., max_length=128)
     goal: str = Field(..., min_length=1, max_length=2000)
 
 
 class ExtractProfileResponse(BaseModel):
+    """Summarised user profile and RAG query derived from questionnaire responses."""
+
     profile_summary: str
     profile_detailed: str
     rag_query: str
@@ -112,6 +116,7 @@ class ExtractProfileResponse(BaseModel):
 # Helper: cache key
 # ---------------------------------------------------------------------------
 def _cache_key(user_id: str, goal: str) -> str:
+    """Build a namespaced Redis cache key for the extract-profile result."""
     return make_cache_key("extract_profile", user_id, goal)
 
 
@@ -143,6 +148,17 @@ def _parse_llm_response(raw: str) -> Optional[dict[str, str]]:
 # ---------------------------------------------------------------------------
 @router.post("/llm/extract-profile", response_model=ExtractProfileResponse)
 async def extract_profile(body: ExtractProfileRequest) -> ExtractProfileResponse:
+    """Build a structured user profile from questionnaire responses using an LLM.
+
+    Args:
+        body: Validated request payload with user_id and goal description.
+
+    Returns:
+        ExtractProfileResponse with profile_summary, profile_detailed, and rag_query.
+
+    Raises:
+        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+    """
     key = _cache_key(body.user_id, body.goal)
 
     # --- cache read ---

@@ -91,17 +91,23 @@ _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class ExtractHabitsRequest(BaseModel):
+    """Input payload for the extract-habits endpoint."""
+
     user_id: str = Field(..., max_length=128)
     goal: str = Field(..., min_length=1, max_length=2000)
 
 
 class HabitEntry(BaseModel):
+    """A single habit with its UUID, sentence, and BCIO context dimension phrases."""
+
     uuid: str
     sentence: str
     context: dict[str, list[str]]
 
 
 class ExtractHabitsResponse(BaseModel):
+    """LLM-selected habits most relevant to the user's goal, plus a summary."""
+
     selected_habits: list[HabitEntry]
     habit_summary: str
 
@@ -110,6 +116,7 @@ class ExtractHabitsResponse(BaseModel):
 # Helper: cache key
 # ---------------------------------------------------------------------------
 def _cache_key(user_id: str, goal: str) -> str:
+    """Build a namespaced Redis cache key for the extract-habits result."""
     return make_cache_key("extract_habits", user_id, goal)
 
 
@@ -134,6 +141,17 @@ def _parse_llm_response(raw: str) -> tuple[list[str], str]:
 # ---------------------------------------------------------------------------
 @router.post("/llm/extract-habits", response_model=ExtractHabitsResponse)
 async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
+    """Select the user's most goal-relevant habits from Neo4j using an LLM.
+
+    Args:
+        body: Validated request payload with user_id and goal description.
+
+    Returns:
+        ExtractHabitsResponse containing the LLM-selected habits and a habit summary.
+
+    Raises:
+        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+    """
     key = _cache_key(body.user_id, body.goal)
 
     # --- cache read ---

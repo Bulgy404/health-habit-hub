@@ -24,12 +24,16 @@ _PROMPT_TEMPLATE = load_prompt_template("prompts/refine_translation.txt")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class RefineTranslationRequest(BaseModel):
+    """Input payload for the refine-translation endpoint."""
+
     original: str = Field(..., min_length=1, max_length=10000)
     raw_translation: str = Field(..., min_length=1, max_length=10000)
     language: str = Field(..., max_length=32)
 
 
 class RefineTranslationResponse(BaseModel):
+    """LLM-refined translation preserving the tone and style of the original text."""
+
     refined_translation: str
 
 
@@ -38,6 +42,18 @@ class RefineTranslationResponse(BaseModel):
 # ---------------------------------------------------------------------------
 @router.post("/llm/refine-translation", response_model=RefineTranslationResponse)
 async def refine_translation(body: RefineTranslationRequest) -> RefineTranslationResponse:
+    """Refine a machine translation to preserve the tone and style of the original.
+
+    Args:
+        body: Validated request payload with original text, raw translation, and target language.
+
+    Returns:
+        RefineTranslationResponse with the LLM-refined translation string.
+        Falls back to raw_translation if the LLM returns an empty response.
+
+    Raises:
+        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+    """
     prompt = _PROMPT_TEMPLATE.format(
         language=body.language,
         original=body.original,

@@ -137,12 +137,15 @@ async def _get_index() -> Optional[dict[str, object]]:
 # Request / Response models
 # ---------------------------------------------------------------------------
 class MapBcioRequest(BaseModel):
+    """Input payload for the map-bcio endpoint."""
+
     uuid: str = Field(..., max_length=128)
     context_phrases: dict[str, list[str]]
 
     @field_validator("context_phrases")
     @classmethod
     def limit_phrase_lengths(cls, v: dict[str, list[str]]) -> dict[str, list[str]]:
+        """Validate that no phrase exceeds 2000 characters."""
         for dim, phrases in v.items():
             for phrase in phrases:
                 if len(phrase) > 2000:
@@ -153,6 +156,8 @@ class MapBcioRequest(BaseModel):
 
 
 class BcioMapping(BaseModel):
+    """A single phrase-to-BCIO-concept mapping with a cosine similarity confidence score."""
+
     phrase: str
     dimension: str
     bcio_concept_id: str
@@ -161,6 +166,8 @@ class BcioMapping(BaseModel):
 
 
 class MapBcioResponse(BaseModel):
+    """All BCIO concept mappings found above the minimum confidence threshold."""
+
     mappings: list[BcioMapping]
 
 
@@ -169,6 +176,18 @@ class MapBcioResponse(BaseModel):
 # ---------------------------------------------------------------------------
 @router.post("/llm/map-bcio", response_model=MapBcioResponse)
 async def map_bcio(body: MapBcioRequest) -> MapBcioResponse:
+    """Map context phrases to BCIO ontology concepts via embedding cosine similarity.
+
+    Args:
+        body: Validated request with a habit UUID and dimension-keyed phrase lists.
+
+    Returns:
+        MapBcioResponse with all phrase-concept pairs above BCIO_MIN_CONFIDENCE.
+        Returns an empty mapping list if the BCIO index is unavailable or embedding fails.
+
+    Raises:
+        HTTPException: 422 if any phrase exceeds 2000 characters (via field_validator).
+    """
     index = await _get_index()
     if index is None or not index["concepts"]:
         return MapBcioResponse(mappings=[])

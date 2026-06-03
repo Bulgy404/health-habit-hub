@@ -32,6 +32,7 @@ _SUPPORTED_EXTENSIONS = {".pdf", ".txt", ".md"}
 
 
 def _headers(content_type: Optional[str] = "application/json") -> dict[str, str]:
+    """Build HTTP headers for LightRAG requests, including optional Bearer token."""
     h: dict[str, str] = {}
     if content_type:
         h["Content-Type"] = content_type
@@ -67,10 +68,14 @@ async def _lightrag(
 # Request / Response models
 # ---------------------------------------------------------------------------
 class RetrieveRequest(BaseModel):
+    """Input payload for the RAG retrieval endpoint."""
+
     rag_query: str = Field(..., min_length=1, max_length=2000)
 
 
 class SourceItem(BaseModel):
+    """A single retrieval result from LightRAG with provenance and relevance score."""
+
     filename: str
     category: str
     excerpt: str
@@ -78,10 +83,14 @@ class SourceItem(BaseModel):
 
 
 class RetrieveResponse(BaseModel):
+    """Retrieval response containing a list of ranked knowledge-base source excerpts."""
+
     sources: list[SourceItem]
 
 
 class KbEntry(BaseModel):
+    """Metadata for a single document in the LightRAG knowledge base."""
+
     filename: str
     category: str
     file_size: int
@@ -94,6 +103,19 @@ class KbEntry(BaseModel):
 # ---------------------------------------------------------------------------
 @router.post("/llm/retrieve", response_model=RetrieveResponse)
 async def retrieve(body: RetrieveRequest) -> RetrieveResponse:
+    """Execute a hybrid graph+vector RAG query against LightRAG.
+
+    Args:
+        body: Validated request payload with the RAG query string.
+
+    Returns:
+        RetrieveResponse with a single SourceItem containing the hybrid context excerpt,
+        or an empty sources list if LightRAG returns no context.
+
+    Raises:
+        HTTPException: 500 if LightRAG is unreachable.
+        HTTPException: 502 if LightRAG returns a 5xx error.
+    """
     try:
         data = await _lightrag(
             "POST",
@@ -128,6 +150,15 @@ async def retrieve(body: RetrieveRequest) -> RetrieveResponse:
 # ---------------------------------------------------------------------------
 @router.get("/kb", response_model=list[KbEntry])
 async def list_kb() -> list[KbEntry]:
+    """List all documents currently indexed in the LightRAG knowledge base.
+
+    Returns:
+        A list of KbEntry records with filename, category, size, status, and upload date.
+
+    Raises:
+        HTTPException: 500 if LightRAG is unreachable.
+        HTTPException: 502 if LightRAG returns a 5xx error.
+    """
     try:
         data = await _lightrag("GET", "/documents")
     except HTTPException:
@@ -163,6 +194,20 @@ async def upload_kb(
     file: UploadFile = File(...),
     category: str = Form(default="general"),
 ) -> JSONResponse:
+    """Upload a document (PDF, TXT, or MD) to the LightRAG knowledge base.
+
+    Args:
+        file: The uploaded file object; must have a recognised extension.
+        category: Logical category label for the document (default: "general").
+
+    Returns:
+        JSONResponse (201) confirming the upload and background indexing.
+
+    Raises:
+        HTTPException: 400 if no filename is provided or the file type is unsupported.
+        HTTPException: 400 if LightRAG rejects the upload.
+        HTTPException: 500 if LightRAG is unreachable.
+    """
     if not file.filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No filename provided.")
 
@@ -207,6 +252,20 @@ async def upload_kb(
 # ---------------------------------------------------------------------------
 @router.delete("/kb/{filename}", status_code=200)
 async def delete_kb(filename: str) -> JSONResponse:
+    """Remove a document from the LightRAG knowledge base by filename.
+
+    Args:
+        filename: The document filename to delete; path traversal characters are rejected.
+
+    Returns:
+        JSONResponse (200) confirming deletion.
+
+    Raises:
+        HTTPException: 400 if the filename contains path traversal characters.
+        HTTPException: 404 if the document is not found in LightRAG.
+        HTTPException: 500 if LightRAG is unreachable.
+        HTTPException: 502 if LightRAG returns a 5xx error.
+    """
     if "/" in filename or "\\" in filename or ".." in filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid filename.")
 
