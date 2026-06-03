@@ -107,6 +107,15 @@ const BEHAVIOR_OPTIONS = [
   { key: "yoga", label: "Yoga" },
 ];
 
+/**
+ * Authenticated JSON fetch helper.
+ *
+ * @param url - The full URL to fetch.
+ * @param token - The NextAuth session access token.
+ * @param opts - Additional fetch options.
+ * @returns The parsed JSON response body.
+ * @throws {Error} If the response status is not 2xx.
+ */
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
     ...opts,
@@ -1556,6 +1565,12 @@ function StudyModal({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+/**
+ * Displays and manages research studies, including groups, participants,
+ * questionnaire assignments, codes, notifications, and cue configuration.
+ *
+ * @returns The studies management page.
+ */
 export default function StudiesPage() {
   const { data: session } = useSession();
   const token =

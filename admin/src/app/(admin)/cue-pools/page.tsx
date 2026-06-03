@@ -18,6 +18,15 @@ const API_BASE =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
   "/admin/cue-pools";
 
+/**
+ * Authenticated JSON fetch helper.
+ *
+ * @param url - The full URL to fetch.
+ * @param token - The NextAuth session access token.
+ * @param opts - Additional fetch options.
+ * @returns The parsed JSON response body.
+ * @throws {Error} If the response status is not 2xx.
+ */
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
     ...opts,
@@ -36,6 +45,12 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   return res.json();
 }
 
+/**
+ * Displays and manages pre-rated contextual cues for study conditions.
+ * Supports creating, filtering, importing via CSV, and deleting cues.
+ *
+ * @returns The cue pools management page.
+ */
 export default function CuePoolsPage() {
   const { data: session } = useSession();
   const token =

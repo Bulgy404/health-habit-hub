@@ -56,6 +56,15 @@ function fmtDate(iso: string | null): string {
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/questionnaires";
 const PARTICIPANT_API = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/questionnaires";
 
+/**
+ * Authenticated JSON fetch helper.
+ *
+ * @param url - The full URL to fetch.
+ * @param token - The NextAuth session access token.
+ * @param opts - Additional fetch options.
+ * @returns The parsed JSON response body.
+ * @throws {Error} If the response status is not 2xx.
+ */
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
     ...opts,
@@ -532,6 +541,12 @@ function ConfirmDeleteDialog({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+/**
+ * Displays and manages questionnaires, including browsing the library and
+ * creating, editing, or deleting custom questionnaires for studies.
+ *
+ * @returns The questionnaires management page.
+ */
 export default function QuestionnairesPage() {
   const { data: session } = useSession();
   const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
