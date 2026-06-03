@@ -1,6 +1,11 @@
 import { ObjectId } from 'mongodb';
 import { COLLECTION } from '../models/cuePool.js';
 
+/**
+ * Insert a new cue document into the cue pool.
+ * @param {{ db: object, text: string, quality: string, dimensions: object, domain: string, language: string }} deps
+ * @returns {Promise<object>} The created cue including its generated id.
+ */
 export async function createCue({
   db,
   text,
@@ -21,6 +26,11 @@ export async function createCue({
   return { id: result.insertedId.toString(), ...doc };
 }
 
+/**
+ * Return a paginated list of cues, optionally filtered by quality and language.
+ * @param {{ db: object, quality?: string, language?: string, page?: number, limit?: number }} deps
+ * @returns {Promise<{ total: number, page: number, limit: number, cues: Array }>}
+ */
 export async function listCues({
   db,
   quality,
@@ -39,6 +49,11 @@ export async function listCues({
   return { total, page, limit, cues: docs.map(serialize) };
 }
 
+/**
+ * Delete a cue by its MongoDB ObjectId string.
+ * @param {{ db: object, id: string }} deps
+ * @returns {Promise<{ deleted: boolean }|{ notFound: boolean }>}
+ */
 export async function deleteCue({ db, id }) {
   let oid;
   try {
@@ -52,7 +67,9 @@ export async function deleteCue({ db, id }) {
 
 /**
  * Randomly pick 1 or 2 pre-rated cues from the pool matching the quality tier.
- * Returns [] for self_selected (user provides their own cue).
+ * Returns an empty array for self_selected (user provides their own cue).
+ * @param {{ db: object, cueSource: string, cueCount: string, cuePoolId?: string|null }} deps
+ * @returns {Promise<Array<{ text: string, source: string, cueId: string }>>}
  */
 export async function pickAssignedCues({
   db,
@@ -101,9 +118,10 @@ function serialize(doc) {
 }
 
 /**
- * Bulk-insert cues from a parsed row array.
- * Each row: { text, quality, stability, salience, specificity, domain, language }
- * Skips rows with missing/invalid required fields.
+ * Bulk-insert cues from a parsed row array, skipping rows with missing or invalid fields.
+ * Each row must have: text, quality, stability (1-5), salience (1-5), specificity (1-5), domain, language.
+ * @param {{ db: object, rows: Array<object> }} deps
+ * @returns {Promise<{ inserted: number, skipped: number }>}
  */
 export async function importCues({ db, rows }) {
   if (!rows || rows.length === 0) return { inserted: 0, skipped: 0 };

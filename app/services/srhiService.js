@@ -6,6 +6,11 @@ import { SRHI_ITEM_IDS } from '../utils/srhi.js';
 const WINDOW_DAYS = 3;
 const GENERATE_AHEAD = 4;
 
+/**
+ * Generate SRHI survey windows for a new intention (one per week for GENERATE_AHEAD weeks).
+ * @param {{ db: object, intentionId: string, userId: string, createdAt: Date, studyId?: string|null, groupId?: string|null }} deps
+ * @returns {Promise<Array>} The inserted window documents.
+ */
 export async function generateWindows({
   db,
   intentionId,
@@ -40,6 +45,11 @@ export async function generateWindows({
   return docs;
 }
 
+/**
+ * Return all pending SRHI windows that are due within the 3-day submission window.
+ * @param {{ db: object, userId: string }} deps
+ * @returns {Promise<Array>} Serialized due window documents.
+ */
 export async function getDueWindows({ db, userId }) {
   const now = new Date();
   const windowCutoff = new Date(
@@ -56,6 +66,11 @@ export async function getDueWindows({ db, userId }) {
   return docs.map(serialize);
 }
 
+/**
+ * Submit SRHI item responses for a given intention week, computing the mean score.
+ * @param {{ db: object, intentionId: string, userId: string, weekNumber: number, items: object }} deps
+ * @returns {Promise<object|{ invalid: boolean, missing: Array }|{ notFound: boolean }>} Serialized window or error indicator.
+ */
 export async function submitSrhi({
   db,
   intentionId,
@@ -91,6 +106,11 @@ export async function submitSrhi({
   return serialize(result);
 }
 
+/**
+ * Return the SRHI score trajectory for an intention, sorted by week number.
+ * @param {{ db: object, intentionId: string, userId: string }} deps
+ * @returns {Promise<Array<{ weekNumber: number, scheduledFor: Date, submittedAt: Date|null, score: number|null }>>}
+ */
 export async function getTrajectory({ db, intentionId, userId }) {
   const oid = new ObjectId(intentionId);
   const docs = await db

@@ -24,6 +24,12 @@ function stripHtml(value) {
   return value;
 }
 
+/**
+ * Strip HTML tags from all string values in req.body for POST, PUT, and PATCH requests.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} _res
+ * @param {import('express').NextFunction} next
+ */
 export function sanitizeBody(req, _res, next) {
   if (
     (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') &&

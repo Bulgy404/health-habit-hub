@@ -41,7 +41,8 @@ async function generateUniqueCodes(db, count) {
 
 /**
  * Generate enrollment codes for a study group.
- * @param {{ db, studyId, groupId, count, maxRedemptions, expiresAt }} deps
+ * @param {{ db: object, studyId: string, groupId: string, count: number, maxRedemptions?: number|null, expiresAt?: string|null }} deps
+ * @returns {Promise<{ codes: Array<string> }|{ notFound: boolean }|{ groupNotFound: boolean }>}
  */
 export async function createCodes({
   db,
@@ -85,8 +86,9 @@ export async function createCodes({
 }
 
 /**
- * List codes for a study (paginated).
- * @param {{ db, studyId, page?, limit? }} deps
+ * List enrollment codes for a study (paginated).
+ * @param {{ db: object, studyId: string, page?: number, limit?: number }} deps
+ * @returns {Promise<{ total: number, page: number, limit: number, codes: Array }|{ notFound: boolean }>}
  */
 export async function listCodes({ db, studyId, page = 1, limit = 20 }) {
   let oid;
@@ -127,7 +129,8 @@ export async function listCodes({ db, studyId, page = 1, limit = 20 }) {
 
 /**
  * Revoke (delete) a code. Returns { conflict: true } if already redeemed.
- * @param {{ db, studyId, code }} deps
+ * @param {{ db: object, studyId: string, code: string }} deps
+ * @returns {Promise<{ deleted: boolean }|{ conflict: boolean }|{ notFound: boolean }>}
  */
 export async function revokeCode({ db, studyId, code }) {
   let oid;
@@ -153,17 +156,10 @@ export async function revokeCode({ db, studyId, code }) {
 }
 
 /**
- * Redeem a code for the authenticated user.
- *
- * Atomicity guarantees:
- *  1. The redemptionCount increment uses findOneAndUpdate with a $expr guard so
- *     only one concurrent request can claim the last available slot (no over-count).
- *  2. The enrollment insert uses findOneAndUpdate with upsert + $setOnInsert so
- *     the check-and-insert is a single atomic operation (no duplicate enrollments).
- *     If a prior enrollment is discovered after claiming a slot, the counter is
- *     decremented to roll back the claim.
- *
- * @param {{ db, userId, code }} deps
+ * Redeem an enrollment code for the authenticated user, enrolling them in the associated study group.
+ * Uses atomic findOneAndUpdate guards to prevent over-redemption and duplicate enrollments.
+ * @param {{ db: object, userId: string, code: string }} deps
+ * @returns {Promise<{ enrolled: boolean, studyId: string, groupId: string, studyName: string|null, groupLabel: string|null }|{ notFound: boolean }|{ expired: boolean }|{ exhausted: boolean }|{ alreadyEnrolled: boolean }>}
  */
 export async function redeemCode({ db, userId, code }) {
   const upperCode = code.toUpperCase();
@@ -236,17 +232,10 @@ export async function redeemCode({ db, userId, code }) {
 }
 
 /**
- * Enroll user in the default study using round-robin group assignment. Idempotent.
- *
- * Atomicity guarantee:
- *   Group selection uses findOneAndUpdate to atomically increment a per-study
- *   counter (_skipCounter) and derive the group index as counter % numGroups.
- *   Two concurrent requests each receive a unique counter value and therefore
- *   land in different groups. The enrollment insert uses upsert + $setOnInsert
- *   so that if a concurrent request has already enrolled the user, this request
- *   is a no-op and returns the existing enrollment.
- *
- * @param {{ db, userId }} deps
+ * Enroll a user in the default study via round-robin group assignment. Idempotent.
+ * Uses atomic counter increment and upsert to prevent duplicate enrollments under concurrency.
+ * @param {{ db: object, userId: string }} deps
+ * @returns {Promise<{ enrolled: boolean, studyId: string, groupId: string, studyName: string|null, groupLabel: string|null }|{ noDefaultStudy: boolean }|{ noGroups: boolean }>}
  */
 export async function skipCode({ db, userId }) {
   // Fast path: user is already enrolled (idempotent).

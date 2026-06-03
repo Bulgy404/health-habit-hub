@@ -5,6 +5,7 @@ import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 /**
  * List all studies with participant count per study (paginated).
  * @param {{ db: object, page?: number, limit?: number }} deps
+ * @returns {Promise<{ total: number, page: number, limit: number, studies: Array }>}
  */
 export async function listStudies({ db, page = 1, limit = 20 }) {
   const skip = (page - 1) * limit;
@@ -114,8 +115,9 @@ export async function getStudy({ db, id }) {
 }
 
 /**
- * Update a study. Groups are additive (existing groups are kept).
+ * Update a study. Groups are additive — existing groups are kept and new ones are appended.
  * @param {{ db: object, id: string, updates: object }} deps
+ * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}
  */
 export async function updateStudy({ db, id, updates }) {
   let oid;
@@ -191,9 +193,9 @@ export async function softDeleteStudy({ db, id }) {
 }
 
 /**
- * List participants enrolled in a study (paginated).
- * Returns summary (total, perGroup) and a page of enrollment rows.
+ * List participants enrolled in a study with per-group summary (paginated).
  * @param {{ db: object, id: string, page?: number, limit?: number }} deps
+ * @returns {Promise<{ total: number, page: number, limit: number, summary: object, participants: Array }|{ notFound: boolean }>}
  */
 export async function listStudyParticipants({ db, id, page = 1, limit = 20 }) {
   let oid;
@@ -262,8 +264,8 @@ export async function listStudyParticipants({ db, id, page = 1, limit = 20 }) {
 
 /**
  * Update the cueConfig for a specific group within a study.
- * Fetches the study first, updates the matching group in the array, then persists.
- * @param {{ db, studyId: string, groupId: string, cueConfig: object }} deps
+ * @param {{ db: object, studyId: string, groupId: string, cueConfig: object }} deps
+ * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}
  */
 export async function updateGroupCueConfig({
   db,
@@ -301,6 +303,7 @@ export async function updateGroupCueConfig({
 /**
  * Mark a study as default, clearing isDefault on the previous default atomically.
  * @param {{ db: object, id: string }} deps
+ * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}
  */
 export async function setDefaultStudy({ db, id }) {
   let oid;
