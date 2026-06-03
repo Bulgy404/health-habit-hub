@@ -206,6 +206,61 @@ export async function dispatchDueNotifications({ db }) {
 }
 
 /**
+ * Attempt to acquire a Redis distributed lock for the notification scheduler tick.
+ * Returns { redis, lockAcquired } — callers must release the lock when done.
+ * If Redis is unavailable, returns { redis: null, lockAcquired: false } so the
+ * caller proceeds without distributed locking.
+ * @param {string} redisUrl
+ * @param {string} lockToken - Unique token to identify ownership of the lock
+ * @returns {Promise<{ redis: object|null, lockAcquired: boolean }>}
+ */
+async function _acquireSchedulerLock(redisUrl, lockToken) {
+  if (!redisUrl) return { redis: null, lockAcquired: false };
+
+  let redis = null;
+  try {
+    const { createClient } = await import('redis');
+    redis = createClient({ url: redisUrl });
+    redis.on('error', () => {}); // suppress unhandled error events
+    await redis.connect();
+    const lockSet = await redis.set('hhh:notif-lock', lockToken, {
+      NX: true,
+      PX: 55000,
+    });
+    if (!lockSet) {
+      await redis.quit();
+      return { redis: null, lockAcquired: false };
+    }
+    return { redis, lockAcquired: true };
+  } catch (redisErr) {
+    console.warn(
+      '[notification] Redis unavailable — proceeding unlocked:',
+      redisErr.message
+    );
+    return { redis: null, lockAcquired: false };
+  }
+}
+
+/**
+ * Release a Redis distributed lock using a compare-and-delete Lua script.
+ * @param {object} redis - Connected Redis client
+ * @param {string} lockToken - Token used when the lock was acquired
+ * @returns {Promise<void>}
+ */
+async function _releaseSchedulerLock(redis, lockToken) {
+  try {
+    // Only delete if we still own the lock (compare-and-delete via Lua)
+    await redis.eval(
+      "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
+      { keys: ['hhh:notif-lock'], arguments: [lockToken] }
+    );
+  } catch (_) {
+    // ignore lock-release errors
+  }
+  await redis.quit().catch(() => {});
+}
+
+/**
  * Start the node-cron scheduler that dispatches due notifications every 60 s.
  * Returns the cron task (call task.stop() to halt it).
  *
@@ -214,32 +269,15 @@ export async function dispatchDueNotifications({ db }) {
  */
 export function startNotificationScheduler({ getDb, redisUrl } = {}) {
   const task = cron.schedule('* * * * *', async () => {
-    // --- Redis distributed lock (55s TTL, slightly less than 60s interval) ---
-    let redis = null;
-    let lockAcquired = false;
     const lockToken = Math.random().toString(36).slice(2);
-    if (redisUrl) {
-      try {
-        const { createClient } = await import('redis');
-        redis = createClient({ url: redisUrl });
-        redis.on('error', () => {}); // suppress unhandled error events
-        await redis.connect();
-        const lockSet = await redis.set('hhh:notif-lock', lockToken, {
-          NX: true,
-          PX: 55000,
-        });
-        if (!lockSet) {
-          await redis.quit();
-          return; // another instance holds the lock — skip this tick
-        }
-        lockAcquired = true;
-      } catch (redisErr) {
-        console.warn(
-          '[notification] Redis unavailable — proceeding unlocked:',
-          redisErr.message
-        );
-        redis = null;
-      }
+    const { redis, lockAcquired } = await _acquireSchedulerLock(
+      redisUrl,
+      lockToken
+    );
+
+    // If Redis is configured but lock was not acquired, another instance holds it.
+    if (redisUrl && !lockAcquired && redis === null) {
+      return; // another instance holds the lock — skip this tick
     }
 
     try {
@@ -249,16 +287,7 @@ export function startNotificationScheduler({ getDb, redisUrl } = {}) {
       console.error('[notification] Scheduler error:', err);
     } finally {
       if (redis && lockAcquired) {
-        try {
-          // Only delete if we still own the lock (compare-and-delete via Lua)
-          await redis.eval(
-            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end",
-            { keys: ['hhh:notif-lock'], arguments: [lockToken] }
-          );
-        } catch (_) {
-          // ignore lock-release errors
-        }
-        await redis.quit().catch(() => {});
+        await _releaseSchedulerLock(redis, lockToken);
       }
     }
   });
