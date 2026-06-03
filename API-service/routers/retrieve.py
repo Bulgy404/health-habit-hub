@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -31,8 +31,8 @@ _LIGHTRAG_API_KEY = os.environ.get("LIGHTRAG_API_KEY", "")
 _SUPPORTED_EXTENSIONS = {".pdf", ".txt", ".md"}
 
 
-def _headers(content_type: Optional[str] = "application/json") -> Dict[str, str]:
-    h: Dict[str, str] = {}
+def _headers(content_type: Optional[str] = "application/json") -> dict[str, str]:
+    h: dict[str, str] = {}
     if content_type:
         h["Content-Type"] = content_type
     if _LIGHTRAG_API_KEY:
@@ -44,11 +44,11 @@ async def _lightrag(
     method: str,
     path: str,
     *,
-    json: Any = None,
-    content: Any = None,
-    headers: Optional[Dict[str, str]] = None,
+    json: Optional[dict[str, object]] = None,
+    content: Optional[bytes] = None,
+    headers: Optional[dict[str, str]] = None,
     timeout: float = 60.0,
-) -> Any:
+) -> dict[str, object]:
     """Execute a request against LightRAG and return the parsed JSON body."""
     url = f"{_LIGHTRAG_URL}{path}"
     hdrs = headers or _headers()
@@ -78,7 +78,7 @@ class SourceItem(BaseModel):
 
 
 class RetrieveResponse(BaseModel):
-    sources: List[SourceItem]
+    sources: list[SourceItem]
 
 
 class KbEntry(BaseModel):
@@ -126,8 +126,8 @@ async def retrieve(body: RetrieveRequest) -> RetrieveResponse:
 # ---------------------------------------------------------------------------
 # GET /api/v1/kb
 # ---------------------------------------------------------------------------
-@router.get("/kb", response_model=List[KbEntry])
-async def list_kb() -> List[KbEntry]:
+@router.get("/kb", response_model=list[KbEntry])
+async def list_kb() -> list[KbEntry]:
     try:
         data = await _lightrag("GET", "/documents")
     except HTTPException:
@@ -136,8 +136,8 @@ async def list_kb() -> List[KbEntry]:
         logger.error("list_kb failed: %s", exc)
         raise HTTPException(status_code=500, detail="Could not reach LightRAG.") from exc
 
-    statuses: Dict[str, List[Dict[str, Any]]] = data.get("statuses", {})
-    entries: List[KbEntry] = []
+    statuses: dict[str, list[dict[str, object]]] = data.get("statuses", {})  # type: ignore[assignment]
+    entries: list[KbEntry] = []
     for docs in statuses.values():
         for doc in docs:
             raw_path: str = doc.get("file_path") or doc.get("id") or ""
@@ -176,7 +176,7 @@ async def upload_kb(
 
     content = await file.read()
 
-    auth_header: Dict[str, str] = {}
+    auth_header: dict[str, str] = {}
     if _LIGHTRAG_API_KEY:
         auth_header["Authorization"] = f"Bearer {_LIGHTRAG_API_KEY}"
 
@@ -219,7 +219,7 @@ async def delete_kb(filename: str) -> JSONResponse:
         logger.error("delete_kb list failed: %s", exc)
         raise HTTPException(status_code=500, detail="Could not reach LightRAG.") from exc
 
-    statuses: Dict[str, List[Dict[str, Any]]] = data.get("statuses", {})
+    statuses: dict[str, list[dict[str, object]]] = data.get("statuses", {})  # type: ignore[assignment]
     doc_id: Optional[str] = None
     for docs in statuses.values():
         for doc in docs:

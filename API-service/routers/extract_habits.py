@@ -5,7 +5,6 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends
 from neo4j import AsyncGraphDatabase  # type: ignore[import]
@@ -38,7 +37,7 @@ _DIMENSIONS = [
 ]
 
 
-async def _fetch_habits_for_user(user_id: str) -> List[Dict[str, Any]]:
+async def _fetch_habits_for_user(user_id: str) -> list[dict[str, object]]:
     """Fetch all Habit nodes (with context) for a given userID from Neo4j.
 
     Returns a list of dicts: {uuid, sentence, context: {dim: [phrases]}}
@@ -46,7 +45,7 @@ async def _fetch_habits_for_user(user_id: str) -> List[Dict[str, Any]]:
     driver = AsyncGraphDatabase.driver(
         _NEO4J_URI, auth=(_NEO4J_USER, _NEO4J_PASSWORD)
     )
-    habits: List[Dict[str, Any]] = []
+    habits: list[dict[str, object]] = []
     try:
         async with driver.session() as session:
             result = await session.run(
@@ -61,7 +60,7 @@ async def _fetch_habits_for_user(user_id: str) -> List[Dict[str, Any]]:
             )
             records = await result.fetch(1000)
             for record in records:
-                ctx: Dict[str, List[str]] = {dim: [] for dim in _DIMENSIONS}
+                ctx: dict[str, list[str]] = {dim: [] for dim in _DIMENSIONS}
                 for item in record["ctx_items"]:
                     dim = item.get("dimension")
                     text = item.get("text")
@@ -99,11 +98,11 @@ class ExtractHabitsRequest(BaseModel):
 class HabitEntry(BaseModel):
     uuid: str
     sentence: str
-    context: Dict[str, List[str]]
+    context: dict[str, list[str]]
 
 
 class ExtractHabitsResponse(BaseModel):
-    selected_habits: List[HabitEntry]
+    selected_habits: list[HabitEntry]
     habit_summary: str
 
 
@@ -114,7 +113,7 @@ def _cache_key(user_id: str, goal: str) -> str:
     return make_cache_key("extract_habits", user_id, goal)
 
 
-def _parse_llm_response(raw: str) -> tuple[List[str], str]:
+def _parse_llm_response(raw: str) -> tuple[list[str], str]:
     """Parse LLM JSON; returns (selected_uuids, habit_summary)."""
     try:
         parsed = json.loads(raw.strip())

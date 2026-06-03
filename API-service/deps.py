@@ -4,11 +4,12 @@ from __future__ import annotations
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Optional
+from typing import AsyncGenerator, Optional
 
 import motor.motor_asyncio
 import redis.asyncio as aioredis
 from fastapi import FastAPI
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +66,7 @@ async def get_redis() -> Optional[aioredis.Redis]:
     return _redis
 
 
-async def get_mongo_db() -> Any:
+async def get_mongo_db() -> AsyncIOMotorDatabase:  # type: ignore[type-arg]
     assert _mongo is not None, "MongoDB client not initialised"
     db_name = os.environ.get("MONGO_DB", "surveyjs")
     return _mongo[db_name]
