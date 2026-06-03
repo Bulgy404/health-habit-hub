@@ -39,9 +39,14 @@ export function createAdminRouter({
   const getDb = makeGetDb(db);
 
   // Seed default settings asynchronously on router creation
-  getDb()
-    .then(seedDefaultSettings)
-    .catch(() => {});
+  (async () => {
+    try {
+      const database = await getDb();
+      await seedDefaultSettings(database);
+    } catch {
+      // Non-fatal: initialization errors are ignored
+    }
+  })();
 
   function getKeycloak() {
     return keycloak || createKeycloakAdminClient();
