@@ -30,6 +30,8 @@ async function readAdminSettings(db) {
 /**
  * Resolve cue configuration for a user, including pre-sampled assigned cues.
  * Priority: enrollment.cueConfig > admin_settings defaults > hardcoded fallback.
+ * @param {{ db: object, userId: string }} deps
+ * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array, maxHabits: number|null, assignedCues: Array }>}
  */
 export async function resolveHabitConfig({ db, userId }) {
   const enrollment = await db.collection(ENROLLMENTS).findOne({ userId });

@@ -1,7 +1,9 @@
 /**
- * Security headers middleware.
- * Sets baseline HTTP security response headers on every request.
- * CSP is intentionally omitted pending EJS/inline-script audit (tracked in backlog).
+ * Set baseline HTTP security response headers on every request.
+ * CSP is intentionally omitted pending EJS/inline-script audit.
+ * @param {import('express').Request} _req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
  */
 export function securityHeaders(_req, res, next) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
