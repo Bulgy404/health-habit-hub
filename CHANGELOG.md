@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- LightRAG upgraded from 1.3.9 to 1.5.0 (`lightrag/Dockerfile`)
+
 ## [1.3.0] - 2026-04-16
 
 ### Security
