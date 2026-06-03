@@ -57,9 +57,14 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
   }
 
   // Kick off index creation eagerly (non-blocking)
-  getDb()
-    .then(ensureIndex)
-    .catch(() => {});
+  (async () => {
+    try {
+      const database = await getDb();
+      await ensureIndex(database);
+    } catch {
+      // Non-fatal: initialization errors are ignored
+    }
+  })();
 
   /**
    * @swagger
