@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { generateTokenCard } from '../../services/token_card_service.js';
+import { generateTokenCard } from '../../services/tokenCardService.js';
 
 const userId = 'test-user-id-12345';
 const username = 'p-test-user-id-12345';
