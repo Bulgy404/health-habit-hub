@@ -11,10 +11,16 @@ import 'recommendation_models.dart';
 /// - Empty: shows message to share habits first
 /// - Results: shows recommendation cards
 class RecommendationResultsScreen extends ConsumerWidget {
+  /// The user's stated health goal.
   final String goal;
+
+  /// The recommendation response, or `null` if loading failed.
   final RecommendationResponse? response;
+
+  /// Error message to display when [response] is `null`.
   final String? error;
 
+  /// Creates a [RecommendationResultsScreen].
   const RecommendationResultsScreen({
     super.key,
     required this.goal,

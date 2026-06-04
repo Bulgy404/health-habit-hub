@@ -6,13 +6,17 @@ import '../l10n/app_localizations.dart';
 /// Shows a top orange no-connection bar, a centred cloud-off icon with
 /// a configurable [message], and a retry button.
 class OfflineBanner extends StatelessWidget {
+  /// Creates an [OfflineBanner] with the given [message] and [onRetry] callback.
   const OfflineBanner({
     super.key,
     required this.message,
     required this.onRetry,
   });
 
+  /// Body message shown below the cloud-off icon.
   final String message;
+
+  /// Called when the user taps the retry button.
   final VoidCallback onRetry;
 
   @override

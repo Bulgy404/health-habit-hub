@@ -16,6 +16,7 @@ import '../services/auth_service.dart';
 class AdminService {
   static const _baseUrl = AppConfig.apiBaseUrl;
 
+  /// Creates an [AdminService] using [dio] and [authService].
   AdminService({required Dio dio, required AuthService authService})
       : _dio = dio,
         _authService = authService;

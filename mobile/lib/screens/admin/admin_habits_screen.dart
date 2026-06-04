@@ -23,6 +23,7 @@ import '../../services/admin_service.dart';
 
 /// Live feed of donated habits with filters and CSV export.
 class AdminHabitsScreen extends ConsumerStatefulWidget {
+  /// Creates an [AdminHabitsScreen].
   const AdminHabitsScreen({super.key});
 
   @override

@@ -14,8 +14,10 @@ import '../services/push_notification_service.dart';
 /// Also bootstraps push-notification permission, token registration, and
 /// navigation from tapped notifications.
 class ShellScreen extends ConsumerStatefulWidget {
+  /// Creates a [ShellScreen] wrapping [navigationShell].
   const ShellScreen({required this.navigationShell, super.key});
 
+  /// The GoRouter navigation shell providing per-tab navigation state.
   final StatefulNavigationShell navigationShell;
 
   @override

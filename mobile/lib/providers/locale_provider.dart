@@ -96,6 +96,7 @@ class LocaleNotifier extends Notifier<Locale> {
   Future<void> loadPreference() => _fetchFromApi();
 }
 
+/// Provides the active [Locale] and exposes [LocaleNotifier.setLocale].
 final localeProvider = NotifierProvider<LocaleNotifier, Locale>(
   LocaleNotifier.new,
 );

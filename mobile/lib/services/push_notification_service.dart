@@ -102,6 +102,7 @@ Future<void> showForegroundNotification(RemoteMessage message) async {
 ///
 /// Inject with [Riverpod] via [pushNotificationServiceProvider].
 class PushNotificationService {
+  /// Creates a [PushNotificationService] using [dio].
   PushNotificationService({required Dio dio}) : _dio = dio;
 
   final Dio _dio;
@@ -156,6 +157,7 @@ class PushNotificationService {
 // Riverpod provider
 // ---------------------------------------------------------------------------
 
+/// Provides the singleton [PushNotificationService] instance.
 final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
   return PushNotificationService(dio: ref.watch(dioProvider));
 });

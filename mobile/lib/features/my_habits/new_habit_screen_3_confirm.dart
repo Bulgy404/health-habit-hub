@@ -1,3 +1,6 @@
+/// Step 3 of 3 in the new habit flow: confirming and creating the intention.
+library;
+
 // mobile/lib/features/my_habits/new_habit_screen_3_confirm.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +11,9 @@ import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
 
+/// Review screen that shows the full habit plan before the user creates it.
 class ConfirmPlanScreen extends ConsumerStatefulWidget {
+  /// Creates a [ConfirmPlanScreen].
   const ConfirmPlanScreen({
     required this.behaviorKey,
     required this.behaviorLabel,
@@ -17,9 +22,16 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
     super.key,
   });
 
+  /// The selected behaviour key.
   final String behaviorKey;
+
+  /// Human-readable label for the selected behaviour.
   final String behaviorLabel;
+
+  /// Habit configuration loaded from the backend.
   final HabitConfig config;
+
+  /// Implementation intention cues entered in the previous step.
   final List<IntentionCue> cues;
 
   @override

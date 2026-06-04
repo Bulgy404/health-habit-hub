@@ -21,6 +21,7 @@ import '../widgets/offline_banner.dart';
 /// date and an Edit button. If not, renders the profile survey via a
 /// [WebView] and POSTs answers to /api/v1/profile on completion.
 class ProfileScreen extends ConsumerStatefulWidget {
+  /// Creates a [ProfileScreen].
   const ProfileScreen({super.key});
 
   @override

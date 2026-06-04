@@ -1,10 +1,15 @@
 /// RAG citation attached to a recommendation.
 class RagCitation {
+  /// Title of the source document.
   final String sourceTitle;
+
+  /// Relevant excerpt from the source document.
   final String excerpt;
 
+  /// Creates a [RagCitation].
   const RagCitation({required this.sourceTitle, required this.excerpt});
 
+  /// Deserialises from JSON.
   factory RagCitation.fromJson(Map<String, dynamic> json) {
     return RagCitation(
       sourceTitle: (json['sourceTitle'] ?? '').toString(),
@@ -12,6 +17,7 @@ class RagCitation {
     );
   }
 
+  /// Serialises to JSON.
   Map<String, dynamic> toJson() => {
         'sourceTitle': sourceTitle,
         'excerpt': excerpt,
@@ -20,13 +26,25 @@ class RagCitation {
 
 /// A habit recommendation from the recommender service.
 class Recommendation {
+  /// Unique recommendation identifier.
   final String id;
+
+  /// Human-readable habit name.
   final String habitName;
+
+  /// Habit category label.
   final String category;
+
+  /// Model confidence score in the range 0.0–1.0.
   final double confidenceScore;
+
+  /// Explanation for why this habit was recommended.
   final String rationale;
+
+  /// Optional RAG citation supporting the recommendation.
   final RagCitation? ragCitation;
 
+  /// Creates a [Recommendation].
   const Recommendation({
     required this.id,
     required this.habitName,
@@ -36,6 +54,7 @@ class Recommendation {
     this.ragCitation,
   });
 
+  /// Deserialises from the recommender API response.
   factory Recommendation.fromJson(Map<String, dynamic> json) {
     final ragJson = json['ragCitation'] as Map<String, dynamic>?;
     return Recommendation(
@@ -48,6 +67,7 @@ class Recommendation {
     );
   }
 
+  /// Serialises to JSON.
   Map<String, dynamic> toJson() => {
         'id': id,
         'habitName': habitName,
