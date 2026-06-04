@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-// Side-nav shell for the admin panel.
-// Wraps each admin sub-screen with a NavigationRail so admins can jump between
-// Participants, Surveys, Habits, Devices, and Settings without leaving admin.
+/// Side-nav shell for the admin panel.
+///
+/// Wraps each admin sub-screen with a [NavigationRail] so admins can jump
+/// between Participants, Surveys, Habits, Devices, and Settings.
 class AdminShellScreen extends StatelessWidget {
+  /// Creates an [AdminShellScreen] with the given [child] sub-screen.
   const AdminShellScreen({required this.child, super.key});
 
+  /// The currently active admin sub-screen.
   final Widget child;
 
   static const _sections = [

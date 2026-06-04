@@ -8,10 +8,14 @@ import '../services/auth_service.dart';
 /// Passed to GoRouter's [refreshListenable] so the redirect guard re-runs and
 /// all role/token providers re-evaluate.
 class AuthNotifier extends ChangeNotifier {
+  /// Notifies listeners that the user has logged out.
   void notifyLogout() => notifyListeners();
+
+  /// Notifies listeners that the user has logged in.
   void notifyLogin() => notifyListeners();
 }
 
+/// Provides the singleton [AuthNotifier].
 final authNotifierProvider = Provider<AuthNotifier>((ref) => AuthNotifier());
 
 /// Provides the singleton [AuthService] instance.

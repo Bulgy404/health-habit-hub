@@ -9,6 +9,7 @@ import '../providers/auth_provider.dart';
 /// button on the welcome screen. Regular users are onboarded via the passphrase
 /// flow (see [WelcomeScreen]).
 class LoginScreen extends ConsumerStatefulWidget {
+  /// Creates a [LoginScreen].
   const LoginScreen({super.key});
 
   @override

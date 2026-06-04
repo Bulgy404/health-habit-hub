@@ -1,17 +1,27 @@
+/// Data models for the My Habits feature.
+library;
+
 // mobile/lib/features/my_habits/my_habits_models.dart
 
 /// A single SRHI item (id, English text, German text).
 class SrhiItem {
+  /// Creates a [SrhiItem].
   const SrhiItem({
     required this.id,
     required this.en,
     required this.de,
   });
 
+  /// Unique question identifier.
   final String id;
+
+  /// Question text in English.
   final String en;
+
+  /// Question text in German.
   final String de;
 
+  /// Deserialises from JSON.
   factory SrhiItem.fromJson(Map<String, dynamic> json) => SrhiItem(
         id: json['id'] as String,
         en: json['en'] as String,
@@ -21,6 +31,7 @@ class SrhiItem {
 
 /// Resolved cue configuration returned by GET /api/v1/me/habit-config.
 class HabitConfig {
+  /// Creates a [HabitConfig].
   const HabitConfig({
     required this.cueCount,
     required this.cueSource,
@@ -31,23 +42,28 @@ class HabitConfig {
     this.assignedCues = const [],
   });
 
-  /// 'single' or 'multi'
+  /// Cue count mode: `'single'` or `'multi'`.
   final String cueCount;
 
-  /// 'low_quality', 'high_quality', or 'self_selected'
+  /// Cue source: `'low_quality'`, `'high_quality'`, or `'self_selected'`.
   final String cueSource;
 
+  /// Optional pool ID for pre-rated cues.
   final String? cuePoolId;
+
+  /// Behaviour keys the participant may choose from.
   final List<String> behaviorOptions;
 
-  /// null = unlimited (public user). 1 = study participant.
+  /// Maximum allowed intentions; `null` = unlimited (public user).
   final int? maxHabits;
 
+  /// SRHI question items to present at each weekly check-in.
   final List<SrhiItem> srhiItems;
 
   /// Cues pre-assigned by the study coordinator (empty for self-selected).
   final List<IntentionCue> assignedCues;
 
+  /// Deserialises from the habit-config API response.
   factory HabitConfig.fromJson(Map<String, dynamic> json) => HabitConfig(
         cueCount: json['cueCount'] as String? ?? 'multi',
         cueSource: json['cueSource'] as String? ?? 'high_quality',
@@ -71,25 +87,30 @@ class HabitConfig {
 
 /// A single cue attached to an implementation intention.
 class IntentionCue {
+  /// Creates an [IntentionCue].
   const IntentionCue({
     required this.text,
     required this.source,
     this.cueId,
   });
 
+  /// Human-readable cue text (e.g. `'After my morning coffee'`).
   final String text;
 
-  /// 'pre_rated' or 'self_selected'
+  /// Cue provenance: `'pre_rated'` or `'self_selected'`.
   final String source;
 
+  /// Backend ID of the cue when sourced from a cue pool.
   final String? cueId;
 
+  /// Deserialises from JSON.
   factory IntentionCue.fromJson(Map<String, dynamic> json) => IntentionCue(
         text: json['text'] as String,
         source: json['source'] as String,
         cueId: json['cueId'] as String?,
       );
 
+  /// Serialises to JSON.
   Map<String, dynamic> toJson() => {
         'text': text,
         'source': source,
@@ -99,6 +120,7 @@ class IntentionCue {
 
 /// An implementation intention created by the user.
 class Intention {
+  /// Creates an [Intention].
   const Intention({
     required this.id,
     required this.behaviorKey,
@@ -110,18 +132,31 @@ class Intention {
     required this.createdAt,
   });
 
+  /// Unique intention identifier.
   final String id;
+
+  /// Key identifying the target behaviour (e.g. `'walking'`).
   final String behaviorKey;
+
+  /// Human-readable behaviour label shown in the UI.
   final String behaviorLabel;
+
+  /// Planned duration of each session in minutes.
   final int durationMinutes;
+
+  /// Implementation intention cues attached to this intention.
   final List<IntentionCue> cues;
+
+  /// Full if-then implementation intention statement.
   final String intentionStatement;
 
-  /// 'active', 'paused', 'completed', or 'abandoned'
+  /// Lifecycle status: `'active'`, `'paused'`, `'completed'`, or `'abandoned'`.
   final String status;
 
+  /// Timestamp when the intention was created.
   final DateTime createdAt;
 
+  /// Deserialises from the intentions API response.
   factory Intention.fromJson(Map<String, dynamic> json) => Intention(
         id: (json['_id'] ?? json['id']) as String,
         behaviorKey: json['behaviorKey'] as String,
@@ -139,6 +174,7 @@ class Intention {
 
 /// A single daily behavior log entry.
 class DailyLog {
+  /// Creates a [DailyLog].
   const DailyLog({
     required this.intentionId,
     required this.date,
@@ -146,13 +182,19 @@ class DailyLog {
     required this.loggedAt,
   });
 
+  /// Identifier of the intention this log belongs to.
   final String intentionId;
 
-  /// 'YYYY-MM-DD'
+  /// Date of the log in `'YYYY-MM-DD'` format.
   final String date;
+
+  /// Whether the habit was enacted on this day.
   final bool enacted;
+
+  /// Timestamp when the log was submitted.
   final DateTime loggedAt;
 
+  /// Deserialises from the daily logs API response.
   factory DailyLog.fromJson(Map<String, dynamic> json) => DailyLog(
         intentionId: json['intentionId'] as String,
         date: json['date'] as String,
@@ -163,6 +205,7 @@ class DailyLog {
 
 /// An open SRHI measurement window (due for submission).
 class SrhiWindow {
+  /// Creates an [SrhiWindow].
   const SrhiWindow({
     required this.id,
     required this.intentionId,
@@ -172,13 +215,25 @@ class SrhiWindow {
     this.score,
   });
 
+  /// Unique window identifier.
   final String id;
+
+  /// Identifier of the intention this window belongs to.
   final String intentionId;
+
+  /// Study week number for this check-in.
   final int weekNumber;
+
+  /// Scheduled submission date.
   final DateTime scheduledFor;
+
+  /// Timestamp when this window was submitted (null if still open).
   final DateTime? submittedAt;
+
+  /// Computed SRHI score after submission (null if not yet submitted).
   final double? score;
 
+  /// Deserialises from the SRHI windows API response.
   factory SrhiWindow.fromJson(Map<String, dynamic> json) => SrhiWindow(
         id: json['id'] as String,
         intentionId: json['intentionId'] as String,
@@ -193,16 +248,23 @@ class SrhiWindow {
 
 /// One data point in the SRHI trajectory for a habit.
 class SrhiTrajectoryPoint {
+  /// Creates an [SrhiTrajectoryPoint].
   const SrhiTrajectoryPoint({
     required this.weekNumber,
     this.score,
     this.submittedAt,
   });
 
+  /// Study week number for this data point.
   final int weekNumber;
+
+  /// SRHI score (1–7 scale average) for this week, or `null` if missing.
   final double? score;
+
+  /// Timestamp when this measurement was submitted.
   final DateTime? submittedAt;
 
+  /// Deserialises from JSON.
   factory SrhiTrajectoryPoint.fromJson(Map<String, dynamic> json) =>
       SrhiTrajectoryPoint(
         weekNumber: (json['weekNumber'] as num).toInt(),

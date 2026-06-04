@@ -1,10 +1,15 @@
+/// Step 2 of 3 in the new habit flow: setting the implementation intention cues.
+library;
+
 // mobile/lib/features/my_habits/new_habit_screen_2_cue.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import 'my_habits_models.dart';
 
+/// Screen for entering the "when" and "where" implementation intention cues.
 class SetCueScreen extends StatefulWidget {
+  /// Creates a [SetCueScreen] for [behaviorKey].
   const SetCueScreen({
     required this.behaviorKey,
     required this.behaviorLabel,
@@ -12,8 +17,13 @@ class SetCueScreen extends StatefulWidget {
     super.key,
   });
 
+  /// The selected behaviour key from the previous step.
   final String behaviorKey;
+
+  /// Human-readable label for the selected behaviour.
   final String behaviorLabel;
+
+  /// Habit configuration loaded from the backend.
   final HabitConfig config;
 
   @override
@@ -102,6 +112,7 @@ class _SetCueScreenState extends State<SetCueScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Instruction ────────────────────────────────────────────
             Text(
               isPreRated
                   ? l10n.setCuePreRatedInstruction
@@ -109,6 +120,7 @@ class _SetCueScreenState extends State<SetCueScreen> {
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 20),
+            // ── Cue input / assigned cues ──────────────────────────────
             if (isPreRated) ...[
               if (widget.config.assignedCues.isEmpty)
                 const Card(
@@ -160,6 +172,7 @@ class _SetCueScreenState extends State<SetCueScreen> {
                 ),
               ],
             ],
+            // ── Validation error / submit ──────────────────────────────
             if (_error != null) ...[
               const SizedBox(height: 8),
               Text(_error!,

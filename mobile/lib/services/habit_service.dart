@@ -11,6 +11,7 @@ import '../config/app_config.dart';
 class HabitService {
   static const _baseUrl = AppConfig.apiBaseUrl;
 
+  /// Creates a [HabitService] using [dio].
   HabitService({required Dio dio}) : _dio = dio;
 
   final Dio _dio;

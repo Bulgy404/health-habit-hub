@@ -124,6 +124,7 @@ enum _ScreenState { loading, success, error }
 /// Onboarding step 2: auto-creates a Keycloak account, derives a 24-word
 /// BIP39-style recovery passphrase, and stores credentials on confirmation.
 class PassphraseScreen extends StatefulWidget {
+  /// Creates a [PassphraseScreen].
   const PassphraseScreen({super.key});
 
   @override

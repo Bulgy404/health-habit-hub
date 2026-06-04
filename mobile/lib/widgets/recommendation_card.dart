@@ -8,10 +8,16 @@ import '../models/recommendation.dart';
 /// section is shown via [ExpansionTile]. Accept and Dismiss buttons appear
 /// in the card footer and call [onAccept]/[onDismiss] respectively.
 class RecommendationCard extends StatelessWidget {
+  /// The recommendation to display.
   final Recommendation recommendation;
+
+  /// Called when the user taps the Accept button.
   final VoidCallback onAccept;
+
+  /// Called when the user taps the Dismiss button.
   final VoidCallback onDismiss;
 
+  /// Creates a [RecommendationCard].
   const RecommendationCard({
     super.key,
     required this.recommendation,

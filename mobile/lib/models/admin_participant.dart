@@ -1,6 +1,7 @@
 /// Minimal participant record as returned by
 /// GET /api/v1/admin/participants.
 class AdminParticipant {
+  /// Creates an [AdminParticipant].
   const AdminParticipant({
     required this.id,
     required this.username,
@@ -11,14 +12,28 @@ class AdminParticipant {
     this.surveysTotal,
   });
 
+  /// Unique user identifier.
   final String id;
+
+  /// Keycloak username for this participant.
   final String username;
+
+  /// Study group the participant belongs to.
   final String group;
+
+  /// Timestamp when the participant enrolled, or null if unknown.
   final DateTime? enrolledAt;
+
+  /// Timestamp of the participant's most recent activity, or null if unknown.
   final DateTime? lastActiveAt;
+
+  /// Number of surveys the participant has completed.
   final int? surveysCompleted;
+
+  /// Total number of surveys assigned to this participant.
   final int? surveysTotal;
 
+  /// Deserialises from the admin participants list API response.
   factory AdminParticipant.fromJson(Map<String, dynamic> json) {
     return AdminParticipant(
       id: (json['userId'] ?? json['_id'] ?? '').toString(),

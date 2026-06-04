@@ -1,3 +1,6 @@
+/// GitHub-style calendar heatmap widget for habit enactment history.
+library;
+
 // mobile/lib/widgets/habit_heatmap_widget.dart
 import 'package:flutter/material.dart';
 
@@ -7,13 +10,17 @@ import 'package:flutter/material.dart';
 /// Days with no entry are rendered grey (no judgment).
 /// [startDate] is the date the intention was created; the grid starts there.
 class HabitHeatmapWidget extends StatelessWidget {
+  /// Creates a [HabitHeatmapWidget].
   const HabitHeatmapWidget({
     required this.logs,
     required this.startDate,
     super.key,
   });
 
+  /// Daily enactment map: `'YYYY-MM-DD'` → true (enacted) / false (missed).
   final Map<String, bool> logs;
+
+  /// Date the habit intention was created; the grid starts from here.
   final DateTime startDate;
 
   @override
@@ -70,6 +77,7 @@ class HabitHeatmapWidget extends StatelessWidget {
 
 /// A single cell in the heatmap grid.
 class HeatmapCell extends StatelessWidget {
+  /// Creates a [HeatmapCell] with the given [enacted] status.
   const HeatmapCell({required this.enacted, super.key});
 
   /// true = green (enacted), false = red (missed), null = grey (no log).

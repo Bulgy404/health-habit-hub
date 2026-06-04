@@ -14,7 +14,9 @@ const _kGreenGlow = [
   BoxShadow(color: Color(0x4745B700), blurRadius: 28, offset: Offset(0, 8)),
 ];
 
+/// App settings screen for theme, language, and account management.
 class UserSettingsScreen extends ConsumerWidget {
+  /// Creates a [UserSettingsScreen].
   const UserSettingsScreen({super.key});
 
   @override

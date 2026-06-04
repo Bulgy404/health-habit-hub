@@ -1,3 +1,6 @@
+/// Screen listing the current user's habit intentions with SRHI prompts.
+library;
+
 // mobile/lib/features/my_habits/my_habits_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +12,10 @@ import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
 
+/// Displays the user's active habit intentions with daily log strips and
+/// SRHI sparklines.  Opens SRHI prompts when weekly check-ins are due.
 class MyHabitsScreen extends ConsumerWidget {
+  /// Creates a [MyHabitsScreen].
   const MyHabitsScreen({super.key});
 
   @override

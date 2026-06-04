@@ -1,3 +1,6 @@
+/// Service and provider for the recommendation feature.
+library;
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,11 +8,13 @@ import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
 import 'recommendation_models.dart';
 
+/// REST client for the recommendation API endpoints.
 class RecommendationFeatureService {
   static const _baseUrl = AppConfig.apiBaseUrl;
 
   final Dio _dio;
 
+  /// Creates a [RecommendationFeatureService] using [dio].
   RecommendationFeatureService({required Dio dio}) : _dio = dio;
 
   /// Calls POST /api/v1/recommend/generate which proxies to the Python
@@ -38,6 +43,7 @@ class RecommendationFeatureService {
   }
 }
 
+/// Provides the singleton [RecommendationFeatureService] instance.
 final recommendationFeatureServiceProvider =
     Provider<RecommendationFeatureService>((ref) {
   return RecommendationFeatureService(dio: ref.watch(dioProvider));
