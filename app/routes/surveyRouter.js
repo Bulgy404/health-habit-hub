@@ -356,6 +356,7 @@ export function createSurveyRouter({ db } = {}) {
           })[c]
       );
 
+      const nonce = res.locals.cspNonce;
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.send(`<!DOCTYPE html>
 <html lang="${lang}">
@@ -364,7 +365,7 @@ export function createSurveyRouter({ db } = {}) {
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>${safeTitle}</title>
 <link rel="stylesheet" href="https://unpkg.com/survey-core@1.12.28/defaultV2.min.css">
-<style>
+<style nonce="${nonce}">
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body { padding: 12px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fff; color: #1a1a1a; }
@@ -376,7 +377,7 @@ export function createSurveyRouter({ db } = {}) {
 <div id="survey-container"></div>
 <script src="https://unpkg.com/survey-core@1.12.28/survey.core.min.js"></script>
 <script src="https://unpkg.com/survey-js-ui@1.12.28/survey-js-ui.min.js"></script>
-<script>
+<script nonce="${nonce}">
   (function() {
     var surveyJson = ${schema};
     try {
