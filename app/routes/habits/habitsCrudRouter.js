@@ -37,7 +37,7 @@ async function fetchLibreTranslation(
     }
     if (!res.ok) {
       console.warn(
-        `[translate] LibreTranslate returned ${res.status} — skipping translation${targetLang.toUpperCase()}`
+        `[translate] LibreTranslate returned ${res.status} — skipping translation to ${targetLang.toUpperCase()}`
       );
       return null;
     }
@@ -45,7 +45,7 @@ async function fetchLibreTranslation(
     return data.translatedText;
   } catch (err) {
     console.warn(
-      `[translate] LibreTranslate error: ${err.message} — skipping translation${targetLang.toUpperCase()}`
+      `[translate] LibreTranslate error: ${err.message} — skipping translation to ${targetLang.toUpperCase()}`
     );
     return null;
   }
@@ -328,7 +328,7 @@ export function createHabitsCrudRouter({
    *               $ref: '#/components/schemas/Error'
    */
   // POST /api/v1/habits/:id/annotate
-  // Adds or removes an anonymous annotation and returns updated counts.
+  // Adds or removes the requesting user's annotation and returns updated counts.
   // Body: { type: 'helpful'|'iDoThis', remove?: boolean }
   router.post('/:id/annotate', async (req, res) => {
     try {
@@ -339,25 +339,36 @@ export function createHabitsCrudRouter({
           .json({ error: 'type must be "helpful" or "iDoThis"' });
       }
 
+      const userId = req.user?.sub;
+      if (!userId || typeof userId !== 'string') {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
       const database = await getDb();
       const habitId = req.params.id;
-      const delta = remove ? -1 : 1;
 
-      // Update MongoDB
+      // Update MongoDB — scope all queries to the requesting user so one
+      // user cannot add or remove another user's annotation.
+      let delta = 0;
       if (remove) {
-        await database
+        const { deletedCount } = await database
           .collection('habit_annotations')
-          .deleteOne({ habitId: String(habitId), type: String(type) });
+          .deleteOne({ habitId: String(habitId), type: String(type), userId });
+        delta = deletedCount > 0 ? -1 : 0;
       } else {
         await database.collection('habit_annotations').insertOne({
           habitId,
           type,
+          userId,
           createdAt: new Date(),
         });
+        delta = 1;
       }
 
-      // Mirror counts to Neo4j
-      await updateHabitAnnotation(queryNeo4j, habitId, type, delta);
+      // Mirror counts to Neo4j only when a document actually changed.
+      if (delta !== 0) {
+        await updateHabitAnnotation(queryNeo4j, habitId, type, delta);
+      }
 
       const all = await database
         .collection('habit_annotations')

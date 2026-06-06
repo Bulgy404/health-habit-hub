@@ -1,47 +1,21 @@
 """POST /api/v1/llm/classify-habit — M1.1 Habit Classifier."""
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
-import os
 from pathlib import Path
-from typing import Optional
 from uuid import uuid4
 
-import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
 from llm_client import chat_complete
+from routers._cache import _REDIS_TTL, get_redis as _get_redis, make_cache_key
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(verify_service_token)])
-
-# ---------------------------------------------------------------------------
-# Redis setup (graceful — if unavailable the endpoint still works)
-# ---------------------------------------------------------------------------
-_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-_REDIS_TTL = int(os.getenv("REDIS_TTL_SECONDS", "86400"))
-
-_redis: Optional[aioredis.Redis] = None
-
-
-async def _get_redis() -> Optional[aioredis.Redis]:
-    """Return a module-level Redis client, initialising lazily; returns None if unavailable."""
-    global _redis
-    if _redis is not None:
-        return _redis
-    try:
-        client: aioredis.Redis = aioredis.from_url(_REDIS_URL, decode_responses=True)
-        await client.ping()  # type: ignore[misc]
-        _redis = client
-        return _redis
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Redis unavailable (%s) — caching disabled.", exc)
-        return None
 
 
 # ---------------------------------------------------------------------------
@@ -77,8 +51,7 @@ class ClassifyHabitResponse(BaseModel):
 # ---------------------------------------------------------------------------
 def _cache_key(sentence: str, language: str) -> str:
     """Build a deterministic Redis key from sentence and language."""
-    digest = hashlib.sha256(f"{sentence}||{language}".encode()).hexdigest()
-    return f"classify_habit:{digest}"
+    return make_cache_key("classify_habit", sentence, language)
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +103,7 @@ async def classify_habit(body: ClassifyHabitRequest) -> ClassifyHabitResponse:
         logger.error("LLM classify_habit call failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Classifier unavailable — see server logs for details.",
+            detail={"error": "Classifier unavailable", "code": "llm_unavailable"},
         ) from exc
 
     try:
@@ -141,7 +114,7 @@ async def classify_habit(body: ClassifyHabitRequest) -> ClassifyHabitResponse:
         logger.error("LLM returned unexpected format: %r (%s)", raw, exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Classifier returned invalid response — see server logs for details.",
+            detail={"error": "Classifier returned invalid response", "code": "llm_invalid_response"},
         ) from exc
 
     # --- cache write ---
