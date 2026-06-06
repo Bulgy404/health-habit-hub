@@ -33,6 +33,21 @@ export async function connect() {
   return db;
 }
 
+/**
+ * Create indexes that are required for correct behaviour (idempotent — safe to
+ * call on every startup).  Must be called after connect().
+ * @param {import('mongodb').Db} database
+ */
+export async function ensureIndexes(database) {
+  // Compound index used by the annotation endpoint:
+  //   deleteOne({ habitId, type, userId }) — needs all three fields
+  //   find({ habitId })                    — covered by the prefix
+  await database.collection('habit_annotations').createIndex(
+    { habitId: 1, type: 1, userId: 1 },
+    { name: 'habitId_type_userId', background: true }
+  );
+}
+
 export async function disconnect() {
   try {
     if (client) await client.close();

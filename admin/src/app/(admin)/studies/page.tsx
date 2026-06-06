@@ -63,6 +63,17 @@ interface ScheduledNotification {
   status: string;
 }
 
+interface SentNotification {
+  id: string;
+  title: string;
+  body: string;
+  targetType: string;
+  targetIds: string[];
+  sentAt: string | null;
+  recipientCount: number | null;
+  status: string;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtDate(iso: string | null): string {
@@ -826,6 +837,9 @@ function NotificationsTab({
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState("");
 
+  const [sentHistory, setSentHistory] = useState<SentNotification[]>([]);
+  const [loadingSent, setLoadingSent] = useState(false);
+
   const fetchScheduled = useCallback(async () => {
     setLoadingScheduled(true);
     setCancelError("");
@@ -845,9 +859,28 @@ function NotificationsTab({
     }
   }, [study.id, token]);
 
+  const fetchSentHistory = useCallback(async () => {
+    setLoadingSent(true);
+    try {
+      const data = await apiFetch(
+        `${NOTIFICATIONS_BASE}?studyId=${study.id}&status=sent&limit=20`,
+        token
+      );
+      const items = Array.isArray(data)
+        ? data
+        : (data as { campaigns?: SentNotification[] }).campaigns ?? data;
+      setSentHistory(Array.isArray(items) ? (items as SentNotification[]) : []);
+    } catch {
+      // non-critical
+    } finally {
+      setLoadingSent(false);
+    }
+  }, [study.id, token]);
+
   useEffect(() => {
     fetchScheduled();
-  }, [fetchScheduled]);
+    fetchSentHistory();
+  }, [fetchScheduled, fetchSentHistory]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -1035,6 +1068,48 @@ function NotificationsTab({
                 </button>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Sent notification history */}
+      <div className={styles.notifSection}>
+        <p className={styles.notifSectionTitle}>Sent history</p>
+        {loadingSent ? (
+          <div className={styles.loadingState}>Loading…</div>
+        ) : sentHistory.length === 0 ? (
+          <div className={styles.notifEmpty}>No notifications sent yet.</div>
+        ) : (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Target</th>
+                  <th>Recipients</th>
+                  <th>Sent at</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sentHistory.map((n) => (
+                  <tr key={n.id}>
+                    <td>
+                      <span className={styles.scheduledTitle}>{n.title}</span>
+                      <span className={styles.scheduledBody} style={{ display: "block", fontSize: "0.78rem" }}>
+                        {n.body}
+                      </span>
+                    </td>
+                    <td>
+                      {n.targetType === "group" && n.targetIds.length > 0
+                        ? study.groups.find((g) => n.targetIds.includes(g.id))?.label ?? n.targetIds[0]
+                        : "All participants"}
+                    </td>
+                    <td>{n.recipientCount ?? "—"}</td>
+                    <td>{fmtDateTime(n.sentAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

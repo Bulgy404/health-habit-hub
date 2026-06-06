@@ -15,6 +15,7 @@ import '../core/dio_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 import '../services/habit_service.dart';
+import '../services/offline_queue_service.dart';
 import '../services/survey_service.dart';
 import 'donate/widgets/donate_form_widget.dart';
 import 'donate/widgets/donate_progress_widget.dart';
@@ -155,6 +156,25 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       }
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;
+      final isNetworkError = e.type == DioExceptionType.connectionError ||
+          e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout;
+
+      if (isNetworkError) {
+        await offlineQueueService.enqueue(values, _lang);
+        if (mounted) {
+          setState(() => _submitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Saved offline — will submit when connected'),
+              duration: Duration(seconds: 4),
+            ),
+          );
+          _resetForm();
+        }
+        return;
+      }
+
       debugPrint(
         'ShareHabitScreen._submit DioException: status=$statusCode '
         'path=${e.requestOptions.path} data=${e.response?.data}',
