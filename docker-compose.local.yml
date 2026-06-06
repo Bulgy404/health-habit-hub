@@ -279,7 +279,7 @@ services:
       - "6379:6379"
     volumes:
       - redis-local-data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     networks:
       - h3-2-app
 
