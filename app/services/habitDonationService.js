@@ -344,6 +344,12 @@ async function _persistRejectedHabit(
 
 /**
  * Produce EN and DE translations for a confirmed habit sentence in parallel.
+ *
+ * Rules:
+ *  - English habits  → translationEN = null (already EN), translationDE = translated
+ *  - German habits   → translationEN = translated, translationDE = null (already DE)
+ *  - Other languages → both translations produced in parallel from the source language
+ *
  * @param {string} sentence
  * @param {string} language
  * @param {Function} translate
@@ -358,23 +364,27 @@ async function _translateHabit(
   apiBase,
   translateUrl
 ) {
+  const isEN = language && language.startsWith('en');
+  const isDE = language && language.startsWith('de');
+  const sourceLang = isEN ? 'en' : language;
+
   return Promise.all([
-    // Translate non-English habits to English
-    language && !language.startsWith('en')
+    // EN: skip for English habits (sentence is already in English)
+    !isEN
       ? translate(
           sentence,
-          language,
+          sourceLang,
           'en',
           '/api/v1/llm/refine-translation',
           apiBase,
           translateUrl
         )
       : Promise.resolve(null),
-    // Translate English habits to German
-    language && language.startsWith('en')
+    // DE: skip for German habits (sentence is already in German)
+    !isDE
       ? translate(
           sentence,
-          'en',
+          sourceLang,
           'de',
           '/api/v1/llm/refine-translation-de',
           apiBase,

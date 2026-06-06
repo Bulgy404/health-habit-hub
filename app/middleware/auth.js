@@ -151,21 +151,12 @@ export function createAuthMiddleware({
         }
       }
 
-      // Some local/dev token flows may omit `sub` but still carry a stable
-      // user identifier in `preferred_username`. Normalize here so downstream
-      // routes can reliably use req.user.sub.
-      if (
-        (payload.sub == null || payload.sub === '') &&
-        typeof payload.preferred_username === 'string' &&
-        payload.preferred_username.trim()
-      ) {
-        payload.sub = payload.preferred_username.trim();
-      } else if (
-        (payload.sub == null || payload.sub === '') &&
-        typeof payload.email === 'string' &&
-        payload.email.trim()
-      ) {
-        payload.sub = payload.email.trim();
+      // Require a non-empty `sub` claim. Keycloak always provides it; a
+      // token without `sub` is malformed or from an untrusted source.
+      // Falling back to attacker-controllable fields like preferred_username
+      // or email would allow impersonation, so we fail closed instead.
+      if (!payload.sub || typeof payload.sub !== 'string') {
+        return res.status(401).json({ error: 'Unauthorized' });
       }
 
       req.user = payload;

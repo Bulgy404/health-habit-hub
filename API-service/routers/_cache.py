@@ -1,6 +1,7 @@
 """Shared Redis cache utilities for LLM router modules."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 from typing import Optional
@@ -13,13 +14,15 @@ _REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
 _REDIS_TTL: int = int(os.getenv("REDIS_TTL_SECONDS", "86400"))
 
 _redis: Optional[aioredis.Redis] = None
+_redis_lock: asyncio.Lock = asyncio.Lock()
 
 
 async def get_redis() -> Optional[aioredis.Redis]:
     """Return a shared Redis client, initialising lazily on first call.
 
-    Returns None (and logs a warning) if Redis is unavailable so callers
-    can degrade gracefully rather than failing hard.
+    Uses a lock so concurrent coroutines cannot each create their own
+    connection (double-checked locking pattern).  Returns None and logs a
+    warning if Redis is unreachable, so callers degrade gracefully.
 
     Returns:
         A connected aioredis.Redis instance, or None if the connection failed.
@@ -27,14 +30,17 @@ async def get_redis() -> Optional[aioredis.Redis]:
     global _redis
     if _redis is not None:
         return _redis
-    try:
-        client: aioredis.Redis = aioredis.from_url(_REDIS_URL, decode_responses=True)
-        await client.ping()  # type: ignore[misc]
-        _redis = client
-        return _redis
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Redis unavailable (%s) — caching disabled.", exc)
-        return None
+    async with _redis_lock:
+        if _redis is not None:  # re-check after acquiring lock
+            return _redis
+        try:
+            client: aioredis.Redis = aioredis.from_url(_REDIS_URL, decode_responses=True)
+            await client.ping()  # type: ignore[misc]
+            _redis = client
+            return _redis
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Redis unavailable (%s) — caching disabled.", exc)
+            return None
 
 
 def make_cache_key(prefix: str, *parts: str) -> str:
