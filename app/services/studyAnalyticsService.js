@@ -6,7 +6,9 @@ const DAILY_LOGS = 'daily_behavior_logs';
 const SRHI = 'srhi_responses';
 
 /**
- * Per-group weekly active rate: % of enrolled participants with ≥1 log in the last 7 days.
+ * Return per-group weekly active rate: percentage of enrolled participants with at least one log in the last 7 days.
+ * @param {{ db: object, studyId: string }} deps
+ * @returns {Promise<Array<{ groupId: string, enrolled: number, active: number, rate: number }>>}
  */
 export async function getWeeklyActiveRate({ db, studyId }) {
   let oid;
@@ -56,7 +58,9 @@ export async function getWeeklyActiveRate({ db, studyId }) {
 }
 
 /**
- * Mean SRHI score per group per week (submitted responses only).
+ * Return mean SRHI score per group per week for submitted responses only.
+ * @param {{ db: object, studyId: string }} deps
+ * @returns {Promise<Array<{ groupId: string|null, weekNumber: number, meanScore: number, count: number }>>}
  */
 export async function getMeanSrhiTrajectory({ db, studyId }) {
   let oid;
@@ -96,7 +100,9 @@ export async function getMeanSrhiTrajectory({ db, studyId }) {
 }
 
 /**
- * Cumulative dropout count per group by date (sorted ascending).
+ * Return cumulative dropout count per group by date, sorted ascending.
+ * @param {{ db: object, studyId: string }} deps
+ * @returns {Promise<Array<{ groupId: string, date: string, cumulative: number }>>}
  */
 export async function getDropoutCurve({ db, studyId }) {
   let oid;

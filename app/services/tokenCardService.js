@@ -24,6 +24,8 @@ export async function generateTokenCard(userId, username, password, format) {
     });
   }
 
+  // PDFKit uses a writable stream model; we wrap it in a Promise so callers
+  // can use async/await rather than passing callbacks.
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A6', margin: 30 });
     const chunks = [];

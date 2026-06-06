@@ -11,6 +11,11 @@ async function enrollmentMap(db, studyId) {
   return Object.fromEntries(docs.map((e) => [e.userId, e]));
 }
 
+/**
+ * Build a CSV string of all SRHI survey responses for a study.
+ * @param {{ db: object, studyId?: string }} deps
+ * @returns {Promise<string>} CSV content including header row.
+ */
 export async function buildSrhiCsv({ db, studyId }) {
   const eMap = await enrollmentMap(db, studyId);
   const filter = studyId ? { studyId: new ObjectId(studyId) } : {};
@@ -37,6 +42,11 @@ export async function buildSrhiCsv({ db, studyId }) {
   return stringify(records, { header: true });
 }
 
+/**
+ * Build a CSV string of all daily behavior log entries for a study.
+ * @param {{ db: object, studyId?: string }} deps
+ * @returns {Promise<string>} CSV content including header row.
+ */
 export async function buildDailyLogsCsv({ db, studyId }) {
   const eMap = await enrollmentMap(db, studyId);
   const intentionFilter = studyId ? { studyId: new ObjectId(studyId) } : {};
@@ -77,6 +87,11 @@ export async function buildDailyLogsCsv({ db, studyId }) {
   return stringify(records, { header: true });
 }
 
+/**
+ * Build a CSV string of dropout statistics for all enrollments in a study.
+ * @param {{ db: object, studyId?: string }} deps
+ * @returns {Promise<string>} CSV content including header row.
+ */
 export async function buildDropoutCsv({ db, studyId }) {
   const filter = studyId ? { studyId: new ObjectId(studyId) } : {};
   const enrollments = await db.collection(ENROLLMENTS).find(filter).toArray();

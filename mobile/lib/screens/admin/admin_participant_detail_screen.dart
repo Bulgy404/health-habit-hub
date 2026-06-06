@@ -18,11 +18,13 @@ import '../../services/admin_service.dart';
 ///  - Timeline ListView with icons in chronological order
 ///  - Export JSON button (shares progress JSON via share_plus)
 class AdminParticipantDetailScreen extends ConsumerStatefulWidget {
+  /// Creates an [AdminParticipantDetailScreen] for [participantId].
   const AdminParticipantDetailScreen({
     super.key,
     required this.participantId,
   });
 
+  /// The participant's unique identifier.
   final String participantId;
 
   @override

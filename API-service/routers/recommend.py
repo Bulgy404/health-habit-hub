@@ -14,10 +14,12 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Optional
 from uuid import uuid4
 
+import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
@@ -40,7 +42,7 @@ router = APIRouter(dependencies=[Depends(verify_service_token)])
 _REDIS_TTL = int(os.getenv("REDIS_TTL_SECONDS", "86400"))
 
 
-async def _get_redis() -> Optional[Any]:
+async def _get_redis() -> Optional[aioredis.Redis]:
     """Compatibility seam for tests and fallback cache access."""
     return await get_redis()
 
@@ -56,27 +58,35 @@ _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class RecommendRequest(BaseModel):
+    """Input payload for the recommend endpoint."""
+
     user_id: str = Field(..., max_length=128)
     goal: str = Field(..., min_length=1, max_length=2000)
     session_id: str = Field(..., max_length=128)
 
 
 class SourceRef(BaseModel):
+    """A reference to a knowledge-base source used in a recommendation."""
+
     filename: str
     excerpt: str
 
 
 class RecommendationItem(BaseModel):
+    """A single personalised habit recommendation with rationale and source references."""
+
     title: str
     body: str
     rationale: str
-    sources: List[SourceRef]
+    sources: list[SourceRef]
 
 
 class RecommendResponse(BaseModel):
+    """Full recommendation response with metadata and a list of recommendation items."""
+
     recommendation_id: str
     goal: str
-    recommendations: List[RecommendationItem]
+    recommendations: list[RecommendationItem]
     generated_at: str
 
 
@@ -84,13 +94,14 @@ class RecommendResponse(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 def _cache_key(user_id: str, goal: str) -> str:
+    """Build a deterministic Redis key for a user+goal recommendation pair."""
     digest = hashlib.sha256(f"{user_id}||{goal}".encode()).hexdigest()
     return f"recommend:{digest}"
 
 
 def _parse_llm_response(
-    raw: str, sources: List[Any]
-) -> List[Dict[str, Any]]:
+    raw: str, sources: list[SourceItem]
+) -> list[dict[str, object]]:
     """Parse LLM JSON; returns list of recommendation dicts (with sources attached)."""
     try:
         parsed = json.loads(raw.strip())
@@ -98,7 +109,7 @@ def _parse_llm_response(
         if not isinstance(items, list):
             return []
         source_refs = [{"filename": s.filename, "excerpt": s.excerpt} for s in sources]
-        result: List[Dict[str, Any]] = []
+        result: list[dict[str, object]] = []
         for item in items:
             if not isinstance(item, dict):
                 continue
@@ -116,7 +127,7 @@ def _parse_llm_response(
         return []
 
 
-async def _fetch_prior_feedback(user_id: str, goal: str, db: Any) -> List[str]:
+async def _fetch_prior_feedback(user_id: str, goal: str, db: AsyncIOMotorDatabase) -> list[str]:
     """Fetch prior feedback comments for (user_id, goal) from MongoDB."""
     try:
         cursor = (
@@ -125,7 +136,7 @@ async def _fetch_prior_feedback(user_id: str, goal: str, db: Any) -> List[str]:
             .sort("created_at", -1)
             .limit(10)
         )
-        comments: List[str] = []
+        comments: list[str] = []
         async for doc in cursor:
             comment = doc.get("comment", "")
             if comment:
@@ -141,9 +152,9 @@ async def _store_recommendation(
     user_id: str,
     goal: str,
     session_id: str,
-    recs: List[Dict[str, Any]],
+    recs: list[dict[str, object]],
     generated_at: str,
-    db: Any = None,
+    db: Optional[AsyncIOMotorDatabase] = None,
 ) -> None:
     """Persist the recommendation document to MongoDB."""
     if db is None:
@@ -169,9 +180,27 @@ async def _store_recommendation(
 @router.post("/llm/recommend", response_model=RecommendResponse)
 async def recommend(
     body: RecommendRequest,
-    redis_client: Optional[Any] = Depends(get_redis),
-    db: Any = Depends(get_mongo_db),
+    redis_client: Optional[aioredis.Redis] = Depends(get_redis),
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
 ) -> RecommendResponse:
+    """Orchestrate the M3 pipeline and generate personalised habit recommendations.
+
+    Runs M3.1 (extract-habits) + M3.2 (extract-profile) in parallel, then M3.3 (retrieve)
+    for RAG context, fetches prior feedback, and calls the LLM to produce recommendations.
+    Results are cached in Redis and persisted to MongoDB.
+
+    Args:
+        body: Validated request payload with user_id, goal, and session_id.
+        redis_client: Injected Redis connection for cache read/write (optional, degrades gracefully).
+        db: Injected MongoDB connection from FastAPI's dependency system.
+
+    Returns:
+        RecommendResponse with a unique recommendation_id, goal, recommendations list,
+        and generated_at timestamp.
+
+    Raises:
+        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+    """
     if redis_client is None:
         redis_client = await _get_redis()
 

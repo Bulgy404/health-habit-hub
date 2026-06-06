@@ -7,7 +7,9 @@ import '../../core/dio_provider.dart';
 import '../../config/app_config.dart';
 import 'profile_fields.dart';
 
+/// Onboarding step where the participant fills in optional profile fields.
 class ProfileSetupScreen extends ConsumerStatefulWidget {
+  /// Creates a [ProfileSetupScreen].
   const ProfileSetupScreen({super.key});
 
   @override

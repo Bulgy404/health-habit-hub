@@ -14,6 +14,7 @@ import '../../services/admin_service.dart';
 ///  - Success snackbar on save
 ///  - Refresh in AppBar
 class AdminSettingsScreen extends ConsumerStatefulWidget {
+  /// Creates an [AdminSettingsScreen].
   const AdminSettingsScreen({super.key});
 
   @override

@@ -8,14 +8,28 @@ import '../core/dio_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/offline_banner.dart';
 
-enum LegalDocumentType { privacy, accessibility, imprint }
+/// Discriminator for the legal document to display.
+enum LegalDocumentType {
+  /// Privacy policy.
+  privacy,
 
+  /// Accessibility statement.
+  accessibility,
+
+  /// Legal imprint / about.
+  imprint,
+}
+
+/// Displays a legal document (privacy policy, accessibility statement, or
+/// imprint) fetched from the backend API and rendered in a [WebView].
 class LegalDocumentScreen extends ConsumerStatefulWidget {
+  /// Creates a [LegalDocumentScreen] for the given [documentType].
   const LegalDocumentScreen({
     required this.documentType,
     super.key,
   });
 
+  /// The type of legal document to display.
   final LegalDocumentType documentType;
 
   @override

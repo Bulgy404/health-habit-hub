@@ -10,6 +10,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - LightRAG upgraded from 1.3.9 to 1.5.0 (`lightrag/Dockerfile`)
 
+### Changed — Full-Repo Clean Sweep (2026-06-03/04)
+
+**Stack 1 — `app/` (Node.js/Express)**
+- Renamed `token_card_service.js` → `tokenCardService.js` (camelCase convention); updated all import paths
+- Deleted `app/controllers/defaultController.js` — confirmed unused (no active consumers)
+- Split `habitsRouter.js` (888 lines) into three focused modules: `habits/habitsCrudRouter.js`, `habits/habitsStatsRouter.js`, `habits/habitsGraphRouter.js`; orchestrator reduced to 68 lines
+- Converted `.then()` callback chains to `async/await` in `questionnaireResponsesRouter.js` and `adminRouter.js`; documented PDFKit `new Promise` wrapper in `tokenCardService.js`
+- Added JSDoc (`@param`, `@returns`, `@throws`) to all 17 exported service functions and all 5 exported middleware functions
+- Extracted single-responsibility helpers from long service functions in `habitDonationService.js`, `studyService.js`, `studyCodeService.js`, `notificationService.js`; private helpers prefixed `_camelCase`
+
+**Stack 2 — `API-service/` (Python/FastAPI)**
+- Extracted shared Redis lazy-initialisation pattern into `routers/_cache.py` (`get_redis`, `make_cache_key`, `_REDIS_TTL`); removed duplication from `extract_habits.py` and `extract_profile.py`
+- Extracted shared LLM invocation helpers into `routers/_llm_helpers.py` (`load_prompt_template`, `call_llm_with_fallback`); simplified `refine_translation.py` and `refine_translation_de.py`
+- Replaced all `Any` type hints with concrete types across all routers (`AsyncIOMotorDatabase`, `aioredis.Redis`, `list[str]`, `dict[str, object]`, etc.); used `cast` where JSON shapes are known at runtime
+- Standardised `HTTPException` error handling: all routers use `status.HTTP_*` constants; replaced raw integer status codes
+- Added Google-style docstrings (module-level + `Args`/`Returns`/`Raises` blocks) to all router functions, helper functions, and Pydantic models across all 12 Python files
+
+**Stack 3 — `admin/` (Next.js 14)**
+- Removed unused `useRef` import and dead CSS classes (`.categoryCell`, orphaned `.select` in knowledge-base module)
+- Moved `analytics-tab.tsx` from `app/(admin)/studies/` into `components/studies-analytics-tab.tsx`; updated all import paths
+- Replaced all remaining `any` TypeScript types with proper interfaces; exported `StudySummaryForAnalytics` type
+- Added JSDoc to all exported page components (`StudiesPage`, `CuePoolsPage`, `KnowledgeBasePage`, `QuestionnairesPage`, `SettingsPage`, `ProfileFieldsPage`) and `Sidebar`, `AnalyticsTab`, `apiFetch`, `authOptions`
+- Extracted data-fetching hooks into same-directory files: `useStudiesData.ts`, `useQuestionnairesData.ts`, `useCuePoolsData.ts`, `useKnowledgeBaseData.ts`; page components reduced to thin rendering shells
+
+**Stack 4 — `mobile/` (Flutter)**
+- Split `main.dart` (592 lines) into `app.dart` (HhhApp widget) and `router/app_router.dart` (GoRouter config + all routes); `main.dart` reduced to ~30-line entry point
+- Split `bubble_graph_widget.dart` (529 lines) into `bubble_graph/bubble_graph_data.dart`, `bubble_graph/bubble_graph_painter.dart`, `bubble_graph/bubble_graph_gesture_handler.dart`
+- Extracted reusable `AdminDataTable<T>` widget to `screens/admin/widgets/admin_data_table.dart`; refactored `admin_questionnaires_screen.dart` and `admin_surveys_screen.dart` to use it
+- Split `donate_screen.dart` (646 lines) into `donate/widgets/donate_form_widget.dart` and `donate/widgets/donate_progress_widget.dart`
+- Added `///` Dart doc comments to all public classes, methods, providers, and fields across 70+ files; added section headers (`// ── State reads ──`, `// ── Main layout ──`, etc.) to large `build()` methods
+
 ## [1.3.0] - 2026-04-16
 
 ### Security

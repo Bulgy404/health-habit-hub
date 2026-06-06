@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useCallback, useEffect, useState } from "react";
 import styles from "./page.module.css";
-import { AnalyticsTab } from "./analytics-tab";
+import { AnalyticsTab } from "../../../components/studies-analytics-tab";
+import { useStudiesData } from "./useStudiesData";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -107,6 +107,15 @@ const BEHAVIOR_OPTIONS = [
   { key: "yoga", label: "Yoga" },
 ];
 
+/**
+ * Authenticated JSON fetch helper.
+ *
+ * @param url - The full URL to fetch.
+ * @param token - The NextAuth session access token.
+ * @param opts - Additional fetch options.
+ * @returns The parsed JSON response body.
+ * @throws {Error} If the response status is not 2xx.
+ */
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
     ...opts,
@@ -1556,41 +1565,18 @@ function StudyModal({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+/**
+ * Displays and manages research studies, including groups, participants,
+ * questionnaire assignments, codes, notifications, and cue configuration.
+ *
+ * @returns The studies management page.
+ */
 export default function StudiesPage() {
-  const { data: session } = useSession();
-  const token =
-    (session as { accessToken?: string } | null)?.accessToken ?? "";
-
-  const [studies, setStudies] = useState<StudySummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { studies, loading, error, token, refetch: fetchList } = useStudiesData();
   const [actionError, setActionError] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<StudySummary | null>(null);
-
-  const fetchList = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    setError("");
-    try {
-      const data = await apiFetch(API_BASE, token);
-      const items: StudySummary[] = Array.isArray(data)
-        ? data
-        : (data as { studies?: StudySummary[] }).studies ?? [];
-      setStudies(items);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load studies"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    fetchList();
-  }, [fetchList]);
 
   function handleOpenCreate() {
     setEditTarget(null);

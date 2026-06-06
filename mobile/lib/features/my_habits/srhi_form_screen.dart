@@ -1,3 +1,6 @@
+/// Weekly SRHI (Self-Report Habit Index) check-in form screen.
+library;
+
 // mobile/lib/features/my_habits/srhi_form_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +10,9 @@ import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
 
+/// Screen for completing the weekly SRHI habit strength questionnaire.
 class SrhiFormScreen extends ConsumerStatefulWidget {
+  /// Creates a [SrhiFormScreen] for [intentionId] at [weekNumber].
   const SrhiFormScreen({
     required this.intentionId,
     required this.weekNumber,
@@ -16,9 +21,16 @@ class SrhiFormScreen extends ConsumerStatefulWidget {
     super.key,
   });
 
+  /// The habit intention being assessed.
   final String intentionId;
+
+  /// Study week number for this check-in.
   final int weekNumber;
+
+  /// Human-readable behaviour label shown in the form header.
   final String behaviorLabel;
+
+  /// SRHI question items to present.
   final List<SrhiItem> srhiItems;
 
   @override
@@ -76,6 +88,7 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
       appBar: AppBar(title: Text(l10n.srhiFormTitle)),
       body: Column(
         children: [
+          // ── Stem ──────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
             child: Text(
@@ -86,6 +99,7 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
                   ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
+          // ── Question sliders ──────────────────────────────────────────
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -158,6 +172,7 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
               ),
             ),
           ),
+          // ── Submit footer ─────────────────────────────────────────────
           if (_error != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),

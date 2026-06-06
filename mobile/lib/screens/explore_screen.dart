@@ -13,7 +13,8 @@ import '../services/habit_service.dart';
 import '../widgets/bubble_graph_widget.dart';
 import 'stats_screen.dart';
 
-// Converts a HabitBubble to the HabitNode model used by _NodeDetailSheet.
+/// Converts a [HabitBubble] from the graph model to a [HabitNode] used by
+/// the detail sheet.
 HabitNode _toHabitNode(HabitBubble bubble, DimensionBubble dimension) {
   return HabitNode(
     id: bubble.id,
@@ -28,7 +29,12 @@ HabitNode _toHabitNode(HabitBubble bubble, DimensionBubble dimension) {
   );
 }
 
+/// Displays the user's habit graph in an interactive bubble visualisation.
+///
+/// Shows dimension bubbles at the top level; tapping a dimension drills in to
+/// show individual habit bubbles.  Tapping a habit opens a [_NodeDetailSheet].
 class ExploreScreen extends ConsumerStatefulWidget {
+  /// Creates an [ExploreScreen].
   const ExploreScreen({super.key});
 
   @override

@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 /// Screen where the user types a health goal and triggers recommendation
 /// generation. Navigates to [RecommendationLoadingScreen] on submit.
 class GoalInputScreen extends StatefulWidget {
+  /// Creates a [GoalInputScreen].
   const GoalInputScreen({super.key});
 
   @override

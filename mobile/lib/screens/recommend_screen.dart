@@ -13,6 +13,7 @@ import '../widgets/recommendation_card.dart';
 /// entry animations, an [AnimatedList] for card removal/insertion, and a
 /// live WebSocket feed with automatic polling fallback.
 class RecommendScreen extends ConsumerStatefulWidget {
+  /// Creates a [RecommendScreen].
   const RecommendScreen({super.key});
 
   @override

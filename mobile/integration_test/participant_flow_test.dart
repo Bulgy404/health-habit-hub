@@ -16,7 +16,7 @@ import 'package:go_router/go_router.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'package:dio/dio.dart';
-import 'package:hhh/main.dart' show routerProvider;
+import 'package:hhh/router/app_router.dart' show routerProvider;
 import 'package:hhh/models/recommendation.dart';
 import 'package:hhh/models/survey.dart';
 import 'package:hhh/models/survey_result.dart';

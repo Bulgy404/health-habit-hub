@@ -1,46 +1,21 @@
 """POST /api/v1/llm/classify-habit — M1.1 Habit Classifier."""
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
-import os
 from pathlib import Path
-from typing import Optional
 from uuid import uuid4
 
-import redis.asyncio as aioredis
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
 from llm_client import chat_complete
+from routers._cache import _REDIS_TTL, get_redis as _get_redis, make_cache_key
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(verify_service_token)])
-
-# ---------------------------------------------------------------------------
-# Redis setup (graceful — if unavailable the endpoint still works)
-# ---------------------------------------------------------------------------
-_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-_REDIS_TTL = int(os.getenv("REDIS_TTL_SECONDS", "86400"))
-
-_redis: Optional[aioredis.Redis] = None
-
-
-async def _get_redis() -> Optional[aioredis.Redis]:
-    global _redis
-    if _redis is not None:
-        return _redis
-    try:
-        client: aioredis.Redis = aioredis.from_url(_REDIS_URL, decode_responses=True)
-        await client.ping()  # type: ignore[misc]
-        _redis = client
-        return _redis
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Redis unavailable (%s) — caching disabled.", exc)
-        return None
 
 
 # ---------------------------------------------------------------------------
@@ -54,12 +29,16 @@ _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class ClassifyHabitRequest(BaseModel):
+    """Input payload for the classify-habit endpoint."""
+
     sentence: str = Field(..., min_length=1, max_length=2000)
     language: str = Field(..., max_length=32)
     user_id: str = Field(..., max_length=128)
 
 
 class ClassifyHabitResponse(BaseModel):
+    """Classification result for a single habit sentence."""
+
     uuid: str
     sentence: str
     language: str
@@ -71,8 +50,8 @@ class ClassifyHabitResponse(BaseModel):
 # Helper: cache key
 # ---------------------------------------------------------------------------
 def _cache_key(sentence: str, language: str) -> str:
-    digest = hashlib.sha256(f"{sentence}||{language}".encode()).hexdigest()
-    return f"classify_habit:{digest}"
+    """Build a deterministic Redis key from sentence and language."""
+    return make_cache_key("classify_habit", sentence, language)
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +59,17 @@ def _cache_key(sentence: str, language: str) -> str:
 # ---------------------------------------------------------------------------
 @router.post("/llm/classify-habit", response_model=ClassifyHabitResponse)
 async def classify_habit(body: ClassifyHabitRequest) -> ClassifyHabitResponse:
+    """Classify whether a sentence describes a habit and return a confidence score.
+
+    Args:
+        body: Validated request payload with the sentence, language, and user_id.
+
+    Returns:
+        ClassifyHabitResponse with is_habit flag, confidence score, and a fresh UUID.
+
+    Raises:
+        HTTPException: 503 if the LLM call fails or returns an unparseable response.
+    """
     key = _cache_key(body.sentence, body.language)
 
     # --- cache read ---
@@ -112,11 +102,8 @@ async def classify_habit(body: ClassifyHabitRequest) -> ClassifyHabitResponse:
     except Exception as exc:  # noqa: BLE001
         logger.error("LLM classify_habit call failed: %s", exc)
         raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "Classifier unavailable",
-                "code": "llm_unavailable",
-            },
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "Classifier unavailable", "code": "llm_unavailable"},
         ) from exc
 
     try:
@@ -126,11 +113,8 @@ async def classify_habit(body: ClassifyHabitRequest) -> ClassifyHabitResponse:
     except (json.JSONDecodeError, KeyError, TypeError) as exc:
         logger.error("LLM returned unexpected format: %r (%s)", raw, exc)
         raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "Classifier returned invalid response",
-                "code": "llm_invalid_response",
-            },
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "Classifier returned invalid response", "code": "llm_invalid_response"},
         ) from exc
 
     # --- cache write ---

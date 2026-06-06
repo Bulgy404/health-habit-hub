@@ -1,46 +1,22 @@
 """POST /api/v1/llm/extract-habits — M3.1 Habit Extractor."""
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 
-import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends
 from neo4j import AsyncGraphDatabase  # type: ignore[import]
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
 from llm_client import chat_complete
+from routers._cache import _REDIS_TTL, get_redis as _get_redis, make_cache_key
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(verify_service_token)])
-
-# ---------------------------------------------------------------------------
-# Redis setup (graceful — if unavailable the endpoint still works)
-# ---------------------------------------------------------------------------
-_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-_REDIS_TTL = int(os.getenv("REDIS_TTL_SECONDS", "86400"))
-
-_redis: Optional[aioredis.Redis] = None
-
-
-async def _get_redis() -> Optional[aioredis.Redis]:
-    global _redis
-    if _redis is not None:
-        return _redis
-    try:
-        client: aioredis.Redis = aioredis.from_url(_REDIS_URL, decode_responses=True)
-        await client.ping()  # type: ignore[misc]
-        _redis = client
-        return _redis
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Redis unavailable (%s) — caching disabled.", exc)
-        return None
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +37,7 @@ _DIMENSIONS = [
 ]
 
 
-async def _fetch_habits_for_user(user_id: str) -> List[Dict[str, Any]]:
+async def _fetch_habits_for_user(user_id: str) -> list[dict[str, object]]:
     """Fetch all Habit nodes (with context) for a given userID from Neo4j.
 
     Returns a list of dicts: {uuid, sentence, context: {dim: [phrases]}}
@@ -69,7 +45,7 @@ async def _fetch_habits_for_user(user_id: str) -> List[Dict[str, Any]]:
     driver = AsyncGraphDatabase.driver(
         _NEO4J_URI, auth=(_NEO4J_USER, _NEO4J_PASSWORD)
     )
-    habits: List[Dict[str, Any]] = []
+    habits: list[dict[str, object]] = []
     try:
         async with driver.session() as session:
             result = await session.run(
@@ -84,7 +60,7 @@ async def _fetch_habits_for_user(user_id: str) -> List[Dict[str, Any]]:
             )
             records = await result.fetch(1000)
             for record in records:
-                ctx: Dict[str, List[str]] = {dim: [] for dim in _DIMENSIONS}
+                ctx: dict[str, list[str]] = {dim: [] for dim in _DIMENSIONS}
                 for item in record["ctx_items"]:
                     dim = item.get("dimension")
                     text = item.get("text")
@@ -115,18 +91,24 @@ _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class ExtractHabitsRequest(BaseModel):
+    """Input payload for the extract-habits endpoint."""
+
     user_id: str = Field(..., max_length=128)
     goal: str = Field(..., min_length=1, max_length=2000)
 
 
 class HabitEntry(BaseModel):
+    """A single habit with its UUID, sentence, and BCIO context dimension phrases."""
+
     uuid: str
     sentence: str
-    context: Dict[str, List[str]]
+    context: dict[str, list[str]]
 
 
 class ExtractHabitsResponse(BaseModel):
-    selected_habits: List[HabitEntry]
+    """LLM-selected habits most relevant to the user's goal, plus a summary."""
+
+    selected_habits: list[HabitEntry]
     habit_summary: str
 
 
@@ -134,11 +116,11 @@ class ExtractHabitsResponse(BaseModel):
 # Helper: cache key
 # ---------------------------------------------------------------------------
 def _cache_key(user_id: str, goal: str) -> str:
-    digest = hashlib.sha256(f"{user_id}||{goal}".encode()).hexdigest()
-    return f"extract_habits:{digest}"
+    """Build a namespaced Redis cache key for the extract-habits result."""
+    return make_cache_key("extract_habits", user_id, goal)
 
 
-def _parse_llm_response(raw: str) -> tuple[List[str], str]:
+def _parse_llm_response(raw: str) -> tuple[list[str], str]:
     """Parse LLM JSON; returns (selected_uuids, habit_summary)."""
     try:
         parsed = json.loads(raw.strip())
@@ -159,6 +141,17 @@ def _parse_llm_response(raw: str) -> tuple[List[str], str]:
 # ---------------------------------------------------------------------------
 @router.post("/llm/extract-habits", response_model=ExtractHabitsResponse)
 async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
+    """Select the user's most goal-relevant habits from Neo4j using an LLM.
+
+    Args:
+        body: Validated request payload with user_id and goal description.
+
+    Returns:
+        ExtractHabitsResponse containing the LLM-selected habits and a habit summary.
+
+    Raises:
+        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+    """
     key = _cache_key(body.user_id, body.goal)
 
     # --- cache read ---

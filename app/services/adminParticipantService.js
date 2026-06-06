@@ -1,7 +1,7 @@
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { assignGroupLabel } from '../db/adminQueries.js';
-import { generateTokenCard } from './token_card_service.js';
+import { generateTokenCard } from './tokenCardService.js';
 
 // Whitelist of valid Neo4j group labels (prevents Cypher label injection)
 const VALID_GROUPS = new Set([

@@ -60,6 +60,8 @@ class RecommendationWsService {
   /// The most recently observed connection status (synchronous read).
   WsConnectionStatus get currentStatus => _currentStatus;
 
+  /// Creates a [RecommendationWsService] and immediately opens the WebSocket
+  /// connection for [userId].
   RecommendationWsService({
     required AuthService authService,
     required RecommendationService recommendationService,
@@ -175,6 +177,7 @@ class RecommendationWsService {
   // Dispose
   // ---------------------------------------------------------------------------
 
+  /// Cancels all subscriptions, timers, and closes the stream controllers.
   void dispose() {
     _disposed = true;
     _channelSub?.cancel();

@@ -148,8 +148,13 @@ async function mapBcio(uuid, contextPhrases, apiBase) {
     );
 }
 
-/** Write Habit node, Context nodes, and BCIOConcept nodes to Neo4j. */
-async function writeToNeo4j(
+/**
+ * Create the Habit node in Neo4j and return the sanitised confidence value.
+ * @param {{ uuid: string, sentence: string, language: string, confidence: number, userID: string, frequency: any, duration: any, healthBenefit: any, wellbeingImpact: any, translationEN: string|null, translationDE: string|null, createdAt: string }} params
+ * @param {Function} queryNeo4j
+ * @returns {Promise<void>}
+ */
+async function _createHabitNode(
   {
     uuid,
     sentence,
@@ -162,12 +167,10 @@ async function writeToNeo4j(
     wellbeingImpact,
     translationEN,
     translationDE,
-    contextPhrases,
-    mappings,
+    createdAt,
   },
   queryNeo4j
 ) {
-  const createdAt = new Date().toISOString();
   const numericConfidence =
     typeof confidence === 'number' ? confidence : Number(confidence);
   const safeConfidence = Number.isFinite(numericConfidence)
@@ -196,7 +199,16 @@ async function writeToNeo4j(
       wellbeing_impact: wellbeingImpact ?? null,
     }
   );
+}
 
+/**
+ * Merge Context nodes and link them to the Habit node.
+ * @param {string} uuid - Habit UUID
+ * @param {object} contextPhrases - Map of dimension → phrase[]
+ * @param {Function} queryNeo4j
+ * @returns {Promise<void>}
+ */
+async function _writeContextNodes(uuid, contextPhrases, queryNeo4j) {
   const contextRows = [];
   for (const [dimension, phrases] of Object.entries(contextPhrases)) {
     for (const phrase of phrases) {
@@ -220,7 +232,15 @@ async function writeToNeo4j(
       { rows: contextRows, habitUuid: uuid }
     );
   }
+}
 
+/**
+ * Merge BCIOConcept nodes and their MAPS_TO relationships from Context nodes.
+ * @param {Array} mappings - Sanitised BCIO mapping objects
+ * @param {Function} queryNeo4j
+ * @returns {Promise<void>}
+ */
+async function _writeBcioMappings(mappings, queryNeo4j) {
   if (mappings.length > 0) {
     await queryNeo4j(
       `UNWIND $mappings AS m
@@ -233,6 +253,145 @@ async function writeToNeo4j(
       { mappings }
     );
   }
+}
+
+/** Write Habit node, Context nodes, and BCIOConcept nodes to Neo4j. */
+async function writeToNeo4j(
+  {
+    uuid,
+    sentence,
+    language,
+    confidence,
+    userID,
+    frequency,
+    duration,
+    healthBenefit,
+    wellbeingImpact,
+    translationEN,
+    translationDE,
+    contextPhrases,
+    mappings,
+  },
+  queryNeo4j
+) {
+  const createdAt = new Date().toISOString();
+  await _createHabitNode(
+    {
+      uuid,
+      sentence,
+      language,
+      confidence,
+      userID,
+      frequency,
+      duration,
+      healthBenefit,
+      wellbeingImpact,
+      translationEN,
+      translationDE,
+      createdAt,
+    },
+    queryNeo4j
+  );
+  await _writeContextNodes(uuid, contextPhrases, queryNeo4j);
+  await _writeBcioMappings(mappings, queryNeo4j);
+}
+
+/**
+ * Persist a rejected (non-habit) sentence to Neo4j and MongoDB, then return the rejection response.
+ * @param {{ uuid: string, sentence: string, language: string, userID: string, confidence: number }} params
+ * @param {Function} queryNeo4j
+ * @param {Function} getDb
+ * @returns {Promise<{ is_habit: false, message: string }>}
+ */
+async function _persistRejectedHabit(
+  { uuid, sentence, language, userID, confidence },
+  queryNeo4j,
+  getDb
+) {
+  const createdAt = new Date().toISOString();
+  const numericConfidence =
+    typeof confidence === 'number' ? confidence : Number(confidence);
+  const safeConfidence = Number.isFinite(numericConfidence)
+    ? numericConfidence
+    : 0;
+  const safeUserId = typeof userID === 'string' ? userID : '';
+  await queryNeo4j(
+    `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: $language,
+       is_habit: false, habit_confidence: $habit_confidence, userID: $userID, created_at: $created_at})`,
+    {
+      uuid,
+      sentence,
+      language,
+      habit_confidence: safeConfidence,
+      userID: safeUserId,
+      created_at: createdAt,
+    }
+  );
+  const database = await getDb();
+  await database.collection('habits').insertOne({
+    sentence,
+    language,
+    is_habit: false,
+    userID,
+    created_at: new Date(),
+  });
+  return {
+    is_habit: false,
+    message:
+      'Thank you for your contribution. This sentence was not identified as a habit and has been noted for review.',
+  };
+}
+
+/**
+ * Produce EN and DE translations for a confirmed habit sentence in parallel.
+ *
+ * Rules:
+ *  - English habits  → translationEN = null (already EN), translationDE = translated
+ *  - German habits   → translationEN = translated, translationDE = null (already DE)
+ *  - Other languages → both translations produced in parallel from the source language
+ *
+ * @param {string} sentence
+ * @param {string} language
+ * @param {Function} translate
+ * @param {string} apiBase
+ * @param {string} translateUrl
+ * @returns {Promise<[string|null, string|null]>} [translationEN, translationDE]
+ */
+async function _translateHabit(
+  sentence,
+  language,
+  translate,
+  apiBase,
+  translateUrl
+) {
+  const isEN = language && language.startsWith('en');
+  const isDE = language && language.startsWith('de');
+  const sourceLang = isEN ? 'en' : language;
+
+  return Promise.all([
+    // EN: skip for English habits (sentence is already in English)
+    !isEN
+      ? translate(
+          sentence,
+          sourceLang,
+          'en',
+          '/api/v1/llm/refine-translation',
+          apiBase,
+          translateUrl
+        )
+      : Promise.resolve(null),
+    // DE: skip for German habits (sentence is already in German)
+    !isDE
+      ? translate(
+          sentence,
+          sourceLang,
+          'de',
+          '/api/v1/llm/refine-translation-de',
+          apiBase,
+          translateUrl
+        )
+      : Promise.resolve(null),
+  ]);
 }
 
 /**
@@ -269,40 +428,11 @@ export async function shareHabit({
   const classified = await classifyHabit(sentence, language, userID, apiBase);
 
   if (!classified.is_habit) {
-    const createdAt = new Date().toISOString();
-    const numericConfidence =
-      typeof classified.confidence === 'number'
-        ? classified.confidence
-        : Number(classified.confidence);
-    const safeConfidence = Number.isFinite(numericConfidence)
-      ? numericConfidence
-      : 0;
-    const safeUserId = typeof userID === 'string' ? userID : '';
-    await queryNeo4j(
-      `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: $language,
-         is_habit: false, habit_confidence: $habit_confidence, userID: $userID, created_at: $created_at})`,
-      {
-        uuid,
-        sentence,
-        language,
-        habit_confidence: safeConfidence,
-        userID: safeUserId,
-        created_at: createdAt,
-      }
+    return _persistRejectedHabit(
+      { uuid, sentence, language, userID, confidence: classified.confidence },
+      queryNeo4j,
+      getDb
     );
-    const database = await getDb();
-    await database.collection('habits').insertOne({
-      sentence,
-      language,
-      is_habit: false,
-      userID,
-      created_at: new Date(),
-    });
-    return {
-      is_habit: false,
-      message:
-        'Thank you for your contribution. This sentence was not identified as a habit and has been noted for review.',
-    };
   }
 
   const contextPhrases = await extractContext(
@@ -312,31 +442,13 @@ export async function shareHabit({
     apiBase
   );
   const mappings = await mapBcio(uuid, contextPhrases, apiBase);
-
-  const [translationEN, translationDE] = await Promise.all([
-    // Translate non-English habits to English
-    language && !language.startsWith('en')
-      ? translate(
-          sentence,
-          language,
-          'en',
-          '/api/v1/llm/refine-translation',
-          apiBase,
-          translateUrl
-        )
-      : Promise.resolve(null),
-    // Translate English habits to German
-    language && language.startsWith('en')
-      ? translate(
-          sentence,
-          'en',
-          'de',
-          '/api/v1/llm/refine-translation-de',
-          apiBase,
-          translateUrl
-        )
-      : Promise.resolve(null),
-  ]);
+  const [translationEN, translationDE] = await _translateHabit(
+    sentence,
+    language,
+    translate,
+    apiBase,
+    translateUrl
+  );
 
   await writeToNeo4j(
     {

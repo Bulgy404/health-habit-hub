@@ -42,8 +42,10 @@ const _minPhaseDuration = Duration(seconds: 2);
 /// Animated loading screen that cycles through four phases while the
 /// recommendation API call runs in the background.
 class RecommendationLoadingScreen extends ConsumerStatefulWidget {
+  /// The user's health goal passed from [GoalInputScreen].
   final String goal;
 
+  /// Creates a [RecommendationLoadingScreen] for [goal].
   const RecommendationLoadingScreen({super.key, required this.goal});
 
   @override

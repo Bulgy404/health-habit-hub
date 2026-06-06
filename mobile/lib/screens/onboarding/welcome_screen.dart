@@ -38,6 +38,7 @@ class _WalkthroughStep {
 /// steps.  The screen bypasses itself (redirects in the router) when the
 /// [kOnboardingCompleteKey] flag is already set in secure storage.
 class WelcomeScreen extends StatefulWidget {
+  /// Creates a [WelcomeScreen].
   const WelcomeScreen({super.key});
 
   @override

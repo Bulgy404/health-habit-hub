@@ -1,3 +1,6 @@
+/// Detail view for a single habit intention.
+library;
+
 // mobile/lib/features/my_habits/habit_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,9 +11,12 @@ import '../../widgets/srhi_sparkline_widget.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
 
+/// Shows log history, SRHI trajectory chart, and actions for a habit intention.
 class HabitDetailScreen extends ConsumerWidget {
+  /// Creates a [HabitDetailScreen] for [intentionId].
   const HabitDetailScreen({required this.intentionId, super.key});
 
+  /// The habit intention identifier to display.
   final String intentionId;
 
   @override
@@ -82,6 +88,7 @@ class HabitDetailScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                // ── Intention summary ────────────────────────────────────
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -100,6 +107,7 @@ class HabitDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
+                // ── Heatmap ──────────────────────────────────────────────
                 const SizedBox(height: 16),
                 Text(l10n.heatmapTitle,
                     style: Theme.of(context)
@@ -125,6 +133,7 @@ class HabitDetailScreen extends ConsumerWidget {
                   loading: () => const LinearProgressIndicator(),
                   error: (e, _) => Text(e.toString()),
                 ),
+                // ── SRHI trajectory sparkline ─────────────────────────────
                 const SizedBox(height: 24),
                 Text(l10n.trajectoryTitle,
                     style: Theme.of(context)

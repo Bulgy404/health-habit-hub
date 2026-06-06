@@ -11,9 +11,13 @@ import 'questionnaire_service.dart';
 /// from a [QuestionnaireDefinition]. Saves partial progress to Riverpod state
 /// on "Save & Continue" and POSTs the final response to the backend on "Submit".
 class QuestionnaireFormWidget extends ConsumerStatefulWidget {
+  /// The questionnaire definition containing all questions.
   final QuestionnaireDefinition definition;
+
+  /// Called after the response has been successfully submitted to the backend.
   final VoidCallback onSubmitted;
 
+  /// Creates a [QuestionnaireFormWidget].
   const QuestionnaireFormWidget({
     super.key,
     required this.definition,

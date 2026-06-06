@@ -8,6 +8,7 @@ import '../config/app_config.dart';
 class RecommendationService {
   static const _baseUrl = AppConfig.apiBaseUrl;
 
+  /// Creates a [RecommendationService] using [dio].
   RecommendationService({required Dio dio}) : _dio = dio;
 
   final Dio _dio;

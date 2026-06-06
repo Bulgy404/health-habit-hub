@@ -23,6 +23,7 @@ import '../../services/admin_service.dart';
 /// FAB opens a dialog to create a new survey.
 /// Tapping a row navigates to [AdminSurveyEditorScreen].
 class AdminSurveysScreen extends ConsumerStatefulWidget {
+  /// Creates an [AdminSurveysScreen].
   const AdminSurveysScreen({super.key});
 
   @override
@@ -432,13 +433,17 @@ class _ErrorView extends StatelessWidget {
 /// Pre-populates the editor with [initialSurvey] if provided; otherwise
 /// fetches the survey by [surveyId] from the API.
 class AdminSurveyEditorScreen extends ConsumerStatefulWidget {
+  /// Creates an [AdminSurveyEditorScreen] for [surveyId].
   const AdminSurveyEditorScreen({
     super.key,
     required this.surveyId,
     this.initialSurvey,
   });
 
+  /// The ID of the survey to edit.
   final String surveyId;
+
+  /// Optional pre-loaded survey data; if null the screen fetches by [surveyId].
   final AdminSurvey? initialSurvey;
 
   @override

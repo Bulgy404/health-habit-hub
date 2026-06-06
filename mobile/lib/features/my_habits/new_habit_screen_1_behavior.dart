@@ -1,3 +1,6 @@
+/// Step 1 of 3 in the new habit flow: picking the target behaviour.
+library;
+
 // mobile/lib/features/my_habits/new_habit_screen_1_behavior.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +17,9 @@ const _behaviorLabels = {
   'yoga': 'Yoga',
 };
 
+/// Screen for selecting the target behaviour when creating a new habit intention.
 class PickBehaviorScreen extends ConsumerWidget {
+  /// Creates a [PickBehaviorScreen].
   const PickBehaviorScreen({super.key});
 
   @override
