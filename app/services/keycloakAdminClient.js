@@ -1,13 +1,9 @@
 /**
- * Keycloak admin client factory.
- * Fetches an admin token via client_credentials grant and exposes
- * user management operations. The token is cached with a 55-second TTL
- * so each KC operation does not make two HTTP calls.
- *
- * Usage:
- *   const kc = createKeycloakAdminClient();
- *   const token = await kc.getAdminToken();
- *   await kc.createUser({ userId, username, password });
+ * Create a Keycloak admin client with a cached admin token (55 s TTL).
+ * Exposes user management operations against the configured realm.
+ * @param {{ base?: string, realm?: string, clientId?: string, clientSecret?: string }} [opts]
+ * @returns {{ getAdminToken: Function, createUser: Function, assignRole: Function, updateUserAttribute: Function, listSessions: Function, revokeSession: Function }}
+ * @throws {Error} If the base URL is invalid or uses an unsupported protocol.
  */
 export function createKeycloakAdminClient({
   base,

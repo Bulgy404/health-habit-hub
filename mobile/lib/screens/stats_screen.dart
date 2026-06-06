@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/habit_stats.dart';
 import '../providers/show_in_graph_provider.dart';
 
+/// Displays the current user's habit statistics and per-dimension breakdown.
 class StatsScreen extends ConsumerWidget {
+  /// Creates a [StatsScreen].
   const StatsScreen({super.key});
 
   @override

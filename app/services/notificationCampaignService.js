@@ -4,6 +4,11 @@ import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 
 const DEVICE_TOKENS = 'deviceTokens';
 
+/**
+ * Create a new notification campaign document.
+ * @param {{ db: object, createdBy: string, studyId?: string, title: string, body: string, targetType: string, targetIds?: Array, scheduledFor?: string|null }} deps
+ * @returns {Promise<object>} The created campaign document with its generated id.
+ */
 export async function createCampaign({
   db,
   createdBy,
@@ -32,6 +37,11 @@ export async function createCampaign({
   return { id: result.insertedId.toString(), ...doc };
 }
 
+/**
+ * List notification campaigns, optionally filtered by study and status (paginated).
+ * @param {{ db: object, studyId?: string, status?: string, page?: number, limit?: number }} deps
+ * @returns {Promise<Array>} Serialized campaign objects.
+ */
 export async function listCampaigns({
   db,
   studyId,
@@ -51,6 +61,11 @@ export async function listCampaigns({
   return docs.map(serialize);
 }
 
+/**
+ * Cancel an unsent notification campaign by id.
+ * @param {{ db: object, id: string }} deps
+ * @returns {Promise<{ cancelled: boolean }|{ notFound: boolean }>}
+ */
 export async function cancelCampaign({ db, id }) {
   let oid;
   try {
@@ -71,7 +86,8 @@ export async function cancelCampaign({ db, id }) {
 /**
  * Resolve target user FCM tokens and dispatch via injected `send` callback.
  * `send` is injected so tests can mock it; production passes the Firebase sender.
- * @param {{ db, id: string, send: (tokens: string[], title: string, body: string) => Promise<number> }} deps
+ * @param {{ db: object, id: string, send: function(string[], string, string): Promise<number> }} deps
+ * @returns {Promise<{ recipientCount: number, sentAt: Date }|{ notFound: boolean }>}
  */
 export async function sendCampaign({ db, id, send }) {
   let oid;

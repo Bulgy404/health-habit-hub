@@ -10,7 +10,7 @@ const ALPHABET_LEN = ALPHABET.length;
 // that fits in a byte (256), eliminating modulo bias.
 const REJECTION_THRESHOLD = 256 - (256 % ALPHABET_LEN);
 
-function generateCode() {
+function _generateCode() {
   const chars = [];
   while (chars.length < 5) {
     const buf = randomBytes(10);
@@ -24,11 +24,11 @@ function generateCode() {
   return 'HHH-' + chars.join('');
 }
 
-async function generateUniqueCodes(db, count) {
+async function _generateUniqueCodes(db, count) {
   const codes = [];
   const seen = new Set();
   while (codes.length < count) {
-    const code = generateCode();
+    const code = _generateCode();
     if (seen.has(code)) continue;
     const existing = await db.collection(CODES).findOne({ code });
     if (!existing) {
@@ -41,7 +41,8 @@ async function generateUniqueCodes(db, count) {
 
 /**
  * Generate enrollment codes for a study group.
- * @param {{ db, studyId, groupId, count, maxRedemptions, expiresAt }} deps
+ * @param {{ db: object, studyId: string, groupId: string, count: number, maxRedemptions?: number|null, expiresAt?: string|null }} deps
+ * @returns {Promise<{ codes: Array<string> }|{ notFound: boolean }|{ groupNotFound: boolean }>}
  */
 export async function createCodes({
   db,
@@ -65,7 +66,7 @@ export async function createCodes({
   if (!group) return { groupNotFound: true };
 
   const cnt = Math.min(100, Math.max(1, parseInt(count, 10) || 1));
-  const codes = await generateUniqueCodes(db, cnt);
+  const codes = await _generateUniqueCodes(db, cnt);
   const now = new Date();
   const maxRed = maxRedemptions != null ? parseInt(maxRedemptions, 10) : null;
   const exp = expiresAt ? new Date(expiresAt) : null;
@@ -85,8 +86,9 @@ export async function createCodes({
 }
 
 /**
- * List codes for a study (paginated).
- * @param {{ db, studyId, page?, limit? }} deps
+ * List enrollment codes for a study (paginated).
+ * @param {{ db: object, studyId: string, page?: number, limit?: number }} deps
+ * @returns {Promise<{ total: number, page: number, limit: number, codes: Array }|{ notFound: boolean }>}
  */
 export async function listCodes({ db, studyId, page = 1, limit = 20 }) {
   let oid;
@@ -127,7 +129,8 @@ export async function listCodes({ db, studyId, page = 1, limit = 20 }) {
 
 /**
  * Revoke (delete) a code. Returns { conflict: true } if already redeemed.
- * @param {{ db, studyId, code }} deps
+ * @param {{ db: object, studyId: string, code: string }} deps
+ * @returns {Promise<{ deleted: boolean }|{ conflict: boolean }|{ notFound: boolean }>}
  */
 export async function revokeCode({ db, studyId, code }) {
   let oid;
@@ -153,17 +156,63 @@ export async function revokeCode({ db, studyId, code }) {
 }
 
 /**
- * Redeem a code for the authenticated user.
- *
- * Atomicity guarantees:
- *  1. The redemptionCount increment uses findOneAndUpdate with a $expr guard so
- *     only one concurrent request can claim the last available slot (no over-count).
- *  2. The enrollment insert uses findOneAndUpdate with upsert + $setOnInsert so
- *     the check-and-insert is a single atomic operation (no duplicate enrollments).
- *     If a prior enrollment is discovered after claiming a slot, the counter is
- *     decremented to roll back the claim.
- *
- * @param {{ db, userId, code }} deps
+ * Atomically claim one redemption slot on a code document.
+ * Returns the updated code document, or null if the code is exhausted.
+ * @param {object} db
+ * @param {string} upperCode - Upper-cased enrollment code
+ * @param {number|null} maxRedemptions
+ * @returns {Promise<object|null>}
+ */
+async function _claimRedemptionSlot(db, upperCode, maxRedemptions) {
+  // The $expr guard ensures redemptionCount < maxRedemptions at the moment of
+  // the increment, so two concurrent requests cannot both claim the last slot.
+  const codeFilter =
+    maxRedemptions != null
+      ? {
+          code: upperCode,
+          $expr: { $lt: ['$redemptionCount', '$maxRedemptions'] },
+        }
+      : { code: upperCode };
+
+  return db
+    .collection(CODES)
+    .findOneAndUpdate(
+      codeFilter,
+      { $inc: { redemptionCount: 1 } },
+      { returnDocument: 'after' }
+    );
+}
+
+/**
+ * Atomically enroll a user via upsert. Returns the pre-existing enrollment doc
+ * if the user was already enrolled, or null if this is a new enrollment.
+ * @param {object} db
+ * @param {string} userId
+ * @param {{ studyId: ObjectId, groupId: ObjectId }} codeDoc
+ * @param {string} upperCode
+ * @returns {Promise<object|null>} Prior enrollment document or null
+ */
+async function _atomicEnrollUser(db, userId, codeDoc, upperCode) {
+  return db.collection(ENROLLMENTS).findOneAndUpdate(
+    { userId: String(userId) },
+    {
+      $setOnInsert: {
+        userId: String(userId),
+        studyId: codeDoc.studyId,
+        groupId: codeDoc.groupId,
+        studyCodeUsed: upperCode,
+        enrolledAt: new Date(),
+      },
+    },
+    { upsert: true, returnDocument: 'before' }
+  );
+}
+
+/**
+ * Redeem an enrollment code for the authenticated user, enrolling them in the associated study group.
+ * Uses atomic findOneAndUpdate guards to prevent over-redemption and duplicate enrollments.
+ * @param {{ db: object, userId: string, code: string }} deps
+ * @returns {Promise<{ enrolled: boolean, studyId: string, groupId: string, studyName: string|null, groupLabel: string|null }|{ notFound: boolean }|{ expired: boolean }|{ exhausted: boolean }|{ alreadyEnrolled: boolean }>}
  */
 export async function redeemCode({ db, userId, code }) {
   const upperCode = code.toUpperCase();
@@ -175,44 +224,14 @@ export async function redeemCode({ db, userId, code }) {
   if (doc.expiresAt && doc.expiresAt < new Date()) return { expired: true };
 
   // 1. Atomically claim a redemption slot.
-  //    The $expr guard ensures redemptionCount < maxRedemptions at the moment of
-  //    the increment, so two concurrent requests cannot both claim the last slot.
-  const codeFilter =
-    doc.maxRedemptions != null
-      ? {
-          code: upperCode,
-          $expr: { $lt: ['$redemptionCount', '$maxRedemptions'] },
-        }
-      : { code: upperCode };
-
-  const claimed = await db
-    .collection(CODES)
-    .findOneAndUpdate(
-      codeFilter,
-      { $inc: { redemptionCount: 1 } },
-      { returnDocument: 'after' }
-    );
-
+  const claimed = await _claimRedemptionSlot(db, upperCode, doc.maxRedemptions);
   if (!claimed) return { exhausted: true };
 
   // 2. Atomically enroll the user (upsert: insert only if userId not present).
   //    With returnDocument:'before', a null result means the document was newly
   //    inserted (no prior enrollment); a non-null result means one already existed.
   const study = await db.collection(STUDIES).findOne({ _id: doc.studyId });
-
-  const prior = await db.collection(ENROLLMENTS).findOneAndUpdate(
-    { userId: String(userId) },
-    {
-      $setOnInsert: {
-        userId: String(userId),
-        studyId: doc.studyId,
-        groupId: doc.groupId,
-        studyCodeUsed: upperCode,
-        enrolledAt: new Date(),
-      },
-    },
-    { upsert: true, returnDocument: 'before' }
-  );
+  const prior = await _atomicEnrollUser(db, userId, doc, upperCode);
 
   // If a prior enrollment existed, roll back the code counter and report conflict.
   if (prior !== null) {
@@ -236,40 +255,41 @@ export async function redeemCode({ db, userId, code }) {
 }
 
 /**
- * Enroll user in the default study using round-robin group assignment. Idempotent.
- *
- * Atomicity guarantee:
- *   Group selection uses findOneAndUpdate to atomically increment a per-study
- *   counter (_skipCounter) and derive the group index as counter % numGroups.
- *   Two concurrent requests each receive a unique counter value and therefore
- *   land in different groups. The enrollment insert uses upsert + $setOnInsert
- *   so that if a concurrent request has already enrolled the user, this request
- *   is a no-op and returns the existing enrollment.
- *
- * @param {{ db, userId }} deps
+ * If the user is already enrolled, return their existing enrollment details.
+ * Returns null when no prior enrollment exists.
+ * @param {object} db
+ * @param {string} userId
+ * @returns {Promise<{ enrolled: boolean, studyId: string, groupId: string, studyName: string|null, groupLabel: string|null }|null>}
  */
-export async function skipCode({ db, userId }) {
-  // Fast path: user is already enrolled (idempotent).
+async function _getExistingEnrollment(db, userId) {
   const existing = await db
     .collection(ENROLLMENTS)
     .findOne({ userId: String(userId) });
-  if (existing) {
-    const study = await db
-      .collection(STUDIES)
-      .findOne({ _id: existing.studyId });
-    const group = study
-      ? study.groups.find(
-          (g) => g.id.toString() === existing.groupId.toString()
-        )
-      : null;
-    return {
-      enrolled: true,
-      studyId: existing.studyId.toString(),
-      groupId: existing.groupId.toString(),
-      studyName: study ? study.name : null,
-      groupLabel: group ? group.label : null,
-    };
-  }
+  if (!existing) return null;
+
+  const study = await db.collection(STUDIES).findOne({ _id: existing.studyId });
+  const group = study
+    ? study.groups.find((g) => g.id.toString() === existing.groupId.toString())
+    : null;
+  return {
+    enrolled: true,
+    studyId: existing.studyId.toString(),
+    groupId: existing.groupId.toString(),
+    studyName: study ? study.name : null,
+    groupLabel: group ? group.label : null,
+  };
+}
+
+/**
+ * Enroll a user in the default study via round-robin group assignment. Idempotent.
+ * Uses atomic counter increment and upsert to prevent duplicate enrollments under concurrency.
+ * @param {{ db: object, userId: string }} deps
+ * @returns {Promise<{ enrolled: boolean, studyId: string, groupId: string, studyName: string|null, groupLabel: string|null }|{ noDefaultStudy: boolean }|{ noGroups: boolean }>}
+ */
+export async function skipCode({ db, userId }) {
+  // Fast path: user is already enrolled (idempotent).
+  const existingResult = await _getExistingEnrollment(db, userId);
+  if (existingResult) return existingResult;
 
   // Atomically claim a slot by incrementing the study's round-robin counter.
   // returnDocument:'after' gives us the post-increment value so counter >= 1.

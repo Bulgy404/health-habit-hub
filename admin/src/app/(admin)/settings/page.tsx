@@ -9,6 +9,15 @@ const SETTINGS_API =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
   "/admin/settings";
 
+/**
+ * Authenticated JSON fetch helper.
+ *
+ * @param url - The full URL to fetch.
+ * @param token - The NextAuth session access token.
+ * @param opts - Additional fetch options.
+ * @returns The parsed JSON response body.
+ * @throws {Error} If the response status is not 2xx.
+ */
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
     ...opts,
@@ -27,6 +36,12 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   return res.json();
 }
 
+/**
+ * Displays and manages system configuration settings, including default cue
+ * configuration for public app-store users.
+ *
+ * @returns The settings management page.
+ */
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();

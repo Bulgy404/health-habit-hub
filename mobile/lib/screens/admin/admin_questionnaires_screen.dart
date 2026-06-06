@@ -1,7 +1,10 @@
-// Admin screen for managing native questionnaire definitions.
-//
-// Library tab: pre-loaded validated instruments (SLIQ, RAND-36, SRHI) — read-only preview.
-// Custom tab: researcher-created questionnaires — create, edit, delete.
+/// Admin screen for managing native questionnaire definitions.
+///
+/// Library tab: pre-loaded validated instruments (SLIQ, RAND-36, SRHI) —
+/// read-only preview.
+/// Custom tab: researcher-created questionnaires — create, edit, delete.
+library;
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,7 +12,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/admin_questionnaire.dart';
 import '../../services/admin_service.dart';
 
+/// Admin screen for browsing and managing questionnaire definitions.
 class AdminQuestionnairesScreen extends ConsumerStatefulWidget {
+  /// Creates an [AdminQuestionnairesScreen].
   const AdminQuestionnairesScreen({super.key});
 
   @override

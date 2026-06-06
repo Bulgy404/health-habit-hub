@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/admin_participant.dart';
 import '../../services/admin_service.dart';
+import 'widgets/admin_data_table.dart';
 
 /// Admin screen that lists all enrolled participants.
 ///
@@ -16,6 +17,7 @@ import '../../services/admin_service.dart';
 ///  - Pagination: 50 rows per page with Previous / Next controls
 ///  - Tap any row to navigate to the participant detail screen
 class AdminParticipantsScreen extends ConsumerStatefulWidget {
+  /// Creates an [AdminParticipantsScreen].
   const AdminParticipantsScreen({super.key});
 
   @override
@@ -247,18 +249,15 @@ class _AdminParticipantsScreenState
                           ? Center(child: Text(l10n.adminNoParticipantsFound))
                           : SingleChildScrollView(
                               scrollDirection: Axis.vertical,
-                              child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: _ParticipantsTable(
-                                  rows: _paginated,
-                                  formatDate: _formatDate,
-                                  formatSurveys: _formatSurveys,
-                                  onTap: (p) => context.push(
-                                    '/admin/participants/${p.id}',
-                                  ),
-                                  onGroupChange: _changeGroup,
-                                  onDelete: _confirmDelete,
+                              child: _ParticipantsTable(
+                                rows: _paginated,
+                                formatDate: _formatDate,
+                                formatSurveys: _formatSurveys,
+                                onTap: (p) => context.push(
+                                  '/admin/participants/${p.id}',
                                 ),
+                                onGroupChange: _changeGroup,
+                                onDelete: _confirmDelete,
                               ),
                             ),
                     ),
@@ -360,57 +359,46 @@ class _ParticipantsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return DataTable(
-      headingRowColor: WidgetStateProperty.all(
-        Theme.of(context).colorScheme.surfaceContainerHighest,
-      ),
+    return AdminDataTable<AdminParticipant>(
       columns: [
-        DataColumn(label: Text(l10n.adminColUsername)),
-        DataColumn(label: Text(l10n.adminGroup)),
-        DataColumn(label: Text(l10n.adminColEnrolled)),
-        DataColumn(label: Text(l10n.adminColLastActive)),
-        DataColumn(label: Text(l10n.adminColSurveysPercent)),
-        DataColumn(label: Text(l10n.adminColActions)),
+        l10n.adminColUsername,
+        l10n.adminGroup,
+        l10n.adminColEnrolled,
+        l10n.adminColLastActive,
+        l10n.adminColSurveysPercent,
+        l10n.adminColActions,
       ],
-      rows: rows
-          .map(
-            (p) => DataRow(
-              onSelectChanged: (_) => onTap(p),
-              cells: [
-                DataCell(Text(p.username)),
-                DataCell(
-                  DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _groups.contains(p.group) ? p.group : null,
-                      isDense: true,
-                      hint: const Text('—'),
-                      items: _groups
-                          .map(
-                            (g) =>
-                                DropdownMenuItem(value: g, child: Text(g)),
-                          )
-                          .toList(),
-                      onChanged: (v) {
-                        if (v != null) onGroupChange(p, v);
-                      },
-                    ),
-                  ),
-                ),
-                DataCell(Text(formatDate(p.enrolledAt))),
-                DataCell(Text(formatDate(p.lastActiveAt))),
-                DataCell(Text(formatSurveys(p))),
-                DataCell(
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    tooltip: l10n.adminDeleteParticipant,
-                    color: Theme.of(context).colorScheme.error,
-                    onPressed: () => onDelete(p),
-                  ),
-                ),
-              ],
+      rows: rows,
+      onRowTap: onTap,
+      cellBuilder: (p) => [
+        DataCell(Text(p.username)),
+        DataCell(
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _groups.contains(p.group) ? p.group : null,
+              isDense: true,
+              hint: const Text('—'),
+              items: _groups
+                  .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) onGroupChange(p, v);
+              },
             ),
-          )
-          .toList(),
+          ),
+        ),
+        DataCell(Text(formatDate(p.enrolledAt))),
+        DataCell(Text(formatDate(p.lastActiveAt))),
+        DataCell(Text(formatSurveys(p))),
+        DataCell(
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: l10n.adminDeleteParticipant,
+            color: Theme.of(context).colorScheme.error,
+            onPressed: () => onDelete(p),
+          ),
+        ),
+      ],
     );
   }
 }

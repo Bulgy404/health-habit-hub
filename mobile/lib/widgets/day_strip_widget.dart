@@ -1,3 +1,6 @@
+/// Day strip widget showing the last 7 days of habit enactment.
+library;
+
 // mobile/lib/widgets/day_strip_widget.dart
 import 'package:flutter/material.dart';
 
@@ -7,13 +10,17 @@ import 'package:flutter/material.dart';
 /// [startDate] clamps the strip to only show days since the habit was created.
 /// If null, always shows 7 days ending today.
 class DayStripWidget extends StatelessWidget {
+  /// Creates a [DayStripWidget].
   const DayStripWidget({
     required this.logs,
     required this.startDate,
     super.key,
   });
 
+  /// Daily enactment map: `'YYYY-MM-DD'` → true (enacted) / false (missed).
   final Map<String, bool> logs;
+
+  /// Date the habit intention started; `null` shows the last 7 days from today.
   final DateTime? startDate;
 
   @override
@@ -50,6 +57,7 @@ class DayStripWidget extends StatelessWidget {
 
 /// A single circle cell in the day strip.
 class DayCell extends StatelessWidget {
+  /// Creates a [DayCell] with the given [enacted] status.
   const DayCell({required this.enacted, super.key});
 
   /// true = enacted (green), false = missed (red), null = pending (grey).

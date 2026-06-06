@@ -2,6 +2,11 @@ import { ObjectId } from 'mongodb';
 import { COLLECTION } from '../models/dailyBehaviorLog.js';
 import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 
+/**
+ * Upsert the daily behavior log entry for a given intention and date.
+ * @param {{ db: object, intentionId: string, userId: string, date: string, enacted: boolean }} deps
+ * @returns {Promise<void>}
+ */
 export async function upsertLog({ db, intentionId, userId, date, enacted }) {
   const oid = new ObjectId(intentionId);
   const now = new Date();
@@ -16,6 +21,11 @@ export async function upsertLog({ db, intentionId, userId, date, enacted }) {
   await touchEnrollmentActivity({ db, userId });
 }
 
+/**
+ * Retrieve daily log entries for an intention, optionally filtered by date range.
+ * @param {{ db: object, intentionId: string, from?: string, to?: string }} deps
+ * @returns {Promise<Array<{ date: string, enacted: boolean, loggedAt: Date }>>}
+ */
 export async function getLogs({ db, intentionId, from, to }) {
   const oid = new ObjectId(intentionId);
   const filter = { intentionId: oid };
@@ -32,6 +42,11 @@ export async function getLogs({ db, intentionId, from, to }) {
   }));
 }
 
+/**
+ * Update the lastActiveAt timestamp on a participant's enrollment record.
+ * @param {{ db: object, userId: string }} deps
+ * @returns {Promise<void>}
+ */
 export async function touchEnrollmentActivity({ db, userId }) {
   await db
     .collection(ENROLLMENTS)

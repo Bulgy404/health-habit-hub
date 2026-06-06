@@ -1,15 +1,22 @@
 /// Aggregated habit statistics returned by GET /api/v1/habits/stats.
 class HabitStats {
+  /// Total number of donated habits in the community.
   final int total;
+
+  /// Habit counts broken down by category.
   final List<CategoryCount> byCategory;
+
+  /// Habit counts broken down by submission date.
   final List<DayCount> byDay;
 
+  /// Creates a [HabitStats].
   const HabitStats({
     required this.total,
     required this.byCategory,
     required this.byDay,
   });
 
+  /// Deserialises [HabitStats] from the API JSON payload.
   factory HabitStats.fromJson(Map<String, dynamic> json) {
     return HabitStats(
       total: (json['total'] as num? ?? 0).toInt(),
@@ -25,12 +32,18 @@ class HabitStats {
   }
 }
 
+/// Habit count for a single category.
 class CategoryCount {
+  /// Category name.
   final String category;
+
+  /// Number of habits in this category.
   final int count;
 
+  /// Creates a [CategoryCount].
   const CategoryCount({required this.category, required this.count});
 
+  /// Deserialises a [CategoryCount] from JSON.
   factory CategoryCount.fromJson(Map<String, dynamic> json) {
     return CategoryCount(
       category: json['category'] as String? ?? 'Unknown',
@@ -39,17 +52,25 @@ class CategoryCount {
   }
 }
 
+/// Habit count for a single behaviour dimension.
 class DimensionStat {
+  /// Dimension identifier.
   final String dimension;
+
+  /// Human-readable dimension label.
   final String label;
+
+  /// Number of habits in this dimension.
   final int count;
 
+  /// Creates a [DimensionStat].
   const DimensionStat({
     required this.dimension,
     required this.label,
     required this.count,
   });
 
+  /// Deserialises a [DimensionStat] from JSON.
   factory DimensionStat.fromJson(Map<String, dynamic> json) {
     return DimensionStat(
       dimension: json['dimension'] as String? ?? '',
@@ -59,14 +80,27 @@ class DimensionStat {
   }
 }
 
+/// A donated habit belonging to the current authenticated user.
 class MyHabit {
+  /// Unique habit identifier.
   final String id;
+
+  /// Display label (may be translated).
   final String label;
+
+  /// Original text as submitted by the contributor.
   final String originalText;
+
+  /// ISO 639-1 language code of the original habit text.
   final String language;
+
+  /// Dimension identifiers this habit belongs to.
   final List<String> dimensions;
+
+  /// Maps annotation type identifiers to cumulative counts.
   final Map<String, int> annotationCounts;
 
+  /// Creates a [MyHabit].
   const MyHabit({
     required this.id,
     required this.label,
@@ -76,9 +110,11 @@ class MyHabit {
     required this.annotationCounts,
   });
 
+  /// Sum of all annotation counts across all annotation types.
   int get totalAnnotations =>
       annotationCounts.values.fold(0, (s, c) => s + c);
 
+  /// Deserialises a [MyHabit] from JSON.
   factory MyHabit.fromJson(Map<String, dynamic> json) {
     final counts =
         ((json['annotationCounts'] as Map<String, dynamic>?) ?? {})
@@ -96,17 +132,25 @@ class MyHabit {
   }
 }
 
+/// Aggregated stats for the current authenticated user's donated habits.
 class MyStats {
+  /// Total number of habits donated by this user.
   final int total;
+
+  /// Per-dimension breakdown of the user's habits.
   final List<DimensionStat> byDimension;
+
+  /// The user's individual donated habits.
   final List<MyHabit> habits;
 
+  /// Creates a [MyStats].
   const MyStats({
     required this.total,
     required this.byDimension,
     required this.habits,
   });
 
+  /// Deserialises [MyStats] from the API JSON payload.
   factory MyStats.fromJson(Map<String, dynamic> json) {
     return MyStats(
       total: (json['total'] as num? ?? 0).toInt(),
@@ -122,12 +166,18 @@ class MyStats {
   }
 }
 
+/// Habit submission count for a specific calendar date.
 class DayCount {
+  /// ISO 8601 date string (e.g. `'2025-06-01'`).
   final String date;
+
+  /// Number of habits donated on this date.
   final int count;
 
+  /// Creates a [DayCount].
   const DayCount({required this.date, required this.count});
 
+  /// Deserialises a [DayCount] from JSON.
   factory DayCount.fromJson(Map<String, dynamic> json) {
     return DayCount(
       date: json['date'] as String? ?? '',

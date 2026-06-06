@@ -21,6 +21,15 @@ const API_BASE =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
   "/admin/profile-field-definitions";
 
+/**
+ * Authenticated JSON fetch helper.
+ *
+ * @param url - The full URL to fetch.
+ * @param token - The NextAuth session access token.
+ * @param opts - Additional fetch options.
+ * @returns The parsed JSON response body.
+ * @throws {Error} If the response status is not 2xx.
+ */
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
     ...opts,
@@ -45,6 +54,12 @@ function emptyForm(): ProfileFieldDefinition {
   return { fieldId: "", label: "", type: "text", options: [], required: false, order: 0 };
 }
 
+/**
+ * Displays and manages user profile field definitions that appear during
+ * onboarding. Supports creating, editing, and deleting field definitions.
+ *
+ * @returns The profile fields management page.
+ */
 export default function ProfileFieldsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();

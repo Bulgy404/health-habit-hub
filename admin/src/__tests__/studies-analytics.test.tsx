@@ -13,21 +13,14 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/studies',
 }));
 
-import { AnalyticsTab } from '../app/(admin)/studies/analytics-tab';
+import { AnalyticsTab, StudySummaryForAnalytics } from '../components/studies-analytics-tab';
 
-const mockStudy = {
+const mockStudy: StudySummaryForAnalytics = {
   id: 'study-1',
-  name: 'Test Study',
-  description: '',
-  isActive: true,
-  isDefault: false,
   groups: [
     { id: 'g1', label: 'C1', index: 1 },
     { id: 'g2', label: 'C2', index: 2 },
   ],
-  questionnaires: [],
-  participantCount: 10,
-  createdAt: null,
 };
 
 beforeEach(() => {
@@ -51,21 +44,21 @@ afterEach(() => { jest.resetAllMocks(); });
 
 describe('AnalyticsTab', () => {
   it('renders without crashing', () => {
-    render(<AnalyticsTab study={mockStudy as any} token="test-token" />);
+    render(<AnalyticsTab study={mockStudy} token="test-token" />);
   });
 
   it('renders Weekly Active Rate heading', async () => {
-    render(<AnalyticsTab study={mockStudy as any} token="test-token" />);
+    render(<AnalyticsTab study={mockStudy} token="test-token" />);
     expect(await screen.findByText(/weekly active rate/i)).toBeInTheDocument();
   });
 
   it('renders SRHI Trajectory heading', async () => {
-    render(<AnalyticsTab study={mockStudy as any} token="test-token" />);
+    render(<AnalyticsTab study={mockStudy} token="test-token" />);
     expect(await screen.findByText(/srhi trajectory/i)).toBeInTheDocument();
   });
 
   it('shows percentage for active groups', async () => {
-    render(<AnalyticsTab study={mockStudy as any} token="test-token" />);
+    render(<AnalyticsTab study={mockStudy} token="test-token" />);
     expect(await screen.findByText(/60%/)).toBeInTheDocument();
   });
 });

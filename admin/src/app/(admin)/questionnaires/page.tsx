@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import styles from "./page.module.css";
+import { useQuestionnairesData } from "./useQuestionnairesData";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,15 @@ function fmtDate(iso: string | null): string {
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/questionnaires";
 const PARTICIPANT_API = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/questionnaires";
 
+/**
+ * Authenticated JSON fetch helper.
+ *
+ * @param url - The full URL to fetch.
+ * @param token - The NextAuth session access token.
+ * @param opts - Additional fetch options.
+ * @returns The parsed JSON response body.
+ * @throws {Error} If the response status is not 2xx.
+ */
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
     ...opts,
@@ -532,14 +542,18 @@ function ConfirmDeleteDialog({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+/**
+ * Displays and manages questionnaires, including browsing the library and
+ * creating, editing, or deleting custom questionnaires for studies.
+ *
+ * @returns The questionnaires management page.
+ */
 export default function QuestionnairesPage() {
   const { data: session } = useSession();
   const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
 
   const [tab, setTab] = useState<Tab>("library");
-  const [questionnaires, setQuestionnaires] = useState<QuestionnaireSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { questionnaires, loading, error, refetch: fetchList } = useQuestionnairesData(token);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<QuestionnaireDetail | null>(null);
@@ -548,24 +562,6 @@ export default function QuestionnairesPage() {
   const [actionError, setActionError] = useState("");
   // IDs known to be assigned to an active study (delete blocked)
   const [assignedIds, setAssignedIds] = useState<Set<string>>(new Set());
-
-  const fetchList = useCallback(async () => {
-    if (!token) return;
-    setLoading(true);
-    setError("");
-    try {
-      const data = await apiFetch(API_BASE, token);
-      setQuestionnaires(data as QuestionnaireSummary[]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load questionnaires");
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    fetchList();
-  }, [fetchList]);
 
   async function handleOpenEdit(q: QuestionnaireSummary) {
     setActionError("");

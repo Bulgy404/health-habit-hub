@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import styles from "./page.module.css";
+import styles from "../app/(admin)/studies/page.module.css";
 
 interface StudyGroup {
   id: string;
@@ -9,7 +9,7 @@ interface StudyGroup {
   index: number;
 }
 
-interface StudySummaryForAnalytics {
+export interface StudySummaryForAnalytics {
   id: string;
   groups: StudyGroup[];
 }
@@ -44,6 +44,14 @@ const ANALYTICS_BASE = (studyId: string) =>
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
   `/admin/studies/${studyId}/analytics`;
 
+/**
+ * Authenticated JSON fetch helper (read-only, no request body).
+ *
+ * @param url - The full URL to fetch.
+ * @param token - The NextAuth session access token.
+ * @returns The parsed JSON response body.
+ * @throws {Error} If the response status is not 2xx.
+ */
 async function apiFetch(url: string, token: string) {
   const res = await fetch(url, {
     headers: {
@@ -60,6 +68,14 @@ async function apiFetch(url: string, token: string) {
 
 const GROUP_COLORS = ["#45B700", "#E679AB", "#3B82F6", "#F59E0B", "#8B5CF6", "#EF4444"];
 
+/**
+ * Displays analytics data for a study, including weekly active rates,
+ * SRHI trajectory, and cumulative dropout curve.
+ *
+ * @param study - The study whose analytics are displayed.
+ * @param token - The NextAuth session access token.
+ * @returns The analytics tab content.
+ */
 export function AnalyticsTab({
   study,
   token,

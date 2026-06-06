@@ -2,46 +2,23 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional, cast
 
 import httpx
-import redis.asyncio as aioredis
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
 from llm_client import chat_complete
+from routers._cache import _REDIS_TTL, get_redis as _get_redis, make_cache_key
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(verify_service_token)])
-
-# ---------------------------------------------------------------------------
-# Redis setup (graceful — if unavailable the endpoint still works)
-# ---------------------------------------------------------------------------
-_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-_REDIS_TTL = int(os.getenv("REDIS_TTL_SECONDS", "86400"))
-
-_redis: Optional[aioredis.Redis] = None
-
-
-async def _get_redis() -> Optional[aioredis.Redis]:
-    global _redis
-    if _redis is not None:
-        return _redis
-    try:
-        client: aioredis.Redis = aioredis.from_url(_REDIS_URL, decode_responses=True)
-        await client.ping()  # type: ignore[misc]
-        _redis = client
-        return _redis
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Redis unavailable (%s) — caching disabled.", exc)
-        return None
 
 
 # ---------------------------------------------------------------------------
@@ -51,7 +28,7 @@ _BACKEND_URL = os.getenv("BACKEND_URL", "http://app:3000")
 _SERVICE_SECRET = os.getenv("API_SERVICE_SECRET", "")
 
 
-async def _fetch_questionnaire_response(user_id: str, slug: str) -> Optional[Dict[str, Any]]:
+async def _fetch_questionnaire_response(user_id: str, slug: str) -> Optional[dict[str, object]]:
     """Fetch the most recent questionnaire response for a user via the service endpoint.
 
     Uses GET /api/v1/questionnaire-responses/service/:userId/:slug authenticated
@@ -80,7 +57,7 @@ async def _fetch_questionnaire_response(user_id: str, slug: str) -> Optional[Dic
     return None
 
 
-async def _fetch_user_profile(user_id: str) -> Optional[Dict[str, Any]]:
+async def _fetch_user_profile(user_id: str) -> Optional[dict[str, object]]:
     """Fetch the user's structured profile from the user_profiles collection.
 
     Uses GET /api/v1/user-profile/service/:userId authenticated
@@ -121,11 +98,15 @@ _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 # Request / Response models
 # ---------------------------------------------------------------------------
 class ExtractProfileRequest(BaseModel):
+    """Input payload for the extract-profile endpoint."""
+
     user_id: str = Field(..., max_length=128)
     goal: str = Field(..., min_length=1, max_length=2000)
 
 
 class ExtractProfileResponse(BaseModel):
+    """Summarised user profile and RAG query derived from questionnaire responses."""
+
     profile_summary: str
     profile_detailed: str
     rag_query: str
@@ -135,11 +116,11 @@ class ExtractProfileResponse(BaseModel):
 # Helper: cache key
 # ---------------------------------------------------------------------------
 def _cache_key(user_id: str, goal: str) -> str:
-    digest = hashlib.sha256(f"{user_id}||{goal}".encode()).hexdigest()
-    return f"extract_profile:{digest}"
+    """Build a namespaced Redis cache key for the extract-profile result."""
+    return make_cache_key("extract_profile", user_id, goal)
 
 
-def _parse_llm_response(raw: str) -> Optional[Dict[str, str]]:
+def _parse_llm_response(raw: str) -> Optional[dict[str, str]]:
     """Parse LLM JSON response; returns None on error."""
     try:
         parsed = json.loads(raw.strip())
@@ -167,6 +148,17 @@ def _parse_llm_response(raw: str) -> Optional[Dict[str, str]]:
 # ---------------------------------------------------------------------------
 @router.post("/llm/extract-profile", response_model=ExtractProfileResponse)
 async def extract_profile(body: ExtractProfileRequest) -> ExtractProfileResponse:
+    """Build a structured user profile from questionnaire responses using an LLM.
+
+    Args:
+        body: Validated request payload with user_id and goal description.
+
+    Returns:
+        ExtractProfileResponse with profile_summary, profile_detailed, and rag_query.
+
+    Raises:
+        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+    """
     key = _cache_key(body.user_id, body.goal)
 
     # --- cache read ---
@@ -195,7 +187,7 @@ async def extract_profile(body: ExtractProfileRequest) -> ExtractProfileResponse
     if profile_data and profile_data.get("fields"):
         lines = [
             f"{f['questionText']}: {f['label']}"
-            for f in profile_data["fields"]
+            for f in cast(list[dict[str, object]], profile_data["fields"])
             if f.get("questionText") and f.get("label")
         ]
         profile_text = "\n".join(lines)

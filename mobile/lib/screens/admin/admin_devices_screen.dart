@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/admin_session.dart';
 import '../../services/admin_service.dart';
+import 'widgets/admin_data_table.dart';
 
 /// Admin screen that lists all active device sessions and allows revoking them.
 ///
@@ -14,6 +15,7 @@ import '../../services/admin_service.dart';
 ///  - Revoke button per row with confirmation dialog
 ///  - Refresh button in AppBar
 class AdminDevicesScreen extends ConsumerStatefulWidget {
+  /// Creates an [AdminDevicesScreen].
   const AdminDevicesScreen({super.key});
 
   @override
@@ -161,10 +163,7 @@ class _SessionsBody extends StatelessWidget {
             webCount: webCount,
           ),
           const SizedBox(height: 16),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: _SessionsTable(sessions: sessions, onRevoke: onRevoke),
-          ),
+          _SessionsTable(sessions: sessions, onRevoke: onRevoke),
         ],
       ),
     );
@@ -275,42 +274,33 @@ class _SessionsTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return DataTable(
-      headingRowColor: WidgetStateProperty.all(
-        Theme.of(context).colorScheme.surfaceContainerHighest,
-      ),
+    return AdminDataTable<AdminSession>(
       columns: [
-        DataColumn(label: Text(l10n.adminColParticipantId)),
-        DataColumn(label: Text(l10n.adminColDeviceType)),
-        DataColumn(label: Text(l10n.adminColAppVersion)),
-        DataColumn(label: Text(l10n.adminColLastSeen)),
-        DataColumn(label: Text(l10n.adminColSessionId)),
-        DataColumn(label: Text(l10n.adminColActions)),
+        l10n.adminColParticipantId,
+        l10n.adminColDeviceType,
+        l10n.adminColAppVersion,
+        l10n.adminColLastSeen,
+        l10n.adminColSessionId,
+        l10n.adminColActions,
       ],
-      rows: sessions.map((s) {
-        final truncatedId = s.id.length > 12
-            ? '${s.id.substring(0, 12)}…'
-            : s.id;
-        return DataRow(
-          cells: [
-            DataCell(Text(s.participantId)),
-            DataCell(Text(s.deviceType)),
-            DataCell(Text(s.appVersion.isNotEmpty ? s.appVersion : '—')),
-            DataCell(Text(
-              s.lastSeen.year == 0 ? '—' : _fmtDate(s.lastSeen),
-            )),
-            DataCell(
-              Tooltip(message: s.id, child: Text(truncatedId)),
+      rows: sessions,
+      cellBuilder: (s) {
+        final truncatedId =
+            s.id.length > 12 ? '${s.id.substring(0, 12)}…' : s.id;
+        return [
+          DataCell(Text(s.participantId)),
+          DataCell(Text(s.deviceType)),
+          DataCell(Text(s.appVersion.isNotEmpty ? s.appVersion : '—')),
+          DataCell(Text(s.lastSeen.year == 0 ? '—' : _fmtDate(s.lastSeen))),
+          DataCell(Tooltip(message: s.id, child: Text(truncatedId))),
+          DataCell(
+            TextButton(
+              onPressed: () => onRevoke(s),
+              child: Text(l10n.adminRevoke),
             ),
-            DataCell(
-              TextButton(
-                onPressed: () => onRevoke(s),
-                child: Text(l10n.adminRevoke),
-              ),
-            ),
-          ],
-        );
-      }).toList(),
+          ),
+        ];
+      },
     );
   }
 }

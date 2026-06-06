@@ -2,13 +2,13 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
 from llm_client import chat_complete
+from routers._llm_helpers import call_llm_with_fallback, load_prompt_template
 
 logger = logging.getLogger(__name__)
 
@@ -17,19 +17,22 @@ router = APIRouter(dependencies=[Depends(verify_service_token)])
 # ---------------------------------------------------------------------------
 # Prompt template
 # ---------------------------------------------------------------------------
-_PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "refine_translation_de.txt"
-_PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
+_PROMPT_TEMPLATE = load_prompt_template("prompts/refine_translation_de.txt")
 
 
 # ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
 class RefineTranslationDeRequest(BaseModel):
+    """Input payload for the German-specific refine-translation-de endpoint."""
+
     original: str = Field(..., min_length=1, max_length=10000)
     raw_translation: str = Field(..., min_length=1, max_length=10000)
 
 
 class RefineTranslationDeResponse(BaseModel):
+    """LLM-refined German translation preserving the tone and style of the original text."""
+
     refined_translation: str
 
 
@@ -38,19 +41,28 @@ class RefineTranslationDeResponse(BaseModel):
 # ---------------------------------------------------------------------------
 @router.post("/llm/refine-translation-de", response_model=RefineTranslationDeResponse)
 async def refine_translation_de(body: RefineTranslationDeRequest) -> RefineTranslationDeResponse:
+    """Refine a German machine translation to match the tone and style of the original.
+
+    Args:
+        body: Validated request payload with original text and raw German translation.
+
+    Returns:
+        RefineTranslationDeResponse with the LLM-refined German translation string.
+        Falls back to raw_translation if the LLM returns an empty response.
+
+    Raises:
+        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+    """
     prompt = _PROMPT_TEMPLATE.format(
         original=body.original,
         raw_translation=body.raw_translation,
     )
 
-    raw = await chat_complete(
-        messages=[{"role": "user", "content": prompt}],
+    refined = await call_llm_with_fallback(
+        prompt=prompt,
+        fallback=body.raw_translation,
         temperature=0.3,
+        llm_func=chat_complete,
     )
-
-    refined = raw.strip()
-    if not refined:
-        logger.warning("LLM returned empty response — falling back to raw_translation.")
-        refined = body.raw_translation
 
     return RefineTranslationDeResponse(refined_translation=refined)

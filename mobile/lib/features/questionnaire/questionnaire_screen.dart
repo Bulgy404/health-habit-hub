@@ -11,8 +11,10 @@ import 'questionnaire_service.dart';
 /// Used for both SLIQ (`/questionnaire/sliq`) and
 /// RAND-36 (`/questionnaire/rand-36`) — no separate screens needed.
 class QuestionnaireScreen extends ConsumerWidget {
+  /// The questionnaire slug identifying which questionnaire to display.
   final String slug;
 
+  /// Creates a [QuestionnaireScreen] for [slug].
   const QuestionnaireScreen({super.key, required this.slug});
 
   @override
@@ -62,8 +64,10 @@ class QuestionnaireScreen extends ConsumerWidget {
 
 /// Confirmation screen shown after successful questionnaire submission.
 class QuestionnaireConfirmationScreen extends StatelessWidget {
+  /// The questionnaire slug, used to personalise the confirmation message.
   final String slug;
 
+  /// Creates a [QuestionnaireConfirmationScreen] for [slug].
   const QuestionnaireConfirmationScreen({super.key, required this.slug});
 
   @override

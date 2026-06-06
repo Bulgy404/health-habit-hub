@@ -31,6 +31,7 @@ const String kGroupIdKey = 'group_id';
 /// If the user has already been enrolled (storage key [kStudyEnrolledKey])
 /// the screen auto-skips to the main app.
 class StudyCodeScreen extends ConsumerStatefulWidget {
+  /// Creates a [StudyCodeScreen].
   const StudyCodeScreen({super.key});
 
   @override

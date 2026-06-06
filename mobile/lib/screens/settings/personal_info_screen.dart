@@ -6,7 +6,9 @@ import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
 import '../onboarding/profile_fields.dart';
 
+/// Settings screen where the participant can update their personal info.
 class PersonalInfoScreen extends ConsumerStatefulWidget {
+  /// Creates a [PersonalInfoScreen].
   const PersonalInfoScreen({super.key});
 
   @override

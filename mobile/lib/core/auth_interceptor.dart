@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 /// The token is fetched via [AuthService.getAccessToken()] before each request.
 /// If no token is available the request is forwarded without the header.
 class AuthInterceptor extends Interceptor {
+  /// Creates an [AuthInterceptor] backed by [_authService].
   const AuthInterceptor(this._authService);
 
   final AuthService _authService;

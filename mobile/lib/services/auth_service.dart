@@ -32,9 +32,13 @@ class AuthService {
   final FlutterAppAuth _appAuth;
   final FlutterSecureStorage _secureStorage;
   final Dio? _dio;
+  /// Called after a successful logout to notify auth listeners.
   final void Function()? onLogout;
+
+  /// Called after a successful login to notify auth listeners.
   final void Function()? onLogin;
 
+  /// Creates an [AuthService].
   AuthService({
     FlutterAppAuth? appAuth,
     FlutterSecureStorage? secureStorage,

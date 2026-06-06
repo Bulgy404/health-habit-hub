@@ -5,6 +5,7 @@ import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 /**
  * List all studies with participant count per study (paginated).
  * @param {{ db: object, page?: number, limit?: number }} deps
+ * @returns {Promise<{ total: number, page: number, limit: number, studies: Array }>}
  */
 export async function listStudies({ db, page = 1, limit = 20 }) {
   const skip = (page - 1) * limit;
@@ -114,8 +115,9 @@ export async function getStudy({ db, id }) {
 }
 
 /**
- * Update a study. Groups are additive (existing groups are kept).
+ * Update a study. Groups are additive — existing groups are kept and new ones are appended.
  * @param {{ db: object, id: string, updates: object }} deps
+ * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}
  */
 export async function updateStudy({ db, id, updates }) {
   let oid;
@@ -191,9 +193,50 @@ export async function softDeleteStudy({ db, id }) {
 }
 
 /**
- * List participants enrolled in a study (paginated).
- * Returns summary (total, perGroup) and a page of enrollment rows.
+ * Build a map of groupId string → label from study.groups.
+ * @param {Array} groups - Study groups array
+ * @returns {object} Record<string, string>
+ */
+function _buildGroupLabelMap(groups) {
+  const groupMap = {};
+  for (const g of groups || []) {
+    groupMap[g.id.toString()] = g.label || `Group ${g.index}`;
+  }
+  return groupMap;
+}
+
+/**
+ * Aggregate enrollment counts per group and return the per-group summary array.
+ * @param {object} db
+ * @param {ObjectId} studyOid
+ * @param {Array} groups - Study groups array
+ * @returns {Promise<Array<{ groupId: string, groupLabel: string, count: number }>>}
+ */
+async function _buildGroupCountSummary(db, studyOid, groups) {
+  const groupCounts = await db
+    .collection(ENROLLMENTS)
+    .aggregate([
+      { $match: { studyId: studyOid } },
+      { $group: { _id: '$groupId', count: { $sum: 1 } } },
+    ])
+    .toArray();
+
+  return (groups || []).map((g) => {
+    const found = groupCounts.find(
+      (c) => c._id?.toString() === g.id.toString()
+    );
+    return {
+      groupId: g.id.toString(),
+      groupLabel: g.label || `Group ${g.index}`,
+      count: found?.count ?? 0,
+    };
+  });
+}
+
+/**
+ * List participants enrolled in a study with per-group summary (paginated).
  * @param {{ db: object, id: string, page?: number, limit?: number }} deps
+ * @returns {Promise<{ total: number, page: number, limit: number, summary: object, participants: Array }|{ notFound: boolean }>}
  */
 export async function listStudyParticipants({ db, id, page = 1, limit = 20 }) {
   let oid;
@@ -219,31 +262,8 @@ export async function listStudyParticipants({ db, id, page = 1, limit = 20 }) {
     .limit(limit)
     .toArray();
 
-  // Build group label lookup from study.groups
-  const groupMap = {};
-  for (const g of study.groups || []) {
-    groupMap[g.id.toString()] = g.label || `Group ${g.index}`;
-  }
-
-  // Count per group for summary
-  const groupCounts = await db
-    .collection(ENROLLMENTS)
-    .aggregate([
-      { $match: { studyId: oid } },
-      { $group: { _id: '$groupId', count: { $sum: 1 } } },
-    ])
-    .toArray();
-
-  const perGroup = (study.groups || []).map((g) => {
-    const found = groupCounts.find(
-      (c) => c._id?.toString() === g.id.toString()
-    );
-    return {
-      groupId: g.id.toString(),
-      groupLabel: g.label || `Group ${g.index}`,
-      count: found?.count ?? 0,
-    };
-  });
+  const groupMap = _buildGroupLabelMap(study.groups);
+  const perGroup = await _buildGroupCountSummary(db, oid, study.groups);
 
   return {
     total,
@@ -262,8 +282,8 @@ export async function listStudyParticipants({ db, id, page = 1, limit = 20 }) {
 
 /**
  * Update the cueConfig for a specific group within a study.
- * Fetches the study first, updates the matching group in the array, then persists.
- * @param {{ db, studyId: string, groupId: string, cueConfig: object }} deps
+ * @param {{ db: object, studyId: string, groupId: string, cueConfig: object }} deps
+ * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}
  */
 export async function updateGroupCueConfig({
   db,
@@ -301,6 +321,7 @@ export async function updateGroupCueConfig({
 /**
  * Mark a study as default, clearing isDefault on the previous default atomically.
  * @param {{ db: object, id: string }} deps
+ * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}
  */
 export async function setDefaultStudy({ db, id }) {
   let oid;

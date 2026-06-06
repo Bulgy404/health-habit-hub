@@ -29,6 +29,12 @@ function verifyJwtSignature(signingInput, signature, jwk) {
   return verify.verify(publicKey, base64urlDecode(signature));
 }
 
+/**
+ * Create a JWT verifier that fetches and caches JWKS keys with a 24-hour TTL.
+ * @param {{ jwksUrl?: string }} [opts]
+ * @returns {function(string): Promise<object>} Async function that verifies a JWT and returns its payload.
+ * @throws {Error} If the token is expired, the signing key is not found, or the signature is invalid.
+ */
 export function createTokenVerifier({ jwksUrl } = {}) {
   const url = jwksUrl || process.env.KEYCLOAK_JWKS_URL;
   let cachedKeys = null;
@@ -71,6 +77,12 @@ export function createTokenVerifier({ jwksUrl } = {}) {
   };
 }
 
+/**
+ * Create an Express middleware that validates Bearer JWTs against Keycloak JWKS.
+ * Attaches the decoded payload to req.user on success; responds 401 on failure.
+ * @param {{ jwksUrl?: string, expectedIssuer?: string|string[], expectedAudience?: string|string[] }} [opts]
+ * @returns {import('express').RequestHandler}
+ */
 export function createAuthMiddleware({
   jwksUrl,
   expectedIssuer,
@@ -139,21 +151,12 @@ export function createAuthMiddleware({
         }
       }
 
-      // Some local/dev token flows may omit `sub` but still carry a stable
-      // user identifier in `preferred_username`. Normalize here so downstream
-      // routes can reliably use req.user.sub.
-      if (
-        (payload.sub == null || payload.sub === '') &&
-        typeof payload.preferred_username === 'string' &&
-        payload.preferred_username.trim()
-      ) {
-        payload.sub = payload.preferred_username.trim();
-      } else if (
-        (payload.sub == null || payload.sub === '') &&
-        typeof payload.email === 'string' &&
-        payload.email.trim()
-      ) {
-        payload.sub = payload.email.trim();
+      // Require a non-empty `sub` claim. Keycloak always provides it; a
+      // token without `sub` is malformed or from an untrusted source.
+      // Falling back to attacker-controllable fields like preferred_username
+      // or email would allow impersonation, so we fail closed instead.
+      if (!payload.sub || typeof payload.sub !== 'string') {
+        return res.status(401).json({ error: 'Unauthorized' });
       }
 
       req.user = payload;

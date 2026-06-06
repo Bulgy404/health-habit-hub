@@ -1,17 +1,24 @@
+/// Service layer for the My Habits feature.
+library;
+
 // mobile/lib/features/my_habits/my_habits_service.dart
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
 import '../../core/exceptions.dart';
 import 'my_habits_models.dart';
 
+/// REST client for the habit intentions and SRHI API endpoints.
 class MyHabitsService {
+  /// Creates a [MyHabitsService] using the given Dio [dio] instance.
   MyHabitsService({required Dio dio}) : _dio = dio;
 
   final Dio _dio;
   static const _base = AppConfig.apiBaseUrl;
 
+  /// Fetches the participant's resolved habit configuration from the backend.
   Future<HabitConfig> fetchHabitConfig() async {
     try {
       final res = await _dio.get<Map<String, dynamic>>('$_base/me/habit-config');
@@ -22,6 +29,7 @@ class MyHabitsService {
     }
   }
 
+  /// Returns all habit intentions for the current user.
   Future<List<Intention>> listIntentions() async {
     try {
       final res = await _dio.get<List<dynamic>>('$_base/habits/intentions');
@@ -35,6 +43,10 @@ class MyHabitsService {
     }
   }
 
+  /// Creates a new habit intention and returns the persisted [Intention].
+  ///
+  /// Throws [ValidationException] when the participant has reached their
+  /// maximum allowed intentions.
   Future<Intention> createIntention({
     required String behaviorKey,
     required String behaviorLabel,
@@ -66,6 +78,7 @@ class MyHabitsService {
     }
   }
 
+  /// Updates the lifecycle [status] of a habit intention.
   Future<void> updateStatus(String intentionId, String status) async {
     try {
       await _dio.patch(
@@ -78,6 +91,7 @@ class MyHabitsService {
     }
   }
 
+  /// Logs whether the habit was [enacted] on [date] (`'YYYY-MM-DD'`).
   Future<void> logDay({
     required String intentionId,
     required String date,
@@ -94,6 +108,7 @@ class MyHabitsService {
     }
   }
 
+  /// Returns daily logs for [intentionId], optionally filtered to [from]–[to].
   Future<List<DailyLog>> fetchLogs(
     String intentionId, {
     String? from,
@@ -117,6 +132,7 @@ class MyHabitsService {
     }
   }
 
+  /// Returns all SRHI measurement windows that are currently due.
   Future<List<SrhiWindow>> fetchDueSrhi() async {
     try {
       final res = await _dio.get<List<dynamic>>('$_base/srhi/due');
@@ -130,6 +146,9 @@ class MyHabitsService {
     }
   }
 
+  /// Submits SRHI [items] for [intentionId] at [weekNumber].
+  ///
+  /// Returns the resulting [SrhiTrajectoryPoint] with the computed score.
   Future<SrhiTrajectoryPoint> submitSrhi({
     required String intentionId,
     required int weekNumber,
@@ -147,6 +166,7 @@ class MyHabitsService {
     }
   }
 
+  /// Returns the full SRHI score trajectory for [intentionId].
   Future<List<SrhiTrajectoryPoint>> fetchTrajectory(String intentionId) async {
     try {
       final res = await _dio.get<List<dynamic>>(
@@ -163,6 +183,7 @@ class MyHabitsService {
   }
 }
 
+/// Provides the singleton [MyHabitsService] instance.
 final myHabitsServiceProvider = Provider<MyHabitsService>((ref) {
   return MyHabitsService(dio: ref.watch(dioProvider));
 });

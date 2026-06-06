@@ -6,11 +6,22 @@
 /// [hasTranslation] indicates whether [name] is a translation (vs. original).
 /// [originalText] is the raw text as submitted by the contributor.
 class HabitNode {
+  /// Unique habit identifier (UUID).
   final String id;
+
+  /// Display name (possibly translated, see [hasTranslation]).
   final String name;
+
+  /// Raw text as submitted by the contributor.
   final String originalText;
+
+  /// Habit category label (e.g. `'Nutrition'`).
   final String category;
+
+  /// BCIO ontology class URI assigned to this habit.
   final String bcioClass;
+
+  /// Annotation type → count map (e.g. `{'thumbUp': 3, 'star': 1}`).
   final Map<String, int> annotationCounts;
 
   /// ISO 639-1 code of the habit's original language (empty if unknown).
@@ -20,6 +31,7 @@ class HabitNode {
   /// false when [name] is the original text (no translation available).
   final bool hasTranslation;
 
+  /// Creates a [HabitNode].
   const HabitNode({
     required this.id,
     required this.name,
@@ -40,6 +52,7 @@ class HabitNode {
     return raw.map((k, v) => MapEntry(k as String, (v as num).toInt()));
   }
 
+  /// Deserialises from the habit graph API response.
   factory HabitNode.fromJson(Map<String, dynamic> json) {
     return HabitNode(
       id: json['id'] as String,

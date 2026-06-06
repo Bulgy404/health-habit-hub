@@ -1,13 +1,27 @@
-import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+/// Habit donation / share screen.
+///
+/// [ShareHabitScreen] is the top-level coordinator.  It owns the survey-mode
+/// toggle and submission logic; the actual form inputs live in
+/// [DonateFormWidget] and progress / success display in
+/// [DonateProgressWidget] / [DonateSuccessWidget].
+library;
+
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 import '../services/habit_service.dart';
 import '../services/survey_service.dart';
+import 'donate/widgets/donate_form_widget.dart';
+import 'donate/widgets/donate_progress_widget.dart';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const _kCardShadow = [
   BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4)),
@@ -16,7 +30,17 @@ const _kGreenGlow = [
   BoxShadow(color: Color(0x4745B700), blurRadius: 28, offset: Offset(0, 8)),
 ];
 
+// ---------------------------------------------------------------------------
+// Main screen
+// ---------------------------------------------------------------------------
+
+/// Root screen for the habit-donation flow.
+///
+/// Displays a landing card with community stats when [_surveyMode] is false.
+/// Switching [_surveyMode] to true renders the full [DonateFormWidget] with a
+/// pinned [DonateProgressWidget] submit button.
 class ShareHabitScreen extends ConsumerStatefulWidget {
+  /// Creates a [ShareHabitScreen].
   const ShareHabitScreen({super.key});
 
   @override
@@ -24,18 +48,12 @@ class ShareHabitScreen extends ConsumerStatefulWidget {
 }
 
 class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _habitController = TextEditingController();
+  final _formKey = GlobalKey<DonateFormWidgetState>();
 
   bool _surveyMode = false;
   bool _submitting = false;
   bool _showSuccess = false;
   String? _notAHabitMsg;
-
-  int? _frequency; // 1–4
-  int? _duration; // 1–4
-  int? _healthBenefit; // 1–5
-  int? _wellbeing; // 1–5
 
   String? _surveyId;
   late String _lang;
@@ -45,12 +63,6 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     super.initState();
     _lang = ref.read(localeProvider).languageCode;
     _loadSurveyId();
-  }
-
-  @override
-  void dispose() {
-    _habitController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadSurveyId() async {
@@ -65,25 +77,21 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   }
 
   void _resetForm() {
-    _habitController.clear();
+    _formKey.currentState?.reset();
     setState(() {
       _surveyMode = false;
       _submitting = false;
       _showSuccess = false;
       _notAHabitMsg = null;
-      _frequency = null;
-      _duration = null;
-      _healthBenefit = null;
-      _wellbeing = null;
     });
   }
 
   Future<void> _submit() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    if (_frequency == null ||
-        _duration == null ||
-        _healthBenefit == null ||
-        _wellbeing == null) {
+    final formState = _formKey.currentState;
+    if (formState == null) return;
+
+    final values = formState.collectValues();
+    if (values == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please answer all questions')),
       );
@@ -96,20 +104,19 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     });
 
     final l10n = AppLocalizations.of(context)!;
-    final sentence = _habitController.text.trim();
     final dio = ref.read(dioProvider);
 
     try {
-      // Step 1: Submit the habit text + ratings → Neo4j (counted in stats).
+      // ── Step 1: Submit habit text + ratings → Neo4j ───────────────────────
       final shareResp = await dio.post<Map<String, dynamic>>(
         '${AppConfig.apiBaseUrl}/habits/share',
         data: {
-          'sentence': sentence,
+          'sentence': values.sentence,
           'language': _lang,
-          'frequency': _frequency,
-          'duration': _duration,
-          'health_benefit': _healthBenefit,
-          'wellbeing_impact': _wellbeing,
+          'frequency': values.frequency,
+          'duration': values.duration,
+          'health_benefit': values.healthBenefit,
+          'wellbeing_impact': values.wellbeing,
         },
       );
 
@@ -126,14 +133,14 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         return;
       }
 
-      // Step 2: Submit ratings metadata to the survey system (best-effort).
+      // ── Step 2: Submit ratings to survey system (best-effort) ─────────────
       if (_surveyId != null) {
         try {
           await ref.read(surveyServiceProvider).submitResult(_surveyId!, {
-            'frequency': _frequency,
-            'duration': _duration,
-            'health_benefit': _healthBenefit,
-            'wellbeing_impact': _wellbeing,
+            'frequency': values.frequency,
+            'duration': values.duration,
+            'health_benefit': values.healthBenefit,
+            'wellbeing_impact': values.wellbeing,
           });
         } catch (_) {
           // Non-critical — habit is already saved.
@@ -148,18 +155,15 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       }
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;
-      final responseData = e.response?.data;
       debugPrint(
         'ShareHabitScreen._submit DioException: status=$statusCode '
-        'path=${e.requestOptions.path} data=$responseData',
+        'path=${e.requestOptions.path} data=${e.response?.data}',
       );
       if (mounted) {
         setState(() => _submitting = false);
         if (statusCode == 401) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Unauthorized. Please sign in again.'),
-            ),
+            const SnackBar(content: Text('Unauthorized. Please sign in again.')),
           );
           return;
         }
@@ -173,43 +177,39 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
           );
           return;
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
       }
     } catch (e) {
       debugPrint('ShareHabitScreen._submit: $e');
       if (mounted) {
         setState(() => _submitting = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
       }
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
+  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    if (_surveyMode) return _buildForm(l10n);
+    if (_surveyMode) return _buildFormScaffold(l10n);
 
+    // ── Landing page ─────────────────────────────────────────────────────────
     final statsAsync = ref.watch(habitStatsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Health Habit Hub'),
         titleSpacing: 16,
-  
       ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          // ── Hero card ────────────────────────────────────────────────────
+          // ── Hero card ─────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Container(
@@ -273,7 +273,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             ),
           ),
 
-          // ── Stats row ────────────────────────────────────────────────────
+          // ── Stats row ─────────────────────────────────────────────────────
           statsAsync.when(
             loading: () => const SizedBox(height: 80),
             error: (e, s) => const SizedBox(height: 12),
@@ -296,11 +296,9 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Native survey form (replaces WebView)
-  // ---------------------------------------------------------------------------
+  // ── Form scaffold ──────────────────────────────────────────────────────────
 
-  Widget _buildForm(AppLocalizations l10n) {
+  Widget _buildFormScaffold(AppLocalizations l10n) {
     if (_showSuccess) {
       return Scaffold(
         appBar: AppBar(
@@ -310,49 +308,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             onPressed: _resetForm,
           ),
         ),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEDF7E5),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: const Icon(
-                    Icons.check_circle,
-                    size: 44,
-                    color: Color(0xFF45B700),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  l10n.habitSharedSuccess,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Thank you for contributing to health research.',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 28),
-                FilledButton(
-                  onPressed: _resetForm,
-                  child: const Text('Share another habit'),
-                ),
-              ],
-            ),
-          ),
-        ),
+        body: DonateSuccessWidget(onReset: _resetForm),
       );
     }
 
@@ -366,150 +322,14 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       ),
       body: Stack(
         children: [
-          Form(
+          DonateFormWidget(
             key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-              children: [
-                // Habit text input
-                const Text(
-                  'Describe your habit',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 4),
-                TextFormField(
-                  controller: _habitController,
-                  maxLines: 3,
-                  maxLength: 500,
-                  enabled: !_submitting,
-                  decoration: InputDecoration(
-                    hintText: 'e.g. I go for a 30-minute walk every morning',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF45B700),
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().length < 10) {
-                      return 'Please describe your habit '
-                          '(at least 10 characters)';
-                    }
-                    return null;
-                  },
-                ),
-                if (_notAHabitMsg != null) ...[
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7ED),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFFCD34D)),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(
-                          Icons.info_outline,
-                          color: Color(0xFFD97706),
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _notAHabitMsg!,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF92400E),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 20),
-
-                const SizedBox(height: 4),
-
-                // Rating questions
-                _RatingQuestion(
-                  label: 'How often do you do this habit?',
-                  options: const ['Rarely', 'Weekly', 'Several/week', 'Daily'],
-                  selected: _frequency,
-                  enabled: !_submitting,
-                  onSelected: (v) => setState(() => _frequency = v),
-                ),
-                const SizedBox(height: 16),
-                _RatingQuestion(
-                  label: 'How long have you had this habit?',
-                  options: const [
-                    '< 1 month',
-                    '1–3 months',
-                    '3–12 months',
-                    '> 1 year',
-                  ],
-                  selected: _duration,
-                  enabled: !_submitting,
-                  onSelected: (v) => setState(() => _duration = v),
-                ),
-                const SizedBox(height: 16),
-                _RatingQuestion(
-                  label: 'How much does it benefit your health?',
-                  options: const ['1', '2', '3', '4', '5'],
-                  selected: _healthBenefit,
-                  enabled: !_submitting,
-                  onSelected: (v) => setState(() => _healthBenefit = v),
-                  caption: '1 = Not at all · 5 = Very much',
-                ),
-                const SizedBox(height: 16),
-                _RatingQuestion(
-                  label: 'How much does it improve your wellbeing?',
-                  options: const ['1', '2', '3', '4', '5'],
-                  selected: _wellbeing,
-                  enabled: !_submitting,
-                  onSelected: (v) => setState(() => _wellbeing = v),
-                  caption: '1 = Not at all · 5 = Very much',
-                ),
-              ],
-            ),
+            submitting: _submitting,
+            notAHabitMsg: _notAHabitMsg,
           ),
-
-          // Submit button pinned at bottom
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-              child: FilledButton(
-                onPressed: _submitting ? null : _submit,
-                child: _submitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text('Donate habit'),
-              ),
-            ),
+          DonateProgressWidget(
+            submitting: _submitting,
+            onSubmit: _submit,
           ),
         ],
       ),
@@ -518,96 +338,21 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Rating question widget — native ChoiceChip row
-// ---------------------------------------------------------------------------
-
-class _RatingQuestion extends StatelessWidget {
-  const _RatingQuestion({
-    required this.label,
-    required this.options,
-    required this.selected,
-    required this.enabled,
-    required this.onSelected,
-    this.caption,
-  });
-
-  final String label;
-  final List<String> options;
-  final int? selected;
-  final bool enabled;
-  final ValueChanged<int> onSelected;
-  final String? caption;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-        ),
-        if (caption != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(
-              caption!,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
-            ),
-          ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: List.generate(options.length, (i) {
-            final value = i + 1;
-            final isSelected = selected == value;
-            return GestureDetector(
-              onTap: enabled ? () => onSelected(value) : null,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFEDF7E5) : Colors.white,
-                  borderRadius: BorderRadius.circular(100),
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color(0xFF45B700)
-                        : const Color(0xFFE5E7EB),
-                    width: isSelected ? 1.5 : 1,
-                  ),
-                  boxShadow: _kCardShadow,
-                ),
-                child: Text(
-                  options[i],
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected
-                        ? const Color(0xFF2E8C00)
-                        : const Color(0xFF374151),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Stat card
 // ---------------------------------------------------------------------------
 
+/// A compact stat display card used in the landing hero section.
 class _StatCard extends StatelessWidget {
+  /// Creates a [_StatCard].
   const _StatCard({this.value, this.icon, required this.label});
 
+  /// Numeric value to display (mutually exclusive with [icon]).
   final String? value;
+
+  /// Icon to display instead of a numeric value.
   final IconData? icon;
+
+  /// Descriptive label shown below the value or icon.
   final String label;
 
   @override

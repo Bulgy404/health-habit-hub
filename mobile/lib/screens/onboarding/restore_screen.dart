@@ -26,6 +26,7 @@ const _kRefreshToken = 'refresh_token';
 /// * The welcome screen's "Restore existing account" link (first-launch flow).
 /// * The Profile screen's "Restore account" option (settings area).
 class RestoreScreen extends StatefulWidget {
+  /// Creates a [RestoreScreen].
   const RestoreScreen({super.key});
 
   @override
