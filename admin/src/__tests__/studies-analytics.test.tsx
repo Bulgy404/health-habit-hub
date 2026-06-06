@@ -36,6 +36,9 @@ beforeEach(() => {
         { groupId: 'g2', weekNumber: 1, meanScore: 3.2, count: 2 },
       ],
       dropoutCurve: [],
+      questionnaireCompletionRates: [
+        { questionnaireId: 'q1', slug: 'baseline', title: 'Baseline Survey', enrolled: 10, completed: 7, rate: 0.7 },
+      ],
     }),
   } as unknown as Response);
 });
@@ -60,5 +63,16 @@ describe('AnalyticsTab', () => {
   it('shows percentage for active groups', async () => {
     render(<AnalyticsTab study={mockStudy} token="test-token" />);
     expect(await screen.findByText(/60%/)).toBeInTheDocument();
+  });
+
+  it('renders Questionnaire Completion heading', async () => {
+    render(<AnalyticsTab study={mockStudy} token="test-token" />);
+    expect(await screen.findByText(/questionnaire completion/i)).toBeInTheDocument();
+  });
+
+  it('shows questionnaire title and completion rate', async () => {
+    render(<AnalyticsTab study={mockStudy} token="test-token" />);
+    expect(await screen.findByText('Baseline Survey')).toBeInTheDocument();
+    expect(await screen.findByText(/70%/)).toBeInTheDocument();
   });
 });
