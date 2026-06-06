@@ -5,6 +5,8 @@ import { COLLECTION as LOGS } from '../models/dailyBehaviorLog.js';
 import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 import { COLLECTION as INTENTIONS } from '../models/implementationIntention.js';
 
+const FORM_RESPONSES = 'form_responses';
+
 async function enrollmentMap(db, studyId) {
   const filter = studyId ? { studyId: new ObjectId(studyId) } : {};
   const docs = await db.collection(ENROLLMENTS).find(filter).toArray();
@@ -82,6 +84,49 @@ export async function buildDailyLogsCsv({ db, studyId }) {
       enacted: l.enacted == null ? 'NA' : l.enacted ? 'TRUE' : 'FALSE',
       loggedAt: l.loggedAt?.toISOString() ?? 'NA',
     };
+  });
+
+  return stringify(records, { header: true });
+}
+
+/**
+ * Build a CSV string of all questionnaire (form) responses for a study.
+ *
+ * Each row is one participant's submission for one questionnaire. Answers are
+ * flattened: every unique answer key across all responses becomes a column.
+ *
+ * @param {{ db: object, studyId?: string }} deps
+ * @returns {Promise<string>} CSV content including header row.
+ */
+export async function buildQuestionnaireResponsesCsv({ db, studyId }) {
+  const eMap = await enrollmentMap(db, studyId);
+  const userIds = Object.keys(eMap);
+
+  const filter = userIds.length ? { userId: { $in: userIds } } : {};
+  const rows = await db.collection(FORM_RESPONSES).find(filter).sort({ submittedAt: 1 }).toArray();
+
+  if (rows.length === 0) return stringify([], { header: true });
+
+  // Collect all answer keys across all responses to build a stable column set.
+  const answerKeys = new Set();
+  for (const r of rows) {
+    for (const key of Object.keys(r.answers ?? {})) answerKeys.add(key);
+  }
+  const sortedKeys = [...answerKeys].sort();
+
+  const records = rows.map((r) => {
+    const e = eMap[r.userId] ?? {};
+    const base = {
+      userId: r.userId,
+      studyId: studyId ?? 'NA',
+      group: e.group ?? 'NA',
+      questionnaireSlug: r.questionnaireSlug ?? 'NA',
+      submittedAt: r.submittedAt?.toISOString() ?? 'NA',
+    };
+    for (const key of sortedKeys) {
+      base[`answer_${key}`] = r.answers?.[key] ?? 'NA';
+    }
+    return base;
   });
 
   return stringify(records, { header: true });
