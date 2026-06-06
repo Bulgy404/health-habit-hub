@@ -19,18 +19,17 @@ export const apiRateLimiter = rateLimit({
 });
 
 /**
- * Strict rate limiter for habit share/donate: max 10 submissions per hour per user.
- * The LLM pipeline is expensive; this prevents accidental or intentional flooding.
+ * Rate limiter for habit share/donate: max 200 submissions per hour per user.
  */
 export const habitShareLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 10,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
   handler(_req, res) {
     res.status(429).json({
-      error: 'Habit donation rate limit exceeded. You can submit up to 10 habits per hour.',
+      error: 'Habit donation rate limit exceeded. You can submit up to 200 habits per hour.',
     });
   },
 });
