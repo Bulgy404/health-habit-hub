@@ -9,6 +9,7 @@ import {
   updateHabitAnnotation,
 } from '../../db/habitQueries.js';
 import { habitShareLimiter } from '../../middleware/rateLimiter.js';
+import { logger } from '../../utils/logger.js';
 
 // Step 1: Call LibreTranslate with a 10-second timeout.
 // Returns the raw translated string, or null if the service is unavailable.
@@ -38,17 +39,13 @@ async function fetchLibreTranslation(
       clearTimeout(timeout);
     }
     if (!res.ok) {
-      console.warn(
-        `[translate] LibreTranslate returned ${res.status} — skipping translation to ${targetLang.toUpperCase()}`
-      );
+      log.warn(`[translate] LibreTranslate returned ${res.status} — skipping translation to ${targetLang.toUpperCase()}`);
       return null;
     }
     const data = await res.json();
     return data.translatedText;
   } catch (err) {
-    console.warn(
-      `[translate] LibreTranslate error: ${err.message} — skipping translation to ${targetLang.toUpperCase()}`
-    );
+    log.warn(`[translate] LibreTranslate error: ${err.message} — skipping translation to ${targetLang.toUpperCase()}`);
     return null;
   }
 }
@@ -81,17 +78,13 @@ async function refineLLMTranslation(
       clearTimeout(timeout);
     }
     if (!res.ok) {
-      console.warn(
-        `[translate] LLM ${llmEndpoint} returned ${res.status} — using raw LibreTranslate output`
-      );
+      log.warn(`[translate] LLM ${llmEndpoint} returned ${res.status} — using raw LibreTranslate output`);
       return draft;
     }
     const data = await res.json();
     return data.refined_translation || draft;
   } catch (err) {
-    console.warn(
-      `[translate] LLM refinement error/timeout: ${err.message} — using raw LibreTranslate output`
-    );
+    log.warn(`[translate] LLM refinement error/timeout: ${err.message} — using raw LibreTranslate output`);
     return draft;
   }
 }
@@ -133,6 +126,8 @@ async function translate(
  * @param {string} [opts.libreTranslateUrl]
  * @returns {express.Router}
  */
+const log = logger.child({ module: 'habitsCrudRouter' });
+
 export function createHabitsCrudRouter({
   getDb,
   queryNeo4j,
@@ -175,7 +170,7 @@ export function createHabitsCrudRouter({
 
       res.json(habits);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -234,7 +229,7 @@ export function createHabitsCrudRouter({
       }));
       res.json(habits);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -350,7 +345,7 @@ export function createHabitsCrudRouter({
       const counts = await getHabitAnnotationCounts(queryNeo4j, habitId);
       res.json({ habitId, annotationCounts: counts });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

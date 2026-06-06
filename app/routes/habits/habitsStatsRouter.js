@@ -1,9 +1,12 @@
 import express from 'express';
+import { logger } from '../../utils/logger.js';
 import {
   getHabitTotal,
   getHabitsByCategory,
   getUserHabits,
 } from '../../db/habitQueries.js';
+
+const log = logger.child({ module: 'habitsStatsRouter' });
 
 function toNumber(val) {
   if (val == null) return 0;
@@ -111,7 +114,7 @@ export function createHabitsStatsRouter({ getDb, queryNeo4j } = {}) {
 
       res.json({ total, byCategory, byDay });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -192,7 +195,7 @@ export function createHabitsStatsRouter({ getDb, queryNeo4j } = {}) {
 
       res.json({ total: habits.length, byDimension, habits });
     } catch (err) {
-      console.error('[route] GET /habits/my-stats error:', err);
+      log.error({ err: err }, '[route] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

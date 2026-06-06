@@ -15,11 +15,14 @@ import {
   listCodes,
   revokeCode,
 } from '../../services/studyCodeService.js';
+import { logger } from '../../utils/logger.js';
 import {
   getWeeklyActiveRate,
   getMeanSrhiTrajectory,
   getDropoutCurve,
 } from '../../services/studyAnalyticsService.js';
+
+const log = logger.child({ module: 'studiesRouter' });
 
 export function createStudiesRouter({
   db,
@@ -43,7 +46,7 @@ export function createStudiesRouter({
       const result = await listStudies({ db: database, page, limit });
       res.json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -80,7 +83,7 @@ export function createStudiesRouter({
         updatedAt: study.updatedAt,
       });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -93,7 +96,7 @@ export function createStudiesRouter({
       if (!study) return res.status(404).json({ error: 'Study not found' });
       res.json(study);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -111,7 +114,7 @@ export function createStudiesRouter({
         return res.status(404).json({ error: 'Study not found' });
       res.json({ ok: true });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -143,7 +146,7 @@ export function createStudiesRouter({
         return res.status(404).json({ error: 'Study or group not found' });
       res.json({ updated: true });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -168,7 +171,7 @@ export function createStudiesRouter({
       }
       res.json({ ok: true });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -182,7 +185,7 @@ export function createStudiesRouter({
         return res.status(404).json({ error: 'Study not found' });
       res.json({ ok: true });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -221,7 +224,7 @@ export function createStudiesRouter({
         return res.status(404).json({ error: 'Group not found in study' });
       res.status(201).json({ codes: result.codes });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -245,7 +248,7 @@ export function createStudiesRouter({
         return res.status(404).json({ error: 'Study not found' });
       res.json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -266,7 +269,7 @@ export function createStudiesRouter({
           .json({ error: 'Code has already been redeemed' });
       res.json({ ok: true });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -290,7 +293,7 @@ export function createStudiesRouter({
         return res.status(404).json({ error: 'Study not found' });
       res.json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -307,7 +310,7 @@ export function createStudiesRouter({
         ]);
       res.json({ weeklyActiveRate, srhiTrajectory, dropoutCurve });
     } catch (err) {
-      console.error('[studies] GET /:id/analytics:', err);
+      log.error({ err: err }, '[studies] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

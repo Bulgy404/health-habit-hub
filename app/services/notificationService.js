@@ -12,6 +12,9 @@
 
 import { ObjectId } from 'mongodb';
 import cron from 'node-cron';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'notificationService' });
 
 export const COLLECTION_DEVICE_TOKENS = 'deviceTokens';
 export const COLLECTION_SCHEDULED = 'scheduledNotifications';
@@ -284,7 +287,7 @@ export function startNotificationScheduler({ getDb, redisUrl } = {}) {
       const db = await getDb();
       await dispatchDueNotifications({ db });
     } catch (err) {
-      console.error('[notification] Scheduler error:', err);
+      log.error({ err: err }, '[notification] error');
     } finally {
       if (redis && lockAcquired) {
         await _releaseSchedulerLock(redis, lockToken);

@@ -2,6 +2,9 @@ import fs from 'fs';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { hide_about } from './language_config.js';
+import { logger } from './logger.js';
+
+const log = logger.child({ module: 'localization' });
 
 let languageDataMap = new Map();
 

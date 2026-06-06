@@ -1,6 +1,9 @@
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
 import { redeemCode, skipCode } from '../services/studyCodeService.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'studyEnrollRouter' });
 
 export function createStudyEnrollRouter({ db } = {}) {
   const router = express.Router();
@@ -41,7 +44,7 @@ export function createStudyEnrollRouter({ db } = {}) {
         groupLabel: result.groupLabel,
       });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -69,7 +72,7 @@ export function createStudyEnrollRouter({ db } = {}) {
         groupLabel: result.groupLabel,
       });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

@@ -5,10 +5,13 @@ import { randomUUID } from 'node:crypto';
 import { makeGetDb } from '../utils/getDb.js';
 import { isPrivileged } from '../middleware/roles.js';
 import { renderSurvey, submitSurvey } from '../controllers/surveyController.js';
+import { logger } from '../utils/logger.js';
 import {
   normalizeSurveyTargetMode,
   canParticipantAccessSurvey,
 } from '../utils/surveyTargeting.js';
+
+const log = logger.child({ module: 'surveyRouter' });
 
 const legacyRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -250,7 +253,7 @@ export function createSurveyRouter({ db } = {}) {
       });
       res.json(surveys);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.json([]);
     }
   });
@@ -393,7 +396,7 @@ export function createSurveyRouter({ db } = {}) {
 </body>
 </html>`);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -423,7 +426,7 @@ export function createSurveyRouter({ db } = {}) {
         assignedGroups: survey.assignedGroups || [],
       });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -521,7 +524,7 @@ export function createSurveyRouter({ db } = {}) {
         completedAt: result.completedAt,
       });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

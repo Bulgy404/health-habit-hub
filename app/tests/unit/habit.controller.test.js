@@ -97,6 +97,8 @@ before(async () => {
 
   const app = express();
   app.use(express.json());
+  // Inject a mock authenticated user so annotate (IDOR-safe) can read req.user.sub
+  app.use((req, _res, next) => { req.user = { sub: 'test-user-1' }; next(); });
   app.use(
     '/habits',
     createHabitsRouter({ db: mockDb, neo4jRun: createMockNeo4jRun() })

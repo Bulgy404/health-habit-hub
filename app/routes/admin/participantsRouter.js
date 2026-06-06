@@ -9,6 +9,9 @@ import {
   softDeleteParticipant,
 } from '../../services/adminParticipantService.js';
 import { getParticipantProgress } from '../../services/adminStatsService.js';
+import { logger } from '../../utils/logger.js';
+
+const log = logger.child({ module: 'participantsRouter' });
 
 export function createParticipantsRouter({
   db,
@@ -109,7 +112,7 @@ export function createParticipantsRouter({
       const result = await listParticipants({ db: database });
       res.json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -122,7 +125,7 @@ export function createParticipantsRouter({
       const result = await createParticipant({ db: database, kc });
       res.status(201).json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -229,7 +232,7 @@ export function createParticipantsRouter({
 
       res.json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -309,7 +312,7 @@ export function createParticipantsRouter({
       });
       res.send(pdfBuffer);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -415,7 +418,7 @@ export function createParticipantsRouter({
 
       res.json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -476,7 +479,7 @@ export function createParticipantsRouter({
 
       res.json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

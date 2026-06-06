@@ -1,3 +1,4 @@
+import { logger } from './logger.js';
 import fetch from 'node-fetch';
 
 /**
@@ -6,6 +7,8 @@ import fetch from 'node-fetch';
  * @param {string|null} str
  * @returns {string}
  */
+const log = logger.child({ module: 'translate' });
+
 export function escapeStringLiteral(str) {
   if (str == null) return '';
   return String(str)
@@ -63,9 +66,7 @@ export async function translateText(text, from, to, endpoint, retries = 3) {
       );
 
       if (attempt === retries || !error.message.includes('ECONNREFUSED')) {
-        console.error(
-          `Translation service unavailable after ${retries} attempts. Returning original text.`
-        );
+        log.error(`Translation service unavailable after ${retries} attempts. Returning original text.`);
         return text;
       }
 

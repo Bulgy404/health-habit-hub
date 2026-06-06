@@ -1,12 +1,15 @@
 // app/routes/notificationCampaignRouter.js
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
+import { logger } from '../utils/logger.js';
 import {
   createCampaign,
   listCampaigns,
   cancelCampaign,
   sendCampaign,
 } from '../services/notificationCampaignService.js';
+
+const log = logger.child({ module: 'notificationCampaignRouter' });
 
 export function createNotificationCampaignRouter({ db, fcmSend } = {}) {
   const router = express.Router();
@@ -39,7 +42,7 @@ export function createNotificationCampaignRouter({ db, fcmSend } = {}) {
       });
       res.json(result);
     } catch (err) {
-      console.error('[notifications] GET /:', err);
+      log.error({ err: err }, '[notifications] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -72,7 +75,7 @@ export function createNotificationCampaignRouter({ db, fcmSend } = {}) {
       }
       res.status(201).json(campaign);
     } catch (err) {
-      console.error('[notifications] POST /:', err);
+      log.error({ err: err }, '[notifications] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -87,7 +90,7 @@ export function createNotificationCampaignRouter({ db, fcmSend } = {}) {
           .json({ error: 'Campaign not found or already sent' });
       res.json({ cancelled: true });
     } catch (err) {
-      console.error('[notifications] DELETE /:id:', err);
+      log.error({ err: err }, '[notifications] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

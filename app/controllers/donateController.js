@@ -2,30 +2,29 @@ import contexts from '../models/contexts.js';
 import { ExperimentGroup } from '../models/experimentGroup.js';
 import { getLanguageMessages } from '../utils/localization.js';
 import { config } from '../utils/config.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'donateController' });
 
 function getExperimentGroupFromQuery(req) {
   if (req.query.group) {
     try {
       return ExperimentGroup.fromString(req.query.group);
     } catch {
-      console.error(
-        `Ignoring invalid experiment group parameter "${req.query.group}".`
-      );
+      log.error(`Ignoring invalid experiment group parameter "${req.query.group}".`);
       return null;
     }
   }
 }
 
 function getExperimentGroupFromCookie(req) {
-  console.log(`Request cookie: experimentGroup=${req.cookies.experimentGroup}`);
+  log.debug(`Request cookie: experimentGroup=${req.cookies.experimentGroup}`);
 
   if (req.cookies.experimentGroup) {
     try {
       return ExperimentGroup.fromString(req.cookies.experimentGroup);
     } catch {
-      console.error(
-        `Invalid experiment group cookie parameter "${req.cookies.experimentGroup}".`
-      );
+      log.error(`Invalid experiment group cookie parameter "${req.cookies.experimentGroup}".`);
       return null;
     }
   } else {
@@ -39,22 +38,16 @@ function getExperimentGroupFromCookie(req) {
 function getExperimentGroup(req, res) {
   const experimentGroupFromQuery = getExperimentGroupFromQuery(req);
   if (experimentGroupFromQuery) {
-    console.log(
-      `Using experiment group from query: ${experimentGroupFromQuery}`
-    );
+    log.debug(`Using experiment group from query: ${experimentGroupFromQuery}`);
     return experimentGroupFromQuery;
   } else {
     const experimentGroupFromCookie = getExperimentGroupFromCookie(req);
     if (experimentGroupFromCookie) {
-      console.log(
-        `Using experiment group from cookie: ${experimentGroupFromCookie}`
-      );
+      log.debug(`Using experiment group from cookie: ${experimentGroupFromCookie}`);
       return experimentGroupFromCookie;
     } else {
       const randomExperimentGroup = ExperimentGroup.random();
-      console.log(
-        `Using randomly selected experiment group: ${randomExperimentGroup}`
-      );
+      log.debug(`Using randomly selected experiment group: ${randomExperimentGroup}`);
       res.cookie('experimentGroup', randomExperimentGroup.toString());
       return randomExperimentGroup;
     }
@@ -85,7 +78,7 @@ export async function saveDonateData(req, res) {
     habitStrength: req.body.habitStrength,
     experimentGroup: ExperimentGroup.fromObject(req.body.experimentGroup),
   };
-  console.log('Hier die Daten des Habits die an die DB weitergeleitet werden:');
+  log.debug('Hier die Daten des Habits die an die DB weitergeleitet werden:');
   console.log(data);
 
   try {
@@ -97,27 +90,18 @@ export async function saveDonateData(req, res) {
       : `${basepath}/`;
 
     console.log('Cookies empfangen:', req.cookies);
-    console.log(
-      `Prüfe Cookie 'demographicsCompleted': Wert ist "${req.cookies.demographicsCompleted}"`
-    );
+    log.debug(`Prüfe Cookie 'demographicsCompleted': Wert ist "${req.cookies.demographicsCompleted}"`);
 
     if (req.cookies.demographicsCompleted === 'true') {
-      console.log(
-        'Entscheidung: Cookie ist gesetzt. Leite weiter zur Dankesseite.'
-      );
+      log.debug('Entscheidung: Cookie ist gesetzt. Leite weiter zur Dankesseite.');
       res.redirect(`${normalizedBasepath}${redirectLang}/thanks`);
     } else {
-      console.log(
-        'Entscheidung: Cookie ist NICHT gesetzt oder falsch. Leite weiter zur Umfrage.'
-      );
+      log.debug('Entscheidung: Cookie ist NICHT gesetzt oder falsch. Leite weiter zur Umfrage.');
       res.redirect(`${normalizedBasepath}${redirectLang}/survey/1`);
     }
   } catch (error) {
     console.log('[donateController] Save failure context:', { data, userId });
-    console.error(
-      '[donateController] Fehler beim Speichern der Spendendaten:',
-      error
-    );
+    log.error({ err: error }, '[donateController] error');
     res.status(500).json({ error: 'Fehler beim Speichern der Daten.' });
   }
 }

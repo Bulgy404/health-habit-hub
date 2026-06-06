@@ -1,5 +1,8 @@
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'profileRouter' });
 
 export function createProfileRouter({ db } = {}) {
   const router = express.Router();
@@ -60,7 +63,7 @@ export function createProfileRouter({ db } = {}) {
       const { _id, ...rest } = profile;
       res.json(rest);
     } catch (err) {
-      console.error('[profileRouter] Error in GET /:', err);
+      log.error({ err: err }, '[profileRouter] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -140,7 +143,7 @@ export function createProfileRouter({ db } = {}) {
       const { _id, ...rest } = profile;
       res.json(rest);
     } catch (err) {
-      console.error('[profileRouter] Error in POST /:', err);
+      log.error({ err: err }, '[profileRouter] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

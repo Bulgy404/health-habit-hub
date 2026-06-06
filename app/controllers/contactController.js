@@ -2,8 +2,11 @@ import { getLanguageMessages } from '../utils/localization.js';
 import nodemailer from 'nodemailer';
 import { config } from '../utils/config.js';
 import fetch from 'node-fetch';
+import { logger } from '../utils/logger.js';
 
 // POST Handler: Processes Contact Form Submission
+const log = logger.child({ module: 'contactController' });
+
 export async function handleContactForm(req, res) {
   const { name, email, subject, message } = req.body;
   const recaptchaToken = req.body['g-recaptcha-response'];
@@ -28,15 +31,15 @@ export async function handleContactForm(req, res) {
     const recaptchaData = await recaptchaResponse.json();
 
     if (!recaptchaData.success) {
-      console.error('❌ reCAPTCHA verification failed:', recaptchaData);
+      log.error({ err: recaptchaData }, '❌ reCAPTCHA verification failed:');
       return res.status(400).json({
         error:
           'reCAPTCHA-Verifizierung fehlgeschlagen. Bitte versuchen Sie es erneut.',
       });
     }
-    console.log('✅ reCAPTCHA verification passed for contact form');
+    log.debug('✅ reCAPTCHA verification passed for contact form');
   } catch (error) {
-    console.error('❌ Error verifying reCAPTCHA:', error);
+    log.error({ err: error }, '❌ Error verifying reCAPTCHA:');
     return res
       .status(500)
       .json({ error: 'Fehler bei der reCAPTCHA-Verifizierung.' });
@@ -78,7 +81,7 @@ ${message}
     await transporter.sendMail(mailOptions);
     res.json({ status: 'ok', message: 'Message sent successfully.' });
   } catch (error) {
-    console.error('Error sending email:', error);
+    log.error({ err: error }, 'Error sending email:');
     res.status(500).json({
       error:
         'There was an error while sending your message. Please try again later.',

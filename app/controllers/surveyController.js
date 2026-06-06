@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 import { connect } from '../models/survey.js';
 
 async function getSurveyDb(req) {
@@ -5,17 +6,17 @@ async function getSurveyDb(req) {
   return injectedDb || connect();
 }
 
+const log = logger.child({ module: 'surveyController' });
+
 export async function renderSurvey(req, res) {
   try {
     const db = await getSurveyDb(req);
     const surveyId = req.params.id;
-    console.log(
-      `Attempting to find survey with id: "${surveyId}" (Type: ${typeof surveyId})`
-    );
+    log.debug(`Attempting to find survey with id: "${surveyId}" (Type: ${typeof surveyId})`);
 
     const survey = await db.collection('surveys').findOne({ id: surveyId });
     if (!survey) {
-      console.error(`Survey with id "${surveyId}" not found in MongoDB.`);
+      log.error(`Survey with id "${surveyId}" not found in MongoDB.`);
       return res.status(404).json({ error: 'Survey not found' });
     }
 
@@ -60,7 +61,7 @@ export async function submitSurvey(req, res) {
       : `${basepath}/`;
     res.redirect(`${normalizedBasepath}${req.lang}/thanks`);
   } catch (err) {
-    console.error('[route] Error:', err);
+    log.error({ err: err }, 'unhandled route error');
     res.status(500).json({ error: 'Server error' });
   }
 }

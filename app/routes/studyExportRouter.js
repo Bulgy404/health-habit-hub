@@ -1,11 +1,14 @@
 // app/routes/studyExportRouter.js
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
+import { logger } from '../utils/logger.js';
 import {
   buildSrhiCsv,
   buildDailyLogsCsv,
   buildDropoutCsv,
 } from '../services/exportService.js';
+
+const log = logger.child({ module: 'studyExportRouter' });
 
 export function createStudyExportRouter({ db } = {}) {
   const router = express.Router({ mergeParams: true });
@@ -32,7 +35,7 @@ export function createStudyExportRouter({ db } = {}) {
       zip.addFile('dropout.csv', Buffer.from(dropoutCsv, 'utf8'));
       res.end(zip.toBuffer());
     } catch (err) {
-      console.error('[export] GET /:', err);
+      log.error({ err: err }, '[export] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

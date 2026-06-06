@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 import express from 'express';
 
 /**
@@ -9,6 +10,8 @@ import express from 'express';
  *   DELETE /api/v1/kb/:filename    — delete a PDF
  *   POST   /api/v1/kb/reindex      — force re-index
  */
+const log = logger.child({ module: 'kbRouter' });
+
 export function createKbRouter({ apiServiceUrl } = {}) {
   const router = express.Router();
   const serviceUrl =
@@ -21,7 +24,7 @@ export function createKbRouter({ apiServiceUrl } = {}) {
       const data = await upstream.json();
       res.status(upstream.status).json(data);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(502).json({ error: 'Knowledge base service unavailable' });
     }
   });
@@ -35,7 +38,7 @@ export function createKbRouter({ apiServiceUrl } = {}) {
       const data = await upstream.json();
       res.status(upstream.status).json(data);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(502).json({ error: 'Knowledge base service unavailable' });
     }
   });
@@ -56,7 +59,7 @@ export function createKbRouter({ apiServiceUrl } = {}) {
       const data = await upstream.json();
       res.status(upstream.status).json(data);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(502).json({ error: 'Knowledge base service unavailable' });
     }
   });
@@ -71,7 +74,7 @@ export function createKbRouter({ apiServiceUrl } = {}) {
       const data = await upstream.json();
       res.status(upstream.status).json(data);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(502).json({ error: 'Knowledge base service unavailable' });
     }
   });

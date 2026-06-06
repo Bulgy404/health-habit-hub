@@ -1,11 +1,14 @@
 import { createHash } from 'node:crypto';
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Compute the same Redis cache key that API-service/routers/recommend.py uses.
  * Key: recommend:{SHA256(user_id||goal)}
  */
+const log = logger.child({ module: 'recommendationsRouter' });
+
 function cacheKey(userId, goal) {
   return `recommend:${createHash('sha256').update(`${userId}||${goal}`).digest('hex')}`;
 }
@@ -30,7 +33,7 @@ export function createRecommendationsRouter({
       await client.connect();
       return client;
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       return null;
     }
   }
@@ -82,13 +85,13 @@ export function createRecommendationsRouter({
           await redis.del(key);
         }
       } catch (err) {
-        console.error('[route] Error:', err);
+        log.error({ err: err }, 'unhandled route error');
         // Redis failure is non-fatal
       }
 
       return res.status(201).json({ ok: true });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       return res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -141,7 +144,7 @@ export function createRecommendationsRouter({
 
       return res.json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       return res.status(500).json({ error: 'Internal server error' });
     }
   });

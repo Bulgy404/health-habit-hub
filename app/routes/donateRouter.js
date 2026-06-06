@@ -7,6 +7,9 @@ import {
   showDonateForm,
 } from '../controllers/donateController.js';
 import { config } from '../utils/config.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'donateRouter' });
 
 const router = express.Router();
 

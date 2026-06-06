@@ -14,10 +14,13 @@ import neo4j from 'neo4j-driver';
 import { randomUUID } from 'node:crypto';
 import { escapeStringLiteral } from './translate.js';
 import { ExperimentalSetting, Donation } from '../models/donation.js';
+import { logger } from './logger.js';
 
 // ---------------------------------------------------------------------------
 // RDF namespace constants — defined once at module level (not per-call).
 // ---------------------------------------------------------------------------
+const log = logger.child({ module: 'Neo4jDatabase' });
+
 const HHH_NS = 'http://example.com/hhh#';
 
 /** Build a full IRI reference from a local name in the hhh namespace. */
@@ -177,9 +180,7 @@ class Neo4jDbClient {
     const status =
       first.terminationStatus || first['terminationStatus'] || 'UNKNOWN';
     if (status !== 'OK') {
-      console.error(
-        `[n10s] Import failed — label: ${label}, status: ${status}, payload (first 200 chars): ${payload.slice(0, 200)}`
-      );
+      log.error(`[n10s] Import failed — label: ${label}, status: ${status}, payload (first 200 chars): ${payload.slice(0, 200)}`);
     }
     return status === 'OK';
   }

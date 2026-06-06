@@ -4,6 +4,9 @@ import { makeGetDb } from '../utils/getDb.js';
 import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { COLLECTION_DEVICE_TOKENS } from '../services/notificationService.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'participantRouter' });
 
 export function createParticipantRouter({ db } = {}) {
   const router = express.Router();
@@ -86,7 +89,7 @@ export function createParticipantRouter({ db } = {}) {
         }))
       );
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -149,7 +152,7 @@ export function createParticipantRouter({ db } = {}) {
 
       res.json({ ok: true });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

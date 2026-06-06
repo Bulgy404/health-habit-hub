@@ -1,11 +1,14 @@
 // app/routes/srhiRouter.js
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
+import { logger } from '../utils/logger.js';
 import {
   getDueWindows,
   submitSrhi,
   getTrajectory,
 } from '../services/srhiService.js';
+
+const log = logger.child({ module: 'srhiRouter' });
 
 export function createSrhiRouter({ db } = {}) {
   const router = express.Router();
@@ -17,7 +20,7 @@ export function createSrhiRouter({ db } = {}) {
       const due = await getDueWindows({ db: database, userId: req.user.sub });
       res.json(due);
     } catch (err) {
-      console.error('[srhi] GET /due:', err);
+      log.error({ err: err }, '[srhi] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -45,7 +48,7 @@ export function createSrhiRouter({ db } = {}) {
           .json({ error: 'SRHI window not found or already submitted' });
       res.status(201).json(result);
     } catch (err) {
-      console.error('[srhi] POST:', err);
+      log.error({ err: err }, '[srhi] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -60,7 +63,7 @@ export function createSrhiRouter({ db } = {}) {
       });
       res.json(trajectory);
     } catch (err) {
-      console.error('[srhi] GET /trajectory:', err);
+      log.error({ err: err }, '[srhi] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
