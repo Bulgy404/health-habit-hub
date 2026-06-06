@@ -13,6 +13,9 @@ import { createParticipantsRouter } from './admin/participantsRouter.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { ROLES } from '../middleware/auth.js';
 import { createProfileFieldDefinitionsAdminRouter } from './profileFieldDefinitionsRouter.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'adminRouter' });
 
 const DEFAULT_SETTINGS = [{ key: 'token_card_format', value: 'both' }];
 
@@ -132,7 +135,7 @@ export function createAdminRouter({
         const result = await getSettings({ db: database });
         res.json(result);
       } catch (err) {
-        console.error('[route] Error:', err);
+        log.error({ err: err }, 'unhandled route error');
         res.status(500).json({ error: 'Internal server error' });
       }
     }
@@ -213,7 +216,7 @@ export function createAdminRouter({
       }
       res.json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -302,7 +305,7 @@ export function createAdminRouter({
       });
       res.send(csv);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -386,7 +389,7 @@ export function createAdminRouter({
       });
       res.json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -435,7 +438,7 @@ export function createAdminRouter({
       const sessions = await kc.listSessions();
       res.json(sessions);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -487,7 +490,7 @@ export function createAdminRouter({
       await kc.revokeSession(sessionId);
       res.json({ ok: true });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

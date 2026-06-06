@@ -1,5 +1,8 @@
 import { loadMarkdown } from '../utils/markdown.js';
 import { getLanguageMessages } from '../utils/localization.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'privacyController' });
 
 export async function renderPrivacyPolicy(req, res, next) {
   try {
@@ -11,7 +14,7 @@ export async function renderPrivacyPolicy(req, res, next) {
       content: html,
     });
   } catch (err) {
-    console.error('Error rendering privacy policy:', err);
+    log.error({ err: err }, 'Error rendering privacy policy:');
     next(err);
   }
 }

@@ -1,12 +1,15 @@
 // app/routes/cuePoolRouter.js
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
+import { logger } from '../utils/logger.js';
 import {
   createCue,
   listCues,
   deleteCue,
   importCues,
 } from '../services/cuePoolService.js';
+
+const log = logger.child({ module: 'cuePoolRouter' });
 
 export function createCuePoolRouter({ db } = {}) {
   const router = express.Router();
@@ -25,7 +28,7 @@ export function createCuePoolRouter({ db } = {}) {
       });
       res.json(result);
     } catch (err) {
-      console.error('[cue-pools] GET /:', err);
+      log.error({ err: err }, '[cue-pools] GET /:');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -49,7 +52,7 @@ export function createCuePoolRouter({ db } = {}) {
       });
       res.status(201).json(result);
     } catch (err) {
-      console.error('[cue-pools] POST /:', err);
+      log.error({ err: err }, '[cue-pools] POST /:');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -65,7 +68,7 @@ export function createCuePoolRouter({ db } = {}) {
       const result = await importCues({ db: database, rows: cues });
       res.status(201).json(result);
     } catch (err) {
-      console.error('[cue-pools] POST /import:', err);
+      log.error({ err: err }, '[cue-pools] POST /import:');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -78,7 +81,7 @@ export function createCuePoolRouter({ db } = {}) {
         return res.status(404).json({ error: 'Cue not found' });
       res.json({ deleted: true });
     } catch (err) {
-      console.error('[cue-pools] DELETE /:id:', err);
+      log.error({ err: err }, '[cue-pools] DELETE /:id:');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

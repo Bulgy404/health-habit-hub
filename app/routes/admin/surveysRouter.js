@@ -2,10 +2,13 @@ import express from 'express';
 import { randomUUID } from 'node:crypto';
 import { ObjectId } from 'mongodb';
 import { makeGetDb } from '../../utils/getDb.js';
+import { logger } from '../../utils/logger.js';
 import {
   normalizeSurveyTargetMode,
   sanitizeSurveyTargeting,
 } from '../../utils/surveyTargeting.js';
+
+const log = logger.child({ module: 'surveysRouter' });
 
 export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
   const router = express.Router();
@@ -109,7 +112,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         }))
       );
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -151,7 +154,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         assignedGroups: doc.assignedGroups,
       });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -252,7 +255,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
       await database.collection('surveys').updateOne({ id }, { $set: update });
       res.json({ ok: true, id });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -335,7 +338,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
       }
       res.json({ ok: true, id, status });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -443,7 +446,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         assignedGroups: targeting.assignedGroups,
       });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -474,7 +477,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         }))
       );
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -508,7 +511,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         updatedAt: doc.updatedAt || doc.createdAt || null,
       });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -550,7 +553,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         slug: slug || null,
       });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -588,7 +591,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         .updateOne({ _id: oid }, { $set: update });
       res.json({ ok: true, id });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -610,7 +613,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
       }
       res.json({ ok: true, slug, active });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -649,7 +652,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
       await database.collection('questionnaires').deleteOne({ _id: oid });
       res.json({ ok: true, id, deleted: true });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

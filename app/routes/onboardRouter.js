@@ -3,6 +3,9 @@ import { randomUUID, randomBytes } from 'node:crypto';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import { ROLES } from '../middleware/auth.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'onboardRouter' });
 
 const onboardRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
@@ -79,7 +82,7 @@ export function createOnboardRouter({ keycloak } = {}) {
         password,
       });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       if (String(err?.message || '').includes('Keycloak create user failed')) {
         return res
           .status(502)

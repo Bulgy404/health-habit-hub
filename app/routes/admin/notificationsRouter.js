@@ -1,10 +1,13 @@
 import express from 'express';
 import { makeGetDb } from '../../utils/getDb.js';
+import { logger } from '../../utils/logger.js';
 import {
   getFirebaseMessaging,
   sendStudyNotification,
   COLLECTION_SCHEDULED,
 } from '../../services/notificationService.js';
+
+const log = logger.child({ module: 'notificationsRouter' });
 
 export function createNotificationsRouter({ db } = {}) {
   const router = express.Router();
@@ -67,7 +70,7 @@ export function createNotificationsRouter({ db } = {}) {
 
       res.json(result);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -157,7 +160,7 @@ export function createNotificationsRouter({ db } = {}) {
 
       res.status(201).json({ id: result.insertedId.toString() });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -196,7 +199,7 @@ export function createNotificationsRouter({ db } = {}) {
         }))
       );
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -241,7 +244,7 @@ export function createNotificationsRouter({ db } = {}) {
 
       res.json({ ok: true });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

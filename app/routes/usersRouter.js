@@ -1,5 +1,8 @@
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'usersRouter' });
 
 const SUPPORTED_LANGUAGES = ['en', 'de'];
 
@@ -20,7 +23,7 @@ export function createUsersRouter({ db } = {}) {
       // Return default without persisting
       return res.json({ userId, preferredLanguage: 'en' });
     } catch (err) {
-      console.error('[usersRouter] Error in GET /me:', err);
+      log.error({ err: err }, '[usersRouter] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -53,7 +56,7 @@ export function createUsersRouter({ db } = {}) {
       const { _id, ...rest } = doc;
       res.json(rest);
     } catch (err) {
-      console.error('[usersRouter] Error in PUT /me:', err);
+      log.error({ err: err }, '[usersRouter] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

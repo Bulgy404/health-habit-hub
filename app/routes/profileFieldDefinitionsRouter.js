@@ -1,5 +1,8 @@
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'profileFieldDefinitionsRouter' });
 
 const VALID_TYPES = ['text', 'number', 'date', 'select'];
 const FIELD_ID_RE = /^[a-z][a-z0-9_]*$/;
@@ -19,7 +22,7 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
       defs.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       res.json(defs.map(({ _id, ...d }) => d));
     } catch (err) {
-      console.error('[profileFieldDefs] GET /admin:', err);
+      log.error({ err: err }, '[profileFieldDefs] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -79,7 +82,7 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
       const { _id, ...rest } = doc;
       res.status(201).json(rest);
     } catch (err) {
-      console.error('[profileFieldDefs] POST /admin:', err);
+      log.error({ err: err }, '[profileFieldDefs] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -126,7 +129,7 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
       const { _id, ...rest } = result;
       res.json(rest);
     } catch (err) {
-      console.error('[profileFieldDefs] PUT /admin/:fieldId:', err);
+      log.error({ err: err }, '[profileFieldDefs] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -143,7 +146,7 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
         return res.status(404).json({ error: 'Not found' });
       res.json({ ok: true });
     } catch (err) {
-      console.error('[profileFieldDefs] DELETE /admin/:fieldId:', err);
+      log.error({ err: err }, '[profileFieldDefs] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -166,7 +169,7 @@ export function createProfileFieldDefinitionsPublicRouter({ db } = {}) {
       defs.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
       res.json(defs.map(({ _id, ...d }) => d));
     } catch (err) {
-      console.error('[profileFieldDefs] GET /public:', err);
+      log.error({ err: err }, '[profileFieldDefs] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

@@ -1,4 +1,7 @@
+import { logger } from '../utils/logger.js';
 import { getLanguageMessages } from '../utils/localization.js';
+
+const log = logger.child({ module: 'demoController' });
 
 export function renderDemoPage(req, res) {
   res.json({

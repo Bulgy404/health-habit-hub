@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 import { countHabitsByUser } from '../db/adminQueries.js';
 
 /**
@@ -7,6 +8,8 @@ import { countHabitsByUser } from '../db/adminQueries.js';
  * @param {Array} recDocs - Recommendation log documents
  * @returns {Array} Sorted timeline events
  */
+const log = logger.child({ module: 'adminStatsService' });
+
 function buildTimeline(participant, surveyResponses, recDocs) {
   const timeline = [];
   if (participant.enrolledAt) {
@@ -59,7 +62,7 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
     try {
       habitsCount = await countHabitsByUser(neo4jRun, id);
     } catch (err) {
-      console.error('[adminStatsService] Neo4j error:', err);
+      log.error({ err: err }, '[adminStatsService] error');
       // Neo4j unavailable; habitsCount stays 0
     }
   } else {

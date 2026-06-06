@@ -1,10 +1,13 @@
 import express from 'express';
 import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
+import { logger } from '../utils/logger.js';
 import {
   mergeUserAndHabits,
   createSubmissionWithScores,
 } from '../db/userQueries.js';
+
+const log = logger.child({ module: 'questionnaireResponsesRouter' });
 
 export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
@@ -130,12 +133,12 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
 
       // Sync to Neo4j — non-blocking: errors are logged but never surface to the caller
       syncUserGraph(userId, questionnaireSlug, answers).catch((err) => {
-        console.error('[questionnaire-responses] neo4j sync error:', err);
+        log.error({ err: err }, '[questionnaire-responses] neo4j sync error:');
       });
 
       res.status(201).json({ ok: true });
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -172,7 +175,7 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       // Strip internal MongoDB _id from response
       res.json(responses.map(({ _id, ...rest }) => rest));
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -226,7 +229,7 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       const { _id, ...responseData } = responses[0];
       res.json(responseData);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -254,7 +257,7 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       const { _id, ...responseData } = responses[0];
       res.json(responseData);
     } catch (err) {
-      console.error('[route] Error:', err);
+      log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

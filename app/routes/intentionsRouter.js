@@ -9,6 +9,9 @@ import {
 } from '../services/intentionService.js';
 import { upsertLog, getLogs } from '../services/dailyLogService.js';
 import { generateWindows } from '../services/srhiService.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'intentionsRouter' });
 
 export function createIntentionsRouter({ db } = {}) {
   const router = express.Router();
@@ -23,7 +26,7 @@ export function createIntentionsRouter({ db } = {}) {
       });
       res.json(intentions);
     } catch (err) {
-      console.error('[intentions] GET /:', err);
+      log.error({ err: err }, '[intentions] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -76,7 +79,7 @@ export function createIntentionsRouter({ db } = {}) {
       });
       res.status(201).json(result);
     } catch (err) {
-      console.error('[intentions] POST /:', err);
+      log.error({ err: err }, '[intentions] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -100,7 +103,7 @@ export function createIntentionsRouter({ db } = {}) {
         return res.status(404).json({ error: 'Intention not found' });
       res.json({ updated: true });
     } catch (err) {
-      console.error('[intentions] PATCH /:id/status:', err);
+      log.error({ err: err }, '[intentions] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -117,7 +120,7 @@ export function createIntentionsRouter({ db } = {}) {
       });
       res.json(logs);
     } catch (err) {
-      console.error('[intentions] GET /:id/logs:', err);
+      log.error({ err: err }, '[intentions] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -139,7 +142,7 @@ export function createIntentionsRouter({ db } = {}) {
       });
       res.status(201).json({ logged: true });
     } catch (err) {
-      console.error('[intentions] POST /:id/logs:', err);
+      log.error({ err: err }, '[intentions] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

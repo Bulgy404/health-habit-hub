@@ -1,5 +1,8 @@
 import express from 'express';
 import { getHabitGraph, getHabitBubbleGraph } from '../../db/habitQueries.js';
+import { logger } from '../../utils/logger.js';
+
+const log = logger.child({ module: 'habitsGraphRouter' });
 
 const DIMENSION_LABELS = {
   TIME: 'Time',
@@ -141,7 +144,7 @@ export function createHabitsGraphRouter({ queryNeo4j, getDb } = {}) {
 
       res.json({ nodes, edges });
     } catch (err) {
-      console.error('[route] GET /habits/graph error:', err);
+      log.error({ err: err }, '[route] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -207,7 +210,7 @@ export function createHabitsGraphRouter({ queryNeo4j, getDb } = {}) {
 
       res.json({ dimensions });
     } catch (err) {
-      console.error('[route] GET /habits/bubble-graph error:', err);
+      log.error({ err: err }, '[route] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

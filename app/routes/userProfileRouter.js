@@ -3,6 +3,9 @@ import neo4j from 'neo4j-driver';
 import { rateLimit } from 'express-rate-limit';
 import { makeGetDb } from '../utils/getDb.js';
 import { setUserProfileProperties } from '../db/userQueries.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'userProfileRouter' });
 
 const serviceRateLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -46,7 +49,7 @@ export function createUserProfileServiceRouter({ db } = {}) {
       const { _id, ...rest } = doc;
       res.json(rest);
     } catch (err) {
-      console.error('[userProfileRouter] GET /service/:userId:', err);
+      log.error({ err: err }, '[userProfileRouter] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -130,12 +133,12 @@ export function createUserProfileRouter({ db, neo4jRun } = {}) {
 
       // Fire-and-forget Neo4j sync
       setUserProfileProperties(queryNeo4j, userId, converted).catch((err) =>
-        console.error('[userProfileRouter] Neo4j sync error:', err)
+        log.error({ err: err }, '[userProfileRouter] error')
       );
 
       res.json({ ok: true });
     } catch (err) {
-      console.error('[userProfileRouter] POST /:', err);
+      log.error({ err: err }, '[userProfileRouter] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -150,7 +153,7 @@ export function createUserProfileRouter({ db, neo4jRun } = {}) {
       const { _id, ...rest } = doc;
       res.json(rest);
     } catch (err) {
-      console.error('[userProfileRouter] GET /:', err);
+      log.error({ err: err }, '[userProfileRouter] error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

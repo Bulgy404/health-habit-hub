@@ -1,5 +1,8 @@
 import express from 'express';
 import { timingSafeEqual } from 'node:crypto';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'internalRouter' });
 
 export function createInternalRouter({ broadcast, internalSecret } = {}) {
   const router = express.Router();
@@ -9,9 +12,7 @@ export function createInternalRouter({ broadcast, internalSecret } = {}) {
   router.use((req, res, next) => {
     if (!secret) {
       // No secret configured: log a warning and deny by default (fail-secure)
-      console.warn(
-        '[internal] INTERNAL_API_SECRET is not set — rejecting request'
-      );
+      log.warn('[internal] INTERNAL_API_SECRET is not set — rejecting request');
       return res.status(403).json({ error: 'Forbidden' });
     }
     const provided = req.headers['x-internal-secret'];

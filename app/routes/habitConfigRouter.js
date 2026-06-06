@@ -3,6 +3,9 @@ import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
 import { resolveHabitConfig } from '../services/habitConfigService.js';
 import { SRHI_ITEMS } from '../utils/srhi.js';
+import { logger } from '../utils/logger.js';
+
+const log = logger.child({ module: 'habitConfigRouter' });
 
 export function createHabitConfigRouter({ db } = {}) {
   const router = express.Router();
@@ -17,7 +20,7 @@ export function createHabitConfigRouter({ db } = {}) {
       });
       res.json({ ...config, srhiItems: SRHI_ITEMS });
     } catch (err) {
-      console.error('[habit-config] GET /:', err);
+      log.error({ err: err }, '[habit-config] GET /:');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
