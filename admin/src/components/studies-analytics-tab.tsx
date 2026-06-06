@@ -34,10 +34,20 @@ interface DropoutPoint {
   cumulative: number;
 }
 
+interface QuestionnaireCompletionRate {
+  questionnaireId: string;
+  slug: string;
+  title: string;
+  enrolled: number;
+  completed: number;
+  rate: number;
+}
+
 interface AnalyticsData {
   weeklyActiveRate: WeeklyActiveRate[];
   srhiTrajectory: SrhiPoint[];
   dropoutCurve: DropoutPoint[];
+  questionnaireCompletionRates: QuestionnaireCompletionRate[];
 }
 
 const ANALYTICS_BASE = (studyId: string) =>
@@ -200,6 +210,30 @@ export function AnalyticsTab({
                 <span className={styles.dropoutDate}>{p.date}</span>
                 <span className={styles.dropoutGroup}>{groupLabel(p.groupId)}</span>
                 <span className={styles.dropoutCount}>cumulative: {p.cumulative}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className={styles.analyticsSection}>
+        <p className={styles.analyticsSectionTitle}>Questionnaire Completion</p>
+        <p className={styles.analyticsSectionDesc}>Share of enrolled participants who submitted each questionnaire.</p>
+        {(!data.questionnaireCompletionRates || data.questionnaireCompletionRates.length === 0) ? (
+          <div className={styles.emptyState}>No questionnaires assigned to this study.</div>
+        ) : (
+          <div className={styles.barChart}>
+            {data.questionnaireCompletionRates.map((q, i) => (
+              <div key={q.questionnaireId} className={styles.barRow}>
+                <span className={styles.barLabel}>{q.title}</span>
+                <div className={styles.barTrack}>
+                  <div
+                    className={styles.barFill}
+                    style={{ width: `${q.rate * 100}%`, background: GROUP_COLORS[i % GROUP_COLORS.length] }}
+                  />
+                </div>
+                <span className={styles.barValue}>{Math.round(q.rate * 100)}%</span>
+                <span className={styles.barSub}>({q.completed}/{q.enrolled})</span>
               </div>
             ))}
           </div>

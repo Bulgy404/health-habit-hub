@@ -4,6 +4,9 @@ import { ObjectId } from 'mongodb';
 const ENROLLMENTS = 'enrollments';
 const DAILY_LOGS = 'daily_behavior_logs';
 const SRHI = 'srhi_responses';
+const FORM_RESPONSES = 'form_responses';
+const STUDIES = 'studies';
+const QUESTIONNAIRES = 'questionnaires';
 
 /**
  * Return per-group weekly active rate: percentage of enrolled participants with at least one log in the last 7 days.
@@ -137,4 +140,63 @@ export async function getDropoutCurve({ db, studyId }) {
     }
   }
   return result.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Return completion rates for each questionnaire assigned to a study.
+ *
+ * For every questionnaire linked to the study, counts how many enrolled
+ * participants have at least one response.
+ *
+ * @param {{ db: object, studyId: string }} deps
+ * @returns {Promise<Array<{ questionnaireId: string, slug: string, title: string, enrolled: number, completed: number, rate: number }>>}
+ */
+export async function getQuestionnaireCompletionRates({ db, studyId }) {
+  let oid;
+  try {
+    oid = new ObjectId(studyId);
+  } catch {
+    return [];
+  }
+
+  const study = await db.collection(STUDIES).findOne({ _id: oid });
+  if (!study || !Array.isArray(study.questionnaires) || study.questionnaires.length === 0) {
+    return [];
+  }
+
+  const questionnaireIds = study.questionnaires.map((id) =>
+    id instanceof ObjectId ? id : new ObjectId(id)
+  );
+
+  const [questionnaires, enrollments] = await Promise.all([
+    db.collection(QUESTIONNAIRES).find({ _id: { $in: questionnaireIds } }).toArray(),
+    db.collection(ENROLLMENTS).find({ studyId: oid }).toArray(),
+  ]);
+
+  const enrolledUserIds = enrollments.map((e) => e.userId);
+  const enrolled = enrolledUserIds.length;
+  if (enrolled === 0 || questionnaires.length === 0) return [];
+
+  return Promise.all(
+    questionnaires.map(async (q) => {
+      const slug = q.slug ?? q._id.toString();
+      const uniqueRespondents = await db
+        .collection(FORM_RESPONSES)
+        .aggregate([
+          { $match: { userId: { $in: enrolledUserIds }, questionnaireSlug: slug } },
+          { $group: { _id: '$userId' } },
+          { $count: 'n' },
+        ])
+        .toArray();
+      const completed = uniqueRespondents[0]?.n ?? 0;
+      return {
+        questionnaireId: q._id.toString(),
+        slug,
+        title: q.title ?? slug,
+        enrolled,
+        completed,
+        rate: enrolled > 0 ? completed / enrolled : 0,
+      };
+    })
+  );
 }

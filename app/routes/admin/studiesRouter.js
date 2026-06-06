@@ -20,6 +20,7 @@ import {
   getWeeklyActiveRate,
   getMeanSrhiTrajectory,
   getDropoutCurve,
+  getQuestionnaireCompletionRates,
 } from '../../services/studyAnalyticsService.js';
 
 const log = logger.child({ module: 'studiesRouter' });
@@ -302,13 +303,14 @@ export function createStudiesRouter({
   router.get('/studies/:id/analytics', async (req, res) => {
     try {
       const database = await getDb();
-      const [weeklyActiveRate, srhiTrajectory, dropoutCurve] =
+      const [weeklyActiveRate, srhiTrajectory, dropoutCurve, questionnaireCompletionRates] =
         await Promise.all([
           getWeeklyActiveRate({ db: database, studyId: req.params.id }),
           getMeanSrhiTrajectory({ db: database, studyId: req.params.id }),
           getDropoutCurve({ db: database, studyId: req.params.id }),
+          getQuestionnaireCompletionRates({ db: database, studyId: req.params.id }),
         ]);
-      res.json({ weeklyActiveRate, srhiTrajectory, dropoutCurve });
+      res.json({ weeklyActiveRate, srhiTrajectory, dropoutCurve, questionnaireCompletionRates });
     } catch (err) {
       log.error({ err: err }, '[studies] error');
       res.status(500).json({ error: 'Internal server error' });
