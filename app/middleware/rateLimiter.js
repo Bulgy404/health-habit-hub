@@ -1,20 +1,36 @@
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 
+function userOrIpKey(req) {
+  return req.user?.sub || ipKeyGenerator(req);
+}
+
 /**
- * Rate limiter: max 100 requests per 15 minutes per authenticated token (sub claim).
- * Falls back to IP address if no JWT sub is present (e.g., unauthenticated health endpoint).
+ * General API rate limiter: max 100 requests per 15 minutes per user/IP.
  */
 export const apiRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator(req) {
-    return req.user?.sub || ipKeyGenerator(req);
-  },
+  keyGenerator: userOrIpKey,
   handler(_req, res) {
-    res
-      .status(429)
-      .json({ error: 'Too many requests, please try again later.' });
+    res.status(429).json({ error: 'Too many requests, please try again later.' });
+  },
+});
+
+/**
+ * Strict rate limiter for habit share/donate: max 10 submissions per hour per user.
+ * The LLM pipeline is expensive; this prevents accidental or intentional flooding.
+ */
+export const habitShareLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+  handler(_req, res) {
+    res.status(429).json({
+      error: 'Habit donation rate limit exceeded. You can submit up to 10 habits per hour.',
+    });
   },
 });

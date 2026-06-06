@@ -5,8 +5,10 @@ import { SUPPORTED_LANGUAGES } from '../../utils/constants.js';
 import {
   getAllHabits,
   getPublicHabits,
+  getHabitAnnotationCounts,
   updateHabitAnnotation,
 } from '../../db/habitQueries.js';
+import { habitShareLimiter } from '../../middleware/rateLimiter.js';
 
 // Step 1: Call LibreTranslate with a 10-second timeout.
 // Returns the raw translated string, or null if the service is unavailable.
@@ -141,27 +143,12 @@ export function createHabitsCrudRouter({
 
   // GET /api/v1/habits
   // Returns all donated habits with translation and category fields.
+  // Annotation counts come from Neo4j Habit node properties — no MongoDB scan.
   // Optional ?lang=en|de adds a displayText convenience field.
   router.get('/', async (req, res) => {
     try {
       const { lang } = req.query;
-      const [records, database] = await Promise.all([
-        getAllHabits(queryNeo4j),
-        getDb(),
-      ]);
-
-      const annotations = await database
-        .collection('habit_annotations')
-        .find({})
-        .toArray();
-
-      const countsByHabit = {};
-      for (const ann of annotations) {
-        if (!countsByHabit[ann.habitId])
-          countsByHabit[ann.habitId] = { helpful: 0, iDoThis: 0 };
-        if (ann.type === 'helpful') countsByHabit[ann.habitId].helpful++;
-        if (ann.type === 'iDoThis') countsByHabit[ann.habitId].iDoThis++;
-      }
+      const records = await getAllHabits(queryNeo4j);
 
       const habits = records.map((r) => {
         const uuid = r.uuid || null;
@@ -173,7 +160,10 @@ export function createHabitsCrudRouter({
           translationDE: r.translationDE || null,
           category: r.category || 'Other',
           bcioClass: r.bcioClass || '',
-          annotationCounts: countsByHabit[uuid] || { helpful: 0, iDoThis: 0 },
+          annotationCounts: {
+            helpful: r.annotationsHelpful ?? 0,
+            iDoThis: r.annotationsIDoThis ?? 0,
+          },
         };
         if (lang === 'en') {
           habit.displayText = habit.translationEN || habit.original;
@@ -228,34 +218,20 @@ export function createHabitsCrudRouter({
    *               $ref: '#/components/schemas/Error'
    */
   // GET /api/v1/habits/public
-  // Returns anonymized habit list with annotation counts
+  // Returns anonymized habit list with annotation counts from Neo4j — no MongoDB scan.
   router.get('/public', async (req, res) => {
     try {
-      const database = await getDb();
-
       const records = await getPublicHabits(queryNeo4j);
-
-      const annotations = await database
-        .collection('habit_annotations')
-        .find({})
-        .toArray();
-
-      const countsByHabit = {};
-      for (const ann of annotations) {
-        if (!countsByHabit[ann.habitId])
-          countsByHabit[ann.habitId] = { helpful: 0, iDoThis: 0 };
-        if (ann.type === 'helpful') countsByHabit[ann.habitId].helpful++;
-        if (ann.type === 'iDoThis') countsByHabit[ann.habitId].iDoThis++;
-      }
-
       const habits = records.map((r) => ({
         id: r.id,
         name: r.name,
         category: r.category ? String(r.category).replace('hhh__', '') : null,
         bcioClass: r.bcioClass || null,
-        annotationCounts: countsByHabit[r.id] || { helpful: 0, iDoThis: 0 },
+        annotationCounts: {
+          helpful: r.annotationsHelpful ?? 0,
+          iDoThis: r.annotationsIDoThis ?? 0,
+        },
       }));
-
       res.json(habits);
     } catch (err) {
       console.error('[route] Error:', err);
@@ -370,17 +346,8 @@ export function createHabitsCrudRouter({
         await updateHabitAnnotation(queryNeo4j, habitId, type, delta);
       }
 
-      const all = await database
-        .collection('habit_annotations')
-        .find({ habitId })
-        .toArray();
-
-      const counts = { helpful: 0, iDoThis: 0 };
-      for (const ann of all) {
-        if (ann.type === 'helpful') counts.helpful++;
-        if (ann.type === 'iDoThis') counts.iDoThis++;
-      }
-
+      // Read authoritative counts from Neo4j (single source of truth after mirror).
+      const counts = await getHabitAnnotationCounts(queryNeo4j, habitId);
       res.json({ habitId, annotationCounts: counts });
     } catch (err) {
       console.error('[route] Error:', err);
@@ -500,8 +467,9 @@ export function createHabitsCrudRouter({
     }
   }
 
-  router.post('/share', handleShareHabit);
-  router.post('/donate', handleShareHabit);
+  // Strict per-user rate limit on habit donation (10 submissions per hour).
+  router.post('/share', habitShareLimiter, handleShareHabit);
+  router.post('/donate', habitShareLimiter, handleShareHabit);
 
   return router;
 }

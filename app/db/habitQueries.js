@@ -6,13 +6,22 @@
  * driver. This keeps Cypher strings out of route handlers and service layers.
  */
 
+// Neo4j returns Integer objects for integer properties; normalise them to JS numbers.
+function neoInt(val) {
+  if (val == null) return 0;
+  if (typeof val === 'object' && typeof val.toNumber === 'function') return val.toNumber();
+  return Number(val);
+}
+
 /**
- * Return all donated habits with translation fields.
+ * Return all donated habits with translation fields and Neo4j-mirrored annotation counts.
+ * Annotation counts come directly from Habit node properties (maintained by
+ * updateHabitAnnotation) — no MongoDB round-trip needed.
  * @param {Function} queryNeo4j
  * @returns {Promise<Array>}
  */
 export async function getAllHabits(queryNeo4j) {
-  return queryNeo4j(`
+  const rows = await queryNeo4j(`
     MATCH (h:Habit)
     OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(:Context)-[:MAPS_TO]->(b:BCIOConcept)
     WITH h,
@@ -24,18 +33,26 @@ export async function getAllHabits(queryNeo4j) {
            h.translationEN AS translationEN,
            h.translationDE AS translationDE,
            coalesce(bcioLabel, 'Other') AS category,
-           coalesce(bcioId, '')         AS bcioClass
+           coalesce(bcioId, '')         AS bcioClass,
+           coalesce(h.annotations_helpful, 0) AS annotationsHelpful,
+           coalesce(h.annotations_iDoThis, 0) AS annotationsIDoThis
   `);
+  return rows.map((r) => ({
+    ...r,
+    annotationsHelpful: neoInt(r.annotationsHelpful),
+    annotationsIDoThis: neoInt(r.annotationsIDoThis),
+  }));
 }
 
 /**
  * Return anonymized public habits (uuid + sentence, no personal data).
  * Includes seeded example habits so the explore graph is populated from day one.
+ * Annotation counts come directly from the Habit node — no MongoDB scan needed.
  * @param {Function} queryNeo4j
  * @returns {Promise<Array>}
  */
 export async function getPublicHabits(queryNeo4j) {
-  return queryNeo4j(`
+  const rows = await queryNeo4j(`
     MATCH (h:Habit)
     OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(:Context)-[:MAPS_TO]->(b:BCIOConcept)
     WITH h,
@@ -44,8 +61,15 @@ export async function getPublicHabits(queryNeo4j) {
     RETURN h.uuid AS id,
            h.sentence AS name,
            coalesce(bcioLabel, 'Other')  AS category,
-           coalesce(bcioId, '')          AS bcioClass
+           coalesce(bcioId, '')          AS bcioClass,
+           coalesce(h.annotations_helpful, 0) AS annotationsHelpful,
+           coalesce(h.annotations_iDoThis, 0) AS annotationsIDoThis
   `);
+  return rows.map((r) => ({
+    ...r,
+    annotationsHelpful: neoInt(r.annotationsHelpful),
+    annotationsIDoThis: neoInt(r.annotationsIDoThis),
+  }));
 }
 
 /**
@@ -115,6 +139,28 @@ export async function getUserHabits(queryNeo4j, userId) {
   `,
     { userId }
   );
+}
+
+/**
+ * Return the Neo4j-mirrored annotation counts for a single habit.
+ * Used by the annotate endpoint to return authoritative counts after a write,
+ * avoiding a full MongoDB collection scan.
+ * @param {Function} queryNeo4j
+ * @param {string} habitId
+ * @returns {Promise<{ helpful: number, iDoThis: number }>}
+ */
+export async function getHabitAnnotationCounts(queryNeo4j, habitId) {
+  const rows = await queryNeo4j(
+    `MATCH (h:Habit {uuid: $habitId})
+     RETURN coalesce(h.annotations_helpful, 0) AS helpful,
+            coalesce(h.annotations_iDoThis, 0)  AS iDoThis`,
+    { habitId }
+  );
+  const row = rows[0];
+  return {
+    helpful: neoInt(row?.helpful ?? 0),
+    iDoThis: neoInt(row?.iDoThis ?? 0),
+  };
 }
 
 /**

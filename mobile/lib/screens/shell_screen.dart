@@ -1,8 +1,12 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../config/app_config.dart';
+import '../core/dio_provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/offline_queue_service.dart';
 import '../services/push_notification_service.dart';
 
 /// The persistent bottom-navigation shell for the app.
@@ -39,7 +43,48 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _initNotifications());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initNotifications();
+      _watchConnectivity();
+    });
+  }
+
+  void _watchConnectivity() {
+    Connectivity().onConnectivityChanged.listen((results) {
+      if (results.any((r) => r != ConnectivityResult.none)) {
+        _drainOfflineQueue();
+      }
+    });
+  }
+
+  Future<void> _drainOfflineQueue() async {
+    final items = await offlineQueueService.drain();
+    if (items.isEmpty) return;
+
+    final dio = ref.read(dioProvider);
+    var succeeded = 0;
+
+    for (final payload in items) {
+      try {
+        await dio.post<Map<String, dynamic>>(
+          '${AppConfig.apiBaseUrl}/habits/share',
+          data: payload,
+        );
+        succeeded++;
+      } catch (_) {
+        await offlineQueueService.requeue(payload);
+      }
+    }
+
+    if (succeeded > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$succeeded habit${succeeded == 1 ? '' : 's'} submitted from offline queue',
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _initNotifications() async {
