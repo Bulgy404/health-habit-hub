@@ -39,8 +39,8 @@ export async function listCues({
   limit = 50,
 }) {
   const filter = {};
-  if (quality) filter.quality = quality;
-  if (language) filter.language = language;
+  if (quality) filter.quality = String(quality);
+  if (language) filter.language = String(language);
   const skip = (page - 1) * limit;
   const [docs, total] = await Promise.all([
     db.collection(COLLECTION).find(filter).skip(skip).limit(limit).toArray(),

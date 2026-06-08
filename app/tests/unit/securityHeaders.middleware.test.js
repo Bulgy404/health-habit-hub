@@ -43,7 +43,7 @@ test('securityHeaders sets Content-Security-Policy', () => {
   const csp = res._headers['Content-Security-Policy'];
   assert.ok(typeof csp === 'string', 'CSP header must be a string');
   assert.ok(csp.includes("default-src 'self'"), 'CSP must include default-src self');
-  assert.ok(csp.includes('https://unpkg.com'), 'CSP must allow unpkg.com for SurveyJS');
+  assert.ok(csp.split(/[;\s]+/).includes('https://unpkg.com'), 'CSP must allow unpkg.com for SurveyJS');
   assert.ok(csp.includes("object-src 'none'"), 'CSP must block object-src');
   assert.ok(csp.includes("frame-ancestors 'none'"), 'CSP must block framing');
 });
