@@ -10,8 +10,8 @@
 ## お問い合わせ
 
 Dipl.-Wi.-Ing. Felix Reinsch
-メールアドレス: [digital-health@tu-dresden.de](mailto:digital-health@tu-dresden.de)
-電話番号: [+49 351 463-37671](tel: +4935146337671)
+メールアドレス: digital-health@tu-dresden.de
+電話番号: +49 351 463-37671
 
 ## 免責事項
 
