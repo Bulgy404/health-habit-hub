@@ -253,7 +253,7 @@ test('Integration: submit SLIQ response → fetch by slug → verify answers mat
   const body = await getRes.json();
   assert.strictEqual(body.questionnaireSlug, 'sliq');
   assert.deepStrictEqual(body.answers, answers);
-  assert.ok(body.submitted_at, 'should have submitted_at');
+  assert.ok(body.submittedAt, 'should have submittedAt');
 });
 
 test('GET /questionnaire-responses/me — returns all responses ordered by most recent first', async () => {
@@ -279,7 +279,7 @@ test('GET /questionnaire-responses/me — returns all responses ordered by most 
     assert.strictEqual(r.userId, 'user-order-test');
   }
   // Most recent first: submitted_at should be non-increasing
-  const times = body.map((r) => new Date(r.submitted_at).getTime());
+  const times = body.map((r) => new Date(r.submittedAt).getTime());
   for (let i = 1; i < times.length; i++) {
     assert.ok(
       times[i] <= times[i - 1],
