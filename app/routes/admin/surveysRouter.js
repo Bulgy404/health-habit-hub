@@ -7,6 +7,15 @@ import {
   normalizeSurveyTargetMode,
   sanitizeSurveyTargeting,
 } from '../../utils/surveyTargeting.js';
+import { validate } from '../../middleware/validate.js';
+import {
+  createSurveySchema,
+  updateSurveySchema,
+  updateSurveyStatusSchema,
+  updateSurveyGroupsSchema,
+  createQuestionnaireSchema,
+  updateQuestionnaireSchema,
+} from '../../schemas/adminSchemas.js';
 
 const log = logger.child({ module: 'surveysRouter' });
 
@@ -118,12 +127,9 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
   });
 
   // POST /api/v1/admin/surveys
-  router.post('/surveys', async (req, res) => {
+  router.post('/surveys', validate(createSurveySchema), async (req, res) => {
     try {
       const { title, type, jsonSchema, assignedGroups, targetMode } = req.body;
-      if (!title || !type) {
-        return res.status(400).json({ error: 'title and type are required' });
-      }
       const targeting = sanitizeSurveyTargeting({
         type,
         targetMode,
@@ -218,7 +224,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
    *               $ref: '#/components/schemas/Error'
    */
   // PUT /api/v1/admin/surveys/:id
-  router.put('/surveys/:id', async (req, res) => {
+  router.put('/surveys/:id', validate(updateSurveySchema), async (req, res) => {
     try {
       const { id } = req.params;
       const { title, type, jsonSchema, assignedGroups, status, targetMode } =
@@ -320,15 +326,10 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
    *               $ref: '#/components/schemas/Error'
    */
   // PATCH /api/v1/admin/surveys/:id/status
-  router.patch('/surveys/:id/status', async (req, res) => {
+  router.patch('/surveys/:id/status', validate(updateSurveyStatusSchema), async (req, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
-      if (!['published', 'archived', 'draft'].includes(status)) {
-        return res.status(400).json({
-          error: "status must be 'published', 'archived', or 'draft'",
-        });
-      }
       const database = await getDb();
       const result = await database
         .collection('surveys')
@@ -406,19 +407,10 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
    *               $ref: '#/components/schemas/Error'
    */
   // PATCH /api/v1/admin/surveys/:id/groups
-  router.patch('/surveys/:id/groups', async (req, res) => {
+  router.patch('/surveys/:id/groups', validate(updateSurveyGroupsSchema), async (req, res) => {
     try {
       const { id } = req.params;
       const { groups } = req.body;
-      if (!Array.isArray(groups)) {
-        return res.status(400).json({ error: 'groups must be an array' });
-      }
-      const valid = ['G1', 'G2', 'G3', 'G4'];
-      if (groups.some((g) => !valid.includes(g))) {
-        return res
-          .status(400)
-          .json({ error: 'groups must contain only G1, G2, G3, G4' });
-      }
       const database = await getDb();
       const existing = await database.collection('surveys').findOne({ id });
       if (!existing) {
@@ -517,12 +509,9 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
   });
 
   // POST /api/v1/admin/questionnaires
-  router.post('/questionnaires', async (req, res) => {
+  router.post('/questionnaires', validate(createQuestionnaireSchema), async (req, res) => {
     try {
       const { slug, title, description, version, questions } = req.body;
-      if (!title) {
-        return res.status(400).json({ error: 'title is required' });
-      }
       const database = await getDb();
       if (slug) {
         const existing = await database
@@ -559,7 +548,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
   });
 
   // PUT /api/v1/admin/questionnaires/:id
-  router.put('/questionnaires/:id', async (req, res) => {
+  router.put('/questionnaires/:id', validate(updateQuestionnaireSchema), async (req, res) => {
     try {
       const { id } = req.params;
       let oid;

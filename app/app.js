@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import bodyParser from 'body-parser';
 import express from 'express';
+import { metricsMiddleware, register } from './middleware/metrics.js';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
@@ -28,6 +29,7 @@ import privacyRouter from './routes/privacyRouter.js';
 import accessibilityRouter from './routes/accessibilityRouter.js';
 
 const app = express();
+app.use(metricsMiddleware);
 app.use(securityHeaders);
 app.set('trust proxy', 1);
 const port = config.port;
@@ -204,4 +206,16 @@ if (!process.env.API_SERVICE_SECRET) {
 
 httpServer.listen(port, () => {
   console.log(`Server is running on http://app.localhost`);
+});
+
+// Internal-only metrics server — not exposed via Traefik.
+// Prometheus scrapes http://app:9091/metrics from the Docker network.
+const metricsApp = express();
+metricsApp.get('/metrics', async (_req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+});
+const metricsPort = process.env.METRICS_PORT ?? 9091;
+createServer(metricsApp).listen(metricsPort, () => {
+  console.log(`Metrics server is running on port ${metricsPort}`);
 });

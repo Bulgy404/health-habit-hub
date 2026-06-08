@@ -8,6 +8,8 @@ import {
   deleteCue,
   importCues,
 } from '../services/cuePoolService.js';
+import { validate } from '../middleware/validate.js';
+import { createCueSchema, importCuesSchema } from '../schemas/adminSchemas.js';
 
 const log = logger.child({ module: 'cuePoolRouter' });
 
@@ -33,14 +35,9 @@ export function createCuePoolRouter({ db } = {}) {
     }
   });
 
-  router.post('/', async (req, res) => {
+  router.post('/', validate(createCueSchema), async (req, res) => {
     try {
       const { text, quality, dimensions, domain, language } = req.body;
-      if (!text || !quality || !dimensions || !domain || !language) {
-        return res.status(400).json({
-          error: 'text, quality, dimensions, domain, language required',
-        });
-      }
       const database = await getDb();
       const result = await createCue({
         db: database,
@@ -58,12 +55,9 @@ export function createCuePoolRouter({ db } = {}) {
   });
 
   // POST /api/v1/admin/cue-pools/import
-  router.post('/import', async (req, res) => {
+  router.post('/import', validate(importCuesSchema), async (req, res) => {
     try {
       const { cues } = req.body;
-      if (!Array.isArray(cues)) {
-        return res.status(400).json({ error: 'cues must be an array' });
-      }
       const database = await getDb();
       const result = await importCues({ db: database, rows: cues });
       res.status(201).json(result);

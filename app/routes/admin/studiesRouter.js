@@ -22,6 +22,13 @@ import {
   getDropoutCurve,
   getQuestionnaireCompletionRates,
 } from '../../services/studyAnalyticsService.js';
+import { validate } from '../../middleware/validate.js';
+import {
+  createStudySchema,
+  updateStudySchema,
+  createStudyCodesSchema,
+  cueConfigSchema,
+} from '../../schemas/adminSchemas.js';
 
 const log = logger.child({ module: 'studiesRouter' });
 
@@ -53,17 +60,9 @@ export function createStudiesRouter({
   });
 
   // POST /api/v1/admin/studies — create a new study
-  router.post('/studies', async (req, res) => {
+  router.post('/studies', validate(createStudySchema), async (req, res) => {
     try {
       const { name, description, groups, questionnaires } = req.body;
-      if (!name || typeof name !== 'string') {
-        return res.status(400).json({ error: 'name is required' });
-      }
-      if (!Array.isArray(groups) || groups.length === 0) {
-        return res
-          .status(400)
-          .json({ error: 'groups must be a non-empty array' });
-      }
       const database = await getDb();
       const study = await createStudy({
         db: database,
@@ -103,7 +102,7 @@ export function createStudiesRouter({
   });
 
   // PUT /api/v1/admin/studies/:id — update a study
-  router.put('/studies/:id', async (req, res) => {
+  router.put('/studies/:id', validate(updateStudySchema), async (req, res) => {
     try {
       const database = await getDb();
       const result = await updateStudy({
@@ -121,15 +120,10 @@ export function createStudiesRouter({
   });
 
   // PATCH /api/v1/admin/studies/:id/groups/:groupId/cue-config
-  router.patch('/studies/:id/groups/:groupId/cue-config', async (req, res) => {
+  router.patch('/studies/:id/groups/:groupId/cue-config', validate(cueConfigSchema), async (req, res) => {
     try {
       const { cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits } =
         req.body;
-      if (!cueCount || !cueSource) {
-        return res
-          .status(400)
-          .json({ error: 'cueCount and cueSource are required' });
-      }
       const database = await getDb();
       const result = await updateGroupCueConfig({
         db: database,
@@ -194,28 +188,15 @@ export function createStudiesRouter({
   // ── Study code routes ─────────────────────────────────────────────────────
 
   // POST /api/v1/admin/studies/:id/codes — generate enrollment codes
-  router.post('/studies/:id/codes', async (req, res) => {
+  router.post('/studies/:id/codes', validate(createStudyCodesSchema), async (req, res) => {
     try {
       const { count, groupId, maxRedemptions, expiresAt } = req.body;
-      const parsedCount = parseInt(count, 10);
-      if (
-        !Number.isInteger(parsedCount) ||
-        parsedCount < 1 ||
-        parsedCount > 100
-      ) {
-        return res
-          .status(400)
-          .json({ error: 'count must be a positive integer ≤ 100' });
-      }
-      if (!groupId || typeof groupId !== 'string') {
-        return res.status(400).json({ error: 'groupId is required' });
-      }
       const database = await getDb();
       const result = await createCodes({
         db: database,
         studyId: req.params.id,
         groupId,
-        count: parsedCount,
+        count,
         maxRedemptions,
         expiresAt,
       });
