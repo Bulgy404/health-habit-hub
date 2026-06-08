@@ -51,7 +51,7 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       await database
         .collection('form_responses')
         .createIndex(
-          { userId: 1, questionnaireSlug: 1, submitted_at: -1 },
+          { userId: 1, questionnaireSlug: 1, submittedAt: -1 },
           { background: true }
         );
     } catch {
@@ -128,7 +128,7 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
         userId,
         questionnaireSlug,
         answers,
-        submitted_at: new Date(),
+        submittedAt: new Date(),
       });
 
       // Sync to Neo4j — non-blocking: errors are logged but never surface to the caller
@@ -169,7 +169,7 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       const responses = await database
         .collection('form_responses')
         .find({ userId: String(userId) })
-        .sort({ submitted_at: -1 })
+        .sort({ submittedAt: -1 })
         .toArray();
 
       // Strip internal MongoDB _id from response
@@ -219,7 +219,7 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       const responses = await database
         .collection('form_responses')
         .find({ userId, questionnaireSlug: slug })
-        .sort({ submitted_at: -1 })
+        .sort({ submittedAt: -1 })
         .limit(1)
         .toArray();
 
@@ -246,7 +246,7 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       const responses = await database
         .collection('form_responses')
         .find({ userId: String(userId), questionnaireSlug: String(slug) })
-        .sort({ submitted_at: -1 })
+        .sort({ submittedAt: -1 })
         .limit(1)
         .toArray();
 

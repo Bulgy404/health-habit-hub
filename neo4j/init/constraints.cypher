@@ -44,9 +44,11 @@ CREATE INDEX context_text_dim IF NOT EXISTS
 CREATE CONSTRAINT user_userId IF NOT EXISTS
   FOR (u:User) REQUIRE u.userId IS UNIQUE;
 
-// QuestionItem — shared across users, composite (id + questionnaireId) must be unique
-CREATE CONSTRAINT question_item_unique IF NOT EXISTS
-  FOR (qi:QuestionItem) REQUIRE (qi.id, qi.questionnaireId) IS NODE KEY;
+// QuestionItem — composite index on (id, questionnaireId) for fast MERGE lookups.
+// NODE KEY (composite uniqueness) requires Enterprise Edition — MERGE already
+// prevents duplicates at the application layer on Community Edition.
+CREATE INDEX question_item_idx IF NOT EXISTS
+  FOR (qi:QuestionItem) ON (qi.id, qi.questionnaireId);
 
 // Index for trajectory queries: find all submissions for a given questionnaire, ordered by time
 CREATE INDEX submission_timeline IF NOT EXISTS

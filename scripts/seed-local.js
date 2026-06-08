@@ -558,16 +558,33 @@ async function seedKeycloak() {
     console.log(`[keycloak] testuser created (id: ${userId})`);
   }
 
-  // Fetch the participant role definition
-  const roleRes = await fetch(
+  // Ensure the participant role exists, creating it if necessary
+  let roleRes = await fetch(
     `${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/roles/participant`,
     { headers: authHeaders }
   );
+  if (roleRes.status === 404) {
+    const createRoleRes = await fetch(
+      `${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/roles`,
+      {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ name: 'participant', description: 'Study participant' }),
+      }
+    );
+    if (!createRoleRes.ok && createRoleRes.status !== 409) {
+      const text = await createRoleRes.text();
+      throw new Error(`Failed to create participant role: ${createRoleRes.status} ${text}`);
+    }
+    console.log('[keycloak] participant role created');
+    roleRes = await fetch(
+      `${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/roles/participant`,
+      { headers: authHeaders }
+    );
+  }
   if (!roleRes.ok) {
     const text = await roleRes.text();
-    throw new Error(
-      `Failed to fetch participant role: ${roleRes.status} ${text}`
-    );
+    throw new Error(`Failed to fetch participant role: ${roleRes.status} ${text}`);
   }
   const participantRole = await roleRes.json();
 
@@ -630,6 +647,13 @@ function fakeSrhiScore(week, seed) {
 
 async function seedTestParticipant(db) {
   const { ObjectId } = appRequire('mongodb');
+
+  const defaultStudy = await db.collection('studies').findOne({ isDefault: true });
+  const defaultStudyOid = defaultStudy?._id ?? null;
+  if (!defaultStudyOid) {
+    console.log('  [warn] default study not found — test enrollments will have studyId: null');
+  }
+
   const conditions = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'];
   const dropDays = { c4: 30, c6: 45 };
 
@@ -642,7 +666,10 @@ async function seedTestParticipant(db) {
 
     await db.collection('enrollments').updateOne(
       { userId },
-      { $setOnInsert: { userId, studyId: null, groupId: null, studyCodeUsed: null, enrolledAt, cueConfig } },
+      {
+        $setOnInsert: { userId, studyCodeUsed: null, enrolledAt, cueConfig },
+        $set: { studyId: defaultStudyOid, groupId: null },
+      },
       { upsert: true }
     );
 
@@ -654,7 +681,6 @@ async function seedTestParticipant(db) {
           _id: intentionId,
           userId,
           enrollmentId: null,
-          studyId: null,
           groupId: null,
           behaviorKey: 'walking',
           behaviorLabel: 'Walking',
@@ -665,6 +691,7 @@ async function seedTestParticipant(db) {
           createdAt: enrolledAt,
           updatedAt: enrolledAt,
         },
+        $set: { studyId: defaultStudyOid },
       },
       { upsert: true }
     );
@@ -702,7 +729,6 @@ async function seedTestParticipant(db) {
           $setOnInsert: {
             intentionId: intention._id,
             userId,
-            studyId: null,
             groupId: null,
             weekNumber: w,
             scheduledFor,
@@ -711,6 +737,7 @@ async function seedTestParticipant(db) {
             score,
             createdAt: scheduledFor,
           },
+          $set: { studyId: defaultStudyOid },
         },
         { upsert: true }
       );
@@ -730,6 +757,36 @@ async function seedTestParticipant(db) {
 
     console.log(`  ✓ seeded test-${cond}`);
   }
+
+  // Seed questionnaire responses (sliq + rand-36) for each test participant
+  console.log('[mongo] Seeding form_responses for test participants...');
+  const SLIQ_QUESTIONS = ['sliq_diet', 'sliq_physical_activity', 'sliq_smoking', 'sliq_alcohol'];
+  const RAND36_QUESTIONS = Array.from({ length: 36 }, (_, i) => `rand36_q${i + 1}`);
+  const baseEnrolledAt = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000);
+
+  for (let ci = 0; ci < conditions.length; ci++) {
+    const userId = `test-${conditions[ci]}`;
+    const responseAt = new Date(baseEnrolledAt.getTime() + 3 * 86400000);
+
+    const sliqAnswers = Object.fromEntries(
+      SLIQ_QUESTIONS.map((q, i) => [q, String((ci + i) % 4)])
+    );
+    const rand36Answers = Object.fromEntries(
+      RAND36_QUESTIONS.map((q, i) => [q, String(((ci + i) % 5) + 1)])
+    );
+
+    await db.collection('form_responses').updateOne(
+      { userId, questionnaireSlug: 'sliq' },
+      { $setOnInsert: { userId, questionnaireSlug: 'sliq', answers: sliqAnswers, submittedAt: responseAt } },
+      { upsert: true }
+    );
+    await db.collection('form_responses').updateOne(
+      { userId, questionnaireSlug: 'rand-36' },
+      { $setOnInsert: { userId, questionnaireSlug: 'rand-36', answers: rand36Answers, submittedAt: responseAt } },
+      { upsert: true }
+    );
+  }
+  console.log('[mongo]   form_responses seeded for test-c1 through test-c6');
 
   const pubId = 'test-public';
   await db.collection('enrollments').updateOne(
