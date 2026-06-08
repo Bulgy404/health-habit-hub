@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./mobile/assets/icon/app_icon.png" width="120" alt="Health Habit Hub"/>
+  <img src="./mobile/assets/icon/app_icon.png" width="100" alt="Health Habit Hub"/>
   <h1>Health Habit Hub</h1>
   <p><strong>A research platform for studying health habits.</strong></p>
 
