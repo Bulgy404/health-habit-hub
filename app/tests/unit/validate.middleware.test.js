@@ -20,14 +20,14 @@ describe('validate middleware', () => {
     count: z.number().int().min(1),
   });
 
-  it('calls next() when body is valid', (t) => {
+  it('calls next() when body is valid', () => {
     const { req, res } = makeReqRes({ name: 'hello', count: 3 });
     const next = mock.fn();
     validate(schema)(req, res, next);
     assert.equal(next.mock.calls.length, 1);
   });
 
-  it('replaces req.body with parsed (trimmed) data', (t) => {
+  it('replaces req.body with parsed (trimmed) data', () => {
     const schemaWithTrim = z.object({ name: z.string().trim() });
     const { req, res } = makeReqRes({ name: '  hello  ' });
     const next = mock.fn();
@@ -35,7 +35,7 @@ describe('validate middleware', () => {
     assert.equal(req.body.name, 'hello');
   });
 
-  it('returns 400 when required field is missing', (t) => {
+  it('returns 400 when required field is missing', () => {
     const { req, res } = makeReqRes({ count: 5 });
     const next = mock.fn();
     validate(schema)(req, res, next);
@@ -45,7 +45,7 @@ describe('validate middleware', () => {
     assert.ok(Array.isArray(res._json.details));
   });
 
-  it('returns field path in details for nested error', (t) => {
+  it('returns field path in details for nested error', () => {
     const nested = z.object({ a: z.object({ b: z.number() }) });
     const { req, res } = makeReqRes({ a: { b: 'notanumber' } });
     const next = mock.fn();
@@ -55,7 +55,7 @@ describe('validate middleware', () => {
     assert.ok(paths.includes('a.b'));
   });
 
-  it('strips unknown fields when schema uses .strict()', (t) => {
+  it('strips unknown fields when schema uses .strict()', () => {
     const strict = z.object({ name: z.string() }).strict();
     const { req, res } = makeReqRes({ name: 'ok', extra: 'bad' });
     const next = mock.fn();
@@ -64,7 +64,7 @@ describe('validate middleware', () => {
     assert.equal(next.mock.calls.length, 0);
   });
 
-  it('returns 400 when count violates min constraint', (t) => {
+  it('returns 400 when count violates min constraint', () => {
     const { req, res } = makeReqRes({ name: 'ok', count: 0 });
     const next = mock.fn();
     validate(schema)(req, res, next);

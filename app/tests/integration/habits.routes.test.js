@@ -150,7 +150,9 @@ const FIXTURE_GRAPH_ROWS = [
 ];
 
 function createMockNeo4jRun() {
-  return async (cypher) => {
+  const annotationCounts = {};
+
+  return async (cypher, params = {}) => {
     if (cypher.includes('count(h) AS total')) {
       return [{ total: 2 }];
     }
@@ -165,6 +167,23 @@ function createMockNeo4jRun() {
     }
     if (cypher.includes('h.sentence AS original')) {
       return FIXTURE_DONATED_HABITS;
+    }
+    if (cypher.includes('SET h.annotations_helpful')) {
+      const id = params.habitId;
+      if (!annotationCounts[id]) annotationCounts[id] = { helpful: 0, iDoThis: 0 };
+      annotationCounts[id].helpful = Math.max(0, annotationCounts[id].helpful + (params.delta ?? 0));
+      return [];
+    }
+    if (cypher.includes('SET h.annotations_iDoThis')) {
+      const id = params.habitId;
+      if (!annotationCounts[id]) annotationCounts[id] = { helpful: 0, iDoThis: 0 };
+      annotationCounts[id].iDoThis = Math.max(0, annotationCounts[id].iDoThis + (params.delta ?? 0));
+      return [];
+    }
+    if (cypher.includes('AS helpful')) {
+      const id = params.habitId;
+      const counts = annotationCounts[id] ?? { helpful: 0, iDoThis: 0 };
+      return [{ helpful: counts.helpful, iDoThis: counts.iDoThis }];
     }
     // default: return public habits
     return FIXTURE_HABITS;
