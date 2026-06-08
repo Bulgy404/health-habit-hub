@@ -34,7 +34,7 @@ async function readAdminSettings(db) {
  * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array, maxHabits: number|null, assignedCues: Array }>}
  */
 export async function resolveHabitConfig({ db, userId }) {
-  const enrollment = await db.collection(ENROLLMENTS).findOne({ userId });
+  const enrollment = await db.collection(ENROLLMENTS).findOne({ userId: String(userId) });
 
   let cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits;
 

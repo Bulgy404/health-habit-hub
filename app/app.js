@@ -3,9 +3,8 @@ import bodyParser from 'body-parser';
 import express from 'express';
 import { metricsMiddleware, register } from './middleware/metrics.js';
 import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 
 import { jsonBodyParser } from './middleware/requestParser.js';
 import { securityHeaders } from './middleware/securityHeaders.js';
@@ -96,7 +95,7 @@ router.use((req, res, next) => {
   let userId = req.cookies.userId;
 
   if (!userId) {
-    userId = uuidv4();
+    userId = randomUUID();
     res.cookie('userId', userId, {
       maxAge: 365 * 24 * 60 * 60 * 1000,
       httpOnly: true,

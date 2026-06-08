@@ -23,7 +23,7 @@ export async function createIntention({
   if (cueConfig?.maxHabits != null) {
     const count = await db
       .collection(COLLECTION)
-      .countDocuments({ userId, status: 'active' });
+      .countDocuments({ userId: String(userId), status: 'active' });
     if (count >= cueConfig.maxHabits) return { limitReached: true };
   }
   const now = new Date();
@@ -51,7 +51,7 @@ export async function createIntention({
  * @returns {Promise<Array>}
  */
 export async function listIntentions({ db, userId }) {
-  const docs = await db.collection(COLLECTION).find({ userId }).toArray();
+  const docs = await db.collection(COLLECTION).find({ userId: String(userId) }).toArray();
   return docs.map(serialize);
 }
 
@@ -86,7 +86,7 @@ export async function updateIntentionStatus({ db, id, userId, status }) {
   const result = await db
     .collection(COLLECTION)
     .findOneAndUpdate(
-      { _id: oid, userId },
+      { _id: oid, userId: String(userId) },
       { $set: { status, updatedAt: new Date() } },
       { returnDocument: 'after' }
     );

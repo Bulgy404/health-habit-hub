@@ -51,7 +51,7 @@ export async function listCampaigns({
 }) {
   const filter = {};
   if (studyId) filter.studyId = new ObjectId(studyId);
-  if (status) filter.status = status;
+  if (status) filter.status = String(status);
   const docs = await db
     .collection(COLLECTION)
     .find(filter)

@@ -58,7 +58,7 @@ export async function getDueWindows({ db, userId }) {
   const docs = await db
     .collection(COLLECTION)
     .find({
-      userId,
+      userId: String(userId),
       submittedAt: null,
       scheduledFor: { $lte: now, $gte: windowCutoff },
     })
@@ -102,7 +102,7 @@ export async function submitSrhi({
 
   await db
     .collection(ENROLLMENTS)
-    .updateOne({ userId }, { $set: { lastActiveAt: now } });
+    .updateOne({ userId: String(userId) }, { $set: { lastActiveAt: now } });
   return serialize(result);
 }
 
@@ -115,7 +115,7 @@ export async function getTrajectory({ db, intentionId, userId }) {
   const oid = new ObjectId(intentionId);
   const docs = await db
     .collection(COLLECTION)
-    .find({ intentionId: oid, userId })
+    .find({ intentionId: oid, userId: String(userId) })
     .sort({ weekNumber: 1 })
     .toArray();
   return docs.map((d) => ({
