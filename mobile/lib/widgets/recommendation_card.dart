@@ -4,9 +4,9 @@ import '../models/recommendation.dart';
 /// Card widget displaying a single habit [Recommendation].
 ///
 /// Shows the habit name, category chip, confidence score bar, and rationale.
-/// If [recommendation.ragCitation] is present, a collapsible RAG citation
-/// section is shown via [ExpansionTile]. Accept and Dismiss buttons appear
-/// in the card footer and call [onAccept]/[onDismiss] respectively.
+/// A "Why?" button opens a bottom sheet with the full rationale and optional
+/// RAG citation. Accept and Dismiss buttons appear in the card footer and
+/// call [onAccept]/[onDismiss] respectively.
 class RecommendationCard extends StatelessWidget {
   /// The recommendation to display.
   final Recommendation recommendation;
@@ -24,6 +24,66 @@ class RecommendationCard extends StatelessWidget {
     required this.onAccept,
     required this.onDismiss,
   });
+
+  void _showWhySheet(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final citation = recommendation.ragCitation;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        builder: (_, controller) => ListView(
+          controller: controller,
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text(
+              'Why "${recommendation.habitName}"?',
+              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            Text(recommendation.rationale, style: textTheme.bodyMedium),
+            if (citation != null) ...[
+              const SizedBox(height: 20),
+              Divider(color: colorScheme.outlineVariant),
+              const SizedBox(height: 12),
+              Text(
+                'Evidence',
+                style: textTheme.labelLarge?.copyWith(color: colorScheme.secondary),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                citation.sourceTitle,
+                style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(citation.excerpt, style: textTheme.bodySmall),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,46 +141,36 @@ class RecommendationCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            // Rationale — max 2 lines
+            // Rationale preview — tap "Why?" for full text
             Text(
               recommendation.rationale,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: textTheme.bodyMedium,
             ),
-            // RAG citation (optional)
-            if (recommendation.ragCitation != null) ...[
-              const SizedBox(height: 4),
-              ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                title: Text(
-                  'Source: ${recommendation.ragCitation!.sourceTitle}',
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: colorScheme.secondary),
-                ),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      recommendation.ragCitation!.excerpt,
-                      style: textTheme.bodySmall,
-                    ),
-                  ),
-                ],
-              ),
-            ],
             const SizedBox(height: 8),
-            // Accept / Dismiss footer
+            // Footer: Why? / Dismiss / Accept
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                TextButton.icon(
+                  onPressed: () => _showWhySheet(context),
+                  icon: const Icon(Icons.info_outline, size: 16),
+                  label: const Text('Why?'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: colorScheme.secondary,
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 36),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+                const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.close),
                   tooltip: 'Dismiss',
                   onPressed: onDismiss,
                   color: colorScheme.error,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 IconButton(
                   icon: const Icon(Icons.check),
                   tooltip: 'Accept',

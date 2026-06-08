@@ -316,6 +316,43 @@ services:
       - traefik.http.routers.admin.service=admin
       - traefik.http.services.admin.loadbalancer.server.port=3001
 
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    container_name: hhh-prometheus
+    restart: always
+    networks:
+      - hhh-proxy
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+
+  grafana:
+    image: grafana/grafana-oss:12.0.1
+    container_name: hhh-grafana
+    restart: always
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_SERVER_ROOT_URL=https://${DOMAIN}/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+    networks:
+      - hhh-proxy
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.grafana.rule=Host(`${DOMAIN}`) && PathPrefix(`/grafana`)
+      - traefik.http.routers.grafana.entrypoints=websecure
+      - traefik.http.routers.grafana.tls.certresolver=letsencrypt
+      - traefik.http.routers.grafana.service=grafana
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+
   backup:
     image: hhh/backup
     container_name: hhh-backup
@@ -367,3 +404,7 @@ volumes:
     name: hhh-redis-data
   lightrag-data:
     name: hhh-lightrag-data
+  prometheus-data:
+    name: hhh-prometheus-data
+  grafana-data:
+    name: hhh-grafana-data

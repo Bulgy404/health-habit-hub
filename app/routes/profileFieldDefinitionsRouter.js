@@ -1,11 +1,13 @@
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
 import { logger } from '../utils/logger.js';
+import { validate } from '../middleware/validate.js';
+import {
+  createProfileFieldSchema,
+  updateProfileFieldSchema,
+} from '../schemas/adminSchemas.js';
 
 const log = logger.child({ module: 'profileFieldDefinitionsRouter' });
-
-const VALID_TYPES = ['text', 'number', 'date', 'select'];
-const FIELD_ID_RE = /^[a-z][a-z0-9_]*$/;
 
 export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
   const router = express.Router();
@@ -28,7 +30,7 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
   });
 
   // POST /api/v1/admin/profile-field-definitions
-  router.post('/', async (req, res) => {
+  router.post('/', validate(createProfileFieldSchema), async (req, res) => {
     try {
       const {
         fieldId,
@@ -38,19 +40,6 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
         required = false,
         order = 0,
       } = req.body;
-      if (!fieldId || !FIELD_ID_RE.test(fieldId)) {
-        return res
-          .status(400)
-          .json({ error: 'fieldId must match /^[a-z][a-z0-9_]*$/' });
-      }
-      if (!VALID_TYPES.includes(type)) {
-        return res
-          .status(400)
-          .json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` });
-      }
-      if (!label || typeof label !== 'string') {
-        return res.status(400).json({ error: 'label is required' });
-      }
       if (
         type === 'select' &&
         (!Array.isArray(options) || options.length === 0)
@@ -88,15 +77,10 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
   });
 
   // PUT /api/v1/admin/profile-field-definitions/:fieldId
-  router.put('/:fieldId', async (req, res) => {
+  router.put('/:fieldId', validate(updateProfileFieldSchema), async (req, res) => {
     try {
       const { fieldId } = req.params;
       const { label, type, options, required, order } = req.body;
-      if (type !== undefined && !VALID_TYPES.includes(type)) {
-        return res
-          .status(400)
-          .json({ error: `type must be one of: ${VALID_TYPES.join(', ')}` });
-      }
       const database = await getDb();
       const existing = await database
         .collection('profile_field_definitions')
