@@ -61,10 +61,7 @@ router.post(
     if (!req.recaptcha.error) {
       next();
     } else {
-      console.warn(
-        '[donateRouter] reCAPTCHA verification failed:',
-        req.recaptcha.error
-      );
+      log.warn({ err: req.recaptcha.error }, 'reCAPTCHA verification failed');
       res.status(400).json({
         error: 'Captcha verification failed. Please try again.',
         details: req.recaptcha.error,

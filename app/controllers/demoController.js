@@ -12,7 +12,7 @@ export function renderDemoPage(req, res) {
 }
 
 export function saveDemoData(req, res) {
-  console.log('Received demographics data:', req.body);
+  log.info({ body: req.body }, 'demographics data received');
   res.cookie('demographicsCompleted', 'true');
   res.json({ status: 'ok', message: 'Demographics data saved.' });
 }

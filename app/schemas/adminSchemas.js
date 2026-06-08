@@ -62,7 +62,7 @@ export const updateQuestionnaireSchema = z.object({
 
 const surveyStatus   = z.enum(['draft', 'published', 'archived']);
 const surveyGroups   = z.array(z.enum(['G1', 'G2', 'G3', 'G4'])).max(4);
-const surveyTargetMode = z.enum(['all_participants', 'group_assigned']).optional();
+const surveyTargetMode = z.enum(['all_participants', 'unassigned_only', 'group_assigned']).optional();
 
 export const createSurveySchema = z.object({
   title:          shortString,
@@ -116,6 +116,4 @@ export const createProfileFieldSchema = z.object({
   order:    z.number().int().optional(),
 });
 
-export const updateProfileFieldSchema = createProfileFieldSchema.partial().extend({
-  fieldId: slugString,
-});
+export const updateProfileFieldSchema = createProfileFieldSchema.partial();
