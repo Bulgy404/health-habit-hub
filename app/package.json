@@ -52,7 +52,7 @@
   "overrides": {
     "@tootallnate/once": "^3.0.1",
     "lodash": "^4.17.24",
-    "protobufjs": "^7.5.5"
+    "protobufjs": "^7.6.2"
   },
   "type": "module",
   "devDependencies": {
