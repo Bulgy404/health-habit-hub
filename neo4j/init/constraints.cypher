@@ -53,3 +53,20 @@ CREATE INDEX question_item_idx IF NOT EXISTS
 // Index for trajectory queries: find all submissions for a given questionnaire, ordered by time
 CREATE INDEX submission_timeline IF NOT EXISTS
   FOR (s:Submission) ON (s.questionnaireId, s.submittedAt);
+
+// Vector indexes for cross-user semantic habit search (M3 recommendation pipeline).
+// Each node type is indexed independently so the goal embedding can match via
+// the habit sentence, a context phrase, or a BCIO behavior-change concept —
+// whichever angle is most semantically relevant.
+// Dimensions must match EMBEDDING_DIMENSIONS env var (default: 2560 = Qwen3-Embedding-4B).
+CREATE VECTOR INDEX habit_embedding_idx IF NOT EXISTS
+  FOR (h:Habit) ON (h.embedding)
+  OPTIONS {indexConfig: {`vector.dimensions`: 2560, `vector.similarity_function`: 'cosine'}};
+
+CREATE VECTOR INDEX context_embedding_idx IF NOT EXISTS
+  FOR (c:Context) ON (c.embedding)
+  OPTIONS {indexConfig: {`vector.dimensions`: 2560, `vector.similarity_function`: 'cosine'}};
+
+CREATE VECTOR INDEX bcio_embedding_idx IF NOT EXISTS
+  FOR (b:BCIOConcept) ON (b.embedding)
+  OPTIONS {indexConfig: {`vector.dimensions`: 2560, `vector.similarity_function`: 'cosine'}};
