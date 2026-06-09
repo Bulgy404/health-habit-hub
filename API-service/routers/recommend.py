@@ -235,6 +235,17 @@ async def recommend(
         ensure_ascii=False,
         indent=2,
     )
+    community_habits_json = json.dumps(
+        [
+            {
+                "sentence": h.sentence,
+                "context": {k: v for k, v in h.context.items() if v},
+            }
+            for h in habits_resp.community_habits
+        ],
+        ensure_ascii=False,
+        indent=2,
+    )
     sources_json = json.dumps(
         [
             {"filename": s.filename, "excerpt": s.excerpt, "score": s.score}
@@ -253,6 +264,7 @@ async def recommend(
         profile_detailed=profile_resp.profile_detailed,
         habit_summary=habits_resp.habit_summary,
         habits_json=habits_json,
+        community_habits_json=community_habits_json,
         sources_json=sources_json,
         prior_feedback=feedback_text,
     )

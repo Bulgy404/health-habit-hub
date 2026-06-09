@@ -469,6 +469,16 @@ export async function shareHabit({
     queryNeo4j
   );
 
+  await embedAndStoreHabit({
+    uuid,
+    sentence,
+    translationEN,
+    contextPhrases,
+    mappings,
+    apiBase,
+    queryNeo4j,
+  });
+
   return {
     is_habit: true,
     uuid,
@@ -477,3 +487,109 @@ export async function shareHabit({
 }
 
 export const donateHabit = shareHabit;
+
+// ---------------------------------------------------------------------------
+// Semantic embedding (called after writeToNeo4j, non-fatal)
+// ---------------------------------------------------------------------------
+
+/**
+ * Embed every node produced by a habit donation in one batch API call:
+ *   - the Habit node (sentence)
+ *   - each Context node (context phrase)
+ *   - each BCIOConcept node (concept label)
+ *
+ * Vectors are stored inline on the respective nodes so Neo4j vector indexes
+ * (habit_embedding_idx, context_embedding_idx, bcio_embedding_idx) can search
+ * each dimension independently during recommendation.
+ *
+ * Non-fatal: if embedding fails the habit is stored normally and will be
+ * absent from cross-user semantic search until a backfill runs.
+ */
+export async function embedAndStoreHabit({
+  uuid,
+  sentence,
+  translationEN,
+  contextPhrases,
+  mappings,
+  apiBase,
+  queryNeo4j,
+}) {
+  try {
+    // --- build ordered texts list ---
+    const habitText = translationEN || sentence;
+
+    // flatten { dimension: [phrases] } → [{ dimension, text }]
+    const contextItems = Object.entries(contextPhrases).flatMap(([dim, phrases]) =>
+      phrases.map((text) => ({ dimension: dim, text }))
+    );
+
+    // deduplicate BCIO concept labels (multiple mappings can share a concept)
+    const bcioSeen = new Set();
+    const bcioItems = (mappings || []).filter((m) => {
+      if (bcioSeen.has(m.bcio_concept_id)) return false;
+      bcioSeen.add(m.bcio_concept_id);
+      return true;
+    });
+
+    const texts = [
+      habitText,
+      ...contextItems.map((c) => c.text),
+      ...bcioItems.map((b) => b.bcio_concept_label),
+    ];
+
+    // --- one batch embed call ---
+    const res = await fetch(`${apiBase}/api/v1/llm/embed-batch`, {
+      method: 'POST',
+      headers: serviceHeaders(),
+      body: JSON.stringify({ texts }),
+    });
+    if (!res.ok) {
+      console.warn(`[habitDonation] embed-batch returned ${res.status} for ${uuid} — skipping.`);
+      return;
+    }
+    const { embeddings } = await res.json();
+    if (!Array.isArray(embeddings) || embeddings.length !== texts.length) return;
+
+    // --- slice back into per-node arrays ---
+    let idx = 0;
+    const habitEmbedding = embeddings[idx++];
+    const contextEmbeddings = embeddings.slice(idx, idx + contextItems.length);
+    idx += contextItems.length;
+    const bcioEmbeddings = embeddings.slice(idx, idx + bcioItems.length);
+
+    // --- write to Neo4j ---
+    await queryNeo4j(
+      'MATCH (h:Habit {uuid: $uuid}) SET h.embedding = $embedding',
+      { uuid, embedding: habitEmbedding }
+    );
+
+    if (contextItems.length > 0) {
+      const contextRows = contextItems.map((c, i) => ({
+        text: c.text,
+        dimension: c.dimension,
+        embedding: contextEmbeddings[i],
+      }));
+      await queryNeo4j(
+        `UNWIND $rows AS row
+         MERGE (c:Context {text: row.text, dimension: row.dimension})
+         SET c.embedding = row.embedding`,
+        { rows: contextRows }
+      );
+    }
+
+    if (bcioItems.length > 0) {
+      const bcioRows = bcioItems.map((b, i) => ({
+        bcio_concept_id: b.bcio_concept_id,
+        embedding: bcioEmbeddings[i],
+      }));
+      await queryNeo4j(
+        `UNWIND $rows AS row
+         MATCH (b:BCIOConcept {bcio_concept_id: row.bcio_concept_id})
+         SET b.embedding = row.embedding`,
+        { rows: bcioRows }
+      );
+    }
+  } catch (err) {
+    console.warn(`[habitDonation] embed-batch failed for ${uuid}: ${err.message}`);
+  }
+}

@@ -1,6 +1,7 @@
 """POST /api/v1/llm/extract-habits — M3.1 Habit Extractor."""
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -13,6 +14,7 @@ from pydantic import BaseModel, Field
 from auth import verify_service_token
 from llm_client import chat_complete
 from routers._cache import _REDIS_TTL, get_redis as _get_redis, make_cache_key
+from routers._embeddings import embed_texts
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,9 @@ _DIMENSIONS = [
     "BEHAVIOR",
     "REASONING",
 ]
+
+
+_COMMUNITY_HABITS_LIMIT = int(os.getenv("COMMUNITY_HABITS_LIMIT", "10"))
 
 
 async def _fetch_habits_for_user(user_id: str) -> list[dict[str, object]]:
@@ -80,6 +85,128 @@ async def _fetch_habits_for_user(user_id: str) -> list[dict[str, object]]:
     return habits
 
 
+async def _run_vector_query(
+    session: object,
+    index_name: str,
+    embedding: list[float],
+    cypher_tail: str,
+    params: dict[str, object],
+) -> list[dict[str, object]]:
+    """Run a single vector index query and return raw records as dicts."""
+    try:
+        cypher = (
+            f"CALL db.index.vector.queryNodes('{index_name}', $limit, $embedding) "
+            f"YIELD node, score\n{cypher_tail}"
+        )
+        result = await session.run(cypher, embedding=embedding, **params)  # type: ignore[union-attr]
+        return await result.data()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Vector query on '%s' failed (index may not exist): %s", index_name, exc)
+        return []
+
+
+def _records_to_habits(records: list[dict]) -> dict[str, dict]:
+    """Convert raw Neo4j records to a uuid-keyed habit dict."""
+    habits: dict[str, dict] = {}
+    for record in records:
+        uuid = record.get("uuid")
+        if not uuid:
+            continue
+        ctx: dict[str, list[str]] = {dim: [] for dim in _DIMENSIONS}
+        for item in record.get("ctx_items", []):
+            dim = item.get("dimension")
+            text = item.get("text")
+            if dim and text and dim in ctx:
+                ctx[dim].append(text)
+        score = float(record.get("score", 0.0))
+        if uuid not in habits or score > float(habits[uuid]["score"]):
+            habits[uuid] = {
+                "uuid": uuid,
+                "sentence": record.get("sentence", ""),
+                "context": ctx,
+                "score": score,
+            }
+    return habits
+
+
+async def _vector_search_habits(
+    goal: str, exclude_user_id: str
+) -> list[dict[str, object]]:
+    """Fan out across habit, context, and BCIO vector indexes to find community habits.
+
+    Embeds the goal once, then queries all three Neo4j vector indexes in parallel:
+    - habit_embedding_idx  : direct sentence-level match
+    - context_embedding_idx: situational match (e.g. goal "feeling down" ≈ INTERNAL_STATE phrase)
+    - bcio_embedding_idx   : behavior-technique match (e.g. goal ≈ "social support seeking")
+
+    Results from all three paths are merged by habit UUID, keeping the max score.
+    Returns an empty list gracefully if indexes do not yet exist.
+    """
+    try:
+        query_embedding = (await embed_texts([goal]))[0]
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Embedding goal for vector search failed: %s", exc)
+        return []
+
+    driver = AsyncGraphDatabase.driver(
+        _NEO4J_URI, auth=(_NEO4J_USER, _NEO4J_PASSWORD)
+    )
+    merged: dict[str, dict[str, object]] = {}
+    limit = _COMMUNITY_HABITS_LIMIT
+    params = {"limit": limit, "exclude_user_id": exclude_user_id}
+
+    habit_tail = """
+        WHERE node.userID <> $exclude_user_id AND node.is_habit = true
+        WITH node AS h, score
+        OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)
+        RETURN h.uuid AS uuid,
+               coalesce(h.translationEN, h.sentence) AS sentence,
+               collect({dimension: c.dimension, text: c.text}) AS ctx_items,
+               score
+    """
+    context_tail = """
+        MATCH (h:Habit)-[:HAS_CONTEXT]->(node)
+        WHERE h.userID <> $exclude_user_id AND h.is_habit = true
+        WITH h, score
+        OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)
+        RETURN h.uuid AS uuid,
+               coalesce(h.translationEN, h.sentence) AS sentence,
+               collect({dimension: c.dimension, text: c.text}) AS ctx_items,
+               score
+    """
+    bcio_tail = """
+        MATCH (c:Context)-[:MAPS_TO]->(node)
+        MATCH (h:Habit)-[:HAS_CONTEXT]->(c)
+        WHERE h.userID <> $exclude_user_id AND h.is_habit = true
+        WITH h, score
+        OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(ctx:Context)
+        RETURN h.uuid AS uuid,
+               coalesce(h.translationEN, h.sentence) AS sentence,
+               collect({dimension: ctx.dimension, text: ctx.text}) AS ctx_items,
+               score
+    """
+
+    try:
+        async with driver.session() as session:
+            habit_records, context_records, bcio_records = await asyncio.gather(
+                _run_vector_query(session, "habit_embedding_idx", query_embedding, habit_tail, params),
+                _run_vector_query(session, "context_embedding_idx", query_embedding, context_tail, params),
+                _run_vector_query(session, "bcio_embedding_idx", query_embedding, bcio_tail, params),
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Neo4j session failed during vector search: %s", exc)
+        return []
+    finally:
+        await driver.close()
+
+    for source in (habit_records, context_records, bcio_records):
+        for uuid, habit in _records_to_habits(source).items():
+            if uuid not in merged or float(habit["score"]) > float(merged[uuid]["score"]):
+                merged[uuid] = habit
+
+    return sorted(merged.values(), key=lambda h: float(h["score"]), reverse=True)[:limit]
+
+
 # ---------------------------------------------------------------------------
 # Prompt template
 # ---------------------------------------------------------------------------
@@ -110,6 +237,7 @@ class ExtractHabitsResponse(BaseModel):
 
     selected_habits: list[HabitEntry]
     habit_summary: str
+    community_habits: list[HabitEntry] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -165,13 +293,22 @@ async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
         except Exception as exc:  # noqa: BLE001
             logger.warning("Redis read error (%s) — falling back to Neo4j + LLM.", exc)
 
-    # --- fetch habits from Neo4j ---
-    all_habits = await _fetch_habits_for_user(body.user_id)
+    # --- fetch user habits + community habits in parallel ---
+    all_habits, community_raw = await asyncio.gather(
+        _fetch_habits_for_user(body.user_id),
+        _vector_search_habits(body.goal, body.user_id),
+    )
+
+    community_habits = [
+        HabitEntry(uuid=h["uuid"], sentence=h["sentence"], context=h["context"])
+        for h in community_raw
+    ]
 
     if not all_habits:
         result = ExtractHabitsResponse(
             selected_habits=[],
             habit_summary="No habits found for this user.",
+            community_habits=community_habits,
         )
         if redis_client is not None:
             try:
@@ -180,7 +317,7 @@ async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
                 logger.warning("Redis write error (%s) — result not cached.", exc)
         return result
 
-    # --- LLM call ---
+    # --- LLM call to filter user's own habits ---
     habits_json = json.dumps(
         [{"uuid": h["uuid"], "sentence": h["sentence"], "context": h["context"]} for h in all_habits],
         ensure_ascii=False,
@@ -205,6 +342,7 @@ async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
     result = ExtractHabitsResponse(
         selected_habits=selected_habits,
         habit_summary=habit_summary,
+        community_habits=community_habits,
     )
 
     # --- cache write ---

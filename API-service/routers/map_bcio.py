@@ -9,11 +9,12 @@ from pathlib import Path
 from typing import Optional, cast
 
 import numpy as np
-import openai
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field, field_validator
 
 from auth import verify_service_token
+from routers._embeddings import EMBEDDING_MODEL as _EMBEDDING_MODEL
+from routers._embeddings import embed_texts as _embed_texts_shared
 
 logger = logging.getLogger(__name__)
 
@@ -22,16 +23,8 @@ router = APIRouter(dependencies=[Depends(verify_service_token)])
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-_EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "Qwen/Qwen3-Embedding-4B")
-_EMBEDDING_API_BASE = os.getenv("EMBEDDING_API_BASE", os.getenv("LLM_API_BASE"))
-_EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", os.getenv("LLM_API_KEY", ""))
 _BCIO_MIN_CONFIDENCE = float(os.getenv("BCIO_MIN_CONFIDENCE", "0.6"))
 _OWL_PATH = Path(__file__).parent.parent / "data" / "bcio.owl"
-
-_openai_client = openai.AsyncOpenAI(
-    api_key=_EMBEDDING_API_KEY or "placeholder",
-    base_url=_EMBEDDING_API_BASE or None,
-)
 
 # ---------------------------------------------------------------------------
 # OWL namespace constants
@@ -62,12 +55,7 @@ def _parse_owl_concepts(owl_path: Path) -> list[dict[str, str]]:
 
 
 async def _embed_texts(texts: list[str]) -> list[list[float]]:
-    """Return embeddings using the configured OpenAI-compatible embedding endpoint."""
-    response = await _openai_client.embeddings.create(
-        model=_EMBEDDING_MODEL,
-        input=texts,
-    )
-    return [item.embedding for item in response.data]
+    return await _embed_texts_shared(texts)
 
 
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
