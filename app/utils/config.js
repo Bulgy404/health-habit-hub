@@ -1,11 +1,6 @@
 const config = {
   path: process.env.PATH || './',
   port: process.env.PORT || 3000,
-  recaptcha: {
-    siteKey: (process.env.RECAPTCHA_SITEKEY || '').trim(),
-    secretKey: (process.env.RECAPTCHA_SECRETKEY || '').trim(),
-    useRecaptchaDomain: process.env.RECAPTCHA_USE_RECAPTCHA_DOMAIN === 'true',
-  },
   neo4j: {
     uri: process.env.NEO4J_URI || 'bolt://neo4j:7687',
     user: process.env.NEO4J_USER || 'neo4j',
@@ -16,14 +11,6 @@ const config = {
     port: process.env.TRANSLATE_PORT || '5000',
     path: process.env.TRANSLATE_PATH || '/translate',
     protocol: process.env.TRANSLATE_PROTOCOL || 'http',
-  },
-  mail: {
-    host: process.env.MAIL_HOST,
-    port: parseInt(process.env.MAIL_PORT, 10),
-    user: process.env.MAIL_USER,
-    pass: process.env.MAIL_PASS,
-    from: process.env.MAIL_FROM,
-    receiver: process.env.MAIL_RECEIVER,
   },
   getTranslateApiEndpoint: function () {
     return `${this.translateApi.protocol}://${this.translateApi.host}:${this.translateApi.port}${this.translateApi.path}`;

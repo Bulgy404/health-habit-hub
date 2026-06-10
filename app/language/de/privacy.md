@@ -1,3 +1,9 @@
+---
+version: 1.0.0
+effectiveDate: 2026-03-15
+bindingLanguage: de
+---
+
 # Datenschutz auf einen Blick
 
 ## Allgemeine Hinweise

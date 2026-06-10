@@ -1,3 +1,9 @@
+---
+version: 1.0.0
+effectiveDate: 2026-06-10
+bindingLanguage: de
+---
+
 # 印刷情報
 
 ## Health-Habit-Hub

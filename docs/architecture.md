@@ -101,9 +101,9 @@ The `app/` service is internally organized into the following layers (as of the 
 | `app/routes/` | Thin Express routers — parameter extraction, auth middleware, delegating to services |
 | `app/services/` | Business logic: `habitDonationService.js`, `adminParticipantService.js`, `adminHabitService.js`, `adminStatsService.js`, `keycloakAdminClient.js`; DFG study services: `habitConfigService.js`, `intentionService.js`, `dailyLogService.js`, `srhiService.js`, `cuePoolService.js`, `exportService.js`, `notificationCampaignService.js`, `studyAnalyticsService.js` |
 | `app/db/` | Named Cypher query modules: `habitQueries.js`, `adminQueries.js` |
-| `app/models/` | Domain model classes: `donation.js` (Donor, Label, Donation, ExperimentalSetting) |
+| `app/models/` | MongoDB collection validators and domain models (`study.js`, `enrollment.js`, `implementationIntention.js`, …) |
 | `app/middleware/` | Express middleware: `auth.js` (JWT/JWKS), `roles.js` (ROLES constants, isPrivileged) |
-| `app/utils/` | Infrastructure helpers: `Neo4jDatabase.js`, `SparqlDatabase.js`, `getDb.js`, `translate.js`, `constants.js` |
+| `app/utils/` | Infrastructure helpers: `getDb.js`, `healthCheck.js`, `translate.js`, `localization.js`, `constants.js` |
 
 ---
 
@@ -335,7 +335,7 @@ LightRAG's built-in web UI is served at `http://localhost:9622` (local) and can 
   -[:MAPS_TO]->(:BCIOConcept { name, uri })
 ```
 
-> **Note:** The legacy `hhh__Habit`, `hhh__Donor`, `hhh__hasBehavior` schema from the old n10s/RDF pipeline co-exists in the same Neo4j instance. Stats endpoints and the `/public` habit list query the old schema (`hhh__Habit`), which is disjoint from newly donated habits. See `docs/migration.md` for the schema migration plan.
+> **Note:** Legacy `hhh__Habit` / `hhh__Donor` data from the old n10s/RDF pipeline may still exist in the Neo4j instance, but the code that wrote it (legacy web donate flow, `Neo4jDatabase.js`) was removed in 2026-06. See `docs/migration.md` for the data migration plan.
 
 ---
 

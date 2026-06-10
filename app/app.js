@@ -16,13 +16,7 @@ import {
   loadLanguageFiles,
 } from './utils/localization.js';
 
-// Express config
-import aboutRouter from './routes/aboutRouter.js';
-import demoRouter from './routes/demoRouter.js';
-import donateRouter from './routes/donateRouter.js';
-import thanksRouter from './routes/thanksRouter.js';
-import contactRouter from './routes/contactRouter.js';
-import rewardRouter from './routes/rewardRouter.js';
+// Express config — public legal pages (rendered by the Flutter app)
 import imprintRouter from './routes/imprintRouter.js';
 import privacyRouter from './routes/privacyRouter.js';
 import accessibilityRouter from './routes/accessibilityRouter.js';
@@ -50,7 +44,7 @@ router.use((req, res, next) => {
 loadLanguageFiles();
 const validLanguageCodes = getLanguageCodes().join('|');
 
-// Use bodyParser and express-recaptcha module
+// Use bodyParser for form/JSON bodies
 router.use(bodyParser.urlencoded({ extended: true }));
 router.use(bodyParser.json()); // Added to parse JSON bodies
 
@@ -59,8 +53,8 @@ router.use(cookieParser());
 // CSRF double-submit cookie middleware for form routes.
 // Note: /api/v1/* routes use JWT auth (CSRF-resistant) and are mounted on
 // `app`, not on this `router`, so they are not affected by this middleware.
-// The donation form is additionally protected by reCAPTCHA; this double-submit
-// check satisfies static analyzers (CodeQL) and provides defense-in-depth.
+// Kept as defense-in-depth for any future state-changing public routes
+// (currently the remaining public routes are read-only legal pages).
 router.use((req, res, next) => {
   if (
     req.method === 'GET' ||
@@ -134,30 +128,11 @@ router.use(
   accessibilityRouter
 );
 
-// Routes
-// Redirects all requests to '/donate' if the language parameter (lng) is already set
-router.get('/:lng(' + validLanguageCodes + ')?/', (req, res) => {
-  // Sanitize lang to a known-good language code to keep redirect on same host.
-  const safeLang = getLanguageCodes().includes(req.lang) ? req.lang : 'en';
-  const targetPath = path.join(contextPath, safeLang, 'donate');
-  res.redirect(301, targetPath);
-});
-
-router.use('/:lng(' + validLanguageCodes + ')/reward', rewardRouter);
-router.use('/:lng(' + validLanguageCodes + ')/contact', contactRouter);
-router.use('/:lng(' + validLanguageCodes + ')/donate', donateRouter);
-router.use('/:lng(' + validLanguageCodes + ')/about', aboutRouter);
-router.use('/:lng(' + validLanguageCodes + ')/demo', demoRouter); //Probably needs to be changed like the ones on the top
-router.use('/:lng(' + validLanguageCodes + ')/thanks', thanksRouter);
-// Intercepts all calls of '/' and checks whether a language (req.lang) is already set. If not, this parameter is set.
-router.use((req, res, next) => {
-  if (req.url.startsWith('/' + req.lang + '/')) {
-    next();
-  } else {
-    const safeLang = getLanguageCodes().includes(req.lang) ? req.lang : 'en';
-    res.redirect(307, path.join(contextPath, safeLang, 'donate'));
-  }
-});
+// NOTE: the legacy web experiment app (donate, thanks, demo, about, reward,
+// contact) was removed in 2026-06. Habit donation now happens exclusively via
+// the authenticated REST API (POST /api/v1/habits/donate). Only the legal
+// pages above (imprint, privacy, accessibility) remain — the Flutter app
+// fetches and renders them.
 
 // API health/info endpoint
 app.get('/api', (req, res) => {

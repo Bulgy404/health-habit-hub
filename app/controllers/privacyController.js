@@ -6,12 +6,13 @@ const log = logger.child({ module: 'privacyController' });
 
 export async function renderPrivacyPolicy(req, res, next) {
   try {
-    const html = await loadMarkdown(req.lang, 'privacy');
+    const { html, meta } = await loadMarkdown(req.lang, 'privacy');
     res.json({
       status: 'ok',
       lang: req.lang,
       messages: getLanguageMessages(req.lang),
       content: html,
+      document: meta,
     });
   } catch (err) {
     log.error({ err: err }, 'Error rendering privacy policy:');
