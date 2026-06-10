@@ -1,0 +1,20 @@
+%% UC-19 — Manage studies, groups & study codes
+sequenceDiagram
+    autonumber
+    actor R as Researcher / Admin
+    participant AP as Admin Panel
+    participant B as Backend (studyService / studyCodeService)
+    participant M as MongoDB
+
+    R->>AP: Open Studies page
+    AP->>B: GET /api/v1/admin/studies
+    B->>M: find(studies, {isActive: true})
+    B-->>AP: studies with G1-G4 groups
+    R->>AP: Create study / edit groups / set per-group cueConfig
+    AP->>B: POST or PUT /api/v1/admin/studies/:id (groups[].cueConfig)
+    B->>M: upsert(studies) - validator enforces group index 1..4
+    B-->>AP: 200
+    R->>AP: Generate study codes for a group
+    AP->>B: POST /api/v1/admin/studies/:id/codes {groupId, maxRedemptions, expiresAt}
+    B->>M: insert(study_codes)
+    B-->>AP: 201 codes (distributed to participants out-of-band)

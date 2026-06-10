@@ -1,0 +1,250 @@
+%% Health Habit Hub — Domain Class Diagram
+%% Derived from: app/models/*.js (MongoDB validators), docs/data-model.md,
+%% Neo4j graph schema, app/models/donation.js (domain classes)
+%% Render: mmdc -i class-diagram.mmd -o class-diagram.svg
+
+classDiagram
+    direction LR
+
+    %% ===================== Identity =====================
+    class User {
+        <<Keycloak>>
+        +String sub
+        +String username
+        +String[] realmRoles  user|researcher|admin
+        +String groupAttribute  G1..G4
+    }
+    class UserPreferences {
+        <<MongoDB users>>
+        +String userId
+        +String preferredLanguage  en|de
+    }
+    User "1" --> "0..1" UserPreferences : has
+
+    %% ===================== Study domain (DFG) =====================
+    class Study {
+        <<MongoDB studies>>
+        +ObjectId _id
+        +String name
+        +String description
+        +Boolean isDefault
+        +Boolean isActive
+        +ObjectId[] questionnaires
+        +Date createdAt
+        +Date updatedAt
+    }
+    class ExperimentGroup {
+        <<embedded in Study>>
+        +ObjectId id
+        +String label
+        +Int index  1..4
+    }
+    class CueConfig {
+        <<embedded>>
+        +String cueCount  single|multi
+        +String cueSource  low_quality|high_quality|self_selected
+        +ObjectId cuePoolId
+        +String[] behaviorOptions
+        +Int maxHabits
+    }
+    class StudyCode {
+        <<MongoDB study_codes>>
+        +ObjectId _id
+        +String code
+        +ObjectId studyId
+        +ObjectId groupId
+        +Int maxRedemptions
+        +Int redemptionCount
+        +Date expiresAt
+    }
+    class Enrollment {
+        <<MongoDB enrollments>>
+        +ObjectId _id
+        +String userId
+        +ObjectId studyId
+        +ObjectId groupId
+        +String studyCodeUsed
+        +Date enrolledAt
+        +Date lastActiveAt
+        +Date droppedOutAt
+        +Date[] reactivations
+    }
+    Study "1" *-- "1..4" ExperimentGroup : groups
+    ExperimentGroup "1" o-- "0..1" CueConfig
+    Enrollment "1" o-- "0..1" CueConfig : override
+    StudyCode "*" --> "1" Study
+    StudyCode "*" --> "1" ExperimentGroup
+    Enrollment "*" --> "1" Study
+    Enrollment "*" --> "1" ExperimentGroup
+    Enrollment "*" --> "1" User
+    Enrollment "*" ..> "0..1" StudyCode : redeemed via
+
+    %% ===================== Habit formation (DFG) =====================
+    class ImplementationIntention {
+        <<MongoDB implementation_intentions>>
+        +ObjectId _id
+        +String userId
+        +ObjectId enrollmentId
+        +String behaviorKey
+        +String behaviorLabel
+        +Int durationMinutes
+        +Cue[] cues
+        +String intentionStatement
+        +String status  active|paused|completed|abandoned
+    }
+    class Cue {
+        <<embedded>>
+        +String text
+        +String source  pre_rated|self_selected
+        +ObjectId cueId
+    }
+    class CuePoolEntry {
+        <<MongoDB cue_pools>>
+        +ObjectId _id
+        +String text
+        +String quality  low|high
+        +Dimensions dimensions  stability,salience,specificity 1-5
+        +String domain
+        +String language  en|de
+    }
+    class DailyBehaviorLog {
+        <<MongoDB daily_behavior_logs>>
+        +ObjectId _id
+        +ObjectId intentionId
+        +String userId
+        +String date  YYYY-MM-DD
+        +Boolean enacted
+        +Date loggedAt
+    }
+    class SrhiResponse {
+        <<MongoDB srhi_responses>>
+        +ObjectId _id
+        +ObjectId intentionId
+        +String userId
+        +Int weekNumber
+        +Date scheduledFor
+        +Date submittedAt
+        +Map items  srhi_1..srhi_12 : 1-7
+        +Double score  mean of items
+    }
+    ImplementationIntention "1" *-- "1..2" Cue
+    Cue "*" ..> "0..1" CuePoolEntry : cueId (if pre_rated)
+    ImplementationIntention "*" --> "0..1" Enrollment
+    ImplementationIntention "1" --> "0..*" DailyBehaviorLog : unique(intentionId,date)
+    ImplementationIntention "1" --> "0..*" SrhiResponse : unique(intentionId,week)
+    ImplementationIntention "*" --> "1" User
+
+    %% ===================== Questionnaires & profiles =====================
+    class Questionnaire {
+        <<MongoDB questionnaires>>
+        +ObjectId _id
+        +String slug
+        +String title
+        +Question[] questions
+    }
+    class FormResponse {
+        <<MongoDB form_responses>>
+        +ObjectId _id
+        +String userId
+        +ObjectId questionnaireId
+        +Map answers
+        +Date submittedAt
+    }
+    class Profile {
+        <<MongoDB profiles>>
+        +String userId
+        +Map answers
+    }
+    class ProfileFieldDefinition {
+        <<MongoDB profile_field_definitions>>
+        +String key
+        +String type
+        +String[] options
+    }
+    Study "1" --> "0..*" Questionnaire : assigns
+    Questionnaire "1" --> "0..*" FormResponse
+    FormResponse "*" --> "1" User
+    Profile "*" --> "1" User
+    Profile ..> ProfileFieldDefinition : validated by
+
+    %% ===================== Recommendations =====================
+    class Recommendation {
+        <<MongoDB recommendations>>
+        +ObjectId _id
+        +String userId
+        +String goal
+        +String sessionId
+        +Item[] recommendations
+        +Date createdAt
+    }
+    class RecommendationFeedback {
+        <<MongoDB recommendation_feedback>>
+        +ObjectId _id
+        +ObjectId recommendationId
+        +String userId
+        +String text
+    }
+    Recommendation "1" --> "0..*" RecommendationFeedback
+    Recommendation "*" --> "1" User
+
+    %% ===================== Notifications =====================
+    class NotificationCampaign {
+        <<MongoDB notification_campaigns>>
+        +ObjectId _id
+        +ObjectId studyId
+        +String createdBy
+        +String title  max 65
+        +String body  max 240
+        +String targetType  individual|group|all_enrolled
+        +String[] targetIds
+        +Date scheduledFor
+        +Date sentAt
+        +Int recipientCount
+        +String status  draft|scheduled|sent|failed
+    }
+    NotificationCampaign "*" --> "0..1" Study
+
+    %% ===================== Habit graph (Neo4j) =====================
+    class Habit {
+        <<Neo4j node>>
+        +String uuid
+        +String original
+        +String language
+        +String translationEN
+        +String translationDE
+    }
+    class Context {
+        <<Neo4j node>>
+        +String text
+        +String dimension  TimeReference|PhysicalSetting|People|InternalState|PriorBehavior|Reasoning
+    }
+    class BCIOConcept {
+        <<Neo4j node>>
+        +String name
+        +String uri
+    }
+    Habit "1" --> "0..*" Context : HAS_CONTEXT
+    Context "1" --> "0..*" BCIOConcept : MAPS_TO
+    Habit "*" ..> "1" User : donated by (anonymised)
+
+    %% ===================== Donation domain classes (backend) =====================
+    class Donation {
+        <<app/models/donation.js>>
+        +String id
+        +Donor donor
+        +ExperimentalSetting setting
+        +Label[] labels
+    }
+    class Donor {
+        +String id  anonymous per-donation UUID
+    }
+    class ExperimentalSetting {
+        +String id
+        +String task  open|closed
+        +String description  open|closed
+        +String group  Group1..Group4
+        +isClosedTaskOpenDescription() bool
+    }
+    Donation "1" *-- "1" Donor
+    Donation "1" *-- "1" ExperimentalSetting
+    Donation ..> Habit : persisted as

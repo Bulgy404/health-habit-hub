@@ -1,0 +1,17 @@
+%% UC-10 — Retrieve resolved habit config (cues + SRHI items)
+sequenceDiagram
+    autonumber
+    participant F as Flutter App (My Habits tab)
+    participant B as Backend (habitConfigService)
+    participant M as MongoDB
+
+    F->>B: GET /api/v1/me/habit-config (Bearer token)
+    B->>M: findOne(enrollments, {userId})
+    M-->>B: enrollment {studyId, groupId, cueConfig?}
+    B->>M: findOne(studies) -> group.cueConfig (or public default)
+    M-->>B: cueConfig {cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits}
+    alt cueSource = pre-rated pool
+        B->>M: sample(cue_pools, {quality, domain, language})
+        M-->>B: random pre-rated cues
+    end
+    B-->>F: {cueConfig, assignedCues, srhiItems[12], behaviorOptions}

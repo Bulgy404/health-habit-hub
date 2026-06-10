@@ -1,0 +1,21 @@
+%% UC-20 — Manage questionnaires
+sequenceDiagram
+    autonumber
+    actor R as Researcher / Admin
+    participant AP as Admin Panel
+    participant B as Backend (questionnairesRouter)
+    participant M as MongoDB
+
+    R->>AP: Open Questionnaires page
+    AP->>B: GET /api/v1/questionnaires
+    B->>M: find(questionnaires)
+    B-->>AP: definitions {slug, title, questions}
+    R->>AP: Create / edit questionnaire (question types, order, validation)
+    AP->>B: POST or PUT /api/v1/questionnaires/:id
+    B->>B: Validate question schema
+    B->>M: upsert(questionnaires)
+    B-->>AP: 200
+    R->>AP: Assign questionnaire to study
+    AP->>B: PUT /api/v1/admin/studies/:id {questionnaires: [ids]}
+    B->>M: update(studies)
+    B-->>AP: 200 (participants see it via UC-06)

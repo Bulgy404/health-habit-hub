@@ -1,0 +1,25 @@
+%% UC-18 — Manage participants
+sequenceDiagram
+    autonumber
+    actor R as Researcher / Admin
+    participant AP as Admin Panel
+    participant B as Backend (adminParticipantService)
+    participant M as MongoDB
+    participant KC as Keycloak (Admin API)
+
+    R->>AP: Open Participants page
+    AP->>B: GET /api/v1/admin/participants
+    B->>M: find(participants, {deletedAt: null}) + enrollment join
+    M-->>B: participant list + progress
+    B-->>AP: participants
+    R->>AP: Create / edit / soft-delete participant
+    alt create
+        AP->>B: POST /api/v1/admin/participants
+        B->>KC: Create Keycloak user (role user, group attribute)
+        B->>M: insert(participants)
+    else soft-delete
+        AP->>B: DELETE /api/v1/admin/participants/:id
+        B->>M: $set {deletedAt: now}
+        B->>KC: Disable Keycloak user
+    end
+    B-->>AP: 200 / 201

@@ -1,0 +1,21 @@
+%% UC-09 — Enroll in study (redeem or skip study code)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (studyEnrollRouter)
+    participant M as MongoDB
+
+    P->>F: Enter study code (or skip)
+    alt redeem code
+        F->>B: POST /api/v1/enroll/redeem-code {code}
+        B->>M: findOne(study_codes, {code})
+        M-->>B: code {studyId, groupId, maxRedemptions, expiresAt}
+        B->>B: Validate not expired / not exhausted
+        B->>M: insert(enrollments {userId, studyId, groupId}), $inc redemptionCount
+        B-->>F: 200 enrolled in study group
+    else skip code
+        F->>B: POST /api/v1/enroll/skip-code
+        B->>M: Resolve default study (isDefault: true), insert enrollment
+        B-->>F: 200 enrolled in default study
+    end

@@ -2,6 +2,8 @@
 
 This document is the canonical reference for all data stores in the Health Habit Hub platform. It covers the Neo4j graph database, the Apache Jena Fuseki triple store, and MongoDB. Use it when writing queries, building reports, or interpreting study data without needing to read source code.
 
+> **Related:** a UML class diagram of this domain model (MongoDB collections, Neo4j nodes, and backend domain classes with relationships and multiplicities) is maintained at [`diagrams/classes/class-diagram.mmd`](diagrams/classes/class-diagram.mmd).
+
 ---
 
 ## Table of Contents

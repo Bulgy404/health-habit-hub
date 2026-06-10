@@ -1,0 +1,26 @@
+%% UC-03 — Donate habit (translation + LLM enrichment + graph persistence)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (habitsRouter)
+    participant LT as LibreTranslate
+    participant AI as API-service (FastAPI)
+    participant N4 as Neo4j
+
+    P->>F: Describe habit sentence
+    F->>B: POST /api/v1/habits/donate {sentence, language}
+    B->>B: Verify JWT (requireRole: user)
+    alt language != "en*"
+        B->>LT: POST /translate {q, source, target: "en"}
+        LT-->>B: translatedText (raw draft)
+        B->>AI: POST /llm/refine-translation {original, raw_translation}
+        AI-->>B: refined_translation (fallback: raw on 10s timeout)
+    end
+    B->>AI: POST /llm/classify-context {sentence: translationEN}
+    AI-->>B: contexts [{text, dimension}]
+    B->>AI: POST /llm/map-bcio {contexts}
+    AI-->>B: mappings [{text, bcio_concept, bcio_uri}]
+    B->>N4: CREATE (:Habit) MERGE (:Context)-[:HAS_CONTEXT]- MERGE (:BCIOConcept)-[:MAPS_TO]-
+    N4-->>B: nodes created
+    B-->>F: 201 "Habit donated"

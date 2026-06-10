@@ -1,0 +1,23 @@
+%% UC-17 — Sign in to admin portal (NextAuth + Keycloak)
+sequenceDiagram
+    autonumber
+    actor R as Researcher / Admin
+    participant AP as Admin Panel (Next.js)
+    participant NA as NextAuth (server)
+    participant KC as Keycloak
+
+    R->>AP: Open admin.<host>
+    AP->>NA: getToken() in middleware.ts
+    NA-->>AP: no session
+    AP->>KC: Redirect to /auth (client hhh-admin, browser URL)
+    R->>KC: Enter credentials
+    KC-->>AP: Authorization code
+    NA->>KC: Exchange code at internal URL (confidential client + secret)
+    KC-->>NA: access_token (incl. realm_access.roles), id_token
+    NA->>NA: JWT callback decodes roles from access_token
+    alt roles include admin or researcher
+        NA-->>AP: Session established
+        AP-->>R: Dashboard (sidebar filtered by role)
+    else missing role
+        AP-->>R: Redirect /access-denied
+    end

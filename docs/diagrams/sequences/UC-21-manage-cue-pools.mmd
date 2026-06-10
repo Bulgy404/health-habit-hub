@@ -1,0 +1,24 @@
+%% UC-21 — Manage cue pools (CRUD + CSV import)
+sequenceDiagram
+    autonumber
+    actor R as Researcher / Admin
+    participant AP as Admin Panel
+    participant B as Backend (cuePoolService)
+    participant M as MongoDB
+
+    R->>AP: Open Cue Pools page
+    AP->>B: GET /api/v1/admin/cue-pools
+    B->>M: find(cue_pools)
+    B-->>AP: cues {text, quality, dimensions, domain, language}
+    alt single cue CRUD
+        R->>AP: Add / edit / delete cue
+        AP->>B: POST / PUT / DELETE /api/v1/admin/cue-pools/:id
+        B->>M: write(cue_pools)
+    else bulk CSV import
+        R->>AP: Upload CSV of pre-rated cues
+        AP->>B: POST /api/v1/admin/cue-pools/import (multipart)
+        B->>B: Parse + validate rows (quality, dimensions 1-5)
+        B->>M: insertMany(cue_pools)
+        B-->>AP: import report {inserted, rejected}
+    end
+    B-->>AP: 200

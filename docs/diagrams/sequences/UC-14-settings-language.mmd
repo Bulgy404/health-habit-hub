@@ -1,0 +1,16 @@
+%% UC-14 — Manage settings & language preference
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (usersRouter)
+    participant M as MongoDB
+
+    P->>F: Change language to German in Settings
+    F->>F: LocaleProvider.setLocale('de')
+    F->>B: PUT /api/v1/users/me {preferredLanguage: "de"}
+    B->>M: findOneAndUpdate(users, {userId}, {$set: {preferredLanguage}}, {upsert: true})
+    M-->>B: updated document
+    B-->>F: 200 {preferredLanguage: "de"}
+    F->>F: Rebuild UI with German locale
+    F->>B: Subsequent reads use ?lang=de (see UC-04)

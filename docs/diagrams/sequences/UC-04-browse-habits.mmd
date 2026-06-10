@@ -1,0 +1,15 @@
+%% UC-04 — Browse & explore habits (locale-aware)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (habitsRouter)
+    participant N4 as Neo4j
+
+    P->>F: Open Explore tab
+    F->>B: GET /api/v1/habits?lang=de (Bearer token)
+    B->>N4: MATCH (h:Habit) RETURN h
+    N4-->>B: habit nodes
+    B->>B: displayText = translationDE || original
+    B-->>F: [{uuid, original, translationEN, translationDE, displayText}]
+    F->>F: Render list / graph / stats views

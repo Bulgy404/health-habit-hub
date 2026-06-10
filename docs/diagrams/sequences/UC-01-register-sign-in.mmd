@@ -1,0 +1,20 @@
+%% UC-01 — Register & sign in (OIDC Authorization Code + PKCE)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant KC as Keycloak
+    participant B as Backend (Express)
+
+    P->>F: Tap "Sign in"
+    F->>F: Generate code_verifier + code_challenge (S256)
+    F->>KC: GET /auth/realms/hhh/.../auth?response_type=code&code_challenge=...
+    KC-->>F: Login page
+    P->>KC: Enter credentials
+    KC-->>F: 302 hhh://callback?code=...
+    F->>KC: POST /token (code + code_verifier)
+    KC-->>F: access_token, refresh_token, id_token
+    F->>F: Store tokens in flutter_secure_storage
+    F->>B: GET /api/v1/users/me (Bearer access_token)
+    B->>B: Verify RS256 sig via cached JWKS, check roles
+    B-->>F: 200 user preferences

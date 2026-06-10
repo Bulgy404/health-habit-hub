@@ -1,0 +1,20 @@
+%% UC-13 — Submit weekly SRHI check-in
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (srhiService)
+    participant M as MongoDB
+
+    F->>B: GET /api/v1/srhi/due
+    B->>M: Compute next due window per active intention (weekNumber since creation)
+    M-->>B: due windows
+    B-->>F: [{intentionId, weekNumber, scheduledFor}]
+    P->>F: Answer 12 SRHI items (1-7 scale)
+    F->>B: POST /api/v1/srhi {intentionId, weekNumber, items}
+    B->>B: Compute score = mean(srhi_1..srhi_12)
+    B->>M: upsert(srhi_responses, key {intentionId, weekNumber})
+    M-->>B: stored
+    B-->>F: 201 {score}
+    F->>B: GET /api/v1/srhi/history
+    B-->>F: score trajectory per intention

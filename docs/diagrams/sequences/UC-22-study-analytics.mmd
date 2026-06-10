@@ -1,0 +1,20 @@
+%% UC-22 — View study analytics
+sequenceDiagram
+    autonumber
+    actor R as Researcher / Admin
+    participant AP as Admin Panel
+    participant B as Backend (studyAnalyticsService)
+    participant M as MongoDB
+
+    R->>AP: Open study analytics dashboard
+    AP->>B: GET /api/v1/admin/studies/:id/analytics
+    par aggregate per group
+        B->>M: aggregate(daily_behavior_logs) - weekly active rate
+    and
+        B->>M: aggregate(srhi_responses) - mean SRHI trajectory per week
+    and
+        B->>M: aggregate(enrollments) - dropout curve (droppedOutAt)
+    end
+    M-->>B: aggregation results
+    B-->>AP: {weeklyActiveRate, srhiTrajectory, dropoutCurve} per group
+    AP-->>R: Render charts (G1-G4 comparison)

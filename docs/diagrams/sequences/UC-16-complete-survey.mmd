@@ -1,0 +1,18 @@
+%% UC-16 — Complete survey (legacy survey module)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Client (Flutter / web)
+    participant B as Backend (surveyRouter)
+    participant M as MongoDB
+
+    F->>B: GET /api/v1/surveys
+    B->>M: find(surveys)
+    M-->>B: survey definitions
+    B-->>F: available surveys
+    F->>B: GET /api/v1/surveys/:id/render
+    B-->>F: rendered survey form
+    P->>F: Fill in answers, submit
+    F->>B: POST /api/v1/surveys/:id/results {answers}
+    B->>M: insert(survey_responses)
+    B-->>F: 201 response stored
