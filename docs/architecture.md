@@ -28,8 +28,6 @@ graph TD
 
         Keycloak["Keycloak 26.5.5\n:8080\n/auth/realms/hhh"]
 
-        Fuseki["Apache Jena Fuseki\n:3030\nSPARQL endpoint"]
-
         Neo4j["Neo4j 5\n:7474 (HTTP)\n:7687 (Bolt)"]
 
         Mongo["MongoDB\n:27017"]
@@ -46,14 +44,12 @@ graph TD
     Proxy -->|"Host: app.*"| App
     Proxy -->|"Host: admin.*"| AdminPanel
     Proxy -->|"Host: keycloak.* / PathPrefix:/auth"| Keycloak
-    Proxy -->|"Host: fuseki.*"| Fuseki
     Proxy -->|"PathPrefix:/mongo"| MongoExpress
     Proxy -->|"Host: translate.*"| LibreTranslate
     Proxy -->|"Host: neo4j.*"| Neo4j
 
     App -->|"JWKS validation"| Keycloak
     AdminPanel -->|"JWKS validation\n(NextAuth)"| Keycloak
-    App -->|"SPARQL queries (HTTP)"| Fuseki
     App -->|"Bolt protocol"| Neo4j
     App -->|"MongoDB driver :27017"| Mongo
     App -->|"HTTP /api/v1/llm/*\n/api/v1/kb/*"| APIService
@@ -64,7 +60,7 @@ graph TD
     KnowledgeMCP -->|"HTTP /query\n/documents/text"| LightRAG
 
     Backup -->|"mongodump"| Mongo
-    Backup -->|"tar fuseki-data"| Fuseki
+    Backup -->|"tar lightrag-data"| LightRAG
     Backup -->|"neo4j-admin dump"| Neo4j
     Backup -->|"Keycloak REST API /partial-export"| Keycloak
 
@@ -84,12 +80,11 @@ graph TD
 | **knowledge-mcp** | FastMCP (Python) | MCP server wrapping LightRAG; exposes `search_knowledge` and `ingest_document` tools for AI agent use via SSE transport | 8002 | `localhost:8002` | `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
 | **keycloak** | Keycloak 26.5.5 | OIDC/OAuth2 identity provider; manages realms, users, roles | 8080 | `localhost:8080` | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KC_DB`, `KC_HTTP_RELATIVE_PATH` (prod) |
 | **admin** | Next.js 14 (App Router) | Researcher/admin web panel: questionnaire management, settings, cue pools, study analytics, notification campaigns | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER` |
-| **fuseki** | Apache Jena Fuseki | SPARQL triplestore; stores HHH + BCIO ontology | 3030 | `fuseki.localhost:3030` | `ADMIN_PASSWORD` |
 | **neo4j** | Neo4j 5 (n10s plugin) | Graph database; stores habit graph with BCIO alignment | 7474 (HTTP), 7687 (Bolt) | `neo4j.localhost:7474` | `NEO4J_AUTH` (`user/password`), `NEO4J_PLUGINS` |
 | **mongo** | MongoDB (latest) | Document store; holds questionnaires, form responses, recommendations, user preferences | 27017 | Internal only | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`, `MONGO_INITDB_DATABASE` |
 | **mongo-express** | Mongo Express | MongoDB admin web UI | 8081 | `localhost/mongo` | `ME_CONFIG_MONGODB_URL`, `ME_CONFIG_BASICAUTH_USERNAME`, `ME_CONFIG_BASICAUTH_PASSWORD` |
 | **translate** | LibreTranslate | Self-hosted machine translation API (en/de) | 5000 | `translate.localhost:5000` | `LT_LOAD_ONLY`, `LT_REQ_LIMIT` |
-| **backup** | Custom Alpine + cron | Daily backups of MongoDB, Fuseki, Neo4j, Keycloak; 30-day retention | — | Internal only | `BACKUP_RETENTION_DAYS`, `ALERT_WEBHOOK_URL`, `BACKUP_EMAIL`, `MONGO_USER`, `MONGO_PASSWORD` |
+| **backup** | Custom Alpine + daily loop | Daily backups of MongoDB, LightRAG, Neo4j, Keycloak; configurable retention (default 14 days) | — | Internal only | `BACKUP_RETENTION_DAYS`, `ALERT_WEBHOOK_URL`, `BACKUP_EMAIL`, `MONGO_USER`, `MONGO_PASSWORD` |
 
 > **Flutter mobile/web**: Not a separate Docker container. Flutter runs natively on Android/iOS or as a compiled web app. In dev the backend is reached directly; in production the compiled web bundle may be hosted on the `app` service.
 >
@@ -328,7 +323,7 @@ LightRAG's built-in web UI is served at `http://localhost:9622` (local) and can 
 |---|---|---|---|
 | **Graph DB** | Neo4j 5 | `Habit`, `Context`, `BCIOConcept` nodes and `HAS_CONTEXT`, `MAPS_TO` relationships | Graph traversal for habit similarity, BCIO alignment queries, and recommender reads |
 | **Document DB** | MongoDB | `users` (preferences), `questionnaires`, `form_responses`, `recommendations`, `recommendation_feedback`; DFG collections: `implementation_intentions`, `daily_behavior_logs`, `srhi_responses`, `cue_pools`, `notification_campaigns` | Flexible schema for survey/form data; no strong relational joins required |
-| **Triplestore** | Apache Jena Fuseki | BCIO ontology (`Ontology.ttl`, `schema.ttl`, `data.ttl`) | SPARQL queries over RDF graph; stores formal OWL ontology that the LLM uses for BCIO mapping |
+| **Triplestore** *(retired)* | Apache Jena Fuseki | BCIO ontology (`Ontology.ttl`, `schema.ttl`, `data.ttl`) | **Removed from the compose stack** — BCIO mapping now uses in-process embeddings in the API-service; ontology sections below are kept for historical reference (see `docs/migration.md`) |
 | **Vector search** | In-process (API-service) | Embedded BCIO concept descriptions | Fast similarity search during `map-bcio` pipeline step; no separate vector DB needed at current scale |
 | **Graph+vector KB** | LightRAG (file-based) | Knowledge graph of concepts/relationships extracted from uploaded documents + vector embeddings | Hybrid retrieval for habit recommendations; graph captures semantic relationships, vector handles dense similarity |
 
@@ -345,6 +340,8 @@ LightRAG's built-in web UI is served at `http://localhost:9622` (local) and can 
 ---
 
 ## Ontology
+
+> **Note (2026-06):** the Fuseki triplestore has been removed from the deployment. The ontology reference below documents the RDF model used by the legacy pipeline and remains relevant for interpreting historical data and the BCIO concept space.
 
 ### Namespaces
 
@@ -435,6 +432,8 @@ Data flow:
 | `notification_campaigns` | Researcher-authored FCM push campaigns with schedule and target group |
 
 ---
+
+*Updated: 2026-06-10 | Fuseki removed from architecture docs (service retired from compose stack); backup targets corrected*
 
 *Updated: 2026-06-10 | Diagram suite added under `docs/diagrams/` (architecture, use cases, 30 sequence diagrams, class diagram)*
 

@@ -32,9 +32,8 @@ flowchart TB
     subgraph data["Data Stores"]
         mongo[("MongoDB 7<br/>studies · questionnaires · intentions<br/>logs · SRHI · recommendations")]
         neo4j[("Neo4j 5<br/>Habit / Context / BCIOConcept graph<br/>bolt :7687")]
-        fuseki[("Apache Jena Fuseki<br/>RDF triplestore · HHH + BCIO ontology<br/>:3030")]
         lightrag[("LightRAG · :9621<br/>graph + vector knowledge base")]
-        redis[("Redis 7<br/>LLM response cache · locks")]
+        redis[("Redis 7<br/>API-service response cache · locks")]
         postgres[("PostgreSQL 16<br/>Keycloak persistence")]
     end
 
@@ -45,7 +44,7 @@ flowchart TB
     end
 
     %% ------- Ops -------
-    backup["Backup Service<br/>cron 02:00 · 30-day retention"]
+    backup["Backup Service<br/>daily cron · configurable retention (default 14 days)"]
 
     %% ------- Edges: actors -------
     participant_actor --> flutter
@@ -68,7 +67,6 @@ flowchart TB
     %% ------- Edges: backend -------
     backend --> mongo
     backend -- "Cypher / Bolt" --> neo4j
-    backend -- "SPARQL" --> fuseki
     backend -- "POST /translate" --> translate
     backend -- "/api/v1/llm/* · /api/v1/kb/*<br/>(service token)" --> apiservice
     backend -- "push campaigns" --> fcm
@@ -76,7 +74,7 @@ flowchart TB
     %% ------- Edges: AI service -------
     apiservice -- "chat / embeddings" --> llm
     apiservice -- "hybrid query / ingest" --> lightrag
-    apiservice --> redis
+    apiservice -- "response cache<br/>(checked before RAG/LLM)" --> redis
     apiservice --> mongo
     apiservice -- "Bolt" --> neo4j
     knowledgemcp --> lightrag
@@ -85,12 +83,12 @@ flowchart TB
     %% ------- Edges: ops -------
     backup -- "mongodump" --> mongo
     backup -- "neo4j-admin dump" --> neo4j
-    backup -- "tar data" --> fuseki
+    backup -- "tar lightrag-data" --> lightrag
     backup -- "partial-export API" --> keycloak
 
     classDef actor fill:#fff3cd,stroke:#b8860b
     classDef store fill:#e7f1ff,stroke:#2a6fb8
     classDef ext fill:#f3e8ff,stroke:#7c3aed
     class participant_actor,researcher_actor,agent_actor actor
-    class mongo,neo4j,fuseki,lightrag,redis,postgres store
+    class mongo,neo4j,lightrag,redis,postgres store
     class llm,fcm ext

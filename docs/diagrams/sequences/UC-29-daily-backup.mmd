@@ -1,24 +1,25 @@
-%% UC-29 — Run daily backup (cron 02:00)
+%% UC-29 — Run daily backup (backup-service, daily loop after startup delay)
+%% Source: backup-service/backup.sh, docker-compose.yml
 sequenceDiagram
     autonumber
-    participant CR as Cron (backup-service)
+    participant CR as backup-service (daily loop)
     participant M as MongoDB
+    participant LR as LightRAG (volume)
     participant N4 as Neo4j
-    participant FU as Fuseki
     participant KC as Keycloak
-    participant FS as Backup volume
-    participant WH as Alert webhook
+    participant FS as Backup volume (./backups)
+    participant WH as Alert webhook / email
 
     CR->>M: mongodump --archive
     M-->>CR: dump stream
-    CR->>N4: neo4j-admin database dump
-    N4-->>CR: graph dump
-    CR->>FU: tar fuseki-data
-    FU-->>CR: archive
-    CR->>KC: POST /partial-export (realm hhh)
+    CR->>LR: tar -czf lightrag-data.tar.gz (read-only volume mount)
+    LR-->>CR: archive
+    CR->>N4: docker stop + neo4j-admin database dump (via docker.sock)
+    N4-->>CR: graph dump, container restarted
+    CR->>KC: realm partial-export (realm hhh)
     KC-->>CR: realm JSON
     CR->>FS: Write timestamped archives
-    CR->>FS: Prune backups older than 30 days
+    CR->>FS: Prune backups older than BACKUP_RETENTION_DAYS (default 14)
     alt any step failed
-        CR->>WH: POST failure alert (ALERT_WEBHOOK_URL)
+        CR->>WH: Failure alert (ALERT_WEBHOOK_URL / ALERT_EMAIL)
     end

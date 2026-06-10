@@ -94,8 +94,7 @@ flowchart TB
 
     mongo[("MongoDB")]
     neo4j[("Neo4j")]
-    fuseki[("Fuseki<br/>RDF/SPARQL")]
-    redis[("Redis")]
+    redis[("Redis<br/>response cache")]
 
     flutter --> traefik
     adminui --> traefik
@@ -104,14 +103,13 @@ flowchart TB
     backend -. "JWKS verify" .-> keycloak
     backend --> mongo
     backend --> neo4j
-    backend --> fuseki
     backend --> apiservice
-    apiservice --> llm
-    apiservice --> lightrag
-    apiservice --> redis
+    apiservice -- "1\. check cache" --> redis
+    apiservice -- "2\. on miss: hybrid retrieve" --> lightrag
+    apiservice -- "3\. generate" --> llm
 ```
 
-Traefik sits in front of everything as the reverse proxy and TLS terminator; internally, services communicate by container name. This is the condensed view — the **full system architecture diagram** (all 13+ containers including LibreTranslate, knowledge-mcp, backup service, PostgreSQL, and FCM) is at [`docs/diagrams/architecture/system-architecture.mmd`](docs/diagrams/architecture/system-architecture.mmd), with a deep-dive in [`docs/architecture.md`](docs/architecture.md).
+Traefik sits in front of everything as the reverse proxy and TLS terminator; internally, services communicate by container name. Redis acts as the API-service's response cache — recommendation requests are answered from cache when possible, and only on a miss does the RAG pipeline (LightRAG retrieval + LLM generation) run. This is the condensed view — the **full system architecture diagram** (all containers including LibreTranslate, knowledge-mcp, backup service, monitoring, PostgreSQL, and FCM) is at [`docs/diagrams/architecture/system-architecture.mmd`](docs/diagrams/architecture/system-architecture.mmd), with a deep-dive in [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
@@ -141,7 +139,7 @@ Highlights: the [habit donation pipeline](docs/diagrams/sequences/UC-03-donate-h
 | `lightrag/` | LightRAG knowledge base (graph + vector) |
 | `knowledge-mcp/` | MCP server exposing the KB to AI agents (SSE) |
 | `keycloak/` | Realm config and init scripts |
-| `mongo/`, `neo4j/`, `fuseki/` *(in compose)* | Data stores, seeds, and init data |
+| `mongo/`, `neo4j/` | Data store seeds and init data |
 | `backup-service/` | Daily cron backups of all stores |
 | `monitoring/` | Monitoring stack configuration |
 | `scripts/` | Seeding, migration, and ops scripts |
@@ -180,7 +178,6 @@ Local service URLs after `make dev`:
 | Admin UI | http://admin.localhost |
 | Keycloak | http://localhost:8080 |
 | Neo4j Browser | http://localhost:7474 |
-| Fuseki | http://localhost:3030 |
 | LightRAG (graph UI) | http://localhost:9621 |
 | LibreTranslate | http://localhost:5001 |
 | Python AI service | http://localhost:8001 |
@@ -210,7 +207,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 | Admin | Next.js 14, NextAuth.js, TypeScript |
 | AI service | Python 3.11, FastAPI, OpenAI-compatible LLM API |
 | Knowledge RAG | LightRAG 1.5 (graph + vector), FastMCP |
-| Databases | MongoDB 7, Neo4j 5, Apache Jena Fuseki, PostgreSQL 16 |
+| Databases | MongoDB 7, Neo4j 5, PostgreSQL 16 (Keycloak) — *Fuseki/RDF retired, see [docs/migration.md](docs/migration.md)* |
 | Cache / locks | Redis 7 |
 | Identity | Keycloak 26 |
 | Translation | LibreTranslate |

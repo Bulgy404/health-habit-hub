@@ -32,7 +32,7 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 
 - **Flutter mobile app** — cross-platform (iOS, Android, web), Keycloak PKCE login, habit donation, AI-powered recommendations, guided onboarding
 - **Habit classification pipeline** — LLM-based habit extraction, BCIO ontology mapping, and recommendation generation via the Python FastAPI service
-- **Semantic knowledge base** — RDF/SPARQL ontology (Apache Fuseki) combined with a Neo4j habit graph
+- **Semantic knowledge base** — Neo4j habit graph with BCIO ontology alignment, plus a LightRAG graph+vector knowledge base *(the former Fuseki/RDF triplestore has been retired — see docs/migration.md)*
 - **Multi-language support** — English and German (LibreTranslate for automatic translation + LLM refinement)
 - **Automated notifications** — Redis-coordinated scheduled push notification dispatch
 - **Researcher admin panel** — study management, participant tracking, questionnaire authoring
@@ -67,7 +67,7 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
                 ┌───────────┼───────────┐
                 ▼           ▼           ▼
          ┌──────────┐ ┌──────────┐ ┌──────────────┐
-         │ MongoDB  │ │  Neo4j   │ │Apache Fuseki │
+         │ MongoDB  │ │  Neo4j   │ │  LightRAG    │
          │ (surveys,│ │ (habit   │ │ (RDF/SPARQL  │
          │  prefs,  │ │  graph,  │ │  ontology)   │
          │  QRs)    │ │  BCIO)   │ │              │
@@ -81,7 +81,7 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 ┌──────────────┐   ┌────────────────────┐   ┌────────────────────┐
 │    Redis     │   │  LibreTranslate    │   │  Backup Service    │
 │ (notif. lock,│   │  (EN↔DE, v1.9.5)  │   │  (MongoDB, Neo4j,  │
-│  rec. cache) │   │  Port 5000         │   │  Fuseki, Keycloak) │
+│  rec. cache) │   │  Port 5000         │   │  LightRAG, Keycloak)│
 └──────────────┘   └────────────────────┘   └────────────────────┘
 ```
 
@@ -96,11 +96,10 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 | `keycloak` | Keycloak 26.5.5 | Identity provider; realm `hhh`; clients: `hhh-flutter` (public PKCE), `hhh-backend` (confidential service account), `hhh-admin` (confidential) |
 | `mongo` | MongoDB 8.2 | Survey definitions, questionnaire responses, user preferences, notification state |
 | `neo4j` | Neo4j 5 + n10s plugin | Habit graph, BCIO relationship data, semantic graph queries |
-| `fuseki` | Apache Jena Fuseki | RDF triple store; SPARQL endpoint for ontology queries |
 | `translate` | LibreTranslate v1.9.5 | Self-hosted EN↔DE machine translation |
 | `redis` | Redis 7 | Distributed lock for notification cron, recommendation caching |
 | `proxy` | Traefik v3.6.1 | Reverse proxy, automatic Let's Encrypt SSL, host-based routing |
-| `backup-service` | Bash scripts | Daily automated backups of MongoDB, Neo4j, Fuseki data, and Keycloak realm export |
+| `backup-service` | Bash scripts | Daily automated backups of MongoDB, Neo4j, LightRAG data, and Keycloak realm export |
 
 ---
 
@@ -193,11 +192,6 @@ health-habit-hub/
 │   ├── hhh-realm.json              # Keycloak realm export (imported on startup)
 │   └── hhh-user-profile.json       # Custom user profile attributes
 │
-├── fuseki/
-│   ├── Dockerfile                  # Custom Fuseki image
-│   ├── config.ttl                  # Dataset configuration
-│   └── init/                       # Initial data for import
-│
 ├── mongo/
 │   └── entrypoint/                 # MongoDB init scripts
 │
@@ -244,7 +238,7 @@ health-habit-hub/
 | Framework | Express.js |
 | Authentication | Keycloak JWKS JWT verification (`middleware/auth.js`) |
 | WebSocket | Node.js `http` + custom WS server (`ws/recommendationWs.js`) |
-| Databases | MongoDB (via native driver), Neo4j (bolt), Apache Fuseki (SPARQL HTTP) |
+| Databases | MongoDB (via native driver), Neo4j (bolt) |
 | Caching / locking | Redis 7 |
 | API docs | swagger-jsdoc + swagger-ui-express at `/api/v1/docs` |
 
@@ -284,7 +278,7 @@ health-habit-hub/
 |----------|---------|
 | MongoDB 8.2 | Survey definitions, questionnaire responses, user preferences, notification state |
 | Neo4j 5 (+ n10s) | Donated habit graph, BCIO relationships, semantic graph |
-| Apache Fuseki (Jena) | RDF triple store, SPARQL endpoint, `Ontology.ttl` |
+| ~~Apache Fuseki (Jena)~~ *(retired)* | Former RDF triple store; ontology files kept for reference |
 
 ### Infrastructure
 
@@ -357,7 +351,7 @@ All variables are defined in `stack.env`. In production, override sensitive valu
 | `NEO4J_PASSWORD` | — | Neo4j password **(change in Portainer)** |
 | `GRAPH_BACKEND` | `neo4j` | Graph backend selector |
 
-### Apache Fuseki
+### Apache Fuseki *(retired — no longer in docker-compose.yml; variables kept for historical reference)*
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -462,7 +456,6 @@ After `make dev`, services are available at:
 | Keycloak admin console | http://keycloak.localhost or http://localhost:8080 |
 | Next.js admin app | http://admin.localhost or http://localhost:3001 |
 | Neo4j browser | http://neo4j.localhost or http://localhost:7474 |
-| Fuseki UI | http://fuseki.localhost or http://localhost:3030 |
 | LibreTranslate | http://translate.localhost or http://localhost:5001 |
 | Python API service | http://localhost:8001 |
 | Traefik dashboard | http://localhost:8888 |
