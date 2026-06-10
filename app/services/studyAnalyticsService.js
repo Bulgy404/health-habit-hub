@@ -160,7 +160,11 @@ export async function getQuestionnaireCompletionRates({ db, studyId }) {
   }
 
   const study = await db.collection(STUDIES).findOne({ _id: oid });
-  if (!study || !Array.isArray(study.questionnaires) || study.questionnaires.length === 0) {
+  if (
+    !study ||
+    !Array.isArray(study.questionnaires) ||
+    study.questionnaires.length === 0
+  ) {
     return [];
   }
 
@@ -169,7 +173,10 @@ export async function getQuestionnaireCompletionRates({ db, studyId }) {
   );
 
   const [questionnaires, enrollments] = await Promise.all([
-    db.collection(QUESTIONNAIRES).find({ _id: { $in: questionnaireIds } }).toArray(),
+    db
+      .collection(QUESTIONNAIRES)
+      .find({ _id: { $in: questionnaireIds } })
+      .toArray(),
     db.collection(ENROLLMENTS).find({ studyId: oid }).toArray(),
   ]);
 
@@ -183,7 +190,12 @@ export async function getQuestionnaireCompletionRates({ db, studyId }) {
       const uniqueRespondents = await db
         .collection(FORM_RESPONSES)
         .aggregate([
-          { $match: { userId: { $in: enrolledUserIds }, questionnaireSlug: slug } },
+          {
+            $match: {
+              userId: { $in: enrolledUserIds },
+              questionnaireSlug: slug,
+            },
+          },
           { $group: { _id: '$userId' } },
           { $count: 'n' },
         ])

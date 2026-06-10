@@ -177,7 +177,9 @@ app.use('/api/v1', express.json(), createV1Router());
 // Ensure required MongoDB indexes exist (idempotent — no-op if already present).
 connectMongo()
   .then((db) => ensureIndexes(db))
-  .catch((err) => console.error('[startup] Failed to ensure MongoDB indexes:', err));
+  .catch((err) =>
+    console.error('[startup] Failed to ensure MongoDB indexes:', err)
+  );
 
 // Start scheduled notification dispatcher (runs every 60 s)
 startNotificationScheduler({

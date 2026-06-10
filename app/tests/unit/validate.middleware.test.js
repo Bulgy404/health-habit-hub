@@ -8,8 +8,14 @@ function makeReqRes(body) {
   const res = {
     _status: 200,
     _json: null,
-    status(code) { this._status = code; return this; },
-    json(data) { this._json = data; return this; },
+    status(code) {
+      this._status = code;
+      return this;
+    },
+    json(data) {
+      this._json = data;
+      return this;
+    },
   };
   return { req, res };
 }

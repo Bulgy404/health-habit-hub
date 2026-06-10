@@ -66,7 +66,9 @@ export async function translateText(text, from, to, endpoint, retries = 3) {
       );
 
       if (attempt === retries || !error.message.includes('ECONNREFUSED')) {
-        log.error(`Translation service unavailable after ${retries} attempts. Returning original text.`);
+        log.error(
+          `Translation service unavailable after ${retries} attempts. Returning original text.`
+        );
         return text;
       }
 

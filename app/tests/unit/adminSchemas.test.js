@@ -16,13 +16,19 @@ import {
 
 function ok(schema, data) {
   const r = schema.safeParse(data);
-  assert.ok(r.success, `expected success but got: ${JSON.stringify(r.error?.errors)}`);
+  assert.ok(
+    r.success,
+    `expected success but got: ${JSON.stringify(r.error?.errors)}`
+  );
   return r.data;
 }
 
 function fail(schema, data) {
   const r = schema.safeParse(data);
-  assert.ok(!r.success, `expected failure but schema accepted: ${JSON.stringify(data)}`);
+  assert.ok(
+    !r.success,
+    `expected failure but schema accepted: ${JSON.stringify(data)}`
+  );
 }
 
 // ── createStudySchema ─────────────────────────────────────────────────────────
@@ -41,7 +47,10 @@ describe('createStudySchema', () => {
   });
 
   it('trims name whitespace', () => {
-    const r = ok(createStudySchema, { name: '  Study  ', groups: [{ label: 'G' }] });
+    const r = ok(createStudySchema, {
+      name: '  Study  ',
+      groups: [{ label: 'G' }],
+    });
     assert.equal(r.name, 'Study');
   });
 });
@@ -117,10 +126,18 @@ describe('createSurveySchema', () => {
 // ── updateSurveyStatusSchema ──────────────────────────────────────────────────
 
 describe('updateSurveyStatusSchema', () => {
-  it('accepts draft', () => { ok(updateSurveyStatusSchema, { status: 'draft' }); });
-  it('accepts published', () => { ok(updateSurveyStatusSchema, { status: 'published' }); });
-  it('accepts archived', () => { ok(updateSurveyStatusSchema, { status: 'archived' }); });
-  it('rejects unknown status', () => { fail(updateSurveyStatusSchema, { status: 'active' }); });
+  it('accepts draft', () => {
+    ok(updateSurveyStatusSchema, { status: 'draft' });
+  });
+  it('accepts published', () => {
+    ok(updateSurveyStatusSchema, { status: 'published' });
+  });
+  it('accepts archived', () => {
+    ok(updateSurveyStatusSchema, { status: 'archived' });
+  });
+  it('rejects unknown status', () => {
+    fail(updateSurveyStatusSchema, { status: 'active' });
+  });
 });
 
 // ── updateSurveyGroupsSchema ──────────────────────────────────────────────────
@@ -166,13 +183,21 @@ describe('createCueSchema', () => {
 
   it('rejects invalid quality', () => {
     fail(createCueSchema, {
-      text: 'x', quality: 'medium', dimensions: ['d'], domain: 'x', language: 'en',
+      text: 'x',
+      quality: 'medium',
+      dimensions: ['d'],
+      domain: 'x',
+      language: 'en',
     });
   });
 
   it('rejects empty dimensions', () => {
     fail(createCueSchema, {
-      text: 'x', quality: 'high', dimensions: [], domain: 'x', language: 'en',
+      text: 'x',
+      quality: 'high',
+      dimensions: [],
+      domain: 'x',
+      language: 'en',
     });
   });
 });
@@ -201,14 +226,26 @@ describe('importCuesSchema', () => {
 
 describe('createProfileFieldSchema', () => {
   it('accepts valid field', () => {
-    ok(createProfileFieldSchema, { fieldId: 'age', label: 'Age', type: 'number' });
+    ok(createProfileFieldSchema, {
+      fieldId: 'age',
+      label: 'Age',
+      type: 'number',
+    });
   });
 
   it('rejects invalid fieldId (uppercase)', () => {
-    fail(createProfileFieldSchema, { fieldId: 'Age', label: 'Age', type: 'number' });
+    fail(createProfileFieldSchema, {
+      fieldId: 'Age',
+      label: 'Age',
+      type: 'number',
+    });
   });
 
   it('rejects invalid type', () => {
-    fail(createProfileFieldSchema, { fieldId: 'x', label: 'X', type: 'boolean' });
+    fail(createProfileFieldSchema, {
+      fieldId: 'x',
+      label: 'X',
+      type: 'boolean',
+    });
   });
 });

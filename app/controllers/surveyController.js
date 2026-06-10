@@ -12,7 +12,9 @@ export async function renderSurvey(req, res) {
   try {
     const db = await getSurveyDb(req);
     const surveyId = req.params.id;
-    log.debug(`Attempting to find survey with id: "${surveyId}" (Type: ${typeof surveyId})`);
+    log.debug(
+      `Attempting to find survey with id: "${surveyId}" (Type: ${typeof surveyId})`
+    );
 
     const survey = await db.collection('surveys').findOne({ id: surveyId });
     if (!survey) {

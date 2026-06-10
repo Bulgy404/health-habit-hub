@@ -12,6 +12,7 @@ Forschungsgruppe Digitale Gesundheit
 Dipl.-Wi.-Ing. Felix Reinsch  
 Email: digital-health@tu-dresden.de  
 Telefon: +49 351 463-37671
+
 ## Haftungsausschluss
 
 Die Inhalte dieser Website wurden mit größtmöglicher Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der bereitgestellten Informationen können wir jedoch keine Gewähr übernehmen.

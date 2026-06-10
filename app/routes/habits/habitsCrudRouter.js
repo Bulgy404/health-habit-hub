@@ -39,13 +39,17 @@ async function fetchLibreTranslation(
       clearTimeout(timeout);
     }
     if (!res.ok) {
-      log.warn(`[translate] LibreTranslate returned ${res.status} — skipping translation to ${targetLang.toUpperCase()}`);
+      log.warn(
+        `[translate] LibreTranslate returned ${res.status} — skipping translation to ${targetLang.toUpperCase()}`
+      );
       return null;
     }
     const data = await res.json();
     return data.translatedText;
   } catch (err) {
-    log.warn(`[translate] LibreTranslate error: ${err.message} — skipping translation to ${targetLang.toUpperCase()}`);
+    log.warn(
+      `[translate] LibreTranslate error: ${err.message} — skipping translation to ${targetLang.toUpperCase()}`
+    );
     return null;
   }
 }
@@ -78,13 +82,17 @@ async function refineLLMTranslation(
       clearTimeout(timeout);
     }
     if (!res.ok) {
-      log.warn(`[translate] LLM ${llmEndpoint} returned ${res.status} — using raw LibreTranslate output`);
+      log.warn(
+        `[translate] LLM ${llmEndpoint} returned ${res.status} — using raw LibreTranslate output`
+      );
       return draft;
     }
     const data = await res.json();
     return data.refined_translation || draft;
   } catch (err) {
-    log.warn(`[translate] LLM refinement error/timeout: ${err.message} — using raw LibreTranslate output`);
+    log.warn(
+      `[translate] LLM refinement error/timeout: ${err.message} — using raw LibreTranslate output`
+    );
     return draft;
   }
 }

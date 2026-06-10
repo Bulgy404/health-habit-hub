@@ -42,10 +42,12 @@ export async function ensureIndexes(database) {
   // Compound index used by the annotation endpoint:
   //   deleteOne({ habitId, type, userId }) — needs all three fields
   //   find({ habitId })                    — covered by the prefix
-  await database.collection('habit_annotations').createIndex(
-    { habitId: 1, type: 1, userId: 1 },
-    { name: 'habitId_type_userId', background: true }
-  );
+  await database
+    .collection('habit_annotations')
+    .createIndex(
+      { habitId: 1, type: 1, userId: 1 },
+      { name: 'habitId_type_userId', background: true }
+    );
 }
 
 export async function disconnect() {

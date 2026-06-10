@@ -73,12 +73,15 @@ function transform(src, importLine, filePath) {
   let out = src;
 
   // Avoid double-import
-  if (!out.includes("from '../utils/logger") && !out.includes("from '../../utils/logger") && !out.includes("from './utils/logger")) {
+  if (
+    !out.includes("from '../utils/logger") &&
+    !out.includes("from '../../utils/logger") &&
+    !out.includes("from './utils/logger")
+  ) {
     // Insert after the last existing import line
     const lastImport = out.lastIndexOf('\nimport ');
-    const insertAt = lastImport >= 0
-      ? out.indexOf('\n', lastImport + 1) + 1
-      : 0;
+    const insertAt =
+      lastImport >= 0 ? out.indexOf('\n', lastImport + 1) + 1 : 0;
     out = out.slice(0, insertAt) + importLine + out.slice(insertAt);
   }
 
@@ -88,46 +91,59 @@ function transform(src, importLine, filePath) {
     const firstCode = out.search(/\n(export|const|function|class|let|var)/);
     if (firstCode >= 0) {
       const insertAt = firstCode + 1;
-      out = out.slice(0, insertAt) + `const log = logger.child({ module: '${filePath.replace(/.*\//, '').replace('.js', '')}' });\n\n` + out.slice(insertAt);
+      out =
+        out.slice(0, insertAt) +
+        `const log = logger.child({ module: '${filePath.replace(/.*\//, '').replace('.js', '')}' });\n\n` +
+        out.slice(insertAt);
     }
   }
 
   // console.error('[route] Error:', err)  →  log.error({ err }, 'unhandled route error')
-  out = out.replace(/console\.error\(\s*'\[route\]\s*Error:',\s*(\w+)\s*\)/g, "log.error({ err: $1 }, 'unhandled route error')");
+  out = out.replace(
+    /console\.error\(\s*'\[route\]\s*Error:',\s*(\w+)\s*\)/g,
+    "log.error({ err: $1 }, 'unhandled route error')"
+  );
 
   // console.error('[startup]', ...) style
-  out = out.replace(/console\.error\(\s*'(\[[\w/]+\])[^']*',\s*(\w+)\s*\)/g, (_, tag, variable) =>
-    `log.error({ err: ${variable} }, '${tag} error')`
+  out = out.replace(
+    /console\.error\(\s*'(\[[\w/]+\])[^']*',\s*(\w+)\s*\)/g,
+    (_, tag, variable) => `log.error({ err: ${variable} }, '${tag} error')`
   );
 
   // console.error('some message', err) → log.error({ err }, 'some message')
-  out = out.replace(/console\.error\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*,\s*(\w+)\s*\)/g, (_, msg, variable) =>
-    `log.error({ err: ${variable} }, ${msg})`
+  out = out.replace(
+    /console\.error\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*,\s*(\w+)\s*\)/g,
+    (_, msg, variable) => `log.error({ err: ${variable} }, ${msg})`
   );
 
   // console.error('message') → log.error('message')
-  out = out.replace(/console\.error\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*\)/g, (_, msg) =>
-    `log.error(${msg})`
+  out = out.replace(
+    /console\.error\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*\)/g,
+    (_, msg) => `log.error(${msg})`
   );
 
   // console.warn('...', val) → log.warn({ val }, '...')
-  out = out.replace(/console\.warn\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*,\s*(\w+)\s*\)/g, (_, msg, variable) =>
-    `log.warn({ ${variable} }, ${msg})`
+  out = out.replace(
+    /console\.warn\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*,\s*(\w+)\s*\)/g,
+    (_, msg, variable) => `log.warn({ ${variable} }, ${msg})`
   );
 
   // console.warn('...') → log.warn('...')
-  out = out.replace(/console\.warn\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*\)/g, (_, msg) =>
-    `log.warn(${msg})`
+  out = out.replace(
+    /console\.warn\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*\)/g,
+    (_, msg) => `log.warn(${msg})`
   );
 
   // console.log('...', val) → log.debug({ val }, '...')
-  out = out.replace(/console\.log\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*,\s*(\w+)\s*\)/g, (_, msg, variable) =>
-    `log.debug({ ${variable} }, ${msg})`
+  out = out.replace(
+    /console\.log\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*,\s*(\w+)\s*\)/g,
+    (_, msg, variable) => `log.debug({ ${variable} }, ${msg})`
   );
 
   // console.log('...') → log.debug('...')
-  out = out.replace(/console\.log\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*\)/g, (_, msg) =>
-    `log.debug(${msg})`
+  out = out.replace(
+    /console\.log\(\s*(`[^`]+`|'[^']+'|"[^"]+")\s*\)/g,
+    (_, msg) => `log.debug(${msg})`
   );
 
   return out;
@@ -137,7 +153,12 @@ let changed = 0;
 for (const filePath of targets) {
   const abs = resolve(root, filePath);
   let src;
-  try { src = readFileSync(abs, 'utf8'); } catch { console.warn(`  skip (not found): ${filePath}`); continue; }
+  try {
+    src = readFileSync(abs, 'utf8');
+  } catch {
+    console.warn(`  skip (not found): ${filePath}`);
+    continue;
+  }
 
   const importLine = loggerImport(filePath);
   const out = transform(src, importLine, filePath);
