@@ -9,7 +9,8 @@
 // Neo4j returns Integer objects for integer properties; normalise them to JS numbers.
 function neoInt(val) {
   if (val == null) return 0;
-  if (typeof val === 'object' && typeof val.toNumber === 'function') return val.toNumber();
+  if (typeof val === 'object' && typeof val.toNumber === 'function')
+    return val.toNumber();
   return Number(val);
 }
 

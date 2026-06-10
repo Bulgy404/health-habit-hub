@@ -180,7 +180,9 @@ class Neo4jDbClient {
     const status =
       first.terminationStatus || first['terminationStatus'] || 'UNKNOWN';
     if (status !== 'OK') {
-      log.error(`[n10s] Import failed — label: ${label}, status: ${status}, payload (first 200 chars): ${payload.slice(0, 200)}`);
+      log.error(
+        `[n10s] Import failed — label: ${label}, status: ${status}, payload (first 200 chars): ${payload.slice(0, 200)}`
+      );
     }
     return status === 'OK';
   }

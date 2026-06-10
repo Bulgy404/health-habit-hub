@@ -40,7 +40,10 @@ let fixed = 0;
 for (const rel of bad) {
   const abs = resolve(root, rel);
   const src = readFileSync(abs, 'utf8');
-  const out = src.replace(RE, (_, open, loggerLine) => `${loggerLine}\n${open}\n`);
+  const out = src.replace(
+    RE,
+    (_, open, loggerLine) => `${loggerLine}\n${open}\n`
+  );
   if (out !== src) {
     writeFileSync(abs, out, 'utf8');
     console.log(`fixed: ${rel}`);

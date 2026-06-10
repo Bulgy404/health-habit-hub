@@ -7,14 +7,21 @@ function makeRes() {
   const locals = {};
   return {
     locals,
-    setHeader(name, value) { headers[name] = value; },
+    setHeader(name, value) {
+      headers[name] = value;
+    },
     _headers: headers,
   };
 }
 
 function makeNext() {
   let called = false;
-  return { fn: () => { called = true; }, wasCalled: () => called };
+  return {
+    fn: () => {
+      called = true;
+    },
+    wasCalled: () => called,
+  };
 }
 
 test('securityHeaders sets X-Content-Type-Options', () => {
@@ -34,7 +41,10 @@ test('securityHeaders sets X-Frame-Options to DENY', () => {
 test('securityHeaders sets Referrer-Policy', () => {
   const res = makeRes();
   securityHeaders({}, res, () => {});
-  assert.strictEqual(res._headers['Referrer-Policy'], 'strict-origin-when-cross-origin');
+  assert.strictEqual(
+    res._headers['Referrer-Policy'],
+    'strict-origin-when-cross-origin'
+  );
 });
 
 test('securityHeaders sets Content-Security-Policy', () => {
@@ -42,9 +52,16 @@ test('securityHeaders sets Content-Security-Policy', () => {
   securityHeaders({}, res, () => {});
   const csp = res._headers['Content-Security-Policy'];
   assert.ok(typeof csp === 'string', 'CSP header must be a string');
-  assert.ok(csp.includes("default-src 'self'"), 'CSP must include default-src self');
-  const unpkgAllowed = csp.split(/[;\s]+/).some(token => {
-    try { return new URL(token).host === 'unpkg.com'; } catch { return false; }
+  assert.ok(
+    csp.includes("default-src 'self'"),
+    'CSP must include default-src self'
+  );
+  const unpkgAllowed = csp.split(/[;\s]+/).some((token) => {
+    try {
+      return new URL(token).host === 'unpkg.com';
+    } catch {
+      return false;
+    }
   });
   assert.ok(unpkgAllowed, 'CSP must allow unpkg.com for SurveyJS');
   assert.ok(csp.includes("object-src 'none'"), 'CSP must block object-src');
@@ -59,8 +76,15 @@ test('securityHeaders generates a unique nonce per request', () => {
 
   const nonce1 = res1.locals.cspNonce;
   const nonce2 = res2.locals.cspNonce;
-  assert.ok(typeof nonce1 === 'string' && nonce1.length > 0, 'nonce must be a non-empty string');
-  assert.notStrictEqual(nonce1, nonce2, 'each request must get a different nonce');
+  assert.ok(
+    typeof nonce1 === 'string' && nonce1.length > 0,
+    'nonce must be a non-empty string'
+  );
+  assert.notStrictEqual(
+    nonce1,
+    nonce2,
+    'each request must get a different nonce'
+  );
 });
 
 test('securityHeaders embeds nonce in CSP script-src and style-src', () => {
@@ -68,7 +92,10 @@ test('securityHeaders embeds nonce in CSP script-src and style-src', () => {
   securityHeaders({}, res, () => {});
   const nonce = res.locals.cspNonce;
   const csp = res._headers['Content-Security-Policy'];
-  assert.ok(csp.includes(`'nonce-${nonce}'`), 'CSP must contain the per-request nonce');
+  assert.ok(
+    csp.includes(`'nonce-${nonce}'`),
+    'CSP must contain the per-request nonce'
+  );
   assert.ok(csp.includes('script-src'), 'CSP must have script-src directive');
   assert.ok(csp.includes('style-src'), 'CSP must have style-src directive');
 });

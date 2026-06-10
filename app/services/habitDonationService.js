@@ -519,8 +519,8 @@ export async function embedAndStoreHabit({
     const habitText = translationEN || sentence;
 
     // flatten { dimension: [phrases] } → [{ dimension, text }]
-    const contextItems = Object.entries(contextPhrases).flatMap(([dim, phrases]) =>
-      phrases.map((text) => ({ dimension: dim, text }))
+    const contextItems = Object.entries(contextPhrases).flatMap(
+      ([dim, phrases]) => phrases.map((text) => ({ dimension: dim, text }))
     );
 
     // deduplicate BCIO concept labels (multiple mappings can share a concept)
@@ -544,11 +544,14 @@ export async function embedAndStoreHabit({
       body: JSON.stringify({ texts }),
     });
     if (!res.ok) {
-      console.warn(`[habitDonation] embed-batch returned ${res.status} for ${uuid} — skipping.`);
+      console.warn(
+        `[habitDonation] embed-batch returned ${res.status} for ${uuid} — skipping.`
+      );
       return;
     }
     const { embeddings } = await res.json();
-    if (!Array.isArray(embeddings) || embeddings.length !== texts.length) return;
+    if (!Array.isArray(embeddings) || embeddings.length !== texts.length)
+      return;
 
     // --- slice back into per-node arrays ---
     let idx = 0;
@@ -590,6 +593,8 @@ export async function embedAndStoreHabit({
       );
     }
   } catch (err) {
-    console.warn(`[habitDonation] embed-batch failed for ${uuid}: ${err.message}`);
+    console.warn(
+      `[habitDonation] embed-batch failed for ${uuid}: ${err.message}`
+    );
   }
 }

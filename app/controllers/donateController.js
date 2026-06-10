@@ -11,7 +11,9 @@ function getExperimentGroupFromQuery(req) {
     try {
       return ExperimentGroup.fromString(req.query.group);
     } catch {
-      log.error(`Ignoring invalid experiment group parameter "${req.query.group}".`);
+      log.error(
+        `Ignoring invalid experiment group parameter "${req.query.group}".`
+      );
       return null;
     }
   }
@@ -24,7 +26,9 @@ function getExperimentGroupFromCookie(req) {
     try {
       return ExperimentGroup.fromString(req.cookies.experimentGroup);
     } catch {
-      log.error(`Invalid experiment group cookie parameter "${req.cookies.experimentGroup}".`);
+      log.error(
+        `Invalid experiment group cookie parameter "${req.cookies.experimentGroup}".`
+      );
       return null;
     }
   } else {
@@ -43,11 +47,15 @@ function getExperimentGroup(req, res) {
   } else {
     const experimentGroupFromCookie = getExperimentGroupFromCookie(req);
     if (experimentGroupFromCookie) {
-      log.debug(`Using experiment group from cookie: ${experimentGroupFromCookie}`);
+      log.debug(
+        `Using experiment group from cookie: ${experimentGroupFromCookie}`
+      );
       return experimentGroupFromCookie;
     } else {
       const randomExperimentGroup = ExperimentGroup.random();
-      log.debug(`Using randomly selected experiment group: ${randomExperimentGroup}`);
+      log.debug(
+        `Using randomly selected experiment group: ${randomExperimentGroup}`
+      );
       res.cookie('experimentGroup', randomExperimentGroup.toString());
       return randomExperimentGroup;
     }
@@ -90,13 +98,19 @@ export async function saveDonateData(req, res) {
       : `${basepath}/`;
 
     console.log('Cookies empfangen:', req.cookies);
-    log.debug(`Prüfe Cookie 'demographicsCompleted': Wert ist "${req.cookies.demographicsCompleted}"`);
+    log.debug(
+      `Prüfe Cookie 'demographicsCompleted': Wert ist "${req.cookies.demographicsCompleted}"`
+    );
 
     if (req.cookies.demographicsCompleted === 'true') {
-      log.debug('Entscheidung: Cookie ist gesetzt. Leite weiter zur Dankesseite.');
+      log.debug(
+        'Entscheidung: Cookie ist gesetzt. Leite weiter zur Dankesseite.'
+      );
       res.redirect(`${normalizedBasepath}${redirectLang}/thanks`);
     } else {
-      log.debug('Entscheidung: Cookie ist NICHT gesetzt oder falsch. Leite weiter zur Umfrage.');
+      log.debug(
+        'Entscheidung: Cookie ist NICHT gesetzt oder falsch. Leite weiter zur Umfrage.'
+      );
       res.redirect(`${normalizedBasepath}${redirectLang}/survey/1`);
     }
   } catch (error) {

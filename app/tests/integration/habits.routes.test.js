@@ -170,14 +170,22 @@ function createMockNeo4jRun() {
     }
     if (cypher.includes('SET h.annotations_helpful')) {
       const id = params.habitId;
-      if (!annotationCounts[id]) annotationCounts[id] = { helpful: 0, iDoThis: 0 };
-      annotationCounts[id].helpful = Math.max(0, annotationCounts[id].helpful + (params.delta ?? 0));
+      if (!annotationCounts[id])
+        annotationCounts[id] = { helpful: 0, iDoThis: 0 };
+      annotationCounts[id].helpful = Math.max(
+        0,
+        annotationCounts[id].helpful + (params.delta ?? 0)
+      );
       return [];
     }
     if (cypher.includes('SET h.annotations_iDoThis')) {
       const id = params.habitId;
-      if (!annotationCounts[id]) annotationCounts[id] = { helpful: 0, iDoThis: 0 };
-      annotationCounts[id].iDoThis = Math.max(0, annotationCounts[id].iDoThis + (params.delta ?? 0));
+      if (!annotationCounts[id])
+        annotationCounts[id] = { helpful: 0, iDoThis: 0 };
+      annotationCounts[id].iDoThis = Math.max(
+        0,
+        annotationCounts[id].iDoThis + (params.delta ?? 0)
+      );
       return [];
     }
     if (cypher.includes('AS helpful')) {

@@ -14,7 +14,9 @@ export const apiRateLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: userOrIpKey,
   handler(_req, res) {
-    res.status(429).json({ error: 'Too many requests, please try again later.' });
+    res
+      .status(429)
+      .json({ error: 'Too many requests, please try again later.' });
   },
 });
 
@@ -29,7 +31,8 @@ export const habitShareLimiter = rateLimit({
   keyGenerator: userOrIpKey,
   handler(_req, res) {
     res.status(429).json({
-      error: 'Habit donation rate limit exceeded. You can submit up to 200 habits per hour.',
+      error:
+        'Habit donation rate limit exceeded. You can submit up to 200 habits per hour.',
     });
   },
 });

@@ -70,7 +70,7 @@ _LLM_REPLY = json.dumps(
 )
 
 
-def _make_habits_mock():
+def _make_habits_mock(community_habits=None):
     from routers.extract_habits import ExtractHabitsResponse, HabitEntry
 
     return ExtractHabitsResponse(
@@ -78,6 +78,7 @@ def _make_habits_mock():
             HabitEntry(**h) for h in _HABITS_RESPONSE["selected_habits"]
         ],
         habit_summary=_HABITS_RESPONSE["habit_summary"],
+        community_habits=community_habits or [],
     )
 
 

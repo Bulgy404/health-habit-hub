@@ -103,7 +103,11 @@ export async function buildQuestionnaireResponsesCsv({ db, studyId }) {
   const userIds = Object.keys(eMap);
 
   const filter = userIds.length ? { userId: { $in: userIds } } : {};
-  const rows = await db.collection(FORM_RESPONSES).find(filter).sort({ submittedAt: 1 }).toArray();
+  const rows = await db
+    .collection(FORM_RESPONSES)
+    .find(filter)
+    .sort({ submittedAt: 1 })
+    .toArray();
 
   if (rows.length === 0) return stringify([], { header: true });
 

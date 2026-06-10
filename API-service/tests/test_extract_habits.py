@@ -36,6 +36,23 @@ _HABITS = [
     },
 ]
 
+_COMMUNITY_HABITS = [
+    {
+        "uuid": "community-uuid-1",
+        "sentence": "when I feel down I go outside for a walk",
+        "context": {
+            "TIME": [],
+            "PHYSICAL_SETTING": [],
+            "PRIOR_BEHAVIOR": [],
+            "OTHER_PEOPLE": [],
+            "INTERNAL_STATE": ["feeling down"],
+            "BEHAVIOR": ["go outside", "walk"],
+            "REASONING": [],
+        },
+        "score": 0.87,
+    }
+]
+
 _LLM_REPLY = json.dumps({
     "selected_habit_uuids": ["uuid-1"],
     "habit_summary": "Walking 10 000 steps each morning supports a general fitness goal.",
@@ -48,6 +65,7 @@ async def test_returns_selected_habits():
     with (
         patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
         patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=_HABITS)),
+        patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=[])),
         patch("routers.extract_habits.chat_complete", new=AsyncMock(return_value=_LLM_REPLY)),
     ):
         async with AsyncClient(
@@ -75,6 +93,7 @@ async def test_empty_habits_returns_no_selection():
     with (
         patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
         patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=[])),
+        patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=[])),
         patch("routers.extract_habits.chat_complete", new=mock_llm),
     ):
         async with AsyncClient(
@@ -98,6 +117,7 @@ async def test_invalid_llm_json_returns_empty_selection():
     with (
         patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
         patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=_HABITS)),
+        patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=[])),
         patch("routers.extract_habits.chat_complete", new=AsyncMock(return_value="not valid json")),
     ):
         async with AsyncClient(
@@ -134,17 +154,20 @@ async def test_cache_hit_skips_neo4j_and_llm():
             }
         ],
         "habit_summary": "Hydration habits support weight management goals.",
+        "community_habits": [],
     }
 
     mock_redis = MagicMock()
     mock_redis.get = AsyncMock(return_value=json.dumps(cached_result))
     mock_redis.setex = AsyncMock()
     mock_neo4j = AsyncMock()
+    mock_vector = AsyncMock()
     mock_llm = AsyncMock()
 
     with (
         patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=mock_redis)),
         patch("routers.extract_habits._fetch_habits_for_user", new=mock_neo4j),
+        patch("routers.extract_habits._vector_search_habits", new=mock_vector),
         patch("routers.extract_habits.chat_complete", new=mock_llm),
     ):
         async with AsyncClient(
@@ -156,9 +179,81 @@ async def test_cache_hit_skips_neo4j_and_llm():
             )
 
         mock_neo4j.assert_not_called()
+        mock_vector.assert_not_called()
         mock_llm.assert_not_called()
 
     assert resp.status_code == 200
     data = resp.json()
     assert len(data["selected_habits"]) == 1
     assert data["selected_habits"][0]["uuid"] == "uuid-2"
+
+
+@pytest.mark.asyncio
+async def test_community_habits_returned_alongside_user_habits():
+    """Vector search results are returned in community_habits field."""
+    with (
+        patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
+        patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=_HABITS)),
+        patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=_COMMUNITY_HABITS)),
+        patch("routers.extract_habits.chat_complete", new=AsyncMock(return_value=_LLM_REPLY)),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/api/v1/llm/extract-habits",
+                json={"user_id": "user-abc", "goal": "improve mood"},
+            )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["community_habits"]) == 1
+    ch = data["community_habits"][0]
+    assert ch["uuid"] == "community-uuid-1"
+    assert "feeling down" in ch["context"]["INTERNAL_STATE"]
+
+
+@pytest.mark.asyncio
+async def test_community_habits_empty_when_no_user_habits():
+    """Community habits are still returned even when the user has no own habits."""
+    with (
+        patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
+        patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=[])),
+        patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=_COMMUNITY_HABITS)),
+        patch("routers.extract_habits.chat_complete", new=AsyncMock()),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/api/v1/llm/extract-habits",
+                json={"user_id": "new-user", "goal": "improve mood"},
+            )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["selected_habits"] == []
+    assert len(data["community_habits"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_vector_search_failure_does_not_break_response():
+    """If vector search raises, the endpoint still returns user habits normally."""
+    with (
+        patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
+        patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=_HABITS)),
+        patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=[])),
+        patch("routers.extract_habits.chat_complete", new=AsyncMock(return_value=_LLM_REPLY)),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/api/v1/llm/extract-habits",
+                json={"user_id": "user-abc", "goal": "improve fitness"},
+            )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["selected_habits"]) == 1
+    assert data["community_habits"] == []

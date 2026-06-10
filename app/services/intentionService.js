@@ -51,7 +51,10 @@ export async function createIntention({
  * @returns {Promise<Array>}
  */
 export async function listIntentions({ db, userId }) {
-  const docs = await db.collection(COLLECTION).find({ userId: String(userId) }).toArray();
+  const docs = await db
+    .collection(COLLECTION)
+    .find({ userId: String(userId) })
+    .toArray();
   return docs.map(serialize);
 }
 

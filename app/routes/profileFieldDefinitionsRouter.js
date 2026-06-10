@@ -77,46 +77,50 @@ export function createProfileFieldDefinitionsAdminRouter({ db } = {}) {
   });
 
   // PUT /api/v1/admin/profile-field-definitions/:fieldId
-  router.put('/:fieldId', validate(updateProfileFieldSchema), async (req, res) => {
-    try {
-      const { fieldId } = req.params;
-      const { label, type, options, required, order } = req.body;
-      const database = await getDb();
-      const existing = await database
-        .collection('profile_field_definitions')
-        .findOne({ fieldId });
-      if (!existing) return res.status(404).json({ error: 'Not found' });
-      const effectiveType = type ?? existing.type;
-      const effectiveOptions = options ?? existing.options;
-      if (
-        effectiveType === 'select' &&
-        (!Array.isArray(effectiveOptions) || effectiveOptions.length === 0)
-      ) {
-        return res.status(400).json({
-          error: 'options must be a non-empty array when type is select',
-        });
+  router.put(
+    '/:fieldId',
+    validate(updateProfileFieldSchema),
+    async (req, res) => {
+      try {
+        const { fieldId } = req.params;
+        const { label, type, options, required, order } = req.body;
+        const database = await getDb();
+        const existing = await database
+          .collection('profile_field_definitions')
+          .findOne({ fieldId });
+        if (!existing) return res.status(404).json({ error: 'Not found' });
+        const effectiveType = type ?? existing.type;
+        const effectiveOptions = options ?? existing.options;
+        if (
+          effectiveType === 'select' &&
+          (!Array.isArray(effectiveOptions) || effectiveOptions.length === 0)
+        ) {
+          return res.status(400).json({
+            error: 'options must be a non-empty array when type is select',
+          });
+        }
+        const updates = { updatedAt: new Date() };
+        if (label !== undefined) updates.label = label;
+        if (type !== undefined) updates.type = type;
+        if (options !== undefined) updates.options = options;
+        if (required !== undefined) updates.required = Boolean(required);
+        if (order !== undefined) updates.order = Number(order) || 0;
+        const result = await database
+          .collection('profile_field_definitions')
+          .findOneAndUpdate(
+            { fieldId },
+            { $set: updates },
+            { returnDocument: 'after' }
+          );
+        if (!result) return res.status(404).json({ error: 'Not found' });
+        const { _id, ...rest } = result;
+        res.json(rest);
+      } catch (err) {
+        log.error({ err: err }, '[profileFieldDefs] error');
+        res.status(500).json({ error: 'Internal server error' });
       }
-      const updates = { updatedAt: new Date() };
-      if (label !== undefined) updates.label = label;
-      if (type !== undefined) updates.type = type;
-      if (options !== undefined) updates.options = options;
-      if (required !== undefined) updates.required = Boolean(required);
-      if (order !== undefined) updates.order = Number(order) || 0;
-      const result = await database
-        .collection('profile_field_definitions')
-        .findOneAndUpdate(
-          { fieldId },
-          { $set: updates },
-          { returnDocument: 'after' }
-        );
-      if (!result) return res.status(404).json({ error: 'Not found' });
-      const { _id, ...rest } = result;
-      res.json(rest);
-    } catch (err) {
-      log.error({ err: err }, '[profileFieldDefs] error');
-      res.status(500).json({ error: 'Internal server error' });
     }
-  });
+  );
 
   // DELETE /api/v1/admin/profile-field-definitions/:fieldId
   router.delete('/:fieldId', async (req, res) => {

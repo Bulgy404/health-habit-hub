@@ -50,5 +50,8 @@ export async function getLogs({ db, intentionId, from, to }) {
 export async function touchEnrollmentActivity({ db, userId }) {
   await db
     .collection(ENROLLMENTS)
-    .updateOne({ userId: String(userId) }, { $set: { lastActiveAt: new Date() } });
+    .updateOne(
+      { userId: String(userId) },
+      { $set: { lastActiveAt: new Date() } }
+    );
 }

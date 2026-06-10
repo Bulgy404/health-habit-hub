@@ -326,23 +326,27 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
    *               $ref: '#/components/schemas/Error'
    */
   // PATCH /api/v1/admin/surveys/:id/status
-  router.patch('/surveys/:id/status', validate(updateSurveyStatusSchema), async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
-      const database = await getDb();
-      const result = await database
-        .collection('surveys')
-        .updateOne({ id }, { $set: { status, updatedAt: new Date() } });
-      if (result.matchedCount === 0) {
-        return res.status(404).json({ error: 'Survey not found' });
+  router.patch(
+    '/surveys/:id/status',
+    validate(updateSurveyStatusSchema),
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { status } = req.body;
+        const database = await getDb();
+        const result = await database
+          .collection('surveys')
+          .updateOne({ id }, { $set: { status, updatedAt: new Date() } });
+        if (result.matchedCount === 0) {
+          return res.status(404).json({ error: 'Survey not found' });
+        }
+        res.json({ ok: true, id, status });
+      } catch (err) {
+        log.error({ err: err }, 'unhandled route error');
+        res.status(500).json({ error: 'Internal server error' });
       }
-      res.json({ ok: true, id, status });
-    } catch (err) {
-      log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
     }
-  });
+  );
 
   /**
    * @swagger
@@ -407,41 +411,45 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
    *               $ref: '#/components/schemas/Error'
    */
   // PATCH /api/v1/admin/surveys/:id/groups
-  router.patch('/surveys/:id/groups', validate(updateSurveyGroupsSchema), async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { groups } = req.body;
-      const database = await getDb();
-      const existing = await database.collection('surveys').findOne({ id });
-      if (!existing) {
-        return res.status(404).json({ error: 'Survey not found' });
-      }
-      const targeting = sanitizeSurveyTargeting({
-        type: existing.type,
-        targetMode: 'group_assigned',
-        assignedGroups: groups,
-      });
-      await database.collection('surveys').updateOne(
-        { id },
-        {
-          $set: {
-            targetMode: targeting.targetMode,
-            assignedGroups: targeting.assignedGroups,
-            updatedAt: new Date(),
-          },
+  router.patch(
+    '/surveys/:id/groups',
+    validate(updateSurveyGroupsSchema),
+    async (req, res) => {
+      try {
+        const { id } = req.params;
+        const { groups } = req.body;
+        const database = await getDb();
+        const existing = await database.collection('surveys').findOne({ id });
+        if (!existing) {
+          return res.status(404).json({ error: 'Survey not found' });
         }
-      );
-      res.json({
-        ok: true,
-        id,
-        targetMode: targeting.targetMode,
-        assignedGroups: targeting.assignedGroups,
-      });
-    } catch (err) {
-      log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+        const targeting = sanitizeSurveyTargeting({
+          type: existing.type,
+          targetMode: 'group_assigned',
+          assignedGroups: groups,
+        });
+        await database.collection('surveys').updateOne(
+          { id },
+          {
+            $set: {
+              targetMode: targeting.targetMode,
+              assignedGroups: targeting.assignedGroups,
+              updatedAt: new Date(),
+            },
+          }
+        );
+        res.json({
+          ok: true,
+          id,
+          targetMode: targeting.targetMode,
+          assignedGroups: targeting.assignedGroups,
+        });
+      } catch (err) {
+        log.error({ err: err }, 'unhandled route error');
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
-  });
+  );
 
   // ── Questionnaire CRUD (admin) ────────────────────────────────────────────
 
@@ -509,81 +517,91 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
   });
 
   // POST /api/v1/admin/questionnaires
-  router.post('/questionnaires', validate(createQuestionnaireSchema), async (req, res) => {
-    try {
-      const { slug, title, description, version, questions } = req.body;
-      const database = await getDb();
-      if (slug) {
-        const existing = await database
-          .collection('questionnaires')
-          .findOne({ slug: String(slug) });
-        if (existing) {
-          return res
-            .status(409)
-            .json({ error: 'Questionnaire with this slug already exists' });
+  router.post(
+    '/questionnaires',
+    validate(createQuestionnaireSchema),
+    async (req, res) => {
+      try {
+        const { slug, title, description, version, questions } = req.body;
+        const database = await getDb();
+        if (slug) {
+          const existing = await database
+            .collection('questionnaires')
+            .findOne({ slug: String(slug) });
+          if (existing) {
+            return res
+              .status(409)
+              .json({ error: 'Questionnaire with this slug already exists' });
+          }
         }
+        const now = new Date();
+        const doc = {
+          slug: slug || null,
+          title,
+          description: description || '',
+          version: version || '1',
+          active: true,
+          isLibrary: false,
+          questions: Array.isArray(questions) ? questions : [],
+          createdAt: now,
+          updatedAt: now,
+        };
+        const result = await database
+          .collection('questionnaires')
+          .insertOne(doc);
+        res.status(201).json({
+          ok: true,
+          id: result.insertedId.toString(),
+          slug: slug || null,
+        });
+      } catch (err) {
+        log.error({ err: err }, 'unhandled route error');
+        res.status(500).json({ error: 'Internal server error' });
       }
-      const now = new Date();
-      const doc = {
-        slug: slug || null,
-        title,
-        description: description || '',
-        version: version || '1',
-        active: true,
-        isLibrary: false,
-        questions: Array.isArray(questions) ? questions : [],
-        createdAt: now,
-        updatedAt: now,
-      };
-      const result = await database.collection('questionnaires').insertOne(doc);
-      res.status(201).json({
-        ok: true,
-        id: result.insertedId.toString(),
-        slug: slug || null,
-      });
-    } catch (err) {
-      log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
     }
-  });
+  );
 
   // PUT /api/v1/admin/questionnaires/:id
-  router.put('/questionnaires/:id', validate(updateQuestionnaireSchema), async (req, res) => {
-    try {
-      const { id } = req.params;
-      let oid;
+  router.put(
+    '/questionnaires/:id',
+    validate(updateQuestionnaireSchema),
+    async (req, res) => {
       try {
-        oid = new ObjectId(id);
-      } catch {
-        return res.status(404).json({ error: 'Questionnaire not found' });
+        const { id } = req.params;
+        let oid;
+        try {
+          oid = new ObjectId(id);
+        } catch {
+          return res.status(404).json({ error: 'Questionnaire not found' });
+        }
+        const database = await getDb();
+        const existing = await database
+          .collection('questionnaires')
+          .findOne({ _id: oid });
+        if (!existing) {
+          return res.status(404).json({ error: 'Questionnaire not found' });
+        }
+        if (existing.isLibrary === true) {
+          return res
+            .status(403)
+            .json({ error: 'Cannot modify a library questionnaire' });
+        }
+        const { title, description, version, questions } = req.body;
+        const update = { updatedAt: new Date() };
+        if (title !== undefined) update.title = title;
+        if (description !== undefined) update.description = description;
+        if (version !== undefined) update.version = version;
+        if (questions !== undefined) update.questions = questions;
+        await database
+          .collection('questionnaires')
+          .updateOne({ _id: oid }, { $set: update });
+        res.json({ ok: true, id });
+      } catch (err) {
+        log.error({ err: err }, 'unhandled route error');
+        res.status(500).json({ error: 'Internal server error' });
       }
-      const database = await getDb();
-      const existing = await database
-        .collection('questionnaires')
-        .findOne({ _id: oid });
-      if (!existing) {
-        return res.status(404).json({ error: 'Questionnaire not found' });
-      }
-      if (existing.isLibrary === true) {
-        return res
-          .status(403)
-          .json({ error: 'Cannot modify a library questionnaire' });
-      }
-      const { title, description, version, questions } = req.body;
-      const update = { updatedAt: new Date() };
-      if (title !== undefined) update.title = title;
-      if (description !== undefined) update.description = description;
-      if (version !== undefined) update.version = version;
-      if (questions !== undefined) update.questions = questions;
-      await database
-        .collection('questionnaires')
-        .updateOne({ _id: oid }, { $set: update });
-      res.json({ ok: true, id });
-    } catch (err) {
-      log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
     }
-  });
+  );
 
   // PATCH /api/v1/admin/questionnaires/:slug/active
   router.patch('/questionnaires/:slug/active', async (req, res) => {

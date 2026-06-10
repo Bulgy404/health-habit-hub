@@ -19,12 +19,13 @@ export function createStudyExportRouter({ db } = {}) {
     try {
       const database = await getDb();
       const { id: studyId } = req.params;
-      const [srhiCsv, logsCsv, dropoutCsv, questionnaireResponsesCsv] = await Promise.all([
-        buildSrhiCsv({ db: database, studyId }),
-        buildDailyLogsCsv({ db: database, studyId }),
-        buildDropoutCsv({ db: database, studyId }),
-        buildQuestionnaireResponsesCsv({ db: database, studyId }),
-      ]);
+      const [srhiCsv, logsCsv, dropoutCsv, questionnaireResponsesCsv] =
+        await Promise.all([
+          buildSrhiCsv({ db: database, studyId }),
+          buildDailyLogsCsv({ db: database, studyId }),
+          buildDropoutCsv({ db: database, studyId }),
+          buildQuestionnaireResponsesCsv({ db: database, studyId }),
+        ]);
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader(
         'Content-Disposition',
@@ -35,7 +36,10 @@ export function createStudyExportRouter({ db } = {}) {
       zip.addFile('srhi_trajectories.csv', Buffer.from(srhiCsv, 'utf8'));
       zip.addFile('daily_logs.csv', Buffer.from(logsCsv, 'utf8'));
       zip.addFile('dropout.csv', Buffer.from(dropoutCsv, 'utf8'));
-      zip.addFile('questionnaire_responses.csv', Buffer.from(questionnaireResponsesCsv, 'utf8'));
+      zip.addFile(
+        'questionnaire_responses.csv',
+        Buffer.from(questionnaireResponsesCsv, 'utf8')
+      );
       res.end(zip.toBuffer());
     } catch (err) {
       log.error({ err: err }, '[export] error');

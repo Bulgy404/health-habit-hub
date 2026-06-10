@@ -120,31 +120,35 @@ export function createStudiesRouter({
   });
 
   // PATCH /api/v1/admin/studies/:id/groups/:groupId/cue-config
-  router.patch('/studies/:id/groups/:groupId/cue-config', validate(cueConfigSchema), async (req, res) => {
-    try {
-      const { cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits } =
-        req.body;
-      const database = await getDb();
-      const result = await updateGroupCueConfig({
-        db: database,
-        studyId: req.params.id,
-        groupId: req.params.groupId,
-        cueConfig: {
-          cueCount,
-          cueSource,
-          cuePoolId: cuePoolId ?? null,
-          behaviorOptions: behaviorOptions ?? [],
-          maxHabits: maxHabits ?? null,
-        },
-      });
-      if (result.notFound)
-        return res.status(404).json({ error: 'Study or group not found' });
-      res.json({ updated: true });
-    } catch (err) {
-      log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+  router.patch(
+    '/studies/:id/groups/:groupId/cue-config',
+    validate(cueConfigSchema),
+    async (req, res) => {
+      try {
+        const { cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits } =
+          req.body;
+        const database = await getDb();
+        const result = await updateGroupCueConfig({
+          db: database,
+          studyId: req.params.id,
+          groupId: req.params.groupId,
+          cueConfig: {
+            cueCount,
+            cueSource,
+            cuePoolId: cuePoolId ?? null,
+            behaviorOptions: behaviorOptions ?? [],
+            maxHabits: maxHabits ?? null,
+          },
+        });
+        if (result.notFound)
+          return res.status(404).json({ error: 'Study or group not found' });
+        res.json({ updated: true });
+      } catch (err) {
+        log.error({ err: err }, 'unhandled route error');
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
-  });
+  );
 
   // DELETE /api/v1/admin/studies/:id — soft-delete a study
   router.delete('/studies/:id', async (req, res) => {
@@ -188,28 +192,32 @@ export function createStudiesRouter({
   // ── Study code routes ─────────────────────────────────────────────────────
 
   // POST /api/v1/admin/studies/:id/codes — generate enrollment codes
-  router.post('/studies/:id/codes', validate(createStudyCodesSchema), async (req, res) => {
-    try {
-      const { count, groupId, maxRedemptions, expiresAt } = req.body;
-      const database = await getDb();
-      const result = await createCodes({
-        db: database,
-        studyId: req.params.id,
-        groupId,
-        count,
-        maxRedemptions,
-        expiresAt,
-      });
-      if (result.notFound)
-        return res.status(404).json({ error: 'Study not found' });
-      if (result.groupNotFound)
-        return res.status(404).json({ error: 'Group not found in study' });
-      res.status(201).json({ codes: result.codes });
-    } catch (err) {
-      log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
+  router.post(
+    '/studies/:id/codes',
+    validate(createStudyCodesSchema),
+    async (req, res) => {
+      try {
+        const { count, groupId, maxRedemptions, expiresAt } = req.body;
+        const database = await getDb();
+        const result = await createCodes({
+          db: database,
+          studyId: req.params.id,
+          groupId,
+          count,
+          maxRedemptions,
+          expiresAt,
+        });
+        if (result.notFound)
+          return res.status(404).json({ error: 'Study not found' });
+        if (result.groupNotFound)
+          return res.status(404).json({ error: 'Group not found in study' });
+        res.status(201).json({ codes: result.codes });
+      } catch (err) {
+        log.error({ err: err }, 'unhandled route error');
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
-  });
+  );
 
   // GET /api/v1/admin/studies/:id/codes — list codes for a study
   router.get('/studies/:id/codes', async (req, res) => {
@@ -284,14 +292,26 @@ export function createStudiesRouter({
   router.get('/studies/:id/analytics', async (req, res) => {
     try {
       const database = await getDb();
-      const [weeklyActiveRate, srhiTrajectory, dropoutCurve, questionnaireCompletionRates] =
-        await Promise.all([
-          getWeeklyActiveRate({ db: database, studyId: req.params.id }),
-          getMeanSrhiTrajectory({ db: database, studyId: req.params.id }),
-          getDropoutCurve({ db: database, studyId: req.params.id }),
-          getQuestionnaireCompletionRates({ db: database, studyId: req.params.id }),
-        ]);
-      res.json({ weeklyActiveRate, srhiTrajectory, dropoutCurve, questionnaireCompletionRates });
+      const [
+        weeklyActiveRate,
+        srhiTrajectory,
+        dropoutCurve,
+        questionnaireCompletionRates,
+      ] = await Promise.all([
+        getWeeklyActiveRate({ db: database, studyId: req.params.id }),
+        getMeanSrhiTrajectory({ db: database, studyId: req.params.id }),
+        getDropoutCurve({ db: database, studyId: req.params.id }),
+        getQuestionnaireCompletionRates({
+          db: database,
+          studyId: req.params.id,
+        }),
+      ]);
+      res.json({
+        weeklyActiveRate,
+        srhiTrajectory,
+        dropoutCurve,
+        questionnaireCompletionRates,
+      });
     } catch (err) {
       log.error({ err: err }, '[studies] error');
       res.status(500).json({ error: 'Internal server error' });
