@@ -1,0 +1,127 @@
+@startuml use-case-diagram
+' Health Habit Hub — Use Case Diagram
+' Render: plantuml -tsvg use-case-diagram.puml
+title Health Habit Hub — Use Cases
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam usecase {
+  BackgroundColor #F8FBFF
+  BorderColor #2A6FB8
+}
+
+actor "Participant\n(role: user)" as P
+actor "Researcher" as R
+actor "Admin" as A
+actor "AI Agent\n(MCP client)" as M
+actor "Backup Scheduler\n(cron)" as B
+actor "Keycloak" as KC <<system>>
+actor "LLM Provider" as LLM <<system>>
+actor "FCM" as FCM <<system>>
+
+A --|> R : inherits
+
+rectangle "Mobile App (Flutter)" {
+  package "Account & Profile" {
+    usecase "UC-01 Register & sign in\n(OIDC + PKCE)" as UC01
+    usecase "UC-02 Onboard\n(create account)" as UC02
+    usecase "UC-05 Manage profile" as UC05
+    usecase "UC-14 Manage settings\n& language" as UC14
+  }
+  package "Habit Donation & Exploration" {
+    usecase "UC-03 Donate habit" as UC03
+    usecase "UC-04 Browse & explore habits" as UC04
+    usecase "UC-16 Complete survey" as UC16
+    usecase "UC-06 Complete questionnaire" as UC06
+  }
+  package "Recommendations" {
+    usecase "UC-07 Request personalised\nrecommendations" as UC07
+    usecase "UC-08 View recommendations\n& give feedback" as UC08
+  }
+  package "DFG Study (My Habits)" {
+    usecase "UC-09 Enroll in study\n(redeem / skip code)" as UC09
+    usecase "UC-10 Retrieve habit config\n(cues + SRHI items)" as UC10
+    usecase "UC-11 Create implementation\nintention" as UC11
+    usecase "UC-12 Log daily behaviour" as UC12
+    usecase "UC-13 Submit weekly\nSRHI check-in" as UC13
+    usecase "UC-15 Receive push\nnotifications" as UC15
+  }
+}
+
+rectangle "Admin Portal (Next.js)" {
+  usecase "UC-17 Sign in to admin portal" as UC17
+  usecase "UC-18 Manage participants" as UC18
+  usecase "UC-19 Manage studies, groups\n& study codes" as UC19
+  usecase "UC-20 Manage questionnaires" as UC20
+  usecase "UC-21 Manage cue pools\n(CRUD + CSV import)" as UC21
+  usecase "UC-22 View study analytics" as UC22
+  usecase "UC-23 Export study data\n(ZIP of CSVs)" as UC23
+  usecase "UC-24 Send notification\ncampaign" as UC24
+  usecase "UC-27 View dashboard stats\n& moderate habit feed" as UC27
+  usecase "UC-25 Manage knowledge base\n(upload documents)" as UC25
+  usecase "UC-26 View knowledge graph" as UC26
+  usecase "UC-28 Configure platform\nsettings" as UC28
+}
+
+rectangle "System / Integrations" {
+  usecase "UC-29 Run daily backup" as UC29
+  usecase "UC-30 Query / ingest KB\nvia MCP" as UC30
+}
+
+' --- Participant ---
+P --> UC01
+P --> UC02
+P --> UC03
+P --> UC04
+P --> UC05
+P --> UC06
+P --> UC07
+P --> UC08
+P --> UC09
+P --> UC10
+P --> UC11
+P --> UC12
+P --> UC13
+P --> UC14
+P --> UC15
+P --> UC16
+
+' --- Researcher (admin inherits) ---
+R --> UC17
+R --> UC18
+R --> UC19
+R --> UC20
+R --> UC21
+R --> UC22
+R --> UC23
+R --> UC24
+R --> UC27
+
+' --- Admin only ---
+A --> UC25
+A --> UC26
+A --> UC28
+
+' --- System actors ---
+M --> UC30
+B --> UC29
+
+' --- Supporting system relations ---
+UC01 ..> KC : <<authenticates via>>
+UC17 ..> KC : <<authenticates via>>
+UC02 ..> KC : <<creates user>>
+UC03 ..> LLM : <<classify + map BCIO>>
+UC07 ..> LLM : <<RAG generation>>
+UC24 ..> FCM : <<push>>
+UC15 ..> FCM : <<receives>>
+
+' --- include / extend ---
+UC03 ..> UC01 : <<include>>
+UC07 ..> UC01 : <<include>>
+UC11 ..> UC10 : <<include>>
+UC13 ..> UC11 : <<extend>>
+UC12 ..> UC11 : <<extend>>
+UC08 ..> UC07 : <<extend>>
+
+@enduml

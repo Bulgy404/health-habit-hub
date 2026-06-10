@@ -1,0 +1,17 @@
+%% UC-12 — Log daily behaviour (idempotent upsert)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (dailyLogService)
+    participant M as MongoDB
+
+    P->>F: Mark habit done / not done for today
+    F->>B: POST /api/v1/habits/intentions/:id/logs {date, enacted}
+    B->>B: Verify intention belongs to user
+    B->>M: upsert(daily_behavior_logs, key {intentionId, date}, {enacted, loggedAt})
+    Note right of M: Unique index {intentionId, date} - re-logging same day overwrites
+    M-->>B: upserted
+    B-->>F: 200 log saved
+    F->>B: GET /api/v1/habits/intentions/:id/logs
+    B-->>F: log history (streak / adherence view)

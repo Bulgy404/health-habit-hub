@@ -1,0 +1,17 @@
+%% UC-08 — View recommendations & give feedback
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (recommendationsRouter)
+    participant M as MongoDB
+
+    P->>F: Open Recommendations
+    F->>B: GET /api/v1/recommendations/me
+    B->>M: find(recommendations, {userId: sub})
+    M-->>B: recommendation records
+    B-->>F: own recommendations
+    P->>F: Write feedback on a recommendation
+    F->>B: POST /api/v1/recommendations/:id/feedback {text}
+    B->>M: insert(recommendation_feedback)
+    B-->>F: 201 feedback stored

@@ -1,0 +1,35 @@
+%% UC-07 — Request personalised recommendations (RAG pipeline)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (recommendRouter)
+    participant AI as API-service (FastAPI)
+    participant R as Redis
+    participant LR as LightRAG
+    participant LLM as LLM Provider
+    participant M as MongoDB
+
+    P->>F: Enter health goal
+    F->>B: POST /api/v1/recommend {goal}
+    B->>AI: POST /llm/recommend {user_id, goal, session_id} (service token)
+    AI->>R: GET cache(hash(user_id, goal))
+    alt cache hit
+        R-->>AI: cached recommendations
+    else cache miss
+        par extract habits
+            AI->>LLM: extract-habits (user's donated habits)
+        and extract profile
+            AI->>LLM: extract-profile (questionnaire answers)
+        end
+        LLM-->>AI: habits summary + profile + rag_query
+        AI->>LR: POST /query {query: rag_query, mode: "hybrid", only_need_context: true}
+        LR-->>AI: synthesized KB context (graph + vector)
+        AI->>LLM: recommend prompt (goal + profile + habits + context)
+        LLM-->>AI: recommendations JSON
+        AI->>R: SETEX cache (TTL 24h)
+        AI->>M: insert(recommendations)
+    end
+    AI-->>B: {recommendations: [...]}
+    B-->>F: 200 recommendations
+    F->>F: Render recommendation cards

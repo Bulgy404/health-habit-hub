@@ -1,0 +1,22 @@
+%% UC-05 — Manage profile (admin-defined field definitions)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (userProfileRouter)
+    participant M as MongoDB
+
+    P->>F: Open Profile screen
+    F->>B: GET /api/v1/profile-field-definitions
+    B->>M: find(profile_field_definitions)
+    M-->>B: field definitions
+    B-->>F: definitions (types, options, validation)
+    F->>B: GET /api/v1/me/profile
+    B->>M: findOne(profiles, {userId: sub})
+    M-->>B: profile answers
+    B-->>F: current answers
+    P->>F: Edit answers, save
+    F->>B: PUT /api/v1/me/profile {answers}
+    B->>B: Validate against definitions
+    B->>M: upsert(profiles, {userId})
+    B-->>F: 200 updated profile

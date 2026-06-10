@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Documentation & Diagrams (2026-06-10)
+- New diagrams-as-code suite under `docs/diagrams/`: system architecture (Mermaid), UML use case diagram (PlantUML), structured use case catalogue with code traceability (30 use cases, 5 actors), one Mermaid sequence diagram per use case (`UC-01` … `UC-30`), and a domain class diagram covering MongoDB collections, Neo4j nodes, and backend domain classes
+- `docs/diagrams/Makefile` + README for reproducible export to SVG/PNG/PDF via `mermaid-cli` and PlantUML; all Mermaid sources validated with `mermaid.parse()`
+- Rewrote `README.md`: condensed Mermaid architecture overview, repository layout, use case section, full documentation index, contributing conventions (logo and badges retained)
+- Replaced placeholder `SECURITY.md` with a real security policy (private reporting, scope, supported versions)
+- Cross-linked `docs/architecture.md`, `docs/data-model.md`, and `DOCUMENTATION.md` to the new diagram suite
+
 ### Changed
 - LightRAG upgraded from 1.3.9 to 1.5.0 (`lightrag/Dockerfile`)
 

@@ -1,0 +1,23 @@
+%% UC-25 — Manage knowledge base (document upload + ingestion) — admin only
+sequenceDiagram
+    autonumber
+    actor A as Admin
+    participant AP as Admin Panel
+    participant B as Backend (kbRouter)
+    participant AI as API-service (FastAPI)
+    participant LR as LightRAG
+    participant LLM as LLM Provider
+
+    A->>AP: Upload PDF / TXT / MD
+    AP->>B: POST /api/v1/kb (multipart)
+    B->>B: requireRole(admin)
+    B->>AI: POST /api/v1/kb (proxy, service token)
+    AI->>LR: POST /documents/file (multipart)
+    LR-->>AI: accepted - processing in background
+    AI-->>B: 201
+    B-->>AP: 201 document queued
+    Note over LR,LLM: Background: chunk text, LLM entity/relation extraction -> knowledge graph, embed chunks -> vector index
+    A->>AP: Check document status / list documents
+    AP->>B: GET /api/v1/kb
+    B->>AI: GET /api/v1/kb -> LightRAG /documents
+    AI-->>AP: document list + processing status

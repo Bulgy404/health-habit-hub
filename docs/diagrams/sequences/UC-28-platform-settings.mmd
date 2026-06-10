@@ -1,0 +1,17 @@
+%% UC-28 — Configure platform settings — admin only
+sequenceDiagram
+    autonumber
+    actor A as Admin
+    participant AP as Admin Panel (Settings page)
+    participant B as Backend (adminRouter)
+    participant M as MongoDB
+
+    A->>AP: Open Settings (researcher users are redirected to /access-denied)
+    AP->>B: GET /api/v1/admin/settings
+    B->>M: find(admin_settings)
+    B-->>AP: key-value configuration
+    A->>AP: Change a setting
+    AP->>B: PUT /api/v1/admin/settings/:key {value}
+    B->>B: requireRole(ROLES.ADMIN)
+    B->>M: upsert(admin_settings, {key})
+    B-->>AP: 200 setting applied

@@ -1,0 +1,26 @@
+%% UC-27 — View dashboard stats & moderate habit feed
+sequenceDiagram
+    autonumber
+    actor R as Researcher / Admin
+    participant AP as Admin Panel
+    participant B as Backend (adminStatsService / adminHabitService)
+    participant M as MongoDB
+    participant N4 as Neo4j
+
+    R->>AP: Open Dashboard
+    AP->>B: GET /api/v1/admin/stats
+    B->>M: counts (participants, responses, recommendations)
+    B->>N4: counts (habits, contexts, BCIO mappings)
+    B-->>AP: aggregated platform stats
+    R->>AP: Open habit feed
+    AP->>B: GET /api/v1/admin/habits/feed
+    B->>N4: MATCH recent (:Habit) with contexts
+    B-->>AP: paginated feed
+    opt export
+        AP->>B: GET /api/v1/admin/habits/feed/export
+        B-->>AP: CSV download
+    end
+    opt session management
+        AP->>B: GET /api/v1/admin/sessions / DELETE /sessions/:id
+        B-->>AP: active sessions / revoked
+    end

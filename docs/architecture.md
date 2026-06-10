@@ -1,5 +1,7 @@
 # Health Habit Hub — System Architecture
 
+> **Related:** the full diagram suite (system architecture, UML use case diagram, 30 per-use-case sequence diagrams, domain class diagram) lives in [`docs/diagrams/`](diagrams/README.md) as renderable Mermaid/PlantUML sources. The use case catalogue with code traceability is in [`diagrams/use-cases/use-case-overview.md`](diagrams/use-cases/use-case-overview.md).
+
 ## Overview
 
 Health Habit Hub (HHH) is a research platform for collecting, annotating, and recommending behavioural habits. It consists of thirteen Docker services orchestrated via `docker-compose`, a Flutter mobile/web app, a Next.js admin panel, and a Python-based recommender/enrichment microservice. All HTTP traffic is routed through a Traefik reverse proxy.
@@ -433,6 +435,8 @@ Data flow:
 | `notification_campaigns` | Researcher-authored FCM push campaigns with schedule and target group |
 
 ---
+
+*Updated: 2026-06-10 | Diagram suite added under `docs/diagrams/` (architecture, use cases, 30 sequence diagrams, class diagram)*
 
 *Updated: 2026-06-03 | LightRAG upgraded to 1.5.0*
 

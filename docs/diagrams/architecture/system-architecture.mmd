@@ -1,0 +1,96 @@
+%% Health Habit Hub — System Architecture (C4-style container diagram)
+%% Source of truth: docker-compose.yml, docs/architecture.md
+%% Render: mmdc -i system-architecture.mmd -o system-architecture.svg
+
+flowchart TB
+    %% ------- Actors -------
+    participant_actor(["👤 Participant<br/>(role: user)"])
+    researcher_actor(["👤 Researcher / Admin"])
+    agent_actor(["🤖 AI Agent<br/>(Claude / MCP client)"])
+
+    %% ------- Clients -------
+    subgraph clients["Clients"]
+        flutter["Flutter App<br/>(iOS / Android / Web)<br/>Riverpod · GoRouter · Firebase"]
+        adminui["Admin Panel<br/>Next.js 14 · NextAuth<br/>:3001"]
+    end
+
+    %% ------- Edge -------
+    traefik["Traefik v3<br/>Reverse proxy · TLS (Let's Encrypt)<br/>:80 / :443"]
+
+    %% ------- Application layer -------
+    subgraph appsvc["Application Services (Docker, h3-proxy network)"]
+        backend["Node.js Backend<br/>Express · /api/v1/*<br/>:3000"]
+        apiservice["API-service<br/>Python FastAPI · :8000<br/>classify · map-BCIO · recommend (RAG)"]
+        knowledgemcp["knowledge-mcp<br/>FastMCP · SSE · :8002<br/>search_knowledge · ingest_document"]
+        translate["LibreTranslate<br/>MT en↔de · :5000"]
+    end
+
+    %% ------- Identity -------
+    keycloak["Keycloak 26<br/>OIDC / OAuth2 · realm hhh<br/>:8080"]
+
+    %% ------- Data layer -------
+    subgraph data["Data Stores"]
+        mongo[("MongoDB 7<br/>studies · questionnaires · intentions<br/>logs · SRHI · recommendations")]
+        neo4j[("Neo4j 5<br/>Habit / Context / BCIOConcept graph<br/>bolt :7687")]
+        fuseki[("Apache Jena Fuseki<br/>RDF triplestore · HHH + BCIO ontology<br/>:3030")]
+        lightrag[("LightRAG · :9621<br/>graph + vector knowledge base")]
+        redis[("Redis 7<br/>LLM response cache · locks")]
+        postgres[("PostgreSQL 16<br/>Keycloak persistence")]
+    end
+
+    %% ------- External -------
+    subgraph external["External Services"]
+        llm["LLM Provider<br/>(OpenAI-compatible API)"]
+        fcm["Firebase Cloud<br/>Messaging (FCM)"]
+    end
+
+    %% ------- Ops -------
+    backup["Backup Service<br/>cron 02:00 · 30-day retention"]
+
+    %% ------- Edges: actors -------
+    participant_actor --> flutter
+    researcher_actor --> adminui
+    agent_actor -- "MCP over SSE" --> knowledgemcp
+
+    %% ------- Edges: clients → edge -------
+    flutter -- "HTTPS REST + JWT" --> traefik
+    adminui -- "HTTPS" --> traefik
+    traefik -- "app.*" --> backend
+    traefik -- "admin.*" --> adminui
+    traefik -- "/auth" --> keycloak
+
+    %% ------- Edges: auth -------
+    flutter -. "OIDC Auth Code + PKCE" .-> keycloak
+    adminui -. "OIDC (NextAuth, confidential client)" .-> keycloak
+    backend -. "JWKS verify (RS256)" .-> keycloak
+    keycloak --> postgres
+
+    %% ------- Edges: backend -------
+    backend --> mongo
+    backend -- "Cypher / Bolt" --> neo4j
+    backend -- "SPARQL" --> fuseki
+    backend -- "POST /translate" --> translate
+    backend -- "/api/v1/llm/* · /api/v1/kb/*<br/>(service token)" --> apiservice
+    backend -- "push campaigns" --> fcm
+
+    %% ------- Edges: AI service -------
+    apiservice -- "chat / embeddings" --> llm
+    apiservice -- "hybrid query / ingest" --> lightrag
+    apiservice --> redis
+    apiservice --> mongo
+    apiservice -- "Bolt" --> neo4j
+    knowledgemcp --> lightrag
+    lightrag -- "entity extraction · embeddings" --> llm
+
+    %% ------- Edges: ops -------
+    backup -- "mongodump" --> mongo
+    backup -- "neo4j-admin dump" --> neo4j
+    backup -- "tar data" --> fuseki
+    backup -- "partial-export API" --> keycloak
+
+    classDef actor fill:#fff3cd,stroke:#b8860b
+    classDef store fill:#e7f1ff,stroke:#2a6fb8
+    classDef ext fill:#f3e8ff,stroke:#7c3aed
+    class participant_actor,researcher_actor,agent_actor actor
+    class mongo,neo4j,fuseki,lightrag,redis,postgres store
+    class llm,fcm ext

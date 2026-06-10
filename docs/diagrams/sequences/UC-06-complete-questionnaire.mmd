@@ -1,0 +1,20 @@
+%% UC-06 — Complete questionnaire
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend
+    participant M as MongoDB
+    participant N4 as Neo4j
+
+    P->>F: Open Questionnaires
+    F->>B: GET /api/v1/participant/questionnaires
+    B->>M: Resolve study enrollment -> assigned questionnaires
+    M-->>B: questionnaire definitions + completion status
+    B-->>F: pending questionnaires
+    P->>F: Answer questions, submit
+    F->>B: POST /api/v1/questionnaire-responses {questionnaireId, answers}
+    B->>B: Validate answers against question schema
+    B->>M: insert(form_responses)
+    B->>N4: Link response metadata to participant graph (where applicable)
+    B-->>F: 201 response recorded

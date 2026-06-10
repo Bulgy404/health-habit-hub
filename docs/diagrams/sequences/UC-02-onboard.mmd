@@ -1,0 +1,15 @@
+%% UC-02 — Onboard (self-service account creation)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (Express)
+    participant KC as Keycloak (Admin API)
+
+    P->>F: Complete onboarding form
+    F->>B: POST /api/v1/onboard {credentials, consent}
+    B->>B: Rate limit (onboardRateLimiter), sanitize input
+    B->>KC: Create user in realm hhh (role: user)
+    KC-->>B: 201 userId (sub)
+    B-->>F: 201 account created
+    F->>KC: Standard sign-in (see UC-01)

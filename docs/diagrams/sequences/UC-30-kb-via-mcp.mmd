@@ -1,0 +1,21 @@
+%% UC-30 — Query / ingest knowledge base via MCP
+sequenceDiagram
+    autonumber
+    actor AG as AI Agent (Claude / MCP client)
+    participant MCP as knowledge-mcp (FastMCP, SSE :8002)
+    participant LR as LightRAG
+
+    AG->>MCP: Connect via SSE, list tools
+    MCP-->>AG: search_knowledge, ingest_document
+    alt search
+        AG->>MCP: call search_knowledge {query}
+        MCP->>LR: POST /query {query, mode: "hybrid"}
+        LR-->>MCP: synthesized answer + context
+        MCP-->>AG: tool result
+    else ingest
+        AG->>MCP: call ingest_document {text}
+        MCP->>LR: POST /documents/text
+        LR-->>MCP: accepted (background indexing)
+        MCP-->>AG: status
+    end
+    Note over MCP: Every tool call logged to stdout

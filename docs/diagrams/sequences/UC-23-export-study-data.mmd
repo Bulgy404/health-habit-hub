@@ -1,0 +1,17 @@
+%% UC-23 — Export study data (ZIP of CSVs)
+sequenceDiagram
+    autonumber
+    actor R as Researcher / Admin
+    participant AP as Admin Panel
+    participant B as Backend (exportService)
+    participant M as MongoDB
+
+    R->>AP: Click "Export data" for a study
+    AP->>B: GET /api/v1/admin/studies/:id/export
+    B->>M: find(srhi_responses, {studyId})
+    B->>M: find(daily_behavior_logs) joined via intentions
+    B->>M: find(enrollments, {droppedOutAt: {$ne: null}})
+    M-->>B: result sets
+    B->>B: Build 3 CSVs (SRHI, daily logs, dropouts), bundle as ZIP
+    B-->>AP: 200 application/zip (download)
+    AP-->>R: Save study-export.zip

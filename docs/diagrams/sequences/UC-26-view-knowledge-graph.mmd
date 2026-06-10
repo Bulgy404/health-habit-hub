@@ -1,0 +1,13 @@
+%% UC-26 — View knowledge graph — admin only
+sequenceDiagram
+    autonumber
+    actor A as Admin
+    participant AP as Admin Panel
+    participant LR as LightRAG (web UI :9621)
+
+    A->>AP: Open Knowledge Base page
+    AP-->>A: "View Graph" link
+    A->>LR: Open LightRAG graph UI
+    LR->>LR: Load entity graph built from all ingested documents
+    LR-->>A: Interactive graph (entities + relationships)
+    A->>A: Verify concept extraction quality

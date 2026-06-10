@@ -1,0 +1,20 @@
+%% UC-11 — Create implementation intention
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (intentionService)
+    participant M as MongoDB
+
+    P->>F: Select behaviour, cue(s), duration
+    F->>F: Compose if-then statement ("After dinner, I will walk for 20 minutes.")
+    F->>B: POST /api/v1/habits/intentions {behaviorKey, cues, durationMinutes, intentionStatement}
+    B->>M: count(implementation_intentions, {userId, status: "active"})
+    M-->>B: activeCount
+    alt activeCount >= maxHabits
+        B-->>F: 409 habit cap reached
+    else under cap
+        B->>M: insert(implementation_intentions {status: "active", enrollmentId, studyId, groupId})
+        M-->>B: _id
+        B-->>F: 201 intention created
+    end

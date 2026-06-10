@@ -1,0 +1,17 @@
+%% UC-15 — Register device & receive push notifications
+sequenceDiagram
+    autonumber
+    participant F as Flutter App
+    participant FCM as Firebase Cloud Messaging
+    participant B as Backend (participantRouter)
+    participant M as MongoDB
+
+    F->>FCM: Request device token (firebase_messaging)
+    FCM-->>F: fcmToken
+    F->>B: POST /api/v1/participant/register-token {fcmToken}
+    B->>M: Store token for userId
+    B-->>F: 200 registered
+    Note over B,FCM: Later: researcher campaign (UC-24) targets this user
+    B->>FCM: send(message, tokens)
+    FCM-->>F: Push notification delivered
+    F->>F: Show notification / deep-link into app

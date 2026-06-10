@@ -1,7 +1,7 @@
 # Health Habit Hub — Documentation
 
-**Version:** 3.0
-**Last Updated:** April 2026
+**Version:** 3.1
+**Last Updated:** June 2026
 **Production Domain:** https://habit.wiwi.tu-dresden.de
 **Repository:** https://github.com/helict/health-habit-hub
 
@@ -40,6 +40,8 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 ---
 
 ## 2. Architecture
+
+> **Diagrams-as-code:** the maintained diagram suite — system architecture ([Mermaid source](docs/diagrams/architecture/system-architecture.mmd)), UML use case diagram + [use case catalogue](docs/diagrams/use-cases/use-case-overview.md), one sequence diagram per use case (UC-01 … UC-30, [docs/diagrams/sequences/](docs/diagrams/sequences/)), and the [domain class diagram](docs/diagrams/classes/class-diagram.mmd) — lives in [docs/diagrams/](docs/diagrams/README.md) with rendering/export instructions (SVG · PNG · PDF).
 
 ### System Diagram
 

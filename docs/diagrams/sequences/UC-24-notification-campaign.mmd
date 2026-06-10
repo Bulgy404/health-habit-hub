@@ -1,0 +1,21 @@
+%% UC-24 — Send notification campaign
+sequenceDiagram
+    autonumber
+    actor R as Researcher / Admin
+    participant AP as Admin Panel
+    participant B as Backend (notificationCampaignService)
+    participant M as MongoDB
+    participant FCM as Firebase Cloud Messaging
+
+    R->>AP: Compose campaign {title <=65, body <=240, target, schedule}
+    AP->>B: POST /api/v1/admin/notifications
+    B->>M: insert(notification_campaigns, {status: "draft"/"scheduled"})
+    alt scheduledFor = null (send now)
+        B->>M: Resolve targets (individual / group / all_enrolled) -> FCM tokens
+        B->>FCM: sendMulticast(title, body, tokens)
+        FCM-->>B: delivery report
+        B->>M: $set {status: "sent", sentAt, recipientCount}
+    else scheduled
+        Note over B: Scheduler picks up campaign at scheduledFor and sends (same path)
+    end
+    B-->>AP: campaign status
