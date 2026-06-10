@@ -256,7 +256,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 | [docs/guides/flutter-architecture.md](docs/guides/flutter-architecture.md) | Developers — mobile app internals |
 | [docs/guides/admin-guide.md](docs/guides/admin-guide.md) ([DE](docs/guides/admin-guide-de.md)) | Researchers / admins |
 | [docs/guides/participant-guide.md](docs/guides/participant-guide.md) ([DE](docs/guides/participant-guide-de.md)) | Study participants |
-| [docs/MANUAL-en.md](docs/MANUAL-en.md) ([DE](docs/MANUAL-de.md) · [JA](docs/MANUAL-ja.md)) | End-user manual |
+| [docs/MANUAL-en.md](docs/MANUAL-en.md) ([DE](docs/MANUAL-de.md) · [JA](docs/MANUAL-ja.md)) | *Legacy* manual of the retired web experiment site (historical reference) |
 
 ---
 

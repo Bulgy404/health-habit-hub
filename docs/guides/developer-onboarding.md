@@ -146,11 +146,6 @@ ALERT_WEBHOOK_URL=
 # ── Admin app password ───────────────────────────────────────────────────
 ADMIN_PASSWORD=devpassword
 
-# ── reCAPTCHA (dev — set to empty to disable) ────────────────────────────
-RECAPTCHA_SITEKEY=
-RECAPTCHA_SECRETKEY=
-RECAPTCHA_USE_RECAPTCHA_DOMAIN=false
-
 # ── Mail (dev — set to empty to disable) ─────────────────────────────────
 MAIL_USER=
 MAIL_PASS=

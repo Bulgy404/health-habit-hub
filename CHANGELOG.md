@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Legal-document versioning (2026-06-10)
+- YAML front matter (`version`, `effectiveDate`, `bindingLanguage`) on all 9 legal documents (`app/language/{en,de,ja}/{privacy,imprint,accessibility}.md`); legal wording unchanged
+- `parseFrontMatter` in `app/utils/markdown.js` (no new dependency); legal-page API responses now include a `document` metadata field
+- Flutter legal screen renders a localized footer (version · effective date) and, on non-German locales, an authoritative-version note — *wording of that note pending DPO confirmation*
+- CI gate `app/scripts/checkLegalDocs.mjs` (`npm run check:legal`): fails the build when locales of a document carry different `version`/`effectiveDate`, preventing silent translation drift; 5 new unit tests for the front matter parser
+
+### Removed — Legacy web experiment app (2026-06-10)
+- Deleted the unauthenticated server-rendered experiment site: `donate`, `thanks`, `demo`, `about`, `reward`, and `contact` routes + controllers, their public JS assets, and the root redirect to `/:lng/donate`. Habit donation happens exclusively via `POST /api/v1/habits/donate`
+- Deleted the old n10s/RDF Neo4j writer (`app/utils/Neo4jDatabase.js`) and its models (`donation.js`, `experimentGroup.js`, `contexts.js`), integration test, and script; existing legacy graph data is untouched (see `docs/migration.md`)
+- Dropped now-unused dependencies (`express-recaptcha`, `nodemailer`), `RECAPTCHA_*` env vars (compose + `.env.example`), and `recaptcha`/`mail` config blocks; removed `test:neo4j` script
+- **Kept:** legal pages (`/:lng/imprint`, `/privacy`, `/accessibility`) — the Flutter app fetches and renders them — and the surveys API (`/api/v1/surveys`), which the mobile app uses
+- Scrubbed configuration & docs: `RECAPTCHA_*` removed from `.env`, `stack.env`, `DEPLOYMENT.md`, `DOCUMENTATION.md` (env section), and `docs/guides/developer-onboarding.md`; `MAIL_RECEIVER` dropped from `.env` (contact-form only — `MAIL_USER/PASS/FROM` kept for the backup service); legacy user manuals (`docs/MANUAL-{en,de,ja}.md`) carry a deprecation banner pointing to the participant guide; fixed stale "WebView survey" description in `docs/guides/flutter-architecture.md` (donation is a native form against the REST API)
+- Verified: ESLint clean, 480/480 backend tests pass, compose files validate
+
+### Fixed — Legacy donate flow crash (2026-06-10)
+- `app/controllers/donateController.js`: `saveDonateData` dynamically imported `Neo4jSparqlDbClient`, a class renamed to `Neo4jDbClient` in the US-170 dead-code pass. The dynamic import evaded static analysis and resolved to `undefined`, so every submission of the legacy web donate form (`POST /:lng/donate`) crashed with `TypeError: Neo4jSparqlDbClient is not a constructor` (HTTP 500). Import corrected; verified against the exported class and full test suite (480/480 pass)
+
 ### Fixed — Architecture docs vs. actual stack (2026-06-10)
 - Removed Fuseki from all current architecture diagrams and service tables — the service is no longer in `docker-compose.yml`; ontology/RDF sections in `docs/architecture.md`, `docs/data-model.md`, and `DOCUMENTATION.md` are now marked *retired/legacy*
 - Corrected backup documentation: targets are MongoDB, LightRAG, Neo4j, Keycloak (not Fuseki); retention is configurable via `BACKUP_RETENTION_DAYS` (default 14 days, not 30)

@@ -108,7 +108,7 @@ Navigation uses **GoRouter** configured in `main.dart` via a `RouterNotifier`/`r
 | `/onboarding/welcome` | `WelcomeScreen` | First-run onboarding |
 | `/onboarding/passphrase` | `PassphraseScreen` | BIP-39 backup passphrase |
 | `/onboarding/restore` | `RestoreScreen` | Restore account from passphrase |
-| `/donate` | `DonateScreen` | WebView survey (habit donation) |
+| `/donate` | `DonateScreen` | Native habit-donation form (posts to `/api/v1/habits/donate`) |
 | `/explore` | `ExploreScreen` | Browse donated habits |
 | `/recommend` | `GoalInputScreen` | Enter a health goal |
 | `/recommend/loading` | `LoadingScreen` | Waits for recommendation result |

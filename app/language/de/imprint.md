@@ -1,3 +1,9 @@
+---
+version: 1.0.0
+effectiveDate: 2026-06-10
+bindingLanguage: de
+---
+
 # Impressum
 
 ## Health Habit Hub

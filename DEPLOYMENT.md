@@ -193,7 +193,6 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
 - [ ] DNS propagation complete (verified with `dig habit.wiwi.tu-dresden.de`)
 
 ### 3. External Services
-- [ ] Google reCAPTCHA keys obtained (<https://www.google.com/recaptcha/admin>)
   - Site key
   - Secret key
   - Domain `habit.wiwi.tu-dresden.de` added
@@ -270,10 +269,6 @@ API_SERVICE_SECRET=<your-shared-api-service-secret>
 
 # Traefik Dashboard (generate: htpasswd -nb admin your-password)
 TRAEFIK_DASHBOARD_AUTH=<your-htpasswd-hash>
-
-# reCAPTCHA (from Google)
-RECAPTCHA_SITEKEY=<your-production-site-key>
-RECAPTCHA_SECRETKEY=<your-production-secret-key>
 
 # Mailjet (from Mailjet dashboard)
 MAIL_USER=<mailjet-api-key>

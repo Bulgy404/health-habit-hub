@@ -39,6 +39,10 @@ jobs:
         working-directory: app
         run: npx eslint .
 
+      - name: Legal documents consistency
+        working-directory: app
+        run: node scripts/checkLegalDocs.mjs
+
   # ─────────────────────────────────────────────────────────────────────────────
   # 2. BACKEND – unit tests + coverage (no services)
   # ─────────────────────────────────────────────────────────────────────────────

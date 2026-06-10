@@ -1,3 +1,9 @@
+---
+version: 1.0.0
+effectiveDate: 2026-03-15
+bindingLanguage: de
+---
+
 Die Forschungsgruppe Digital Health ist bestrebt, ihre Websites und mobilen Anwendungen barrierefrei zugänglich zu machen, gemäß dem Barrierefreie-Websites-Gesetz (BfWebG) und der Barrierefreie-Informationstechnik-Verordnung (BITV 2.0), zur Umsetzung der EU-Richtlinie 2016/2102.
 
 ### Erstellung dieser Erklärung zur Barrierefreiheit

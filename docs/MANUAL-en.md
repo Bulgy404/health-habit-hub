@@ -1,3 +1,5 @@
+> **⚠️ Legacy document.** This manual describes the retired browser-based experiment site (G1–G4 web pages, reCAPTCHA), which was removed in June 2026. Current participants use the Flutter mobile app — see [guides/participant-guide.md](guides/participant-guide.md). Kept for historical reference to the original study design.
+
 # User Manual
 
 ## Introduction

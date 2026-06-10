@@ -80,9 +80,14 @@ class _LegalDocumentScreenState extends ConsumerState<LegalDocumentScreen> {
         throw StateError('Missing legal document content');
       }
 
+      // Optional document metadata (version, effectiveDate, bindingLanguage)
+      // delivered by the backend from the document's front matter.
+      final docMeta = response.data?['document'];
+      final meta = docMeta is Map<String, dynamic> ? docMeta : null;
+
       final controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.disabled)
-        ..loadHtmlString(_wrapHtml(content));
+        ..loadHtmlString(_wrapHtml(content, meta: meta, locale: locale));
 
       if (!mounted) {
         return;
@@ -115,8 +120,50 @@ class _LegalDocumentScreenState extends ConsumerState<LegalDocumentScreen> {
     LegalDocumentType.imprint => l10n.imprint,
   };
 
-  String _wrapHtml(String body) {
+  /// Builds the localized metadata footer ("Version … · Effective …"),
+  /// or an empty string when the backend sent no document metadata.
+  String _metaFooter(Map<String, dynamic>? meta, String locale) {
+    if (meta == null) {
+      return '';
+    }
+    final version = meta['version']?.toString();
+    final effectiveDate = meta['effectiveDate']?.toString();
+    final binding = meta['bindingLanguage']?.toString();
+    if (version == null && effectiveDate == null) {
+      return '';
+    }
+
+    final (versionLabel, effectiveLabel, bindingNote) = switch (locale) {
+      'de' => (
+          'Version',
+          'Stand',
+          'Die deutsche Fassung ist maßgeblich.',
+        ),
+      'ja' => (
+          'バージョン',
+          '発効日',
+          'ドイツ語版が法的に優先されます。',
+        ),
+      _ => (
+          'Version',
+          'Effective',
+          'The German version is authoritative.',
+        ),
+    };
+
+    final parts = <String>[
+      if (version != null) '$versionLabel $version',
+      if (effectiveDate != null) '$effectiveLabel $effectiveDate',
+    ];
+    final bindingLine =
+        (binding != null && binding != locale) ? '<br>$bindingNote' : '';
+    return '<footer class="doc-meta">${parts.join(' · ')}$bindingLine</footer>';
+  }
+
+  String _wrapHtml(String body,
+      {Map<String, dynamic>? meta, required String locale}) {
     final title = _title(AppLocalizations.of(context)!);
+    final footer = _metaFooter(meta, locale);
     return '''
 <!doctype html>
 <html lang="en">
@@ -143,10 +190,18 @@ class _LegalDocumentScreenState extends ConsumerState<LegalDocumentScreen> {
       p, li {
         font-size: 16px;
       }
+      .doc-meta {
+        margin-top: 2em;
+        padding-top: 1em;
+        border-top: 1px solid #e5e7eb;
+        font-size: 13px;
+        color: #6b7280;
+      }
     </style>
   </head>
   <body>
     $body
+    $footer
   </body>
 </html>
 ''';

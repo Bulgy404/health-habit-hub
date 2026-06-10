@@ -6,12 +6,13 @@ const log = logger.child({ module: 'accessibilityController' });
 
 export async function renderAccessibility(req, res, next) {
   try {
-    const html = await loadMarkdown(req.lang, 'accessibility');
+    const { html, meta } = await loadMarkdown(req.lang, 'accessibility');
     res.json({
       status: 'ok',
       lang: req.lang,
       messages: getLanguageMessages(req.lang),
       content: html,
+      document: meta,
     });
   } catch (err) {
     log.error({ err: err }, 'Error rendering accessibility page:');

@@ -1,3 +1,9 @@
+---
+version: 1.0.0
+effectiveDate: 2026-03-15
+bindingLanguage: de
+---
+
 The Digital Health Research Group strives to make its websites and mobile applications accessible in accordance with the Barrier-Free Websites Act (BfWebG) and the Barrier-Free Information Technology Ordinance (BITV 2.0), implementing EU Directive 2016/2102.
 
 ### Creation of this Accessibility Statement

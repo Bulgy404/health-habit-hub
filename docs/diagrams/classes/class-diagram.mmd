@@ -1,6 +1,6 @@
 %% Health Habit Hub — Domain Class Diagram
 %% Derived from: app/models/*.js (MongoDB validators), docs/data-model.md,
-%% Neo4j graph schema, app/models/donation.js (domain classes)
+%% and the Neo4j graph schema
 %% Render: mmdc -i class-diagram.mmd -o class-diagram.svg
 
 classDiagram
@@ -226,25 +226,3 @@ classDiagram
     Habit "1" --> "0..*" Context : HAS_CONTEXT
     Context "1" --> "0..*" BCIOConcept : MAPS_TO
     Habit "*" ..> "1" User : donated by (anonymised)
-
-    %% ===================== Donation domain classes (backend) =====================
-    class Donation {
-        <<app/models/donation.js>>
-        +String id
-        +Donor donor
-        +ExperimentalSetting setting
-        +Label[] labels
-    }
-    class Donor {
-        +String id  anonymous per-donation UUID
-    }
-    class ExperimentalSetting {
-        +String id
-        +String task  open|closed
-        +String description  open|closed
-        +String group  Group1..Group4
-        +isClosedTaskOpenDescription() bool
-    }
-    Donation "1" *-- "1" Donor
-    Donation "1" *-- "1" ExperimentalSetting
-    Donation ..> Habit : persisted as

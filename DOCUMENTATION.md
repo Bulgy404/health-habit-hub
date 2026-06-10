@@ -401,15 +401,6 @@ All variables are defined in `stack.env`. In production, override sensitive valu
 | `BACKUP_EMAIL` | — | Email address for backup reports |
 | `ALERT_WEBHOOK_URL` | _(empty)_ | Optional Slack/Discord/Teams webhook URL |
 
-### reCAPTCHA (contact form)
-
-| Variable | Description |
-|----------|-------------|
-| `RECAPTCHA_SITEKEY` | Google reCAPTCHA v2 site key |
-| `RECAPTCHA_SECRETKEY` | Google reCAPTCHA v2 secret key |
-| `RECAPTCHA_USE_RECAPTCHA_DOMAIN` | Use `recaptcha.net` domain (for regions blocking Google) |
-
----
 
 ## 6. Local Development
 
@@ -630,6 +621,26 @@ All endpoints require the `X-API-Service-Secret` header (value from `API_SERVICE
 ---
 
 ## 11. Security
+
+### Legal Documents (imprint, privacy, accessibility)
+
+The user-facing legal documents live as Markdown in `app/language/{en,de,ja}/` and are served at `/:lng/{imprint,privacy,accessibility}` (rendered to HTML server-side; the Flutter app fetches and displays them). Each file carries YAML front matter:
+
+```yaml
+---
+version: 1.0.0
+effectiveDate: 2026-03-15
+bindingLanguage: de
+---
+```
+
+Rules:
+
+- **Bump `version` and `effectiveDate` in *all three* locales together** when the content changes — CI (`node scripts/checkLegalDocs.mjs`, also `npm run check:legal`) fails if locales diverge.
+- The metadata is returned in the API response (`document` field) and shown as a footer in the app; non-German locales display a note that the German version is authoritative.
+- Git history of these files is the GDPR audit trail for which policy version was active when.
+- Never machine-translate these documents; translations require professional/legal review.
+
 
 ### Authentication Model
 
