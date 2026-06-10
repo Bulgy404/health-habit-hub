@@ -59,7 +59,7 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 
 | ID | Use Case | Actor | Description | Components |
 |---|---|---|---|---|
-| UC-29 | Run daily backup | Backup Scheduler | 02:00 cron: mongodump, neo4j-admin dump, Fuseki tar, Keycloak partial-export; 30-day retention, webhook alert on failure | backup-service, all stores |
+| UC-29 | Run daily backup | Backup Scheduler | Daily loop: mongodump, LightRAG data tar, neo4j-admin dump, Keycloak partial-export; configurable retention (default 14 days), webhook/email alert on failure | backup-service, MongoDB, Neo4j, LightRAG, Keycloak |
 | UC-30 | Query / ingest KB via MCP | AI Agent | `search_knowledge` and `ingest_document` tools over SSE | knowledge-mcp, LightRAG |
 
 ---

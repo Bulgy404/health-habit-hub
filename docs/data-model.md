@@ -337,7 +337,9 @@ RETURN d.hhh__id AS userId, d.hhh__group AS groupField
 
 ---
 
-## 2. Fuseki / SPARQL Triple Store
+## 2. Fuseki / SPARQL Triple Store *(retired)*
+
+> **Note (2026-06):** the Fuseki service has been removed from `docker-compose.yml`. This section is kept as a reference for the RDF ontology model (HHH + BCIO) and for interpreting historical exports. See `migration.md`.
 
 Apache Jena Fuseki serves the HHH + BCIO OWL ontology (and optionally the habit data as RDF). The dataset is named `/hhh`.
 
