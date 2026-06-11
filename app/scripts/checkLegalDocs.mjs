@@ -17,7 +17,7 @@ import path from 'path';
 import { parseFrontMatter } from '../utils/markdown.js';
 
 const LANGS = ['en', 'de', 'ja'];
-const DOCS = ['privacy', 'imprint', 'accessibility'];
+const DOCS = ['privacy', 'imprint', 'accessibility', 'consent'];
 const REQUIRED_KEYS = ['version', 'effectiveDate', 'bindingLanguage'];
 
 let failures = 0;

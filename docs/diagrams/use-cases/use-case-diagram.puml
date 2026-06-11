@@ -26,12 +26,15 @@ rectangle "Mobile App (Flutter)" {
   package "Account & Profile" {
     usecase "UC-01 Register & sign in\n(OIDC + PKCE)" as UC01
     usecase "UC-02 Onboard\n(create account)" as UC02
+    usecase "UC-31 Give informed\nconsent" as UC31
+    usecase "UC-32 Delete account" as UC32
     usecase "UC-05 Manage profile" as UC05
     usecase "UC-14 Manage settings\n& language" as UC14
   }
   package "Habit Donation & Exploration" {
     usecase "UC-03 Donate habit" as UC03
     usecase "UC-04 Browse & explore habits" as UC04
+    usecase "UC-34 Comment & like habits" as UC34
     usecase "UC-16 Complete survey" as UC16
     usecase "UC-06 Complete questionnaire" as UC06
   }
@@ -46,6 +49,7 @@ rectangle "Mobile App (Flutter)" {
     usecase "UC-12 Log daily behaviour" as UC12
     usecase "UC-13 Submit weekly\nSRHI check-in" as UC13
     usecase "UC-15 Receive push\nnotifications" as UC15
+    usecase "UC-33 Receive adaptive\nhabit reminders" as UC33
   }
 }
 
@@ -72,6 +76,8 @@ rectangle "System / Integrations" {
 ' --- Participant ---
 P --> UC01
 P --> UC02
+P --> UC31
+P --> UC32
 P --> UC03
 P --> UC04
 P --> UC05
@@ -86,6 +92,8 @@ P --> UC13
 P --> UC14
 P --> UC15
 P --> UC16
+P --> UC33
+P --> UC34
 
 ' --- Researcher (admin inherits) ---
 R --> UC17
@@ -118,9 +126,14 @@ UC15 ..> FCM : <<receives>>
 
 ' --- include / extend ---
 UC03 ..> UC01 : <<include>>
+UC02 ..> UC31 : <<include>>
+UC32 ..> KC : <<deletes identity>>
 UC07 ..> UC01 : <<include>>
 UC11 ..> UC10 : <<include>>
 UC13 ..> UC11 : <<extend>>
+UC33 ..> UC11 : <<include>>
+UC34 ..> UC04 : <<extend>>
+UC07 ..> UC34 : <<uses likes>>
 UC12 ..> UC11 : <<extend>>
 UC08 ..> UC07 : <<extend>>
 

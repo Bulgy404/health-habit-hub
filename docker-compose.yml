@@ -145,11 +145,7 @@ services:
     restart: always
     environment:
       - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD}
-      - NEO4J_PLUGINS=["n10s"]
       - NEO4J_server_directories_import=/import
-      - NEO4J_dbms_security_procedures_unrestricted=n10s.*
-      - NEO4J_dbms_security_procedures_allowlist=n10s.*
-      - EXTENSION_SCRIPT=/neo4j-extension.sh
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -159,7 +155,6 @@ services:
       - neo4j-data:/data
       - neo4j-logs:/logs
       - ./neo4j/import:/import:ro
-      - ./neo4j/extension.sh:/neo4j-extension.sh:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7474"]
       interval: 30s
@@ -358,6 +353,7 @@ services:
     env_file: .env
     environment:
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
+      - OFFSITE_REMOTE=${OFFSITE_REMOTE:-}
       - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
       - ALERT_EMAIL=${ALERT_EMAIL:-}
       - BACKUP_EMAIL=${BACKUP_EMAIL:-}
@@ -368,6 +364,7 @@ services:
       - MAIL_FROM=${MAIL_FROM:-}
     volumes:
       - ./backups:/backups
+      - ./backup-service/rclone:/config/rclone:ro
       - lightrag-data:/lightrag:ro
       - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
     networks:

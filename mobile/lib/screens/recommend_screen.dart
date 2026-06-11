@@ -269,12 +269,46 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
     if (_error != null) return _buildError();
     if (_recommendations.isEmpty) return _buildEmpty();
 
-    return AnimatedList(
-      key: _listKey,
-      initialItemCount: _recommendations.length,
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemBuilder: (context, index, animation) =>
-          _buildCard(_recommendations[index], animation, index),
+    return Column(
+      children: [
+        _buildAiDisclaimer(),
+        Expanded(
+          child: AnimatedList(
+            key: _listKey,
+            initialItemCount: _recommendations.length,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemBuilder: (context, index, animation) =>
+                _buildCard(_recommendations[index], animation, index),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// AI provenance + medical disclaimer (App Store Guideline 1.4.1):
+  /// recommendations are AI-generated research suggestions, not medical advice.
+  Widget _buildAiDisclaimer() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.auto_awesome, size: 16, color: Color(0xFF6B7280)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'AI-generated suggestions based on your study data. '
+              'This is not medical advice — consult a doctor for health concerns.',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

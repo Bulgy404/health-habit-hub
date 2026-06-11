@@ -124,6 +124,7 @@ def _records_to_habits(records: list[dict]) -> dict[str, dict]:
                 "uuid": uuid,
                 "sentence": record.get("sentence", ""),
                 "context": ctx,
+                "likes": int(record.get("likes", 0) or 0),
                 "score": score,
             }
     return habits
@@ -162,6 +163,7 @@ async def _vector_search_habits(
         RETURN h.uuid AS uuid,
                coalesce(h.translationEN, h.sentence) AS sentence,
                collect({dimension: c.dimension, text: c.text}) AS ctx_items,
+               coalesce(h.annotations_like, 0) AS likes,
                score
     """
     context_tail = """
@@ -172,6 +174,7 @@ async def _vector_search_habits(
         RETURN h.uuid AS uuid,
                coalesce(h.translationEN, h.sentence) AS sentence,
                collect({dimension: c.dimension, text: c.text}) AS ctx_items,
+               coalesce(h.annotations_like, 0) AS likes,
                score
     """
     bcio_tail = """
@@ -183,6 +186,7 @@ async def _vector_search_habits(
         RETURN h.uuid AS uuid,
                coalesce(h.translationEN, h.sentence) AS sentence,
                collect({dimension: ctx.dimension, text: ctx.text}) AS ctx_items,
+               coalesce(h.annotations_like, 0) AS likes,
                score
     """
 
@@ -230,6 +234,7 @@ class HabitEntry(BaseModel):
     uuid: str
     sentence: str
     context: dict[str, list[str]]
+    likes: int = 0
 
 
 class ExtractHabitsResponse(BaseModel):
@@ -300,7 +305,12 @@ async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
     )
 
     community_habits = [
-        HabitEntry(uuid=h["uuid"], sentence=h["sentence"], context=h["context"])
+        HabitEntry(
+            uuid=h["uuid"],
+            sentence=h["sentence"],
+            context=h["context"],
+            likes=int(h.get("likes", 0)),
+        )
         for h in community_raw
     ]
 

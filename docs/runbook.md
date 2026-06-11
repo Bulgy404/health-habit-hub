@@ -946,3 +946,62 @@ bash scripts/deploy-recommender.sh
 
 *End of Runbook — see also [Architecture](architecture.md), [Data Model](data-model.md),
 [API Reference](api/openapi.yaml), and [Admin Guide](guides/admin-guide.md).*
+
+---
+
+## Backup & Restore
+
+### Known limitation: Neo4j backup downtime window
+
+The nightly backup runs `neo4j-admin database dump`, which **stops the Neo4j
+container** for the duration of the dump (typically < 1 minute on current data
+volumes). During this window, habit donation, explore feeds, and admin stats
+return errors. The backup loop starts ~02:00 (container start + 120 s + 24 h
+cycles), i.e. during the lowest-traffic period. If the dataset grows enough
+for this to matter, switch to Neo4j Enterprise online backup or accept dumps
+from a replica.
+
+### Offsite sync
+
+Backups land in `./backups` **on the same host as the databases** — by
+themselves they do not survive host loss. Configure offsite sync:
+
+1. Create `backup-service/rclone/rclone.conf` on the host (git-ignored) with a
+   remote, e.g. an S3-compatible bucket or TU SFTP target.
+2. Set `OFFSITE_REMOTE=<remote>:<path>` in `.env`.
+3. Recreate the backup container. Every nightly run then mirrors
+   `full_backup_*.tar.gz` + manifests offsite; sync failures trigger the
+   alert webhook/email like any other backup error.
+
+### Restore drill (run quarterly — an untested backup is not a backup)
+
+On a scratch machine or the staging host:
+
+```bash
+# 1. Fetch the latest archive (from offsite if testing disaster recovery)
+tar -xzf full_backup_<DATE>.tar.gz -C /tmp/restore
+
+# 2. MongoDB
+docker compose up -d mongo
+docker exec -i hhh-mongo mongorestore --archive < /tmp/restore/<DATE>/mongo.archive
+
+# 3. Neo4j (container must be stopped for load)
+docker compose stop neo4j
+docker run --rm -v <neo4j-data-volume>:/data -v /tmp/restore/<DATE>/neo4j:/backup \
+  neo4j:5 neo4j-admin database load neo4j --from-path=/backup --overwrite-destination
+docker compose start neo4j
+
+# 4. LightRAG
+docker run --rm -v <lightrag-data-volume>:/lightrag -v /tmp/restore/<DATE>:/backup alpine \
+  sh -c "rm -rf /lightrag/* && tar -xzf /backup/lightrag-data.tar.gz -C /lightrag"
+
+# 5. Keycloak realm
+# Import /tmp/restore/<DATE>/hhh-realm.json via Keycloak admin console
+# (Realm settings → Partial import) or --import-realm on a fresh instance.
+
+# 6. Verify
+node scripts/smoke-e2e.mjs   # against the restored stack
+```
+
+Record date, archive used, duration, and any surprises in the study log.
+`backup-service/restore.sh` automates steps 2–4 on the production host.

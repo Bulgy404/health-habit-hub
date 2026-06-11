@@ -26,14 +26,17 @@ This document is the canonical reference for all data stores in the Health Habit
 
 ## 1. Neo4j Graph Database
 
-Neo4j stores the habit knowledge graph. There are **two coexisting schemas** in the same database:
+Neo4j stores the habit knowledge graph using a single active schema (`Habit`, `Context`, `BCIOConcept`), created by the donate pipeline (`POST /api/v1/habits/donate`). All endpoints (feed, stats, public list) read this schema.
 
-- **New schema** (`Habit`, `Context`, `BCIOConcept`) — created by the donate pipeline (`POST /api/v1/habits/donate`). This is the active schema for all new data.
-- **Old schema** (`hhh__Habit`, `hhh__Donor`, …) — created by the neosemantics (n10s) plugin when the HHH/BCIO ontology is imported via Fuseki. Used by the `/habits/public` and `/habits/stats` endpoints.
+> **Note (2026-06):** the former n10s/RDF schema (`hhh__Habit`, `hhh__Donor`, …) was retired without data migration — no legacy data existed. The n10s plugin is no longer loaded. Sections 1.2–1.4 below are kept as a historical reference only.
 
-> **Important:** These two schemas are disjoint datasets in the same database. The stats and public-list endpoints query the old `hhh__` schema; the donate pipeline writes to the new schema. A migration script is needed to reconcile them.
+### 1.1 Current Schema (Donate Pipeline)
 
-### 1.1 New Schema (Donate Pipeline)
+> Community signals: `Habit` nodes carry `annotations_helpful`,
+> `annotations_iDoThis`, and `annotations_like` counters; anonymous comments
+> are `(:Comment {id, text, createdAt})-[:COMMENT_ON]->(:Habit)` nodes whose
+> authorship exists only in MongoDB `habit_comments`.
+
 
 #### `Habit`
 
@@ -86,7 +89,7 @@ BCIO ontology concepts mapped from context phrases. Created/merged by `map-bcio`
 
 ---
 
-### 1.2 Old Schema (n10s / Ontology Import)
+### 1.2 Old Schema (n10s / Ontology Import) — *retired, historical reference*
 
 All labels and property names use the `hhh__` prefix (neosemantics convention for namespace `http://example.com/hhh#`).
 
@@ -565,6 +568,8 @@ MongoDB stores operational data: survey definitions, participant records, profil
 | `srhi_responses` | Weekly SRHI habit-strength measurements | No |
 | `cue_pools` | Pre-rated contextual cues for study conditions | No |
 | `notification_campaigns` | Researcher-composed push notification campaigns | No |
+| `consents` | Informed-consent acceptances (append-only audit trail, versioned) | No |
+| `habit_comments` | Comment-ownership mapping (author of anonymous Neo4j Comment nodes) | No |
 
 ---
 
@@ -929,6 +934,7 @@ One document per implementation intention (habit plan) created by a user.
 | `durationMinutes` | Int | Target session duration |
 | `cues` | Array | `[{text, source, cueId?}]` — 1 or 2 cues; source: `"pre_rated"` or `"self_selected"` |
 | `intentionStatement` | String | Full if-then statement e.g. `"After dinner, I will walk for 20 minutes."` |
+| `reminderTime` | String\|null | Daily reminder time `HH:mm` chosen at creation; frequency fades via the adaptive reminder plan (see architecture.md) |
 | `status` | String | `"active"`, `"paused"`, `"completed"`, `"abandoned"` |
 | `createdAt` | Date | |
 | `updatedAt` | Date | |

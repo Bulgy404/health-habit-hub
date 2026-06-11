@@ -31,6 +31,7 @@ import '../screens/donate_screen.dart';
 import '../screens/explore_screen.dart';
 import '../screens/legal_document_screen.dart';
 import '../screens/login_screen.dart';
+import '../screens/onboarding/consent_screen.dart';
 import '../screens/onboarding/passphrase_screen.dart';
 import '../screens/onboarding/profile_setup_screen.dart';
 import '../screens/onboarding/restore_screen.dart';
@@ -64,6 +65,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/onboarding/welcome',
         builder: (context, state) => const WelcomeScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding/consent',
+        builder: (context, state) => const ConsentScreen(),
+      ),
+      GoRoute(
+        path: '/consent-update',
+        builder: (context, state) => const ConsentScreen(isUpdate: true),
       ),
       GoRoute(
         path: '/onboarding/passphrase',
@@ -225,6 +234,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: 'imprint',
                     builder: (context, state) => const LegalDocumentScreen(
                       documentType: LegalDocumentType.imprint,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'consent',
+                    builder: (context, state) => const LegalDocumentScreen(
+                      documentType: LegalDocumentType.consent,
                     ),
                   ),
                   GoRoute(

@@ -118,6 +118,26 @@ export function createKeycloakAdminClient({
         throw new Error(`Keycloak role assignment failed: ${assignRes.status}`);
     },
 
+    /**
+     * Permanently delete a user from the realm (GDPR / account deletion).
+     * @param {string} userId Keycloak user id (`sub` claim).
+     * @throws {Error} If Keycloak responds with a non-2xx status other than 404.
+     */
+    async deleteUser(userId) {
+      const token = await getAdminToken();
+      const res = await fetch(
+        `${_base}/admin/realms/${_realm}/users/${encodeURIComponent(userId)}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      // 404 = already gone — treat as success (idempotent deletion)
+      if (!res.ok && res.status !== 404) {
+        throw new Error(`Keycloak deleteUser failed: ${res.status}`);
+      }
+    },
+
     async updateUserAttribute(userId, key, value) {
       const token = await getAdminToken();
       await fetch(`${_base}/admin/realms/${_realm}/users/${userId}`, {

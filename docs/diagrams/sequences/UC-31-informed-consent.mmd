@@ -1,0 +1,24 @@
+%% UC-31 — Give informed consent (App Store 5.1.3 / GDPR Art. 6(1)(a), 9(2)(a))
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App (ConsentScreen)
+    participant B as Backend
+    participant M as MongoDB
+
+    P->>F: Tap "Get Started"
+    F->>B: GET /:locale/consent (public)
+    B-->>F: {content: HTML, document: {version, effectiveDate, bindingLanguage}}
+    F-->>P: Render HabConnect study information + consent text
+    alt consents
+        P->>F: Tap "I consent"
+        F->>F: Store consent version + locale + timestamp (secure storage)
+        F->>F: Continue to account creation (passphrase screen)
+        Note over F,B: After account creation & login:
+        F->>B: POST /api/v1/users/me/consent {consentVersion, locale} (Bearer)
+        B->>M: insert(consents) — append-only audit record
+        B-->>F: 201
+    else declines
+        P->>F: Tap "I do not consent"
+        F-->>P: Return to welcome screen — no account, no data collected
+    end

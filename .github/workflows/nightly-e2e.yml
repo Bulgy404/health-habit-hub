@@ -1,0 +1,63 @@
+name: Nightly E2E smoke test
+
+# Boots the real Docker stack (Mongo, Neo4j, Keycloak, backend) and walks the
+# core participant journey end-to-end — no mocks. Catches integration drift
+# (container config, Keycloak realm, index/validator changes) that unit and
+# mocked integration tests cannot. LLM-dependent flows (donate enrichment,
+# recommendations) are intentionally out of scope: no credentials in CI.
+
+on:
+  schedule:
+    - cron: "30 3 * * *" # nightly 03:30 UTC
+  workflow_dispatch: {}
+
+jobs:
+  e2e-smoke:
+    name: compose up + participant journey
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create CI environment file
+        run: |
+          cp .env.example .env
+          # Fill the secrets the core stack needs with CI-only throwaways.
+          fill() { sed -i "s|^$1=.*|$1=$2|" .env || echo "$1=$2" >> .env; }
+          fill MONGO_PASSWORD ci-mongo-pass
+          fill NEO4J_PASSWORD ci-neo4j-pass
+          fill KEYCLOAK_ADMIN_PASSWORD ci-keycloak-pass
+          fill API_SERVICE_SECRET ci-api-service-secret-0123456789
+          fill REDIS_PASSWORD ci-redis-pass
+
+      - name: Start core services
+        run: |
+          docker compose -f docker-compose.local.yml up -d \
+            mongo neo4j keycloak keycloak-db redis app || \
+          docker compose -f docker-compose.local.yml up -d
+
+      - name: Wait for backend health
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/api/v1/health >/dev/null 2>&1; then
+              echo "Backend healthy after ${i}0s"; exit 0
+            fi
+            sleep 10
+          done
+          echo "Backend never became healthy"; docker compose -f docker-compose.local.yml logs --tail 100; exit 1
+
+      - name: Seed dev data
+        run: |
+          if [ -f scripts/seed-local.js ]; then
+            (cd app && npm ci --omit=dev) || true
+            node scripts/seed-local.js || echo "Seeding failed — continuing (smoke creates its own data)"
+          fi
+
+      - name: Run smoke test
+        run: BASE_URL=http://localhost:3000 node scripts/smoke-e2e.mjs
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.local.yml logs --tail 200

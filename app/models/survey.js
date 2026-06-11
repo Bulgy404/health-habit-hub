@@ -48,6 +48,16 @@ export async function ensureIndexes(database) {
       { habitId: 1, type: 1, userId: 1 },
       { name: 'habitId_type_userId', background: true }
     );
+
+  // Consent audit trail (latest-consent reads + per-user erasure)
+  const { ensureIndexes: ensureConsentIndexes } = await import('./consent.js');
+  await ensureConsentIndexes(database);
+
+  // Comment ownership mapping (rate limiting + GDPR erasure)
+  const { ensureIndexes: ensureCommentIndexes } = await import(
+    './habitComment.js'
+  );
+  await ensureCommentIndexes(database);
 }
 
 export async function disconnect() {

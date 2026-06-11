@@ -12,6 +12,32 @@ const MONGO_URI =
 const DB_NAME = process.env.MONGO_DB || 'hhh';
 
 const validators = {
+  habit_comments: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['commentId', 'habitId', 'userId', 'createdAt'],
+      properties: {
+        _id: { bsonType: 'objectId' },
+        commentId: { bsonType: 'string' },
+        habitId: { bsonType: 'string' },
+        userId: { bsonType: 'string' },
+        createdAt: { bsonType: 'date' },
+      },
+    },
+  },
+  consents: {
+    $jsonSchema: {
+      bsonType: 'object',
+      required: ['userId', 'consentVersion', 'consentedAt'],
+      properties: {
+        _id: { bsonType: 'objectId' },
+        userId: { bsonType: 'string' },
+        consentVersion: { bsonType: 'string', pattern: '^\\d+\\.\\d+\\.\\d+$' },
+        locale: { bsonType: ['string', 'null'], enum: ['en', 'de', 'ja', null] },
+        consentedAt: { bsonType: 'date' },
+      },
+    },
+  },
   results: {
     $jsonSchema: {
       bsonType: 'object',

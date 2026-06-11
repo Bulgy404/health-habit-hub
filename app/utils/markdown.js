@@ -3,7 +3,7 @@ import path from 'path';
 import { marked } from 'marked';
 
 const ALLOWED_LANGS = new Set(['en', 'de', 'ja']);
-const ALLOWED_NAMES = new Set(['accessibility', 'imprint', 'privacy']);
+const ALLOWED_NAMES = new Set(['accessibility', 'imprint', 'privacy', 'consent']);
 
 /**
  * Parse a simple `key: value` YAML front matter block delimited by `---` lines.

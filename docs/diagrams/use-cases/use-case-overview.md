@@ -37,6 +37,10 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 | UC-14 | Manage settings & language | Persist preferences (e.g. `preferredLanguage`); UI re-localises | `GET/PUT /api/v1/users/me` | MongoDB |
 | UC-15 | Receive push notifications | Register FCM device token; receive campaign pushes | `POST /api/v1/participant/register-token` | Backend, FCM |
 | UC-16 | Complete survey | Legacy survey module: render survey, submit results | `GET /api/v1/surveys/:id`, `POST /api/v1/surveys/:id/results` | MongoDB |
+| UC-31 | Give informed consent | Mandatory pre-registration consent screen (HabConnect IC); versioned acceptance recorded server-side | `GET /:lng/consent`, `POST /api/v1/users/me/consent` | Backend, MongoDB |
+| UC-32 | Delete account | In-app GDPR/App-Store account deletion: wipes all participant-linked MongoDB data, the user's Comment nodes, + Keycloak identity; data export via `GET /users/me/export` (Art. 20) | `DELETE /api/v1/users/me`, `GET /api/v1/users/me/export` | MongoDB, Neo4j, Keycloak Admin API |
+| UC-33 | Receive adaptive habit reminders | Local notifications at a user-picked time; frequency fades as autonomy score (SRHI + adherence + streak) rises, with hysteresis and recovery; weights tunable via admin_settings | `GET /api/v1/habits/intentions/reminder-plans` | MongoDB, device notifications |
+| UC-34 | Comment & like habits | Anonymous likes (counter on Habit node) and comments (Comment nodes); like counts feed the LLM recommendation prompt as community signal | `POST /habits/:id/annotate (like)`, `GET/POST /habits/:id/comments` | Neo4j, MongoDB |
 
 ## Researcher / Admin use cases (admin portal)
 
@@ -68,10 +72,10 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 
 | Functional area | Use cases | Code |
 |---|---|---|
-| Auth & identity | UC-01, UC-02, UC-17 | `app/middleware/auth.js`, `app/routes/onboardRouter.js`, `admin/src/lib/auth.ts`, `keycloak/` |
-| Donation pipeline | UC-03, UC-04 | `app/routes/habits/`, `app/services/habitDonationService.js`, `API-service/routers/classify_*.py`, `map_bcio.py` |
+| Auth & identity | UC-01, UC-02, UC-17, UC-31, UC-32 | `app/middleware/auth.js`, `app/routes/onboardRouter.js`, `admin/src/lib/auth.ts`, `keycloak/` |
+| Donation pipeline | UC-03, UC-04, UC-34 | `app/routes/habits/`, `app/services/habitDonationService.js`, `API-service/routers/classify_*.py`, `map_bcio.py` |
 | Recommendations | UC-07, UC-08 | `app/routes/recommendRouter.js`, `API-service/routers/recommend.py`, `retrieve.py` |
-| DFG study module | UC-09 – UC-13, UC-19, UC-21 – UC-24 | `app/services/intentionService.js`, `dailyLogService.js`, `srhiService.js`, `cuePoolService.js`, `exportService.js`, `studyAnalyticsService.js`, `notificationCampaignService.js` |
+| DFG study module | UC-09 – UC-13, UC-19, UC-21 – UC-24, UC-33 | `app/services/intentionService.js`, `dailyLogService.js`, `srhiService.js`, `cuePoolService.js`, `exportService.js`, `studyAnalyticsService.js`, `notificationCampaignService.js` |
 | Questionnaires & profiles | UC-05, UC-06, UC-20 | `app/routes/questionnaires*`, `profileFieldDefinitionsRouter.js`, `userProfileRouter.js` |
 | Knowledge base | UC-25, UC-26, UC-30 | `app/routes/kbRouter.js`, `API-service/kb/`, `lightrag/`, `knowledge-mcp/` |
 | Operations | UC-29 | `backup-service/` |

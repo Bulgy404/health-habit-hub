@@ -66,7 +66,8 @@ class LocaleNotifier extends Notifier<Locale> {
     return {'Authorization': 'Bearer $token'};
   }
 
-  bool _isSupported(String lang) => lang == 'en' || lang == 'de';
+  bool _isSupported(String lang) =>
+    lang == 'en' || lang == 'de' || lang == 'ja';
 
   /// Changes locale locally (immediately) and syncs to the API in the
   /// background.  Local state and storage are updated before the network call

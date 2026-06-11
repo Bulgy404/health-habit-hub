@@ -17,9 +17,11 @@
     "version-check": "node ../scripts/version-check.js",
     "seed": "node ../scripts/seed-local.js",
     "seed:study": "node ../scripts/seed-study.js",
-    "check:legal": "node scripts/checkLegalDocs.mjs"
+    "check:legal": "node scripts/checkLegalDocs.mjs",
+    "check:openapi": "node ../scripts/generate-spec.js && git diff --exit-code ../docs/api/openapi.yaml"
   },
   "dependencies": {
+    "@sentry/node": "^8.55.0",
     "adm-zip": "^0.5.17",
     "bcryptjs": "^3.0.3",
     "body-parser": "^1.20.2",
@@ -31,6 +33,7 @@
     "express": "^4.18.2",
     "express-rate-limit": "^8.3.1",
     "firebase-admin": "^13.7.0",
+    "js-yaml": "^4.1.0",
     "marked": "^16.0.0",
     "mongodb": "^6.17.0",
     "neo4j-driver": "^5.22.1",

@@ -99,7 +99,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   void _onContinue() {
-    context.go('/onboarding/passphrase');
+    context.go('/onboarding/consent');
   }
 
   void _onRestore() {

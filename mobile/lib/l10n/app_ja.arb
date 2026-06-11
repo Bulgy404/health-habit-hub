@@ -1,0 +1,810 @@
+{
+  "@@locale": "ja",
+  "appTitle": "Health Habit Hub",
+  "@appTitle": {
+    "description": "The application title"
+  },
+  "shareHabit": "習慣をシェア",
+  "@shareHabit": {
+    "description": "Label for the share habit screen/action"
+  },
+  "exploreHabits": "習慣を探索",
+  "@exploreHabits": {
+    "description": "Label for the explore habits screen"
+  },
+  "settings": "設定",
+  "@settings": {
+    "description": "Label for the settings screen"
+  },
+  "profile": "プロフィール",
+  "@profile": {
+    "description": "Label for the profile screen"
+  },
+  "habitSharedSuccess": "習慣をシェアしました！",
+  "@habitSharedSuccess": {
+    "description": "Snackbar message when habit sharing succeeds"
+  },
+  "submissionFailed": "送信に失敗しました。もう一度お試しください。",
+  "@submissionFailed": {
+    "description": "Snackbar message when a form submission fails"
+  },
+  "noConnection": "接続がありません",
+  "@noConnection": {
+    "description": "Offline banner heading"
+  },
+  "couldNotLoadSurvey": "アンケートを読み込めませんでした。\n接続を確認してください。",
+  "@couldNotLoadSurvey": {
+    "description": "Offline banner body for donate screen"
+  },
+  "retry": "再試行",
+  "@retry": {
+    "description": "Label for the retry button"
+  },
+  "refresh": "更新",
+  "@refresh": {
+    "description": "Tooltip for the refresh icon button"
+  },
+  "graphTab": "グラフ",
+  "@graphTab": {
+    "description": "Tab label for the habit graph view"
+  },
+  "statsTab": "統計",
+  "@statsTab": {
+    "description": "Tab label for the stats view"
+  },
+  "failedToLoadHabits": "習慣の読み込みに失敗しました",
+  "@failedToLoadHabits": {
+    "description": "Error message when habit list fails to load"
+  },
+  "noHabitDataYet": "まだ習慣データがありません。",
+  "@noHabitDataYet": {
+    "description": "Empty state message on explore screen"
+  },
+  "couldNotSubmitAnnotation": "注釈を送信できませんでした",
+  "@couldNotSubmitAnnotation": {
+    "description": "Snackbar message when annotation submission fails"
+  },
+  "communityAnnotations": "コミュニティの注釈",
+  "@communityAnnotations": {
+    "description": "Section heading for annotation counts in habit detail sheet"
+  },
+  "unknown": "不明",
+  "@unknown": {
+    "description": "Fallback label when a category is empty"
+  },
+  "iDoThisCount": "私もやっている: {count}",
+  "@iDoThisCount": {
+    "description": "Annotation count label for iDoThis",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "helpfulCount": "役に立った: {count}",
+  "@helpfulCount": {
+    "description": "Annotation count label for helpful",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "iDoThisToo": "私もやっている",
+  "@iDoThisToo": {
+    "description": "Button label for the iDoThis annotation action"
+  },
+  "helpful": "役に立った",
+  "@helpful": {
+    "description": "Button label for the helpful annotation action"
+  },
+  "failedToLoadSettings": "設定の読み込みに失敗しました",
+  "@failedToLoadSettings": {
+    "description": "Error message when settings fail to load"
+  },
+  "tokenCardFormat": "トークンカード形式",
+  "@tokenCardFormat": {
+    "description": "Section title for token card format setting"
+  },
+  "tokenCardFormatDescription": "新規参加者のトークンカード生成時に使用する形式を選択します。",
+  "@tokenCardFormatDescription": {
+    "description": "Description text for the token card format setting"
+  },
+  "settingsSaved": "設定を保存しました",
+  "@settingsSaved": {
+    "description": "Snackbar message when settings are saved successfully"
+  },
+  "failedToSaveSettings": "設定の保存に失敗しました",
+  "@failedToSaveSettings": {
+    "description": "Snackbar message when saving settings fails"
+  },
+  "privacyStatement": "プライバシーポリシー",
+  "@privacyStatement": {
+    "description": "Label for the privacy statement legal page"
+  },
+  "accessibilityStatement": "アクセシビリティ声明",
+  "@accessibilityStatement": {
+    "description": "Label for the accessibility statement legal page"
+  },
+  "imprint": "インプリント（運営者情報）",
+  "@imprint": {
+    "description": "Label for the imprint legal page"
+  },
+  "couldNotLoadLegalDocument": "この文書を読み込めませんでした。\n接続を確認してください。",
+  "@couldNotLoadLegalDocument": {
+    "description": "Offline banner body for legal document screens"
+  },
+  "save": "保存",
+  "@save": {
+    "description": "Label for the save button"
+  },
+  "qrOnly": "QRのみ",
+  "@qrOnly": {
+    "description": "Radio option label for QR-only token card format"
+  },
+  "qrOnlyDescription": "QRコードトークンのみを生成",
+  "@qrOnlyDescription": {
+    "description": "Subtitle for the QR-only token card format option"
+  },
+  "printOnly": "印刷のみ",
+  "@printOnly": {
+    "description": "Radio option label for print-only token card format"
+  },
+  "printOnlyDescription": "印刷用トークンカードのみを生成",
+  "@printOnlyDescription": {
+    "description": "Subtitle for the print-only token card format option"
+  },
+  "both": "両方",
+  "@both": {
+    "description": "Radio option label for both QR and print token card format"
+  },
+  "bothDescription": "QRコードと印刷用トークンカードを生成",
+  "@bothDescription": {
+    "description": "Subtitle for the both token card format option"
+  },
+  "myProfile": "マイプロフィール",
+  "@myProfile": {
+    "description": "AppBar title for the profile screen"
+  },
+  "profileSavedSuccess": "プロフィールを保存しました！",
+  "@profileSavedSuccess": {
+    "description": "Snackbar message when profile is saved successfully"
+  },
+  "couldNotLoadProfile": "プロフィールを読み込めませんでした。\n接続を確認してください。",
+  "@couldNotLoadProfile": {
+    "description": "Offline banner body for profile screen"
+  },
+  "healthQuestionnaires": "健康に関する質問票",
+  "@healthQuestionnaires": {
+    "description": "Section heading for health questionnaire buttons"
+  },
+  "sliqLifestyleIndex": "SLIQ — ライフスタイル指標",
+  "@sliqLifestyleIndex": {
+    "description": "Button label for the SLIQ questionnaire"
+  },
+  "rand36HealthSurvey": "RAND-36 — 健康調査",
+  "@rand36HealthSurvey": {
+    "description": "Button label for the RAND-36 questionnaire"
+  },
+  "restoreAccountOnDevice": "この端末でアカウントを復元",
+  "@restoreAccountOnDevice": {
+    "description": "Button label to restore account on current device"
+  },
+  "profileCompleted": "プロフィール完了",
+  "@profileCompleted": {
+    "description": "Card title when profile has been completed"
+  },
+  "completedOn": "完了日: {date}",
+  "@completedOn": {
+    "description": "Card subtitle showing when profile was completed",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "edit": "編集",
+  "@edit": {
+    "description": "Label for the edit button"
+  },
+  "appearance": "外観",
+  "@appearance": {
+    "description": "Section heading for theme mode selector"
+  },
+  "light": "ライト",
+  "@light": {
+    "description": "Theme mode option: light"
+  },
+  "system": "システム",
+  "@system": {
+    "description": "Theme mode option: system default"
+  },
+  "dark": "ダーク",
+  "@dark": {
+    "description": "Theme mode option: dark"
+  },
+  "cancel": "キャンセル",
+  "@cancel": {
+    "description": "Label for the cancel button"
+  },
+  "delete": "削除",
+  "@delete": {
+    "description": "Label for the delete button"
+  },
+  "create": "作成",
+  "@create": {
+    "description": "Label for the create button"
+  },
+  "apply": "適用",
+  "@apply": {
+    "description": "Label for the apply filters button"
+  },
+  "adminDeviceSessions": "デバイスセッション",
+  "@adminDeviceSessions": {
+    "description": "AppBar title for the admin device sessions screen"
+  },
+  "adminRevokeSessionTitle": "セッションを無効化しますか？",
+  "@adminRevokeSessionTitle": {
+    "description": "Dialog title when confirming session revocation"
+  },
+  "adminRevokeSessionContent": "参加者 {participantId} のセッションを無効化しますか？\nただちにログアウトされます。",
+  "@adminRevokeSessionContent": {
+    "description": "Dialog body when confirming session revocation",
+    "placeholders": {
+      "participantId": {
+        "type": "String"
+      }
+    }
+  },
+  "adminRevoke": "無効化",
+  "@adminRevoke": {
+    "description": "Button label to revoke a device session"
+  },
+  "adminSessionRevoked": "セッションを無効化しました",
+  "@adminSessionRevoked": {
+    "description": "Snackbar message when session is successfully revoked"
+  },
+  "adminFailedToRevokeSession": "セッションの無効化に失敗しました",
+  "@adminFailedToRevokeSession": {
+    "description": "Snackbar message when session revocation fails"
+  },
+  "adminNoActiveSessions": "アクティブなセッションはありません",
+  "@adminNoActiveSessions": {
+    "description": "Empty state message on device sessions screen"
+  },
+  "adminFailedToLoadSessions": "セッションの読み込みに失敗しました",
+  "@adminFailedToLoadSessions": {
+    "description": "Error message when device sessions fail to load"
+  },
+  "adminColParticipantId": "参加者ID",
+  "@adminColParticipantId": {
+    "description": "Column header for participant ID in device sessions table"
+  },
+  "adminColDeviceType": "デバイス種別",
+  "@adminColDeviceType": {
+    "description": "Column header for device type in device sessions table"
+  },
+  "adminColAppVersion": "アプリバージョン",
+  "@adminColAppVersion": {
+    "description": "Column header for app version in device sessions table"
+  },
+  "adminColLastSeen": "最終アクセス",
+  "@adminColLastSeen": {
+    "description": "Column header for last seen timestamp in device sessions table"
+  },
+  "adminColSessionId": "セッションID",
+  "@adminColSessionId": {
+    "description": "Column header for session ID in device sessions table"
+  },
+  "adminColActions": "操作",
+  "@adminColActions": {
+    "description": "Column header for actions in admin tables"
+  },
+  "adminDonatedHabits": "シェアされた習慣",
+  "@adminDonatedHabits": {
+    "description": "AppBar title for the admin donated habits screen"
+  },
+  "adminAutoRefreshOn": "自動更新オン",
+  "@adminAutoRefreshOn": {
+    "description": "Tooltip when auto-refresh is enabled"
+  },
+  "adminAutoRefreshOff": "自動更新オフ",
+  "@adminAutoRefreshOff": {
+    "description": "Tooltip when auto-refresh is disabled"
+  },
+  "adminCouldNotOpenExportUrl": "エクスポートURLを開けませんでした",
+  "@adminCouldNotOpenExportUrl": {
+    "description": "Snackbar message when CSV export URL cannot be opened"
+  },
+  "adminCsvExportFailed": "CSVエクスポートに失敗しました",
+  "@adminCsvExportFailed": {
+    "description": "Snackbar message when CSV export fails"
+  },
+  "adminAllDates": "すべての日付",
+  "@adminAllDates": {
+    "description": "Label shown on date range button when no date range is selected"
+  },
+  "adminGroup": "グループ",
+  "@adminGroup": {
+    "description": "Label for the group dropdown filter"
+  },
+  "adminCategory": "カテゴリー",
+  "@adminCategory": {
+    "description": "Label for the category dropdown filter"
+  },
+  "adminAll": "すべて",
+  "@adminAll": {
+    "description": "Option label meaning all groups or all categories"
+  },
+  "adminClearDateRange": "期間指定をクリア",
+  "@adminClearDateRange": {
+    "description": "Tooltip for the clear date range button"
+  },
+  "adminCsv": "CSV",
+  "@adminCsv": {
+    "description": "Label for the CSV export button"
+  },
+  "adminNoHabitDonationsFound": "シェアされた習慣が見つかりません",
+  "@adminNoHabitDonationsFound": {
+    "description": "Empty state message on donated habits screen"
+  },
+  "adminFailedToLoadHabitDonations": "シェアされた習慣の読み込みに失敗しました",
+  "@adminFailedToLoadHabitDonations": {
+    "description": "Error message when habit donations fail to load"
+  },
+  "adminParticipantTitle": "参加者 {participantId}",
+  "@adminParticipantTitle": {
+    "description": "AppBar title for the participant detail screen",
+    "placeholders": {
+      "participantId": {
+        "type": "String"
+      }
+    }
+  },
+  "adminExportJson": "JSONをエクスポート",
+  "@adminExportJson": {
+    "description": "Tooltip for the export JSON button on participant detail screen"
+  },
+  "adminFailedToExportProgress": "進捗データのエクスポートに失敗しました。",
+  "@adminFailedToExportProgress": {
+    "description": "Snackbar message when exporting participant progress data fails"
+  },
+  "adminProfileCard": "プロフィール",
+  "@adminProfileCard": {
+    "description": "Card title for the profile section on participant detail screen"
+  },
+  "adminProfileNotYetCompleted": "未完了",
+  "@adminProfileNotYetCompleted": {
+    "description": "Status text when participant profile is not yet completed"
+  },
+  "adminSurveysCompleted": "完了したアンケート（{count}）",
+  "@adminSurveysCompleted": {
+    "description": "Section header showing how many surveys were completed",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminNoSurveysCompletedYet": "完了したアンケートはまだありません。",
+  "@adminNoSurveysCompletedYet": {
+    "description": "Empty state for surveys section on participant detail screen"
+  },
+  "adminHabitsDonated": "シェアされた習慣（{count}）",
+  "@adminHabitsDonated": {
+    "description": "Section header showing how many habits were donated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminNoHabitsDonatedYet": "シェアされた習慣はまだありません。",
+  "@adminNoHabitsDonatedYet": {
+    "description": "Empty state for habits section when no habits donated"
+  },
+  "adminHabitsDonatedDetail": "{count}件の習慣がシェアされました。個々の習慣の詳細は習慣モニターで確認できます。",
+  "@adminHabitsDonatedDetail": {
+    "description": "Detail text for habits section when habits have been donated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminRecommendations": "推奨",
+  "@adminRecommendations": {
+    "description": "Section heading for recommendations on participant detail screen"
+  },
+  "adminAccepted": "承認済み",
+  "@adminAccepted": {
+    "description": "Label for accepted recommendations count chip"
+  },
+  "adminDismissed": "却下済み",
+  "@adminDismissed": {
+    "description": "Label for dismissed recommendations count chip"
+  },
+  "adminTimeline": "タイムライン",
+  "@adminTimeline": {
+    "description": "Section heading for the timeline on participant detail screen"
+  },
+  "adminNoTimelineEventsYet": "タイムラインのイベントはまだありません。",
+  "@adminNoTimelineEventsYet": {
+    "description": "Empty state for timeline section on participant detail screen"
+  },
+  "adminTimelineEnrolled": "登録済み",
+  "@adminTimelineEnrolled": {
+    "description": "Timeline event label for enrollment"
+  },
+  "adminTimelineSurveyCompleted": "アンケート完了",
+  "@adminTimelineSurveyCompleted": {
+    "description": "Timeline event label for survey completion"
+  },
+  "adminTimelineRecommendationAccepted": "推奨を承認",
+  "@adminTimelineRecommendationAccepted": {
+    "description": "Timeline event label for recommendation accepted"
+  },
+  "adminTimelineRecommendationDismissed": "推奨を却下",
+  "@adminTimelineRecommendationDismissed": {
+    "description": "Timeline event label for recommendation dismissed"
+  },
+  "adminFailedToLoadParticipantProgress": "参加者の進捗の読み込みに失敗しました。",
+  "@adminFailedToLoadParticipantProgress": {
+    "description": "Error message when participant progress fails to load"
+  },
+  "adminParticipants": "参加者",
+  "@adminParticipants": {
+    "description": "AppBar title for the admin participants screen"
+  },
+  "adminNoParticipantsFound": "参加者が見つかりません。",
+  "@adminNoParticipantsFound": {
+    "description": "Empty state message on participants screen"
+  },
+  "adminSearchByUsername": "ユーザー名で検索…",
+  "@adminSearchByUsername": {
+    "description": "Hint text for the participant search field"
+  },
+  "adminAllGroups": "すべてのグループ",
+  "@adminAllGroups": {
+    "description": "Dropdown option to show all groups"
+  },
+  "adminColUsername": "ユーザー名",
+  "@adminColUsername": {
+    "description": "Column header for username in participants table"
+  },
+  "adminColEnrolled": "登録日",
+  "@adminColEnrolled": {
+    "description": "Column header for enrolled date in participants table"
+  },
+  "adminColLastActive": "最終アクティブ",
+  "@adminColLastActive": {
+    "description": "Column header for last active date in participants table"
+  },
+  "adminColSurveysPercent": "アンケート %",
+  "@adminColSurveysPercent": {
+    "description": "Column header for survey completion percentage in participants table"
+  },
+  "adminDeleteParticipant": "参加者を削除",
+  "@adminDeleteParticipant": {
+    "description": "Tooltip for delete participant button"
+  },
+  "adminFailedToUpdateGroup": "グループの更新に失敗しました。",
+  "@adminFailedToUpdateGroup": {
+    "description": "Snackbar message when updating participant group fails"
+  },
+  "adminDeleteParticipantTitle": "参加者の削除",
+  "@adminDeleteParticipantTitle": {
+    "description": "Dialog title when confirming participant deletion"
+  },
+  "adminDeleteParticipantContent": "参加者データは匿名化されます。この操作は取り消せません。",
+  "@adminDeleteParticipantContent": {
+    "description": "Dialog body when confirming participant deletion"
+  },
+  "adminFailedToDeleteParticipant": "参加者の削除に失敗しました。",
+  "@adminFailedToDeleteParticipant": {
+    "description": "Snackbar message when participant deletion fails"
+  },
+  "adminParticipantCreated": "参加者 {username} を作成しました",
+  "@adminParticipantCreated": {
+    "description": "Snackbar message when a new participant is created",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "adminCreateParticipantTooltip": "参加者を作成",
+  "@adminCreateParticipantTooltip": {
+    "description": "Tooltip for the create participant floating action button"
+  },
+  "adminFailedToLoadParticipants": "参加者の読み込みに失敗しました。",
+  "@adminFailedToLoadParticipants": {
+    "description": "Error message when participants list fails to load"
+  },
+  "adminPrevious": "前へ",
+  "@adminPrevious": {
+    "description": "Label for the previous page button in pagination"
+  },
+  "adminNext": "次へ",
+  "@adminNext": {
+    "description": "Label for the next page button in pagination"
+  },
+  "adminCreateParticipantTitle": "参加者の作成",
+  "@adminCreateParticipantTitle": {
+    "description": "Dialog title for creating a new participant"
+  },
+  "adminStudyGroup": "研究グループ",
+  "@adminStudyGroup": {
+    "description": "Label for the study group dropdown in create participant dialog"
+  },
+  "adminTokenCardFormat": "トークンカード形式",
+  "@adminTokenCardFormat": {
+    "description": "Label for the token card format dropdown in create participant dialog"
+  },
+  "adminQrAndPrint": "QR + 印刷",
+  "@adminQrAndPrint": {
+    "description": "Option label for QR + Print token card format in create participant dialog"
+  },
+  "adminFailedToCreateParticipant": "参加者の作成に失敗しました。もう一度お試しください。",
+  "@adminFailedToCreateParticipant": {
+    "description": "Error message when participant creation fails"
+  },
+  "adminSurveys": "アンケート",
+  "@adminSurveys": {
+    "description": "AppBar title for the admin surveys screen"
+  },
+  "adminFailedToUpdateStatus": "ステータスの更新に失敗しました",
+  "@adminFailedToUpdateStatus": {
+    "description": "Snackbar message when updating survey status fails"
+  },
+  "adminNewSurveyTooltip": "新規アンケート",
+  "@adminNewSurveyTooltip": {
+    "description": "Tooltip for the new survey floating action button"
+  },
+  "adminNoSurveysFound": "アンケートが見つかりません",
+  "@adminNoSurveysFound": {
+    "description": "Empty state message on surveys screen"
+  },
+  "adminFailedToLoadSurveys": "アンケートの読み込みに失敗しました",
+  "@adminFailedToLoadSurveys": {
+    "description": "Error message when surveys fail to load"
+  },
+  "adminPublish": "公開",
+  "@adminPublish": {
+    "description": "Button label to publish a survey"
+  },
+  "adminArchive": "アーカイブ",
+  "@adminArchive": {
+    "description": "Button label to archive a survey"
+  },
+  "adminNewSurveyTitle": "新規アンケート",
+  "@adminNewSurveyTitle": {
+    "description": "Dialog title for creating a new survey"
+  },
+  "adminSurveyTitleLabel": "タイトル",
+  "@adminSurveyTitleLabel": {
+    "description": "Label for the title field in the new survey dialog"
+  },
+  "adminSurveyTypeLabel": "種類",
+  "@adminSurveyTypeLabel": {
+    "description": "Label for the type dropdown in the new survey dialog"
+  },
+  "adminTitleIsRequired": "タイトルは必須です",
+  "@adminTitleIsRequired": {
+    "description": "Validation message when survey title is empty"
+  },
+  "adminFailedToCreateSurvey": "アンケートの作成に失敗しました",
+  "@adminFailedToCreateSurvey": {
+    "description": "Error message when survey creation fails"
+  },
+  "adminSurveyEditor": "アンケートエディター",
+  "@adminSurveyEditor": {
+    "description": "Fallback AppBar title for the survey editor screen"
+  },
+  "adminInvalidJson": "無効なJSONです — 保存前に修正してください",
+  "@adminInvalidJson": {
+    "description": "Snackbar message when survey JSON is invalid"
+  },
+  "adminSurveySaved": "アンケートを保存しました",
+  "@adminSurveySaved": {
+    "description": "Snackbar message when survey is saved successfully"
+  },
+  "adminFailedToSaveSurvey": "アンケートの保存に失敗しました",
+  "@adminFailedToSaveSurvey": {
+    "description": "Snackbar message when saving survey fails"
+  },
+  "adminFailedToLoadSurvey": "アンケートの読み込みに失敗しました",
+  "@adminFailedToLoadSurvey": {
+    "description": "Error message when a single survey fails to load"
+  },
+  "adminJsonSchema": "JSONスキーマ",
+  "@adminJsonSchema": {
+    "description": "Label for the JSON schema text field in the survey editor"
+  },
+  "adminAssignToGroups": "グループに割り当て",
+  "@adminAssignToGroups": {
+    "description": "Section heading for group assignment chips in the survey editor"
+  },
+  "failedToLoadStats": "統計の読み込みに失敗しました",
+  "@failedToLoadStats": {
+    "description": "Error message when stats fail to load on explore screen"
+  },
+  "failedToLoadQuestionnaire": "質問票を読み込めませんでした。",
+  "@failedToLoadQuestionnaire": {
+    "description": "Error message when questionnaire fails to load"
+  },
+  "getRecommendations": "推奨を取得",
+  "@getRecommendations": {
+    "description": "AppBar title and button label for the recommendation input screen"
+  },
+  "healthGoalPrompt": "どのような健康目標に取り組みたいですか？",
+  "@healthGoalPrompt": {
+    "description": "Prompt asking the user to describe their health goal"
+  },
+  "questionnaireResponseSubmitted": "回答を送信しました！",
+  "@questionnaireResponseSubmitted": {
+    "description": "Heading on the questionnaire confirmation screen"
+  },
+  "questionnaireThankYou": "質問票へのご回答ありがとうございます。あなたの回答は習慣の推奨のパーソナライズに役立てられます。",
+  "@questionnaireThankYou": {
+    "description": "Body text on the questionnaire confirmation screen"
+  },
+  "backToProfile": "プロフィールに戻る",
+  "@backToProfile": {
+    "description": "Button label to navigate back to the profile screen"
+  },
+  "thankYou": "ありがとうございます",
+  "@thankYou": {
+    "description": "AppBar title for confirmation screens"
+  },
+  "noQuestionnairesAssigned": "あなたの研究に割り当てられた質問票はありません。",
+  "@noQuestionnairesAssigned": {
+    "description": "Empty state message shown on the profile screen when the participant's study has no questionnaires"
+  },
+  "myHabitsTab": "マイ習慣",
+  "@myHabitsTab": {
+    "description": "Bottom nav tab label for My Habits"
+  },
+  "newHabit": "新しい習慣",
+  "@newHabit": {
+    "description": "Button to start new habit flow"
+  },
+  "noHabitsYet": "まだ習慣がありません。\n「新しい習慣」をタップして始めましょう。",
+  "@noHabitsYet": {
+    "description": "Empty state for My Habits tab"
+  },
+  "logToday": "今日を記録",
+  "@logToday": {
+    "description": "Button on habit card to log today's enactment"
+  },
+  "loggedToday": "記録済み ✓",
+  "@loggedToday": {
+    "description": "Shown on habit card when today is already logged"
+  },
+  "pickBehaviorTitle": "どんな習慣を身につけたいですか？",
+  "@pickBehaviorTitle": {
+    "description": "Screen 1 of new habit flow"
+  },
+  "setCueTitle": "きっかけを設定",
+  "@setCueTitle": {
+    "description": "Screen 2 of new habit flow"
+  },
+  "setCuePreRatedInstruction": "あなたの研究条件では次のきっかけが割り当てられます。よく読んでください — これが行動するタイミングです。",
+  "@setCuePreRatedInstruction": {
+    "description": "Instruction shown for pre-rated cues"
+  },
+  "setCueSelfSelectedInstruction": "あなたの生活の中で定期的に起こる具体的な瞬間を記述してください。",
+  "@setCueSelfSelectedInstruction": {
+    "description": "Instruction shown for self-selected cues"
+  },
+  "setCuePlaceholder": "例：毎晩夕食の後に",
+  "@setCuePlaceholder": {
+    "description": "Hint text for self-selected cue input"
+  },
+  "setCueTooShort": "きっかけは10文字以上で記述してください。",
+  "@setCueTooShort": {
+    "description": "Validation error for too-short cue text"
+  },
+  "confirmPlanTitle": "あなたのプラン",
+  "@confirmPlanTitle": {
+    "description": "Screen 3 of new habit flow"
+  },
+  "confirmPlanSubtitle": "実行意図を読んで確認してください。",
+  "@confirmPlanSubtitle": {
+    "description": "Subtitle on confirm plan screen"
+  },
+  "durationLabel": "所要時間（分）",
+  "@durationLabel": {
+    "description": "Label for duration input in new habit flow"
+  },
+  "createHabit": "習慣を作成",
+  "@createHabit": {
+    "description": "Submit button on confirm plan screen"
+  },
+  "habitLimitReached": "あなたの研究条件における習慣数の上限に達しました。",
+  "@habitLimitReached": {
+    "description": "Error when maxHabits is exceeded"
+  },
+  "srhiCheckInTitle": "週次習慣チェックイン",
+  "@srhiCheckInTitle": {
+    "description": "Title on SRHI prompt card"
+  },
+  "srhiCheckInSubtitle": "所要時間は約2分です。",
+  "@srhiCheckInSubtitle": {
+    "description": "Subtitle on SRHI prompt card"
+  },
+  "srhiStartButton": "チェックインを開始",
+  "@srhiStartButton": {
+    "description": "Button on SRHI prompt card"
+  },
+  "srhiFormTitle": "習慣チェックイン",
+  "@srhiFormTitle": {
+    "description": "AppBar title on SRHI form screen"
+  },
+  "srhiStem": "私の{behavior}は…",
+  "@srhiStem": {
+    "description": "Stem sentence for SRHI items",
+    "placeholders": {
+      "behavior": {
+        "type": "String"
+      }
+    }
+  },
+  "srhiSubmit": "送信",
+  "@srhiSubmit": {
+    "description": "Submit button on SRHI form screen"
+  },
+  "srhiSubmitIncomplete": "送信する前に12項目すべてを評価してください。",
+  "@srhiSubmitIncomplete": {
+    "description": "Error shown when SRHI form is incomplete"
+  },
+  "weekLabel": "第{n}週",
+  "@weekLabel": {
+    "description": "Week label in SRHI trajectory",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "habitDetailTitle": "習慣の詳細",
+  "@habitDetailTitle": {
+    "description": "AppBar title on habit detail screen"
+  },
+  "abandonHabit": "習慣をやめる",
+  "@abandonHabit": {
+    "description": "Menu action to abandon a habit"
+  },
+  "abandonConfirm": "この習慣をやめてもよろしいですか？この操作は取り消せません。",
+  "@abandonConfirm": {
+    "description": "Confirmation dialog body for abandon"
+  },
+  "confirm": "確認",
+  "@confirm": {
+    "description": "Confirm button in dialogs"
+  },
+  "heatmapTitle": "活動記録",
+  "@heatmapTitle": {
+    "description": "Section title above the heatmap"
+  },
+  "trajectoryTitle": "習慣の強さ",
+  "@trajectoryTitle": {
+    "description": "Section title above SRHI trajectory chart"
+  },
+  "enactedLabel": "実行",
+  "@enactedLabel": {
+    "description": "Legend label for heatmap enacted cells"
+  },
+  "missedLabel": "未実行",
+  "@missedLabel": {
+    "description": "Legend label for heatmap missed cells"
+  },
+  "noLogsYet": "まだ活動が記録されていません。",
+  "@noLogsYet": {
+    "description": "Empty state for heatmap"
+  },
+  "noTrajectoryYet": "SRHIデータは最初の週次チェックイン後に表示されます。",
+  "@noTrajectoryYet": {
+    "description": "Empty state for trajectory chart"
+  }
+}

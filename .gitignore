@@ -48,3 +48,6 @@ docs/superpowers/
 
 # Archive backups
 *.tar.gz
+
+# rclone offsite-backup credentials
+backup-service/rclone/

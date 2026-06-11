@@ -7,6 +7,8 @@ import {
   getPublicHabits,
   getHabitAnnotationCounts,
   updateHabitAnnotation,
+  addHabitComment,
+  getHabitComments,
 } from '../../db/habitQueries.js';
 import { habitShareLimiter } from '../../middleware/rateLimiter.js';
 import { logger } from '../../utils/logger.js';
@@ -308,14 +310,14 @@ export function createHabitsCrudRouter({
    */
   // POST /api/v1/habits/:id/annotate
   // Adds or removes the requesting user's annotation and returns updated counts.
-  // Body: { type: 'helpful'|'iDoThis', remove?: boolean }
+  // Body: { type: 'helpful'|'iDoThis'|'like', remove?: boolean }
   router.post('/:id/annotate', async (req, res) => {
     try {
       const { type, remove = false } = req.body || {};
-      if (type !== 'helpful' && type !== 'iDoThis') {
+      if (!['helpful', 'iDoThis', 'like'].includes(type)) {
         return res
           .status(400)
-          .json({ error: 'type must be "helpful" or "iDoThis"' });
+          .json({ error: 'type must be "helpful", "iDoThis" or "like"' });
       }
 
       const userId = req.user?.sub;
@@ -352,6 +354,58 @@ export function createHabitsCrudRouter({
       // Read authoritative counts from Neo4j (single source of truth after mirror).
       const counts = await getHabitAnnotationCounts(queryNeo4j, habitId);
       res.json({ habitId, annotationCounts: counts });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/habits/:id/comments — anonymous community comments, newest first
+  router.get('/:id/comments', async (req, res) => {
+    try {
+      const comments = await getHabitComments(queryNeo4j, req.params.id);
+      res.json({ habitId: req.params.id, comments });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/v1/habits/:id/comments — add an anonymous comment.
+  // The Comment node carries no user identifier; ownership is recorded in
+  // MongoDB (habit_comments) solely for rate limiting and GDPR erasure.
+  router.post('/:id/comments', habitShareLimiter, async (req, res) => {
+    try {
+      const userId = req.user?.sub;
+      if (!userId || typeof userId !== 'string') {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      const text = String(req.body?.text ?? '').trim();
+      if (!text || text.length > 500) {
+        return res
+          .status(400)
+          .json({ error: 'text is required (1-500 characters)' });
+      }
+
+      const habitId = req.params.id;
+      const commentId = randomUUID();
+      const created = await addHabitComment(queryNeo4j, habitId, {
+        id: commentId,
+        text,
+      });
+      if (!created) {
+        return res.status(404).json({ error: 'Habit not found' });
+      }
+
+      const database = await getDb();
+      await database.collection('habit_comments').insertOne({
+        commentId,
+        habitId: String(habitId),
+        userId: String(userId),
+        createdAt: new Date(),
+      });
+
+      res.status(201).json({ habitId, comment: created });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });

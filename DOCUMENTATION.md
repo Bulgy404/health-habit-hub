@@ -95,7 +95,7 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 | `recommender` (API-service) | Python 3, FastAPI | LLM-based habit classification, BCIO mapping, context extraction, habit recommendation; protected by `API_SERVICE_SECRET` |
 | `keycloak` | Keycloak 26.5.5 | Identity provider; realm `hhh`; clients: `hhh-flutter` (public PKCE), `hhh-backend` (confidential service account), `hhh-admin` (confidential) |
 | `mongo` | MongoDB 8.2 | Survey definitions, questionnaire responses, user preferences, notification state |
-| `neo4j` | Neo4j 5 + n10s plugin | Habit graph, BCIO relationship data, semantic graph queries |
+| `neo4j` | Neo4j 5 | Habit graph, BCIO relationship data, semantic graph queries |
 | `translate` | LibreTranslate v1.9.5 | Self-hosted EN↔DE machine translation |
 | `redis` | Redis 7 | Distributed lock for notification cron, recommendation caching |
 | `proxy` | Traefik v3.6.1 | Reverse proxy, automatic Let's Encrypt SSL, host-based routing |
@@ -277,7 +277,7 @@ health-habit-hub/
 | Database | Purpose |
 |----------|---------|
 | MongoDB 8.2 | Survey definitions, questionnaire responses, user preferences, notification state |
-| Neo4j 5 (+ n10s) | Donated habit graph, BCIO relationships, semantic graph |
+| Neo4j 5 | Donated habit graph, BCIO relationships, semantic graph |
 | ~~Apache Fuseki (Jena)~~ *(retired)* | Former RDF triple store; ontology files kept for reference |
 
 ### Infrastructure

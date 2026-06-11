@@ -28,6 +28,8 @@ export async function getAllHabits(queryNeo4j) {
     WITH h,
          head(collect(b.bcio_concept_label)) AS bcioLabel,
          head(collect(b.bcio_concept_id))    AS bcioId
+    OPTIONAL MATCH (h)<-[:COMMENT_ON]-(cm:Comment)
+    WITH h, bcioLabel, bcioId, count(cm) AS commentCount
     RETURN h.uuid AS uuid,
            h.sentence AS original,
            h.language AS language,
@@ -36,12 +38,16 @@ export async function getAllHabits(queryNeo4j) {
            coalesce(bcioLabel, 'Other') AS category,
            coalesce(bcioId, '')         AS bcioClass,
            coalesce(h.annotations_helpful, 0) AS annotationsHelpful,
-           coalesce(h.annotations_iDoThis, 0) AS annotationsIDoThis
+           coalesce(h.annotations_iDoThis, 0) AS annotationsIDoThis,
+           coalesce(h.annotations_like, 0)    AS annotationsLike,
+           commentCount
   `);
   return rows.map((r) => ({
     ...r,
     annotationsHelpful: neoInt(r.annotationsHelpful),
     annotationsIDoThis: neoInt(r.annotationsIDoThis),
+    annotationsLike: neoInt(r.annotationsLike),
+    commentCount: neoInt(r.commentCount),
   }));
 }
 
@@ -59,17 +65,23 @@ export async function getPublicHabits(queryNeo4j) {
     WITH h,
          head(collect(b.bcio_concept_label)) AS bcioLabel,
          head(collect(b.bcio_concept_id))    AS bcioId
+    OPTIONAL MATCH (h)<-[:COMMENT_ON]-(cm:Comment)
+    WITH h, bcioLabel, bcioId, count(cm) AS commentCount
     RETURN h.uuid AS id,
            h.sentence AS name,
            coalesce(bcioLabel, 'Other')  AS category,
            coalesce(bcioId, '')          AS bcioClass,
            coalesce(h.annotations_helpful, 0) AS annotationsHelpful,
-           coalesce(h.annotations_iDoThis, 0) AS annotationsIDoThis
+           coalesce(h.annotations_iDoThis, 0) AS annotationsIDoThis,
+           coalesce(h.annotations_like, 0)    AS annotationsLike,
+           commentCount
   `);
   return rows.map((r) => ({
     ...r,
     annotationsHelpful: neoInt(r.annotationsHelpful),
     annotationsIDoThis: neoInt(r.annotationsIDoThis),
+    annotationsLike: neoInt(r.annotationsLike),
+    commentCount: neoInt(r.commentCount),
   }));
 }
 
@@ -154,13 +166,15 @@ export async function getHabitAnnotationCounts(queryNeo4j, habitId) {
   const rows = await queryNeo4j(
     `MATCH (h:Habit {uuid: $habitId})
      RETURN coalesce(h.annotations_helpful, 0) AS helpful,
-            coalesce(h.annotations_iDoThis, 0)  AS iDoThis`,
+            coalesce(h.annotations_iDoThis, 0)  AS iDoThis,
+            coalesce(h.annotations_like, 0)     AS likes`,
     { habitId }
   );
   const row = rows[0];
   return {
     helpful: neoInt(row?.helpful ?? 0),
     iDoThis: neoInt(row?.iDoThis ?? 0),
+    likes: neoInt(row?.likes ?? 0),
   };
 }
 
@@ -174,7 +188,14 @@ export async function getHabitAnnotationCounts(queryNeo4j, habitId) {
  * @returns {Promise<void>}
  */
 export async function updateHabitAnnotation(queryNeo4j, habitId, type, delta) {
-  if (type === 'iDoThis') {
+  if (type === 'like') {
+    await queryNeo4j(
+      `MATCH (h:Habit {uuid: $habitId})
+       WITH h, coalesce(h.annotations_like, 0) + $delta AS newVal
+       SET h.annotations_like = CASE WHEN newVal < 0 THEN 0 ELSE newVal END`,
+      { habitId, delta }
+    );
+  } else if (type === 'iDoThis') {
     await queryNeo4j(
       `MATCH (h:Habit {uuid: $habitId})
        WITH h, coalesce(h.annotations_iDoThis, 0) + $delta AS newVal
@@ -210,4 +231,53 @@ export async function getHabitGraph(queryNeo4j) {
       b.bcio_concept_id                        AS conceptId,
       b.bcio_concept_label                     AS conceptLabel
   `);
+}
+
+/**
+ * Create an anonymous Comment node attached to a habit. Ownership is tracked
+ * separately in MongoDB (`habit_comments`) so accounts can be erased without
+ * de-anonymising the graph.
+ * @param {Function} queryNeo4j
+ * @param {string} habitId  Habit uuid
+ * @param {{ id: string, text: string }} comment
+ * @returns {Promise<object|null>} created comment or null if habit not found
+ */
+export async function addHabitComment(queryNeo4j, habitId, { id, text }) {
+  const rows = await queryNeo4j(
+    `MATCH (h:Habit {uuid: $habitId})
+     CREATE (c:Comment {id: $id, text: $text, createdAt: $createdAt})-[:COMMENT_ON]->(h)
+     RETURN c.id AS id, c.text AS text, c.createdAt AS createdAt`,
+    { habitId, id, text, createdAt: new Date().toISOString() }
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * List comments for a habit, newest first.
+ * @param {Function} queryNeo4j
+ * @param {string} habitId
+ * @param {number} [limit]
+ * @returns {Promise<Array<{id: string, text: string, createdAt: string}>>}
+ */
+export async function getHabitComments(queryNeo4j, habitId, limit = 50) {
+  return queryNeo4j(
+    `MATCH (c:Comment)-[:COMMENT_ON]->(h:Habit {uuid: $habitId})
+     RETURN c.id AS id, c.text AS text, c.createdAt AS createdAt
+     ORDER BY c.createdAt DESC
+     LIMIT toInteger($limit)`,
+    { habitId, limit }
+  );
+}
+
+/**
+ * Delete Comment nodes by id (GDPR account erasure path).
+ * @param {Function} queryNeo4j
+ * @param {string[]} commentIds
+ */
+export async function deleteHabitComments(queryNeo4j, commentIds) {
+  if (!commentIds?.length) return;
+  await queryNeo4j(
+    `MATCH (c:Comment) WHERE c.id IN $commentIds DETACH DELETE c`,
+    { commentIds }
+  );
 }

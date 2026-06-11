@@ -344,27 +344,11 @@ All containers should be running:
 
 ### 4. Run One-time Migration Scripts (First Deploy of This Branch Only)
 
-#### 4a. Migrate Legacy `hhh__Habit` Nodes to New Habit Schema
+#### 4a. Legacy Neo4j Migration — no longer required
 
-All existing `hhh__Habit` nodes (from the old n10s/RDF pipeline) must be copied into the new `Habit` schema before the stats and explore-feed endpoints will show historical donations. Run this once after the first deploy:
-
-```bash
-docker exec h3-2-app node scripts/run-migration.js
-```
-
-Expected output:
-```
-[migration] Found 42 hhh__Habit node(s): 42 to migrate, 0 already exist.
-[migration] Running step 1/2…
-[migration] Running step 2/2…
-[migration] Done. Migrated 42 habits, skipped 0 (already exist).
-```
-
-The script is **idempotent** — running it again produces:
-```
-[migration] Found 42 hhh__Habit node(s): 0 to migrate, 42 already exist.
-[migration] Done. Migrated 0 habits, skipped 42 (already exist).
-```
+The legacy n10s `hhh__Habit` schema was retired in 2026-06 with no production
+data; no migration step is needed. Current-schema constraints are applied
+automatically at backend startup (`app/utils/neo4jSchema.js`).
 
 #### 4b. Re-import Keycloak Realm (First Deploy After Keycloak DB Migration)
 
@@ -816,3 +800,58 @@ docker exec -it h3-2-redis redis-cli
 - SSL certificates are stored in `/mnt/data/appdata/hhh2/traefik-certs/`
 - LibreTranslate volume at `/mnt/data/appdata/hhh2/translate` must be owned by UID 1032 before first deploy
 - Neo4j requires an SSH tunnel for browser access in production
+
+---
+
+## Error Reporting (Sentry)
+
+Both the backend and the Flutter app ship with **opt-in** Sentry crash
+reporting — a silent no-op unless configured:
+
+- **Backend:** set `SENTRY_DSN` in `.env` (and optionally
+  `SENTRY_TRACES_SAMPLE_RATE`, default 0). Unhandled route errors are captured
+  with route + method tags; request bodies and cookies are stripped before
+  sending (`app/utils/errorReporting.js`).
+- **Flutter:** build with `--dart-define=SENTRY_DSN=https://…`. PII,
+  screenshots, and view hierarchies are disabled — participants stay anonymous
+  in crash reports.
+
+> **Data protection:** use a **self-hosted Sentry instance** on TU
+> infrastructure (or an EU-region instance reviewed by the DPO) before
+> enabling this in production. Without a DSN nothing is collected. For a
+> longitudinal study, silent client crashes look identical to dropout —
+> crash reporting separates the two.
+
+---
+
+## Secrets Handling & Rotation
+
+### Principles
+
+- `.env` files are **never** committed (`.gitignore`); `.env.example` carries
+  placeholders only. CI uses throwaway values (see `nightly-e2e.yml`).
+- On the production host, prefer **Portainer stack secrets / environment
+  overrides** over flat `.env` files: secrets entered in Portainer are stored
+  in its encrypted database instead of plaintext on disk, and redeploys don't
+  depend on a hand-edited file. Migrate one variable at a time by moving it
+  from `.env` into the Portainer stack editor's environment section.
+- Restrict `.env` on the host: `chmod 600 .env`, owned by the deploy user.
+- The rclone offsite-backup credentials live in
+  `backup-service/rclone/rclone.conf` (git-ignored, `chmod 600`).
+
+### Rotation checklist (do now, then on every team change)
+
+| Secret | Where used | Rotate at |
+|---|---|---|
+| `MONGO_PASSWORD` | mongo, app, backup | regenerate + redeploy stack |
+| `NEO4J_PASSWORD` | neo4j, app, api-service | regenerate + redeploy |
+| `KEYCLOAK_ADMIN_PASSWORD` | keycloak, keycloak-init | Keycloak admin console + .env |
+| `KEYCLOAK_SECRET` (hhh-admin client) | admin panel | Keycloak → Clients → hhh-admin → Credentials |
+| `API_SERVICE_SECRET` | app ↔ api-service | regenerate + redeploy both |
+| `LIGHTRAG_API_KEY`, `LLM_API_KEY` | lightrag, api-service | provider console |
+| `MAIL_USER` / `MAIL_PASS` (Mailjet) | backup alerts | **rotate now** — previous values circulated in a repo working copy |
+| ~~`RECAPTCHA_*`~~ | removed 2026-06 | **revoke now** in the Google reCAPTCHA console — keys are unused but were exposed |
+| `SENTRY_DSN` | app, mobile builds | Sentry project settings (low sensitivity — write-only DSN) |
+
+After any rotation: `docker compose up -d` (affected services) and run
+`node scripts/smoke-e2e.mjs` against the deployment.

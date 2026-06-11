@@ -115,13 +115,13 @@ Traefik sits in front of everything as the reverse proxy and TLS terminator; int
 
 ## Use Cases
 
-The platform covers **30 use cases** across five actors. Each one is specified with its own sequence diagram.
+The platform covers **34 use cases** across five actors. Each one is specified with its own sequence diagram.
 
 | | |
 |---|---|
 | 📋 Structured catalogue (actors, endpoints, stores, traceability to code) | [`docs/diagrams/use-cases/use-case-overview.md`](docs/diagrams/use-cases/use-case-overview.md) |
 | 🎭 UML use case diagram | [`docs/diagrams/use-cases/use-case-diagram.puml`](docs/diagrams/use-cases/use-case-diagram.puml) |
-| 🔁 Sequence diagrams UC-01 … UC-30 (one per use case) | [`docs/diagrams/sequences/`](docs/diagrams/sequences/) |
+| 🔁 Sequence diagrams UC-01 … UC-34 (one per use case) | [`docs/diagrams/sequences/`](docs/diagrams/sequences/) |
 | 🧩 Domain class diagram (MongoDB + Neo4j + domain classes) | [`docs/diagrams/classes/class-diagram.mmd`](docs/diagrams/classes/class-diagram.mmd) |
 
 Highlights: the [habit donation pipeline](docs/diagrams/sequences/UC-03-donate-habit.mmd) (translate → LLM classify → BCIO map → Neo4j), the [RAG recommendation flow](docs/diagrams/sequences/UC-07-request-recommendations.mmd), and the [DFG study flows](docs/diagrams/sequences/UC-11-create-intention.mmd) (UC-09 – UC-13).
@@ -227,6 +227,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 | [CHANGELOG.md](CHANGELOG.md) | Version history (Keep a Changelog / SemVer) |
 | [SECURITY.md](SECURITY.md) | Security policy and vulnerability reporting |
 | [AUDIT.md](AUDIT.md) | Security audit log |
+| [docs/app-store/review-information.md](docs/app-store/review-information.md) | App Store review notes, demo access, privacy labels |
 
 **Diagrams** (diagrams-as-code — Mermaid + PlantUML, see [docs/diagrams/README.md](docs/diagrams/README.md) for rendering/export)
 

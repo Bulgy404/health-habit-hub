@@ -53,6 +53,7 @@ class MyHabitsService {
     required int durationMinutes,
     required List<IntentionCue> cues,
     required String intentionStatement,
+    String? reminderTime,
   }) async {
     try {
       final res = await _dio.post<Map<String, dynamic>>(
@@ -63,6 +64,7 @@ class MyHabitsService {
           'durationMinutes': durationMinutes,
           'cues': cues.map((c) => c.toJson()).toList(),
           'intentionStatement': intentionStatement,
+          if (reminderTime != null) 'reminderTime': reminderTime,
         },
       );
       if (res.statusCode == 409) {

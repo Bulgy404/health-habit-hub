@@ -94,6 +94,54 @@ class HabitService {
     return ((response.data?['annotationCounts'] as Map<String, dynamic>?) ?? {})
         .map((k, v) => MapEntry(k, (v as num).toInt()));
   }
+
+  /// Fetches anonymous community comments for habit [id], newest first.
+  Future<List<HabitComment>> fetchComments(String id) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '$_baseUrl/habits/$id/comments',
+    );
+    return (response.data?['comments'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(HabitComment.fromJson)
+        .toList();
+  }
+
+  /// Posts an anonymous comment on habit [id]. Returns the created comment.
+  Future<HabitComment> addComment(String id, String text) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '$_baseUrl/habits/$id/comments',
+      data: {'text': text},
+    );
+    return HabitComment.fromJson(
+      response.data!['comment'] as Map<String, dynamic>,
+    );
+  }
+}
+
+/// An anonymous community comment on a donated habit.
+class HabitComment {
+  /// Creates a [HabitComment].
+  const HabitComment({
+    required this.id,
+    required this.text,
+    required this.createdAt,
+  });
+
+  /// Parses a comment from the API response.
+  factory HabitComment.fromJson(Map<String, dynamic> json) => HabitComment(
+        id: json['id']?.toString() ?? '',
+        text: json['text']?.toString() ?? '',
+        createdAt: json['createdAt']?.toString() ?? '',
+      );
+
+  /// Neo4j Comment node id.
+  final String id;
+
+  /// Comment text.
+  final String text;
+
+  /// ISO timestamp.
+  final String createdAt;
 }
 
 /// Provides the singleton [HabitService] instance.

@@ -196,8 +196,34 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
     // Clear any stale study enrollment from a previous install so the
     // study-code screen is always shown for a fresh account.
     await storage.delete(key: 'study_enrolled');
+    // Record the informed-consent acceptance (made on the consent screen,
+    // before account creation) against the new account. Best-effort: the
+    // local record in secure storage remains the fallback audit anchor.
+    await _syncConsentRecord(storage);
     if (!mounted) return;
     context.go('/onboarding/profile-setup');
+  }
+
+  /// Posts the locally stored consent acceptance to the backend so the study
+  /// keeps an auditable record of which consent version this participant
+  /// accepted (App Store Review Guideline 5.1.3).
+  Future<void> _syncConsentRecord(FlutterSecureStorage storage) async {
+    try {
+      final consentVersion = await storage.read(key: 'consent_version');
+      if (consentVersion == null) return;
+      final consentLocale = await storage.read(key: 'consent_locale');
+      await Dio().post<Map<String, dynamic>>(
+        '${AppConfig.apiBaseUrl}/users/me/consent',
+        data: {
+          'consentVersion': consentVersion,
+          if (consentLocale != null) 'locale': consentLocale,
+        },
+        options: Options(headers: {'Authorization': 'Bearer $_accessToken'}),
+      );
+    } catch (_) {
+      // Offline or transient server error — consent acceptance remains
+      // recorded locally in secure storage as the audit anchor.
+    }
   }
 
   void _copyToClipboard() {

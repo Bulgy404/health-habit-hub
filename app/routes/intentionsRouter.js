@@ -2,6 +2,7 @@
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
 import { resolveHabitConfig } from '../services/habitConfigService.js';
+import { computeReminderPlans } from '../services/reminderPlanService.js';
 import {
   createIntention,
   listIntentions,
@@ -31,6 +32,24 @@ export function createIntentionsRouter({ db } = {}) {
     }
   });
 
+  // GET /api/v1/habits/intentions/reminder-plans
+  // Adaptive reminder schedule per active intention (autonomy score + tier).
+  // The Flutter app uses this to (re)schedule local notifications; reminders
+  // fade as SRHI and adherence rise (see reminderPlanService.js).
+  router.get('/reminder-plans', async (req, res) => {
+    try {
+      const database = await getDb();
+      const plans = await computeReminderPlans({
+        db: database,
+        userId: String(req.user.sub),
+      });
+      res.json({ plans });
+    } catch (err) {
+      log.error({ err: err }, '[intentions] reminder-plans error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   router.post('/', async (req, res) => {
     try {
       const {
@@ -39,7 +58,16 @@ export function createIntentionsRouter({ db } = {}) {
         durationMinutes,
         cues,
         intentionStatement,
+        reminderTime,
       } = req.body;
+      if (
+        reminderTime != null &&
+        !/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(String(reminderTime))
+      ) {
+        return res
+          .status(400)
+          .json({ error: 'reminderTime must be HH:mm (24h) or null' });
+      }
       if (
         !behaviorKey ||
         !behaviorLabel ||
@@ -63,6 +91,7 @@ export function createIntentionsRouter({ db } = {}) {
         durationMinutes,
         cues,
         intentionStatement,
+        reminderTime: reminderTime ?? null,
         cueConfig,
       });
       if (result.limitReached)

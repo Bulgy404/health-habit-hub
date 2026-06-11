@@ -1,23 +1,8 @@
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { assignGroupLabel } from '../db/adminQueries.js';
 import { generateTokenCard } from './tokenCardService.js';
 
 // Whitelist of valid Neo4j group labels (prevents Cypher label injection)
-const VALID_GROUPS = new Set([
-  'hhh__Group1',
-  'hhh__Group2',
-  'hhh__Group3',
-  'hhh__Group4',
-]);
-
-const GROUP_LABEL_MAP = {
-  G1: 'hhh__Group1',
-  G2: 'hhh__Group2',
-  G3: 'hhh__Group3',
-  G4: 'hhh__Group4',
-};
-
 function randomPassword() {
   return randomBytes(12).toString('base64url');
 }
@@ -87,12 +72,15 @@ export async function createParticipant({ db, kc }) {
 }
 
 /**
- * Assign a study group to a participant (MongoDB + Keycloak + Neo4j).
+ * Assign a study group to a participant (MongoDB + Keycloak).
+ * The legacy Neo4j hhh__GroupN label write was removed with the old n10s
+ * schema — group membership lives in MongoDB and the Keycloak `group`
+ * attribute only.
  * Returns null if participant not found.
- * @param {{ db: object, neo4jRun: Function|null, kc: object, id: string, group: string }} deps
+ * @param {{ db: object, kc: object, id: string, group: string }} deps
  * @returns {Promise<{ ok: boolean, userId: string, group: string }|null>}
  */
-export async function assignGroup({ db, neo4jRun, kc, id, group }) {
+export async function assignGroup({ db, kc, id, group }) {
   await kc.updateUserAttribute(id, 'group', group);
 
   const result = await db
@@ -104,13 +92,6 @@ export async function assignGroup({ db, neo4jRun, kc, id, group }) {
 
   if (result.matchedCount === 0) {
     return null;
-  }
-
-  if (neo4jRun) {
-    const newLabel = GROUP_LABEL_MAP[group];
-    if (VALID_GROUPS.has(newLabel)) {
-      await assignGroupLabel(neo4jRun, id, newLabel);
-    }
   }
 
   return { ok: true, userId: id, group };

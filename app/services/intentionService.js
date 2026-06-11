@@ -18,6 +18,7 @@ export async function createIntention({
   durationMinutes,
   cues,
   intentionStatement,
+  reminderTime = null,
   cueConfig,
 }) {
   if (cueConfig?.maxHabits != null) {
@@ -37,6 +38,7 @@ export async function createIntention({
     durationMinutes: parseInt(durationMinutes, 10),
     cues,
     intentionStatement,
+    reminderTime,
     status: 'active',
     createdAt: now,
     updatedAt: now,

@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
 import '../providers/auth_provider.dart';
+import '../services/consent_service.dart';
 import '../services/offline_queue_service.dart';
 import '../services/push_notification_service.dart';
+import '../services/reminder_scheduler_service.dart';
 
 /// The persistent bottom-navigation shell for the app.
 ///
@@ -44,9 +46,32 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkConsentVersion();
       _initNotifications();
+      _syncHabitReminders();
       _watchConnectivity();
     });
+  }
+
+  /// UC-33: refresh the adaptive local habit reminders from the latest
+  /// backend plan (frequency fades as SRHI / adherence rise).
+  Future<void> _syncHabitReminders() async {
+    try {
+      await ReminderSchedulerService(dio: ref.read(dioProvider))
+          .syncReminders();
+    } catch (_) {
+      // Offline or no active intentions — retried on next start.
+    }
+  }
+
+  /// UC-31: when the informed-consent document version was bumped since this
+  /// participant last accepted it, route to the mandatory re-consent screen.
+  Future<void> _checkConsentVersion() async {
+    final locale = mounted
+        ? Localizations.localeOf(context).languageCode
+        : 'en';
+    final required = await isReconsentRequired(ref.read(dioProvider), locale);
+    if (required && mounted) context.go('/consent-update');
   }
 
   void _watchConnectivity() {

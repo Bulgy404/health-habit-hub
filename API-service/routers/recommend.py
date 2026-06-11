@@ -240,6 +240,7 @@ async def recommend(
             {
                 "sentence": h.sentence,
                 "context": {k: v for k, v in h.context.items() if v},
+                "community_likes": h.likes,
             }
             for h in habits_resp.community_habits
         ],
