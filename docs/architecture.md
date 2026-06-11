@@ -80,7 +80,7 @@ graph TD
 | **knowledge-mcp** | FastMCP (Python) | MCP server wrapping LightRAG; exposes `search_knowledge` and `ingest_document` tools for AI agent use via SSE transport | 8002 | `localhost:8002` | `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
 | **keycloak** | Keycloak 26.5.5 | OIDC/OAuth2 identity provider; manages realms, users, roles | 8080 | `localhost:8080` | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KC_DB`, `KC_HTTP_RELATIVE_PATH` (prod) |
 | **admin** | Next.js 14 (App Router) | Researcher/admin web panel: questionnaire management, settings, cue pools, study analytics, notification campaigns | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER` |
-| **neo4j** | Neo4j 5 (n10s plugin) | Graph database; stores habit graph with BCIO alignment | 7474 (HTTP), 7687 (Bolt) | `neo4j.localhost:7474` | `NEO4J_AUTH` (`user/password`), `NEO4J_PLUGINS` |
+| **neo4j** | Neo4j 5 | Graph database; stores habit graph with BCIO alignment | 7474 (HTTP), 7687 (Bolt) | `neo4j.localhost:7474` | `NEO4J_AUTH` (`user/password`) |
 | **mongo** | MongoDB (latest) | Document store; holds questionnaires, form responses, recommendations, user preferences | 27017 | Internal only | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`, `MONGO_INITDB_DATABASE` |
 | **mongo-express** | Mongo Express | MongoDB admin web UI | 8081 | `localhost/mongo` | `ME_CONFIG_MONGODB_URL`, `ME_CONFIG_BASICAUTH_USERNAME`, `ME_CONFIG_BASICAUTH_PASSWORD` |
 | **translate** | LibreTranslate | Self-hosted machine translation API (en/de) | 5000 | `translate.localhost:5000` | `LT_LOAD_ONLY`, `LT_REQ_LIMIT` |
@@ -335,7 +335,7 @@ LightRAG's built-in web UI is served at `http://localhost:9622` (local) and can 
   -[:MAPS_TO]->(:BCIOConcept { name, uri })
 ```
 
-> **Note:** Legacy `hhh__Habit` / `hhh__Donor` data from the old n10s/RDF pipeline may still exist in the Neo4j instance, but the code that wrote it (legacy web donate flow, `Neo4jDatabase.js`) was removed in 2026-06. See `docs/migration.md` for the data migration plan.
+> **Note:** The legacy n10s/RDF schema (`hhh__Habit`, `hhh__Donor`) was fully retired in 2026-06 — no legacy data existed, the writer code was removed, and the n10s plugin is no longer loaded. See `docs/migration.md`.
 
 ---
 
@@ -420,6 +420,64 @@ Data flow:
 | `/admin/studies/:id/export` | Research data ZIP download (3 CSVs) |
 | `/admin/notifications` | Researcher FCM notification campaign management |
 | `/admin/studies/:id/groups/:groupId/cue-config` | Per-group cue source, count, and behaviour config |
+
+### Adaptive Reminder Fading (UC-33)
+
+Participants pick a daily reminder time (`reminderTime`, `HH:mm`) when
+creating an implementation intention. The backend then computes a per-intention
+**reminder plan** that fades notification frequency as the habit becomes
+automatic — reminders are scaffolding (Lally et al. 2010), and keeping them
+constant risks reminder blindness while removing them too early collapses
+fragile habits.
+
+**Autonomy score** (`app/services/reminderPlanService.js` — transparent and
+pre-registerable by design; per-user samples are far too small for ML, and the
+fading rule must be explainable to the ethics board):
+
+```
+autonomy = 0.5 · srhiNorm + 0.35 · adherence14d + 0.15 · streakNorm
+
+srhiNorm     = (latest weekly SRHI − 1) / 6          // 1–7 scale → 0–1
+adherence14d = enacted days in the past 14 days / 14  // today excluded
+streakNorm   = min(current streak, 14) / 14
+```
+
+**Tier mapping** (score lower bounds): `daily` → ≥0.45 `every_2_days` →
+≥0.60 `twice_weekly` → ≥0.75 `weekly` → ≥0.90 `off`.
+
+Two stabilisers:
+
+- **Hysteresis (fading is slow):** tiers beyond `every_2_days` additionally
+  require the *previous* week's SRHI to support the same tier — one good week
+  is not yet automaticity.
+- **Recovery (escalation is fast):** if 7-day adherence drops below 0.5, the
+  plan snaps back to `daily` immediately, regardless of SRHI.
+
+**Researcher tuning:** weights and the recovery threshold are read from
+`admin_settings` keys `reminder_weight_srhi`, `reminder_weight_adherence`,
+`reminder_weight_streak`, `reminder_recovery_adherence` — making reminder
+fading itself an experimental factor (per the Prüfplan).
+
+**Flow:** the app calls `GET /api/v1/habits/intentions/reminder-plans`
+(plans include `autonomyScore` and all components for transparency) on app
+start, after intention creation, and after each SRHI submission, then
+cancels and reschedules local notifications for the next 14 days
+(`mobile/lib/services/reminder_scheduler_service.dart`,
+`flutter_local_notifications` + `timezone`). No server push is involved —
+reminders fire on-device. See `docs/diagrams/sequences/UC-33-adaptive-reminders.mmd`.
+
+### Community Signals: Likes & Comments (UC-34)
+
+Participants can like and comment on habits in the explore graph. Likes are a
+third annotation type (`POST /habits/:uuid/annotate {type: "like"}`,
+deduplicated per user in `habit_annotations`, mirrored as `annotations_like`
+on the `Habit` node). Comments are **anonymous** `(:Comment {id, text,
+createdAt})-[:COMMENT_ON]->(:Habit)` nodes; authorship is recorded only in
+MongoDB `habit_comments` so account deletion can erase a participant's
+comments without de-anonymising the graph. Like counts flow into the
+recommendation pipeline: the community-habit vector search returns
+`community_likes` per habit and the LLM prompt instructs preferring
+well-liked habits when they fit the user.
 
 ### New MongoDB Collections
 

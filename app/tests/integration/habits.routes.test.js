@@ -49,13 +49,35 @@ function makeToken(roles = ['user']) {
 
 function createMockDb() {
   const annotations = [];
+  const commentOwnership = [];
   return {
     collection(name) {
+      if (name === 'habit_comments') {
+        return {
+          async insertOne(doc) {
+            commentOwnership.push({ ...doc });
+          },
+          find() {
+            return { toArray: async () => [...commentOwnership] };
+          },
+        };
+      }
       if (name !== 'habit_annotations')
         throw new Error(`unexpected collection: ${name}`);
       return {
         async insertOne(doc) {
           annotations.push({ ...doc });
+        },
+        async deleteOne(query = {}) {
+          const idx = annotations.findIndex(
+            (a) =>
+              a.habitId === query.habitId &&
+              a.type === query.type &&
+              a.userId === query.userId
+          );
+          if (idx === -1) return { deletedCount: 0 };
+          annotations.splice(idx, 1);
+          return { deletedCount: 1 };
         },
         find(query = {}) {
           return {
@@ -151,6 +173,7 @@ const FIXTURE_GRAPH_ROWS = [
 
 function createMockNeo4jRun() {
   const annotationCounts = {};
+  const comments = []; // {id, text, createdAt, habitId}
 
   return async (cypher, params = {}) => {
     if (cypher.includes('count(h) AS total')) {
@@ -188,10 +211,54 @@ function createMockNeo4jRun() {
       );
       return [];
     }
+    if (cypher.includes('SET h.annotations_like')) {
+      const id = params.habitId;
+      if (!annotationCounts[id])
+        annotationCounts[id] = { helpful: 0, iDoThis: 0, likes: 0 };
+      annotationCounts[id].likes = Math.max(
+        0,
+        (annotationCounts[id].likes ?? 0) + (params.delta ?? 0)
+      );
+      return [];
+    }
     if (cypher.includes('AS helpful')) {
       const id = params.habitId;
-      const counts = annotationCounts[id] ?? { helpful: 0, iDoThis: 0 };
-      return [{ helpful: counts.helpful, iDoThis: counts.iDoThis }];
+      const counts = annotationCounts[id] ?? {
+        helpful: 0,
+        iDoThis: 0,
+        likes: 0,
+      };
+      return [
+        {
+          helpful: counts.helpful,
+          iDoThis: counts.iDoThis,
+          likes: counts.likes ?? 0,
+        },
+      ];
+    }
+    if (cypher.includes('CREATE (c:Comment')) {
+      // Habit must exist in the fixtures for the MATCH to succeed
+      const exists = FIXTURE_HABITS.some((h) => h.id === params.habitId);
+      if (!exists) return [];
+      const created = {
+        id: params.id,
+        text: params.text,
+        createdAt: params.createdAt,
+      };
+      comments.unshift({ ...created, habitId: params.habitId });
+      return [created];
+    }
+    if (cypher.includes('MATCH (c:Comment)-[:COMMENT_ON]')) {
+      return comments
+        .filter((c) => c.habitId === params.habitId)
+        .map(({ habitId: _habitId, ...rest }) => rest);
+    }
+    if (cypher.includes('WHERE c.id IN $commentIds')) {
+      for (const cid of params.commentIds ?? []) {
+        const idx = comments.findIndex((c) => c.id === cid);
+        if (idx !== -1) comments.splice(idx, 1);
+      }
+      return [];
     }
     // default: return public habits
     return FIXTURE_HABITS;
@@ -456,4 +523,87 @@ test('GET /api/v1/habits/graph returns graph with nodes and edges', async () => 
   const edge = body.edges[0];
   assert.ok(edge.source.startsWith('h:'));
   assert.ok(edge.target.startsWith('c:'));
+});
+
+// ── Likes (annotation type 'like') ───────────────────────────────────────────
+
+test('POST /:id/annotate accepts type "like" and returns like count', async () => {
+  const res = await post(
+    '/api/v1/habits/habit-1/annotate',
+    { type: 'like' },
+    makeToken()
+  );
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.strictEqual(body.annotationCounts.likes, 1);
+});
+
+test('like can be removed again (toggle)', async () => {
+  await post('/api/v1/habits/habit-2/annotate', { type: 'like' }, makeToken());
+  const res = await post(
+    '/api/v1/habits/habit-2/annotate',
+    { type: 'like', remove: true },
+    makeToken()
+  );
+  const body = await res.json();
+  assert.strictEqual(body.annotationCounts.likes, 0);
+});
+
+// ── Community comments ───────────────────────────────────────────────────────
+
+test('POST /:id/comments requires auth', async () => {
+  const res = await post('/api/v1/habits/habit-1/comments', { text: 'hi' });
+  assert.strictEqual(res.status, 401);
+});
+
+test('POST /:id/comments validates text length', async () => {
+  const empty = await post(
+    '/api/v1/habits/habit-1/comments',
+    { text: '   ' },
+    makeToken()
+  );
+  assert.strictEqual(empty.status, 400);
+  const tooLong = await post(
+    '/api/v1/habits/habit-1/comments',
+    { text: 'x'.repeat(501) },
+    makeToken()
+  );
+  assert.strictEqual(tooLong.status, 400);
+});
+
+test('comment is created as anonymous node and listed newest first', async () => {
+  const created = await post(
+    '/api/v1/habits/habit-1/comments',
+    { text: 'This works great after breakfast!' },
+    makeToken()
+  );
+  assert.strictEqual(created.status, 201);
+  const createdBody = await created.json();
+  assert.strictEqual(
+    createdBody.comment.text,
+    'This works great after breakfast!'
+  );
+  // No user identifier on the public comment payload
+  assert.strictEqual(createdBody.comment.userId, undefined);
+
+  await post(
+    '/api/v1/habits/habit-1/comments',
+    { text: 'Second comment' },
+    makeToken()
+  );
+
+  const list = await get('/api/v1/habits/habit-1/comments', makeToken());
+  assert.strictEqual(list.status, 200);
+  const listBody = await list.json();
+  assert.ok(listBody.comments.length >= 2);
+  assert.strictEqual(listBody.comments[0].text, 'Second comment');
+});
+
+test('commenting on an unknown habit returns 404', async () => {
+  const res = await post(
+    '/api/v1/habits/nope-does-not-exist/comments',
+    { text: 'hello' },
+    makeToken()
+  );
+  assert.strictEqual(res.status, 404);
 });

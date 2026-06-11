@@ -274,7 +274,7 @@ export function createV1Router({
   router.use(
     '/users',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createUsersRouter({ db })
+    createUsersRouter({ db, keycloak, neo4jRun })
   );
 
   // Knowledge base routes: require admin role only

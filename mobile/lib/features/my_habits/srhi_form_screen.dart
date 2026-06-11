@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import 'my_habits_models.dart';
+import '../../core/dio_provider.dart';
+import '../../services/reminder_scheduler_service.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
 
@@ -71,6 +73,13 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
           );
       ref.invalidate(dueSrhiProvider);
       ref.invalidate(srhiTrajectoryProvider(widget.intentionId));
+      // The new SRHI score changes the adaptive reminder plan — resync.
+      try {
+        await ReminderSchedulerService(dio: ref.read(dioProvider))
+            .syncReminders();
+      } catch (_) {
+        // Non-fatal: resynced on next app start.
+      }
       if (mounted) context.pop();
     } catch (e) {
       setState(() => _error = e.toString());

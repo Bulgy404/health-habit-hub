@@ -172,7 +172,6 @@ test('assignGroup updates MongoDB and calls kc.updateUserAttribute', async () =>
   };
   const result = await assignGroup({
     db,
-    neo4jRun: null,
     kc,
     id: 'u1',
     group: 'G2',
@@ -186,7 +185,6 @@ test('assignGroup returns null when participant not found', async () => {
   const kc = { async updateUserAttribute() {} };
   const result = await assignGroup({
     db,
-    neo4jRun: null,
     kc,
     id: 'missing',
     group: 'G1',
@@ -194,24 +192,17 @@ test('assignGroup returns null when participant not found', async () => {
   assert.strictEqual(result, null);
 });
 
-test('assignGroup calls neo4jRun with valid group label', async () => {
+test('assignGroup persists the group in MongoDB only (legacy Neo4j label write removed)', async () => {
   const db = makeDb({
     participants: [
       { userId: 'u1', username: 'p-u1', group: 'G1', enrolledAt: new Date() },
     ],
   });
   const kc = { async updateUserAttribute() {} };
-  const neo4jCalls = [];
-  const neo4jRun = async (cypher, params) => {
-    neo4jCalls.push({ cypher, params });
-    return [];
-  };
-  await assignGroup({ db, neo4jRun, kc, id: 'u1', group: 'G3' });
-  assert.strictEqual(neo4jCalls.length, 1);
-  assert.ok(
-    neo4jCalls[0].cypher.includes('hhh__Group3'),
-    'Cypher uses correct label'
-  );
+  const result = await assignGroup({ db, kc, id: 'u1', group: 'G3' });
+  assert.deepStrictEqual(result, { ok: true, userId: 'u1', group: 'G3' });
+  const doc = await db.collection('participants').findOne({ userId: 'u1' });
+  assert.strictEqual(doc.group, 'G3');
 });
 
 test('getParticipant returns null for deleted participant', async () => {

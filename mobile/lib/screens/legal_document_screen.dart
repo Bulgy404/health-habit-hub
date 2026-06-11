@@ -18,6 +18,9 @@ enum LegalDocumentType {
 
   /// Legal imprint / about.
   imprint,
+
+  /// Study information & informed-consent document (read-only view).
+  consent,
 }
 
 /// Displays a legal document (privacy policy, accessibility statement, or
@@ -112,12 +115,14 @@ class _LegalDocumentScreenState extends ConsumerState<LegalDocumentScreen> {
     LegalDocumentType.privacy => 'privacy',
     LegalDocumentType.accessibility => 'accessibility',
     LegalDocumentType.imprint => 'imprint',
+    LegalDocumentType.consent => 'consent',
   };
 
   String _title(AppLocalizations l10n) => switch (widget.documentType) {
     LegalDocumentType.privacy => l10n.privacyStatement,
     LegalDocumentType.accessibility => l10n.accessibilityStatement,
     LegalDocumentType.imprint => l10n.imprint,
+    LegalDocumentType.consent => 'Study Consent',
   };
 
   /// Builds the localized metadata footer ("Version … · Effective …"),

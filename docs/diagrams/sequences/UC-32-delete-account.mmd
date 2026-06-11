@@ -1,0 +1,22 @@
+%% UC-32 — Delete account (App Store 5.1.1(v) / GDPR right to erasure)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App (Settings)
+    participant B as Backend (usersRouter)
+    participant M as MongoDB
+    participant KC as Keycloak (Admin API)
+
+    P->>F: Settings -> "Delete account"
+    F-->>P: Confirmation dialog (lists exactly what is deleted)
+    P->>F: Confirm "Delete permanently"
+    F->>B: DELETE /api/v1/users/me (Bearer token)
+    loop participant-linked collections
+        B->>M: deleteMany({userId}) — users, profiles, enrollments, intentions,<br/>daily logs, SRHI, form responses, recommendations, feedback,<br/>device tokens, consents
+    end
+    B->>KC: DELETE /admin/realms/hhh/users/{sub} (idempotent)
+    KC-->>B: 204 (or 404 = already gone)
+    B-->>F: 200 {ok, deleted counts}
+    Note over B: Donated habits in Neo4j carry no user identifier (anonymous by design)
+    F->>F: Wipe secure storage, logout
+    F-->>P: Back to onboarding welcome screen

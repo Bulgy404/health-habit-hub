@@ -1,0 +1,18 @@
+%% UC-33 — Adaptive habit reminders (fading with habit strength)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (reminderPlanService)
+    participant M as MongoDB
+    participant OS as Device notifications
+
+    P->>F: Create intention, pick reminder time (Cupertino wheel)
+    F->>B: POST /habits/intentions {.., reminderTime: "19:30"}
+    Note over F,B: On app start and after every SRHI submission:
+    F->>B: GET /habits/intentions/reminder-plans
+    B->>M: active intentions + srhi_responses + daily_behavior_logs + admin_settings (reminder_* weights)
+    B->>B: autonomy = 0.5*SRHI + 0.35*adherence14d + 0.15*streak<br/>tier: daily -> every_2_days -> twice_weekly -> weekly -> off<br/>hysteresis: fading needs 2 supporting SRHI weeks<br/>recovery: adherence7d < 0.5 snaps back to daily
+    B-->>F: {plans: [{intentionId, reminderTime, frequency, autonomyScore, components}]}
+    F->>OS: cancelAll + zonedSchedule next 14 days per plan (local notifications)
+    OS-->>P: Reminder fires at chosen time — less often as the habit strengthens

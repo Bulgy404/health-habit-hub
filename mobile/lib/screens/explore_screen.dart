@@ -254,12 +254,52 @@ class _NodeDetailSheet extends ConsumerStatefulWidget {
 
 class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
   late HabitNode _node;
-  String? _loadingType; // 'iDoThis' or 'helpful' while a request is in-flight
+  String? _loadingType; // annotation type while a request is in-flight
+  List<HabitComment>? _comments;
+  final _commentController = TextEditingController();
+  bool _postingComment = false;
 
   @override
   void initState() {
     super.initState();
     _node = widget.initialNode;
+    _loadComments();
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadComments() async {
+    try {
+      final comments = await widget.habitService.fetchComments(_node.id);
+      if (mounted) setState(() => _comments = comments);
+    } catch (_) {
+      if (mounted) setState(() => _comments = const []);
+    }
+  }
+
+  Future<void> _postComment() async {
+    final text = _commentController.text.trim();
+    if (text.isEmpty || _postingComment) return;
+    setState(() => _postingComment = true);
+    try {
+      final created = await widget.habitService.addComment(_node.id, text);
+      _commentController.clear();
+      if (mounted) {
+        setState(() => _comments = [created, ...?_comments]);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not post comment')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _postingComment = false);
+    }
   }
 
   Future<void> _annotate(String type) async {
@@ -313,6 +353,7 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
         annotationState[_node.id]?.contains('iDoThis') ?? false;
     final helpfulActive =
         annotationState[_node.id]?.contains('helpful') ?? false;
+    final likeActive = annotationState[_node.id]?.contains('like') ?? false;
     final busy = _loadingType != null;
 
     final related =
@@ -446,6 +487,12 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
                 ),
                 color: helpfulActive ? Colors.amber : cs.tertiary,
               ),
+              const SizedBox(width: 20),
+              _CountBadge(
+                icon: likeActive ? Icons.favorite : Icons.favorite_border,
+                label: '${_node.annotationCounts['likes'] ?? 0}',
+                color: likeActive ? Colors.red.shade400 : cs.secondary,
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -494,8 +541,81 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
                   label: Text(l10n.helpful),
                 ),
               ),
+              const SizedBox(width: 12),
+              IconButton.outlined(
+                onPressed: busy ? null : () => _annotate('like'),
+                tooltip: 'Like',
+                isSelected: likeActive,
+                icon: _loadingType == 'like'
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        likeActive ? Icons.favorite : Icons.favorite_border,
+                        color: likeActive ? Colors.red.shade400 : null,
+                      ),
+              ),
             ],
           ),
+
+          // ── Community comments ─────────────────────────────────────
+          const SizedBox(height: 20),
+          Text('Comments', style: tt.titleSmall),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _commentController,
+                  maxLength: 500,
+                  decoration: const InputDecoration(
+                    hintText: 'Share a thought (anonymous)…',
+                    counterText: '',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                onPressed: _postingComment ? null : _postComment,
+                icon: _postingComment
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_comments == null)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            )
+          else if (_comments!.isEmpty)
+            Text('No comments yet — be the first.', style: tt.bodySmall)
+          else
+            ..._comments!.take(20).map(
+                  (c) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.chat_bubble_outline,
+                            size: 14, color: cs.outline),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(c.text, style: tt.bodySmall)),
+                      ],
+                    ),
+                  ),
+                ),
 
           // Related habits — bounded scrollable container, always below buttons
           if (related.isNotEmpty) ...[

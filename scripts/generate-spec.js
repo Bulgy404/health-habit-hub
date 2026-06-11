@@ -6,6 +6,7 @@
  */
 import { writeFileSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import path from 'path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,7 +15,12 @@ const repoRoot = path.join(__dirname, '..');
 try {
   const { swaggerSpec } = await import(path.join(repoRoot, 'app', 'swagger.js'));
 
-  const yaml = await import('js-yaml');
+  // Resolve js-yaml from app/node_modules — this script lives at the repo
+  // root, which has no node_modules of its own.
+  const requireFromApp = createRequire(
+    path.join(repoRoot, 'app', 'package.json')
+  );
+  const yaml = requireFromApp('js-yaml');
   const yamlOutput = yaml.dump(swaggerSpec, { lineWidth: 120, noRefs: true });
 
   const outDir = path.join(repoRoot, 'docs', 'api');

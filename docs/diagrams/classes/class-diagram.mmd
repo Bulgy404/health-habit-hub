@@ -17,9 +17,18 @@ classDiagram
     class UserPreferences {
         <<MongoDB users>>
         +String userId
-        +String preferredLanguage  en|de
+        +String preferredLanguage  en|de|ja
+    }
+    class Consent {
+        <<MongoDB consents>>
+        +ObjectId _id
+        +String userId
+        +String consentVersion  semver
+        +String locale  en|de|ja
+        +Date consentedAt
     }
     User "1" --> "0..1" UserPreferences : has
+    User "1" --> "0..*" Consent : accepted (append-only)
 
     %% ===================== Study domain (DFG) =====================
     class Study {
@@ -90,6 +99,7 @@ classDiagram
         +Int durationMinutes
         +Cue[] cues
         +String intentionStatement
+        +String reminderTime  HH:mm or null
         +String status  active|paused|completed|abandoned
     }
     class Cue {
@@ -105,7 +115,7 @@ classDiagram
         +String quality  low|high
         +Dimensions dimensions  stability,salience,specificity 1-5
         +String domain
-        +String language  en|de
+        +String language  en|de|ja
     }
     class DailyBehaviorLog {
         <<MongoDB daily_behavior_logs>>
@@ -212,6 +222,9 @@ classDiagram
         +String language
         +String translationEN
         +String translationDE
+        +Int annotations_like
+        +Int annotations_helpful
+        +Int annotations_iDoThis
     }
     class Context {
         <<Neo4j node>>
@@ -223,6 +236,22 @@ classDiagram
         +String name
         +String uri
     }
+    class Comment {
+        <<Neo4j node>>
+        +String id
+        +String text
+        +String createdAt
+    }
+    class HabitCommentOwnership {
+        <<MongoDB habit_comments>>
+        +String commentId
+        +String habitId
+        +String userId
+        +Date createdAt
+    }
+    Comment "0..*" --> "1" Habit : COMMENT_ON
+    HabitCommentOwnership ..> Comment : maps author (GDPR erasure)
+    HabitCommentOwnership "*" --> "1" User
     Habit "1" --> "0..*" Context : HAS_CONTEXT
     Context "1" --> "0..*" BCIOConcept : MAPS_TO
     Habit "*" ..> "1" User : donated by (anonymised)

@@ -1,0 +1,28 @@
+%% UC-34 — Comment & like habits in the explore graph (community signal -> LLM)
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App (Explore)
+    participant B as Backend (habitsCrudRouter)
+    participant M as MongoDB
+    participant N4 as Neo4j
+    participant AI as API-service (recommend)
+
+    P->>F: Tap ♥ on a habit
+    F->>B: POST /habits/:uuid/annotate {type: "like"}
+    B->>M: insert(habit_annotations) — one like per user (dedup)
+    B->>N4: SET h.annotations_like += 1 (counter on Habit node)
+    B-->>F: updated counts {helpful, iDoThis, likes}
+
+    P->>F: Write a comment
+    F->>B: POST /habits/:uuid/comments {text}
+    B->>N4: CREATE (:Comment {id, text, createdAt})-[:COMMENT_ON]->(:Habit) — anonymous node
+    B->>M: insert(habit_comments {commentId, userId}) — ownership only (rate limit + GDPR erasure)
+    B-->>F: 201 comment
+    F->>B: GET /habits/:uuid/comments
+    B->>N4: MATCH (c:Comment)-[:COMMENT_ON]->(h) ORDER BY createdAt DESC
+    B-->>F: anonymous comment list
+
+    Note over AI,N4: Recommendation generation (UC-07):
+    AI->>N4: vector search community habits incl. coalesce(h.annotations_like, 0)
+    AI->>AI: prompt includes community_likes — LLM prefers well-liked habits

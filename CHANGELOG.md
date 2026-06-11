@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Engineering robustness (2026-06-10)
+- **Crash/error reporting (opt-in):** backend Sentry integration behind `SENTRY_DSN` (`app/utils/errorReporting.js` — central Express error handler, request bodies/cookies stripped, no-op without DSN); Flutter `sentry_flutter` behind `--dart-define=SENTRY_DSN` with PII/screenshots/view-hierarchy disabled; DEPLOYMENT.md documents the self-hosted-instance requirement
+- **Nightly E2E smoke test:** `scripts/smoke-e2e.mjs` walks the real participant journey (health → legal docs → onboard → consent → enroll → habit-config → intention → log → reminder plan → export → deletion incl. erasure verification) against live containers; `.github/workflows/nightly-e2e.yml` boots the compose stack nightly and runs it — catches integration drift 535 mocked tests cannot
+- **OpenAPI drift gate:** fixed `scripts/generate-spec.js` (js-yaml resolution from `app/node_modules`; the script was broken and the committed spec was **1119 lines stale**); spec regenerated; CI now regenerates and `git diff --exit-code`s `docs/api/openapi.yaml`; `npm run generate-spec` / `check:openapi` added
+- **Backup hygiene:** optional offsite mirror in `backup.sh` via rclone (`OFFSITE_REMOTE` env + git-ignored `backup-service/rclone/rclone.conf`, failures alert like any backup error); runbook gains a quarterly restore-drill procedure and documents the nightly Neo4j dump downtime window (~1 min, container stop)
+- **Secrets:** DEPLOYMENT.md gains a secrets-handling section (Portainer secrets over flat `.env`, `chmod 600`) and a rotation checklist — flagging the circulated Mailjet credentials for immediate rotation and the removed reCAPTCHA keys for revocation
+
+### Added — Study features: re-consent, data export, adaptive reminders, habit social signals (2026-06-10)
+- **Re-consent on version bump (UC-31):** app start compares the recorded consent version against the served document; a bump routes to a mandatory re-consent screen (accept → recorded server-side; decline → sign-out). Fails open on network errors
+- **Participant data export (UC-32 / GDPR Art. 20):** `GET /api/v1/users/me/export` returns all 12 participant collections as a JSON download; Settings → "Export my data" shares the file via the system share sheet
+- **Adaptive habit reminders (UC-33):** participants pick a reminder time (Cupertino wheel) at intention creation (`reminderTime` HH:mm on the intention); `reminderPlanService` computes a transparent autonomy score (0.5·SRHI + 0.35·adherence14d + 0.15·streak) mapped to fading tiers daily→every-2-days→twice-weekly→weekly→off, with two-week hysteresis before fading and immediate snap-back to daily when 7-day adherence drops below 0.5; weights tunable via `admin_settings` (`reminder_*` keys, per-study experimentation); `GET /habits/intentions/reminder-plans` + Flutter scheduler (`flutter_local_notifications` zonedSchedule, new `timezone`/`flutter_timezone` deps) resyncs on app start, intention creation, and SRHI submission; 12 algorithm unit tests
+- **Habit comments & likes (UC-34):** `like` as third annotation type (Mongo dedup + `annotations_like` counter on Habit nodes); anonymous `(:Comment)-[:COMMENT_ON]->(:Habit)` nodes with ownership mapped only in `habit_comments` (validator + indexes, models/ pattern) for rate limiting and GDPR erasure — account deletion now also detach-deletes the user's Comment nodes; explore sheet gains ♥ button, like count, and a comment list/composer; community habits in the recommendation pipeline now carry `community_likes`, and the prompt instructs the LLM to prefer well-liked habits
+- My Habits overview cards now show a per-habit "Habit strength" score chip (latest SRHI /7 with trend arrow) above the existing sparkline; full trajectory chart + heatmap remain on the detail screen
+- Backend suite: 535 tests (21 new for likes/comments, 12 for the reminder algorithm, 2 for export); diagrams + catalogue extended (UC-33, UC-34), class diagram updated (Comment, ownership mapping, reminderTime, like counters)
+
+### Changed — Neo4j legacy schema retired, Japanese added, consents hardened (2026-06-10)
+- **n10s plugin dropped:** `NEO4J_PLUGINS=["n10s"]`, the n10s procedure allowlists, and the `EXTENSION_SCRIPT` workaround (`neo4j/extension.sh`, deleted) removed from both compose files — nothing has called n10s since the legacy donate flow was removed; requires a Neo4j container recreate on next deploy; also deleted the vendored 13 MB `neo4j/plugins/n10s.jar` (was git-tracked but not mounted by any compose file)
+- **Neo4j legacy schema retired (no data migration needed — no legacy data exists):** the last legacy writer (`assignGroupLabel` on `hhh__Donor`) removed — group membership lives in MongoDB + Keycloak only; `seed-local.js` no longer seeds legacy Group/Donor nodes; `neo4j/init/constraints.cypher` rewritten for the current schema; US-133 constraints/indexes (`habit_uuid_unique`, `context_text_dimension`, `bcio_uri_unique`) now applied automatically at startup via `app/utils/neo4jSchema.js`; `docs/migration.md` documents the one-statement conversion should a legacy environment ever resurface
+- **Japanese (ja) is now a full app language:** `app_ja.arb` + generated `AppLocalizationsJa` (188 strings), registered in `supportedLocales`, locale provider, and the settings picker (日本語); backend `preferredLanguage` and cue-pool `language` accept `ja` (legal documents and backend messages already existed in JA)
+- **consents collection hardened:** `app/models/consent.js` with JSON-schema validator (semver `consentVersion`, locale enum) and `{userId, consentedAt}` compound index, applied at startup and via `scripts/add-mongo-validators.js`; 4 new model unit tests
+
+### Fixed — Pre-submission audit (2026-06-10)
+- Regenerated `app/package-lock.json` after the legacy-dependency removal — `npm ci` (used in CI) would have failed on the lockfile/manifest mismatch
+- Added `ios/Runner/Runner.entitlements` (`aps-environment`) wired into all three Runner build configurations, plus `UIBackgroundModes: remote-notification` in `Info.plist` — without these, APNs registration and therefore the entire FCM push flow (UC-15/UC-24) silently fails on devices
+
+### Added — App Store compliance (2026-06-10)
+- **Informed consent (Guideline 5.1.3):** ethics-reviewed HabConnect consent document (v1.0.0, DE authoritative + EN/JA convenience translations) served at `/:lng/consent` through the versioned legal-doc pipeline; mandatory `ConsentScreen` before account creation in the Flutter onboarding; acceptance recorded locally and via `POST /api/v1/users/me/consent` (append-only `consents` collection); re-readable under Settings → Legal → Study consent
+- **Account deletion (Guideline 5.1.1(v)):** `DELETE /api/v1/users/me` removes all participant-linked MongoDB documents (11 collections) and the Keycloak identity (new `deleteUser` admin-client method, idempotent); Settings → Delete account with explicit confirmation, local wipe, and logout
+- **Privacy manifest:** `ios/Runner/PrivacyInfo.xcprivacy` (no tracking; Health/UserID/UsageData collection declared; required-reason APIs CA92.1, C617.1, 35F9.1) registered in the Runner Xcode target
+- **Medical disclaimer (Guideline 1.4.1):** AI-provenance + not-medical-advice banner on the recommendations screen
+- **Review package (Guideline 2.1):** `docs/app-store/review-information.md` with demo flow, study code instructions, reviewer notes, App Privacy label mapping, and guideline status; references ethics submission (2025-05-13) and DPO assessment (Az. 0543-025/001, 2025-03-28)
+- 8 new integration tests (consent recording, deletion incl. idempotency); diagrams + use case catalogue extended (UC-31, UC-32)
+
+### Added — Use-case test coverage completed (2026-06-10)
+- UC-10: integration tests for `GET /me/habit-config` (enrollment cue config, cue sampling, SRHI items, admin-settings fallback, auth)
+- UC-15: integration tests for `POST /participant/register-token` (auth, validation, upsert semantics)
+- UC-25: integration tests for the Node `kbRouter` proxy against a mocked API-service (admin-only role enforcement, list/upload/delete/reindex pass-through, 502 on upstream outage) — the API-service side was already covered by `test_retrieve.py`
+- UC-30: first test suite for `knowledge-mcp` (7 pytest cases for `search_knowledge` / `ingest_document` with mocked LightRAG, incl. auth header, modes, and error propagation); new CI job `knowledge-mcp-test` + `requirements-dev.txt`
+- All 30 use cases now have automated coverage (UC-26 is a UI link; UC-29 covered by static backup-script checks)
+
 ### Added — Legal-document versioning (2026-06-10)
 - YAML front matter (`version`, `effectiveDate`, `bindingLanguage`) on all 9 legal documents (`app/language/{en,de,ja}/{privacy,imprint,accessibility}.md`); legal wording unchanged
 - `parseFrontMatter` in `app/utils/markdown.js` (no new dependency); legal-page API responses now include a `document` metadata field

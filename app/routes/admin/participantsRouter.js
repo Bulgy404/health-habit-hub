@@ -220,7 +220,6 @@ export function createParticipantsRouter({
       const kc = getKeycloak();
       const result = await assignGroup({
         db: database,
-        neo4jRun,
         kc,
         id,
         group,

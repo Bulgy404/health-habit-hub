@@ -43,6 +43,15 @@ jobs:
         working-directory: app
         run: node scripts/checkLegalDocs.mjs
 
+      - name: OpenAPI spec drift
+        working-directory: app
+        run: |
+          node ../scripts/generate-spec.js
+          git diff --exit-code ../docs/api/openapi.yaml || {
+            echo "::error::docs/api/openapi.yaml is stale — run 'npm run generate-spec' in app/ and commit the result";
+            exit 1;
+          }
+
   # ─────────────────────────────────────────────────────────────────────────────
   # 2. BACKEND – unit tests + coverage (no services)
   # ─────────────────────────────────────────────────────────────────────────────
@@ -345,6 +354,31 @@ jobs:
         env:
           LLM_API_KEY: placeholder
           API_SERVICE_SECRET: test-api-service-secret
+        run: pytest tests/ -v
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 10b. KNOWLEDGE-MCP – pytest
+  # ─────────────────────────────────────────────────────────────────────────────
+  knowledge-mcp-test:
+    name: knowledge-mcp – tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: knowledge-mcp/requirements.txt
+
+      - name: Install dependencies
+        working-directory: knowledge-mcp
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run pytest
+        working-directory: knowledge-mcp
         run: pytest tests/ -v
 
   # ─────────────────────────────────────────────────────────────────────────────

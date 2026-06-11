@@ -2,10 +2,13 @@
 library;
 
 // mobile/lib/features/my_habits/new_habit_screen_3_confirm.dart
+import 'package:flutter/cupertino.dart' show CupertinoDatePicker, CupertinoDatePickerMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/dio_provider.dart';
 import '../../core/exceptions.dart';
+import '../../services/reminder_scheduler_service.dart';
 import '../../l10n/app_localizations.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
@@ -40,8 +43,58 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
 
 class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   int _durationMinutes = 20;
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 19, minute: 0);
+  bool _reminderEnabled = true;
   bool _submitting = false;
   String? _error;
+
+  String get _reminderTimeString =>
+      '${_reminderTime.hour.toString().padLeft(2, '0')}:'
+      '${_reminderTime.minute.toString().padLeft(2, '0')}';
+
+  /// iOS-style wheel picker for the daily reminder time. Reminders start
+  /// daily and automatically become less frequent as the habit strengthens
+  /// (adaptive plan from the backend, see reminder_scheduler_service.dart).
+  Future<void> _pickReminderTime() async {
+    var pending = _reminderTime;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: 280,
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    setState(() => _reminderTime = pending);
+                    Navigator.of(sheetContext).pop();
+                  },
+                  child: const Text('Done'),
+                ),
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.time,
+                  use24hFormat: true,
+                  initialDateTime: DateTime(
+                    2026,
+                    1,
+                    1,
+                    _reminderTime.hour,
+                    _reminderTime.minute,
+                  ),
+                  onDateTimeChanged: (dt) =>
+                      pending = TimeOfDay(hour: dt.hour, minute: dt.minute),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   String get _intentionStatement {
     final cueText = widget.cues.map((c) => c.text).join(', ');
@@ -61,8 +114,16 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             durationMinutes: _durationMinutes,
             cues: widget.cues,
             intentionStatement: _intentionStatement,
+            reminderTime: _reminderEnabled ? _reminderTimeString : null,
           );
       ref.invalidate(intentionsProvider);
+      // Schedule the (initially daily) local reminders for the new habit.
+      try {
+        await ReminderSchedulerService(dio: ref.read(dioProvider))
+            .syncReminders();
+      } catch (_) {
+        // Non-fatal: rescheduled on next app start.
+      }
       if (mounted) context.go('/habits');
     } on ValidationException {
       setState(() => _error = l10n.habitLimitReached);
@@ -117,6 +178,32 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                 );
               }).toList(),
             ),
+            const SizedBox(height: 24),
+            Text('Daily reminder',
+                style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Switch(
+                  value: _reminderEnabled,
+                  onChanged: (v) => setState(() => _reminderEnabled = v),
+                ),
+                const SizedBox(width: 8),
+                if (_reminderEnabled)
+                  ActionChip(
+                    avatar: const Icon(Icons.schedule, size: 18),
+                    label: Text(_reminderTimeString),
+                    onPressed: _pickReminderTime,
+                  )
+                else
+                  const Text('No reminders'),
+              ],
+            ),
+            if (_reminderEnabled)
+              Text(
+                'Reminders become less frequent as your habit gets stronger.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             if (_error != null) ...[
               const SizedBox(height: 16),
               Text(_error!,

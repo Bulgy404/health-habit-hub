@@ -65,6 +65,10 @@ export const VALIDATOR = {
         },
       },
       intentionStatement: { bsonType: 'string' },
+      reminderTime: {
+        bsonType: ['string', 'null'],
+        pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$',
+      },
       status: {
         bsonType: 'string',
         enum: ['active', 'paused', 'completed', 'abandoned'],

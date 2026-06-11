@@ -372,59 +372,6 @@ async function seedNeo4j() {
   }
   console.log('[neo4j] Constraints applied.');
 
-  // Seed 4 ExperimentalSetting Group nodes (idempotent via MERGE on uri)
-  console.log('[neo4j] Seeding Group nodes...');
-  const groups = [
-    {
-      label: 'hhh__Group1',
-      uri: 'hhh:Group1',
-      name: 'Closed Task, Open Description',
-    },
-    {
-      label: 'hhh__Group2',
-      uri: 'hhh:Group2',
-      name: 'Closed Task, Closed Description',
-    },
-    {
-      label: 'hhh__Group3',
-      uri: 'hhh:Group3',
-      name: 'Full+Free-text (Open Task, Closed Description)',
-    },
-    {
-      label: 'hhh__Group4',
-      uri: 'hhh:Group4',
-      name: 'Minimal+Free-text (Open Task, Open Description)',
-    },
-  ];
-  // Each group needs both hhh__ExperimentalSetting and its group-specific label.
-  // Labels must be literal in Cypher — run one statement per group.
-  const groupCyphers = [
-    `MERGE (g:hhh__ExperimentalSetting:hhh__Group1 {uri: $uri})
-     ON CREATE SET g.name = $name, g.seeded = true`,
-    `MERGE (g:hhh__ExperimentalSetting:hhh__Group2 {uri: $uri})
-     ON CREATE SET g.name = $name, g.seeded = true`,
-    `MERGE (g:hhh__ExperimentalSetting:hhh__Group3 {uri: $uri})
-     ON CREATE SET g.name = $name, g.seeded = true`,
-    `MERGE (g:hhh__ExperimentalSetting:hhh__Group4 {uri: $uri})
-     ON CREATE SET g.name = $name, g.seeded = true`,
-  ];
-  for (let i = 0; i < groups.length; i++) {
-    await neo4jQuery(groupCyphers[i], {
-      uri: groups[i].uri,
-      name: groups[i].name,
-    });
-    console.log(`[neo4j]   Group "${groups[i].label}" seeded`);
-  }
-
-  // Seed 1 test Donor (idempotent via MERGE on hhh__userId)
-  console.log('[neo4j] Seeding test Donor...');
-  await neo4jQuery(
-    `MERGE (d:hhh__Donor {hhh__userId: $userId})
-     ON CREATE SET d.hhh__created = $now, d.seeded = true`,
-    { userId: 'dev-user-1', now: new Date().toISOString() }
-  );
-  console.log('[neo4j]   Donor "dev-user-1" seeded');
-
   // Seed 2 Habit nodes (idempotent via MERGE on uuid)
   console.log('[neo4j] Seeding Habit nodes...');
   const habits = [

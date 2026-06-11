@@ -227,6 +227,35 @@ else
   log "  No old backups to delete"
 fi
 
+# ── Optional offsite sync (rclone) ──────────────────────────────────────────
+# Set OFFSITE_REMOTE (e.g. "tu-s3:hhh-backups" or "sftp-backup:backups") to
+# mirror the local backup directory to an offsite destination. The rclone
+# config is mounted read-only at /config/rclone/rclone.conf (see compose).
+# Backups on the same host as the databases are NOT disaster-safe on their own.
+if [ -n "${OFFSITE_REMOTE:-}" ]; then
+  log ""
+  log "Syncing backups offsite to ${OFFSITE_REMOTE}..."
+  if command -v rclone >/dev/null 2>&1; then
+    if rclone sync "$BACKUP_DIR" "$OFFSITE_REMOTE" \
+        --config /config/rclone/rclone.conf \
+        --include "full_backup_*.tar.gz" --include "backup_*.manifest" \
+        >> "$LOG_FILE" 2>&1; then
+      log "✓ Offsite sync completed"
+    else
+      log "✗ Offsite sync FAILED"
+      ERROR_LOG="${ERROR_LOG}Offsite sync to ${OFFSITE_REMOTE} failed\n"
+      BACKUP_ERRORS=$((BACKUP_ERRORS + 1))
+      send_alert "⚠ Offsite backup sync failed (${OFFSITE_REMOTE})" "FAILED"
+    fi
+  else
+    log "✗ OFFSITE_REMOTE set but rclone is not installed"
+    BACKUP_ERRORS=$((BACKUP_ERRORS + 1))
+  fi
+else
+  log ""
+  log "OFFSITE_REMOTE not set — backups remain on this host only (configure offsite sync for disaster safety)"
+fi
+
 # List current backups
 log ""
 log "Current backups:"

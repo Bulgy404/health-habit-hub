@@ -4,6 +4,28 @@ This document describes all database migration scripts available in the `scripts
 
 ---
 
+## Legacy n10s/RDF schema — retired without data migration
+
+The legacy n10s schema (`hhh__Habit`, `hhh__Donor`, `hhh__ExperimentalSetting`,
+`hhh__GroupN`) was retired in 2026-06 together with the legacy web experiment
+app. **No production data existed in the legacy schema**, so no data migration
+was performed — the schema was removed outright:
+
+- the last legacy writer (`assignGroupLabel` on `hhh__Donor`) was deleted;
+  group membership lives in MongoDB `participants.group` + the Keycloak
+  `group` attribute only
+- `scripts/seed-local.js` no longer seeds legacy Group/Donor nodes
+- `neo4j/init/constraints.cypher` now contains only current-schema
+  constraints (also applied automatically at startup, see below)
+
+If a legacy environment ever resurfaces, the conversion is a single
+idempotent Cypher statement: MATCH each `hhh__Habit`, then
+`MERGE (:Habit {uuid: hhh__id})` carrying `sentence = hhh__value` and
+`language = hhh__language`, marking processed legacy nodes with a
+`legacy_migrated` flag.
+
+---
+
 ## migrate-habits-bcio.js
 
 **Purpose:** Enriches existing Neo4j `Habit` nodes with BCIO context and concept links by running them through the API-service M1.2 (classify-context) and M1.3 (map-bcio) pipeline.
@@ -150,7 +172,7 @@ Remove `--dry-run` to apply. The script is idempotent — already-migrated nodes
 
 **Introduced in:** Review finding (US-133) — not yet applied automatically
 
-The new `Habit`, `Context`, and `BCIOConcept` labels are missing uniqueness constraints and indexes. The following Cypher should be run once on any environment to add them:
+**Update (2026-06):** these constraints are now applied automatically at backend startup via `app/utils/neo4jSchema.js` (idempotent, non-fatal). The manual Cypher below is kept for reference:
 
 ```cypher
 -- Unique uuid on Habit (prevents duplicate donations)

@@ -18,6 +18,7 @@ import {
 
 // Express config — public legal pages (rendered by the Flutter app)
 import imprintRouter from './routes/imprintRouter.js';
+import consentRouter from './routes/consentRouter.js';
 import privacyRouter from './routes/privacyRouter.js';
 import accessibilityRouter from './routes/accessibilityRouter.js';
 
@@ -122,6 +123,7 @@ router.use('/:lng(' + validLanguageCodes + ')?/', (req, res, next) => {
 });
 
 router.use('/:lng(' + validLanguageCodes + ')/imprint', imprintRouter);
+router.use('/:lng(' + validLanguageCodes + ')/consent', consentRouter);
 router.use('/:lng(' + validLanguageCodes + ')/privacy', privacyRouter);
 router.use(
   '/:lng(' + validLanguageCodes + ')/accessibility',
@@ -147,7 +149,18 @@ import { createTokenVerifier } from './middleware/auth.js';
 import { startNotificationScheduler } from './services/notificationService.js';
 import { makeGetDb } from './utils/getDb.js';
 import { connect as connectMongo, ensureIndexes } from './models/survey.js';
+import { ensureNeo4jSchema } from './utils/neo4jSchema.js';
+import {
+  initErrorReporting,
+  errorReportingMiddleware,
+} from './utils/errorReporting.js';
 app.use('/api/v1', express.json(), createV1Router());
+
+// Crash/error reporting (no-op unless SENTRY_DSN is set).
+initErrorReporting();
+
+// Ensure Neo4j constraints/indexes for the habit graph (idempotent, non-fatal).
+ensureNeo4jSchema();
 
 // Ensure required MongoDB indexes exist (idempotent — no-op if already present).
 connectMongo()
@@ -168,6 +181,9 @@ app.use(contextPath, router);
 app.use((req, res) => {
   res.status(404).send('404 - Not Found');
 });
+
+// Central error handler — logs, reports to Sentry (if configured), returns 500.
+app.use(errorReportingMiddleware());
 
 const httpServer = createServer(app);
 const verifyToken = createTokenVerifier();

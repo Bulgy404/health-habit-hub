@@ -59,8 +59,6 @@ components:
               $ref: '#/components/schemas/ServiceStatus'
             mongo:
               $ref: '#/components/schemas/ServiceStatus'
-            fuseki:
-              $ref: '#/components/schemas/ServiceStatus'
             keycloak:
               $ref: '#/components/schemas/ServiceStatus'
             recommender:
@@ -234,8 +232,8 @@ paths:
     get:
       summary: Check health of all downstream services
       description: >-
-        Returns the live health status and latency of neo4j, mongo, fuseki, keycloak, and the recommender service. This
-        endpoint is unauthenticated.
+        Returns the live health status and latency of neo4j, mongo, keycloak, and the recommender service. This endpoint
+        is unauthenticated.
       tags:
         - Health
       security: []
@@ -255,9 +253,6 @@ paths:
                   mongo:
                     status: ok
                     latencyMs: 5
-                  fuseki:
-                    status: ok
-                    latencyMs: 22
                   keycloak:
                     status: ok
                     latencyMs: 30
@@ -279,9 +274,6 @@ paths:
                   mongo:
                     status: ok
                     latencyMs: 5
-                  fuseki:
-                    status: ok
-                    latencyMs: 22
                   keycloak:
                     status: ok
                     latencyMs: 30
@@ -321,244 +313,6 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: Forbidden
-  /admin/participants:
-    get:
-      summary: List all active participants
-      description: Returns all participants that have not been soft-deleted.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Array of participant summaries
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Participant'
-              example:
-                - userId: a1b2c3d4-1234-5678-abcd-ef0123456789
-                  username: p-a1b2c3d4
-                  group: G2
-                  enrolledAt: '2026-03-01T09:00:00.000Z'
-                  lastActive: '2026-03-15T14:00:00.000Z'
-                  surveyCompletionPct: 0.5
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    post:
-      summary: Create a new participant
-      description: >-
-        Creates a Keycloak user with the participant role, inserts a MongoDB record, and returns credentials plus a
-        token card URL.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Participant created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  userId:
-                    type: string
-                    format: uuid
-                  username:
-                    type: string
-                    example: p-a1b2c3d4
-                  password:
-                    type: string
-                    example: Xk9mP2rNv7wQ
-                  tokenCardUrl:
-                    type: string
-                    example: /api/v1/admin/participants/a1b2c3d4.../token-card
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /admin/participants/{id}/group:
-    patch:
-      summary: Assign participant to a study group
-      description: Updates the participant's study group in MongoDB, Keycloak attributes, and Neo4j node labels.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-          description: Participant userId
-          example: a1b2c3d4-1234-5678-abcd-ef0123456789
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - group
-              properties:
-                group:
-                  type: string
-                  enum:
-                    - G1
-                    - G2
-                    - G3
-                    - G4
-                  example: G2
-      responses:
-        '200':
-          description: Group updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-                    example: true
-                  userId:
-                    type: string
-                    format: uuid
-                  group:
-                    type: string
-                    enum:
-                      - G1
-                      - G2
-                      - G3
-                      - G4
-        '400':
-          description: Invalid group value
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: Invalid group. Must be G1, G2, G3, or G4
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Participant not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /admin/participants/{id}/token-card:
-    get:
-      summary: Download participant token card PDF
-      description: >-
-        Generates and returns a PDF token card for the specified participant. Supports QR code only, print-text only, or
-        both formats.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-          description: Participant userId
-          example: a1b2c3d4-1234-5678-abcd-ef0123456789
-        - in: query
-          name: format
-          required: false
-          schema:
-            type: string
-            enum:
-              - qr
-              - print
-              - both
-            default: both
-          description: Token card output format
-      responses:
-        '200':
-          description: PDF token card
-          content:
-            application/pdf:
-              schema:
-                type: string
-                format: binary
-        '400':
-          description: Invalid format parameter
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Participant not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
   /admin/settings:
     get:
       summary: Get all admin settings
@@ -584,7 +338,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Caller does not have admin or researcher role
+          description: Caller does not have admin role (settings are admin-only)
           content:
             application/json:
               schema:
@@ -649,110 +403,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /admin/participants/{id}/progress:
-    get:
-      summary: Get participant progress summary
-      description: >-
-        Returns profile completion status, survey responses, habit donation count, recommendation acceptance/dismissal
-        counts, and a chronological activity timeline.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-          description: Participant userId
-          example: a1b2c3d4-1234-5678-abcd-ef0123456789
-      responses:
-        '200':
-          description: Participant progress
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  profile:
-                    type: object
-                    properties:
-                      completed:
-                        type: boolean
-                      completedAt:
-                        type: string
-                        format: date-time
-                        nullable: true
-                  surveys:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        title:
-                          type: string
-                        completedAt:
-                          type: string
-                          format: date-time
-                  habitsCount:
-                    type: integer
-                  recommendations:
-                    type: object
-                    properties:
-                      accepted:
-                        type: integer
-                      dismissed:
-                        type: integer
-                  timeline:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        type:
-                          type: string
-                        timestamp:
-                          type: string
-                          format: date-time
-                        detail:
-                          type: string
-              example:
-                profile:
-                  completed: true
-                  completedAt: '2026-03-02T10:00:00.000Z'
-                surveys:
-                  - id: survey-uuid-001
-                    title: Baseline Questionnaire
-                    completedAt: '2026-03-03T11:00:00.000Z'
-                habitsCount: 7
-                recommendations:
-                  accepted: 3
-                  dismissed: 1
-                timeline:
-                  - type: enrolled
-                    timestamp: '2026-03-01T09:00:00.000Z'
-                    detail: Participant enrolled
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Participant not found
+          description: Caller does not have admin role (settings are admin-only)
           content:
             application/json:
               schema:
@@ -990,6 +641,487 @@ paths:
                 $ref: '#/components/schemas/Error'
         '403':
           description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/notifications/send:
+    post:
+      summary: Send push notification immediately to study participants
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - studyId
+                - title
+                - body
+              properties:
+                studyId:
+                  type: string
+                groupId:
+                  type: string
+                  description: Optional group filter
+                title:
+                  type: string
+                body:
+                  type: string
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Notification dispatched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent:
+                    type: integer
+                  failed:
+                    type: integer
+        '400':
+          description: Missing required fields
+  /admin/notifications/schedule:
+    post:
+      summary: Schedule a push notification for future delivery
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - studyId
+                - title
+                - body
+                - scheduledAt
+              properties:
+                studyId:
+                  type: string
+                groupId:
+                  type: string
+                title:
+                  type: string
+                body:
+                  type: string
+                data:
+                  type: object
+                scheduledAt:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Notification scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+        '400':
+          description: Missing required fields or invalid scheduledAt
+  /admin/notifications/scheduled:
+    get:
+      summary: List pending scheduled notifications
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of pending scheduled notifications
+  /admin/notifications/scheduled/{id}:
+    delete:
+      summary: Cancel a pending scheduled notification
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Notification cancelled
+        '404':
+          description: Notification not found or already sent
+  /admin/participants:
+    get:
+      summary: List all active participants
+      description: Returns all participants that have not been soft-deleted.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of participant summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Participant'
+              example:
+                - userId: a1b2c3d4-1234-5678-abcd-ef0123456789
+                  username: p-a1b2c3d4
+                  group: G2
+                  enrolledAt: '2026-03-01T09:00:00.000Z'
+                  lastActive: '2026-03-15T14:00:00.000Z'
+                  surveyCompletionPct: 0.5
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create a new participant
+      description: >-
+        Creates a Keycloak user with the participant role, inserts a MongoDB record, generates a token card PDF, and
+        returns the participant identifiers plus a token card URL.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Participant created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    format: uuid
+                  username:
+                    type: string
+                    example: p-a1b2c3d4
+                  tokenCardUrl:
+                    type: string
+                    example: /api/v1/admin/participants/a1b2c3d4.../token-card
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/participants/{id}/group:
+    patch:
+      summary: Assign participant to a study group
+      description: Updates the participant's study group in MongoDB, Keycloak attributes, and Neo4j node labels.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Participant userId
+          example: a1b2c3d4-1234-5678-abcd-ef0123456789
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - group
+              properties:
+                group:
+                  type: string
+                  enum:
+                    - G1
+                    - G2
+                    - G3
+                    - G4
+                  example: G2
+      responses:
+        '200':
+          description: Group updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  userId:
+                    type: string
+                    format: uuid
+                  group:
+                    type: string
+                    enum:
+                      - G1
+                      - G2
+                      - G3
+                      - G4
+        '400':
+          description: Invalid group value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Invalid group. Must be G1, G2, G3, or G4
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Participant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/participants/{id}/token-card:
+    get:
+      summary: Download participant token card PDF
+      description: Returns the pre-generated PDF token card for the specified participant.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Participant userId
+          example: a1b2c3d4-1234-5678-abcd-ef0123456789
+      responses:
+        '200':
+          description: PDF token card
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Participant not found or token card not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/participants/{id}/progress:
+    get:
+      summary: Get participant progress summary
+      description: >-
+        Returns profile completion status, survey responses, habit donation count, recommendation acceptance/dismissal
+        counts, and a chronological activity timeline.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Participant userId
+          example: a1b2c3d4-1234-5678-abcd-ef0123456789
+      responses:
+        '200':
+          description: Participant progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile:
+                    type: object
+                    properties:
+                      completed:
+                        type: boolean
+                      completedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                  surveys:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        completedAt:
+                          type: string
+                          format: date-time
+                  habitsCount:
+                    type: integer
+                  recommendations:
+                    type: object
+                    properties:
+                      accepted:
+                        type: integer
+                      dismissed:
+                        type: integer
+                  timeline:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+                        detail:
+                          type: string
+              example:
+                profile:
+                  completed: true
+                  completedAt: '2026-03-02T10:00:00.000Z'
+                surveys:
+                  - id: survey-uuid-001
+                    title: Baseline Questionnaire
+                    completedAt: '2026-03-03T11:00:00.000Z'
+                habitsCount: 7
+                recommendations:
+                  accepted: 3
+                  dismissed: 1
+                timeline:
+                  - type: enrolled
+                    timestamp: '2026-03-01T09:00:00.000Z'
+                    detail: Participant enrolled
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Participant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/participants/{id}:
+    delete:
+      summary: Soft-delete a participant
+      description: >-
+        Sets deletedAt timestamp and anonymizes the username. The participant record is retained for data integrity but
+        excluded from all participant listings.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Participant userId
+      responses:
+        '200':
+          description: Participant soft-deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Participant not found
           content:
             application/json:
               schema:
@@ -1307,168 +1439,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /admin/participants/{id}:
-    delete:
-      summary: Soft-delete a participant
-      description: >-
-        Sets deletedAt timestamp and anonymizes the username. The participant record is retained for data integrity but
-        excluded from all participant listings.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-          description: Participant userId
-      responses:
-        '200':
-          description: Participant soft-deleted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-                    example: true
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Participant not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /admin/notifications/send:
-    post:
-      summary: Send push notification immediately to study participants
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - studyId
-                - title
-                - body
-              properties:
-                studyId:
-                  type: string
-                groupId:
-                  type: string
-                  description: Optional group filter
-                title:
-                  type: string
-                body:
-                  type: string
-                data:
-                  type: object
-      responses:
-        '200':
-          description: Notification dispatched
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  sent:
-                    type: integer
-                  failed:
-                    type: integer
-        '400':
-          description: Missing required fields
-  /admin/notifications/schedule:
-    post:
-      summary: Schedule a push notification for future delivery
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - studyId
-                - title
-                - body
-                - scheduledAt
-              properties:
-                studyId:
-                  type: string
-                groupId:
-                  type: string
-                title:
-                  type: string
-                body:
-                  type: string
-                data:
-                  type: object
-                scheduledAt:
-                  type: string
-                  format: date-time
-      responses:
-        '201':
-          description: Notification scheduled
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-        '400':
-          description: Missing required fields or invalid scheduledAt
-  /admin/notifications/scheduled:
-    get:
-      summary: List pending scheduled notifications
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Array of pending scheduled notifications
-  /admin/notifications/scheduled/{id}:
-    delete:
-      summary: Cancel a pending scheduled notification
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Notification cancelled
-        '404':
-          description: Notification not found or already sent
   /surveys:
     get:
       summary: List surveys
@@ -1620,157 +1590,6 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Survey not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /habits/public:
-    get:
-      summary: Get anonymized public habit list
-      description: >-
-        Returns all donated habits with annotation counts. No personal data included. Useful for the habit graph
-        visualization.
-      tags:
-        - Habits
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: List of anonymized habits
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Habit'
-              example:
-                - id: habit-001
-                  name: Go for a 30-min walk daily
-                  category: Group1
-                  bcioClass: null
-                  annotationCounts:
-                    helpful: 5
-                    iDoThis: 3
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /habits/{id}/annotate:
-    post:
-      summary: Annotate a habit
-      description: Adds an anonymous annotation ("helpful" or "iDoThis") to a habit node. Returns updated annotation counts.
-      tags:
-        - Habits
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: Neo4j habit node ID
-          example: habit-001
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - type
-              properties:
-                type:
-                  type: string
-                  enum:
-                    - helpful
-                    - iDoThis
-                  example: helpful
-      responses:
-        '200':
-          description: Annotation stored; updated counts returned
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  habitId:
-                    type: string
-                    example: habit-001
-                  annotationCounts:
-                    type: object
-                    properties:
-                      helpful:
-                        type: integer
-                        example: 6
-                      iDoThis:
-                        type: integer
-                        example: 3
-        '400':
-          description: Invalid annotation type
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: type must be "helpful" or "iDoThis"
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /habits/stats:
-    get:
-      summary: Get aggregate habit donation statistics
-      description: >-
-        Returns total habit count, breakdown by study group category, and daily annotation activity over the last 30
-        days.
-      tags:
-        - Habits
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Habit statistics
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HabitStats'
-              example:
-                total: 142
-                byCategory:
-                  - category: Group1
-                    count: 42
-                  - category: Group2
-                    count: 38
-                byDay:
-                  - date: '2026-03-14'
-                    count: 7
-                  - date: '2026-03-15'
-                    count: 12
-        '401':
-          description: Missing or invalid JWT
           content:
             application/json:
               schema:

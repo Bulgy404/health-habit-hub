@@ -103,11 +103,7 @@ services:
     restart: unless-stopped
     environment:
       - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j_password_change_me}
-      - NEO4J_PLUGINS=["n10s"]
       - NEO4J_server_directories_import=/import
-      - NEO4J_dbms_security_procedures_unrestricted=n10s.*
-      - NEO4J_dbms_security_procedures_allowlist=n10s.*
-      - EXTENSION_SCRIPT=/neo4j-extension.sh
     ports:
       - "7474:7474"
       - "7687:7687"
@@ -118,7 +114,6 @@ services:
       - neo4j-local-data:/data
       - neo4j-local-logs:/logs
       - ./neo4j/import:/import:ro
-      - ./neo4j/extension.sh:/neo4j-extension.sh:ro
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7474"]
       interval: 30s

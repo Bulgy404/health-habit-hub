@@ -282,6 +282,7 @@ class HhhApp extends ConsumerWidget {
       supportedLocales: const [
         Locale('en'),
         Locale('de'),
+        Locale('ja'),
       ],
     );
   }

@@ -223,12 +223,53 @@ class _HabitCard extends ConsumerWidget {
               ),
               trajectoryAsync.when(
                 data: (trajectory) {
-                  final submitted =
-                      trajectory.where((p) => p.score != null).length;
-                  if (submitted < 2) return const SizedBox.shrink();
+                  final submitted = trajectory
+                      .where((p) => p.score != null)
+                      .toList();
+                  if (submitted.length < 2) return const SizedBox.shrink();
+                  final latest = submitted.last.score!;
+                  final previous = submitted[submitted.length - 2].score!;
+                  final delta = latest - previous;
+                  final trendIcon = delta > 0.05
+                      ? Icons.trending_up
+                      : delta < -0.05
+                          ? Icons.trending_down
+                          : Icons.trending_flat;
+                  final trendColor = delta > 0.05
+                      ? Colors.green.shade700
+                      : delta < -0.05
+                          ? Colors.orange.shade800
+                          : Colors.grey;
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
-                    child: SrhiSparklineWidget(trajectory: trajectory),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Habit strength',
+                              style: Theme.of(context).textTheme.labelSmall,
+                            ),
+                            const Spacer(),
+                            Icon(trendIcon, size: 16, color: trendColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${latest.toStringAsFixed(1)} / 7',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelMedium
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: trendColor,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        SrhiSparklineWidget(trajectory: trajectory),
+                      ],
+                    ),
                   );
                 },
                 loading: () => const SizedBox.shrink(),
