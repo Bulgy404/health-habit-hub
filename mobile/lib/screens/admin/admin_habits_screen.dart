@@ -11,6 +11,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -196,6 +197,11 @@ class _AdminHabitsScreenState extends ConsumerState<AdminHabitsScreen> {
       appBar: AppBar(
         title: Text(l10n.adminDonatedHabits),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.forum_outlined),
+            tooltip: l10n.adminComments,
+            onPressed: () => context.push('/admin/comments'),
+          ),
           Tooltip(
             message: _autoRefresh ? l10n.adminAutoRefreshOn : l10n.adminAutoRefreshOff,
             child: IconButton(

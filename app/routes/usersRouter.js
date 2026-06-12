@@ -1,6 +1,9 @@
 import express from 'express';
+import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
 import { deleteHabitComments } from '../db/habitQueries.js';
+import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
+import { config } from '../utils/config.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'usersRouter' });
@@ -10,6 +13,26 @@ const SUPPORTED_LANGUAGES = ['en', 'de', 'ja'];
 export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
+
+  // Production fallbacks (mirrors adminRouter/habitsRouter): when not
+  // injected (tests inject mocks), create real clients so account deletion
+  // ALWAYS erases the Keycloak identity and the user's Comment nodes.
+  const getKeycloak = () => keycloak || createKeycloakAdminClient();
+  let _neo4jDriver = null;
+  async function queryNeo4j(cypher, params = {}) {
+    if (neo4jRun) return neo4jRun(cypher, params);
+    _neo4jDriver ??= neo4j.driver(
+      config.neo4j.uri,
+      neo4j.auth.basic(config.neo4j.user, config.neo4j.password)
+    );
+    const session = _neo4jDriver.session();
+    try {
+      const result = await session.run(cypher, params);
+      return result.records.map((r) => r.toObject());
+    } finally {
+      await session.close();
+    }
+  }
 
   // GET /api/v1/users/me – return caller's user record (creates default if absent)
   router.get('/me', async (req, res) => {
@@ -172,19 +195,17 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
 
       // Erase the user's anonymous Comment nodes from the habit graph first
       // (ownership is only known via the habit_comments mapping).
-      if (neo4jRun) {
-        try {
-          const ownComments = await database
-            .collection('habit_comments')
-            .find({ userId })
-            .toArray();
-          await deleteHabitComments(
-            neo4jRun,
-            ownComments.map((c) => String(c.commentId))
-          );
-        } catch (err) {
-          log.warn({ err }, '[usersRouter] comment-node erasure failed');
-        }
+      try {
+        const ownComments = await database
+          .collection('habit_comments')
+          .find({ userId })
+          .toArray();
+        await deleteHabitComments(
+          queryNeo4j,
+          ownComments.map((c) => String(c.commentId))
+        );
+      } catch (err) {
+        log.warn({ err }, '[usersRouter] comment-node erasure failed');
       }
 
       const deleted = {};
@@ -193,11 +214,12 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
         deleted[name] = result?.deletedCount ?? 0;
       }
 
-      if (keycloak?.deleteUser) {
-        await keycloak.deleteUser(userId);
+      const kc = getKeycloak();
+      if (kc?.deleteUser) {
+        await kc.deleteUser(userId);
       } else {
         log.warn(
-          '[usersRouter] no Keycloak admin client configured — identity not deleted'
+          '[usersRouter] no Keycloak admin client available — identity not deleted'
         );
       }
 

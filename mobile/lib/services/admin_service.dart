@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/app_config.dart';
+import '../core/dio_provider.dart';
 import '../models/admin_habit_donation.dart';
 import '../models/admin_participant.dart';
 import '../models/admin_questionnaire.dart';
@@ -8,8 +10,6 @@ import '../models/admin_session.dart';
 import '../models/admin_survey.dart';
 import '../models/participant_progress.dart';
 import '../providers/auth_provider.dart';
-import '../config/app_config.dart';
-import '../core/dio_provider.dart';
 import '../services/auth_service.dart';
 
 /// Service for admin API endpoints.
@@ -283,6 +283,61 @@ class AdminService {
     if (token != null) params.add('token=${Uri.encodeComponent(token)}');
     return '$_baseUrl/admin/habits/feed/export?${params.join('&')}';
   }
+
+  /// Fetches all participant comments for moderation (newest first).
+  Future<List<AdminComment>> fetchModerationComments() async {
+    final res = await _dio.get<Map<String, dynamic>>(
+      '$_baseUrl/admin/comments',
+    );
+    return (res.data?['comments'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(AdminComment.fromJson)
+        .toList();
+  }
+
+  /// Deletes a participant comment (moderation): removes the anonymous
+  /// Neo4j node and the ownership mapping.
+  Future<void> deleteModeratedComment(String commentId) async {
+    await _dio.delete<Map<String, dynamic>>(
+      '$_baseUrl/admin/comments/$commentId',
+    );
+  }
+}
+
+/// A participant comment in the researcher moderation view.
+class AdminComment {
+  /// Creates an [AdminComment].
+  const AdminComment({
+    required this.id,
+    required this.text,
+    required this.createdAt,
+    required this.habitId,
+    required this.habitSentence,
+  });
+
+  /// Parses a moderation entry from the API response.
+  factory AdminComment.fromJson(Map<String, dynamic> json) => AdminComment(
+        id: json['id']?.toString() ?? '',
+        text: json['text']?.toString() ?? '',
+        createdAt: json['createdAt']?.toString() ?? '',
+        habitId: json['habitId']?.toString() ?? '',
+        habitSentence: json['habitSentence']?.toString() ?? '',
+      );
+
+  /// Comment node id.
+  final String id;
+
+  /// Comment text.
+  final String text;
+
+  /// ISO timestamp.
+  final String createdAt;
+
+  /// Habit uuid the comment is attached to.
+  final String habitId;
+
+  /// Habit sentence for moderation context.
+  final String habitSentence;
 }
 
 /// Riverpod provider for [AdminService].

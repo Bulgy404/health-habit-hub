@@ -1227,6 +1227,222 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'SRHI data will appear after your first weekly check-in.'**
   String get noTrajectoryYet;
+
+  /// App bar title of the informed-consent screen
+  ///
+  /// In en, this message translates to:
+  /// **'Study Information & Consent'**
+  String get consentTitle;
+
+  /// App bar title when re-consenting after a version bump
+  ///
+  /// In en, this message translates to:
+  /// **'Updated Study Consent'**
+  String get consentUpdatedTitle;
+
+  /// Text above the consent buttons
+  ///
+  /// In en, this message translates to:
+  /// **'By tapping "I consent" you confirm that you have read and understood the study information and voluntarily agree to participate.'**
+  String get consentConfirmText;
+
+  /// Accept button on the consent screen
+  ///
+  /// In en, this message translates to:
+  /// **'I consent'**
+  String get consentAccept;
+
+  /// Decline button on the consent screen
+  ///
+  /// In en, this message translates to:
+  /// **'I do not consent'**
+  String get consentDecline;
+
+  /// Offline error on the consent screen
+  ///
+  /// In en, this message translates to:
+  /// **'The consent document could not be loaded. Please check your connection.'**
+  String get consentCouldNotLoad;
+
+  /// Settings entry to delete the account
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get deleteAccount;
+
+  /// Title of the account-deletion confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account?'**
+  String get deleteAccountTitle;
+
+  /// Body of the account-deletion confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'This permanently deletes your account and all data linked to it: your profile, study enrollment, habit plans, daily logs, questionnaire answers, and recommendations.\n\nHabit donations are stored anonymously and cannot be traced back to you.\n\nThis cannot be undone.'**
+  String get deleteAccountContent;
+
+  /// Destructive confirm button of the deletion dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Delete permanently'**
+  String get deleteAccountConfirm;
+
+  /// Snackbar when account deletion fails
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion failed. Please check your connection and try again.'**
+  String get deleteAccountFailed;
+
+  /// Settings entry for the GDPR data export
+  ///
+  /// In en, this message translates to:
+  /// **'Export my data'**
+  String get exportMyData;
+
+  /// Snackbar when the data export fails
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed. Please check your connection and try again.'**
+  String get exportFailed;
+
+  /// Settings section label for data rights
+  ///
+  /// In en, this message translates to:
+  /// **'My data'**
+  String get myDataSection;
+
+  /// Settings entry / title of the read-only consent document
+  ///
+  /// In en, this message translates to:
+  /// **'Study consent'**
+  String get studyConsent;
+
+  /// Settings section label for legal documents
+  ///
+  /// In en, this message translates to:
+  /// **'Legal'**
+  String get legalSection;
+
+  /// Settings entry for the app language
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get language;
+
+  /// Settings entry to sign out
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get signOut;
+
+  /// Body of the sign-out confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to sign out?'**
+  String get signOutConfirm;
+
+  /// AI provenance and medical disclaimer on the recommendations screen
+  ///
+  /// In en, this message translates to:
+  /// **'AI-generated suggestions based on your study data. This is not medical advice — consult a doctor for health concerns.'**
+  String get aiDisclaimer;
+
+  /// Label of the reminder section in habit creation
+  ///
+  /// In en, this message translates to:
+  /// **'Daily reminder'**
+  String get dailyReminderLabel;
+
+  /// Shown when reminders are disabled
+  ///
+  /// In en, this message translates to:
+  /// **'No reminders'**
+  String get noReminders;
+
+  /// Hint explaining adaptive reminder fading
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders become less frequent as your habit gets stronger.'**
+  String get reminderFadingHint;
+
+  /// Done button on the time picker sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get doneButton;
+
+  /// Label of the SRHI score chip on habit cards
+  ///
+  /// In en, this message translates to:
+  /// **'Habit strength'**
+  String get habitStrengthLabel;
+
+  /// Header of the comment section on a habit
+  ///
+  /// In en, this message translates to:
+  /// **'Comments'**
+  String get commentsTitle;
+
+  /// Placeholder of the comment input
+  ///
+  /// In en, this message translates to:
+  /// **'Share a thought (anonymous)…'**
+  String get commentHint;
+
+  /// Empty state of the comment list
+  ///
+  /// In en, this message translates to:
+  /// **'No comments yet — be the first.'**
+  String get noCommentsYet;
+
+  /// Snackbar when posting a comment fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not post comment'**
+  String get couldNotPostComment;
+
+  /// Tooltip of the like button
+  ///
+  /// In en, this message translates to:
+  /// **'Like'**
+  String get likeTooltip;
+
+  /// Title of the admin comment-moderation screen
+  ///
+  /// In en, this message translates to:
+  /// **'Comments'**
+  String get adminComments;
+
+  /// Title of the moderation delete dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Delete comment?'**
+  String get adminDeleteCommentTitle;
+
+  /// Body of the moderation delete dialog
+  ///
+  /// In en, this message translates to:
+  /// **'This removes the comment for all participants. Cannot be undone.'**
+  String get adminDeleteCommentContent;
+
+  /// Snackbar when moderation deletion fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete comment'**
+  String get adminFailedToDeleteComment;
+
+  /// Error state of the moderation list
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load comments'**
+  String get adminFailedToLoadComments;
+
+  /// Empty state of the moderation list
+  ///
+  /// In en, this message translates to:
+  /// **'No comments yet.'**
+  String get adminNoCommentsYet;
 }
 
 class _AppLocalizationsDelegate

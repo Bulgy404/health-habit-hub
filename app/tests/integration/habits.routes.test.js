@@ -60,6 +60,14 @@ function createMockDb() {
           find() {
             return { toArray: async () => [...commentOwnership] };
           },
+          async deleteOne(query = {}) {
+            const idx = commentOwnership.findIndex(
+              (c) => c.commentId === query.commentId
+            );
+            if (idx === -1) return { deletedCount: 0 };
+            commentOwnership.splice(idx, 1);
+            return { deletedCount: 1 };
+          },
         };
       }
       if (name !== 'habit_annotations')
@@ -247,6 +255,17 @@ function createMockNeo4jRun() {
       };
       comments.unshift({ ...created, habitId: params.habitId });
       return [created];
+    }
+    if (cypher.includes('AS habitSentence')) {
+      // Moderation list across all habits
+      return comments.map((c) => ({
+        id: c.id,
+        text: c.text,
+        createdAt: c.createdAt,
+        habitId: c.habitId,
+        habitSentence:
+          FIXTURE_HABITS.find((h) => h.id === c.habitId)?.name ?? '',
+      }));
     }
     if (cypher.includes('MATCH (c:Comment)-[:COMMENT_ON]')) {
       return comments
@@ -606,4 +625,47 @@ test('commenting on an unknown habit returns 404', async () => {
     makeToken()
   );
   assert.strictEqual(res.status, 404);
+});
+
+// ── Comment moderation (admin) ───────────────────────────────────────────────
+
+test('GET /admin/comments requires admin/researcher role', async () => {
+  const res = await get('/api/v1/admin/comments', makeToken(['user']));
+  assert.strictEqual(res.status, 403);
+});
+
+test('moderation list returns all comments with habit context', async () => {
+  await post(
+    '/api/v1/habits/habit-2/comments',
+    { text: 'Needs moderation review' },
+    makeToken()
+  );
+  const res = await get('/api/v1/admin/comments', makeToken(['admin']));
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.comments.length >= 1);
+  const entry = body.comments.find((c) => c.text === 'Needs moderation review');
+  assert.ok(entry);
+  assert.strictEqual(entry.habitId, 'habit-2');
+  assert.ok(entry.habitSentence.length > 0);
+});
+
+test('DELETE /admin/comments/:id removes node and ownership mapping', async () => {
+  const created = await post(
+    '/api/v1/habits/habit-1/comments',
+    { text: 'Delete me please' },
+    makeToken()
+  );
+  const { comment } = await created.json();
+
+  const del = await fetch(`${baseUrl}/api/v1/admin/comments/${comment.id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${makeToken(['researcher'])}` },
+  });
+  assert.strictEqual(del.status, 200);
+
+  // Gone from the public habit comment list
+  const list = await get('/api/v1/habits/habit-1/comments', makeToken());
+  const listBody = await list.json();
+  assert.ok(!listBody.comments.some((c) => c.id === comment.id));
 });

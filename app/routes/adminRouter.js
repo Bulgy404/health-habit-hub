@@ -1,5 +1,8 @@
 import express from 'express';
+import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
+import { config } from '../utils/config.js';
+import { listAllComments, deleteHabitComments } from '../db/habitQueries.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import {
   getHabitsFeed,
@@ -38,6 +41,23 @@ export function createAdminRouter({
   keycloak,
   tokenCardService,
 } = {}) {
+  // Lazy Neo4j fallback for production (tests inject neo4jRun).
+  let _neo4jDriver = null;
+  async function queryNeo4j(cypher, params = {}) {
+    if (neo4jRun) return neo4jRun(cypher, params);
+    _neo4jDriver ??= neo4j.driver(
+      config.neo4j.uri,
+      neo4j.auth.basic(config.neo4j.user, config.neo4j.password)
+    );
+    const session = _neo4jDriver.session();
+    try {
+      const result = await session.run(cypher, params);
+      return result.records.map((r) => r.toObject());
+    } finally {
+      await session.close();
+    }
+  }
+
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -279,6 +299,37 @@ export function createAdminRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
+  // GET /api/v1/admin/comments — all participant comments for moderation
+  // (newest first, with habit context). Roles enforced at mount (admin/researcher).
+  router.get('/comments', async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+      const comments = await listAllComments(queryNeo4j, limit);
+      res.json({ comments });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // DELETE /api/v1/admin/comments/:commentId — moderate (remove) a comment.
+  // Deletes the anonymous Neo4j node and the MongoDB ownership mapping.
+  router.delete('/comments/:commentId', async (req, res) => {
+    try {
+      const commentId = String(req.params.commentId);
+      await deleteHabitComments(queryNeo4j, [commentId]);
+      const database = await getDb();
+      const { deletedCount } = await database
+        .collection('habit_comments')
+        .deleteOne({ commentId });
+      log.info({ commentId, deletedCount }, '[admin] comment moderated');
+      res.json({ ok: true, commentId });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // GET /api/v1/admin/habits/feed/export (must be before /habits/feed)
   router.get('/habits/feed/export', async (req, res) => {
     try {
@@ -373,6 +424,37 @@ export function createAdminRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
+  // GET /api/v1/admin/comments — all participant comments for moderation
+  // (newest first, with habit context). Roles enforced at mount (admin/researcher).
+  router.get('/comments', async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+      const comments = await listAllComments(queryNeo4j, limit);
+      res.json({ comments });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // DELETE /api/v1/admin/comments/:commentId — moderate (remove) a comment.
+  // Deletes the anonymous Neo4j node and the MongoDB ownership mapping.
+  router.delete('/comments/:commentId', async (req, res) => {
+    try {
+      const commentId = String(req.params.commentId);
+      await deleteHabitComments(queryNeo4j, [commentId]);
+      const database = await getDb();
+      const { deletedCount } = await database
+        .collection('habit_comments')
+        .deleteOne({ commentId });
+      log.info({ commentId, deletedCount }, '[admin] comment moderated');
+      res.json({ ok: true, commentId });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // GET /api/v1/admin/habits/feed
   router.get('/habits/feed', async (req, res) => {
     try {

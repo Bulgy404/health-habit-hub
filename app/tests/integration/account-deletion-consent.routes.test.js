@@ -230,13 +230,11 @@ test('exports all participant-linked documents as a JSON download', async () => 
   await db
     .collection('implementation_intentions')
     .insertOne({ userId: sub, behaviorKey: 'walking' });
-  await db
-    .collection('consents')
-    .insertOne({
-      userId: sub,
-      consentVersion: '1.0.0',
-      consentedAt: new Date(),
-    });
+  await db.collection('consents').insertOne({
+    userId: sub,
+    consentVersion: '1.0.0',
+    consentedAt: new Date(),
+  });
 
   const res = await fetch(`${baseUrl}/api/v1/users/me/export`, {
     headers: authHeaders(makeToken(['user'], sub)),

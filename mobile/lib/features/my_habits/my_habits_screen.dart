@@ -5,6 +5,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../l10n/app_localizations.dart';
 import '../../widgets/day_strip_widget.dart';
 import '../../widgets/srhi_sparkline_widget.dart';
@@ -248,7 +249,7 @@ class _HabitCard extends ConsumerWidget {
                         Row(
                           children: [
                             Text(
-                              'Habit strength',
+                              l10n.habitStrengthLabel,
                               style: Theme.of(context).textTheme.labelSmall,
                             ),
                             const Spacer(),

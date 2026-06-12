@@ -596,4 +596,112 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get noTrajectoryYet => 'SRHIデータは最初の週次チェックイン後に表示されます。';
+
+  @override
+  String get consentTitle => '研究の説明と同意';
+
+  @override
+  String get consentUpdatedTitle => '更新された同意書';
+
+  @override
+  String get consentConfirmText => '「同意します」をタップすることで、研究に関する情報を読んで理解し、自発的に参加することを確認したことになります。';
+
+  @override
+  String get consentAccept => '同意します';
+
+  @override
+  String get consentDecline => '同意しません';
+
+  @override
+  String get consentCouldNotLoad => '同意書を読み込めませんでした。接続を確認してください。';
+
+  @override
+  String get deleteAccount => 'アカウントを削除';
+
+  @override
+  String get deleteAccountTitle => 'アカウントを削除しますか？';
+
+  @override
+  String get deleteAccountContent => 'アカウントと、それに紐づくすべてのデータ（プロフィール、研究参加、習慣プラン、毎日の記録、質問票の回答、推奨）が完全に削除されます。\n\n提供された習慣は匿名で保存されており、あなたに紐づけることはできません。\n\nこの操作は取り消せません。';
+
+  @override
+  String get deleteAccountConfirm => '完全に削除';
+
+  @override
+  String get deleteAccountFailed => 'アカウントの削除に失敗しました。接続を確認して、もう一度お試しください。';
+
+  @override
+  String get exportMyData => 'データをエクスポート';
+
+  @override
+  String get exportFailed => 'エクスポートに失敗しました。接続を確認して、もう一度お試しください。';
+
+  @override
+  String get myDataSection => 'マイデータ';
+
+  @override
+  String get studyConsent => '研究への同意';
+
+  @override
+  String get legalSection => '法的情報';
+
+  @override
+  String get language => '言語';
+
+  @override
+  String get signOut => 'サインアウト';
+
+  @override
+  String get signOutConfirm => '本当にサインアウトしますか？';
+
+  @override
+  String get aiDisclaimer => 'あなたの研究データに基づくAI生成の提案です。これは医学的助言ではありません。健康上の懸念がある場合は医師にご相談ください。';
+
+  @override
+  String get dailyReminderLabel => '毎日のリマインダー';
+
+  @override
+  String get noReminders => 'リマインダーなし';
+
+  @override
+  String get reminderFadingHint => '習慣が強くなるにつれて、リマインダーの頻度は減っていきます。';
+
+  @override
+  String get doneButton => '完了';
+
+  @override
+  String get habitStrengthLabel => '習慣の強さ';
+
+  @override
+  String get commentsTitle => 'コメント';
+
+  @override
+  String get commentHint => '感想をシェア（匿名）…';
+
+  @override
+  String get noCommentsYet => 'まだコメントはありません。最初のコメントを書きましょう。';
+
+  @override
+  String get couldNotPostComment => 'コメントを投稿できませんでした';
+
+  @override
+  String get likeTooltip => 'いいね';
+
+  @override
+  String get adminComments => 'コメント';
+
+  @override
+  String get adminDeleteCommentTitle => 'コメントを削除しますか？';
+
+  @override
+  String get adminDeleteCommentContent => 'このコメントはすべての参加者から削除されます。取り消せません。';
+
+  @override
+  String get adminFailedToDeleteComment => 'コメントの削除に失敗しました';
+
+  @override
+  String get adminFailedToLoadComments => 'コメントの読み込みに失敗しました';
+
+  @override
+  String get adminNoCommentsYet => 'まだコメントはありません。';
 }

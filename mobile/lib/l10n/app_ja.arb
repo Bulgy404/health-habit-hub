@@ -806,5 +806,149 @@
   "noTrajectoryYet": "SRHIデータは最初の週次チェックイン後に表示されます。",
   "@noTrajectoryYet": {
     "description": "Empty state for trajectory chart"
+  },
+  "consentTitle": "研究の説明と同意",
+  "@consentTitle": {
+    "description": "App bar title of the informed-consent screen"
+  },
+  "consentUpdatedTitle": "更新された同意書",
+  "@consentUpdatedTitle": {
+    "description": "App bar title when re-consenting after a version bump"
+  },
+  "consentConfirmText": "「同意します」をタップすることで、研究に関する情報を読んで理解し、自発的に参加することを確認したことになります。",
+  "@consentConfirmText": {
+    "description": "Text above the consent buttons"
+  },
+  "consentAccept": "同意します",
+  "@consentAccept": {
+    "description": "Accept button on the consent screen"
+  },
+  "consentDecline": "同意しません",
+  "@consentDecline": {
+    "description": "Decline button on the consent screen"
+  },
+  "consentCouldNotLoad": "同意書を読み込めませんでした。接続を確認してください。",
+  "@consentCouldNotLoad": {
+    "description": "Offline error on the consent screen"
+  },
+  "deleteAccount": "アカウントを削除",
+  "@deleteAccount": {
+    "description": "Settings entry to delete the account"
+  },
+  "deleteAccountTitle": "アカウントを削除しますか？",
+  "@deleteAccountTitle": {
+    "description": "Title of the account-deletion confirmation dialog"
+  },
+  "deleteAccountContent": "アカウントと、それに紐づくすべてのデータ（プロフィール、研究参加、習慣プラン、毎日の記録、質問票の回答、推奨）が完全に削除されます。\n\n提供された習慣は匿名で保存されており、あなたに紐づけることはできません。\n\nこの操作は取り消せません。",
+  "@deleteAccountContent": {
+    "description": "Body of the account-deletion confirmation dialog"
+  },
+  "deleteAccountConfirm": "完全に削除",
+  "@deleteAccountConfirm": {
+    "description": "Destructive confirm button of the deletion dialog"
+  },
+  "deleteAccountFailed": "アカウントの削除に失敗しました。接続を確認して、もう一度お試しください。",
+  "@deleteAccountFailed": {
+    "description": "Snackbar when account deletion fails"
+  },
+  "exportMyData": "データをエクスポート",
+  "@exportMyData": {
+    "description": "Settings entry for the GDPR data export"
+  },
+  "exportFailed": "エクスポートに失敗しました。接続を確認して、もう一度お試しください。",
+  "@exportFailed": {
+    "description": "Snackbar when the data export fails"
+  },
+  "myDataSection": "マイデータ",
+  "@myDataSection": {
+    "description": "Settings section label for data rights"
+  },
+  "studyConsent": "研究への同意",
+  "@studyConsent": {
+    "description": "Settings entry / title of the read-only consent document"
+  },
+  "legalSection": "法的情報",
+  "@legalSection": {
+    "description": "Settings section label for legal documents"
+  },
+  "language": "言語",
+  "@language": {
+    "description": "Settings entry for the app language"
+  },
+  "signOut": "サインアウト",
+  "@signOut": {
+    "description": "Settings entry to sign out"
+  },
+  "signOutConfirm": "本当にサインアウトしますか？",
+  "@signOutConfirm": {
+    "description": "Body of the sign-out confirmation dialog"
+  },
+  "aiDisclaimer": "あなたの研究データに基づくAI生成の提案です。これは医学的助言ではありません。健康上の懸念がある場合は医師にご相談ください。",
+  "@aiDisclaimer": {
+    "description": "AI provenance and medical disclaimer on the recommendations screen"
+  },
+  "dailyReminderLabel": "毎日のリマインダー",
+  "@dailyReminderLabel": {
+    "description": "Label of the reminder section in habit creation"
+  },
+  "noReminders": "リマインダーなし",
+  "@noReminders": {
+    "description": "Shown when reminders are disabled"
+  },
+  "reminderFadingHint": "習慣が強くなるにつれて、リマインダーの頻度は減っていきます。",
+  "@reminderFadingHint": {
+    "description": "Hint explaining adaptive reminder fading"
+  },
+  "doneButton": "完了",
+  "@doneButton": {
+    "description": "Done button on the time picker sheet"
+  },
+  "habitStrengthLabel": "習慣の強さ",
+  "@habitStrengthLabel": {
+    "description": "Label of the SRHI score chip on habit cards"
+  },
+  "commentsTitle": "コメント",
+  "@commentsTitle": {
+    "description": "Header of the comment section on a habit"
+  },
+  "commentHint": "感想をシェア（匿名）…",
+  "@commentHint": {
+    "description": "Placeholder of the comment input"
+  },
+  "noCommentsYet": "まだコメントはありません。最初のコメントを書きましょう。",
+  "@noCommentsYet": {
+    "description": "Empty state of the comment list"
+  },
+  "couldNotPostComment": "コメントを投稿できませんでした",
+  "@couldNotPostComment": {
+    "description": "Snackbar when posting a comment fails"
+  },
+  "likeTooltip": "いいね",
+  "@likeTooltip": {
+    "description": "Tooltip of the like button"
+  },
+  "adminComments": "コメント",
+  "@adminComments": {
+    "description": "Title of the admin comment-moderation screen"
+  },
+  "adminDeleteCommentTitle": "コメントを削除しますか？",
+  "@adminDeleteCommentTitle": {
+    "description": "Title of the moderation delete dialog"
+  },
+  "adminDeleteCommentContent": "このコメントはすべての参加者から削除されます。取り消せません。",
+  "@adminDeleteCommentContent": {
+    "description": "Body of the moderation delete dialog"
+  },
+  "adminFailedToDeleteComment": "コメントの削除に失敗しました",
+  "@adminFailedToDeleteComment": {
+    "description": "Snackbar when moderation deletion fails"
+  },
+  "adminFailedToLoadComments": "コメントの読み込みに失敗しました",
+  "@adminFailedToLoadComments": {
+    "description": "Error state of the moderation list"
+  },
+  "adminNoCommentsYet": "まだコメントはありません。",
+  "@adminNoCommentsYet": {
+    "description": "Empty state of the moderation list"
   }
 }

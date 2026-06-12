@@ -662,77 +662,293 @@
     "description": "Empty state message shown on the profile screen when the participant's study has no questionnaires"
   },
   "myHabitsTab": "My Habits",
-  "@myHabitsTab": { "description": "Bottom nav tab label for My Habits" },
+  "@myHabitsTab": {
+    "description": "Bottom nav tab label for My Habits"
+  },
   "newHabit": "New Habit",
-  "@newHabit": { "description": "Button to start new habit flow" },
+  "@newHabit": {
+    "description": "Button to start new habit flow"
+  },
   "noHabitsYet": "No habits yet.\nTap \"New Habit\" to start forming one.",
-  "@noHabitsYet": { "description": "Empty state for My Habits tab" },
+  "@noHabitsYet": {
+    "description": "Empty state for My Habits tab"
+  },
   "logToday": "Log today",
-  "@logToday": { "description": "Button on habit card to log today's enactment" },
+  "@logToday": {
+    "description": "Button on habit card to log today's enactment"
+  },
   "loggedToday": "Logged ✓",
-  "@loggedToday": { "description": "Shown on habit card when today is already logged" },
+  "@loggedToday": {
+    "description": "Shown on habit card when today is already logged"
+  },
   "pickBehaviorTitle": "What habit do you want to form?",
-  "@pickBehaviorTitle": { "description": "Screen 1 of new habit flow" },
+  "@pickBehaviorTitle": {
+    "description": "Screen 1 of new habit flow"
+  },
   "setCueTitle": "Set your cue",
-  "@setCueTitle": { "description": "Screen 2 of new habit flow" },
+  "@setCueTitle": {
+    "description": "Screen 2 of new habit flow"
+  },
   "setCuePreRatedInstruction": "Your study condition assigns the following cue(s). Read them carefully — this is when you will act.",
-  "@setCuePreRatedInstruction": { "description": "Instruction shown for pre-rated cues" },
+  "@setCuePreRatedInstruction": {
+    "description": "Instruction shown for pre-rated cues"
+  },
   "setCueSelfSelectedInstruction": "Describe a specific moment that happens regularly in your life.",
-  "@setCueSelfSelectedInstruction": { "description": "Instruction shown for self-selected cues" },
+  "@setCueSelfSelectedInstruction": {
+    "description": "Instruction shown for self-selected cues"
+  },
   "setCuePlaceholder": "e.g. After dinner each evening",
-  "@setCuePlaceholder": { "description": "Hint text for self-selected cue input" },
+  "@setCuePlaceholder": {
+    "description": "Hint text for self-selected cue input"
+  },
   "setCueTooShort": "Please describe your cue in at least 10 characters.",
-  "@setCueTooShort": { "description": "Validation error for too-short cue text" },
+  "@setCueTooShort": {
+    "description": "Validation error for too-short cue text"
+  },
   "confirmPlanTitle": "Your plan",
-  "@confirmPlanTitle": { "description": "Screen 3 of new habit flow" },
+  "@confirmPlanTitle": {
+    "description": "Screen 3 of new habit flow"
+  },
   "confirmPlanSubtitle": "Read your implementation intention and confirm.",
-  "@confirmPlanSubtitle": { "description": "Subtitle on confirm plan screen" },
+  "@confirmPlanSubtitle": {
+    "description": "Subtitle on confirm plan screen"
+  },
   "durationLabel": "Duration (minutes)",
-  "@durationLabel": { "description": "Label for duration input in new habit flow" },
+  "@durationLabel": {
+    "description": "Label for duration input in new habit flow"
+  },
   "createHabit": "Create habit",
-  "@createHabit": { "description": "Submit button on confirm plan screen" },
+  "@createHabit": {
+    "description": "Submit button on confirm plan screen"
+  },
   "habitLimitReached": "You have reached the habit limit for your study condition.",
-  "@habitLimitReached": { "description": "Error when maxHabits is exceeded" },
+  "@habitLimitReached": {
+    "description": "Error when maxHabits is exceeded"
+  },
   "srhiCheckInTitle": "Weekly habit check-in",
-  "@srhiCheckInTitle": { "description": "Title on SRHI prompt card" },
+  "@srhiCheckInTitle": {
+    "description": "Title on SRHI prompt card"
+  },
   "srhiCheckInSubtitle": "Takes about 2 minutes.",
-  "@srhiCheckInSubtitle": { "description": "Subtitle on SRHI prompt card" },
+  "@srhiCheckInSubtitle": {
+    "description": "Subtitle on SRHI prompt card"
+  },
   "srhiStartButton": "Start check-in",
-  "@srhiStartButton": { "description": "Button on SRHI prompt card" },
+  "@srhiStartButton": {
+    "description": "Button on SRHI prompt card"
+  },
   "srhiFormTitle": "Habit check-in",
-  "@srhiFormTitle": { "description": "AppBar title on SRHI form screen" },
+  "@srhiFormTitle": {
+    "description": "AppBar title on SRHI form screen"
+  },
   "srhiStem": "My {behavior} is something…",
   "@srhiStem": {
     "description": "Stem sentence for SRHI items",
-    "placeholders": { "behavior": { "type": "String" } }
+    "placeholders": {
+      "behavior": {
+        "type": "String"
+      }
+    }
   },
   "srhiSubmit": "Submit",
-  "@srhiSubmit": { "description": "Submit button on SRHI form screen" },
+  "@srhiSubmit": {
+    "description": "Submit button on SRHI form screen"
+  },
   "srhiSubmitIncomplete": "Please rate all 12 items before submitting.",
-  "@srhiSubmitIncomplete": { "description": "Error shown when SRHI form is incomplete" },
+  "@srhiSubmitIncomplete": {
+    "description": "Error shown when SRHI form is incomplete"
+  },
   "weekLabel": "Week {n}",
   "@weekLabel": {
     "description": "Week label in SRHI trajectory",
-    "placeholders": { "n": { "type": "int" } }
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
   },
   "habitDetailTitle": "Habit detail",
-  "@habitDetailTitle": { "description": "AppBar title on habit detail screen" },
+  "@habitDetailTitle": {
+    "description": "AppBar title on habit detail screen"
+  },
   "abandonHabit": "Abandon habit",
-  "@abandonHabit": { "description": "Menu action to abandon a habit" },
+  "@abandonHabit": {
+    "description": "Menu action to abandon a habit"
+  },
   "abandonConfirm": "Are you sure you want to abandon this habit? This cannot be undone.",
-  "@abandonConfirm": { "description": "Confirmation dialog body for abandon" },
+  "@abandonConfirm": {
+    "description": "Confirmation dialog body for abandon"
+  },
   "confirm": "Confirm",
-  "@confirm": { "description": "Confirm button in dialogs" },
+  "@confirm": {
+    "description": "Confirm button in dialogs"
+  },
   "heatmapTitle": "Activity log",
-  "@heatmapTitle": { "description": "Section title above the heatmap" },
+  "@heatmapTitle": {
+    "description": "Section title above the heatmap"
+  },
   "trajectoryTitle": "Habit strength",
-  "@trajectoryTitle": { "description": "Section title above SRHI trajectory chart" },
+  "@trajectoryTitle": {
+    "description": "Section title above SRHI trajectory chart"
+  },
   "enactedLabel": "Enacted",
-  "@enactedLabel": { "description": "Legend label for heatmap enacted cells" },
+  "@enactedLabel": {
+    "description": "Legend label for heatmap enacted cells"
+  },
   "missedLabel": "Missed",
-  "@missedLabel": { "description": "Legend label for heatmap missed cells" },
+  "@missedLabel": {
+    "description": "Legend label for heatmap missed cells"
+  },
   "noLogsYet": "No activity logged yet.",
-  "@noLogsYet": { "description": "Empty state for heatmap" },
+  "@noLogsYet": {
+    "description": "Empty state for heatmap"
+  },
   "noTrajectoryYet": "SRHI data will appear after your first weekly check-in.",
-  "@noTrajectoryYet": { "description": "Empty state for trajectory chart" }
+  "@noTrajectoryYet": {
+    "description": "Empty state for trajectory chart"
+  },
+  "consentTitle": "Study Information & Consent",
+  "@consentTitle": {
+    "description": "App bar title of the informed-consent screen"
+  },
+  "consentUpdatedTitle": "Updated Study Consent",
+  "@consentUpdatedTitle": {
+    "description": "App bar title when re-consenting after a version bump"
+  },
+  "consentConfirmText": "By tapping \"I consent\" you confirm that you have read and understood the study information and voluntarily agree to participate.",
+  "@consentConfirmText": {
+    "description": "Text above the consent buttons"
+  },
+  "consentAccept": "I consent",
+  "@consentAccept": {
+    "description": "Accept button on the consent screen"
+  },
+  "consentDecline": "I do not consent",
+  "@consentDecline": {
+    "description": "Decline button on the consent screen"
+  },
+  "consentCouldNotLoad": "The consent document could not be loaded. Please check your connection.",
+  "@consentCouldNotLoad": {
+    "description": "Offline error on the consent screen"
+  },
+  "deleteAccount": "Delete account",
+  "@deleteAccount": {
+    "description": "Settings entry to delete the account"
+  },
+  "deleteAccountTitle": "Delete account?",
+  "@deleteAccountTitle": {
+    "description": "Title of the account-deletion confirmation dialog"
+  },
+  "deleteAccountContent": "This permanently deletes your account and all data linked to it: your profile, study enrollment, habit plans, daily logs, questionnaire answers, and recommendations.\n\nHabit donations are stored anonymously and cannot be traced back to you.\n\nThis cannot be undone.",
+  "@deleteAccountContent": {
+    "description": "Body of the account-deletion confirmation dialog"
+  },
+  "deleteAccountConfirm": "Delete permanently",
+  "@deleteAccountConfirm": {
+    "description": "Destructive confirm button of the deletion dialog"
+  },
+  "deleteAccountFailed": "Account deletion failed. Please check your connection and try again.",
+  "@deleteAccountFailed": {
+    "description": "Snackbar when account deletion fails"
+  },
+  "exportMyData": "Export my data",
+  "@exportMyData": {
+    "description": "Settings entry for the GDPR data export"
+  },
+  "exportFailed": "Export failed. Please check your connection and try again.",
+  "@exportFailed": {
+    "description": "Snackbar when the data export fails"
+  },
+  "myDataSection": "My data",
+  "@myDataSection": {
+    "description": "Settings section label for data rights"
+  },
+  "studyConsent": "Study consent",
+  "@studyConsent": {
+    "description": "Settings entry / title of the read-only consent document"
+  },
+  "legalSection": "Legal",
+  "@legalSection": {
+    "description": "Settings section label for legal documents"
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Settings entry for the app language"
+  },
+  "signOut": "Sign out",
+  "@signOut": {
+    "description": "Settings entry to sign out"
+  },
+  "signOutConfirm": "Are you sure you want to sign out?",
+  "@signOutConfirm": {
+    "description": "Body of the sign-out confirmation dialog"
+  },
+  "aiDisclaimer": "AI-generated suggestions based on your study data. This is not medical advice — consult a doctor for health concerns.",
+  "@aiDisclaimer": {
+    "description": "AI provenance and medical disclaimer on the recommendations screen"
+  },
+  "dailyReminderLabel": "Daily reminder",
+  "@dailyReminderLabel": {
+    "description": "Label of the reminder section in habit creation"
+  },
+  "noReminders": "No reminders",
+  "@noReminders": {
+    "description": "Shown when reminders are disabled"
+  },
+  "reminderFadingHint": "Reminders become less frequent as your habit gets stronger.",
+  "@reminderFadingHint": {
+    "description": "Hint explaining adaptive reminder fading"
+  },
+  "doneButton": "Done",
+  "@doneButton": {
+    "description": "Done button on the time picker sheet"
+  },
+  "habitStrengthLabel": "Habit strength",
+  "@habitStrengthLabel": {
+    "description": "Label of the SRHI score chip on habit cards"
+  },
+  "commentsTitle": "Comments",
+  "@commentsTitle": {
+    "description": "Header of the comment section on a habit"
+  },
+  "commentHint": "Share a thought (anonymous)…",
+  "@commentHint": {
+    "description": "Placeholder of the comment input"
+  },
+  "noCommentsYet": "No comments yet — be the first.",
+  "@noCommentsYet": {
+    "description": "Empty state of the comment list"
+  },
+  "couldNotPostComment": "Could not post comment",
+  "@couldNotPostComment": {
+    "description": "Snackbar when posting a comment fails"
+  },
+  "likeTooltip": "Like",
+  "@likeTooltip": {
+    "description": "Tooltip of the like button"
+  },
+  "adminComments": "Comments",
+  "@adminComments": {
+    "description": "Title of the admin comment-moderation screen"
+  },
+  "adminDeleteCommentTitle": "Delete comment?",
+  "@adminDeleteCommentTitle": {
+    "description": "Title of the moderation delete dialog"
+  },
+  "adminDeleteCommentContent": "This removes the comment for all participants. Cannot be undone.",
+  "@adminDeleteCommentContent": {
+    "description": "Body of the moderation delete dialog"
+  },
+  "adminFailedToDeleteComment": "Failed to delete comment",
+  "@adminFailedToDeleteComment": {
+    "description": "Snackbar when moderation deletion fails"
+  },
+  "adminFailedToLoadComments": "Failed to load comments",
+  "@adminFailedToLoadComments": {
+    "description": "Error state of the moderation list"
+  },
+  "adminNoCommentsYet": "No comments yet.",
+  "@adminNoCommentsYet": {
+    "description": "Empty state of the moderation list"
+  }
 }
