@@ -64,7 +64,7 @@ class MyHabitsService {
           'durationMinutes': durationMinutes,
           'cues': cues.map((c) => c.toJson()).toList(),
           'intentionStatement': intentionStatement,
-          if (reminderTime != null) 'reminderTime': reminderTime,
+          'reminderTime': ?reminderTime,
         },
       );
       if (res.statusCode == 409) {

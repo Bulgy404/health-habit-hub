@@ -38,6 +38,7 @@ Future<void> main() async {
       // participants are anonymous and must stay that way in crash reports.
       options.sendDefaultPii = false;
       options.attachScreenshot = false;
+      // ignore: experimental_member_use
       options.attachViewHierarchy = false;
       options.tracesSampleRate = 0;
       options.environment =

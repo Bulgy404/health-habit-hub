@@ -604,7 +604,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get consentUpdatedTitle => '更新された同意書';
 
   @override
-  String get consentConfirmText => '「同意します」をタップすることで、研究に関する情報を読んで理解し、自発的に参加することを確認したことになります。';
+  String get consentConfirmText =>
+      '「同意します」をタップすることで、研究に関する情報を読んで理解し、自発的に参加することを確認したことになります。';
 
   @override
   String get consentAccept => '同意します';
@@ -622,7 +623,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get deleteAccountTitle => 'アカウントを削除しますか？';
 
   @override
-  String get deleteAccountContent => 'アカウントと、それに紐づくすべてのデータ（プロフィール、研究参加、習慣プラン、毎日の記録、質問票の回答、推奨）が完全に削除されます。\n\n提供された習慣は匿名で保存されており、あなたに紐づけることはできません。\n\nこの操作は取り消せません。';
+  String get deleteAccountContent =>
+      'アカウントと、それに紐づくすべてのデータ（プロフィール、研究参加、習慣プラン、毎日の記録、質問票の回答、推奨）が完全に削除されます。\n\n提供された習慣は匿名で保存されており、あなたに紐づけることはできません。\n\nこの操作は取り消せません。';
 
   @override
   String get deleteAccountConfirm => '完全に削除';
@@ -655,7 +657,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get signOutConfirm => '本当にサインアウトしますか？';
 
   @override
-  String get aiDisclaimer => 'あなたの研究データに基づくAI生成の提案です。これは医学的助言ではありません。健康上の懸念がある場合は医師にご相談ください。';
+  String get aiDisclaimer =>
+      'あなたの研究データに基づくAI生成の提案です。これは医学的助言ではありません。健康上の懸念がある場合は医師にご相談ください。';
 
   @override
   String get dailyReminderLabel => '毎日のリマインダー';

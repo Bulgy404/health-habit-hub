@@ -216,7 +216,7 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
         '${AppConfig.apiBaseUrl}/users/me/consent',
         data: {
           'consentVersion': consentVersion,
-          if (consentLocale != null) 'locale': consentLocale,
+          'locale': ?consentLocale,
         },
         options: Options(headers: {'Authorization': 'Bearer $_accessToken'}),
       );

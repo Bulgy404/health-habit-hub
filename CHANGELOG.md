@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — CI pipeline repairs (2026-06-10)
+- **Ontology – graph integrity job rewritten for the current schema:** it still seeded and asserted the retired `hhh__` legacy graph; now seeds a Habit→Context→BCIOConcept(+Comment) fixture and asserts constraint presence (`habit_uuid`, `bcio_uri_unique`, `comment_id_unique`), pipeline-shape retrievability, and integrity invariants (no duplicate uuids, no orphaned Context/Comment nodes)
+- **Flutter – dependency audit:** `flutter_timezone` bumped `^4.1.1` → `^5.0.2` (latest major is 5.x; the audit gate flags lagging majors) and the scheduler adapted to the v5 `TimezoneInfo.identifier` API
+- **Nightly E2E:** corrected service list for `docker-compose.local.yml` (no `keycloak-db` locally; added `keycloak-init`; removed the full-stack fallback that pulled LLM-dependent services); seeding now runs via `npm run seed` from `app/`
+- **Deprecation warnings:** `actions/checkout@v5`, `actions/setup-python@v6`, `actions/upload-artifact@v5` across all workflows and composite actions (Node 24 runners)
+
 ### Added — Comment moderation, full localization, CI fixes (2026-06-10)
 - **Comment moderation (UC-34/UC-27):** `GET /api/v1/admin/comments` (all participant comments newest-first with habit context, limit-capped) and `DELETE /api/v1/admin/comments/:commentId` (removes the anonymous Neo4j node + Mongo ownership mapping); new Flutter admin screen (list, refresh, confirm-and-delete) reachable from the habit monitor app bar; adminRouter gains the lazy production Neo4j fallback; 3 new integration tests (role enforcement, listing with context, delete-and-verify)
 - **Localization completed:** 36 new l10n keys (consent flow, account deletion, data export, AI disclaimer, reminder picker, habit-strength chip, comments UI, moderation UI) translated to EN/DE/JA across the three arb files and the generated localization classes; all hardcoded English strings from the recent feature work replaced — JA strings pending native-speaker review like the consent translation
