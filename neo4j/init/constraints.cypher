@@ -1,7 +1,7 @@
 // Neo4j constraints for Health Habit Hub (current schema only —
 // legacy n10s/hhh__ constraints removed 2026-06, no legacy data existed).
 // Core constraints are also applied automatically at backend startup
-// (app/utils/neo4jSchema.js); this file is for fresh-database seeding.
+// via app/utils/neo4jSchema.js — this file is for fresh-database seeding.
 
 // Uniqueness constraint on Habit.uuid (new donate-pipeline schema)
 CREATE CONSTRAINT habit_uuid IF NOT EXISTS

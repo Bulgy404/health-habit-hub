@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed — CI pipeline repairs (2026-06-10)
+- **Ontology constraint parser fixed:** the CI step split `constraints.cypher` on `;` *before* removing comments — a semicolon inside a header comment produced a bogus statement (Cypher syntax error), and `//`-prefixed chunks bundled with real statements would have been silently dropped; the parser now strips comment lines first, and the header comment no longer contains a semicolon (10 clean statements verified)
 - **Ontology – graph integrity job rewritten for the current schema:** it still seeded and asserted the retired `hhh__` legacy graph; now seeds a Habit→Context→BCIOConcept(+Comment) fixture and asserts constraint presence (`habit_uuid`, `bcio_uri_unique`, `comment_id_unique`), pipeline-shape retrievability, and integrity invariants (no duplicate uuids, no orphaned Context/Comment nodes)
 - **Flutter – dependency audit:** `flutter_timezone` bumped `^4.1.1` → `^5.0.2` (latest major is 5.x; the audit gate flags lagging majors) and the scheduler adapted to the v5 `TimezoneInfo.identifier` API
 - **Nightly E2E:** corrected service list for `docker-compose.local.yml` (no `keycloak-db` locally; added `keycloak-init`; removed the full-stack fallback that pulled LLM-dependent services); seeding now runs via `npm run seed` from `app/`

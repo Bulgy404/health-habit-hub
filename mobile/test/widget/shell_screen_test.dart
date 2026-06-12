@@ -12,7 +12,7 @@ import 'package:hhh/screens/shell_screen.dart';
 // Test router factory
 // ---------------------------------------------------------------------------
 
-GoRouter _buildTestRouter({List<String> roles = const []}) {
+GoRouter _buildTestRouter() {
   return GoRouter(
     initialLocation: '/share',
     routes: [
@@ -29,6 +29,12 @@ GoRouter _buildTestRouter({List<String> roles = const []}) {
             GoRoute(
               path: '/explore',
               builder: (_, _) => const Scaffold(body: Text('Explore Tab')),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: '/habits',
+              builder: (_, _) => const Scaffold(body: Text('Habits Tab')),
             ),
           ]),
           StatefulShellBranch(routes: [
@@ -81,6 +87,7 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Share'), findsOneWidget);
     expect(find.text('Explore'), findsOneWidget);
+    expect(find.text('Habits'), findsOneWidget);
     expect(find.text('Recs'), findsOneWidget);
     expect(find.text('Account'), findsOneWidget);
   });
@@ -94,7 +101,7 @@ void main() {
   });
 
   testWidgets('shows Admin tab for admin users', (tester) async {
-    final router = _buildTestRouter(roles: ['admin']);
+    final router = _buildTestRouter();
     await tester.pumpWidget(_buildSubject(router, ['admin']));
     await tester.pump();
 

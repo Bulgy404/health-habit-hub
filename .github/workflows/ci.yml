@@ -247,9 +247,12 @@ jobs:
         run: |
           python3 - <<'EOF'
           import json, urllib.request, urllib.parse
-          constraints = open("neo4j/init/constraints.cypher").read()
-          # Strip comments and split on semicolons to get individual statements
-          stmts = [s.strip() for s in constraints.split(";") if s.strip() and not s.strip().startswith("//")]
+          raw = open("neo4j/init/constraints.cypher").read()
+          # Remove comment LINES first (they may contain semicolons and would
+          # otherwise be bundled into / split out of real statements), THEN
+          # split on semicolons to get individual statements.
+          code = "\n".join(l for l in raw.split("\n") if not l.strip().startswith("//"))
+          stmts = [s.strip() for s in code.split(";") if s.strip()]
           payload = json.dumps({"statements": [{"statement": s} for s in stmts]}).encode()
           req = urllib.request.Request(
               "http://localhost:7474/db/neo4j/tx/commit",

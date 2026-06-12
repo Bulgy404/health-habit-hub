@@ -152,7 +152,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
         ? _allTabs
         : _allTabs.where((t) => t.path != '/admin').toList();
 
-    // Map visible-tab index → branch index (admin branch is always #4).
+    // Map visible-tab index to branch index (admin branch is always #5).
     int currentVisibleIndex = widget.navigationShell.currentIndex;
     if (!isAdminOrResearcher &&
         widget.navigationShell.currentIndex >= _adminBranchIndex) {
