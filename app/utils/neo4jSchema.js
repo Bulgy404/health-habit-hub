@@ -46,7 +46,10 @@ export async function ensureNeo4jSchema() {
     log.info('Neo4j constraints/indexes ensured (habit graph schema)');
     return true;
   } catch (err) {
-    log.warn({ err }, 'Could not ensure Neo4j schema (will retry on next start)');
+    log.warn(
+      { err },
+      'Could not ensure Neo4j schema (will retry on next start)'
+    );
     return false;
   } finally {
     await session.close();

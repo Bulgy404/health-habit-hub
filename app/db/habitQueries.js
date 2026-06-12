@@ -281,3 +281,24 @@ export async function deleteHabitComments(queryNeo4j, commentIds) {
     { commentIds }
   );
 }
+
+/**
+ * List ALL comments across habits for researcher moderation, newest first,
+ * including the habit sentence for context.
+ * @param {Function} queryNeo4j
+ * @param {number} [limit]
+ * @returns {Promise<Array<{id, text, createdAt, habitId, habitSentence}>>}
+ */
+export async function listAllComments(queryNeo4j, limit = 100) {
+  return queryNeo4j(
+    `MATCH (c:Comment)-[:COMMENT_ON]->(h:Habit)
+     RETURN c.id AS id,
+            c.text AS text,
+            c.createdAt AS createdAt,
+            h.uuid AS habitId,
+            coalesce(h.translationEN, h.sentence) AS habitSentence
+     ORDER BY c.createdAt DESC
+     LIMIT toInteger($limit)`,
+    { limit }
+  );
+}

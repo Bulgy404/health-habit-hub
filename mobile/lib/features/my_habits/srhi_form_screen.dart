@@ -5,10 +5,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../l10n/app_localizations.dart';
-import 'my_habits_models.dart';
+
 import '../../core/dio_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/reminder_scheduler_service.dart';
+import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
 

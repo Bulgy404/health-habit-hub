@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Comment moderation, full localization, CI fixes (2026-06-10)
+- **Comment moderation (UC-34/UC-27):** `GET /api/v1/admin/comments` (all participant comments newest-first with habit context, limit-capped) and `DELETE /api/v1/admin/comments/:commentId` (removes the anonymous Neo4j node + Mongo ownership mapping); new Flutter admin screen (list, refresh, confirm-and-delete) reachable from the habit monitor app bar; adminRouter gains the lazy production Neo4j fallback; 3 new integration tests (role enforcement, listing with context, delete-and-verify)
+- **Localization completed:** 36 new l10n keys (consent flow, account deletion, data export, AI disclaimer, reminder picker, habit-strength chip, comments UI, moderation UI) translated to EN/DE/JA across the three arb files and the generated localization classes; all hardcoded English strings from the recent feature work replaced — JA strings pending native-speaker review like the consent translation
+- **CI fixes:** committed `docs/api/openapi.yaml` regenerated (had re-staled after the moderation endpoints — the new drift gate would have caught it); Prettier formatting applied to 5 backend files; Dart import blocks normalized (dart:/package:/relative, each sorted) in all 20 session-touched files to satisfy `directives_ordering` in `flutter analyze`; `timezone` constraint fixed to `^0.11.0` for `flutter_local_notifications` 22 pub resolution; lockfile verified in sync with `npm ci --dry-run`
+
+### Fixed — Account deletion was incomplete in production (2026-06-10)
+- `usersRouter` lacked the production fallbacks the other routers have: with `createV1Router()` called without injected clients (the production path in `app.js`), `DELETE /users/me` wiped MongoDB but **silently skipped the Keycloak identity and the user's Comment nodes**. Now mirrors `adminRouter`/`habitsRouter`: lazily creates a real Keycloak admin client and Neo4j runner when none are injected; the nightly E2E smoke test exercises this path against real containers
+
 ### Added — Engineering robustness (2026-06-10)
 - **Crash/error reporting (opt-in):** backend Sentry integration behind `SENTRY_DSN` (`app/utils/errorReporting.js` — central Express error handler, request bodies/cookies stripped, no-op without DSN); Flutter `sentry_flutter` behind `--dart-define=SENTRY_DSN` with PII/screenshots/view-hierarchy disabled; DEPLOYMENT.md documents the self-hosted-instance requirement
 - **Nightly E2E smoke test:** `scripts/smoke-e2e.mjs` walks the real participant journey (health → legal docs → onboard → consent → enroll → habit-config → intention → log → reminder plan → export → deletion incl. erasure verification) against live containers; `.github/workflows/nightly-e2e.yml` boots the compose stack nightly and runs it — catches integration drift 535 mocked tests cannot

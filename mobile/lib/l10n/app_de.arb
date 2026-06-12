@@ -187,5 +187,149 @@
   "enactedLabel": "Umgesetzt",
   "missedLabel": "Verpasst",
   "noLogsYet": "Noch keine Aktivität eingetragen.",
-  "noTrajectoryYet": "SRHI-Daten erscheinen nach deinem ersten wöchentlichen Check-in."
+  "noTrajectoryYet": "SRHI-Daten erscheinen nach deinem ersten wöchentlichen Check-in.",
+  "consentTitle": "Studieninformation & Einwilligung",
+  "@consentTitle": {
+    "description": "App bar title of the informed-consent screen"
+  },
+  "consentUpdatedTitle": "Aktualisierte Einwilligung",
+  "@consentUpdatedTitle": {
+    "description": "App bar title when re-consenting after a version bump"
+  },
+  "consentConfirmText": "Mit \"Ich willige ein\" bestätigen Sie, dass Sie die Studieninformation gelesen und verstanden haben und freiwillig teilnehmen möchten.",
+  "@consentConfirmText": {
+    "description": "Text above the consent buttons"
+  },
+  "consentAccept": "Ich willige ein",
+  "@consentAccept": {
+    "description": "Accept button on the consent screen"
+  },
+  "consentDecline": "Ich willige nicht ein",
+  "@consentDecline": {
+    "description": "Decline button on the consent screen"
+  },
+  "consentCouldNotLoad": "Die Einwilligungserklärung konnte nicht geladen werden. Bitte prüfen Sie Ihre Verbindung.",
+  "@consentCouldNotLoad": {
+    "description": "Offline error on the consent screen"
+  },
+  "deleteAccount": "Konto löschen",
+  "@deleteAccount": {
+    "description": "Settings entry to delete the account"
+  },
+  "deleteAccountTitle": "Konto löschen?",
+  "@deleteAccountTitle": {
+    "description": "Title of the account-deletion confirmation dialog"
+  },
+  "deleteAccountContent": "Dadurch werden Ihr Konto und alle damit verknüpften Daten dauerhaft gelöscht: Profil, Studienteilnahme, Gewohnheitspläne, tägliche Einträge, Fragebogenantworten und Empfehlungen.\n\nGespendete Gewohnheiten sind anonym gespeichert und können nicht auf Sie zurückgeführt werden.\n\nDies kann nicht rückgängig gemacht werden.",
+  "@deleteAccountContent": {
+    "description": "Body of the account-deletion confirmation dialog"
+  },
+  "deleteAccountConfirm": "Endgültig löschen",
+  "@deleteAccountConfirm": {
+    "description": "Destructive confirm button of the deletion dialog"
+  },
+  "deleteAccountFailed": "Kontolöschung fehlgeschlagen. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  "@deleteAccountFailed": {
+    "description": "Snackbar when account deletion fails"
+  },
+  "exportMyData": "Meine Daten exportieren",
+  "@exportMyData": {
+    "description": "Settings entry for the GDPR data export"
+  },
+  "exportFailed": "Export fehlgeschlagen. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  "@exportFailed": {
+    "description": "Snackbar when the data export fails"
+  },
+  "myDataSection": "Meine Daten",
+  "@myDataSection": {
+    "description": "Settings section label for data rights"
+  },
+  "studyConsent": "Studieneinwilligung",
+  "@studyConsent": {
+    "description": "Settings entry / title of the read-only consent document"
+  },
+  "legalSection": "Rechtliches",
+  "@legalSection": {
+    "description": "Settings section label for legal documents"
+  },
+  "language": "Sprache",
+  "@language": {
+    "description": "Settings entry for the app language"
+  },
+  "signOut": "Abmelden",
+  "@signOut": {
+    "description": "Settings entry to sign out"
+  },
+  "signOutConfirm": "Möchten Sie sich wirklich abmelden?",
+  "@signOutConfirm": {
+    "description": "Body of the sign-out confirmation dialog"
+  },
+  "aiDisclaimer": "KI-generierte Vorschläge auf Basis Ihrer Studiendaten. Dies ist keine medizinische Beratung — wenden Sie sich bei gesundheitlichen Fragen an einen Arzt.",
+  "@aiDisclaimer": {
+    "description": "AI provenance and medical disclaimer on the recommendations screen"
+  },
+  "dailyReminderLabel": "Tägliche Erinnerung",
+  "@dailyReminderLabel": {
+    "description": "Label of the reminder section in habit creation"
+  },
+  "noReminders": "Keine Erinnerungen",
+  "@noReminders": {
+    "description": "Shown when reminders are disabled"
+  },
+  "reminderFadingHint": "Erinnerungen werden seltener, je stärker Ihre Gewohnheit wird.",
+  "@reminderFadingHint": {
+    "description": "Hint explaining adaptive reminder fading"
+  },
+  "doneButton": "Fertig",
+  "@doneButton": {
+    "description": "Done button on the time picker sheet"
+  },
+  "habitStrengthLabel": "Gewohnheitsstärke",
+  "@habitStrengthLabel": {
+    "description": "Label of the SRHI score chip on habit cards"
+  },
+  "commentsTitle": "Kommentare",
+  "@commentsTitle": {
+    "description": "Header of the comment section on a habit"
+  },
+  "commentHint": "Teilen Sie einen Gedanken (anonym) …",
+  "@commentHint": {
+    "description": "Placeholder of the comment input"
+  },
+  "noCommentsYet": "Noch keine Kommentare — seien Sie die/der Erste.",
+  "@noCommentsYet": {
+    "description": "Empty state of the comment list"
+  },
+  "couldNotPostComment": "Kommentar konnte nicht gesendet werden",
+  "@couldNotPostComment": {
+    "description": "Snackbar when posting a comment fails"
+  },
+  "likeTooltip": "Gefällt mir",
+  "@likeTooltip": {
+    "description": "Tooltip of the like button"
+  },
+  "adminComments": "Kommentare",
+  "@adminComments": {
+    "description": "Title of the admin comment-moderation screen"
+  },
+  "adminDeleteCommentTitle": "Kommentar löschen?",
+  "@adminDeleteCommentTitle": {
+    "description": "Title of the moderation delete dialog"
+  },
+  "adminDeleteCommentContent": "Der Kommentar wird für alle Teilnehmenden entfernt. Kann nicht rückgängig gemacht werden.",
+  "@adminDeleteCommentContent": {
+    "description": "Body of the moderation delete dialog"
+  },
+  "adminFailedToDeleteComment": "Kommentar konnte nicht gelöscht werden",
+  "@adminFailedToDeleteComment": {
+    "description": "Snackbar when moderation deletion fails"
+  },
+  "adminFailedToLoadComments": "Kommentare konnten nicht geladen werden",
+  "@adminFailedToLoadComments": {
+    "description": "Error state of the moderation list"
+  },
+  "adminNoCommentsYet": "Noch keine Kommentare.",
+  "@adminNoCommentsYet": {
+    "description": "Empty state of the moderation list"
+  }
 }

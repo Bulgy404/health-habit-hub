@@ -7,8 +7,19 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/my_habits/habit_detail_screen.dart';
+import '../features/my_habits/my_habits_models.dart';
+import '../features/my_habits/my_habits_screen.dart';
+import '../features/my_habits/new_habit_screen_1_behavior.dart';
+import '../features/my_habits/new_habit_screen_2_cue.dart';
+import '../features/my_habits/new_habit_screen_3_confirm.dart';
+import '../features/my_habits/srhi_form_screen.dart';
+import '../features/questionnaire/questionnaire_screen.dart';
+import '../features/recommendation/goal_input_screen.dart';
+import '../features/recommendation/loading_screen.dart';
 import '../models/admin_survey.dart';
 import '../providers/auth_provider.dart';
+import '../screens/admin/admin_comments_screen.dart';
 import '../screens/admin/admin_devices_screen.dart';
 import '../screens/admin/admin_habits_screen.dart';
 import '../screens/admin/admin_participant_detail_screen.dart';
@@ -17,16 +28,6 @@ import '../screens/admin/admin_questionnaires_screen.dart';
 import '../screens/admin/admin_settings_screen.dart';
 import '../screens/admin/admin_shell_screen.dart';
 import '../screens/admin/admin_surveys_screen.dart';
-import '../features/my_habits/my_habits_screen.dart';
-import '../features/my_habits/new_habit_screen_1_behavior.dart';
-import '../features/my_habits/new_habit_screen_2_cue.dart';
-import '../features/my_habits/new_habit_screen_3_confirm.dart';
-import '../features/my_habits/habit_detail_screen.dart';
-import '../features/my_habits/srhi_form_screen.dart';
-import '../features/my_habits/my_habits_models.dart';
-import '../features/questionnaire/questionnaire_screen.dart';
-import '../features/recommendation/goal_input_screen.dart';
-import '../features/recommendation/loading_screen.dart';
 import '../screens/donate_screen.dart';
 import '../screens/explore_screen.dart';
 import '../screens/legal_document_screen.dart';
@@ -38,8 +39,8 @@ import '../screens/onboarding/restore_screen.dart';
 import '../screens/onboarding/study_code_screen.dart';
 import '../screens/onboarding/welcome_screen.dart';
 import '../screens/profile_screen.dart';
-import '../screens/shell_screen.dart';
 import '../screens/settings/personal_info_screen.dart';
+import '../screens/shell_screen.dart';
 import '../screens/user_settings_screen.dart';
 import 'redirect.dart';
 
@@ -296,6 +297,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                     path: '/admin/questionnaires',
                     builder: (context, state) =>
                         const AdminQuestionnairesScreen(),
+                  ),
+                  GoRoute(
+                    path: '/admin/comments',
+                    builder: (context, state) => const AdminCommentsScreen(),
                   ),
                   GoRoute(
                     path: '/admin/habits',

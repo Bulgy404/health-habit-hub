@@ -640,4 +640,112 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get noTrajectoryYet =>
       'SRHI-Daten erscheinen nach deinem ersten wöchentlichen Check-in.';
+
+  @override
+  String get consentTitle => 'Studieninformation & Einwilligung';
+
+  @override
+  String get consentUpdatedTitle => 'Aktualisierte Einwilligung';
+
+  @override
+  String get consentConfirmText => 'Mit "Ich willige ein" bestätigen Sie, dass Sie die Studieninformation gelesen und verstanden haben und freiwillig teilnehmen möchten.';
+
+  @override
+  String get consentAccept => 'Ich willige ein';
+
+  @override
+  String get consentDecline => 'Ich willige nicht ein';
+
+  @override
+  String get consentCouldNotLoad => 'Die Einwilligungserklärung konnte nicht geladen werden. Bitte prüfen Sie Ihre Verbindung.';
+
+  @override
+  String get deleteAccount => 'Konto löschen';
+
+  @override
+  String get deleteAccountTitle => 'Konto löschen?';
+
+  @override
+  String get deleteAccountContent => 'Dadurch werden Ihr Konto und alle damit verknüpften Daten dauerhaft gelöscht: Profil, Studienteilnahme, Gewohnheitspläne, tägliche Einträge, Fragebogenantworten und Empfehlungen.\n\nGespendete Gewohnheiten sind anonym gespeichert und können nicht auf Sie zurückgeführt werden.\n\nDies kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get deleteAccountConfirm => 'Endgültig löschen';
+
+  @override
+  String get deleteAccountFailed => 'Kontolöschung fehlgeschlagen. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.';
+
+  @override
+  String get exportMyData => 'Meine Daten exportieren';
+
+  @override
+  String get exportFailed => 'Export fehlgeschlagen. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.';
+
+  @override
+  String get myDataSection => 'Meine Daten';
+
+  @override
+  String get studyConsent => 'Studieneinwilligung';
+
+  @override
+  String get legalSection => 'Rechtliches';
+
+  @override
+  String get language => 'Sprache';
+
+  @override
+  String get signOut => 'Abmelden';
+
+  @override
+  String get signOutConfirm => 'Möchten Sie sich wirklich abmelden?';
+
+  @override
+  String get aiDisclaimer => 'KI-generierte Vorschläge auf Basis Ihrer Studiendaten. Dies ist keine medizinische Beratung — wenden Sie sich bei gesundheitlichen Fragen an einen Arzt.';
+
+  @override
+  String get dailyReminderLabel => 'Tägliche Erinnerung';
+
+  @override
+  String get noReminders => 'Keine Erinnerungen';
+
+  @override
+  String get reminderFadingHint => 'Erinnerungen werden seltener, je stärker Ihre Gewohnheit wird.';
+
+  @override
+  String get doneButton => 'Fertig';
+
+  @override
+  String get habitStrengthLabel => 'Gewohnheitsstärke';
+
+  @override
+  String get commentsTitle => 'Kommentare';
+
+  @override
+  String get commentHint => 'Teilen Sie einen Gedanken (anonym) …';
+
+  @override
+  String get noCommentsYet => 'Noch keine Kommentare — seien Sie die/der Erste.';
+
+  @override
+  String get couldNotPostComment => 'Kommentar konnte nicht gesendet werden';
+
+  @override
+  String get likeTooltip => 'Gefällt mir';
+
+  @override
+  String get adminComments => 'Kommentare';
+
+  @override
+  String get adminDeleteCommentTitle => 'Kommentar löschen?';
+
+  @override
+  String get adminDeleteCommentContent => 'Der Kommentar wird für alle Teilnehmenden entfernt. Kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get adminFailedToDeleteComment => 'Kommentar konnte nicht gelöscht werden';
+
+  @override
+  String get adminFailedToLoadComments => 'Kommentare konnten nicht geladen werden';
+
+  @override
+  String get adminNoCommentsYet => 'Noch keine Kommentare.';
 }

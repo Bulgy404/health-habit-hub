@@ -2,9 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../config/app_config.dart';
@@ -135,7 +134,7 @@ class UserSettingsScreen extends ConsumerWidget {
             children: [
               _SettingsRow(
                 icon: Icons.language,
-                title: 'Language',
+                title: l10n.language,
                 trailing: Text(
                   switch (currentLocale.languageCode) {
                     'de' => 'Deutsch',
@@ -170,7 +169,7 @@ class UserSettingsScreen extends ConsumerWidget {
           ),
 
           // ── Legal ──────────────────────────────────────────────────
-          _SectionLabel('Legal'),
+          _SectionLabel(l10n.legalSection),
           _SettingsCard(
             children: [
               _SettingsRow(
@@ -182,7 +181,7 @@ class UserSettingsScreen extends ConsumerWidget {
               const Divider(height: 1, indent: 52),
               _SettingsRow(
                 icon: Icons.fact_check_outlined,
-                title: 'Study consent',
+                title: l10n.studyConsent,
                 trailing: const Icon(Icons.chevron_right, size: 18),
                 onTap: () => context.push('/settings/consent'),
               ),
@@ -197,12 +196,12 @@ class UserSettingsScreen extends ConsumerWidget {
           ),
 
           // ── My data (GDPR) ─────────────────────────────────────────
-          _SectionLabel('My data'),
+          _SectionLabel(l10n.myDataSection),
           _SettingsCard(
             children: [
               _SettingsRow(
                 icon: Icons.download_outlined,
-                title: 'Export my data',
+                title: l10n.exportMyData,
                 trailing: const Icon(Icons.chevron_right, size: 18),
                 onTap: () => _exportMyData(context, ref),
               ),
@@ -215,7 +214,7 @@ class UserSettingsScreen extends ConsumerWidget {
             children: [
               _SettingsRow(
                 icon: Icons.logout,
-                title: 'Sign out',
+                title: l10n.signOut,
                 iconColor: const Color(0xFFDC2626),
                 titleColor: const Color(0xFFDC2626),
                 onTap: () => _confirmSignOut(context, ref, l10n),
@@ -229,7 +228,7 @@ class UserSettingsScreen extends ConsumerWidget {
             children: [
               _SettingsRow(
                 icon: Icons.delete_forever,
-                title: 'Delete account',
+                title: l10n.deleteAccount,
                 iconColor: const Color(0xFFDC2626),
                 titleColor: const Color(0xFFDC2626),
                 onTap: () => _confirmDeleteAccount(context, ref),
@@ -351,6 +350,7 @@ class UserSettingsScreen extends ConsumerWidget {
   /// GDPR Art. 20 — downloads every document linked to this account as a
   /// JSON file and opens the system share sheet.
   Future<void> _exportMyData(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
       final dio = ref.read(dioProvider);
@@ -373,11 +373,7 @@ class UserSettingsScreen extends ConsumerWidget {
       );
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Export failed. Please check your connection and try again.',
-          ),
-        ),
+        SnackBar(content: Text(l10n.exportFailed)),
       );
     }
   }
@@ -385,21 +381,16 @@ class UserSettingsScreen extends ConsumerWidget {
   /// Two-step account deletion: explains exactly what is removed, then calls
   /// `DELETE /api/v1/users/me`, wipes local storage, and returns to onboarding.
   void _confirmDeleteAccount(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete account?'),
-        content: const Text(
-          'This permanently deletes your account and all data linked to it: '
-          'your profile, study enrollment, habit plans, daily logs, '
-          'questionnaire answers, and recommendations.\n\n'
-          'Habit donations are stored anonymously and cannot be traced back '
-          'to you.\n\nThis cannot be undone.',
-        ),
+        title: Text(l10n.deleteAccountTitle),
+        content: Text(l10n.deleteAccountContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             style: TextButton.styleFrom(
@@ -409,7 +400,7 @@ class UserSettingsScreen extends ConsumerWidget {
               Navigator.of(ctx).pop();
               await _deleteAccount(context, ref);
             },
-            child: const Text('Delete permanently'),
+            child: Text(l10n.deleteAccountConfirm),
           ),
         ],
       ),
@@ -417,6 +408,7 @@ class UserSettingsScreen extends ConsumerWidget {
   }
 
   Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     try {
       final dio = ref.read(dioProvider);
@@ -425,11 +417,7 @@ class UserSettingsScreen extends ConsumerWidget {
       );
     } catch (_) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Account deletion failed. Please check your connection and try again.',
-          ),
-        ),
+        SnackBar(content: Text(l10n.deleteAccountFailed)),
       );
       return;
     }
@@ -448,12 +436,12 @@ class UserSettingsScreen extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Sign out'),
-        content: const Text('Are you sure you want to sign out?'),
+        title: Text(l10n.signOut),
+        content: Text(l10n.signOutConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             style: TextButton.styleFrom(
@@ -463,7 +451,7 @@ class UserSettingsScreen extends ConsumerWidget {
               Navigator.of(ctx).pop();
               ref.read(authServiceProvider).logout();
             },
-            child: const Text('Sign out'),
+            child: Text(l10n.signOut),
           ),
         ],
       ),

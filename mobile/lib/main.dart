@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
-import 'firebase_options.dart';
 import 'app.dart';
+import 'firebase_options.dart';
 
 /// Sentry DSN injected at build time:
 ///   flutter build ios --dart-define=SENTRY_DSN=https://...

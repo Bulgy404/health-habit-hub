@@ -294,7 +294,9 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not post comment')),
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.couldNotPostComment),
+          ),
         );
       }
     } finally {
@@ -544,7 +546,7 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
               const SizedBox(width: 12),
               IconButton.outlined(
                 onPressed: busy ? null : () => _annotate('like'),
-                tooltip: 'Like',
+                tooltip: l10n.likeTooltip,
                 isSelected: likeActive,
                 icon: _loadingType == 'like'
                     ? const SizedBox(
@@ -562,7 +564,7 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
 
           // ── Community comments ─────────────────────────────────────
           const SizedBox(height: 20),
-          Text('Comments', style: tt.titleSmall),
+          Text(l10n.commentsTitle, style: tt.titleSmall),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -570,11 +572,11 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
                 child: TextField(
                   controller: _commentController,
                   maxLength: 500,
-                  decoration: const InputDecoration(
-                    hintText: 'Share a thought (anonymous)…',
+                  decoration: InputDecoration(
+                    hintText: l10n.commentHint,
                     counterText: '',
                     isDense: true,
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
               ),
@@ -600,7 +602,7 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
               ),
             )
           else if (_comments!.isEmpty)
-            Text('No comments yet — be the first.', style: tt.bodySmall)
+            Text(l10n.noCommentsYet, style: tt.bodySmall)
           else
             ..._comments!.take(20).map(
                   (c) => Padding(

@@ -6,10 +6,11 @@ import 'package:flutter/cupertino.dart' show CupertinoDatePicker, CupertinoDateP
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/dio_provider.dart';
 import '../../core/exceptions.dart';
-import '../../services/reminder_scheduler_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/reminder_scheduler_service.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
@@ -71,7 +72,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                     setState(() => _reminderTime = pending);
                     Navigator.of(sheetContext).pop();
                   },
-                  child: const Text('Done'),
+                  child: Text(AppLocalizations.of(context)!.doneButton),
                 ),
               ),
               Expanded(
@@ -179,7 +180,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
               }).toList(),
             ),
             const SizedBox(height: 24),
-            Text('Daily reminder',
+            Text(l10n.dailyReminderLabel,
                 style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
             Row(
@@ -196,12 +197,12 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                     onPressed: _pickReminderTime,
                   )
                 else
-                  const Text('No reminders'),
+                  Text(l10n.noReminders),
               ],
             ),
             if (_reminderEnabled)
               Text(
-                'Reminders become less frequent as your habit gets stronger.',
+                l10n.reminderFadingHint,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             if (_error != null) ...[

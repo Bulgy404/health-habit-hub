@@ -7,6 +7,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
+import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/offline_banner.dart';
 
@@ -175,17 +176,16 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isUpdate
-            ? 'Updated Study Consent'
-            : 'Study Information & Consent'),
+        title: Text(
+            widget.isUpdate ? l10n.consentUpdatedTitle : l10n.consentTitle),
         automaticallyImplyLeading: !widget.isUpdate,
       ),
       body: _offline
           ? OfflineBanner(
-              message:
-                  'The consent document could not be loaded. Please check your connection.',
+              message: l10n.consentCouldNotLoad,
               onRetry: _loadDocument,
             )
           : _loading || _controller == null
@@ -202,20 +202,18 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              'By tapping "I consent" you confirm that you have '
-                              'read and understood the study information and '
-                              'voluntarily agree to participate.',
+                              l10n.consentConfirmText,
                               style: Theme.of(context).textTheme.bodySmall,
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
                             FilledButton(
                               onPressed: _onAccept,
-                              child: const Text('I consent'),
+                              child: Text(l10n.consentAccept),
                             ),
                             TextButton(
                               onPressed: _onDecline,
-                              child: const Text('I do not consent'),
+                              child: Text(l10n.consentDecline),
                             ),
                           ],
                         ),

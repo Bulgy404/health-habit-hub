@@ -40,7 +40,7 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 | UC-31 | Give informed consent | Mandatory pre-registration consent screen (HabConnect IC); versioned acceptance recorded server-side | `GET /:lng/consent`, `POST /api/v1/users/me/consent` | Backend, MongoDB |
 | UC-32 | Delete account | In-app GDPR/App-Store account deletion: wipes all participant-linked MongoDB data, the user's Comment nodes, + Keycloak identity; data export via `GET /users/me/export` (Art. 20) | `DELETE /api/v1/users/me`, `GET /api/v1/users/me/export` | MongoDB, Neo4j, Keycloak Admin API |
 | UC-33 | Receive adaptive habit reminders | Local notifications at a user-picked time; frequency fades as autonomy score (SRHI + adherence + streak) rises, with hysteresis and recovery; weights tunable via admin_settings | `GET /api/v1/habits/intentions/reminder-plans` | MongoDB, device notifications |
-| UC-34 | Comment & like habits | Anonymous likes (counter on Habit node) and comments (Comment nodes); like counts feed the LLM recommendation prompt as community signal | `POST /habits/:id/annotate (like)`, `GET/POST /habits/:id/comments` | Neo4j, MongoDB |
+| UC-34 | Comment & like habits | Anonymous likes (counter on Habit node) and comments (Comment nodes); like counts feed the LLM recommendation prompt as community signal; researchers moderate via `GET/DELETE /admin/comments*` | `POST /habits/:id/annotate (like)`, `GET/POST /habits/:id/comments` | Neo4j, MongoDB |
 
 ## Researcher / Admin use cases (admin portal)
 

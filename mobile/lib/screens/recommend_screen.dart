@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/recommendation.dart';
 import '../providers/auth_provider.dart';
 import '../services/recommendation_service.dart';
@@ -302,8 +303,7 @@ class _RecommendScreenState extends ConsumerState<RecommendScreen>
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'AI-generated suggestions based on your study data. '
-              'This is not medical advice — consult a doctor for health concerns.',
+              AppLocalizations.of(context)!.aiDisclaimer,
               style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
             ),
           ),

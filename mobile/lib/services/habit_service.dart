@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../config/app_config.dart';
+import '../core/dio_provider.dart';
 import '../core/exceptions.dart';
 import '../models/bubble_graph.dart';
 import '../models/habit_node.dart';
 import '../models/habit_stats.dart'; // HabitStats, MyStats, etc.
-import '../core/dio_provider.dart';
-import '../config/app_config.dart';
 
 /// Service for fetching public habit data and submitting anonymous annotations.
 class HabitService {
