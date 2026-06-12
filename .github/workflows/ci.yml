@@ -28,7 +28,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-node-app
 
       - name: Format
@@ -62,7 +62,7 @@ jobs:
       contents: read
       actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-node-app
 
       - name: Run unit tests with coverage
@@ -78,7 +78,7 @@ jobs:
           node --test "tests/unit/**/*.test.js"
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: backend-unit-coverage
           path: app/coverage/
@@ -122,7 +122,7 @@ jobs:
           --health-retries 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-node-app
 
       - name: Run integration tests
@@ -148,7 +148,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-node-app
 
       - name: Audit dependencies
@@ -164,7 +164,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
 
       - name: Analyze
@@ -181,7 +181,7 @@ jobs:
       contents: read
       actions: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
 
       - name: Run all widget tests with coverage
@@ -189,7 +189,7 @@ jobs:
         run: flutter test --coverage
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: flutter-coverage
           path: mobile/coverage/
@@ -203,7 +203,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
 
       - name: Build Flutter web
@@ -234,7 +234,7 @@ jobs:
           --health-retries 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Wait for Neo4j HTTP API
         run: |
@@ -284,16 +284,15 @@ jobs:
                       raise SystemExit(f"Seed error: {d['errors']}")
 
           cypher([
-              "MERGE (:hhh__ExperimentalSetting:hhh__Group1 {uri:'http://example.com/hhh#G1'})",
-              "MERGE (:hhh__ExperimentalSetting:hhh__Group2 {uri:'http://example.com/hhh#G2'})",
-              "MERGE (:hhh__ExperimentalSetting:hhh__Group3 {uri:'http://example.com/hhh#G3'})",
-              "MERGE (:hhh__ExperimentalSetting:hhh__Group4 {uri:'http://example.com/hhh#G4'})",
-              "MERGE (:hhh__Donor {uri:'http://example.com/hhh#d1', hhh__userId:'u1', hhh__group:'G1'})",
-              "MERGE (:hhh__Habit {uri:'http://example.com/hhh#h1'})",
+              "MERGE (h:Habit {uuid:'ci-habit-1'}) SET h.sentence='I drink water every morning.', h.language='en'",
+              "MERGE (c:Context {text:'every morning', dimension:'TimeReference'})",
+              "MERGE (b:BCIOConcept {uri:'http://humanbehaviourchange.org/ontology/BCIO#ci-1'}) SET b.name='Habit formation'",
+              "MERGE (cm:Comment {id:'ci-comment-1'}) SET cm.text='Works for me!', cm.createdAt='2026-06-10T00:00:00Z'",
           ])
           cypher([
-              "MATCH (d1:hhh__Donor {uri:'http://example.com/hhh#d1'}), (h1:hhh__Habit {uri:'http://example.com/hhh#h1'}) MERGE (d1)-[:hhh__donates]->(h1)",
-              "MATCH (h1:hhh__Habit {uri:'http://example.com/hhh#h1'}), (g1:hhh__Group1 {uri:'http://example.com/hhh#G1'}) MERGE (h1)-[:hhh__partOf]->(g1)",
+              "MATCH (h:Habit {uuid:'ci-habit-1'}), (c:Context {text:'every morning'}) MERGE (h)-[:HAS_CONTEXT]->(c)",
+              "MATCH (c:Context {text:'every morning'}), (b:BCIOConcept {uri:'http://humanbehaviourchange.org/ontology/BCIO#ci-1'}) MERGE (c)-[:MAPS_TO]->(b)",
+              "MATCH (cm:Comment {id:'ci-comment-1'}), (h:Habit {uuid:'ci-habit-1'}) MERGE (cm)-[:COMMENT_ON]->(h)",
           ])
           print("Seed data applied.")
           EOF
@@ -314,7 +313,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build app (Node.js)
         run: docker build ./app
@@ -337,9 +336,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
@@ -365,9 +364,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
@@ -390,7 +389,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-node-app
         with:
           working-directory: admin
@@ -412,7 +411,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-flutter
 
       - name: Verify dependency graph resolves without conflicts

@@ -136,44 +136,62 @@ print(len(d['results'][0]['data']))
 # Tests
 # ---------------------------------------------------------------------------
 
-echo "=== HHH Ontology + Graph Integrity Tests ==="
+echo "=== HHH Graph Integrity Tests (current schema) ==="
 echo ""
 
-# Test 1: All 4 experimental groups retrievable
-echo "--- Neo4j: group retrievability ---"
+# Test 1: schema constraints are present (applied from neo4j/init/constraints.cypher)
+echo "--- Neo4j: constraints ---"
 assert_cypher_count \
-  "Group1 nodes exist" \
-  "MATCH (n:hhh__Group1) RETURN count(n) AS c" \
+  "Habit uuid uniqueness constraint exists" \
+  "SHOW CONSTRAINTS YIELD name WHERE name = 'habit_uuid' RETURN count(*) AS c" \
   "1"
 
 assert_cypher_count \
-  "Group2 nodes exist" \
-  "MATCH (n:hhh__Group2) RETURN count(n) AS c" \
+  "BCIOConcept uri uniqueness constraint exists" \
+  "SHOW CONSTRAINTS YIELD name WHERE name = 'bcio_uri_unique' RETURN count(*) AS c" \
   "1"
 
 assert_cypher_count \
-  "Group3 nodes exist" \
-  "MATCH (n:hhh__Group3) RETURN count(n) AS c" \
+  "Comment id uniqueness constraint exists" \
+  "SHOW CONSTRAINTS YIELD name WHERE name = 'comment_id_unique' RETURN count(*) AS c" \
   "1"
 
-assert_cypher_count \
-  "Group4 nodes exist" \
-  "MATCH (n:hhh__Group4) RETURN count(n) AS c" \
-  "1"
-
-# Test 2: No donor nodes without a group assignment
+# Test 2: seeded donation pipeline shape is retrievable
 echo ""
-echo "--- Neo4j: donor group integrity ---"
+echo "--- Neo4j: donation pipeline shape ---"
+assert_cypher_count \
+  "Habit nodes exist" \
+  "MATCH (h:Habit) RETURN count(h) AS c" \
+  "1"
+
+assert_cypher_count \
+  "Habit -> Context -> BCIOConcept path exists" \
+  "MATCH (:Habit)-[:HAS_CONTEXT]->(:Context)-[:MAPS_TO]->(:BCIOConcept) RETURN count(*) AS c" \
+  "1"
+
+assert_cypher_count \
+  "Comment attached to a Habit" \
+  "MATCH (:Comment)-[:COMMENT_ON]->(:Habit) RETURN count(*) AS c" \
+  "1"
+
+# Test 3: integrity — no duplicates or orphans
+echo ""
+echo "--- Neo4j: integrity violations ---"
 assert_cypher_zero \
-  "No donors missing group assignment" \
-  "MATCH (d:hhh__Donor) WHERE d.hhh__group IS NULL RETURN d.hhh__userId AS ungrouped_donor"
+  "No duplicate Habit uuids" \
+  "MATCH (h:Habit) WITH h.uuid AS uuid, count(*) AS n WHERE n > 1 RETURN uuid"
 
-# Test 3: No orphaned habit nodes
-echo ""
-echo "--- Neo4j: orphaned habit nodes ---"
 assert_cypher_zero \
-  "No orphaned hhh__Habit nodes" \
-  "MATCH (h:hhh__Habit) WHERE NOT (h)<-[:hhh__donates]-(:hhh__Donor) AND NOT (h)-[:hhh__partOf]->(:hhh__ExperimentalSetting) RETURN h.uri AS orphaned_habit"
+  "No orphaned Context nodes (must belong to a Habit)" \
+  "MATCH (c:Context) WHERE NOT (:Habit)-[:HAS_CONTEXT]->(c) RETURN c.text AS orphaned_context"
+
+assert_cypher_zero \
+  "No orphaned Comment nodes (must reference a Habit)" \
+  "MATCH (c:Comment) WHERE NOT (c)-[:COMMENT_ON]->(:Habit) RETURN c.id AS orphaned_comment"
+
+assert_cypher_zero \
+  "No Habit without a uuid" \
+  "MATCH (h:Habit) WHERE h.uuid IS NULL RETURN id(h) AS habit_without_uuid"
 
 # ---------------------------------------------------------------------------
 # Summary

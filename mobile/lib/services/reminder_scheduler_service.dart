@@ -42,8 +42,9 @@ class ReminderSchedulerService {
     if (_tzReady) return;
     tzdata.initializeTimeZones();
     try {
-      final name = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(name));
+      // flutter_timezone >= 5 returns a TimezoneInfo object.
+      final info = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(info.identifier));
     } catch (_) {
       // Fall back to UTC — reminders still fire, possibly offset.
     }
@@ -84,11 +85,11 @@ class ReminderSchedulerService {
         if (!fireAt.isAfter(now)) fireAt = fireAt.add(const Duration(days: 1));
 
         await _plugin.zonedSchedule(
-          notificationId++,
-          'Time for your habit',
-          'Your plan: stay on track today. Open the app to log it.',
-          fireAt,
-          const NotificationDetails(
+          id: notificationId++,
+          title: 'Time for your habit',
+          body: 'Your plan: stay on track today. Open the app to log it.',
+          scheduledDate: fireAt,
+          notificationDetails: const NotificationDetails(
             android: AndroidNotificationDetails(
               _channelId,
               _channelName,

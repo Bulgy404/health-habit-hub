@@ -1243,7 +1243,7 @@ abstract class AppLocalizations {
   /// Text above the consent buttons
   ///
   /// In en, this message translates to:
-  /// **'By tapping "I consent" you confirm that you have read and understood the study information and voluntarily agree to participate.'**
+  /// **'By tapping \"I consent\" you confirm that you have read and understood the study information and voluntarily agree to participate.'**
   String get consentConfirmText;
 
   /// Accept button on the consent screen

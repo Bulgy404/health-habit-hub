@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Create CI environment file
         run: |
@@ -33,10 +33,11 @@ jobs:
           fill REDIS_PASSWORD ci-redis-pass
 
       - name: Start core services
+        # Only the services the participant journey needs — LightRAG and the
+        # recommender require LLM credentials and stay out of CI.
         run: |
           docker compose -f docker-compose.local.yml up -d \
-            mongo neo4j keycloak keycloak-db redis app || \
-          docker compose -f docker-compose.local.yml up -d
+            mongo neo4j keycloak keycloak-init redis app
 
       - name: Wait for backend health
         run: |
@@ -48,12 +49,10 @@ jobs:
           done
           echo "Backend never became healthy"; docker compose -f docker-compose.local.yml logs --tail 100; exit 1
 
-      - name: Seed dev data
+      - name: Seed dev data (best-effort — the smoke test creates its own data)
         run: |
-          if [ -f scripts/seed-local.js ]; then
-            (cd app && npm ci --omit=dev) || true
-            node scripts/seed-local.js || echo "Seeding failed — continuing (smoke creates its own data)"
-          fi
+          (cd app && npm ci --omit=dev && npm run seed) \
+            || echo "Seeding failed — continuing"
 
       - name: Run smoke test
         run: BASE_URL=http://localhost:3000 node scripts/smoke-e2e.mjs

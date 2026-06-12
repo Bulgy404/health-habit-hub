@@ -627,7 +627,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consentUpdatedTitle => 'Updated Study Consent';
 
   @override
-  String get consentConfirmText => 'By tapping "I consent" you confirm that you have read and understood the study information and voluntarily agree to participate.';
+  String get consentConfirmText =>
+      'By tapping \"I consent\" you confirm that you have read and understood the study information and voluntarily agree to participate.';
 
   @override
   String get consentAccept => 'I consent';
@@ -636,7 +637,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get consentDecline => 'I do not consent';
 
   @override
-  String get consentCouldNotLoad => 'The consent document could not be loaded. Please check your connection.';
+  String get consentCouldNotLoad =>
+      'The consent document could not be loaded. Please check your connection.';
 
   @override
   String get deleteAccount => 'Delete account';
@@ -645,19 +647,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteAccountTitle => 'Delete account?';
 
   @override
-  String get deleteAccountContent => 'This permanently deletes your account and all data linked to it: your profile, study enrollment, habit plans, daily logs, questionnaire answers, and recommendations.\n\nHabit donations are stored anonymously and cannot be traced back to you.\n\nThis cannot be undone.';
+  String get deleteAccountContent =>
+      'This permanently deletes your account and all data linked to it: your profile, study enrollment, habit plans, daily logs, questionnaire answers, and recommendations.\n\nHabit donations are stored anonymously and cannot be traced back to you.\n\nThis cannot be undone.';
 
   @override
   String get deleteAccountConfirm => 'Delete permanently';
 
   @override
-  String get deleteAccountFailed => 'Account deletion failed. Please check your connection and try again.';
+  String get deleteAccountFailed =>
+      'Account deletion failed. Please check your connection and try again.';
 
   @override
   String get exportMyData => 'Export my data';
 
   @override
-  String get exportFailed => 'Export failed. Please check your connection and try again.';
+  String get exportFailed =>
+      'Export failed. Please check your connection and try again.';
 
   @override
   String get myDataSection => 'My data';
@@ -678,7 +683,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signOutConfirm => 'Are you sure you want to sign out?';
 
   @override
-  String get aiDisclaimer => 'AI-generated suggestions based on your study data. This is not medical advice — consult a doctor for health concerns.';
+  String get aiDisclaimer =>
+      'AI-generated suggestions based on your study data. This is not medical advice — consult a doctor for health concerns.';
 
   @override
   String get dailyReminderLabel => 'Daily reminder';
@@ -687,7 +693,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noReminders => 'No reminders';
 
   @override
-  String get reminderFadingHint => 'Reminders become less frequent as your habit gets stronger.';
+  String get reminderFadingHint =>
+      'Reminders become less frequent as your habit gets stronger.';
 
   @override
   String get doneButton => 'Done';
@@ -717,7 +724,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminDeleteCommentTitle => 'Delete comment?';
 
   @override
-  String get adminDeleteCommentContent => 'This removes the comment for all participants. Cannot be undone.';
+  String get adminDeleteCommentContent =>
+      'This removes the comment for all participants. Cannot be undone.';
 
   @override
   String get adminFailedToDeleteComment => 'Failed to delete comment';
