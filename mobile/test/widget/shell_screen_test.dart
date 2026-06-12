@@ -19,36 +19,46 @@ GoRouter _buildTestRouter() {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => ShellScreen(navigationShell: shell),
         branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/share',
-              builder: (_, _) => const Scaffold(body: Text('Share Tab')),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/explore',
-              builder: (_, _) => const Scaffold(body: Text('Explore Tab')),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/habits',
-              builder: (_, _) => const Scaffold(body: Text('Habits Tab')),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/recommend',
-              builder: (_, _) => const Scaffold(body: Text('Recommend Tab')),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: '/settings',
-              builder: (_, _) => const Scaffold(body: Text('Settings Tab')),
-            ),
-          ]),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/share',
+                builder: (_, _) => const Scaffold(body: Text('Share Tab')),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/explore',
+                builder: (_, _) => const Scaffold(body: Text('Explore Tab')),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/habits',
+                builder: (_, _) => const Scaffold(body: Text('Habits Tab')),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/recommend',
+                builder: (_, _) => const Scaffold(body: Text('Recommend Tab')),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/settings',
+                builder: (_, _) => const Scaffold(body: Text('Settings Tab')),
+              ),
+            ],
+          ),
           StatefulShellBranch(
             initialLocation: '/admin/participants',
             routes: [
@@ -69,6 +79,8 @@ Widget _buildSubject(GoRouter router, List<String> roles) {
   return ProviderScope(
     overrides: [
       userRolesProvider.overrideWith((ref) async => roles),
+      reconsentRequiredProvider.overrideWithValue((_) async => false),
+      habitReminderSyncProvider.overrideWithValue(() async {}),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -108,7 +120,9 @@ void main() {
     expect(find.text('Admin'), findsOneWidget);
   });
 
-  testWidgets('shows loading state (NavigationBar still visible)', (tester) async {
+  testWidgets('shows loading state (NavigationBar still visible)', (
+    tester,
+  ) async {
     final router = _buildTestRouter();
     // Use a Completer that never completes to simulate a long-running roles load.
     // Completer.future does NOT create a pending timer (unlike Future.delayed).
@@ -118,6 +132,8 @@ void main() {
           userRolesProvider.overrideWith(
             (ref) => Completer<List<String>>().future,
           ),
+          reconsentRequiredProvider.overrideWithValue((_) async => false),
+          habitReminderSyncProvider.overrideWithValue(() async {}),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),

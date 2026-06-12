@@ -12,6 +12,24 @@ import '../services/offline_queue_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/reminder_scheduler_service.dart';
 
+/// Checks whether re-consent is required for the current locale.
+///
+/// Exposed as a provider so widget tests can keep [ShellScreen] focused on
+/// navigation without starting real network requests.
+final reconsentRequiredProvider = Provider<Future<bool> Function(String)>((
+  ref,
+) {
+  return (locale) => isReconsentRequired(ref.read(dioProvider), locale);
+});
+
+/// Synchronizes adaptive habit reminders.
+///
+/// Exposed as a provider so startup side effects can be replaced in tests.
+final habitReminderSyncProvider = Provider<Future<void> Function()>((ref) {
+  return () =>
+      ReminderSchedulerService(dio: ref.read(dioProvider)).syncReminders();
+});
+
 /// The persistent bottom-navigation shell for the app.
 ///
 /// Uses [StatefulNavigationShell] from go_router to preserve navigation state
@@ -33,12 +51,20 @@ class ShellScreen extends ConsumerStatefulWidget {
 
 class _ShellScreenState extends ConsumerState<ShellScreen> {
   static const _allTabs = [
-    _TabConfig(label: 'Share',   icon: Icons.volunteer_activism,    path: '/share'),
-    _TabConfig(label: 'Explore', icon: Icons.hub,                   path: '/explore'),
-    _TabConfig(label: 'Habits',  icon: Icons.self_improvement,      path: '/habits'),
-    _TabConfig(label: 'Recs',    icon: Icons.lightbulb,             path: '/recommend'),
-    _TabConfig(label: 'Account', icon: Icons.manage_accounts,       path: '/settings'),
-    _TabConfig(label: 'Admin',   icon: Icons.admin_panel_settings,  path: '/admin'),
+    _TabConfig(label: 'Share', icon: Icons.volunteer_activism, path: '/share'),
+    _TabConfig(label: 'Explore', icon: Icons.hub, path: '/explore'),
+    _TabConfig(label: 'Habits', icon: Icons.self_improvement, path: '/habits'),
+    _TabConfig(label: 'Recs', icon: Icons.lightbulb, path: '/recommend'),
+    _TabConfig(
+      label: 'Account',
+      icon: Icons.manage_accounts,
+      path: '/settings',
+    ),
+    _TabConfig(
+      label: 'Admin',
+      icon: Icons.admin_panel_settings,
+      path: '/admin',
+    ),
   ];
 
   static const int _adminBranchIndex = 5;
@@ -58,8 +84,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
   /// backend plan (frequency fades as SRHI / adherence rise).
   Future<void> _syncHabitReminders() async {
     try {
-      await ReminderSchedulerService(dio: ref.read(dioProvider))
-          .syncReminders();
+      await ref.read(habitReminderSyncProvider)();
     } catch (_) {
       // Offline or no active intentions — retried on next start.
     }
@@ -71,7 +96,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     final locale = mounted
         ? Localizations.localeOf(context).languageCode
         : 'en';
-    final required = await isReconsentRequired(ref.read(dioProvider), locale);
+    final required = await ref.read(reconsentRequiredProvider)(locale);
     if (required && mounted) context.go('/consent-update');
   }
 
@@ -163,7 +188,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
       body: widget.navigationShell,
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1)),
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
+              width: 1,
+            ),
+          ),
         ),
         child: NavigationBar(
           selectedIndex: currentVisibleIndex,
@@ -174,11 +204,17 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
             }
             widget.navigationShell.goBranch(
               branchIndex,
-              initialLocation: branchIndex == widget.navigationShell.currentIndex,
+              initialLocation:
+                  branchIndex == widget.navigationShell.currentIndex,
             );
           },
           destinations: visibleTabs
-              .map((tab) => NavigationDestination(icon: Icon(tab.icon), label: tab.label))
+              .map(
+                (tab) => NavigationDestination(
+                  icon: Icon(tab.icon),
+                  label: tab.label,
+                ),
+              )
               .toList(),
         ),
       ),
