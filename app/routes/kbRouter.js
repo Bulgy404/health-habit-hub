@@ -17,10 +17,21 @@ export function createKbRouter({ apiServiceUrl } = {}) {
   const serviceUrl =
     apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
 
+  // The Python API-service requires X-Service-Auth-Token on every request.
+  // FastAPI returns 422 (not 401) when a required Header(...) param is absent.
+  function serviceHeaders(extra = {}) {
+    return {
+      'x-service-auth-token': process.env.API_SERVICE_SECRET || '',
+      ...extra,
+    };
+  }
+
   // GET /api/v1/kb — list all PDFs
   router.get('/', async (_req, res) => {
     try {
-      const upstream = await fetch(`${serviceUrl}/api/v1/kb`);
+      const upstream = await fetch(`${serviceUrl}/api/v1/kb`, {
+        headers: serviceHeaders(),
+      });
       const data = await upstream.json();
       res.status(upstream.status).json(data);
     } catch (err) {
@@ -34,6 +45,7 @@ export function createKbRouter({ apiServiceUrl } = {}) {
     try {
       const upstream = await fetch(`${serviceUrl}/api/v1/kb/reindex`, {
         method: 'POST',
+        headers: serviceHeaders(),
       });
       const data = await upstream.json();
       res.status(upstream.status).json(data);
@@ -53,7 +65,7 @@ export function createKbRouter({ apiServiceUrl } = {}) {
       const body = Buffer.concat(chunks);
       const upstream = await fetch(`${serviceUrl}/api/v1/kb`, {
         method: 'POST',
-        headers: { 'content-type': req.headers['content-type'] },
+        headers: serviceHeaders({ 'content-type': req.headers['content-type'] }),
         body,
       });
       const data = await upstream.json();
@@ -69,7 +81,7 @@ export function createKbRouter({ apiServiceUrl } = {}) {
     try {
       const upstream = await fetch(
         `${serviceUrl}/api/v1/kb/${encodeURIComponent(req.params.filename)}`,
-        { method: 'DELETE' }
+        { method: 'DELETE', headers: serviceHeaders() }
       );
       const data = await upstream.json();
       res.status(upstream.status).json(data);

@@ -218,6 +218,48 @@ services:
       - traefik.http.routers.keycloak.service=keycloak
       - traefik.http.services.keycloak.loadbalancer.server.port=8080
 
+  keycloak-init:
+    image: quay.io/keycloak/keycloak:26.5.5
+    container_name: hhh-keycloak-init
+    restart: "no"
+    env_file: .env
+    volumes:
+      - ./keycloak/hhh-user-profile.json:/opt/keycloak/bootstrap/hhh-user-profile.json:ro
+    networks:
+      - hhh-proxy
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-lc"]
+    command: >
+      'until /opt/keycloak/bin/kcadm.sh config credentials
+      --server http://keycloak:8080/auth
+      --realm master
+      --user "$$KEYCLOAK_ADMIN"
+      --password "$$KEYCLOAK_ADMIN_PASSWORD";
+      do sleep 2; done &&
+      /opt/keycloak/bin/kcadm.sh update users/profile -r hhh -f /opt/keycloak/bootstrap/hhh-user-profile.json &&
+      BACKEND_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-backend --fields id --format csv --noquotes) &&
+      /opt/keycloak/bin/kcadm.sh update clients/$$BACKEND_ID -r hhh -s secret="$$KEYCLOAK_ADMIN_CLIENT_SECRET" &&
+      ADMIN_UI_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-admin --fields id --format csv --noquotes) &&
+      /opt/keycloak/bin/kcadm.sh update clients/$$ADMIN_UI_ID -r hhh -s secret="$$KEYCLOAK_ADMIN_UI_CLIENT_SECRET" &&
+      SA_ID=$$(/opt/keycloak/bin/kcadm.sh get clients/$$BACKEND_ID/service-account-user -r hhh --fields id --format csv --noquotes) &&
+      /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$SA_ID --cclientid realm-management --rolename realm-admin &&
+      HHH_ADMIN_USER="$${HHH_ADMIN_USER:-$$KEYCLOAK_ADMIN}" &&
+      HHH_ADMIN_ID=$$(/opt/keycloak/bin/kcadm.sh get users -r hhh -q username=$$HHH_ADMIN_USER -q exact=true --fields id --format json 2>/dev/null | grep -o "\"id\" *: *\"[^\"]*\"" | head -n1 | grep -o "\"[^\"]*\"$$" | tr -d "\"") &&
+      if [ -z "$$HHH_ADMIN_ID" ]; then
+        echo "Creating HHH admin user: $$HHH_ADMIN_USER" &&
+        /opt/keycloak/bin/kcadm.sh create users -r hhh -s username="$$HHH_ADMIN_USER" -s enabled=true -s emailVerified=true &&
+        HHH_ADMIN_ID=$$(/opt/keycloak/bin/kcadm.sh get users -r hhh -q username=$$HHH_ADMIN_USER -q exact=true --fields id --format json 2>/dev/null | grep -o "\"id\" *: *\"[^\"]*\"" | head -n1 | grep -o "\"[^\"]*\"$$" | tr -d "\"");
+      fi &&
+      if [ -z "$$HHH_ADMIN_ID" ]; then
+        echo "ERROR: could not create or find HHH admin user $$HHH_ADMIN_USER" >&2 && exit 1;
+      fi &&
+      /opt/keycloak/bin/kcadm.sh set-password -r hhh --userid $$HHH_ADMIN_ID --new-password "$$KEYCLOAK_ADMIN_PASSWORD" --temporary=false &&
+      /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$HHH_ADMIN_ID --rolename admin &&
+      /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$HHH_ADMIN_ID --rolename researcher &&
+      echo "HHH admin user $$HHH_ADMIN_USER provisioned successfully (id=$$HHH_ADMIN_ID)"'
+
   redis:
     image: redis:7-alpine
     container_name: hhh-redis
@@ -290,6 +332,8 @@ services:
     env_file: .env
     environment:
       - NEXTAUTH_URL=https://${DOMAIN}/admin
+      - NEXT_PUBLIC_NEXTAUTH_URL=https://${DOMAIN}/admin
+      - NEXT_PUBLIC_KEYCLOAK_BROWSER_URL=https://${DOMAIN}/auth
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - KEYCLOAK_CLIENT_ID=hhh-admin
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET}
@@ -299,7 +343,10 @@ services:
     networks:
       - hhh-proxy
     depends_on:
-      - keycloak
+      keycloak:
+        condition: service_healthy
+      keycloak-init:
+        condition: service_completed_successfully
     labels:
       - traefik.enable=true
       - traefik.http.routers.admin.rule=Host(`${DOMAIN}`) && PathPrefix(`/admin`)

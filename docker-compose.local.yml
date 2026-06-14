@@ -196,14 +196,19 @@ services:
       SA_ID=$$(/opt/keycloak/bin/kcadm.sh get clients/$$BACKEND_ID/service-account-user -r hhh --fields id --format csv --noquotes) &&
       /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$SA_ID --cclientid realm-management --rolename realm-admin &&
       HHH_ADMIN_USER="$${HHH_ADMIN_USER:-$$KEYCLOAK_ADMIN}" &&
-      HHH_ADMIN_ID=$$(/opt/keycloak/bin/kcadm.sh get users -r hhh -q username=$$HHH_ADMIN_USER --fields id --format json 2>/dev/null | grep -o "\"id\" *: *\"[^\"]*\"" | head -n1 | grep -o "\"[^\"]*\"$$" | tr -d "\"") &&
+      HHH_ADMIN_ID=$$(/opt/keycloak/bin/kcadm.sh get users -r hhh -q username=$$HHH_ADMIN_USER -q exact=true --fields id --format json 2>/dev/null | grep -o "\"id\" *: *\"[^\"]*\"" | head -n1 | grep -o "\"[^\"]*\"$$" | tr -d "\"") &&
       if [ -z "$$HHH_ADMIN_ID" ]; then
-        /opt/keycloak/bin/kcadm.sh create users -r hhh -s username="$$HHH_ADMIN_USER" -s enabled=true -s emailVerified=true >/dev/null &&
-        HHH_ADMIN_ID=$$(/opt/keycloak/bin/kcadm.sh get users -r hhh -q username=$$HHH_ADMIN_USER --fields id --format json 2>/dev/null | grep -o "\"id\" *: *\"[^\"]*\"" | head -n1 | grep -o "\"[^\"]*\"$$" | tr -d "\"");
+        echo "Creating HHH admin user: $$HHH_ADMIN_USER" &&
+        /opt/keycloak/bin/kcadm.sh create users -r hhh -s username="$$HHH_ADMIN_USER" -s enabled=true -s emailVerified=true &&
+        HHH_ADMIN_ID=$$(/opt/keycloak/bin/kcadm.sh get users -r hhh -q username=$$HHH_ADMIN_USER -q exact=true --fields id --format json 2>/dev/null | grep -o "\"id\" *: *\"[^\"]*\"" | head -n1 | grep -o "\"[^\"]*\"$$" | tr -d "\"");
+      fi &&
+      if [ -z "$$HHH_ADMIN_ID" ]; then
+        echo "ERROR: could not create or find HHH admin user $$HHH_ADMIN_USER" >&2 && exit 1;
       fi &&
       /opt/keycloak/bin/kcadm.sh set-password -r hhh --userid $$HHH_ADMIN_ID --new-password "$$KEYCLOAK_ADMIN_PASSWORD" --temporary=false &&
       /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$HHH_ADMIN_ID --rolename admin &&
-      /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$HHH_ADMIN_ID --rolename researcher'
+      /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$HHH_ADMIN_ID --rolename researcher &&
+      echo "HHH admin user $$HHH_ADMIN_USER provisioned successfully (id=$$HHH_ADMIN_ID)"'
 
   admin:
     image: hhh/admin
@@ -214,13 +219,16 @@ services:
       - .env
     environment:
       - NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}
+      - NEXT_PUBLIC_NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}
+      - NEXT_PUBLIC_KEYCLOAK_BROWSER_URL=http://localhost:8080
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
       - KEYCLOAK_CLIENT_ID=hhh-admin
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET:-hhh-admin-secret-change-me}
-      # In dev, Keycloak (start-dev) dynamically sets the token issuer from the request
-      # Host header. The browser hits localhost:8080, so tokens carry iss=localhost:8080.
-      # KEYCLOAK_ISSUER must match that value for NextAuth JWT validation to succeed.
-      # KEYCLOAK_INTERNAL_URL is used for server-side calls (token exchange, JWKS, userinfo).
+      # Keycloak (start-dev) uses its configured hostname as the token issuer, not the
+      # request host. In local dev this is localhost:8080 (the public-facing URL), so
+      # tokens carry iss=http://localhost:8080/realms/hhh. KEYCLOAK_ISSUER must match
+      # that value exactly for NextAuth/openid-client iss validation to succeed.
+      # All actual container-to-container calls use KEYCLOAK_INTERNAL_URL (keycloak:8080).
       - KEYCLOAK_ISSUER=http://localhost:8080/realms/hhh
       - KEYCLOAK_BROWSER_URL=http://localhost:8080
       - KEYCLOAK_INTERNAL_URL=http://keycloak:8080

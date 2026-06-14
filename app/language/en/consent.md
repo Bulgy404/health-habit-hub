@@ -1,165 +1,152 @@
 ---
-version: 1.0.0
+version: 1.1.0
 effectiveDate: 2025-05-13
 bindingLanguage: de
 ---
 
-# Information and Declaration of Consent for the Research Project: HabConnect – from Habit to Health
+# Consent to Participate in the HabConnect Study
+
+> **The Health-Habit-Hub app** is the study app for the **HabConnect – from Habit to Health** study conducted by Technische Universität Dresden.
 
 > This is a convenience translation. The German version of this document is authoritative.
+
+---
+
+## Key Points at a Glance
+
+Before reading the full details, here is a quick summary:
+
+- **What is this about?** You share everyday habits and receive personalised recommendations for a healthier lifestyle.
+- **Who runs the study?** The Digital Health Research Group at TU Dresden — reviewed and approved by an independent ethics committee.
+- **Is my data safe?** All data is stored in **fully anonymised** form. No name, no email, no address.
+- **Is participation voluntary?** Yes — you can stop at any time, for any reason, with no consequences.
+- **Can I delete my data?** Because all data is anonymous, individual records cannot be identified or deleted after anonymisation. However, you can delete your account and all associated data in the app settings at any time while you are still participating.
+
+---
 
 ## Information
 
 Dear prospective participant,
 
-Thank you very much for your interest in our scientific study. This document contains all essential information about the study.
+Thank you for your interest in our research. The **Health-Habit-Hub app** is part of the **HabConnect – from Habit to Health** study, planned and conducted by the Digital Health Research Group, Faculty of Business and Economics, Technische Universität Dresden. The study is self-funded by our institution and has been reviewed by an independent ethics committee, which raised no objections.
 
-The study is conducted as an open data collection, which is why no upper limit on the number of participants has been set.
-
-This study is planned and conducted by Technische Universität Dresden, Faculty of Business and Economics, Digital Health Research Group. Our institution funds the study itself. The study has been reviewed by an independent ethics committee. No objections to the conduct of this study were raised during the consultation.
-
-Your participation in this study is voluntary. You may also end your participation at any time without giving reasons. You will not suffer any disadvantages as a result.
-
-Please read this information carefully. The study director will discuss the study with you and answer your questions.
+Your participation is voluntary. You can stop at any time without giving a reason and without any disadvantage to you.
 
 ## Why is this study being conducted?
 
-The research project "HabConnect – from Habit to Health" consists of two consecutive parts:
+The research project has two parts:
 
-In the first part of the study, data on everyday habits is collected online. The goal is to obtain a comprehensive picture of which habits people perform in their everyday lives, in which contexts they take place, and how they differ between different groups of people.
+**Part 1 – Collecting habits:** We gather data on everyday habits — which habits people perform, in which contexts, and how they differ between groups.
 
-Exemplary research questions to be answered in this part are:
+**Part 2 – Testing recommendations:** Based on the collected data, we develop and test how personalised recommendations must be formulated and delivered for people to actually adopt them.
 
-In which contexts (e.g. time of day, environment, social situation) are health-promoting habits performed most frequently?
+Example research questions:
 
-How do health-promoting habits differ between different groups of people (e.g. age, gender, occupation, lifestyle)?
+- In which contexts (e.g. time of day, environment) are health-promoting habits most frequently performed?
+- Which factors influence whether people integrate new habits into their daily lives?
+- How do digital interventions affect the long-term maintenance of healthy habits?
 
-In the second part of the study, personalised recommendations for health-promoting habits are developed based on the collected data. These recommendations are made available to participants via an app and experimentally tested to determine how they must be formulated and communicated so that they are actually adopted and implemented.
+The goal is to develop scientifically sound, practical recommendations that help people lead healthier lives in the long term.
 
-Exemplary research questions for this part are:
+## How does the study work?
 
-How should recommendations for healthy habits be formulated and communicated so that they are adopted and implemented by users?
+There is no fixed participation period — you decide how long and how intensively you take part.
 
-Which factors influence the willingness to integrate new health-promoting habits into everyday life?
+**In the Health-Habit-Hub app** you can:
 
-How do digital interventions (e.g. app-based recommendations) affect the development and maintenance of healthy habits?
+- Describe and share your everyday habits (e.g. "Every morning after waking up, I brush my teeth and do 10 squats.")
+- Receive personalised recommendations for healthy habits and log whether you have followed them
+- Complete short weekly questionnaires (approx. 10 minutes)
 
-These research questions are not exhaustive and may be supplemented by further questions during the course of the study in order to take new findings and perspectives into account.
+Depending on how actively you participate, the daily time commitment is approximately 5–15 minutes.
 
-Overall, the study aims to develop and test scientifically sound and practical recommendations for health-promoting habits. The findings are intended to help design digital tools that support people in leading a healthier lifestyle in the long term.
+## What do you get out of it?
 
-## What is the course of the study?
+- You reflect more consciously on your own habits.
+- You receive ideas and personalised recommendations for a healthier everyday life.
+- You make a valuable contribution to research that can benefit many people in the long term.
 
-Participation in the study is not limited in time for individual participants. You decide for yourself how often and for how long you enter your habits and use the system.
+## What are the risks?
 
-The study consists of two parts:
+Apart from the data protection aspects explained below, there are no risks associated with participation.
 
-In the first part, data about everyday habits is collected with the help of HabShare. You will be directed to a website where you can enter your daily habits. It is randomly determined whether you merely describe your habit in one sentence or additionally state the context in which it takes place. An example of a simple description would be: "Every morning after waking up, I brush my teeth and do 10 squats." After entering, you may receive a short questionnaire. Depending on the group, completing it takes about two to five minutes per shared habit.
+## What is expected of you?
 
-In the second part of the study, experiments take place with the HabHealth app. This app runs on mobile devices with Android or iOS. You will receive suggestions for healthy habits and indicate in the app whether you have implemented them. During the experiment, your interactions with the app are recorded – for example, whether or not you have carried out a suggested habit. In addition, you will be asked about once a week to complete a short questionnaire, which takes about ten minutes. Depending on the experimental setup, the daily time required is about five to fifteen minutes. Here, too, you decide for yourself how long and how intensively you want to participate. You can withdraw at any time without giving reasons.
+Please answer all questions honestly and to the best of your knowledge. Only then can reliable results be obtained and meaningful recommendations be derived.
 
-Participation in both parts of the study is voluntary and can be ended at any time without consequences.
+## Data Protection
 
-## Is there a personal benefit from participating in the study?
+The Digital Health Research Group of TU Dresden is responsible for your data.
 
-By participating in the study, you have the opportunity to reflect more on your own habits and to engage with them more consciously. You will learn which behaviours can contribute positively to health – and how to integrate such habits more easily into everyday life. Furthermore, additional incentives will be provided in the course of the study, such as adjacent habits (e.g. slightly modified behaviours or contexts) that can be used to optimise your own habits.
+**Legal basis:** Your personal consent (Art. 6(1)(a), Art. 9(2)(a) GDPR).
 
-In addition, your participation makes an important contribution to research. The findings help to develop digital tools and recommendations that can support many people in leading a healthier life in the long term.
+### What data is collected?
 
-## What risks are associated with participating in the study?
+All data is collected in **fully anonymised** form. This means: no information is stored that could be used to identify you — no name, no date of birth, no email address.
 
-Apart from data protection risks, participation in the study involves no risks. More information can be found under "Data Protection Information".
+We collect:
 
-## What is expected of participants?
+- Descriptions of everyday habits
+- Demographic characteristics (e.g. age group, gender, occupation) — in anonymised form only
+- App usage behaviour (e.g. whether a recommended habit was followed)
+- Weekly questionnaire responses on habit strength and well-being
 
-We ask you to answer the survey honestly and to the best of your knowledge and belief. Only in this way can reliable results be obtained and meaningful recommendations be derived.
+### How is the data used?
 
-## Data Protection Information
+Your anonymised data will be used for:
 
-In this study, the Digital Health Research Group of Technische Universität Dresden is responsible for data processing.
+1. **This study** — to answer the research questions
+2. **An open habits database** — anonymised data will be made permanently available to the scientific community to develop better recommendation systems
+3. **Scientific publications** — in a form that does not allow any conclusions about individual participants
 
-The legal basis for processing your data is your personal consent (Art. 6 (1)(a), Art. 9 (2)(a) GDPR). Your data will be treated confidentially at all times.
+### International data transfers
 
-The data is collected for the purpose of the study described above and used within this framework.
+Certain anonymised and aggregated datasets (e.g. on the formulation of habits) are shared with the following partners:
 
-We also plan an additional use of the data outside this study. Specifically, we intend to create a habits database. This database is to be made available to scientific research and serve as a basis for the development and improvement of systems for the automated recommendation of healthy behaviours.
+- **Tohoku University, Japan** (Center for Smart Aging Research)
+- **Memorial University of Newfoundland, Canada** (Faculty of Business Administration)
 
-The collected data is stored and shared exclusively in anonymised form. No conclusions about individual persons are possible. Personal or pseudonymised data is not passed on to third parties. The anonymised data is used exclusively for scientific purposes.
+Both countries have received an EU adequacy decision. Only anonymised data is transferred — for example: "Group A logged more habits on average than Group B."
 
-By participating in the study, you consent to the use of your data collected during the study both for the present investigation and beyond, within the framework of an open database. Before the data is shared, it is fully anonymised so that no conclusions about individual persons are possible.
+### How long is the data stored?
 
-This study also collects information that is generally considered special categories of personal data under Article 9 of the EU General Data Protection Regulation (EU GDPR). This includes, for example, information about your gender, your ethnic origin, your religious affiliation, your physical and mental well-being, as well as data about your everyday life and personality.
+Anonymous data is stored on TU Dresden servers and may be kept permanently to support long-term scientific research. Once data has been fully anonymised, individual records can no longer be identified or selectively deleted.
 
-However, all data is collected in fully anonymised form. This means: no information is stored that allows conclusions about your identity. Subsequent attribution of the data to your person is also not possible.
+### Your rights
 
-All data through which you could be directly identified, e.g. your name or date of birth, is deleted or modified in such a way that practically no one, not even the study directors, can find out to whom the data belongs (anonymised).
+Because all data is anonymous, we cannot attribute specific records to any individual after anonymisation. For questions or concerns, please contact:
 
-The anonymous data is stored on the servers of Technische Universität Dresden and, unless legal obligations prevent this, may be kept permanently. Should the research project be terminated at a later date, all anonymous data will also be deleted. This ensures that the anonymity of participants is maintained at all times and that the data is used exclusively for scientific purposes. We do not collect personal data.
-
-Some of the data on everyday habits collected in this study will be shared in anonymised and aggregated form with our scientific partners in Japan and Canada for processing and research. The data is shared exclusively for research purposes and in compliance with all applicable data protection regulations.
-
-In particular, this concerns datasets dealing with the formulation of habits (message framing) and with different types of tasks. Explicit care is taken to ensure that no conclusions about individual persons are possible.
-
-An example of the type of information shared would be: "Group A entered more habits on average than Group B."
-
-Person-related statements such as "Ms Müller likes to go jogging in the afternoon." are not shared and are not the aim of this data collection.
-
-Through this approach, your anonymity remains fully protected at all times, and your data is used exclusively for the advancement of science.
-
-Current partners are Japan's Center for Smart Aging Research, Tohoku University, Japan, and the Faculty of Business Administration, Memorial University of Newfoundland, Canada. The EU has determined that both institutions provide an adequate legal level of data protection (so-called adequacy decision).
-
-The research data may be used for scientific publications and/or made available to other researchers in scientific databases for an unlimited period of time. The data is used in a form that does not allow any conclusions about individual study participants (anonymised).
-
-The collected data is processed in anonymised form, which means that attribution to individual study participants is not possible. Therefore, there is no right to information about the specific data, as we do not know to whom the data belongs.
-
-Consent to the processing of your data is voluntary and can be withdrawn at any time without giving reasons. You can do this by no longer sharing habits, by uninstalling the app, or by deleting your account in the app's settings. After your withdrawal, no further data will be collected. The lawfulness of the processing carried out up to your withdrawal remains unaffected.
-
-Please note that once your data has been anonymised, inspection, correction or deletion is no longer possible. In these cases, please contact:
-
-Felix Reinsch
+**Felix Reinsch**
 felix.reinsch@tu-dresden.de
-Digital Health Research Group
-Technische Universität Dresden
+Digital Health Research Group, Technische Universität Dresden
 
-For questions regarding data protection, please contact the Data Protection Officer:
-
-Technische Universität Dresden
-Data Protection Officer
-Helmholtzstr. 6
-01062 Dresden
+**TU Dresden Data Protection Officer:**
+Helmholtzstr. 6, 01062 Dresden
 Tel.: +49 351 463-0
 Email: Informationssicherheit@tu-dresden.de
 
-You have the right to lodge a complaint with any data protection supervisory authority. A list of supervisory authorities in Germany can be found at: https://www.bfdi.bund.de/DE/Infothek/Anschriften_Links/anschriften_links-node.html
+You have the right to lodge a complaint with any data protection supervisory authority:
 
-The supervisory authority responsible for you can be reached at:
-
-Saxon Commissioner for Data Protection and Transparency
-Postfach 11 01 32
-01330 Dresden
+**Saxon Commissioner for Data Protection and Transparency**
+Postfach 11 01 32, 01330 Dresden
 Tel.: +49 351 85471-101
 Email: post@sdtb.sachsen.de
 
-## Updates to this Declaration of Consent
+A list of all German supervisory authorities is available at: https://www.bfdi.bund.de/DE/Infothek/Anschriften_Links/anschriften_links-node.html
 
-This declaration of consent is reviewed regularly and updated as necessary to ensure that it always complies with current research requirements, legal provisions and ethical standards. Possible changes may result, for example, from new project partners, expanded research goals or adapted data protection provisions. The current version of this declaration of consent can be found on our study website. Significant changes that could affect your participation will be communicated transparently.
+## Updates to this Consent Form
 
-The Digital Health Research Group of TU Dresden is committed to informing all participants about relevant updates. Since the study is conducted in fully anonymised form, changes are communicated via the platforms used. You can view the current version of the declaration of consent at any time and reconsider your participation accordingly.
+This consent form is reviewed regularly. Any significant changes will be communicated to you via the app and you will be asked to consent again. The current version is always accessible within the app.
 
 ## Declaration of Consent
 
-I have received and read the written information and declaration of consent for the above-mentioned study. I have been informed comprehensively in writing about the purpose and course of the study, the benefits and risks of participation, and my rights and obligations.
+I have read and understood the information about this study. I have been informed that:
 
-I have been informed that my participation is voluntary and that I have the right to withdraw my consent at any time without giving reasons, without suffering any disadvantages as a result.
+- my participation is voluntary,
+- I can stop at any time without giving a reason,
+- all my data will be fully anonymised,
+- the data will be used for scientific purposes and in an open research database.
 
-**Consent to data processing:** The processing and use of personal data for the above-mentioned study takes place exclusively as described in the section "Data Protection Information".
-
-You are taking part in a fully anonymised study conducted by the Digital Health Research Group at Technische Universität Dresden.
-
-By continuing, you consent to the anonymous use of your data within the HabConnect research. No personal data (such as name, address or email) is collected or stored.
-
-Participation is voluntary. You can cancel your entry at any time. You will not suffer any disadvantages as a result.
+**By continuing, I consent to the anonymous use of my data within the HabConnect research.**
 
 Your information will be used exclusively for scientific purposes and stored on the secure servers of TU Dresden.
-
-By continuing, you confirm that you have read and understood the study information and that you wish to participate voluntarily.

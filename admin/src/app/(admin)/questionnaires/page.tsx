@@ -439,7 +439,16 @@ function QuestionnairePreviewModal({
           type: (q.type ?? "text") as QuestionType,
           text: q.text ?? "",
           required: q.required ?? false,
-          options: Array.isArray(q.options) ? q.options : [],
+          // Options may be stored as {value, label} objects (legacy format from library
+          // questionnaires). Normalize to strings for display.
+          options: Array.isArray(q.options)
+            ? q.options.map((o: unknown) =>
+                typeof o === "string"
+                  ? o
+                  : ((o as { label?: string }).label ??
+                     String((o as { value?: unknown }).value ?? o))
+              )
+            : [],
         }));
         setDetail({ ...questionnaire, questions });
       } catch {
@@ -574,7 +583,15 @@ export default function QuestionnairesPage() {
           type: (qq.type ?? "text") as QuestionType,
           text: qq.text ?? "",
           required: qq.required ?? false,
-          options: Array.isArray(qq.options) ? qq.options : [],
+          // Normalize {value, label} options (library format) to plain strings.
+          options: Array.isArray(qq.options)
+            ? qq.options.map((o: unknown) =>
+                typeof o === "string"
+                  ? o
+                  : ((o as { label?: string }).label ??
+                     String((o as { value?: unknown }).value ?? o))
+              )
+            : [],
         })),
       });
       setModalOpen(true);

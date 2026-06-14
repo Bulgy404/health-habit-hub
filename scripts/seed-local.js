@@ -483,7 +483,7 @@ async function seedKeycloak() {
           username: 'testuser',
           enabled: true,
           credentials: [
-            { type: 'password', value: 'testpass123', temporary: false },
+            { type: 'password', value: 'testpass1234', temporary: false },
           ],
           attributes: { group: [] },
         }),

@@ -249,11 +249,34 @@ class AuthService {
     return token != null;
   }
 
-  /// Clears all tokens from secure storage and notifies listeners.
+  /// Logs out locally and revokes the Keycloak server-side session.
+  ///
+  /// Calls Keycloak's token revocation endpoint (RFC 7009) with the stored
+  /// refresh token before clearing local storage. This invalidates the session
+  /// on the server so a stolen refresh token cannot be replayed. Revocation
+  /// failure is silently ignored — local tokens are always cleared regardless.
   Future<void> logout() async {
+    final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
+    if (refreshToken != null) {
+      try {
+        await (_dio ?? Dio()).post<void>(
+          '$_keycloakBaseUrl/realms/$_realm/protocol/openid-connect/revoke',
+          data: {
+            'client_id': _clientId,
+            'token': refreshToken,
+            'token_type_hint': 'refresh_token',
+          },
+          options: Options(contentType: 'application/x-www-form-urlencoded'),
+        );
+      } catch (_) {
+        // Best-effort — always clear local tokens even if revocation fails.
+      }
+    }
     await _secureStorage.delete(key: _tokenKey);
     await _secureStorage.delete(key: _refreshTokenKey);
     await _secureStorage.delete(key: _expiryKey);
+    await _secureStorage.delete(key: _usernameKey);
+    await _secureStorage.delete(key: _passwordKey);
     onLogout?.call();
   }
 
