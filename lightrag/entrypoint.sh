@@ -11,4 +11,5 @@ exec lightrag-server \
   --working-dir /app/data \
   --llm-binding openai \
   --embedding-binding openai \
-  --log-level INFO
+  --log-level INFO \
+  --timeout 3600

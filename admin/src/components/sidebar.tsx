@@ -62,7 +62,15 @@ export function Sidebar() {
           <div className={styles.userEmail}>{session.user.email}</div>
         )}
         <button
-          onClick={() => signOut()}
+          onClick={() =>
+            signOut({
+              // After NextAuth clears its session, redirect to Keycloak's
+              // end_session endpoint so the SSO session is also destroyed.
+              // Without this the user stays logged in to Keycloak and can
+              // re-enter the admin portal without re-entering credentials.
+              callbackUrl: `${process.env.NEXT_PUBLIC_KEYCLOAK_BROWSER_URL}/realms/hhh/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(process.env.NEXT_PUBLIC_NEXTAUTH_URL ?? "")}&client_id=hhh-admin`,
+            })
+          }
           className={styles.signOutButton}
         >
           Sign out

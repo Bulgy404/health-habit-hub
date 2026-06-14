@@ -24,6 +24,25 @@ const KEYCLOAK_INTERNAL = process.env.KEYCLOAK_INTERNAL_URL!;
 const TOKEN_URL = `${KEYCLOAK_INTERNAL}/realms/hhh/protocol/openid-connect/token`;
 
 /**
+ * Decode realm roles from a Keycloak access token (JWT).
+ * Keycloak puts realm_access.roles in the access token payload, not in the
+ * HTTP response body and not reliably in the ID token (which varies by mapper
+ * configuration). Reading directly from the JWT avoids Issuer discovery
+ * dependencies and works regardless of idToken mapper settings.
+ */
+function decodeRoles(accessToken?: string): string[] {
+  if (!accessToken) return [];
+  try {
+    const payload = JSON.parse(
+      Buffer.from(accessToken.split(".")[1], "base64url").toString()
+    ) as { realm_access?: { roles?: string[] } };
+    return payload?.realm_access?.roles ?? [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Exchange a refresh token for a new access token and return updated JWT fields.
  * On failure, marks the token with an error so the session callback can signal
  * the client to re-authenticate.
@@ -47,7 +66,6 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       access_token: string;
       expires_in: number;
       refresh_token?: string;
-      realm_access?: { roles?: string[] };
     };
 
     return {
@@ -56,8 +74,9 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       // expires_in is relative seconds; store as absolute Unix timestamp
       accessTokenExpires: Math.floor(Date.now() / 1000) + refreshed.expires_in,
       refreshToken: refreshed.refresh_token ?? token.refreshToken,
-      // Update roles from the new token so revocations take effect on refresh
-      roles: refreshed.realm_access?.roles ?? token.roles,
+      // Re-decode roles from the new access token so revocations take effect.
+      // realm_access is in the JWT payload, not the HTTP response body.
+      roles: decodeRoles(refreshed.access_token),
       error: undefined,
     };
   } catch {
@@ -80,9 +99,11 @@ export const authOptions: AuthOptions = {
       clientId: process.env.KEYCLOAK_CLIENT_ID!,
       clientSecret: process.env.KEYCLOAK_CLIENT_SECRET!,
       issuer: process.env.KEYCLOAK_ISSUER!,
-      wellKnown: `${process.env.KEYCLOAK_INTERNAL_URL!}/realms/hhh/.well-known/openid-configuration`,
+      // wellKnown is intentionally omitted: when set, next-auth uses Issuer.discover() on the
+      // internal Docker URL, and the returned discovery doc overrides authorization.url with
+      // keycloak:8080 (unreachable from the browser). All endpoints are explicit below.
+      jwks_endpoint: `${process.env.KEYCLOAK_INTERNAL_URL!}/realms/hhh/protocol/openid-connect/certs`,
       checks: ["pkce", "state"],
-      idToken: true,
       authorization: {
         url: `${process.env.KEYCLOAK_BROWSER_URL!}/realms/hhh/protocol/openid-connect/auth`,
         params: { scope: "openid email profile" },
@@ -102,10 +123,14 @@ export const authOptions: AuthOptions = {
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account && profile) {
-        // Initial sign-in: seed the token from the ID token profile.
+        // Initial sign-in: decode roles from the access token payload.
+        // We don't use idToken for roles because without wellKnown discovery
+        // the openid-client Issuer isn't initialized for iss claim validation,
+        // causing OAuthCallback errors. The access token always carries
+        // realm_access.roles in its JWT payload.
         return {
           ...token,
-          roles: (profile as { realm_access?: { roles?: string[] } }).realm_access?.roles ?? [],
+          roles: decodeRoles(account.access_token),
           accessToken: account.access_token,
           accessTokenExpires: account.expires_at,
           refreshToken: account.refresh_token,

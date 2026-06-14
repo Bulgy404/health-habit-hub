@@ -1,8 +1,8 @@
 {
   "realm": "hhh",
   "enabled": true,
-  "displayName": "Health Habit Hub",
-  "displayNameHtml": "<b>Health Habit Hub</b>",
+  "displayName": "Health-Habit-Hub",
+  "displayNameHtml": "<b>Health-Habit-Hub</b>",
   "sslRequired": "external",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
@@ -10,6 +10,12 @@
   "resetPasswordAllowed": true,
   "editUsernameAllowed": false,
   "bruteForceProtected": true,
+  "failureFactor": 5,
+  "maxFailureWaitSeconds": 900,
+  "minimumQuickLoginWaitSeconds": 60,
+  "maxDeltaTimeSeconds": 43200,
+  "permanentLockout": false,
+  "passwordPolicy": "length(12) and notUsername(undefined) and notEmail(undefined)",
   "roles": {
     "realm": [
       {
@@ -49,6 +55,7 @@
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
       "redirectUris": [
+        "de.tu-dresden.hhh://*",
         "hhh://*",
         "http://localhost:*"
       ],
@@ -118,12 +125,17 @@
       "protocol": "openid-connect",
       "redirectUris": [
         "http://localhost:3001/*",
-        "http://admin.localhost/*"
+        "http://admin.localhost/*",
+        "https://${DOMAIN}/admin/*"
       ],
       "webOrigins": [
         "http://localhost:3001",
-        "http://admin.localhost"
+        "http://admin.localhost",
+        "https://${DOMAIN}"
       ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
       "defaultClientScopes": [
         "basic",
         "openid",
@@ -144,40 +156,5 @@
     "offline_access",
     "uma_authorization"
   ],
-  "users": [
-    {
-      "id": "00000000-0000-0000-0000-000000000001",
-      "username": "demo-admin",
-      "firstName": "Demo",
-      "lastName": "Admin",
-      "enabled": true,
-      "emailVerified": true,
-      "email": "demo-admin@hhh.local",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "demo-admin",
-          "temporary": true
-        }
-      ],
-      "realmRoles": ["admin"]
-    },
-    {
-      "id": "00000000-0000-0000-0000-000000000002",
-      "username": "demo-researcher",
-      "firstName": "Demo",
-      "lastName": "Researcher",
-      "enabled": true,
-      "emailVerified": true,
-      "email": "demo-researcher@hhh.local",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "demo-researcher",
-          "temporary": true
-        }
-      ],
-      "realmRoles": ["researcher"]
-    }
-  ]
+  "users": []
 }
