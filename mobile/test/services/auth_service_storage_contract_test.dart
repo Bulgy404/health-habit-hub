@@ -288,19 +288,21 @@ void main() {
   // ─── logout() ──────────────────────────────────────────────────────────────
 
   group('logout()', () {
-    test('delete() is called exactly three times (once per token key)', () async {
+    test('delete() is called exactly five times (tokens + credentials)', () async {
       storage.seedValue('access_token', 'tok');
       storage.seedValue('refresh_token', 'ref');
       storage.seedValue('token_expiry', DateTime.now().toIso8601String());
+      storage.seedValue('username', 'user');
+      storage.seedValue('password', 'pass');
 
       final service = AuthService(secureStorage: storage);
       await service.logout();
 
       final deletes = storage.calls.where((c) => c['method'] == 'delete').toList();
-      expect(deletes.length, 3);
+      expect(deletes.length, 5);
     });
 
-    test('delete() is called for access_token, refresh_token, token_expiry',
+    test('delete() is called for all stored keys including credentials',
         () async {
       final service = AuthService(secureStorage: storage);
       await service.logout();
@@ -310,7 +312,7 @@ void main() {
           .map((c) => c['key'] as String)
           .toSet();
       expect(deletedKeys,
-          equals({'access_token', 'refresh_token', 'token_expiry'}));
+          equals({'access_token', 'refresh_token', 'token_expiry', 'username', 'password'}));
     });
 
     test('onLogout callback is triggered after all deletes', () async {
@@ -322,11 +324,11 @@ void main() {
       );
       await service.logout();
 
-      // Callback fires after the three deletes.
+      // Callback fires after the five deletes.
       expect(log, equals(['logout']));
       final deletesBeforeCallback =
           storage.calls.where((c) => c['method'] == 'delete').length;
-      expect(deletesBeforeCallback, 3);
+      expect(deletesBeforeCallback, 5);
     });
   });
 

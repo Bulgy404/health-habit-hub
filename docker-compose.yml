@@ -279,6 +279,7 @@ services:
     environment:
       - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY}
       - LLM_MODEL=${LLM_MODEL}
+      - LIGHTRAG_LLM_MODEL=${LIGHTRAG_LLM_MODEL:-alias-huge-no-thinking}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL}
     volumes:
       - lightrag-data:/app/data

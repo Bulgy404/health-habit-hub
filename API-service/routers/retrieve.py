@@ -32,12 +32,11 @@ _SUPPORTED_EXTENSIONS = {".pdf", ".txt", ".md"}
 
 
 def _headers(content_type: Optional[str] = "application/json") -> dict[str, str]:
-    """Build HTTP headers for LightRAG requests, including optional Bearer token."""
     h: dict[str, str] = {}
     if content_type:
         h["Content-Type"] = content_type
     if _LIGHTRAG_API_KEY:
-        h["Authorization"] = f"Bearer {_LIGHTRAG_API_KEY}"
+        h["X-API-Key"] = _LIGHTRAG_API_KEY
     return h
 
 
@@ -228,7 +227,7 @@ async def upload_kb(
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
             resp = await client.post(
-                f"{_LIGHTRAG_URL}/documents/file",
+                f"{_LIGHTRAG_URL}/documents/upload",
                 headers=auth_header,
                 files={"file": (file.filename, content, file.content_type or "application/octet-stream")},
             )
