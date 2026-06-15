@@ -70,14 +70,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String helpfulCount(String count) {
-    return 'Helpful: $count';
+    return 'Saved: $count';
   }
 
   @override
   String get iDoThisToo => 'I do this too';
 
   @override
-  String get helpful => 'Helpful';
+  String get helpful => 'Save';
+
+  @override
+  String get savedSection => 'Saved';
 
   @override
   String get failedToLoadSettings => 'Failed to load settings';
@@ -715,7 +718,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get couldNotPostComment => 'Could not post comment';
 
   @override
-  String get likeTooltip => 'Like';
+  String get likeTooltip => '';
 
   @override
   String get adminComments => 'Comments';

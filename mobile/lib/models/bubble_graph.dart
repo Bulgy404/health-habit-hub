@@ -87,6 +87,9 @@ class HabitBubble {
   int get totalAnnotations =>
       annotationCounts.values.fold(0, (s, c) => s + c);
 
+  /// Number of users who marked this habit as "I do this too".
+  int get iDoThisCount => annotationCounts['iDoThis'] ?? 0;
+
   /// Deserialises a [HabitBubble] from JSON.
   factory HabitBubble.fromJson(Map<String, dynamic> json) {
     final counts = ((json['annotationCounts'] as Map<String, dynamic>?) ?? {})

@@ -217,7 +217,7 @@ abstract class AppLocalizations {
   /// Annotation count label for helpful
   ///
   /// In en, this message translates to:
-  /// **'Helpful: {count}'**
+  /// **'Saved: {count}'**
   String helpfulCount(String count);
 
   /// Button label for the iDoThis annotation action
@@ -229,8 +229,14 @@ abstract class AppLocalizations {
   /// Button label for the helpful annotation action
   ///
   /// In en, this message translates to:
-  /// **'Helpful'**
+  /// **'Save'**
   String get helpful;
+
+  /// Section heading for saved habits in My Habits overview
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get savedSection;
 
   /// Error message when settings fail to load
   ///
@@ -1402,10 +1408,10 @@ abstract class AppLocalizations {
   /// **'Could not post comment'**
   String get couldNotPostComment;
 
-  /// Tooltip of the like button
+  /// Unused — like annotation removed
   ///
   /// In en, this message translates to:
-  /// **'Like'**
+  /// **''**
   String get likeTooltip;
 
   /// Title of the admin comment-moderation screen

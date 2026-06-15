@@ -39,7 +39,6 @@ import '../screens/onboarding/restore_screen.dart';
 import '../screens/onboarding/study_code_screen.dart';
 import '../screens/onboarding/welcome_screen.dart';
 import '../screens/profile_screen.dart';
-import '../screens/settings/personal_info_screen.dart';
 import '../screens/shell_screen.dart';
 import '../screens/user_settings_screen.dart';
 import 'redirect.dart';
@@ -242,10 +241,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => const LegalDocumentScreen(
                       documentType: LegalDocumentType.consent,
                     ),
-                  ),
-                  GoRoute(
-                    path: 'personal-info',
-                    builder: (context, state) => const PersonalInfoScreen(),
                   ),
                 ],
               ),

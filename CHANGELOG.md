@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added — Admin analytics, monitoring (2026-06-15)
+- **Interactive analytics charts:** `studies-analytics-tab.tsx` now shows floating tooltips on all chart elements (bar rows, SVG line points) with exact values; clicking a "Weekly Active Rate" bar opens a drill-down panel that fetches and lists participants for that group via `GET /api/v1/admin/participants?studyId=&groupId=`; cumulative dropout rebuilt as a proper SVG line chart (was a plain list); questionnaire completion bars use the wider `.barLabelWide` label so full questionnaire names are visible
+- **Analytics modal widened:** study edit modal grew from `max-width: 640px` to `min(96vw, 1100px)` so the analytics tab no longer overflows the white box
+- **Prometheus + Grafana (local):** `docker-compose.local.yml` now includes `prometheus` (port 9090, `prometheus.localhost`) and `grafana` (port 3002, `grafana.localhost`); Prometheus scrapes the existing Node.js `/metrics` endpoint at `app:9091`; Grafana auto-provisions the Prometheus datasource and the pre-built HHH App Metrics dashboard (`monitoring/grafana/dashboards/hhh-app.json`) with HTTP rate, latency percentiles, memory, and event loop panels; Makefile gains `monitoring`, `monitoring-stop`, `logs-prometheus`, `logs-grafana` targets
+
+### Fixed — Admin portal (2026-06-15)
+- **Keycloak issuer mismatch (OAuthCallbackError):** `KEYCLOAK_ISSUER` in `docker-compose.local.yml` corrected from `http://keycloak:8080/realms/hhh` to `http://localhost:8080/realms/hhh`; Keycloak `start-dev` stamps `iss` with the public-facing hostname, not the Docker-internal one; NextAuth v4 `idToken` auto-detects `true` when scope includes `openid` and then validates `iss` strictly via `client.callback()` — the internal URL caused every login to fail with "try sign in with a different account"
+- **Knowledge Base HTTP 422:** all four `kbRouter.js` proxy calls were missing `X-Service-Auth-Token`; FastAPI returns 422 (not 401) for a missing required `Header(...)` parameter; added `serviceHeaders()` helper that injects `API_SERVICE_SECRET` into every upstream fetch
+- **Questionnaires crash (React error #31):** MongoDB stores SurveyJS question options as `{value, label}` objects; the preview modal and edit handler rendered them directly as React children; options are now normalised to plain strings at load time in both places
+- **LightRAG processing timeout:** `--timeout` increased from 360 → 3600 s in `lightrag/entrypoint.sh`; the external SCADS.AI LLM was timing out at chunk 18/23 on larger documents
+- **LLM model:** changed from `alias-ha` → `alias-huge` in `.env` and `docker-compose.local.yml`
+
 ### Fixed — CI pipeline repairs (2026-06-10)
 - **`npm ci` "Invalid Version:" repaired (2026-06-12):** the regenerated `app/package-lock.json` contained a corrupt entry — `node_modules/google-gax/node_modules/@grpc/grpc-js` had no `version`/`resolved`/`integrity` fields (just `{"optional": true}`), making npm's arborist throw `Invalid Version:` during every `npm ci` (all setup-node-app CI jobs + the app Docker build). Note: `npm ci --dry-run` does **not** catch this — verification now uses a real clean-room `npm ci` (612 packages, passes); `admin/package-lock.json` audited clean; full backend suite re-run (538/538)
 - **Ontology constraint parser fixed:** the CI step split `constraints.cypher` on `;` *before* removing comments — a semicolon inside a header comment produced a bogus statement (Cypher syntax error), and `//`-prefixed chunks bundled with real statements would have been silently dropped; the parser now strips comment lines first, and the header comment no longer contains a semicolon (10 clean statements verified)

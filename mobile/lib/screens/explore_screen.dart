@@ -50,7 +50,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -218,12 +218,32 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           tabs: [
             Tab(icon: const Icon(Icons.bubble_chart), text: l10n.graphTab),
             Tab(icon: const Icon(Icons.bar_chart), text: l10n.statsTab),
+            Tab(icon: const Icon(Icons.bookmark_outline), text: l10n.myHabitsTab),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [body, const StatsScreen()],
+        children: [
+          body,
+          const StatsScreen(),
+          _MyHabitsTab(
+            graph: graphAsync.value,
+            habitService: ref.read(habitServiceProvider),
+            onHabitTap: (habitId, dimensionId) {
+              _tabController.animateTo(0);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                ref.read(showInGraphProvider.notifier).select(
+                  HabitGraphSelection(
+                    habitId: habitId,
+                    dimensionId: dimensionId,
+                  ),
+                );
+              });
+            },
+          ),
+        ],
       ),
     );
   }
@@ -355,7 +375,6 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
         annotationState[_node.id]?.contains('iDoThis') ?? false;
     final helpfulActive =
         annotationState[_node.id]?.contains('helpful') ?? false;
-    final likeActive = annotationState[_node.id]?.contains('like') ?? false;
     final busy = _loadingType != null;
 
     final related =
@@ -483,17 +502,11 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
               ),
               const SizedBox(width: 20),
               _CountBadge(
-                icon: helpfulActive ? Icons.star : Icons.star_outline,
+                icon: helpfulActive ? Icons.bookmark : Icons.bookmark_outline,
                 label: l10n.helpfulCount(
                   '${_node.annotationCounts['helpful'] ?? 0}',
                 ),
-                color: helpfulActive ? Colors.amber : cs.tertiary,
-              ),
-              const SizedBox(width: 20),
-              _CountBadge(
-                icon: likeActive ? Icons.favorite : Icons.favorite_border,
-                label: '${_node.annotationCounts['likes'] ?? 0}',
-                color: likeActive ? Colors.red.shade400 : cs.secondary,
+                color: helpfulActive ? cs.primary : cs.tertiary,
               ),
             ],
           ),
@@ -530,6 +543,14 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
               Expanded(
                 child: FilledButton.icon(
                   onPressed: busy ? null : () => _annotate('helpful'),
+                  style: helpfulActive
+                      ? FilledButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primaryContainer,
+                          foregroundColor:
+                              Theme.of(context).colorScheme.onPrimaryContainer,
+                        )
+                      : null,
                   icon: _loadingType == 'helpful'
                       ? const SizedBox(
                           width: 14,
@@ -537,27 +558,12 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : Icon(
-                          helpfulActive ? Icons.star : Icons.star_outline,
-                          color: helpfulActive ? Colors.amber : null,
+                          helpfulActive
+                              ? Icons.bookmark
+                              : Icons.bookmark_outline,
                         ),
                   label: Text(l10n.helpful),
                 ),
-              ),
-              const SizedBox(width: 12),
-              IconButton.outlined(
-                onPressed: busy ? null : () => _annotate('like'),
-                tooltip: l10n.likeTooltip,
-                isSelected: likeActive,
-                icon: _loadingType == 'like'
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        likeActive ? Icons.favorite : Icons.favorite_border,
-                        color: likeActive ? Colors.red.shade400 : null,
-                      ),
               ),
             ],
           ),
@@ -685,6 +691,242 @@ class _CountBadge extends StatelessWidget {
         Icon(icon, size: 16, color: color),
         const SizedBox(width: 5),
         Text(label, style: Theme.of(context).textTheme.bodyMedium),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// My Habits tab — overview of the user's saved and iDoThis annotations
+// ---------------------------------------------------------------------------
+
+class _MyHabitsTab extends StatefulWidget {
+  final BubbleGraph? graph;
+  final HabitService habitService;
+  final void Function(String habitId, String dimensionId) onHabitTap;
+
+  const _MyHabitsTab({
+    required this.graph,
+    required this.habitService,
+    required this.onHabitTap,
+  });
+
+  @override
+  State<_MyHabitsTab> createState() => _MyHabitsTabState();
+}
+
+class _MyHabitsTabState extends State<_MyHabitsTab>
+    with AutomaticKeepAliveClientMixin {
+  Map<String, List<String>>? _annotations;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final data = await widget.habitService.fetchMyAnnotations();
+      if (mounted) setState(() { _annotations = data; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() { _error = 'Failed to load'; _loading = false; });
+    }
+  }
+
+  String _habitName(String id) {
+    if (widget.graph == null) return id;
+    for (final dim in widget.graph!.dimensions) {
+      for (final h in dim.habits) {
+        if (h.id == id) return h.label;
+      }
+    }
+    return id;
+  }
+
+  String? _dimensionId(String habitId) {
+    if (widget.graph == null) return null;
+    for (final dim in widget.graph!.dimensions) {
+      for (final h in dim.habits) {
+        if (h.id == habitId) return dim.id;
+      }
+    }
+    return null;
+  }
+
+  void _tapHabit(String habitId) {
+    final dimId = _dimensionId(habitId);
+    if (dimId == null) return;
+    widget.onHabitTap(habitId, dimId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final l10n = AppLocalizations.of(context)!;
+
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(_error!, style: tt.bodyMedium),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () { setState(() { _loading = true; _error = null; }); _load(); },
+              icon: const Icon(Icons.refresh),
+              label: Text(l10n.retry),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final iDoThisIds = _annotations?['iDoThis'] ?? [];
+    final savedIds = _annotations?['helpful'] ?? [];
+
+    if (iDoThisIds.isEmpty && savedIds.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.bookmark_outline, size: 48, color: cs.outline),
+            const SizedBox(height: 12),
+            Text(
+              l10n.myHabitsTab,
+              style: tt.titleMedium?.copyWith(color: cs.outline),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Tap "${l10n.iDoThisToo}" or "${l10n.helpful}" on any habit to see it here.',
+              style: tt.bodySmall?.copyWith(color: cs.outline),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        children: [
+          if (iDoThisIds.isNotEmpty)
+            _AnnotationSection(
+              icon: Icons.thumb_up,
+              label: l10n.iDoThisToo,
+              color: Colors.green.shade700,
+              habitIds: iDoThisIds,
+              habitName: _habitName,
+              onTap: _tapHabit,
+              canNavigate: widget.graph != null,
+            ),
+          if (savedIds.isNotEmpty)
+            _AnnotationSection(
+              icon: Icons.bookmark,
+              label: l10n.savedSection,
+              color: cs.primary,
+              habitIds: savedIds,
+              habitName: _habitName,
+              onTap: _tapHabit,
+              canNavigate: widget.graph != null,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnnotationSection extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final List<String> habitIds;
+  final String Function(String id) habitName;
+  final void Function(String id) onTap;
+  final bool canNavigate;
+
+  const _AnnotationSection({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.habitIds,
+    required this.habitName,
+    required this.onTap,
+    required this.canNavigate,
+  });
+
+  @override
+  State<_AnnotationSection> createState() => _AnnotationSectionState();
+}
+
+class _AnnotationSectionState extends State<_AnnotationSection> {
+  bool _expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(widget.icon, size: 18, color: widget.color),
+                const SizedBox(width: 8),
+                Text(
+                  '${widget.label} (${widget.habitIds.length})',
+                  style: tt.titleSmall?.copyWith(
+                    color: widget.color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  color: cs.outline,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_expanded)
+          ...widget.habitIds.map(
+            (id) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+              child: Card(
+                margin: EdgeInsets.zero,
+                child: ListTile(
+                  leading: Icon(widget.icon, color: widget.color, size: 20),
+                  title: Text(widget.habitName(id)),
+                  trailing: widget.canNavigate
+                      ? Icon(Icons.arrow_forward_ios, size: 12, color: cs.outline)
+                      : null,
+                  tileColor: cs.surfaceContainerLow,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  onTap: widget.canNavigate ? () => widget.onTap(id) : null,
+                ),
+              ),
+            ),
+          ),
+        const SizedBox(height: 8),
       ],
     );
   }

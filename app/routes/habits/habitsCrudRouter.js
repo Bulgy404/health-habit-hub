@@ -308,16 +308,40 @@ export function createHabitsCrudRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
+  // GET /api/v1/habits/my-annotations — returns the current user's own annotations
+  router.get('/my-annotations', async (req, res) => {
+    try {
+      const userId = req.user?.sub;
+      if (!userId || typeof userId !== 'string') {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      const database = await getDb();
+      const docs = await database
+        .collection('habit_annotations')
+        .find({ userId }, { projection: { habitId: 1, type: 1, _id: 0 } })
+        .toArray();
+      const result = { helpful: [], iDoThis: [] };
+      for (const doc of docs) {
+        if (doc.type === 'helpful') result.helpful.push(doc.habitId);
+        if (doc.type === 'iDoThis') result.iDoThis.push(doc.habitId);
+      }
+      res.json(result);
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // POST /api/v1/habits/:id/annotate
   // Adds or removes the requesting user's annotation and returns updated counts.
-  // Body: { type: 'helpful'|'iDoThis'|'like', remove?: boolean }
+  // Body: { type: 'helpful'|'iDoThis', remove?: boolean }
   router.post('/:id/annotate', async (req, res) => {
     try {
       const { type, remove = false } = req.body || {};
-      if (!['helpful', 'iDoThis', 'like'].includes(type)) {
+      if (!['helpful', 'iDoThis'].includes(type)) {
         return res
           .status(400)
-          .json({ error: 'type must be "helpful", "iDoThis" or "like"' });
+          .json({ error: 'type must be "helpful" or "iDoThis"' });
       }
 
       const userId = req.user?.sub;

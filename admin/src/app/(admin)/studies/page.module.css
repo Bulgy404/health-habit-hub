@@ -170,7 +170,7 @@
   background: var(--color-surface);
   border-radius: 12px;
   width: 100%;
-  max-width: 640px;
+  max-width: min(96vw, 1100px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   margin: auto;
 }
@@ -878,18 +878,24 @@
 /* ── Analytics tab ──────────────────────────────────────────────────────────── */
 .analyticsTab { padding: 0.5rem 0; }
 .analyticsSection { border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+.analyticsSectionHeader { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem; }
 .analyticsSectionTitle { font-weight: 600; font-size: 0.9rem; margin: 0 0 0.2rem; color: var(--color-text); }
-.analyticsSectionDesc { font-size: 0.78rem; color: var(--color-text-muted); margin: 0 0 0.75rem; }
-.barChart { display: flex; flex-direction: column; gap: 0.5rem; }
-.barRow { display: flex; align-items: center; gap: 0.5rem; }
-.barLabel { font-size: 0.8rem; font-weight: 600; width: 40px; flex-shrink: 0; color: var(--color-text); }
-.barTrack { flex: 1; height: 12px; background: var(--color-surface-alt); border-radius: 6px; overflow: hidden; }
-.barFill { height: 100%; border-radius: 6px; transition: width 0.3s; }
-.barValue { font-size: 0.8rem; font-weight: 600; color: var(--color-text); width: 36px; text-align: right; }
-.barSub { font-size: 0.75rem; color: var(--color-text-muted); width: 48px; }
-.lineChartWrap { overflow-x: auto; }
+.analyticsSectionDesc { font-size: 0.78rem; color: var(--color-text-muted); margin: 0; }
+.barChart { display: flex; flex-direction: column; gap: 0.6rem; }
+.barRow { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; border-radius: 6px; padding: 0.2rem 0.35rem; transition: background 0.15s; }
+.barRow:hover { background: var(--color-surface-alt); }
+.barRowClickable { cursor: pointer; }
+.barLabel { font-size: 0.8rem; font-weight: 600; width: 48px; flex-shrink: 0; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barLabelWide { font-size: 0.8rem; font-weight: 600; width: 180px; flex-shrink: 0; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barTrack { flex: 1; height: 14px; background: var(--color-surface-alt); border-radius: 6px; overflow: hidden; }
+.barFill { height: 100%; border-radius: 6px; transition: width 0.4s ease; }
+.barValue { font-size: 0.8rem; font-weight: 700; color: var(--color-text); width: 36px; text-align: right; }
+.barSub { font-size: 0.75rem; color: var(--color-text-muted); width: 54px; }
+.lineChartWrap { overflow-x: auto; position: relative; }
 .lineChart { width: 100%; min-width: 300px; }
-.chartLegend { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.5rem; }
+.lineChartInteractive circle { cursor: pointer; transition: r 0.15s; }
+.lineChartInteractive circle:hover { r: 6; }
+.chartLegend { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.75rem; }
 .legendItem { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--color-text); }
 .legendDot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .dropoutList { display: flex; flex-direction: column; gap: 0.35rem; }
@@ -898,3 +904,44 @@
 .dropoutDate { color: var(--color-text-muted); width: 90px; flex-shrink: 0; }
 .dropoutGroup { font-weight: 600; color: var(--color-text); width: 50px; }
 .dropoutCount { color: var(--color-text-muted); }
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  z-index: 200;
+  background: var(--color-text);
+  color: var(--color-surface);
+  font-size: 0.75rem;
+  border-radius: 6px;
+  padding: 0.4rem 0.65rem;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-width: 240px;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+/* Drill-down panel */
+.drillPanel {
+  margin-top: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.drillPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  background: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+.drillPanelTitle { font-size: 0.85rem; font-weight: 600; color: var(--color-text); }
+.drillPanelClose { background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--color-text-muted); line-height: 1; padding: 0.1rem 0.25rem; }
+.drillTable { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+.drillTable th { padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border); background: var(--color-surface-alt); }
+.drillTable td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border); color: var(--color-text); }
+.drillTable tr:last-child td { border-bottom: none; }
+.drillTable tr:hover td { background: var(--color-surface-alt); }
+.drillLoading { padding: 1rem; text-align: center; color: var(--color-text-muted); font-size: 0.85rem; }

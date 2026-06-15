@@ -81,7 +81,7 @@
       }
     }
   },
-  "helpfulCount": "役に立った: {count}",
+  "helpfulCount": "保存済み: {count}",
   "@helpfulCount": {
     "description": "Annotation count label for helpful",
     "placeholders": {
@@ -94,7 +94,8 @@
   "@iDoThisToo": {
     "description": "Button label for the iDoThis annotation action"
   },
-  "helpful": "役に立った",
+  "helpful": "保存",
+  "savedSection": "保存済み",
   "@helpful": {
     "description": "Button label for the helpful annotation action"
   },
@@ -923,7 +924,7 @@
   "@couldNotPostComment": {
     "description": "Snackbar when posting a comment fails"
   },
-  "likeTooltip": "いいね",
+  "likeTooltip": "",
   "@likeTooltip": {
     "description": "Tooltip of the like button"
   },
