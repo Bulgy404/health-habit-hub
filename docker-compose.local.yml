@@ -352,6 +352,56 @@ services:
       - redis
       - lightrag
 
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    container_name: h3-2-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - h3-2-proxy
+      - h3-2-app
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.prometheus.rule=Host(`prometheus.${PATH_SUFFIX:-localhost}`)
+      - traefik.http.routers.prometheus.entrypoints=web
+      - traefik.http.routers.prometheus.service=prometheus
+      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+
+  grafana:
+    image: grafana/grafana:12.0.1
+    container_name: h3-2-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://grafana.${PATH_SUFFIX:-localhost}
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3002:3000"
+    networks:
+      - h3-2-proxy
+      - h3-2-app
+    depends_on:
+      - prometheus
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.grafana.rule=Host(`grafana.${PATH_SUFFIX:-localhost}`)
+      - traefik.http.routers.grafana.entrypoints=web
+      - traefik.http.routers.grafana.service=grafana
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+
 volumes:
   mongo-local-data:
   neo4j-local-data:
@@ -360,6 +410,8 @@ volumes:
   translate-local-data:
   redis-local-data:
   lightrag-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   h3-2-proxy:

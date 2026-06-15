@@ -80,8 +80,26 @@ class HabitService {
     }
   }
 
-  /// Submits or removes an anonymous annotation of [type] ('helpful' or
-  /// 'iDoThis') for habit [id]. Pass [remove] to undo a previous annotation.
+  /// Returns the current user's own annotations grouped by type.
+  /// Keys are 'helpful' and 'iDoThis', values are lists of habit IDs.
+  Future<Map<String, List<String>>> fetchMyAnnotations() async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '$_baseUrl/habits/my-annotations',
+      );
+      final data = response.data ?? {};
+      return {
+        'helpful': List<String>.from(data['helpful'] as List? ?? []),
+        'iDoThis': List<String>.from(data['iDoThis'] as List? ?? []),
+      };
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      rethrow;
+    }
+  }
+
+  /// Submits or removes an annotation of [type] ('helpful' or 'iDoThis') for
+  /// habit [id]. Pass [remove] to undo a previous annotation.
   /// Returns the updated annotation counts.
   Future<Map<String, int>> annotateHabit(
     String id,

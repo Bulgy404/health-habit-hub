@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import styles from "./page.module.css";
-import { AnalyticsTab } from "../../../components/studies-analytics-tab";
+
 import { useStudiesData } from "./useStudiesData";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -1293,7 +1293,7 @@ function CueConfigTab({
 
 // ── Study form modal ──────────────────────────────────────────────────────────
 
-type ModalTab = "details" | "questionnaires" | "codes" | "participants" | "notifications" | "cue-config" | "analytics";
+type ModalTab = "details" | "questionnaires" | "codes" | "participants" | "notifications" | "cue-config";
 
 function StudyModal({
   initial,
@@ -1464,12 +1464,7 @@ function StudyModal({
             >
               Cue Config
             </button>
-            <button
-              className={`${styles.tab} ${activeTab === "analytics" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("analytics")}
-            >
-              Analytics
-            </button>
+
           </div>
         )}
 
@@ -1555,8 +1550,6 @@ function StudyModal({
             initial && <ParticipantsTab study={initial} token={token} />
           ) : activeTab === "cue-config" ? (
             initial && <CueConfigTab study={initial} token={token} />
-          ) : activeTab === "analytics" ? (
-            initial && <AnalyticsTab study={initial} token={token} />
           ) : (
             initial && <NotificationsTab study={initial} token={token} />
           )}

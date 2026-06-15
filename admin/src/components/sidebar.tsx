@@ -14,6 +14,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/studies", label: "Studies", icon: "🔬" },
+  { href: "/analytics", label: "Analytics", icon: "📊" },
   { href: "/cue-pools", label: "Cue Pools", icon: "🎯" },
   { href: "/questionnaires", label: "Questionnaires", icon: "📋" },
   { href: "/profile-fields", label: "Profile Fields", icon: "👤", adminOnly: true },

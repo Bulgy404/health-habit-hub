@@ -1,0 +1,161 @@
+{
+  "title": "Health Habit Hub — App Metrics",
+  "uid": "hhh-app",
+  "version": 1,
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "HTTP Requests / min",
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "rate(http_requests_total[1m]) * 60",
+          "legendFormat": "req/min",
+          "datasource": "Prometheus"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "colorMode": "background" }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "HTTP Error Rate",
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))",
+          "legendFormat": "error rate",
+          "datasource": "Prometheus"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "unit": "percentunit", "colorMode": "background",
+        "thresholds": { "steps": [
+          { "value": null, "color": "green" },
+          { "value": 0.01, "color": "yellow" },
+          { "value": 0.05, "color": "red" }
+        ]}
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Process Memory (RSS)",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes",
+          "legendFormat": "RSS",
+          "datasource": "Prometheus"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "unit": "bytes", "colorMode": "background" }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Node.js Event Loop Lag",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "nodejs_eventloop_lag_seconds",
+          "legendFormat": "lag",
+          "datasource": "Prometheus"
+        }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "unit": "s", "colorMode": "background",
+        "thresholds": { "steps": [
+          { "value": null, "color": "green" },
+          { "value": 0.1, "color": "yellow" },
+          { "value": 0.5, "color": "red" }
+        ]}
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "HTTP Requests by Status",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by(status) (rate(http_requests_total[1m]))",
+          "legendFormat": "{{status}}",
+          "datasource": "Prometheus"
+        }
+      ],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "HTTP Request Duration (p50 / p95 / p99)",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99",
+          "datasource": "Prometheus"
+        }
+      ],
+      "options": { "tooltip": { "mode": "multi" } },
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Node.js Memory",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 7 },
+      "targets": [
+        {
+          "expr": "nodejs_heap_size_used_bytes",
+          "legendFormat": "heap used",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "nodejs_heap_size_total_bytes",
+          "legendFormat": "heap total",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "process_resident_memory_bytes",
+          "legendFormat": "RSS",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Active Handles & Requests",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 7 },
+      "targets": [
+        {
+          "expr": "nodejs_active_handles_total",
+          "legendFormat": "active handles",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "nodejs_active_requests_total",
+          "legendFormat": "active requests",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    }
+  ]
+}

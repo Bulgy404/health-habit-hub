@@ -69,14 +69,17 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String helpfulCount(String count) {
-    return '役に立った: $count';
+    return '保存済み: $count';
   }
 
   @override
   String get iDoThisToo => '私もやっている';
 
   @override
-  String get helpful => '役に立った';
+  String get helpful => '保存';
+
+  @override
+  String get savedSection => '保存済み';
 
   @override
   String get failedToLoadSettings => '設定の読み込みに失敗しました';
@@ -688,7 +691,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get couldNotPostComment => 'コメントを投稿できませんでした';
 
   @override
-  String get likeTooltip => 'いいね';
+  String get likeTooltip => '';
 
   @override
   String get adminComments => 'コメント';

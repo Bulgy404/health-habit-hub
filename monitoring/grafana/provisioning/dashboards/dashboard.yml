@@ -5,4 +5,4 @@ providers:
     folder: HHH
     type: file
     options:
-      path: /var/lib/grafana/dashboards
+      path: /etc/grafana/dashboards

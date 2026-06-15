@@ -19,9 +19,10 @@
   "communityAnnotations": "Community-Annotationen",
   "unknown": "Unbekannt",
   "iDoThisCount": "Das mache ich auch: {count}",
-  "helpfulCount": "Hilfreich: {count}",
+  "helpfulCount": "Gespeichert: {count}",
   "iDoThisToo": "Das mache ich auch",
-  "helpful": "Hilfreich",
+  "helpful": "Merken",
+  "savedSection": "Gemerkt",
   "failedToLoadSettings": "Einstellungen konnten nicht geladen werden",
   "tokenCardFormat": "Token-Karten-Format",
   "tokenCardFormatDescription": "Wählen Sie das Format für die Erstellung von Token-Karten für neue Teilnehmer.",
@@ -304,7 +305,7 @@
   "@couldNotPostComment": {
     "description": "Snackbar when posting a comment fails"
   },
-  "likeTooltip": "Gefällt mir",
+  "likeTooltip": "",
   "@likeTooltip": {
     "description": "Tooltip of the like button"
   },

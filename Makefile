@@ -2,6 +2,7 @@
 
 .PHONY: help \
         dev stop seed verify-keycloak fix-keycloak logs logs-all ios reset \
+        monitoring monitoring-stop logs-prometheus logs-grafana \
         format test test-backend test-flutter test-python test-admin test-bcio-pipeline \
         prod-up prod-stop prod-ps prod-logs prod-build prod-restart \
         prod-keycloak prod-seed prod-update prod-cutover
@@ -43,6 +44,18 @@ reset: stop ## Wipe local volumes, restart, and re-seed
 	docker compose -f docker-compose.local.yml down -v
 	$(MAKE) dev
 	$(MAKE) seed
+
+monitoring: ## Start Prometheus + Grafana (grafana.localhost / prometheus.localhost)
+	docker compose -f docker-compose.local.yml up -d prometheus grafana
+
+monitoring-stop: ## Stop Prometheus + Grafana
+	docker compose -f docker-compose.local.yml stop prometheus grafana
+
+logs-prometheus: ## Tail Prometheus logs
+	docker compose -f docker-compose.local.yml logs -f prometheus
+
+logs-grafana: ## Tail Grafana logs
+	docker compose -f docker-compose.local.yml logs -f grafana
 
 test: test-backend test-flutter test-python test-admin ## Run all tests
 

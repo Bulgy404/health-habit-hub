@@ -109,6 +109,8 @@ Expected local URLs in this mode:
 | Neo4j Browser | `http://localhost:7474` | Login with `neo4j` + `NEO4J_PASSWORD` |
 | Recommender | `http://localhost:8001/docs` | FastAPI docs |
 | Redis | `localhost:6379` | No auth in local mode |
+| Prometheus | `http://prometheus.localhost` | Scrapes app metrics from `app:9091` |
+| Grafana | `http://grafana.localhost` | Login: `admin` / `KEYCLOAK_ADMIN_PASSWORD`. Pre-built HHH dashboard auto-provisioned |
 
 ### 4. Start Full Local Stack
 
@@ -533,6 +535,32 @@ In Portainer:
 
 ## Monitoring
 
+### Prometheus + Grafana (local)
+
+`docker-compose.local.yml` includes Prometheus and Grafana. They start automatically with `make dev` or can be started alone:
+
+```bash
+docker compose -f docker-compose.local.yml up -d prometheus grafana
+```
+
+| Service | Local URL | Port |
+|---------|-----------|------|
+| Prometheus | `http://prometheus.localhost` | 9090 |
+| Grafana | `http://grafana.localhost` | 3002 |
+
+Grafana credentials: `admin` / value of `KEYCLOAK_ADMIN_PASSWORD` in `.env`.
+
+The pre-built **HHH App Metrics** dashboard (`monitoring/grafana/dashboards/hhh-app.json`) is auto-provisioned. It shows:
+- HTTP request rate and error rate
+- p50 / p95 / p99 latency
+- Node.js heap and RSS memory
+- Event loop lag
+- Active handles and requests
+
+Prometheus scrapes the Node.js app at `http://app:9091/metrics` (prom-client, standard default metrics + `http_request_duration_seconds` histogram). The scrape target and interval are configured in `monitoring/prometheus.yml`.
+
+> **Production:** Prometheus and Grafana are not yet in `docker-compose.prod.yml`. Add them when you want persistent metrics in production, and consider restricting Grafana behind Traefik auth middleware.
+
 ### Container Logs
 
 View logs in Portainer:
@@ -610,6 +638,8 @@ Automatic via Let's Encrypt — certificates auto-renew 30 days before expiry. M
 | Translation | `https://habit.wiwi.tu-dresden.de/translate` | `http://translate.localhost` | `http://localhost:5001` |
 | Neo4j Browser | SSH tunnel only (see below) | `http://neo4j.localhost` | `http://localhost:7474` |
 | Recommender API docs | — | not routed via Traefik locally | `http://localhost:8001/docs` |
+| Prometheus | — (not in prod yet) | `http://prometheus.localhost` | `http://localhost:9090` |
+| Grafana | — (not in prod yet) | `http://grafana.localhost` | `http://localhost:3002` |
 | Traefik Dashboard | `https://habit.wiwi.tu-dresden.de/dashboard` | `http://proxy.localhost` | `http://localhost:8888` |
 
 ---

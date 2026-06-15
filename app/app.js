@@ -149,6 +149,7 @@ import { createTokenVerifier } from './middleware/auth.js';
 import { startNotificationScheduler } from './services/notificationService.js';
 import { makeGetDb } from './utils/getDb.js';
 import { connect as connectMongo, ensureIndexes } from './models/survey.js';
+import { runSeedDefaultProfileFields } from './db/seedProfileFields.js';
 import { ensureNeo4jSchema } from './utils/neo4jSchema.js';
 import {
   initErrorReporting,
@@ -168,6 +169,9 @@ connectMongo()
   .catch((err) =>
     console.error('[startup] Failed to ensure MongoDB indexes:', err)
   );
+
+// Seed default profile field definitions (gender, age_group) if not already present.
+runSeedDefaultProfileFields();
 
 // Start scheduled notification dispatcher (runs every 60 s)
 startNotificationScheduler({

@@ -101,11 +101,11 @@ class _BubbleGraphWidgetState extends State<BubbleGraphWidget>
   List<BubbleNode> _habitBubbles(DimensionBubble dim) {
     final habits = dim.habits;
     if (habits.isEmpty) return [];
-    final maxAnnot = habits.map((h) => h.totalAnnotations + 1).reduce(math.max);
+    final maxAnnot = habits.map((h) => h.iDoThisCount + 1).reduce(math.max);
     final color = colorFor(dim.id);
     return habits.map((h) {
-      final ratio = math.sqrt((h.totalAnnotations + 1) / maxAnnot);
-      final r = 18.0 + ratio * 32.0; // 18–50 px
+      final ratio = math.sqrt((h.iDoThisCount + 1) / maxAnnot);
+      final r = 18.0 + ratio * 42.0; // 18–60 px, driven by "I do this too" count
       return BubbleNode(
         id: h.id,
         label: h.label,
