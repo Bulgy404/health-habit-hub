@@ -140,7 +140,7 @@ async def test_list_kb_empty():
 async def test_upload_kb_pdf_success():
     """POST /kb forwards PDF to LightRAG and returns 201."""
     with respx.mock(base_url=_LIGHTRAG) as mock:
-        mock.post("/documents/file").mock(
+        mock.post("/documents/upload").mock(
             return_value=Response(
                 200,
                 json={"status": "success", "message": "File 'paper.pdf' saved successfully."},
@@ -162,7 +162,7 @@ async def test_upload_kb_pdf_success():
 async def test_upload_kb_markdown_success():
     """POST /kb accepts .md files."""
     with respx.mock(base_url=_LIGHTRAG) as mock:
-        mock.post("/documents/file").mock(
+        mock.post("/documents/upload").mock(
             return_value=Response(200, json={"status": "success", "message": "ok"})
         )
 
@@ -180,7 +180,7 @@ async def test_upload_kb_markdown_success():
 async def test_upload_kb_txt_success():
     """POST /kb accepts .txt files."""
     with respx.mock(base_url=_LIGHTRAG) as mock:
-        mock.post("/documents/file").mock(
+        mock.post("/documents/upload").mock(
             return_value=Response(200, json={"status": "success", "message": "ok"})
         )
 

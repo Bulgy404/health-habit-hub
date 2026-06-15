@@ -219,30 +219,10 @@ function createMockNeo4jRun() {
       );
       return [];
     }
-    if (cypher.includes('SET h.annotations_like')) {
-      const id = params.habitId;
-      if (!annotationCounts[id])
-        annotationCounts[id] = { helpful: 0, iDoThis: 0, likes: 0 };
-      annotationCounts[id].likes = Math.max(
-        0,
-        (annotationCounts[id].likes ?? 0) + (params.delta ?? 0)
-      );
-      return [];
-    }
     if (cypher.includes('AS helpful')) {
       const id = params.habitId;
-      const counts = annotationCounts[id] ?? {
-        helpful: 0,
-        iDoThis: 0,
-        likes: 0,
-      };
-      return [
-        {
-          helpful: counts.helpful,
-          iDoThis: counts.iDoThis,
-          likes: counts.likes ?? 0,
-        },
-      ];
+      const counts = annotationCounts[id] ?? { helpful: 0, iDoThis: 0 };
+      return [{ helpful: counts.helpful, iDoThis: counts.iDoThis }];
     }
     if (cypher.includes('CREATE (c:Comment')) {
       // Habit must exist in the fixtures for the MATCH to succeed
@@ -544,29 +524,6 @@ test('GET /api/v1/habits/graph returns graph with nodes and edges', async () => 
   assert.ok(edge.target.startsWith('c:'));
 });
 
-// ── Likes (annotation type 'like') ───────────────────────────────────────────
-
-test('POST /:id/annotate accepts type "like" and returns like count', async () => {
-  const res = await post(
-    '/api/v1/habits/habit-1/annotate',
-    { type: 'like' },
-    makeToken()
-  );
-  assert.strictEqual(res.status, 200);
-  const body = await res.json();
-  assert.strictEqual(body.annotationCounts.likes, 1);
-});
-
-test('like can be removed again (toggle)', async () => {
-  await post('/api/v1/habits/habit-2/annotate', { type: 'like' }, makeToken());
-  const res = await post(
-    '/api/v1/habits/habit-2/annotate',
-    { type: 'like', remove: true },
-    makeToken()
-  );
-  const body = await res.json();
-  assert.strictEqual(body.annotationCounts.likes, 0);
-});
 
 // ── Community comments ───────────────────────────────────────────────────────
 
