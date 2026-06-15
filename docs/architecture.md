@@ -79,7 +79,7 @@ graph TD
 | **lightrag** | LightRAG 1.5.0 (Python) | Graph+vector knowledge base; builds entity graph from uploaded documents; exposes REST query API and built-in graph visualization UI | 9621 | `localhost:9622` | `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_API_BASE`, `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `LIGHTRAG_API_KEY` |
 | **knowledge-mcp** | FastMCP (Python) | MCP server wrapping LightRAG; exposes `search_knowledge` and `ingest_document` tools for AI agent use via SSE transport | 8002 | `localhost:8002` | `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
 | **keycloak** | Keycloak 26.5.5 | OIDC/OAuth2 identity provider; manages realms, users, roles | 8080 | `localhost:8080` | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KC_DB`, `KC_HTTP_RELATIVE_PATH` (prod) |
-| **admin** | Next.js 14 (App Router) | Researcher/admin web panel: questionnaire management, settings, cue pools, study analytics, notification campaigns | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER` |
+| **admin** | Next.js 14 (App Router), Recharts | Researcher/admin web panel: study management, dedicated analytics dashboard (Recharts, study filter, KPI cards, SRHI/active-rate/dropout/questionnaire charts, participant table), questionnaire management, cue pools, knowledge base, notification campaigns, settings | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER` |
 | **neo4j** | Neo4j 5 | Graph database; stores habit graph with BCIO alignment | 7474 (HTTP), 7687 (Bolt) | `neo4j.localhost:7474` | `NEO4J_AUTH` (`user/password`) |
 | **mongo** | MongoDB (latest) | Document store; holds questionnaires, form responses, recommendations, user preferences | 27017 | Internal only | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`, `MONGO_INITDB_DATABASE` |
 | **mongo-express** | Mongo Express | MongoDB admin web UI | 8081 | `localhost/mongo` | `ME_CONFIG_MONGODB_URL`, `ME_CONFIG_BASICAUTH_USERNAME`, `ME_CONFIG_BASICAUTH_PASSWORD` |
@@ -253,8 +253,20 @@ Note that `KEYCLOAK_ISSUER` uses the **browser-facing** hostname even though tok
 Beyond the middleware allow-list, the admin panel enforces fine-grained access control at the page level:
 
 - `/knowledge-base` and `/settings` are admin-only — `researcher` users are redirected to `/access-denied`
+- `/analytics`, `/studies`, `/cue-pools`, and `/questionnaires` are accessible to both `admin` and `researcher`
 - The sidebar hides the KB and Settings entries for `researcher` users so the navigation reflects what they can actually open
 - Flutter admin routes (when the admin Flutter UI is in use) are restricted to `admin` only
+
+#### Analytics page (`/analytics`)
+
+The standalone analytics dashboard (`admin/src/app/(admin)/analytics/page.tsx`) is the primary research-monitoring interface. It is accessible to both `admin` and `researcher` roles. Key features:
+
+- **Study selector** — dropdown populated from `GET /admin/studies`; defaults to the first active study; switching reloads all data
+- **KPI cards** — total enrolled, active last 7 days (%), dropout count + rate (colour-coded amber/red above 10%/20%), mean SRHI at the latest week, mean questionnaire completion rate
+- **Charts (Recharts)** — vertical BarChart for per-group weekly active rate; LineChart for SRHI trajectory per group with a habit-threshold reference line at score 4; step-after LineChart for cumulative dropout; horizontal BarChart for per-questionnaire completion rates
+- **Participant table** — all enrolled participants for the selected study with username, group, enrolled date, last-active date, inline survey-completion mini-bar, and active/inactive/dropped-out status badge
+
+Data sources: `GET /admin/studies/:id/analytics` (analytics) and `GET /admin/studies/:id/participants` (participant table), both standard backend endpoints.
 
 #### Local admin user provisioning
 
@@ -416,7 +428,7 @@ Data flow:
 | `/habits/intentions/:id/logs` | Daily behaviour log creation and history |
 | `/srhi/*` | SRHI due-window query, weekly submission, and trajectory history |
 | `/admin/cue-pools` | Cue pool CRUD and bulk CSV import |
-| `/admin/studies/:id/analytics` | Per-group weekly active rate, SRHI trajectory, dropout curve |
+| `/admin/studies/:id/analytics` | Per-group weekly active rate, SRHI trajectory, dropout curve, questionnaire completion rates |
 | `/admin/studies/:id/export` | Research data ZIP download (3 CSVs) |
 | `/admin/notifications` | Researcher FCM notification campaign management |
 | `/admin/studies/:id/groups/:groupId/cue-config` | Per-group cue source, count, and behaviour config |
