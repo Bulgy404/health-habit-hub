@@ -181,6 +181,8 @@ Local service URLs after `make dev`:
 | LightRAG (graph UI) | http://localhost:9621 |
 | LibreTranslate | http://localhost:5001 |
 | Python AI service | http://localhost:8001 |
+| Prometheus | http://prometheus.localhost |
+| Grafana | http://grafana.localhost (admin / `KEYCLOAK_ADMIN_PASSWORD`) |
 | Traefik dashboard | http://localhost:8888 |
 
 Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new to the codebase? [docs/guides/developer-onboarding.md](docs/guides/developer-onboarding.md)
@@ -195,6 +197,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 | `make reset` | Wipe volumes, restart, re-seed |
 | `make logs` | Tail backend logs |
 | `make test` | Run all test suites |
+| `make monitoring` | Start Prometheus + Grafana |
 
 ---
 
@@ -204,7 +207,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 |---|---|
 | Mobile / Web | Flutter 3, Dart, Riverpod, GoRouter, Firebase |
 | Backend | Node.js 22, Express, ES modules |
-| Admin | Next.js 14, NextAuth.js, TypeScript |
+| Admin | Next.js 14, NextAuth.js, TypeScript, Recharts |
 | AI service | Python 3.11, FastAPI, OpenAI-compatible LLM API |
 | Knowledge RAG | LightRAG 1.5 (graph + vector), FastMCP |
 | Databases | MongoDB 7, Neo4j 5, PostgreSQL 16 (Keycloak) — *Fuseki/RDF retired, see [docs/migration.md](docs/migration.md)* |
