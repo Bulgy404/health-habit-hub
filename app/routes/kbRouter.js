@@ -65,7 +65,9 @@ export function createKbRouter({ apiServiceUrl } = {}) {
       const body = Buffer.concat(chunks);
       const upstream = await fetch(`${serviceUrl}/api/v1/kb`, {
         method: 'POST',
-        headers: serviceHeaders({ 'content-type': req.headers['content-type'] }),
+        headers: serviceHeaders({
+          'content-type': req.headers['content-type'],
+        }),
         body,
       });
       const data = await upstream.json();

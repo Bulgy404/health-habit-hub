@@ -296,7 +296,9 @@ services:
     environment:
       - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY:-dev-lightrag-secret}
       - LLM_MODEL=${LLM_MODEL}
+      - LIGHTRAG_LLM_MODEL=${LIGHTRAG_LLM_MODEL:-alias-huge-no-thinking}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL}
+      - LLM_TIMEOUT=${LLM_TIMEOUT:-600}
     ports:
       - "${LIGHTRAG_HOST_PORT:-9622}:9621"
     volumes:
