@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { BarChart2 } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -34,21 +35,21 @@ interface StudySummary {
 }
 
 interface WeeklyActiveRate {
-  groupId: string;
+  groupId: string | null;
   enrolled: number;
   active: number;
   rate: number;
 }
 
 interface SrhiPoint {
-  groupId: string;
+  groupId: string | null;
   weekNumber: number;
   meanScore: number;
   count: number;
 }
 
 interface DropoutPoint {
-  groupId: string;
+  groupId: string | null;
   date: string;
   cumulative: number;
 }
@@ -198,8 +199,10 @@ export default function AnalyticsPage() {
 
   const study = studies.find((s) => s.id === selectedId);
 
-  const groupLabel = (gid: string) =>
-    study?.groups.find((g) => g.id === gid)?.label ?? gid;
+  const groupLabel = (gid: string | null | undefined): string => {
+    if (!gid || gid === "unknown") return "Default";
+    return study?.groups.find((g) => g.id === gid)?.label ?? gid;
+  };
 
   // KPIs
   const kpi = useMemo(() => {
@@ -314,7 +317,7 @@ export default function AnalyticsPage() {
       {/* No study yet */}
       {!selectedId && (
         <div className={styles.prompt}>
-          <span className={styles.promptIcon}>📊</span>
+          <BarChart2 size={32} strokeWidth={1.5} className={styles.promptIcon} />
           <span className={styles.promptText}>Select a study above to see analytics</span>
         </div>
       )}

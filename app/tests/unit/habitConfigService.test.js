@@ -153,6 +153,14 @@ test('resolveHabitConfig: public user gets empty assignedCues', async () => {
             cueConfig: null,
           }),
         };
+      // _resolveGroupCueConfig falls back to the study when enrollment.cueConfig is null.
+      // Return a study whose group has no cueConfig so we fall through to admin_settings.
+      if (name === 'studies')
+        return {
+          findOne: async () => ({
+            groups: [{ id: { toString: () => 'g0' }, label: 'G1', index: 1 }],
+          }),
+        };
       if (name === 'admin_settings')
         return {
           find: () => ({

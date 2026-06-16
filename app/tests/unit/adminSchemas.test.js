@@ -86,8 +86,8 @@ describe('createStudyCodesSchema', () => {
     fail(createStudyCodesSchema, { count: 101, groupId: 'g1' });
   });
 
-  it('rejects missing groupId', () => {
-    fail(createStudyCodesSchema, { count: 5 });
+  it('accepts missing groupId (study-level code)', () => {
+    ok(createStudyCodesSchema, { count: 5 });
   });
 });
 

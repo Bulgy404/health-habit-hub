@@ -14,9 +14,11 @@
   --color-sidebar-hover: #334155;
   --color-bg: #f8fafc;
   --color-surface: #ffffff;
+  --color-surface-alt: #f1f5f9;
   --color-border: #e2e8f0;
   --color-text: #0f172a;
   --color-text-muted: #64748b;
+  --color-success: #16a34a;
   --sidebar-width: 240px;
 }
 

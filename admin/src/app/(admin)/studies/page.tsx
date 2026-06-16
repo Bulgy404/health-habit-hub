@@ -11,6 +11,7 @@ interface StudyGroup {
   id: string;
   label: string;
   index: number;
+  allocationWeight?: number;
   cueConfig?: CueConfig | null;
 }
 
@@ -45,7 +46,7 @@ interface QuestionnaireSummary {
 
 interface StudyCode {
   code: string;
-  groupId: string;
+  groupId: string | null; // null = study-level code, group assigned at redemption
   maxRedemptions: number | null;
   redemptionCount: number;
   expiresAt: string | null;
@@ -300,17 +301,35 @@ function CodesTab({
   study: StudySummary;
   token: string;
 }) {
+  // ── Codes list ───────────────────────────────────────────────────────────
   const [codes, setCodes] = useState<StudyCode[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const limit = 10;
   const [loadingCodes, setLoadingCodes] = useState(false);
   const [codesError, setCodesError] = useState("");
+  const [revoking, setRevoking] = useState<string | null>(null);
 
-  // Generate form state
-  const [genGroupId, setGenGroupId] = useState(
-    study.groups[0]?.id ?? ""
+  // ── Allocation weights (slider) ──────────────────────────────────────────
+  const [weights, setWeights] = useState<Record<string, number>>(
+    Object.fromEntries(study.groups.map((g) => [g.id, g.allocationWeight ?? 1]))
   );
+  const [savingAlloc, setSavingAlloc] = useState(false);
+  const [allocSaved, setAllocSaved] = useState(false);
+  const totalWeight = Object.values(weights).reduce((s, w) => s + w, 0) || 1;
+
+  // ── Study-level code generation (primary) ────────────────────────────────
+  const [studyCount, setStudyCount] = useState(10);
+  const [studyMaxRed, setStudyMaxRed] = useState("");
+  const [studyExpiry, setStudyExpiry] = useState("");
+  const [studyGenerating, setStudyGenerating] = useState(false);
+  const [studyGenError, setStudyGenError] = useState("");
+  const [studyGenCodes, setStudyGenCodes] = useState<string[]>([]);
+  const [studyCopied, setStudyCopied] = useState(false);
+
+  // ── Targeted group codes (secondary, collapsible) ────────────────────────
+  const [targetOpen, setTargetOpen] = useState(false);
+  const [genGroupId, setGenGroupId] = useState(study.groups[0]?.id ?? "");
   const [genCount, setGenCount] = useState(1);
   const [genMaxRed, setGenMaxRed] = useState("");
   const [genExpiry, setGenExpiry] = useState("");
@@ -318,9 +337,6 @@ function CodesTab({
   const [genError, setGenError] = useState("");
   const [generatedCodes, setGeneratedCodes] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
-
-  // Revoke state
-  const [revoking, setRevoking] = useState<string | null>(null);
 
   const fetchCodes = useCallback(
     async (p: number) => {
@@ -334,9 +350,7 @@ function CodesTab({
         setCodes((data as { codes: StudyCode[] }).codes ?? []);
         setTotal((data as { total: number }).total ?? 0);
       } catch (err) {
-        setCodesError(
-          err instanceof Error ? err.message : "Failed to load codes"
-        );
+        setCodesError(err instanceof Error ? err.message : "Failed to load codes");
       } finally {
         setLoadingCodes(false);
       }
@@ -348,35 +362,83 @@ function CodesTab({
     fetchCodes(page);
   }, [fetchCodes, page]);
 
-  function groupLabel(groupId: string): string {
+  function groupLabel(groupId: string | null): string {
+    if (!groupId) return "Auto-assigned";
     const g = study.groups.find((grp) => grp.id === groupId);
     return g ? g.label || `Group ${g.index}` : groupId;
   }
 
-  async function handleGenerate() {
-    if (!genGroupId) {
-      setGenError("Please select a group.");
-      return;
+  // ── Allocation save ──────────────────────────────────────────────────────
+  async function handleSaveAllocation() {
+    setSavingAlloc(true);
+    try {
+      await apiFetch(`${API_BASE}/${study.id}/allocation`, token, {
+        method: "PATCH",
+        body: JSON.stringify({
+          weights: study.groups.map((g) => ({
+            groupId: g.id,
+            weight: weights[g.id] ?? 1,
+          })),
+        }),
+      });
+      setAllocSaved(true);
+      setTimeout(() => setAllocSaved(false), 2000);
+    } catch {
+      // ignore — allocation save is best-effort in the UI
+    } finally {
+      setSavingAlloc(false);
     }
+  }
+
+  // ── Study-level code generation ──────────────────────────────────────────
+  async function handleStudyGenerate() {
+    setStudyGenerating(true);
+    setStudyGenError("");
+    setStudyGenCodes([]);
+    try {
+      const payload: Record<string, unknown> = { count: studyCount };
+      if (studyMaxRed) payload.maxRedemptions = parseInt(studyMaxRed, 10);
+      if (studyExpiry) payload.expiresAt = studyExpiry;
+      const data = await apiFetch(`${API_BASE}/${study.id}/codes`, token, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const newCodes: string[] = ((data as { codes: StudyCode[] }).codes ?? []).map(
+        (c) => (typeof c === "string" ? c : c.code)
+      );
+      setStudyGenCodes(newCodes);
+      setPage(1);
+      await fetchCodes(1);
+    } catch (err) {
+      setStudyGenError(err instanceof Error ? err.message : "Generate failed");
+    } finally {
+      setStudyGenerating(false);
+    }
+  }
+
+  async function handleStudyCopyAll() {
+    await navigator.clipboard.writeText(studyGenCodes.join("\n"));
+    setStudyCopied(true);
+    setTimeout(() => setStudyCopied(false), 2000);
+  }
+
+  // ── Targeted group code generation ───────────────────────────────────────
+  async function handleGenerate() {
     setGenerating(true);
     setGenError("");
     setGeneratedCodes([]);
     try {
-      const payload: Record<string, unknown> = {
-        groupId: genGroupId,
-        count: genCount,
-      };
+      const payload: Record<string, unknown> = { groupId: genGroupId, count: genCount };
       if (genMaxRed) payload.maxRedemptions = parseInt(genMaxRed, 10);
       if (genExpiry) payload.expiresAt = genExpiry;
       const data = await apiFetch(`${API_BASE}/${study.id}/codes`, token, {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      const newCodes: string[] = (
-        (data as { codes: StudyCode[] }).codes ?? []
-      ).map((c) => (typeof c === "string" ? c : c.code));
+      const newCodes: string[] = ((data as { codes: StudyCode[] }).codes ?? []).map(
+        (c) => (typeof c === "string" ? c : c.code)
+      );
       setGeneratedCodes(newCodes);
-      // Refresh list from page 1
       setPage(1);
       await fetchCodes(1);
     } catch (err) {
@@ -395,12 +457,10 @@ function CodesTab({
   async function handleRevoke(code: string) {
     setRevoking(code);
     try {
-      await apiFetch(`${API_BASE}/${study.id}/codes/${code}`, token, {
-        method: "DELETE",
-      });
+      await apiFetch(`${API_BASE}/${study.id}/codes/${code}`, token, { method: "DELETE" });
       await fetchCodes(page);
     } catch {
-      // ignore — button is disabled when redeemed so errors are unexpected
+      // ignore
     } finally {
       setRevoking(null);
     }
@@ -410,24 +470,64 @@ function CodesTab({
 
   return (
     <div className={styles.codesTab}>
-      {/* Generate form */}
+
+      {/* ── Allocation sliders ──────────────────────────────────────────── */}
       <div className={styles.genSection}>
-        <h3 className={styles.genTitle}>Generate Codes</h3>
+        <h3 className={styles.genTitle}>Group allocation</h3>
+        <p className={styles.genDesc}>
+          Controls how study codes distribute participants across conditions.
+          Weights are relative — 2 : 1 : 1 : 1 means the first group gets twice as many participants.
+        </p>
+        <div className={styles.allocGrid}>
+          {study.groups.map((g) => {
+            const w = weights[g.id] ?? 1;
+            const pct = Math.round((w / totalWeight) * 100);
+            return (
+              <div key={g.id} className={styles.allocRow}>
+                <span className={styles.allocLabel}>{g.label || `Group ${g.index}`}</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={w}
+                  className={styles.allocSlider}
+                  onChange={(e) =>
+                    setWeights((prev) => ({ ...prev, [g.id]: Number(e.target.value) }))
+                  }
+                />
+                <span className={styles.allocPct}>{pct}%</span>
+              </div>
+            );
+          })}
+        </div>
+        <div className={styles.allocActions}>
+          <button
+            className={styles.allocEqualBtn}
+            onClick={() =>
+              setWeights(Object.fromEntries(study.groups.map((g) => [g.id, 1])))
+            }
+          >
+            = Equal
+          </button>
+          <button
+            className={styles.saveBtn}
+            onClick={handleSaveAllocation}
+            disabled={savingAlloc}
+          >
+            {allocSaved ? "Saved ✓" : savingAlloc ? "Saving…" : "Save allocation"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Study-level code generation (primary) ──────────────────────── */}
+      <div className={styles.genSection}>
+        <h3 className={styles.genTitle}>Generate study codes</h3>
+        <p className={styles.genDesc}>
+          Codes are tied to the study. Each participant who redeems one is assigned
+          to a group automatically using the allocation above.
+        </p>
         <div className={styles.genForm}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Group</label>
-            <select
-              className={styles.select}
-              value={genGroupId}
-              onChange={(e) => setGenGroupId(e.target.value)}
-            >
-              {study.groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.label || `Group ${g.index}`}
-                </option>
-              ))}
-            </select>
-          </div>
           <div className={styles.formGroup}>
             <label className={styles.label}>Quantity (1–100)</label>
             <input
@@ -435,9 +535,9 @@ function CodesTab({
               type="number"
               min={1}
               max={100}
-              value={genCount}
+              value={studyCount}
               onChange={(e) =>
-                setGenCount(Math.min(100, Math.max(1, Number(e.target.value))))
+                setStudyCount(Math.min(100, Math.max(1, Number(e.target.value))))
               }
             />
           </div>
@@ -447,55 +547,142 @@ function CodesTab({
               className={styles.input}
               type="number"
               min={1}
-              value={genMaxRed}
-              onChange={(e) => setGenMaxRed(e.target.value)}
+              value={studyMaxRed}
+              onChange={(e) => setStudyMaxRed(e.target.value)}
               placeholder="Unlimited"
             />
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Expiry date/time (optional)</label>
+            <label className={styles.label}>Expiry (optional)</label>
             <input
               className={styles.input}
               type="datetime-local"
-              value={genExpiry}
-              onChange={(e) => setGenExpiry(e.target.value)}
+              value={studyExpiry}
+              onChange={(e) => setStudyExpiry(e.target.value)}
             />
           </div>
         </div>
-        {genError && <div className={styles.errorMsg}>{genError}</div>}
+        {studyGenError && <div className={styles.errorMsg}>{studyGenError}</div>}
         <button
           className={styles.saveBtn}
-          onClick={handleGenerate}
-          disabled={generating}
+          onClick={handleStudyGenerate}
+          disabled={studyGenerating}
         >
-          {generating ? "Generating…" : "Generate Codes"}
+          {studyGenerating ? "Generating…" : "Generate codes"}
         </button>
-
-        {generatedCodes.length > 0 && (
+        {studyGenCodes.length > 0 && (
           <div className={styles.genResult}>
             <div className={styles.genResultHeader}>
               <span className={styles.genResultTitle}>
-                {generatedCodes.length} code
-                {generatedCodes.length !== 1 ? "s" : ""} generated
+                {studyGenCodes.length} code{studyGenCodes.length !== 1 ? "s" : ""} generated
               </span>
-              <button className={styles.copyAllBtn} onClick={handleCopyAll}>
-                {copied ? "Copied!" : "Copy All"}
+              <button className={styles.copyAllBtn} onClick={handleStudyCopyAll}>
+                {studyCopied ? "Copied!" : "Copy all"}
               </button>
             </div>
             <div className={styles.codeList}>
-              {generatedCodes.map((c) => (
-                <span key={c} className={styles.codeChip}>
-                  {c}
-                </span>
+              {studyGenCodes.map((c) => (
+                <span key={c} className={styles.codeChip}>{c}</span>
               ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* Codes table */}
+      {/* ── Targeted group codes (secondary, collapsible) ───────────────── */}
+      <div className={styles.genSection}>
+        <button
+          className={styles.targetedToggle}
+          onClick={() => setTargetOpen((o) => !o)}
+        >
+          {targetOpen ? "▾" : "▸"} Targeted group codes
+          <span className={styles.targetedToggleSub}>
+            — pin a code to a specific condition
+          </span>
+        </button>
+        {targetOpen && (
+          <>
+            <div className={styles.genForm} style={{ marginTop: "0.75rem" }}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Group</label>
+                <select
+                  className={styles.select}
+                  value={genGroupId}
+                  onChange={(e) => setGenGroupId(e.target.value)}
+                >
+                  {study.groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label || `Group ${g.index}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Quantity (1–100)</label>
+                <input
+                  className={styles.input}
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={genCount}
+                  onChange={(e) =>
+                    setGenCount(Math.min(100, Math.max(1, Number(e.target.value))))
+                  }
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Max redemptions (optional)</label>
+                <input
+                  className={styles.input}
+                  type="number"
+                  min={1}
+                  value={genMaxRed}
+                  onChange={(e) => setGenMaxRed(e.target.value)}
+                  placeholder="Unlimited"
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Expiry (optional)</label>
+                <input
+                  className={styles.input}
+                  type="datetime-local"
+                  value={genExpiry}
+                  onChange={(e) => setGenExpiry(e.target.value)}
+                />
+              </div>
+            </div>
+            {genError && <div className={styles.errorMsg}>{genError}</div>}
+            <button
+              className={styles.saveBtn}
+              onClick={handleGenerate}
+              disabled={generating}
+            >
+              {generating ? "Generating…" : "Generate targeted codes"}
+            </button>
+            {generatedCodes.length > 0 && (
+              <div className={styles.genResult}>
+                <div className={styles.genResultHeader}>
+                  <span className={styles.genResultTitle}>
+                    {generatedCodes.length} code{generatedCodes.length !== 1 ? "s" : ""} generated
+                  </span>
+                  <button className={styles.copyAllBtn} onClick={handleCopyAll}>
+                    {copied ? "Copied!" : "Copy all"}
+                  </button>
+                </div>
+                <div className={styles.codeList}>
+                  {generatedCodes.map((c) => (
+                    <span key={c} className={styles.codeChip}>{c}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ── Codes table ─────────────────────────────────────────────────── */}
       <div className={styles.codesTableSection}>
-        <h3 className={styles.genTitle}>Existing Codes</h3>
+        <h3 className={styles.genTitle}>Existing codes</h3>
         {codesError && <div className={styles.errorMsg}>{codesError}</div>}
         {loadingCodes ? (
           <div className={styles.loadingState}>Loading…</div>
@@ -517,21 +704,19 @@ function CodesTab({
                 <tbody>
                   {codes.map((c) => (
                     <tr key={c.code}>
+                      <td><span className={styles.codeText}>{c.code}</span></td>
                       <td>
-                        <span className={styles.codeText}>{c.code}</span>
+                        {c.groupId ? (
+                          groupLabel(c.groupId)
+                        ) : (
+                          <span className={styles.autoAssignedBadge}>Auto-assigned</span>
+                        )}
                       </td>
-                      <td>{groupLabel(c.groupId)}</td>
-                      <td>
-                        {c.redemptionCount}/
-                        {c.maxRedemptions ?? "∞"}
-                      </td>
+                      <td>{c.redemptionCount}/{c.maxRedemptions ?? "∞"}</td>
                       <td>{fmtDateTime(c.expiresAt)}</td>
                       <td>
                         {c.redemptionCount > 0 ? (
-                          <span
-                            className={styles.revokeDisabled}
-                            title="Cannot revoke a redeemed code"
-                          >
+                          <span className={styles.revokeDisabled} title="Cannot revoke a redeemed code">
                             Revoke
                           </span>
                         ) : (
@@ -563,9 +748,7 @@ function CodesTab({
                 </span>
                 <button
                   className={styles.pageBtn}
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
                 >
                   Next ›

@@ -1,5 +1,6 @@
 // app/services/habitConfigService.js
 import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
+import { COLLECTION as STUDIES } from '../models/study.js';
 import { DEFAULT_BEHAVIOR_KEYS } from '../utils/srhi.js';
 import { pickAssignedCues } from './cuePoolService.js';
 
@@ -28,8 +29,26 @@ async function readAdminSettings(db) {
 }
 
 /**
+ * Look up the group's cueConfig from the study document for a given enrollment.
+ * Used as a fallback when the enrollment was created before cueConfig snapshotting.
+ * @param {object} db
+ * @param {{ studyId: ObjectId, groupId: ObjectId }} enrollment
+ * @returns {Promise<object|null>}
+ */
+async function _resolveGroupCueConfig(db, enrollment) {
+  if (!enrollment?.studyId || !enrollment?.groupId) return null;
+  const study = await db
+    .collection(STUDIES)
+    .findOne({ _id: enrollment.studyId });
+  const group = study?.groups?.find(
+    (g) => g.id.toString() === enrollment.groupId.toString()
+  );
+  return group?.cueConfig ?? null;
+}
+
+/**
  * Resolve cue configuration for a user, including pre-sampled assigned cues.
- * Priority: enrollment.cueConfig > admin_settings defaults > hardcoded fallback.
+ * Priority: enrollment.cueConfig (snapshot) > study group cueConfig (live) > admin_settings defaults > hardcoded fallback.
  * @param {{ db: object, userId: string }} deps
  * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array, maxHabits: number|null, assignedCues: Array }>}
  */
@@ -40,13 +59,17 @@ export async function resolveHabitConfig({ db, userId }) {
 
   let cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits;
 
-  if (enrollment?.cueConfig) {
-    cueCount = enrollment.cueConfig.cueCount;
-    cueSource = enrollment.cueConfig.cueSource;
-    cuePoolId = enrollment.cueConfig.cuePoolId ?? null;
-    behaviorOptions =
-      enrollment.cueConfig.behaviorOptions ?? DEFAULT_BEHAVIOR_KEYS;
-    maxHabits = enrollment.cueConfig.maxHabits ?? null;
+  // 1. Snapshotted cueConfig on the enrollment (set at enrollment time for new enrollments)
+  // 2. Live cueConfig from the study group (fallback for enrollments before snapshotting was added)
+  const resolvedConfig =
+    enrollment?.cueConfig ?? (await _resolveGroupCueConfig(db, enrollment));
+
+  if (resolvedConfig) {
+    cueCount = resolvedConfig.cueCount;
+    cueSource = resolvedConfig.cueSource;
+    cuePoolId = resolvedConfig.cuePoolId ?? null;
+    behaviorOptions = resolvedConfig.behaviorOptions ?? DEFAULT_BEHAVIOR_KEYS;
+    maxHabits = resolvedConfig.maxHabits ?? null;
   } else {
     const settings = await readAdminSettings(db);
     cueCount = settings['default_cue_count'] ?? FALLBACK.cueCount;
