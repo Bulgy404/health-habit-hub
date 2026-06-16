@@ -33,9 +33,23 @@ export const updateStudySchema = z
 
 export const createStudyCodesSchema = z.object({
   count: z.number().int().min(1).max(100),
-  groupId: z.string().min(1),
+  // groupId is optional: omit for study-level codes (group assigned at redemption
+  // via weighted round-robin); supply for targeted group-specific codes.
+  groupId: z.string().min(1).optional().nullable(),
   maxRedemptions: z.number().int().min(1).max(1000).optional().nullable(),
   expiresAt: z.string().datetime({ offset: true }).optional().nullable(),
+});
+
+export const updateAllocationSchema = z.object({
+  weights: z
+    .array(
+      z.object({
+        groupId: mongoId,
+        weight: z.number().int().min(1).max(100),
+      })
+    )
+    .min(1)
+    .max(8),
 });
 
 export const cueConfigSchema = z.object({

@@ -8,9 +8,10 @@
  *   isDefault    boolean    True for the default study (partial-unique index ensures at most one).
  *   isActive     boolean    Soft-delete flag.
  *   groups       Array<{    Experiment groups for this study.
- *     id:    ObjectId
- *     label: string
- *     index: 1|2|3|4
+ *     id:               ObjectId
+ *     label:            string
+ *     index:            1|2|3|4
+ *     allocationWeight: int (1–100, default 1) — relative weight for round-robin enrollment via study codes.
  *   }>
  *   questionnaires  Array<ObjectId>  Refs to questionnaires collection.
  *   createdAt    Date
@@ -46,6 +47,7 @@ export const VALIDATOR = {
             id: { bsonType: 'objectId' },
             label: { bsonType: 'string' },
             index: { bsonType: 'int', minimum: 1, maximum: 4 },
+            allocationWeight: { bsonType: 'int', minimum: 1, maximum: 100 },
             cueConfig: {
               bsonType: ['object', 'null'],
               properties: {

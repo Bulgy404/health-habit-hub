@@ -9,6 +9,7 @@ import {
   setDefaultStudy,
   listStudyParticipants,
   updateGroupCueConfig,
+  updateAllocationWeights,
 } from '../../services/studyService.js';
 import {
   createCodes,
@@ -28,6 +29,7 @@ import {
   updateStudySchema,
   createStudyCodesSchema,
   cueConfigSchema,
+  updateAllocationSchema,
 } from '../../schemas/adminSchemas.js';
 
 const log = logger.child({ module: 'studiesRouter' });
@@ -118,6 +120,28 @@ export function createStudiesRouter({
       res.status(500).json({ error: 'Internal server error' });
     }
   });
+
+  // PATCH /api/v1/admin/studies/:id/allocation — set per-group allocation weights
+  router.patch(
+    '/studies/:id/allocation',
+    validate(updateAllocationSchema),
+    async (req, res) => {
+      try {
+        const database = await getDb();
+        const result = await updateAllocationWeights({
+          db: database,
+          studyId: req.params.id,
+          weights: req.body.weights,
+        });
+        if (result.notFound)
+          return res.status(404).json({ error: 'Study not found' });
+        res.json({ updated: true });
+      } catch (err) {
+        log.error({ err }, 'unhandled route error');
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  );
 
   // PATCH /api/v1/admin/studies/:id/groups/:groupId/cue-config
   router.patch(

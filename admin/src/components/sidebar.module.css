@@ -20,7 +20,8 @@
 }
 
 .brandIcon {
-  font-size: 1.4rem;
+  color: var(--color-primary);
+  flex-shrink: 0;
 }
 
 .brandName {
@@ -64,10 +65,14 @@
   color: #ffffff !important;
 }
 
-.navIcon {
-  font-size: 1.1rem;
-  width: 1.25rem;
-  text-align: center;
+.navLink svg {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.navLinkActive svg,
+.navLink:hover svg {
+  opacity: 1;
 }
 
 .footer {
@@ -95,6 +100,10 @@
   font-size: 0.85rem;
   cursor: pointer;
   transition: background-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .signOutButton:hover {

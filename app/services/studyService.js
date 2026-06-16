@@ -319,6 +319,37 @@ export async function updateGroupCueConfig({
 }
 
 /**
+ * Update allocationWeight on each group in the study.
+ * Only groups whose groupId appears in the weights array are modified.
+ * @param {{ db: object, studyId: string, weights: Array<{groupId: string, weight: number}> }} deps
+ * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}
+ */
+export async function updateAllocationWeights({ db, studyId, weights }) {
+  let oid;
+  try {
+    oid = new ObjectId(studyId);
+  } catch {
+    return { notFound: true };
+  }
+
+  const study = await db.collection(STUDIES).findOne({ _id: oid });
+  if (!study) return { notFound: true };
+
+  const weightMap = Object.fromEntries(
+    weights.map((w) => [w.groupId, w.weight])
+  );
+  const groups = (study.groups || []).map((g) => {
+    const w = weightMap[g.id.toString()];
+    return w !== undefined ? { ...g, allocationWeight: w } : g;
+  });
+
+  await db
+    .collection(STUDIES)
+    .updateOne({ _id: oid }, { $set: { groups, updatedAt: new Date() } });
+  return { updated: true };
+}
+
+/**
  * Mark a study as default, clearing isDefault on the previous default atomically.
  * @param {{ db: object, id: string }} deps
  * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}

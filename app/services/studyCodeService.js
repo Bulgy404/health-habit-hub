@@ -62,8 +62,13 @@ export async function createCodes({
   const study = await db.collection(STUDIES).findOne({ _id: studyOid });
   if (!study) return { notFound: true };
 
-  const group = study.groups.find((g) => g.id.toString() === groupId);
-  if (!group) return { groupNotFound: true };
+  // groupId is optional: null/undefined → study-level code (group assigned at redemption).
+  let resolvedGroupId = null;
+  if (groupId) {
+    const group = study.groups.find((g) => g.id.toString() === groupId);
+    if (!group) return { groupNotFound: true };
+    resolvedGroupId = group.id;
+  }
 
   const cnt = Math.min(100, Math.max(1, parseInt(count, 10) || 1));
   const codes = await _generateUniqueCodes(db, cnt);
@@ -74,7 +79,7 @@ export async function createCodes({
   const docs = codes.map((code) => ({
     code,
     studyId: studyOid,
-    groupId: group.id,
+    groupId: resolvedGroupId,
     maxRedemptions: maxRed,
     redemptionCount: 0,
     expiresAt: exp,
@@ -118,7 +123,7 @@ export async function listCodes({ db, studyId, page = 1, limit = 20 }) {
     limit,
     codes: docs.map((c) => ({
       code: c.code,
-      groupId: c.groupId.toString(),
+      groupId: c.groupId?.toString() ?? null,
       maxRedemptions: c.maxRedemptions,
       redemptionCount: c.redemptionCount,
       expiresAt: c.expiresAt,
@@ -186,26 +191,69 @@ async function _claimRedemptionSlot(db, upperCode, maxRedemptions) {
 /**
  * Atomically enroll a user via upsert. Returns the pre-existing enrollment doc
  * if the user was already enrolled, or null if this is a new enrollment.
+ * Snapshots the group's cueConfig at enrollment time so habitConfigService can
+ * apply the correct experimental condition without joining back to the study.
  * @param {object} db
  * @param {string} userId
- * @param {{ studyId: ObjectId, groupId: ObjectId }} codeDoc
+ * @param {ObjectId} studyId
+ * @param {ObjectId} groupId - Already-resolved group id (never null at this point)
  * @param {string} upperCode
+ * @param {object|null} cueConfig - The group's cueConfig from study.groups[].cueConfig
  * @returns {Promise<object|null>} Prior enrollment document or null
  */
-async function _atomicEnrollUser(db, userId, codeDoc, upperCode) {
+async function _atomicEnrollUser(
+  db,
+  userId,
+  studyId,
+  groupId,
+  upperCode,
+  cueConfig
+) {
   return db.collection(ENROLLMENTS).findOneAndUpdate(
     { userId: String(userId) },
     {
       $setOnInsert: {
         userId: String(userId),
-        studyId: codeDoc.studyId,
-        groupId: codeDoc.groupId,
+        studyId,
+        groupId,
         studyCodeUsed: upperCode,
+        cueConfig: cueConfig ?? null,
         enrolledAt: new Date(),
       },
     },
     { upsert: true, returnDocument: 'before' }
   );
+}
+
+/**
+ * Select a study group using weighted round-robin.
+ * Atomically increments the study's _skipCounter and maps it to a group
+ * based on each group's allocationWeight (default 1 = equal weight).
+ * @param {object} db
+ * @param {object} study - Full study document (must have _id and groups)
+ * @returns {Promise<object>} The selected group object
+ */
+async function _selectGroupWeighted(db, study) {
+  const groups = study.groups || [];
+  const totalWeight = groups.reduce((s, g) => s + (g.allocationWeight ?? 1), 0);
+
+  const updated = await db
+    .collection(STUDIES)
+    .findOneAndUpdate(
+      { _id: study._id },
+      { $inc: { _skipCounter: 1 } },
+      { returnDocument: 'after' }
+    );
+
+  // Map counter (1-based after increment) to a group slot
+  let pos =
+    (((updated._skipCounter - 1) % totalWeight) + totalWeight) % totalWeight;
+  for (const group of groups) {
+    const w = group.allocationWeight ?? 1;
+    if (pos < w) return group;
+    pos -= w;
+  }
+  return groups[0];
 }
 
 /**
@@ -231,7 +279,25 @@ export async function redeemCode({ db, userId, code }) {
   //    With returnDocument:'before', a null result means the document was newly
   //    inserted (no prior enrollment); a non-null result means one already existed.
   const study = await db.collection(STUDIES).findOne({ _id: doc.studyId });
-  const prior = await _atomicEnrollUser(db, userId, doc, upperCode);
+
+  // Resolve group: targeted code → use stored groupId; study-level code → weighted round-robin.
+  let group;
+  if (doc.groupId) {
+    group = study?.groups?.find(
+      (g) => g.id.toString() === doc.groupId.toString()
+    );
+  } else {
+    group = await _selectGroupWeighted(db, study);
+  }
+
+  const prior = await _atomicEnrollUser(
+    db,
+    userId,
+    doc.studyId,
+    group?.id,
+    upperCode,
+    group?.cueConfig ?? null
+  );
 
   // If a prior enrollment existed, roll back the code counter and report conflict.
   if (prior !== null) {
@@ -241,14 +307,10 @@ export async function redeemCode({ db, userId, code }) {
     return { alreadyEnrolled: true };
   }
 
-  const group = study?.groups?.find(
-    (g) => g.id.toString() === doc.groupId.toString()
-  );
-
   return {
     enrolled: true,
     studyId: doc.studyId.toString(),
-    groupId: doc.groupId.toString(),
+    groupId: group?.id?.toString() ?? null,
     studyName: study?.name ?? null,
     groupLabel: group?.label ?? null,
   };
@@ -318,6 +380,7 @@ export async function skipCode({ db, userId }) {
         studyId: study._id,
         groupId: selectedGroup.id,
         studyCodeUsed: null,
+        cueConfig: selectedGroup.cueConfig ?? null,
         enrolledAt: new Date(),
       },
     },
