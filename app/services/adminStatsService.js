@@ -44,12 +44,14 @@ function buildTimeline(participant, surveyResponses, recDocs) {
  * @returns {Promise<object|null>}
  */
 export async function getParticipantProgress({ db, neo4jRun, id }) {
+  // Try admin-created participant first; fall back to any study enrollment
   const participant = await db
     .collection('participants')
     .findOne({ userId: id, deletedAt: { $exists: false } });
 
   if (!participant) {
-    return null;
+    const enrollment = await db.collection('enrollments').findOne({ userId: id });
+    if (!enrollment) return null;
   }
 
   const surveyResponses = await db
@@ -80,12 +82,14 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
   const accepted = recDocs.filter((r) => r.type === 'accepted').length;
   const dismissed = recDocs.filter((r) => r.type === 'dismissed').length;
 
-  const timeline = buildTimeline(participant, surveyResponses, recDocs);
+  // Use participant doc if available, otherwise synthesise a minimal object for the timeline
+  const timelineSource = participant ?? {};
+  const timeline = buildTimeline(timelineSource, surveyResponses, recDocs);
 
   return {
     profile: {
-      completed: participant.profileCompleted || false,
-      completedAt: participant.profileCompletedAt || null,
+      completed: participant?.profileCompleted || false,
+      completedAt: participant?.profileCompletedAt || null,
     },
     surveys: surveyResponses.map((sr) => ({
       id: sr.surveyId,

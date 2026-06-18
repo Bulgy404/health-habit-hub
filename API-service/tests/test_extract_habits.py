@@ -64,7 +64,7 @@ async def test_returns_selected_habits():
     """LLM-selected habit UUIDs are returned with full context."""
     with (
         patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
-        patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=_HABITS)),
+        patch("routers.extract_habits._vector_search_user_habits", new=AsyncMock(return_value=_HABITS)),
         patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=[])),
         patch("routers.extract_habits.chat_complete", new=AsyncMock(return_value=_LLM_REPLY)),
     ):
@@ -92,7 +92,7 @@ async def test_empty_habits_returns_no_selection():
     mock_llm = AsyncMock()
     with (
         patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
-        patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=[])),
+        patch("routers.extract_habits._vector_search_user_habits", new=AsyncMock(return_value=[])),
         patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=[])),
         patch("routers.extract_habits.chat_complete", new=mock_llm),
     ):
@@ -107,7 +107,7 @@ async def test_empty_habits_returns_no_selection():
     assert resp.status_code == 200
     data = resp.json()
     assert data["selected_habits"] == []
-    assert "No habits found" in data["habit_summary"]
+    assert "community graph" in data["habit_summary"]
     mock_llm.assert_not_called()
 
 
@@ -116,7 +116,7 @@ async def test_invalid_llm_json_returns_empty_selection():
     """Malformed LLM response produces empty selection and fallback summary."""
     with (
         patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
-        patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=_HABITS)),
+        patch("routers.extract_habits._vector_search_user_habits", new=AsyncMock(return_value=_HABITS)),
         patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=[])),
         patch("routers.extract_habits.chat_complete", new=AsyncMock(return_value="not valid json")),
     ):
@@ -166,7 +166,7 @@ async def test_cache_hit_skips_neo4j_and_llm():
 
     with (
         patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=mock_redis)),
-        patch("routers.extract_habits._fetch_habits_for_user", new=mock_neo4j),
+        patch("routers.extract_habits._vector_search_user_habits", new=mock_neo4j),
         patch("routers.extract_habits._vector_search_habits", new=mock_vector),
         patch("routers.extract_habits.chat_complete", new=mock_llm),
     ):
@@ -193,7 +193,7 @@ async def test_community_habits_returned_alongside_user_habits():
     """Vector search results are returned in community_habits field."""
     with (
         patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
-        patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=_HABITS)),
+        patch("routers.extract_habits._vector_search_user_habits", new=AsyncMock(return_value=_HABITS)),
         patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=_COMMUNITY_HABITS)),
         patch("routers.extract_habits.chat_complete", new=AsyncMock(return_value=_LLM_REPLY)),
     ):
@@ -214,13 +214,17 @@ async def test_community_habits_returned_alongside_user_habits():
 
 
 @pytest.mark.asyncio
-async def test_community_habits_empty_when_no_user_habits():
-    """Community habits are still returned even when the user has no own habits."""
+async def test_community_habits_used_when_no_personal_habits():
+    """When user has no personal habits, community vector results are used as the candidate pool."""
+    llm_reply = json.dumps({
+        "selected_habit_uuids": ["community-uuid-1"],
+        "habit_summary": "Walking outside when feeling down can improve mood.",
+    })
     with (
         patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
-        patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=[])),
+        patch("routers.extract_habits._vector_search_user_habits", new=AsyncMock(return_value=[])),
         patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=_COMMUNITY_HABITS)),
-        patch("routers.extract_habits.chat_complete", new=AsyncMock()),
+        patch("routers.extract_habits.chat_complete", new=AsyncMock(return_value=llm_reply)),
     ):
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
@@ -232,7 +236,9 @@ async def test_community_habits_empty_when_no_user_habits():
 
     assert resp.status_code == 200
     data = resp.json()
-    assert data["selected_habits"] == []
+    # LLM selects from community pool — user gets recommendations even without personal habits
+    assert len(data["selected_habits"]) == 1
+    assert data["selected_habits"][0]["uuid"] == "community-uuid-1"
     assert len(data["community_habits"]) == 1
 
 
@@ -241,7 +247,7 @@ async def test_vector_search_failure_does_not_break_response():
     """If vector search raises, the endpoint still returns user habits normally."""
     with (
         patch("routers.extract_habits._get_redis", new=AsyncMock(return_value=None)),
-        patch("routers.extract_habits._fetch_habits_for_user", new=AsyncMock(return_value=_HABITS)),
+        patch("routers.extract_habits._vector_search_user_habits", new=AsyncMock(return_value=_HABITS)),
         patch("routers.extract_habits._vector_search_habits", new=AsyncMock(return_value=[])),
         patch("routers.extract_habits.chat_complete", new=AsyncMock(return_value=_LLM_REPLY)),
     ):

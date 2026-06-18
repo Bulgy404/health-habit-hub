@@ -3,7 +3,7 @@
 .PHONY: help \
         dev stop seed verify-keycloak fix-keycloak logs logs-all ios reset \
         monitoring monitoring-stop logs-prometheus logs-grafana \
-        format test test-backend test-flutter test-python test-admin test-bcio-pipeline \
+        format test test-backend test-flutter test-python test-admin seed-habits \
         prod-up prod-stop prod-ps prod-logs prod-build prod-restart \
         prod-keycloak prod-seed prod-update prod-cutover
 
@@ -76,8 +76,8 @@ test-python: ## Python API-service: pytest
 test-admin: ## Admin: typecheck
 	cd admin && npx tsc --noEmit
 
-test-bcio-pipeline: ## Run 100 habits through the live BCIO mapping pipeline
-	set -a && . ./.env && set +a && python3 scripts/test-bcio-pipeline.py
+seed-habits: ## Seed Neo4j with 100 test habits via full donation pipeline (MODE=seed for fast direct path)
+	set -a && . ./.env && set +a && python3 scripts/seed-habits.py --mode $(or $(MODE),e2e)
 
 # ── Production (run on server) ────────────────────────────
 # All prod targets use docker-compose.yml (the default file).

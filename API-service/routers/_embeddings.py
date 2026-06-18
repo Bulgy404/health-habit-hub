@@ -15,9 +15,12 @@ EMBEDDING_DIMENSIONS: int = int(os.getenv("EMBEDDING_DIMENSIONS", "2560"))
 _EMBEDDING_API_BASE = os.getenv("EMBEDDING_API_BASE", os.getenv("LLM_API_BASE"))
 _EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", os.getenv("LLM_API_KEY", ""))
 
+_EMBEDDING_TIMEOUT = float(os.getenv("EMBEDDING_TIMEOUT_SECONDS", "30"))
+
 _client = openai.AsyncOpenAI(
     api_key=_EMBEDDING_API_KEY or "placeholder",
     base_url=_EMBEDDING_API_BASE or None,
+    timeout=_EMBEDDING_TIMEOUT,
 )
 
 

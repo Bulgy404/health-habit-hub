@@ -1,0 +1,74 @@
+%% M3 Recommendation Pipeline — data-flow view
+flowchart TD
+    INPUT(["`**POST /llm/recommend**
+    user_id · goal · session_id`"])
+
+    CACHE{Redis cache hit?}
+    INPUT --> CACHE
+    CACHE -->|yes| DONE(["`Return cached
+    recommendations`"])
+
+    CACHE -->|no| PARALLEL
+
+    subgraph PARALLEL["Run in parallel"]
+        direction TB
+
+        subgraph M31["M3.1 — extract-habits"]
+            direction TB
+            EMBED["Embed goal\n(single call, reused)"]
+
+            subgraph PERSONAL["Personal habits"]
+                P1["MATCH Habit {userID}\nfetch + stored embeddings\n≤ 200 rows"]
+                P2["Cosine rank in Python\n→ top USER_HABITS_LIMIT"]
+                P1 --> P2
+            end
+
+            subgraph COMMUNITY["Community habits — 3-index fan-out"]
+                C1["habit_embedding_idx\nsentence match"]
+                C2["context_embedding_idx\nsituational / INTERNAL_STATE match"]
+                C3["bcio_embedding_idx\nbehaviour-change concept match"]
+                CMERGE["Merge by max score\n→ top COMMUNITY_HABITS_LIMIT"]
+                C1 & C2 & C3 --> CMERGE
+            end
+
+            DEDUP["Dedup personal + community\ncandidate pool ≤ 20 habits"]
+            LLM1["LLM — select relevant habits\n+ habit_summary"]
+
+            EMBED --> PERSONAL & COMMUNITY
+            P2 & CMERGE --> DEDUP --> LLM1
+        end
+
+        subgraph M32["M3.2 — extract-profile"]
+            direction TB
+            Q1["GET /questionnaire-responses\n/service/{userId}/sliq"]
+            Q2["GET /questionnaire-responses\n/service/{userId}/rand-36"]
+            Q3["GET /user-profile\n/service/{userId}"]
+            LLM2["LLM — build profile summary\n+ rag_query"]
+            Q1 & Q2 & Q3 --> LLM2
+        end
+    end
+
+    subgraph M33["M3.3 — retrieve (RAG)"]
+        LR["LightRAG hybrid query\ngraph + vector over KB documents"]
+    end
+
+    FB["MongoDB\nprior feedback for this user+goal\n(last 10 comments)"]
+
+    RECOMMEND["LLM — recommend.txt prompt\ngoal + profile + habits + KB context + feedback\n→ recommendations JSON"]
+
+    STORE["Store in MongoDB\nCache in Redis TTL 24h"]
+    OUT(["`Return **RecommendResponse**
+    recommendation_id · recommendations`"])
+
+    PARALLEL --> M33
+    M32 -->|rag_query| M33
+    M33 --> RECOMMEND
+    M31 --> RECOMMEND
+    FB --> RECOMMEND
+    RECOMMEND --> STORE --> OUT
+
+    style M31 fill:#e8f4f8,stroke:#4a90d9
+    style M32 fill:#f0f8e8,stroke:#5a9a4a
+    style M33 fill:#fff8e8,stroke:#c9a020
+    style PERSONAL fill:#d8edf8,stroke:#4a90d9
+    style COMMUNITY fill:#c8e4f4,stroke:#4a90d9

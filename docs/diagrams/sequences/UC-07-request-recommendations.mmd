@@ -1,4 +1,4 @@
-%% UC-07 — Request personalised recommendations (RAG pipeline)
+%% UC-07 — Request personalised recommendations (full M3 pipeline)
 sequenceDiagram
     autonumber
     actor P as Participant
@@ -6,30 +6,59 @@ sequenceDiagram
     participant B as Backend (recommendRouter)
     participant AI as API-service (FastAPI)
     participant R as Redis
+    participant N as Neo4j
+    participant MB as Backend (service token)
     participant LR as LightRAG
     participant LLM as LLM Provider
     participant M as MongoDB
 
     P->>F: Enter health goal
-    F->>B: POST /api/v1/recommend {goal}
-    B->>AI: POST /llm/recommend {user_id, goal, session_id} (service token)
-    AI->>R: GET cache(hash(user_id, goal))
+    F->>B: POST /api/v1/recommend/generate {goal, session_id}
+    B->>AI: POST /api/v1/llm/recommend {user_id, goal, session_id}
+    AI->>R: GET cache(sha256(user_id‖goal))
+
     alt cache hit
         R-->>AI: cached recommendations
     else cache miss
-        par extract habits
-            AI->>LLM: extract-habits (user's donated habits)
-        and extract profile
-            AI->>LLM: extract-profile (questionnaire answers)
+
+        par M3.1 — extract-habits
+            Note over AI,N: embed goal once, reuse for both searches
+            AI->>N: MATCH Habit {userID} — fetch embeddings (≤200 rows)
+            N-->>AI: habit nodes + stored vectors
+            Note over AI: cosine rank in Python → top USER_HABITS_LIMIT personal habits
+            AI->>N: vector search habit_embedding_idx (community, excl. user)
+            AI->>N: vector search context_embedding_idx (community, excl. user)
+            AI->>N: vector search bcio_embedding_idx (community, excl. user)
+            N-->>AI: top-k per index, merged by max score
+            Note over AI: dedup personal + community → candidate pool ≤20 habits
+            AI->>LLM: select habits from candidate pool
+            LLM-->>AI: selected_habit_uuids + habit_summary
+
+        and M3.2 — extract-profile
+            AI->>MB: GET /questionnaire-responses/service/{userId}/sliq
+            MB-->>AI: SLIQ answers (or 404)
+            AI->>MB: GET /questionnaire-responses/service/{userId}/rand-36
+            MB-->>AI: RAND-36 answers (or 404)
+            AI->>MB: GET /user-profile/service/{userId}
+            MB-->>AI: profile fields
+            AI->>LLM: build profile summary + rag_query
+            LLM-->>AI: profile_summary, profile_detailed, rag_query
         end
-        LLM-->>AI: habits summary + profile + rag_query
-        AI->>LR: POST /query {query: rag_query, mode: "hybrid", only_need_context: true}
-        LR-->>AI: synthesized KB context (graph + vector)
-        AI->>LLM: recommend prompt (goal + profile + habits + context)
+
+        AI->>LR: POST /query {query: rag_query, mode: hybrid}
+        LR-->>AI: synthesized KB context (graph + vector sources)
+
+        AI->>M: find recommendation_feedback {userId, goal} limit 10
+        M-->>AI: prior feedback comments
+
+        Note over AI,LLM: prompt = goal + profile + habit_summary + selected_habits + community_habits + KB sources + feedback
+        AI->>LLM: POST /chat/completions (recommend.txt prompt, temp 0.2)
         LLM-->>AI: recommendations JSON
-        AI->>R: SETEX cache (TTL 24h)
-        AI->>M: insert(recommendations)
+
+        AI->>M: insert recommendations
+        AI->>R: SETEX cache TTL 24h
     end
-    AI-->>B: {recommendations: [...]}
-    B-->>F: 200 recommendations
+
+    AI-->>B: {recommendation_id, recommendations}
+    B-->>F: 200 OK
     F->>F: Render recommendation cards
