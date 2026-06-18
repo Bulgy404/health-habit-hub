@@ -274,33 +274,78 @@ In local development, the `keycloak-init` container automatically creates a user
 
 ---
 
-## Knowledge Base & RAG Pipeline
+## M3 Recommendation Pipeline
+
+The recommendation pipeline runs entirely inside the **API-service** (Python / FastAPI). It is triggered by `POST /api/v1/recommend/generate` on the Node.js backend, which proxies the request (with a service token) to `POST /api/v1/llm/recommend`.
+
+The full data-flow diagram is at [`docs/diagrams/architecture/recommendation-pipeline.mmd`](diagrams/architecture/recommendation-pipeline.mmd). The per-step sequence diagram is at [`docs/diagrams/sequences/UC-07-request-recommendations.mmd`](diagrams/sequences/UC-07-request-recommendations.mmd).
+
+### Pipeline stages
+
+**Step 0 — Cache check**
+Redis `GET recommend:{sha256(user_id‖goal)}`. On a hit the cached `RecommendResponse` is returned immediately without any LLM or Neo4j calls.
+
+**Steps 1 + 2 — M3.1 and M3.2 run in parallel**
+
+**M3.1 — extract-habits** selects the most goal-relevant habits from a bounded candidate pool:
+
+| Sub-step | What happens |
+|---|---|
+| Embed goal | Single embedding call, result reused for all searches below |
+| Personal habit search | `MATCH Habit {userID, is_habit: true}` — fetch ≤ 200 nodes with their stored embedding vectors; cosine-rank in Python; keep top `USER_HABITS_LIMIT` (default 10) |
+| Community search — sentence | `habit_embedding_idx` vector query excluding the requesting user; top-k by habit sentence similarity |
+| Community search — context | `context_embedding_idx` vector query; finds habits whose situational context (e.g. `INTERNAL_STATE: "feeling anxious"`) matches the goal |
+| Community search — BCIO | `bcio_embedding_idx` vector query; finds habits whose linked behaviour-change concepts match the goal |
+| Merge | Three community index results merged by max score → top `COMMUNITY_HABITS_LIMIT` (default 10) |
+| Dedup | Personal + community combined, deduplicated by UUID → candidate pool ≤ 20 habits |
+| LLM selection | LLM receives the candidate pool and selects the most relevant UUIDs + writes a `habit_summary` |
+
+**M3.2 — extract-profile** builds a structured user context from questionnaire data:
+
+| Sub-step | Endpoint called | Auth |
+|---|---|---|
+| SLIQ questionnaire | `GET /api/v1/questionnaire-responses/service/{userId}/sliq` | `X-Service-Auth-Token` |
+| RAND-36 questionnaire | `GET /api/v1/questionnaire-responses/service/{userId}/rand-36` | `X-Service-Auth-Token` |
+| User profile fields | `GET /api/v1/user-profile/service/{userId}` | `X-Service-Auth-Token` |
+| LLM call | Produces `profile_summary`, `profile_detailed`, and a `rag_query` tuned to the user's health context | — |
+
+**Step 3 — M3.3 retrieve (RAG)**
+`POST /query` to LightRAG with `rag_query` from M3.2 and `mode=hybrid`. LightRAG searches both its knowledge graph and its vector index simultaneously and returns a synthesized context string from the uploaded academic documents.
+
+**Step 4 — Prior feedback**
+MongoDB `recommendation_feedback` collection is queried for the last 10 feedback comments the user left for this specific goal. This enables the LLM to avoid repeating suggestions that were previously dismissed.
+
+**Step 5 — Final LLM call (recommend.txt)**
+Prompt assembles: `goal + profile_summary + profile_detailed + habit_summary + selected_habits + community_habits + KB sources + prior_feedback`. Temperature 0.2 for stable but slightly varied output. Returns a `recommendations` JSON list.
+
+**Step 6 — Persist and cache**
+Recommendation stored in MongoDB `recommendations` collection; result cached in Redis with 24 h TTL.
+
+### Configurable limits
+
+| Env var | Default | Effect |
+|---|---|---|
+| `USER_HABITS_LIMIT` | `10` | Max personal habits passed to LLM |
+| `COMMUNITY_HABITS_LIMIT` | `10` | Max community habits from vector search |
+| `REDIS_TTL_SECONDS` | `86400` | Cache TTL in seconds |
+| `RECOMMENDER_TIMEOUT_MS` | `180000` | Proxy timeout on Node.js side |
+
+### Seeding test data
+
+The community vector search requires `Habit` nodes in Neo4j with stored embeddings. To seed the graph with the 100 test habits run:
+
+```bash
+python3 scripts/seed-habits.py [--mode seed] [--concurrency 5] [--dry-run]
+```
+
+This bypasses the habit classifier (all 100 sentences are pre-verified habits), calls `classify-context` → `map-bcio` → `embed-batch` for each, and writes Habit + Context + BCIOConcept nodes directly to Neo4j. Habits are distributed across 10 synthetic seed user IDs so the `exclude_user_id` filter works correctly. The script is idempotent — re-running skips habits that already have embeddings.
+
+### Knowledge base & document ingestion
 
 The knowledge base stores academic papers and documents that inform habit recommendations. Admins upload PDF, TXT, or MD files via the admin portal. LightRAG processes each document and builds two parallel indexes:
 
-1. **Knowledge graph** — LightRAG extracts key concepts and relationships from the document text using the LLM (scads AI). For example, from a sleep paper it might extract `sleep → improves → recovery` as a graph edge. This graph captures semantic structure that pure vector search misses.
+1. **Knowledge graph** — LightRAG extracts key concepts and relationships from the document text using the LLM. For example, from a sleep paper it might extract `sleep → improves → recovery` as a graph edge.
 2. **Vector index** — The same document chunks are embedded and stored for dense similarity search.
-
-When a habit recommendation is requested, the API-service calls LightRAG with `mode=hybrid`. LightRAG searches both the graph and the vector index simultaneously and returns a synthesized context string. This context is passed to the recommendation LLM alongside the user's goal to generate personalized habit suggestions.
-
-### Recommendation retrieval flow
-
-```mermaid
-sequenceDiagram
-    participant App as Node.js Backend
-    participant API as API-service (FastAPI)
-    participant LR as LightRAG
-
-    App->>API: POST /api/v1/llm/recommend<br/>{ user_id, goal, session_id }
-    API->>API: extract habits + profile (parallel LLM calls)
-    API->>LR: POST /query<br/>{ query: rag_query, mode: "hybrid", only_need_context: true }
-    LR-->>API: { response: "context from graph+vector..." }
-    API->>API: build recommendation prompt with context
-    API->>API: LLM call → parse recommendations
-    API-->>App: { recommendations: [...] }
-```
-
-### Document ingestion flow
 
 ```mermaid
 sequenceDiagram
@@ -336,16 +381,39 @@ LightRAG's built-in web UI is served at `http://localhost:9622` (local) and can 
 | **Graph DB** | Neo4j 5 | `Habit`, `Context`, `BCIOConcept` nodes and `HAS_CONTEXT`, `MAPS_TO` relationships | Graph traversal for habit similarity, BCIO alignment queries, and recommender reads |
 | **Document DB** | MongoDB | `users` (preferences), `questionnaires`, `form_responses`, `recommendations`, `recommendation_feedback`; DFG collections: `implementation_intentions`, `daily_behavior_logs`, `srhi_responses`, `cue_pools`, `notification_campaigns` | Flexible schema for survey/form data; no strong relational joins required |
 | **Triplestore** *(retired)* | Apache Jena Fuseki | BCIO ontology (`Ontology.ttl`, `schema.ttl`, `data.ttl`) | **Removed from the compose stack** — BCIO mapping now uses in-process embeddings in the API-service; ontology sections below are kept for historical reference (see `docs/migration.md`) |
-| **Vector search** | In-process (API-service) | Embedded BCIO concept descriptions | Fast similarity search during `map-bcio` pipeline step; no separate vector DB needed at current scale |
+| **Vector search** | Neo4j vector indexes (`habit_embedding_idx`, `context_embedding_idx`, `bcio_embedding_idx`) + in-process cosine (API-service) | Habit sentence embeddings, context phrase embeddings, BCIO concept embeddings | Three-index fan-out for community habit retrieval in M3.1; in-process cosine for ranking a user's own habits against the goal |
 | **Graph+vector KB** | LightRAG (file-based) | Knowledge graph of concepts/relationships extracted from uploaded documents + vector embeddings | Hybrid retrieval for habit recommendations; graph captures semantic relationships, vector handles dense similarity |
 
-### Neo4j Schema (Current — `ralph/hhh-platform-unified`)
+### Neo4j Schema (Current)
 
 ```
-(:Habit { uuid, original, language, translationEN, translationDE })
-  -[:HAS_CONTEXT]->(:Context { text, dimension })
-  -[:MAPS_TO]->(:BCIOConcept { name, uri })
+(:Habit {
+    uuid, sentence, language, translationEN, translationDE,
+    is_habit, habit_confidence, userID, created_at,
+    embedding,              ← 2560-dim vector (habit_embedding_idx)
+    annotations_like, annotations_helpful, annotations_iDoThis
+})
+  -[:HAS_CONTEXT {dimension}]->
+(:Context {
+    text, dimension,
+    embedding               ← 2560-dim vector (context_embedding_idx)
+})
+  -[:MAPS_TO {phrase, dimension, mapping_confidence}]->
+(:BCIOConcept {
+    bcio_concept_id, bcio_concept_label,
+    embedding               ← 2560-dim vector (bcio_embedding_idx)
+})
 ```
+
+**Vector indexes** (created at startup via `neo4j/init/constraints.cypher`):
+
+| Index | Node property | Used by |
+|---|---|---|
+| `habit_embedding_idx` | `Habit.embedding` | Community sentence search in M3.1 |
+| `context_embedding_idx` | `Context.embedding` | Community situational search in M3.1 |
+| `bcio_embedding_idx` | `BCIOConcept.embedding` | Community behaviour-technique search in M3.1 |
+
+All three indexes use cosine similarity with 2560 dimensions (configurable via `EMBEDDING_DIMENSIONS`).
 
 > **Note:** The legacy n10s/RDF schema (`hhh__Habit`, `hhh__Donor`) was fully retired in 2026-06 — no legacy data existed, the writer code was removed, and the n10s plugin is no longer loaded. See `docs/migration.md`.
 

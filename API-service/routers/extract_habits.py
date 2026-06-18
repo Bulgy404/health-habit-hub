@@ -7,6 +7,7 @@ import logging
 import os
 from pathlib import Path
 
+import numpy as np
 from fastapi import APIRouter, Depends
 from neo4j import AsyncGraphDatabase  # type: ignore[import]
 from pydantic import BaseModel, Field
@@ -22,11 +23,28 @@ router = APIRouter(dependencies=[Depends(verify_service_token)])
 
 
 # ---------------------------------------------------------------------------
-# Neo4j setup
+# Neo4j setup — module-level singleton driver to avoid per-call handshake cost
 # ---------------------------------------------------------------------------
 _NEO4J_URI = os.getenv("NEO4J_URI", "bolt://neo4j:7687")
 _NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 _NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
+
+_neo4j_driver = None
+_neo4j_lock: asyncio.Lock = asyncio.Lock()
+
+
+async def _get_neo4j_driver():
+    """Return a shared Neo4j driver, creating it once on first use."""
+    global _neo4j_driver
+    if _neo4j_driver is not None:
+        return _neo4j_driver
+    async with _neo4j_lock:
+        if _neo4j_driver is not None:
+            return _neo4j_driver
+        _neo4j_driver = AsyncGraphDatabase.driver(
+            _NEO4J_URI, auth=(_NEO4J_USER, _NEO4J_PASSWORD)
+        )
+        return _neo4j_driver
 
 _DIMENSIONS = [
     "TIME",
@@ -40,49 +58,101 @@ _DIMENSIONS = [
 
 
 _COMMUNITY_HABITS_LIMIT = int(os.getenv("COMMUNITY_HABITS_LIMIT", "10"))
+_USER_HABITS_LIMIT = int(os.getenv("USER_HABITS_LIMIT", "10"))
 
 
-async def _fetch_habits_for_user(user_id: str) -> list[dict[str, object]]:
-    """Fetch all Habit nodes (with context) for a given userID from Neo4j.
+def _cosine_scores(
+    goal_vec: "np.ndarray", habit_embeddings: list[list[float]]
+) -> list[float]:
+    """Return cosine similarities between goal_vec and each habit embedding."""
+    if not habit_embeddings:
+        return []
+    mat = np.array(habit_embeddings, dtype=np.float32)
+    norms = np.linalg.norm(mat, axis=1, keepdims=True)
+    goal_norm = float(np.linalg.norm(goal_vec))
+    if goal_norm == 0:
+        return [0.0] * len(habit_embeddings)
+    norms = np.where(norms == 0, 1.0, norms)
+    return (mat @ goal_vec / (norms.squeeze(1) * goal_norm)).tolist()
 
-    Returns a list of dicts: {uuid, sentence, context: {dim: [phrases]}}
+
+async def _vector_search_user_habits(
+    goal: str, user_id: str
+) -> list[dict[str, object]]:
+    """Return the user's own habits ranked by semantic similarity to the goal.
+
+    Embeds the goal once, fetches all of the user's donated habits with their
+    stored embeddings (bounded at 200 — no user will exceed this), ranks them
+    by cosine similarity in Python, and returns the top USER_HABITS_LIMIT.
+
+    Falls back to an unranked fetch (capped at USER_HABITS_LIMIT) when the
+    user's habits have no embeddings yet (pre-embedding donation path).
     """
-    driver = AsyncGraphDatabase.driver(
-        _NEO4J_URI, auth=(_NEO4J_USER, _NEO4J_PASSWORD)
-    )
-    habits: list[dict[str, object]] = []
     try:
+        goal_embedding = (await embed_texts([goal]))[0]
+        goal_vec = np.array(goal_embedding, dtype=np.float32)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to embed goal for user habit search: %s", exc)
+        return []
+
+    try:
+        driver = await _get_neo4j_driver()
         async with driver.session() as session:
             result = await session.run(
                 """
-                MATCH (h:Habit {userID: $user_id})
+                MATCH (h:Habit {userID: $user_id, is_habit: true})
                 OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)
-                RETURN h.uuid AS uuid,
-                       h.sentence AS sentence,
-                       collect({dimension: c.dimension, text: c.text}) AS ctx_items
+                RETURN h.uuid    AS uuid,
+                       coalesce(h.translationEN, h.sentence) AS sentence,
+                       collect({dimension: c.dimension, text: c.text}) AS ctx_items,
+                       h.embedding AS embedding
                 """,
                 user_id=user_id,
             )
-            records = await result.fetch(1000)
-            for record in records:
-                ctx: dict[str, list[str]] = {dim: [] for dim in _DIMENSIONS}
-                for item in record["ctx_items"]:
-                    dim = item.get("dimension")
-                    text = item.get("text")
-                    if dim and text and dim in ctx:
-                        ctx[dim].append(text)
-                habits.append(
-                    {
-                        "uuid": record["uuid"],
-                        "sentence": record["sentence"],
-                        "context": ctx,
-                    }
-                )
+            records = await result.fetch(200)
     except Exception as exc:  # noqa: BLE001
-        logger.error("Neo4j query failed: %s", exc)
-    finally:
-        await driver.close()
-    return habits
+        logger.error("Neo4j user-habit fetch failed: %s", exc)
+        return []
+
+    if not records:
+        return []
+
+    # Separate habits with and without embeddings
+    with_emb: list[dict] = []
+    without_emb: list[dict] = []
+    for rec in records:
+        ctx: dict[str, list[str]] = {dim: [] for dim in _DIMENSIONS}
+        for item in rec.get("ctx_items") or []:
+            d = item.get("dimension")
+            t = item.get("text")
+            if d and t and d in ctx:
+                ctx[d].append(t)
+        entry = {
+            "uuid": rec["uuid"],
+            "sentence": rec["sentence"],
+            "context": ctx,
+            "likes": 0,
+        }
+        if rec.get("embedding"):
+            entry["_embedding"] = rec["embedding"]
+            with_emb.append(entry)
+        else:
+            without_emb.append(entry)
+
+    if with_emb:
+        scores = _cosine_scores(goal_vec, [h["_embedding"] for h in with_emb])
+        for h, s in zip(with_emb, scores):
+            h["score"] = float(s)
+            del h["_embedding"]
+        with_emb.sort(key=lambda h: h["score"], reverse=True)
+        return with_emb[: _USER_HABITS_LIMIT]
+
+    # Fallback: no embeddings — return most-recently-added, capped
+    logger.info(
+        "User %s has %d habits but none have embeddings — returning unranked.",
+        user_id, len(without_emb),
+    )
+    return without_emb[: _USER_HABITS_LIMIT]
 
 
 async def _run_vector_query(
@@ -149,9 +219,6 @@ async def _vector_search_habits(
         logger.warning("Embedding goal for vector search failed: %s", exc)
         return []
 
-    driver = AsyncGraphDatabase.driver(
-        _NEO4J_URI, auth=(_NEO4J_USER, _NEO4J_PASSWORD)
-    )
     merged: dict[str, dict[str, object]] = {}
     limit = _COMMUNITY_HABITS_LIMIT
     params = {"limit": limit, "exclude_user_id": exclude_user_id}
@@ -191,6 +258,7 @@ async def _vector_search_habits(
     """
 
     try:
+        driver = await _get_neo4j_driver()
         async with driver.session() as session:
             habit_records, context_records, bcio_records = await asyncio.gather(
                 _run_vector_query(session, "habit_embedding_idx", query_embedding, habit_tail, params),
@@ -200,8 +268,6 @@ async def _vector_search_habits(
     except Exception as exc:  # noqa: BLE001
         logger.warning("Neo4j session failed during vector search: %s", exc)
         return []
-    finally:
-        await driver.close()
 
     for source in (habit_records, context_records, bcio_records):
         for uuid, habit in _records_to_habits(source).items():
@@ -274,13 +340,21 @@ def _parse_llm_response(raw: str) -> tuple[list[str], str]:
 # ---------------------------------------------------------------------------
 @router.post("/llm/extract-habits", response_model=ExtractHabitsResponse)
 async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
-    """Select the user's most goal-relevant habits from Neo4j using an LLM.
+    """Select the most goal-relevant habits from the full Neo4j graph using an LLM.
+
+    Builds a candidate pool by merging:
+    - The user's own donated habits (personal, highly contextual)
+    - Community habits retrieved via semantic vector search on the goal embedding
+
+    The LLM then selects the best-fitting habits from this combined pool.
+    Users with no donated habits still receive recommendations from the community graph.
 
     Args:
         body: Validated request payload with user_id and goal description.
 
     Returns:
-        ExtractHabitsResponse containing the LLM-selected habits and a habit summary.
+        ExtractHabitsResponse with LLM-selected habits, a summary, and the raw
+        community vector-search results for the caller to display separately.
 
     Raises:
         HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
@@ -298,12 +372,15 @@ async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
         except Exception as exc:  # noqa: BLE001
             logger.warning("Redis read error (%s) — falling back to Neo4j + LLM.", exc)
 
-    # --- fetch user habits + community habits in parallel ---
-    all_habits, community_raw = await asyncio.gather(
-        _fetch_habits_for_user(body.user_id),
+    # --- vector-search both pools in parallel ---
+    # personal: user's own habits ranked by semantic similarity to goal (top USER_HABITS_LIMIT)
+    # community: other users' habits via 3-index fan-out (top COMMUNITY_HABITS_LIMIT)
+    personal_habits, community_raw = await asyncio.gather(
+        _vector_search_user_habits(body.goal, body.user_id),
         _vector_search_habits(body.goal, body.user_id),
     )
 
+    # community_habits field: all vector-search results for the caller to display
     community_habits = [
         HabitEntry(
             uuid=h["uuid"],
@@ -314,10 +391,28 @@ async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
         for h in community_raw
     ]
 
-    if not all_habits:
+    # Build a merged candidate pool: personal first (more contextually relevant),
+    # then community vector results. Dedup by UUID so the LLM sees each habit once.
+    seen: set[str] = set()
+    candidate_pool: list[dict[str, object]] = []
+    for h in personal_habits:
+        if h["uuid"] not in seen:
+            seen.add(str(h["uuid"]))
+            candidate_pool.append(h)
+    for h in community_raw:
+        if str(h["uuid"]) not in seen:
+            seen.add(str(h["uuid"]))
+            candidate_pool.append(h)
+
+    if not candidate_pool:
+        logger.info(
+            "No habits found in either personal or community graph for user %s — "
+            "community habit graph may be empty.",
+            body.user_id,
+        )
         result = ExtractHabitsResponse(
             selected_habits=[],
-            habit_summary="No habits found for this user.",
+            habit_summary="No relevant habits found yet — the community graph may still be growing.",
             community_habits=community_habits,
         )
         if redis_client is not None:
@@ -327,9 +422,9 @@ async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
                 logger.warning("Redis write error (%s) — result not cached.", exc)
         return result
 
-    # --- LLM call to filter user's own habits ---
+    # --- LLM: select best-fit habits from the merged pool ---
     habits_json = json.dumps(
-        [{"uuid": h["uuid"], "sentence": h["sentence"], "context": h["context"]} for h in all_habits],
+        [{"uuid": h["uuid"], "sentence": h["sentence"], "context": h["context"]} for h in candidate_pool],
         ensure_ascii=False,
         indent=2,
     )
@@ -341,12 +436,17 @@ async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
 
     selected_uuids, habit_summary = _parse_llm_response(raw)
 
-    # filter to selected habits, preserving order
-    uuid_set = set(selected_uuids)
+    # Reconstruct selected entries from the merged pool, preserving LLM order
+    uuid_to_habit = {str(h["uuid"]): h for h in candidate_pool}
     selected_habits = [
-        HabitEntry(uuid=h["uuid"], sentence=h["sentence"], context=h["context"])
-        for h in all_habits
-        if h["uuid"] in uuid_set
+        HabitEntry(
+            uuid=str(uuid),
+            sentence=str(uuid_to_habit[uuid]["sentence"]),
+            context=uuid_to_habit[uuid]["context"],  # type: ignore[arg-type]
+            likes=int(uuid_to_habit[uuid].get("likes", 0) or 0),
+        )
+        for uuid in selected_uuids
+        if uuid in uuid_to_habit
     ]
 
     result = ExtractHabitsResponse(

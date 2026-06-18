@@ -223,6 +223,7 @@ export default function CuePoolsPage() {
                 <option value="high">High</option>
                 <option value="low">Low</option>
               </select>
+              <span className={styles.hint}>High-quality cues are shown to the high_quality condition; low to the low_quality condition.</span>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Domain</label>
@@ -231,6 +232,7 @@ export default function CuePoolsPage() {
                 value={newDomain}
                 onChange={(e) => setNewDomain(e.target.value)}
               />
+              <span className={styles.hint}>The activity domain this cue relates to (e.g. physical_activity).</span>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Language</label>
@@ -242,6 +244,7 @@ export default function CuePoolsPage() {
                 <option value="en">English</option>
                 <option value="de">German</option>
               </select>
+              <span className={styles.hint}>The language this cue is written in — used to match participant locale.</span>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Stability (1–5)</label>
@@ -253,6 +256,7 @@ export default function CuePoolsPage() {
                 value={newStability}
                 onChange={(e) => setNewStability(Number(e.target.value))}
               />
+              <span className={styles.hint}>How temporally consistent this cue is across days. 5 = very stable.</span>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Salience (1–5)</label>
@@ -264,6 +268,7 @@ export default function CuePoolsPage() {
                 value={newSalience}
                 onChange={(e) => setNewSalience(Number(e.target.value))}
               />
+              <span className={styles.hint}>How noticeable or attention-grabbing this cue is. 5 = highly salient.</span>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>Specificity (1–5)</label>
@@ -275,6 +280,7 @@ export default function CuePoolsPage() {
                 value={newSpecificity}
                 onChange={(e) => setNewSpecificity(Number(e.target.value))}
               />
+              <span className={styles.hint}>How concrete and specific this cue context is. 5 = very specific.</span>
             </div>
           </div>
           <div className={styles.formFooter}>

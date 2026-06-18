@@ -8,6 +8,8 @@ function isValidUserId(id) {
   return typeof id === 'string' && UUID_RE.test(id);
 }
 
+const PROXY_TIMEOUT_MS = parseInt(process.env.RECOMMENDER_TIMEOUT_MS ?? '180000', 10);
+
 async function proxyToRecommender(req, res, targetUrl) {
   const headers = {};
   if (req.headers.authorization) {
@@ -16,14 +18,22 @@ async function proxyToRecommender(req, res, targetUrl) {
   if (process.env.API_SERVICE_SECRET) {
     headers['X-Service-Auth-Token'] = process.env.API_SERVICE_SECRET;
   }
-  const fetchOptions = { method: req.method, headers };
+  const fetchOptions = { method: req.method, headers, signal: AbortSignal.timeout(PROXY_TIMEOUT_MS) };
   if (req.body && Object.keys(req.body).length > 0) {
     fetchOptions.body = JSON.stringify(req.body);
     headers['Content-Type'] = 'application/json';
   }
-  const upstream = await fetch(targetUrl, fetchOptions);
-  const data = await upstream.json();
-  res.status(upstream.status).json(data);
+  try {
+    const upstream = await fetch(targetUrl, fetchOptions);
+    const data = await upstream.json();
+    res.status(upstream.status).json(data);
+  } catch (err) {
+    if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+      res.status(504).json({ error: 'Recommender service timed out' });
+    } else {
+      res.status(502).json({ error: 'Recommender service unavailable' });
+    }
+  }
 }
 
 export function createRecommendRouter({ recommenderUrl } = {}) {

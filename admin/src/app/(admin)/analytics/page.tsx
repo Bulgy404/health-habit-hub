@@ -80,6 +80,14 @@ interface Participant {
   droppedOutAt?: string | null;
 }
 
+interface ParticipantProgress {
+  profile: { completed: boolean; completedAt: string | null };
+  surveys: { id: string; title: string; completedAt: string }[];
+  habitsCount: number;
+  recommendations: { accepted: number; dismissed: number };
+  timeline: { type: string; timestamp: string; detail: string }[];
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function apiFetch<T>(url: string, token: string): Promise<T> {
@@ -133,6 +141,120 @@ function KpiCard({ label, value, sub, accent }: {
   );
 }
 
+// ── Participant drawer ────────────────────────────────────────────────────────
+
+function ParticipantDrawer({
+  participant,
+  progress,
+  loading,
+  onClose,
+}: {
+  participant: Participant;
+  progress: ParticipantProgress | null;
+  loading: boolean;
+  onClose: () => void;
+}) {
+  const isDropped = !!participant.droppedOutAt;
+  const isActive = !isDropped && !!participant.lastActive &&
+    new Date(participant.lastActive) > new Date(Date.now() - 7 * 86400_000);
+
+  return (
+    <>
+      <div className={styles.drawerOverlay} onClick={onClose} />
+      <div className={styles.drawer}>
+        <div className={styles.drawerHeader}>
+          <div>
+            <div className={styles.drawerTitle}>{participant.username ?? participant.userId.slice(0, 8)}</div>
+            <div className={styles.drawerSub}>
+              {participant.group ?? "—"} · {isDropped ? "Dropped out" : isActive ? "Active" : "Inactive"}
+              {" · "}Enrolled {fmt(participant.enrolledAt)}
+            </div>
+          </div>
+          <button className={styles.drawerClose} onClick={onClose}>×</button>
+        </div>
+
+        <div className={styles.drawerBody}>
+          {loading && <div className={styles.loadingState}>Loading…</div>}
+
+          {!loading && progress && (
+            <>
+              <div className={styles.drawerSection}>
+                <div className={styles.drawerSectionTitle}>Summary</div>
+                <div className={styles.drawerStatGrid}>
+                  <div className={styles.drawerStat}>
+                    <span className={styles.drawerStatLabel}>Habits</span>
+                    <span className={styles.drawerStatValue}>{progress.habitsCount}</span>
+                  </div>
+                  <div className={styles.drawerStat}>
+                    <span className={styles.drawerStatLabel}>Surveys completed</span>
+                    <span className={styles.drawerStatValue}>{progress.surveys.length}</span>
+                  </div>
+                  <div className={styles.drawerStat}>
+                    <span className={styles.drawerStatLabel}>Recommendations accepted</span>
+                    <span className={styles.drawerStatValue}>{progress.recommendations.accepted}</span>
+                  </div>
+                  <div className={styles.drawerStat}>
+                    <span className={styles.drawerStatLabel}>Recommendations dismissed</span>
+                    <span className={styles.drawerStatValue}>{progress.recommendations.dismissed}</span>
+                  </div>
+                  <div className={styles.drawerStat}>
+                    <span className={styles.drawerStatLabel}>Profile complete</span>
+                    <span className={styles.drawerStatValue}>{progress.profile.completed ? "Yes" : "No"}</span>
+                  </div>
+                  <div className={styles.drawerStat}>
+                    <span className={styles.drawerStatLabel}>Last active</span>
+                    <span className={styles.drawerStatValue} style={{ fontSize: "0.9rem" }}>{fmt(participant.lastActive)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.drawerSection}>
+                <div className={styles.drawerSectionTitle}>Completed surveys</div>
+                {progress.surveys.length === 0 ? (
+                  <div className={styles.drawerEmpty}>No surveys completed yet.</div>
+                ) : (
+                  <div className={styles.drawerSurveyList}>
+                    {progress.surveys.map((s) => (
+                      <div key={s.id} className={styles.drawerSurveyItem}>
+                        <span className={styles.drawerSurveyTitle}>{s.title}</span>
+                        <span className={styles.drawerSurveyDate}>{fmt(s.completedAt)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.drawerSection}>
+                <div className={styles.drawerSectionTitle}>Activity timeline</div>
+                {progress.timeline.length === 0 ? (
+                  <div className={styles.drawerEmpty}>No activity recorded.</div>
+                ) : (
+                  <div className={styles.drawerTimeline}>
+                    {progress.timeline.map((ev, i) => (
+                      <div key={i} className={styles.drawerTimelineItem}>
+                        <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                          <div className={styles.drawerTimelineDot} />
+                          {i < progress.timeline.length - 1 && (
+                            <div className={styles.drawerTimelineLine} />
+                          )}
+                        </div>
+                        <div className={styles.drawerTimelineContent}>
+                          <span className={styles.drawerTimelineDetail}>{ev.detail}</span>
+                          <span className={styles.drawerTimelineDate}>{fmt(ev.timestamp)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
@@ -149,6 +271,10 @@ export default function AnalyticsPage() {
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [participantsLoading, setParticipantsLoading] = useState(false);
+
+  const [drawerParticipant, setDrawerParticipant] = useState<Participant | null>(null);
+  const [drawerProgress, setDrawerProgress] = useState<ParticipantProgress | null>(null);
+  const [drawerLoading, setDrawerLoading] = useState(false);
 
   // ── Load study list ────────────────────────────────────────────────────────
 
@@ -203,6 +329,20 @@ export default function AnalyticsPage() {
     if (!gid || gid === "unknown") return "Default";
     return study?.groups.find((g) => g.id === gid)?.label ?? gid;
   };
+
+  async function handleParticipantClick(p: Participant) {
+    setDrawerParticipant(p);
+    setDrawerProgress(null);
+    setDrawerLoading(true);
+    try {
+      const data = await apiFetch<ParticipantProgress>(`${API}/admin/participants/${p.userId}/progress`, token);
+      setDrawerProgress(data);
+    } catch {
+      // non-critical — drawer stays open with what we have
+    } finally {
+      setDrawerLoading(false);
+    }
+  }
 
   // KPIs
   const kpi = useMemo(() => {
@@ -553,7 +693,12 @@ export default function AnalyticsPage() {
                     const isActive = !isDropped && !!p.lastActive &&
                       new Date(p.lastActive) > new Date(Date.now() - 7 * 86400_000);
                     return (
-                      <tr key={p.userId}>
+                      <tr
+                        key={p.userId}
+                        className={styles.clickableRow}
+                        onClick={() => handleParticipantClick(p)}
+                        title="Click to view participant details"
+                      >
                         <td className={styles.mono}>{p.username ?? p.userId.slice(0, 8)}</td>
                         <td>{p.group ?? "—"}</td>
                         <td>{fmt(p.enrolledAt)}</td>
@@ -588,6 +733,15 @@ export default function AnalyticsPage() {
             )}
           </div>
         </>
+      )}
+
+      {drawerParticipant && (
+        <ParticipantDrawer
+          participant={drawerParticipant}
+          progress={drawerProgress}
+          loading={drawerLoading}
+          onClose={() => { setDrawerParticipant(null); setDrawerProgress(null); }}
+        />
       )}
     </div>
   );

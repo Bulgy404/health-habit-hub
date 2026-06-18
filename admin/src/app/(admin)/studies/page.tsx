@@ -540,6 +540,7 @@ function CodesTab({
                 setStudyCount(Math.min(100, Math.max(1, Number(e.target.value))))
               }
             />
+            <span className={styles.hint}>How many unique enrollment codes to generate in this batch.</span>
           </div>
           <div className={styles.formGroup}>
             <label className={styles.label}>Max redemptions (optional)</label>
@@ -551,6 +552,7 @@ function CodesTab({
               onChange={(e) => setStudyMaxRed(e.target.value)}
               placeholder="Unlimited"
             />
+            <span className={styles.hint}>How many participants can redeem each code. Leave blank for unlimited.</span>
           </div>
           <div className={styles.formGroup}>
             <label className={styles.label}>Expiry (optional)</label>
@@ -560,6 +562,7 @@ function CodesTab({
               value={studyExpiry}
               onChange={(e) => setStudyExpiry(e.target.value)}
             />
+            <span className={styles.hint}>Codes stop working after this date and time. Leave blank for no expiry.</span>
           </div>
         </div>
         {studyGenError && <div className={styles.errorMsg}>{studyGenError}</div>}
@@ -616,6 +619,7 @@ function CodesTab({
                     </option>
                   ))}
                 </select>
+                <span className={styles.hint}>Participants who redeem this code are assigned directly to this condition, bypassing the allocation weights.</span>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Quantity (1–100)</label>
@@ -629,6 +633,7 @@ function CodesTab({
                     setGenCount(Math.min(100, Math.max(1, Number(e.target.value))))
                   }
                 />
+                <span className={styles.hint}>How many unique codes to generate for this condition.</span>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Max redemptions (optional)</label>
@@ -640,6 +645,7 @@ function CodesTab({
                   onChange={(e) => setGenMaxRed(e.target.value)}
                   placeholder="Unlimited"
                 />
+                <span className={styles.hint}>How many participants can redeem each code. Leave blank for unlimited.</span>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Expiry (optional)</label>
@@ -649,6 +655,7 @@ function CodesTab({
                   value={genExpiry}
                   onChange={(e) => setGenExpiry(e.target.value)}
                 />
+                <span className={styles.hint}>Codes stop working after this date and time. Leave blank for no expiry.</span>
               </div>
             </div>
             {genError && <div className={styles.errorMsg}>{genError}</div>}
@@ -1179,6 +1186,7 @@ function NotificationsTab({
                   <option key={g.id} value={g.id}>{g.label}</option>
                 ))}
               </select>
+              <span className={styles.hint}>Send to everyone enrolled in this study or to a specific condition group.</span>
             </div>
 
             <div className={styles.formGroup}>
@@ -1191,6 +1199,7 @@ function NotificationsTab({
                 <option value="now">Now</option>
                 <option value="schedule">Schedule</option>
               </select>
+              <span className={styles.hint}>Send immediately or schedule for a future date and time.</span>
             </div>
           </div>
 
@@ -1409,6 +1418,7 @@ function CueConfigTab({
                   <option value="single">Single cue</option>
                   <option value="multi">Multi-cue</option>
                 </select>
+                <span className={styles.hint}>Single: one cue per habit-formation session. Multi: several cues presented together.</span>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Cue source</label>
@@ -1425,6 +1435,7 @@ function CueConfigTab({
                   <option value="high_quality">High quality (pre-rated)</option>
                   <option value="self_selected">Self-selected</option>
                 </select>
+                <span className={styles.hint}>How cues are sourced — pre-rated from the cue pool library, or chosen by the participant themselves.</span>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Max habits</label>
@@ -1440,10 +1451,12 @@ function CueConfigTab({
                   <option value="">Unlimited (public)</option>
                   <option value="1">1 (study participant)</option>
                 </select>
+                <span className={styles.hint}>Caps how many habits a participant can create. Use &quot;1&quot; for single-habit study designs.</span>
               </div>
             </div>
             <div className={styles.formGroup} style={{ marginTop: "0.75rem" }}>
               <label className={styles.label}>Allowed behaviors</label>
+              <span className={styles.hint}>Which activity types appear as options when participants create a new habit.</span>
               <div className={styles.behaviorCheckboxes}>
                 {BEHAVIOR_OPTIONS.map((b) => (
                   <label key={b.key} className={styles.checkboxLabel}>
@@ -1671,6 +1684,7 @@ function StudyModal({
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Autumn 2025 Cohort"
                   />
+                  <span className={styles.hint}>Used internally; not visible to participants.</span>
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
@@ -1681,6 +1695,7 @@ function StudyModal({
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Optional description for this study"
                   />
+                  <span className={styles.hint}>Optional. For internal reference only.</span>
                 </div>
 
                 <div className={styles.formGroup}>
@@ -1697,6 +1712,7 @@ function StudyModal({
                     <option value={3}>3</option>
                     <option value={4}>4</option>
                   </select>
+                  <span className={styles.hint}>Each group is a study condition (e.g. control, intervention). Label them below.</span>
                 </div>
               </div>
 

@@ -12,7 +12,10 @@ import { createHabitsRouter } from './habitsRouter.js';
 import { createAdminRouter } from './adminRouter.js';
 import { createOnboardRouter } from './onboardRouter.js';
 import { createQuestionnairesRouter } from './questionnairesRouter.js';
-import { createQuestionnaireResponsesRouter } from './questionnaireResponsesRouter.js';
+import {
+  createQuestionnaireResponsesRouter,
+  createQuestionnaireResponsesServiceRouter,
+} from './questionnaireResponsesRouter.js';
 import { createRecommendationsRouter } from './recommendationsRouter.js';
 import { createKbRouter } from './kbRouter.js';
 import { createUsersRouter } from './usersRouter.js';
@@ -164,6 +167,13 @@ export function createV1Router({
     '/user-profile',
     apiRateLimiter,
     createUserProfileServiceRouter({ db })
+  );
+
+  // Service-to-service: questionnaire responses (no JWT required, uses X-Service-Auth-Token)
+  router.use(
+    '/questionnaire-responses',
+    apiRateLimiter,
+    createQuestionnaireResponsesServiceRouter({ db })
   );
 
   // All routes below require a valid JWT

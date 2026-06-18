@@ -132,6 +132,7 @@ export default function SettingsPage() {
                   <option value="single">Single cue</option>
                   <option value="multi">Multi-cue (recommended)</option>
                 </select>
+                <span className={styles.hint}>Single: one cue per habit session. Multi: several cues presented together.</span>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Cue source</label>
@@ -144,6 +145,7 @@ export default function SettingsPage() {
                   <option value="low_quality">Low quality</option>
                   <option value="self_selected">Self-selected</option>
                 </select>
+                <span className={styles.hint}>How cues are selected for non-study users — from the pre-rated library or participant-chosen.</span>
               </div>
               <div className={styles.formGroup}>
                 <label className={styles.label}>Default reminder time</label>
@@ -153,6 +155,7 @@ export default function SettingsPage() {
                   value={reminderTime}
                   onChange={(e) => { setReminderTime(e.target.value); setSaved(false); }}
                 />
+                <span className={styles.hint}>Time of day for the daily check-in push notification. Participants can override in their profile.</span>
               </div>
             </div>
             <div className={styles.footer}>
