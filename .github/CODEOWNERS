@@ -1,0 +1,61 @@
+# CODEOWNERS
+#
+# Each line is a file pattern followed by one or more owners.
+# The last matching pattern takes the highest precedence.
+# Owners are automatically requested for review on pull requests.
+#
+# Syntax: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default: all maintainers review everything not covered below
+*                               @Bulgy404
+
+# ── Backend (Node.js) ──────────────────────────────────────────
+/app/                           @Bulgy404
+/app/routes/                    @Bulgy404
+/app/controllers/               @Bulgy404
+/app/middleware/                 @Bulgy404
+/app/services/                  @Bulgy404
+/app/tests/                     @Bulgy404
+
+# ── Python API / Recommendation pipeline ──────────────────────
+/API-service/                   @Bulgy404
+/API-service/routers/           @Bulgy404
+/API-service/tests/             @Bulgy404
+
+# ── Mobile (Flutter) ──────────────────────────────────────────
+/mobile/                        @Bulgy404
+/mobile/lib/                    @Bulgy404
+/mobile/test/                   @Bulgy404
+
+# ── Admin portal (Next.js) ────────────────────────────────────
+/admin/                         @Bulgy404
+/admin/src/                     @Bulgy404
+
+# ── Knowledge MCP ─────────────────────────────────────────────
+/knowledge-mcp/                 @Bulgy404
+
+# ── Infrastructure & deployment ───────────────────────────────
+/docker-compose.yml             @Bulgy404
+/docker-compose.local.yml       @Bulgy404
+/keycloak/                      @Bulgy404
+/neo4j/                         @Bulgy404
+/monitoring/                    @Bulgy404
+/backup-service/                @Bulgy404
+/scripts/                       @Bulgy404
+Makefile                        @Bulgy404
+DEPLOYMENT.md                   @Bulgy404
+
+# ── CI/CD ─────────────────────────────────────────────────────
+/.github/                       @Bulgy404
+/.github/workflows/             @Bulgy404
+
+# ── Security-sensitive files ───────────────────────────────────
+SECURITY.md                     @Bulgy404
+AUDIT.md                        @Bulgy404
+
+# ── Documentation ─────────────────────────────────────────────
+/docs/                          @Bulgy404
+CHANGELOG.md                    @Bulgy404
+
+# ── LightRAG / RAG pipeline ───────────────────────────────────
+/lightrag/                      @Bulgy404

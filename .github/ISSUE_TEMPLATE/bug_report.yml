@@ -1,0 +1,76 @@
+name: Bug report
+description: Something is broken or behaving unexpectedly
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Fill in as much detail as you can — the more context, the faster we can fix it.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the system is affected?
+      options:
+        - Mobile app (Flutter)
+        - Backend API (Node.js)
+        - Recommendation pipeline (Python)
+        - Admin portal (Next.js)
+        - Knowledge MCP / LightRAG
+        - Infrastructure / Docker
+        - CI/CD
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug description
+      description: What happened? What did you expect to happen?
+      placeholder: |
+        **Actual behaviour:** ...
+        **Expected behaviour:** ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that consistently reproduce the bug
+      placeholder: |
+        1. Start local stack with `make dev`
+        2. Open the app and navigate to ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or error output
+      description: Paste logs, stack traces, or network responses here (redact secrets)
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Branch/commit, OS, Node/Flutter/Python versions, Docker version
+      placeholder: "main@a1b2c3d, macOS 15.4, Node 22, Flutter 3.29"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: I can reproduce this consistently
+          required: true
+        - label: I have not included secrets, credentials, or personal data above
+          required: true
