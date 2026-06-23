@@ -105,7 +105,7 @@ class DonateSuccessWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Thank you for contributing to health research.',
+              'Your habit is being analyzed and will appear in the community shortly.',
               style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
               textAlign: TextAlign.center,
             ),

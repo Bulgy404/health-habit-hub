@@ -18,7 +18,8 @@ and is annotated with the expected output.
 8. [Rotating Secrets](#rotating-secrets)
 9. [Adding an Admin User](#adding-an-admin-user)
 10. [Checking Service Health](#checking-service-health)
-11. [Troubleshooting](#troubleshooting)
+11. [Queue & Cache Monitoring](#queue--cache-monitoring-local-dev)
+12. [Troubleshooting](#troubleshooting)
     - [Keycloak 401 errors](#keycloak-401-errors--jwks-url-misconfigured)
     - [Keycloak DB unavailable — PostgreSQL not ready](#keycloak-db-unavailable--postgresql-not-ready)
     - [Neo4j connection refused — container not ready](#neo4j-connection-refused--container-not-ready)
@@ -618,7 +619,63 @@ echo "ERROR: Services not healthy after 60s" && exit 1
 
 ---
 
-## 11. Troubleshooting
+## 11. Queue & Cache Monitoring (local dev)
+
+Two browser UIs are available in local development to inspect the BullMQ habit-donation queue and the Redis cache.
+
+### Bull Board — habit donation queue
+
+Bull Board is mounted inside the app server and exposes a live view of the `habit-donations` BullMQ queue.
+
+**URL:** http://app.localhost/admin/queues
+
+Only available when `NODE_ENV !== production`. No extra login required in local dev — the app container is only reachable from localhost.
+
+What you can do:
+- See job counts by state: waiting, active, completed, failed
+- Inspect individual job payloads (habit sentence, userID, confidence)
+- Retry failed jobs manually
+- Pause / resume the queue
+
+**Typical workflow after `make seed`:**
+1. Open http://app.localhost/admin/queues
+2. Watch jobs move from **Waiting** → **Active** → **Completed** in real time
+3. If a job lands in **Failed**, click it to read the error and retry
+
+### RedisInsight — full Redis key browser
+
+RedisInsight is a separate Docker service that provides a GUI for browsing all Redis keys, including BullMQ's internal structures.
+
+**URL:** http://redis-insight.localhost  
+**Direct port:** http://localhost:5540
+
+First-time setup (one-off):
+1. Open http://redis-insight.localhost
+2. Click **Add Redis Database**
+3. Fill in:
+   - Host: `redis` (Docker service name)
+   - Port: `6379`
+   - Password: value of `REDIS_PASSWORD` from your `.env`
+4. Click **Add Redis Database**
+
+What you can see:
+- `bull:habit-donations:*` — BullMQ job hashes, sorted sets for each state
+- `bull:habit-donations:completed` — completed job IDs (kept 24 h)
+- `bull:habit-donations:failed` — failed job IDs (kept 24 h)
+- All other Redis keys used by the app (recommendation cache, notification locks)
+
+**Start/stop RedisInsight:**
+```bash
+# Start (it starts automatically with make dev)
+docker compose -f docker-compose.local.yml up -d redis-insight
+
+# Stop
+docker compose -f docker-compose.local.yml stop redis-insight
+```
+
+---
+
+## 12. Troubleshooting
 
 ### Keycloak 401 errors — JWKS URL misconfigured
 

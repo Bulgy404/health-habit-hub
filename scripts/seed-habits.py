@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Optional
 
 import httpx
-from neo4j import AsyncGraphDatabase  # type: ignore[import]
+from neo4j import AsyncGraphDatabase, NotificationMinimumSeverity  # type: ignore[import]
 
 # ---------------------------------------------------------------------------
 # Load .env
@@ -180,24 +180,63 @@ def _service_headers() -> dict[str, str]:
     return {"X-Service-Auth-Token": _SECRET}
 
 
+async def _warmup(client: httpx.AsyncClient) -> None:
+    """Trigger BCIO index build and wait for the API service to be fully ready."""
+    print("  Warming up API service (building BCIO index on first request)…", flush=True)
+    for attempt in range(1, 13):  # up to 2 minutes
+        try:
+            r = await client.post(
+                f"{_API_BASE}/llm/map-bcio",
+                headers=_service_headers(),
+                json={"uuid": "warmup", "context_phrases": {"BEHAVIOR": ["exercise"]}},
+                timeout=120.0,
+            )
+            if r.status_code < 500:
+                print(f"  API service ready (attempt {attempt}).\n")
+                return
+        except Exception:
+            pass
+        print(f"  Not ready yet, retrying in 10 s… ({attempt}/12)", flush=True)
+        await asyncio.sleep(10)
+    print("  Warning: API service did not warm up — proceeding anyway.\n")
+
+
+async def _post_with_retry(client: httpx.AsyncClient, url: str, **kwargs) -> httpx.Response:
+    """POST with up to 3 retries and exponential backoff on server errors."""
+    for attempt in range(3):
+        try:
+            r = await client.post(url, **kwargs)
+            if r.status_code < 500:
+                return r
+            await asyncio.sleep(2 ** attempt)
+        except (httpx.RemoteProtocolError, httpx.ConnectError, httpx.ReadTimeout):
+            if attempt == 2:
+                raise
+            await asyncio.sleep(2 ** attempt)
+    raise httpx.RemoteProtocolError("Max retries exceeded", request=None)
+
+
 async def _classify_context(client: httpx.AsyncClient, uuid: str, sentence: str, language: str) -> dict[str, list[str]]:
     dims = ["TIME", "PHYSICAL_SETTING", "PRIOR_BEHAVIOR", "OTHER_PEOPLE", "INTERNAL_STATE", "BEHAVIOR", "REASONING"]
     try:
-        r = await client.post(f"{_API_BASE}/llm/classify-context",
+        r = await _post_with_retry(client, f"{_API_BASE}/llm/classify-context",
                               headers=_service_headers(),
                               json={"uuid": uuid, "sentence": sentence, "language": language},
-                              timeout=60.0)
+                              timeout=120.0)
         r.raise_for_status()
         data = r.json()
         return {d: data.get(d, []) for d in dims}
+    except httpx.HTTPStatusError as exc:
+        print(f"    classify-context failed: HTTP {exc.response.status_code} — {exc.response.text[:200]}")
+        return {}
     except Exception as exc:
-        print(f"    classify-context failed: {exc}")
+        print(f"    classify-context failed: {type(exc).__name__}: {exc}")
         return {}
 
 
 async def _map_bcio(client: httpx.AsyncClient, uuid: str, context_phrases: dict) -> list[dict]:
     try:
-        r = await client.post(f"{_API_BASE}/llm/map-bcio",
+        r = await _post_with_retry(client, f"{_API_BASE}/llm/map-bcio",
                               headers=_service_headers(),
                               json={"uuid": uuid, "context_phrases": context_phrases},
                               timeout=60.0)
@@ -210,7 +249,7 @@ async def _map_bcio(client: httpx.AsyncClient, uuid: str, context_phrases: dict)
 
 async def _embed_texts(client: httpx.AsyncClient, texts: list[str]) -> list[list[float]]:
     try:
-        r = await client.post(f"{_API_BASE}/llm/embed-batch",
+        r = await _post_with_retry(client, f"{_API_BASE}/llm/embed-batch",
                               headers=_service_headers(),
                               json={"texts": texts},
                               timeout=120.0)
@@ -231,7 +270,7 @@ async def _write_to_neo4j(session, uuid: str, sentence: str, language: str,
         ON MATCH SET  h.sentence=$sentence, h.language=$language, h.userID=$userID
         """,
         uuid=uuid, sentence=sentence, language=language,
-        userID=user_id, created_at=datetime.datetime.utcnow().isoformat(),
+        userID=user_id, created_at=datetime.datetime.now(datetime.timezone.utc).isoformat(),
     )
     context_rows = [{"text": p.strip(), "dimension": d}
                     for d, ps in context_phrases.items() for p in ps if p.strip()]
@@ -290,12 +329,16 @@ async def _seed_one(client, driver, sentence, language, user_id,
             print(f"    dry-run: uuid={habit_uuid} user={user_id}")
             return True
 
-        # Skip if already embedded
+        # Skip only if already fully enriched (embedding + at least one context phrase)
         async with driver.session() as s:
             rec = await (await s.run(
-                "MATCH (h:Habit {uuid:$uuid}) RETURN h.embedding IS NOT NULL AS has_emb",
+                """
+                MATCH (h:Habit {uuid:$uuid})
+                OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)
+                RETURN h.embedding IS NOT NULL AS has_emb, count(c) AS ctx_count
+                """,
                 uuid=habit_uuid)).single()
-            if rec and rec["has_emb"]:
+            if rec and rec["has_emb"] and rec["ctx_count"] > 0:
                 print(f"    already seeded, skipping"); return True
 
         ctx = await _classify_context(client, habit_uuid, sentence, language)
@@ -318,10 +361,14 @@ async def run_seed(concurrency: int, habit_count: int, dry_run: bool) -> None:
     sem = asyncio.Semaphore(concurrency)
     print(f"Mode: seed (direct)  •  {total} habits  •  concurrency={concurrency}")
     print(f"API service: {_API_BASE}  •  Neo4j: {_NEO4J_URI}\n")
-    driver = AsyncGraphDatabase.driver(_NEO4J_URI, auth=(_NEO4J_USER, _NEO4J_PASSWORD))
+    driver = AsyncGraphDatabase.driver(
+        _NEO4J_URI, auth=(_NEO4J_USER, _NEO4J_PASSWORD),
+        notifications_min_severity=NotificationMinimumSeverity.OFF,
+    )
     start = time.monotonic()
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
+            await _warmup(client)
             results = await asyncio.gather(*[
                 _seed_one(client, driver, sentence, language,
                           _SEED_USERS[i % len(_SEED_USERS)],
@@ -331,6 +378,9 @@ async def run_seed(concurrency: int, habit_count: int, dry_run: bool) -> None:
     finally:
         await driver.close()
     ok = sum(1 for r in results if r is True)
+    errors = [r for r in results if isinstance(r, Exception)]
+    if errors:
+        print(f"\n  First error: {errors[0]}")
     print(f"\n{'─'*60}\nSeeded: {ok}/{total}  •  {time.monotonic()-start:.1f}s")
 
 
@@ -378,10 +428,13 @@ async def _donate_one(client: httpx.AsyncClient, token: str, sentence: str,
                 timeout=120.0,
             )
             r.raise_for_status()
-            data = r.json()
-            status = "habit ✓" if data.get("is_habit") else "not a habit"
-            print(f"  [{index:3}/{total}] {status} — {sentence[:60]}", flush=True)
-            return {"ok": True, "is_habit": data.get("is_habit", False)}
+            if r.status_code == 202:
+                # Habit accepted and queued for async processing.
+                print(f"  [{index:3}/{total}] queued ✓  — {sentence[:60]}", flush=True)
+                return {"ok": True, "queued": True}
+            # 200: classifier rejected (not a habit).
+            print(f"  [{index:3}/{total}] not a habit — {sentence[:60]}", flush=True)
+            return {"ok": True, "is_habit": False}
         except Exception as exc:
             print(f"  [{index:3}/{total}] ERROR: {exc!r} — {sentence[:60]}", flush=True)
             return {"ok": False}
@@ -422,14 +475,16 @@ async def run_e2e(concurrency: int, habit_count: int) -> None:
         ])
     results = [r for batch in nested for r in batch]
     elapsed = time.monotonic() - start
-    donated   = sum(1 for r in results if r.get("is_habit"))
-    not_habit = sum(1 for r in results if r.get("ok") and not r.get("is_habit"))
+    queued    = sum(1 for r in results if r.get("queued"))
+    not_habit = sum(1 for r in results if r.get("ok") and not r.get("queued"))
     errors    = sum(1 for r in results if not r.get("ok"))
     print(f"\n{'─'*60}")
-    print(f"Donated to Neo4j : {donated}")
-    print(f"Not a habit      : {not_habit}")
-    print(f"Errors           : {errors}")
-    print(f"Time             : {elapsed:.1f}s  ({total/elapsed:.1f} habits/s)")
+    print(f"Queued for processing : {queued}")
+    print(f"Not a habit           : {not_habit}")
+    print(f"Errors                : {errors}")
+    print(f"Time                  : {elapsed:.1f}s  ({total/elapsed:.1f} habits/s)")
+    if queued:
+        print(f"\nHabits are processing asynchronously in the BullMQ worker.")
 
 
 # ===========================================================================

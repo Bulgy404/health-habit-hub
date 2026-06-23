@@ -21,10 +21,13 @@
     "check:openapi": "node ../scripts/generate-spec.js && git diff --exit-code ../docs/api/openapi.yaml"
   },
   "dependencies": {
+    "@bull-board/api": "^8.0.1",
+    "@bull-board/express": "^8.0.1",
     "@sentry/node": "^8.55.0",
     "adm-zip": "^0.5.17",
     "bcryptjs": "^3.0.3",
     "body-parser": "^1.20.2",
+    "bullmq": "^5.79.1",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.6",
     "csv-stringify": "^6.7.0",

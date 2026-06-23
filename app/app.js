@@ -157,6 +157,20 @@ import {
 } from './utils/errorReporting.js';
 app.use('/api/v1', express.json(), createV1Router());
 
+// Bull Board — queue dashboard (local/staging only, never in production).
+if (process.env.NODE_ENV !== 'production') {
+  const { createBullBoard } = await import('@bull-board/api');
+  const { BullMQAdapter } = await import('@bull-board/api/bullMQAdapter');
+  const { ExpressAdapter } = await import('@bull-board/express');
+  const { habitQueue } = await import('./lib/habitQueue.js');
+
+  const boardAdapter = new ExpressAdapter();
+  boardAdapter.setBasePath('/admin/queues');
+  createBullBoard({ queues: [new BullMQAdapter(habitQueue)], serverAdapter: boardAdapter });
+  app.use('/admin/queues', boardAdapter.getRouter());
+  console.log('[bull-board] Queue dashboard: http://app.localhost/admin/queues');
+}
+
 // Crash/error reporting (no-op unless SENTRY_DSN is set).
 initErrorReporting();
 

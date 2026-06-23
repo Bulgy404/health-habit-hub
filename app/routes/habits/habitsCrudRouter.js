@@ -1,6 +1,12 @@
 import express from 'express';
 import { randomUUID } from 'node:crypto';
-import { shareHabit } from '../../services/habitDonationService.js';
+import {
+  shareHabit,
+  classifyHabit,
+  persistRejectedHabit,
+  enqueueHabitDonation,
+} from '../../services/habitDonationService.js';
+import { getJobStatus } from '../../lib/habitQueue.js';
 import { SUPPORTED_LANGUAGES } from '../../utils/constants.js';
 import {
   getAllHabits,
@@ -12,118 +18,7 @@ import {
 } from '../../db/habitQueries.js';
 import { habitShareLimiter } from '../../middleware/rateLimiter.js';
 import { logger } from '../../utils/logger.js';
-
-// Step 1: Call LibreTranslate with a 10-second timeout.
-// Returns the raw translated string, or null if the service is unavailable.
-async function fetchLibreTranslation(
-  sentence,
-  sourceLang,
-  targetLang,
-  translateUrl
-) {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    let res;
-    try {
-      res = await fetch(translateUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          q: sentence,
-          source: sourceLang,
-          target: targetLang,
-          format: 'text',
-        }),
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-    if (!res.ok) {
-      log.warn(
-        `[translate] LibreTranslate returned ${res.status} — skipping translation to ${targetLang.toUpperCase()}`
-      );
-      return null;
-    }
-    const data = await res.json();
-    return data.translatedText;
-  } catch (err) {
-    log.warn(
-      `[translate] LibreTranslate error: ${err.message} — skipping translation to ${targetLang.toUpperCase()}`
-    );
-    return null;
-  }
-}
-
-// Step 2: Refine the raw translation with the LLM tone endpoint.
-// Returns the refined string, or the original draft if the LLM is unavailable.
-async function refineLLMTranslation(
-  draft,
-  sentence,
-  sourceLang,
-  llmEndpoint,
-  apiBase
-) {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    let res;
-    try {
-      res = await fetch(`${apiBase}${llmEndpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          original: sentence,
-          raw_translation: draft,
-          language: sourceLang,
-        }),
-        signal: controller.signal,
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-    if (!res.ok) {
-      log.warn(
-        `[translate] LLM ${llmEndpoint} returned ${res.status} — using raw LibreTranslate output`
-      );
-      return draft;
-    }
-    const data = await res.json();
-    return data.refined_translation || draft;
-  } catch (err) {
-    log.warn(
-      `[translate] LLM refinement error/timeout: ${err.message} — using raw LibreTranslate output`
-    );
-    return draft;
-  }
-}
-
-// Unified translation: LibreTranslate → LLM tone refinement.
-// Returns refined string, raw LibreTranslate output if LLM fails, or null if LibreTranslate fails.
-async function translate(
-  sentence,
-  sourceLang,
-  targetLang,
-  llmEndpoint,
-  apiBase,
-  translateUrl
-) {
-  const draft = await fetchLibreTranslation(
-    sentence,
-    sourceLang,
-    targetLang,
-    translateUrl
-  );
-  if (!draft) return null;
-  return refineLLMTranslation(
-    draft,
-    sentence,
-    sourceLang,
-    llmEndpoint,
-    apiBase
-  );
-}
+import { translateHabit } from '../../utils/translate.js';
 
 /**
  * Handles CRUD-style habits routes: list, public, annotate, share, donate.
@@ -143,6 +38,7 @@ export function createHabitsCrudRouter({
   queryNeo4j,
   apiServiceUrl,
   libreTranslateUrl,
+  habitQueue,
 } = {}) {
   const router = express.Router();
 
@@ -436,8 +332,9 @@ export function createHabitsCrudRouter({
     }
   });
 
-  // POST /api/v1/habits/share
-  // Validate input then delegate to the habit-sharing service.
+  // POST /api/v1/habits/share (and /donate alias)
+  // Classify synchronously; rejected habits return 200 immediately, accepted
+  // habits are enqueued and return 202 so the LLM pipeline runs off the request.
   async function handleShareHabit(req, res) {
     const {
       sentence,
@@ -452,9 +349,7 @@ export function createHabitsCrudRouter({
       return res.status(401).json({ error: 'Unauthorized' });
     }
     if (!sentence || !language) {
-      return res
-        .status(400)
-        .json({ error: 'sentence and language are required' });
+      return res.status(400).json({ error: 'sentence and language are required' });
     }
     if (typeof sentence !== 'string' || sentence.length > 1000) {
       return res.status(400).json({
@@ -470,9 +365,7 @@ export function createHabitsCrudRouter({
       });
     }
     const isValidRating = (v, max) =>
-      v === undefined ||
-      v === null ||
-      (Number.isInteger(v) && v >= 1 && v <= max);
+      v === undefined || v === null || (Number.isInteger(v) && v >= 1 && v <= max);
     if (
       !isValidRating(frequency, 4) ||
       !isValidRating(duration, 4) ||
@@ -490,22 +383,39 @@ export function createHabitsCrudRouter({
       `http://${process.env.TRANSLATE_HOST || 'localhost'}:${process.env.TRANSLATE_PORT || '5000'}${process.env.TRANSLATE_PATH || '/translate'}`;
 
     try {
-      const result = await shareHabit({
-        uuid: randomUUID(),
+      const uuid = randomUUID();
+
+      // Step 1 (sync, fast): classify — keeps the immediate "not a habit" UX.
+      const classified = await classifyHabit(sentence, language, userId, apiBase);
+
+      if (!classified.is_habit) {
+        const result = await persistRejectedHabit(
+          { uuid, sentence, language, userID: userId, confidence: classified.confidence },
+          queryNeo4j,
+          getDb
+        );
+        return res.status(200).json(result);
+      }
+
+      // Step 2 (async): enqueue the expensive pipeline and return 202 immediately.
+      const { jobId } = await enqueueHabitDonation({
+        uuid,
         sentence,
         language,
         userID: userId,
+        confidence: classified.confidence,
         frequency: frequency ?? null,
         duration: duration ?? null,
         healthBenefit: health_benefit ?? null,
         wellbeingImpact: wellbeing_impact ?? null,
-        queryNeo4j,
-        getDb,
-        apiBase,
-        translate,
-        translateUrl,
+        habitQueue,
       });
-      return res.status(result.is_habit ? 201 : 200).json(result);
+
+      return res.status(202).json({
+        jobId,
+        status: 'pending',
+        message: 'Your habit has been submitted and is being analyzed.',
+      });
     } catch (err) {
       if (err.status && Number.isInteger(err.status)) {
         if (process.env.NODE_ENV !== 'production') {
@@ -538,15 +448,29 @@ export function createHabitsCrudRouter({
         })
       );
       const detail =
-        process.env.NODE_ENV !== 'production'
-          ? err?.message || String(err)
-          : undefined;
+        process.env.NODE_ENV !== 'production' ? err?.message || String(err) : undefined;
       return res.status(500).json({
         error: 'Internal server error',
         ...(detail ? { detail } : {}),
       });
     }
   }
+
+  // GET /api/v1/habits/jobs/:jobId — poll donation job status from Redis.
+  router.get('/jobs/:jobId', async (req, res) => {
+    const userId = req.user?.sub;
+    const { jobId } = req.params;
+    try {
+      const job = await getJobStatus(jobId);
+      if (!job) return res.status(404).json({ error: 'Job not found' });
+      if (job.userID !== userId) return res.status(403).json({ error: 'Forbidden' });
+      const { userID: _drop, ...safe } = job;
+      return res.json(safe);
+    } catch (err) {
+      log.error({ err: err.message }, 'failed to get job status');
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
   // Strict per-user rate limit on habit donation (10 submissions per hour).
   router.post('/share', habitShareLimiter, handleShareHabit);

@@ -20,7 +20,7 @@ function serviceHeaders() {
 }
 
 /** Classify whether sentence is a habit and return { is_habit, confidence }. */
-async function classifyHabit(sentence, language, userID, apiBase) {
+export async function classifyHabit(sentence, language, userID, apiBase) {
   let res;
   try {
     res = await fetch(`${apiBase}/api/v1/llm/classify-habit`, {
@@ -303,7 +303,7 @@ async function writeToNeo4j(
  * @param {Function} getDb
  * @returns {Promise<{ is_habit: false, message: string }>}
  */
-async function _persistRejectedHabit(
+export async function persistRejectedHabit(
   { uuid, sentence, language, userID, confidence },
   queryNeo4j,
   getDb
@@ -428,7 +428,7 @@ export async function shareHabit({
   const classified = await classifyHabit(sentence, language, userID, apiBase);
 
   if (!classified.is_habit) {
-    return _persistRejectedHabit(
+    return persistRejectedHabit(
       { uuid, sentence, language, userID, confidence: classified.confidence },
       queryNeo4j,
       getDb
@@ -487,6 +487,81 @@ export async function shareHabit({
 }
 
 export const donateHabit = shareHabit;
+
+// ---------------------------------------------------------------------------
+// Async donation helpers (used by the BullMQ worker path)
+// ---------------------------------------------------------------------------
+
+/**
+ * Run the expensive pipeline steps for an already-classified habit:
+ * extractContext → mapBcio → translate → writeToNeo4j → embed.
+ * Classification is intentionally skipped — call classifyHabit first.
+ */
+export async function processAcceptedHabit({
+  uuid,
+  sentence,
+  language,
+  userID,
+  confidence,
+  frequency = null,
+  duration = null,
+  healthBenefit = null,
+  wellbeingImpact = null,
+  queryNeo4j,
+  getDb,
+  apiBase,
+  translate,
+  translateUrl,
+}) {
+  const contextPhrases = await extractContext(uuid, sentence, language, apiBase);
+  const mappings = await mapBcio(uuid, contextPhrases, apiBase);
+  const [translationEN, translationDE] = await _translateHabit(
+    sentence, language, translate, apiBase, translateUrl
+  );
+
+  await writeToNeo4j(
+    {
+      uuid, sentence, language,
+      confidence: confidence ?? 1,
+      userID, frequency, duration, healthBenefit, wellbeingImpact,
+      translationEN, translationDE, contextPhrases, mappings,
+    },
+    queryNeo4j
+  );
+
+  await embedAndStoreHabit({
+    uuid, sentence, translationEN, contextPhrases, mappings, apiBase, queryNeo4j,
+  });
+
+  return { is_habit: true, uuid };
+}
+
+/**
+ * Save a habit donation job to the BullMQ queue and return the jobId immediately.
+ * The uuid is used as the BullMQ job ID so it can be looked up by the status endpoint.
+ */
+export async function enqueueHabitDonation({
+  uuid,
+  sentence,
+  language,
+  userID,
+  confidence,
+  frequency = null,
+  duration = null,
+  healthBenefit = null,
+  wellbeingImpact = null,
+  habitQueue,
+}) {
+  await habitQueue.add(
+    'process',
+    {
+      uuid, sentence, language, userID, confidence,
+      frequency, duration, healthBenefit, wellbeingImpact,
+    },
+    { jobId: uuid }
+  );
+  return { jobId: uuid, status: 'pending' };
+}
 
 // ---------------------------------------------------------------------------
 // Semantic embedding (called after writeToNeo4j, non-fatal)
