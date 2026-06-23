@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.1] — 2026-06-23
+
+Initial release of Health Habit Hub — a research platform for studying health habit formation, developed at TU Dresden as part of the DFG-funded research programme.
+
+### Included in this release
+
+- **Mobile app** (Flutter — iOS / Android / Web): habit donation, questionnaire-based health profiling, AI-powered personalised recommendations, DFG study protocol (implementation intentions, daily logging, weekly SRHI), adaptive reminders, data export, comment & like on community habits
+- **Backend API** (Node.js / Express): full REST API at `/api/v1/*`, Keycloak OIDC auth, MongoDB + Neo4j persistence, service-to-service auth pattern
+- **Recommendation pipeline** (Python / FastAPI): M3 pipeline — personal habit cosine ranking, 3-index community vector search (sentence / context / BCIO), LightRAG hybrid RAG retrieval, Redis response cache
+- **Admin portal** (Next.js): study management, weighted round-robin group enrolment, questionnaire builder, analytics dashboard (Recharts), comment moderation, knowledge base management
+- **Knowledge graph** (Neo4j): BCIO ontology mapping, vector indexes for habit / context / BCIO concept embeddings, community habit graph
+- **Infrastructure**: Docker Compose stack (Traefik v3, Keycloak 26, MongoDB 7, Neo4j 5, Redis 7, LightRAG, LibreTranslate, Prometheus, Grafana, backup service)
+- **CI/CD**: 13-job GitHub Actions pipeline (lint, unit tests, integration tests, Flutter analysis, ontology integrity, Docker build validation, security audit, nightly E2E smoke test, CodeQL)
+- **Repository conventions**: CONTRIBUTING.md, CODE_OF_CONDUCT.md, PR template, issue templates, CODEOWNERS, release workflow with CI gate
+
 ### Added — Standalone analytics page, monitoring (2026-06-15)
 - **Dedicated `/analytics` sidebar page (Recharts):** analytics moved out of the study-edit modal into its own first-class sidebar route accessible to both `admin` and `researcher` roles; the page has a study dropdown (defaults to the first active study), five KPI summary cards (total enrolled, active last 7 days, dropouts with colour-coded rate, avg SRHI at latest week, avg questionnaire completion), and four Recharts charts — vertical BarChart for weekly active rate per condition (reference line at 50%), LineChart for SRHI trajectory with a dashed habit-threshold line at 4, step-after LineChart for cumulative dropout, and a horizontal BarChart for questionnaire completion (reference line at 80%); a participant table at the bottom lists all enrolled members with group, enrolled date, last-active date, mini survey-completion bar, and status badge; `recharts` added to `admin/package.json`
 - **Analytics tab removed from study edit modal:** the "Analytics" tab button, `ModalTab` union type entry, render branch, and `AnalyticsTab` import are all removed from `studies/page.tsx`; the `studies-analytics-tab.tsx` component is retained as a standalone module for potential reuse
