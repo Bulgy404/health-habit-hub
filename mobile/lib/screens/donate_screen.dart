@@ -108,7 +108,8 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     final dio = ref.read(dioProvider);
 
     try {
-      // ── Step 1: Submit habit text + ratings → Neo4j ───────────────────────
+      // ── Step 1: Submit habit text + ratings ──────────────────────────────
+      // 200 = classifier rejected (not a habit), 202 = accepted and queued.
       final shareResp = await dio.post<Map<String, dynamic>>(
         '${AppConfig.apiBaseUrl}/habits/share',
         data: {
@@ -133,6 +134,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         }
         return;
       }
+      // 202: habit accepted and queued for analysis.
 
       // ── Step 2: Submit ratings to survey system (best-effort) ─────────────
       if (_surveyId != null) {

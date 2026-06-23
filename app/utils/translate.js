@@ -30,6 +30,76 @@ export function escapeStringLiteral(str) {
  * @param {number} [retries=3] - Number of retry attempts
  * @returns {Promise<string>}
  */
+// ---------------------------------------------------------------------------
+// Habit donation translation pipeline (LibreTranslate → LLM tone refinement)
+// ---------------------------------------------------------------------------
+
+async function _fetchLibreTranslation(sentence, sourceLang, targetLang, translateUrl) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let res;
+    try {
+      res = await globalThis.fetch(translateUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: sentence, source: sourceLang, target: targetLang, format: 'text' }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (!res.ok) {
+      log.warn(`[translate] LibreTranslate returned ${res.status} — skipping translation to ${targetLang.toUpperCase()}`);
+      return null;
+    }
+    const data = await res.json();
+    return data.translatedText;
+  } catch (err) {
+    log.warn(`[translate] LibreTranslate error: ${err.message} — skipping translation to ${targetLang.toUpperCase()}`);
+    return null;
+  }
+}
+
+async function _refineLLMTranslation(draft, sentence, sourceLang, llmEndpoint, apiBase) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let res;
+    try {
+      res = await globalThis.fetch(`${apiBase}${llmEndpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ original: sentence, raw_translation: draft, language: sourceLang }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (!res.ok) {
+      log.warn(`[translate] LLM ${llmEndpoint} returned ${res.status} — using raw LibreTranslate output`);
+      return draft;
+    }
+    const data = await res.json();
+    return data.refined_translation || draft;
+  } catch (err) {
+    log.warn(`[translate] LLM refinement error/timeout: ${err.message} — using raw LibreTranslate output`);
+    return draft;
+  }
+}
+
+/**
+ * Translate a habit sentence via LibreTranslate then refine with an LLM tone endpoint.
+ * Returns the refined string, the raw translation if LLM fails, or null if LibreTranslate fails.
+ */
+export async function translateHabit(sentence, sourceLang, targetLang, llmEndpoint, apiBase, translateUrl) {
+  const draft = await _fetchLibreTranslation(sentence, sourceLang, targetLang, translateUrl);
+  if (!draft) return null;
+  return _refineLLMTranslation(draft, sentence, sourceLang, llmEndpoint, apiBase);
+}
+
+// ---------------------------------------------------------------------------
+
 export async function translateText(text, from, to, endpoint, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {

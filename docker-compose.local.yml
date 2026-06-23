@@ -59,6 +59,7 @@ services:
       - proxy
       - mongo
       - neo4j
+      - redis
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
       interval: 30s
@@ -286,6 +287,26 @@ services:
     networks:
       - h3-2-app
 
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: h3-2-redis-insight
+    restart: unless-stopped
+    ports:
+      - "5540:5540"
+    volumes:
+      - redis-insight-data:/data
+    networks:
+      - h3-2-proxy
+      - h3-2-app
+    depends_on:
+      - redis
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.redis-insight.rule=Host(`redis-insight.${PATH_SUFFIX:-localhost}`)
+      - traefik.http.routers.redis-insight.entrypoints=web
+      - traefik.http.routers.redis-insight.service=redis-insight
+      - traefik.http.services.redis-insight.loadbalancer.server.port=5540
+
   lightrag:
     image: hhh/lightrag
     container_name: h3-2-lightrag
@@ -409,6 +430,7 @@ volumes:
   keycloak-local-data:
   translate-local-data:
   redis-local-data:
+  redis-insight-data:
   lightrag-data:
   prometheus-data:
   grafana-data:

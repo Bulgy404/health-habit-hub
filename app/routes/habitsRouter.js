@@ -4,6 +4,7 @@ import { makeGetDb } from '../utils/getDb.js';
 import { createHabitsCrudRouter } from './habits/habitsCrudRouter.js';
 import { createHabitsStatsRouter } from './habits/habitsStatsRouter.js';
 import { createHabitsGraphRouter } from './habits/habitsGraphRouter.js';
+import { habitQueue, startHabitWorker } from '../lib/habitQueue.js';
 
 /**
  * Top-level habits router. Composes CRUD, stats, and graph sub-routers.
@@ -57,10 +58,21 @@ export function createHabitsRouter({
       queryNeo4j,
       apiServiceUrl,
       libreTranslateUrl,
+      habitQueue,
     })
   );
   router.use('/', createHabitsStatsRouter({ getDb, queryNeo4j }));
   router.use('/', createHabitsGraphRouter({ queryNeo4j, getDb }));
+
+  // Start the BullMQ worker unless we are in test mode (neo4jRun injected).
+  if (!neo4jRun) {
+    const apiBase = apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
+    const translateUrl =
+      libreTranslateUrl ||
+      process.env.LIBRE_TRANSLATE_URL ||
+      `http://${process.env.TRANSLATE_HOST || 'localhost'}:${process.env.TRANSLATE_PORT || '5000'}${process.env.TRANSLATE_PATH || '/translate'}`;
+    startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl });
+  }
 
   return router;
 }

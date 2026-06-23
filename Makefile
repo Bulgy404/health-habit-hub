@@ -18,9 +18,10 @@ dev: ## Start local services (docker-compose.local.yml)
 stop: ## Stop local services
 	docker compose -f docker-compose.local.yml down
 
-seed: ## Seed local MongoDB, Neo4j, and Keycloak
+seed: ## Seed local MongoDB, Neo4j, Keycloak, and Neo4j community habit graph
 	set -a && . ./.env && set +a && export KEYCLOAK_URL=http://localhost:8080 && cd app && npm run seed
 	$(MAKE) verify-keycloak || ( $(MAKE) fix-keycloak && $(MAKE) verify-keycloak )
+	$(MAKE) seed-habits MODE=e2e
 
 verify-keycloak: ## Verify hhh-flutter default scopes include stable identity claims (sub)
 	bash scripts/verify-keycloak-claims.sh
@@ -77,7 +78,8 @@ test-admin: ## Admin: typecheck
 	cd admin && npx tsc --noEmit
 
 seed-habits: ## Seed Neo4j with 100 test habits via full donation pipeline (MODE=seed for fast direct path)
-	set -a && . ./.env && set +a && python3 scripts/seed-habits.py --mode $(or $(MODE),e2e)
+	python3 -m pip install --quiet --break-system-packages httpx neo4j
+	set -a && . ./.env && set +a && NEO4J_URI=bolt://localhost:7687 python3 scripts/seed-habits.py --mode $(or $(MODE),e2e) --concurrency $(or $(CONCURRENCY),1)
 
 # ── Production (run on server) ────────────────────────────
 # All prod targets use docker-compose.yml (the default file).
