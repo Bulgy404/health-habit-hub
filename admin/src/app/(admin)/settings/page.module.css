@@ -18,3 +18,19 @@
 .savedMsg { font-size: 0.8rem; color: var(--color-success, #16a34a); }
 .errorMsg { padding: 0.6rem 0.9rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #dc2626; font-size: 0.875rem; margin-bottom: 0.75rem; }
 .loadingState { padding: 1rem; color: var(--color-text-muted); font-size: 0.875rem; }
+
+/* ── Activity types section ──────────────────────────────────────────────────── */
+.activityTable { width: 100%; border-collapse: collapse; font-size: 0.875rem; margin-bottom: 1rem; }
+.activityTable th { text-align: left; font-size: 0.75rem; font-weight: 500; color: var(--color-text-muted); padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--color-border); }
+.activityTable td { padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--color-border); vertical-align: middle; }
+.activityTable tr:last-child td { border-bottom: none; }
+.activityKey { font-family: monospace; font-size: 0.8rem; color: var(--color-text-muted); }
+.defaultToggle { cursor: pointer; }
+.deleteBtn { background: none; border: none; cursor: pointer; color: var(--color-text-muted); padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.85rem; }
+.deleteBtn:hover { color: #dc2626; background: #fef2f2; }
+.addActivityRow { display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin-top: 0.75rem; }
+.addActivityRow .input { flex: 1; min-width: 120px; }
+.addBtn { padding: 0.4rem 0.85rem; background: var(--color-primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
+.addBtn:hover { background: var(--color-primary-dark); }
+.addBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.addFieldLabel { font-size: 0.75rem; font-weight: 500; color: var(--color-text-muted); display: block; margin-bottom: 0.25rem; }

@@ -124,6 +124,29 @@ export const importCuesSchema = z.object({
   cues: z.array(createCueSchema).min(1).max(500),
 });
 
+// ── Activity types ────────────────────────────────────────────────────────────
+
+const activityKey = z
+  .string()
+  .min(1)
+  .max(100)
+  .regex(/^[a-z][a-z0-9_]*$/, 'must be lowercase alphanumeric with underscores, starting with a letter');
+
+export const createActivityTypeSchema = z.object({
+  key: activityKey,
+  label_en: shortString,
+  label_de: z.string().max(200).trim().optional(),
+  isDefault: z.boolean().optional(),
+});
+
+export const updateActivityTypeSchema = z
+  .object({
+    label_en: shortString.optional(),
+    label_de: z.string().max(200).trim().optional(),
+    isDefault: z.boolean().optional(),
+  })
+  .strict();
+
 // ── Profile field definitions ─────────────────────────────────────────────────
 
 const fieldType = z.enum(['text', 'number', 'date', 'select']);

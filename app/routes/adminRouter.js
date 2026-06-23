@@ -16,6 +16,8 @@ import { createParticipantsRouter } from './admin/participantsRouter.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { ROLES } from '../middleware/auth.js';
 import { createProfileFieldDefinitionsAdminRouter } from './profileFieldDefinitionsRouter.js';
+import { createActivityTypeRouter } from './activityTypeRouter.js';
+import { seedActivityTypes } from '../services/activityTypeService.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'adminRouter' });
@@ -61,11 +63,12 @@ export function createAdminRouter({
   const router = express.Router();
   const getDb = makeGetDb(db);
 
-  // Seed default settings asynchronously on router creation
+  // Seed default settings and activity types asynchronously on router creation
   (async () => {
     try {
       const database = await getDb();
       await seedDefaultSettings(database);
+      await seedActivityTypes(database);
     } catch {
       // Non-fatal: initialization errors are ignored
     }
@@ -589,6 +592,12 @@ export function createAdminRouter({
     '/profile-field-definitions',
     requireRole(ROLES.ADMIN),
     createProfileFieldDefinitionsAdminRouter({ db })
+  );
+
+  router.use(
+    '/activity-types',
+    requireRole(ROLES.ADMIN),
+    createActivityTypeRouter({ db })
   );
 
   return router;

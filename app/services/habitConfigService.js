@@ -3,12 +3,13 @@ import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { DEFAULT_BEHAVIOR_KEYS } from '../utils/srhi.js';
 import { pickAssignedCues } from './cuePoolService.js';
+import { getDefaultBehaviorKeys } from './activityTypeService.js';
 
 const FALLBACK = {
   cueCount: 'multi',
   cueSource: 'high_quality',
   cuePoolId: null,
-  behaviorOptions: DEFAULT_BEHAVIOR_KEYS,
+  behaviorOptions: DEFAULT_BEHAVIOR_KEYS, // static fallback if DB unreachable
   maxHabits: null,
 };
 
@@ -75,7 +76,14 @@ export async function resolveHabitConfig({ db, userId }) {
     cueCount = settings['default_cue_count'] ?? FALLBACK.cueCount;
     cueSource = settings['default_cue_source'] ?? FALLBACK.cueSource;
     cuePoolId = null;
-    behaviorOptions = DEFAULT_BEHAVIOR_KEYS;
+    // Read platform default behaviors from DB (configurable via admin portal).
+    // Falls back to hardcoded constant only when DB read fails.
+    try {
+      const dbDefaults = await getDefaultBehaviorKeys(db);
+      behaviorOptions = dbDefaults.length > 0 ? dbDefaults : DEFAULT_BEHAVIOR_KEYS;
+    } catch {
+      behaviorOptions = DEFAULT_BEHAVIOR_KEYS;
+    }
     maxHabits = null;
   }
 
