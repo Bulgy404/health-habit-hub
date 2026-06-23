@@ -19,7 +19,8 @@ interface CueConfig {
   cueCount: "single" | "multi";
   cueSource: "low_quality" | "high_quality" | "self_selected";
   cuePoolId: string | null;
-  behaviorOptions: string[];
+  /** null means "use platform defaults" (resolved when catalog loads) */
+  behaviorOptions: string[] | null;
   maxHabits: number | null;
 }
 
@@ -111,6 +112,7 @@ const NOTIFICATIONS_BASE =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
   "/admin/notifications";
 
+// Hardcoded fallback — used only when the activity-types API is unreachable.
 const BEHAVIOR_OPTIONS = [
   { key: "walking", label: "Walking" },
   { key: "light_jogging", label: "Light jogging" },
@@ -118,8 +120,6 @@ const BEHAVIOR_OPTIONS = [
   { key: "structured_calisthenics", label: "Structured calisthenics" },
   { key: "yoga", label: "Yoga" },
 ];
-
-const BEHAVIOR_OPTION_KEYS = new Set(BEHAVIOR_OPTIONS.map((b) => b.key));
 
 /**
  * Authenticated JSON fetch helper.
@@ -1311,6 +1311,19 @@ function NotificationsTab({
   );
 }
 
+// ── Activity type type ────────────────────────────────────────────────────────
+
+interface ActivityTypeEntry {
+  key: string;
+  label_en: string;
+  label_de?: string;
+  isDefault: boolean;
+}
+
+const ACTIVITY_TYPES_API =
+  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
+  "/admin/activity-types";
+
 // ── Cue config tab ────────────────────────────────────────────────────────────
 
 function CueConfigTab({
@@ -1320,6 +1333,23 @@ function CueConfigTab({
   study: StudySummary;
   token: string;
 }) {
+  // Load catalog from the backend
+  const [activityTypes, setActivityTypes] = useState<ActivityTypeEntry[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) return;
+    apiFetch(ACTIVITY_TYPES_API, token)
+      .then((data) => setActivityTypes(data as ActivityTypeEntry[]))
+      .catch(() => {
+        // Fallback to hardcoded list if API unreachable
+        setActivityTypes(BEHAVIOR_OPTIONS.map((b) => ({ key: b.key, label_en: b.label, isDefault: true })));
+      })
+      .finally(() => setCatalogLoading(false));
+  }, [token]);
+
+  const defaultKeys = activityTypes.filter((a) => a.isDefault).map((a) => a.key);
+
   const [groupStates, setGroupStates] = useState<
     Record<string, CueConfig & { saving: boolean; saved: boolean; error: string }>
   >(() =>
@@ -1330,8 +1360,8 @@ function CueConfigTab({
           cueCount: g.cueConfig?.cueCount ?? "multi",
           cueSource: g.cueConfig?.cueSource ?? "high_quality",
           cuePoolId: g.cueConfig?.cuePoolId ?? null,
-          behaviorOptions:
-            g.cueConfig?.behaviorOptions ?? BEHAVIOR_OPTIONS.map((b) => b.key),
+          // null cueConfig → will be initialised to catalog defaults after load
+          behaviorOptions: g.cueConfig?.behaviorOptions ?? null,
           maxHabits: g.cueConfig?.maxHabits ?? null,
           saving: false,
           saved: false,
@@ -1341,8 +1371,20 @@ function CueConfigTab({
     )
   );
 
-  // Per-group "add custom activity" input value
-  const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
+  // Once catalog is loaded, fill in null behaviorOptions with catalog defaults
+  useEffect(() => {
+    if (catalogLoading || defaultKeys.length === 0) return;
+    setGroupStates((prev) => {
+      const next = { ...prev };
+      for (const [id, s] of Object.entries(next)) {
+        if (s.behaviorOptions === null) {
+          next[id] = { ...s, behaviorOptions: defaultKeys };
+        }
+      }
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalogLoading]);
 
   function update(
     groupId: string,
@@ -1355,29 +1397,11 @@ function CueConfigTab({
   }
 
   function toggleBehavior(groupId: string, key: string) {
-    const current = groupStates[groupId].behaviorOptions;
+    const current = groupStates[groupId].behaviorOptions ?? defaultKeys;
     const next = current.includes(key)
       ? current.filter((k) => k !== key)
       : [...current, key];
     update(groupId, { behaviorOptions: next });
-  }
-
-  function addCustomBehavior(groupId: string) {
-    const raw = (customInputs[groupId] ?? "").trim();
-    if (!raw) return;
-    // Normalise: lowercase, spaces → underscores, strip non-alphanumeric except underscore
-    const key = raw.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
-    if (!key) return;
-    const current = groupStates[groupId].behaviorOptions;
-    if (!current.includes(key)) {
-      update(groupId, { behaviorOptions: [...current, key] });
-    }
-    setCustomInputs((prev) => ({ ...prev, [groupId]: "" }));
-  }
-
-  function removeCustomBehavior(groupId: string, key: string) {
-    const current = groupStates[groupId].behaviorOptions;
-    update(groupId, { behaviorOptions: current.filter((k) => k !== key) });
   }
 
   async function handleSave(groupId: string) {
@@ -1393,7 +1417,7 @@ function CueConfigTab({
             cueCount: s.cueCount,
             cueSource: s.cueSource,
             cuePoolId: s.cuePoolId,
-            behaviorOptions: s.behaviorOptions,
+            behaviorOptions: s.behaviorOptions ?? defaultKeys,
             maxHabits: s.maxHabits,
           }),
         }
@@ -1415,11 +1439,16 @@ function CueConfigTab({
     );
   }
 
+  if (catalogLoading) {
+    return <div className={styles.emptyState}>Loading activity catalog…</div>;
+  }
+
   return (
     <div>
       {study.groups.map((g) => {
         const s = groupStates[g.id];
         if (!s) return null;
+        const enabledKeys = s.behaviorOptions ?? defaultKeys;
         return (
           <div key={g.id} className={styles.cueConfigGroup}>
             <p className={styles.cueConfigGroupLabel}>
@@ -1479,62 +1508,27 @@ function CueConfigTab({
             </div>
             <div className={styles.formGroup} style={{ marginTop: "0.75rem" }}>
               <label className={styles.label}>Allowed behaviors</label>
-              <span className={styles.hint}>Which activity types appear as options when participants create a new habit.</span>
+              <span className={styles.hint}>
+                Which activity types participants can choose from. Manage the catalog in{" "}
+                <strong>Settings → Activity Types</strong>.
+              </span>
               <div className={styles.behaviorCheckboxes}>
-                {BEHAVIOR_OPTIONS.map((b) => (
-                  <label key={b.key} className={styles.checkboxLabel}>
+                {activityTypes.map((a) => (
+                  <label key={a.key} className={styles.checkboxLabel}>
                     <input
                       type="checkbox"
-                      checked={s.behaviorOptions.includes(b.key)}
-                      onChange={() => toggleBehavior(g.id, b.key)}
+                      checked={enabledKeys.includes(a.key)}
+                      onChange={() => toggleBehavior(g.id, a.key)}
                     />
-                    {b.label}
+                    {a.label_en}
+                    {a.isDefault && (
+                      <span style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", marginLeft: "0.25rem" }}>
+                        (default)
+                      </span>
+                    )}
                   </label>
                 ))}
               </div>
-              {/* Custom (non-default) behavior keys saved on this group */}
-              {s.behaviorOptions.filter((k) => !BEHAVIOR_OPTION_KEYS.has(k)).length > 0 && (
-                <div className={styles.customBehaviorChips}>
-                  {s.behaviorOptions
-                    .filter((k) => !BEHAVIOR_OPTION_KEYS.has(k))
-                    .map((k) => (
-                      <span key={k} className={styles.customBehaviorChip}>
-                        {k}
-                        <button
-                          type="button"
-                          className={styles.chipRemoveBtn}
-                          onClick={() => removeCustomBehavior(g.id, k)}
-                          title="Remove"
-                        >
-                          ×
-                        </button>
-                      </span>
-                    ))}
-                </div>
-              )}
-              {/* Add custom activity */}
-              <div className={styles.customBehaviorRow}>
-                <input
-                  type="text"
-                  className={styles.input}
-                  placeholder="Add custom activity (e.g. swimming)"
-                  value={customInputs[g.id] ?? ""}
-                  onChange={(e) =>
-                    setCustomInputs((prev) => ({ ...prev, [g.id]: e.target.value }))
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") { e.preventDefault(); addCustomBehavior(g.id); }
-                  }}
-                />
-                <button
-                  type="button"
-                  className={styles.addCustomBtn}
-                  onClick={() => addCustomBehavior(g.id)}
-                >
-                  Add
-                </button>
-              </div>
-              <span className={styles.hint}>Custom keys are stored as lowercase_underscored strings (e.g. "Swimming" → <code>swimming</code>).</span>
             </div>
             <div className={styles.cueConfigFooter}>
               {s.saved && <span className={styles.savedMsg}>Saved!</span>}
