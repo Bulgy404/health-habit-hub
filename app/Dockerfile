@@ -11,7 +11,7 @@ RUN apk add --no-cache curl
 
 # Install dependencies first (leverages Docker layer cache)
 COPY --chown=node:node package*.json ./
-RUN npm ci --omit=dev --verbose
+RUN npm ci --omit=dev --legacy-peer-deps --verbose
 
 
 

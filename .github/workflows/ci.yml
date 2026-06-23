@@ -475,6 +475,7 @@ jobs:
       - ontology-test
       - docker-build
       - python-api-test
+      - knowledge-mcp-test
       - admin-build
       - flutter-dependency-audit
     steps:

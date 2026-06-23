@@ -119,6 +119,8 @@ const BEHAVIOR_OPTIONS = [
   { key: "yoga", label: "Yoga" },
 ];
 
+const BEHAVIOR_OPTION_KEYS = new Set(BEHAVIOR_OPTIONS.map((b) => b.key));
+
 /**
  * Authenticated JSON fetch helper.
  *
@@ -1339,6 +1341,9 @@ function CueConfigTab({
     )
   );
 
+  // Per-group "add custom activity" input value
+  const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
+
   function update(
     groupId: string,
     patch: Partial<(typeof groupStates)[string]>
@@ -1355,6 +1360,24 @@ function CueConfigTab({
       ? current.filter((k) => k !== key)
       : [...current, key];
     update(groupId, { behaviorOptions: next });
+  }
+
+  function addCustomBehavior(groupId: string) {
+    const raw = (customInputs[groupId] ?? "").trim();
+    if (!raw) return;
+    // Normalise: lowercase, spaces → underscores, strip non-alphanumeric except underscore
+    const key = raw.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+    if (!key) return;
+    const current = groupStates[groupId].behaviorOptions;
+    if (!current.includes(key)) {
+      update(groupId, { behaviorOptions: [...current, key] });
+    }
+    setCustomInputs((prev) => ({ ...prev, [groupId]: "" }));
+  }
+
+  function removeCustomBehavior(groupId: string, key: string) {
+    const current = groupStates[groupId].behaviorOptions;
+    update(groupId, { behaviorOptions: current.filter((k) => k !== key) });
   }
 
   async function handleSave(groupId: string) {
@@ -1469,6 +1492,49 @@ function CueConfigTab({
                   </label>
                 ))}
               </div>
+              {/* Custom (non-default) behavior keys saved on this group */}
+              {s.behaviorOptions.filter((k) => !BEHAVIOR_OPTION_KEYS.has(k)).length > 0 && (
+                <div className={styles.customBehaviorChips}>
+                  {s.behaviorOptions
+                    .filter((k) => !BEHAVIOR_OPTION_KEYS.has(k))
+                    .map((k) => (
+                      <span key={k} className={styles.customBehaviorChip}>
+                        {k}
+                        <button
+                          type="button"
+                          className={styles.chipRemoveBtn}
+                          onClick={() => removeCustomBehavior(g.id, k)}
+                          title="Remove"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                </div>
+              )}
+              {/* Add custom activity */}
+              <div className={styles.customBehaviorRow}>
+                <input
+                  type="text"
+                  className={styles.input}
+                  placeholder="Add custom activity (e.g. swimming)"
+                  value={customInputs[g.id] ?? ""}
+                  onChange={(e) =>
+                    setCustomInputs((prev) => ({ ...prev, [g.id]: e.target.value }))
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); addCustomBehavior(g.id); }
+                  }}
+                />
+                <button
+                  type="button"
+                  className={styles.addCustomBtn}
+                  onClick={() => addCustomBehavior(g.id)}
+                >
+                  Add
+                </button>
+              </div>
+              <span className={styles.hint}>Custom keys are stored as lowercase_underscored strings (e.g. "Swimming" → <code>swimming</code>).</span>
             </div>
             <div className={styles.cueConfigFooter}>
               {s.saved && <span className={styles.savedMsg}>Saved!</span>}
