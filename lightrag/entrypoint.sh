@@ -15,7 +15,8 @@ lightrag-server \
   --llm-binding openai \
   --embedding-binding openai \
   --log-level INFO \
-  --timeout 3600 &
+  --timeout 3600 \
+  --max-async 4 &
 
 SERVER_PID=$!
 

@@ -417,35 +417,52 @@ async def _onboard(client: httpx.AsyncClient) -> Optional[str]:
         return None
 
 
-async def _donate_one(client: httpx.AsyncClient, token: str, sentence: str,
+async def _donate_one(client: httpx.AsyncClient, token_holder: list, sentence: str,
                        language: str, index: int, total: int, sem: asyncio.Semaphore) -> dict:
     async with sem:
-        try:
-            r = await client.post(
-                f"{_APP_BASE}/habits/donate",
-                headers={"Authorization": f"Bearer {token}"},
-                json={"sentence": sentence, "language": language},
-                timeout=120.0,
-            )
-            r.raise_for_status()
-            if r.status_code == 202:
-                # Habit accepted and queued for async processing.
-                print(f"  [{index:3}/{total}] queued ✓  — {sentence[:60]}", flush=True)
-                return {"ok": True, "queued": True}
-            # 200: classifier rejected (not a habit).
-            print(f"  [{index:3}/{total}] not a habit — {sentence[:60]}", flush=True)
-            return {"ok": True, "is_habit": False}
-        except Exception as exc:
-            print(f"  [{index:3}/{total}] ERROR: {exc!r} — {sentence[:60]}", flush=True)
-            return {"ok": False}
+        for attempt in range(2):
+            try:
+                r = await client.post(
+                    f"{_APP_BASE}/habits/donate",
+                    headers={"Authorization": f"Bearer {token_holder[0]}"},
+                    json={"sentence": sentence, "language": language},
+                    timeout=120.0,
+                )
+                if r.status_code == 401 and attempt == 0:
+                    new_token = await _onboard(client)
+                    if new_token:
+                        token_holder[0] = new_token
+                        print(f"  [{index:3}/{total}] token refreshed, retrying…", flush=True)
+                        continue
+                    return {"ok": False}
+                r.raise_for_status()
+                if r.status_code == 202:
+                    print(f"  [{index:3}/{total}] queued ✓  — {sentence[:60]}", flush=True)
+                    return {"ok": True, "queued": True}
+                print(f"  [{index:3}/{total}] not a habit — {sentence[:60]}", flush=True)
+                return {"ok": True, "is_habit": False}
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 401 and attempt == 0:
+                    new_token = await _onboard(client)
+                    if new_token:
+                        token_holder[0] = new_token
+                        print(f"  [{index:3}/{total}] token refreshed, retrying…", flush=True)
+                        continue
+                print(f"  [{index:3}/{total}] ERROR: {exc!r} — {sentence[:60]}", flush=True)
+                return {"ok": False}
+            except Exception as exc:
+                print(f"  [{index:3}/{total}] ERROR: {exc!r} — {sentence[:60]}", flush=True)
+                return {"ok": False}
+        return {"ok": False}
 
 
 async def _e2e_user(client, habits, offsets, total, sem):
     token = await _onboard(client)
     if token is None:
         return [{"ok": False}] * len(habits)
+    token_holder = [token]
     return await asyncio.gather(*[
-        _donate_one(client, token, sentence, language, offsets[i], total, sem)
+        _donate_one(client, token_holder, sentence, language, offsets[i], total, sem)
         for i, (sentence, language) in enumerate(habits)
     ])
 
