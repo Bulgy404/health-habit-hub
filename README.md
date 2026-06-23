@@ -12,6 +12,9 @@
     <img src="https://img.shields.io/badge/Node.js-22-339933?logo=node.js" alt="Node.js 22" />
     <img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python" alt="Python 3.11+" />
     <img src="https://img.shields.io/badge/license-Proprietary-lightgrey" alt="License" />
+    <a href="https://github.com/Bulgy404/health-habit-hub/releases/latest">
+      <img src="https://img.shields.io/github/v/release/Bulgy404/health-habit-hub?label=release" alt="Latest release" />
+    </a>
   </p>
 
   <p>
@@ -24,6 +27,8 @@
     <a href="DEPLOYMENT.md">Deployment</a>
     &nbsp;·&nbsp;
     <a href="CHANGELOG.md">Changelog</a>
+    &nbsp;·&nbsp;
+    <a href="https://github.com/Bulgy404/health-habit-hub/releases">Releases</a>
   </p>
 </div>
 
@@ -41,6 +46,7 @@
   - [Common commands](#common-commands)
 - [Tech Stack](#tech-stack)
 - [Documentation](#documentation)
+- [Releases](#releases)
 - [Contributing & Conventions](#contributing--conventions)
 
 ---
@@ -264,12 +270,47 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 
 ---
 
+## Releases
+
+All releases are published on the [GitHub Releases page](https://github.com/Bulgy404/health-habit-hub/releases). Each release is generated automatically when a version tag is pushed — **the release workflow blocks on the `ci-passed` gate job, so a release is never created if any CI check is failing**.
+
+**To cut a release:**
+
+```bash
+# 1. Update CHANGELOG.md — move [Unreleased] items to a new versioned section
+#    e.g. ## [1.3.0] — 2026-06-23
+
+# 2. Commit the changelog update
+git add CHANGELOG.md
+git commit -m "chore(release): bump version to 1.3.0"
+git push origin main        # CI must pass on main first
+
+# 3. Push the tag — this triggers the release workflow
+git tag -a v1.3.0 -m "Release v1.3.0"
+git push origin v1.3.0
+```
+
+The [`release.yml`](.github/workflows/release.yml) workflow then:
+1. Polls the GitHub API until the `ci-passed` check completes on the tagged commit
+2. Aborts if CI failed or timed out (> 15 min)
+3. Extracts the matching `## [1.3.0]` section from `CHANGELOG.md` as the release body
+4. Creates the GitHub Release — pre-release tags (`-alpha.N`, `-beta.N`, `-rc.N`) are flagged automatically
+
+Version numbers follow [Semantic Versioning](https://semver.org) (`vMAJOR.MINOR.PATCH`). See [CONTRIBUTING.md](CONTRIBUTING.md#release-tagging) for the full tagging convention.
+
+---
+
 ## Contributing & Conventions
 
-- **Branching & releases** — changes are documented in [CHANGELOG.md](CHANGELOG.md) following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [SemVer](https://semver.org).
-- **Code style** — Prettier (`.prettierrc`) for JS/TS, JSDoc on exported functions; Google-style docstrings and concrete type hints in Python; `make test` must pass before merging.
-- **Diagrams stay current** — when you change a flow, update the matching diagram in `docs/diagrams/` in the same PR; the [traceability table](docs/diagrams/use-cases/use-case-overview.md#traceability) maps use cases to code.
-- **Security** — report vulnerabilities as described in [SECURITY.md](SECURITY.md); never commit secrets (`.env` is git-ignored, use `.env.example` as reference).
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the full guide: branch naming, commit message format (Conventional Commits), PR process, code style per language, and testing requirements.
+
+Key rules at a glance:
+
+- **Branch names** follow `type/short-description` (e.g. `feature/adaptive-reminders`, `fix/questionnaire-401`)
+- **Commits** follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat`, `fix`, `chore`, `docs`, `refactor`, …)
+- **PRs** must be green on CI, squash-merged, and have the PR title in Conventional Commits format
+- **Diagrams stay current** — update `docs/diagrams/` in the same PR as the code change
+- **Security** — report vulnerabilities via [SECURITY.md](SECURITY.md); never commit secrets
 
 ---
 

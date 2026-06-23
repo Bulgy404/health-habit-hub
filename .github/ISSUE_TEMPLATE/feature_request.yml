@@ -1,0 +1,71 @@
+name: Feature request
+description: Propose a new feature or improvement
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a request, check the [existing issues](../issues) and [discussions](../discussions) to avoid duplicates.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the system would this affect?
+      options:
+        - Mobile app (Flutter)
+        - Backend API (Node.js)
+        - Recommendation pipeline (Python)
+        - Admin portal (Next.js)
+        - Knowledge MCP / LightRAG
+        - Infrastructure / Docker
+        - CI/CD
+        - Multiple areas
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What problem does this solve? Who is affected and how often?
+      placeholder: "As a study participant, I often find it hard to ... because ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe what you'd like to happen. Be as specific as you can.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you think about? Why are they insufficient?
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority (your assessment)
+      options:
+        - Low — nice to have
+        - Medium — improves daily workflow
+        - High — blocks important work
+        - Critical — data loss / security
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: This is not a security vulnerability (use SECURITY.md for those)
+          required: true
