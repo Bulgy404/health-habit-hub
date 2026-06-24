@@ -4,7 +4,9 @@ import {
   classifyHabit,
   persistRejectedHabit,
   enqueueHabitDonation,
+  shareHabit,
 } from '../../services/habitDonationService.js';
+import { translateHabit } from '../../utils/translate.js';
 import { getJobStatus } from '../../lib/habitQueue.js';
 import { SUPPORTED_LANGUAGES } from '../../utils/constants.js';
 import {
@@ -35,7 +37,7 @@ export function createHabitsCrudRouter({
   getDb,
   queryNeo4j,
   apiServiceUrl,
-  libreTranslateUrl: _libreTranslateUrl,
+  libreTranslateUrl,
   habitQueue,
 } = {}) {
   const router = express.Router();
@@ -379,8 +381,33 @@ export function createHabitsCrudRouter({
 
     const apiBase =
       apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
+    const translateUrl =
+      libreTranslateUrl ||
+      process.env.LIBRE_TRANSLATE_URL ||
+      `http://${process.env.TRANSLATE_HOST || 'localhost'}:${process.env.TRANSLATE_PORT || '5000'}${process.env.TRANSLATE_PATH || '/translate'}`;
     try {
       const uuid = randomUUID();
+
+      // When no queue is available (e.g. test mode), fall back to the
+      // synchronous pipeline so tests can verify end-to-end behaviour.
+      if (!habitQueue) {
+        const result = await shareHabit({
+          uuid,
+          sentence,
+          language,
+          userID: userId,
+          frequency: frequency ?? null,
+          duration: duration ?? null,
+          healthBenefit: health_benefit ?? null,
+          wellbeingImpact: wellbeing_impact ?? null,
+          queryNeo4j,
+          getDb,
+          apiBase,
+          translate: translateHabit,
+          translateUrl,
+        });
+        return res.status(result.is_habit ? 201 : 200).json(result);
+      }
 
       // Step 1 (sync, fast): classify — keeps the immediate "not a habit" UX.
       const classified = await classifyHabit(

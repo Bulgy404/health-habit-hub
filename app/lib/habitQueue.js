@@ -10,16 +10,24 @@ function redisConnection() {
   return { url: process.env.REDIS_URL || 'redis://localhost:6379' };
 }
 
-export const habitQueue = new Queue(QUEUE_NAME, {
-  connection: redisConnection(),
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 5000 },
-    // Keep completed/failed jobs in Redis for 24 h so the status endpoint works.
-    removeOnComplete: { age: 86400 },
-    removeOnFailed: { age: 86400 },
-  },
-});
+let _queue = null;
+
+// Defer Queue construction until first use so importing this module does not
+// attempt a Redis connection at load time (which breaks tests without Redis).
+export function getHabitQueue() {
+  if (!_queue) {
+    _queue = new Queue(QUEUE_NAME, {
+      connection: redisConnection(),
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: { age: 86400 },
+        removeOnFailed: { age: 86400 },
+      },
+    });
+  }
+  return _queue;
+}
 
 /**
  * Look up a job's status from Redis via BullMQ.
@@ -29,7 +37,7 @@ export const habitQueue = new Queue(QUEUE_NAME, {
  * @returns {Promise<{ jobId, status, uuid, userID, failReason? } | null>}
  */
 export async function getJobStatus(jobId) {
-  const job = await Job.fromId(habitQueue, jobId);
+  const job = await Job.fromId(getHabitQueue(), jobId);
   if (!job) return null;
 
   const state = await job.getState();
