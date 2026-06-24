@@ -4,7 +4,7 @@ import { makeGetDb } from '../utils/getDb.js';
 import { createHabitsCrudRouter } from './habits/habitsCrudRouter.js';
 import { createHabitsStatsRouter } from './habits/habitsStatsRouter.js';
 import { createHabitsGraphRouter } from './habits/habitsGraphRouter.js';
-import { habitQueue, startHabitWorker } from '../lib/habitQueue.js';
+import { getHabitQueue, startHabitWorker } from '../lib/habitQueue.js';
 
 /**
  * Top-level habits router. Composes CRUD, stats, and graph sub-routers.
@@ -58,7 +58,7 @@ export function createHabitsRouter({
       queryNeo4j,
       apiServiceUrl,
       libreTranslateUrl,
-      habitQueue,
+      habitQueue: neo4jRun ? null : getHabitQueue(),
     })
   );
   router.use('/', createHabitsStatsRouter({ getDb, queryNeo4j }));
