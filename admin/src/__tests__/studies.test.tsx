@@ -78,16 +78,16 @@ describe('StudiesPage', () => {
     // Click Codes tab
     await user.click(codesTab);
 
-    // The Generate Codes section heading should appear
+    // The Generate study codes section heading should appear
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /generate codes/i })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /generate study codes/i })).toBeInTheDocument();
     });
   });
 
-  it('Codes tab generate form shows error when no group is selected', async () => {
+  it('Codes tab generate form submits without requiring a group (study-level codes)', async () => {
     const user = userEvent.setup();
 
-    // Study with no groups so genGroupId stays ""
+    // Study-level codes don't require a group — auto-assigned at redemption.
     const studyNoGroups = { ...mockStudy, groups: [] };
 
     (global.fetch as jest.Mock)
@@ -110,13 +110,14 @@ describe('StudiesPage', () => {
     const codesTab = await screen.findByRole('button', { name: /^codes$/i });
     await user.click(codesTab);
 
-    // Wait for Generate Codes button to appear, then click it
-    const generateBtn = await screen.findByRole('button', { name: /generate codes/i });
+    // Wait for Generate codes button and click it — no group selection needed
+    const generateBtn = await screen.findByRole('button', { name: /^generate codes$/i });
     await user.click(generateBtn);
 
-    // Error message about selecting a group should appear
+    // No error should appear; button should return to its default label
     await waitFor(() => {
-      expect(screen.getByText(/please select a group/i)).toBeInTheDocument();
+      expect(screen.queryByText(/please select a group/i)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^generate codes$/i })).toBeInTheDocument();
     });
   });
 });

@@ -8,7 +8,10 @@ function isValidUserId(id) {
   return typeof id === 'string' && UUID_RE.test(id);
 }
 
-const PROXY_TIMEOUT_MS = parseInt(process.env.RECOMMENDER_TIMEOUT_MS ?? '180000', 10);
+const PROXY_TIMEOUT_MS = parseInt(
+  process.env.RECOMMENDER_TIMEOUT_MS ?? '180000',
+  10
+);
 
 async function proxyToRecommender(req, res, targetUrl) {
   const headers = {};
@@ -18,7 +21,11 @@ async function proxyToRecommender(req, res, targetUrl) {
   if (process.env.API_SERVICE_SECRET) {
     headers['X-Service-Auth-Token'] = process.env.API_SERVICE_SECRET;
   }
-  const fetchOptions = { method: req.method, headers, signal: AbortSignal.timeout(PROXY_TIMEOUT_MS) };
+  const fetchOptions = {
+    method: req.method,
+    headers,
+    signal: AbortSignal.timeout(PROXY_TIMEOUT_MS),
+  };
   if (req.body && Object.keys(req.body).length > 0) {
     fetchOptions.body = JSON.stringify(req.body);
     headers['Content-Type'] = 'application/json';

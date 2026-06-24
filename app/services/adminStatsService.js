@@ -50,7 +50,9 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
     .findOne({ userId: id, deletedAt: { $exists: false } });
 
   if (!participant) {
-    const enrollment = await db.collection('enrollments').findOne({ userId: id });
+    const enrollment = await db
+      .collection('enrollments')
+      .findOne({ userId: id });
     if (!enrollment) return null;
   }
 

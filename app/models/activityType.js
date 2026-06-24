@@ -35,7 +35,10 @@ export const VALIDATOR = {
  */
 export async function ensureIndexes(db) {
   const col = db.collection(COLLECTION);
-  await col.createIndex({ key: 1 }, { unique: true, name: 'activity_types_key_unique' });
+  await col.createIndex(
+    { key: 1 },
+    { unique: true, name: 'activity_types_key_unique' }
+  );
   await col.createIndex({ isDefault: 1 }, { name: 'activity_types_isDefault' });
 }
 
@@ -44,9 +47,29 @@ export async function ensureIndexes(db) {
  * These mirror the previous hardcoded BEHAVIOR_OPTIONS in app/utils/srhi.js.
  */
 export const SEED_ACTIVITY_TYPES = [
-  { key: 'walking',                label_en: 'Walking',                 label_de: 'Spazieren gehen',       isDefault: true },
-  { key: 'light_jogging',          label_en: 'Light jogging',           label_de: 'Leichtes Joggen',       isDefault: true },
-  { key: 'cycling',                label_en: 'Cycling',                 label_de: 'Radfahren',             isDefault: true },
-  { key: 'structured_calisthenics',label_en: 'Structured calisthenics', label_de: 'Kalisteniktraining',    isDefault: true },
-  { key: 'yoga',                   label_en: 'Yoga',                    label_de: 'Yoga',                  isDefault: true },
+  {
+    key: 'walking',
+    label_en: 'Walking',
+    label_de: 'Spazieren gehen',
+    isDefault: true,
+  },
+  {
+    key: 'light_jogging',
+    label_en: 'Light jogging',
+    label_de: 'Leichtes Joggen',
+    isDefault: true,
+  },
+  {
+    key: 'cycling',
+    label_en: 'Cycling',
+    label_de: 'Radfahren',
+    isDefault: true,
+  },
+  {
+    key: 'structured_calisthenics',
+    label_en: 'Structured calisthenics',
+    label_de: 'Kalisteniktraining',
+    isDefault: true,
+  },
+  { key: 'yoga', label_en: 'Yoga', label_de: 'Yoga', isDefault: true },
 ];
