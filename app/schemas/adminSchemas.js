@@ -130,7 +130,10 @@ const activityKey = z
   .string()
   .min(1)
   .max(100)
-  .regex(/^[a-z][a-z0-9_]*$/, 'must be lowercase alphanumeric with underscores, starting with a letter');
+  .regex(
+    /^[a-z][a-z0-9_]*$/,
+    'must be lowercase alphanumeric with underscores, starting with a letter'
+  );
 
 export const createActivityTypeSchema = z.object({
   key: activityKey,

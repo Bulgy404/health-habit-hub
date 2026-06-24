@@ -29,7 +29,19 @@ export async function seedActivityTypes(db) {
 export async function listActivityTypes(db) {
   return db
     .collection(COLLECTION)
-    .find({}, { projection: { _id: 0, key: 1, label_en: 1, label_de: 1, isDefault: 1, createdAt: 1 } })
+    .find(
+      {},
+      {
+        projection: {
+          _id: 0,
+          key: 1,
+          label_en: 1,
+          label_de: 1,
+          isDefault: 1,
+          createdAt: 1,
+        },
+      }
+    )
     .sort({ createdAt: 1 })
     .toArray();
 }
@@ -39,9 +51,13 @@ export async function listActivityTypes(db) {
  * @param {import('mongodb').Db} db
  * @param {{ key: string, label_en: string, label_de?: string, isDefault?: boolean }} data
  */
-export async function createActivityType(db, { key, label_en, label_de, isDefault }) {
+export async function createActivityType(
+  db,
+  { key, label_en, label_de, isDefault }
+) {
   const existing = await db.collection(COLLECTION).findOne({ key });
-  if (existing) return { error: 'Activity type with this key already exists', status: 409 };
+  if (existing)
+    return { error: 'Activity type with this key already exists', status: 409 };
   await db.collection(COLLECTION).insertOne({
     key,
     label_en,
@@ -49,7 +65,12 @@ export async function createActivityType(db, { key, label_en, label_de, isDefaul
     isDefault: isDefault ?? false,
     createdAt: new Date(),
   });
-  return { key, label_en, label_de: label_de ?? '', isDefault: isDefault ?? false };
+  return {
+    key,
+    label_en,
+    label_de: label_de ?? '',
+    isDefault: isDefault ?? false,
+  };
 }
 
 /**
@@ -59,7 +80,9 @@ export async function createActivityType(db, { key, label_en, label_de, isDefaul
  * @param {{ label_en?: string, label_de?: string, isDefault?: boolean }} patch
  */
 export async function updateActivityType(db, key, patch) {
-  const result = await db.collection(COLLECTION).updateOne({ key }, { $set: patch });
+  const result = await db
+    .collection(COLLECTION)
+    .updateOne({ key }, { $set: patch });
   if (result.matchedCount === 0) return { notFound: true };
   return { ok: true };
 }

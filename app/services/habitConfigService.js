@@ -80,7 +80,8 @@ export async function resolveHabitConfig({ db, userId }) {
     // Falls back to hardcoded constant only when DB read fails.
     try {
       const dbDefaults = await getDefaultBehaviorKeys(db);
-      behaviorOptions = dbDefaults.length > 0 ? dbDefaults : DEFAULT_BEHAVIOR_KEYS;
+      behaviorOptions =
+        dbDefaults.length > 0 ? dbDefaults : DEFAULT_BEHAVIOR_KEYS;
     } catch {
       behaviorOptions = DEFAULT_BEHAVIOR_KEYS;
     }

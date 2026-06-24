@@ -55,14 +55,28 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
     QUEUE_NAME,
     async (job) => {
       const {
-        uuid, sentence, language, userID,
-        frequency, duration, healthBenefit, wellbeingImpact,
+        uuid,
+        sentence,
+        language,
+        userID,
+        frequency,
+        duration,
+        healthBenefit,
+        wellbeingImpact,
       } = job.data;
 
       const result = await processAcceptedHabit({
-        uuid, sentence, language, userID,
-        frequency, duration, healthBenefit, wellbeingImpact,
-        queryNeo4j, getDb, apiBase,
+        uuid,
+        sentence,
+        language,
+        userID,
+        frequency,
+        duration,
+        healthBenefit,
+        wellbeingImpact,
+        queryNeo4j,
+        getDb,
+        apiBase,
         translate: translateHabit,
         translateUrl,
       });
@@ -74,7 +88,10 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
   );
 
   worker.on('failed', (job, err) => {
-    log.error({ jobId: job?.data?.uuid, err: err.message }, 'habit donation job failed');
+    log.error(
+      { jobId: job?.data?.uuid, err: err.message },
+      'habit donation job failed'
+    );
   });
 
   return worker;

@@ -524,7 +524,6 @@ test('GET /api/v1/habits/graph returns graph with nodes and edges', async () => 
   assert.ok(edge.target.startsWith('c:'));
 });
 
-
 // ── Community comments ───────────────────────────────────────────────────────
 
 test('POST /:id/comments requires auth', async () => {

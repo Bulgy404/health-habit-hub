@@ -3,7 +3,10 @@ import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
 import { logger } from '../utils/logger.js';
 import { validate } from '../middleware/validate.js';
-import { createActivityTypeSchema, updateActivityTypeSchema } from '../schemas/adminSchemas.js';
+import {
+  createActivityTypeSchema,
+  updateActivityTypeSchema,
+} from '../schemas/adminSchemas.js';
 import {
   listActivityTypes,
   createActivityType,
@@ -43,8 +46,14 @@ export function createActivityTypeRouter({ db } = {}) {
     try {
       const { key, label_en, label_de, isDefault } = req.body;
       const database = await getDb();
-      const result = await createActivityType(database, { key, label_en, label_de, isDefault });
-      if (result.error) return res.status(result.status ?? 400).json({ error: result.error });
+      const result = await createActivityType(database, {
+        key,
+        label_en,
+        label_de,
+        isDefault,
+      });
+      if (result.error)
+        return res.status(result.status ?? 400).json({ error: result.error });
       res.status(201).json(result);
     } catch (err) {
       log.error({ err }, '[activity-types] POST /');
@@ -53,25 +62,31 @@ export function createActivityTypeRouter({ db } = {}) {
   });
 
   // PATCH /api/v1/admin/activity-types/:key
-  router.patch('/:key', validate(updateActivityTypeSchema), async (req, res) => {
-    try {
-      const { key } = req.params;
-      const database = await getDb();
-      const result = await updateActivityType(database, key, req.body);
-      if (result.notFound) return res.status(404).json({ error: 'Activity type not found' });
-      res.json({ ok: true });
-    } catch (err) {
-      log.error({ err }, '[activity-types] PATCH /:key');
-      res.status(500).json({ error: 'Internal server error' });
+  router.patch(
+    '/:key',
+    validate(updateActivityTypeSchema),
+    async (req, res) => {
+      try {
+        const { key } = req.params;
+        const database = await getDb();
+        const result = await updateActivityType(database, key, req.body);
+        if (result.notFound)
+          return res.status(404).json({ error: 'Activity type not found' });
+        res.json({ ok: true });
+      } catch (err) {
+        log.error({ err }, '[activity-types] PATCH /:key');
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
-  });
+  );
 
   // DELETE /api/v1/admin/activity-types/:key
   router.delete('/:key', async (req, res) => {
     try {
       const database = await getDb();
       const result = await deleteActivityType(database, req.params.key);
-      if (result.notFound) return res.status(404).json({ error: 'Activity type not found' });
+      if (result.notFound)
+        return res.status(404).json({ error: 'Activity type not found' });
       res.json({ deleted: true });
     } catch (err) {
       log.error({ err }, '[activity-types] DELETE /:key');

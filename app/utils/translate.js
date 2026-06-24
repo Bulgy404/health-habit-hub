@@ -34,7 +34,12 @@ export function escapeStringLiteral(str) {
 // Habit donation translation pipeline (LibreTranslate → LLM tone refinement)
 // ---------------------------------------------------------------------------
 
-async function _fetchLibreTranslation(sentence, sourceLang, targetLang, translateUrl) {
+async function _fetchLibreTranslation(
+  sentence,
+  sourceLang,
+  targetLang,
+  translateUrl
+) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
@@ -43,25 +48,40 @@ async function _fetchLibreTranslation(sentence, sourceLang, targetLang, translat
       res = await globalThis.fetch(translateUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: sentence, source: sourceLang, target: targetLang, format: 'text' }),
+        body: JSON.stringify({
+          q: sentence,
+          source: sourceLang,
+          target: targetLang,
+          format: 'text',
+        }),
         signal: controller.signal,
       });
     } finally {
       clearTimeout(timeout);
     }
     if (!res.ok) {
-      log.warn(`[translate] LibreTranslate returned ${res.status} — skipping translation to ${targetLang.toUpperCase()}`);
+      log.warn(
+        `[translate] LibreTranslate returned ${res.status} — skipping translation to ${targetLang.toUpperCase()}`
+      );
       return null;
     }
     const data = await res.json();
     return data.translatedText;
   } catch (err) {
-    log.warn(`[translate] LibreTranslate error: ${err.message} — skipping translation to ${targetLang.toUpperCase()}`);
+    log.warn(
+      `[translate] LibreTranslate error: ${err.message} — skipping translation to ${targetLang.toUpperCase()}`
+    );
     return null;
   }
 }
 
-async function _refineLLMTranslation(draft, sentence, sourceLang, llmEndpoint, apiBase) {
+async function _refineLLMTranslation(
+  draft,
+  sentence,
+  sourceLang,
+  llmEndpoint,
+  apiBase
+) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
@@ -70,20 +90,28 @@ async function _refineLLMTranslation(draft, sentence, sourceLang, llmEndpoint, a
       res = await globalThis.fetch(`${apiBase}${llmEndpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ original: sentence, raw_translation: draft, language: sourceLang }),
+        body: JSON.stringify({
+          original: sentence,
+          raw_translation: draft,
+          language: sourceLang,
+        }),
         signal: controller.signal,
       });
     } finally {
       clearTimeout(timeout);
     }
     if (!res.ok) {
-      log.warn(`[translate] LLM ${llmEndpoint} returned ${res.status} — using raw LibreTranslate output`);
+      log.warn(
+        `[translate] LLM ${llmEndpoint} returned ${res.status} — using raw LibreTranslate output`
+      );
       return draft;
     }
     const data = await res.json();
     return data.refined_translation || draft;
   } catch (err) {
-    log.warn(`[translate] LLM refinement error/timeout: ${err.message} — using raw LibreTranslate output`);
+    log.warn(
+      `[translate] LLM refinement error/timeout: ${err.message} — using raw LibreTranslate output`
+    );
     return draft;
   }
 }
@@ -92,10 +120,28 @@ async function _refineLLMTranslation(draft, sentence, sourceLang, llmEndpoint, a
  * Translate a habit sentence via LibreTranslate then refine with an LLM tone endpoint.
  * Returns the refined string, the raw translation if LLM fails, or null if LibreTranslate fails.
  */
-export async function translateHabit(sentence, sourceLang, targetLang, llmEndpoint, apiBase, translateUrl) {
-  const draft = await _fetchLibreTranslation(sentence, sourceLang, targetLang, translateUrl);
+export async function translateHabit(
+  sentence,
+  sourceLang,
+  targetLang,
+  llmEndpoint,
+  apiBase,
+  translateUrl
+) {
+  const draft = await _fetchLibreTranslation(
+    sentence,
+    sourceLang,
+    targetLang,
+    translateUrl
+  );
   if (!draft) return null;
-  return _refineLLMTranslation(draft, sentence, sourceLang, llmEndpoint, apiBase);
+  return _refineLLMTranslation(
+    draft,
+    sentence,
+    sourceLang,
+    llmEndpoint,
+    apiBase
+  );
 }
 
 // ---------------------------------------------------------------------------

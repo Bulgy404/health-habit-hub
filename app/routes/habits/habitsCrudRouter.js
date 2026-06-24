@@ -1,7 +1,6 @@
 import express from 'express';
 import { randomUUID } from 'node:crypto';
 import {
-  shareHabit,
   classifyHabit,
   persistRejectedHabit,
   enqueueHabitDonation,
@@ -18,7 +17,6 @@ import {
 } from '../../db/habitQueries.js';
 import { habitShareLimiter } from '../../middleware/rateLimiter.js';
 import { logger } from '../../utils/logger.js';
-import { translateHabit } from '../../utils/translate.js';
 
 /**
  * Handles CRUD-style habits routes: list, public, annotate, share, donate.
@@ -37,7 +35,7 @@ export function createHabitsCrudRouter({
   getDb,
   queryNeo4j,
   apiServiceUrl,
-  libreTranslateUrl,
+  libreTranslateUrl: _libreTranslateUrl,
   habitQueue,
 } = {}) {
   const router = express.Router();
@@ -349,7 +347,9 @@ export function createHabitsCrudRouter({
       return res.status(401).json({ error: 'Unauthorized' });
     }
     if (!sentence || !language) {
-      return res.status(400).json({ error: 'sentence and language are required' });
+      return res
+        .status(400)
+        .json({ error: 'sentence and language are required' });
     }
     if (typeof sentence !== 'string' || sentence.length > 1000) {
       return res.status(400).json({
@@ -365,7 +365,9 @@ export function createHabitsCrudRouter({
       });
     }
     const isValidRating = (v, max) =>
-      v === undefined || v === null || (Number.isInteger(v) && v >= 1 && v <= max);
+      v === undefined ||
+      v === null ||
+      (Number.isInteger(v) && v >= 1 && v <= max);
     if (
       !isValidRating(frequency, 4) ||
       !isValidRating(duration, 4) ||
@@ -377,20 +379,26 @@ export function createHabitsCrudRouter({
 
     const apiBase =
       apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
-    const translateUrl =
-      libreTranslateUrl ||
-      process.env.LIBRE_TRANSLATE_URL ||
-      `http://${process.env.TRANSLATE_HOST || 'localhost'}:${process.env.TRANSLATE_PORT || '5000'}${process.env.TRANSLATE_PATH || '/translate'}`;
-
     try {
       const uuid = randomUUID();
 
       // Step 1 (sync, fast): classify — keeps the immediate "not a habit" UX.
-      const classified = await classifyHabit(sentence, language, userId, apiBase);
+      const classified = await classifyHabit(
+        sentence,
+        language,
+        userId,
+        apiBase
+      );
 
       if (!classified.is_habit) {
         const result = await persistRejectedHabit(
-          { uuid, sentence, language, userID: userId, confidence: classified.confidence },
+          {
+            uuid,
+            sentence,
+            language,
+            userID: userId,
+            confidence: classified.confidence,
+          },
           queryNeo4j,
           getDb
         );
@@ -448,7 +456,9 @@ export function createHabitsCrudRouter({
         })
       );
       const detail =
-        process.env.NODE_ENV !== 'production' ? err?.message || String(err) : undefined;
+        process.env.NODE_ENV !== 'production'
+          ? err?.message || String(err)
+          : undefined;
       return res.status(500).json({
         error: 'Internal server error',
         ...(detail ? { detail } : {}),
@@ -463,7 +473,8 @@ export function createHabitsCrudRouter({
     try {
       const job = await getJobStatus(jobId);
       if (!job) return res.status(404).json({ error: 'Job not found' });
-      if (job.userID !== userId) return res.status(403).json({ error: 'Forbidden' });
+      if (job.userID !== userId)
+        return res.status(403).json({ error: 'Forbidden' });
       const { userID: _drop, ...safe } = job;
       return res.json(safe);
     } catch (err) {

@@ -66,7 +66,8 @@ export function createHabitsRouter({
 
   // Start the BullMQ worker unless we are in test mode (neo4jRun injected).
   if (!neo4jRun) {
-    const apiBase = apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
+    const apiBase =
+      apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
     const translateUrl =
       libreTranslateUrl ||
       process.env.LIBRE_TRANSLATE_URL ||

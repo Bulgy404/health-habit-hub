@@ -508,29 +508,53 @@ export async function processAcceptedHabit({
   healthBenefit = null,
   wellbeingImpact = null,
   queryNeo4j,
-  getDb,
+  getDb: _getDb,
   apiBase,
   translate,
   translateUrl,
 }) {
-  const contextPhrases = await extractContext(uuid, sentence, language, apiBase);
+  const contextPhrases = await extractContext(
+    uuid,
+    sentence,
+    language,
+    apiBase
+  );
   const mappings = await mapBcio(uuid, contextPhrases, apiBase);
   const [translationEN, translationDE] = await _translateHabit(
-    sentence, language, translate, apiBase, translateUrl
+    sentence,
+    language,
+    translate,
+    apiBase,
+    translateUrl
   );
 
   await writeToNeo4j(
     {
-      uuid, sentence, language,
+      uuid,
+      sentence,
+      language,
       confidence: confidence ?? 1,
-      userID, frequency, duration, healthBenefit, wellbeingImpact,
-      translationEN, translationDE, contextPhrases, mappings,
+      userID,
+      frequency,
+      duration,
+      healthBenefit,
+      wellbeingImpact,
+      translationEN,
+      translationDE,
+      contextPhrases,
+      mappings,
     },
     queryNeo4j
   );
 
   await embedAndStoreHabit({
-    uuid, sentence, translationEN, contextPhrases, mappings, apiBase, queryNeo4j,
+    uuid,
+    sentence,
+    translationEN,
+    contextPhrases,
+    mappings,
+    apiBase,
+    queryNeo4j,
   });
 
   return { is_habit: true, uuid };
@@ -555,8 +579,15 @@ export async function enqueueHabitDonation({
   await habitQueue.add(
     'process',
     {
-      uuid, sentence, language, userID, confidence,
-      frequency, duration, healthBenefit, wellbeingImpact,
+      uuid,
+      sentence,
+      language,
+      userID,
+      confidence,
+      frequency,
+      duration,
+      healthBenefit,
+      wellbeingImpact,
     },
     { jobId: uuid }
   );

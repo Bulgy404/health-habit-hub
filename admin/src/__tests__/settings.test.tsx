@@ -15,14 +15,17 @@ jest.mock('next/navigation', () => ({
 }));
 
 beforeEach(() => {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    json: jest.fn().mockResolvedValue({
-      default_cue_count: 'multi',
-      default_cue_source: 'high_quality',
-      default_reminder_time: '19:00',
-    }),
-  } as unknown as Response);
+  global.fetch = jest.fn().mockImplementation((url: string) => {
+    const isActivityTypes = String(url).includes('/activity-types');
+    return Promise.resolve({
+      ok: true,
+      json: jest.fn().mockResolvedValue(
+        isActivityTypes
+          ? []
+          : { default_cue_count: 'multi', default_cue_source: 'high_quality', default_reminder_time: '19:00' }
+      ),
+    } as unknown as Response);
+  });
 });
 
 afterEach(() => { jest.resetAllMocks(); });
