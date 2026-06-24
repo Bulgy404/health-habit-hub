@@ -55,21 +55,24 @@ export async function createActivityType(
   db,
   { key, label_en, label_de, isDefault }
 ) {
+  if (typeof key !== 'string' || !key)
+    throw new TypeError('key must be a non-empty string');
   const existing = await db.collection(COLLECTION).findOne({ key });
   if (existing)
     return { error: 'Activity type with this key already exists', status: 409 };
-  await db.collection(COLLECTION).insertOne({
+  const doc = {
     key,
-    label_en,
-    label_de: label_de ?? '',
-    isDefault: isDefault ?? false,
+    label_en: String(label_en),
+    label_de: label_de != null ? String(label_de) : '',
+    isDefault: Boolean(isDefault),
     createdAt: new Date(),
-  });
+  };
+  await db.collection(COLLECTION).insertOne(doc);
   return {
-    key,
-    label_en,
-    label_de: label_de ?? '',
-    isDefault: isDefault ?? false,
+    key: doc.key,
+    label_en: doc.label_en,
+    label_de: doc.label_de,
+    isDefault: doc.isDefault,
   };
 }
 
@@ -80,9 +83,17 @@ export async function createActivityType(
  * @param {{ label_en?: string, label_de?: string, isDefault?: boolean }} patch
  */
 export async function updateActivityType(db, key, patch) {
-  const result = await db
-    .collection(COLLECTION)
-    .updateOne({ key }, { $set: patch });
+  if (typeof key !== 'string' || !key)
+    throw new TypeError('key must be a non-empty string');
+  // Build an explicit $set document from the only fields this operation is
+  // allowed to touch — prevents operator injection even if upstream validation
+  // is bypassed.
+  const $set = {};
+  if (patch.label_en !== undefined) $set.label_en = String(patch.label_en);
+  if (patch.label_de !== undefined)
+    $set.label_de = patch.label_de != null ? String(patch.label_de) : '';
+  if (patch.isDefault !== undefined) $set.isDefault = Boolean(patch.isDefault);
+  const result = await db.collection(COLLECTION).updateOne({ key }, { $set });
   if (result.matchedCount === 0) return { notFound: true };
   return { ok: true };
 }
@@ -93,6 +104,8 @@ export async function updateActivityType(db, key, patch) {
  * @param {string} key
  */
 export async function deleteActivityType(db, key) {
+  if (typeof key !== 'string' || !key)
+    throw new TypeError('key must be a non-empty string');
   const result = await db.collection(COLLECTION).deleteOne({ key });
   if (result.deletedCount === 0) return { notFound: true };
   return { deleted: true };
