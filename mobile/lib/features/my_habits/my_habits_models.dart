@@ -40,6 +40,7 @@ class HabitConfig {
     this.maxHabits,
     required this.srhiItems,
     this.assignedCues = const [],
+    this.recommenderEnabled = true,
   });
 
   /// Cue count mode: `'single'` or `'multi'`.
@@ -63,6 +64,10 @@ class HabitConfig {
   /// Cues pre-assigned by the study coordinator (empty for self-selected).
   final List<IntentionCue> assignedCues;
 
+  /// Whether the recommender feature is enabled for this participant's study.
+  /// Defaults to `true` (enabled) when absent, for backward compatibility.
+  final bool recommenderEnabled;
+
   /// Deserialises from the habit-config API response.
   factory HabitConfig.fromJson(Map<String, dynamic> json) => HabitConfig(
         cueCount: json['cueCount'] as String? ?? 'multi',
@@ -82,6 +87,7 @@ class HabitConfig {
                 .map(IntentionCue.fromJson)
                 .toList() ??
             const [],
+        recommenderEnabled: json['recommenderEnabled'] as bool? ?? true,
       );
 }
 

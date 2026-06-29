@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/my_habits/habit_detail_screen.dart';
 import '../features/my_habits/my_habits_models.dart';
+import '../features/my_habits/my_habits_provider.dart';
 import '../features/my_habits/my_habits_screen.dart';
 import '../features/my_habits/new_habit_screen_1_behavior.dart';
 import '../features/my_habits/new_habit_screen_2_cue.dart';
@@ -56,6 +57,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       getIsLoggedIn: () => ref.read(authServiceProvider).isLoggedIn(),
       getUserRoles: () => ref.read(userRolesProvider.future),
       getIsOnboardingComplete: isOnboardingComplete,
+      getRecommenderEnabled: () async => ref.read(recommenderEnabledProvider),
     ),
     routes: [
       GoRoute(

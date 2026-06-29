@@ -34,6 +34,7 @@ const mockStudy = {
   description: '',
   isActive: true,
   isDefault: false,
+  recommenderEnabled: true,
   groups: [],
   questionnaires: [],
   participantCount: 0,

@@ -75,6 +75,22 @@ test('resolveHabitConfig: no enrollment returns hardcoded fallback', async () =>
   assert.equal(config.maxHabits, null);
 });
 
+test('resolveHabitConfig: recommenderEnabled defaults to true', async () => {
+  // No enrolment, and study with the flag absent → enabled.
+  const db = makeDb({ enrollment: null, adminSettings: [] });
+  const config = await resolveHabitConfig({ db, userId: 'u1' });
+  assert.equal(config.recommenderEnabled, true);
+});
+
+test('resolveHabitConfig: recommenderEnabled is false when study disables it', async () => {
+  const db = makeDb({
+    enrollment: { groupId: 'g1', studyId: 's1', cueConfig: studyCueConfig },
+    study: { recommenderEnabled: false },
+  });
+  const config = await resolveHabitConfig({ db, userId: 'u1' });
+  assert.equal(config.recommenderEnabled, false);
+});
+
 test('resolveHabitConfig: pre-rated study participant gets assignedCues from pool', async () => {
   const db = {
     collection(name) {
@@ -102,6 +118,8 @@ test('resolveHabitConfig: pre-rated study participant gets assignedCues from poo
         };
       if (name === 'admin_settings')
         return { find: () => ({ toArray: async () => [] }) };
+      if (name === 'studies')
+        return { findOne: async () => ({ recommenderEnabled: true }) };
       throw new Error(`unexpected: ${name}`);
     },
   };
@@ -134,6 +152,8 @@ test('resolveHabitConfig: self_selected participant gets empty assignedCues', as
         };
       if (name === 'admin_settings')
         return { find: () => ({ toArray: async () => [] }) };
+      if (name === 'studies')
+        return { findOne: async () => ({ recommenderEnabled: true }) };
       throw new Error(`unexpected: ${name}`);
     },
   };

@@ -20,6 +20,7 @@ export interface StudySummary {
   description: string;
   isActive: boolean;
   isDefault: boolean;
+  recommenderEnabled: boolean;
   groups: StudyGroup[];
   questionnaires: string[];
   participantCount: number;

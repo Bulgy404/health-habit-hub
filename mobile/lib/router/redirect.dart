@@ -20,6 +20,7 @@ Future<String?> redirectGuard({
   required Future<bool> Function() getIsLoggedIn,
   required Future<List<String>> Function() getUserRoles,
   required Future<bool> Function() getIsOnboardingComplete,
+  Future<bool> Function()? getRecommenderEnabled,
 }) async {
   // ── 1. Admin guard ────────────────────────────────────────────────────────
   if (location.startsWith('/admin')) {
@@ -51,6 +52,18 @@ Future<String?> redirectGuard({
       if (!isLoggedIn) return '/onboarding/welcome';
     } catch (_) {
       return '/onboarding/welcome';
+    }
+  }
+
+  // ── 2b. Recommender guard ───────────────────────────────────────────────────
+  // When the participant's study disables the recommender, keep them out of the
+  // recommender flow (e.g. reached via a deep link or push notification). The
+  // bottom-nav tab is also hidden in ShellScreen; this is defence-in-depth.
+  if (location.startsWith('/recommend') && getRecommenderEnabled != null) {
+    try {
+      if (!await getRecommenderEnabled()) return '/habits';
+    } catch (_) {
+      // Unknown → allow; the tab-level check still applies once config loads.
     }
   }
 

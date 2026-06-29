@@ -7,6 +7,9 @@
  *   description  string     Optional description.
  *   isDefault    boolean    True for the default study (partial-unique index ensures at most one).
  *   isActive     boolean    Soft-delete flag.
+ *   recommenderEnabled boolean  Optional. When false, participants in this study do not see
+ *                              the recommender screen in the app. Defaults to true (treated as
+ *                              enabled when absent, for backward compatibility).
  *   groups       Array<{    Experiment groups for this study.
  *     id:               ObjectId
  *     label:            string
@@ -38,6 +41,8 @@ export const VALIDATOR = {
       description: { bsonType: ['string', 'null'] },
       isDefault: { bsonType: 'bool' },
       isActive: { bsonType: 'bool' },
+      // Optional: absence is treated as enabled (true) for backward compatibility.
+      recommenderEnabled: { bsonType: 'bool' },
       groups: {
         bsonType: 'array',
         items: {

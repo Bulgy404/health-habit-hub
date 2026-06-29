@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hhh/features/my_habits/my_habits_provider.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/screens/shell_screen.dart';
 
@@ -75,12 +76,17 @@ GoRouter _buildTestRouter() {
   );
 }
 
-Widget _buildSubject(GoRouter router, List<String> roles) {
+Widget _buildSubject(
+  GoRouter router,
+  List<String> roles, {
+  bool recommenderEnabled = true,
+}) {
   return ProviderScope(
     overrides: [
       userRolesProvider.overrideWith((ref) async => roles),
       reconsentRequiredProvider.overrideWithValue((_) async => false),
       habitReminderSyncProvider.overrideWithValue(() async {}),
+      recommenderEnabledProvider.overrideWithValue(recommenderEnabled),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -120,6 +126,31 @@ void main() {
     expect(find.text('Admin'), findsOneWidget);
   });
 
+  testWidgets('shows Recs tab when recommender enabled', (tester) async {
+    final router = _buildTestRouter();
+    await tester.pumpWidget(
+      _buildSubject(router, const [], recommenderEnabled: true),
+    );
+    await tester.pump();
+
+    expect(find.text('Recs'), findsOneWidget);
+  });
+
+  testWidgets('hides Recs tab when recommender disabled for the study', (
+    tester,
+  ) async {
+    final router = _buildTestRouter();
+    await tester.pumpWidget(
+      _buildSubject(router, const [], recommenderEnabled: false),
+    );
+    await tester.pump();
+
+    expect(find.text('Recs'), findsNothing);
+    // Other tabs remain.
+    expect(find.text('Habits'), findsOneWidget);
+    expect(find.text('Account'), findsOneWidget);
+  });
+
   testWidgets('shows loading state (NavigationBar still visible)', (
     tester,
   ) async {
@@ -134,6 +165,7 @@ void main() {
           ),
           reconsentRequiredProvider.overrideWithValue((_) async => false),
           habitReminderSyncProvider.overrideWithValue(() async {}),
+          recommenderEnabledProvider.overrideWithValue(true),
         ],
         child: MaterialApp.router(routerConfig: router),
       ),
