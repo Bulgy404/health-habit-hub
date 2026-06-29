@@ -162,12 +162,12 @@ if (process.env.NODE_ENV !== 'production') {
   const { createBullBoard } = await import('@bull-board/api');
   const { BullMQAdapter } = await import('@bull-board/api/bullMQAdapter');
   const { ExpressAdapter } = await import('@bull-board/express');
-  const { habitQueue } = await import('./lib/habitQueue.js');
+  const { getHabitQueue } = await import('./lib/habitQueue.js');
 
   const boardAdapter = new ExpressAdapter();
   boardAdapter.setBasePath('/admin/queues');
   createBullBoard({
-    queues: [new BullMQAdapter(habitQueue)],
+    queues: [new BullMQAdapter(getHabitQueue())],
     serverAdapter: boardAdapter,
   });
   app.use('/admin/queues', boardAdapter.getRouter());
