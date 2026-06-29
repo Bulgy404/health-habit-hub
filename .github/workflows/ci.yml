@@ -15,6 +15,13 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+# Cancel superseded runs on the same ref (PR branch or branch push) to save
+# runner minutes. Tag pushes (releases) get their own group so they are never
+# cancelled by a later push.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 permissions:
   contents: read
 
@@ -31,9 +38,11 @@ jobs:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-node-app
 
-      - name: Format
+      - name: Format check
         working-directory: app
-        run: npx prettier --write .
+        # Use --check (not --write): CI must FAIL on unformatted code, not
+        # silently rewrite it (which always passes and defeats the gate).
+        run: npx prettier --check .
 
       - name: Lint
         working-directory: app
@@ -84,7 +93,7 @@ jobs:
           path: app/coverage/
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # 3. BACKEND – integration tests (MongoDB + Neo4j + Fuseki)
+  # 3. BACKEND – integration tests (MongoDB + Neo4j)
   # ─────────────────────────────────────────────────────────────────────────────
   backend-integration:
     name: Backend – integration tests

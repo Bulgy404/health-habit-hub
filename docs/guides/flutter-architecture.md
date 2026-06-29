@@ -30,9 +30,8 @@ Keycloak (OIDC)
      ▼
 Flutter App ──────► Node.js Backend API (Express)
      │                       │
-     │  WebView (SurveyJS)   ├── Neo4j (habits graph)
-     │                       ├── MongoDB (survey responses)
-     │                       └── Fuseki (SPARQL / ontology)
+     │  WebView (SurveyJS)   ├── Neo4j (habits graph + BCIO ontology)
+     │                       └── MongoDB (survey responses)
      └──────────────────────► Recommender (FastAPI / Python)
 ```
 

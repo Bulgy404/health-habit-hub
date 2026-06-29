@@ -1,4 +1,4 @@
-# Vistual Studio Code files
+# Visual Studio Code files
 .vscode/
 
 # Node.js files
@@ -6,6 +6,17 @@ node_modules/
 .npm/
 build/
 admin/.next/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+*.egg-info/
 
 # Yarn package manager files
 yarn.lock

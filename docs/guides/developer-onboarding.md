@@ -91,13 +91,9 @@ ACME_EMAIL=dev@localhost
 APP_BASE_PATH=/
 NODE_ENV=development
 
-# ── Fuseki ─────────────────────────────────────────────────────────────
-FUSEKI_PATH=fuseki
-DB_HOST=fuseki
-DB_PORT=3030
-DB_USER=admin
-DB_PASSWORD=devpassword
-DB_PATH=hhh
+# NOTE: the Apache Jena Fuseki triple store has been retired — there are no
+# longer any FUSEKI_*/DB_* variables. BCIO mapping runs on in-process
+# embeddings in the recommender service. See ../migration.md.
 
 # ── MongoDB ─────────────────────────────────────────────────────────────
 MONGO_HOST=mongo
@@ -187,7 +183,6 @@ Expected output:
   "services": {
     "neo4j":    { "status": "ok", "latencyMs": 12 },
     "mongo":    { "status": "ok", "latencyMs": 5  },
-    "fuseki":   { "status": "ok", "latencyMs": 18 },
     "keycloak": { "status": "ok", "latencyMs": 22 },
     "recommender": { "status": "ok", "latencyMs": 8 }
   }
@@ -208,7 +203,6 @@ h3-app               running
 h3-keycloak          healthy
 h3-mongo             running
 h3-neo4j             healthy
-h3-fuseki            running
 h3-recommender       running
 h3-lightrag          running
 h3-knowledge-mcp     running
@@ -438,21 +432,29 @@ cd API-service
 API_SERVICE_SECRET=test pytest tests/test_retrieve.py -v
 ```
 
-### Ontology / SPARQL tests
+### Ontology / graph integrity tests
+
+These now run against **Neo4j** (the Fuseki/SPARQL triple store has been retired). They check the live graph schema — constraints, donation-pipeline shape, and integrity violations.
 
 ```bash
-cd tests
-bash test-ontology.sh
+# Requires a running Neo4j (e.g. from `make dev`); override creds via env if needed:
+#   NEO4J_HTTP=http://localhost:7474 NEO4J_USER=neo4j NEO4J_PASS=password
+bash tests/ontology/test-ontology.sh
 ```
 
-Expected output (each line is a PASS):
+Expected output (each check is a PASS):
 
 ```
-[PASS] Ontology loads into Fuseki without errors
-[PASS] owl:Class count > 100 (found: 134)
-[PASS] No duplicate URIs
-[PASS] G3/G4 groups are distinct
-[PASS] HHH core classes present
+=== HHH Graph Integrity Tests (current schema) ===
+
+--- Neo4j: constraints ---
+PASS [constraints present]: count=… (expected >= …)
+
+--- Neo4j: donation pipeline shape ---
+PASS [habit→context→BCIO path]: count=… (expected >= …)
+
+--- Neo4j: integrity violations ---
+PASS [no orphan contexts]: 0 violations
 ```
 
 ---
@@ -470,7 +472,7 @@ lsof -i :3000
 kill -9 <PID>
 ```
 
-Common conflicting ports: **3000** (Node.js), **3001** (Admin app), **8080** (Keycloak), **7474/7687** (Neo4j), **27017** (MongoDB), **3030** (Fuseki).
+Common conflicting ports: **3000** (Node.js), **3001** (Admin app), **8080** (Keycloak), **7474/7687** (Neo4j), **27017** (MongoDB), **9622** (LightRAG), **8001** (recommender).
 
 ### Keycloak not ready
 
@@ -615,13 +617,15 @@ status
 
 ---
 
-**Check 6 — Fuseki SPARQL endpoint responding**
+**Check 6 — LightRAG knowledge base responding**
+
+> The Fuseki/SPARQL endpoint check was removed when the triple store was retired. BCIO mapping now runs on in-process embeddings, and the knowledge base is served by LightRAG.
 
 ```bash
-curl -s -u admin:devpassword "http://localhost:3030/hhh/query?query=SELECT+%28COUNT%28*%29+AS+%3Fc%29+WHERE+%7B%3Fs+a+%3Chttp%3A%2F%2Fwww.w3.org%2F2002%2F07%2Fowl%23Class%3E%7D" | python3 -c "import sys,json; r=json.load(sys.stdin)['results']['bindings'][0]['c']['value']; print('OK ('+r+' classes)' if int(r)>100 else 'FAIL')"
+curl -s http://localhost:9622/health | python3 -c "import sys,json; print('OK' if json.load(sys.stdin).get('status')=='healthy' else 'FAIL')"
 ```
 
-Expected: `OK (134 classes)` (or similar — must be > 100)
+Expected: `OK`
 
 ---
 
