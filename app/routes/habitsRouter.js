@@ -51,6 +51,13 @@ export function createHabitsRouter({
     }
   }
 
+  // The BullMQ queue/worker connect to Redis the moment they are constructed.
+  // Only enable them for a real running app — never under tests, where Redis is
+  // not available (e.g. the CI integration job has Mongo + Neo4j but no Redis).
+  // Tests either inject `neo4jRun` or run with NODE_ENV=test and rely on the
+  // synchronous donation fallback in habitsCrudRouter when habitQueue is null.
+  const queueEnabled = !neo4jRun && process.env.NODE_ENV !== 'test';
+
   router.use(
     '/',
     createHabitsCrudRouter({
@@ -58,14 +65,14 @@ export function createHabitsRouter({
       queryNeo4j,
       apiServiceUrl,
       libreTranslateUrl,
-      habitQueue: neo4jRun ? null : getHabitQueue(),
+      habitQueue: queueEnabled ? getHabitQueue() : null,
     })
   );
   router.use('/', createHabitsStatsRouter({ getDb, queryNeo4j }));
   router.use('/', createHabitsGraphRouter({ queryNeo4j, getDb }));
 
-  // Start the BullMQ worker unless we are in test mode (neo4jRun injected).
-  if (!neo4jRun) {
+  // Start the BullMQ worker only for a real running app (see queueEnabled above).
+  if (queueEnabled) {
     const apiBase =
       apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
     const translateUrl =

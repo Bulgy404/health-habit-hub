@@ -497,8 +497,10 @@ export function createHabitsCrudRouter({
   router.get('/jobs/:jobId', async (req, res) => {
     const userId = req.user?.sub;
     const { jobId } = req.params;
+    // No queue (synchronous/test mode) → there are no async jobs to report.
+    if (!habitQueue) return res.status(404).json({ error: 'Job not found' });
     try {
-      const job = await getJobStatus(jobId);
+      const job = await getJobStatus(jobId, habitQueue);
       if (!job) return res.status(404).json({ error: 'Job not found' });
       if (job.userID !== userId)
         return res.status(403).json({ error: 'Forbidden' });

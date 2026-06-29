@@ -34,10 +34,12 @@ export function getHabitQueue() {
  * Returns null if the job does not exist or has expired.
  *
  * @param {string} jobId - UUID used as the BullMQ job ID
+ * @param {Queue} [queue] - Queue to query; defaults to the shared singleton.
+ *   Callers in test mode (no Redis) should not call this with a null queue.
  * @returns {Promise<{ jobId, status, uuid, userID, failReason? } | null>}
  */
-export async function getJobStatus(jobId) {
-  const job = await Job.fromId(getHabitQueue(), jobId);
+export async function getJobStatus(jobId, queue = getHabitQueue()) {
+  const job = await Job.fromId(queue, jobId);
   if (!job) return null;
 
   const state = await job.getState();
