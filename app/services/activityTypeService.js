@@ -93,6 +93,14 @@ export async function updateActivityType(db, key, patch) {
   if (patch.label_de !== undefined)
     $set.label_de = patch.label_de != null ? String(patch.label_de) : '';
   if (patch.isDefault !== undefined) $set.isDefault = Boolean(patch.isDefault);
+  // Guard against an empty patch: MongoDB throws "'$set' is empty" if we pass
+  // { $set: {} }. A no-op PATCH should just confirm the doc exists, not 500.
+  if (Object.keys($set).length === 0) {
+    const exists = await db
+      .collection(COLLECTION)
+      .findOne({ key }, { projection: { _id: 1 } });
+    return exists ? { ok: true } : { notFound: true };
+  }
   const result = await db.collection(COLLECTION).updateOne({ key }, { $set });
   if (result.matchedCount === 0) return { notFound: true };
   return { ok: true };

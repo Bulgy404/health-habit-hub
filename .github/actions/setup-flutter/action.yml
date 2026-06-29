@@ -1,5 +1,5 @@
 name: 'Setup Flutter'
-description: 'Checkout, set up Flutter stable with pub cache, and install pub dependencies'
+description: 'Set up Flutter stable with pub cache, stub Firebase config, and install pub dependencies (run actions/checkout first)'
 
 runs:
   using: 'composite'

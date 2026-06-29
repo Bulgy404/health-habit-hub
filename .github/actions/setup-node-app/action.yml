@@ -1,5 +1,5 @@
 name: 'Setup Node.js application'
-description: 'Checkout, set up Node.js 22 with npm cache, and install dependencies'
+description: 'Set up Node.js 22 with npm cache and install dependencies (run actions/checkout first)'
 
 inputs:
   working-directory:

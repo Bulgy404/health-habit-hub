@@ -98,8 +98,9 @@ This runs `docker compose -f docker-compose.local.yml up -d`, starting:
 | **recommender** | Python FastAPI recommender | `localhost:8001` |
 | **lightrag** | LightRAG knowledge base (REST API + graph UI) | `localhost:9622` |
 | **knowledge-mcp** | MCP server wrapping LightRAG | `localhost:8002` |
-| **fuseki** | Apache Jena Fuseki (RDF/SPARQL) | `localhost:3030` |
 | **translate** | LibreTranslate | `localhost:5001` |
+
+> The Apache Jena **Fuseki** triple store has been retired and is no longer part of the compose stack — see [`../migration.md`](../migration.md). BCIO mapping now runs on in-process embeddings in the recommender service.
 
 > **Note:** On first start, Neo4j and Keycloak each take 30–60 seconds to become healthy, and `keycloak-init` must complete before the `admin` container starts. Wait before running the next step.
 
@@ -307,7 +308,7 @@ lsof -i :3000 | grep LISTEN
 kill -9 <PID>
 ```
 
-Common conflicting ports: `3000` (app), `3001` (admin), `7474`/`7687` (neo4j), `8080` (keycloak), `27017` (mongo), `5001` (libretranslate), `6379` (redis), `3030` (fuseki), `8001` (recommender).
+Common conflicting ports: `3000` (app), `3001` (admin), `7474`/`7687` (neo4j), `8080` (keycloak), `27017` (mongo), `5001` (libretranslate), `6379` (redis), `9622` (lightrag), `8001` (recommender).
 
 ---
 

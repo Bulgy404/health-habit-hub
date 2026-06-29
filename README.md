@@ -184,7 +184,7 @@ Local service URLs after `make dev`:
 | Admin UI | http://admin.localhost |
 | Keycloak | http://localhost:8080 |
 | Neo4j Browser | http://localhost:7474 |
-| LightRAG (graph UI) | http://localhost:9621 |
+| LightRAG (graph UI) | http://localhost:9622 |
 | LibreTranslate | http://localhost:5001 |
 | Python AI service | http://localhost:8001 |
 | Prometheus | http://prometheus.localhost |
@@ -197,6 +197,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 
 | Command | Description |
 |---|---|
+| `make help` | List every available target (the default `make` goal) |
 | `make dev` | Start all services |
 | `make stop` | Stop all services |
 | `make seed` | Seed databases |
@@ -244,7 +245,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 |---|---|
 | System architecture | [docs/diagrams/architecture/](docs/diagrams/architecture/) |
 | Use cases (diagram + catalogue) | [docs/diagrams/use-cases/](docs/diagrams/use-cases/) |
-| Sequence diagrams (UC-01 … UC-30) | [docs/diagrams/sequences/](docs/diagrams/sequences/) |
+| Sequence diagrams (UC-01 … UC-34) | [docs/diagrams/sequences/](docs/diagrams/sequences/) |
 | Domain class diagram | [docs/diagrams/classes/](docs/diagrams/classes/) |
 
 **Reference**
@@ -252,7 +253,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 | Document | Description |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | Per-service reference, pipelines, auth flows, data storage rationale |
-| [docs/data-model.md](docs/data-model.md) | Neo4j / Fuseki / MongoDB schemas with annotated queries |
+| [docs/data-model.md](docs/data-model.md) | Neo4j and MongoDB schemas with annotated queries (plus the retired Fuseki/RDF model, kept for historical data) |
 | [docs/api/openapi.yaml](docs/api/openapi.yaml) | OpenAPI 3.1 spec ([Postman collection](docs/api/hhh-postman-collection.json)) |
 | [docs/migration.md](docs/migration.md) | Neo4j schema migration plan |
 | [docs/runbook.md](docs/runbook.md) | Operations runbook |

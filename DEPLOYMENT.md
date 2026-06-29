@@ -37,8 +37,6 @@ KEYCLOAK_ADMIN_PASSWORD=<local-keycloak-password>
 KEYCLOAK_ADMIN_CLIENT_SECRET=<local-hhh-backend-secret>
 MONGO_PASSWORD=<local-mongo-password>
 NEO4J_PASSWORD=<local-neo4j-password>
-DB_PASSWORD=<local-fuseki-password>
-ADMIN_PASSWORD=<local-fuseki-password>
 API_SERVICE_SECRET=<local-api-service-secret>
 LLM_API_KEY=<optional-but-needed-for-recommender-features>
 ```
@@ -67,7 +65,7 @@ docker compose down -v
 This resets:
 - MongoDB data
 - Neo4j data
-- Fuseki data
+- LightRAG index
 - Redis data
 - Keycloak local realm storage
 
@@ -104,9 +102,9 @@ Expected local URLs in this mode:
 | Keycloak | `http://localhost:8080` | Realm + admin console |
 | Keycloak Admin Console | `http://localhost:8080/admin/` | Login with `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
 | Keycloak Realm Metadata | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | Quick realm import check |
-| Fuseki | `http://localhost:3030` | Basic auth with `admin` + `ADMIN_PASSWORD` |
 | Translation | `http://localhost:5001` | LibreTranslate in `docker-compose.local.yml` |
 | Neo4j Browser | `http://localhost:7474` | Login with `neo4j` + `NEO4J_PASSWORD` |
+| LightRAG | `http://localhost:9622` | Graph + vector knowledge base UI |
 | Recommender | `http://localhost:8001/docs` | FastAPI docs |
 | Redis | `localhost:6379` | No auth in local mode |
 | Prometheus | `http://prometheus.localhost` | Scrapes app metrics from `app:9091` |
@@ -132,7 +130,7 @@ This stack also starts Traefik and the Next.js admin app. Use these local URLs:
 Notes:
 - `*.localhost` resolves locally on modern browsers, so `app.localhost` and `admin.localhost` should work without editing `/etc/hosts`.
 - The admin app uses the `hhh-admin` Keycloak client and requires a Keycloak user with the `admin` or `researcher` realm role.
-- `docker-compose.yml` does not include Redis; Redis is only present in `docker-compose.local.yml` and `docker-compose.prod.yml`.
+- Redis is included in `docker-compose.yml`, `docker-compose.local.yml`, and `docker-compose.prod.yml` — it is the API-service response cache and is required by all stacks.
 
 ### 5. Create a Local Admin User in Keycloak
 
@@ -204,7 +202,6 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
   - Sender domain verified
 
 ### 4. Security — Generate Secure Values
-- [ ] Fuseki admin password (`ADMIN_PASSWORD`)
 - [ ] MongoDB password (`MONGO_PASSWORD`)
 - [ ] Mongo Express password (`MONGO_EXPRESS_PASSWORD`)
 - [ ] Neo4j password (`NEO4J_PASSWORD`)
@@ -255,7 +252,6 @@ The `stack.env` file in the repository contains placeholder values. Override eve
 
 ```env
 # Passwords — generate secure values!
-ADMIN_PASSWORD=<your-secure-fuseki-password>
 MONGO_PASSWORD=<your-secure-mongo-password>
 MONGO_EXPRESS_PASSWORD=<your-secure-mongo-express-password>
 NEO4J_PASSWORD=<your-secure-neo4j-password>
@@ -317,7 +313,6 @@ All containers should be running:
 |-----------|------|
 | `h3-2-proxy` | Traefik reverse proxy |
 | `h3-2-app` | Node.js backend API |
-| `h3-2-fuseki` | Apache Jena Fuseki RDF/SPARQL database |
 | `h3-2-mongo` | MongoDB — survey responses, recommendations, user preferences |
 | `h3-2-mongo-express` | MongoDB web UI |
 | `h3-2-neo4j` | Neo4j graph database — habit graph, BCIO ontology |
@@ -326,6 +321,8 @@ All containers should be running:
 | `h3-2-keycloak-db` | PostgreSQL — Keycloak backend database |
 | `h3-2-keycloak` | Keycloak identity provider — authentication and authorisation |
 | `h3-2-recommender` | Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement |
+| `h3-2-lightrag` | LightRAG — graph + vector knowledge base |
+| `h3-2-knowledge-mcp` | MCP server exposing the knowledge base to AI agents |
 | `h3-2-admin` | Next.js admin panel — study management UI |
 | `h3-2-backup` | Backup service |
 
@@ -339,7 +336,6 @@ All containers should be running:
 - [ ] Main application: `https://habit.wiwi.tu-dresden.de`
 - [ ] Admin panel: `https://habit.wiwi.tu-dresden.de/admin`
 - [ ] Mongo Express: `https://habit.wiwi.tu-dresden.de/mongo`
-- [ ] Fuseki (requires auth): `https://habit.wiwi.tu-dresden.de/fuseki`
 - [ ] Translation API: `https://habit.wiwi.tu-dresden.de/translate`
 - [ ] Neo4j browser: `http://localhost:7474` (via SSH tunnel — see below)
 - [ ] Traefik dashboard: `https://habit.wiwi.tu-dresden.de/dashboard`
@@ -438,10 +434,11 @@ h3-proxy network (bridge)
    |-- h3-2-app          Node.js backend API
    |-- h3-2-admin        Next.js admin panel
    |-- h3-2-recommender  Python FastAPI — LLM/BCIO/recommendations
+   |-- h3-2-lightrag     LightRAG — graph + vector knowledge base
+   |-- h3-2-knowledge-mcp MCP server — knowledge base for AI agents
    |-- h3-2-redis        Redis — notification locks, recommendation cache
    |-- h3-2-keycloak     Keycloak — ports 8080 exposed for admin UI
    |-- h3-2-keycloak-db  PostgreSQL — Keycloak database (internal only)
-   |-- h3-2-fuseki       RDF/SPARQL
    |-- h3-2-mongo        MongoDB
    |-- h3-2-mongo-express MongoDB UI
    |-- h3-2-neo4j        Graph DB — ports 7474/7687 exposed for SSH tunnel
@@ -490,14 +487,14 @@ In Portainer:
 
 ### Services Can't Communicate
 
-**Problem:** App can't connect to MongoDB / Fuseki / Neo4j / Redis
+**Problem:** App can't connect to MongoDB / Neo4j / Redis / recommender
 
 **Solutions:**
 1. Verify all containers are on the same network:
    ```bash
    docker network inspect h3-proxy
    ```
-2. Check service names match those in `docker-compose.prod.yml` (internal hostnames are the service keys: `mongo`, `fuseki`, `neo4j`, `redis`, `recommender`)
+2. Check service names match those in `docker-compose.prod.yml` (internal hostnames are the service keys: `mongo`, `neo4j`, `redis`, `recommender`, `lightrag`)
 3. Verify environment variables in Portainer
 
 ### Recommender / API Service Errors
@@ -634,9 +631,9 @@ Automatic via Let's Encrypt — certificates auto-renew 30 days before expiry. M
 | Keycloak Admin UI | `https://habit.wiwi.tu-dresden.de/auth/admin` | `http://keycloak.localhost/admin/` | `http://localhost:8080/admin/` |
 | Keycloak Realm Metadata | — | `http://keycloak.localhost/realms/hhh/.well-known/openid-configuration` | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` |
 | Mongo Express | `https://habit.wiwi.tu-dresden.de/mongo` | not in `docker-compose.local.yml` | `http://localhost:8081` (with `docker compose up`) |
-| Fuseki | `https://habit.wiwi.tu-dresden.de/fuseki` | `http://fuseki.localhost` | `http://localhost:3030` |
 | Translation | `https://habit.wiwi.tu-dresden.de/translate` | `http://translate.localhost` | `http://localhost:5001` |
 | Neo4j Browser | SSH tunnel only (see below) | `http://neo4j.localhost` | `http://localhost:7474` |
+| LightRAG | SSH tunnel only | `http://localhost:9622` | `http://localhost:9622` |
 | Recommender API docs | — | not routed via Traefik locally | `http://localhost:8001/docs` |
 | Prometheus | — (not in prod yet) | `http://prometheus.localhost` | `http://localhost:9090` |
 | Grafana | — (not in prod yet) | `http://grafana.localhost` | `http://localhost:3002` |
@@ -786,24 +783,24 @@ docker start h3-2-neo4j
 docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}
 ```
 
-### Fuseki Data
+### LightRAG Data
 
-**Storage:** Named volume `h3-2-fuseki-data`
+**Storage:** Named volume `h3-2-lightrag-data` (graph + vector knowledge base index). Also captured automatically by the nightly backup service.
 
-**Backup Fuseki:**
+**Backup LightRAG index:**
 ```bash
 docker run --rm \
-  -v h3-2-fuseki-data:/data \
+  -v h3-2-lightrag-data:/data \
   -v $(pwd):/backup \
-  alpine tar czf /backup/fuseki-backup-$(date +%Y%m%d).tar.gz -C /data .
+  alpine tar czf /backup/lightrag-backup-$(date +%Y%m%d).tar.gz -C /data .
 ```
 
-**Restore Fuseki:**
+**Restore LightRAG index:**
 ```bash
 docker run --rm \
-  -v h3-2-fuseki-data:/data \
+  -v h3-2-lightrag-data:/data \
   -v $(pwd):/backup \
-  alpine tar xzf /backup/fuseki-backup-YYYYMMDD.tar.gz -C /data
+  alpine tar xzf /backup/lightrag-backup-YYYYMMDD.tar.gz -C /data
 ```
 
 ### Redis Data

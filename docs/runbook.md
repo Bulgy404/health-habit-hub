@@ -65,7 +65,7 @@ git --version
 | 8080 | TCP      | Keycloak admin UI (restrict to trusted IPs in production) |
 
 > **Security note:** Port 8080 should be firewalled to admin IP ranges only.
-> Never expose Neo4j (7474/7687), MongoDB (27017), or Fuseki (3030) externally.
+> Never expose Neo4j (7474/7687) or MongoDB (27017) externally.
 
 ---
 
@@ -99,7 +99,6 @@ KEYCLOAK_ADMIN_PASSWORD=<strong-password>
 KC_DB_PASSWORD=<strong-password>      # Keycloak PostgreSQL DB password
 MONGO_PASSWORD=<strong-password>
 NEO4J_PASSWORD=<strong-password>
-DB_PASSWORD=<strong-password>         # Fuseki
 ADMIN_PASSWORD=<strong-password>      # application admin
 API_SERVICE_SECRET=<hex-secret>       # shared secret between h3-app and h3-recommender
 LIGHTRAG_API_KEY=<hex-secret>         # bearer token protecting LightRAG REST API
@@ -120,11 +119,10 @@ docker compose --env-file stack.env.local up -d
 
 Expected output (services pulling/building, then starting):
 ```
-[+] Running 13/13
+[+] Running 12/12
  ✔ Container h3-traefik        Started
  ✔ Container h3-mongo          Started
  ✔ Container h3-neo4j          Started
- ✔ Container h3-fuseki         Started
  ✔ Container h3-keycloak       Started
  ✔ Container h3-recommender    Started
  ✔ Container h3-lightrag       Started
@@ -155,7 +153,6 @@ Expected output (all services reachable):
     "services": {
         "neo4j":      { "status": "ok", "latencyMs": 12 },
         "mongo":      { "status": "ok", "latencyMs":  5 },
-        "fuseki":     { "status": "ok", "latencyMs": 18 },
         "keycloak":   { "status": "ok", "latencyMs": 30 },
         "recommender":{ "status": "ok", "latencyMs":  8 }
     }
@@ -332,15 +329,15 @@ docker exec h3-backup tail -50 /backups/backup.log
 Expected output (successful run):
 ```
 [2026-03-15 02:00:01] Starting backup...
-[2026-03-15 02:00:02] 1/4 Dumping MongoDB...
-[2026-03-15 02:00:05] MongoDB dump complete.
-[2026-03-15 02:00:05] 2/4 Dumping Neo4j...
-[2026-03-15 02:00:10] Neo4j dump complete.
-[2026-03-15 02:00:10] 3/4 Dumping Fuseki...
-[2026-03-15 02:00:11] Fuseki dump complete.
-[2026-03-15 02:00:11] 4/4 Exporting Keycloak realm...
-[2026-03-15 02:00:14] Keycloak export complete.
-[2026-03-15 02:00:15] Archiving to full_backup_20260315_020000.tar.gz...
+[2026-03-15 02:00:02] 1/5 Backing up MongoDB...
+[2026-03-15 02:00:05] ✓ MongoDB backup completed
+[2026-03-15 02:00:05] 2/5 Backing up LightRAG index...
+[2026-03-15 02:00:08] ✓ LightRAG backup completed
+[2026-03-15 02:00:08] 3/5 Backing up Neo4j (using neo4j-admin dump)...
+[2026-03-15 02:00:13] ✓ Neo4j backup completed
+[2026-03-15 02:00:13] 4/5 Backing up Keycloak realm...
+[2026-03-15 02:00:16] ✓ Keycloak backup completed
+[2026-03-15 02:00:16] 5/5 Creating unified backup archive...
 [2026-03-15 02:00:18] Backup complete. Size: 24M
 ```
 
@@ -351,7 +348,7 @@ ARCHIVE=$(docker exec h3-backup ls /backups/full_backup_*.tar.gz | tail -1)
 docker exec h3-backup tar -tzf "$ARCHIVE" | head -20
 ```
 
-Expected output: a list of paths inside the archive (mongo/, neo4j/, fuseki/, keycloak/).
+Expected output: a list of paths inside the archive (mongo/, lightrag/, neo4j/, keycloak/).
 
 ---
 
@@ -559,7 +556,6 @@ Expected output:
     "services": {
         "neo4j":      { "status": "ok", "latencyMs": 12 },
         "mongo":      { "status": "ok", "latencyMs":  5 },
-        "fuseki":     { "status": "ok", "latencyMs": 18 },
         "keycloak":   { "status": "ok", "latencyMs": 30 },
         "recommender":{ "status": "ok", "latencyMs":  8 }
     }
