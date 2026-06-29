@@ -64,7 +64,8 @@ export function createStudiesRouter({
   // POST /api/v1/admin/studies — create a new study
   router.post('/studies', validate(createStudySchema), async (req, res) => {
     try {
-      const { name, description, groups, questionnaires } = req.body;
+      const { name, description, groups, questionnaires, recommenderEnabled } =
+        req.body;
       const database = await getDb();
       const study = await createStudy({
         db: database,
@@ -72,6 +73,7 @@ export function createStudiesRouter({
         description,
         groups,
         questionnaires,
+        recommenderEnabled,
       });
       res.status(201).json({
         id: study._id.toString(),
@@ -79,6 +81,7 @@ export function createStudiesRouter({
         description: study.description,
         isDefault: study.isDefault,
         isActive: study.isActive,
+        recommenderEnabled: study.recommenderEnabled !== false,
         groups: study.groups,
         questionnaires: (study.questionnaires || []).map((id) => id.toString()),
         createdAt: study.createdAt,

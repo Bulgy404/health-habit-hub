@@ -22,12 +22,14 @@ export const createStudySchema = z.object({
   description: longString.optional(),
   groups: z.array(studyGroupSchema).min(1).max(8),
   questionnaires: z.array(mongoId).max(20).optional(),
+  recommenderEnabled: z.boolean().optional(),
 });
 
 export const updateStudySchema = z
   .object({
     name: shortString.optional(),
     description: longString.optional(),
+    recommenderEnabled: z.boolean().optional(),
   })
   .strict();
 

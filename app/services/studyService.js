@@ -42,6 +42,7 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
       description: s.description ?? null,
       isDefault: s.isDefault,
       isActive: s.isActive,
+      recommenderEnabled: s.recommenderEnabled !== false,
       groups: s.groups,
       questionnaires: (s.questionnaires || []).map((id) => id.toString()),
       participantCount: countMap[s._id.toString()] ?? 0,
@@ -62,6 +63,7 @@ export async function createStudy({
   description = null,
   groups = [],
   questionnaires = [],
+  recommenderEnabled = true,
 }) {
   const now = new Date();
   const studyGroups = groups.map((g, i) => ({
@@ -77,6 +79,7 @@ export async function createStudy({
     description,
     isDefault: false,
     isActive: true,
+    recommenderEnabled: recommenderEnabled !== false,
     groups: studyGroups,
     questionnaires: questionnaireIds,
     createdAt: now,
@@ -107,6 +110,7 @@ export async function getStudy({ db, id }) {
     description: study.description ?? null,
     isDefault: study.isDefault,
     isActive: study.isActive,
+    recommenderEnabled: study.recommenderEnabled !== false,
     groups: study.groups,
     questionnaires: (study.questionnaires || []).map((id) => id.toString()),
     createdAt: study.createdAt,
@@ -135,6 +139,8 @@ export async function updateStudy({ db, id, updates }) {
   if (updates.name !== undefined) $set.name = updates.name;
   if (updates.description !== undefined) $set.description = updates.description;
   if (updates.isActive !== undefined) $set.isActive = updates.isActive;
+  if (updates.recommenderEnabled !== undefined)
+    $set.recommenderEnabled = updates.recommenderEnabled;
 
   // Groups are additive: append new groups, keep existing ones
   if (Array.isArray(updates.groups) && updates.groups.length > 0) {

@@ -8,6 +8,15 @@ final habitConfigProvider = FutureProvider<HabitConfig>((ref) {
   return ref.watch(myHabitsServiceProvider).fetchHabitConfig();
 });
 
+/// Whether the recommender feature is enabled for the current participant's
+/// study. Defaults to `true` while the config is loading or on error, so the
+/// recommender is only hidden once we positively know the study disabled it.
+final recommenderEnabledProvider = Provider<bool>((ref) {
+  return ref
+      .watch(habitConfigProvider)
+      .maybeWhen(data: (c) => c.recommenderEnabled, orElse: () => true);
+});
+
 /// All active implementation intentions for the current user.
 final intentionsProvider = FutureProvider<List<Intention>>((ref) {
   return ref.watch(myHabitsServiceProvider).listIntentions();

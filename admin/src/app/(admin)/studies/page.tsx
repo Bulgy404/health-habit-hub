@@ -30,6 +30,7 @@ interface StudySummary {
   description: string;
   isActive: boolean;
   isDefault: boolean;
+  recommenderEnabled: boolean;
   groups: StudyGroup[];
   questionnaires: string[];
   participantCount: number;
@@ -1572,6 +1573,9 @@ function StudyModal({
   const [description, setDescription] = useState(
     initial?.description ?? ""
   );
+  const [recommenderEnabled, setRecommenderEnabled] = useState(
+    initial?.recommenderEnabled ?? true
+  );
   const [groupCount, setGroupCount] = useState(
     initial?.groups.length ?? 1
   );
@@ -1609,6 +1613,7 @@ function StudyModal({
       const payload = {
         name: name.trim(),
         description: description.trim(),
+        recommenderEnabled,
         groups: groupLabels.slice(0, groupCount).map((label) => ({ label })),
       };
       if (isEdit) {
@@ -1756,6 +1761,21 @@ function StudyModal({
                     placeholder="Optional description for this study"
                   />
                   <span className={styles.hint}>Optional. For internal reference only.</span>
+                </div>
+
+                <div className={`${styles.formGroup} ${styles.formFull}`}>
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={recommenderEnabled}
+                      onChange={(e) => setRecommenderEnabled(e.target.checked)}
+                    />
+                    Enable recommender for this study
+                  </label>
+                  <span className={styles.hint}>
+                    When disabled, participants in this study do not see the
+                    recommender screen in the app.
+                  </span>
                 </div>
 
                 <div className={styles.formGroup}>

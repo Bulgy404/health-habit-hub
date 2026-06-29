@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
+import '../features/my_habits/my_habits_provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/consent_service.dart';
 import '../services/offline_queue_service.dart';
@@ -50,24 +51,41 @@ class ShellScreen extends ConsumerStatefulWidget {
 }
 
 class _ShellScreenState extends ConsumerState<ShellScreen> {
+  // `branch` is the index of the matching StatefulShellBranch in app_router.dart.
+  // Keep these in sync with the branch order there.
   static const _allTabs = [
-    _TabConfig(label: 'Share', icon: Icons.volunteer_activism, path: '/share'),
-    _TabConfig(label: 'Explore', icon: Icons.hub, path: '/explore'),
-    _TabConfig(label: 'Habits', icon: Icons.self_improvement, path: '/habits'),
-    _TabConfig(label: 'Recs', icon: Icons.lightbulb, path: '/recommend'),
+    _TabConfig(
+      label: 'Share',
+      icon: Icons.volunteer_activism,
+      path: '/share',
+      branch: 0,
+    ),
+    _TabConfig(label: 'Explore', icon: Icons.hub, path: '/explore', branch: 1),
+    _TabConfig(
+      label: 'Habits',
+      icon: Icons.self_improvement,
+      path: '/habits',
+      branch: 2,
+    ),
+    _TabConfig(
+      label: 'Recs',
+      icon: Icons.lightbulb,
+      path: '/recommend',
+      branch: 3,
+    ),
     _TabConfig(
       label: 'Account',
       icon: Icons.manage_accounts,
       path: '/settings',
+      branch: 4,
     ),
     _TabConfig(
       label: 'Admin',
       icon: Icons.admin_panel_settings,
       path: '/admin',
+      branch: 5,
     ),
   ];
-
-  static const int _adminBranchIndex = 5;
 
   @override
   void initState() {
@@ -173,16 +191,23 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     final isAdminOrResearcher =
         roles.contains('admin') || roles.contains('researcher');
 
-    final visibleTabs = isAdminOrResearcher
-        ? _allTabs
-        : _allTabs.where((t) => t.path != '/admin').toList();
+    // Study-level feature flag: hide the recommender tab when the participant's
+    // study disables it. Defaults to enabled while the config loads / on error.
+    final recommenderEnabled = ref.watch(recommenderEnabledProvider);
 
-    // Map visible-tab index to branch index (admin branch is always #5).
-    int currentVisibleIndex = widget.navigationShell.currentIndex;
-    if (!isAdminOrResearcher &&
-        widget.navigationShell.currentIndex >= _adminBranchIndex) {
-      currentVisibleIndex = _adminBranchIndex - 1;
-    }
+    // Filter tabs by capability. `branch` carries the real router branch index,
+    // so visible-index → branch mapping works regardless of which tabs are hidden.
+    final visibleTabs = _allTabs.where((t) {
+      if (t.path == '/admin') return isAdminOrResearcher;
+      if (t.path == '/recommend') return recommenderEnabled;
+      return true;
+    }).toList();
+
+    // Highlight the tab matching the current branch; fall back to the first tab
+    // when the current branch is hidden (e.g. landed on /recommend then disabled).
+    final currentBranch = widget.navigationShell.currentIndex;
+    final matchedIndex = visibleTabs.indexWhere((t) => t.branch == currentBranch);
+    final currentVisibleIndex = matchedIndex >= 0 ? matchedIndex : 0;
 
     return Scaffold(
       body: widget.navigationShell,
@@ -198,14 +223,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
         child: NavigationBar(
           selectedIndex: currentVisibleIndex,
           onDestinationSelected: (visibleIndex) {
-            int branchIndex = visibleIndex;
-            if (!isAdminOrResearcher && visibleIndex >= _adminBranchIndex) {
-              branchIndex = visibleIndex + 1;
-            }
+            final branchIndex = visibleTabs[visibleIndex].branch;
             widget.navigationShell.goBranch(
               branchIndex,
-              initialLocation:
-                  branchIndex == widget.navigationShell.currentIndex,
+              initialLocation: branchIndex == widget.navigationShell.currentIndex,
             );
           },
           destinations: visibleTabs
@@ -227,9 +248,13 @@ class _TabConfig {
     required this.label,
     required this.icon,
     required this.path,
+    required this.branch,
   });
 
   final String label;
   final IconData icon;
   final String path;
+
+  /// Index of the matching StatefulShellBranch in app_router.dart.
+  final int branch;
 }

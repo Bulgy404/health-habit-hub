@@ -51,12 +51,26 @@ async function _resolveGroupCueConfig(db, enrollment) {
  * Resolve cue configuration for a user, including pre-sampled assigned cues.
  * Priority: enrollment.cueConfig (snapshot) > study group cueConfig (live) > admin_settings defaults > hardcoded fallback.
  * @param {{ db: object, userId: string }} deps
- * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array, maxHabits: number|null, assignedCues: Array }>}
+ * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array, maxHabits: number|null, assignedCues: Array, recommenderEnabled: boolean }>}
  */
 export async function resolveHabitConfig({ db, userId }) {
   const enrollment = await db
     .collection(ENROLLMENTS)
     .findOne({ userId: String(userId) });
+
+  // Study-level feature flag: when a study disables the recommender, the app
+  // hides the recommender screen for its participants. Absent flag (or no
+  // enrolment / study) is treated as enabled for backward compatibility.
+  let recommenderEnabled = true;
+  if (enrollment?.studyId) {
+    const study = await db
+      .collection(STUDIES)
+      .findOne(
+        { _id: enrollment.studyId },
+        { projection: { recommenderEnabled: 1 } }
+      );
+    if (study) recommenderEnabled = study.recommenderEnabled !== false;
+  }
 
   let cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits;
 
@@ -102,5 +116,6 @@ export async function resolveHabitConfig({ db, userId }) {
     behaviorOptions,
     maxHabits,
     assignedCues,
+    recommenderEnabled,
   };
 }

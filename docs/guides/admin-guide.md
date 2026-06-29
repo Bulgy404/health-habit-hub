@@ -438,6 +438,8 @@ Tap the **Delete** (trash) icon on any cue row and confirm the dialog. Deletion 
 
 ## 11. Configuring Study Conditions (Cue Config)
 
+> **Recommender toggle (study-level).** The study's **Details** tab has an *"Enable recommender for this study"* checkbox. When unchecked, participants enrolled in that study no longer see the recommender screen (the "Recs" tab) in the app. It applies to the whole study (all groups) and is enabled by default; the change takes effect the next time the participant's app refreshes its configuration.
+
 Each study group can have its own cue delivery settings. These are managed from the **Cue Config** tab inside a study's edit modal.
 
 **Step 1.** In the Admin panel, navigate to **Studies**.
