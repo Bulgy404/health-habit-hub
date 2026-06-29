@@ -32,7 +32,21 @@ async function proxyToRecommender(req, res, targetUrl) {
   }
   try {
     const upstream = await fetch(targetUrl, fetchOptions);
-    const data = await upstream.json();
+    // Preserve the upstream status even when the body is empty or not JSON
+    // (e.g. 204 No Content, or an HTML error page from an intermediary) —
+    // parsing blindly would otherwise mask the real status as a 502 below.
+    const text = await upstream.text();
+    if (!text) {
+      return res.status(upstream.status).end();
+    }
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return res
+        .status(upstream.status)
+        .json({ error: 'Recommender returned a non-JSON response' });
+    }
     res.status(upstream.status).json(data);
   } catch (err) {
     if (err.name === 'TimeoutError' || err.name === 'AbortError') {

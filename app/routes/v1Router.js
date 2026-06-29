@@ -50,6 +50,7 @@ export function createV1Router({
   rateLimiter,
   redisClient,
   redisUrl,
+  enableQueue = false,
 } = {}) {
   const router = express.Router();
 
@@ -200,7 +201,13 @@ export function createV1Router({
   router.use(
     '/habits',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createHabitsRouter({ db, neo4jRun, apiServiceUrl, libreTranslateUrl })
+    createHabitsRouter({
+      db,
+      neo4jRun,
+      apiServiceUrl,
+      libreTranslateUrl,
+      enableQueue,
+    })
   );
 
   // Implementation intentions (user + admin + researcher)

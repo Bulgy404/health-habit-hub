@@ -155,7 +155,9 @@ import {
   initErrorReporting,
   errorReportingMiddleware,
 } from './utils/errorReporting.js';
-app.use('/api/v1', express.json(), createV1Router());
+// enableQueue: true — this is the real app boot, so the BullMQ donation queue
+// and worker should run (they connect to Redis). Tests never set this.
+app.use('/api/v1', express.json(), createV1Router({ enableQueue: true }));
 
 // Bull Board — queue dashboard (local/staging only, never in production).
 if (process.env.NODE_ENV !== 'production') {

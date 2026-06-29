@@ -160,9 +160,39 @@ jobs:
       - uses: actions/checkout@v5
       - uses: ./.github/actions/setup-node-app
 
-      - name: Audit dependencies
+      - name: Audit backend dependencies
         working-directory: app
         run: npm audit --audit-level=critical
+
+      # npm audit reads package-lock.json directly — no install needed for admin.
+      - name: Audit admin dependencies
+        working-directory: admin
+        run: npm audit --audit-level=critical
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 4b. PYTHON – dependency audit (API-service + knowledge-mcp)
+  # ─────────────────────────────────────────────────────────────────────────────
+  python-security:
+    name: Python – dependency audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      # Audit each service's pinned requirements against the PyPI advisory DB.
+      - name: Audit API-service dependencies
+        run: pip-audit -r API-service/requirements.txt
+
+      - name: Audit knowledge-mcp dependencies
+        run: pip-audit -r knowledge-mcp/requirements.txt
 
   # ─────────────────────────────────────────────────────────────────────────────
   # 5. FLUTTER – analyze (fast gate)
@@ -327,17 +357,44 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Each image caches its layers to the GitHub Actions cache (scoped per
+      # image) so unchanged layers are reused across runs instead of rebuilt.
       - name: Build app (Node.js)
-        run: docker build ./app
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          push: false
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,mode=max,scope=app
 
       - name: Build recommender (Python)
-        run: docker build ./API-service
+        uses: docker/build-push-action@v6
+        with:
+          context: ./API-service
+          push: false
+          cache-from: type=gha,scope=recommender
+          cache-to: type=gha,mode=max,scope=recommender
 
       - name: Build backup-service
-        run: docker build ./backup-service
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backup-service
+          push: false
+          cache-from: type=gha,scope=backup
+          cache-to: type=gha,mode=max,scope=backup
 
       - name: Build admin (Next.js)
-        run: docker build -f admin/Dockerfile -t hhh-admin admin/
+        uses: docker/build-push-action@v6
+        with:
+          context: ./admin
+          file: admin/Dockerfile
+          tags: hhh-admin:ci
+          push: false
+          cache-from: type=gha,scope=admin
+          cache-to: type=gha,mode=max,scope=admin
 
   # ─────────────────────────────────────────────────────────────────────────────
   # 10. PYTHON API-SERVICE – pytest
@@ -478,6 +535,7 @@ jobs:
       - backend-unit
       - backend-integration
       - backend-security
+      - python-security
       - flutter-analyze
       - flutter-test
       - flutter-build-web

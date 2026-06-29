@@ -21,8 +21,14 @@ export function createRecommendationsRouter({
   const router = express.Router();
   const getDb = makeGetDb(db);
 
+  // Lazily-created, reused client. A new client per request would churn TCP
+  // connections; we cache only a successful one, so a transient failure still
+  // retries on the next request rather than disabling Redis permanently.
+  let cachedClient;
+
   async function getRedis() {
     if (redisClient !== undefined) return redisClient; // null means disabled in tests
+    if (cachedClient) return cachedClient;
     try {
       const { createClient } = await import('redis');
       const url = redisUrl || process.env.REDIS_URL || 'redis://localhost:6379';
@@ -31,6 +37,7 @@ export function createRecommendationsRouter({
         console.warn('[redis] client error:', err.message)
       );
       await client.connect();
+      cachedClient = client;
       return client;
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
