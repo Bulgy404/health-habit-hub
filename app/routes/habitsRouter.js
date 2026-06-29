@@ -23,6 +23,7 @@ export function createHabitsRouter({
   neo4jRun,
   apiServiceUrl,
   libreTranslateUrl,
+  enableQueue = false,
 } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
@@ -51,12 +52,13 @@ export function createHabitsRouter({
     }
   }
 
-  // The BullMQ queue/worker connect to Redis the moment they are constructed.
-  // Only enable them for a real running app — never under tests, where Redis is
-  // not available (e.g. the CI integration job has Mongo + Neo4j but no Redis).
-  // Tests either inject `neo4jRun` or run with NODE_ENV=test and rely on the
-  // synchronous donation fallback in habitsCrudRouter when habitQueue is null.
-  const queueEnabled = !neo4jRun && process.env.NODE_ENV !== 'test';
+  // The BullMQ queue/worker connect to Redis the moment they are constructed,
+  // so they are strictly opt-in: only the real app boot passes enableQueue=true
+  // (see app.js). Tests never set it, so building any router stays offline and
+  // donation uses the synchronous fallback in habitsCrudRouter when the queue is
+  // null. This avoids ECONNREFUSED when no Redis is present (e.g. the CI
+  // integration job, which has Mongo + Neo4j but no Redis).
+  const queueEnabled = enableQueue && !neo4jRun;
 
   router.use(
     '/',
