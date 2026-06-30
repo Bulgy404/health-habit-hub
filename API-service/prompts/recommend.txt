@@ -7,10 +7,13 @@ USER HEALTH PROFILE:
 
 {profile_detailed}
 
-RELEVANT EXISTING HABITS (user's own):
+RELEVANT EXISTING HABITS (user's own donated habits, selected by relevance to the goal):
 {habit_summary}
 
 {habits_json}
+
+HABITS BOOKMARKED BY THIS USER (habits from other participants that this user has explicitly saved or marked as helpful — strong signal of personal interest):
+{annotated_habits_json}
 
 SIMILAR HABITS FROM OTHER USERS (anonymised, ranked by semantic similarity to the goal — use as inspiration; `community_likes` is how many participants endorsed the habit, so prefer well-liked habits when they fit the user):
 {community_habits_json}
@@ -23,9 +26,10 @@ PRIOR USER FEEDBACK (from previous recommendations for this goal):
 
 Your task:
 1. Generate 3 to 5 personalised habit recommendations tailored to the user's goal, profile, and existing habits.
-2. Draw inspiration from similar habits other users found helpful in comparable situations — give extra weight to habits with high `community_likes` — and adapt them to this user's profile rather than copying them verbatim.
-3. Each recommendation should be grounded in the academic sources where possible.
-4. Take into account any prior feedback the user has given to avoid repeating suggestions they disliked.
+2. Give priority to habits the user has already bookmarked — they signal explicit interest. Build on or extend those habits rather than simply repeating them.
+3. Draw inspiration from similar habits other users found helpful in comparable situations — give extra weight to habits with high `community_likes` — and adapt them to this user's profile rather than copying them verbatim.
+4. Each recommendation should be grounded in the academic sources where possible.
+5. Take into account any prior feedback the user has given to avoid repeating suggestions they disliked.
 
 Return ONLY a JSON object — no prose, no markdown, no code fences — with exactly this structure:
 {{

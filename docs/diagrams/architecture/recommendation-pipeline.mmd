@@ -1,74 +1,164 @@
-%% M3 Recommendation Pipeline — data-flow view
+%% M3 Recommendation Pipeline — data-flow view with queries
 flowchart TD
-    INPUT(["`**POST /llm/recommend**
-    user_id · goal · session_id`"])
+    INPUT(["`**POST /api/v1/llm/recommend**
+    user_id · goal · session_id
+    *Auth: X-Service-Auth-Token*`"])
 
-    CACHE{Redis cache hit?}
+    CACHE{"`Redis cache check
+    GET recommend:{sha256(user_id‖goal)}`"}
     INPUT --> CACHE
-    CACHE -->|yes| DONE(["`Return cached
-    recommendations`"])
+    CACHE -->|hit| DONE(["`Return cached
+    RecommendResponse`"])
 
-    CACHE -->|no| PARALLEL
+    CACHE -->|miss| PARALLEL
 
-    subgraph PARALLEL["Run in parallel"]
+    subgraph PARALLEL["M3.1 + M3.2 + annotated-habits run in parallel  (asyncio.gather)"]
         direction TB
 
         subgraph M31["M3.1 — extract-habits"]
             direction TB
-            EMBED["Embed goal\n(single call, reused)"]
+            EMBED["`**Embed goal** once
+            POST /embeddings
+            model: Qwen3-Embedding-4B (2560-dim)
+            result reused for all searches below`"]
 
-            subgraph PERSONAL["Personal habits"]
-                P1["MATCH Habit {userID}\nfetch + stored embeddings\n≤ 200 rows"]
-                P2["Cosine rank in Python\n→ top USER_HABITS_LIMIT"]
+            subgraph PERSONAL["Personal habits  (1 Neo4j session)"]
+                P1["`**Cypher:**
+                MATCH (h:Habit {userID: $user_id, is_habit: true})
+                OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)
+                RETURN h.uuid,
+                       coalesce(h.translationEN, h.sentence),
+                       collect({dimension: c.dimension, text: c.text}),
+                       h.embedding
+                *LIMIT 200 rows*`"]
+                P2["`cosine rank in Python
+                → top USER_HABITS_LIMIT (default 10)`"]
                 P1 --> P2
             end
 
-            subgraph COMMUNITY["Community habits — 3-index fan-out"]
-                C1["habit_embedding_idx\nsentence match"]
-                C2["context_embedding_idx\nsituational / INTERNAL_STATE match"]
-                C3["bcio_embedding_idx\nbehaviour-change concept match"]
-                CMERGE["Merge by max score\n→ top COMMUNITY_HABITS_LIMIT"]
+            subgraph COMMUNITY["Community habits — 3-index fan-out  (3 parallel Neo4j sessions)"]
+                C1["`**habit_embedding_idx** — sentence-level match
+                CALL db.index.vector.queryNodes(
+                  'habit_embedding_idx', $limit, $embedding)
+                YIELD node, score
+                WHERE node.userID <> $excl AND node.is_habit = true
+                OPTIONAL MATCH (node)-[:HAS_CONTEXT]->(c:Context)
+                RETURN node.uuid, coalesce(node.translationEN, node.sentence),
+                       collect(c), node.annotations_like, score`"]
+                C2["`**context_embedding_idx** — situational / INTERNAL_STATE match
+                CALL db.index.vector.queryNodes(
+                  'context_embedding_idx', $limit, $embedding)
+                YIELD node, score
+                MATCH (h:Habit)-[:HAS_CONTEXT]->(node)
+                WHERE h.userID <> $excl AND h.is_habit = true
+                OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)
+                RETURN h.uuid, coalesce(h.translationEN, h.sentence),
+                       collect(c), h.annotations_like, score`"]
+                C3["`**bcio_embedding_idx** — behaviour-change concept match
+                CALL db.index.vector.queryNodes(
+                  'bcio_embedding_idx', $limit, $embedding)
+                YIELD node, score
+                MATCH (c:Context)-[:MAPS_TO]->(node)
+                MATCH (h:Habit)-[:HAS_CONTEXT]->(c)
+                WHERE h.userID <> $excl AND h.is_habit = true
+                OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(ctx:Context)
+                RETURN h.uuid, coalesce(h.translationEN, h.sentence),
+                       collect(ctx), h.annotations_like, score`"]
+                CMERGE["`Merge by max(score) per UUID
+                → top COMMUNITY_HABITS_LIMIT (default 10)`"]
                 C1 & C2 & C3 --> CMERGE
             end
 
-            DEDUP["Dedup personal + community\ncandidate pool ≤ 20 habits"]
-            LLM1["LLM — select relevant habits\n+ habit_summary"]
+            DEDUP["`Dedup personal + community by UUID
+            candidate pool ≤ 20 habits`"]
+            LLM1["`**LLM call** — extract_habits.txt (temp 0.0)
+            vars: {goal}, {habits_json}
+            → {selected_habit_uuids, habit_summary}`"]
 
             EMBED --> PERSONAL & COMMUNITY
             P2 & CMERGE --> DEDUP --> LLM1
         end
 
-        subgraph M32["M3.2 — extract-profile"]
+        subgraph ANNOT["Annotated habits  (MongoDB + Neo4j)"]
             direction TB
-            Q1["GET /questionnaire-responses\n/service/{userId}/sliq"]
-            Q2["GET /questionnaire-responses\n/service/{userId}/rand-36"]
-            Q3["GET /user-profile\n/service/{userId}"]
-            LLM2["LLM — build profile summary\n+ rag_query"]
+            AN1["`**MongoDB** habit_annotations
+            db.find({userId: $user_id,
+              type: {$in: ['helpful','iDoThis','like']}},
+              {habitId:1, _id:0})`"]
+            AN2["`**Neo4j** — fetch by UUID
+            MATCH (h:Habit {is_habit: true})
+            WHERE h.uuid IN $uuids
+            OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)
+            RETURN h.uuid, coalesce(h.translationEN, h.sentence),
+                   collect({dimension: c.dimension, text: c.text}),
+                   h.annotations_like`"]
+            AN1 --> AN2
+        end
+
+        subgraph M32["M3.2 — extract-profile  (3 parallel HTTP calls, X-Service-Auth-Token)"]
+            direction TB
+            Q1["`GET /api/v1/questionnaire-responses
+            /service/{userId}/sliq`"]
+            Q2["`GET /api/v1/questionnaire-responses
+            /service/{userId}/rand-36`"]
+            Q3["`GET /api/v1/user-profile
+            /service/{userId}`"]
+            LLM2["`**LLM call** — extract_profile.txt (temp 0.0)
+            vars: {goal}, {profile_json}, {sliq_json}, {rand36_json}
+            → {profile_summary, profile_detailed, rag_query}`"]
             Q1 & Q2 & Q3 --> LLM2
         end
     end
 
-    subgraph M33["M3.3 — retrieve (RAG)"]
-        LR["LightRAG hybrid query\ngraph + vector over KB documents"]
+    subgraph M33["M3.3 — retrieve (RAG)  — sequential, uses rag_query from M3.2"]
+        LR["`POST /query to LightRAG (timeout 90 s)
+        {
+          query: rag_query,
+          mode: 'hybrid',
+          only_need_context: true
+        }
+        ↳ searches knowledge graph AND vector index simultaneously
+        ↳ returns synthesised context string from uploaded KB documents`"]
     end
 
-    FB["MongoDB\nprior feedback for this user+goal\n(last 10 comments)"]
+    FB["`**MongoDB** recommendation_feedback
+    db.find({userId: user_id, goal: goal}, {comment:1, _id:0})
+      .sort({created_at: -1}).limit(10)`"]
 
-    RECOMMEND["LLM — recommend.txt prompt\ngoal + profile + habits + KB context + feedback\n→ recommendations JSON"]
+    RECOMMEND["`**LLM call** — recommend.txt (temp 0.2)
+    vars:
+      {goal}                  ← entry point
+      {profile_summary}       ← M3.2 LLM
+      {profile_detailed}      ← M3.2 LLM
+      {habit_summary}         ← M3.1 LLM
+      {habits_json}           ← M3.1 selected personal habits
+      {annotated_habits_json} ← liked/saved habits (MongoDB+Neo4j)
+      {community_habits_json} ← M3.1 community vector results
+      {sources_json}          ← M3.3 LightRAG context
+      {prior_feedback}        ← MongoDB comments
+    → {recommendations: [{title, body, rationale}]}`"]
 
-    STORE["Store in MongoDB\nCache in Redis TTL 24h"]
+    STORE["`**Persist & cache**
+    MongoDB recommendations.insertOne({
+      recommendation_id, userId, goal,
+      session_id, recommendations, generated_at
+    })
+    Redis SETEX recommend:{sha256} 86400`"]
+
     OUT(["`Return **RecommendResponse**
-    recommendation_id · recommendations`"])
+    recommendation_id · recommendations · generated_at`"])
 
     PARALLEL --> M33
     M32 -->|rag_query| M33
     M33 --> RECOMMEND
     M31 --> RECOMMEND
+    ANNOT --> RECOMMEND
     FB --> RECOMMEND
     RECOMMEND --> STORE --> OUT
 
     style M31 fill:#e8f4f8,stroke:#4a90d9
     style M32 fill:#f0f8e8,stroke:#5a9a4a
     style M33 fill:#fff8e8,stroke:#c9a020
+    style ANNOT fill:#f8eef8,stroke:#9a4ab0
     style PERSONAL fill:#d8edf8,stroke:#4a90d9
     style COMMUNITY fill:#c8e4f4,stroke:#4a90d9

@@ -286,7 +286,7 @@ The full data-flow diagram is at [`docs/diagrams/architecture/recommendation-pip
 **Step 0 — Cache check**
 Redis `GET recommend:{sha256(user_id‖goal)}`. On a hit the cached `RecommendResponse` is returned immediately without any LLM or Neo4j calls.
 
-**Steps 1 + 2 — M3.1 and M3.2 run in parallel**
+**Steps 1 + 2 — M3.1, M3.2, and annotated-habits fetch run in parallel**
 
 **M3.1 — extract-habits** selects the most goal-relevant habits from a bounded candidate pool:
 
@@ -300,6 +300,9 @@ Redis `GET recommend:{sha256(user_id‖goal)}`. On a hit the cached `RecommendRe
 | Merge | Three community index results merged by max score → top `COMMUNITY_HABITS_LIMIT` (default 10) |
 | Dedup | Personal + community combined, deduplicated by UUID → candidate pool ≤ 20 habits |
 | LLM selection | LLM receives the candidate pool and selects the most relevant UUIDs + writes a `habit_summary` |
+
+**Annotated-habits fetch** (parallel with M3.1 and M3.2):
+MongoDB `habit_annotations` is queried for all habits the user has explicitly liked or saved (`type: helpful | iDoThis | like`). The matching `Habit` nodes are then fetched from Neo4j with their full context. These are passed to the final prompt as a separate `{annotated_habits_json}` section — a strong personal-interest signal distinct from the user's donated habits or the community semantic search.
 
 **M3.2 — extract-profile** builds a structured user context from questionnaire data:
 
@@ -321,6 +324,45 @@ Prompt assembles: `goal + profile_summary + profile_detailed + habit_summary + s
 
 **Step 6 — Persist and cache**
 Recommendation stored in MongoDB `recommendations` collection; result cached in Redis with 24 h TTL.
+
+### Pipeline input reference
+
+Every data source queried during a single recommendation run:
+
+| Stage | Source | Query / call |
+|---|---|---|
+| **Entry point** | Node.js backend proxy | `POST /api/v1/llm/recommend {user_id, goal, session_id}` with `X-Service-Auth-Token` header |
+| **Cache check** | Redis | `GET recommend:{sha256(user_id‖goal)}` — hit returns cached response; miss continues pipeline |
+| **M3.1 personal habits** | Neo4j (1 session, ≤200 rows) | `MATCH (h:Habit {userID: $user_id, is_habit: true}) OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context) RETURN h.uuid, coalesce(h.translationEN, h.sentence), collect({dimension: c.dimension, text: c.text}), h.embedding` — cosine-ranked in Python, top `USER_HABITS_LIMIT` kept |
+| **M3.1 community — sentence** | Neo4j `habit_embedding_idx` | `CALL db.index.vector.queryNodes('habit_embedding_idx', $limit, $embedding) YIELD node, score WHERE node.userID <> $exclude_user_id AND node.is_habit = true WITH node AS h, score OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context) RETURN h.uuid, coalesce(h.translationEN, h.sentence), collect(c), h.annotations_like, score` |
+| **M3.1 community — context** | Neo4j `context_embedding_idx` | `CALL db.index.vector.queryNodes('context_embedding_idx', $limit, $embedding) YIELD node, score MATCH (h:Habit)-[:HAS_CONTEXT]->(node) WHERE h.userID <> $exclude_user_id AND h.is_habit = true WITH h, score OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context) RETURN h.uuid, coalesce(h.translationEN, h.sentence), collect(c), h.annotations_like, score` |
+| **M3.1 community — BCIO** | Neo4j `bcio_embedding_idx` | `CALL db.index.vector.queryNodes('bcio_embedding_idx', $limit, $embedding) YIELD node, score MATCH (c:Context)-[:MAPS_TO]->(node) MATCH (h:Habit)-[:HAS_CONTEXT]->(c) WHERE h.userID <> $exclude_user_id AND h.is_habit = true WITH h, score OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(ctx:Context) RETURN h.uuid, coalesce(h.translationEN, h.sentence), collect(ctx), h.annotations_like, score` |
+| **M3.1 LLM — habit selection** | LLM (`extract_habits.txt`, temp 0.0) | Prompt vars: `{goal}`, `{habits_json}` (uuid + sentence + context for each candidate) → returns `{selected_habit_uuids, habit_summary}` |
+| **Annotated habits** | MongoDB `habit_annotations` + Neo4j (parallel with M3.1 and M3.2) | `db.habit_annotations.find({userId: user_id, type: {$in: ["helpful","iDoThis","like"]}}, {habitId:1, _id:0})` → fetch matching Habit nodes from Neo4j with context |
+| **M3.2 SLIQ** | Node.js service endpoint | `GET /api/v1/questionnaire-responses/service/{userId}/sliq` with `X-Service-Auth-Token` |
+| **M3.2 RAND-36** | Node.js service endpoint | `GET /api/v1/questionnaire-responses/service/{userId}/rand-36` with `X-Service-Auth-Token` |
+| **M3.2 user profile** | Node.js service endpoint | `GET /api/v1/user-profile/service/{userId}` with `X-Service-Auth-Token` |
+| **M3.2 LLM — profile build** | LLM (`extract_profile.txt`, temp 0.0) | Prompt vars: `{goal}`, `{profile_json}` (age + gender), `{sliq_json}`, `{rand36_json}` → returns `{profile_summary, profile_detailed, rag_query}` |
+| **M3.3 RAG retrieval** | LightRAG (timeout 90 s) | `POST /query {query: rag_query, mode: "hybrid", only_need_context: true}` — searches both knowledge graph and vector index; returns a synthesised context string |
+| **Prior feedback** | MongoDB `recommendation_feedback` | `db.recommendation_feedback.find({userId: user_id, goal: goal}, {comment: 1, _id: 0}).sort({created_at: -1}).limit(10)` |
+| **Cache write** | Redis | `SETEX recommend:{sha256} 86400 <serialised RecommendResponse>` |
+| **Persist result** | MongoDB `recommendations` | `db.recommendations.insertOne({recommendation_id, userId, goal, session_id, recommendations, generated_at})` |
+
+**Final LLM prompt** (`recommend.txt`, temperature 0.2) receives these variables:
+
+| Variable | Populated from |
+|---|---|
+| `{goal}` | Entry point request body |
+| `{profile_summary}` | M3.2 LLM → `profile_summary` (≤80 words) |
+| `{profile_detailed}` | M3.2 LLM → `profile_detailed` (80–200 words) |
+| `{habit_summary}` | M3.1 LLM → `habit_summary` |
+| `{habits_json}` | M3.1 LLM-selected personal habits — `[{uuid, sentence}]` |
+| `{annotated_habits_json}` | Habits user liked/saved — MongoDB `habit_annotations` → Neo4j `[{sentence, context}]` |
+| `{community_habits_json}` | M3.1 community vector-search results — `[{sentence, context, community_likes}]` |
+| `{sources_json}` | M3.3 LightRAG output — `[{filename, excerpt, score}]` |
+| `{prior_feedback}` | MongoDB `recommendation_feedback` comments, one per line (or `"None"`) |
+
+The detailed data-flow with all queries is rendered in [`docs/diagrams/architecture/recommendation-pipeline.mmd`](diagrams/architecture/recommendation-pipeline.mmd). The LLM call structure and final prompt composition are shown in [`docs/diagrams/sequences/UC-recommend-llm-prompt.mmd`](diagrams/sequences/UC-recommend-llm-prompt.mmd).
 
 ### Configurable limits
 

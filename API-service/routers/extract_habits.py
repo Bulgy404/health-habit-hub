@@ -6,9 +6,11 @@ import json
 import logging
 import os
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 from fastapi import APIRouter, Depends
+from motor.motor_asyncio import AsyncIOMotorDatabase
 from neo4j import AsyncGraphDatabase  # type: ignore[import]
 from pydantic import BaseModel, Field
 
@@ -257,14 +259,17 @@ async def _vector_search_habits(
                score
     """
 
-    try:
+    async def _query_in_own_session(index_name: str, cypher_tail: str) -> list[dict[str, object]]:
         driver = await _get_neo4j_driver()
         async with driver.session() as session:
-            habit_records, context_records, bcio_records = await asyncio.gather(
-                _run_vector_query(session, "habit_embedding_idx", query_embedding, habit_tail, params),
-                _run_vector_query(session, "context_embedding_idx", query_embedding, context_tail, params),
-                _run_vector_query(session, "bcio_embedding_idx", query_embedding, bcio_tail, params),
-            )
+            return await _run_vector_query(session, index_name, query_embedding, cypher_tail, params)
+
+    try:
+        habit_records, context_records, bcio_records = await asyncio.gather(
+            _query_in_own_session("habit_embedding_idx", habit_tail),
+            _query_in_own_session("context_embedding_idx", context_tail),
+            _query_in_own_session("bcio_embedding_idx", bcio_tail),
+        )
     except Exception as exc:  # noqa: BLE001
         logger.warning("Neo4j session failed during vector search: %s", exc)
         return []
@@ -275,6 +280,77 @@ async def _vector_search_habits(
                 merged[uuid] = habit
 
     return sorted(merged.values(), key=lambda h: float(h["score"]), reverse=True)[:limit]
+
+
+# ---------------------------------------------------------------------------
+# Annotated habits (liked / saved by this user from the community)
+# ---------------------------------------------------------------------------
+
+async def fetch_annotated_habits(
+    user_id: str,
+    db: AsyncIOMotorDatabase,
+) -> list[dict[str, object]]:
+    """Return habits this user has liked or saved, with full Neo4j context.
+
+    Queries MongoDB habit_annotations for types helpful/iDoThis/like, then
+    fetches the matching Habit nodes from Neo4j.  Returns [] on any error so
+    the caller's pipeline degrades gracefully.
+    """
+    try:
+        cursor = db["habit_annotations"].find(
+            {"userId": user_id, "type": {"$in": ["helpful", "iDoThis", "like"]}},
+            {"habitId": 1, "_id": 0},
+        )
+        raw_uuids: list[str] = []
+        async for doc in cursor:
+            hid = doc.get("habitId")
+            if hid:
+                raw_uuids.append(str(hid))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("MongoDB annotated-habits fetch failed for user %s: %s", user_id, exc)
+        return []
+
+    if not raw_uuids:
+        return []
+
+    uuids = list(dict.fromkeys(raw_uuids))  # deduplicate, preserve insertion order
+    try:
+        driver = await _get_neo4j_driver()
+        async with driver.session() as session:
+            result = await session.run(
+                """
+                MATCH (h:Habit {is_habit: true})
+                WHERE h.uuid IN $uuids
+                OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)
+                RETURN h.uuid AS uuid,
+                       coalesce(h.translationEN, h.sentence) AS sentence,
+                       collect({dimension: c.dimension, text: c.text}) AS ctx_items,
+                       coalesce(h.annotations_like, 0) AS likes
+                """,
+                uuids=uuids,
+            )
+            records = await result.data()
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Neo4j fetch of annotated habits failed: %s", exc)
+        return []
+
+    habits: list[dict[str, object]] = []
+    for rec in records:
+        ctx: dict[str, list[str]] = {dim: [] for dim in _DIMENSIONS}
+        for item in rec.get("ctx_items", []):
+            d = item.get("dimension")
+            t = item.get("text")
+            if d and t and d in ctx:
+                ctx[d].append(t)
+        habits.append(
+            {
+                "uuid": rec["uuid"],
+                "sentence": rec["sentence"],
+                "context": ctx,
+                "likes": int(rec.get("likes", 0) or 0),
+            }
+        )
+    return habits
 
 
 # ---------------------------------------------------------------------------
@@ -322,7 +398,11 @@ def _cache_key(user_id: str, goal: str) -> str:
 def _parse_llm_response(raw: str) -> tuple[list[str], str]:
     """Parse LLM JSON; returns (selected_uuids, habit_summary)."""
     try:
-        parsed = json.loads(raw.strip())
+        text = raw.strip()
+        start, end = text.find("{"), text.rfind("}") + 1
+        if start != -1 and end > start:
+            text = text[start:end]
+        parsed = json.loads(text)
         uuids = parsed.get("selected_habit_uuids", [])
         if not isinstance(uuids, list):
             uuids = []

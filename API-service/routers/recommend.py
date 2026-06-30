@@ -27,6 +27,7 @@ from deps import get_mongo_db, get_redis
 from llm_client import chat_complete
 from routers.extract_habits import ExtractHabitsRequest
 from routers.extract_habits import extract_habits as _extract_habits
+from routers.extract_habits import fetch_annotated_habits as _fetch_annotated_habits
 from routers.extract_profile import ExtractProfileRequest
 from routers.extract_profile import extract_profile as _extract_profile
 from routers.retrieve import RetrieveRequest
@@ -104,7 +105,11 @@ def _parse_llm_response(
 ) -> list[dict[str, object]]:
     """Parse LLM JSON; returns list of recommendation dicts (with sources attached)."""
     try:
-        parsed = json.loads(raw.strip())
+        text = raw.strip()
+        start, end = text.find("{"), text.rfind("}") + 1
+        if start != -1 and end > start:
+            text = text[start:end]
+        parsed = json.loads(text)
         items = parsed.get("recommendations", [])
         if not isinstance(items, list):
             return []
@@ -216,10 +221,11 @@ async def recommend(
         except Exception as exc:  # noqa: BLE001
             logger.warning("Redis read error (%s) — falling back to LLM.", exc)
 
-    # --- M3.1 + M3.2 in parallel ---
-    habits_resp, profile_resp = await asyncio.gather(
+    # --- M3.1 + M3.2 + annotated habits in parallel ---
+    habits_resp, profile_resp, annotated_raw = await asyncio.gather(
         _extract_habits(ExtractHabitsRequest(user_id=body.user_id, goal=body.goal)),
         _extract_profile(ExtractProfileRequest(user_id=body.user_id, goal=body.goal)),
+        _fetch_annotated_habits(body.user_id, db),
     )
 
     # --- M3.3: RAG retrieval using rag_query from M3.2 ---
@@ -232,6 +238,17 @@ async def recommend(
     # --- Build prompt ---
     habits_json = json.dumps(
         [{"uuid": h.uuid, "sentence": h.sentence} for h in habits_resp.selected_habits],
+        ensure_ascii=False,
+        indent=2,
+    )
+    annotated_habits_json = json.dumps(
+        [
+            {
+                "sentence": h["sentence"],
+                "context": {k: v for k, v in h["context"].items() if v},
+            }
+            for h in annotated_raw
+        ],
         ensure_ascii=False,
         indent=2,
     )
@@ -265,6 +282,7 @@ async def recommend(
         profile_detailed=profile_resp.profile_detailed,
         habit_summary=habits_resp.habit_summary,
         habits_json=habits_json,
+        annotated_habits_json=annotated_habits_json,
         community_habits_json=community_habits_json,
         sources_json=sources_json,
         prior_feedback=feedback_text,
