@@ -1,0 +1,148 @@
+%% M3 Recommendation Pipeline — LLM calls and final prompt composition
+%%
+%% Shows the three LLM calls, their exact inputs/outputs, and how they
+%% assemble into the final recommend.txt prompt sent to the LLM.
+%%
+flowchart TD
+
+    %% ── Data sources ─────────────────────────────────────────────────────────
+    GOAL(["goal  ·  user_id  ·  session_id"])
+
+    subgraph NEO4J_PERSONAL["Neo4j — personal habits"]
+        NP["`MATCH (h:Habit {userID: $user_id, is_habit: true})
+        cosine-rank vs. goal embedding
+        → top USER_HABITS_LIMIT`"]
+    end
+
+    subgraph NEO4J_COMMUNITY["Neo4j — community habits (3-index fan-out)"]
+        NC["`habit_embedding_idx  ·  context_embedding_idx  ·  bcio_embedding_idx
+        each: CALL db.index.vector.queryNodes(index, limit, goal_embedding)
+        merge by max(score) → top COMMUNITY_HABITS_LIMIT`"]
+    end
+
+    subgraph MONGO_ANNOT["MongoDB + Neo4j — bookmarked habits"]
+        MA["`habit_annotations.find(
+          {userId, type: {$in: ['helpful','iDoThis','like']}})
+        → fetch Habit nodes from Neo4j by UUID`"]
+    end
+
+    subgraph BACKEND_QA["Node.js backend  (X-Service-Auth-Token)"]
+        QA1["GET /questionnaire-responses/service/{userId}/sliq"]
+        QA2["GET /questionnaire-responses/service/{userId}/rand-36"]
+        QA3["GET /user-profile/service/{userId}"]
+    end
+
+    subgraph LIGHTRAG["LightRAG"]
+        LR["`POST /query
+        {query: rag_query, mode: 'hybrid', only_need_context: true}`"]
+    end
+
+    subgraph MONGO_FB["MongoDB — prior feedback"]
+        FB["`recommendation_feedback.find(
+          {userId, goal}).sort({created_at:-1}).limit(10)`"]
+    end
+
+    %% ── LLM call 1: extract_habits.txt ───────────────────────────────────────
+    subgraph LLM1["① LLM — extract_habits.txt  (temp 0.0)"]
+        direction TB
+        LLM1_IN["`**Prompt inputs:**
+        {goal}
+        {habits_json}  ← personal + community candidate pool
+                         (deduplicated, ≤ 20 habits)`"]
+        LLM1_OUT["`**Outputs:**
+        selected_habit_uuids  → personal habits most relevant to goal
+        habit_summary         → 2–4 sentence narrative`"]
+        LLM1_IN --> LLM1_OUT
+    end
+
+    %% ── LLM call 2: extract_profile.txt ─────────────────────────────────────
+    subgraph LLM2["② LLM — extract_profile.txt  (temp 0.0)"]
+        direction TB
+        LLM2_IN["`**Prompt inputs:**
+        {goal}
+        {profile_json}  ← age + gender from user_profiles
+        {sliq_json}     ← Pittsburgh Sleep Quality Index answers
+        {rand36_json}   ← RAND-36 health-related quality of life answers`"]
+        LLM2_OUT["`**Outputs:**
+        profile_summary   → ≤80-word plain-language summary
+        profile_detailed  → 80–200-word comprehensive paragraph
+        rag_query         → single sentence for KB retrieval`"]
+        LLM2_IN --> LLM2_OUT
+    end
+
+    %% ── Wiring into the two prep LLMs ───────────────────────────────────────
+    GOAL --> LLM1_IN
+    NEO4J_PERSONAL --> LLM1_IN
+    NEO4J_COMMUNITY --> LLM1_IN
+
+    GOAL --> LLM2_IN
+    BACKEND_QA --> LLM2_IN
+
+    LLM2_OUT -->|rag_query| LIGHTRAG
+
+    %% ── Final prompt assembly ─────────────────────────────────────────────────
+    subgraph FINAL["③ Final prompt — recommend.txt  (temp 0.2)"]
+        direction TB
+
+        F1["`**[1] USER GOAL**
+        {goal}  ← from request`"]
+
+        F2["`**[2] USER HEALTH PROFILE**
+        {profile_summary}   ← LLM② profile_summary
+        {profile_detailed}  ← LLM② profile_detailed`"]
+
+        F3["`**[3] RELEVANT EXISTING HABITS  (user's own)**
+        {habit_summary}  ← LLM① habit_summary
+        {habits_json}    ← habits selected by LLM① from personal pool
+                           [{uuid, sentence}]`"]
+
+        F4["`**[4] HABITS BOOKMARKED BY THIS USER**
+        {annotated_habits_json}  ← MongoDB habit_annotations → Neo4j
+                                   [{sentence, context}]
+        *Strong personal-interest signal — build on or extend these*`"]
+
+        F5["`**[5] SIMILAR HABITS FROM OTHER USERS**
+        {community_habits_json}  ← LLM① community_habits (all, not filtered)
+                                   [{sentence, context, community_likes}]`"]
+
+        F6["`**[6] RELEVANT ACADEMIC SOURCES**
+        {sources_json}  ← LightRAG hybrid retrieval
+                          [{filename, excerpt, score}]`"]
+
+        F7["`**[7] PRIOR USER FEEDBACK**
+        {prior_feedback}  ← MongoDB recommendation_feedback
+                            last 10 comments for this user+goal`"]
+
+        F1 --> F2 --> F3 --> F4 --> F5 --> F6 --> F7
+    end
+
+    LLM1_OUT --> F3
+    LLM1_OUT --> F5
+    LLM2_OUT --> F2
+    MONGO_ANNOT --> F4
+    LIGHTRAG --> F6
+    MONGO_FB --> F7
+    GOAL --> F1
+
+    subgraph OUTPUT["LLM③ Output"]
+        OUT["`{recommendations: [
+          {title, body, rationale},
+          ...  (3–5 items)
+        ]}`"]
+    end
+
+    F7 --> OUTPUT
+
+    %% ── Stored / cached ──────────────────────────────────────────────────────
+    PERSIST["`MongoDB recommendations.insertOne(...)
+    Redis SETEX recommend:{sha256(user_id‖goal)} 86400`"]
+    OUTPUT --> PERSIST
+
+    %% ── Styles ───────────────────────────────────────────────────────────────
+    style LLM1 fill:#e8f4f8,stroke:#4a90d9
+    style LLM2 fill:#f0f8e8,stroke:#5a9a4a
+    style FINAL fill:#fff8e8,stroke:#c9a020
+    style MONGO_ANNOT fill:#f8eef8,stroke:#9a4ab0
+    style NEO4J_PERSONAL fill:#d8edf8,stroke:#4a90d9
+    style NEO4J_COMMUNITY fill:#c8e4f4,stroke:#4a90d9
+    style OUTPUT fill:#fce8e8,stroke:#d94a4a
