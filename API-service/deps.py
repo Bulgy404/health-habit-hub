@@ -33,6 +33,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as exc:  # noqa: BLE001
         logger.error("BCIO index warm-up failed: %s", exc)
 
+    from routers.extract_habits import _get_neo4j_driver
+    from routers._gds_ranking import refresh_fastrp_embeddings
+    try:
+        neo4j_driver = await _get_neo4j_driver()
+        ok = await refresh_fastrp_embeddings(neo4j_driver)
+        if not ok:
+            logger.warning(
+                "FastRP embeddings not written — Neo4j GDS plugin may not be installed. "
+                "Community habit re-ranking will use semantic scores only."
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("FastRP startup refresh failed: %s", exc)
+
     yield
 
     if _redis is not None:
