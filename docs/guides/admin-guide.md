@@ -46,7 +46,14 @@ The admin panel is accessible only to users with the `admin` or `researcher` Key
 
 **Step 2.** On the login screen enter your **admin username** and **password** (not a token card — admin accounts use a regular password set in Keycloak). Tap **Login**.
 
-**Step 3.** After login, the navigation bar will show an extra **Admin** tab (gear icon). Tap it to open the admin panel.
+**Step 3.** After login, the navigation bar will show an extra **Admin** tab (gear icon). Tap it to open the admin panel. The left sidebar is organised into two sections:
+
+| Section | Pages |
+|---|---|
+| **Research** | Studies, Analytics |
+| **Configuration** | Cue Pools, Questionnaires, Profile Fields *(admin only)*, Knowledge Base *(admin only)*, Settings *(admin only)* |
+
+`researcher` accounts see only the Configuration items they have access to; admin-only pages are hidden from the sidebar entirely.
 
 | Screenshot | Callout annotations |
 |---|---|
@@ -291,22 +298,36 @@ The CSV contains columns: `participant_pseudonym`, `study_group`, `habit_text`, 
 
 ## 6. Tracking Participant Progress
 
-The participant progress view shows activity summaries for each participant to help identify inactive or struggling participants.
+The participant detail drawer on the **Analytics** page shows a full activity summary for each participant and is the primary place to monitor individual progress.
 
-**Step 1.** In the Admin panel, tap **Participants** and open a participant's detail view.
+**Step 1.** Navigate to **Analytics** in the left sidebar.
 
-**Step 2.** Scroll to the **Activity** section. It shows:
-- **First login date** (or "Not yet logged in")
-- **Profile survey completed** (Yes / No)
-- **Habits donated count** (total and per week)
-- **Last active date**
-- **Recommendations accepted / dismissed count**
+**Step 2.** Select a study from the dropdown at the top of the page.
 
-| Screenshot | Callout annotations |
+**Step 3.** Scroll to the participant table at the bottom of the page and click any participant row. A drawer slides in from the right.
+
+The drawer contains four sections:
+
+| Section | What it shows |
 |---|---|
-| ![Participant progress view](../assets/screenshots/admin/06-participant-progress.png) | **(1)** First login date (or "Not yet logged in" banner). **(2)** Profile completion badge — green tick if completed. **(3)** Habits donated — number badge with weekly sparkline. **(4)** Recommendations panel — accepted vs dismissed ratio bar. **(5)** Last active timestamp. |
+| **Summary** | Habits created, surveys completed, recommendations accepted/dismissed, profile completion, last active date |
+| **Reminders** | Current reminder frequency, autonomy score with score bar, and the per-signal breakdown (see below) |
+| **Completed surveys** | List of surveys the participant has submitted, with completion dates |
+| **Activity timeline** | Chronological log of all tracked events (enrolment, logins, habit creation, survey submissions, etc.) |
 
-*Figure 6: Participant activity summary.*
+### Reminder plan breakdown
+
+The **Reminders** section shows how the adaptive fading algorithm has assessed the participant's habit automaticity for each active intention:
+
+| Field | What it means |
+|---|---|
+| **Frequency badge** | Current reminder cadence — `Daily` (red) → `Every 2 days` (orange) → `Twice weekly` (amber) → `Weekly` (green) → `Off` (grey) |
+| **Score bar** | Autonomy score 0–1; higher = more automatic, fewer reminders needed |
+| **SRHI** | Contribution from the participant's latest weekly habit-strength self-report (weight 50%) |
+| **Adherence 14d** | Contribution from the fraction of the past 14 days with a logged enactment (weight 35%) |
+| **Streak** | Contribution from the current consecutive-day streak, capped at 14 days (weight 15%) |
+
+If the participant has no active intentions, the section shows "No active intentions".
 
 > **Tip:** Use the **Participants** list view's **"No logins yet"** filter (Group filter → Status: Never logged in) to identify participants who have not activated their token cards.
 
@@ -461,21 +482,34 @@ Each study group can have its own cue delivery settings. These are managed from 
 
 ## 12. Viewing Study Analytics
 
-The **Analytics** tab inside a study's edit modal provides live statistics for a running study.
+The standalone **Analytics** page (`/analytics`) is the primary research-monitoring dashboard. It is accessible to both `admin` and `researcher` roles.
 
-**Step 1.** Navigate to **Studies** and open a study.
+**Step 1.** Click **Analytics** in the left sidebar.
 
-**Step 2.** Click the **Analytics** tab.
+**Step 2.** Select a study from the dropdown at the top of the page. All charts and the participant table update automatically.
 
-The tab contains three panels:
+### KPI cards
 
-| Panel | What it shows |
+| Card | What it shows |
 |---|---|
-| Weekly Active Rate | Bar chart showing the percentage of enrolled participants per group who logged at least one behavior in the last 7 days |
-| SRHI Trajectory | Line chart showing the mean SRHI habit-strength score (1–7 scale) per week, with one line per study condition |
-| Cumulative Dropout | Table listing each participant marked as dropped out, with their dropout date and a running total per group |
+| Total enrolled | All participants currently active in the study |
+| Active last 7 days | Percentage who logged at least one behaviour in the past week (amber above 10% inactive, red above 20%) |
+| Dropout count / rate | Cumulative dropout numbers; rate is colour-coded |
+| Mean SRHI (latest week) | Average habit-strength self-report score across all groups at the most recent weekly checkpoint |
+| Questionnaire completion | Average completion rate across all assigned questionnaires |
 
-All data is fetched live on tab open — refresh the tab to update the figures.
+### Charts
+
+| Chart | What it shows |
+|---|---|
+| Weekly Active Rate | Bar chart — per-group percentage of enrolled participants active in the last 7 days |
+| SRHI Trajectory | Line chart — mean SRHI score per group per week; dashed reference line at score 4 (habit threshold) |
+| Cumulative Dropout | Step chart — running dropout count per group over time |
+| Questionnaire Completion | Horizontal bar chart — completion rate per questionnaire |
+
+### Participant table and detail drawer
+
+The table below the charts lists all enrolled participants with username, group, enrolled date, last-active date, inline survey-completion bar, and status badge. Click any row to open the participant detail drawer (see Section 6 for a full description of the drawer contents, including the **Reminders** section).
 
 ---
 

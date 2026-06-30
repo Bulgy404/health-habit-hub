@@ -254,7 +254,7 @@ Beyond the middleware allow-list, the admin panel enforces fine-grained access c
 
 - `/knowledge-base` and `/settings` are admin-only — `researcher` users are redirected to `/access-denied`
 - `/analytics`, `/studies`, `/cue-pools`, and `/questionnaires` are accessible to both `admin` and `researcher`
-- The sidebar hides the KB and Settings entries for `researcher` users so the navigation reflects what they can actually open
+- The sidebar groups navigation into two labelled sections — **Research** (Studies, Analytics) and **Configuration** (Cue Pools, Questionnaires, Profile Fields, Knowledge Base, Settings) — and hides the admin-only Configuration entries for `researcher` users so the navigation reflects what they can actually open
 - Flutter admin routes (when the admin Flutter UI is in use) are restricted to `admin` only
 
 #### Analytics page (`/analytics`)
@@ -265,8 +265,9 @@ The standalone analytics dashboard (`admin/src/app/(admin)/analytics/page.tsx`) 
 - **KPI cards** — total enrolled, active last 7 days (%), dropout count + rate (colour-coded amber/red above 10%/20%), mean SRHI at the latest week, mean questionnaire completion rate
 - **Charts (Recharts)** — vertical BarChart for per-group weekly active rate; LineChart for SRHI trajectory per group with a habit-threshold reference line at score 4; step-after LineChart for cumulative dropout; horizontal BarChart for per-questionnaire completion rates
 - **Participant table** — all enrolled participants for the selected study with username, group, enrolled date, last-active date, inline survey-completion mini-bar, and active/inactive/dropped-out status badge
+- **Participant detail drawer** — clicking any participant row opens a slide-over panel showing: summary stats (habits, surveys, recommendations, profile completion, last active), a **Reminders** section (see below), completed surveys list, and a chronological activity timeline
 
-Data sources: `GET /admin/studies/:id/analytics` (analytics) and `GET /admin/studies/:id/participants` (participant table), both standard backend endpoints.
+Data sources: `GET /admin/studies/:id/analytics` (analytics), `GET /admin/studies/:id/participants` (participant table), `GET /admin/participants/:id/progress` (drawer summary + timeline), `GET /admin/participants/:id/reminder-plans` (drawer Reminders section).
 
 #### Local admin user provisioning
 
@@ -545,6 +546,15 @@ cancels and reschedules local notifications for the next 14 days
 (`mobile/lib/services/reminder_scheduler_service.dart`,
 `flutter_local_notifications` + `timezone`). No server push is involved —
 reminders fire on-device. See `docs/diagrams/sequences/UC-33-adaptive-reminders.mmd`.
+
+**Admin visibility:** `GET /api/v1/admin/participants/:id/reminder-plans`
+(admin/researcher roles) returns the same plan payload for any participant.
+It is surfaced in the Analytics page participant detail drawer as the
+**Reminders** section, showing: current frequency tier (colour-coded badge),
+autonomy score with progress bar, and a per-component breakdown table
+(SRHI ×0.50 / Adherence 14d ×0.35 / Streak ×0.15 with raw value and weighted
+contribution). If the participant has no active intentions the section reads
+"No active intentions".
 
 ### Community Signals: Likes & Comments (UC-34)
 

@@ -506,3 +506,114 @@
 .promptIcon { font-size: 3rem; }
 .promptText { font-size: 1rem; font-weight: 500; }
 .promptSub  { font-size: 0.85rem; }
+
+/* ── Reminder plan cards (inside ParticipantDrawer) ─────────────────────────── */
+
+.reminderPlanCard {
+  padding: 0.75rem 0;
+  border-bottom: 1px dashed var(--color-border);
+}
+
+.reminderPlanCard:last-child {
+  border-bottom: none;
+}
+
+.reminderPlanHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.reminderPlanId {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  font-family: monospace;
+}
+
+.frequencyBadge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.frequencyDaily      { background: #fee2e2; color: #b91c1c; }
+.frequencyEvery2Days { background: #ffedd5; color: #c2410c; }
+.frequencyTwiceWeekly { background: #fef9c3; color: #92400e; }
+.frequencyWeekly     { background: #dcfce7; color: #15803d; }
+.frequencyOff        { background: #f1f5f9; color: var(--color-text-muted); }
+
+.reminderScoreRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.reminderScoreLabel {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  min-width: 2.5rem;
+}
+
+.reminderScoreValue {
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 3rem;
+}
+
+.scoreBarWrap {
+  flex: 1;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.scoreBarFill {
+  height: 100%;
+  background: var(--color-primary, #3b82f6);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.componentTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  margin-bottom: 0.4rem;
+}
+
+.componentTable th {
+  text-align: left;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  padding: 0.15rem 0.25rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.componentTable td {
+  padding: 0.2rem 0.25rem;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+
+.componentTable tr:last-child td {
+  border-bottom: none;
+}
+
+.componentWeight {
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  margin-left: 0.2rem;
+}
+
+.reminderComputedAt {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}

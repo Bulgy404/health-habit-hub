@@ -88,6 +88,22 @@ interface ParticipantProgress {
   timeline: { type: string; timestamp: string; detail: string }[];
 }
 
+interface ReminderPlanComponents {
+  srhi: number;
+  adherence14d: number;
+  streak: number;
+  adherence7d: number;
+}
+
+interface ReminderPlan {
+  intentionId: string;
+  frequency: string;
+  autonomyScore: number;
+  components: ReminderPlanComponents;
+  reminderTime: string | null;
+  computedAt: string;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function apiFetch<T>(url: string, token: string): Promise<T> {
@@ -143,15 +159,35 @@ function KpiCard({ label, value, sub, accent }: {
 
 // ── Participant drawer ────────────────────────────────────────────────────────
 
+const FREQUENCY_LABELS: Record<string, string> = {
+  daily: "Daily",
+  every_2_days: "Every 2 days",
+  twice_weekly: "Twice weekly",
+  weekly: "Weekly",
+  off: "Off",
+};
+
+const FREQUENCY_CSS: Record<string, string> = {
+  daily: styles.frequencyDaily,
+  every_2_days: styles.frequencyEvery2Days,
+  twice_weekly: styles.frequencyTwiceWeekly,
+  weekly: styles.frequencyWeekly,
+  off: styles.frequencyOff,
+};
+
 function ParticipantDrawer({
   participant,
   progress,
   loading,
+  plans,
+  plansLoading,
   onClose,
 }: {
   participant: Participant;
   progress: ParticipantProgress | null;
   loading: boolean;
+  plans: ReminderPlan[] | null;
+  plansLoading: boolean;
   onClose: () => void;
 }) {
   const isDropped = !!participant.droppedOutAt;
@@ -206,6 +242,65 @@ function ParticipantDrawer({
                     <span className={styles.drawerStatValue} style={{ fontSize: "0.9rem" }}>{fmt(participant.lastActive)}</span>
                   </div>
                 </div>
+              </div>
+
+              <div className={styles.drawerSection}>
+                <div className={styles.drawerSectionTitle}>Reminders</div>
+                {plansLoading ? (
+                  <div className={styles.drawerEmpty}>Loading…</div>
+                ) : !plans || plans.length === 0 ? (
+                  <div className={styles.drawerEmpty}>No active intentions</div>
+                ) : (
+                  plans.map((plan) => (
+                    <div key={plan.intentionId} className={styles.reminderPlanCard}>
+                      <div className={styles.reminderPlanHeader}>
+                        <span className={styles.reminderPlanId}>
+                          {plan.intentionId.slice(-8)}
+                          {plan.reminderTime && ` · ${plan.reminderTime}`}
+                        </span>
+                        <span className={`${styles.frequencyBadge} ${FREQUENCY_CSS[plan.frequency] ?? ""}`}>
+                          {FREQUENCY_LABELS[plan.frequency] ?? plan.frequency}
+                        </span>
+                      </div>
+                      <div className={styles.reminderScoreRow}>
+                        <span className={styles.reminderScoreLabel}>Score</span>
+                        <span className={styles.reminderScoreValue}>{plan.autonomyScore.toFixed(3)}</span>
+                        <div className={styles.scoreBarWrap}>
+                          <div className={styles.scoreBarFill} style={{ width: `${Math.round(plan.autonomyScore * 100)}%` }} />
+                        </div>
+                      </div>
+                      <table className={styles.componentTable}>
+                        <thead>
+                          <tr>
+                            <th>Signal</th>
+                            <th>Value</th>
+                            <th>Contribution</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>SRHI</td>
+                            <td>{plan.components.srhi.toFixed(3)}</td>
+                            <td>{(plan.components.srhi * 0.50).toFixed(3)} <span className={styles.componentWeight}>×0.50</span></td>
+                          </tr>
+                          <tr>
+                            <td>Adherence 14d</td>
+                            <td>{plan.components.adherence14d.toFixed(3)}</td>
+                            <td>{(plan.components.adherence14d * 0.35).toFixed(3)} <span className={styles.componentWeight}>×0.35</span></td>
+                          </tr>
+                          <tr>
+                            <td>Streak</td>
+                            <td>{plan.components.streak.toFixed(3)}</td>
+                            <td>{(plan.components.streak * 0.15).toFixed(3)} <span className={styles.componentWeight}>×0.15</span></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div className={styles.reminderComputedAt}>
+                        Computed {fmt(plan.computedAt)}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
               <div className={styles.drawerSection}>
@@ -275,6 +370,8 @@ export default function AnalyticsPage() {
   const [drawerParticipant, setDrawerParticipant] = useState<Participant | null>(null);
   const [drawerProgress, setDrawerProgress] = useState<ParticipantProgress | null>(null);
   const [drawerLoading, setDrawerLoading] = useState(false);
+  const [drawerPlans, setDrawerPlans] = useState<ReminderPlan[] | null>(null);
+  const [drawerPlansLoading, setDrawerPlansLoading] = useState(false);
 
   // ── Load study list ────────────────────────────────────────────────────────
 
@@ -334,6 +431,14 @@ export default function AnalyticsPage() {
     setDrawerParticipant(p);
     setDrawerProgress(null);
     setDrawerLoading(true);
+    setDrawerPlans(null);
+    setDrawerPlansLoading(true);
+
+    apiFetch<{ plans: ReminderPlan[] }>(`${API}/admin/participants/${p.userId}/reminder-plans`, token)
+      .then((d) => setDrawerPlans(d.plans ?? []))
+      .catch(() => setDrawerPlans([]))
+      .finally(() => setDrawerPlansLoading(false));
+
     try {
       const data = await apiFetch<ParticipantProgress>(`${API}/admin/participants/${p.userId}/progress`, token);
       setDrawerProgress(data);
@@ -740,7 +845,9 @@ export default function AnalyticsPage() {
           participant={drawerParticipant}
           progress={drawerProgress}
           loading={drawerLoading}
-          onClose={() => { setDrawerParticipant(null); setDrawerProgress(null); }}
+          plans={drawerPlans}
+          plansLoading={drawerPlansLoading}
+          onClose={() => { setDrawerParticipant(null); setDrawerProgress(null); setDrawerPlans(null); }}
         />
       )}
     </div>
