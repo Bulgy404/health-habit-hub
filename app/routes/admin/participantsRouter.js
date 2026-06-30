@@ -9,6 +9,7 @@ import {
   softDeleteParticipant,
 } from '../../services/adminParticipantService.js';
 import { getParticipantProgress } from '../../services/adminStatsService.js';
+import { computeReminderPlans } from '../../services/reminderPlanService.js';
 import { logger } from '../../utils/logger.js';
 
 const log = logger.child({ module: 'participantsRouter' });
@@ -416,6 +417,23 @@ export function createParticipantsRouter({
       }
 
       res.json(result);
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/participants/:id/reminder-plans
+  router.get('/participants/:id/reminder-plans', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const database = await getDb();
+      const participant = await getParticipant({ db: database, id });
+      if (!participant) {
+        return res.status(404).json({ error: 'Participant not found' });
+      }
+      const plans = await computeReminderPlans({ db: database, userId: id });
+      res.json({ plans });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });

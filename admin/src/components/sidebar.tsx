@@ -24,14 +24,29 @@ interface NavItem {
   adminOnly?: boolean;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: "/studies", label: "Studies", Icon: FlaskConical },
-  { href: "/analytics", label: "Analytics", Icon: BarChart2 },
-  { href: "/cue-pools", label: "Cue Pools", Icon: Crosshair },
-  { href: "/questionnaires", label: "Questionnaires", Icon: ClipboardList },
-  { href: "/profile-fields", label: "Profile Fields", Icon: UserCircle, adminOnly: true },
-  { href: "/knowledge-base", label: "Knowledge Base", Icon: BookOpen, adminOnly: true },
-  { href: "/settings", label: "Settings", Icon: Settings, adminOnly: true },
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    title: "Research",
+    items: [
+      { href: "/studies", label: "Studies", Icon: FlaskConical },
+      { href: "/analytics", label: "Analytics", Icon: BarChart2 },
+    ],
+  },
+  {
+    title: "Configuration",
+    items: [
+      { href: "/cue-pools", label: "Cue Pools", Icon: Crosshair },
+      { href: "/questionnaires", label: "Questionnaires", Icon: ClipboardList },
+      { href: "/profile-fields", label: "Profile Fields", Icon: UserCircle, adminOnly: true },
+      { href: "/knowledge-base", label: "Knowledge Base", Icon: BookOpen, adminOnly: true },
+      { href: "/settings", label: "Settings", Icon: Settings, adminOnly: true },
+    ],
+  },
 ];
 
 /**
@@ -45,7 +60,6 @@ export function Sidebar() {
   const { data: session } = useSession();
 
   const isAdmin = (session?.roles ?? []).includes("admin");
-  const visibleItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
 
   return (
     <aside className={styles.sidebar}>
@@ -55,19 +69,28 @@ export function Sidebar() {
       </div>
 
       <nav className={styles.nav}>
-        <ul className={styles.navList}>
-          {visibleItems.map((item) => (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={`${styles.navLink} ${pathname.startsWith(item.href) ? styles.navLinkActive : ""}`}
-              >
-                <item.Icon size={16} strokeWidth={1.75} />
-                {item.label}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {NAV_SECTIONS.map((section) => {
+          const visible = section.items.filter((item) => !item.adminOnly || isAdmin);
+          if (visible.length === 0) return null;
+          return (
+            <div key={section.title} className={styles.navSection}>
+              <div className={styles.navSectionTitle}>{section.title}</div>
+              <ul className={styles.navList}>
+                {visible.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={`${styles.navLink} ${pathname.startsWith(item.href) ? styles.navLinkActive : ""}`}
+                    >
+                      <item.Icon size={16} strokeWidth={1.75} />
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
       </nav>
 
       <div className={styles.footer}>
