@@ -1,7 +1,8 @@
-%% M3 Recommendation Pipeline — LLM calls and final prompt composition
+%% M3 Recommendation Pipeline — single-LLM-call architecture
 %%
-%% Shows the three LLM calls, their exact inputs/outputs, and how they
-%% assemble into the final recommend.txt prompt sent to the LLM.
+%% LLM-1 (extract_habits selection) is replaced by GDS FastRP re-ranking.
+%% LLM-2 (extract_profile formatting) is replaced by build_profile() (deterministic).
+%% One LLM call writes recommendations with selected_habit_uuids for explainability.
 %%
 flowchart TD
 
@@ -15,9 +16,19 @@ flowchart TD
     end
 
     subgraph NEO4J_COMMUNITY["Neo4j — community habits (3-index fan-out)"]
-        NC["`habit_embedding_idx  ·  context_embedding_idx  ·  bcio_embedding_idx
-        each: CALL db.index.vector.queryNodes(index, limit, goal_embedding)
+        NC["`habit_embedding_idx · context_embedding_idx · bcio_embedding_idx
         merge by max(score) → top COMMUNITY_HABITS_LIMIT`"]
+    end
+
+    subgraph GDS_RERANK["GDS FastRP re-ranking  *(replaces LLM-1 selection)*"]
+        direction TB
+        GR1["`Fetch user habits' fastrp_embedding vectors from Neo4j`"]
+        GR2["`Compute user centroid = mean(user_habit_embeddings)`"]
+        GR3["`Score each community habit:
+        0.5 × cosine(goal_emb, sentence_emb)
+        0.3 × cosine(user_centroid, fastrp_emb)
+        0.2 × log-normalised likes`"]
+        GR1 --> GR2 --> GR3
     end
 
     subgraph MONGO_ANNOT["MongoDB + Neo4j — bookmarked habits"]
@@ -27,9 +38,26 @@ flowchart TD
     end
 
     subgraph BACKEND_QA["Node.js backend  (X-Service-Auth-Token)"]
-        QA1["GET /questionnaire-responses/service/{userId}/sliq"]
-        QA2["GET /questionnaire-responses/service/{userId}/rand-36"]
-        QA3["GET /user-profile/service/{userId}"]
+        QA1["`GET /questionnaire-responses/service/{userId}
+        → enrollment → studyId → questionnaire slugs → latest responses
+        → {[slug]: responseOrNull}  *(study-configurable)*`"]
+        QA2["GET /user-profile/service/{userId}"]
+    end
+
+    subgraph PROFILE_BUILD["build_profile()  *(replaces LLM-2)*"]
+        direction TB
+        PB1["`Extract demographic labels from profile fields`"]
+        PB2["`Format each questionnaire response generically
+        (known slugs get human-readable labels;
+        unknown slugs formatted with raw questionId keys)`"]
+        PB3["`Assemble profile_summary, profile_detailed, rag_query`"]
+        PB1 & PB2 --> PB3
+    end
+
+    subgraph NEO4J_BCIO["Neo4j — BCIO concepts per habit"]
+        BC["`MATCH (h)-[:HAS_CONTEXT]->(c)-[:MAPS_TO]->(b:BCIOConcept)
+        WHERE h.uuid IN top_habit_uuids
+        RETURN h.uuid, collect(DISTINCT b.label)`"]
     end
 
     subgraph LIGHTRAG["LightRAG"]
@@ -42,91 +70,68 @@ flowchart TD
           {userId, goal}).sort({created_at:-1}).limit(10)`"]
     end
 
-    %% ── LLM call 1: extract_habits.txt ───────────────────────────────────────
-    subgraph LLM1["① LLM — extract_habits.txt  (temp 0.0)"]
-        direction TB
-        LLM1_IN["`**Prompt inputs:**
-        {goal}
-        {habits_json}  ← personal + community candidate pool
-                         (deduplicated, ≤ 20 habits)`"]
-        LLM1_OUT["`**Outputs:**
-        selected_habit_uuids  → personal habits most relevant to goal
-        habit_summary         → 2–4 sentence narrative`"]
-        LLM1_IN --> LLM1_OUT
-    end
+    %% ── Wiring ───────────────────────────────────────────────────────────────
+    GOAL --> NEO4J_PERSONAL & NEO4J_COMMUNITY & MONGO_ANNOT & BACKEND_QA & MONGO_FB
+    NEO4J_PERSONAL --> GDS_RERANK
+    NEO4J_COMMUNITY --> GDS_RERANK
+    BACKEND_QA --> PROFILE_BUILD
+    GOAL --> PROFILE_BUILD
 
-    %% ── LLM call 2: extract_profile.txt ─────────────────────────────────────
-    subgraph LLM2["② LLM — extract_profile.txt  (temp 0.0)"]
-        direction TB
-        LLM2_IN["`**Prompt inputs:**
-        {goal}
-        {profile_json}  ← age + gender from user_profiles
-        {sliq_json}     ← Pittsburgh Sleep Quality Index answers
-        {rand36_json}   ← RAND-36 health-related quality of life answers`"]
-        LLM2_OUT["`**Outputs:**
-        profile_summary   → ≤80-word plain-language summary
-        profile_detailed  → 80–200-word comprehensive paragraph
-        rag_query         → single sentence for KB retrieval`"]
-        LLM2_IN --> LLM2_OUT
-    end
-
-    %% ── Wiring into the two prep LLMs ───────────────────────────────────────
-    GOAL --> LLM1_IN
-    NEO4J_PERSONAL --> LLM1_IN
-    NEO4J_COMMUNITY --> LLM1_IN
-
-    GOAL --> LLM2_IN
-    BACKEND_QA --> LLM2_IN
-
-    LLM2_OUT -->|rag_query| LIGHTRAG
+    GDS_RERANK -->|ranked community habits| NEO4J_BCIO
+    NEO4J_PERSONAL -->|personal habit UUIDs| NEO4J_BCIO
+    PROFILE_BUILD -->|rag_query| LIGHTRAG
 
     %% ── Final prompt assembly ─────────────────────────────────────────────────
-    subgraph FINAL["③ Final prompt — recommend.txt  (temp 0.2)"]
+    subgraph FINAL["Single LLM call — recommend.txt  (temp 0.2)"]
         direction TB
 
         F1["`**[1] USER GOAL**
         {goal}  ← from request`"]
 
         F2["`**[2] USER HEALTH PROFILE**
-        {profile_summary}   ← LLM② profile_summary
-        {profile_detailed}  ← LLM② profile_detailed`"]
+        {profile_summary}   ← build_profile()
+        {profile_detailed}  ← build_profile()`"]
 
-        F3["`**[3] RELEVANT EXISTING HABITS  (user's own)**
-        {habit_summary}  ← LLM① habit_summary
-        {habits_json}    ← habits selected by LLM① from personal pool
-                           [{uuid, sentence}]`"]
+        F3["`**[3] USER'S OWN HABITS**
+        {personal_habits_json}  ← cosine-ranked personal habits
+            [{uuid, sentence, context, bcio_concepts, likes}]`"]
 
-        F4["`**[4] HABITS BOOKMARKED BY THIS USER**
-        {annotated_habits_json}  ← MongoDB habit_annotations → Neo4j
-                                   [{sentence, context}]
-        *Strong personal-interest signal — build on or extend these*`"]
+        F4["`**[4] BOOKMARKED HABITS**
+        {annotated_habits_json}  ← MongoDB → Neo4j
+            [{uuid, sentence, context, bcio_concepts}]`"]
 
-        F5["`**[5] SIMILAR HABITS FROM OTHER USERS**
-        {community_habits_json}  ← LLM① community_habits (all, not filtered)
-                                   [{sentence, context, community_likes}]`"]
+        F5["`**[5] COMMUNITY HABITS**
+        {community_habits_json}  ← GDS FastRP re-ranked
+            [{uuid, sentence, context, bcio_concepts, likes}]`"]
 
-        F6["`**[6] RELEVANT ACADEMIC SOURCES**
-        {sources_json}  ← LightRAG hybrid retrieval
-                          [{filename, excerpt, score}]`"]
+        F6["`**[6] ACADEMIC SOURCES**
+        {sources_json}  ← LightRAG hybrid retrieval`"]
 
-        F7["`**[7] PRIOR USER FEEDBACK**
-        {prior_feedback}  ← MongoDB recommendation_feedback
-                            last 10 comments for this user+goal`"]
+        F7["`**[7] PRIOR FEEDBACK**
+        {prior_feedback}  ← MongoDB comments`"]
 
         F1 --> F2 --> F3 --> F4 --> F5 --> F6 --> F7
     end
 
-    LLM1_OUT --> F3
-    LLM1_OUT --> F5
-    LLM2_OUT --> F2
+    GDS_RERANK --> F5
+    NEO4J_PERSONAL --> F3
+    NEO4J_BCIO -->|bcio_concepts| F3
+    NEO4J_BCIO -->|bcio_concepts| F4
+    NEO4J_BCIO -->|bcio_concepts| F5
+    PROFILE_BUILD --> F2
     MONGO_ANNOT --> F4
     LIGHTRAG --> F6
     MONGO_FB --> F7
     GOAL --> F1
 
-    subgraph OUTPUT["LLM③ Output"]
+    subgraph OUTPUT["LLM Output"]
         OUT["`{recommendations: [
-          {title, body, rationale},
+          {
+            title,
+            body,
+            rationale,            ← may cite BCIOConcept names
+            selected_habit_uuids  ← explainability: which habits informed this
+          },
           ...  (3–5 items)
         ]}`"]
     end
@@ -139,10 +144,11 @@ flowchart TD
     OUTPUT --> PERSIST
 
     %% ── Styles ───────────────────────────────────────────────────────────────
-    style LLM1 fill:#e8f4f8,stroke:#4a90d9
-    style LLM2 fill:#f0f8e8,stroke:#5a9a4a
+    style GDS_RERANK fill:#fff3e0,stroke:#e65100
+    style PROFILE_BUILD fill:#e8f8e8,stroke:#5a9a4a
     style FINAL fill:#fff8e8,stroke:#c9a020
     style MONGO_ANNOT fill:#f8eef8,stroke:#9a4ab0
     style NEO4J_PERSONAL fill:#d8edf8,stroke:#4a90d9
     style NEO4J_COMMUNITY fill:#c8e4f4,stroke:#4a90d9
+    style NEO4J_BCIO fill:#d0e8ff,stroke:#4a90d9
     style OUTPUT fill:#fce8e8,stroke:#d94a4a

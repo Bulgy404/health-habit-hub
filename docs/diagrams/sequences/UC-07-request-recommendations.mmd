@@ -1,4 +1,4 @@
-%% UC-07 — Request personalised recommendations (full M3 pipeline)
+%% UC-07 — Request personalised recommendations (single-LLM-call pipeline)
 sequenceDiagram
     autonumber
     actor P as Participant
@@ -22,56 +22,55 @@ sequenceDiagram
         R-->>AI: cached RecommendResponse JSON
     else cache miss
 
-        par M3.1 — extract-habits + annotated-habits + M3.2 all run in parallel
-            Note over AI,N: Embed goal once via Qwen3-Embedding-4B (2560-dim) — reused for all searches
-            AI->>N: Cypher (1 session, limit 200 rows):<br/>MATCH (h:Habit {userID: $user_id, is_habit: true})<br/>OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)<br/>RETURN h.uuid, coalesce(h.translationEN, h.sentence),<br/>       collect({dimension: c.dimension, text: c.text}), h.embedding
-            N-->>AI: habit nodes with stored 2560-dim embedding vectors
-            Note over AI: cosine-rank in Python → top USER_HABITS_LIMIT (default 10) personal habits
+        Note over AI: Stage 1 — 6-way asyncio.gather (zero LLM calls)
 
-            par 3-index community fan-out (3 separate Neo4j sessions, asyncio.gather)
-                AI->>N: CALL db.index.vector.queryNodes('habit_embedding_idx', $limit, $emb)<br/>YIELD node, score<br/>WHERE node.userID <> $exclude_user_id AND node.is_habit = true<br/>OPTIONAL MATCH (node)-[:HAS_CONTEXT]->(c:Context)<br/>RETURN node.uuid, sentence, collect(c), node.annotations_like, score
-            and
-                AI->>N: CALL db.index.vector.queryNodes('context_embedding_idx', $limit, $emb)<br/>YIELD node, score<br/>MATCH (h:Habit)-[:HAS_CONTEXT]->(node)<br/>WHERE h.userID <> $exclude_user_id AND h.is_habit = true<br/>RETURN h.uuid, sentence, collect(c), h.annotations_like, score
-            and
-                AI->>N: CALL db.index.vector.queryNodes('bcio_embedding_idx', $limit, $emb)<br/>YIELD node, score<br/>MATCH (c:Context)-[:MAPS_TO]->(node)<br/>MATCH (h:Habit)-[:HAS_CONTEXT]->(c)<br/>WHERE h.userID <> $exclude_user_id AND h.is_habit = true<br/>RETURN h.uuid, sentence, collect(ctx), h.annotations_like, score
-            end
-            N-->>AI: top-k per index; merge by max(score) per UUID → COMMUNITY_HABITS_LIMIT (default 10)
-            Note over AI: dedup personal + community by UUID → candidate pool ≤ 20 habits
-            AI->>LLM: extract_habits.txt (temp 0.0)<br/>vars: {goal}, {habits_json}
-            LLM-->>AI: {selected_habit_uuids, habit_summary}
-
+        par Personal habits (Neo4j)
+            Note over AI,N: Embed goal once via Qwen3-Embedding-4B (2560-dim)
+            AI->>N: MATCH (h:Habit {userID, is_habit:true})<br/>cosine-rank vs goal embedding → top USER_HABITS_LIMIT
+            N-->>AI: personal habit nodes with embeddings
+        and Community habits — 3-index fan-out (3 parallel Neo4j sessions)
+            AI->>N: db.index.vector.queryNodes('habit_embedding_idx', limit, emb)
+            AI->>N: db.index.vector.queryNodes('context_embedding_idx', limit, emb)
+            AI->>N: db.index.vector.queryNodes('bcio_embedding_idx', limit, emb)
+            N-->>AI: top-k per index; merge by max(score) → COMMUNITY_HABITS_LIMIT
         and Annotated habits (MongoDB + Neo4j)
-            AI->>M: db.habit_annotations.find({userId, type:{$in:["helpful","iDoThis","like"]}}, {habitId:1, _id:0})
+            AI->>M: habit_annotations.find({userId, type:{$in:['helpful','iDoThis','like']}})
             M-->>AI: habit UUIDs this user liked/saved
-            AI->>N: MATCH (h:Habit {is_habit:true}) WHERE h.uuid IN $uuids<br/>OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context)<br/>RETURN h.uuid, coalesce(h.translationEN, h.sentence), collect(c), h.annotations_like
-            N-->>AI: annotated habit nodes with context
-
-        and M3.2 — extract-profile (3 parallel HTTP calls, X-Service-Auth-Token)
-            AI->>MB: GET /api/v1/questionnaire-responses/service/{userId}/sliq
-            MB-->>AI: SLIQ answers JSON (or 404 → empty)
-            AI->>MB: GET /api/v1/questionnaire-responses/service/{userId}/rand-36
-            MB-->>AI: RAND-36 answers JSON (or 404 → empty)
-            AI->>MB: GET /api/v1/user-profile/service/{userId}
-            MB-->>AI: profile fields (age, gender, ...)
-            AI->>LLM: extract_profile.txt (temp 0.0)<br/>vars: {goal}, {profile_json}, {sliq_json}, {rand36_json}
-            LLM-->>AI: {profile_summary, profile_detailed, rag_query}
+            AI->>N: MATCH (h:Habit) WHERE h.uuid IN $uuids → habit nodes with context
+            N-->>AI: annotated habit nodes
+        and Profile data (2 parallel HTTP calls)
+            AI->>MB: GET /questionnaire-responses/service/{userId}<br/>(returns all slugs from user's enrolled study)
+            MB->>MB: enrollment → studyId → questionnaire slugs → latest responses
+            MB-->>AI: {[slug]: responseOrNull} for all study questionnaires
+            AI->>MB: GET /user-profile/service/{userId}
+            MB-->>AI: profile fields (age, gender, …)
+        and Prior feedback (MongoDB)
+            AI->>M: recommendation_feedback.find({userId, goal}).sort({created_at:-1}).limit(10)
+            M-->>AI: prior feedback comments
         end
 
-        Note over AI: rag_query from M3.2 (or fallback to raw goal)
-        AI->>LR: POST /query<br/>{query: rag_query, mode: "hybrid", only_need_context: true}<br/>timeout: 90 s
-        LR-->>AI: synthesised context string (graph + vector over KB documents)
+        Note over AI: Stage 2 — deterministic processing (zero LLM calls)
+        Note over AI: build_profile() assembles profile_summary + rag_query from all study questionnaire responses
+        Note over AI: GDS FastRP re-ranking: compute user centroid → hybrid score<br/>(0.5 × semantic + 0.3 × graph + 0.2 × endorsement) for each community habit
 
-        AI->>M: db.recommendation_feedback.find({userId, goal}, {comment:1, _id:0})<br/>  .sort({created_at: -1}).limit(10)
-        M-->>AI: prior feedback comments (or empty)
+        Note over AI: Stage 3 — parallel enrichment
 
-        Note over AI,LLM: recommend.txt (temp 0.2) assembles all 9 variables:<br/>{goal} {profile_summary} {profile_detailed} {habit_summary}<br/>{habits_json} {annotated_habits_json} {community_habits_json} {sources_json} {prior_feedback}
-        AI->>LLM: POST /chat/completions (recommend.txt prompt, temp 0.2)
-        LLM-->>AI: {recommendations: [{title, body, rationale}]}
+        par BCIO concepts (Neo4j) + LightRAG retrieval
+            AI->>N: MATCH (h)-[:HAS_CONTEXT]→(c)-[:MAPS_TO]→(b:BCIOConcept)<br/>WHERE h.uuid IN top_habit_uuids<br/>RETURN uuid, collect(b.label)
+            N-->>AI: {uuid: [BCIOConcept, ...]} for each habit
+        and LightRAG retrieval
+            AI->>LR: POST /query {query: rag_query, mode:'hybrid', only_need_context:true} (90s)
+            LR-->>AI: synthesised context from knowledge-base documents
+        end
 
-        AI->>M: db.recommendations.insertOne({recommendation_id, userId, goal, session_id, recommendations, generated_at})
+        Note over AI,LLM: Single LLM call — recommend.txt (temp 0.2)<br/>9 vars: goal · profile_summary · profile_detailed<br/>personal_habits_json (+ bcio_concepts) · annotated_habits_json<br/>community_habits_json (GDS-reranked + bcio_concepts)<br/>sources_json · prior_feedback
+        AI->>LLM: POST /chat/completions (recommend.txt, temp 0.2)
+        LLM-->>AI: {recommendations: [{title, body, rationale, selected_habit_uuids}]}
+
+        AI->>M: recommendations.insertOne({recommendation_id, userId, goal, session_id, recommendations, generated_at})
         AI->>R: SETEX recommend:{sha256} 86400 <RecommendResponse JSON>
     end
 
     AI-->>B: {recommendation_id, recommendations, generated_at}
     B-->>F: 200 OK
-    F->>F: Render recommendation cards
+    F->>F: Render recommendation cards with provenance (selected_habit_uuids)

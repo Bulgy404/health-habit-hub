@@ -17,6 +17,84 @@ export function createQuestionnaireResponsesServiceRouter({ db } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
+  /**
+   * GET /service/:userId — all questionnaire responses for a user's enrolled study.
+   *
+   * Resolves enrollment → studyId → questionnaire slugs, then returns the most
+   * recent response for each slug as { [slug]: responseOrNull }.
+   * Returns {} when the user is not enrolled or the study has no questionnaires.
+   */
+  router.get('/service/:userId', async (req, res) => {
+    try {
+      const token = req.headers['x-service-auth-token'];
+      const expected = process.env.API_SERVICE_SECRET;
+      if (!token || !expected || token !== expected) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const { userId } = req.params;
+      const database = await getDb();
+
+      // 1. Find user's enrollment
+      const enrollment = await database
+        .collection('enrollments')
+        .findOne({ userId });
+      if (!enrollment) {
+        return res.json({});
+      }
+
+      // 2. Find study and its questionnaire refs
+      const study = await database
+        .collection('studies')
+        .findOne({ _id: enrollment.studyId });
+      if (
+        !study ||
+        !Array.isArray(study.questionnaires) ||
+        study.questionnaires.length === 0
+      ) {
+        return res.json({});
+      }
+
+      // 3. Resolve questionnaire slugs
+      const questionnaireDocs = await database
+        .collection('questionnaires')
+        .find({ _id: { $in: study.questionnaires } })
+        .project({ slug: 1, _id: 0 })
+        .toArray();
+
+      const slugs = questionnaireDocs.map((q) => q.slug).filter(Boolean);
+      if (slugs.length === 0) {
+        return res.json({});
+      }
+
+      // 4. Fetch the most recent response per slug in one aggregation
+      const latestResponses = await database
+        .collection('form_responses')
+        .aggregate([
+          { $match: { userId, questionnaireSlug: { $in: slugs } } },
+          { $sort: { submittedAt: -1 } },
+          {
+            $group: {
+              _id: '$questionnaireSlug',
+              doc: { $first: '$$ROOT' },
+            },
+          },
+        ])
+        .toArray();
+
+      const result = Object.fromEntries(slugs.map((s) => [s, null]));
+      for (const { _id: slug, doc } of latestResponses) {
+        const { _id, ...rest } = doc;
+        result[slug] = rest;
+      }
+
+      return res.json(result);
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   router.get('/service/:userId/:slug', async (req, res) => {
     try {
       const token = req.headers['x-service-auth-token'];

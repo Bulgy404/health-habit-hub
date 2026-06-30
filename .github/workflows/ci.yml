@@ -116,11 +116,11 @@ jobs:
         image: neo4j:5-community
         env:
           NEO4J_AUTH: neo4j/password
-          NEO4J_PLUGINS: '["apoc", "n10s"]'
+          NEO4J_PLUGINS: '["apoc", "n10s", "graph-data-science"]'
           NEO4J_apoc_export_file_enabled: "true"
           NEO4J_apoc_import_file_enabled: "true"
           NEO4J_apoc_import_file_use__neo4j__config: "true"
-          NEO4J_dbms_security_procedures_unrestricted: "apoc.*,n10s.*"
+          NEO4J_dbms_security_procedures_unrestricted: "apoc.*,n10s.*,gds.*"
         ports:
           - 7687:7687
           - 7474:7474
@@ -263,6 +263,8 @@ jobs:
         image: neo4j:5-community
         env:
           NEO4J_AUTH: neo4j/password
+          NEO4J_PLUGINS: '["graph-data-science"]'
+          NEO4J_dbms_security_procedures_unrestricted: "gds.*"
         ports:
           - 7687:7687
           - 7474:7474

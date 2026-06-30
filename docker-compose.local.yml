@@ -105,6 +105,7 @@ services:
     environment:
       - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j_password_change_me}
       - NEO4J_server_directories_import=/import
+      - NEO4J_PLUGINS=["graph-data-science"]
     ports:
       - "7474:7474"
       - "7687:7687"

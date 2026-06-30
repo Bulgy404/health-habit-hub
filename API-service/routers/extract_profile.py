@@ -57,6 +57,39 @@ async def _fetch_questionnaire_response(user_id: str, slug: str) -> Optional[dic
     return None
 
 
+async def _fetch_all_questionnaire_responses(
+    user_id: str,
+) -> dict[str, Optional[dict[str, object]]]:
+    """Fetch all questionnaire responses for a user's enrolled study.
+
+    Calls GET /api/v1/questionnaire-responses/service/:userId — the backend
+    resolves enrollment → studyId → questionnaire slugs and returns the most
+    recent response per slug as {slug: response_or_null}.
+
+    Returns {} when the user is not enrolled, the study has no questionnaires,
+    or the backend is unavailable.
+    """
+    if not _SERVICE_SECRET:
+        logger.warning("API_SERVICE_SECRET not set — cannot fetch questionnaire responses.")
+        return {}
+
+    url = f"{_BACKEND_URL}/api/v1/questionnaire-responses/service/{user_id}"
+    headers = {"X-Service-Auth-Token": _SERVICE_SECRET}
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(url, headers=headers)
+        if resp.status_code == 200:
+            return resp.json()
+        logger.warning(
+            "Unexpected status %d fetching questionnaire responses for user %s.",
+            resp.status_code,
+            user_id,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to fetch questionnaire responses for user %s: %s", user_id, exc)
+    return {}
+
+
 async def _fetch_user_profile(user_id: str) -> Optional[dict[str, object]]:
     """Fetch the user's structured profile from the user_profiles collection.
 
