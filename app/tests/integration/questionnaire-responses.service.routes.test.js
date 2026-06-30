@@ -101,9 +101,7 @@ function createMockDb() {
           let results = [...getCol(name)];
           for (const stage of pipeline) {
             if ('$match' in stage) {
-              results = results.filter((d) =>
-                matchesQuery(d, stage['$match'])
-              );
+              results = results.filter((d) => matchesQuery(d, stage['$match']));
             } else if ('$sort' in stage) {
               const [field, dir] = Object.entries(stage['$sort'])[0];
               results = [...results].sort((a, b) => {
@@ -128,7 +126,11 @@ function createMockDb() {
               results = [...seen.values()];
             }
           }
-          return { async toArray() { return results; } };
+          return {
+            async toArray() {
+              return results;
+            },
+          };
         },
       };
     },
@@ -209,9 +211,7 @@ async function seedStudy(userId, slugs, responses = []) {
       .insertOne({ _id: questIds[i], slug: slugs[i] });
   }
 
-  await db
-    .collection('enrollments')
-    .insertOne({ userId, studyId });
+  await db.collection('enrollments').insertOne({ userId, studyId });
 
   for (const { slug, answers, submittedAt } of responses) {
     await db.collection('form_responses').insertOne({
@@ -238,8 +238,12 @@ test('GET /questionnaire-responses/service/:userId — returns {} when user not 
 
 test('GET /questionnaire-responses/service/:userId — returns {} when study has no questionnaires', async () => {
   const userId = 'user-empty-study';
-  await db.collection('studies').insertOne({ _id: `study-${userId}`, questionnaires: [] });
-  await db.collection('enrollments').insertOne({ userId, studyId: `study-${userId}` });
+  await db
+    .collection('studies')
+    .insertOne({ _id: `study-${userId}`, questionnaires: [] });
+  await db
+    .collection('enrollments')
+    .insertOne({ userId, studyId: `study-${userId}` });
 
   const res = await serviceRequest(userId);
   assert.strictEqual(res.status, 200);
@@ -260,10 +264,17 @@ test('GET /questionnaire-responses/service/:userId — returns null per slug whe
 
 test('GET /questionnaire-responses/service/:userId — returns latest responses for enrolled study questionnaires', async () => {
   const userId = 'user-with-responses';
-  await seedStudy(userId, ['sliq', 'rand-36'], [
-    { slug: 'sliq', answers: { sliq_sleep_quality: '3', sliq_sleep_duration: '7' } },
-    { slug: 'rand-36', answers: { rand36_energy: '4' } },
-  ]);
+  await seedStudy(
+    userId,
+    ['sliq', 'rand-36'],
+    [
+      {
+        slug: 'sliq',
+        answers: { sliq_sleep_quality: '3', sliq_sleep_duration: '7' },
+      },
+      { slug: 'rand-36', answers: { rand36_energy: '4' } },
+    ]
+  );
 
   const res = await serviceRequest(userId);
   assert.strictEqual(res.status, 200);
@@ -283,10 +294,22 @@ test('GET /questionnaire-responses/service/:userId — returns most recent respo
   const older = new Date(Date.now() - 10_000);
   const newer = new Date();
 
-  await seedStudy(userId, ['sliq'], [
-    { slug: 'sliq', answers: { sliq_sleep_quality: '2' }, submittedAt: older },
-    { slug: 'sliq', answers: { sliq_sleep_quality: '5' }, submittedAt: newer },
-  ]);
+  await seedStudy(
+    userId,
+    ['sliq'],
+    [
+      {
+        slug: 'sliq',
+        answers: { sliq_sleep_quality: '2' },
+        submittedAt: older,
+      },
+      {
+        slug: 'sliq',
+        answers: { sliq_sleep_quality: '5' },
+        submittedAt: newer,
+      },
+    ]
+  );
 
   const res = await serviceRequest(userId);
   assert.strictEqual(res.status, 200);
@@ -302,9 +325,11 @@ test('GET /questionnaire-responses/service/:userId — returns most recent respo
 test('GET /questionnaire-responses/service/:userId — only includes slugs from enrolled study', async () => {
   const userId = 'user-study-scope';
   // Study only has sliq, not phq-9
-  await seedStudy(userId, ['sliq'], [
-    { slug: 'sliq', answers: { sliq_sleep_quality: '4' } },
-  ]);
+  await seedStudy(
+    userId,
+    ['sliq'],
+    [{ slug: 'sliq', answers: { sliq_sleep_quality: '4' } }]
+  );
   // Insert a phq-9 response manually — should NOT appear in output
   await db.collection('form_responses').insertOne({
     userId,
@@ -318,15 +343,22 @@ test('GET /questionnaire-responses/service/:userId — only includes slugs from 
   const body = await res.json();
 
   assert.ok('sliq' in body, 'sliq should be in response');
-  assert.ok(!('phq-9' in body), 'phq-9 should not be in response (not in study)');
+  assert.ok(
+    !('phq-9' in body),
+    'phq-9 should not be in response (not in study)'
+  );
 });
 
 test('GET /questionnaire-responses/service/:userId — partial submission: some slugs answered, some null', async () => {
   const userId = 'user-partial';
-  await seedStudy(userId, ['sliq', 'rand-36', 'phq-9'], [
-    { slug: 'rand-36', answers: { rand36_energy: '3' } },
-    // sliq and phq-9 not submitted
-  ]);
+  await seedStudy(
+    userId,
+    ['sliq', 'rand-36', 'phq-9'],
+    [
+      { slug: 'rand-36', answers: { rand36_energy: '3' } },
+      // sliq and phq-9 not submitted
+    ]
+  );
 
   const res = await serviceRequest(userId);
   assert.strictEqual(res.status, 200);
