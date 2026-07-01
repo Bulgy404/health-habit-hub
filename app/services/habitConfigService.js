@@ -1,6 +1,10 @@
 // app/services/habitConfigService.js
 import { ObjectId } from '../models/survey.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
+import {
+  COLLECTION as APP_SETTINGS,
+  DEFAULTS as APP_SETTINGS_DEFAULTS,
+} from '../models/appSettings.js';
 import { DEFAULT_BEHAVIOR_KEYS } from '../utils/srhi.js';
 import { pickAssignedCues } from './cuePoolService.js';
 import { getDefaultBehaviorKeys } from './activityTypeService.js';
@@ -13,6 +17,22 @@ const FALLBACK = {
   behaviorOptions: DEFAULT_BEHAVIOR_KEYS, // static fallback if DB unreachable
   maxHabits: null,
 };
+
+async function readAppSettings(db) {
+  try {
+    const doc = await db.collection(APP_SETTINGS).findOne({ key: 'global' });
+    return {
+      guidedHabitCreationEnabled:
+        doc?.guidedHabitCreationEnabled ??
+        APP_SETTINGS_DEFAULTS.guidedHabitCreationEnabled,
+      communityShareDefault:
+        doc?.communityShareDefault ??
+        APP_SETTINGS_DEFAULTS.communityShareDefault,
+    };
+  } catch {
+    return { ...APP_SETTINGS_DEFAULTS };
+  }
+}
 
 async function readAdminSettings(db) {
   const docs = await db
@@ -34,8 +54,9 @@ async function readAdminSettings(db) {
  * Resolve cue configuration for a user, including pre-sampled assigned cues.
  * cueConfig is always resolved live from the study group in MongoDB (no snapshot).
  * Priority: study group cueConfig (live) > admin_settings defaults > hardcoded fallback.
+ * Also includes the platform-wide app feature flags (app_settings singleton).
  * @param {{ db: object, userId: string, neo4jRun: Function }} deps
- * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array, maxHabits: number|null, assignedCues: Array, recommenderEnabled: boolean }>}
+ * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array, maxHabits: number|null, assignedCues: Array, recommenderEnabled: boolean, guidedHabitCreationEnabled: boolean, communityShareDefault: boolean }>}
  */
 export async function resolveHabitConfig({ db, userId, neo4jRun }) {
   // Get enrollment from Neo4j
@@ -102,6 +123,8 @@ export async function resolveHabitConfig({ db, userId, neo4jRun }) {
     cuePoolId,
   });
 
+  const appSettings = await readAppSettings(db);
+
   return {
     cueCount,
     cueSource,
@@ -110,5 +133,6 @@ export async function resolveHabitConfig({ db, userId, neo4jRun }) {
     maxHabits,
     assignedCues,
     recommenderEnabled,
+    ...appSettings,
   };
 }

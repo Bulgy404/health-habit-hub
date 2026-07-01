@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import SettingsPage from '../app/(admin)/settings/page';
+import ActivityTypesPage from '../app/(admin)/settings/page';
 
 jest.mock('next-auth/react', () => ({
   useSession: () => ({
@@ -15,33 +15,32 @@ jest.mock('next/navigation', () => ({
 }));
 
 beforeEach(() => {
-  global.fetch = jest.fn().mockImplementation((url: string) => {
-    const isActivityTypes = String(url).includes('/activity-types');
-    return Promise.resolve({
+  global.fetch = jest.fn().mockImplementation(() =>
+    Promise.resolve({
       ok: true,
-      json: jest.fn().mockResolvedValue(
-        isActivityTypes
-          ? []
-          : { default_cue_count: 'multi', default_cue_source: 'high_quality', default_reminder_time: '19:00' }
-      ),
-    } as unknown as Response);
-  });
+      json: jest.fn().mockResolvedValue([
+        { key: 'walking', label_en: 'Walking', isDefault: true },
+        { key: 'yoga', label_en: 'Yoga', isDefault: false },
+      ]),
+    } as unknown as Response)
+  );
 });
 
 afterEach(() => { jest.resetAllMocks(); });
 
-describe('SettingsPage', () => {
+describe('ActivityTypesPage', () => {
   it('renders without crashing', () => {
-    render(<SettingsPage />);
+    render(<ActivityTypesPage />);
   });
 
   it('renders the page title', () => {
-    render(<SettingsPage />);
-    expect(screen.getByRole('heading', { name: /settings/i })).toBeInTheDocument();
+    render(<ActivityTypesPage />);
+    expect(screen.getByRole('heading', { name: /activity types/i })).toBeInTheDocument();
   });
 
-  it('renders cue config section heading', async () => {
-    render(<SettingsPage />);
-    expect(await screen.findByText(/public default cue config/i)).toBeInTheDocument();
+  it('renders the catalog entries', async () => {
+    render(<ActivityTypesPage />);
+    expect(await screen.findByText('Walking')).toBeInTheDocument();
+    expect(screen.getByText('Yoga')).toBeInTheDocument();
   });
 });

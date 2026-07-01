@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import styles from "./page.module.css";
 
 import { useStudiesData } from "./useStudiesData";
+import { apiFetch, apiUrl } from "@/lib/api";
+import { useActivityTypes } from "@/lib/useActivityTypes";
+import { CueConfigForm } from "@/components/cue-config-form";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -101,53 +104,9 @@ function fmtDateTime(iso: string | null): string {
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
-  "/admin/studies";
-
-const QUESTIONNAIRES_API =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
-  "/admin/questionnaires";
-
-const NOTIFICATIONS_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
-  "/admin/notifications";
-
-// Hardcoded fallback — used only when the activity-types API is unreachable.
-const BEHAVIOR_OPTIONS = [
-  { key: "walking", label: "Walking" },
-  { key: "light_jogging", label: "Light jogging" },
-  { key: "cycling", label: "Cycling" },
-  { key: "structured_calisthenics", label: "Structured calisthenics" },
-  { key: "yoga", label: "Yoga" },
-];
-
-/**
- * Authenticated JSON fetch helper.
- *
- * @param url - The full URL to fetch.
- * @param token - The NextAuth session access token.
- * @param opts - Additional fetch options.
- * @returns The parsed JSON response body.
- * @throws {Error} If the response status is not 2xx.
- */
-async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
-  const res = await fetch(url, {
-    ...opts,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(opts.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: string }).error ?? `HTTP ${res.status}`
-    );
-  }
-  return res.json();
-}
+const API_BASE = apiUrl("/admin/studies");
+const QUESTIONNAIRES_API = apiUrl("/admin/questionnaires");
+const NOTIFICATIONS_BASE = apiUrl("/admin/notifications");
 
 // ── Questionnaires tab ────────────────────────────────────────────────────────
 
@@ -794,9 +753,7 @@ function ParticipantsTab({
   study: StudySummary;
   token: string;
 }) {
-  const PARTICIPANTS_BASE =
-    (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
-    `/admin/studies/${study.id}/participants`;
+  const PARTICIPANTS_BASE = apiUrl(`/admin/studies/${study.id}/participants`);
 
   const [rows, setRows] = useState<EnrollmentRow[]>([]);
   const [summary, setSummary] = useState<ParticipantSummary | null>(null);
@@ -874,9 +831,7 @@ function ParticipantsTab({
     }
   }
 
-  const EXPORT_BASE =
-    (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
-    `/admin/studies/${study.id}/export`;
+  const EXPORT_BASE = apiUrl(`/admin/studies/${study.id}/export`);
 
   async function handleExportZip() {
     setExportingZip(true);
@@ -1312,19 +1267,6 @@ function NotificationsTab({
   );
 }
 
-// ── Activity type type ────────────────────────────────────────────────────────
-
-interface ActivityTypeEntry {
-  key: string;
-  label_en: string;
-  label_de?: string;
-  isDefault: boolean;
-}
-
-const ACTIVITY_TYPES_API =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
-  "/admin/activity-types";
-
 // ── Cue config tab ────────────────────────────────────────────────────────────
 
 function CueConfigTab({
@@ -1334,21 +1276,7 @@ function CueConfigTab({
   study: StudySummary;
   token: string;
 }) {
-  // Load catalog from the backend
-  const [activityTypes, setActivityTypes] = useState<ActivityTypeEntry[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(true);
-
-  useEffect(() => {
-    if (!token) return;
-    apiFetch(ACTIVITY_TYPES_API, token)
-      .then((data) => setActivityTypes(data as ActivityTypeEntry[]))
-      .catch(() => {
-        // Fallback to hardcoded list if API unreachable
-        setActivityTypes(BEHAVIOR_OPTIONS.map((b) => ({ key: b.key, label_en: b.label, isDefault: true })));
-      })
-      .finally(() => setCatalogLoading(false));
-  }, [token]);
-
+  const { activityTypes, loading: catalogLoading } = useActivityTypes(token);
   const defaultKeys = activityTypes.filter((a) => a.isDefault).map((a) => a.key);
 
   const [groupStates, setGroupStates] = useState<
@@ -1361,7 +1289,8 @@ function CueConfigTab({
           cueCount: g.cueConfig?.cueCount ?? "multi",
           cueSource: g.cueConfig?.cueSource ?? "high_quality",
           cuePoolId: g.cueConfig?.cuePoolId ?? null,
-          // null cueConfig → will be initialised to catalog defaults after load
+          // null means "platform defaults"; the shared form resolves it
+          // against the catalog for display
           behaviorOptions: g.cueConfig?.behaviorOptions ?? null,
           maxHabits: g.cueConfig?.maxHabits ?? null,
           saving: false,
@@ -1372,21 +1301,6 @@ function CueConfigTab({
     )
   );
 
-  // Once catalog is loaded, fill in null behaviorOptions with catalog defaults
-  useEffect(() => {
-    if (catalogLoading || defaultKeys.length === 0) return;
-    setGroupStates((prev) => {
-      const next = { ...prev };
-      for (const [id, s] of Object.entries(next)) {
-        if (s.behaviorOptions === null) {
-          next[id] = { ...s, behaviorOptions: defaultKeys };
-        }
-      }
-      return next;
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catalogLoading]);
-
   function update(
     groupId: string,
     patch: Partial<(typeof groupStates)[string]>
@@ -1395,14 +1309,6 @@ function CueConfigTab({
       ...prev,
       [groupId]: { ...prev[groupId], ...patch, saved: false },
     }));
-  }
-
-  function toggleBehavior(groupId: string, key: string) {
-    const current = groupStates[groupId].behaviorOptions ?? defaultKeys;
-    const next = current.includes(key)
-      ? current.filter((k) => k !== key)
-      : [...current, key];
-    update(groupId, { behaviorOptions: next });
   }
 
   async function handleSave(groupId: string) {
@@ -1449,88 +1355,23 @@ function CueConfigTab({
       {study.groups.map((g) => {
         const s = groupStates[g.id];
         if (!s) return null;
-        const enabledKeys = s.behaviorOptions ?? defaultKeys;
         return (
           <div key={g.id} className={styles.cueConfigGroup}>
             <p className={styles.cueConfigGroupLabel}>
               {g.label || `Group ${g.index}`}
             </p>
             {s.error && <div className={styles.errorMsg}>{s.error}</div>}
-            <div className={styles.formGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Cue count</label>
-                <select
-                  className={styles.select}
-                  value={s.cueCount}
-                  onChange={(e) =>
-                    update(g.id, {
-                      cueCount: e.target.value as "single" | "multi",
-                    })
-                  }
-                >
-                  <option value="single">Single cue</option>
-                  <option value="multi">Multi-cue</option>
-                </select>
-                <span className={styles.hint}>Single: one cue per habit-formation session. Multi: several cues presented together.</span>
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Cue source</label>
-                <select
-                  className={styles.select}
-                  value={s.cueSource}
-                  onChange={(e) =>
-                    update(g.id, {
-                      cueSource: e.target.value as CueConfig["cueSource"],
-                    })
-                  }
-                >
-                  <option value="low_quality">Low quality (pre-rated)</option>
-                  <option value="high_quality">High quality (pre-rated)</option>
-                  <option value="self_selected">Self-selected</option>
-                </select>
-                <span className={styles.hint}>How cues are sourced — pre-rated from the cue pool library, or chosen by the participant themselves.</span>
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Max habits</label>
-                <select
-                  className={styles.select}
-                  value={s.maxHabits ?? ""}
-                  onChange={(e) =>
-                    update(g.id, {
-                      maxHabits: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
-                >
-                  <option value="">Unlimited (public)</option>
-                  <option value="1">1 (study participant)</option>
-                </select>
-                <span className={styles.hint}>Caps how many habits a participant can create. Use &quot;1&quot; for single-habit study designs.</span>
-              </div>
-            </div>
-            <div className={styles.formGroup} style={{ marginTop: "0.75rem" }}>
-              <label className={styles.label}>Allowed behaviors</label>
-              <span className={styles.hint}>
-                Which activity types participants can choose from. Manage the catalog in{" "}
-                <strong>Settings → Activity Types</strong>.
-              </span>
-              <div className={styles.behaviorCheckboxes}>
-                {activityTypes.map((a) => (
-                  <label key={a.key} className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={enabledKeys.includes(a.key)}
-                      onChange={() => toggleBehavior(g.id, a.key)}
-                    />
-                    {a.label_en}
-                    {a.isDefault && (
-                      <span style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", marginLeft: "0.25rem" }}>
-                        (default)
-                      </span>
-                    )}
-                  </label>
-                ))}
-              </div>
-            </div>
+            <CueConfigForm
+              value={{
+                cueCount: s.cueCount,
+                cueSource: s.cueSource,
+                behaviorOptions: s.behaviorOptions,
+                maxHabits: s.maxHabits,
+              }}
+              onChange={(patch) => update(g.id, patch)}
+              activityTypes={activityTypes}
+              showMaxHabits
+            />
             <div className={styles.cueConfigFooter}>
               {s.saved && <span className={styles.savedMsg}>Saved!</span>}
               <button

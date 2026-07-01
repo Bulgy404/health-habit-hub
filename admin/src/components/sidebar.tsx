@@ -10,7 +10,7 @@ import {
   ClipboardList,
   UserCircle,
   BookOpen,
-  Settings,
+  Dumbbell,
   LogOut,
   Activity,
   Smartphone,
@@ -51,7 +51,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/questionnaires", label: "Questionnaires", Icon: ClipboardList },
       { href: "/profile-fields", label: "Profile Fields", Icon: UserCircle, adminOnly: true },
       { href: "/knowledge-base", label: "Knowledge Base", Icon: BookOpen, adminOnly: true },
-      { href: "/settings", label: "Settings", Icon: Settings, adminOnly: true },
+      { href: "/settings", label: "Activity Types", Icon: Dumbbell, adminOnly: true },
     ],
   },
 ];

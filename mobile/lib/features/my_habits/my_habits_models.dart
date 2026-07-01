@@ -41,6 +41,8 @@ class HabitConfig {
     required this.srhiItems,
     this.assignedCues = const [],
     this.recommenderEnabled = true,
+    this.guidedHabitCreationEnabled = true,
+    this.communityShareDefault = true,
   });
 
   /// Cue count mode: `'single'` or `'multi'`.
@@ -68,6 +70,18 @@ class HabitConfig {
   /// Defaults to `true` (enabled) when absent, for backward compatibility.
   final bool recommenderEnabled;
 
+  /// Whether the guided implementation-intention wizard (LLM stitch step) is
+  /// enabled. When false, users compose their plan sentence as free text.
+  /// Platform-wide flag set in the admin portal (Public App settings).
+  /// Defaults to `true` when absent, for backward compatibility.
+  final bool guidedHabitCreationEnabled;
+
+  /// Whether the community-sharing opt-in is shown (pre-selected) at the end
+  /// of habit creation. Platform-wide flag set in the admin portal (Public
+  /// App settings). Defaults to `true` when absent, for backward
+  /// compatibility.
+  final bool communityShareDefault;
+
   /// Deserialises from the habit-config API response.
   factory HabitConfig.fromJson(Map<String, dynamic> json) => HabitConfig(
         cueCount: json['cueCount'] as String? ?? 'multi',
@@ -88,6 +102,10 @@ class HabitConfig {
                 .toList() ??
             const [],
         recommenderEnabled: json['recommenderEnabled'] as bool? ?? true,
+        guidedHabitCreationEnabled:
+            json['guidedHabitCreationEnabled'] as bool? ?? true,
+        communityShareDefault:
+            json['communityShareDefault'] as bool? ?? true,
       );
 }
 

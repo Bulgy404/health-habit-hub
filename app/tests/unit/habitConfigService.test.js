@@ -16,6 +16,7 @@ function makeDb({
   study = null,
   adminSettings = [],
   cuePools = [],
+  appSettings = null,
 } = {}) {
   return {
     collection(name) {
@@ -34,6 +35,10 @@ function makeDb({
       if (name === 'cue_pools')
         return {
           aggregate: () => ({ toArray: async () => cuePools }),
+        };
+      if (name === 'app_settings')
+        return {
+          findOne: async () => appSettings,
         };
       throw new Error(`unexpected collection: ${name}`);
     },
@@ -115,6 +120,43 @@ test('resolveHabitConfig: recommenderEnabled is false when study disables it', a
   ];
   const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
   assert.equal(config.recommenderEnabled, false);
+});
+
+test('resolveHabitConfig: app feature flags default to true without app_settings doc', async () => {
+  const db = makeDb({ enrollment: null, adminSettings: [], appSettings: null });
+  const config = await resolveHabitConfig({ db, userId: 'u1' });
+  assert.equal(config.guidedHabitCreationEnabled, true);
+  assert.equal(config.communityShareDefault, true);
+});
+
+test('resolveHabitConfig: app feature flags reflect the app_settings doc', async () => {
+  const db = makeDb({
+    enrollment: null,
+    adminSettings: [],
+    appSettings: {
+      key: 'global',
+      guidedHabitCreationEnabled: false,
+      communityShareDefault: false,
+    },
+  });
+  const config = await resolveHabitConfig({ db, userId: 'u1' });
+  assert.equal(config.guidedHabitCreationEnabled, false);
+  assert.equal(config.communityShareDefault, false);
+});
+
+test('resolveHabitConfig: app feature flags fall back to defaults when the read fails', async () => {
+  // makeDb throws for app_settings when the collection is not stubbed —
+  // simulate that by overriding collection() for this name.
+  const base = makeDb({ enrollment: null, adminSettings: [] });
+  const db = {
+    collection(name) {
+      if (name === 'app_settings') throw new Error('db unreachable');
+      return base.collection(name);
+    },
+  };
+  const config = await resolveHabitConfig({ db, userId: 'u1' });
+  assert.equal(config.guidedHabitCreationEnabled, true);
+  assert.equal(config.communityShareDefault, true);
 });
 
 test('resolveHabitConfig: pre-rated study participant gets assignedCues from pool', async () => {
