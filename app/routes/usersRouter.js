@@ -2,6 +2,7 @@ import express from 'express';
 import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
 import { deleteHabitComments } from '../db/habitQueries.js';
+import { deleteEnrollment } from '../services/enrollmentNeo4j.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import { config } from '../utils/config.js';
 import { logger } from '../utils/logger.js';
@@ -138,7 +139,6 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
   const USER_COLLECTIONS = [
     'users',
     'profiles',
-    'enrollments',
     'implementation_intentions',
     'daily_behavior_logs',
     'srhi_responses',
@@ -206,6 +206,13 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
         );
       } catch (err) {
         log.warn({ err }, '[usersRouter] comment-node erasure failed');
+      }
+
+      // Delete ENROLLED_IN relationship from Neo4j (non-fatal)
+      try {
+        await deleteEnrollment(queryNeo4j, userId);
+      } catch (err) {
+        log.warn({ err }, '[usersRouter] neo4j enrollment erasure failed');
       }
 
       const deleted = {};

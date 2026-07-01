@@ -1,8 +1,11 @@
 import { randomBytes } from 'node:crypto';
 import { ObjectId } from '../models/survey.js';
 import { COLLECTION as CODES } from '../models/studyCode.js';
-import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
+import {
+  getEnrollment,
+  createEnrollment,
+} from './enrollmentNeo4j.js';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const ALPHABET_LEN = ALPHABET.length;
@@ -189,43 +192,6 @@ async function _claimRedemptionSlot(db, upperCode, maxRedemptions) {
 }
 
 /**
- * Atomically enroll a user via upsert. Returns the pre-existing enrollment doc
- * if the user was already enrolled, or null if this is a new enrollment.
- * Snapshots the group's cueConfig at enrollment time so habitConfigService can
- * apply the correct experimental condition without joining back to the study.
- * @param {object} db
- * @param {string} userId
- * @param {ObjectId} studyId
- * @param {ObjectId} groupId - Already-resolved group id (never null at this point)
- * @param {string} upperCode
- * @param {object|null} cueConfig - The group's cueConfig from study.groups[].cueConfig
- * @returns {Promise<object|null>} Prior enrollment document or null
- */
-async function _atomicEnrollUser(
-  db,
-  userId,
-  studyId,
-  groupId,
-  upperCode,
-  cueConfig
-) {
-  return db.collection(ENROLLMENTS).findOneAndUpdate(
-    { userId: String(userId) },
-    {
-      $setOnInsert: {
-        userId: String(userId),
-        studyId,
-        groupId,
-        studyCodeUsed: upperCode,
-        cueConfig: cueConfig ?? null,
-        enrolledAt: new Date(),
-      },
-    },
-    { upsert: true, returnDocument: 'before' }
-  );
-}
-
-/**
  * Select a study group using weighted round-robin.
  * Atomically increments the study's _skipCounter and maps it to a group
  * based on each group's allocationWeight (default 1 = equal weight).
@@ -258,11 +224,10 @@ async function _selectGroupWeighted(db, study) {
 
 /**
  * Redeem an enrollment code for the authenticated user, enrolling them in the associated study group.
- * Uses atomic findOneAndUpdate guards to prevent over-redemption and duplicate enrollments.
- * @param {{ db: object, userId: string, code: string }} deps
+ * @param {{ db: object, userId: string, code: string, neo4jRun: Function }} deps
  * @returns {Promise<{ enrolled: boolean, studyId: string, groupId: string, studyName: string|null, groupLabel: string|null }|{ notFound: boolean }|{ expired: boolean }|{ exhausted: boolean }|{ alreadyEnrolled: boolean }>}
  */
-export async function redeemCode({ db, userId, code }) {
+export async function redeemCode({ db, userId, code, neo4jRun }) {
   const upperCode = code.toUpperCase();
 
   // Read-only pre-checks (non-sensitive to races — real guards below are atomic).
@@ -275,9 +240,6 @@ export async function redeemCode({ db, userId, code }) {
   const claimed = await _claimRedemptionSlot(db, upperCode, doc.maxRedemptions);
   if (!claimed) return { exhausted: true };
 
-  // 2. Atomically enroll the user (upsert: insert only if userId not present).
-  //    With returnDocument:'before', a null result means the document was newly
-  //    inserted (no prior enrollment); a non-null result means one already existed.
   const study = await db.collection(STUDIES).findOne({ _id: doc.studyId });
 
   // Resolve group: targeted code → use stored groupId; study-level code → weighted round-robin.
@@ -290,17 +252,17 @@ export async function redeemCode({ db, userId, code }) {
     group = await _selectGroupWeighted(db, study);
   }
 
-  const prior = await _atomicEnrollUser(
-    db,
+  // 2. Create enrollment in Neo4j (check-then-create).
+  const enrollResult = await createEnrollment(neo4jRun, {
     userId,
-    doc.studyId,
-    group?.id,
-    upperCode,
-    group?.cueConfig ?? null
-  );
+    studyId: doc.studyId.toString(),
+    groupId: group?.id?.toString() ?? null,
+    studyCodeUsed: upperCode,
+    enrolledAt: new Date(),
+  });
 
-  // If a prior enrollment existed, roll back the code counter and report conflict.
-  if (prior !== null) {
+  // If already enrolled, roll back the code counter and report conflict.
+  if (enrollResult.alreadyEnrolled) {
     await db
       .collection(CODES)
       .updateOne({ code: upperCode }, { $inc: { redemptionCount: -1 } });
@@ -317,44 +279,39 @@ export async function redeemCode({ db, userId, code }) {
 }
 
 /**
- * If the user is already enrolled, return their existing enrollment details.
- * Returns null when no prior enrollment exists.
- * @param {object} db
- * @param {string} userId
- * @returns {Promise<{ enrolled: boolean, studyId: string, groupId: string, studyName: string|null, groupLabel: string|null }|null>}
- */
-async function _getExistingEnrollment(db, userId) {
-  const existing = await db
-    .collection(ENROLLMENTS)
-    .findOne({ userId: String(userId) });
-  if (!existing) return null;
-
-  const study = await db.collection(STUDIES).findOne({ _id: existing.studyId });
-  const group = study
-    ? study.groups.find((g) => g.id.toString() === existing.groupId.toString())
-    : null;
-  return {
-    enrolled: true,
-    studyId: existing.studyId.toString(),
-    groupId: existing.groupId.toString(),
-    studyName: study ? study.name : null,
-    groupLabel: group ? group.label : null,
-  };
-}
-
-/**
  * Enroll a user in the default study via round-robin group assignment. Idempotent.
- * Uses atomic counter increment and upsert to prevent duplicate enrollments under concurrency.
- * @param {{ db: object, userId: string }} deps
+ * @param {{ db: object, userId: string, neo4jRun: Function }} deps
  * @returns {Promise<{ enrolled: boolean, studyId: string, groupId: string, studyName: string|null, groupLabel: string|null }|{ noDefaultStudy: boolean }|{ noGroups: boolean }>}
  */
-export async function skipCode({ db, userId }) {
-  // Fast path: user is already enrolled (idempotent).
-  const existingResult = await _getExistingEnrollment(db, userId);
-  if (existingResult) return existingResult;
+export async function skipCode({ db, userId, neo4jRun }) {
+  // Fast path: user is already enrolled (idempotent — check Neo4j).
+  const existingEnrollment = await getEnrollment(neo4jRun, userId);
+  if (existingEnrollment) {
+    let study = null;
+    if (existingEnrollment.studyId) {
+      try {
+        study = await db
+          .collection(STUDIES)
+          .findOne({ _id: new ObjectId(existingEnrollment.studyId) });
+      } catch {
+        // bad studyId — study stays null
+      }
+    }
+    const group = study
+      ? (study.groups || []).find(
+          (g) => g.id.toString() === existingEnrollment.groupId
+        )
+      : null;
+    return {
+      enrolled: true,
+      studyId: existingEnrollment.studyId,
+      groupId: existingEnrollment.groupId,
+      studyName: study ? study.name : null,
+      groupLabel: group ? group.label : null,
+    };
+  }
 
   // Atomically claim a slot by incrementing the study's round-robin counter.
-  // returnDocument:'after' gives us the post-increment value so counter >= 1.
   const study = await db
     .collection(STUDIES)
     .findOneAndUpdate(
@@ -370,34 +327,26 @@ export async function skipCode({ db, userId }) {
   const idx = (study._skipCounter - 1) % study.groups.length;
   const selectedGroup = study.groups[idx];
 
-  // Atomically insert enrollment only if this user is not yet enrolled.
-  // If a concurrent request already enrolled this user, prior will be non-null.
-  const prior = await db.collection(ENROLLMENTS).findOneAndUpdate(
-    { userId: String(userId) },
-    {
-      $setOnInsert: {
-        userId: String(userId),
-        studyId: study._id,
-        groupId: selectedGroup.id,
-        studyCodeUsed: null,
-        cueConfig: selectedGroup.cueConfig ?? null,
-        enrolledAt: new Date(),
-      },
-    },
-    { upsert: true, returnDocument: 'before' }
-  );
+  const enrollResult = await createEnrollment(neo4jRun, {
+    userId,
+    studyId: study._id.toString(),
+    groupId: selectedGroup.id.toString(),
+    studyCodeUsed: null,
+    enrolledAt: new Date(),
+  });
 
-  if (prior !== null) {
-    // Concurrent request enrolled this user first; return their enrollment.
-    const group = study.groups.find(
-      (g) => g.id.toString() === prior.groupId.toString()
-    );
+  if (enrollResult.alreadyEnrolled) {
+    // Another concurrent request enrolled this user; re-fetch from Neo4j.
+    const neo = await getEnrollment(neo4jRun, userId);
+    const grp = neo?.groupId
+      ? (study.groups || []).find((g) => g.id.toString() === neo.groupId)
+      : null;
     return {
       enrolled: true,
-      studyId: prior.studyId.toString(),
-      groupId: prior.groupId.toString(),
+      studyId: neo?.studyId ?? study._id.toString(),
+      groupId: neo?.groupId ?? selectedGroup.id.toString(),
       studyName: study.name,
-      groupLabel: group ? group.label : null,
+      groupLabel: grp ? grp.label : selectedGroup.label,
     };
   }
 

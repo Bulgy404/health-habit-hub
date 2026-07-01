@@ -52,6 +52,12 @@ flowchart TD
             Q2["`GET /user-profile/service/{userId}`"]
         end
 
+        subgraph STUDYCFG["Study group config  (resolved per participant)"]
+            SC1["`GET /study-config/me  *(JWT)*
+            enrollment → study → group →
+            {cueConfig, activityTypeConfig, reminderConfig, autoDonate}`"]
+        end
+
         FB_FETCH["`**MongoDB** recommendation_feedback
         .find({userId, goal}).sort({created_at:-1}).limit(10)`"]
     end

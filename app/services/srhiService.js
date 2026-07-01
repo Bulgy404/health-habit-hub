@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { COLLECTION } from '../models/srhiResponse.js';
-import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 import { SRHI_ITEM_IDS } from '../utils/srhi.js';
+import { setEnrollmentField } from './enrollmentNeo4j.js';
 
 const WINDOW_DAYS = 3;
 const GENERATE_AHEAD = 4;
@@ -68,7 +68,7 @@ export async function getDueWindows({ db, userId }) {
 
 /**
  * Submit SRHI item responses for a given intention week, computing the mean score.
- * @param {{ db: object, intentionId: string, userId: string, weekNumber: number, items: object }} deps
+ * @param {{ db: object, intentionId: string, userId: string, weekNumber: number, items: object, neo4jRun?: Function }} deps
  * @returns {Promise<object|{ invalid: boolean, missing: Array }|{ notFound: boolean }>} Serialized window or error indicator.
  */
 export async function submitSrhi({
@@ -77,6 +77,7 @@ export async function submitSrhi({
   userId,
   weekNumber,
   items,
+  neo4jRun,
 }) {
   const oid = new ObjectId(intentionId);
   const missing = SRHI_ITEM_IDS.filter(
@@ -100,9 +101,13 @@ export async function submitSrhi({
   );
   if (!result) return { notFound: true };
 
-  await db
-    .collection(ENROLLMENTS)
-    .updateOne({ userId: String(userId) }, { $set: { lastActiveAt: now } });
+  // Update lastActiveAt on the ENROLLED_IN relationship (non-fatal)
+  if (neo4jRun) {
+    setEnrollmentField(neo4jRun, String(userId), 'lastActiveAt', now).catch(
+      () => {}
+    );
+  }
+
   return serialize(result);
 }
 

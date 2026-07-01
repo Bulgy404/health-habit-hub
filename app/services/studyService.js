@@ -1,6 +1,12 @@
 import { ObjectId } from '../models/survey.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
+import {
+  getUsersForStudy,
+  countEnrollments,
+  getEnrollment,
+  syncStudy,
+} from './enrollmentNeo4j.js';
 
 /**
  * List all studies with participant count per study (paginated).
@@ -54,7 +60,7 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
 
 /**
  * Create a new study.
- * @param {{ db: object, name: string, description?: string, groups: Array<{label: string}>, questionnaires?: string[] }} deps
+ * @param {{ db: object, name: string, description?: string, groups: Array<{label: string}>, questionnaires?: string[], neo4jRun?: Function }} deps
  * @returns {Promise<object>} The created study document.
  */
 export async function createStudy({
@@ -64,6 +70,7 @@ export async function createStudy({
   groups = [],
   questionnaires = [],
   recommenderEnabled = true,
+  neo4jRun,
 }) {
   const now = new Date();
   const studyGroups = groups.map((g, i) => ({
@@ -71,6 +78,9 @@ export async function createStudy({
     label: g.label,
     index: i + 1,
     cueConfig: g.cueConfig ?? null,
+    activityTypeConfig: g.activityTypeConfig ?? null,
+    reminderConfig: g.reminderConfig ?? null,
+    autoDonate: g.autoDonate ?? false,
   }));
   const questionnaireIds = questionnaires.map((id) => new ObjectId(id));
 
@@ -87,6 +97,31 @@ export async function createStudy({
   };
 
   const result = await db.collection(STUDIES).insertOne(doc);
+
+  // Sync Study node to Neo4j (non-breaking: skip if neo4jRun not provided)
+  if (neo4jRun) {
+    try {
+      // Resolve questionnaire slugs
+      let slugs = [];
+      if (questionnaireIds.length > 0) {
+        const qDocs = await db
+          .collection('questionnaires')
+          .find({ _id: { $in: questionnaireIds } })
+          .project({ slug: 1 })
+          .toArray();
+        slugs = qDocs.map((q) => q.slug).filter(Boolean);
+      }
+      await syncStudy(neo4jRun, {
+        uuid: result.insertedId.toString(),
+        name,
+        slugs,
+      });
+    } catch (err) {
+      // Non-fatal: Neo4j sync failure should not roll back the MongoDB insert
+      console.error('[studyService] Neo4j syncStudy failed after create:', err?.message);
+    }
+  }
+
   return { ...doc, _id: result.insertedId };
 }
 
@@ -120,10 +155,10 @@ export async function getStudy({ db, id }) {
 
 /**
  * Update a study. Groups are additive — existing groups are kept and new ones are appended.
- * @param {{ db: object, id: string, updates: object }} deps
+ * @param {{ db: object, id: string, updates: object, neo4jRun?: Function }} deps
  * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}
  */
-export async function updateStudy({ db, id, updates }) {
+export async function updateStudy({ db, id, updates, neo4jRun }) {
   let oid;
   try {
     oid = new ObjectId(id);
@@ -153,6 +188,9 @@ export async function updateStudy({ db, id, updates }) {
         label: g.label,
         index: existingGroups.length + i + 1,
         cueConfig: g.cueConfig ?? null,
+        activityTypeConfig: g.activityTypeConfig ?? null,
+        reminderConfig: g.reminderConfig ?? null,
+        autoDonate: g.autoDonate ?? false,
       }));
     $set.groups = [...existingGroups, ...newGroups];
   }
@@ -162,15 +200,41 @@ export async function updateStudy({ db, id, updates }) {
   }
 
   await db.collection(STUDIES).updateOne({ _id: oid }, { $set });
+
+  // Sync Study node to Neo4j (non-breaking: skip if neo4jRun not provided)
+  if (neo4jRun) {
+    try {
+      // Fetch latest study state for slug resolution
+      const latest = await db.collection(STUDIES).findOne({ _id: oid });
+      let slugs = [];
+      const qIds = latest?.questionnaires ?? [];
+      if (qIds.length > 0) {
+        const qDocs = await db
+          .collection('questionnaires')
+          .find({ _id: { $in: qIds } })
+          .project({ slug: 1 })
+          .toArray();
+        slugs = qDocs.map((q) => q.slug).filter(Boolean);
+      }
+      await syncStudy(neo4jRun, {
+        uuid: id,
+        name: latest?.name ?? (updates.name ?? existing.name),
+        slugs,
+      });
+    } catch (err) {
+      console.error('[studyService] Neo4j syncStudy failed after update:', err?.message);
+    }
+  }
+
   return { updated: true };
 }
 
 /**
  * Soft-delete a study (sets isActive: false).
  * Returns { conflict: true } if participants are enrolled.
- * @param {{ db: object, id: string }} deps
+ * @param {{ db: object, id: string, neo4jRun?: Function }} deps
  */
-export async function softDeleteStudy({ db, id }) {
+export async function softDeleteStudy({ db, id, neo4jRun }) {
   let oid;
   try {
     oid = new ObjectId(id);
@@ -183,9 +247,10 @@ export async function softDeleteStudy({ db, id }) {
 
   if (existing.isDefault) return { isDefault: true };
 
-  const enrollmentCount = await db
-    .collection(ENROLLMENTS)
-    .countDocuments({ studyId: oid });
+  // Count enrollments from Neo4j; fall back to 0 if neo4jRun not provided
+  const enrollmentCount = neo4jRun
+    ? await countEnrollments(neo4jRun, id.toString())
+    : 0;
 
   if (enrollmentCount > 0) return { conflict: true };
 
@@ -212,39 +277,37 @@ function _buildGroupLabelMap(groups) {
 }
 
 /**
- * Aggregate enrollment counts per group and return the per-group summary array.
- * @param {object} db
- * @param {ObjectId} studyOid
+ * Aggregate enrollment counts per group from Neo4j result rows.
+ * @param {Array<{ groupId: string|null }>} enrolledUsers - Result from getUsersForStudy
  * @param {Array} groups - Study groups array
- * @returns {Promise<Array<{ groupId: string, groupLabel: string, count: number }>>}
+ * @returns {Array<{ groupId: string, groupLabel: string, count: number }>}
  */
-async function _buildGroupCountSummary(db, studyOid, groups) {
-  const groupCounts = await db
-    .collection(ENROLLMENTS)
-    .aggregate([
-      { $match: { studyId: studyOid } },
-      { $group: { _id: '$groupId', count: { $sum: 1 } } },
-    ])
-    .toArray();
+function _buildGroupCountSummary(enrolledUsers, groups) {
+  const groupCountMap = {};
+  for (const e of enrolledUsers || []) {
+    const gid = e.groupId ?? 'unknown';
+    groupCountMap[gid] = (groupCountMap[gid] ?? 0) + 1;
+  }
 
-  return (groups || []).map((g) => {
-    const found = groupCounts.find(
-      (c) => c._id?.toString() === g.id.toString()
-    );
-    return {
-      groupId: g.id.toString(),
-      groupLabel: g.label || `Group ${g.index}`,
-      count: found?.count ?? 0,
-    };
-  });
+  return (groups || []).map((g) => ({
+    groupId: g.id.toString(),
+    groupLabel: g.label || `Group ${g.index}`,
+    count: groupCountMap[g.id.toString()] ?? 0,
+  }));
 }
 
 /**
  * List participants enrolled in a study with per-group summary (paginated).
- * @param {{ db: object, id: string, page?: number, limit?: number }} deps
+ * @param {{ db: object, id: string, page?: number, limit?: number, neo4jRun?: Function }} deps
  * @returns {Promise<{ total: number, page: number, limit: number, summary: object, participants: Array }|{ notFound: boolean }>}
  */
-export async function listStudyParticipants({ db, id, page = 1, limit = 20 }) {
+export async function listStudyParticipants({
+  db,
+  id,
+  page = 1,
+  limit = 20,
+  neo4jRun,
+}) {
   let oid;
   try {
     oid = new ObjectId(id);
@@ -255,31 +318,27 @@ export async function listStudyParticipants({ db, id, page = 1, limit = 20 }) {
   const study = await db.collection(STUDIES).findOne({ _id: oid });
   if (!study) return { notFound: true };
 
-  const total = await db
-    .collection(ENROLLMENTS)
-    .countDocuments({ studyId: oid });
+  // Get all enrolled users from Neo4j (slice in JS for pagination)
+  const allEnrolled = neo4jRun
+    ? await getUsersForStudy(neo4jRun, id.toString())
+    : [];
 
+  const total = allEnrolled.length;
   const skip = (page - 1) * limit;
-  const enrollments = await db
-    .collection(ENROLLMENTS)
-    .find({ studyId: oid })
-    .sort({ enrolledAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .toArray();
+  const pageEnrolled = allEnrolled.slice(skip, skip + limit);
 
   const groupMap = _buildGroupLabelMap(study.groups);
-  const perGroup = await _buildGroupCountSummary(db, oid, study.groups);
+  const perGroup = _buildGroupCountSummary(allEnrolled, study.groups);
 
   return {
     total,
     page,
     limit,
     summary: { total, perGroup },
-    participants: enrollments.map((e) => ({
+    participants: pageEnrolled.map((e) => ({
       userId: e.userId,
-      groupId: e.groupId?.toString() ?? null,
-      groupLabel: groupMap[e.groupId?.toString()] ?? '—',
+      groupId: e.groupId ?? null,
+      groupLabel: groupMap[e.groupId] ?? '—',
       enrolledAt: e.enrolledAt,
       codeUsed: e.studyCodeUsed ?? null,
     })),
@@ -322,6 +381,90 @@ export async function updateGroupCueConfig({
 
   if (result.matchedCount === 0) return { notFound: true };
   return { updated: true };
+}
+
+/**
+ * Update the full per-group config (cueConfig, activityTypeConfig, reminderConfig, autoDonate).
+ * Only supplied fields are written; others are left unchanged.
+ * @param {{ db: object, studyId: string, groupId: string, config: object }} deps
+ * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}
+ */
+export async function updateGroupConfig({ db, studyId, groupId, config }) {
+  let studyOid, groupOid;
+  try {
+    studyOid = new ObjectId(studyId);
+    groupOid = new ObjectId(groupId);
+  } catch {
+    return { notFound: true };
+  }
+
+  const study = await db.collection(STUDIES).findOne({ _id: studyOid });
+  if (!study) return { notFound: true };
+
+  const groups = study.groups || [];
+  const groupIndex = groups.findIndex(
+    (g) => g.id?.toString() === groupOid.toString()
+  );
+  if (groupIndex === -1) return { notFound: true };
+
+  const existing = groups[groupIndex];
+  const updated = { ...existing };
+
+  if (config.cueConfig !== undefined) updated.cueConfig = config.cueConfig;
+  if (config.activityTypeConfig !== undefined)
+    updated.activityTypeConfig = config.activityTypeConfig;
+  if (config.reminderConfig !== undefined)
+    updated.reminderConfig = config.reminderConfig;
+  if (config.autoDonate !== undefined) updated.autoDonate = config.autoDonate;
+
+  groups[groupIndex] = updated;
+
+  const result = await db
+    .collection(STUDIES)
+    .updateOne({ _id: studyOid }, { $set: { groups, updatedAt: new Date() } });
+
+  if (result.matchedCount === 0) return { notFound: true };
+  return { updated: true };
+}
+
+/**
+ * Resolve the group config for a participant identified by userId.
+ * Looks up enrollment (from Neo4j) → study (from MongoDB) → group config.
+ * Returns null when the user is not enrolled in any study.
+ * @param {{ db: object, userId: string, neo4jRun: Function }} deps
+ * @returns {Promise<object|null>}
+ */
+export async function getParticipantGroupConfig({ db, userId, neo4jRun }) {
+  if (!neo4jRun) return null;
+
+  const enrollment = await getEnrollment(neo4jRun, userId);
+  if (!enrollment) return null;
+
+  let studyOid;
+  try {
+    studyOid = new ObjectId(enrollment.studyId);
+  } catch {
+    return null;
+  }
+
+  const study = await db.collection(STUDIES).findOne({ _id: studyOid });
+  if (!study) return null;
+
+  const group = (study.groups || []).find(
+    (g) => g.id?.toString() === enrollment.groupId?.toString()
+  );
+
+  return {
+    studyId: study._id.toString(),
+    studyName: study.name,
+    groupId: group?.id?.toString() ?? null,
+    groupLabel: group?.label ?? null,
+    recommenderEnabled: study.recommenderEnabled !== false,
+    cueConfig: group?.cueConfig ?? null,
+    activityTypeConfig: group?.activityTypeConfig ?? null,
+    reminderConfig: group?.reminderConfig ?? null,
+    autoDonate: group?.autoDonate ?? false,
+  };
 }
 
 /**

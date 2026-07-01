@@ -12,7 +12,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert';
 import { createServer } from 'node:http';
 import express from 'express';
-import { createV1Router } from '../../routes/v1Router.js';
+import { createApiRouter } from '../../routes/apiRouter.js';
 
 // ── Extended mock MongoDB ─────────────────────────────────────────────────────
 // Supports $in queries, .project(), and the $match/$sort/$group aggregate pipeline
@@ -146,6 +146,17 @@ let db;
 const realFetch = global.fetch;
 const originalSecret = process.env.API_SERVICE_SECRET;
 
+// Tracks userId → slug[] so the Neo4j mock can return the right questionnaires.
+const slugsByUser = new Map();
+
+const neo4jRun = async (cypher, params) => {
+  if (cypher.includes('HAS_QUESTIONNAIRE')) {
+    const slugs = slugsByUser.get(params.userId) ?? [];
+    return [{ slugs }];
+  }
+  return [];
+};
+
 before(async () => {
   process.env.API_SERVICE_SECRET = SERVICE_SECRET;
 
@@ -154,12 +165,12 @@ before(async () => {
   app.use(express.json());
   app.use(
     '/api/v1',
-    createV1Router({
+    createApiRouter({
       jwksUrl: 'http://127.0.0.1:9999/unreachable',
       expectedIssuer: null,
       expectedAudience: null,
       db,
-      neo4jRun: async () => [],
+      neo4jRun,
     })
   );
 
@@ -196,22 +207,9 @@ function serviceRequestNoAuth(userId) {
   );
 }
 
-// Helper: seed study + enrollment + questionnaires for a user
+// Helper: seed study questionnaire slugs (via Neo4j mock) and form responses for a user.
 async function seedStudy(userId, slugs, responses = []) {
-  const studyId = `study-${userId}`;
-  const questIds = slugs.map((s) => `qid-${s}`);
-
-  await db
-    .collection('studies')
-    .insertOne({ _id: studyId, questionnaires: questIds });
-
-  for (let i = 0; i < slugs.length; i++) {
-    await db
-      .collection('questionnaires')
-      .insertOne({ _id: questIds[i], slug: slugs[i] });
-  }
-
-  await db.collection('enrollments').insertOne({ userId, studyId });
+  slugsByUser.set(userId, slugs);
 
   for (const { slug, answers, submittedAt } of responses) {
     await db.collection('form_responses').insertOne({

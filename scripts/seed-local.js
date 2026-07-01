@@ -336,10 +336,10 @@ async function seedDefaultStudy() {
       isDefault: true,
       isActive: true,
       groups: [
-        { id: new ObjectId(), label: 'Group 1', index: 1 },
-        { id: new ObjectId(), label: 'Group 2', index: 2 },
-        { id: new ObjectId(), label: 'Group 3', index: 3 },
-        { id: new ObjectId(), label: 'Group 4', index: 4 },
+        { id: new ObjectId(), label: 'Group 1', index: 1, cueConfig: null, activityTypeConfig: null, reminderConfig: { enabled: true, fixedTime: null }, autoDonate: false },
+        { id: new ObjectId(), label: 'Group 2', index: 2, cueConfig: null, activityTypeConfig: null, reminderConfig: { enabled: true, fixedTime: null }, autoDonate: false },
+        { id: new ObjectId(), label: 'Group 3', index: 3, cueConfig: null, activityTypeConfig: null, reminderConfig: { enabled: true, fixedTime: null }, autoDonate: false },
+        { id: new ObjectId(), label: 'Group 4', index: 4, cueConfig: null, activityTypeConfig: null, reminderConfig: { enabled: true, fixedTime: null }, autoDonate: false },
       ],
       questionnaires: qIds,
       createdAt: now,
@@ -597,8 +597,17 @@ async function seedTestParticipant(db) {
 
   const defaultStudy = await db.collection('studies').findOne({ isDefault: true });
   const defaultStudyOid = defaultStudy?._id ?? null;
+  const defaultStudyIdStr = defaultStudyOid?.toString() ?? null;
   if (!defaultStudyOid) {
     console.log('  [warn] default study not found — test enrollments will have studyId: null');
+  }
+
+  // Ensure Study node exists in Neo4j before creating enrollments
+  if (defaultStudyIdStr) {
+    await neo4jQuery(
+      `MERGE (s:Study {uuid: $uuid}) SET s.name = $name`,
+      { uuid: defaultStudyIdStr, name: defaultStudy?.name ?? 'Default Study' }
+    );
   }
 
   const conditions = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6'];
@@ -611,14 +620,22 @@ async function seedTestParticipant(db) {
     const cues = EXAMPLE_CUES[cueKey] ?? EXAMPLE_CUES['high_quality_single'];
     const enrolledAt = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000);
 
-    await db.collection('enrollments').updateOne(
-      { userId },
-      {
-        $setOnInsert: { userId, studyCodeUsed: null, enrolledAt, cueConfig },
-        $set: { studyId: defaultStudyOid, groupId: null },
-      },
-      { upsert: true }
-    );
+    // Create ENROLLED_IN relationship in Neo4j (idempotent via MERGE)
+    if (defaultStudyIdStr) {
+      await neo4jQuery(
+        `MERGE (u:User {userID: $userId})
+         MERGE (s:Study {uuid: $studyId})
+         MERGE (u)-[e:ENROLLED_IN]->(s)
+         ON CREATE SET e.enrolledAt = $enrolledAt,
+                       e.groupId = null,
+                       e.studyCodeUsed = null`,
+        {
+          userId,
+          studyId: defaultStudyIdStr,
+          enrolledAt: enrolledAt.toISOString(),
+        }
+      );
+    }
 
     const intentionId = new ObjectId();
     await db.collection('implementation_intentions').updateOne(
@@ -690,14 +707,17 @@ async function seedTestParticipant(db) {
       );
     }
 
-    if (dropDays[cond] != null) {
-      await db.collection('enrollments').updateOne(
-        { userId },
+    if (dropDays[cond] != null && defaultStudyIdStr) {
+      const droppedAt = new Date(enrolledAt.getTime() + dropDays[cond] * 86400000);
+      const lastActiveAt = new Date(enrolledAt.getTime() + (dropDays[cond] - 1) * 86400000);
+      await neo4jQuery(
+        `MATCH (u:User {userID: $userId})-[e:ENROLLED_IN]->(:Study {uuid: $studyId})
+         SET e.droppedOutAt = $droppedAt, e.lastActiveAt = $lastActiveAt`,
         {
-          $set: {
-            droppedOutAt: new Date(enrolledAt.getTime() + dropDays[cond] * 86400000),
-            lastActiveAt: new Date(enrolledAt.getTime() + (dropDays[cond] - 1) * 86400000),
-          },
+          userId,
+          studyId: defaultStudyIdStr,
+          droppedAt: droppedAt.toISOString(),
+          lastActiveAt: lastActiveAt.toISOString(),
         }
       );
     }
@@ -735,13 +755,13 @@ async function seedTestParticipant(db) {
   }
   console.log('[mongo]   form_responses seeded for test-c1 through test-c6');
 
+  // test-public: not enrolled in a study (no Neo4j ENROLLED_IN edge needed)
   const pubId = 'test-public';
-  await db.collection('enrollments').updateOne(
-    { userId: pubId },
-    { $setOnInsert: { userId: pubId, studyId: null, groupId: null, studyCodeUsed: null, enrolledAt: new Date(), cueConfig: null } },
-    { upsert: true }
+  await neo4jQuery(
+    `MERGE (u:User {userID: $userId})`,
+    { userId: pubId }
   );
-  console.log('  ✓ seeded test-public');
+  console.log('  ✓ seeded test-public (user node only, no study enrollment)');
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────

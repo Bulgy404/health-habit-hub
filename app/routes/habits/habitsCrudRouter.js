@@ -6,6 +6,7 @@ import {
   enqueueHabitDonation,
   shareHabit,
 } from '../../services/habitDonationService.js';
+import { getEnrollment } from '../../services/enrollmentNeo4j.js';
 import { translateHabit } from '../../utils/translate.js';
 import { getJobStatus } from '../../lib/habitQueue.js';
 import { SUPPORTED_LANGUAGES } from '../../utils/constants.js';
@@ -388,6 +389,16 @@ export function createHabitsCrudRouter({
     try {
       const uuid = randomUUID();
 
+      // Resolve the participant's studyId so Neo4j Habit nodes can be tagged
+      // for research queries — best-effort, null for non-enrolled users.
+      let studyId = null;
+      try {
+        const enrollment = await getEnrollment(queryNeo4j, userId);
+        studyId = enrollment?.studyId ?? null;
+      } catch {
+        // Non-fatal: missing studyId is fine, habit is still stored.
+      }
+
       // When no queue is available (e.g. test mode), fall back to the
       // synchronous pipeline so tests can verify end-to-end behaviour.
       if (!habitQueue) {
@@ -396,6 +407,7 @@ export function createHabitsCrudRouter({
           sentence,
           language,
           userID: userId,
+          studyId,
           frequency: frequency ?? null,
           duration: duration ?? null,
           healthBenefit: health_benefit ?? null,
@@ -438,6 +450,7 @@ export function createHabitsCrudRouter({
         sentence,
         language,
         userID: userId,
+        studyId,
         confidence: classified.confidence,
         frequency: frequency ?? null,
         duration: duration ?? null,
@@ -515,6 +528,41 @@ export function createHabitsCrudRouter({
   // Strict per-user rate limit on habit donation (10 submissions per hour).
   router.post('/share', habitShareLimiter, handleShareHabit);
   router.post('/donate', habitShareLimiter, handleShareHabit);
+
+  // POST /api/v1/habits/stitch-intention — proxy to API-service LLM
+  // Merges user-entered action + cues into one implementation intention sentence.
+  router.post('/stitch-intention', async (req, res) => {
+    const { action, cues, language = 'en' } = req.body || {};
+    if (!action || !Array.isArray(cues) || cues.length === 0) {
+      return res.status(400).json({ error: 'action and cues are required' });
+    }
+    const apiBase =
+      apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
+    const headers = { 'Content-Type': 'application/json' };
+    if (process.env.API_SERVICE_SECRET)
+      headers['X-Service-Auth-Token'] = process.env.API_SERVICE_SECRET;
+    try {
+      const upstream = await fetch(
+        `${apiBase}/api/v1/llm/stitch-intention`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ action, cues, language }),
+        }
+      );
+      if (!upstream.ok) {
+        const text = await upstream.text().catch(() => '');
+        return res
+          .status(upstream.status >= 500 ? 502 : upstream.status)
+          .json({ error: text || 'Upstream error' });
+      }
+      const data = await upstream.json();
+      return res.json(data);
+    } catch (err) {
+      log.error({ err }, 'stitch-intention proxy error');
+      return res.status(503).json({ error: 'Service unavailable' });
+    }
+  });
 
   return router;
 }

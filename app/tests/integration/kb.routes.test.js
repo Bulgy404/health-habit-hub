@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import { createServer } from 'node:http';
 import { generateKeyPairSync, createSign } from 'node:crypto';
 import express from 'express';
-import { createV1Router } from '../../routes/v1Router.js';
+import { createApiRouter } from '../../routes/apiRouter.js';
 
 // ── Key material ──────────────────────────────────────────────────────────────
 
@@ -108,7 +108,7 @@ before(async () => {
 
   const testApp = express();
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
-  const v1Router = createV1Router({
+  const apiRouter = createApiRouter({
     jwksUrl: 'http://keycloak/jwks',
     expectedIssuer: null,
     expectedAudience: null,
@@ -117,7 +117,7 @@ before(async () => {
     neo4jRun: async () => [],
     apiServiceUrl,
   });
-  testApp.use('/api/v1', v1Router);
+  testApp.use('/api/v1', apiRouter);
   server = createServer(testApp);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -220,7 +220,7 @@ test('POST /kb/reindex proxies to the API-service reindex endpoint', async () =>
 test('returns 502 when the API-service is unreachable', async () => {
   const deadApp = express();
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
-  const deadRouter = createV1Router({
+  const deadRouter = createApiRouter({
     jwksUrl: 'http://keycloak/jwks',
     expectedIssuer: null,
     expectedAudience: null,

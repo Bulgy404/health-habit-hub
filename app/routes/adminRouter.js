@@ -18,6 +18,7 @@ import { ROLES } from '../middleware/auth.js';
 import { createProfileFieldDefinitionsAdminRouter } from './profileFieldDefinitionsRouter.js';
 import { createActivityTypeRouter } from './activityTypeRouter.js';
 import { seedActivityTypes } from '../services/activityTypeService.js';
+import { createAppSettingsRouter } from './admin/appSettingsRouter.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'adminRouter' });
@@ -598,6 +599,12 @@ export function createAdminRouter({
     '/activity-types',
     requireRole(ROLES.ADMIN),
     createActivityTypeRouter({ db })
+  );
+
+  router.use(
+    '/',
+    requireRole(ROLES.ADMIN),
+    createAppSettingsRouter({ db })
   );
 
   return router;

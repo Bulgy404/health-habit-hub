@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { createServer } from 'node:http';
 import { generateKeyPairSync, createSign } from 'node:crypto';
 import express from 'express';
-import { createV1Router } from '../../routes/v1Router.js';
+import { createApiRouter } from '../../routes/apiRouter.js';
 
 const { privateKey, publicKey } = generateKeyPairSync('rsa', {
   modulusLength: 2048,
@@ -92,7 +92,7 @@ before(async () => {
   app.use(express.json());
   app.use(
     '/api/v1',
-    createV1Router({
+    createApiRouter({
       jwksUrl: `http://127.0.0.1:${jwksPort}/realms/hhh/protocol/openid-connect/certs`,
       expectedIssuer: null,
       expectedAudience: null,

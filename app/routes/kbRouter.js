@@ -4,7 +4,7 @@ import express from 'express';
 /**
  * Knowledge Base router — proxies KB CRUD operations to the API-service.
  *
- * Routes (all require admin/researcher role, enforced in v1Router):
+ * Routes (all require admin/researcher role, enforced in apiRouter):
  *   GET    /api/v1/kb              — list PDFs
  *   POST   /api/v1/kb              — upload a PDF (multipart/form-data)
  *   DELETE /api/v1/kb/:filename    — delete a PDF

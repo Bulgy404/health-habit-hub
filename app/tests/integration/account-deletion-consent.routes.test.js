@@ -4,7 +4,7 @@ import assert from 'node:assert';
 import { createServer } from 'node:http';
 import { generateKeyPairSync, createSign } from 'node:crypto';
 import express from 'express';
-import { createV1Router } from '../../routes/v1Router.js';
+import { createApiRouter } from '../../routes/apiRouter.js';
 
 // ── Key material ──────────────────────────────────────────────────────────────
 
@@ -128,7 +128,7 @@ before(async () => {
   const testApp = express();
   testApp.use(express.json());
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
-  const v1Router = createV1Router({
+  const apiRouter = createApiRouter({
     jwksUrl: 'http://keycloak/jwks',
     expectedIssuer: null,
     expectedAudience: null,
@@ -137,7 +137,7 @@ before(async () => {
     neo4jRun: async () => [],
     keycloak: mockKeycloak,
   });
-  testApp.use('/api/v1', v1Router);
+  testApp.use('/api/v1', apiRouter);
   server = createServer(testApp);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -269,12 +269,7 @@ test('deletes all participant data and the Keycloak identity', async () => {
   const sub = 'doomed-user';
   // Seed data across several collections
   const db = createMockDb();
-  for (const c of [
-    'users',
-    'enrollments',
-    'implementation_intentions',
-    'consents',
-  ]) {
+  for (const c of ['users', 'implementation_intentions', 'consents']) {
     await db.collection(c).insertOne({ userId: sub, payload: c });
   }
   await db.collection('users').insertOne({ userId: 'other-user' });
@@ -287,7 +282,7 @@ test('deletes all participant data and the Keycloak identity', async () => {
   const body = await res.json();
   assert.strictEqual(body.ok, true);
   assert.strictEqual(body.deleted.users >= 1, true);
-  assert.strictEqual(body.deleted.enrollments >= 1, true);
+  // enrollment is now deleted from Neo4j, not MongoDB
   assert.strictEqual(body.deleted.implementation_intentions >= 1, true);
   assert.strictEqual(body.deleted.consents >= 1, true);
 

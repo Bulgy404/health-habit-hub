@@ -150,9 +150,6 @@ async function mapBcio(uuid, contextPhrases, apiBase) {
 
 /**
  * Create the Habit node in Neo4j and return the sanitised confidence value.
- * @param {{ uuid: string, sentence: string, language: string, confidence: number, userID: string, frequency: any, duration: any, healthBenefit: any, wellbeingImpact: any, translationEN: string|null, translationDE: string|null, createdAt: string }} params
- * @param {Function} queryNeo4j
- * @returns {Promise<void>}
  */
 async function _createHabitNode(
   {
@@ -161,6 +158,7 @@ async function _createHabitNode(
     language,
     confidence,
     userID,
+    studyId,
     frequency,
     duration,
     healthBenefit,
@@ -180,7 +178,8 @@ async function _createHabitNode(
 
   await queryNeo4j(
     `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: $language,
-       is_habit: true, habit_confidence: $habit_confidence, userID: $userID, created_at: $created_at,
+       is_habit: true, habit_confidence: $habit_confidence, userID: $userID,
+       studyId: $studyId, created_at: $created_at,
        translationEN: $translationEN, translationDE: $translationDE,
        frequency: $frequency, duration: $duration,
        health_benefit: $health_benefit, wellbeing_impact: $wellbeing_impact})`,
@@ -190,6 +189,7 @@ async function _createHabitNode(
       language,
       habit_confidence: safeConfidence,
       userID: safeUserId,
+      studyId: studyId ?? null,
       created_at: createdAt,
       translationEN: translationEN || null,
       translationDE: translationDE || null,
@@ -263,6 +263,7 @@ async function writeToNeo4j(
     language,
     confidence,
     userID,
+    studyId,
     frequency,
     duration,
     healthBenefit,
@@ -282,6 +283,7 @@ async function writeToNeo4j(
       language,
       confidence,
       userID,
+      studyId,
       frequency,
       duration,
       healthBenefit,
@@ -415,6 +417,7 @@ export async function shareHabit({
   sentence,
   language,
   userID,
+  studyId = null,
   frequency = null,
   duration = null,
   healthBenefit = null,
@@ -457,6 +460,7 @@ export async function shareHabit({
       language,
       confidence: classified.confidence,
       userID,
+      studyId,
       frequency,
       duration,
       healthBenefit,
@@ -502,6 +506,7 @@ export async function processAcceptedHabit({
   sentence,
   language,
   userID,
+  studyId = null,
   confidence,
   frequency = null,
   duration = null,
@@ -535,6 +540,7 @@ export async function processAcceptedHabit({
       language,
       confidence: confidence ?? 1,
       userID,
+      studyId,
       frequency,
       duration,
       healthBenefit,
@@ -569,6 +575,7 @@ export async function enqueueHabitDonation({
   sentence,
   language,
   userID,
+  studyId = null,
   confidence,
   frequency = null,
   duration = null,
@@ -583,6 +590,7 @@ export async function enqueueHabitDonation({
       sentence,
       language,
       userID,
+      studyId,
       confidence,
       frequency,
       duration,

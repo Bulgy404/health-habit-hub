@@ -29,13 +29,14 @@ import { createProfileFieldDefinitionsPublicRouter } from './profileFieldDefinit
 import { createIntentionsRouter } from './intentionsRouter.js';
 import { createSrhiRouter } from './srhiRouter.js';
 import { createHabitConfigRouter } from './habitConfigRouter.js';
+import { createStudyConfigRouter } from './studyConfigRouter.js';
 import { createCuePoolRouter } from './cuePoolRouter.js';
 import { createStudyExportRouter } from './studyExportRouter.js';
 import { createNotificationCampaignRouter } from './notificationCampaignRouter.js';
 import { checkAllServices } from '../utils/healthCheck.js';
 import { swaggerSpec } from '../swagger.js';
 
-export function createV1Router({
+export function createApiRouter({
   jwksUrl,
   expectedIssuer,
   expectedAudience,
@@ -174,7 +175,7 @@ export function createV1Router({
   router.use(
     '/questionnaire-responses',
     apiRateLimiter,
-    createQuestionnaireResponsesServiceRouter({ db })
+    createQuestionnaireResponsesServiceRouter({ db, neo4jRun })
   );
 
   // All routes below require a valid JWT
@@ -221,14 +222,14 @@ export function createV1Router({
   router.use(
     '/srhi',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createSrhiRouter({ db })
+    createSrhiRouter({ db, neo4jRun })
   );
 
   // Resolved habit config (user + admin + researcher)
   router.use(
     '/me/habit-config',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createHabitConfigRouter({ db })
+    createHabitConfigRouter({ db, neo4jRun })
   );
 
   // Cue pool management (admin + researcher only)
@@ -249,7 +250,7 @@ export function createV1Router({
   router.use(
     '/admin/notifications',
     requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
-    createNotificationCampaignRouter({ db })
+    createNotificationCampaignRouter({ db, neo4jRun })
   );
 
   // Recommend routes: require user, admin, or researcher role
@@ -305,14 +306,21 @@ export function createV1Router({
   router.use(
     '/onboarding',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createStudyEnrollRouter({ db })
+    createStudyEnrollRouter({ db, neo4jRun })
+  );
+
+  // Study config for the current participant: require user, admin, or researcher role
+  router.use(
+    '/study-config',
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
+    createStudyConfigRouter({ db })
   );
 
   // Participant-specific routes: require user, admin, or researcher role
   router.use(
     '/participant',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createParticipantRouter({ db })
+    createParticipantRouter({ db, neo4jRun })
   );
 
   // User profile: require user, admin, or researcher role
@@ -332,4 +340,4 @@ export function createV1Router({
   return router;
 }
 
-export default createV1Router;
+export default createApiRouter;

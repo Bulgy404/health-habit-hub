@@ -1,0 +1,28 @@
+%% UC-36 — Researcher configures per-group study design in admin portal
+sequenceDiagram
+    autonumber
+    actor R as Researcher
+    participant A as Admin Portal (Next.js)
+    participant B as Backend (Node.js)
+    participant M as MongoDB
+
+    R->>A: Open Studies → select study → select group
+    A->>B: GET /api/v1/admin/studies/:id  (JWT, admin/researcher role)
+    B->>M: studies.findOne({_id})
+    M-->>B: study + groups (with current config)
+    B-->>A: study detail
+
+    R->>A: Configure per-group toggles:
+    Note over R,A: • Restrict activity types → select allowed types<br/>• Restrict cue selection → link to cue pool<br/>• Reminder: enable toggle + optional fixed time (HH:MM)<br/>• Auto-donate habits to community
+    R->>A: Save
+
+    A->>B: PATCH /api/v1/admin/studies/:id/groups/:groupId/config<br/>{cueConfig?, activityTypeConfig?, reminderConfig?, autoDonate?}
+    B->>M: studies.updateOne({_id}, {$set: {groups: [...]}})
+    M-->>B: {matchedCount:1}
+    B-->>A: 200 {updated: true}
+    A->>R: Group config saved
+
+    Note over R,A: Repeat for other groups (e.g. control group has fewer restrictions)
+
+    Note over B,M: When participant logs in:
+    Note over B,M: GET /study-config/me → enrollment → study → group<br/>Returns resolved config to Flutter app

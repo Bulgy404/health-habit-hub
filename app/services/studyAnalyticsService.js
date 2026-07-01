@@ -1,7 +1,7 @@
 // app/services/studyAnalyticsService.js
 import { ObjectId } from 'mongodb';
+import { getUsersForStudy } from './enrollmentNeo4j.js';
 
-const ENROLLMENTS = 'enrollments';
 const DAILY_LOGS = 'daily_behavior_logs';
 const SRHI = 'srhi_responses';
 const FORM_RESPONSES = 'form_responses';
@@ -10,27 +10,19 @@ const QUESTIONNAIRES = 'questionnaires';
 
 /**
  * Return per-group weekly active rate: percentage of enrolled participants with at least one log in the last 7 days.
- * @param {{ db: object, studyId: string }} deps
+ * @param {{ db: object, studyId: string, neo4jRun: Function }} deps
  * @returns {Promise<Array<{ groupId: string, enrolled: number, active: number, rate: number }>>}
  */
-export async function getWeeklyActiveRate({ db, studyId }) {
-  let oid;
-  try {
-    oid = new ObjectId(studyId);
-  } catch {
-    return [];
-  }
-
-  const enrollments = await db
-    .collection(ENROLLMENTS)
-    .find({ studyId: oid })
-    .toArray();
+export async function getWeeklyActiveRate({ db, studyId, neo4jRun }) {
+  const enrollments = neo4jRun
+    ? await getUsersForStudy(neo4jRun, studyId)
+    : [];
 
   if (enrollments.length === 0) return [];
 
   const byGroup = {};
   for (const e of enrollments) {
-    const gid = e.groupId?.toString() ?? 'unknown';
+    const gid = e.groupId ?? 'unknown';
     byGroup[gid] = byGroup[gid] ?? { groupId: gid, userIds: [] };
     byGroup[gid].userIds.push(e.userId);
   }
@@ -104,28 +96,29 @@ export async function getMeanSrhiTrajectory({ db, studyId }) {
 
 /**
  * Return cumulative dropout count per group by date, sorted ascending.
- * @param {{ db: object, studyId: string }} deps
+ * @param {{ db: object, studyId: string, neo4jRun: Function }} deps
  * @returns {Promise<Array<{ groupId: string, date: string, cumulative: number }>>}
  */
-export async function getDropoutCurve({ db, studyId }) {
-  let oid;
-  try {
-    oid = new ObjectId(studyId);
-  } catch {
-    return [];
-  }
+export async function getDropoutCurve({ db, studyId, neo4jRun }) {
+  if (!neo4jRun) return [];
 
-  const dropped = await db
-    .collection(ENROLLMENTS)
-    .find({ studyId: oid, droppedOutAt: { $ne: null } })
-    .toArray();
+  const rows = await neo4jRun(
+    `MATCH (u:User)-[e:ENROLLED_IN]->(s:Study {uuid: $studyId})
+     WHERE e.droppedOutAt IS NOT NULL
+     RETURN e.groupId AS groupId, e.droppedOutAt AS droppedOutAt`,
+    { studyId: String(studyId) }
+  );
 
-  if (dropped.length === 0) return [];
+  if (!rows || rows.length === 0) return [];
 
   const byGroup = {};
-  for (const e of dropped) {
-    const gid = e.groupId?.toString() ?? 'unknown';
-    const date = e.droppedOutAt.toISOString().split('T')[0];
+  for (const e of rows) {
+    const gid = e.groupId ?? 'unknown';
+    const raw = e.droppedOutAt;
+    const date =
+      raw instanceof Date
+        ? raw.toISOString().split('T')[0]
+        : String(raw).split('T')[0];
     byGroup[gid] = byGroup[gid] ?? [];
     byGroup[gid].push(date);
   }
@@ -148,10 +141,10 @@ export async function getDropoutCurve({ db, studyId }) {
  * For every questionnaire linked to the study, counts how many enrolled
  * participants have at least one response.
  *
- * @param {{ db: object, studyId: string }} deps
+ * @param {{ db: object, studyId: string, neo4jRun: Function }} deps
  * @returns {Promise<Array<{ questionnaireId: string, slug: string, title: string, enrolled: number, completed: number, rate: number }>>}
  */
-export async function getQuestionnaireCompletionRates({ db, studyId }) {
+export async function getQuestionnaireCompletionRates({ db, studyId, neo4jRun }) {
   let oid;
   try {
     oid = new ObjectId(studyId);
@@ -172,13 +165,14 @@ export async function getQuestionnaireCompletionRates({ db, studyId }) {
     id instanceof ObjectId ? id : new ObjectId(id)
   );
 
-  const [questionnaires, enrollments] = await Promise.all([
-    db
-      .collection(QUESTIONNAIRES)
-      .find({ _id: { $in: questionnaireIds } })
-      .toArray(),
-    db.collection(ENROLLMENTS).find({ studyId: oid }).toArray(),
-  ]);
+  const enrollments = neo4jRun
+    ? await getUsersForStudy(neo4jRun, studyId)
+    : [];
+
+  const questionnaires = await db
+    .collection(QUESTIONNAIRES)
+    .find({ _id: { $in: questionnaireIds } })
+    .toArray();
 
   const enrolledUserIds = enrollments.map((e) => e.userId);
   const enrolled = enrolledUserIds.length;

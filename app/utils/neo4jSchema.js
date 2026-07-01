@@ -23,6 +23,12 @@ const SCHEMA_STATEMENTS = [
   // Community comments on habits (anonymous nodes, erased via id on account deletion)
   `CREATE CONSTRAINT comment_id_unique IF NOT EXISTS
      FOR (c:Comment) REQUIRE c.id IS UNIQUE`,
+  // Study node — one per MongoDB study document
+  `CREATE CONSTRAINT study_uuid IF NOT EXISTS
+     FOR (s:Study) REQUIRE s.uuid IS UNIQUE`,
+  // Questionnaire slug — for HAS_QUESTIONNAIRE traversal
+  `CREATE CONSTRAINT questionnaire_slug IF NOT EXISTS
+     FOR (q:Questionnaire) REQUIRE q.slug IS UNIQUE`,
 ];
 
 /**

@@ -15,6 +15,10 @@
  *     label:            string
  *     index:            1|2|3|4
  *     allocationWeight: int (1–100, default 1) — relative weight for round-robin enrollment via study codes.
+ *     cueConfig:        { restricted: boolean, cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits } | null
+ *     activityTypeConfig: { restricted: boolean, allowedActivityTypeIds: ObjectId[] } | null
+ *     reminderConfig:   { enabled: boolean, fixedTime: string|null } | null  — fixedTime is "HH:MM"
+ *     autoDonate:       boolean — when true habits are auto-donated to the community on creation
  *   }>
  *   questionnaires  Array<ObjectId>  Refs to questionnaires collection.
  *   createdAt    Date
@@ -56,6 +60,7 @@ export const VALIDATOR = {
             cueConfig: {
               bsonType: ['object', 'null'],
               properties: {
+                restricted: { bsonType: 'bool' },
                 cueCount: { bsonType: 'string', enum: ['single', 'multi'] },
                 cueSource: {
                   bsonType: 'string',
@@ -69,6 +74,24 @@ export const VALIDATOR = {
                 maxHabits: { bsonType: ['int', 'null'] },
               },
             },
+            activityTypeConfig: {
+              bsonType: ['object', 'null'],
+              properties: {
+                restricted: { bsonType: 'bool' },
+                allowedActivityTypeIds: {
+                  bsonType: 'array',
+                  items: { bsonType: 'objectId' },
+                },
+              },
+            },
+            reminderConfig: {
+              bsonType: ['object', 'null'],
+              properties: {
+                enabled: { bsonType: 'bool' },
+                fixedTime: { bsonType: ['string', 'null'] },
+              },
+            },
+            autoDonate: { bsonType: 'bool' },
           },
         },
       },

@@ -5,7 +5,7 @@ import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'studyEnrollRouter' });
 
-export function createStudyEnrollRouter({ db } = {}) {
+export function createStudyEnrollRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -26,7 +26,7 @@ export function createStudyEnrollRouter({ db } = {}) {
       if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
       const database = await getDb();
-      const result = await redeemCode({ db: database, userId, code });
+      const result = await redeemCode({ db: database, userId, code, neo4jRun });
 
       if (result.notFound)
         return res.status(404).json({ error: 'Code not found' });
@@ -56,7 +56,7 @@ export function createStudyEnrollRouter({ db } = {}) {
       if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
       const database = await getDb();
-      const result = await skipCode({ db: database, userId });
+      const result = await skipCode({ db: database, userId, neo4jRun });
 
       if (result.noDefaultStudy) {
         return res.status(503).json({ error: 'No default study configured' });

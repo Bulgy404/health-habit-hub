@@ -3,12 +3,14 @@ library;
 
 // mobile/lib/features/my_habits/new_habit_screen_2_cue.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/study_config_service.dart';
 import 'my_habits_models.dart';
 
 /// Screen for entering the "when" and "where" implementation intention cues.
-class SetCueScreen extends StatefulWidget {
+class SetCueScreen extends ConsumerStatefulWidget {
   /// Creates a [SetCueScreen] for [behaviorKey].
   const SetCueScreen({
     required this.behaviorKey,
@@ -27,13 +29,14 @@ class SetCueScreen extends StatefulWidget {
   final HabitConfig config;
 
   @override
-  State<SetCueScreen> createState() => _SetCueScreenState();
+  ConsumerState<SetCueScreen> createState() => _SetCueScreenState();
 }
 
-class _SetCueScreenState extends State<SetCueScreen> {
+class _SetCueScreenState extends ConsumerState<SetCueScreen> {
   final _cue1Controller = TextEditingController();
   final _cue2Controller = TextEditingController();
   String? _error;
+  bool _stitching = false;
 
   @override
   void dispose() {
@@ -42,7 +45,7 @@ class _SetCueScreenState extends State<SetCueScreen> {
     super.dispose();
   }
 
-  void _onNext() {
+  Future<void> _onNext() async {
     final l10n = AppLocalizations.of(context)!;
     final isPreRated = widget.config.cueSource != 'self_selected';
 
@@ -59,7 +62,10 @@ class _SetCueScreenState extends State<SetCueScreen> {
       }
     }
 
-    setState(() => _error = null);
+    setState(() {
+      _error = null;
+      _stitching = true;
+    });
 
     final List<IntentionCue> cues;
     if (isPreRated) {
@@ -88,6 +94,16 @@ class _SetCueScreenState extends State<SetCueScreen> {
       ];
     }
 
+    // Call stitch-intention LLM (non-blocking: falls back to local assembly on failure).
+    final stitchedSentence =
+        await ref.read(studyConfigServiceProvider).stitchIntention(
+              action: widget.behaviorLabel,
+              cues: cues.map((c) => c.text).toList(),
+            );
+
+    if (!mounted) return;
+    setState(() => _stitching = false);
+
     context.push(
       '/habits/new/confirm',
       extra: {
@@ -95,6 +111,7 @@ class _SetCueScreenState extends State<SetCueScreen> {
         'behaviorLabel': widget.behaviorLabel,
         'config': widget.config,
         'cues': cues,
+        if (stitchedSentence != null) 'stitchedSentence': stitchedSentence,
       },
     );
   }
@@ -180,8 +197,15 @@ class _SetCueScreenState extends State<SetCueScreen> {
             ],
             const Spacer(),
             FilledButton(
-              onPressed: _onNext,
-              child: const Text('Next'),
+              onPressed: _stitching ? null : _onNext,
+              child: _stitching
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Next'),
             ),
           ],
         ),

@@ -1,0 +1,69 @@
+%% UC-35 — Guided habit creation (Path A: public / Path B: study participant)
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant F as Flutter App
+    participant B as Backend (Node.js)
+    participant AI as API-service (FastAPI)
+    participant N as Neo4j
+    participant M as MongoDB
+
+    Note over F,B: On login / app start
+
+    F->>B: GET /api/v1/study-config/me  (JWT)
+    B->>M: enrollments.findOne({userId})
+    M-->>B: enrollment or null
+    alt enrolled
+        B->>M: studies.findOne({_id: studyId})
+        M-->>B: study + group config
+        B-->>F: {studyId, groupId, cueConfig, activityTypeConfig,<br/>reminderConfig, autoDonate, recommenderEnabled}
+    else not enrolled (public user)
+        B-->>F: null
+    end
+
+    Note over F: Path A (public) or Path B (study) — same screens, different constraints
+
+    U->>F: Tap "New Habit"
+    F->>B: GET /api/v1/me/habit-config  (resolves cues from group config)
+    B-->>F: {behaviorOptions, cueSource, cueCount, assignedCues, …}
+
+    F->>U: Screen 1 — Pick behaviour (restricted if activityTypeConfig.restricted)
+    U->>F: Select behaviour (e.g. "Walking")
+
+    F->>U: Screen 2 — Enter cues (restricted if cueConfig.restricted)
+    U->>F: Enter cue(s) (e.g. "After my morning coffee")
+
+    F->>B: POST /api/v1/habits/stitch-intention {action, cues, language}
+    B->>AI: POST /api/v1/llm/stitch-intention {action, cues, language}
+    Note over AI: Quick LLM call (temp 0.3, ~1 s) — no RAG
+    AI-->>B: {sentence: "After my morning coffee, I will go for a 20-min walk."}
+    B-->>F: {sentence}
+
+    F->>U: Screen 3 — Confirm (editable sentence, duration, reminder)
+    Note over F: reminderConfig.fixedTime → show read-only if set by study<br/>autoDonate → skip share toggle if true
+    U->>F: Tap "Create"
+
+    F->>B: POST /api/v1/habits/intentions {behaviorKey, cues, intentionStatement, reminderTime}
+    B->>M: intentions.insertOne({userId, behaviorKey, …})
+    M-->>B: {id}
+    B-->>F: 201 Created
+
+    alt autoDonate = true (study group setting)
+        F->>B: POST /api/v1/habits/share {sentence, language}
+        B->>M: enrollments.findOne({userId}) → studyId
+        B->>AI: POST /api/v1/llm/classify-habit + extract-context + map-bcio
+        AI-->>B: contextPhrases + mappings
+        B->>N: CREATE (h:Habit {uuid, userID, studyId, sentence, …})
+        N-->>B: ok
+        B-->>F: 202 Accepted
+    else communityShareDefault = true (public setting)
+        F->>U: Show share toggle (pre-selected)
+        opt User opts in
+            F->>B: POST /api/v1/habits/share {sentence, language}
+            B->>N: CREATE (h:Habit {uuid, userID, studyId: null, …})
+            N-->>B: ok
+            B-->>F: 202 Accepted
+        end
+    end
+
+    F->>U: Success screen

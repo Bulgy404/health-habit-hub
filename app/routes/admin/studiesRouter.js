@@ -9,6 +9,7 @@ import {
   setDefaultStudy,
   listStudyParticipants,
   updateGroupCueConfig,
+  updateGroupConfig,
   updateAllocationWeights,
 } from '../../services/studyService.js';
 import {
@@ -30,13 +31,14 @@ import {
   createStudyCodesSchema,
   cueConfigSchema,
   updateAllocationSchema,
+  updateGroupConfigSchema,
 } from '../../schemas/adminSchemas.js';
 
 const log = logger.child({ module: 'studiesRouter' });
 
 export function createStudiesRouter({
   db,
-  neo4jRun: _neo4jRun,
+  neo4jRun,
   keycloak: _keycloak,
 } = {}) {
   const router = express.Router();
@@ -74,6 +76,7 @@ export function createStudiesRouter({
         groups,
         questionnaires,
         recommenderEnabled,
+        neo4jRun,
       });
       res.status(201).json({
         id: study._id.toString(),
@@ -114,6 +117,7 @@ export function createStudiesRouter({
         db: database,
         id: req.params.id,
         updates: req.body,
+        neo4jRun,
       });
       if (result.notFound)
         return res.status(404).json({ error: 'Study not found' });
@@ -177,11 +181,34 @@ export function createStudiesRouter({
     }
   );
 
+  // PATCH /api/v1/admin/studies/:id/groups/:groupId/config — update per-group config
+  router.patch(
+    '/studies/:id/groups/:groupId/config',
+    validate(updateGroupConfigSchema),
+    async (req, res) => {
+      try {
+        const database = await getDb();
+        const result = await updateGroupConfig({
+          db: database,
+          studyId: req.params.id,
+          groupId: req.params.groupId,
+          config: req.body,
+        });
+        if (result.notFound)
+          return res.status(404).json({ error: 'Study or group not found' });
+        res.json({ updated: true });
+      } catch (err) {
+        log.error({ err }, 'unhandled route error');
+        res.status(500).json({ error: 'Internal server error' });
+      }
+    }
+  );
+
   // DELETE /api/v1/admin/studies/:id — soft-delete a study
   router.delete('/studies/:id', async (req, res) => {
     try {
       const database = await getDb();
-      const result = await softDeleteStudy({ db: database, id: req.params.id });
+      const result = await softDeleteStudy({ db: database, id: req.params.id, neo4jRun });
       if (result.notFound)
         return res.status(404).json({ error: 'Study not found' });
       if (result.isDefault) {
@@ -305,6 +332,7 @@ export function createStudiesRouter({
         id: req.params.id,
         page,
         limit,
+        neo4jRun,
       });
       if (result.notFound)
         return res.status(404).json({ error: 'Study not found' });
@@ -325,12 +353,13 @@ export function createStudiesRouter({
         dropoutCurve,
         questionnaireCompletionRates,
       ] = await Promise.all([
-        getWeeklyActiveRate({ db: database, studyId: req.params.id }),
+        getWeeklyActiveRate({ db: database, studyId: req.params.id, neo4jRun }),
         getMeanSrhiTrajectory({ db: database, studyId: req.params.id }),
-        getDropoutCurve({ db: database, studyId: req.params.id }),
+        getDropoutCurve({ db: database, studyId: req.params.id, neo4jRun }),
         getQuestionnaireCompletionRates({
           db: database,
           studyId: req.params.id,
+          neo4jRun,
         }),
       ]);
       res.json({

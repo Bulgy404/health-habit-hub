@@ -6,7 +6,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 from fastapi import APIRouter, Depends
@@ -80,7 +80,7 @@ def _cosine_scores(
 
 async def _vector_search_user_habits(
     goal: str, user_id: str
-) -> list[dict[str, object]]:
+) -> list[dict[str, Any]]:
     """Return the user's own habits ranked by semantic similarity to the goal.
 
     Embeds the goal once, fetches all of the user's donated habits with their
@@ -162,8 +162,8 @@ async def _run_vector_query(
     index_name: str,
     embedding: list[float],
     cypher_tail: str,
-    params: dict[str, object],
-) -> list[dict[str, object]]:
+    params: dict[str, Any],
+) -> list[dict[str, Any]]:
     """Run a single vector index query and return raw records as dicts."""
     try:
         cypher = (
@@ -177,9 +177,9 @@ async def _run_vector_query(
         return []
 
 
-def _records_to_habits(records: list[dict]) -> dict[str, dict]:
+def _records_to_habits(records: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Convert raw Neo4j records to a uuid-keyed habit dict."""
-    habits: dict[str, dict] = {}
+    habits: dict[str, dict[str, Any]] = {}
     for record in records:
         uuid = record.get("uuid")
         if not uuid:
@@ -204,7 +204,7 @@ def _records_to_habits(records: list[dict]) -> dict[str, dict]:
 
 async def _vector_search_habits(
     goal: str, exclude_user_id: str
-) -> list[dict[str, object]]:
+) -> list[dict[str, Any]]:
     """Fan out across habit, context, and BCIO vector indexes to find community habits.
 
     Embeds the goal once, then queries all three Neo4j vector indexes in parallel:
@@ -221,7 +221,7 @@ async def _vector_search_habits(
         logger.warning("Embedding goal for vector search failed: %s", exc)
         return []
 
-    merged: dict[str, dict[str, object]] = {}
+    merged: dict[str, dict[str, Any]] = {}  # uuid → habit dict
     limit = _COMMUNITY_HABITS_LIMIT
     params = {"limit": limit, "exclude_user_id": exclude_user_id}
 
@@ -259,7 +259,7 @@ async def _vector_search_habits(
                score
     """
 
-    async def _query_in_own_session(index_name: str, cypher_tail: str) -> list[dict[str, object]]:
+    async def _query_in_own_session(index_name: str, cypher_tail: str) -> list[dict[str, Any]]:
         driver = await _get_neo4j_driver()
         async with driver.session() as session:
             return await _run_vector_query(session, index_name, query_embedding, cypher_tail, params)
@@ -289,7 +289,7 @@ async def _vector_search_habits(
 async def fetch_annotated_habits(
     user_id: str,
     db: AsyncIOMotorDatabase,
-) -> list[dict[str, object]]:
+) -> list[dict[str, Any]]:
     """Return habits this user has liked or saved, with full Neo4j context.
 
     Queries MongoDB habit_annotations for types helpful/iDoThis/like, then
@@ -334,7 +334,7 @@ async def fetch_annotated_habits(
         logger.error("Neo4j fetch of annotated habits failed: %s", exc)
         return []
 
-    habits: list[dict[str, object]] = []
+    habits: list[dict[str, Any]] = []
     for rec in records:
         ctx: dict[str, list[str]] = {dim: [] for dim in _DIMENSIONS}
         for item in rec.get("ctx_items", []):
@@ -474,7 +474,7 @@ async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
     # Build a merged candidate pool: personal first (more contextually relevant),
     # then community vector results. Dedup by UUID so the LLM sees each habit once.
     seen: set[str] = set()
-    candidate_pool: list[dict[str, object]] = []
+    candidate_pool: list[dict[str, Any]] = []
     for h in personal_habits:
         if h["uuid"] not in seen:
             seen.add(str(h["uuid"]))

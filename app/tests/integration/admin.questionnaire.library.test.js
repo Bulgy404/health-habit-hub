@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { generateKeyPairSync, createSign } from 'node:crypto';
 import { ObjectId } from 'mongodb';
 import express from 'express';
-import { createV1Router } from '../../routes/v1Router.js';
+import { createApiRouter } from '../../routes/apiRouter.js';
 
 // ── Key material ─────────────────────────────────────────────────────────────
 
@@ -140,6 +140,17 @@ let server;
 let baseUrl;
 let mockDb;
 
+// Configurable Neo4j enrollment mock: tests set entries before calling the endpoint.
+const neo4jEnrollments = new Map(); // userId → { studyId, groupId, enrolledAt, studyCodeUsed }
+
+const neo4jRun = async (cypher, params) => {
+  if (cypher.includes('ENROLLED_IN')) {
+    const row = neo4jEnrollments.get(params.userId);
+    return row ? [row] : [];
+  }
+  return [];
+};
+
 before(async () => {
   mockDb = createMockDb();
 
@@ -154,14 +165,15 @@ before(async () => {
   const testApp = express();
   testApp.use(express.json());
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
-  const v1Router = createV1Router({
+  const apiRouter = createApiRouter({
     jwksUrl: 'http://keycloak/jwks',
     expectedIssuer: null,
     expectedAudience: null,
     serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
     db: mockDb,
+    neo4jRun,
   });
-  testApp.use('/api/v1', v1Router);
+  testApp.use('/api/v1', apiRouter);
 
   server = createServer(testApp);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -436,18 +448,15 @@ test('GET /api/v1/participant/questionnaires - returns study questionnaires for 
   );
   const { id: qId } = await createRes.json();
 
-  // Seed enrollment and study
+  // Seed enrollment (Neo4j mock) and study
   const studyId = new ObjectId();
   const groupId = new ObjectId();
-  mockDb._seed('enrollments', [
-    {
-      _id: new ObjectId(),
-      userId: 'enrolled-user',
-      studyId,
-      groupId,
-      enrolledAt: new Date(),
-    },
-  ]);
+  neo4jEnrollments.set('enrolled-user', {
+    studyId: studyId.toString(),
+    groupId: groupId.toString(),
+    enrolledAt: new Date().toISOString(),
+    studyCodeUsed: null,
+  });
   mockDb._seed('studies', [
     {
       _id: studyId,
