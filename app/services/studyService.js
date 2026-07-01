@@ -118,7 +118,10 @@ export async function createStudy({
       });
     } catch (err) {
       // Non-fatal: Neo4j sync failure should not roll back the MongoDB insert
-      console.error('[studyService] Neo4j syncStudy failed after create:', err?.message);
+      console.error(
+        '[studyService] Neo4j syncStudy failed after create:',
+        err?.message
+      );
     }
   }
 
@@ -218,11 +221,14 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
       }
       await syncStudy(neo4jRun, {
         uuid: id,
-        name: latest?.name ?? (updates.name ?? existing.name),
+        name: latest?.name ?? updates.name ?? existing.name,
         slugs,
       });
     } catch (err) {
-      console.error('[studyService] Neo4j syncStudy failed after update:', err?.message);
+      console.error(
+        '[studyService] Neo4j syncStudy failed after update:',
+        err?.message
+      );
     }
   }
 

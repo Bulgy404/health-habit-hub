@@ -601,11 +601,7 @@ export function createAdminRouter({
     createActivityTypeRouter({ db })
   );
 
-  router.use(
-    '/',
-    requireRole(ROLES.ADMIN),
-    createAppSettingsRouter({ db })
-  );
+  router.use('/', requireRole(ROLES.ADMIN), createAppSettingsRouter({ db }));
 
   return router;
 }

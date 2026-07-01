@@ -68,7 +68,11 @@ test('getParticipantGroupConfig — returns null when neo4jRun not provided', as
 test('getParticipantGroupConfig — returns null when user not enrolled', async () => {
   const db = createMemDb();
   const neo4jRun = async () => []; // no enrollment row
-  const result = await getParticipantGroupConfig({ db, userId: 'user-x', neo4jRun });
+  const result = await getParticipantGroupConfig({
+    db,
+    userId: 'user-x',
+    neo4jRun,
+  });
   assert.strictEqual(result, null);
 });
 
@@ -77,7 +81,11 @@ test('getParticipantGroupConfig — returns null when enrollment has bad studyId
   const neo4jRun = async () => [
     { studyId: 'bad-id', groupId: null, enrolledAt: null, studyCodeUsed: null },
   ];
-  const result = await getParticipantGroupConfig({ db, userId: 'u1', neo4jRun });
+  const result = await getParticipantGroupConfig({
+    db,
+    userId: 'u1',
+    neo4jRun,
+  });
   assert.strictEqual(result, null);
 });
 
@@ -270,5 +278,8 @@ test('updateGroupConfig — sets activityTypeConfig', async () => {
 
   const study = await db.collection(STUDIES).findOne({ _id: studyId });
   assert.strictEqual(study.groups[0].activityTypeConfig.restricted, true);
-  assert.strictEqual(study.groups[0].activityTypeConfig.allowedActivityTypeIds.length, 1);
+  assert.strictEqual(
+    study.groups[0].activityTypeConfig.allowedActivityTypeIds.length,
+    1
+  );
 });

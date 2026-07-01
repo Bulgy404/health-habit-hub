@@ -542,14 +542,11 @@ export function createHabitsCrudRouter({
     if (process.env.API_SERVICE_SECRET)
       headers['X-Service-Auth-Token'] = process.env.API_SERVICE_SECRET;
     try {
-      const upstream = await fetch(
-        `${apiBase}/api/v1/llm/stitch-intention`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ action, cues, language }),
-        }
-      );
+      const upstream = await fetch(`${apiBase}/api/v1/llm/stitch-intention`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ action, cues, language }),
+      });
       if (!upstream.ok) {
         const text = await upstream.text().catch(() => '');
         return res

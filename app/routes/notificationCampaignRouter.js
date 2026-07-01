@@ -11,7 +11,11 @@ import {
 
 const log = logger.child({ module: 'notificationCampaignRouter' });
 
-export function createNotificationCampaignRouter({ db, fcmSend, neo4jRun } = {}) {
+export function createNotificationCampaignRouter({
+  db,
+  fcmSend,
+  neo4jRun,
+} = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -71,7 +75,12 @@ export function createNotificationCampaignRouter({ db, fcmSend, neo4jRun } = {})
         scheduledFor: scheduledFor ?? null,
       });
       if (!scheduledFor) {
-        await sendCampaign({ db: database, id: campaign.id, send: send, neo4jRun });
+        await sendCampaign({
+          db: database,
+          id: campaign.id,
+          send: send,
+          neo4jRun,
+        });
       }
       res.status(201).json(campaign);
     } catch (err) {

@@ -14,9 +14,7 @@ const QUESTIONNAIRES = 'questionnaires';
  * @returns {Promise<Array<{ groupId: string, enrolled: number, active: number, rate: number }>>}
  */
 export async function getWeeklyActiveRate({ db, studyId, neo4jRun }) {
-  const enrollments = neo4jRun
-    ? await getUsersForStudy(neo4jRun, studyId)
-    : [];
+  const enrollments = neo4jRun ? await getUsersForStudy(neo4jRun, studyId) : [];
 
   if (enrollments.length === 0) return [];
 
@@ -144,7 +142,11 @@ export async function getDropoutCurve({ db, studyId, neo4jRun }) {
  * @param {{ db: object, studyId: string, neo4jRun: Function }} deps
  * @returns {Promise<Array<{ questionnaireId: string, slug: string, title: string, enrolled: number, completed: number, rate: number }>>}
  */
-export async function getQuestionnaireCompletionRates({ db, studyId, neo4jRun }) {
+export async function getQuestionnaireCompletionRates({
+  db,
+  studyId,
+  neo4jRun,
+}) {
   let oid;
   try {
     oid = new ObjectId(studyId);
@@ -165,9 +167,7 @@ export async function getQuestionnaireCompletionRates({ db, studyId, neo4jRun })
     id instanceof ObjectId ? id : new ObjectId(id)
   );
 
-  const enrollments = neo4jRun
-    ? await getUsersForStudy(neo4jRun, studyId)
-    : [];
+  const enrollments = neo4jRun ? await getUsersForStudy(neo4jRun, studyId) : [];
 
   const questionnaires = await db
     .collection(QUESTIONNAIRES)

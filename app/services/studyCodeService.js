@@ -2,10 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { ObjectId } from '../models/survey.js';
 import { COLLECTION as CODES } from '../models/studyCode.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
-import {
-  getEnrollment,
-  createEnrollment,
-} from './enrollmentNeo4j.js';
+import { getEnrollment, createEnrollment } from './enrollmentNeo4j.js';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const ALPHABET_LEN = ALPHABET.length;

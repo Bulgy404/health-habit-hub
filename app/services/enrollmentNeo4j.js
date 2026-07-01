@@ -119,8 +119,7 @@ export async function createEnrollment(
  * @param {*} value
  */
 export async function setEnrollmentField(neo4jRun, userId, field, value) {
-  const serialized =
-    value instanceof Date ? value.toISOString() : value;
+  const serialized = value instanceof Date ? value.toISOString() : value;
   // Cypher does not support parameterised property keys; use template injection
   // (safe: field is always a trusted string literal from our own code).
   await neo4jRun(

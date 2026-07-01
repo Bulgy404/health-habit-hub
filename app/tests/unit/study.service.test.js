@@ -283,17 +283,13 @@ test('softDeleteStudy returns conflict when study has enrollments', async () => 
         updatedAt: new Date(),
       },
     ],
-    enrollments: [
-      {
-        _id: new ObjectId(),
-        userId: 'u1',
-        studyId: id,
-        groupId: new ObjectId(),
-        enrolledAt: new Date(),
-      },
-    ],
   });
-  const result = await softDeleteStudy({ db, id: id.toString() });
+  // Enrollment lives in Neo4j now; return count > 0 to trigger the conflict.
+  const neo4jRun = async (cypher) => {
+    if (cypher.includes('count(*) AS n')) return [{ n: 1 }];
+    return [];
+  };
+  const result = await softDeleteStudy({ db, id: id.toString(), neo4jRun });
   assert.equal(result.conflict, true);
 });
 
