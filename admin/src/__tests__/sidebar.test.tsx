@@ -38,7 +38,8 @@ describe('Sidebar', () => {
     expect(screen.getByText('Analytics')).toBeInTheDocument();
     expect(screen.getByText('Questionnaires')).toBeInTheDocument();
     expect(screen.queryByText('Knowledge Base')).not.toBeInTheDocument();
-    expect(screen.queryByText('Settings')).not.toBeInTheDocument();
+    expect(screen.queryByText('Activity Types')).not.toBeInTheDocument();
+    expect(screen.queryByText('App Settings')).not.toBeInTheDocument();
   });
 
   it('shows all nav items for admin', () => {
@@ -52,7 +53,8 @@ describe('Sidebar', () => {
     expect(screen.getByText('Analytics')).toBeInTheDocument();
     expect(screen.getByText('Questionnaires')).toBeInTheDocument();
     expect(screen.getByText('Knowledge Base')).toBeInTheDocument();
-    expect(screen.getByText('Settings')).toBeInTheDocument();
+    expect(screen.getByText('Activity Types')).toBeInTheDocument();
+    expect(screen.getByText('App Settings')).toBeInTheDocument();
   });
 
   it('shows Profile Fields for admin', () => {

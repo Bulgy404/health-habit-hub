@@ -94,12 +94,16 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
       ];
     }
 
-    // Call stitch-intention LLM (non-blocking: falls back to local assembly on failure).
-    final stitchedSentence =
-        await ref.read(studyConfigServiceProvider).stitchIntention(
+    // Call stitch-intention LLM (non-blocking: falls back to local assembly
+    // on failure). Skipped entirely when the guided wizard is disabled
+    // platform-wide — the user then composes the sentence as free text on
+    // the confirm screen.
+    final stitchedSentence = widget.config.guidedHabitCreationEnabled
+        ? await ref.read(studyConfigServiceProvider).stitchIntention(
               action: widget.behaviorLabel,
               cues: cues.map((c) => c.text).toList(),
-            );
+            )
+        : null;
 
     if (!mounted) return;
     setState(() => _stitching = false);

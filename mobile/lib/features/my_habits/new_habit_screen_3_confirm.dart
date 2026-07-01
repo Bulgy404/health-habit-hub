@@ -7,9 +7,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
 import '../../core/exceptions.dart';
 import '../../l10n/app_localizations.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/study_config_provider.dart';
 import '../../services/reminder_scheduler_service.dart';
 import 'my_habits_models.dart';
@@ -54,12 +56,16 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   bool _submitting = false;
   String? _error;
   late String _intentionStatementEditable;
+  late bool _shareWithCommunity;
 
   @override
   void initState() {
     super.initState();
     _intentionStatementEditable =
         widget.stitchedSentence ?? _buildFallbackStatement();
+    // The opt-in is only shown (and pre-selected) when the platform-wide
+    // communityShareDefault flag is enabled in the admin portal.
+    _shareWithCommunity = widget.config.communityShareDefault;
   }
 
   String _buildFallbackStatement() {
@@ -140,6 +146,21 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                 effectiveReminderEnabled ? effectiveReminderTime : null,
           );
       ref.invalidate(intentionsProvider);
+      // Share the habit sentence anonymously with the community if the user
+      // kept the opt-in selected. Best-effort: the habit is already created.
+      if (widget.config.communityShareDefault && _shareWithCommunity) {
+        try {
+          await ref.read(dioProvider).post<Map<String, dynamic>>(
+            '${AppConfig.apiBaseUrl}/habits/share',
+            data: {
+              'sentence': _intentionStatementEditable,
+              'language': ref.read(localeProvider).languageCode,
+            },
+          );
+        } catch (_) {
+          // Non-fatal: sharing is optional and anonymous.
+        }
+      }
       // Schedule the (initially daily) local reminders for the new habit.
       try {
         await ReminderSchedulerService(dio: ref.read(dioProvider))
@@ -264,6 +285,23 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                 l10n.reminderFadingHint,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
+            if (widget.config.communityShareDefault) ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Switch(
+                    value: _shareWithCommunity,
+                    onChanged: (v) => setState(() => _shareWithCommunity = v),
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Share this habit anonymously with the community',
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (_error != null) ...[
               const SizedBox(height: 16),
               Text(_error!,
