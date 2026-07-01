@@ -25,6 +25,14 @@ CREATE INDEX question_item_idx IF NOT EXISTS
 CREATE INDEX submission_timeline IF NOT EXISTS
   FOR (s:Submission) ON (s.questionnaireId, s.submittedAt);
 
+// Study node — one per MongoDB study document
+CREATE CONSTRAINT study_uuid IF NOT EXISTS
+  FOR (s:Study) REQUIRE s.uuid IS UNIQUE;
+
+// Questionnaire slug — for HAS_QUESTIONNAIRE traversal
+CREATE CONSTRAINT questionnaire_slug IF NOT EXISTS
+  FOR (q:Questionnaire) REQUIRE q.slug IS UNIQUE;
+
 // Vector indexes for cross-user semantic habit search (M3 recommendation pipeline).
 // Each node type is indexed independently so the goal embedding can match via
 // the habit sentence, a context phrase, or a BCIO behavior-change concept —

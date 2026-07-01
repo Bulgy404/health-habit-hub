@@ -6,7 +6,7 @@ import logging
 import os
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Optional, cast
+from typing import Any, Optional, cast
 
 import numpy as np
 from fastapi import APIRouter, Depends
@@ -36,7 +36,7 @@ _OWL_NS = "http://www.w3.org/2002/07/owl#"
 # ---------------------------------------------------------------------------
 # In-memory concept index: {"hash": str, "concepts": [{"id", "label", "embedding"}]}
 # ---------------------------------------------------------------------------
-_INDEX: Optional[dict[str, object]] = None
+_INDEX: Optional[dict[str, Any]] = None
 
 
 def _parse_owl_concepts(owl_path: Path) -> list[dict[str, str]]:
@@ -69,7 +69,7 @@ def _cosine_similarity(a: list[float], b: list[float]) -> float:
     return float(np.dot(vec_a, vec_b) / (norm_a * norm_b))
 
 
-async def _get_index() -> Optional[dict[str, object]]:
+async def _get_index() -> Optional[dict[str, Any]]:
     """Return the BCIO concept index, rebuilding it when bcio.owl changes."""
     global _INDEX
 
@@ -113,7 +113,7 @@ async def _get_index() -> Optional[dict[str, object]]:
         logger.error("Failed to build BCIO concept embeddings: %s", exc)
         return None
 
-    concepts_with_embeddings: list[dict[str, object]] = [
+    concepts_with_embeddings: list[dict[str, Any]] = [
         {**c, "embedding": emb} for c, emb in zip(raw_concepts, embeddings)
     ]
     _INDEX = {"hash": file_hash, "concepts": concepts_with_embeddings}
@@ -198,12 +198,12 @@ async def map_bcio(body: MapBcioRequest) -> MapBcioResponse:
         logger.error("Failed to embed context phrases: %s", exc)
         return MapBcioResponse(mappings=[])
 
-    concepts = cast(list[dict[str, object]], index["concepts"])
+    concepts = cast(list[dict[str, Any]], index["concepts"])
     mappings: list[BcioMapping] = []
 
     for (phrase, dimension), phrase_emb in zip(phrase_dim_pairs, phrase_embeddings):
         best_score = -1.0
-        best_concept: Optional[dict[str, object]] = None
+        best_concept: Optional[dict[str, Any]] = None
         for concept in concepts:
             score = _cosine_similarity(phrase_emb, cast(list[float], concept["embedding"]))
             if score > best_score:

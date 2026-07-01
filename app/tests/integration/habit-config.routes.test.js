@@ -5,7 +5,7 @@ import { createServer } from 'node:http';
 import { generateKeyPairSync, createSign } from 'node:crypto';
 import express from 'express';
 import { ObjectId } from 'mongodb';
-import { createV1Router } from '../../routes/v1Router.js';
+import { createApiRouter } from '../../routes/apiRouter.js';
 
 // ── Key material ──────────────────────────────────────────────────────────────
 
@@ -47,10 +47,25 @@ const cueId = new ObjectId();
 function createMockDb({ enrollment } = {}) {
   return {
     collection(name) {
-      if (name === 'enrollments') {
+      if (name === 'studies') {
         return {
-          findOne: async (q) =>
-            enrollment && q.userId === enrollment.userId ? enrollment : null,
+          findOne: async (q) => {
+            if (enrollment && String(q._id) === enrollment.studyId.toString()) {
+              return {
+                _id: enrollment.studyId,
+                recommenderEnabled: true,
+                groups: [
+                  {
+                    id: enrollment.groupId,
+                    label: 'Test Group',
+                    index: 1,
+                    cueConfig: enrollment.cueConfig ?? null,
+                  },
+                ],
+              };
+            }
+            return null;
+          },
         };
       }
       if (name === 'admin_settings') {
@@ -125,15 +140,27 @@ before(async () => {
   const testApp = express();
   testApp.use(express.json());
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
-  const v1Router = createV1Router({
+  const apiRouter = createApiRouter({
     jwksUrl: 'http://keycloak/jwks',
     expectedIssuer: null,
     expectedAudience: null,
     serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
     db: createMockDb({ enrollment: enrollmentFixture }),
-    neo4jRun: async () => [],
+    neo4jRun: async (cypher, params) => {
+      if (cypher.includes('ENROLLED_IN') && params.userId === enrolledUser) {
+        return [
+          {
+            studyId: enrollmentFixture.studyId.toString(),
+            groupId: enrollmentFixture.groupId.toString(),
+            enrolledAt: null,
+            studyCodeUsed: null,
+          },
+        ];
+      }
+      return [];
+    },
   });
-  testApp.use('/api/v1', v1Router);
+  testApp.use('/api/v1', apiRouter);
   server = createServer(testApp);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   baseUrl = `http://127.0.0.1:${server.address().port}`;

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Optional
+from typing import Any, Optional
 
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
@@ -44,11 +44,11 @@ async def _lightrag(
     method: str,
     path: str,
     *,
-    json: Optional[dict[str, object]] = None,
+    json: Optional[dict[str, Any]] = None,
     content: Optional[bytes] = None,
     headers: Optional[dict[str, str]] = None,
     timeout: float = 60.0,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     """Execute a request against LightRAG and return the parsed JSON body."""
     url = f"{_LIGHTRAG_URL}{path}"
     hdrs = headers or _headers()
@@ -166,7 +166,7 @@ async def list_kb() -> list[KbEntry]:
         logger.error("list_kb failed: %s", exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not reach LightRAG.") from exc
 
-    statuses: dict[str, list[dict[str, object]]] = data.get("statuses", {})  # type: ignore[assignment]
+    statuses: dict[str, list[dict[str, Any]]] = data.get("statuses", {})  # type: ignore[assignment]
     entries: list[KbEntry] = []
     for docs in statuses.values():
         for doc in docs:
@@ -277,7 +277,7 @@ async def delete_kb(filename: str) -> JSONResponse:
         logger.error("delete_kb list failed: %s", exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not reach LightRAG.") from exc
 
-    statuses: dict[str, list[dict[str, object]]] = data.get("statuses", {})  # type: ignore[assignment]
+    statuses: dict[str, list[dict[str, Any]]] = data.get("statuses", {})  # type: ignore[assignment]
     doc_id: Optional[str] = None
     for docs in statuses.values():
         for doc in docs:

@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { createServer } from 'node:http';
 import { generateKeyPairSync, createSign } from 'node:crypto';
 import express from 'express';
-import { createV1Router } from '../../routes/v1Router.js';
+import { createApiRouter } from '../../routes/apiRouter.js';
 
 // ── Key material ─────────────────────────────────────────────────────────────
 
@@ -236,7 +236,7 @@ before(async () => {
   const testApp = express();
   testApp.use(express.json());
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
-  const v1Router = createV1Router({
+  const apiRouter = createApiRouter({
     jwksUrl: 'http://keycloak/jwks',
     expectedIssuer: null,
     expectedAudience: null,
@@ -245,7 +245,7 @@ before(async () => {
     neo4jRun: neo4jMock.neo4jRun,
     apiServiceUrl: API_SERVICE_URL,
   });
-  testApp.use('/api/v1', v1Router);
+  testApp.use('/api/v1', apiRouter);
 
   server = createServer(testApp);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));

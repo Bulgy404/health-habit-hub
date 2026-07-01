@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { COLLECTION } from '../models/notificationCampaign.js';
-import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
+import { getUsersForStudy } from './enrollmentNeo4j.js';
 
 const DEVICE_TOKENS = 'deviceTokens';
 
@@ -86,10 +86,10 @@ export async function cancelCampaign({ db, id }) {
 /**
  * Resolve target user FCM tokens and dispatch via injected `send` callback.
  * `send` is injected so tests can mock it; production passes the Firebase sender.
- * @param {{ db: object, id: string, send: function(string[], string, string): Promise<number> }} deps
+ * @param {{ db: object, id: string, send: function(string[], string, string): Promise<number>, neo4jRun?: Function }} deps
  * @returns {Promise<{ recipientCount: number, sentAt: Date }|{ notFound: boolean }>}
  */
-export async function sendCampaign({ db, id, send }) {
+export async function sendCampaign({ db, id, send, neo4jRun }) {
   let oid;
   try {
     oid = new ObjectId(id);
@@ -103,17 +103,31 @@ export async function sendCampaign({ db, id, send }) {
   if (campaign.targetType === 'individual') {
     userIds = campaign.targetIds;
   } else if (campaign.targetType === 'group') {
-    const enrollments = await db
-      .collection(ENROLLMENTS)
-      .find({
-        groupId: { $in: campaign.targetIds.map((gid) => new ObjectId(gid)) },
-      })
-      .toArray();
-    userIds = enrollments.map((e) => e.userId);
+    if (neo4jRun) {
+      const rows = await neo4jRun(
+        `MATCH (u:User)-[e:ENROLLED_IN]->(:Study)
+         WHERE e.groupId IN $groupIds
+         RETURN u.userID AS userId`,
+        { groupIds: campaign.targetIds }
+      );
+      userIds = (rows || []).map((r) => r.userId);
+    }
   } else {
-    const filter = campaign.studyId ? { studyId: campaign.studyId } : {};
-    const enrollments = await db.collection(ENROLLMENTS).find(filter).toArray();
-    userIds = enrollments.map((e) => e.userId);
+    // 'all' target type
+    if (neo4jRun) {
+      if (campaign.studyId) {
+        const enrolled = await getUsersForStudy(
+          neo4jRun,
+          campaign.studyId.toString()
+        );
+        userIds = enrolled.map((e) => e.userId);
+      } else {
+        const rows = await neo4jRun(
+          `MATCH (u:User)-[:ENROLLED_IN]->(:Study) RETURN u.userID AS userId`
+        );
+        userIds = (rows || []).map((r) => r.userId);
+      }
+    }
   }
 
   const tokenDocs = await db

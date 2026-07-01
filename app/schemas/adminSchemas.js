@@ -55,12 +55,43 @@ export const updateAllocationSchema = z.object({
 });
 
 export const cueConfigSchema = z.object({
+  restricted: z.boolean().optional(),
   cueCount: z.enum(['single', 'multi']),
   cueSource: z.enum(['high_quality', 'low_quality', 'self_selected']),
   cuePoolId: mongoId.optional().nullable(),
   behaviorOptions: z.array(z.string().max(200)).max(20).optional(),
   maxHabits: z.number().int().min(1).max(20).optional().nullable(),
 });
+
+const activityTypeConfigSchema = z.object({
+  restricted: z.boolean(),
+  allowedActivityTypeIds: z.array(mongoId).max(50).optional(),
+});
+
+const reminderConfigSchema = z.object({
+  enabled: z.boolean(),
+  fixedTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, 'must be HH:MM')
+    .optional()
+    .nullable(),
+});
+
+export const updateGroupConfigSchema = z
+  .object({
+    cueConfig: cueConfigSchema.optional().nullable(),
+    activityTypeConfig: activityTypeConfigSchema.optional().nullable(),
+    reminderConfig: reminderConfigSchema.optional().nullable(),
+    autoDonate: z.boolean().optional(),
+  })
+  .strict();
+
+export const updateAppSettingsSchema = z
+  .object({
+    guidedHabitCreationEnabled: z.boolean().optional(),
+    communityShareDefault: z.boolean().optional(),
+  })
+  .strict();
 
 // ── Questionnaires ────────────────────────────────────────────────────────────
 

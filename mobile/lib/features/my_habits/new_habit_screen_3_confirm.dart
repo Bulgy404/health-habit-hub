@@ -10,7 +10,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/dio_provider.dart';
 import '../../core/exceptions.dart';
 import '../../l10n/app_localizations.dart';
+import '../../providers/study_config_provider.dart';
 import '../../services/reminder_scheduler_service.dart';
+import '../../services/study_config_service.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
@@ -23,6 +25,7 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
     required this.behaviorLabel,
     required this.config,
     required this.cues,
+    this.stitchedSentence,
     super.key,
   });
 
@@ -38,6 +41,9 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
   /// Implementation intention cues entered in the previous step.
   final List<IntentionCue> cues;
 
+  /// LLM-stitched intention sentence (from /habits/stitch-intention), if available.
+  final String? stitchedSentence;
+
   @override
   ConsumerState<ConfirmPlanScreen> createState() => _ConfirmPlanScreenState();
 }
@@ -48,6 +54,19 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   bool _reminderEnabled = true;
   bool _submitting = false;
   String? _error;
+  late String _intentionStatementEditable;
+
+  @override
+  void initState() {
+    super.initState();
+    _intentionStatementEditable =
+        widget.stitchedSentence ?? _buildFallbackStatement();
+  }
+
+  String _buildFallbackStatement() {
+    final cueText = widget.cues.map((c) => c.text).join(', ');
+    return '$cueText, I will ${widget.behaviorLabel.toLowerCase()} for $_durationMinutes minutes.';
+  }
 
   String get _reminderTimeString =>
       '${_reminderTime.hour.toString().padLeft(2, '0')}:'
@@ -97,13 +116,16 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
     );
   }
 
-  String get _intentionStatement {
-    final cueText = widget.cues.map((c) => c.text).join(', ');
-    return '$cueText, I will ${widget.behaviorLabel.toLowerCase()} for $_durationMinutes minutes.';
-  }
-
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context)!;
+    final studyConfig = ref.read(studyConfigProvider).valueOrNull;
+    final reminderCfg = studyConfig?.reminderConfig;
+
+    // Determine effective reminder state from study config overrides.
+    final effectiveReminderEnabled =
+        reminderCfg != null ? reminderCfg.enabled : _reminderEnabled;
+    final effectiveReminderTime = reminderCfg?.fixedTime ?? _reminderTimeString;
+
     setState(() {
       _submitting = true;
       _error = null;
@@ -114,8 +136,9 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             behaviorLabel: widget.behaviorLabel,
             durationMinutes: _durationMinutes,
             cues: widget.cues,
-            intentionStatement: _intentionStatement,
-            reminderTime: _reminderEnabled ? _reminderTimeString : null,
+            intentionStatement: _intentionStatementEditable,
+            reminderTime:
+                effectiveReminderEnabled ? effectiveReminderTime : null,
           );
       ref.invalidate(intentionsProvider);
       // Schedule the (initially daily) local reminders for the new habit.
@@ -138,6 +161,12 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final studyConfig = ref.watch(studyConfigProvider).valueOrNull;
+    final reminderCfg = studyConfig?.reminderConfig;
+
+    // Study-override: if study has fixedTime, show it read-only.
+    final hasFixedTime = reminderCfg?.fixedTime != null;
+    final reminderControlledByStudy = reminderCfg != null;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.confirmPlanTitle)),
@@ -149,16 +178,26 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             Text(l10n.confirmPlanSubtitle,
                 style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 24),
+            // Editable intention statement card
             Card(
               color: const Color(0xFFEDF7E5),
               child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(
-                  _intentionStatement,
+                padding: const EdgeInsets.all(12),
+                child: TextField(
+                  controller: TextEditingController(
+                    text: _intentionStatementEditable,
+                  )..selection = TextSelection.collapsed(
+                      offset: _intentionStatementEditable.length),
+                  onChanged: (v) => _intentionStatementEditable = v,
+                  maxLines: null,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                         height: 1.5,
                       ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    hintText: 'Edit your intention…',
+                  ),
                 ),
               ),
             ),
@@ -183,24 +222,45 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             Text(l10n.dailyReminderLabel,
                 style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Switch(
-                  value: _reminderEnabled,
-                  onChanged: (v) => setState(() => _reminderEnabled = v),
-                ),
-                const SizedBox(width: 8),
-                if (_reminderEnabled)
-                  ActionChip(
-                    avatar: const Icon(Icons.schedule, size: 18),
-                    label: Text(_reminderTimeString),
-                    onPressed: _pickReminderTime,
-                  )
-                else
-                  Text(l10n.noReminders),
-              ],
-            ),
-            if (_reminderEnabled)
+            if (reminderControlledByStudy)
+              // Study controls reminder — show read-only status
+              Row(
+                children: [
+                  Icon(
+                    reminderCfg!.enabled ? Icons.notifications_active : Icons.notifications_off,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    reminderCfg.enabled
+                        ? hasFixedTime
+                            ? 'Reminder at ${reminderCfg.fixedTime} (set by study)'
+                            : 'Reminders enabled (set by study)'
+                        : 'No reminders (set by study)',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              )
+            else
+              Row(
+                children: [
+                  Switch(
+                    value: _reminderEnabled,
+                    onChanged: (v) => setState(() => _reminderEnabled = v),
+                  ),
+                  const SizedBox(width: 8),
+                  if (_reminderEnabled)
+                    ActionChip(
+                      avatar: const Icon(Icons.schedule, size: 18),
+                      label: Text(_reminderTimeString),
+                      onPressed: _pickReminderTime,
+                    )
+                  else
+                    Text(l10n.noReminders),
+                ],
+              ),
+            if (!reminderControlledByStudy && _reminderEnabled)
               Text(
                 l10n.reminderFadingHint,
                 style: Theme.of(context).textTheme.bodySmall,

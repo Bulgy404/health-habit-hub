@@ -1,10 +1,13 @@
 %% UC-09 — Enroll in study (redeem or skip study code)
+%% Enrollment edge is now stored in Neo4j (ENROLLED_IN relationship);
+%% group config stays in MongoDB studies collection.
 sequenceDiagram
     autonumber
     actor P as Participant
     participant F as Flutter App
     participant B as Backend (studyEnrollRouter)
     participant M as MongoDB
+    participant N as Neo4j
 
     P->>F: Enter study code (or skip)
     alt redeem code
@@ -12,10 +15,20 @@ sequenceDiagram
         B->>M: findOne(study_codes, {code})
         M-->>B: code {studyId, groupId, maxRedemptions, expiresAt}
         B->>B: Validate not expired / not exhausted
-        B->>M: insert(enrollments {userId, studyId, groupId}), $inc redemptionCount
+        B->>M: $inc redemptionCount (atomic claim)
+        M-->>B: updated code doc
+        B->>N: OPTIONAL MATCH check — already enrolled?
+        N-->>B: exists: false
+        B->>N: MERGE User, MERGE Study, CREATE ENROLLED_IN {enrolledAt, groupId, studyCodeUsed}
+        N-->>B: enrollment created
         B-->>F: 200 enrolled in study group
     else skip code
         F->>B: POST /api/v1/enroll/skip-code
-        B->>M: Resolve default study (isDefault: true), insert enrollment
+        B->>N: MATCH (u:User {userID})-[:ENROLLED_IN]->() — already enrolled?
+        N-->>B: no existing enrollment
+        B->>M: findOneAndUpdate(studies, {isDefault:true}, {$inc: _skipCounter})
+        M-->>B: default study + selected group
+        B->>N: MERGE User, MERGE Study, CREATE ENROLLED_IN {enrolledAt, groupId}
+        N-->>B: enrollment created
         B-->>F: 200 enrolled in default study
     end

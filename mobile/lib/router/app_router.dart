@@ -161,6 +161,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         config: extra['config'] as HabitConfig,
                         cues: (extra['cues'] as List<dynamic>)
                             .cast<IntentionCue>(),
+                        stitchedSentence:
+                            extra['stitchedSentence'] as String?,
                       );
                     },
                   ),

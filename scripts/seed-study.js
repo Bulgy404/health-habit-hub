@@ -44,11 +44,42 @@ const DEFAULT_STUDY_NAME = 'HHH Default Study';
 const DEFAULT_STUDY_DESCRIPTION =
   'The default study used when no specific study code is provided during onboarding.';
 
+// Default group config: all features enabled, unrestricted.
+// Researchers can update per-group config via the admin portal
+// (PATCH /admin/studies/:id/groups/:groupId/config).
 const DEFAULT_GROUPS = [
-  { index: 1, label: 'Group 1' },
-  { index: 2, label: 'Group 2' },
-  { index: 3, label: 'Group 3' },
-  { index: 4, label: 'Group 4' },
+  {
+    index: 1,
+    label: 'Group 1',
+    cueConfig: null,
+    activityTypeConfig: null,
+    reminderConfig: { enabled: true, fixedTime: null },
+    autoDonate: false,
+  },
+  {
+    index: 2,
+    label: 'Group 2',
+    cueConfig: null,
+    activityTypeConfig: null,
+    reminderConfig: { enabled: true, fixedTime: null },
+    autoDonate: false,
+  },
+  {
+    index: 3,
+    label: 'Group 3',
+    cueConfig: null,
+    activityTypeConfig: null,
+    reminderConfig: { enabled: true, fixedTime: null },
+    autoDonate: false,
+  },
+  {
+    index: 4,
+    label: 'Group 4',
+    cueConfig: null,
+    activityTypeConfig: null,
+    reminderConfig: { enabled: true, fixedTime: null },
+    autoDonate: false,
+  },
 ];
 
 // ── Main ───────────────────────────────────────────────────────────────────
@@ -124,11 +155,17 @@ async function seedDefaultStudy(db) {
   }
 
   const now = new Date();
-  const groups = DEFAULT_GROUPS.map(({ index, label }) => ({
-    id: new ObjectId(),
-    label,
-    index,
-  }));
+  const groups = DEFAULT_GROUPS.map(
+    ({ index, label, cueConfig, activityTypeConfig, reminderConfig, autoDonate }) => ({
+      id: new ObjectId(),
+      label,
+      index,
+      cueConfig,
+      activityTypeConfig,
+      reminderConfig,
+      autoDonate,
+    })
+  );
 
   const result = await db.collection('studies').insertOne({
     name: DEFAULT_STUDY_NAME,

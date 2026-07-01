@@ -13,6 +13,7 @@ import {
   Settings,
   LogOut,
   Activity,
+  Smartphone,
   type LucideIcon,
 } from "lucide-react";
 import styles from "./sidebar.module.css";
@@ -30,6 +31,12 @@ interface NavSection {
 }
 
 const NAV_SECTIONS: NavSection[] = [
+  {
+    title: "Public App",
+    items: [
+      { href: "/default-app", label: "App Settings", Icon: Smartphone, adminOnly: true },
+    ],
+  },
   {
     title: "Research",
     items: [

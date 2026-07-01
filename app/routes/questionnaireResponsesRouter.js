@@ -13,15 +13,37 @@ const log = logger.child({ module: 'questionnaireResponsesRouter' });
  * Service-to-service router for questionnaire responses.
  * Mounted BEFORE JWT authenticate middleware — auth is done via X-Service-Auth-Token.
  */
-export function createQuestionnaireResponsesServiceRouter({ db } = {}) {
+export function createQuestionnaireResponsesServiceRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
+
+  // Long-lived Neo4j driver for the service router — created once if not injected
+  const _serviceNeo4jDriver = neo4jRun
+    ? null
+    : neo4j.driver(
+        process.env.NEO4J_URI || 'bolt://neo4j:7687',
+        neo4j.auth.basic(
+          process.env.NEO4J_USER || 'neo4j',
+          process.env.NEO4J_PASSWORD || 'password'
+        )
+      );
+
+  async function queryServiceNeo4j(cypher, params = {}) {
+    if (neo4jRun) return neo4jRun(cypher, params);
+    const session = _serviceNeo4jDriver.session();
+    try {
+      const result = await session.run(cypher, params);
+      return result.records.map((r) => r.toObject());
+    } finally {
+      await session.close();
+    }
+  }
 
   /**
    * GET /service/:userId — all questionnaire responses for a user's enrolled study.
    *
-   * Resolves enrollment → studyId → questionnaire slugs, then returns the most
-   * recent response for each slug as { [slug]: responseOrNull }.
+   * Resolves enrollment + questionnaire slugs via a single Neo4j traversal, then
+   * returns the most recent response for each slug as { [slug]: responseOrNull }.
    * Returns {} when the user is not enrolled or the study has no questionnaires.
    */
   router.get('/service/:userId', async (req, res) => {
@@ -35,34 +57,14 @@ export function createQuestionnaireResponsesServiceRouter({ db } = {}) {
       const { userId } = req.params;
       const database = await getDb();
 
-      // 1. Find user's enrollment
-      const enrollment = await database
-        .collection('enrollments')
-        .findOne({ userId });
-      if (!enrollment) {
-        return res.json({});
-      }
+      // Single Neo4j traversal: User → ENROLLED_IN → Study → HAS_QUESTIONNAIRE → Questionnaire
+      const rows = await queryServiceNeo4j(
+        `MATCH (u:User {userID: $userId})-[:ENROLLED_IN]->(s:Study)-[:HAS_QUESTIONNAIRE]->(q:Questionnaire)
+         RETURN collect(q.slug) AS slugs`,
+        { userId }
+      );
 
-      // 2. Find study and its questionnaire refs
-      const study = await database
-        .collection('studies')
-        .findOne({ _id: enrollment.studyId });
-      if (
-        !study ||
-        !Array.isArray(study.questionnaires) ||
-        study.questionnaires.length === 0
-      ) {
-        return res.json({});
-      }
-
-      // 3. Resolve questionnaire slugs
-      const questionnaireDocs = await database
-        .collection('questionnaires')
-        .find({ _id: { $in: study.questionnaires } })
-        .project({ slug: 1, _id: 0 })
-        .toArray();
-
-      const slugs = questionnaireDocs.map((q) => q.slug).filter(Boolean);
+      const slugs = (rows[0]?.slugs ?? []).filter(Boolean);
       if (slugs.length === 0) {
         return res.json({});
       }

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { generateKeyPairSync, createSign } from 'node:crypto';
 import express from 'express';
-import { createV1Router } from '../../routes/v1Router.js';
+import { createApiRouter } from '../../routes/apiRouter.js';
 
 // ── Key material ────────────────────────────────────────────────────────────
 
@@ -113,7 +113,7 @@ before(async () => {
   const db = createMockDb();
   const app = express();
   app.use(express.json());
-  const v1 = createV1Router({
+  const v1 = createApiRouter({
     jwksUrl: 'http://mock-keycloak/jwks',
     expectedIssuer: null,
     expectedAudience: null,

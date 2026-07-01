@@ -10,7 +10,7 @@ import {
 
 const log = logger.child({ module: 'srhiRouter' });
 
-export function createSrhiRouter({ db } = {}) {
+export function createSrhiRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -37,6 +37,7 @@ export function createSrhiRouter({ db } = {}) {
         userId: req.user.sub,
         weekNumber: parseInt(req.params.weekNumber, 10),
         items,
+        neo4jRun,
       });
       if (result.invalid)
         return res

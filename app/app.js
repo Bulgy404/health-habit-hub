@@ -142,7 +142,7 @@ app.get('/api', (req, res) => {
 });
 
 // Versioned API routes (JWT-protected)
-import createV1Router from './routes/index.js';
+import createApiRouter from './routes/index.js';
 import { createInternalRouter } from './routes/internalRouter.js';
 import { createRecommendationWsServer } from './ws/recommendationWs.js';
 import { createTokenVerifier } from './middleware/auth.js';
@@ -157,7 +157,7 @@ import {
 } from './utils/errorReporting.js';
 // enableQueue: true — this is the real app boot, so the BullMQ donation queue
 // and worker should run (they connect to Redis). Tests never set this.
-app.use('/api/v1', express.json(), createV1Router({ enableQueue: true }));
+app.use('/api/v1', express.json(), createApiRouter({ enableQueue: true }));
 
 // Bull Board — queue dashboard (local/staging only, never in production).
 if (process.env.NODE_ENV !== 'production') {

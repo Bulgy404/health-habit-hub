@@ -1,14 +1,14 @@
 import express from 'express';
 import { ObjectId } from 'mongodb';
 import { makeGetDb } from '../utils/getDb.js';
-import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { COLLECTION_DEVICE_TOKENS } from '../services/notificationService.js';
+import { getEnrollment } from '../services/enrollmentNeo4j.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'participantRouter' });
 
-export function createParticipantRouter({ db } = {}) {
+export function createParticipantRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -49,17 +49,24 @@ export function createParticipantRouter({ db } = {}) {
 
       const database = await getDb();
 
-      const enrollment = await database
-        .collection(ENROLLMENTS)
-        .findOne({ userId: String(userId) });
+      const enrollment = neo4jRun
+        ? await getEnrollment(neo4jRun, String(userId))
+        : null;
 
       if (!enrollment) {
         return res.status(404).json({ error: 'Not enrolled in any study' });
       }
 
+      let studyOid;
+      try {
+        studyOid = new ObjectId(enrollment.studyId);
+      } catch {
+        return res.status(404).json({ error: 'Not enrolled in any study' });
+      }
+
       const study = await database
         .collection(STUDIES)
-        .findOne({ _id: enrollment.studyId });
+        .findOne({ _id: studyOid });
 
       if (!study || !study.isActive) {
         return res.status(404).json({ error: 'Study not found or inactive' });

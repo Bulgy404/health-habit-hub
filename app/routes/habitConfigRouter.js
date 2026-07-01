@@ -7,7 +7,7 @@ import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'habitConfigRouter' });
 
-export function createHabitConfigRouter({ db } = {}) {
+export function createHabitConfigRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -17,6 +17,7 @@ export function createHabitConfigRouter({ db } = {}) {
       const config = await resolveHabitConfig({
         db: database,
         userId: req.user.sub,
+        neo4jRun,
       });
       res.json({ ...config, srhiItems: SRHI_ITEMS });
     } catch (err) {

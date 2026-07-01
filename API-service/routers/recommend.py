@@ -21,7 +21,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Optional, cast
+from typing import Any, Optional, cast
 from uuid import uuid4
 
 import redis.asyncio as aioredis
@@ -98,7 +98,7 @@ async def _get_redis() -> Optional[aioredis.Redis]:
 
 def _parse_llm_response(
     raw: str, sources: list[SourceItem]
-) -> list[dict[str, object]]:
+) -> list[dict[str, Any]]:
     """Parse LLM JSON; attach sources and extract selected_habit_uuids per item."""
     try:
         text = raw.strip()
@@ -110,7 +110,7 @@ def _parse_llm_response(
         if not isinstance(items, list):
             return []
         source_refs = [{"filename": s.filename, "excerpt": s.excerpt} for s in sources]
-        result: list[dict[str, object]] = []
+        result: list[dict[str, Any]] = []
         for item in items:
             if not isinstance(item, dict):
                 continue
@@ -160,7 +160,7 @@ async def _store_recommendation(
     user_id: str,
     goal: str,
     session_id: str,
-    recs: list[dict[str, object]],
+    recs: list[dict[str, Any]],
     generated_at: str,
     db: Optional[AsyncIOMotorDatabase] = None,
 ) -> None:

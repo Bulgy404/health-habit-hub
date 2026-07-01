@@ -21,6 +21,7 @@ from routers.recommend import router as recommend_router
 from routers.refine_translation import router as refine_translation_router
 from routers.refine_translation_de import router as refine_translation_de_router
 from routers.retrieve import router as retrieve_router
+from routers.stitch_intention import router as stitch_intention_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -36,6 +37,7 @@ app.include_router(refine_translation_router, prefix="/api/v1")
 app.include_router(refine_translation_de_router, prefix="/api/v1")
 app.include_router(retrieve_router, prefix="/api/v1")
 app.include_router(recommend_router, prefix="/api/v1")
+app.include_router(stitch_intention_router, prefix="/api/v1")
 
 
 @app.get("/health")
