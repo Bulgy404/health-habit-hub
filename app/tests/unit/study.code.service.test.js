@@ -157,6 +157,44 @@ function makeDb(initial = {}) {
   };
 }
 
+// ── Neo4j enrollment mock ─────────────────────────────────────────────────────
+
+function makeNeo4jRun(initial = []) {
+  const store = new Map(initial.map((e) => [e.userId, e]));
+  return async (cypher, params) => {
+    if (cypher.includes('RETURN s.uuid AS studyId')) {
+      const row = store.get(params.userId);
+      return row
+        ? [
+            {
+              studyId: row.studyId,
+              groupId: row.groupId ?? null,
+              enrolledAt: row.enrolledAt ?? null,
+              studyCodeUsed: row.studyCodeUsed ?? null,
+            },
+          ]
+        : [];
+    }
+    if (cypher.includes('OPTIONAL MATCH') && cypher.includes('ENROLLED_IN')) {
+      return [{ exists: store.has(params.userId) }];
+    }
+    if (cypher.includes('CREATE (u)-[e:ENROLLED_IN]')) {
+      store.set(params.userId, {
+        studyId: params.studyId,
+        groupId: params.groupId ?? null,
+        enrolledAt: params.enrolledAt ?? null,
+        studyCodeUsed: params.code ?? null,
+      });
+      return [];
+    }
+    if (cypher.includes('DELETE e')) {
+      store.delete(params.userId);
+      return [];
+    }
+    return [];
+  };
+}
+
 // ── createCodes ───────────────────────────────────────────────────────────────
 
 test('createCodes returns notFound for unknown study', async () => {
@@ -436,17 +474,21 @@ test('redeemCode returns alreadyEnrolled when user already has enrollment', asyn
         createdAt: new Date(),
       },
     ],
-    enrollments: [
-      {
-        userId: 'user-1',
-        studyId,
-        groupId,
-        studyCodeUsed: null,
-        enrolledAt: new Date(),
-      },
-    ],
   });
-  const result = await redeemCode({ db, userId: 'user-1', code: 'HHH-VALID' });
+  const neo4jRun = makeNeo4jRun([
+    {
+      userId: 'user-1',
+      studyId: studyId.toString(),
+      groupId: groupId.toString(),
+      enrolledAt: new Date(),
+    },
+  ]);
+  const result = await redeemCode({
+    db,
+    userId: 'user-1',
+    code: 'HHH-VALID',
+    neo4jRun,
+  });
   assert.equal(result.alreadyEnrolled, true);
 });
 
@@ -480,10 +522,12 @@ test('redeemCode creates enrollment and increments counter (case-insensitive)', 
     ],
   });
   // Use lowercase code — should be case-insensitive
+  const neo4jRun = makeNeo4jRun([]);
   const result = await redeemCode({
     db,
     userId: 'user-1',
     code: 'hhh-abc12',
+    neo4jRun,
   });
   assert.equal(result.enrolled, true);
   assert.equal(result.studyName, 'My Study');
@@ -524,9 +568,20 @@ test('redeemCode returns exhausted atomically — second concurrent request cann
     ],
   });
 
+  const neo4jRun = makeNeo4jRun([]);
   // Simulate sequential requests that represent concurrent attempts
-  const r1 = await redeemCode({ db, userId: 'user-1', code: 'HHH-LIMIT' });
-  const r2 = await redeemCode({ db, userId: 'user-2', code: 'HHH-LIMIT' });
+  const r1 = await redeemCode({
+    db,
+    userId: 'user-1',
+    code: 'HHH-LIMIT',
+    neo4jRun,
+  });
+  const r2 = await redeemCode({
+    db,
+    userId: 'user-2',
+    code: 'HHH-LIMIT',
+    neo4jRun,
+  });
 
   assert.equal(r1.enrolled, true);
   assert.equal(r2.exhausted, true);
@@ -566,28 +621,36 @@ test('redeemCode returns alreadyEnrolled and rolls back counter for duplicate us
     ],
   });
 
+  const neo4jRun = makeNeo4jRun([]);
   // First redemption succeeds
-  const r1 = await redeemCode({ db, userId: 'user-1', code: 'HHH-MULTI' });
+  const r1 = await redeemCode({
+    db,
+    userId: 'user-1',
+    code: 'HHH-MULTI',
+    neo4jRun,
+  });
   assert.equal(r1.enrolled, true);
 
   // Second attempt by same userId: alreadyEnrolled, counter must be rolled back to 1
-  const r2 = await redeemCode({ db, userId: 'user-1', code: 'HHH-MULTI' });
+  const r2 = await redeemCode({
+    db,
+    userId: 'user-1',
+    code: 'HHH-MULTI',
+    neo4jRun,
+  });
   assert.equal(r2.alreadyEnrolled, true);
 
   // Counter must stay at 1 (the rollback undoes the second increment)
   const codes = await db.collection('studyCodes').find({}).toArray();
   assert.equal(codes[0].redemptionCount, 1);
-
-  // Only one enrollment must exist
-  const enrollments = await db.collection('enrollments').find({}).toArray();
-  assert.equal(enrollments.length, 1);
 });
 
 // ── skipCode ──────────────────────────────────────────────────────────────────
 
 test('skipCode returns noDefaultStudy when no default study', async () => {
   const db = makeDb();
-  const result = await skipCode({ db, userId: 'user-1' });
+  const neo4jRun = makeNeo4jRun([]);
+  const result = await skipCode({ db, userId: 'user-1', neo4jRun });
   assert.equal(result.noDefaultStudy, true);
 });
 
@@ -607,7 +670,8 @@ test('skipCode returns noGroups when default study has no groups', async () => {
       },
     ],
   });
-  const result = await skipCode({ db, userId: 'user-1' });
+  const neo4jRun = makeNeo4jRun([]);
+  const result = await skipCode({ db, userId: 'user-1', neo4jRun });
   assert.equal(result.noGroups, true);
 });
 
@@ -633,14 +697,15 @@ test('skipCode enrolls user in default study with round-robin group', async () =
       },
     ],
   });
+  const neo4jRun = makeNeo4jRun([]);
   // First user: counter becomes 1, idx = (1-1) % 2 = 0 → Group 1
-  const r1 = await skipCode({ db, userId: 'user-A' });
+  const r1 = await skipCode({ db, userId: 'user-A', neo4jRun });
   assert.equal(r1.enrolled, true);
   assert.equal(r1.studyName, 'Study X');
   assert.equal(r1.groupLabel, 'Group 1');
 
   // Second user: counter becomes 2, idx = (2-1) % 2 = 1 → Group 2
-  const r2 = await skipCode({ db, userId: 'user-B' });
+  const r2 = await skipCode({ db, userId: 'user-B', neo4jRun });
   assert.equal(r2.enrolled, true);
   assert.equal(r2.groupLabel, 'Group 2');
 });
@@ -668,20 +733,18 @@ test('skipCode concurrent requests land in different groups — atomic counter p
     ],
   });
 
+  const neo4jRun = makeNeo4jRun([]);
   // Simulate two concurrent requests (sequential in test, but both start before either
   // inserts enrollment — the atomic counter guarantees different groups regardless).
   const [r1, r2] = await Promise.all([
-    skipCode({ db, userId: 'concurrent-user-1' }),
-    skipCode({ db, userId: 'concurrent-user-2' }),
+    skipCode({ db, userId: 'concurrent-user-1', neo4jRun }),
+    skipCode({ db, userId: 'concurrent-user-2', neo4jRun }),
   ]);
 
   assert.equal(r1.enrolled, true);
   assert.equal(r2.enrolled, true);
   // The two users must end up in different groups.
   assert.notEqual(r1.groupId, r2.groupId);
-  // Each enrollment collection entry must reference the group the user was assigned.
-  const enrollments = await db.collection('enrollments').find({}).toArray();
-  assert.equal(enrollments.length, 2);
 });
 
 test('skipCode is idempotent — returns existing enrollment', async () => {
@@ -701,20 +764,16 @@ test('skipCode is idempotent — returns existing enrollment', async () => {
         updatedAt: new Date(),
       },
     ],
-    enrollments: [
-      {
-        userId: 'user-1',
-        studyId,
-        groupId,
-        studyCodeUsed: null,
-        enrolledAt: new Date(),
-      },
-    ],
   });
-  const result = await skipCode({ db, userId: 'user-1' });
+  const neo4jRun = makeNeo4jRun([
+    {
+      userId: 'user-1',
+      studyId: studyId.toString(),
+      groupId: groupId.toString(),
+      enrolledAt: new Date(),
+    },
+  ]);
+  const result = await skipCode({ db, userId: 'user-1', neo4jRun });
   assert.equal(result.enrolled, true);
   assert.equal(result.studyId, studyId.toString());
-  // Should not create a second enrollment
-  const count = await db.collection('enrollments').countDocuments({});
-  assert.equal(count, 1);
 });

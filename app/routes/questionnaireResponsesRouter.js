@@ -13,7 +13,10 @@ const log = logger.child({ module: 'questionnaireResponsesRouter' });
  * Service-to-service router for questionnaire responses.
  * Mounted BEFORE JWT authenticate middleware — auth is done via X-Service-Auth-Token.
  */
-export function createQuestionnaireResponsesServiceRouter({ db, neo4jRun } = {}) {
+export function createQuestionnaireResponsesServiceRouter({
+  db,
+  neo4jRun,
+} = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 

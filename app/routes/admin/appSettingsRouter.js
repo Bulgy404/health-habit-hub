@@ -47,11 +47,13 @@ export function createAppSettingsRouter({ db } = {}) {
         if (req.body.communityShareDefault !== undefined)
           $set.communityShareDefault = req.body.communityShareDefault;
 
-        await database.collection(COLLECTION).updateOne(
-          { key: 'global' },
-          { $set: { key: 'global', ...$set } },
-          { upsert: true }
-        );
+        await database
+          .collection(COLLECTION)
+          .updateOne(
+            { key: 'global' },
+            { $set: { key: 'global', ...$set } },
+            { upsert: true }
+          );
         res.json(await getSettings(database));
       } catch (err) {
         log.error({ err }, 'unhandled route error');

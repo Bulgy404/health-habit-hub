@@ -12,18 +12,36 @@ const studyId = new ObjectId();
 const groupA = new ObjectId();
 const groupB = new ObjectId();
 
-function makeDb({ enrollments = [], logs = [], srhi = [] } = {}) {
+function makeNeo4jRun(enrollments) {
+  return async (cypher, params) => {
+    if (cypher.includes('u.userID AS userId')) {
+      return enrollments
+        .filter((e) => e.studyId?.toString() === params.studyId)
+        .map((e) => ({
+          userId: e.userId,
+          groupId: e.groupId?.toString() ?? null,
+          enrolledAt: e.enrolledAt ?? null,
+          studyCodeUsed: null,
+        }));
+    }
+    if (cypher.includes('droppedOutAt')) {
+      return enrollments
+        .filter(
+          (e) =>
+            e.studyId?.toString() === params.studyId && e.droppedOutAt != null
+        )
+        .map((e) => ({
+          groupId: e.groupId?.toString() ?? null,
+          droppedOutAt: e.droppedOutAt,
+        }));
+    }
+    return [];
+  };
+}
+
+function makeDb({ logs = [], srhi = [] } = {}) {
   return {
     collection(name) {
-      if (name === 'enrollments')
-        return {
-          find: (q) => ({
-            toArray: async () =>
-              enrollments.filter(
-                (e) => e.studyId?.toString() === q.studyId?.toString()
-              ),
-          }),
-        };
       if (name === 'daily_behavior_logs')
         return {
           aggregate: (pipeline) => {
@@ -83,14 +101,18 @@ function makeDb({ enrollments = [], logs = [], srhi = [] } = {}) {
 test('getWeeklyActiveRate: returns per-group active rate', async () => {
   const today = new Date().toISOString().split('T')[0];
   const db = makeDb({
-    enrollments: [
-      { userId: 'u1', studyId, groupId: groupA },
-      { userId: 'u2', studyId, groupId: groupA },
-      { userId: 'u3', studyId, groupId: groupB },
-    ],
     logs: [{ userId: 'u1', date: today, enacted: true }],
   });
-  const result = await getWeeklyActiveRate({ db, studyId: studyId.toString() });
+  const neo4jRun = makeNeo4jRun([
+    { userId: 'u1', studyId, groupId: groupA },
+    { userId: 'u2', studyId, groupId: groupA },
+    { userId: 'u3', studyId, groupId: groupB },
+  ]);
+  const result = await getWeeklyActiveRate({
+    db,
+    studyId: studyId.toString(),
+    neo4jRun,
+  });
   const a = result.find((r) => r.groupId === groupA.toString());
   const b = result.find((r) => r.groupId === groupB.toString());
   assert.ok(a, 'groupA result exists');
@@ -103,7 +125,6 @@ test('getWeeklyActiveRate: returns per-group active rate', async () => {
 
 test('getMeanSrhiTrajectory: returns mean score per group per week', async () => {
   const db = makeDb({
-    enrollments: [],
     srhi: [
       {
         studyId,
@@ -144,48 +165,25 @@ test('getMeanSrhiTrajectory: returns mean score per group per week', async () =>
 });
 
 test('getDropoutCurve: returns cumulative dropouts per group by date', async () => {
-  // Note: getDropoutCurve uses find() not aggregate(), so the mock's find() returns filtered enrollments
-  const dbWithDropouts = {
-    collection(name) {
-      if (name === 'enrollments')
-        return {
-          find: (q) => ({
-            toArray: async () =>
-              [
-                {
-                  userId: 'u1',
-                  studyId,
-                  groupId: groupA,
-                  droppedOutAt: new Date('2026-01-10'),
-                },
-                {
-                  userId: 'u2',
-                  studyId,
-                  groupId: groupA,
-                  droppedOutAt: new Date('2026-01-15'),
-                },
-                { userId: 'u3', studyId, groupId: groupB, droppedOutAt: null },
-              ].filter((e) => {
-                if (
-                  q.studyId &&
-                  e.studyId?.toString() !== q.studyId?.toString()
-                )
-                  return false;
-                if (
-                  q.droppedOutAt?.$ne !== undefined &&
-                  e.droppedOutAt === null
-                )
-                  return false;
-                return true;
-              }),
-          }),
-        };
-      throw new Error(`unexpected: ${name}`);
+  const neo4jRun = makeNeo4jRun([
+    {
+      userId: 'u1',
+      studyId,
+      groupId: groupA,
+      droppedOutAt: new Date('2026-01-10'),
     },
-  };
+    {
+      userId: 'u2',
+      studyId,
+      groupId: groupA,
+      droppedOutAt: new Date('2026-01-15'),
+    },
+    { userId: 'u3', studyId, groupId: groupB, droppedOutAt: null },
+  ]);
   const result = await getDropoutCurve({
-    db: dbWithDropouts,
+    db: makeDb(),
     studyId: studyId.toString(),
+    neo4jRun,
   });
   const aDropouts = result.filter((r) => r.groupId === groupA.toString());
   assert.equal(aDropouts.length, 2);

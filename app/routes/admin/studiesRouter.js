@@ -208,7 +208,11 @@ export function createStudiesRouter({
   router.delete('/studies/:id', async (req, res) => {
     try {
       const database = await getDb();
-      const result = await softDeleteStudy({ db: database, id: req.params.id, neo4jRun });
+      const result = await softDeleteStudy({
+        db: database,
+        id: req.params.id,
+        neo4jRun,
+      });
       if (result.notFound)
         return res.status(404).json({ error: 'Study not found' });
       if (result.isDefault) {

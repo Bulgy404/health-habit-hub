@@ -54,9 +54,7 @@ export async function resolveHabitConfig({ db, userId, neo4jRun }) {
     }
 
     if (studyOid) {
-      const study = await db
-        .collection(STUDIES)
-        .findOne({ _id: studyOid });
+      const study = await db.collection(STUDIES).findOne({ _id: studyOid });
 
       if (study) {
         recommenderEnabled = study.recommenderEnabled !== false;

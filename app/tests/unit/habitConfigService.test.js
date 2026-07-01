@@ -41,11 +41,27 @@ function makeDb({
 }
 
 test('resolveHabitConfig: study participant gets group cueConfig', async () => {
-  const groupId = 'g1';
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
   const db = makeDb({
-    enrollment: { groupId, studyId: 's1', cueConfig: studyCueConfig },
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      groups: [
+        { id: groupId, label: 'G1', index: 1, cueConfig: studyCueConfig },
+      ],
+    },
   });
-  const config = await resolveHabitConfig({ db, userId: 'u1' });
+  const neo4jRun = async () => [
+    {
+      studyId: studyId.toString(),
+      groupId: groupId.toString(),
+      enrolledAt: null,
+      studyCodeUsed: null,
+    },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
   assert.equal(config.cueCount, 'single');
   assert.equal(config.cueSource, 'high_quality');
   assert.equal(config.maxHabits, 1);
@@ -83,11 +99,21 @@ test('resolveHabitConfig: recommenderEnabled defaults to true', async () => {
 });
 
 test('resolveHabitConfig: recommenderEnabled is false when study disables it', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
   const db = makeDb({
-    enrollment: { groupId: 'g1', studyId: 's1', cueConfig: studyCueConfig },
-    study: { recommenderEnabled: false },
+    study: { _id: studyId, recommenderEnabled: false, groups: [] },
   });
-  const config = await resolveHabitConfig({ db, userId: 'u1' });
+  const neo4jRun = async () => [
+    {
+      studyId: studyId.toString(),
+      groupId: groupId.toString(),
+      enrolledAt: null,
+      studyCodeUsed: null,
+    },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
   assert.equal(config.recommenderEnabled, false);
 });
 
