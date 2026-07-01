@@ -226,7 +226,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
               Row(
                 children: [
                   Icon(
-                    reminderCfg!.enabled ? Icons.notifications_active : Icons.notifications_off,
+                    reminderCfg.enabled ? Icons.notifications_active : Icons.notifications_off,
                     size: 20,
                     color: Theme.of(context).colorScheme.secondary,
                   ),
