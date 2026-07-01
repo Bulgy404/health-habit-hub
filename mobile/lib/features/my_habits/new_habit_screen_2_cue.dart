@@ -111,7 +111,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
         'behaviorLabel': widget.behaviorLabel,
         'config': widget.config,
         'cues': cues,
-        ?'stitchedSentence': stitchedSentence,
+        if (stitchedSentence != null) 'stitchedSentence': stitchedSentence, // ignore: use_null_aware_elements
       },
     );
   }
