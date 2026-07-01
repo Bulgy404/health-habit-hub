@@ -97,7 +97,7 @@ export async function getMeanSrhiTrajectory({ db, studyId }) {
  * @param {{ db: object, studyId: string, neo4jRun: Function }} deps
  * @returns {Promise<Array<{ groupId: string, date: string, cumulative: number }>>}
  */
-export async function getDropoutCurve({ db, studyId, neo4jRun }) {
+export async function getDropoutCurve({ db: _db, studyId, neo4jRun }) {
   if (!neo4jRun) return [];
 
   const rows = await neo4jRun(

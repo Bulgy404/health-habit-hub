@@ -12,7 +12,6 @@ import '../../core/exceptions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/study_config_provider.dart';
 import '../../services/reminder_scheduler_service.dart';
-import '../../services/study_config_service.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
@@ -118,7 +117,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
 
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context)!;
-    final studyConfig = ref.read(studyConfigProvider).valueOrNull;
+    final studyConfig = ref.read(studyConfigProvider).value;
     final reminderCfg = studyConfig?.reminderConfig;
 
     // Determine effective reminder state from study config overrides.
@@ -161,7 +160,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final studyConfig = ref.watch(studyConfigProvider).valueOrNull;
+    final studyConfig = ref.watch(studyConfigProvider).value;
     final reminderCfg = studyConfig?.reminderConfig;
 
     // Study-override: if study has fixedTime, show it read-only.
