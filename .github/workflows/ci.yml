@@ -503,6 +503,7 @@ jobs:
               data = json.load(f)
 
           breaking = []
+          skipped_prerelease = []
           for pkg in data.get("packages", []):
               if pkg.get("kind") != "direct":
                   continue
@@ -512,8 +513,20 @@ jobs:
                   continue
               cur_major = int(current.split(".")[0])
               res_major = int(resolvable.split(".")[0])
-              if res_major > cur_major:
-                  breaking.append(f"  {pkg['package']}: {current} -> {resolvable}")
+              if res_major <= cur_major:
+                  continue
+              # Only flag STABLE major upgrades. A pre-release resolvable
+              # (e.g. 10.0.0-alpha.1) is not something we can reasonably adopt,
+              # so it should not fail the audit. Semver marks pre-releases with
+              # a hyphen in the version string.
+              if "-" in resolvable:
+                  skipped_prerelease.append(f"  {pkg['package']}: {current} -> {resolvable} (pre-release, ignored)")
+                  continue
+              breaking.append(f"  {pkg['package']}: {current} -> {resolvable}")
+
+          if skipped_prerelease:
+              print("Pre-release major upgrades available (ignored):")
+              print("\n".join(skipped_prerelease))
 
           if breaking:
               print("Breaking major-version upgrades available for direct dependencies:")
@@ -521,7 +534,7 @@ jobs:
               print("Run: flutter pub upgrade --major-versions <package> to upgrade intentionally.")
               sys.exit(1)
           else:
-              print("No breaking major-version upgrades found.")
+              print("No breaking (stable) major-version upgrades found.")
           EOF
 
   # ─────────────────────────────────────────────────────────────────────────────
