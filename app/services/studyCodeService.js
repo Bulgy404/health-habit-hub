@@ -6,7 +6,13 @@ import { getEnrollment, createEnrollment } from './enrollmentNeo4j.js';
 import { generateWindowsForUser } from './questionnaireScheduleService.js';
 
 /** Best-effort: create the participant's questionnaire windows on enrollment. */
-async function scheduleQuestionnaires(db, userId, studyId, groupId, enrolledAt) {
+async function scheduleQuestionnaires(
+  db,
+  userId,
+  studyId,
+  groupId,
+  enrolledAt
+) {
   try {
     await generateWindowsForUser({ db, userId, studyId, groupId, enrolledAt });
   } catch {

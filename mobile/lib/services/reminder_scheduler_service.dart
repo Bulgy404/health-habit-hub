@@ -128,7 +128,7 @@ class ReminderSchedulerService {
     // Always clear the existing questionnaire reminders first, so toggling the
     // study setting off (or changing the hour) cancels/replaces them.
     for (var i = 0; i < _qNotifMax; i++) {
-      await _plugin.cancel(_qNotifBase + i);
+      await _plugin.cancel(id: _qNotifBase + i);
     }
 
     // Study-controlled: skip entirely when reminders are disabled.

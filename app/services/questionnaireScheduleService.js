@@ -31,12 +31,17 @@ export function scheduleOffsets(cadence) {
     const fromWeeks = (cadence.weeks || []).map(
       (w) => Math.max(0, Math.round(w)) * 7
     );
-    const fromDays = (cadence.days || []).map((d) => Math.max(0, Math.round(d)));
+    const fromDays = (cadence.days || []).map((d) =>
+      Math.max(0, Math.round(d))
+    );
     offsets = [...fromWeeks, ...fromDays];
   } else {
     const start = Math.max(0, Math.round(cadence.startOffsetDays ?? 0));
     const interval = Math.max(1, Math.round(cadence.intervalDays ?? 7));
-    const occ = Math.min(200, Math.max(1, Math.round(cadence.occurrences ?? 1)));
+    const occ = Math.min(
+      200,
+      Math.max(1, Math.round(cadence.occurrences ?? 1))
+    );
     offsets = Array.from({ length: occ }, (_, k) => start + k * interval);
   }
   return [...new Set(offsets)].sort((a, b) => a - b);
@@ -198,7 +203,11 @@ export async function markWindowSubmitted({
 }
 
 /** Remove windows for an assignment. By default only open (unsubmitted) ones. */
-export async function deleteAssignmentWindows({ db, assignmentId, onlyOpen = true }) {
+export async function deleteAssignmentWindows({
+  db,
+  assignmentId,
+  onlyOpen = true,
+}) {
   const filter = { assignmentId: toOid(assignmentId) };
   if (onlyOpen) filter.submittedAt = null;
   await db.collection(WINDOWS).deleteMany(filter);
@@ -279,7 +288,10 @@ export async function createAssignment({
   const study = await db.collection('studies').findOne({ _id: sOid });
   if (!study) return { notFound: true };
   const gOid = groupId ? toOid(groupId) : null;
-  if (gOid && !(study.groups || []).some((g) => g.id?.toString() === gOid.toString())) {
+  if (
+    gOid &&
+    !(study.groups || []).some((g) => g.id?.toString() === gOid.toString())
+  ) {
     return { groupNotFound: true };
   }
   const questionnaire = await db

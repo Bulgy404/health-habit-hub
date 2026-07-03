@@ -129,7 +129,10 @@ export function createParticipantsRouter({
         Math.min(365, parseInt(req.body?.days, 10) || 7)
       );
       const database = await getDb();
-      const participant = await getParticipant({ db: database, id: req.params.id });
+      const participant = await getParticipant({
+        db: database,
+        id: req.params.id,
+      });
       if (!participant) {
         return res.status(404).json({ error: 'Participant not found' });
       }

@@ -549,7 +549,11 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
           if (!/^[a-z]/.test(base)) base = `q-${base}`;
           finalSlug = base;
           let n = 1;
-          while (await database.collection('questionnaires').findOne({ slug: finalSlug })) {
+          while (
+            await database
+              .collection('questionnaires')
+              .findOne({ slug: finalSlug })
+          ) {
             n += 1;
             finalSlug = `${base}-${n}`;
           }

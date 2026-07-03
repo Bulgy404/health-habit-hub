@@ -67,8 +67,7 @@ export function recoveryPhraseFromCredentials(username, password) {
   const uuidBytes = hexToBytes(username.replace(/-/g, '')); // 16 bytes
   const passBytes = hexToBytes(password);
   if (uuidBytes.length < 16 || passBytes.length === 0) return null;
-  return [
-    ...bytesToWords(uuidBytes, 12),
-    ...bytesToWords(passBytes, 12),
-  ].join(' ');
+  return [...bytesToWords(uuidBytes, 12), ...bytesToWords(passBytes, 12)].join(
+    ' '
+  );
 }

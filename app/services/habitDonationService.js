@@ -215,7 +215,12 @@ async function _createHabitNode(
        FOREACH (_ IN CASE WHEN $studyId IS NULL THEN [] ELSE [1] END |
          MERGE (s:Study {uuid: $studyId})
          MERGE (h)-[:DONATED_IN]->(s))`,
-      { uuid, userID: safeUserId, studyId: studyId ?? null, created_at: createdAt }
+      {
+        uuid,
+        userID: safeUserId,
+        studyId: studyId ?? null,
+        created_at: createdAt,
+      }
     );
   }
 }
