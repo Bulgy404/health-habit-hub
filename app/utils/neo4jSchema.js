@@ -26,6 +26,11 @@ const SCHEMA_STATEMENTS = [
   // Study node — one per MongoDB study document
   `CREATE CONSTRAINT study_uuid IF NOT EXISTS
      FOR (s:Study) REQUIRE s.uuid IS UNIQUE`,
+  // User node — one per Keycloak subject. Property is `userID` (capital D) to
+  // match enrollment + donation writes; the constraint backs those MERGEs so
+  // concurrent writes can't create duplicate User nodes.
+  `CREATE CONSTRAINT user_userID IF NOT EXISTS
+     FOR (u:User) REQUIRE u.userID IS UNIQUE`,
   // Questionnaire slug — for HAS_QUESTIONNAIRE traversal
   `CREATE CONSTRAINT questionnaire_slug IF NOT EXISTS
      FOR (q:Questionnaire) REQUIRE q.slug IS UNIQUE`,

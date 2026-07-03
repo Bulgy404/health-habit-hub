@@ -11,9 +11,10 @@ CREATE CONSTRAINT habit_uuid IF NOT EXISTS
 CREATE INDEX context_text_dim IF NOT EXISTS
   FOR (c:Context) ON (c.text, c.dimension);
 
-// User node — one node per Keycloak subject
-CREATE CONSTRAINT user_userId IF NOT EXISTS
-  FOR (u:User) REQUIRE u.userId IS UNIQUE;
+// User node — one node per Keycloak subject.
+// Property is `userID` (capital D) to match enrollment + donation writes.
+CREATE CONSTRAINT user_userID IF NOT EXISTS
+  FOR (u:User) REQUIRE u.userID IS UNIQUE;
 
 // QuestionItem — composite index on (id, questionnaireId) for fast MERGE lookups.
 // NODE KEY (composite uniqueness) requires Enterprise Edition — MERGE already

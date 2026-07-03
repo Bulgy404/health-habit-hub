@@ -140,8 +140,9 @@ async def test_recommend_returns_valid_response():
 
 
 @pytest.mark.asyncio
-async def test_recommendations_include_selected_habit_uuids():
-    """Each recommendation item contains selected_habit_uuids from the LLM response."""
+async def test_habit_uuids_stored_but_not_exposed_to_client():
+    """Graph provenance (habit UUIDs) is stored server-side but stripped from the response."""
+    mock_store = AsyncMock()
     with (
         patch("routers.recommend._get_redis", new=AsyncMock(return_value=None)),
         patch("routers.recommend._vector_search_user_habits", new=AsyncMock(return_value=_PERSONAL_HABITS)),
@@ -154,7 +155,7 @@ async def test_recommendations_include_selected_habit_uuids():
         patch("routers.recommend._fetch_bcio_concepts", new=AsyncMock(return_value={})),
         patch("routers.recommend._get_neo4j_driver", new=AsyncMock(return_value=MagicMock())),
         patch("routers.recommend._retrieve", new=AsyncMock(return_value=_make_retrieve_mock())),
-        patch("routers.recommend._store_recommendation", new=AsyncMock()),
+        patch("routers.recommend._store_recommendation", new=mock_store),
         patch("routers.recommend.chat_complete", new=AsyncMock(return_value=_LLM_REPLY)),
     ):
         async with AsyncClient(
@@ -166,9 +167,14 @@ async def test_recommendations_include_selected_habit_uuids():
             )
 
     data = resp.json()
-    assert data["recommendations"][0]["selected_habit_uuids"] == ["uuid-1"]
-    assert data["recommendations"][1]["selected_habit_uuids"] == []
-    assert data["recommendations"][2]["selected_habit_uuids"] == ["uuid-2"]
+    # Client payload carries no graph identifiers.
+    for rec in data["recommendations"]:
+        assert "selected_habit_uuids" not in rec
+    # But the stored (debugging) copy keeps them.
+    stored_recs = mock_store.call_args.kwargs["recs"]
+    assert stored_recs[0]["selected_habit_uuids"] == ["uuid-1"]
+    assert stored_recs[1]["selected_habit_uuids"] == []
+    assert stored_recs[2]["selected_habit_uuids"] == ["uuid-2"]
 
 
 @pytest.mark.asyncio
@@ -303,7 +309,8 @@ async def test_recommend_prior_feedback_included_in_prompt():
             )
 
     assert resp.status_code == 200
-    assert "I didn't like the running suggestion" in captured[0]["content"]
+    user_prompt = next(m["content"] for m in captured if m["role"] == "user")
+    assert "I didn't like the running suggestion" in user_prompt
 
 
 @pytest.mark.asyncio
@@ -340,7 +347,7 @@ async def test_recommend_bcio_concepts_included_in_prompt():
                 json={"user_id": "user-abc", "goal": "improve fitness", "session_id": "sess-4"},
             )
 
-    prompt = captured[0]["content"]
+    prompt = next(m["content"] for m in captured if m["role"] == "user")
     assert "Habit formation" in prompt
     assert "Self-monitoring" in prompt
 

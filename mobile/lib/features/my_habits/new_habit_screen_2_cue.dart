@@ -1,4 +1,4 @@
-/// Step 2 of 3 in the new habit flow: setting the implementation intention cues.
+/// Step 2 of the new habit flow: setting the implementation intention cues.
 library;
 
 // mobile/lib/features/my_habits/new_habit_screen_2_cue.dart
@@ -6,8 +6,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
-import '../../services/study_config_service.dart';
+import '../../providers/locale_provider.dart';
+import 'habit_onboarding_widgets.dart';
 import 'my_habits_models.dart';
+
+/// Maximum number of self-selected cues a user can attach to one habit.
+const int kMaxCues = 7;
 
 /// Screen for entering the "when" and "where" implementation intention cues.
 class SetCueScreen extends ConsumerStatefulWidget {
@@ -16,6 +20,7 @@ class SetCueScreen extends ConsumerStatefulWidget {
     required this.behaviorKey,
     required this.behaviorLabel,
     required this.config,
+    this.initialCue,
     super.key,
   });
 
@@ -28,44 +33,63 @@ class SetCueScreen extends ConsumerStatefulWidget {
   /// Habit configuration loaded from the backend.
   final HabitConfig config;
 
+  /// Optional cue text to prefill the first cue field (e.g. suggested by the
+  /// recommender). The user can freely edit or replace it.
+  final String? initialCue;
+
   @override
   ConsumerState<SetCueScreen> createState() => _SetCueScreenState();
 }
 
 class _SetCueScreenState extends ConsumerState<SetCueScreen> {
-  final _cue1Controller = TextEditingController();
-  final _cue2Controller = TextEditingController();
+  /// One controller per self-selected cue field. Starts with a single cue.
+  final List<TextEditingController> _cueControllers = [TextEditingController()];
   String? _error;
-  bool _stitching = false;
+  // Session-only dismiss for the cue explainer card.
+  bool _introDismissed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final cue = widget.initialCue?.trim();
+    if (cue != null && cue.isNotEmpty) {
+      _cueControllers.first.text = cue;
+    }
+  }
 
   @override
   void dispose() {
-    _cue1Controller.dispose();
-    _cue2Controller.dispose();
+    for (final c in _cueControllers) {
+      c.dispose();
+    }
     super.dispose();
   }
+
+  void _addCue() {
+    if (_cueControllers.length >= kMaxCues) return;
+    setState(() {
+      _cueControllers.add(TextEditingController());
+      _error = null;
+    });
+  }
+
+  void _removeCue(int index) {
+    if (_cueControllers.length <= 1) return;
+    setState(() {
+      _cueControllers.removeAt(index).dispose();
+      _error = null;
+    });
+  }
+
+  /// Collects the non-empty, trimmed self-selected cues.
+  List<String> _collectSelfCues() => _cueControllers
+      .map((c) => c.text.trim())
+      .where((t) => t.isNotEmpty)
+      .toList();
 
   Future<void> _onNext() async {
     final l10n = AppLocalizations.of(context)!;
     final isPreRated = widget.config.cueSource != 'self_selected';
-
-    if (!isPreRated) {
-      if (_cue1Controller.text.trim().length < 10) {
-        setState(() => _error = l10n.setCueTooShort);
-        return;
-      }
-      if (widget.config.cueCount == 'multi' &&
-          _cue2Controller.text.trim().isNotEmpty &&
-          _cue2Controller.text.trim().length < 10) {
-        setState(() => _error = l10n.setCueTooShort);
-        return;
-      }
-    }
-
-    setState(() {
-      _error = null;
-      _stitching = true;
-    });
 
     final List<IntentionCue> cues;
     if (isPreRated) {
@@ -80,59 +104,63 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
         ];
       }
     } else {
+      final texts = _collectSelfCues();
+      if (texts.isEmpty || texts.first.length < 10) {
+        setState(() => _error = l10n.setCueTooShort);
+        return;
+      }
+      // Any additional cue that was typed must be substantive.
+      if (texts.skip(1).any((t) => t.length < 3)) {
+        setState(() => _error = l10n.setCueTooShort);
+        return;
+      }
       cues = [
-        IntentionCue(
-          text: _cue1Controller.text.trim(),
-          source: 'self_selected',
-        ),
-        if (widget.config.cueCount == 'multi' &&
-            _cue2Controller.text.trim().isNotEmpty)
-          IntentionCue(
-            text: _cue2Controller.text.trim(),
-            source: 'self_selected',
-          ),
+        for (final t in texts)
+          IntentionCue(text: t, source: 'self_selected'),
       ];
     }
 
-    // Call stitch-intention LLM (non-blocking: falls back to local assembly
-    // on failure). Skipped entirely when the guided wizard is disabled
-    // platform-wide — the user then composes the sentence as free text on
-    // the confirm screen.
-    final stitchedSentence = widget.config.guidedHabitCreationEnabled
-        ? await ref.read(studyConfigServiceProvider).stitchIntention(
-              action: widget.behaviorLabel,
-              cues: cues.map((c) => c.text).toList(),
-            )
-        : null;
+    setState(() => _error = null);
 
-    if (!mounted) return;
-    setState(() => _stitching = false);
+    final extra = <String, dynamic>{
+      'behaviorKey': widget.behaviorKey,
+      'behaviorLabel': widget.behaviorLabel,
+      'config': widget.config,
+      'cues': cues,
+    };
 
-    context.push(
-      '/habits/new/confirm',
-      extra: {
-        'behaviorKey': widget.behaviorKey,
-        'behaviorLabel': widget.behaviorLabel,
-        'config': widget.config,
-        'cues': cues,
-        if (stitchedSentence != null) 'stitchedSentence': stitchedSentence, // ignore: use_null_aware_elements
-      },
-    );
+    // When the guided wizard is enabled, hand off to the animated stitch
+    // screen which calls the LLM and reveals the implementation intention.
+    // Otherwise go straight to the confirm screen (free-text compose).
+    if (widget.config.guidedHabitCreationEnabled) {
+      context.push('/habits/new/stitching', extra: extra);
+    } else {
+      context.push('/habits/new/confirm', extra: extra);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final lang = ref.watch(localeProvider).languageCode;
     final isPreRated = widget.config.cueSource != 'self_selected';
-    final isMulti = widget.config.cueCount == 'multi';
+    final showIntro = widget.config.onboardingEnabled && !_introDismissed;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.setCueTitle)),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(20),
           children: [
+            if (showIntro) ...[
+              OnboardingExplainerCard(
+                icon: Icons.alarm_on,
+                title: HabitOnboardingCopy.cueTitleFor(lang),
+                body: HabitOnboardingCopy.cueBodyFor(lang),
+                onDismiss: () => setState(() => _introDismissed = true),
+              ),
+              const SizedBox(height: 16),
+            ],
             // ── Instruction ────────────────────────────────────────────
             Text(
               isPreRated
@@ -142,78 +170,120 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
             ),
             const SizedBox(height: 20),
             // ── Cue input / assigned cues ──────────────────────────────
-            if (isPreRated) ...[
-              if (widget.config.assignedCues.isEmpty)
-                const Card(
-                  child: ListTile(
-                    leading: Icon(Icons.hourglass_empty),
-                    title: Text('No cues available yet'),
-                    subtitle: Text('Your study coordinator will assign cues soon'),
-                  ),
-                )
-              else
-                ...widget.config.assignedCues.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final cue = entry.value;
-                  final total = widget.config.assignedCues.length;
-                  return Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.location_on),
-                      title: Text(cue.text),
-                      subtitle: Text(
-                        total > 1
-                            ? 'Cue ${index + 1} of $total (assigned by study)'
-                            : 'Assigned by study',
-                      ),
-                    ),
-                  );
-                }),
-            ] else ...[
-              TextField(
-                controller: _cue1Controller,
-                decoration: InputDecoration(
-                  labelText: isMulti ? 'Cue 1' : 'Your cue',
-                  hintText: l10n.setCuePlaceholder,
-                  border: const OutlineInputBorder(),
-                ),
-                maxLength: 200,
-                onChanged: (_) => setState(() => _error = null),
-              ),
-              if (isMulti) ...[
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _cue2Controller,
-                  decoration: const InputDecoration(
-                    labelText: 'Cue 2 (optional context)',
-                    hintText: 'e.g. at home on weekdays',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLength: 200,
-                  onChanged: (_) => setState(() => _error = null),
-                ),
-              ],
-            ],
-            // ── Validation error / submit ──────────────────────────────
+            if (isPreRated)
+              ..._buildAssignedCues(context)
+            else
+              ..._buildSelfCueFields(context),
+            // ── Validation error ───────────────────────────────────────
             if (_error != null) ...[
               const SizedBox(height: 8),
               Text(_error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
-            const Spacer(),
+            const SizedBox(height: 24),
             FilledButton(
-              onPressed: _stitching ? null : _onNext,
-              child: _stitching
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Text('Next'),
+              onPressed: _onNext,
+              child: const Text('Next'),
             ),
           ],
         ),
       ),
     );
+  }
+
+  List<Widget> _buildAssignedCues(BuildContext context) {
+    if (widget.config.assignedCues.isEmpty) {
+      return const [
+        Card(
+          child: ListTile(
+            leading: Icon(Icons.hourglass_empty),
+            title: Text('No cues available yet'),
+            subtitle: Text('Your study coordinator will assign cues soon'),
+          ),
+        ),
+      ];
+    }
+    final total = widget.config.assignedCues.length;
+    return [
+      ...widget.config.assignedCues.asMap().entries.map((entry) {
+        final index = entry.key;
+        final cue = entry.value;
+        return Card(
+          child: ListTile(
+            leading: const Icon(Icons.location_on),
+            title: Text(cue.text),
+            subtitle: Text(
+              total > 1
+                  ? 'Cue ${index + 1} of $total (assigned by study)'
+                  : 'Assigned by study',
+            ),
+          ),
+        );
+      }),
+    ];
+  }
+
+  List<Widget> _buildSelfCueFields(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final widgets = <Widget>[];
+    for (var i = 0; i < _cueControllers.length; i++) {
+      widgets.add(
+        Padding(
+          padding: EdgeInsets.only(top: i == 0 ? 0 : 12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _cueControllers[i],
+                  decoration: InputDecoration(
+                    labelText: _cueControllers.length == 1
+                        ? 'Your cue'
+                        : 'Cue ${i + 1}',
+                    hintText:
+                        i == 0 ? l10n.setCuePlaceholder : 'e.g. at home on weekdays',
+                    border: const OutlineInputBorder(),
+                  ),
+                  maxLength: 200,
+                  onChanged: (_) {
+                    if (_error != null) setState(() => _error = null);
+                  },
+                ),
+              ),
+              if (_cueControllers.length > 1)
+                IconButton(
+                  icon: const Icon(Icons.remove_circle_outline),
+                  tooltip: 'Remove cue',
+                  onPressed: () => _removeCue(i),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+    // ── Add-cue button (hidden once the max is reached) ──────────────────
+    if (_cueControllers.length < kMaxCues) {
+      widgets.add(
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _addCue,
+            icon: const Icon(Icons.add),
+            label: Text('Add another cue (${_cueControllers.length}/$kMaxCues)'),
+          ),
+        ),
+      );
+    } else {
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            'You can add up to $kMaxCues cues.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      );
+    }
+    return widgets;
   }
 }

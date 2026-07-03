@@ -38,6 +38,12 @@ class AuthService {
   /// Called after a successful login to notify auth listeners.
   final void Function()? onLogin;
 
+  /// Single-flight guard for token refresh. When multiple requests fire at
+  /// once (e.g. a screen loading logs + trajectory together) they must share
+  /// one refresh, otherwise the second replays an already-rotated (single-use)
+  /// refresh token, gets rejected, and forces an unnecessary logout.
+  Future<bool>? _refreshFuture;
+
   /// Creates an [AuthService].
   AuthService({
     FlutterAppAuth? appAuth,
@@ -162,25 +168,37 @@ class AuthService {
   /// intact so the user is not logged out when the server is unreachable.
   Future<String?> getAccessToken() async {
     if (await _tokenNeedsRefresh()) {
-      try {
-        await refreshToken();
-      } catch (e) {
-        final isTokenRejected = e is DioException &&
-            e.response != null &&
-            (e.response!.statusCode == 400 || e.response!.statusCode == 401);
-        if (isTokenRejected) {
-          final reauthed = await reauthenticate();
-          if (reauthed) {
-            return _secureStorage.read(key: _tokenKey);
-          }
-          await logout();
-          return null;
-        }
-        // Network / server error — return the stored token as-is and let the
-        // caller's API request fail with 401 if the token is truly expired.
-      }
+      // Coalesce concurrent refreshes: the first caller starts the refresh, and
+      // any others awaiting during that window share its result.
+      _refreshFuture ??=
+          _performRefresh().whenComplete(() => _refreshFuture = null);
+      final stillAuthenticated = await _refreshFuture!;
+      if (!stillAuthenticated) return null;
     }
     return _secureStorage.read(key: _tokenKey);
+  }
+
+  /// Performs a single token refresh, recovering via silent re-authentication
+  /// and only logging out if that also fails. Returns true when a usable token
+  /// is available afterwards, false when the session was ended.
+  Future<bool> _performRefresh() async {
+    try {
+      await refreshToken();
+      return true;
+    } catch (e) {
+      final isTokenRejected = e is DioException &&
+          e.response != null &&
+          (e.response!.statusCode == 400 || e.response!.statusCode == 401);
+      if (isTokenRejected) {
+        final reauthed = await reauthenticate();
+        if (reauthed) return true;
+        await logout();
+        return false;
+      }
+      // Network / server error — keep the stored token and let the caller's API
+      // request fail with 401 if the token is truly expired.
+      return true;
+    }
   }
 
   /// Returns true if the stored access token is expired or within 60 seconds

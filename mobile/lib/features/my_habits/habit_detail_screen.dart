@@ -40,16 +40,17 @@ class HabitDetailScreen extends ConsumerWidget {
                 if (value == 'abandon') {
                   final confirmed = await showDialog<bool>(
                     context: context,
-                    builder: (_) => AlertDialog(
+                    builder: (dialogContext) => AlertDialog(
                       title: Text(l10n.abandonHabit),
                       content: Text(l10n.abandonConfirm),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.pop(context, false),
+                          onPressed: () =>
+                              Navigator.pop(dialogContext, false),
                           child: Text(l10n.cancel),
                         ),
                         FilledButton(
-                          onPressed: () => Navigator.pop(context, true),
+                          onPressed: () => Navigator.pop(dialogContext, true),
                           child: Text(l10n.confirm),
                         ),
                       ],

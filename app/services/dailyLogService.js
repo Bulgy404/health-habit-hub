@@ -13,7 +13,10 @@ export async function upsertLog({ db, intentionId, userId, date, enacted }) {
   await db.collection(COLLECTION).findOneAndUpdate(
     { intentionId: oid, date: String(date) },
     {
-      $setOnInsert: { intentionId: oid, userId, date, loggedAt: now },
+      // loggedAt must not appear in both $setOnInsert and $set — MongoDB rejects
+      // the update with a path conflict (HTTP 500). It lives in $set so it is
+      // written on both insert and re-log.
+      $setOnInsert: { intentionId: oid, userId, date },
       $set: { enacted, loggedAt: now },
     },
     { upsert: true, returnDocument: 'after' }

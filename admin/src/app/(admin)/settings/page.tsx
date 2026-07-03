@@ -16,9 +16,11 @@ interface ActivityType {
 }
 
 /**
- * Manages the platform-wide catalog of activity types that appear as behavior
- * options when participants create a new habit. Activity types marked as
- * "default" are shown to public (non-study) users automatically.
+ * Manages the platform-wide catalog of activity types that study groups can
+ * offer as behavior options. Activity types marked as "default" form the
+ * pre-selected set when a study group has no explicit behavior restriction.
+ * Public (non-study) users are unaffected — they enter their habit as free
+ * text.
  */
 function ActivityTypesSection({ token }: { token: string }) {
   const [types, setTypes] = useState<ActivityType[]>([]);
@@ -98,9 +100,10 @@ function ActivityTypesSection({ token }: { token: string }) {
     <div className={styles.section}>
       <p className={styles.sectionTitle}>Catalog</p>
       <p className={styles.sectionDesc}>
-        Platform-wide catalog of activity types that participants can choose from when creating a habit.
-        Activities marked as <strong>default</strong> are available to public (non-study) users.
-        Study groups can restrict or expand this list via their Cue Config.
+        Platform-wide catalog of activity types that study participants can choose from when creating a habit.
+        Activities marked as <strong>default</strong> are pre-selected for study groups without an explicit
+        behavior restriction. Study groups can restrict or expand the list via their Cue Config.
+        Public (non-study) users enter their habit as free text and do not use this catalog.
       </p>
 
       {error && <div className={styles.errorMsg}>{error}</div>}
@@ -211,8 +214,9 @@ function ActivityTypesSection({ token }: { token: string }) {
 // ── Activity Types page ───────────────────────────────────────────────────────
 
 /**
- * Manages the platform-wide activity-type catalog. Public app defaults and
- * study cue configuration have their own pages (Public App and Studies).
+ * Manages the platform-wide activity-type catalog used by study cue configs.
+ * Public app settings and study cue configuration have their own pages
+ * (Public App and Studies).
  *
  * @returns The activity types management page.
  */
@@ -224,7 +228,7 @@ export default function ActivityTypesPage() {
       <div className={styles.header}>
         <h1 className={styles.title}>Activity Types</h1>
         <p className={styles.subtitle}>
-          The behavior catalog used by the public app and by study cue configs.
+          The behavior catalog offered to study participants via cue configs.
         </p>
       </div>
 

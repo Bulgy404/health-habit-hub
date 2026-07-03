@@ -199,6 +199,25 @@ async function _createHabitNode(
       wellbeing_impact: wellbeingImpact ?? null,
     }
   );
+
+  // Link the donation into the graph so it can be traversed from the donor and
+  // the study, not only via the scalar userID/studyId properties:
+  //   (:User)-[:DONATED]->(:Habit)-[:DONATED_IN]->(:Study)
+  // DONATED_IN is only created for study-enrolled donors (studyId set); public
+  // donors just get the DONATED edge.
+  if (safeUserId) {
+    await queryNeo4j(
+      `MATCH (h:Habit {uuid: $uuid})
+       MERGE (u:User {userID: $userID})
+       MERGE (u)-[d:DONATED]->(h)
+         ON CREATE SET d.at = $created_at
+       WITH h
+       FOREACH (_ IN CASE WHEN $studyId IS NULL THEN [] ELSE [1] END |
+         MERGE (s:Study {uuid: $studyId})
+         MERGE (h)-[:DONATED_IN]->(s))`,
+      { uuid, userID: safeUserId, studyId: studyId ?? null, created_at: createdAt }
+    );
+  }
 }
 
 /**

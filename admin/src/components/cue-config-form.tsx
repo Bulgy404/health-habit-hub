@@ -1,6 +1,5 @@
 "use client";
 
-import type { ReactNode } from "react";
 import styles from "./cue-config-form.module.css";
 
 /**
@@ -27,19 +26,17 @@ export interface CueConfigValue {
 }
 
 /**
- * Shared cue-configuration form used by the Public App settings page and the
- * per-group Cue Config tab in the Studies modal, so both audiences are edited
- * with identical fields, labels, and hints.
+ * Cue-configuration form for a study group (Studies → Cue Config tab).
+ * Public users are not configured here — they create habits with free-text
+ * entry, so cue configuration exists only per study group.
  *
  * Controlled component: the parent owns the value and persists it.
  *
  * @param value - Current cue configuration.
  * @param onChange - Called with a partial patch when any field changes.
  * @param activityTypes - Platform activity-type catalog (for the behaviors list).
- * @param showMaxHabits - Show the max-habits selector (study groups only).
+ * @param showMaxHabits - Show the max-habits selector.
  * @param showBehaviors - Show the allowed-behaviors checkboxes.
- * @param extraFields - Optional extra form fields rendered inside the grid
- *   (e.g. the public default reminder time).
  */
 export function CueConfigForm({
   value,
@@ -47,14 +44,12 @@ export function CueConfigForm({
   activityTypes,
   showMaxHabits = false,
   showBehaviors = true,
-  extraFields,
 }: {
   value: CueConfigValue;
   onChange: (patch: Partial<CueConfigValue>) => void;
   activityTypes: ActivityTypeEntry[];
   showMaxHabits?: boolean;
   showBehaviors?: boolean;
-  extraFields?: ReactNode;
 }) {
   const defaultKeys = activityTypes
     .filter((a) => a.isDefault)
@@ -131,8 +126,6 @@ export function CueConfigForm({
             </span>
           </div>
         )}
-
-        {extraFields}
       </div>
 
       {showBehaviors && (

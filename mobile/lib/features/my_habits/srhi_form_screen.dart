@@ -109,6 +109,49 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
                   ?.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
+          // ── Scale anchors (what 1 and 7 mean) ─────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Row(
+              children: [
+                const SizedBox(width: 140),
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          locale == 'de'
+                              ? '1 = Stimme gar nicht zu'
+                              : '1 = Strongly disagree',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(color: Colors.grey),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          locale == 'de'
+                              ? '7 = Stimme voll zu'
+                              : '7 = Strongly agree',
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelSmall
+                              ?.copyWith(color: Colors.grey),
+                          textAlign: TextAlign.end,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 20),
+              ],
+            ),
+          ),
           // ── Question sliders ──────────────────────────────────────────
           Expanded(
             child: SingleChildScrollView(

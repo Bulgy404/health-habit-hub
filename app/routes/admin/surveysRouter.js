@@ -524,6 +524,11 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
       try {
         const { slug, title, description, version, questions } = req.body;
         const database = await getDb();
+
+        // Every questionnaire needs a slug — responses and questionnaire
+        // scheduling/completion are keyed by it. Derive a unique one from the
+        // title when the admin didn't supply a slug.
+        let finalSlug;
         if (slug) {
           const existing = await database
             .collection('questionnaires')
@@ -533,10 +538,26 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
               .status(409)
               .json({ error: 'Questionnaire with this slug already exists' });
           }
+          finalSlug = String(slug);
+        } else {
+          let base = String(title || 'questionnaire')
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .slice(0, 60);
+          if (!/^[a-z]/.test(base)) base = `q-${base}`;
+          finalSlug = base;
+          let n = 1;
+          while (await database.collection('questionnaires').findOne({ slug: finalSlug })) {
+            n += 1;
+            finalSlug = `${base}-${n}`;
+          }
         }
+
         const now = new Date();
         const doc = {
-          slug: slug || null,
+          slug: finalSlug,
           title,
           description: description || '',
           version: version || '1',
@@ -552,7 +573,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         res.status(201).json({
           ok: true,
           id: result.insertedId.toString(),
-          slug: slug || null,
+          slug: finalSlug,
         });
       } catch (err) {
         log.error({ err: err }, 'unhandled route error');

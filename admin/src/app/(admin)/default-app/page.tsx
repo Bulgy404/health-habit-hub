@@ -5,11 +5,6 @@ import styles from "./page.module.css";
 
 import { apiFetch, apiUrl } from "@/lib/api";
 import { useAdminGuard } from "@/lib/useAdminGuard";
-import { useActivityTypes } from "@/lib/useActivityTypes";
-import {
-  CueConfigForm,
-  type CueConfigValue,
-} from "@/components/cue-config-form";
 
 const APP_SETTINGS_API = apiUrl("/admin/app-settings");
 const SETTINGS_API = apiUrl("/admin/settings");
@@ -100,8 +95,9 @@ function FeaturesSection({ token }: { token: string }) {
           </label>
           <p className={styles.toggleHint}>
             When enabled, public users are taken through a step-by-step wizard
-            (action → cues → LLM stitch → confirm → reminder) instead of a free
-            text entry.
+            (habit → cues → LLM stitch → confirm → reminder). Habit and cues
+            are always free text for public users; disabling this only skips
+            the LLM stitching step.
           </p>
 
           <label className={styles.toggle}>
@@ -135,23 +131,17 @@ function FeaturesSection({ token }: { token: string }) {
   );
 }
 
-// ── Default cue config section ────────────────────────────────────────────────
+// ── Defaults section ──────────────────────────────────────────────────────────
 
 /**
- * Default cue configuration for public users, backed by the
- * default_cue_count / default_cue_source / default_reminder_time keys in
- * /admin/settings. Study participants override these with their group's
- * cue config (edited in Studies → Cue Config with the same form).
+ * Non-study defaults for the public app, backed by the
+ * default_reminder_time key in /admin/settings.
+ *
+ * Public users enter their habit and cues as free text, so there is no cue
+ * or behavior configuration here — that exists only per study group
+ * (Studies → Cue Config).
  */
-function DefaultCueConfigSection({ token }: { token: string }) {
-  const { activityTypes } = useActivityTypes(token);
-
-  const [config, setConfig] = useState<CueConfigValue>({
-    cueCount: "multi",
-    cueSource: "high_quality",
-    behaviorOptions: null,
-    maxHabits: null,
-  });
+function DefaultsSection({ token }: { token: string }) {
   const [reminderTime, setReminderTime] = useState("19:00");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -162,11 +152,6 @@ function DefaultCueConfigSection({ token }: { token: string }) {
     if (!token) return;
     apiFetch(SETTINGS_API, token)
       .then((data: Record<string, string>) => {
-        setConfig((c) => ({
-          ...c,
-          cueCount: (data.default_cue_count as CueConfigValue["cueCount"]) ?? c.cueCount,
-          cueSource: (data.default_cue_source as CueConfigValue["cueSource"]) ?? c.cueSource,
-        }));
         if (data.default_reminder_time) setReminderTime(data.default_reminder_time);
       })
       .catch((err) => {
@@ -180,20 +165,10 @@ function DefaultCueConfigSection({ token }: { token: string }) {
     setSaved(false);
     setError("");
     try {
-      await Promise.all([
-        apiFetch(`${SETTINGS_API}/default_cue_count`, token, {
-          method: "PUT",
-          body: JSON.stringify({ value: config.cueCount }),
-        }),
-        apiFetch(`${SETTINGS_API}/default_cue_source`, token, {
-          method: "PUT",
-          body: JSON.stringify({ value: config.cueSource }),
-        }),
-        apiFetch(`${SETTINGS_API}/default_reminder_time`, token, {
-          method: "PUT",
-          body: JSON.stringify({ value: reminderTime }),
-        }),
-      ]);
+      await apiFetch(`${SETTINGS_API}/default_reminder_time`, token, {
+        method: "PUT",
+        body: JSON.stringify({ value: reminderTime }),
+      });
       setSaved(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -202,14 +177,13 @@ function DefaultCueConfigSection({ token }: { token: string }) {
     }
   }
 
-  const defaultBehaviors = activityTypes.filter((a) => a.isDefault);
-
   return (
     <div className={styles.section}>
-      <p className={styles.sectionTitle}>Default Cue Config</p>
+      <p className={styles.sectionTitle}>Defaults</p>
       <p className={styles.sectionDesc}>
-        Cue configuration for users who join without a study code. Study
-        participants override these with their group&apos;s cue config.
+        Public users create their habits with free-text entry — cue and
+        behavior configuration exists only per study group (Studies → Cue
+        Config).
       </p>
 
       {loading ? (
@@ -217,52 +191,21 @@ function DefaultCueConfigSection({ token }: { token: string }) {
       ) : (
         <>
           {error && <div className={styles.errorMsg}>{error}</div>}
-          <CueConfigForm
-            value={config}
-            onChange={(patch) => {
-              setConfig((c) => ({ ...c, ...patch }));
-              setSaved(false);
-            }}
-            activityTypes={activityTypes}
-            showBehaviors={false}
-            extraFields={
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Default reminder time</label>
-                <input
-                  className={styles.input}
-                  type="time"
-                  value={reminderTime}
-                  onChange={(e) => {
-                    setReminderTime(e.target.value);
-                    setSaved(false);
-                  }}
-                />
-                <span className={styles.hint}>
-                  Time of day for the daily check-in push notification. Users
-                  can override in their profile.
-                </span>
-              </div>
-            }
-          />
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Available behaviors</label>
+          <div className={styles.formGroup} style={{ maxWidth: "16rem" }}>
+            <label className={styles.label}>Default reminder time</label>
+            <input
+              className={styles.input}
+              type="time"
+              value={reminderTime}
+              onChange={(e) => {
+                setReminderTime(e.target.value);
+                setSaved(false);
+              }}
+            />
             <span className={styles.hint}>
-              Public users can choose from the activity types marked as
-              default. Manage them under{" "}
-              <strong>Configuration → Activity Types</strong>.
+              Time of day for the daily check-in push notification. Users can
+              override in their profile.
             </span>
-            <div className={styles.behaviorChips}>
-              {defaultBehaviors.length === 0 ? (
-                <span className={styles.hint}>No default activity types configured.</span>
-              ) : (
-                defaultBehaviors.map((a) => (
-                  <span key={a.key} className={styles.behaviorChip}>
-                    {a.label_en}
-                  </span>
-                ))
-              )}
-            </div>
           </div>
 
           <div className={styles.footer}>
@@ -285,7 +228,7 @@ function DefaultCueConfigSection({ token }: { token: string }) {
 
 /**
  * Unified admin page for the public (no-study-code) app experience:
- * feature toggles and the default cue configuration.
+ * feature toggles and non-study defaults.
  */
 export default function DefaultAppPage() {
   const { token } = useAdminGuard();
@@ -300,7 +243,7 @@ export default function DefaultAppPage() {
       </div>
 
       <FeaturesSection token={token} />
-      <DefaultCueConfigSection token={token} />
+      <DefaultsSection token={token} />
     </div>
   );
 }

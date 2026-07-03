@@ -39,6 +39,20 @@ class QuestionnaireService {
     );
   }
 
+  /// Returns the participant's due + upcoming scheduled questionnaires
+  /// (from the questionnaire scheduling system).
+  Future<List<DueQuestionnaire>> fetchDueQuestionnaires() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '$_baseUrl/questionnaires/due',
+    );
+    final list =
+        (response.data?['questionnaires'] as List<dynamic>?) ?? const [];
+    return list
+        .cast<Map<String, dynamic>>()
+        .map(DueQuestionnaire.fromJson)
+        .toList();
+  }
+
   /// Returns the questionnaires assigned to the participant's enrolled study.
   Future<List<ParticipantQuestionnaire>> fetchParticipantQuestionnaires() async {
     final response = await _dio.get<List<dynamic>>(
@@ -51,9 +65,60 @@ class QuestionnaireService {
   }
 }
 
+/// A scheduled questionnaire occurrence that is due (or coming up) for the
+/// current participant.
+class DueQuestionnaire {
+  /// Creates a [DueQuestionnaire].
+  const DueQuestionnaire({
+    required this.windowId,
+    required this.slug,
+    required this.title,
+    required this.occurrence,
+    required this.scheduledFor,
+    required this.isDue,
+  });
+
+  /// The scheduled window id.
+  final String windowId;
+
+  /// Questionnaire slug (used to open + submit it).
+  final String slug;
+
+  /// Human-readable questionnaire title.
+  final String title;
+
+  /// 1-based occurrence within the assignment schedule.
+  final int occurrence;
+
+  /// When this occurrence is due.
+  final DateTime? scheduledFor;
+
+  /// Whether it is due now (`scheduledFor <= now`).
+  final bool isDue;
+
+  /// Deserialises from the `/questionnaires/due` API response.
+  factory DueQuestionnaire.fromJson(Map<String, dynamic> json) =>
+      DueQuestionnaire(
+        windowId: json['windowId']?.toString() ?? '',
+        slug: json['questionnaireSlug']?.toString() ?? '',
+        title: json['questionnaireTitle']?.toString() ?? '',
+        occurrence: (json['occurrence'] as num?)?.toInt() ?? 1,
+        scheduledFor: json['scheduledFor'] != null
+            ? DateTime.tryParse(json['scheduledFor'].toString())
+            : null,
+        isDue: json['isDue'] == true,
+      );
+}
+
 /// Provides the singleton [QuestionnaireService] instance.
 final questionnaireServiceProvider = Provider<QuestionnaireService>((ref) {
   return QuestionnaireService(dio: ref.watch(dioProvider));
+});
+
+/// The participant's due + upcoming scheduled questionnaires.
+final dueQuestionnairesProvider =
+    FutureProvider<List<DueQuestionnaire>>((ref) async {
+  return ref.watch(questionnaireServiceProvider).fetchDueQuestionnaires();
 });
 
 /// Fetches a [QuestionnaireDefinition] by [slug].

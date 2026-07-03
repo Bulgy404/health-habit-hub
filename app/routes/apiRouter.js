@@ -159,7 +159,7 @@ export function createApiRouter({
   });
 
   // Public: anonymous self-registration (rate limited separately, no JWT required)
-  router.use('/onboard', createOnboardRouter({ keycloak }));
+  router.use('/onboard', createOnboardRouter({ keycloak, db }));
 
   // Sanitize request bodies before auth (general protection)
   router.use(sanitizeBody);

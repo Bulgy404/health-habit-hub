@@ -10,10 +10,13 @@ import {
   ClipboardList,
   UserCircle,
   BookOpen,
-  Dumbbell,
   LogOut,
   Activity,
   Smartphone,
+  Users,
+  Tablet,
+  Gift,
+  MessageSquare,
   type LucideIcon,
 } from "lucide-react";
 import styles from "./sidebar.module.css";
@@ -45,13 +48,21 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: "Operations",
+    items: [
+      { href: "/participants", label: "Participants", Icon: Users, adminOnly: true },
+      { href: "/devices", label: "Devices", Icon: Tablet, adminOnly: true },
+      { href: "/donations", label: "Habit Donations", Icon: Gift, adminOnly: true },
+      { href: "/comments", label: "Comments", Icon: MessageSquare, adminOnly: true },
+    ],
+  },
+  {
     title: "Configuration",
     items: [
       { href: "/cue-pools", label: "Cue Pools", Icon: Crosshair },
       { href: "/questionnaires", label: "Questionnaires", Icon: ClipboardList },
       { href: "/profile-fields", label: "Profile Fields", Icon: UserCircle, adminOnly: true },
       { href: "/knowledge-base", label: "Knowledge Base", Icon: BookOpen, adminOnly: true },
-      { href: "/settings", label: "Activity Types", Icon: Dumbbell, adminOnly: true },
     ],
   },
 ];

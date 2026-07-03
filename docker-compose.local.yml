@@ -378,6 +378,10 @@ services:
     env_file:
       - .env
     environment:
+      # .env sets MONGO_HOST=localhost for host-run scripts (e.g. seed); inside
+      # the container Mongo is reached via the compose service name. Mirrors the
+      # override on the `app` service (and the production compose recommender).
+      - MONGO_HOST=mongo
       - API_SERVICE_SECRET=${API_SERVICE_SECRET}
       - LIGHTRAG_URL=${LIGHTRAG_URL:-http://lightrag:9621}
       - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY:-dev-lightrag-secret}

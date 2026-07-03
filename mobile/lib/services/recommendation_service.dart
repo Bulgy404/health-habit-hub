@@ -14,9 +14,14 @@ class RecommendationService {
   final Dio _dio;
 
   /// Fetches all recommendations for [userId].
+  ///
+  /// Recommendation generation runs an LLM + retrieval pipeline server-side and
+  /// can take well over a minute, so this call overrides the shared Dio
+  /// receiveTimeout with a much longer one to avoid aborting a valid response.
   Future<List<Recommendation>> fetchRecommendations(String userId) async {
     final response = await _dio.get<List<dynamic>>(
       '$_baseUrl/recommend/$userId',
+      options: Options(receiveTimeout: const Duration(minutes: 4)),
     );
     return (response.data ?? [])
         .cast<Map<String, dynamic>>()

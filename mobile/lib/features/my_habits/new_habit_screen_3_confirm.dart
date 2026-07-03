@@ -2,6 +2,9 @@
 library;
 
 // mobile/lib/features/my_habits/new_habit_screen_3_confirm.dart
+import 'dart:async';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart' show CupertinoDatePicker, CupertinoDatePickerMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -50,12 +53,14 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
 }
 
 class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
-  int _durationMinutes = 20;
+  // Duration is no longer chosen on this screen (kept fixed for the payload).
+  static const int _durationMinutes = 20;
   TimeOfDay _reminderTime = const TimeOfDay(hour: 19, minute: 0);
   bool _reminderEnabled = true;
   bool _submitting = false;
   String? _error;
   late String _intentionStatementEditable;
+  late final TextEditingController _statementController;
   late bool _shareWithCommunity;
 
   @override
@@ -63,14 +68,24 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
     super.initState();
     _intentionStatementEditable =
         widget.stitchedSentence ?? _buildFallbackStatement();
+    // A single, persistent controller — recreating it on every build (the
+    // previous behaviour) reset the cursor and fought the user's typing.
+    _statementController =
+        TextEditingController(text: _intentionStatementEditable);
     // The opt-in is only shown (and pre-selected) when the platform-wide
     // communityShareDefault flag is enabled in the admin portal.
     _shareWithCommunity = widget.config.communityShareDefault;
   }
 
+  @override
+  void dispose() {
+    _statementController.dispose();
+    super.dispose();
+  }
+
   String _buildFallbackStatement() {
     final cueText = widget.cues.map((c) => c.text).join(', ');
-    return '$cueText, I will ${widget.behaviorLabel.toLowerCase()} for $_durationMinutes minutes.';
+    return '$cueText, I will ${widget.behaviorLabel.toLowerCase()}.';
   }
 
   String get _reminderTimeString =>
@@ -135,6 +150,14 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
       _submitting = true;
       _error = null;
     });
+    // Capture service handles and values up front so the background work below
+    // does not touch `ref`/`context` after we navigate away and dispose.
+    final dio = ref.read(dioProvider);
+    final shouldShare =
+        widget.config.communityShareDefault && _shareWithCommunity;
+    final sentence = _intentionStatementEditable;
+    final language = ref.read(localeProvider).languageCode;
+
     try {
       await ref.read(myHabitsServiceProvider).createIntention(
             behaviorKey: widget.behaviorKey,
@@ -146,35 +169,57 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                 effectiveReminderEnabled ? effectiveReminderTime : null,
           );
       ref.invalidate(intentionsProvider);
-      // Share the habit sentence anonymously with the community if the user
-      // kept the opt-in selected. Best-effort: the habit is already created.
-      if (widget.config.communityShareDefault && _shareWithCommunity) {
-        try {
-          await ref.read(dioProvider).post<Map<String, dynamic>>(
-            '${AppConfig.apiBaseUrl}/habits/share',
-            data: {
-              'sentence': _intentionStatementEditable,
-              'language': ref.read(localeProvider).languageCode,
-            },
-          );
-        } catch (_) {
-          // Non-fatal: sharing is optional and anonymous.
-        }
-      }
-      // Schedule the (initially daily) local reminders for the new habit.
-      try {
-        await ReminderSchedulerService(dio: ref.read(dioProvider))
-            .syncReminders();
-      } catch (_) {
-        // Non-fatal: rescheduled on next app start.
-      }
+
+      // The habit is now created — navigate immediately. Community sharing and
+      // reminder scheduling are best-effort and can be slow (a network call
+      // plus many native notification writes), so run them in the background
+      // rather than blocking the "Create habit" button on them.
       if (mounted) context.go('/habits');
+      _runPostCreateTasks(
+        dio: dio,
+        shouldShare: shouldShare,
+        sentence: sentence,
+        language: language,
+      );
     } on ValidationException {
       setState(() => _error = l10n.habitLimitReached);
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  /// Fire-and-forget best-effort work after the habit is created. Failures are
+  /// non-fatal: sharing is optional, and reminders re-sync on next app start.
+  void _runPostCreateTasks({
+    required Dio dio,
+    required bool shouldShare,
+    required String sentence,
+    required String language,
+  }) {
+    if (shouldShare) {
+      unawaited(_shareQuietly(dio, sentence, language));
+    }
+    unawaited(_syncRemindersQuietly(dio));
+  }
+
+  Future<void> _shareQuietly(Dio dio, String sentence, String language) async {
+    try {
+      await dio.post<Map<String, dynamic>>(
+        '${AppConfig.apiBaseUrl}/habits/share',
+        data: {'sentence': sentence, 'language': language},
+      );
+    } catch (_) {
+      // Non-fatal: sharing is optional and anonymous.
+    }
+  }
+
+  Future<void> _syncRemindersQuietly(Dio dio) async {
+    try {
+      await ReminderSchedulerService(dio: dio).syncReminders();
+    } catch (_) {
+      // Non-fatal: rescheduled on next app start.
     }
   }
 
@@ -190,11 +235,12 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.confirmPlanTitle)),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Text(l10n.confirmPlanSubtitle,
                 style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 24),
@@ -204,10 +250,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: TextField(
-                  controller: TextEditingController(
-                    text: _intentionStatementEditable,
-                  )..selection = TextSelection.collapsed(
-                      offset: _intentionStatementEditable.length),
+                  controller: _statementController,
                   onChanged: (v) => _intentionStatementEditable = v,
                   maxLines: null,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -220,23 +263,6 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Text(l10n.durationLabel,
-                style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 8),
-            Row(
-              children: [15, 20, 30, 45, 60].map((mins) {
-                final selected = _durationMinutes == mins;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text('$mins min'),
-                    selected: selected,
-                    onSelected: (_) => setState(() => _durationMinutes = mins),
-                  ),
-                );
-              }).toList(),
             ),
             const SizedBox(height: 24),
             Text(l10n.dailyReminderLabel,
@@ -307,19 +333,23 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
               Text(_error!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
-            const Spacer(),
-            FilledButton(
-              onPressed: _submitting ? null : _submit,
-              child: _submitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : Text(l10n.createHabit),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _submitting ? null : _submit,
+                child: _submitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(l10n.createHabit),
+              ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

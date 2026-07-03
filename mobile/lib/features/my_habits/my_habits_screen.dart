@@ -32,6 +32,10 @@ class MyHabitsScreen extends ConsumerWidget {
         actions: [
           configAsync.when(
             data: (config) {
+              // Study/group may disable self-service habit creation entirely.
+              if (!config.selfHabitCreationEnabled) {
+                return const SizedBox.shrink();
+              }
               final activeCount = intentionsAsync.value
                       ?.where((i) => i.status == 'active')
                       .length ??
@@ -285,26 +289,43 @@ class _HabitCard extends ConsumerWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   ),
-                  onPressed: todayLogged
-                      ? null
-                      : () async {
-                          try {
-                            await ref.read(myHabitsServiceProvider).logDay(
-                                  intentionId: intention.id,
-                                  date: todayStr,
-                                  enacted: true,
-                                );
-                            ref.invalidate(intentionLogsProvider(intention.id));
-                          } catch (_) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text(
-                                        'Failed to log — please try again.')),
-                              );
-                            }
-                          }
-                        },
+                  // Always tappable so the press gives feedback even when today
+                  // is already logged (a disabled button silently does nothing,
+                  // which reads as "the button is broken").
+                  onPressed: () async {
+                    // Capture the messenger before the await so feedback still
+                    // shows if the widget rebuilds.
+                    final messenger = ScaffoldMessenger.of(context);
+                    if (todayLogged) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.loggedToday),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                      return;
+                    }
+                    try {
+                      await ref.read(myHabitsServiceProvider).logDay(
+                            intentionId: intention.id,
+                            date: todayStr,
+                            enacted: true,
+                          );
+                      ref.invalidate(intentionLogsProvider(intention.id));
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.loggedToday),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    } catch (e) {
+                      // Surface the real reason so failures are diagnosable
+                      // instead of silently doing nothing.
+                      messenger.showSnackBar(
+                        SnackBar(content: Text('Could not log today: $e')),
+                      );
+                    }
+                  },
                   child: Text(todayLogged ? l10n.loggedToday : l10n.logToday),
                 ),
               ),

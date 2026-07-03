@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Goal input guarding** (API-service): regex prompt-injection screen (EN + DE, e.g. "forget all previous instructions") rejects shady goals instantly with `422`; an LLM system-message backstop refuses harmful/off-topic goals with `{"refused": true, reason}` → `422`. The Flutter app shows the refusal reason verbatim. Refusals are logged and never cached.
+- **Paper citations with links**: recommendations now cite academic papers per item (`source_filenames`, validated against the actually retrieved documents). `citations.py` parses Zotero-style KB filenames into `Author (Year) — Title`; curated DOI/links come from `API-service/data/references.json` (no links are guessed). The app renders tappable citations; plain text when no curated link exists.
+- **Suggested cue per recommendation** (`suggested_cue`): a concrete "when/where" trigger phrase; the app shows it on the card and prefills the cue screen with it via "Add to my habits".
+- **"Add to my habits"** on recommendation cards: forwards a recommendation into the guided habit flow (cue → LLM-stitched implementation intention → confirm screen with reminder + community-share options).
+- **Language matching**: recommendations are written in the language of the goal (German goal → German output).
+- **Anti-repetition context**: the user's last ≤15 recommendation titles (MongoDB) are fed back into the prompt; new rule against recommending habits the user already practises.
+- **`LLM_RECOMMEND_MODEL`**: separate (fast) model for the final recommendation call, independent of `LLM_MODEL`.
+- **Speed knobs** (`.env`): `RECOMMEND_MAX_CONTEXT_CHARS` (LightRAG context cap, default 30000 in `.env`) and `LLM_RECOMMEND_MAX_TOKENS` (completion cap); habit JSON in the prompt is now compact.
+- `scripts/test-recommender.py` — smoke test for the recommender (health check with startup retry, timed `/llm/recommend` call, parsed output, proxy-timeout warning).
+- **Questionnaire scheduling & completion tracking.** Assign a questionnaire to a whole study or a specific group (group overrides study-wide for that questionnaire), with a cadence: recurring interval (every _N_ days, _M_ times) or fixed timepoints as study **weeks and/or exact days** after enrollment. Per-participant scheduled windows are generated on enrollment and back-filled on assignment changes; submitting a response marks the next open window complete and links it to the answers. New admin **Schedule** tab (assignments + completion) and an answer-viewer to read a participant's answers per questionnaire/timepoint. New collections `questionnaire_assignments`, `questionnaire_windows`; new admin endpoints under `/admin/studies/:id/questionnaire-assignments` and `/admin/participants/:id/responses`.
+- **Graph donation edges**: donated habits are linked in Neo4j via `(:User)-[:DONATED]->(:Habit)-[:DONATED_IN]->(:Study)`, enabling donor → habit → study traversals.
+- **Study/group flags** for onboarding and self-habit-creation; **Redis result-cache** for the LLM stitch-intention step.
+- **Recovery phrases + token cards** for participants surfaced in the admin portal, gated by `EXPOSE_RECOVERY_PHRASES` (off by default).
+- **Dev fast-forward** (test tool): from a participant's Progress modal, advance their timeline by _N_ days so upcoming questionnaire windows, daily logs and SRHI become due immediately — useful for exercising time-based flows without waiting. Shifts timestamps across `enrollments`, `participants`, `implementation_intentions`, `daily_behavior_logs`, `srhi_responses`, `questionnaire_windows`, `form_responses`, and the Neo4j `ENROLLED_IN` edge. Gated by `ENABLE_TEST_TOOLS` (off by default; never enable in production). New endpoints `GET /admin/participants/test-tools` and `POST /admin/participants/:id/fast-forward`.
+
+### Changed
+
+- Recommendation responses no longer expose Neo4j habit UUIDs (`selected_habit_uuids`); they are logged and stored in MongoDB for debugging instead. Rationales are instructed to use plain language (no BCIO/ontology terms or internal identifiers).
+- LLM client: configurable `LLM_TIMEOUT_S` (default 120 s) and `LLM_MAX_RETRIES` (default 0 — fail fast instead of 504ing through the proxy); every LLM call now logs model, prompt size, and duration.
+- API-service MongoDB client honours `MONGO_SERVER_SELECTION_TIMEOUT_MS` / `MONGO_SOCKET_TIMEOUT_MS` (default 5 s) so Mongo outages degrade gracefully instead of blocking 30 s per call.
+- Mobile admin section removed; participant / device / comment / donation management moved into the web admin portal.
+
+### Fixed
+
+- Recommender container connected to `localhost:27017` instead of the `mongo` service (env override in `docker-compose.local.yml`), causing Mongo fetch failures and gateway 504s during recommendation generation.
+- Flutter loading screen surfaced raw `DioException` text; it now shows the server's error message (e.g. the goal-guard refusal reason) or a friendly timeout message.
+- **Account restore was broken**: onboarding minted a 32-byte password but the 24-word recovery phrase only encodes 16 bytes, truncating the restored password so login failed. Passwords are now 16 bytes and round-trip exactly.
+- **Daily habit logging returned HTTP 500** — `loggedAt` was set in both `$setOnInsert` and `$set`, a MongoDB path conflict.
+- **Opening a habit could force a logout** — concurrent token refreshes replayed a single-use Keycloak refresh token; refresh is now single-flighted.
+- Neo4j `User` uniqueness constraint was on `userId` while all code uses `userID`; corrected and added to the startup schema.
+- Admin study creation returned 400 when a group label was left blank.
+
 ## [0.0.1] — 2026-06-23
 
 Initial release of Health Habit Hub — a research platform for studying health habit formation, developed at TU Dresden as part of the DFG-funded research programme.

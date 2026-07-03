@@ -6,6 +6,7 @@ import {
   mergeUserAndHabits,
   createSubmissionWithScores,
 } from '../db/userQueries.js';
+import { markWindowSubmitted } from '../services/questionnaireScheduleService.js';
 
 const log = logger.child({ module: 'questionnaireResponsesRouter' });
 
@@ -245,12 +246,30 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       }
 
       const database = await getDb();
-      await database.collection('form_responses').insertOne({
-        userId,
-        questionnaireSlug,
-        answers,
-        submittedAt: new Date(),
-      });
+      const submittedAt = new Date();
+      const { insertedId } = await database
+        .collection('form_responses')
+        .insertOne({
+          userId,
+          questionnaireSlug,
+          answers,
+          submittedAt,
+        });
+
+      // Mark the participant's next scheduled window for this questionnaire as
+      // completed and link it to the response (best-effort — ad-hoc / unscheduled
+      // submissions simply have no window to close).
+      try {
+        await markWindowSubmitted({
+          db: database,
+          userId,
+          questionnaireSlug,
+          responseId: insertedId,
+          submittedAt,
+        });
+      } catch (err) {
+        log.error({ err }, '[questionnaire-responses] window link error');
+      }
 
       // Sync to Neo4j — non-blocking: errors are logged but never surface to the caller
       syncUserGraph(userId, questionnaireSlug, answers).catch((err) => {

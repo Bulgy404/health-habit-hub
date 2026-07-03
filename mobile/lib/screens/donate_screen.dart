@@ -9,8 +9,11 @@ library;
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
+import '../features/questionnaire/questionnaire_service.dart';
 import '../core/dio_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
@@ -59,11 +62,249 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   String? _surveyId;
   late String _lang;
 
+  /// Whether a habit was already shared today (persisted per device).
+  bool _sharedToday = false;
+
+  static const _lastShareDateKey = 'last_habit_share_date';
+
+  static String _todayStr() {
+    final d = DateTime.now();
+    return '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+  }
+
   @override
   void initState() {
     super.initState();
     _lang = ref.read(localeProvider).languageCode;
     _loadSurveyId();
+    _loadSharedToday();
+  }
+
+  Future<void> _loadSharedToday() async {
+    final prefs = await SharedPreferences.getInstance();
+    final last = prefs.getString(_lastShareDateKey);
+    if (mounted && last == _todayStr()) {
+      setState(() => _sharedToday = true);
+    }
+  }
+
+  Future<void> _markSharedToday() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastShareDateKey, _todayStr());
+    if (mounted) setState(() => _sharedToday = true);
+  }
+
+  /// The green "today's task" prompt shown until a habit is shared today.
+  Widget _taskCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF45B700),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: _kGreenGlow,
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _lang == 'de' ? 'GEWOHNHEIT TEILEN' : 'SHARE A HABIT',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Share a habit with science',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Anonymous · ~2 min · Helps researchers worldwide',
+            style: TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          GestureDetector(
+            onTap: () => setState(() => _surveyMode = true),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: const Text(
+                'Start sharing',
+                style: TextStyle(
+                  color: Color(0xFF2E8C00),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A "today's task" card for a scheduled questionnaire that is currently due.
+  Widget _questionnaireTaskCard(DueQuestionnaire q) {
+    final de = _lang == 'de';
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF4F46E5),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: _kCardShadow,
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            de ? 'FRAGEBOGEN' : 'QUESTIONNAIRE',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            q.title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            de
+                ? 'Kurzer Fragebogen · jetzt fällig'
+                : 'Short questionnaire · due now',
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+          const SizedBox(height: 14),
+          GestureDetector(
+            onTap: () async {
+              await context.push('/questionnaire/${q.slug}');
+              if (mounted) ref.invalidate(dueQuestionnairesProvider);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: Text(
+                de ? 'Ausfüllen' : 'Complete',
+                style: const TextStyle(
+                  color: Color(0xFF4F46E5),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Shown once a habit has been shared today, replacing the task prompt.
+  Widget _sharedTodayCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFEDF7E5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF45B700), width: 1),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: Color(0xFF2E8C00), size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _lang == 'de' ? 'Heute geteilt' : 'Shared today',
+                  style: const TextStyle(
+                    color: Color(0xFF2E8C00),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _lang == 'de'
+                      ? 'Danke für deinen Beitrag! Komm morgen für die nächste Aufgabe wieder.'
+                      : 'Thanks for contributing! Come back tomorrow for the next one.',
+                  style: const TextStyle(color: Color(0xFF3F6212), fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A short, always-visible explanation of why sharing habits is useful, so
+  /// the landing screen isn't sparse.
+  Widget _whyShareCard() {
+    final de = _lang == 'de';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: _kCardShadow,
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.science_outlined,
+                    size: 18, color: Color(0xFF45B700)),
+                const SizedBox(width: 8),
+                Text(
+                  de ? 'Warum teilen?' : 'Why share?',
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              de
+                  ? 'Jede geteilte Gewohnheit fließt anonym in eine wachsende, öffentliche Wissensbasis darüber ein, wie Menschen im Alltag gesunde Routinen aufbauen. Je mehr echte Beispiele Forschende sehen, desto besser lassen sich hilfreichere Empfehlungen für alle entwickeln – auch für dich.'
+                  : 'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone’s recommendations become — including yours.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(height: 1.45),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _loadSurveyId() async {
@@ -150,6 +391,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         }
       }
 
+      // Remember that a habit was shared today so the "today's task" prompt
+      // gives way to a thank-you until tomorrow.
+      await _markSharedToday();
+
       if (mounted) {
         setState(() {
           _submitting = false;
@@ -222,78 +467,51 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
 
     // ── Landing page ─────────────────────────────────────────────────────────
     final statsAsync = ref.watch(habitStatsProvider);
+    final dueList = ref.watch(dueQuestionnairesProvider).value
+            ?.where((q) => q.isDue)
+            .toList() ??
+        const <DueQuestionnaire>[];
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Health Habit Hub'),
         titleSpacing: 16,
       ),
-      body: ListView(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(dueQuestionnairesProvider);
+          ref.invalidate(habitStatsProvider);
+        },
+        child: ListView(
         padding: const EdgeInsets.only(bottom: 24),
         children: [
-          // ── Hero card ─────────────────────────────────────────────────────
+          // ── Today's tasks ─────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF45B700),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: _kGreenGlow,
-              ),
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "TODAY'S TASK",
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Share a habit with science',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Anonymous · ~2 min · Helps researchers worldwide',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  const SizedBox(height: 14),
-                  GestureDetector(
-                    onTap: () => setState(() => _surveyMode = true),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(100),
-                      ),
-                      child: const Text(
-                        'Start sharing',
-                        style: TextStyle(
-                          color: Color(0xFF2E8C00),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+            child: Text(
+              _lang == 'de' ? 'HEUTIGE AUFGABEN' : "TODAY'S TASKS",
+              style: const TextStyle(
+                color: Color(0xFF6B7280),
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
               ),
             ),
           ),
+          // Share-a-habit task (or a thank-you once shared today).
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+            child: _sharedToday ? _sharedTodayCard() : _taskCard(),
+          ),
+          // A card per questionnaire that is currently due.
+          for (final q in dueList)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: _questionnaireTaskCard(q),
+            ),
+
+          // ── Why share? ────────────────────────────────────────────────────
+          _whyShareCard(),
 
           // ── Stats row ─────────────────────────────────────────────────────
           statsAsync.when(
@@ -314,6 +532,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

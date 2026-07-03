@@ -58,6 +58,12 @@ export async function ensureIndexes(database) {
     './habitComment.js'
   );
   await ensureCommentIndexes(database);
+
+  // Questionnaire scheduling (assignments + per-participant windows)
+  const { ensureIndexes: ensureScheduleIndexes } = await import(
+    './questionnaireSchedule.js'
+  );
+  await ensureScheduleIndexes(database);
 }
 
 export async function disconnect() {

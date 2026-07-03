@@ -1,10 +1,9 @@
 // Pure redirect guard logic extracted from routerProvider so it can be
 // unit-tested independently of Riverpod and flutter_secure_storage.
 //
-// [redirectGuard] encodes all three guards:
-//   1. Admin guard  – only the admin role may access /admin/* routes.
-//   2. Auth guard   – unauthenticated users may not access protected routes.
-//   3. Onboarding bypass – skip welcome/login when already onboarded + logged in.
+// [redirectGuard] encodes two guards:
+//   1. Auth guard   – unauthenticated users may not access protected routes.
+//   2. Onboarding bypass – skip welcome when already onboarded + logged in.
 
 /// Returns the path to redirect to, or null to stay on [location].
 ///
@@ -22,22 +21,7 @@ Future<String?> redirectGuard({
   required Future<bool> Function() getIsOnboardingComplete,
   Future<bool> Function()? getRecommenderEnabled,
 }) async {
-  // ── 1. Admin guard ────────────────────────────────────────────────────────
-  if (location.startsWith('/admin')) {
-    try {
-      final isLoggedIn = await getIsLoggedIn();
-      if (!isLoggedIn) return '/onboarding/welcome';
-      final roles = await getUserRoles();
-      if (!roles.contains('admin')) {
-        return '/';
-      }
-    } catch (_) {
-      return '/onboarding/welcome';
-    }
-    return null;
-  }
-
-  // ── 2. Auth guard ─────────────────────────────────────────────────────────
+  // ── 1. Auth guard ─────────────────────────────────────────────────────────
   const protectedPrefixes = [
     '/share',
     '/donate',
@@ -55,7 +39,7 @@ Future<String?> redirectGuard({
     }
   }
 
-  // ── 2b. Recommender guard ───────────────────────────────────────────────────
+  // ── 1b. Recommender guard ───────────────────────────────────────────────────
   // When the participant's study disables the recommender, keep them out of the
   // recommender flow (e.g. reached via a deep link or push notification). The
   // bottom-nav tab is also hidden in ShellScreen; this is defence-in-depth.
@@ -67,10 +51,8 @@ Future<String?> redirectGuard({
     }
   }
 
-  // ── 3. Onboarding bypass ──────────────────────────────────────────────────
+  // ── 2. Onboarding bypass ──────────────────────────────────────────────────
   // Only suppress /onboarding/welcome for users who have already onboarded.
-  // /login is intentionally excluded — it hosts the admin PKCE flow and must
-  // always be reachable regardless of participant onboarding state.
   if (location.startsWith('/onboarding/welcome')) {
     if (await getIsOnboardingComplete()) {
       try {

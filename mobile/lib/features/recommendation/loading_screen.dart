@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -64,7 +65,7 @@ class _RecommendationLoadingScreenState
 
   // Holds the API result (null while in-flight, error or response when done)
   RecommendationResponse? _response;
-  Object? _error;
+  String? _error;
   bool _apiDone = false;
 
   @override
@@ -108,10 +109,29 @@ class _RecommendationLoadingScreenState
       // 401/403 errors: the AuthInterceptor called getAccessToken() which
       // attempted reauthentication. If that failed, logout() was already
       // called and GoRouter redirects automatically.
-      if (mounted) setState(() => _error = e);
+      if (mounted) setState(() => _error = _friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _apiDone = true);
     }
+  }
+
+  /// Extracts the server's message from an error, falling back to a generic
+  /// one. A 422 carries the guard's refusal reason (e.g. "Only health-related
+  /// goals are supported.") in `detail`, which the user should see verbatim.
+  String _friendlyErrorMessage(Object e) {
+    if (e is DioException) {
+      final data = e.response?.data;
+      if (data is Map) {
+        final detail = data['detail'] ?? data['error'];
+        if (detail is String && detail.trim().isNotEmpty) return detail;
+      }
+      final code = e.response?.statusCode;
+      if (code == 504 || e.type == DioExceptionType.receiveTimeout) {
+        return 'Generating recommendations took too long. Please try again.';
+      }
+    }
+    return 'Something went wrong while generating recommendations. '
+        'Please try again.';
   }
 
   // ---------------------------------------------------------------------------
@@ -155,7 +175,7 @@ class _RecommendationLoadingScreenState
           builder: (_) => RecommendationResultsScreen(
             goal: widget.goal,
             response: null,
-            error: _error.toString(),
+            error: _error,
           ),
         ),
       );

@@ -7,14 +7,20 @@ import {
 } from '../models/appSettings.js';
 import { DEFAULT_BEHAVIOR_KEYS } from '../utils/srhi.js';
 import { pickAssignedCues } from './cuePoolService.js';
-import { getDefaultBehaviorKeys } from './activityTypeService.js';
 import { getEnrollment } from './enrollmentNeo4j.js';
 
-const FALLBACK = {
+/**
+ * Configuration for users without a study-group cueConfig (public app-store
+ * users, or enrolled users whose group has no cue config yet): fully free
+ * entry. The user types their own habit (no activity-type catalog, signalled
+ * by empty behaviorOptions) and their own cues (self_selected, so no
+ * pre-rated cue assignment).
+ */
+const PUBLIC_FREE_ENTRY = {
   cueCount: 'multi',
-  cueSource: 'high_quality',
+  cueSource: 'self_selected',
   cuePoolId: null,
-  behaviorOptions: DEFAULT_BEHAVIOR_KEYS, // static fallback if DB unreachable
+  behaviorOptions: [],
   maxHabits: null,
 };
 
@@ -34,26 +40,10 @@ async function readAppSettings(db) {
   }
 }
 
-async function readAdminSettings(db) {
-  const docs = await db
-    .collection('admin_settings')
-    .find({
-      key: {
-        $in: [
-          'default_cue_count',
-          'default_cue_source',
-          'default_reminder_time',
-        ],
-      },
-    })
-    .toArray();
-  return Object.fromEntries(docs.map((d) => [d.key, d.value]));
-}
-
 /**
  * Resolve cue configuration for a user, including pre-sampled assigned cues.
  * cueConfig is always resolved live from the study group in MongoDB (no snapshot).
- * Priority: study group cueConfig (live) > admin_settings defaults > hardcoded fallback.
+ * Priority: study group cueConfig (live) > free-entry public config.
  * Also includes the platform-wide app feature flags (app_settings singleton).
  * @param {{ db: object, userId: string, neo4jRun: Function }} deps
  * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array, maxHabits: number|null, assignedCues: Array, recommenderEnabled: boolean, guidedHabitCreationEnabled: boolean, communityShareDefault: boolean }>}
@@ -65,6 +55,11 @@ export async function resolveHabitConfig({ db, userId, neo4jRun }) {
   // Study-level feature flag and live cueConfig from the study group.
   let recommenderEnabled = true;
   let cueConfig = null;
+  // Onboarding + self-habit-creation flags. Default enabled for everyone
+  // (public/free-entry users). Study level sets the baseline; a non-null
+  // group-level value overrides it.
+  let onboardingEnabled = true;
+  let selfHabitCreationEnabled = true;
 
   if (enrollment?.studyId) {
     let studyOid;
@@ -79,13 +74,21 @@ export async function resolveHabitConfig({ db, userId, neo4jRun }) {
 
       if (study) {
         recommenderEnabled = study.recommenderEnabled !== false;
+        onboardingEnabled = study.onboardingEnabled !== false;
+        selfHabitCreationEnabled = study.selfHabitCreationEnabled !== false;
 
-        // Resolve cueConfig live from the study group
+        // Resolve cueConfig and per-group flag overrides live from the group.
         if (enrollment.groupId) {
           const group = (study.groups || []).find(
             (g) => g.id?.toString() === enrollment.groupId
           );
           cueConfig = group?.cueConfig ?? null;
+          if (group?.onboardingEnabled != null) {
+            onboardingEnabled = group.onboardingEnabled;
+          }
+          if (group?.selfHabitCreationEnabled != null) {
+            selfHabitCreationEnabled = group.selfHabitCreationEnabled;
+          }
         }
       }
     }
@@ -100,20 +103,8 @@ export async function resolveHabitConfig({ db, userId, neo4jRun }) {
     behaviorOptions = cueConfig.behaviorOptions ?? DEFAULT_BEHAVIOR_KEYS;
     maxHabits = cueConfig.maxHabits ?? null;
   } else {
-    const settings = await readAdminSettings(db);
-    cueCount = settings['default_cue_count'] ?? FALLBACK.cueCount;
-    cueSource = settings['default_cue_source'] ?? FALLBACK.cueSource;
-    cuePoolId = null;
-    // Read platform default behaviors from DB (configurable via admin portal).
-    // Falls back to hardcoded constant only when DB read fails.
-    try {
-      const dbDefaults = await getDefaultBehaviorKeys(db);
-      behaviorOptions =
-        dbDefaults.length > 0 ? dbDefaults : DEFAULT_BEHAVIOR_KEYS;
-    } catch {
-      behaviorOptions = DEFAULT_BEHAVIOR_KEYS;
-    }
-    maxHabits = null;
+    ({ cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits } =
+      PUBLIC_FREE_ENTRY);
   }
 
   const assignedCues = await pickAssignedCues({
@@ -133,6 +124,8 @@ export async function resolveHabitConfig({ db, userId, neo4jRun }) {
     maxHabits,
     assignedCues,
     recommenderEnabled,
+    onboardingEnabled,
+    selfHabitCreationEnabled,
     ...appSettings,
   };
 }

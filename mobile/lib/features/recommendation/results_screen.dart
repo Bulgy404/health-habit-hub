@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../my_habits/my_habits_provider.dart';
 import 'recommendation_feature_service.dart';
 import 'recommendation_models.dart';
 
@@ -147,7 +150,53 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
   final _commentController = TextEditingController();
   bool _submitting = false;
   bool _submitted = false;
+  bool _addingToHabits = false;
   String? _submitError;
+
+  /// Derives a stable snake_case key from the title, matching the
+  /// normalisation used by the free-entry behaviour form.
+  String _slugify(String label) {
+    final slug = label
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+    return slug.isEmpty ? 'custom' : slug;
+  }
+
+  /// Forwards this recommendation into the habit-creation flow: the behaviour
+  /// is prefilled from the recommendation, then the user picks a cue, the
+  /// implementation intention is stitched, and the confirm screen lets them
+  /// verify/adjust the intention, set a reminder, and share with the
+  /// community.
+  Future<void> _addToHabits() async {
+    setState(() => _addingToHabits = true);
+    try {
+      final config = await ref.read(habitConfigProvider.future);
+      if (!mounted) return;
+      context.push(
+        '/habits/new/cue',
+        extra: {
+          'behaviorKey': _slugify(widget.item.title),
+          'behaviorLabel': widget.item.title,
+          'config': config,
+          'initialCue': widget.item.suggestedCue.isNotEmpty
+              ? widget.item.suggestedCue
+              : null,
+        },
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open the habit flow. Please try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _addingToHabits = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -213,6 +262,25 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
                   ?.copyWith(color: colorScheme.secondary),
             ),
             Text(widget.item.rationale, style: textTheme.bodySmall),
+            // Suggested implementation-intention cue
+            if (widget.item.suggestedCue.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.bolt, size: 16, color: colorScheme.tertiary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      widget.item.suggestedCue,
+                      style: textTheme.bodySmall?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        color: colorScheme.tertiary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             // Sources (collapsible)
             if (widget.item.sources.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -224,30 +292,26 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
                       ?.copyWith(color: colorScheme.primary),
                 ),
                 children: widget.item.sources
-                    .map(
-                      (s) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              s.filename,
-                              style: textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              s.excerpt,
-                              style: textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
+                    .map((s) => _SourceLink(source: s))
                     .toList(),
               ),
             ],
+            const SizedBox(height: 12),
+            // Adopt this recommendation as a habit
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: _addingToHabits ? null : _addToHabits,
+                icon: _addingToHabits
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.playlist_add),
+                label: const Text('Add to my habits'),
+              ),
+            ),
             const Divider(height: 24),
             // Feedback section
             if (_submitted)
@@ -300,6 +364,66 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
                 ),
               ],
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Source citation link
+// ---------------------------------------------------------------------------
+
+/// A tappable academic-paper citation that opens the paper's link.
+class _SourceLink extends StatelessWidget {
+  const _SourceLink({required this.source});
+
+  final RecommendationSourceRef source;
+
+  Future<void> _open(BuildContext context) async {
+    final uri = Uri.tryParse(source.url);
+    if (uri == null) return;
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open the source link.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final hasLink = source.url.isNotEmpty;
+
+    return InkWell(
+      onTap: hasLink ? () => _open(context) : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              hasLink ? Icons.open_in_new : Icons.description_outlined,
+              size: 16,
+              color: hasLink ? colorScheme.primary : colorScheme.outline,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                source.displayLabel,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: textTheme.bodySmall?.copyWith(
+                  color: hasLink ? colorScheme.primary : null,
+                  decoration: hasLink ? TextDecoration.underline : null,
+                  decorationColor: colorScheme.primary,
+                ),
+              ),
+            ),
           ],
         ),
       ),

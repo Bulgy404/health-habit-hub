@@ -9,6 +9,7 @@ import {
 import { getEnrollment } from '../../services/enrollmentNeo4j.js';
 import { translateHabit } from '../../utils/translate.js';
 import { getJobStatus } from '../../lib/habitQueue.js';
+import { getOrComputeStitch } from '../../lib/stitchCache.js';
 import { SUPPORTED_LANGUAGES } from '../../utils/constants.js';
 import {
   getAllHabits,
@@ -17,6 +18,7 @@ import {
   updateHabitAnnotation,
   addHabitComment,
   getHabitComments,
+  getRelatedHabits,
 } from '../../db/habitQueries.js';
 import { habitShareLimiter } from '../../middleware/rateLimiter.js';
 import { logger } from '../../utils/logger.js';
@@ -205,6 +207,41 @@ export function createHabitsCrudRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
+  // GET /api/v1/habits/:id/related — semantically similar habits (top-N by
+  // embedding similarity, capped). Falls back to an empty list when the source
+  // habit has no embedding; the client then uses its own local fallback.
+  router.get('/:id/related', async (req, res) => {
+    try {
+      const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 10));
+      const { lang } = req.query;
+      const rows = await getRelatedHabits(queryNeo4j, req.params.id, limit);
+      const habits = rows.map((r) => {
+        const displayText =
+          lang === 'de'
+            ? r.translationDE || r.original
+            : lang === 'en'
+              ? r.translationEN || r.original
+              : r.original;
+        return {
+          uuid: r.uuid,
+          original: r.original,
+          translationEN: r.translationEN,
+          translationDE: r.translationDE,
+          category: r.category
+            ? String(r.category).replace('hhh__', '')
+            : 'Other',
+          displayText,
+          score: r.score,
+        };
+      });
+      res.json(habits);
+    } catch (err) {
+      log.error({ err: err }, 'related habits query failed');
+      // Non-fatal: the client falls back to its local related list.
+      res.json([]);
+    }
+  });
+
   // GET /api/v1/habits/my-annotations — returns the current user's own annotations
   router.get('/my-annotations', async (req, res) => {
     try {
@@ -541,20 +578,44 @@ export function createHabitsCrudRouter({
     const headers = { 'Content-Type': 'application/json' };
     if (process.env.API_SERVICE_SECRET)
       headers['X-Service-Auth-Token'] = process.env.API_SERVICE_SECRET;
+
+    // Sentinel used to distinguish "upstream returned an error" (don't cache,
+    // surface the status) from "upstream returned a sentence" (cache it).
+    let upstreamError = null;
+
     try {
-      const upstream = await fetch(`${apiBase}/api/v1/llm/stitch-intention`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ action, cues, language }),
-      });
-      if (!upstream.ok) {
-        const text = await upstream.text().catch(() => '');
-        return res
-          .status(upstream.status >= 500 ? 502 : upstream.status)
-          .json({ error: text || 'Upstream error' });
+      const { sentence, cached } = await getOrComputeStitch(
+        { action, cues, language },
+        async () => {
+          const upstream = await fetch(
+            `${apiBase}/api/v1/llm/stitch-intention`,
+            {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ action, cues, language }),
+            }
+          );
+          if (!upstream.ok) {
+            const text = await upstream.text().catch(() => '');
+            upstreamError = {
+              status: upstream.status >= 500 ? 502 : upstream.status,
+              error: text || 'Upstream error',
+            };
+            return null;
+          }
+          const data = await upstream.json();
+          return data?.sentence ?? null;
+        }
+      );
+
+      if (upstreamError) {
+        return res.status(upstreamError.status).json({ error: upstreamError.error });
       }
-      const data = await upstream.json();
-      return res.json(data);
+      if (sentence == null) {
+        return res.status(502).json({ error: 'Upstream error' });
+      }
+      // `cached` is advisory; the app only reads `sentence`.
+      return res.json({ sentence, cached });
     } catch (err) {
       log.error({ err }, 'stitch-intention proxy error');
       return res.status(503).json({ error: 'Service unavailable' });
