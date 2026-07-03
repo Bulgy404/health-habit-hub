@@ -212,7 +212,10 @@ export function createHabitsCrudRouter({
   // habit has no embedding; the client then uses its own local fallback.
   router.get('/:id/related', async (req, res) => {
     try {
-      const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 10));
+      const limit = Math.min(
+        20,
+        Math.max(1, parseInt(req.query.limit, 10) || 10)
+      );
       const { lang } = req.query;
       const rows = await getRelatedHabits(queryNeo4j, req.params.id, limit);
       const habits = rows.map((r) => {
@@ -609,7 +612,9 @@ export function createHabitsCrudRouter({
       );
 
       if (upstreamError) {
-        return res.status(upstreamError.status).json({ error: upstreamError.error });
+        return res
+          .status(upstreamError.status)
+          .json({ error: upstreamError.error });
       }
       if (sentence == null) {
         return res.status(502).json({ error: 'Upstream error' });

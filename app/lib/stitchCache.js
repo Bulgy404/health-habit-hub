@@ -63,7 +63,10 @@ async function getRedis() {
   } catch (err) {
     // Disable for the rest of the process lifetime after a hard failure so we
     // don't pay the connect() timeout on every request.
-    log.warn({ err: err?.message }, 'redis unavailable — stitch cache disabled');
+    log.warn(
+      { err: err?.message },
+      'redis unavailable — stitch cache disabled'
+    );
     redisDisabled = true;
     return null;
   }
@@ -78,7 +81,11 @@ async function getRedis() {
  * @param {number} [ttlSeconds]
  * @returns {Promise<{ sentence: string|null, cached: boolean }>}
  */
-export async function getOrComputeStitch(input, compute, ttlSeconds = DEFAULT_TTL_SECONDS) {
+export async function getOrComputeStitch(
+  input,
+  compute,
+  ttlSeconds = DEFAULT_TTL_SECONDS
+) {
   const key = stitchCacheKey(input);
   const redis = await getRedis();
 

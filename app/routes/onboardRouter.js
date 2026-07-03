@@ -113,7 +113,7 @@ export function createOnboardRouter({ keycloak, db } = {}) {
       } catch (dbErr) {
         log.warn(
           { err: dbErr?.message },
-          'onboard: failed to persist participant record',
+          'onboard: failed to persist participant record'
         );
       }
 

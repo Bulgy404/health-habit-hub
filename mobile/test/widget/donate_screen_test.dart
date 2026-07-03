@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hhh/features/questionnaire/questionnaire_service.dart';
 import 'package:hhh/models/habit_stats.dart';
 import 'package:hhh/models/survey.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -64,6 +65,10 @@ Widget _buildSubject(_FakeSurveyService surveyService) {
       // Return empty stats immediately to avoid any network calls.
       habitStatsProvider.overrideWith(
         (_) async => const HabitStats(total: 0, byCategory: [], byDay: []),
+      ),
+      // No due questionnaires — avoids a real network call to /questionnaires/due.
+      dueQuestionnairesProvider.overrideWith(
+        (_) async => const <DueQuestionnaire>[],
       ),
     ],
     child: MaterialApp(

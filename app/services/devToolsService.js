@@ -9,7 +9,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * Shift the date fields of every matching document backward by [ms].
  * @returns {Promise<number>} number of documents updated
  */
-async function shiftCollection(db, collection, filter, dateFields, dayStrFields, ms) {
+async function shiftCollection(
+  db,
+  collection,
+  filter,
+  dateFields,
+  dayStrFields,
+  ms
+) {
   const docs = await db.collection(collection).find(filter).toArray();
   const ops = [];
   for (const doc of docs) {
@@ -19,7 +26,9 @@ async function shiftCollection(db, collection, filter, dateFields, dayStrFields,
     }
     for (const f of dayStrFields) {
       if (doc[f]) {
-        const shifted = new Date(new Date(`${doc[f]}T00:00:00Z`).getTime() - ms);
+        const shifted = new Date(
+          new Date(`${doc[f]}T00:00:00Z`).getTime() - ms
+        );
         $set[f] = shifted.toISOString().slice(0, 10);
       }
     }
@@ -47,13 +56,62 @@ export async function fastForwardParticipant({ db, neo4jRun, userId, days }) {
   const uf = { userId: String(userId) };
 
   const shifted = {
-    enrollments: await shiftCollection(db, 'enrollments', uf, ['enrolledAt', 'lastActiveAt'], [], ms),
-    participants: await shiftCollection(db, 'participants', uf, ['enrolledAt', 'lastActive'], [], ms),
-    intentions: await shiftCollection(db, 'implementation_intentions', uf, ['createdAt', 'updatedAt'], [], ms),
-    dailyLogs: await shiftCollection(db, 'daily_behavior_logs', uf, ['loggedAt'], ['date'], ms),
-    srhi: await shiftCollection(db, 'srhi_responses', uf, ['scheduledFor', 'submittedAt', 'createdAt'], [], ms),
-    questionnaireWindows: await shiftCollection(db, 'questionnaire_windows', uf, ['scheduledFor', 'submittedAt'], [], ms),
-    formResponses: await shiftCollection(db, 'form_responses', uf, ['submittedAt'], [], ms),
+    enrollments: await shiftCollection(
+      db,
+      'enrollments',
+      uf,
+      ['enrolledAt', 'lastActiveAt'],
+      [],
+      ms
+    ),
+    participants: await shiftCollection(
+      db,
+      'participants',
+      uf,
+      ['enrolledAt', 'lastActive'],
+      [],
+      ms
+    ),
+    intentions: await shiftCollection(
+      db,
+      'implementation_intentions',
+      uf,
+      ['createdAt', 'updatedAt'],
+      [],
+      ms
+    ),
+    dailyLogs: await shiftCollection(
+      db,
+      'daily_behavior_logs',
+      uf,
+      ['loggedAt'],
+      ['date'],
+      ms
+    ),
+    srhi: await shiftCollection(
+      db,
+      'srhi_responses',
+      uf,
+      ['scheduledFor', 'submittedAt', 'createdAt'],
+      [],
+      ms
+    ),
+    questionnaireWindows: await shiftCollection(
+      db,
+      'questionnaire_windows',
+      uf,
+      ['scheduledFor', 'submittedAt'],
+      [],
+      ms
+    ),
+    formResponses: await shiftCollection(
+      db,
+      'form_responses',
+      uf,
+      ['submittedAt'],
+      [],
+      ms
+    ),
   };
 
   // Neo4j enrollment timestamps (stored as ISO strings on the ENROLLED_IN edge).

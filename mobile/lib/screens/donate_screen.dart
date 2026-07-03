@@ -65,13 +65,20 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   /// Whether a habit was already shared today (persisted per device).
   bool _sharedToday = false;
 
-  static const _lastShareDateKey = 'last_habit_share_date';
+  /// Consecutive-day sharing streak (persisted per device).
+  int _shareStreak = 0;
 
-  static String _todayStr() {
-    final d = DateTime.now();
-    return '${d.year}-${d.month.toString().padLeft(2, '0')}-'
-        '${d.day.toString().padLeft(2, '0')}';
-  }
+  static const _lastShareDateKey = 'last_habit_share_date';
+  static const _streakKey = 'habit_share_streak';
+
+  static String _dateStr(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
+
+  static String _todayStr() => _dateStr(DateTime.now());
+
+  static String _yesterdayStr() =>
+      _dateStr(DateTime.now().subtract(const Duration(days: 1)));
 
   @override
   void initState() {
@@ -84,15 +91,38 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   Future<void> _loadSharedToday() async {
     final prefs = await SharedPreferences.getInstance();
     final last = prefs.getString(_lastShareDateKey);
-    if (mounted && last == _todayStr()) {
-      setState(() => _sharedToday = true);
+    final streak = prefs.getInt(_streakKey) ?? 0;
+    // The streak is "alive" only if the last share was today or yesterday;
+    // otherwise a day was missed and it has reset.
+    final alive = last == _todayStr() || last == _yesterdayStr();
+    if (mounted) {
+      setState(() {
+        _sharedToday = last == _todayStr();
+        _shareStreak = alive ? streak : 0;
+      });
     }
   }
 
   Future<void> _markSharedToday() async {
     final prefs = await SharedPreferences.getInstance();
+    final last = prefs.getString(_lastShareDateKey);
+    final prevStreak = prefs.getInt(_streakKey) ?? 0;
+    final int newStreak;
+    if (last == _todayStr()) {
+      newStreak = prevStreak < 1 ? 1 : prevStreak; // already counted today
+    } else if (last == _yesterdayStr()) {
+      newStreak = prevStreak + 1; // continued the streak
+    } else {
+      newStreak = 1; // first share, or streak was broken
+    }
     await prefs.setString(_lastShareDateKey, _todayStr());
-    if (mounted) setState(() => _sharedToday = true);
+    await prefs.setInt(_streakKey, newStreak);
+    if (mounted) {
+      setState(() {
+        _sharedToday = true;
+        _shareStreak = newStreak;
+      });
+    }
   }
 
   /// The green "today's task" prompt shown until a habit is shared today.
@@ -523,9 +553,9 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 children: [
                   _StatCard(value: '${stats.total}', label: 'Community'),
                   const SizedBox(width: 10),
-                  const _StatCard(
-                    icon: Icons.military_tech,
-                    label: 'Top habit',
+                  _StatCard(
+                    value: '$_shareStreak',
+                    label: _lang == 'de' ? 'Tage-Serie' : 'Day streak',
                   ),
                 ],
               ),
@@ -585,15 +615,12 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
 /// A compact stat display card used in the landing hero section.
 class _StatCard extends StatelessWidget {
   /// Creates a [_StatCard].
-  const _StatCard({this.value, this.icon, required this.label});
+  const _StatCard({this.value, required this.label});
 
-  /// Numeric value to display (mutually exclusive with [icon]).
+  /// Numeric value to display.
   final String? value;
 
-  /// Icon to display instead of a numeric value.
-  final IconData? icon;
-
-  /// Descriptive label shown below the value or icon.
+  /// Descriptive label shown below the value.
   final String label;
 
   @override
@@ -608,17 +635,14 @@ class _StatCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            if (icon != null)
-              Icon(icon, color: const Color(0xFF45B700), size: 22)
-            else
-              Text(
-                value ?? '-',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFF45B700),
-                ),
+            Text(
+              value ?? '-',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF45B700),
               ),
+            ),
             const SizedBox(height: 3),
             Text(
               label,
