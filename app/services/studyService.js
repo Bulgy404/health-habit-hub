@@ -49,6 +49,7 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
       isDefault: s.isDefault,
       isActive: s.isActive,
       recommenderEnabled: s.recommenderEnabled !== false,
+      questionnaireReminders: normalizeReminders(s),
       groups: s.groups,
       questionnaires: (s.questionnaires || []).map((id) => id.toString()),
       participantCount: countMap[s._id.toString()] ?? 0,
@@ -70,6 +71,8 @@ export async function createStudy({
   groups = [],
   questionnaires = [],
   recommenderEnabled = true,
+  onboardingEnabled = true,
+  selfHabitCreationEnabled = true,
   neo4jRun,
 }) {
   const now = new Date();
@@ -81,6 +84,9 @@ export async function createStudy({
     activityTypeConfig: g.activityTypeConfig ?? null,
     reminderConfig: g.reminderConfig ?? null,
     autoDonate: g.autoDonate ?? false,
+    // null = inherit the study-level flag; a boolean overrides it.
+    onboardingEnabled: g.onboardingEnabled ?? null,
+    selfHabitCreationEnabled: g.selfHabitCreationEnabled ?? null,
   }));
   const questionnaireIds = questionnaires.map((id) => new ObjectId(id));
 
@@ -90,6 +96,10 @@ export async function createStudy({
     isDefault: false,
     isActive: true,
     recommenderEnabled: recommenderEnabled !== false,
+    onboardingEnabled: onboardingEnabled !== false,
+    selfHabitCreationEnabled: selfHabitCreationEnabled !== false,
+    // Local questionnaire due-date reminders (enabled, fired at `hour` local).
+    questionnaireReminders: { enabled: true, hour: 9 },
     groups: studyGroups,
     questionnaires: questionnaireIds,
     createdAt: now,
@@ -149,10 +159,22 @@ export async function getStudy({ db, id }) {
     isDefault: study.isDefault,
     isActive: study.isActive,
     recommenderEnabled: study.recommenderEnabled !== false,
+    onboardingEnabled: study.onboardingEnabled !== false,
+    selfHabitCreationEnabled: study.selfHabitCreationEnabled !== false,
+    questionnaireReminders: normalizeReminders(study),
     groups: study.groups,
     questionnaires: (study.questionnaires || []).map((id) => id.toString()),
     createdAt: study.createdAt,
     updatedAt: study.updatedAt,
+  };
+}
+
+/** Normalise a study's questionnaire-reminder config (defaults: on, 9am). */
+function normalizeReminders(study) {
+  const r = study?.questionnaireReminders;
+  return {
+    enabled: r ? r.enabled !== false : true,
+    hour: Number.isInteger(r?.hour) ? r.hour : 9,
   };
 }
 
@@ -179,6 +201,17 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
   if (updates.isActive !== undefined) $set.isActive = updates.isActive;
   if (updates.recommenderEnabled !== undefined)
     $set.recommenderEnabled = updates.recommenderEnabled;
+  if (updates.onboardingEnabled !== undefined)
+    $set.onboardingEnabled = updates.onboardingEnabled;
+  if (updates.selfHabitCreationEnabled !== undefined)
+    $set.selfHabitCreationEnabled = updates.selfHabitCreationEnabled;
+  if (updates.questionnaireReminders !== undefined)
+    $set.questionnaireReminders = {
+      enabled: updates.questionnaireReminders.enabled !== false,
+      hour: Number.isInteger(updates.questionnaireReminders.hour)
+        ? updates.questionnaireReminders.hour
+        : 9,
+    };
 
   // Groups are additive: append new groups, keep existing ones
   if (Array.isArray(updates.groups) && updates.groups.length > 0) {
@@ -194,6 +227,8 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
         activityTypeConfig: g.activityTypeConfig ?? null,
         reminderConfig: g.reminderConfig ?? null,
         autoDonate: g.autoDonate ?? false,
+        onboardingEnabled: g.onboardingEnabled ?? null,
+        selfHabitCreationEnabled: g.selfHabitCreationEnabled ?? null,
       }));
     $set.groups = [...existingGroups, ...newGroups];
   }
@@ -422,6 +457,10 @@ export async function updateGroupConfig({ db, studyId, groupId, config }) {
   if (config.reminderConfig !== undefined)
     updated.reminderConfig = config.reminderConfig;
   if (config.autoDonate !== undefined) updated.autoDonate = config.autoDonate;
+  if (config.onboardingEnabled !== undefined)
+    updated.onboardingEnabled = config.onboardingEnabled;
+  if (config.selfHabitCreationEnabled !== undefined)
+    updated.selfHabitCreationEnabled = config.selfHabitCreationEnabled;
 
   groups[groupIndex] = updated;
 

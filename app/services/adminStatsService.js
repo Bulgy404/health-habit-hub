@@ -1,5 +1,6 @@
 import { logger } from '../utils/logger.js';
 import { countHabitsByUser } from '../db/adminQueries.js';
+import { getParticipantWindows } from './questionnaireScheduleService.js';
 
 /**
  * Build a chronological timeline of participant events.
@@ -88,6 +89,14 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
   const timelineSource = participant ?? {};
   const timeline = buildTimeline(timelineSource, surveyResponses, recDocs);
 
+  // Scheduled questionnaire windows + completion for this participant.
+  let questionnaires = [];
+  try {
+    questionnaires = await getParticipantWindows({ db, userId: id });
+  } catch (err) {
+    log.error({ err }, '[adminStatsService] questionnaire windows error');
+  }
+
   return {
     profile: {
       completed: participant?.profileCompleted || false,
@@ -100,6 +109,7 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
     })),
     habitsCount,
     recommendations: { accepted, dismissed },
+    questionnaires,
     timeline,
   };
 }

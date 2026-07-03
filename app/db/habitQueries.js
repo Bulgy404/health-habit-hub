@@ -15,7 +15,50 @@ function neoInt(val) {
 }
 
 /**
+ * Return the habits most semantically similar to [uuid], using the Neo4j
+ * vector index over the inline habit embeddings (the same embeddings the
+ * recommender uses). Excludes the source habit and classifier-rejected nodes.
+ * Returns [] when the source has no embedding yet (caller should fall back).
+ *
+ * @param {Function} queryNeo4j
+ * @param {string} uuid - Source habit uuid.
+ * @param {number} [limit=10] - Max related habits to return.
+ * @returns {Promise<Array>}
+ */
+export async function getRelatedHabits(queryNeo4j, uuid, limit = 10) {
+  // queryNodes returns the source itself among the k nearest, so over-fetch.
+  const k = Math.max(limit + 5, 10);
+  const rows = await queryNeo4j(
+    `MATCH (src:Habit {uuid: $uuid})
+     WHERE src.embedding IS NOT NULL
+     CALL db.index.vector.queryNodes('habit_embedding_idx', toInteger($k), src.embedding)
+     YIELD node, score
+     WHERE node.uuid <> $uuid AND node.is_habit = true
+     RETURN node.uuid AS uuid,
+            node.sentence AS original,
+            node.translationEN AS translationEN,
+            node.translationDE AS translationDE,
+            coalesce(node.category, 'Other') AS category,
+            score
+     ORDER BY score DESC
+     LIMIT toInteger($limit)`,
+    { uuid, k, limit }
+  );
+  return rows.map((r) => ({
+    uuid: r.uuid,
+    original: r.original || null,
+    translationEN: r.translationEN || null,
+    translationDE: r.translationDE || null,
+    category: r.category || 'Other',
+    score: typeof r.score === 'number' ? r.score : Number(r.score) || 0,
+  }));
+}
+
+/**
  * Return all donated habits with translation fields and Neo4j-mirrored annotation counts.
+ * Only confirmed habits (is_habit = true) are returned; sentences rejected by
+ * the classifier are still stored as Habit nodes (is_habit = false) for review
+ * but are excluded here so they don't inflate the community list.
  * Annotation counts come directly from Habit node properties (maintained by
  * updateHabitAnnotation) — no MongoDB round-trip needed.
  * @param {Function} queryNeo4j
@@ -24,6 +67,7 @@ function neoInt(val) {
 export async function getAllHabits(queryNeo4j) {
   const rows = await queryNeo4j(`
     MATCH (h:Habit)
+    WHERE h.is_habit = true
     OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(:Context)-[:MAPS_TO]->(b:BCIOConcept)
     WITH h,
          head(collect(b.bcio_concept_label)) AS bcioLabel,
@@ -53,7 +97,9 @@ export async function getAllHabits(queryNeo4j) {
 
 /**
  * Return anonymized public habits (uuid + sentence, no personal data).
- * Includes seeded example habits so the explore graph is populated from day one.
+ * Includes seeded example habits so the explore graph is populated from day one,
+ * but excludes classifier-rejected sentences (is_habit = false), which remain
+ * stored as Habit nodes for review.
  * Annotation counts come directly from the Habit node — no MongoDB scan needed.
  * @param {Function} queryNeo4j
  * @returns {Promise<Array>}
@@ -61,6 +107,7 @@ export async function getAllHabits(queryNeo4j) {
 export async function getPublicHabits(queryNeo4j) {
   const rows = await queryNeo4j(`
     MATCH (h:Habit)
+    WHERE h.is_habit = true OR h.seeded = true
     OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(:Context)-[:MAPS_TO]->(b:BCIOConcept)
     WITH h,
          head(collect(b.bcio_concept_label)) AS bcioLabel,

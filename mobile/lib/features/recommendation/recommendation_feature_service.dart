@@ -24,9 +24,17 @@ class RecommendationFeatureService {
     required String goal,
     required String sessionId,
   }) async {
+    // Recommendation generation runs an LLM + retrieval pipeline server-side
+    // and routinely takes longer than the shared Dio receiveTimeout (60s), so
+    // this call raises the receive/send timeouts to avoid aborting a valid
+    // response mid-flight.
     final response = await _dio.post<Map<String, dynamic>>(
       '$_baseUrl/recommend/generate',
       data: {'user_id': userId, 'goal': goal, 'session_id': sessionId},
+      options: Options(
+        receiveTimeout: const Duration(minutes: 5),
+        sendTimeout: const Duration(minutes: 1),
+      ),
     );
     return RecommendationResponse.fromJson(response.data!);
   }

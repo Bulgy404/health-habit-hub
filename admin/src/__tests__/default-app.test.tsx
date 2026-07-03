@@ -17,21 +17,9 @@ jest.mock('next/navigation', () => ({
 beforeEach(() => {
   global.fetch = jest.fn().mockImplementation((url: string) => {
     const u = String(url);
-    let body: unknown;
-    if (u.includes('/activity-types')) {
-      body = [
-        { key: 'walking', label_en: 'Walking', isDefault: true },
-        { key: 'yoga', label_en: 'Yoga', isDefault: false },
-      ];
-    } else if (u.includes('/app-settings')) {
-      body = { guidedHabitCreationEnabled: true, communityShareDefault: false };
-    } else {
-      body = {
-        default_cue_count: 'multi',
-        default_cue_source: 'high_quality',
-        default_reminder_time: '19:00',
-      };
-    }
+    const body = u.includes('/app-settings')
+      ? { guidedHabitCreationEnabled: true, communityShareDefault: false }
+      : { default_reminder_time: '19:00' };
     return Promise.resolve({
       ok: true,
       json: jest.fn().mockResolvedValue(body),
@@ -58,17 +46,12 @@ describe('DefaultAppPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders the default cue config section with shared form fields', async () => {
+  it('renders the defaults section with the reminder time only', async () => {
     render(<DefaultAppPage />);
-    expect(await screen.findByText(/default cue config/i)).toBeInTheDocument();
-    expect(await screen.findByText(/cue count/i)).toBeInTheDocument();
-    expect(screen.getByText(/cue source/i)).toBeInTheDocument();
-    expect(screen.getByText(/default reminder time/i)).toBeInTheDocument();
-  });
-
-  it('lists default behaviors from the activity catalog', async () => {
-    render(<DefaultAppPage />);
-    expect(await screen.findByText('Walking')).toBeInTheDocument();
-    expect(screen.queryByText('Yoga')).not.toBeInTheDocument();
+    expect(await screen.findByText(/default reminder time/i)).toBeInTheDocument();
+    // Cue and behavior configuration is study-only — must not appear here.
+    expect(screen.queryByText(/cue count/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/cue source/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/allowed behaviors/i)).not.toBeInTheDocument();
   });
 });

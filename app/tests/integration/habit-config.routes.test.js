@@ -214,15 +214,18 @@ test('includes the 12 SRHI items', async () => {
   assert.strictEqual(body.srhiItems.length, 12);
 });
 
-// ── Fallback to admin-settings defaults for non-enrolled users ────────────────
+// ── Free-entry public config for non-enrolled users ───────────────────────────
 
-test('falls back to admin_settings defaults when the user has no enrollment', async () => {
+test('returns the free-entry public config when the user has no enrollment', async () => {
   const res = await get(HC, makeToken(['user'], 'not-enrolled-user'));
   assert.strictEqual(res.status, 200);
   const body = await res.json();
 
-  assert.strictEqual(body.cueCount, 'single');
-  assert.strictEqual(body.cueSource, 'high_quality');
-  assert.strictEqual(body.assignedCues.length, 1);
+  assert.strictEqual(body.cueCount, 'multi');
+  assert.strictEqual(body.cueSource, 'self_selected');
+  // Empty behaviorOptions signals free habit entry (no catalog picker),
+  // and self-selected cues mean nothing is pre-assigned.
+  assert.deepStrictEqual(body.behaviorOptions, []);
+  assert.deepStrictEqual(body.assignedCues, []);
   assert.strictEqual(body.maxHabits, null);
 });

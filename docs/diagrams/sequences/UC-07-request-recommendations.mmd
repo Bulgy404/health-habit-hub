@@ -16,13 +16,20 @@ sequenceDiagram
     F->>B: POST /api/v1/recommend/generate {goal, session_id}
     B->>AI: POST /api/v1/llm/recommend {user_id, goal, session_id}
     Note over B,AI: X-Service-Auth-Token header (verify_service_token)
+
+    AI->>AI: Goal guard — regex injection screen (EN+DE)
+    alt goal is an injection attempt ("forget all previous instructions", …)
+        AI-->>B: 422 {detail: user-facing reason}
+        B-->>F: 422 (status + body passed through)
+        F->>F: Show refusal reason to the user
+    else goal passes the screen
     AI->>R: GET recommend:{sha256(user_id‖goal)}
 
     alt cache hit
         R-->>AI: cached RecommendResponse JSON
     else cache miss
 
-        Note over AI: Stage 1 — 6-way asyncio.gather (zero LLM calls)
+        Note over AI: Stage 1 — 7-way asyncio.gather (zero LLM calls)
 
         par Personal habits (Neo4j)
             Note over AI,N: Embed goal once via Qwen3-Embedding-4B (2560-dim)
@@ -47,6 +54,9 @@ sequenceDiagram
         and Prior feedback (MongoDB)
             AI->>M: recommendation_feedback.find({userId, goal}).sort({created_at:-1}).limit(10)
             M-->>AI: prior feedback comments
+        and Previous titles (MongoDB)
+            AI->>M: recommendations.find({userId}).sort({generated_at:-1}).limit(5)
+            M-->>AI: ≤15 previously recommended titles (anti-repetition)
         end
 
         Note over AI: Stage 2 — deterministic processing (zero LLM calls)
@@ -61,16 +71,26 @@ sequenceDiagram
         and LightRAG retrieval
             AI->>LR: POST /query {query: rag_query, mode:'hybrid', only_need_context:true} (90s)
             LR-->>AI: synthesised context from knowledge-base documents
+            AI->>AI: cap context at RECOMMEND_MAX_CONTEXT_CHARS,<br/>extract distinct file_paths → paper citations (citations.py + references.json)
         end
 
-        Note over AI,LLM: Single LLM call — recommend.txt (temp 0.2)<br/>9 vars: goal · profile_summary · profile_detailed<br/>personal_habits_json (+ bcio_concepts) · annotated_habits_json<br/>community_habits_json (GDS-reranked + bcio_concepts)<br/>sources_json · prior_feedback
-        AI->>LLM: POST /chat/completions (recommend.txt, temp 0.2)
-        LLM-->>AI: {recommendations: [{title, body, rationale, selected_habit_uuids}]}
+        Note over AI,LLM: Single LLM call — recommend.txt<br/>model LLM_RECOMMEND_MODEL · temp 0.2 · max_tokens LLM_RECOMMEND_MAX_TOKENS<br/>system msg: goal = untrusted data; output in the goal's language<br/>vars: goal · profile · personal/annotated/community habits (+bcio)<br/>sources_json (capped) · source_documents_json · prior_feedback · previous_titles
+        AI->>LLM: POST /chat/completions
+        LLM-->>AI: {recommendations: [{title, body, rationale, suggested_cue,<br/>selected_habit_uuids, source_filenames}]} or {refused, reason}
 
-        AI->>M: recommendations.insertOne({recommendation_id, userId, goal, session_id, recommendations, generated_at})
-        AI->>R: SETEX recommend:{sha256} 86400 <RecommendResponse JSON>
+        alt LLM refused the goal
+            AI-->>B: 422 {detail: reason}
+            B-->>F: 422
+            F->>F: Show refusal reason to the user
+        else recommendations generated
+            AI->>AI: resolve source_filenames → citations (title, url via references.json)<br/>log selected_habit_uuids per recommendation (debugging)
+            AI->>M: recommendations.insertOne({…, recommendations incl. selected_habit_uuids, generated_at})
+            AI->>R: SETEX recommend:{sha256} 86400 <RecommendResponse JSON>
+        end
+    end
     end
 
     AI-->>B: {recommendation_id, recommendations, generated_at}
+    Note over AI,B: Each item: title · body · rationale · suggested_cue · sources<br/>(paper citations with optional DOI links) — no habit UUIDs
     B-->>F: 200 OK
-    F->>F: Render recommendation cards with provenance (selected_habit_uuids)
+    F->>F: Render cards — tappable paper citations, suggested cue,<br/>"Add to my habits" → cue screen prefilled with suggested_cue

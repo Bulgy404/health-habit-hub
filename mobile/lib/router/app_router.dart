@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/my_habits/habit_detail_screen.dart';
+import '../features/my_habits/intention_stitch_screen.dart';
 import '../features/my_habits/my_habits_models.dart';
 import '../features/my_habits/my_habits_provider.dart';
 import '../features/my_habits/my_habits_screen.dart';
@@ -18,21 +19,10 @@ import '../features/my_habits/srhi_form_screen.dart';
 import '../features/questionnaire/questionnaire_screen.dart';
 import '../features/recommendation/goal_input_screen.dart';
 import '../features/recommendation/loading_screen.dart';
-import '../models/admin_survey.dart';
 import '../providers/auth_provider.dart';
-import '../screens/admin/admin_comments_screen.dart';
-import '../screens/admin/admin_devices_screen.dart';
-import '../screens/admin/admin_habits_screen.dart';
-import '../screens/admin/admin_participant_detail_screen.dart';
-import '../screens/admin/admin_participants_screen.dart';
-import '../screens/admin/admin_questionnaires_screen.dart';
-import '../screens/admin/admin_settings_screen.dart';
-import '../screens/admin/admin_shell_screen.dart';
-import '../screens/admin/admin_surveys_screen.dart';
 import '../screens/donate_screen.dart';
 import '../screens/explore_screen.dart';
 import '../screens/legal_document_screen.dart';
-import '../screens/login_screen.dart';
 import '../screens/onboarding/consent_screen.dart';
 import '../screens/onboarding/passphrase_screen.dart';
 import '../screens/onboarding/profile_setup_screen.dart';
@@ -60,10 +50,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       getRecommenderEnabled: () async => ref.read(recommenderEnabledProvider),
     ),
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
       GoRoute(
         path: '/onboarding/welcome',
         builder: (context, state) => const WelcomeScreen(),
@@ -148,6 +134,20 @@ final routerProvider = Provider<GoRouter>((ref) {
                         behaviorKey: extra['behaviorKey'] as String,
                         behaviorLabel: extra['behaviorLabel'] as String,
                         config: extra['config'] as HabitConfig,
+                        initialCue: extra['initialCue'] as String?,
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'new/stitching',
+                    builder: (context, state) {
+                      final extra = state.extra as Map<String, dynamic>;
+                      return IntentionStitchScreen(
+                        behaviorKey: extra['behaviorKey'] as String,
+                        behaviorLabel: extra['behaviorLabel'] as String,
+                        config: extra['config'] as HabitConfig,
+                        cues: (extra['cues'] as List<dynamic>)
+                            .cast<IntentionCue>(),
                       );
                     },
                   ),
@@ -245,76 +245,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => const LegalDocumentScreen(
                       documentType: LegalDocumentType.consent,
                     ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          // Admin branch: side-nav rail via AdminShellScreen.
-          // initialLocation ensures the Admin tab always opens to the
-          // participants list on first visit.
-          StatefulShellBranch(
-            initialLocation: '/admin/participants',
-            routes: [
-              ShellRoute(
-                builder: (context, state, child) =>
-                    AdminShellScreen(child: child),
-                routes: [
-                  GoRoute(
-                    path: '/admin/participants',
-                    builder: (context, state) =>
-                        const AdminParticipantsScreen(),
-                    routes: [
-                      GoRoute(
-                        path: ':id',
-                        builder: (context, state) =>
-                            AdminParticipantDetailScreen(
-                          participantId:
-                              state.pathParameters['id'] ?? '',
-                        ),
-                      ),
-                    ],
-                  ),
-                  GoRoute(
-                    path: '/admin/surveys',
-                    builder: (context, state) =>
-                        const AdminSurveysScreen(),
-                    routes: [
-                      GoRoute(
-                        path: ':id',
-                        builder: (context, state) =>
-                            AdminSurveyEditorScreen(
-                          surveyId:
-                              state.pathParameters['id'] ?? '',
-                          initialSurvey:
-                              state.extra as AdminSurvey?,
-                        ),
-                      ),
-                    ],
-                  ),
-                  GoRoute(
-                    path: '/admin/questionnaires',
-                    builder: (context, state) =>
-                        const AdminQuestionnairesScreen(),
-                  ),
-                  GoRoute(
-                    path: '/admin/comments',
-                    builder: (context, state) => const AdminCommentsScreen(),
-                  ),
-                  GoRoute(
-                    path: '/admin/habits',
-                    builder: (context, state) =>
-                        const AdminHabitsScreen(),
-                  ),
-                  GoRoute(
-                    path: '/admin/devices',
-                    builder: (context, state) =>
-                        const AdminDevicesScreen(),
-                  ),
-                  GoRoute(
-                    path: '/admin/settings',
-                    builder: (context, state) =>
-                        const AdminSettingsScreen(),
                   ),
                 ],
               ),

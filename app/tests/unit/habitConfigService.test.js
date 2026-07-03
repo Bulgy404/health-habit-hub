@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { resolveHabitConfig } from '../../services/habitConfigService.js';
-import { DEFAULT_BEHAVIOR_KEYS } from '../../utils/srhi.js';
 
 const studyCueConfig = {
   cueCount: 'single',
@@ -73,27 +72,26 @@ test('resolveHabitConfig: study participant gets group cueConfig', async () => {
   assert.deepEqual(config.behaviorOptions, ['walking', 'yoga']);
 });
 
-test('resolveHabitConfig: public user gets admin default', async () => {
+test('resolveHabitConfig: public user gets free-entry config', async () => {
   const db = makeDb({
     enrollment: { groupId: 'g0', studyId: 's0', cueConfig: null },
-    adminSettings: [
-      { key: 'default_cue_count', value: 'multi' },
-      { key: 'default_cue_source', value: 'high_quality' },
-    ],
   });
   const config = await resolveHabitConfig({ db, userId: 'u2' });
   assert.equal(config.cueCount, 'multi');
-  assert.equal(config.cueSource, 'high_quality');
+  assert.equal(config.cueSource, 'self_selected');
   assert.equal(config.maxHabits, null);
-  assert.deepEqual(config.behaviorOptions, DEFAULT_BEHAVIOR_KEYS);
+  // Empty behaviorOptions signals free habit entry (no catalog picker).
+  assert.deepEqual(config.behaviorOptions, []);
 });
 
-test('resolveHabitConfig: no enrollment returns hardcoded fallback', async () => {
-  const db = makeDb({ enrollment: null, adminSettings: [] });
+test('resolveHabitConfig: no enrollment returns free-entry config', async () => {
+  const db = makeDb({ enrollment: null });
   const config = await resolveHabitConfig({ db, userId: 'u3' });
   assert.equal(config.cueCount, 'multi');
-  assert.equal(config.cueSource, 'high_quality');
+  assert.equal(config.cueSource, 'self_selected');
   assert.equal(config.maxHabits, null);
+  assert.deepEqual(config.behaviorOptions, []);
+  assert.deepEqual(config.assignedCues, []);
 });
 
 test('resolveHabitConfig: recommenderEnabled defaults to true', async () => {
@@ -160,38 +158,28 @@ test('resolveHabitConfig: app feature flags fall back to defaults when the read 
 });
 
 test('resolveHabitConfig: pre-rated study participant gets assignedCues from pool', async () => {
-  const db = {
-    collection(name) {
-      if (name === 'enrollments')
-        return {
-          findOne: async () => ({
-            groupId: 'g1',
-            studyId: 's1',
-            cueConfig: {
-              cueCount: 'single',
-              cueSource: 'high_quality',
-              cuePoolId: null,
-              behaviorOptions: ['walking'],
-              maxHabits: 1,
-            },
-          }),
-        };
-      if (name === 'cue_pools')
-        return {
-          aggregate: () => ({
-            toArray: async () => [
-              { _id: 'pool-1', text: 'After dinner', quality: 'high' },
-            ],
-          }),
-        };
-      if (name === 'admin_settings')
-        return { find: () => ({ toArray: async () => [] }) };
-      if (name === 'studies')
-        return { findOne: async () => ({ recommenderEnabled: true }) };
-      throw new Error(`unexpected: ${name}`);
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      groups: [
+        { id: groupId, label: 'G1', index: 1, cueConfig: studyCueConfig },
+      ],
     },
-  };
-  const config = await resolveHabitConfig({ db, userId: 'u1' });
+    cuePools: [{ _id: 'pool-1', text: 'After dinner', quality: 'high' }],
+  });
+  const neo4jRun = async () => [
+    {
+      studyId: studyId.toString(),
+      groupId: groupId.toString(),
+      enrolledAt: null,
+      studyCodeUsed: null,
+    },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
   assert.equal(config.assignedCues.length, 1);
   assert.equal(config.assignedCues[0].text, 'After dinner');
   assert.equal(config.assignedCues[0].source, 'pre_rated');

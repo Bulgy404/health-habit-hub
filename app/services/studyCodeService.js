@@ -3,6 +3,16 @@ import { ObjectId } from '../models/survey.js';
 import { COLLECTION as CODES } from '../models/studyCode.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { getEnrollment, createEnrollment } from './enrollmentNeo4j.js';
+import { generateWindowsForUser } from './questionnaireScheduleService.js';
+
+/** Best-effort: create the participant's questionnaire windows on enrollment. */
+async function scheduleQuestionnaires(db, userId, studyId, groupId, enrolledAt) {
+  try {
+    await generateWindowsForUser({ db, userId, studyId, groupId, enrolledAt });
+  } catch {
+    // Non-fatal: windows can be regenerated when an assignment changes.
+  }
+}
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 const ALPHABET_LEN = ALPHABET.length;
@@ -265,6 +275,14 @@ export async function redeemCode({ db, userId, code, neo4jRun }) {
       .updateOne({ code: upperCode }, { $inc: { redemptionCount: -1 } });
     return { alreadyEnrolled: true };
   }
+
+  await scheduleQuestionnaires(
+    db,
+    userId,
+    doc.studyId,
+    group?.id ?? null,
+    new Date()
+  );
 
   return {
     enrolled: true,

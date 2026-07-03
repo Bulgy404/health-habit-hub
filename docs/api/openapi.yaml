@@ -1649,6 +1649,105 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /recommend/generate:
+    post:
+      summary: Generate personalised habit recommendations
+      description: >-
+        Proxies to the Python recommender's POST /api/v1/llm/recommend (M3 single-LLM-call pipeline).
+        The goal is guarded input: a prompt-injection screen (EN + DE) and an LLM refusal backstop
+        reject shady or off-topic goals with 422 and a user-facing reason. Recommendations are
+        written in the language of the goal. Each item carries paper citations (with DOI links when
+        curated in API-service/data/references.json) and a suggested implementation-intention cue.
+        Graph provenance (habit UUIDs) is logged and stored server-side, never returned.
+      tags:
+        - Recommend
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, goal, session_id]
+              properties:
+                user_id:
+                  type: string
+                  format: uuid
+                goal:
+                  type: string
+                  maxLength: 2000
+                  example: besser schlafen
+                session_id:
+                  type: string
+      responses:
+        '200':
+          description: Generated recommendations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendation_id:
+                    type: string
+                  goal:
+                    type: string
+                  generated_at:
+                    type: string
+                    format: date-time
+                  recommendations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        body:
+                          type: string
+                        rationale:
+                          type: string
+                          description: Plain language, cites papers in Author (Year) style
+                        suggested_cue:
+                          type: string
+                          description: Suggested "when/where" trigger phrase for the implementation intention
+                        sources:
+                          type: array
+                          description: Academic paper citations backing this recommendation
+                          items:
+                            type: object
+                            properties:
+                              filename:
+                                type: string
+                              title:
+                                type: string
+                              excerpt:
+                                type: string
+                                description: Preformatted citation, e.g. "Wood & Rünger (2016) — Psychology of Habit"
+                              url:
+                                type: string
+                                description: DOI/publisher link when curated in references.json; empty otherwise
+        '422':
+          description: Goal rejected by the input guard (prompt injection, harmful, or off-topic)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Only health-related goals are supported.
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '504':
+          description: Recommender service timed out (RECOMMENDER_TIMEOUT_MS)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /recommend/{userId}:
     get:
       summary: Get habit recommendations for a user

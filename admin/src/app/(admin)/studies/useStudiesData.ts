@@ -12,6 +12,8 @@ interface StudyGroup {
     behaviorOptions: string[];
     maxHabits: number | null;
   } | null;
+  onboardingEnabled?: boolean | null;
+  selfHabitCreationEnabled?: boolean | null;
 }
 
 export interface StudySummary {
@@ -21,6 +23,9 @@ export interface StudySummary {
   isActive: boolean;
   isDefault: boolean;
   recommenderEnabled: boolean;
+  onboardingEnabled: boolean;
+  selfHabitCreationEnabled: boolean;
+  questionnaireReminders?: { enabled: boolean; hour: number };
   groups: StudyGroup[];
   questionnaires: string[];
   participantCount: number;

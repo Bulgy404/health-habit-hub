@@ -371,8 +371,15 @@ All variables are defined in `stack.env`. In production, override sensitive valu
 | `API_SERVICE_SECRET` | — | Shared secret between Node.js backend and Python API service **(change in Portainer)** |
 | `LLM_API_KEY` | — | API key for the LLM provider **(required, set in Portainer)** |
 | `LLM_API_BASE` | OpenAI | Base URL of the LLM provider (e.g. `https://llm.scads.ai/v1`) |
-| `LLM_MODEL` | `alias-ha` | Model name or alias for all LLM calls |
+| `LLM_MODEL` | `alias-huge` | Model name or alias for general LLM calls |
+| `LLM_RECOMMEND_MODEL` | — (falls back to `LLM_MODEL`) | Model used only for the final recommendation-writing call (e.g. `alias-ha`) |
 | `LLM_TEMPERATURE` | `0.2` | LLM sampling temperature (0.0 = deterministic) |
+| `LLM_TIMEOUT_S` | `120` | Per-attempt timeout for LLM calls |
+| `LLM_MAX_RETRIES` | `0` | OpenAI-client retries (0 = fail fast, avoids proxy 504s) |
+| `RECOMMEND_MAX_CONTEXT_CHARS` | `0` (unlimited) | Cap on the LightRAG context in the recommendation prompt (latency lever; `.env` sets `30000`) |
+| `LLM_RECOMMEND_MAX_TOKENS` | `0` (model default) | Completion-length cap for the recommendation call (`.env` sets `2000`) |
+| `MONGO_SERVER_SELECTION_TIMEOUT_MS` | `5000` | MongoDB server-selection/connect timeout in the API-service |
+| `MONGO_SOCKET_TIMEOUT_MS` | `5000` | MongoDB socket timeout in the API-service |
 
 ### LibreTranslate
 
@@ -596,8 +603,10 @@ The interactive Swagger UI is served by the running backend at `/api/v1/docs`. T
 | `GET` | `/api/v1/profile` | JWT (participant+) | Get user profile |
 | `PUT` | `/api/v1/profile` | JWT (participant+) | Update user profile |
 | `GET` | `/api/v1/questionnaires` | JWT (participant+) | List questionnaires |
-| `POST` | `/api/v1/questionnaire-responses` | JWT (participant+) | Submit questionnaire response |
+| `POST` | `/api/v1/questionnaire-responses` | JWT (participant+) | Submit questionnaire response (links the answer to the next open scheduled window) |
 | `POST` | `/api/v1/onboarding` | JWT (participant) | Redeem study enrollment code |
+| `GET/POST/PUT/DELETE` | `/api/v1/admin/studies/:id/questionnaire-assignments` | JWT (admin, researcher) | Assign a questionnaire to a study/group on a cadence; list assignments + completion |
+| `GET` | `/api/v1/admin/participants/:id/responses` | JWT (admin, researcher) | A participant's questionnaire answers (for the admin answer viewer) |
 | `GET/POST` | `/api/v1/admin/*` | JWT (admin, researcher) | Admin operations (participants, studies, exports) |
 | `GET/POST` | `/api/v1/kb/*` | JWT (admin, researcher) | Knowledge base management |
 
@@ -616,7 +625,7 @@ All endpoints require the `X-API-Service-Secret` header (value from `API_SERVICE
 | `POST` | `/api/v1/refine-translation` | LLM-refine EN translation |
 | `POST` | `/api/v1/refine-translation-de` | LLM-refine DE translation |
 | `POST` | `/api/v1/retrieve` | Retrieve relevant knowledge base entries |
-| `POST` | `/api/v1/recommend` | Generate habit recommendations |
+| `POST` | `/api/v1/recommend` | Generate habit recommendations — guarded goal input (prompt-injection screen + LLM refusal backstop → `422` with user-facing reason); response items carry `title · body · rationale · suggested_cue · sources` (paper citations with optional DOI links from `API-service/data/references.json`); graph provenance (`selected_habit_uuids`) is logged/stored server-side only |
 
 ---
 

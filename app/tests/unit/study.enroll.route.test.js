@@ -52,6 +52,21 @@ function makeDb(initial = {}) {
           if (update.$set) Object.assign(s[idx], update.$set);
           return returnDocument === 'before' ? before : { ...s[idx] };
         },
+        async updateOne(filter, update) {
+          const idx = s.findIndex((d) =>
+            Object.entries(filter).every(
+              ([k, v]) => d[k]?.toString() === v?.toString()
+            )
+          );
+          if (idx === -1) return { matchedCount: 0, modifiedCount: 0 };
+          if (update.$inc) {
+            for (const [k, v] of Object.entries(update.$inc)) {
+              s[idx][k] = (s[idx][k] || 0) + v;
+            }
+          }
+          if (update.$set) Object.assign(s[idx], update.$set);
+          return { matchedCount: 1, modifiedCount: 1 };
+        },
         aggregate() {
           return {
             async toArray() {
@@ -61,6 +76,35 @@ function makeDb(initial = {}) {
         },
       };
     },
+  };
+}
+
+// ── In-memory Neo4j stub ──────────────────────────────────────────────────────
+
+/**
+ * Minimal neo4jRun stub covering the cypher used by createEnrollment /
+ * getEnrollment: tracks which users are enrolled in a Map.
+ */
+function makeNeo4jRun() {
+  const enrollments = new Map(); // userId → { studyId, groupId, ... }
+  return async (cypher, params = {}) => {
+    if (cypher.includes('RETURN u IS NOT NULL AS exists')) {
+      return [{ exists: enrollments.has(String(params.userId)) }];
+    }
+    if (cypher.includes('CREATE (u)-[e:ENROLLED_IN]')) {
+      enrollments.set(String(params.userId), {
+        studyId: params.studyId,
+        groupId: params.groupId ?? null,
+        enrolledAt: params.enrolledAt ?? null,
+        studyCodeUsed: params.studyCodeUsed ?? null,
+      });
+      return [];
+    }
+    if (cypher.includes('MATCH (u:User {userID: $userId})-[e:ENROLLED_IN]')) {
+      const e = enrollments.get(String(params.userId));
+      return e ? [e] : [];
+    }
+    return [];
   };
 }
 
@@ -101,12 +145,15 @@ before(async () => {
 
   const testApp = express();
   testApp.use(express.json());
-  // Inject fake authenticated user
+  // Inject fake authenticated user (overridable per request via header)
   testApp.use((req, _res, next) => {
-    req.user = { sub: 'test-user-1' };
+    req.user = { sub: req.headers['x-test-user'] ?? 'test-user-1' };
     next();
   });
-  testApp.use('/api/v1/onboarding', createStudyEnrollRouter({ db }));
+  testApp.use(
+    '/api/v1/onboarding',
+    createStudyEnrollRouter({ db, neo4jRun: makeNeo4jRun() })
+  );
 
   server = createServer(testApp);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -172,22 +219,52 @@ test('POST /redeem-code returns 400 for empty string', async () => {
   assert.strictEqual(res.status, 400);
 });
 
-test('POST /redeem-code accepts valid uppercase code and proceeds past format check', async () => {
+test('POST /redeem-code accepts valid uppercase code and enrolls the user', async () => {
   const res = await fetch(`${baseUrl}/api/v1/onboarding/redeem-code`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-test-user': 'redeem-upper-user',
+    },
     body: JSON.stringify({ code: 'HHH-ABCDE' }),
   });
-  // Format is valid — result depends on service logic (200 or 404), not 400
-  assert.notStrictEqual(res.status, 400);
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.studyId, 'should return studyId');
+  assert.ok(body.groupId, 'should return groupId');
+  assert.strictEqual(body.studyName, 'Test Study');
+  assert.strictEqual(body.groupLabel, 'Group 1');
 });
 
-test('POST /redeem-code accepts valid lowercase code and proceeds past format check', async () => {
+test('POST /redeem-code accepts valid lowercase code and enrolls the user', async () => {
   const res = await fetch(`${baseUrl}/api/v1/onboarding/redeem-code`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-test-user': 'redeem-lower-user',
+    },
     body: JSON.stringify({ code: 'hhh-abcde' }),
   });
-  // Format is valid (case-insensitive) — must not be rejected as invalid format
-  assert.notStrictEqual(res.status, 400);
+  // Format is valid (case-insensitive) — the code resolves and enrolls
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.studyId, 'should return studyId');
+});
+
+test('POST /redeem-code returns 409 when the user is already enrolled', async () => {
+  const redeem = () =>
+    fetch(`${baseUrl}/api/v1/onboarding/redeem-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-test-user': 'redeem-twice-user',
+      },
+      body: JSON.stringify({ code: 'HHH-ABCDE' }),
+    });
+  const first = await redeem();
+  assert.strictEqual(first.status, 200);
+  const second = await redeem();
+  assert.strictEqual(second.status, 409);
+  const body = await second.json();
+  assert.match(body.error, /Already enrolled/);
 });

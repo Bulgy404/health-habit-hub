@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
+from citations import build_citation, extract_document_filenames
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +83,15 @@ class SourceItem(BaseModel):
 
 
 class RetrieveResponse(BaseModel):
-    """Retrieval response containing a list of ranked knowledge-base source excerpts."""
+    """Retrieval response with per-document provenance and the raw context blob.
+
+    ``sources`` lists the distinct knowledge-base documents found in the
+    LightRAG context (one item per document). ``context`` carries the full
+    hybrid context text for prompt grounding.
+    """
 
     sources: list[SourceItem]
+    context: str = ""
 
 
 class KbEntry(BaseModel):
@@ -130,10 +137,25 @@ async def retrieve(body: RetrieveRequest) -> RetrieveResponse:
 
     context: str = data.get("response") or ""
     if not context.strip():
-        return RetrieveResponse(sources=[])
+        return RetrieveResponse(sources=[], context="")
 
-    return RetrieveResponse(
-        sources=[
+    # Per-document provenance: LightRAG embeds each chunk's file_path in the
+    # context, so the distinct filenames identify the actual papers used.
+    doc_filenames = extract_document_filenames(context)
+    if doc_filenames:
+        sources = [
+            SourceItem(
+                filename=name,
+                category="document",
+                excerpt=build_citation(name)["citation"],
+                score=1.0,
+            )
+            for name in doc_filenames
+        ]
+    else:
+        # Fallback: no filenames recognisable in the context — keep the old
+        # single-blob source so downstream consumers still get something.
+        sources = [
             SourceItem(
                 filename="knowledge_base",
                 category="hybrid",
@@ -141,7 +163,8 @@ async def retrieve(body: RetrieveRequest) -> RetrieveResponse:
                 score=1.0,
             )
         ]
-    )
+
+    return RetrieveResponse(sources=sources, context=context)
 
 
 # ---------------------------------------------------------------------------

@@ -86,6 +86,10 @@ BCIO ontology concepts mapped from context phrases. Created/merged by `map-bcio`
 |---|---|---|---|---|
 | `HAS_CONTEXT` | `Habit` | `Context` | `dimension` (String) | Links a habit to its extracted context phrases |
 | `MAPS_TO` | `Context` | `BCIOConcept` | `confidence` (Float), `phrase` (String), `dimension` (String) | Links a context phrase to its BCIO concept mapping |
+| `DONATED` | `User` | `Habit` | `at` (ISO String) | Links a participant to a habit they donated (in addition to the scalar `Habit.userID`) |
+| `DONATED_IN` | `Habit` | `Study` | — | Links a donated habit to the study its donor was enrolled in (only for study-enrolled donors). Enables traversals like "all habits donated in study X" |
+
+> `User` nodes are keyed by `userID` (the Keycloak subject) with a uniqueness constraint (`user_userID`). Donations are also queryable from the scalar `Habit.userID` / `Habit.studyId` properties, but the `DONATED` / `DONATED_IN` edges make donor→habit→study traversals first-class.
 
 ---
 
@@ -559,7 +563,10 @@ MongoDB stores operational data: survey definitions, participant records, profil
 | `recommendations_log` | Accepted/dismissed recommendation events (legacy) | No |
 | `users` | Per-user preferences (preferredLanguage) | No |
 | `questionnaires` | Questionnaire definitions (slug, title, questions) | No |
-| `form_responses` | Questionnaire form submissions from participants | No |
+| `form_responses` | Questionnaire form submissions (answers) from participants | No |
+| `questionnaire_assignments` | Questionnaire assigned to a study (all groups) or a specific group, with a cadence | No |
+| `questionnaire_windows` | Per-participant scheduled questionnaire occurrences + completion state | No |
+| `enrollments` | Study/group membership per participant (drives study participant counts) | No |
 | `recommendations` | Recommendation records from the Python recommender | No |
 | `recommendation_feedback` | Free-text feedback on individual recommendations | No |
 | `habits` | Non-habit submissions saved for manual review | No |
@@ -880,6 +887,82 @@ Compound index on `(userId, questionnaireSlug, submitted_at DESC)` is created at
   "submitted_at": { "$date": "2026-03-20T10:00:00Z" }
 }
 ```
+
+On submission the response is also linked to the participant's next open
+`questionnaire_windows` entry for that questionnaire (marking that scheduled
+timepoint complete). Ad-hoc submissions with no matching window simply store the
+response without linking.
+
+---
+
+#### `questionnaire_assignments`
+
+A questionnaire assigned to a study on a cadence. `groupId: null` = study-wide
+(all groups); a group id restricts / overrides it for that group. Managed via
+`.../admin/studies/:id/questionnaire-assignments`.
+
+| Field | BSON Type | Required | Description |
+|---|---|---|---|
+| `_id` | ObjectId | Auto | Assignment ID |
+| `studyId` | ObjectId | Yes | Ref to `studies._id` |
+| `groupId` | ObjectId \| null | Yes | Ref to `studies.groups[].id`; `null` = all groups (study-wide) |
+| `questionnaireId` | ObjectId | Yes | Ref to `questionnaires._id` |
+| `questionnaireSlug` | String | Yes | Denormalised slug (matches `form_responses.questionnaireSlug`) |
+| `questionnaireTitle` | String | Yes | Denormalised title (for admin display) |
+| `cadence` | Object | Yes | Schedule — see below |
+| `active` | Boolean | Yes | Whether the assignment currently generates windows |
+| `createdAt` / `updatedAt` | Date | Yes | Timestamps |
+
+**Cadence** is one of two shapes:
+
+- **Interval** — `{ mode: "interval", startOffsetDays, intervalDays, occurrences }`. Due dates = `enrolledAt + startOffsetDays + k·intervalDays` for `k` in `0 … occurrences-1`.
+- **Fixed** — `{ mode: "fixed", weeks?: number[], days?: number[] }`. Due dates = the union of `week·7` and exact `day` offsets after enrollment (week 0 / day 0 = baseline at enrollment).
+
+A group-scoped assignment for a questionnaire overrides the study-wide
+assignment for that same questionnaire. Unique index on
+`(studyId, groupId, questionnaireId)`.
+
+**Example (SLIQ at baseline, week 4, week 8, plus day 3):**
+```json
+{
+  "_id": { "$oid": "66b0000000000000000000a1" },
+  "studyId": { "$oid": "66a0000000000000000000ff" },
+  "groupId": null,
+  "questionnaireId": { "$oid": "65a0000000000000000000aa" },
+  "questionnaireSlug": "sliq",
+  "questionnaireTitle": "Simple Lifestyle Indicator Questionnaire",
+  "cadence": { "mode": "fixed", "weeks": [0, 4, 8], "days": [3] },
+  "active": true,
+  "createdAt": { "$date": "2026-03-01T09:00:00Z" },
+  "updatedAt": { "$date": "2026-03-01T09:00:00Z" }
+}
+```
+
+---
+
+#### `questionnaire_windows`
+
+One scheduled occurrence of an assignment for one participant, plus its
+completion state. Generated on enrollment and whenever an assignment is
+created/changed (back-filled for already-enrolled participants).
+
+| Field | BSON Type | Required | Description |
+|---|---|---|---|
+| `_id` | ObjectId | Auto | Window ID |
+| `userId` | String | Yes | Keycloak `sub` |
+| `studyId` | ObjectId | Yes | Ref to `studies._id` |
+| `groupId` | ObjectId \| null | Yes | Participant's group at generation time |
+| `assignmentId` | ObjectId | Yes | Ref to `questionnaire_assignments._id` |
+| `questionnaireId` | ObjectId | Yes | Ref to `questionnaires._id` |
+| `questionnaireSlug` | String | Yes | Denormalised slug |
+| `occurrence` | Int | Yes | 1-based index within the assignment's schedule |
+| `scheduledFor` | Date | Yes | Due date (`enrolledAt + offset`) |
+| `submittedAt` | Date \| null | Yes | When completed (null = open) |
+| `responseId` | ObjectId \| null | Yes | Ref to the `form_responses` entry it was answered with |
+
+Unique index on `(userId, assignmentId, occurrence)`. Study-level completion
+(`completed / total`) is aggregated over this collection; per-participant
+completion + answers power the admin participant view.
 
 ---
 

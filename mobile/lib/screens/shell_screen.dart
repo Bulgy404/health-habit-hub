@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
 import '../features/my_habits/my_habits_provider.dart';
-import '../providers/auth_provider.dart';
 import '../services/consent_service.dart';
 import '../services/offline_queue_service.dart';
 import '../services/push_notification_service.dart';
@@ -79,12 +78,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
       path: '/settings',
       branch: 4,
     ),
-    _TabConfig(
-      label: 'Admin',
-      icon: Icons.admin_panel_settings,
-      path: '/admin',
-      branch: 5,
-    ),
   ];
 
   @override
@@ -105,6 +98,13 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
       await ref.read(habitReminderSyncProvider)();
     } catch (_) {
       // Offline or no active intentions — retried on next start.
+    }
+    // Schedule reminders for upcoming study questionnaires.
+    try {
+      await ReminderSchedulerService(dio: ref.read(dioProvider))
+          .syncQuestionnaireReminders();
+    } catch (_) {
+      // Non-fatal: rescheduled on next app start.
     }
   }
 
@@ -186,11 +186,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final rolesAsync = ref.watch(userRolesProvider);
-    final roles = rolesAsync.value ?? <String>[];
-    final isAdminOrResearcher =
-        roles.contains('admin') || roles.contains('researcher');
-
     // Study-level feature flag: hide the recommender tab when the participant's
     // study disables it. Defaults to enabled while the config loads / on error.
     final recommenderEnabled = ref.watch(recommenderEnabledProvider);
@@ -198,7 +193,6 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     // Filter tabs by capability. `branch` carries the real router branch index,
     // so visible-index → branch mapping works regardless of which tabs are hidden.
     final visibleTabs = _allTabs.where((t) {
-      if (t.path == '/admin') return isAdminOrResearcher;
       if (t.path == '/recommend') return recommenderEnabled;
       return true;
     }).toList();

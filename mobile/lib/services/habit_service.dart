@@ -80,6 +80,26 @@ class HabitService {
     }
   }
 
+  /// Returns the uuids of the habits most semantically similar to [id]
+  /// (embedding similarity, most-similar first), capped at [limit]. Returns an
+  /// empty list on error or when the habit has no embedding yet, so callers can
+  /// fall back to a local heuristic.
+  Future<List<String>> fetchRelatedHabitIds(String id, {int limit = 10}) async {
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '$_baseUrl/habits/$id/related',
+        queryParameters: {'limit': limit},
+      );
+      return (response.data ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map((j) => (j['uuid'] ?? '').toString())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   /// Returns the current user's own annotations grouped by type.
   /// Keys are 'helpful' and 'iDoThis', values are lists of habit IDs.
   Future<Map<String, List<String>>> fetchMyAnnotations() async {

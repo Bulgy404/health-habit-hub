@@ -2,7 +2,10 @@
 %%
 %% LLM-1 (extract_habits selection) is replaced by GDS FastRP re-ranking.
 %% LLM-2 (extract_profile formatting) is replaced by build_profile() (deterministic).
-%% One LLM call writes recommendations with selected_habit_uuids for explainability.
+%% One LLM call (model LLM_RECOMMEND_MODEL, temp 0.2, max_tokens
+%% LLM_RECOMMEND_MAX_TOKENS) writes recommendations. The goal is guarded
+%% (regex screen + system-message backstop); output is written in the goal's
+%% language; papers are cited per recommendation via source_filenames.
 %%
 flowchart TD
 
@@ -70,8 +73,19 @@ flowchart TD
           {userId, goal}).sort({created_at:-1}).limit(10)`"]
     end
 
+    subgraph MONGO_PREV["MongoDB — previously recommended"]
+        PT["`recommendations.find({userId})
+        .sort({generated_at:-1}).limit(5)
+        → ≤15 deduplicated titles`"]
+    end
+
+    subgraph CITATIONS["citations.py + data/references.json"]
+        CIT["`LightRAG context → distinct file_paths
+        → [{filename, citation}] (curated DOI link if present)`"]
+    end
+
     %% ── Wiring ───────────────────────────────────────────────────────────────
-    GOAL --> NEO4J_PERSONAL & NEO4J_COMMUNITY & MONGO_ANNOT & BACKEND_QA & MONGO_FB
+    GOAL --> NEO4J_PERSONAL & NEO4J_COMMUNITY & MONGO_ANNOT & BACKEND_QA & MONGO_FB & MONGO_PREV
     NEO4J_PERSONAL --> GDS_RERANK
     NEO4J_COMMUNITY --> GDS_RERANK
     BACKEND_QA --> PROFILE_BUILD
@@ -80,13 +94,15 @@ flowchart TD
     GDS_RERANK -->|ranked community habits| NEO4J_BCIO
     NEO4J_PERSONAL -->|personal habit UUIDs| NEO4J_BCIO
     PROFILE_BUILD -->|rag_query| LIGHTRAG
+    LIGHTRAG --> CITATIONS
 
     %% ── Final prompt assembly ─────────────────────────────────────────────────
     subgraph FINAL["Single LLM call — recommend.txt  (temp 0.2)"]
         direction TB
 
-        F1["`**[1] USER GOAL**
-        {goal}  ← from request`"]
+        F1["`**[1] USER GOAL** *(untrusted, <<<delimited>>>)*
+        {goal}  ← from request — guarded by regex screen
+        + refusal backstop in system message`"]
 
         F2["`**[2] USER HEALTH PROFILE**
         {profile_summary}   ← build_profile()
@@ -104,13 +120,22 @@ flowchart TD
         {community_habits_json}  ← GDS FastRP re-ranked
             [{uuid, sentence, context, bcio_concepts, likes}]`"]
 
-        F6["`**[6] ACADEMIC SOURCES**
-        {sources_json}  ← LightRAG hybrid retrieval`"]
+        F6["`**[6] ACADEMIC KNOWLEDGE**
+        {sources_json}  ← LightRAG hybrid retrieval
+        *(capped at RECOMMEND_MAX_CONTEXT_CHARS)*`"]
 
-        F7["`**[7] PRIOR FEEDBACK**
+        F7["`**[7] AVAILABLE SOURCE DOCUMENTS**
+        {source_documents_json}  ← citations.py
+            [{filename, citation}] — citable papers`"]
+
+        F8["`**[8] PRIOR FEEDBACK**
         {prior_feedback}  ← MongoDB comments`"]
 
-        F1 --> F2 --> F3 --> F4 --> F5 --> F6 --> F7
+        F9["`**[9] PREVIOUSLY RECOMMENDED**
+        {previous_titles}  ← MongoDB recommendations
+        *(anti-repetition)*`"]
+
+        F1 --> F2 --> F3 --> F4 --> F5 --> F6 --> F7 --> F8 --> F9
     end
 
     GDS_RERANK --> F5
@@ -121,22 +146,26 @@ flowchart TD
     PROFILE_BUILD --> F2
     MONGO_ANNOT --> F4
     LIGHTRAG --> F6
-    MONGO_FB --> F7
+    CITATIONS --> F7
+    MONGO_FB --> F8
+    MONGO_PREV --> F9
     GOAL --> F1
 
-    subgraph OUTPUT["LLM Output"]
+    subgraph OUTPUT["LLM Output  (written in the language of the goal)"]
         OUT["`{recommendations: [
           {
-            title,
-            body,
-            rationale,            ← may cite BCIOConcept names
-            selected_habit_uuids  ← explainability: which habits informed this
+            title, body,
+            rationale,            ← plain language, cites papers Author (Year)
+            suggested_cue,        ← when/where trigger for the intention flow
+            selected_habit_uuids, ← logged + stored server-side only
+            source_filenames      ← validated → citations with optional DOI links
           },
           ...  (3–5 items)
-        ]}`"]
+        ]}
+        or {refused: true, reason} → HTTP 422 (goal guard)`"]
     end
 
-    F7 --> OUTPUT
+    F9 --> OUTPUT
 
     %% ── Stored / cached ──────────────────────────────────────────────────────
     PERSIST["`MongoDB recommendations.insertOne(...)

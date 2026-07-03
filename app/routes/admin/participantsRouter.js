@@ -9,10 +9,16 @@ import {
   softDeleteParticipant,
 } from '../../services/adminParticipantService.js';
 import { getParticipantProgress } from '../../services/adminStatsService.js';
+import { getParticipantResponses } from '../../services/questionnaireScheduleService.js';
+import { fastForwardParticipant } from '../../services/devToolsService.js';
 import { computeReminderPlans } from '../../services/reminderPlanService.js';
 import { logger } from '../../utils/logger.js';
 
 const log = logger.child({ module: 'participantsRouter' });
+
+function testToolsEnabled() {
+  return process.env.ENABLE_TEST_TOOLS === 'true';
+}
 
 export function createParticipantsRouter({
   db,
@@ -106,6 +112,40 @@ export function createParticipantsRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
+  // GET /api/v1/admin/participants/test-tools — whether dev test tools are on
+  router.get('/participants/test-tools', (req, res) => {
+    res.json({ enabled: testToolsEnabled() });
+  });
+
+  // POST /api/v1/admin/participants/:id/fast-forward — dev-only time travel.
+  // Shifts a participant's timeline back N days so future windows become due.
+  router.post('/participants/:id/fast-forward', async (req, res) => {
+    if (!testToolsEnabled()) {
+      return res.status(403).json({ error: 'Test tools are disabled' });
+    }
+    try {
+      const days = Math.max(
+        1,
+        Math.min(365, parseInt(req.body?.days, 10) || 7)
+      );
+      const database = await getDb();
+      const participant = await getParticipant({ db: database, id: req.params.id });
+      if (!participant) {
+        return res.status(404).json({ error: 'Participant not found' });
+      }
+      const shifted = await fastForwardParticipant({
+        db: database,
+        neo4jRun,
+        userId: req.params.id,
+        days,
+      });
+      res.json({ ok: true, days, shifted });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // GET /api/v1/admin/participants
   router.get('/participants', async (req, res) => {
     try {
@@ -417,6 +457,21 @@ export function createParticipantsRouter({
       }
 
       res.json(result);
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/admin/participants/:id/responses — questionnaire answers
+  router.get('/participants/:id/responses', async (req, res) => {
+    try {
+      const database = await getDb();
+      const responses = await getParticipantResponses({
+        db: database,
+        userId: req.params.id,
+      });
+      res.json({ responses });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });

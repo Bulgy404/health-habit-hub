@@ -4,15 +4,21 @@ flowchart TD
     user_id · goal · session_id
     *Auth: X-Service-Auth-Token*`"])
 
+    GUARD{"`Goal guard
+    regex injection screen (EN+DE)`"}
+    INPUT --> GUARD
+    GUARD -->|injection / shady goal| REJ(["`**422** user-facing reason
+    (never cached)`"])
+
     CACHE{"`Redis cache check
     GET recommend:{sha256(user_id‖goal)}`"}
-    INPUT --> CACHE
+    GUARD -->|clean| CACHE
     CACHE -->|hit| DONE(["`Return cached
     RecommendResponse`"])
 
     CACHE -->|miss| PARALLEL
 
-    subgraph PARALLEL["Stage 1 — 6-way parallel data fetch  (asyncio.gather, zero LLM calls)"]
+    subgraph PARALLEL["Stage 1 — 7-way parallel data fetch  (asyncio.gather, zero LLM calls)"]
         direction TB
 
         subgraph PERSONAL["Personal habits  (1 Neo4j session)"]
@@ -60,6 +66,10 @@ flowchart TD
 
         FB_FETCH["`**MongoDB** recommendation_feedback
         .find({userId, goal}).sort({created_at:-1}).limit(10)`"]
+
+        PREV_FETCH["`**MongoDB** recommendations
+        last 5 sets → ≤15 previous titles
+        *(anti-repetition context)*`"]
     end
 
     subgraph STAGE2["Stage 2 — deterministic processing  (zero LLM calls)"]
@@ -89,20 +99,28 @@ flowchart TD
         → {uuid: [concept_label, ...]}`"]
         LR["`**LightRAG** POST /query
         {query: rag_query, mode: 'hybrid', only_need_context: true}
-        timeout: 90 s`"]
+        timeout: 90 s
+        → context capped at RECOMMEND_MAX_CONTEXT_CHARS
+        → distinct file_paths extracted → paper citations`"]
     end
 
-    RECOMMEND["`**Single LLM call** — recommend.txt (temp 0.2)
+    RECOMMEND["`**Single LLM call** — recommend.txt
+    model: LLM_RECOMMEND_MODEL (fallback LLM_MODEL) · temp 0.2
+    max_tokens: LLM_RECOMMEND_MAX_TOKENS · system msg: goal = untrusted data
+    output language = language of the goal
     vars:
-      {goal}                   ← entry point
-      {profile_summary}        ← build_profile()
-      {profile_detailed}       ← build_profile()
-      {personal_habits_json}   ← personal habits + bcio_concepts
-      {annotated_habits_json}  ← bookmarked habits + bcio_concepts
-      {community_habits_json}  ← GDS-reranked community + bcio_concepts
-      {sources_json}           ← LightRAG context
-      {prior_feedback}         ← MongoDB comments
-    → {recommendations: [{title, body, rationale, selected_habit_uuids}]}`"]
+      {goal}                    ← entry point (<<<delimited>>>)
+      {profile_summary/detailed}← build_profile()
+      {personal_habits_json}    ← personal habits + bcio_concepts (compact)
+      {annotated_habits_json}   ← bookmarked habits + bcio_concepts
+      {community_habits_json}   ← GDS-reranked community + bcio_concepts
+      {sources_json}            ← LightRAG context (capped)
+      {source_documents_json}   ← citable papers [{filename, citation}]
+      {prior_feedback}          ← MongoDB comments
+      {previous_titles}         ← anti-repetition list
+    → {recommendations: [{title, body, rationale, suggested_cue,
+       selected_habit_uuids, source_filenames}]}
+    or {refused: true, reason} → **422**`"]
 
     STORE["`**Persist & cache**
     MongoDB recommendations.insertOne({...})
@@ -110,7 +128,10 @@ flowchart TD
 
     OUT(["`Return **RecommendResponse**
     recommendation_id · recommendations · generated_at
-    Each item: title · body · rationale · sources · selected_habit_uuids`"])
+    Each item: title · body · rationale · suggested_cue ·
+    sources [{filename, title, url, citation}]
+    *(selected_habit_uuids logged + stored in Mongo only —
+    never sent to the client)*`"])
 
     PARALLEL --> STAGE2
     STAGE2 --> STAGE3

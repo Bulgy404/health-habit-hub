@@ -23,6 +23,13 @@ export const createStudySchema = z.object({
   groups: z.array(studyGroupSchema).min(1).max(8),
   questionnaires: z.array(mongoId).max(20).optional(),
   recommenderEnabled: z.boolean().optional(),
+  onboardingEnabled: z.boolean().optional(),
+  selfHabitCreationEnabled: z.boolean().optional(),
+});
+
+const questionnaireRemindersSchema = z.object({
+  enabled: z.boolean(),
+  hour: z.number().int().min(0).max(23),
 });
 
 export const updateStudySchema = z
@@ -30,6 +37,9 @@ export const updateStudySchema = z
     name: shortString.optional(),
     description: longString.optional(),
     recommenderEnabled: z.boolean().optional(),
+    onboardingEnabled: z.boolean().optional(),
+    selfHabitCreationEnabled: z.boolean().optional(),
+    questionnaireReminders: questionnaireRemindersSchema.optional(),
   })
   .strict();
 
@@ -83,6 +93,47 @@ export const updateGroupConfigSchema = z
     activityTypeConfig: activityTypeConfigSchema.optional().nullable(),
     reminderConfig: reminderConfigSchema.optional().nullable(),
     autoDonate: z.boolean().optional(),
+    // null = inherit the study-level flag; a boolean overrides it per group.
+    onboardingEnabled: z.boolean().optional().nullable(),
+    selfHabitCreationEnabled: z.boolean().optional().nullable(),
+  })
+  .strict();
+
+// ── Questionnaire scheduling ───────────────────────────────────────────────────
+
+const cadenceSchema = z
+  .object({
+    mode: z.enum(['interval', 'fixed']),
+    startOffsetDays: z.number().int().min(0).max(365).optional(),
+    intervalDays: z.number().int().min(1).max(365).optional(),
+    occurrences: z.number().int().min(1).max(200).optional(),
+    // Fixed timepoints: whole weeks and/or exact days after enrollment.
+    weeks: z.array(z.number().int().min(0).max(104)).max(52).optional(),
+    days: z.array(z.number().int().min(0).max(730)).max(120).optional(),
+  })
+  .refine(
+    (c) =>
+      c.mode === 'fixed'
+        ? (Array.isArray(c.weeks) && c.weeks.length > 0) ||
+          (Array.isArray(c.days) && c.days.length > 0)
+        : c.intervalDays != null && c.occurrences != null,
+    {
+      message:
+        'interval mode requires intervalDays + occurrences; fixed mode requires weeks and/or days',
+    }
+  );
+
+export const createQuestionnaireAssignmentSchema = z.object({
+  questionnaireId: mongoId,
+  // null / omitted = study-wide (all groups); otherwise a specific group id.
+  groupId: mongoId.nullable().optional(),
+  cadence: cadenceSchema,
+});
+
+export const updateQuestionnaireAssignmentSchema = z
+  .object({
+    cadence: cadenceSchema.optional(),
+    active: z.boolean().optional(),
   })
   .strict();
 

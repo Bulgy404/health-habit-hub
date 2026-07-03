@@ -43,6 +43,8 @@ class HabitConfig {
     this.recommenderEnabled = true,
     this.guidedHabitCreationEnabled = true,
     this.communityShareDefault = true,
+    this.onboardingEnabled = true,
+    this.selfHabitCreationEnabled = true,
   });
 
   /// Cue count mode: `'single'` or `'multi'`.
@@ -82,6 +84,16 @@ class HabitConfig {
   /// compatibility.
   final bool communityShareDefault;
 
+  /// Whether the first-time habit-creation onboarding (educational explainers
+  /// for what a habit is and what cues are) should be shown. Resolved from the
+  /// participant's study/group; defaults to `true` for public users.
+  final bool onboardingEnabled;
+
+  /// Whether the participant may create their own habits. When `false`, the
+  /// "add habit" entry point is hidden. Resolved from the participant's
+  /// study/group; defaults to `true` for public users.
+  final bool selfHabitCreationEnabled;
+
   /// Deserialises from the habit-config API response.
   factory HabitConfig.fromJson(Map<String, dynamic> json) => HabitConfig(
         cueCount: json['cueCount'] as String? ?? 'multi',
@@ -106,6 +118,9 @@ class HabitConfig {
             json['guidedHabitCreationEnabled'] as bool? ?? true,
         communityShareDefault:
             json['communityShareDefault'] as bool? ?? true,
+        onboardingEnabled: json['onboardingEnabled'] as bool? ?? true,
+        selfHabitCreationEnabled:
+            json['selfHabitCreationEnabled'] as bool? ?? true,
       );
 }
 

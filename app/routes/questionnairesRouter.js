@@ -1,5 +1,6 @@
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
+import { getDueQuestionnaires } from '../services/questionnaireScheduleService.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'questionnairesRouter' });
@@ -53,6 +54,21 @@ export function createQuestionnairesRouter({ db } = {}) {
       );
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/questionnaires/due — the participant's due + upcoming
+  // scheduled questionnaires (must be declared before the /:slug route).
+  router.get('/due', async (req, res) => {
+    try {
+      const userId = req.user?.sub;
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      const database = await getDb();
+      const due = await getDueQuestionnaires({ db: database, userId });
+      res.json(due);
+    } catch (err) {
+      log.error({ err: err }, '[questionnaires] due error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

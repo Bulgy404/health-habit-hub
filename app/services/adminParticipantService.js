@@ -1,6 +1,7 @@
 import { randomUUID, randomBytes, createHash } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import { generateTokenCard } from './tokenCardService.js';
+import { recoveryPhrasesEnabled } from '../utils/recoveryPhrase.js';
 
 // Whitelist of valid Neo4j group labels (prevents Cypher label injection)
 function randomPassword() {
@@ -18,6 +19,10 @@ export async function listParticipants({ db }) {
     .find({ deletedAt: { $exists: false } })
     .toArray();
 
+  // Recovery phrases are account secrets; only surface them when explicitly
+  // enabled (local test/verification), never in production.
+  const exposePhrase = recoveryPhrasesEnabled();
+
   return participants.map((p) => ({
     userId: p.userId,
     username: p.username,
@@ -25,6 +30,10 @@ export async function listParticipants({ db }) {
     enrolledAt: p.enrolledAt,
     lastActive: p.lastActive || null,
     surveyCompletionPct: p.surveyCompletionPct || 0,
+    // Recovery phrase for self-onboarded/seeded accounts (null for admin
+    // token-card accounts). hasTokenCard signals a downloadable card exists.
+    recoveryPhrase: exposePhrase ? p.recoveryPhrase || null : null,
+    hasTokenCard: !!p.tokenCardPdf,
   }));
 }
 

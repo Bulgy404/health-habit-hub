@@ -74,7 +74,17 @@ def _build_mongo_client() -> None:
     else:
         url = f"mongodb://{mongo_host}:{mongo_port}/"
 
-    _mongo = motor.motor_asyncio.AsyncIOMotorClient(url)
+    server_selection_timeout = int(
+        os.environ.get("MONGO_SERVER_SELECTION_TIMEOUT_MS", "5000")
+    )
+    socket_timeout = int(os.environ.get("MONGO_SOCKET_TIMEOUT_MS", "5000"))
+
+    _mongo = motor.motor_asyncio.AsyncIOMotorClient(
+        url,
+        serverSelectionTimeoutMS=server_selection_timeout,
+        connectTimeoutMS=server_selection_timeout,
+        socketTimeoutMS=socket_timeout,
+    )
 
 
 async def get_redis() -> Optional[aioredis.Redis]:

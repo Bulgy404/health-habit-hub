@@ -11,6 +11,15 @@ const _channelName = 'Habit reminders';
 const _channelDescription =
     'Adaptive reminders for your implementation intentions';
 
+const _qChannelId = 'hhh_questionnaire_reminders';
+const _qChannelName = 'Questionnaire reminders';
+const _qChannelDescription = 'Reminders when a study questionnaire is due';
+// Dedicated notification-id range so questionnaire reminders never collide with
+// habit reminders (which use low ids). Capped at 20 to stay well within iOS's
+// 64-pending-notification limit alongside the habit reminders.
+const _qNotifBase = 500000;
+const _qNotifMax = 20;
+
 final _plugin = FlutterLocalNotificationsPlugin();
 bool _tzReady = false;
 
@@ -101,6 +110,70 @@ class ReminderSchedulerService {
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         );
       }
+    }
+  }
+
+  /// Schedules a local notification at each upcoming scheduled questionnaire
+  /// due date (`GET /questionnaires/due`). Due-now questionnaires are shown as
+  /// "today's task" cards instead, so only future occurrences are notified.
+  /// Uses a dedicated id range that it clears first, so it never disturbs the
+  /// habit reminders.
+  Future<void> syncQuestionnaireReminders() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '${AppConfig.apiBaseUrl}/questionnaires/due',
+    );
+    final data = response.data ?? const {};
+    await _ensureTimezone();
+
+    // Always clear the existing questionnaire reminders first, so toggling the
+    // study setting off (or changing the hour) cancels/replaces them.
+    for (var i = 0; i < _qNotifMax; i++) {
+      await _plugin.cancel(_qNotifBase + i);
+    }
+
+    // Study-controlled: skip entirely when reminders are disabled.
+    final reminders = (data['reminders'] as Map<String, dynamic>?) ?? const {};
+    if (reminders['enabled'] == false) return;
+    final hour = (reminders['hour'] as num?)?.toInt() ?? 9;
+
+    final items = (data['questionnaires'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>();
+    final now = tz.TZDateTime.now(tz.local);
+    var idx = 0;
+    for (final it in items) {
+      if (idx >= _qNotifMax) break;
+      final scheduledStr = it['scheduledFor']?.toString();
+      if (scheduledStr == null) continue;
+      final parsed = DateTime.tryParse(scheduledStr);
+      if (parsed == null) continue;
+      // Fire on the due date at the study's configured local hour.
+      final localDue = tz.TZDateTime.from(parsed, tz.local);
+      final fireAt = tz.TZDateTime(
+        tz.local,
+        localDue.year,
+        localDue.month,
+        localDue.day,
+        hour,
+      );
+      if (!fireAt.isAfter(now)) continue; // already passed → shown as a card
+      final title = it['questionnaireTitle']?.toString() ?? 'Questionnaire';
+
+      await _plugin.zonedSchedule(
+        id: _qNotifBase + idx++,
+        title: 'Questionnaire ready',
+        body: '$title is ready to complete.',
+        scheduledDate: fireAt,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _qChannelId,
+            _qChannelName,
+            channelDescription: _qChannelDescription,
+            importance: Importance.defaultImportance,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      );
     }
   }
 

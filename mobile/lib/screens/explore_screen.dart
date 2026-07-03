@@ -134,17 +134,30 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   void _handleShowInGraph(HabitGraphSelection selection) {
     final graph = _graphOverride ?? ref.read(bubbleGraphProvider).value;
     if (graph == null) return;
-    final dimension = graph.dimensions
-        .where((d) => d.id == selection.dimensionId)
-        .firstOrNull;
-    if (dimension == null) return;
-    final habit = dimension.habits
-        .where((h) => h.id == selection.habitId)
-        .firstOrNull;
-    if (habit == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _showHabitDetail(habit, dimension, graph);
-    });
+
+    // Locate the habit by id. Prefer the requested dimension when it matches,
+    // otherwise fall back to whichever dimension actually contains the habit —
+    // the caller may not know (or send) a dimension id.
+    for (final d in graph.dimensions) {
+      final match = d.habits.where((h) => h.id == selection.habitId).firstOrNull;
+      if (match != null &&
+          (selection.dimensionId.isEmpty || d.id == selection.dimensionId)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showHabitDetail(match, d, graph);
+        });
+        return;
+      }
+    }
+    for (final d in graph.dimensions) {
+      final match = d.habits.where((h) => h.id == selection.habitId).firstOrNull;
+      if (match != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _showHabitDetail(match, d, graph);
+        });
+        return;
+      }
+    }
+    // Habit not present in the graph (e.g. no context yet) — nothing to open.
   }
 
   @override
@@ -152,10 +165,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
     final l10n = AppLocalizations.of(context)!;
     final graphAsync = ref.watch(bubbleGraphProvider);
 
-    // Handle "Show in Habit Graph" requests from the Stats tab.
+    // Handle "Show in Habit Graph" requests from the Stats / My Habits tabs.
+    // ExploreScreen owns the TabController, so it also performs the tab switch.
     ref.listen<HabitGraphSelection?>(showInGraphProvider, (_, selection) {
       if (selection == null) return;
       ref.read(showInGraphProvider.notifier).clear();
+      if (_tabController.index != 0) _tabController.animateTo(0);
       _handleShowInGraph(selection);
     });
 
@@ -278,12 +293,34 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
   List<HabitComment>? _comments;
   final _commentController = TextEditingController();
   bool _postingComment = false;
+  // Similarity-ranked related habits from the backend; null until loaded (the
+  // build falls back to a local same-category heuristic in the meantime).
+  List<HabitNode>? _relatedOverride;
 
   @override
   void initState() {
     super.initState();
     _node = widget.initialNode;
     _loadComments();
+    _loadRelated();
+  }
+
+  Future<void> _loadRelated() async {
+    try {
+      final ids =
+          await widget.habitService.fetchRelatedHabitIds(_node.id, limit: 10);
+      if (ids.isEmpty) return;
+      final byId = {for (final h in widget.allHabits) h.id: h};
+      final ordered = [
+        for (final id in ids)
+          if (byId[id] != null) byId[id]!,
+      ];
+      if (mounted && ordered.isNotEmpty) {
+        setState(() => _relatedOverride = ordered);
+      }
+    } catch (_) {
+      // Keep the local fallback.
+    }
   }
 
   @override
@@ -377,11 +414,18 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
         annotationState[_node.id]?.contains('helpful') ?? false;
     final busy = _loadingType != null;
 
-    final related =
-        widget.allHabits
-            .where((h) => h.id != _node.id && h.category == _node.category)
-            .toList()
-          ..sort((a, b) => b.totalAnnotations.compareTo(a.totalAnnotations));
+    // Prefer similarity-ranked related habits from the backend; otherwise fall
+    // back to a local same-category heuristic. Either way, cap at 10.
+    List<HabitNode> related;
+    if (_relatedOverride != null) {
+      related = _relatedOverride!.take(10).toList();
+    } else {
+      related = widget.allHabits
+          .where((h) => h.id != _node.id && h.category == _node.category)
+          .toList()
+        ..sort((a, b) => b.totalAnnotations.compareTo(a.totalAnnotations));
+      related = related.take(10).toList();
+    }
 
     return DraggableScrollableSheet(
       expand: false,

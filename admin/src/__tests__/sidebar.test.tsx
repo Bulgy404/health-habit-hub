@@ -53,7 +53,8 @@ describe('Sidebar', () => {
     expect(screen.getByText('Analytics')).toBeInTheDocument();
     expect(screen.getByText('Questionnaires')).toBeInTheDocument();
     expect(screen.getByText('Knowledge Base')).toBeInTheDocument();
-    expect(screen.getByText('Activity Types')).toBeInTheDocument();
+    // Activity Types moved into the study settings (Cue Config tab).
+    expect(screen.queryByText('Activity Types')).not.toBeInTheDocument();
     expect(screen.getByText('App Settings')).toBeInTheDocument();
   });
 

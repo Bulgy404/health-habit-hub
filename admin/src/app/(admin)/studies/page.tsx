@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import styles from "./page.module.css";
 
 import { useStudiesData } from "./useStudiesData";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { useActivityTypes } from "@/lib/useActivityTypes";
 import { CueConfigForm } from "@/components/cue-config-form";
+import { ActivityTypesManager } from "@/components/activity-types-manager";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -16,6 +17,9 @@ interface StudyGroup {
   index: number;
   allocationWeight?: number;
   cueConfig?: CueConfig | null;
+  // null = inherit the study-level flag; boolean overrides per group.
+  onboardingEnabled?: boolean | null;
+  selfHabitCreationEnabled?: boolean | null;
 }
 
 interface CueConfig {
@@ -34,6 +38,9 @@ interface StudySummary {
   isActive: boolean;
   isDefault: boolean;
   recommenderEnabled: boolean;
+  onboardingEnabled: boolean;
+  selfHabitCreationEnabled: boolean;
+  questionnaireReminders?: { enabled: boolean; hour: number };
   groups: StudyGroup[];
   questionnaires: string[];
   participantCount: number;
@@ -253,6 +260,446 @@ function QuestionnairesTab({
     </div>
   );
 }
+
+// ── Questionnaire schedule tab ─────────────────────────────────────────────────
+
+interface Cadence {
+  mode: "interval" | "fixed";
+  startOffsetDays?: number;
+  intervalDays?: number;
+  occurrences?: number;
+  weeks?: number[];
+  days?: number[];
+}
+
+interface ScheduleAssignment {
+  id: string;
+  groupId: string | null;
+  questionnaireId: string;
+  questionnaireSlug: string;
+  questionnaireTitle: string;
+  cadence: Cadence;
+  cadenceSummary: string;
+  active: boolean;
+  occurrences: number;
+}
+
+interface Completion {
+  questionnaireId: string | null;
+  questionnaireSlug: string;
+  total: number;
+  completed: number;
+}
+
+interface CalendarEntry {
+  date: string; // YYYY-MM-DD
+  items: { questionnaireSlug: string; total: number; completed: number }[];
+}
+
+/**
+ * Assign questionnaires to a study (all groups) or to a specific group, on a
+ * recurring-interval or fixed-week cadence, and view completion across
+ * participants. Scheduled "windows" are generated per participant; completion
+ * is tracked as they submit responses.
+ */
+function QuestionnaireScheduleTab({
+  study,
+  token,
+}: {
+  study: StudySummary;
+  token: string;
+}) {
+  const [assignments, setAssignments] = useState<ScheduleAssignment[]>([]);
+  const [completion, setCompletion] = useState<Completion[]>([]);
+  const [calendar, setCalendar] = useState<CalendarEntry[]>([]);
+  const [allQ, setAllQ] = useState<QuestionnaireSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Add-assignment form
+  const [qId, setQId] = useState("");
+  const [scope, setScope] = useState("study"); // "study" or a group id
+  const [mode, setMode] = useState<"interval" | "fixed">("interval");
+  const [startOffsetDays, setStartOffsetDays] = useState(0);
+  const [intervalDays, setIntervalDays] = useState(7);
+  const [occurrences, setOccurrences] = useState(8);
+  const [weeksStr, setWeeksStr] = useState("0, 4, 8");
+  const [daysStr, setDaysStr] = useState("");
+
+  const base = `${API_BASE}/${study.id}/questionnaire-assignments`;
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [data, qs, cal] = await Promise.all([
+        apiFetch(base, token),
+        apiFetch(QUESTIONNAIRES_API, token),
+        apiFetch(`${API_BASE}/${study.id}/questionnaire-calendar`, token).catch(() => ({ calendar: [] })),
+      ]);
+      setAssignments((data.assignments ?? []) as ScheduleAssignment[]);
+      setCompletion((data.completion ?? []) as Completion[]);
+      setCalendar((cal?.calendar ?? []) as CalendarEntry[]);
+      setAllQ(Array.isArray(qs) ? (qs as QuestionnaireSummary[]) : []);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load schedule");
+    } finally {
+      setLoading(false);
+    }
+  }, [base, token]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  function scopeLabel(groupId: string | null): string {
+    if (!groupId) return "Study-wide";
+    const g = study.groups.find((gr) => gr.id === groupId);
+    return g ? g.label || `Group ${g.index}` : "Group";
+  }
+
+  function completionFor(slug: string): string {
+    const c = completion.find((x) => x.questionnaireSlug === slug);
+    return c ? `${c.completed} / ${c.total}` : "0 / 0";
+  }
+
+  async function handleAdd() {
+    if (!qId) {
+      setError("Choose a questionnaire first.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const parseList = (s: string) =>
+        s
+          .split(",")
+          .map((x) => parseInt(x.trim(), 10))
+          .filter((n) => !Number.isNaN(n));
+      let cadence: Cadence;
+      if (mode === "interval") {
+        cadence = { mode, startOffsetDays, intervalDays, occurrences };
+      } else {
+        const weeks = parseList(weeksStr);
+        const days = parseList(daysStr);
+        cadence = { mode: "fixed" };
+        if (weeks.length) cadence.weeks = weeks;
+        if (days.length) cadence.days = days;
+      }
+      await apiFetch(base, token, {
+        method: "POST",
+        body: JSON.stringify({
+          questionnaireId: qId,
+          groupId: scope === "study" ? null : scope,
+          cadence,
+        }),
+      });
+      setQId("");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add assignment");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (
+      !confirm(
+        "Remove this assignment? Scheduled entries not yet answered are removed too."
+      )
+    )
+      return;
+    try {
+      await apiFetch(`${base}/${id}`, token, { method: "DELETE" });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete assignment");
+    }
+  }
+
+  if (loading) return <div className={styles.loadingState}>Loading…</div>;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {error && <div className={styles.errorMsg}>{error}</div>}
+
+      {/* Current assignments */}
+      <div>
+        <p className={styles.qSectionTitle}>Assigned questionnaires</p>
+        {assignments.length === 0 ? (
+          <p className={styles.hint}>
+            No questionnaires scheduled yet. Add one below.
+          </p>
+        ) : (
+          <table className={styles.table} style={{ width: "100%" }}>
+            <thead>
+              <tr>
+                <th style={cellHead}>Questionnaire</th>
+                <th style={cellHead}>Scope</th>
+                <th style={cellHead}>Cadence</th>
+                <th style={cellHead}>Completed</th>
+                <th style={cellHead}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {assignments.map((a) => (
+                <tr key={a.id}>
+                  <td style={cell}>{a.questionnaireTitle}</td>
+                  <td style={cell}>{scopeLabel(a.groupId)}</td>
+                  <td style={cell}>
+                    {a.cadenceSummary}{" "}
+                    <span className={styles.hint}>({a.occurrences}×)</span>
+                  </td>
+                  <td style={cell}>{completionFor(a.questionnaireSlug)}</td>
+                  <td style={cell}>
+                    <button
+                      className={styles.saveBtn}
+                      style={{ background: "transparent", color: "#dc2626" }}
+                      onClick={() => handleDelete(a.id)}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Add assignment */}
+      <div className={styles.cueConfigGroup}>
+        <p className={styles.cueConfigGroupLabel}>Add a questionnaire</p>
+        <div className={styles.formGrid}>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Questionnaire</label>
+            <select
+              className={styles.select}
+              value={qId}
+              onChange={(e) => setQId(e.target.value)}
+            >
+              <option value="">Select…</option>
+              {allQ.map((q) => (
+                <option key={q.id} value={q.id}>
+                  {q.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Applies to</label>
+            <select
+              className={styles.select}
+              value={scope}
+              onChange={(e) => setScope(e.target.value)}
+            >
+              <option value="study">Whole study (all groups)</option>
+              {study.groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.label || `Group ${g.index}`} only
+                </option>
+              ))}
+            </select>
+            <span className={styles.hint}>
+              A group assignment overrides the study-wide one for that
+              questionnaire.
+            </span>
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>Cadence</label>
+            <select
+              className={styles.select}
+              value={mode}
+              onChange={(e) => setMode(e.target.value as "interval" | "fixed")}
+            >
+              <option value="interval">Recurring interval</option>
+              <option value="fixed">Fixed study weeks</option>
+            </select>
+          </div>
+        </div>
+
+        {mode === "interval" ? (
+          <div className={styles.formGrid}>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>First due (days after enrol)</label>
+              <input
+                className={styles.select}
+                type="number"
+                min={0}
+                value={startOffsetDays}
+                onChange={(e) => setStartOffsetDays(parseInt(e.target.value, 10) || 0)}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Every (days)</label>
+              <input
+                className={styles.select}
+                type="number"
+                min={1}
+                value={intervalDays}
+                onChange={(e) => setIntervalDays(parseInt(e.target.value, 10) || 1)}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Occurrences</label>
+              <input
+                className={styles.select}
+                type="number"
+                min={1}
+                value={occurrences}
+                onChange={(e) => setOccurrences(parseInt(e.target.value, 10) || 1)}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className={styles.formGrid}>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Study weeks (comma-separated)</label>
+              <input
+                className={styles.select}
+                value={weeksStr}
+                onChange={(e) => setWeeksStr(e.target.value)}
+                placeholder="e.g. 0, 4, 8"
+              />
+              <span className={styles.hint}>
+                Week 0 = at enrollment (baseline). Each week is a due date.
+              </span>
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Days (exact, comma-separated)</label>
+              <input
+                className={styles.select}
+                value={daysStr}
+                onChange={(e) => setDaysStr(e.target.value)}
+                placeholder="e.g. 1, 3, 10"
+              />
+              <span className={styles.hint}>
+                Exact days after enrollment. Combined with any weeks above.
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div className={styles.cueConfigFooter}>
+          <button
+            className={styles.saveBtn}
+            onClick={handleAdd}
+            disabled={saving}
+          >
+            {saving ? "Adding…" : "Add assignment"}
+          </button>
+        </div>
+      </div>
+
+      {/* Calendar of scheduled questionnaire due dates */}
+      <div>
+        <p className={styles.qSectionTitle}>Schedule calendar</p>
+        <ScheduleCalendar entries={calendar} />
+      </div>
+    </div>
+  );
+}
+
+/** Month-grid calendar highlighting days with scheduled questionnaires. */
+function ScheduleCalendar({ entries }: { entries: CalendarEntry[] }) {
+  const byDate = new Map(entries.map((e) => [e.date, e.items]));
+  // Start the view on the month of the earliest scheduled date, else today.
+  const firstDate = entries
+    .map((e) => e.date)
+    .sort()
+    .find(Boolean);
+  const initial = firstDate ? new Date(`${firstDate}T00:00:00`) : new Date();
+  const [view, setView] = useState(new Date(initial.getFullYear(), initial.getMonth(), 1));
+
+  const year = view.getFullYear();
+  const month = view.getMonth();
+  const monthLabel = view.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const first = new Date(year, month, 1);
+  const startWeekday = (first.getDay() + 6) % 7; // Monday-first
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [
+    ...Array(startWeekday).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const todayStr = `${new Date().getFullYear()}-${pad(new Date().getMonth() + 1)}-${pad(new Date().getDate())}`;
+
+  return (
+    <div style={{ maxWidth: 560 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+        <button className={styles.saveBtn} style={{ background: "transparent", color: "var(--color-text)" }} onClick={() => setView(new Date(year, month - 1, 1))}>‹</button>
+        <strong>{monthLabel}</strong>
+        <button className={styles.saveBtn} style={{ background: "transparent", color: "var(--color-text)" }} onClick={() => setView(new Date(year, month + 1, 1))}>›</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
+        {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => (
+          <div key={d} style={{ textAlign: "center", fontSize: "0.7rem", color: "var(--color-text-muted)", fontWeight: 600 }}>{d}</div>
+        ))}
+        {cells.map((day, i) => {
+          if (day === null) return <div key={i} />;
+          const dateStr = `${year}-${pad(month + 1)}-${pad(day)}`;
+          const items = byDate.get(dateStr);
+          const isToday = dateStr === todayStr;
+          const label = items
+            ? items.map((it) => `${it.questionnaireSlug} ${it.completed}/${it.total}`).join("\n")
+            : undefined;
+          return (
+            <div
+              key={i}
+              title={label}
+              style={{
+                minHeight: 46,
+                border: "1px solid var(--color-border)",
+                borderRadius: 6,
+                padding: "2px 4px",
+                background: items ? "#eef2ff" : "transparent",
+                outline: isToday ? "2px solid var(--color-primary)" : "none",
+              }}
+            >
+              <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>{day}</div>
+              {items && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 1, marginTop: 1 }}>
+                  {items.slice(0, 2).map((it) => (
+                    <span key={it.questionnaireSlug} style={{ fontSize: "0.6rem", color: "#4338ca", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {it.questionnaireSlug} · {it.total}
+                    </span>
+                  ))}
+                  {items.length > 2 && (
+                    <span style={{ fontSize: "0.6rem", color: "#4338ca" }}>+{items.length - 2}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {entries.length === 0 && (
+        <p className={styles.hint} style={{ marginTop: "0.5rem" }}>
+          No scheduled occurrences yet. Add an assignment (windows are generated per enrolled participant).
+        </p>
+      )}
+    </div>
+  );
+}
+
+const cellHead: CSSProperties = {
+  textAlign: "left",
+  padding: "0.5rem 0.75rem",
+  fontSize: "0.75rem",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  color: "var(--color-text-muted)",
+  borderBottom: "1px solid var(--color-border)",
+};
+const cell: CSSProperties = {
+  padding: "0.6rem 0.75rem",
+  borderBottom: "1px solid var(--color-border)",
+  fontSize: "0.9rem",
+};
 
 // ── Codes tab ─────────────────────────────────────────────────────────────────
 
@@ -1269,6 +1716,19 @@ function NotificationsTab({
 
 // ── Cue config tab ────────────────────────────────────────────────────────────
 
+/** Maps a nullable boolean override to the tri-state <select> value. */
+function triStateValue(v: boolean | null): "inherit" | "on" | "off" {
+  if (v === null || v === undefined) return "inherit";
+  return v ? "on" : "off";
+}
+
+/** Parses a tri-state <select> value back to a nullable boolean override. */
+function triStateParse(v: string): boolean | null {
+  if (v === "on") return true;
+  if (v === "off") return false;
+  return null;
+}
+
 function CueConfigTab({
   study,
   token,
@@ -1280,7 +1740,16 @@ function CueConfigTab({
   const defaultKeys = activityTypes.filter((a) => a.isDefault).map((a) => a.key);
 
   const [groupStates, setGroupStates] = useState<
-    Record<string, CueConfig & { saving: boolean; saved: boolean; error: string }>
+    Record<
+      string,
+      CueConfig & {
+        onboardingEnabled: boolean | null;
+        selfHabitCreationEnabled: boolean | null;
+        saving: boolean;
+        saved: boolean;
+        error: string;
+      }
+    >
   >(() =>
     Object.fromEntries(
       study.groups.map((g) => [
@@ -1293,6 +1762,9 @@ function CueConfigTab({
           // against the catalog for display
           behaviorOptions: g.cueConfig?.behaviorOptions ?? null,
           maxHabits: g.cueConfig?.maxHabits ?? null,
+          // null = inherit study-level flag
+          onboardingEnabled: g.onboardingEnabled ?? null,
+          selfHabitCreationEnabled: g.selfHabitCreationEnabled ?? null,
           saving: false,
           saved: false,
           error: "",
@@ -1329,6 +1801,14 @@ function CueConfigTab({
           }),
         }
       );
+      // Persist the per-group onboarding / self-creation overrides.
+      await apiFetch(`${API_BASE}/${study.id}/groups/${groupId}/config`, token, {
+        method: "PATCH",
+        body: JSON.stringify({
+          onboardingEnabled: s.onboardingEnabled,
+          selfHabitCreationEnabled: s.selfHabitCreationEnabled,
+        }),
+      });
       update(groupId, { saving: false, saved: true });
     } catch (err) {
       update(groupId, {
@@ -1352,6 +1832,7 @@ function CueConfigTab({
 
   return (
     <div>
+      <ActivityTypesManager token={token} />
       {study.groups.map((g) => {
         const s = groupStates[g.id];
         if (!s) return null;
@@ -1372,6 +1853,49 @@ function CueConfigTab({
               activityTypes={activityTypes}
               showMaxHabits
             />
+            <div className={styles.formGrid}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Onboarding (this group)</label>
+                <select
+                  className={styles.select}
+                  value={triStateValue(s.onboardingEnabled)}
+                  onChange={(e) =>
+                    update(g.id, {
+                      onboardingEnabled: triStateParse(e.target.value),
+                    })
+                  }
+                >
+                  <option value="inherit">Inherit study setting</option>
+                  <option value="on">On</option>
+                  <option value="off">Off</option>
+                </select>
+                <span className={styles.hint}>
+                  Overrides the study-level onboarding setting for this group
+                  only.
+                </span>
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>
+                  Self habit creation (this group)
+                </label>
+                <select
+                  className={styles.select}
+                  value={triStateValue(s.selfHabitCreationEnabled)}
+                  onChange={(e) =>
+                    update(g.id, {
+                      selfHabitCreationEnabled: triStateParse(e.target.value),
+                    })
+                  }
+                >
+                  <option value="inherit">Inherit study setting</option>
+                  <option value="on">On</option>
+                  <option value="off">Off</option>
+                </select>
+                <span className={styles.hint}>
+                  When off, this group cannot create their own habits.
+                </span>
+              </div>
+            </div>
             <div className={styles.cueConfigFooter}>
               {s.saved && <span className={styles.savedMsg}>Saved!</span>}
               <button
@@ -1391,7 +1915,7 @@ function CueConfigTab({
 
 // ── Study form modal ──────────────────────────────────────────────────────────
 
-type ModalTab = "details" | "questionnaires" | "codes" | "participants" | "notifications" | "cue-config";
+type ModalTab = "details" | "questionnaires" | "schedule" | "codes" | "participants" | "notifications" | "cue-config";
 
 function StudyModal({
   initial,
@@ -1416,6 +1940,18 @@ function StudyModal({
   );
   const [recommenderEnabled, setRecommenderEnabled] = useState(
     initial?.recommenderEnabled ?? true
+  );
+  const [onboardingEnabled, setOnboardingEnabled] = useState(
+    initial?.onboardingEnabled ?? true
+  );
+  const [selfHabitCreationEnabled, setSelfHabitCreationEnabled] = useState(
+    initial?.selfHabitCreationEnabled ?? true
+  );
+  const [remindersEnabled, setRemindersEnabled] = useState(
+    initial?.questionnaireReminders?.enabled ?? true
+  );
+  const [reminderHour, setReminderHour] = useState(
+    initial?.questionnaireReminders?.hour ?? 9
   );
   const [groupCount, setGroupCount] = useState(
     initial?.groups.length ?? 1
@@ -1451,21 +1987,36 @@ function StudyModal({
     setSaving(true);
     setError("");
     try {
-      const payload = {
-        name: name.trim(),
-        description: description.trim(),
-        recommenderEnabled,
-        groups: groupLabels.slice(0, groupCount).map((label) => ({ label })),
-      };
       if (isEdit) {
+        // updateStudySchema is strict: only name/description/recommenderEnabled
+        // are accepted. Groups are not editable via this endpoint.
         await apiFetch(`${API_BASE}/${initial!.id}`, token, {
           method: "PUT",
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            name: name.trim(),
+            description: description.trim(),
+            recommenderEnabled,
+            onboardingEnabled,
+            selfHabitCreationEnabled,
+            questionnaireReminders: { enabled: remindersEnabled, hour: reminderHour },
+          }),
         });
       } else {
+        // Group labels are required (min 1 char) on the server — fall back to
+        // "Group N" for any left blank so create doesn't 400.
+        const groups = groupLabels
+          .slice(0, groupCount)
+          .map((label, i) => ({ label: label.trim() || `Group ${i + 1}` }));
         await apiFetch(API_BASE, token, {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            name: name.trim(),
+            description: description.trim(),
+            recommenderEnabled,
+            onboardingEnabled,
+            selfHabitCreationEnabled,
+            groups,
+          }),
         });
       }
       onSaved();
@@ -1541,6 +2092,12 @@ function StudyModal({
               onClick={() => setActiveTab("questionnaires")}
             >
               Questionnaires
+            </button>
+            <button
+              className={`${styles.tab} ${activeTab === "schedule" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("schedule")}
+            >
+              Schedule
             </button>
             <button
               className={`${styles.tab} ${activeTab === "codes" ? styles.tabActive : ""}`}
@@ -1619,6 +2176,71 @@ function StudyModal({
                   </span>
                 </div>
 
+                <div className={`${styles.formGroup} ${styles.formFull}`}>
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={onboardingEnabled}
+                      onChange={(e) => setOnboardingEnabled(e.target.checked)}
+                    />
+                    Show habit-creation onboarding for this study
+                  </label>
+                  <span className={styles.hint}>
+                    When disabled, participants skip the first-time explainer
+                    screens (what a habit is, what cues are) when creating a
+                    habit. Can be overridden per group below.
+                  </span>
+                </div>
+
+                <div className={`${styles.formGroup} ${styles.formFull}`}>
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={selfHabitCreationEnabled}
+                      onChange={(e) =>
+                        setSelfHabitCreationEnabled(e.target.checked)
+                      }
+                    />
+                    Allow participants to create their own habits
+                  </label>
+                  <span className={styles.hint}>
+                    When disabled, participants in this study cannot create new
+                    habits themselves. Can be overridden per group below.
+                  </span>
+                </div>
+
+                <div className={`${styles.formGroup} ${styles.formFull}`}>
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={remindersEnabled}
+                      onChange={(e) => setRemindersEnabled(e.target.checked)}
+                    />
+                    Send questionnaire reminders
+                  </label>
+                  <span className={styles.hint}>
+                    When enabled, participants get a reminder notification on the
+                    day each questionnaire is due. Turn off to cancel reminders
+                    for this study (applied on the participant&apos;s next app open).
+                  </span>
+                  {remindersEnabled && (
+                    <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span className={styles.label} style={{ margin: 0 }}>Reminder time</span>
+                      <select
+                        className={styles.select}
+                        value={reminderHour}
+                        onChange={(e) => setReminderHour(parseInt(e.target.value, 10))}
+                      >
+                        {Array.from({ length: 24 }, (_, h) => (
+                          <option key={h} value={h}>
+                            {String(h).padStart(2, "0")}:00
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Number of groups</label>
                   <select
@@ -1664,6 +2286,8 @@ function StudyModal({
                 onSaved={onSaved}
               />
             )
+          ) : activeTab === "schedule" ? (
+            initial && <QuestionnaireScheduleTab study={initial} token={token} />
           ) : activeTab === "codes" ? (
             initial && <CodesTab study={initial} token={token} />
           ) : activeTab === "participants" ? (

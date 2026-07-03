@@ -125,12 +125,15 @@ test('POST /api/v1/onboard username is a UUID', async () => {
   );
 });
 
-test('POST /api/v1/onboard password is 64 hex characters (32 bytes)', async () => {
+test('POST /api/v1/onboard password is 32 hex characters (16 bytes)', async () => {
+  // Must be 16 bytes so the 24-word recovery phrase can fully encode it
+  // (12 words = 16 bytes). A longer password would be truncated by the phrase
+  // and account restore on a new device would fail.
   const res = await fetch(`${baseUrl}/api/v1/onboard`, { method: 'POST' });
   const body = await res.json();
   assert.match(
     body.password,
-    /^[0-9a-f]{64}$/,
-    'password should be 64 hex chars'
+    /^[0-9a-f]{32}$/,
+    'password should be 32 hex chars (16 bytes)'
   );
 });

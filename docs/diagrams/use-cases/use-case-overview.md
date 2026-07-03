@@ -27,7 +27,7 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 | UC-04 | Browse & explore habits | List donated habits with locale-aware `displayText`; graph & stats views | `GET /api/v1/habits?lang=` | Backend, Neo4j |
 | UC-05 | Manage profile | Read/write profile answers against admin-defined field definitions | `GET/PUT /api/v1/me/profile`, `GET /api/v1/profile-field-definitions` | MongoDB |
 | UC-06 | Complete questionnaire | Fetch assigned questionnaire, submit form response | `GET /api/v1/participant/questionnaires`, `POST /api/v1/questionnaire-responses` | MongoDB, Neo4j |
-| UC-07 | Request recommendations | RAG pipeline: extract habits + profile → hybrid retrieve → LLM generation, Redis-cached | `POST /api/v1/recommend` | API-service, LightRAG, Redis, MongoDB |
+| UC-07 | Request recommendations | Guarded goal input (injection screen + LLM refusal → 422) → 7-way parallel fetch → GDS re-rank → hybrid retrieve → single LLM call (goal-language output, suggested cues, paper citations with DOI links); Redis-cached; habit UUIDs logged server-side only | `POST /api/v1/recommend/generate` | API-service, LightRAG, Redis, MongoDB, Neo4j |
 | UC-08 | View recommendations & give feedback | List own recommendations; per-recommendation free-text feedback | `GET /api/v1/recommendations/me`, `POST /api/v1/recommendations/:id/feedback` | MongoDB |
 | UC-09 | Enroll in study | Redeem study code (assigns group) or skip into default study | `POST /api/v1/enroll/redeem-code`, `/enroll/skip-code` | MongoDB |
 | UC-10 | Retrieve habit config | Resolved cue config + randomly drawn pre-rated cues + SRHI items for the user's group | `GET /api/v1/me/habit-config` | MongoDB (studies, cue_pools, enrollments) |

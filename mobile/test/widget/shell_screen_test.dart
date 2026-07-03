@@ -110,20 +110,13 @@ void main() {
     expect(find.text('Account'), findsOneWidget);
   });
 
-  testWidgets('hides Admin tab for regular users', (tester) async {
-    final router = _buildTestRouter();
-    await tester.pumpWidget(_buildSubject(router, const []));
-    await tester.pump();
-
-    expect(find.text('Admin'), findsNothing);
-  });
-
-  testWidgets('shows Admin tab for admin users', (tester) async {
+  testWidgets('never shows an Admin tab (admin moved to web portal)',
+      (tester) async {
     final router = _buildTestRouter();
     await tester.pumpWidget(_buildSubject(router, ['admin']));
     await tester.pump();
 
-    expect(find.text('Admin'), findsOneWidget);
+    expect(find.text('Admin'), findsNothing);
   });
 
   testWidgets('shows Recs tab when recommender enabled', (tester) async {

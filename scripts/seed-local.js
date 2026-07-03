@@ -34,6 +34,16 @@ import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { randomUUID, randomBytes } from 'node:crypto';
+import {
+  recoveryPhraseFromCredentials,
+  recoveryPhrasesEnabled,
+} from '../app/utils/recoveryPhrase.js';
+import { generateTokenCard } from '../app/services/tokenCardService.js';
+import {
+  generateWindowsForUser,
+  markWindowSubmitted,
+} from '../app/services/questionnaireScheduleService.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -764,6 +774,463 @@ async function seedTestParticipant(db) {
   console.log('  ✓ seeded test-public (user node only, no study enrollment)');
 }
 
+// ── Second test study: 4 groups × 2 participants ───────────────────────────
+//
+// Produces a realistic "study under way" alongside the public/default study:
+// 8 Keycloak participants (2 per group) who each donated 3 habits, track a
+// personal habit with ~6 weeks of daily logs, and have weekly SRHI scores.
+
+const COHORT_DONATIONS = [
+  { s: 'I take the stairs instead of the lift at work.', ctx: 'When I arrive at the office', dim: 'TIME' },
+  { s: 'I go for a 20-minute walk after lunch.', ctx: 'After lunch on workdays', dim: 'TIME' },
+  { s: 'I stretch for five minutes when I wake up.', ctx: 'Right after waking up', dim: 'TIME' },
+  { s: 'I cycle to the shops instead of driving.', ctx: 'When I run errands', dim: 'PHYSICAL_SETTING' },
+  { s: 'I do ten squats while the kettle boils.', ctx: 'While the kettle boils', dim: 'PRECEDING_ACTION' },
+  { s: 'I walk the dog before breakfast.', ctx: 'Before breakfast', dim: 'TIME' },
+  { s: 'I get off the bus one stop early and walk.', ctx: 'On my commute home', dim: 'PHYSICAL_SETTING' },
+  { s: 'I do a short yoga flow before bed.', ctx: 'In the evening before bed', dim: 'TIME' },
+  { s: 'I go for a run with a friend on Saturdays.', ctx: 'On Saturday mornings', dim: 'SOCIAL_SETTING' },
+  { s: 'I do push-ups after my morning shower.', ctx: 'After my morning shower', dim: 'PRECEDING_ACTION' },
+  { s: 'I take a walking break every afternoon.', ctx: 'Every afternoon at work', dim: 'TIME' },
+  { s: 'I park at the far end of the car park.', ctx: 'When I go shopping', dim: 'PHYSICAL_SETTING' },
+  { s: 'I do calf raises while brushing my teeth.', ctx: 'While brushing my teeth', dim: 'PRECEDING_ACTION' },
+  { s: 'I go swimming on Wednesday evenings.', ctx: 'On Wednesday evenings', dim: 'TIME' },
+  { s: 'I do a plank hold before checking my phone in the morning.', ctx: 'Before checking my phone', dim: 'PRECEDING_ACTION' },
+  { s: 'I walk during phone calls.', ctx: 'When I take a phone call', dim: 'PRECEDING_ACTION' },
+  { s: 'I stretch my back every hour at my desk.', ctx: 'Every hour at my desk', dim: 'TIME' },
+  { s: 'I go for a family bike ride on Sundays.', ctx: 'On Sunday afternoons', dim: 'SOCIAL_SETTING' },
+  { s: 'I do a five-minute warm-up before dinner.', ctx: 'Before dinner', dim: 'TIME' },
+  { s: 'I take a lunchtime walk in the park.', ctx: 'At lunchtime in the park', dim: 'PHYSICAL_SETTING' },
+];
+
+const COHORT_BEHAVIORS = [
+  { key: 'walking', label: 'Walking' },
+  { key: 'light_jogging', label: 'Light jogging' },
+  { key: 'cycling', label: 'Cycling' },
+  { key: 'structured_calisthenics', label: 'Structured calisthenics' },
+  { key: 'yoga', label: 'Yoga' },
+];
+
+async function kcEnsureParticipantRole(authHeaders) {
+  let roleRes = await fetch(
+    `${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/roles/participant`,
+    { headers: authHeaders }
+  );
+  if (roleRes.status === 404) {
+    await fetch(`${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/roles`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ name: 'participant', description: 'Study participant' }),
+    });
+    roleRes = await fetch(
+      `${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/roles/participant`,
+      { headers: authHeaders }
+    );
+  }
+  if (!roleRes.ok) {
+    throw new Error(`Failed to fetch participant role: ${roleRes.status}`);
+  }
+  return roleRes.json();
+}
+
+/** Create (or find) a Keycloak user and return its id (the JWT `sub`). */
+async function kcEnsureUser(authHeaders, { username, password, group, role }) {
+  const q = `${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/users?username=${encodeURIComponent(username)}&exact=true`;
+  const searchRes = await fetch(q, { headers: authHeaders });
+  const existing = searchRes.ok ? await searchRes.json() : [];
+  let id = Array.isArray(existing) && existing.length > 0 ? existing[0].id : null;
+
+  if (!id) {
+    const createRes = await fetch(
+      `${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/users`,
+      {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          username,
+          enabled: true,
+          credentials: [{ type: 'password', value: password, temporary: false }],
+          attributes: { group: [group] },
+        }),
+      }
+    );
+    if (!createRes.ok && createRes.status !== 409) {
+      const t = await createRes.text();
+      throw new Error(`Failed to create ${username}: ${createRes.status} ${t}`);
+    }
+    const refetch = await fetch(q, { headers: authHeaders });
+    const users = await refetch.json();
+    id = users[0].id;
+  }
+
+  // Assign the participant realm role (idempotent).
+  const mapUrl = `${KEYCLOAK_URL}/admin/realms/${KEYCLOAK_REALM}/users/${id}/role-mappings/realm`;
+  const mappingsRes = await fetch(mapUrl, { headers: authHeaders });
+  const mappings = mappingsRes.ok ? await mappingsRes.json() : [];
+  const hasRole =
+    Array.isArray(mappings) && mappings.some((r) => r.name === role.name);
+  if (!hasRole) {
+    await fetch(mapUrl, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify([role]),
+    });
+  }
+  return id;
+}
+
+async function seedTestStudyCohort(db) {
+  console.log('\n[cohort] Seeding second test study (4 groups × 2 participants)...');
+  const { ObjectId } = appRequire('mongodb');
+  const studies = db.collection('studies');
+  const STUDY_NAME = 'Movement Habits Study (Test)';
+
+  const existingStudy = await studies.findOne({ name: STUDY_NAME });
+  if (existingStudy) {
+    console.log('[cohort] study already exists, skipping.');
+    return;
+  }
+
+  const sliq = await db.collection('questionnaires').findOne({ slug: 'sliq' });
+  const rand36 = await db.collection('questionnaires').findOne({ slug: 'rand-36' });
+  const qIds = [sliq?._id, rand36?._id].filter(Boolean);
+
+  const now = new Date();
+  const groups = [1, 2, 3, 4].map((i) => ({
+    id: new ObjectId(),
+    label: `Group ${i}`,
+    index: i,
+    cueConfig: null,
+    activityTypeConfig: null,
+    reminderConfig: { enabled: true, fixedTime: null },
+    autoDonate: false,
+    onboardingEnabled: null,
+    selfHabitCreationEnabled: null,
+  }));
+  const studyDoc = {
+    name: STUDY_NAME,
+    description:
+      'Simulated test study: 4 groups × 2 participants, each with donated habits, a tracked personal habit, daily logs and weekly SRHI.',
+    isDefault: false,
+    isActive: true,
+    recommenderEnabled: true,
+    onboardingEnabled: true,
+    selfHabitCreationEnabled: true,
+    groups,
+    questionnaires: qIds,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const { insertedId: studyOid } = await studies.insertOne(studyDoc);
+  const studyIdStr = studyOid.toString();
+  await neo4jQuery(`MERGE (s:Study {uuid: $uuid}) SET s.name = $name`, {
+    uuid: studyIdStr,
+    name: STUDY_NAME,
+  });
+  console.log(`[cohort]   study "${STUDY_NAME}" created (${studyIdStr})`);
+
+  const kcToken = await getKeycloakAdminToken();
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${kcToken}`,
+  };
+  const participantRole = await kcEnsureParticipantRole(authHeaders);
+
+  const enrolledAt = new Date(Date.now() - 49 * 24 * 60 * 60 * 1000); // ~7 weeks ago
+  let seed = 0;
+  const cohortUsers = [];
+
+  for (let g = 0; g < groups.length; g++) {
+    const group = groups[g];
+    const groupShort = `G${g + 1}`;
+    for (let u = 1; u <= 2; u++) {
+      seed++;
+      // Phrase-compatible credentials: a UUID username + 16-byte hex password
+      // (like the self-onboarding flow) so a real, restorable recovery phrase
+      // can be derived. 16 bytes is required — see onboardRouter.js.
+      const username = randomUUID();
+      const password = randomBytes(16).toString('hex');
+      const userId = await kcEnsureUser(authHeaders, {
+        username,
+        password,
+        group: groupShort,
+        role: participantRole,
+      });
+      // Token card is always generated; the recovery phrase is only stored
+      // when EXPOSE_RECOVERY_PHRASES=true (see app/utils/recoveryPhrase.js).
+      const recoveryPhrase = recoveryPhrasesEnabled()
+        ? recoveryPhraseFromCredentials(username, password)
+        : null;
+      const tokenCardPdf = await generateTokenCard(userId, username, password, 'both');
+
+      // Admin participants list (MongoDB `participants`) — with token card + phrase.
+      await db.collection('participants').updateOne(
+        { userId },
+        {
+          $setOnInsert: {
+            userId,
+            username,
+            group: groupShort,
+            enrolledAt,
+            surveyCompletionPct: 1,
+            source: 'seed',
+            label: `${groupShort} · User ${u}`,
+            recoveryPhrase,
+            tokenCardPdf,
+          },
+          $set: { lastActive: now },
+        },
+        { upsert: true }
+      );
+
+      // Study membership (MongoDB `enrollments`) — drives study participant counts.
+      await db.collection('enrollments').updateOne(
+        { userId },
+        {
+          $setOnInsert: {
+            userId,
+            studyId: studyOid,
+            groupId: group.id,
+            studyCodeUsed: null,
+            enrolledAt,
+          },
+          $set: { lastActiveAt: now },
+        },
+        { upsert: true }
+      );
+
+      // Graph enrollment (Neo4j).
+      await neo4jQuery(
+        `MERGE (usr:User {userID: $userId})
+         MERGE (st:Study {uuid: $studyId})
+         MERGE (usr)-[e:ENROLLED_IN]->(st)
+           ON CREATE SET e.enrolledAt = $enrolledAt, e.groupId = $groupId,
+                         e.studyCodeUsed = null, e.lastActiveAt = $lastActiveAt`,
+        {
+          userId,
+          studyId: studyIdStr,
+          groupId: group.id.toString(),
+          enrolledAt: enrolledAt.toISOString(),
+          lastActiveAt: now.toISOString(),
+        }
+      );
+
+      // Baseline questionnaire responses (so the participant reads as complete).
+      const responseAt = new Date(enrolledAt.getTime() + 2 * 86400000);
+      await db.collection('form_responses').updateOne(
+        { userId, questionnaireSlug: 'sliq' },
+        {
+          $setOnInsert: {
+            userId,
+            questionnaireSlug: 'sliq',
+            answers: Object.fromEntries(
+              ['sliq_diet', 'sliq_physical_activity', 'sliq_smoking', 'sliq_alcohol'].map(
+                (k, i) => [k, String((seed + i) % 4)]
+              )
+            ),
+            submittedAt: responseAt,
+          },
+        },
+        { upsert: true }
+      );
+      await db.collection('form_responses').updateOne(
+        { userId, questionnaireSlug: 'rand-36' },
+        {
+          $setOnInsert: {
+            userId,
+            questionnaireSlug: 'rand-36',
+            answers: Object.fromEntries(
+              Array.from({ length: 36 }, (_, i) => [`rand36_q${i + 1}`, String(((seed + i) % 5) + 1)])
+            ),
+            submittedAt: responseAt,
+          },
+        },
+        { upsert: true }
+      );
+
+      // ── Personal habit to track (implementation intention) ──────────────
+      const behavior = COHORT_BEHAVIORS[seed % COHORT_BEHAVIORS.length];
+      const cueText = 'After my morning coffee';
+      const intentionId = new ObjectId();
+      await db.collection('implementation_intentions').updateOne(
+        { userId, status: 'active' },
+        {
+          $setOnInsert: {
+            _id: intentionId,
+            userId,
+            enrollmentId: null,
+            groupId: group.id,
+            behaviorKey: behavior.key,
+            behaviorLabel: behavior.label,
+            durationMinutes: 20,
+            cues: [{ text: cueText, source: 'self_selected', cueId: null }],
+            intentionStatement: `${cueText}, I will ${behavior.label.toLowerCase()} for 20 minutes.`,
+            status: 'active',
+            createdAt: enrolledAt,
+            updatedAt: enrolledAt,
+          },
+          $set: { studyId: studyOid },
+        },
+        { upsert: true }
+      );
+      const intention = await db
+        .collection('implementation_intentions')
+        .findOne({ userId, status: 'active' });
+
+      // Daily logs — 42 days, ~75% enacted.
+      for (let d = 0; d < 42; d++) {
+        const enacted = Math.random() < 0.75;
+        const date = new Date(enrolledAt.getTime() + d * 86400000);
+        const dateStr = date.toISOString().split('T')[0];
+        await db.collection('daily_behavior_logs').updateOne(
+          { intentionId: intention._id, date: dateStr },
+          {
+            $setOnInsert: { intentionId: intention._id, userId, date: dateStr, enacted },
+            $set: { loggedAt: date },
+          },
+          { upsert: true }
+        );
+      }
+
+      // Weekly SRHI — 7 weeks, rising habit strength.
+      for (let w = 1; w <= 7; w++) {
+        const scheduledFor = new Date(enrolledAt.getTime() + (w - 1) * 7 * 86400000);
+        const score = fakeSrhiScore(w, seed);
+        const items = Object.fromEntries(
+          Array.from({ length: 12 }, (_, i) => [
+            `srhi_${i + 1}`,
+            Math.min(7, Math.max(1, Math.round(score + (Math.random() - 0.5)))),
+          ])
+        );
+        await db.collection('srhi_responses').updateOne(
+          { intentionId: intention._id, weekNumber: w },
+          {
+            $setOnInsert: {
+              intentionId: intention._id,
+              userId,
+              groupId: group.id,
+              weekNumber: w,
+              scheduledFor,
+              submittedAt: new Date(scheduledFor.getTime() + 86400000),
+              items,
+              score,
+              createdAt: scheduledFor,
+            },
+            $set: { studyId: studyOid },
+          },
+          { upsert: true }
+        );
+      }
+
+      // ── 3 donated habits (Neo4j) with DONATED / DONATED_IN + a Context ──
+      for (let hI = 0; hI < 3; hI++) {
+        const donation = COHORT_DONATIONS[(seed * 3 + hI) % COHORT_DONATIONS.length];
+        const habitUuid = `seed-study-${userId}-${hI}`;
+        const donatedAt = new Date(
+          enrolledAt.getTime() + (hI + 1) * 3 * 86400000
+        ).toISOString();
+        await neo4jQuery(
+          `MERGE (h:Habit {uuid: $uuid})
+             ON CREATE SET h.sentence = $sentence, h.language = 'en',
+               h.is_habit = true, h.habit_confidence = 0.9,
+               h.userID = $userId, h.studyId = $studyId, h.created_at = $donatedAt,
+               h.translationEN = $sentence, h.translationDE = null
+           MERGE (u:User {userID: $userId})
+           MERGE (u)-[d:DONATED]->(h) ON CREATE SET d.at = $donatedAt
+           MERGE (s:Study {uuid: $studyId})
+           MERGE (h)-[:DONATED_IN]->(s)
+           MERGE (c:Context {text: $ctx, dimension: $dim})
+           MERGE (h)-[:HAS_CONTEXT {dimension: $dim}]->(c)`,
+          {
+            uuid: habitUuid,
+            sentence: donation.s,
+            userId,
+            studyId: studyIdStr,
+            donatedAt,
+            ctx: donation.ctx,
+            dim: donation.dim,
+          }
+        );
+      }
+
+      cohortUsers.push({ userId, groupId: group.id });
+
+      console.log(
+        `[cohort]   ✓ ${groupShort} · User ${u} (${username}) — token card, recovery phrase, 3 donations, 1 tracked habit`
+      );
+    }
+  }
+
+  // ── Questionnaire assignments + scheduled windows + completion ──────────
+  // SLIQ at fixed study weeks (baseline, week 4, week 8); RAND-36 recurring
+  // every 14 days ×3. Both study-wide (all groups).
+  const assignmentDefs = [
+    sliq && {
+      questionnaireId: sliq._id,
+      questionnaireSlug: sliq.slug,
+      questionnaireTitle: sliq.title ?? sliq.slug,
+      cadence: { mode: 'fixed', weeks: [0, 4, 8] },
+    },
+    rand36 && {
+      questionnaireId: rand36._id,
+      questionnaireSlug: rand36.slug,
+      questionnaireTitle: rand36.title ?? rand36.slug,
+      cadence: { mode: 'interval', startOffsetDays: 0, intervalDays: 14, occurrences: 3 },
+    },
+  ].filter(Boolean);
+
+  for (const def of assignmentDefs) {
+    await db.collection('questionnaire_assignments').updateOne(
+      { studyId: studyOid, groupId: null, questionnaireId: def.questionnaireId },
+      {
+        $setOnInsert: {
+          studyId: studyOid,
+          groupId: null,
+          questionnaireId: def.questionnaireId,
+          questionnaireSlug: def.questionnaireSlug,
+          questionnaireTitle: def.questionnaireTitle,
+          cadence: def.cadence,
+          active: true,
+          createdAt: now,
+          updatedAt: now,
+        },
+      },
+      { upsert: true }
+    );
+  }
+
+  // Generate each participant's windows, then mark the baseline response for
+  // each questionnaire as completed (they already have SLIQ + RAND-36 responses).
+  for (const cu of cohortUsers) {
+    await generateWindowsForUser({
+      db,
+      userId: cu.userId,
+      studyId: studyOid,
+      groupId: cu.groupId,
+      enrolledAt,
+    });
+    for (const slug of ['sliq', 'rand-36']) {
+      const resp = await db
+        .collection('form_responses')
+        .findOne({ userId: cu.userId, questionnaireSlug: slug });
+      if (resp) {
+        await markWindowSubmitted({
+          db,
+          userId: cu.userId,
+          questionnaireSlug: slug,
+          responseId: resp._id,
+          submittedAt: resp.submittedAt ?? now,
+        });
+      }
+    }
+  }
+
+  console.log(
+    '[cohort] Done — 8 participants, 24 donated habits, 8 tracked habits, ' +
+      `${assignmentDefs.length} questionnaire assignments + scheduled windows.`
+  );
+}
+
 // ── Main ───────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -772,6 +1239,9 @@ async function main() {
     await seedMongo();
     await seedSurveys();
     await seedDefaultStudy();
+    // Neo4j must be seeded (and awaited via waitForNeo4j) before the test
+    // participants step, which issues neo4jQuery calls of its own.
+    await seedNeo4j();
     {
       const mongoUrl = `mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/?authSource=${MONGO_AUTH_SOURCE}`;
       const client = new MongoClient(mongoUrl, {
@@ -787,8 +1257,20 @@ async function main() {
         await client.close();
       }
     }
-    await seedNeo4j();
     await seedKeycloak();
+    {
+      const mongoUrl = `mongodb://${MONGO_USER}:${MONGO_PASSWORD}@${MONGO_HOST}:${MONGO_PORT}/?authSource=${MONGO_AUTH_SOURCE}`;
+      const client = new MongoClient(mongoUrl, {
+        serverSelectionTimeoutMS: 10000,
+        socketTimeoutMS: 10000,
+      });
+      try {
+        await client.connect();
+        await seedTestStudyCohort(client.db(MONGO_DB));
+      } finally {
+        await client.close();
+      }
+    }
     console.log('\n✓ All seed steps completed successfully.');
   } catch (err) {
     console.error('\n✗ Seed failed:', err.message);

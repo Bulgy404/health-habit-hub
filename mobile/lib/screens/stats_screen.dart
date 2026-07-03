@@ -77,13 +77,16 @@ class _StatsContent extends ConsumerWidget {
               _HabitCard(
                 habit: habit,
                 onShowInGraph: () {
-                  if (habit.dimensions.isEmpty) return;
-                  // Switch to Graph tab (index 0 inside ExploreScreen).
-                  DefaultTabController.of(context).animateTo(0);
+                  // ExploreScreen owns the TabController and listens to this
+                  // provider — it switches to the Graph tab and opens the
+                  // habit. (The Stats tab has no DefaultTabController ancestor,
+                  // so it must not drive the tabs itself.)
                   ref.read(showInGraphProvider.notifier).select(
                         HabitGraphSelection(
                           habitId: habit.id,
-                          dimensionId: habit.dimensions.first,
+                          dimensionId: habit.dimensions.isNotEmpty
+                              ? habit.dimensions.first
+                              : '',
                         ),
                       );
                 },
