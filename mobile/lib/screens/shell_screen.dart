@@ -22,12 +22,26 @@ final reconsentRequiredProvider = Provider<Future<bool> Function(String)>((
   return (locale) => isReconsentRequired(ref.read(dioProvider), locale);
 });
 
-/// Synchronizes adaptive habit reminders.
+/// Synchronizes adaptive habit reminders and study-questionnaire reminders.
 ///
-/// Exposed as a provider so startup side effects can be replaced in tests.
+/// Exposed as a single provider so all reminder-related startup side effects
+/// can be replaced with a no-op in widget tests (avoids real network + local
+/// notification platform-channel calls). Each sync is isolated so a failure in
+/// one does not prevent the other.
 final habitReminderSyncProvider = Provider<Future<void> Function()>((ref) {
-  return () =>
-      ReminderSchedulerService(dio: ref.read(dioProvider)).syncReminders();
+  return () async {
+    final service = ReminderSchedulerService(dio: ref.read(dioProvider));
+    try {
+      await service.syncReminders();
+    } catch (_) {
+      // Offline or no active intentions — retried on next start.
+    }
+    try {
+      await service.syncQuestionnaireReminders();
+    } catch (_) {
+      // Non-fatal: rescheduled on next app start.
+    }
+  };
 });
 
 /// The persistent bottom-navigation shell for the app.
@@ -91,20 +105,15 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     });
   }
 
-  /// UC-33: refresh the adaptive local habit reminders from the latest
-  /// backend plan (frequency fades as SRHI / adherence rise).
+  /// UC-33: refresh the adaptive local habit reminders from the latest backend
+  /// plan (frequency fades as SRHI / adherence rise) and reschedule upcoming
+  /// study-questionnaire reminders. Both run via [habitReminderSyncProvider] so
+  /// they can be stubbed out in tests.
   Future<void> _syncHabitReminders() async {
     try {
       await ref.read(habitReminderSyncProvider)();
     } catch (_) {
-      // Offline or no active intentions — retried on next start.
-    }
-    // Schedule reminders for upcoming study questionnaires.
-    try {
-      await ReminderSchedulerService(dio: ref.read(dioProvider))
-          .syncQuestionnaireReminders();
-    } catch (_) {
-      // Non-fatal: rescheduled on next app start.
+      // Offline / plugins unavailable — retried on next start.
     }
   }
 
