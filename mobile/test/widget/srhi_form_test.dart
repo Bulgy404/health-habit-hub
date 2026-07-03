@@ -64,13 +64,21 @@ void main() {
 
   testWidgets('Submit button enabled after all 12 sliders are moved',
       (tester) async {
+    // Use a tall surface so all 12 slider rows are laid out (the form scrolls),
+    // making each Slider reliably draggable.
+    tester.view.physicalSize = const Size(1000, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(_buildSubject(_twelveItems));
     await tester.pump();
 
-    // Drag all 12 sliders to move them off the initial 0 value.
+    // Drag each slider far enough to cross at least one of its 6 divisions so
+    // onChanged fires and the item is marked answered.
     final sliders = find.byType(Slider);
     for (int i = 0; i < 12; i++) {
-      await tester.drag(sliders.at(i), const Offset(20, 0));
+      await tester.drag(sliders.at(i), const Offset(300, 0));
       await tester.pump();
     }
 
