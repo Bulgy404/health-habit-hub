@@ -41,6 +41,11 @@ final habitReminderSyncProvider = Provider<Future<void> Function()>((ref) {
     } catch (_) {
       // Non-fatal: rescheduled on next app start.
     }
+    try {
+      await service.syncEndOfStudyNotification();
+    } catch (_) {
+      // Non-fatal: rescheduled on next app start.
+    }
   };
 });
 
@@ -209,7 +214,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     // Highlight the tab matching the current branch; fall back to the first tab
     // when the current branch is hidden (e.g. landed on /recommend then disabled).
     final currentBranch = widget.navigationShell.currentIndex;
-    final matchedIndex = visibleTabs.indexWhere((t) => t.branch == currentBranch);
+    final matchedIndex = visibleTabs.indexWhere(
+      (t) => t.branch == currentBranch,
+    );
     final currentVisibleIndex = matchedIndex >= 0 ? matchedIndex : 0;
 
     return Scaffold(
@@ -229,7 +236,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
             final branchIndex = visibleTabs[visibleIndex].branch;
             widget.navigationShell.goBranch(
               branchIndex,
-              initialLocation: branchIndex == widget.navigationShell.currentIndex,
+              initialLocation:
+                  branchIndex == widget.navigationShell.currentIndex,
             );
           },
           destinations: visibleTabs

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   FlaskConical,
   BarChart2,
@@ -17,55 +18,71 @@ import {
   Tablet,
   Gift,
   MessageSquare,
+  Lightbulb,
+  Server,
+  DatabaseBackup,
+  Globe,
   type LucideIcon,
 } from "lucide-react";
+import { locales, LOCALE_COOKIE, type Locale } from "@/lib/locale";
 import styles from "./sidebar.module.css";
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   Icon: LucideIcon;
   adminOnly?: boolean;
 }
 
 interface NavSection {
-  title: string;
+  titleKey: string;
   items: NavItem[];
 }
 
 const NAV_SECTIONS: NavSection[] = [
   {
-    title: "Public App",
+    titleKey: "publicApp",
+    items: [{ href: "/default-app", labelKey: "appSettings", Icon: Smartphone, adminOnly: true }],
+  },
+  {
+    titleKey: "research",
     items: [
-      { href: "/default-app", label: "App Settings", Icon: Smartphone, adminOnly: true },
+      { href: "/studies", labelKey: "studies", Icon: FlaskConical },
+      { href: "/analytics", labelKey: "analytics", Icon: BarChart2 },
+      { href: "/insights", labelKey: "insights", Icon: Lightbulb, adminOnly: true },
     ],
   },
   {
-    title: "Research",
+    titleKey: "operations",
     items: [
-      { href: "/studies", label: "Studies", Icon: FlaskConical },
-      { href: "/analytics", label: "Analytics", Icon: BarChart2 },
+      { href: "/participants", labelKey: "participants", Icon: Users, adminOnly: true },
+      { href: "/devices", labelKey: "devices", Icon: Tablet, adminOnly: true },
+      { href: "/donations", labelKey: "donations", Icon: Gift, adminOnly: true },
+      { href: "/comments", labelKey: "comments", Icon: MessageSquare, adminOnly: true },
     ],
   },
   {
-    title: "Operations",
+    titleKey: "configuration",
     items: [
-      { href: "/participants", label: "Participants", Icon: Users, adminOnly: true },
-      { href: "/devices", label: "Devices", Icon: Tablet, adminOnly: true },
-      { href: "/donations", label: "Habit Donations", Icon: Gift, adminOnly: true },
-      { href: "/comments", label: "Comments", Icon: MessageSquare, adminOnly: true },
+      { href: "/cue-pools", labelKey: "cuePools", Icon: Crosshair },
+      { href: "/questionnaires", labelKey: "questionnaires", Icon: ClipboardList },
+      { href: "/profile-fields", labelKey: "profileFields", Icon: UserCircle, adminOnly: true },
+      { href: "/knowledge-base", labelKey: "knowledgeBase", Icon: BookOpen, adminOnly: true },
     ],
   },
   {
-    title: "Configuration",
+    titleKey: "monitoring",
     items: [
-      { href: "/cue-pools", label: "Cue Pools", Icon: Crosshair },
-      { href: "/questionnaires", label: "Questionnaires", Icon: ClipboardList },
-      { href: "/profile-fields", label: "Profile Fields", Icon: UserCircle, adminOnly: true },
-      { href: "/knowledge-base", label: "Knowledge Base", Icon: BookOpen, adminOnly: true },
+      { href: "/system", labelKey: "system", Icon: Server, adminOnly: true },
+      { href: "/backups", labelKey: "backups", Icon: DatabaseBackup, adminOnly: true },
     ],
   },
 ];
+
+const LOCALE_LABELS: Record<Locale, string> = {
+  en: "English",
+  de: "Deutsch",
+};
 
 /**
  * Fixed-position navigation sidebar showing links to all admin sections.
@@ -75,15 +92,25 @@ const NAV_SECTIONS: NavSection[] = [
  */
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
+  const t = useTranslations("sidebar");
+  const locale = useLocale();
 
   const isAdmin = (session?.roles ?? []).includes("admin");
+
+  function handleLocaleChange(next: string) {
+    // A plain preference cookie, not security-sensitive — set client-side and
+    // refresh so the server-rendered tree picks it up (see src/i18n/request.ts).
+    document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; SameSite=Lax`;
+    router.refresh();
+  }
 
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
         <Activity size={20} strokeWidth={2} className={styles.brandIcon} />
-        <span className={styles.brandName}>HHH Portal</span>
+        <span className={styles.brandName}>{t("brand")}</span>
       </div>
 
       <nav className={styles.nav}>
@@ -91,8 +118,8 @@ export function Sidebar() {
           const visible = section.items.filter((item) => !item.adminOnly || isAdmin);
           if (visible.length === 0) return null;
           return (
-            <div key={section.title} className={styles.navSection}>
-              <div className={styles.navSectionTitle}>{section.title}</div>
+            <div key={section.titleKey} className={styles.navSection}>
+              <div className={styles.navSectionTitle}>{t(`sections.${section.titleKey}`)}</div>
               <ul className={styles.navList}>
                 {visible.map((item) => (
                   <li key={item.href}>
@@ -101,7 +128,7 @@ export function Sidebar() {
                       className={`${styles.navLink} ${pathname.startsWith(item.href) ? styles.navLinkActive : ""}`}
                     >
                       <item.Icon size={16} strokeWidth={1.75} />
-                      {item.label}
+                      {t(`nav.${item.labelKey}`)}
                     </Link>
                   </li>
                 ))}
@@ -112,9 +139,22 @@ export function Sidebar() {
       </nav>
 
       <div className={styles.footer}>
-        {session?.user?.email && (
-          <div className={styles.userEmail}>{session.user.email}</div>
-        )}
+        {session?.user?.email && <div className={styles.userEmail}>{session.user.email}</div>}
+        <div className={styles.langSwitcher}>
+          <Globe size={14} strokeWidth={1.75} />
+          <select
+            aria-label={t("language")}
+            value={locale}
+            onChange={(e) => handleLocaleChange(e.target.value)}
+            className={styles.langSelect}
+          >
+            {locales.map((l) => (
+              <option key={l} value={l}>
+                {LOCALE_LABELS[l]}
+              </option>
+            ))}
+          </select>
+        </div>
         <button
           onClick={() =>
             signOut({
@@ -124,7 +164,7 @@ export function Sidebar() {
           className={styles.signOutButton}
         >
           <LogOut size={14} strokeWidth={1.75} />
-          Sign out
+          {t("signOut")}
         </button>
       </div>
     </aside>

@@ -51,12 +51,17 @@ services:
       - NEO4J_USER=${NEO4J_USER:-neo4j}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD}
       - API_SERVICE_SECRET=${API_SERVICE_SECRET}
+      # Internal-only client for the admin Backups page — see backup-service/api/.
+      - BACKUP_API_URL=http://backup:4100
+      - BACKUP_API_SECRET=${BACKUP_API_SECRET}
+      - BACKUP_UPLOAD_MAX_MB=${BACKUP_UPLOAD_MAX_MB:-2048}
     networks:
       - hhh-proxy
     depends_on:
       - mongo
       - neo4j
       - redis
+      - backup
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
       interval: 30s
@@ -418,6 +423,11 @@ services:
       - MAIL_USER=${MAIL_USER:-}
       - MAIL_PASS=${MAIL_PASS:-}
       - MAIL_FROM=${MAIL_FROM:-}
+      # Internal-only HTTP API used by the admin panel's Backups page
+      # (status/trigger/restore/upload) — never published to the host, only
+      # reachable from other containers on hhh-proxy.
+      - BACKUP_API_SECRET=${BACKUP_API_SECRET}
+      - BACKUP_UPLOAD_MAX_MB=${BACKUP_UPLOAD_MAX_MB:-2048}
     volumes:
       - ./backups:/backups
       - ./backup-service/rclone:/config/rclone:ro
@@ -429,7 +439,17 @@ services:
       - mongo
       - neo4j
       - lightrag
-    command: /bin/bash -c "echo 'Waiting 2 minutes for services to stabilize...'; sleep 120; while true; do /backup.sh; sleep 86400; done"
+    # Also starts the internal backup-api HTTP server (see backup-service/api/)
+    # used by the admin panel. The schedule itself is a sleep loop, not real
+    # cron — see docs/runbook.md — so "next backup" drifts by up to a few
+    # minutes on every restart of this container.
+    command: /bin/bash -c "node /backup-api/server.js & echo 'Waiting 2 minutes for services to stabilize...'; sleep 120; while true; do BACKUP_TRIGGER=scheduled /backup.sh; sleep 86400; done"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
 
 networks:
   hhh-proxy:

@@ -6,12 +6,14 @@ import {
   getStudy,
   updateStudy,
   softDeleteStudy,
+  deleteStudy,
   setDefaultStudy,
   listStudyParticipants,
   updateGroupCueConfig,
   updateGroupConfig,
   updateAllocationWeights,
 } from '../../services/studyService.js';
+import { exportStudyData } from '../../services/studyExportService.js';
 import {
   createCodes,
   listCodes,
@@ -23,6 +25,10 @@ import {
   getMeanSrhiTrajectory,
   getDropoutCurve,
   getQuestionnaireCompletionRates,
+  getEnrollmentTrend,
+  getDailyActive,
+  getHabitsByGroup,
+  getEngagementSummary,
 } from '../../services/studyAnalyticsService.js';
 import {
   listAssignments,
@@ -84,6 +90,8 @@ export function createStudiesRouter({
         recommenderEnabled,
         onboardingEnabled,
         selfHabitCreationEnabled,
+        endDate,
+        endOfStudyNotification,
       } = req.body;
       const database = await getDb();
       const study = await createStudy({
@@ -95,6 +103,8 @@ export function createStudiesRouter({
         recommenderEnabled,
         onboardingEnabled,
         selfHabitCreationEnabled,
+        endDate,
+        endOfStudyNotification,
         neo4jRun,
       });
       res.status(201).json({
@@ -106,6 +116,8 @@ export function createStudiesRouter({
         recommenderEnabled: study.recommenderEnabled !== false,
         onboardingEnabled: study.onboardingEnabled !== false,
         selfHabitCreationEnabled: study.selfHabitCreationEnabled !== false,
+        endDate: study.endDate ?? null,
+        endOfStudyNotification: study.endOfStudyNotification,
         groups: study.groups,
         questionnaires: (study.questionnaires || []).map((id) => id.toString()),
         createdAt: study.createdAt,
@@ -246,6 +258,141 @@ export function createStudiesRouter({
         return res
           .status(409)
           .json({ error: 'Study has enrolled participants' });
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * @swagger
+   * /admin/studies/{id}/export:
+   *   get:
+   *     summary: Download all data for a study
+   *     description: Returns a JSON snapshot of the study, its enrollments, participants, questionnaire assignments/windows, and all participant-scoped data (responses, logs, SRHI, donations, comments). Token-card binaries are omitted and recovery phrases are redacted unless EXPOSE_RECOVERY_PHRASES is enabled.
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: string }
+   *         description: Study id
+   *     responses:
+   *       200:
+   *         description: JSON export bundle (attachment)
+   *         content:
+   *           application/json:
+   *             schema: { type: object }
+   *       404:
+   *         description: Study not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  // GET /api/v1/admin/studies/:id/export — downloadable JSON of all study data
+  router.get('/studies/:id/export', async (req, res) => {
+    try {
+      const database = await getDb();
+      const bundle = await exportStudyData({ db: database, id: req.params.id });
+      if (!bundle) return res.status(404).json({ error: 'Study not found' });
+      const safeName = String(bundle.study.name || 'study')
+        .replace(/[^a-z0-9]+/gi, '-')
+        .replace(/^-+|-+$/g, '')
+        .toLowerCase()
+        .slice(0, 60);
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.set({
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Disposition': `attachment; filename="study-${safeName || 'export'}-${stamp}.json"`,
+      });
+      res.send(JSON.stringify(bundle, null, 2));
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * @swagger
+   * /admin/studies/{id}/delete:
+   *   post:
+   *     summary: Delete a study from the admin UI (soft-delete)
+   *     description: Hides the study from the studies list while retaining all of its data in the backend. Requires the exact study name as confirmation. The default study cannot be deleted.
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: string }
+   *         description: Study id
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [confirmName]
+   *             properties:
+   *               confirmName:
+   *                 type: string
+   *                 description: Must exactly match the study's name
+   *     responses:
+   *       200:
+   *         description: Study hidden from the list
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 ok: { type: boolean, example: true }
+   *       400:
+   *         description: Name confirmation did not match
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: Study not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       409:
+   *         description: Cannot delete the default study
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  // POST /api/v1/admin/studies/:id/delete — soft-delete (hide from UI, keep
+  // data). Requires the exact study name in the body as a confirmation.
+  router.post('/studies/:id/delete', async (req, res) => {
+    try {
+      const database = await getDb();
+      const result = await deleteStudy({
+        db: database,
+        id: req.params.id,
+        confirmName: req.body?.confirmName,
+      });
+      if (result.notFound)
+        return res.status(404).json({ error: 'Study not found' });
+      if (result.isDefault) {
+        return res.status(409).json({
+          error:
+            'Cannot delete the default study. Set another study as default first.',
+        });
+      }
+      if (result.nameMismatch) {
+        return res.status(400).json({
+          error: 'Study name confirmation does not match.',
+        });
       }
       res.json({ ok: true });
     } catch (err) {
@@ -493,11 +640,23 @@ export function createStudiesRouter({
         srhiTrajectory,
         dropoutCurve,
         questionnaireCompletionRates,
+        enrollmentTrend,
+        dailyActive,
+        habitsByGroup,
+        engagement,
       ] = await Promise.all([
         getWeeklyActiveRate({ db: database, studyId: req.params.id, neo4jRun }),
         getMeanSrhiTrajectory({ db: database, studyId: req.params.id }),
         getDropoutCurve({ db: database, studyId: req.params.id, neo4jRun }),
         getQuestionnaireCompletionRates({
+          db: database,
+          studyId: req.params.id,
+          neo4jRun,
+        }),
+        getEnrollmentTrend({ studyId: req.params.id, neo4jRun }),
+        getDailyActive({ db: database, studyId: req.params.id, neo4jRun }),
+        getHabitsByGroup({ studyId: req.params.id, neo4jRun }),
+        getEngagementSummary({
           db: database,
           studyId: req.params.id,
           neo4jRun,
@@ -508,6 +667,10 @@ export function createStudiesRouter({
         srhiTrajectory,
         dropoutCurve,
         questionnaireCompletionRates,
+        enrollmentTrend,
+        dailyActive,
+        habitsByGroup,
+        engagement,
       });
     } catch (err) {
       log.error({ err: err }, '[studies] error');

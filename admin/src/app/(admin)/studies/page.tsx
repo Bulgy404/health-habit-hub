@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useTranslations } from "next-intl";
 import styles from "./page.module.css";
 
 import { useStudiesData } from "./useStudiesData";
@@ -41,6 +42,8 @@ interface StudySummary {
   onboardingEnabled: boolean;
   selfHabitCreationEnabled: boolean;
   questionnaireReminders?: { enabled: boolean; hour: number };
+  endDate?: string | null;
+  endOfStudyNotification?: { enabled: boolean; title: string; body: string };
   groups: StudyGroup[];
   questionnaires: string[];
   participantCount: number;
@@ -126,10 +129,10 @@ function QuestionnairesTab({
   token: string;
   onSaved: () => void;
 }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
   const [allQuestionnaires, setAllQuestionnaires] = useState<QuestionnaireSummary[]>([]);
-  const [selected, setSelected] = useState<Set<string>>(
-    new Set(study.questionnaires ?? [])
-  );
+  const [selected, setSelected] = useState<Set<string>>(new Set(study.questionnaires ?? []));
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -143,20 +146,22 @@ function QuestionnairesTab({
     apiFetch(QUESTIONNAIRES_API, token)
       .then((data) => {
         if (!cancelled) {
-          setAllQuestionnaires(
-            Array.isArray(data) ? (data as QuestionnaireSummary[]) : []
-          );
+          setAllQuestionnaires(Array.isArray(data) ? (data as QuestionnaireSummary[]) : []);
         }
       })
       .catch((err) => {
         if (!cancelled)
-          setLoadError(err instanceof Error ? err.message : "Failed to load questionnaires");
+          setLoadError(
+            err instanceof Error ? err.message : t("questionnairesTab.errors.loadFailed")
+          );
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
-  }, [token]);
+    return () => {
+      cancelled = true;
+    };
+  }, [token, t]);
 
   function toggleId(id: string) {
     setSelected((prev) => {
@@ -180,7 +185,7 @@ function QuestionnairesTab({
       setSaved(true);
       onSaved();
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Save failed");
+      setSaveError(err instanceof Error ? err.message : t("saveFailedGeneric"));
     } finally {
       setSaving(false);
     }
@@ -193,16 +198,14 @@ function QuestionnairesTab({
     <div className={styles.questionnairesTab}>
       {loadError && <div className={styles.errorMsg}>{loadError}</div>}
       {loading ? (
-        <div className={styles.loadingState}>Loading…</div>
+        <div className={styles.loadingState}>{tc("loading")}</div>
       ) : allQuestionnaires.length === 0 ? (
-        <div className={styles.emptyState}>
-          No questionnaires available. Create some in the Questionnaires section.
-        </div>
+        <div className={styles.emptyState}>{t("questionnairesTab.empty")}</div>
       ) : (
         <>
           {library.length > 0 && (
             <div className={styles.qSection}>
-              <p className={styles.qSectionTitle}>Library questionnaires</p>
+              <p className={styles.qSectionTitle}>{t("questionnairesTab.libraryTitle")}</p>
               <div className={styles.qList}>
                 {library.map((q) => (
                   <label key={q.id} className={styles.qItem}>
@@ -214,7 +217,9 @@ function QuestionnairesTab({
                     />
                     <span className={styles.qTitle}>{q.title}</span>
                     {!q.active && (
-                      <span className={styles.qInactive}>inactive</span>
+                      <span className={styles.qInactive}>
+                        {t("questionnairesTab.inactiveBadge")}
+                      </span>
                     )}
                   </label>
                 ))}
@@ -223,7 +228,7 @@ function QuestionnairesTab({
           )}
           {custom.length > 0 && (
             <div className={styles.qSection}>
-              <p className={styles.qSectionTitle}>Custom questionnaires</p>
+              <p className={styles.qSectionTitle}>{t("questionnairesTab.customTitle")}</p>
               <div className={styles.qList}>
                 {custom.map((q) => (
                   <label key={q.id} className={styles.qItem}>
@@ -235,7 +240,9 @@ function QuestionnairesTab({
                     />
                     <span className={styles.qTitle}>{q.title}</span>
                     {!q.active && (
-                      <span className={styles.qInactive}>inactive</span>
+                      <span className={styles.qInactive}>
+                        {t("questionnairesTab.inactiveBadge")}
+                      </span>
                     )}
                   </label>
                 ))}
@@ -244,15 +251,9 @@ function QuestionnairesTab({
           )}
           {saveError && <div className={styles.errorMsg}>{saveError}</div>}
           <div className={styles.qFooter}>
-            {saved && (
-              <span className={styles.savedMsg}>Saved!</span>
-            )}
-            <button
-              className={styles.saveBtn}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "Saving…" : "Save"}
+            {saved && <span className={styles.savedMsg}>{t("saved")}</span>}
+            <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+              {saving ? tc("saving") : tc("save")}
             </button>
           </div>
         </>
@@ -293,7 +294,12 @@ interface Completion {
 
 interface CalendarEntry {
   date: string; // YYYY-MM-DD
-  items: { questionnaireSlug: string; total: number; completed: number }[];
+  items: {
+    questionnaireSlug: string;
+    total: number;
+    completed: number;
+    projected?: boolean;
+  }[];
 }
 
 /**
@@ -302,13 +308,9 @@ interface CalendarEntry {
  * participants. Scheduled "windows" are generated per participant; completion
  * is tracked as they submit responses.
  */
-function QuestionnaireScheduleTab({
-  study,
-  token,
-}: {
-  study: StudySummary;
-  token: string;
-}) {
+function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token: string }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
   const [assignments, setAssignments] = useState<ScheduleAssignment[]>([]);
   const [completion, setCompletion] = useState<Completion[]>([]);
   const [calendar, setCalendar] = useState<CalendarEntry[]>([]);
@@ -326,8 +328,25 @@ function QuestionnaireScheduleTab({
   const [occurrences, setOccurrences] = useState(8);
   const [weeksStr, setWeeksStr] = useState("0, 4, 8");
   const [daysStr, setDaysStr] = useState("");
+  const addFormRef = useRef<HTMLDivElement | null>(null);
 
   const base = `${API_BASE}/${study.id}/questionnaire-assignments`;
+
+  // Clicking a calendar day pre-fills the "Add assignment" form with an
+  // interval cadence starting on that day (relative to today, since windows
+  // are always scheduled relative to a participant's enrollment date).
+  function handleDayClick(dateStr: string) {
+    const clicked = new Date(`${dateStr}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.max(
+      0,
+      Math.round((clicked.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
+    );
+    setMode("interval");
+    setStartOffsetDays(diffDays);
+    addFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -335,7 +354,9 @@ function QuestionnaireScheduleTab({
       const [data, qs, cal] = await Promise.all([
         apiFetch(base, token),
         apiFetch(QUESTIONNAIRES_API, token),
-        apiFetch(`${API_BASE}/${study.id}/questionnaire-calendar`, token).catch(() => ({ calendar: [] })),
+        apiFetch(`${API_BASE}/${study.id}/questionnaire-calendar`, token).catch(() => ({
+          calendar: [],
+        })),
       ]);
       setAssignments((data.assignments ?? []) as ScheduleAssignment[]);
       setCompletion((data.completion ?? []) as Completion[]);
@@ -343,30 +364,33 @@ function QuestionnaireScheduleTab({
       setAllQ(Array.isArray(qs) ? (qs as QuestionnaireSummary[]) : []);
       setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load schedule");
+      setError(e instanceof Error ? e.message : t("scheduleTab.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [base, token]);
+  }, [base, token, t]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   function scopeLabel(groupId: string | null): string {
-    if (!groupId) return "Study-wide";
+    if (!groupId) return t("scheduleTab.studyWide");
     const g = study.groups.find((gr) => gr.id === groupId);
-    return g ? g.label || `Group ${g.index}` : "Group";
+    return g ? g.label || t("groupFallbackLabel", { index: g.index }) : t("unknownGroupFallback");
   }
 
   function completionFor(slug: string): string {
     const c = completion.find((x) => x.questionnaireSlug === slug);
-    return c ? `${c.completed} / ${c.total}` : "0 / 0";
+    return t("scheduleTab.completionFraction", {
+      completed: c?.completed ?? 0,
+      total: c?.total ?? 0,
+    });
   }
 
   async function handleAdd() {
     if (!qId) {
-      setError("Choose a questionnaire first.");
+      setError(t("scheduleTab.errors.chooseQuestionnaire"));
       return;
     }
     setSaving(true);
@@ -398,28 +422,23 @@ function QuestionnaireScheduleTab({
       setQId("");
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add assignment");
+      setError(e instanceof Error ? e.message : t("scheduleTab.errors.addFailed"));
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (
-      !confirm(
-        "Remove this assignment? Scheduled entries not yet answered are removed too."
-      )
-    )
-      return;
+    if (!confirm(t("scheduleTab.confirmRemove"))) return;
     try {
       await apiFetch(`${base}/${id}`, token, { method: "DELETE" });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete assignment");
+      setError(e instanceof Error ? e.message : t("scheduleTab.errors.deleteFailed"));
     }
   }
 
-  if (loading) return <div className={styles.loadingState}>Loading…</div>;
+  if (loading) return <div className={styles.loadingState}>{tc("loading")}</div>;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
@@ -427,19 +446,17 @@ function QuestionnaireScheduleTab({
 
       {/* Current assignments */}
       <div>
-        <p className={styles.qSectionTitle}>Assigned questionnaires</p>
+        <p className={styles.qSectionTitle}>{t("scheduleTab.assignedTitle")}</p>
         {assignments.length === 0 ? (
-          <p className={styles.hint}>
-            No questionnaires scheduled yet. Add one below.
-          </p>
+          <p className={styles.hint}>{t("scheduleTab.noneAssigned")}</p>
         ) : (
           <table className={styles.table} style={{ width: "100%" }}>
             <thead>
               <tr>
-                <th style={cellHead}>Questionnaire</th>
-                <th style={cellHead}>Scope</th>
-                <th style={cellHead}>Cadence</th>
-                <th style={cellHead}>Completed</th>
+                <th style={cellHead}>{t("scheduleTab.questionnaireHeader")}</th>
+                <th style={cellHead}>{t("scheduleTab.scopeHeader")}</th>
+                <th style={cellHead}>{t("scheduleTab.cadenceHeader")}</th>
+                <th style={cellHead}>{t("scheduleTab.completedHeader")}</th>
                 <th style={cellHead}></th>
               </tr>
             </thead>
@@ -449,8 +466,7 @@ function QuestionnaireScheduleTab({
                   <td style={cell}>{a.questionnaireTitle}</td>
                   <td style={cell}>{scopeLabel(a.groupId)}</td>
                   <td style={cell}>
-                    {a.cadenceSummary}{" "}
-                    <span className={styles.hint}>({a.occurrences}×)</span>
+                    {a.cadenceSummary} <span className={styles.hint}>({a.occurrences}×)</span>
                   </td>
                   <td style={cell}>{completionFor(a.questionnaireSlug)}</td>
                   <td style={cell}>
@@ -459,7 +475,7 @@ function QuestionnaireScheduleTab({
                       style={{ background: "transparent", color: "#dc2626" }}
                       onClick={() => handleDelete(a.id)}
                     >
-                      Remove
+                      {t("scheduleTab.remove")}
                     </button>
                   </td>
                 </tr>
@@ -470,17 +486,13 @@ function QuestionnaireScheduleTab({
       </div>
 
       {/* Add assignment */}
-      <div className={styles.cueConfigGroup}>
-        <p className={styles.cueConfigGroupLabel}>Add a questionnaire</p>
+      <div className={styles.cueConfigGroup} ref={addFormRef}>
+        <p className={styles.cueConfigGroupLabel}>{t("scheduleTab.addTitle")}</p>
         <div className={styles.formGrid}>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Questionnaire</label>
-            <select
-              className={styles.select}
-              value={qId}
-              onChange={(e) => setQId(e.target.value)}
-            >
-              <option value="">Select…</option>
+            <label className={styles.label}>{t("scheduleTab.questionnaireHeader")}</label>
+            <select className={styles.select} value={qId} onChange={(e) => setQId(e.target.value)}>
+              <option value="">{t("scheduleTab.selectPlaceholder")}</option>
               {allQ.map((q) => (
                 <option key={q.id} value={q.id}>
                   {q.title}
@@ -489,33 +501,32 @@ function QuestionnaireScheduleTab({
             </select>
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Applies to</label>
+            <label className={styles.label}>{t("scheduleTab.appliesToLabel")}</label>
             <select
               className={styles.select}
               value={scope}
               onChange={(e) => setScope(e.target.value)}
             >
-              <option value="study">Whole study (all groups)</option>
+              <option value="study">{t("scheduleTab.wholeStudyOption")}</option>
               {study.groups.map((g) => (
                 <option key={g.id} value={g.id}>
-                  {g.label || `Group ${g.index}`} only
+                  {t("scheduleTab.groupOnlyOption", {
+                    label: g.label || t("groupFallbackLabel", { index: g.index }),
+                  })}
                 </option>
               ))}
             </select>
-            <span className={styles.hint}>
-              A group assignment overrides the study-wide one for that
-              questionnaire.
-            </span>
+            <span className={styles.hint}>{t("scheduleTab.appliesToHint")}</span>
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Cadence</label>
+            <label className={styles.label}>{t("scheduleTab.cadenceHeader")}</label>
             <select
               className={styles.select}
               value={mode}
               onChange={(e) => setMode(e.target.value as "interval" | "fixed")}
             >
-              <option value="interval">Recurring interval</option>
-              <option value="fixed">Fixed study weeks</option>
+              <option value="interval">{t("scheduleTab.intervalOption")}</option>
+              <option value="fixed">{t("scheduleTab.fixedOption")}</option>
             </select>
           </div>
         </div>
@@ -523,7 +534,7 @@ function QuestionnaireScheduleTab({
         {mode === "interval" ? (
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
-              <label className={styles.label}>First due (days after enrol)</label>
+              <label className={styles.label}>{t("scheduleTab.firstDueLabel")}</label>
               <input
                 className={styles.select}
                 type="number"
@@ -533,7 +544,7 @@ function QuestionnaireScheduleTab({
               />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Every (days)</label>
+              <label className={styles.label}>{t("scheduleTab.everyDaysLabel")}</label>
               <input
                 className={styles.select}
                 type="number"
@@ -543,7 +554,7 @@ function QuestionnaireScheduleTab({
               />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Occurrences</label>
+              <label className={styles.label}>{t("scheduleTab.occurrencesLabel")}</label>
               <input
                 className={styles.select}
                 type="number"
@@ -556,54 +567,62 @@ function QuestionnaireScheduleTab({
         ) : (
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Study weeks (comma-separated)</label>
+              <label className={styles.label}>{t("scheduleTab.weeksLabel")}</label>
               <input
                 className={styles.select}
                 value={weeksStr}
                 onChange={(e) => setWeeksStr(e.target.value)}
-                placeholder="e.g. 0, 4, 8"
+                placeholder={t("scheduleTab.weeksPlaceholder")}
               />
-              <span className={styles.hint}>
-                Week 0 = at enrollment (baseline). Each week is a due date.
-              </span>
+              <span className={styles.hint}>{t("scheduleTab.weeksHint")}</span>
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Days (exact, comma-separated)</label>
+              <label className={styles.label}>{t("scheduleTab.daysLabel")}</label>
               <input
                 className={styles.select}
                 value={daysStr}
                 onChange={(e) => setDaysStr(e.target.value)}
-                placeholder="e.g. 1, 3, 10"
+                placeholder={t("scheduleTab.daysPlaceholder")}
               />
-              <span className={styles.hint}>
-                Exact days after enrollment. Combined with any weeks above.
-              </span>
+              <span className={styles.hint}>{t("scheduleTab.daysHint")}</span>
             </div>
           </div>
         )}
 
         <div className={styles.cueConfigFooter}>
-          <button
-            className={styles.saveBtn}
-            onClick={handleAdd}
-            disabled={saving}
-          >
-            {saving ? "Adding…" : "Add assignment"}
+          <button className={styles.saveBtn} onClick={handleAdd} disabled={saving}>
+            {saving ? t("addingEllipsis") : t("scheduleTab.addAssignment")}
           </button>
         </div>
       </div>
 
       {/* Calendar of scheduled questionnaire due dates */}
       <div>
-        <p className={styles.qSectionTitle}>Schedule calendar</p>
-        <ScheduleCalendar entries={calendar} />
+        <p className={styles.qSectionTitle}>{t("scheduleTab.calendarTitle")}</p>
+        <p className={styles.hint} style={{ marginTop: "-0.25rem", marginBottom: "0.5rem" }}>
+          {t("scheduleTab.calendarHint")}
+        </p>
+        <ScheduleCalendar
+          entries={calendar}
+          endDate={study.endDate ?? null}
+          onDayClick={handleDayClick}
+        />
       </div>
     </div>
   );
 }
 
 /** Month-grid calendar highlighting days with scheduled questionnaires. */
-function ScheduleCalendar({ entries }: { entries: CalendarEntry[] }) {
+function ScheduleCalendar({
+  entries,
+  endDate,
+  onDayClick,
+}: {
+  entries: CalendarEntry[];
+  endDate?: string | null;
+  onDayClick?: (dateStr: string) => void;
+}) {
+  const t = useTranslations("studies");
   const byDate = new Map(entries.map((e) => [e.date, e.items]));
   // Start the view on the month of the earliest scheduled date, else today.
   const firstDate = entries
@@ -626,52 +645,151 @@ function ScheduleCalendar({ entries }: { entries: CalendarEntry[] }) {
   while (cells.length % 7 !== 0) cells.push(null);
 
   const pad = (n: number) => String(n).padStart(2, "0");
-  const todayStr = `${new Date().getFullYear()}-${pad(new Date().getMonth() + 1)}-${pad(new Date().getDate())}`;
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const endDateStr = endDate ? endDate.slice(0, 10) : null;
+
+  function goToToday() {
+    const todayDate = new Date();
+    setView(new Date(todayDate.getFullYear(), todayDate.getMonth(), 1));
+  }
 
   return (
     <div style={{ maxWidth: 560 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-        <button className={styles.saveBtn} style={{ background: "transparent", color: "var(--color-text)" }} onClick={() => setView(new Date(year, month - 1, 1))}>‹</button>
-        <strong>{monthLabel}</strong>
-        <button className={styles.saveBtn} style={{ background: "transparent", color: "var(--color-text)" }} onClick={() => setView(new Date(year, month + 1, 1))}>›</button>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "0.5rem",
+        }}
+      >
+        <button
+          className={styles.saveBtn}
+          style={{ background: "transparent", color: "var(--color-text)" }}
+          onClick={() => setView(new Date(year, month - 1, 1))}
+        >
+          ‹
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          <strong>{monthLabel}</strong>
+          <button
+            className={styles.saveBtn}
+            style={{ background: "transparent", color: "var(--color-primary)", padding: "2px 8px" }}
+            onClick={goToToday}
+          >
+            {t("scheduleTab.calendar.today")}
+          </button>
+        </div>
+        <button
+          className={styles.saveBtn}
+          style={{ background: "transparent", color: "var(--color-text)" }}
+          onClick={() => setView(new Date(year, month + 1, 1))}
+        >
+          ›
+        </button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
-        {["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d) => (
-          <div key={d} style={{ textAlign: "center", fontSize: "0.7rem", color: "var(--color-text-muted)", fontWeight: 600 }}>{d}</div>
+        {[
+          t("scheduleTab.calendar.weekdayMon"),
+          t("scheduleTab.calendar.weekdayTue"),
+          t("scheduleTab.calendar.weekdayWed"),
+          t("scheduleTab.calendar.weekdayThu"),
+          t("scheduleTab.calendar.weekdayFri"),
+          t("scheduleTab.calendar.weekdaySat"),
+          t("scheduleTab.calendar.weekdaySun"),
+        ].map((d) => (
+          <div
+            key={d}
+            style={{
+              textAlign: "center",
+              fontSize: "0.7rem",
+              color: "var(--color-text-muted)",
+              fontWeight: 600,
+            }}
+          >
+            {d}
+          </div>
         ))}
         {cells.map((day, i) => {
           if (day === null) return <div key={i} />;
           const dateStr = `${year}-${pad(month + 1)}-${pad(day)}`;
           const items = byDate.get(dateStr);
           const isToday = dateStr === todayStr;
+          const isEndDate = endDateStr !== null && dateStr === endDateStr;
+          const isPastEnd = endDateStr !== null && dateStr > endDateStr;
+          const isPast = dateStr < todayStr;
+          const clickable = !!onDayClick && !isPastEnd;
+          const allProjected = !!items && items.every((it) => it.projected);
           const label = items
-            ? items.map((it) => `${it.questionnaireSlug} ${it.completed}/${it.total}`).join("\n")
+            ? items
+                .map(
+                  (it) =>
+                    t("scheduleTab.calendar.dayTooltipItem", {
+                      slug: it.questionnaireSlug,
+                      completed: it.completed,
+                      total: it.total,
+                    }) + (it.projected ? t("scheduleTab.calendar.previewSuffix") : "")
+                )
+                .join("\n")
             : undefined;
           return (
             <div
               key={i}
               title={label}
+              onClick={clickable ? () => onDayClick?.(dateStr) : undefined}
               style={{
                 minHeight: 46,
-                border: "1px solid var(--color-border)",
+                border: isEndDate ? "1px solid #dc2626" : "1px solid var(--color-border)",
+                borderStyle: allProjected ? "dashed" : "solid",
                 borderRadius: 6,
                 padding: "2px 4px",
-                background: items ? "#eef2ff" : "transparent",
+                background: isPastEnd
+                  ? "var(--color-surface-muted, #f3f4f6)"
+                  : items
+                    ? "#eef2ff"
+                    : "transparent",
                 outline: isToday ? "2px solid var(--color-primary)" : "none",
+                opacity: isPastEnd ? 0.5 : 1,
+                cursor: clickable ? "pointer" : "default",
               }}
             >
-              <div style={{ fontSize: "0.72rem", color: "var(--color-text-muted)" }}>{day}</div>
+              <div
+                style={{
+                  fontSize: "0.72rem",
+                  color: isEndDate ? "#dc2626" : "var(--color-text-muted)",
+                  fontWeight: isEndDate ? 700 : 400,
+                }}
+              >
+                {day}
+                {isEndDate && " ⏹"}
+              </div>
               {items && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 1, marginTop: 1 }}>
                   {items.slice(0, 2).map((it) => (
-                    <span key={it.questionnaireSlug} style={{ fontSize: "0.6rem", color: "#4338ca", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span
+                      key={it.questionnaireSlug}
+                      style={{
+                        fontSize: "0.6rem",
+                        color: it.projected ? "#6b7280" : "#4338ca",
+                        fontStyle: it.projected ? "italic" : "normal",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {it.questionnaireSlug} · {it.total}
                     </span>
                   ))}
                   {items.length > 2 && (
-                    <span style={{ fontSize: "0.6rem", color: "#4338ca" }}>+{items.length - 2}</span>
+                    <span style={{ fontSize: "0.6rem", color: "#4338ca" }}>
+                      +{items.length - 2}
+                    </span>
                   )}
                 </div>
+              )}
+              {!items && !isPast && !isPastEnd && onDayClick && (
+                <div style={{ fontSize: "0.6rem", color: "var(--color-text-muted)" }}>+</div>
               )}
             </div>
           );
@@ -679,7 +797,7 @@ function ScheduleCalendar({ entries }: { entries: CalendarEntry[] }) {
       </div>
       {entries.length === 0 && (
         <p className={styles.hint} style={{ marginTop: "0.5rem" }}>
-          No scheduled occurrences yet. Add an assignment (windows are generated per enrolled participant).
+          {t("scheduleTab.calendar.noOccurrences")}
         </p>
       )}
     </div>
@@ -703,13 +821,9 @@ const cell: CSSProperties = {
 
 // ── Codes tab ─────────────────────────────────────────────────────────────────
 
-function CodesTab({
-  study,
-  token,
-}: {
-  study: StudySummary;
-  token: string;
-}) {
+function CodesTab({ study, token }: { study: StudySummary; token: string }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
   // ── Codes list ───────────────────────────────────────────────────────────
   const [codes, setCodes] = useState<StudyCode[]>([]);
   const [total, setTotal] = useState(0);
@@ -759,12 +873,12 @@ function CodesTab({
         setCodes((data as { codes: StudyCode[] }).codes ?? []);
         setTotal((data as { total: number }).total ?? 0);
       } catch (err) {
-        setCodesError(err instanceof Error ? err.message : "Failed to load codes");
+        setCodesError(err instanceof Error ? err.message : t("codesTab.errors.loadFailed"));
       } finally {
         setLoadingCodes(false);
       }
     },
-    [study.id, token]
+    [study.id, token, t]
   );
 
   useEffect(() => {
@@ -772,9 +886,9 @@ function CodesTab({
   }, [fetchCodes, page]);
 
   function groupLabel(groupId: string | null): string {
-    if (!groupId) return "Auto-assigned";
+    if (!groupId) return t("codesTab.autoAssigned");
     const g = study.groups.find((grp) => grp.id === groupId);
-    return g ? g.label || `Group ${g.index}` : groupId;
+    return g ? g.label || t("groupFallbackLabel", { index: g.index }) : groupId;
   }
 
   // ── Allocation save ──────────────────────────────────────────────────────
@@ -812,14 +926,14 @@ function CodesTab({
         method: "POST",
         body: JSON.stringify(payload),
       });
-      const newCodes: string[] = ((data as { codes: StudyCode[] }).codes ?? []).map(
-        (c) => (typeof c === "string" ? c : c.code)
+      const newCodes: string[] = ((data as { codes: StudyCode[] }).codes ?? []).map((c) =>
+        typeof c === "string" ? c : c.code
       );
       setStudyGenCodes(newCodes);
       setPage(1);
       await fetchCodes(1);
     } catch (err) {
-      setStudyGenError(err instanceof Error ? err.message : "Generate failed");
+      setStudyGenError(err instanceof Error ? err.message : t("codesTab.errors.generateFailed"));
     } finally {
       setStudyGenerating(false);
     }
@@ -844,14 +958,14 @@ function CodesTab({
         method: "POST",
         body: JSON.stringify(payload),
       });
-      const newCodes: string[] = ((data as { codes: StudyCode[] }).codes ?? []).map(
-        (c) => (typeof c === "string" ? c : c.code)
+      const newCodes: string[] = ((data as { codes: StudyCode[] }).codes ?? []).map((c) =>
+        typeof c === "string" ? c : c.code
       );
       setGeneratedCodes(newCodes);
       setPage(1);
       await fetchCodes(1);
     } catch (err) {
-      setGenError(err instanceof Error ? err.message : "Generate failed");
+      setGenError(err instanceof Error ? err.message : t("codesTab.errors.generateFailed"));
     } finally {
       setGenerating(false);
     }
@@ -879,21 +993,19 @@ function CodesTab({
 
   return (
     <div className={styles.codesTab}>
-
       {/* ── Allocation sliders ──────────────────────────────────────────── */}
       <div className={styles.genSection}>
-        <h3 className={styles.genTitle}>Group allocation</h3>
-        <p className={styles.genDesc}>
-          Controls how study codes distribute participants across conditions.
-          Weights are relative — 2 : 1 : 1 : 1 means the first group gets twice as many participants.
-        </p>
+        <h3 className={styles.genTitle}>{t("codesTab.allocationTitle")}</h3>
+        <p className={styles.genDesc}>{t("codesTab.allocationDesc")}</p>
         <div className={styles.allocGrid}>
           {study.groups.map((g) => {
             const w = weights[g.id] ?? 1;
             const pct = Math.round((w / totalWeight) * 100);
             return (
               <div key={g.id} className={styles.allocRow}>
-                <span className={styles.allocLabel}>{g.label || `Group ${g.index}`}</span>
+                <span className={styles.allocLabel}>
+                  {g.label || t("groupFallbackLabel", { index: g.index })}
+                </span>
                 <input
                   type="range"
                   min={1}
@@ -913,88 +1025,79 @@ function CodesTab({
         <div className={styles.allocActions}>
           <button
             className={styles.allocEqualBtn}
-            onClick={() =>
-              setWeights(Object.fromEntries(study.groups.map((g) => [g.id, 1])))
-            }
+            onClick={() => setWeights(Object.fromEntries(study.groups.map((g) => [g.id, 1])))}
           >
-            = Equal
+            {t("codesTab.equalButton")}
           </button>
-          <button
-            className={styles.saveBtn}
-            onClick={handleSaveAllocation}
-            disabled={savingAlloc}
-          >
-            {allocSaved ? "Saved ✓" : savingAlloc ? "Saving…" : "Save allocation"}
+          <button className={styles.saveBtn} onClick={handleSaveAllocation} disabled={savingAlloc}>
+            {allocSaved
+              ? t("codesTab.savedAllocation")
+              : savingAlloc
+                ? tc("saving")
+                : t("codesTab.saveAllocation")}
           </button>
         </div>
       </div>
 
       {/* ── Study-level code generation (primary) ──────────────────────── */}
       <div className={styles.genSection}>
-        <h3 className={styles.genTitle}>Generate study codes</h3>
-        <p className={styles.genDesc}>
-          Codes are tied to the study. Each participant who redeems one is assigned
-          to a group automatically using the allocation above.
-        </p>
+        <h3 className={styles.genTitle}>{t("codesTab.generateTitle")}</h3>
+        <p className={styles.genDesc}>{t("codesTab.generateDesc")}</p>
         <div className={styles.genForm}>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Quantity (1–100)</label>
+            <label className={styles.label}>{t("codesTab.quantityLabel")}</label>
             <input
               className={styles.input}
               type="number"
               min={1}
               max={100}
               value={studyCount}
-              onChange={(e) =>
-                setStudyCount(Math.min(100, Math.max(1, Number(e.target.value))))
-              }
+              onChange={(e) => setStudyCount(Math.min(100, Math.max(1, Number(e.target.value))))}
             />
-            <span className={styles.hint}>How many unique enrollment codes to generate in this batch.</span>
+            <span className={styles.hint}>{t("codesTab.quantityHintStudy")}</span>
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Max redemptions (optional)</label>
+            <label className={styles.label}>{t("codesTab.maxRedemptionsLabel")}</label>
             <input
               className={styles.input}
               type="number"
               min={1}
               value={studyMaxRed}
               onChange={(e) => setStudyMaxRed(e.target.value)}
-              placeholder="Unlimited"
+              placeholder={t("codesTab.unlimitedPlaceholder")}
             />
-            <span className={styles.hint}>How many participants can redeem each code. Leave blank for unlimited.</span>
+            <span className={styles.hint}>{t("codesTab.maxRedemptionsHint")}</span>
           </div>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Expiry (optional)</label>
+            <label className={styles.label}>{t("codesTab.expiryLabel")}</label>
             <input
               className={styles.input}
               type="datetime-local"
               value={studyExpiry}
               onChange={(e) => setStudyExpiry(e.target.value)}
             />
-            <span className={styles.hint}>Codes stop working after this date and time. Leave blank for no expiry.</span>
+            <span className={styles.hint}>{t("codesTab.expiryHint")}</span>
           </div>
         </div>
         {studyGenError && <div className={styles.errorMsg}>{studyGenError}</div>}
-        <button
-          className={styles.saveBtn}
-          onClick={handleStudyGenerate}
-          disabled={studyGenerating}
-        >
-          {studyGenerating ? "Generating…" : "Generate codes"}
+        <button className={styles.saveBtn} onClick={handleStudyGenerate} disabled={studyGenerating}>
+          {studyGenerating ? t("generatingEllipsis") : t("codesTab.generateCodes")}
         </button>
         {studyGenCodes.length > 0 && (
           <div className={styles.genResult}>
             <div className={styles.genResultHeader}>
               <span className={styles.genResultTitle}>
-                {studyGenCodes.length} code{studyGenCodes.length !== 1 ? "s" : ""} generated
+                {t("codesTab.codesGeneratedCount", { count: studyGenCodes.length })}
               </span>
               <button className={styles.copyAllBtn} onClick={handleStudyCopyAll}>
-                {studyCopied ? "Copied!" : "Copy all"}
+                {studyCopied ? t("copiedExclaim") : t("copyAll")}
               </button>
             </div>
             <div className={styles.codeList}>
               {studyGenCodes.map((c) => (
-                <span key={c} className={styles.codeChip}>{c}</span>
+                <span key={c} className={styles.codeChip}>
+                  {c}
+                </span>
               ))}
             </div>
           </div>
@@ -1003,20 +1106,15 @@ function CodesTab({
 
       {/* ── Targeted group codes (secondary, collapsible) ───────────────── */}
       <div className={styles.genSection}>
-        <button
-          className={styles.targetedToggle}
-          onClick={() => setTargetOpen((o) => !o)}
-        >
-          {targetOpen ? "▾" : "▸"} Targeted group codes
-          <span className={styles.targetedToggleSub}>
-            — pin a code to a specific condition
-          </span>
+        <button className={styles.targetedToggle} onClick={() => setTargetOpen((o) => !o)}>
+          {targetOpen ? "▾" : "▸"} {t("codesTab.targetedToggle")}
+          <span className={styles.targetedToggleSub}>{t("codesTab.targetedToggleSub")}</span>
         </button>
         {targetOpen && (
           <>
             <div className={styles.genForm} style={{ marginTop: "0.75rem" }}>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Group</label>
+                <label className={styles.label}>{t("groupHeader")}</label>
                 <select
                   className={styles.select}
                   value={genGroupId}
@@ -1024,70 +1122,66 @@ function CodesTab({
                 >
                   {study.groups.map((g) => (
                     <option key={g.id} value={g.id}>
-                      {g.label || `Group ${g.index}`}
+                      {g.label || t("groupFallbackLabel", { index: g.index })}
                     </option>
                   ))}
                 </select>
-                <span className={styles.hint}>Participants who redeem this code are assigned directly to this condition, bypassing the allocation weights.</span>
+                <span className={styles.hint}>{t("codesTab.groupHint")}</span>
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Quantity (1–100)</label>
+                <label className={styles.label}>{t("codesTab.quantityLabel")}</label>
                 <input
                   className={styles.input}
                   type="number"
                   min={1}
                   max={100}
                   value={genCount}
-                  onChange={(e) =>
-                    setGenCount(Math.min(100, Math.max(1, Number(e.target.value))))
-                  }
+                  onChange={(e) => setGenCount(Math.min(100, Math.max(1, Number(e.target.value))))}
                 />
-                <span className={styles.hint}>How many unique codes to generate for this condition.</span>
+                <span className={styles.hint}>{t("codesTab.targetedQuantityHint")}</span>
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Max redemptions (optional)</label>
+                <label className={styles.label}>{t("codesTab.maxRedemptionsLabel")}</label>
                 <input
                   className={styles.input}
                   type="number"
                   min={1}
                   value={genMaxRed}
                   onChange={(e) => setGenMaxRed(e.target.value)}
-                  placeholder="Unlimited"
+                  placeholder={t("codesTab.unlimitedPlaceholder")}
                 />
-                <span className={styles.hint}>How many participants can redeem each code. Leave blank for unlimited.</span>
+                <span className={styles.hint}>{t("codesTab.maxRedemptionsHint")}</span>
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Expiry (optional)</label>
+                <label className={styles.label}>{t("codesTab.expiryLabel")}</label>
                 <input
                   className={styles.input}
                   type="datetime-local"
                   value={genExpiry}
                   onChange={(e) => setGenExpiry(e.target.value)}
                 />
-                <span className={styles.hint}>Codes stop working after this date and time. Leave blank for no expiry.</span>
+                <span className={styles.hint}>{t("codesTab.expiryHint")}</span>
               </div>
             </div>
             {genError && <div className={styles.errorMsg}>{genError}</div>}
-            <button
-              className={styles.saveBtn}
-              onClick={handleGenerate}
-              disabled={generating}
-            >
-              {generating ? "Generating…" : "Generate targeted codes"}
+            <button className={styles.saveBtn} onClick={handleGenerate} disabled={generating}>
+              {generating ? t("generatingEllipsis") : t("codesTab.generateTargeted")}
             </button>
             {generatedCodes.length > 0 && (
               <div className={styles.genResult}>
                 <div className={styles.genResultHeader}>
                   <span className={styles.genResultTitle}>
-                    {generatedCodes.length} code{generatedCodes.length !== 1 ? "s" : ""} generated
+                    {t("codesTab.codesGeneratedCount", { count: generatedCodes.length })}
                   </span>
                   <button className={styles.copyAllBtn} onClick={handleCopyAll}>
-                    {copied ? "Copied!" : "Copy all"}
+                    {copied ? t("copiedExclaim") : t("copyAll")}
                   </button>
                 </div>
                 <div className={styles.codeList}>
                   {generatedCodes.map((c) => (
-                    <span key={c} className={styles.codeChip}>{c}</span>
+                    <span key={c} className={styles.codeChip}>
+                      {c}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -1098,42 +1192,51 @@ function CodesTab({
 
       {/* ── Codes table ─────────────────────────────────────────────────── */}
       <div className={styles.codesTableSection}>
-        <h3 className={styles.genTitle}>Existing codes</h3>
+        <h3 className={styles.genTitle}>{t("codesTab.existingCodesTitle")}</h3>
         {codesError && <div className={styles.errorMsg}>{codesError}</div>}
         {loadingCodes ? (
-          <div className={styles.loadingState}>Loading…</div>
+          <div className={styles.loadingState}>{tc("loading")}</div>
         ) : codes.length === 0 ? (
-          <div className={styles.emptyState}>No codes yet.</div>
+          <div className={styles.emptyState}>{t("codesTab.noCodesYet")}</div>
         ) : (
           <>
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Code</th>
-                    <th>Group</th>
-                    <th>Redemptions</th>
-                    <th>Expiry</th>
-                    <th>Action</th>
+                    <th>{t("codesTab.headers.code")}</th>
+                    <th>{t("groupHeader")}</th>
+                    <th>{t("codesTab.headers.redemptions")}</th>
+                    <th>{t("codesTab.headers.expiry")}</th>
+                    <th>{t("codesTab.headers.action")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {codes.map((c) => (
                     <tr key={c.code}>
-                      <td><span className={styles.codeText}>{c.code}</span></td>
+                      <td>
+                        <span className={styles.codeText}>{c.code}</span>
+                      </td>
                       <td>
                         {c.groupId ? (
                           groupLabel(c.groupId)
                         ) : (
-                          <span className={styles.autoAssignedBadge}>Auto-assigned</span>
+                          <span className={styles.autoAssignedBadge}>
+                            {t("codesTab.autoAssigned")}
+                          </span>
                         )}
                       </td>
-                      <td>{c.redemptionCount}/{c.maxRedemptions ?? "∞"}</td>
+                      <td>
+                        {c.redemptionCount}/{c.maxRedemptions ?? "∞"}
+                      </td>
                       <td>{fmtDateTime(c.expiresAt)}</td>
                       <td>
                         {c.redemptionCount > 0 ? (
-                          <span className={styles.revokeDisabled} title="Cannot revoke a redeemed code">
-                            Revoke
+                          <span
+                            className={styles.revokeDisabled}
+                            title={t("codesTab.cannotRevokeTitle")}
+                          >
+                            {t("codesTab.revoke")}
                           </span>
                         ) : (
                           <button
@@ -1141,7 +1244,9 @@ function CodesTab({
                             onClick={() => handleRevoke(c.code)}
                             disabled={revoking === c.code}
                           >
-                            {revoking === c.code ? "…" : "Revoke"}
+                            {revoking === c.code
+                              ? t("codesTab.revokingEllipsis")
+                              : t("codesTab.revoke")}
                           </button>
                         )}
                       </td>
@@ -1157,17 +1262,17 @@ function CodesTab({
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page <= 1}
                 >
-                  ‹ Prev
+                  {t("pagination.prev")}
                 </button>
                 <span className={styles.pageInfo}>
-                  Page {page} of {totalPages} ({total} total)
+                  {t("pagination.pageInfo", { page, totalPages, total })}
                 </span>
                 <button
                   className={styles.pageBtn}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
                 >
-                  Next ›
+                  {t("pagination.next")}
                 </button>
               </div>
             )}
@@ -1193,13 +1298,9 @@ interface ParticipantSummary {
   perGroup: { groupId: string; groupLabel: string; count: number }[];
 }
 
-function ParticipantsTab({
-  study,
-  token,
-}: {
-  study: StudySummary;
-  token: string;
-}) {
+function ParticipantsTab({ study, token }: { study: StudySummary; token: string }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
   const PARTICIPANTS_BASE = apiUrl(`/admin/studies/${study.id}/participants`);
 
   const [rows, setRows] = useState<EnrollmentRow[]>([]);
@@ -1217,26 +1318,17 @@ function ParticipantsTab({
       setLoading(true);
       setLoadError("");
       try {
-        const data = await apiFetch(
-          `${PARTICIPANTS_BASE}?page=${p}&limit=${limit}`,
-          token
-        );
-        setRows(
-          (data as { participants: EnrollmentRow[] }).participants ?? []
-        );
+        const data = await apiFetch(`${PARTICIPANTS_BASE}?page=${p}&limit=${limit}`, token);
+        setRows((data as { participants: EnrollmentRow[] }).participants ?? []);
         setTotal((data as { total: number }).total ?? 0);
-        setSummary(
-          (data as { summary: ParticipantSummary }).summary ?? null
-        );
+        setSummary((data as { summary: ParticipantSummary }).summary ?? null);
       } catch (err) {
-        setLoadError(
-          err instanceof Error ? err.message : "Failed to load participants"
-        );
+        setLoadError(err instanceof Error ? err.message : t("participantsTab.errors.loadFailed"));
       } finally {
         setLoading(false);
       }
     },
-    [PARTICIPANTS_BASE, token]
+    [PARTICIPANTS_BASE, token, t]
   );
 
   useEffect(() => {
@@ -1247,12 +1339,8 @@ function ParticipantsTab({
     setExporting(true);
     try {
       // Fetch all records (up to 500)
-      const data = await apiFetch(
-        `${PARTICIPANTS_BASE}?page=1&limit=500`,
-        token
-      );
-      const all: EnrollmentRow[] =
-        (data as { participants: EnrollmentRow[] }).participants ?? [];
+      const data = await apiFetch(`${PARTICIPANTS_BASE}?page=1&limit=500`, token);
+      const all: EnrollmentRow[] = (data as { participants: EnrollmentRow[] }).participants ?? [];
 
       const header = "User ID,Group,Enrolled At,Code Used";
       const csvLines = all.map((r) =>
@@ -1309,7 +1397,9 @@ function ParticipantsTab({
       {summary && (
         <div className={styles.summaryRow}>
           <span className={styles.summaryStat}>
-            <span className={styles.summaryStatLabel}>Total enrolled:</span>
+            <span className={styles.summaryStatLabel}>
+              {t("participantsTab.totalEnrolledLabel")}
+            </span>
             <span className={styles.summaryStatValue}>{summary.total}</span>
           </span>
           {summary.perGroup.map((g) => (
@@ -1324,40 +1414,40 @@ function ParticipantsTab({
       {/* Table header with CSV button */}
       <div className={styles.participantsTableHeader}>
         <span style={{ fontSize: "0.85rem", color: "var(--color-text-muted)" }}>
-          {total} participant{total !== 1 ? "s" : ""} enrolled
+          {t("participantsTab.participantsEnrolledCount", { count: total })}
         </span>
         <button
           className={styles.csvBtn}
           onClick={handleDownloadCsv}
           disabled={exporting || total === 0}
         >
-          {exporting ? "Exporting…" : "Download CSV"}
+          {exporting ? t("exportingEllipsis") : t("participantsTab.downloadCsv")}
         </button>
         <button
           className={styles.csvBtn}
           onClick={handleExportZip}
           disabled={exportingZip || total === 0}
         >
-          {exportingZip ? "Exporting…" : "Export ZIP (R-ready)"}
+          {exportingZip ? t("exportingEllipsis") : t("participantsTab.exportZip")}
         </button>
       </div>
 
       {loadError && <div className={styles.errorMsg}>{loadError}</div>}
 
       {loading ? (
-        <div className={styles.loadingState}>Loading…</div>
+        <div className={styles.loadingState}>{tc("loading")}</div>
       ) : rows.length === 0 ? (
-        <div className={styles.emptyState}>No participants enrolled yet.</div>
+        <div className={styles.emptyState}>{t("participantsTab.empty")}</div>
       ) : (
         <>
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>User ID</th>
-                  <th>Group</th>
-                  <th>Enrolled</th>
-                  <th>Code Used</th>
+                  <th>{t("participantsTab.headers.userId")}</th>
+                  <th>{t("groupHeader")}</th>
+                  <th>{t("participantsTab.headers.enrolled")}</th>
+                  <th>{t("participantsTab.headers.codeUsed")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1373,7 +1463,7 @@ function ParticipantsTab({
                         <span className={styles.codePill}>{r.codeUsed}</span>
                       ) : (
                         <span className={styles.codeDefault}>
-                          direct/default
+                          {t("participantsTab.directDefault")}
                         </span>
                       )}
                     </td>
@@ -1389,17 +1479,17 @@ function ParticipantsTab({
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
               >
-                ‹ Prev
+                {t("pagination.prev")}
               </button>
               <span className={styles.pageInfo}>
-                Page {page} of {totalPages} ({total} total)
+                {t("pagination.pageInfo", { page, totalPages, total })}
               </span>
               <button
                 className={styles.pageBtn}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
               >
-                Next ›
+                {t("pagination.next")}
               </button>
             </div>
           )}
@@ -1411,13 +1501,9 @@ function ParticipantsTab({
 
 // ── Notifications tab ─────────────────────────────────────────────────────────
 
-function NotificationsTab({
-  study,
-  token,
-}: {
-  study: StudySummary;
-  token: string;
-}) {
+function NotificationsTab({ study, token }: { study: StudySummary; token: string }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [targetGroupId, setTargetGroupId] = useState("all");
@@ -1445,7 +1531,7 @@ function NotificationsTab({
       );
       const items = Array.isArray(data)
         ? data
-        : (data as { campaigns?: ScheduledNotification[] }).campaigns ?? data;
+        : ((data as { campaigns?: ScheduledNotification[] }).campaigns ?? data);
       setScheduled(Array.isArray(items) ? items : []);
     } catch {
       // non-critical
@@ -1463,7 +1549,7 @@ function NotificationsTab({
       );
       const items = Array.isArray(data)
         ? data
-        : (data as { campaigns?: SentNotification[] }).campaigns ?? data;
+        : ((data as { campaigns?: SentNotification[] }).campaigns ?? data);
       setSentHistory(Array.isArray(items) ? (items as SentNotification[]) : []);
     } catch {
       // non-critical
@@ -1483,10 +1569,16 @@ function NotificationsTab({
   }
 
   async function handleSend() {
-    if (!title.trim()) { setSendError("Title is required."); return; }
-    if (!body.trim()) { setSendError("Body is required."); return; }
+    if (!title.trim()) {
+      setSendError(t("notificationsTab.errors.titleRequired"));
+      return;
+    }
+    if (!body.trim()) {
+      setSendError(t("notificationsTab.errors.bodyRequired"));
+      return;
+    }
     if (sendMode === "schedule" && !scheduledAt) {
-      setSendError("Scheduled time is required.");
+      setSendError(t("notificationsTab.errors.scheduledTimeRequired"));
       return;
     }
     setSending(true);
@@ -1510,20 +1602,28 @@ function NotificationsTab({
 
       if (sendMode === "now") {
         const r = result as { recipientCount?: number };
-        showToast(`Sent to ${r.recipientCount ?? 0} participant${(r.recipientCount ?? 0) !== 1 ? "s" : ""}`);
+        showToast(t("notificationsTab.sentToCount", { count: r.recipientCount ?? 0 }));
       } else {
         showToast(
-          `Scheduled for ${new Date(scheduledAt).toLocaleString("en-GB", {
-            day: "2-digit", month: "short", year: "numeric",
-            hour: "2-digit", minute: "2-digit",
-          })}`
+          t("notificationsTab.scheduledForDate", {
+            date: new Date(scheduledAt).toLocaleString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          })
         );
         await fetchScheduled();
       }
-      setTitle(""); setBody(""); setTargetGroupId("all");
-      setSendMode("now"); setScheduledAt("");
+      setTitle("");
+      setBody("");
+      setTargetGroupId("all");
+      setSendMode("now");
+      setScheduledAt("");
     } catch (err) {
-      setSendError(err instanceof Error ? err.message : "Send failed");
+      setSendError(err instanceof Error ? err.message : t("notificationsTab.errors.sendFailed"));
     } finally {
       setSending(false);
     }
@@ -1536,7 +1636,9 @@ function NotificationsTab({
       await apiFetch(`${NOTIFICATIONS_BASE}/${id}`, token, { method: "DELETE" });
       setScheduled((prev) => prev.filter((n) => n.id !== id));
     } catch (err) {
-      setCancelError(err instanceof Error ? err.message : "Cancel failed");
+      setCancelError(
+        err instanceof Error ? err.message : t("notificationsTab.errors.cancelFailed")
+      );
     } finally {
       setCancellingId(null);
     }
@@ -1546,33 +1648,39 @@ function NotificationsTab({
     <div className={styles.notificationsTab}>
       {/* Compose form */}
       <div className={styles.notifSection}>
-        <p className={styles.notifSectionTitle}>Compose notification</p>
+        <p className={styles.notifSectionTitle}>{t("notificationsTab.composeTitle")}</p>
         {sendError && <div className={styles.errorMsg}>{sendError}</div>}
         {toast && <div className={styles.toastMsg}>{toast}</div>}
 
         <div className={styles.notifForm}>
           <div className={styles.formGroup}>
             <label className={styles.label}>
-              Title <span className={styles.charHint}>({title.length}/50)</span>
+              {t("notificationsTab.titleLabel")}{" "}
+              <span className={styles.charHint}>
+                {t("notificationsTab.charCount", { length: title.length, max: 50 })}
+              </span>
             </label>
             <input
               className={styles.input}
               value={title}
               onChange={(e) => setTitle(e.target.value.slice(0, 50))}
-              placeholder="Notification title"
+              placeholder={t("notificationsTab.titlePlaceholder")}
               maxLength={50}
             />
           </div>
 
           <div className={styles.formGroup}>
             <label className={styles.label}>
-              Body <span className={styles.charHint}>({body.length}/200)</span>
+              {t("notificationsTab.bodyLabel")}{" "}
+              <span className={styles.charHint}>
+                {t("notificationsTab.charCount", { length: body.length, max: 200 })}
+              </span>
             </label>
             <textarea
               className={styles.textarea}
               value={body}
               onChange={(e) => setBody(e.target.value.slice(0, 200))}
-              placeholder="Notification body text"
+              placeholder={t("notificationsTab.bodyPlaceholder")}
               maxLength={200}
               rows={3}
             />
@@ -1580,37 +1688,39 @@ function NotificationsTab({
 
           <div className={styles.notifFormRow}>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Target</label>
+              <label className={styles.label}>{t("notificationsTab.targetLabel")}</label>
               <select
                 className={styles.select}
                 value={targetGroupId}
                 onChange={(e) => setTargetGroupId(e.target.value)}
               >
-                <option value="all">All participants</option>
+                <option value="all">{t("notificationsTab.allParticipants")}</option>
                 {study.groups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.label}</option>
+                  <option key={g.id} value={g.id}>
+                    {g.label}
+                  </option>
                 ))}
               </select>
-              <span className={styles.hint}>Send to everyone enrolled in this study or to a specific condition group.</span>
+              <span className={styles.hint}>{t("notificationsTab.targetHint")}</span>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Send time</label>
+              <label className={styles.label}>{t("notificationsTab.sendTimeLabel")}</label>
               <select
                 className={styles.select}
                 value={sendMode}
                 onChange={(e) => setSendMode(e.target.value as "now" | "schedule")}
               >
-                <option value="now">Now</option>
-                <option value="schedule">Schedule</option>
+                <option value="now">{t("notificationsTab.sendNowOption")}</option>
+                <option value="schedule">{t("notificationsTab.scheduleOption")}</option>
               </select>
-              <span className={styles.hint}>Send immediately or schedule for a future date and time.</span>
+              <span className={styles.hint}>{t("notificationsTab.sendTimeHint")}</span>
             </div>
           </div>
 
           {sendMode === "schedule" && (
             <div className={styles.formGroup}>
-              <label className={styles.label}>Scheduled date &amp; time</label>
+              <label className={styles.label}>{t("notificationsTab.scheduledAtLabel")}</label>
               <input
                 className={styles.input}
                 type="datetime-local"
@@ -1622,12 +1732,12 @@ function NotificationsTab({
           )}
 
           <div className={styles.notifFormFooter}>
-            <button
-              className={styles.saveBtn}
-              onClick={handleSend}
-              disabled={sending}
-            >
-              {sending ? "Sending…" : sendMode === "now" ? "Send" : "Schedule"}
+            <button className={styles.saveBtn} onClick={handleSend} disabled={sending}>
+              {sending
+                ? t("notificationsTab.sendingEllipsis")
+                : sendMode === "now"
+                  ? t("notificationsTab.send")
+                  : t("notificationsTab.scheduleOption")}
             </button>
           </div>
         </div>
@@ -1635,12 +1745,12 @@ function NotificationsTab({
 
       {/* Scheduled notifications */}
       <div className={styles.notifSection}>
-        <p className={styles.notifSectionTitle}>Scheduled</p>
+        <p className={styles.notifSectionTitle}>{t("notificationsTab.scheduledSectionTitle")}</p>
         {cancelError && <div className={styles.errorMsg}>{cancelError}</div>}
         {loadingScheduled ? (
-          <div className={styles.loadingState}>Loading…</div>
+          <div className={styles.loadingState}>{tc("loading")}</div>
         ) : scheduled.length === 0 ? (
-          <div className={styles.notifEmpty}>No pending scheduled notifications.</div>
+          <div className={styles.notifEmpty}>{t("notificationsTab.noScheduled")}</div>
         ) : (
           <div className={styles.scheduledList}>
             {scheduled.map((n) => (
@@ -1650,8 +1760,9 @@ function NotificationsTab({
                   <span className={styles.scheduledBody}>{n.body}</span>
                   <span className={styles.scheduledMeta}>
                     {n.targetType === "group" && n.targetIds.length > 0
-                      ? study.groups.find((g) => n.targetIds.includes(g.id))?.label ?? n.targetIds[0]
-                      : "All participants"}
+                      ? (study.groups.find((g) => n.targetIds.includes(g.id))?.label ??
+                        n.targetIds[0])
+                      : t("notificationsTab.allParticipants")}
                     {" · "}
                     {fmtDateTime(n.scheduledFor)}
                   </span>
@@ -1661,7 +1772,7 @@ function NotificationsTab({
                   onClick={() => handleCancel(n.id)}
                   disabled={cancellingId === n.id}
                 >
-                  {cancellingId === n.id ? "…" : "Cancel"}
+                  {cancellingId === n.id ? t("notificationsTab.cancellingEllipsis") : tc("cancel")}
                 </button>
               </div>
             ))}
@@ -1671,20 +1782,20 @@ function NotificationsTab({
 
       {/* Sent notification history */}
       <div className={styles.notifSection}>
-        <p className={styles.notifSectionTitle}>Sent history</p>
+        <p className={styles.notifSectionTitle}>{t("notificationsTab.sentHistoryTitle")}</p>
         {loadingSent ? (
-          <div className={styles.loadingState}>Loading…</div>
+          <div className={styles.loadingState}>{tc("loading")}</div>
         ) : sentHistory.length === 0 ? (
-          <div className={styles.notifEmpty}>No notifications sent yet.</div>
+          <div className={styles.notifEmpty}>{t("notificationsTab.noSentHistory")}</div>
         ) : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Title</th>
-                  <th>Target</th>
-                  <th>Recipients</th>
-                  <th>Sent at</th>
+                  <th>{t("notificationsTab.titleLabel")}</th>
+                  <th>{t("notificationsTab.targetLabel")}</th>
+                  <th>{t("notificationsTab.headers.recipients")}</th>
+                  <th>{t("notificationsTab.headers.sentAt")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1692,14 +1803,18 @@ function NotificationsTab({
                   <tr key={n.id}>
                     <td>
                       <span className={styles.scheduledTitle}>{n.title}</span>
-                      <span className={styles.scheduledBody} style={{ display: "block", fontSize: "0.78rem" }}>
+                      <span
+                        className={styles.scheduledBody}
+                        style={{ display: "block", fontSize: "0.78rem" }}
+                      >
                         {n.body}
                       </span>
                     </td>
                     <td>
                       {n.targetType === "group" && n.targetIds.length > 0
-                        ? study.groups.find((g) => n.targetIds.includes(g.id))?.label ?? n.targetIds[0]
-                        : "All participants"}
+                        ? (study.groups.find((g) => n.targetIds.includes(g.id))?.label ??
+                          n.targetIds[0])
+                        : t("notificationsTab.allParticipants")}
                     </td>
                     <td>{n.recipientCount ?? "—"}</td>
                     <td>{fmtDateTime(n.sentAt)}</td>
@@ -1729,13 +1844,9 @@ function triStateParse(v: string): boolean | null {
   return null;
 }
 
-function CueConfigTab({
-  study,
-  token,
-}: {
-  study: StudySummary;
-  token: string;
-}) {
+function CueConfigTab({ study, token }: { study: StudySummary; token: string }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
   const { activityTypes, loading: catalogLoading } = useActivityTypes(token);
   const defaultKeys = activityTypes.filter((a) => a.isDefault).map((a) => a.key);
 
@@ -1773,10 +1884,7 @@ function CueConfigTab({
     )
   );
 
-  function update(
-    groupId: string,
-    patch: Partial<(typeof groupStates)[string]>
-  ) {
+  function update(groupId: string, patch: Partial<(typeof groupStates)[string]>) {
     setGroupStates((prev) => ({
       ...prev,
       [groupId]: { ...prev[groupId], ...patch, saved: false },
@@ -1787,20 +1895,16 @@ function CueConfigTab({
     const s = groupStates[groupId];
     update(groupId, { saving: true, error: "" });
     try {
-      await apiFetch(
-        `${API_BASE}/${study.id}/groups/${groupId}/cue-config`,
-        token,
-        {
-          method: "PATCH",
-          body: JSON.stringify({
-            cueCount: s.cueCount,
-            cueSource: s.cueSource,
-            cuePoolId: s.cuePoolId,
-            behaviorOptions: s.behaviorOptions ?? defaultKeys,
-            maxHabits: s.maxHabits,
-          }),
-        }
-      );
+      await apiFetch(`${API_BASE}/${study.id}/groups/${groupId}/cue-config`, token, {
+        method: "PATCH",
+        body: JSON.stringify({
+          cueCount: s.cueCount,
+          cueSource: s.cueSource,
+          cuePoolId: s.cuePoolId,
+          behaviorOptions: s.behaviorOptions ?? defaultKeys,
+          maxHabits: s.maxHabits,
+        }),
+      });
       // Persist the per-group onboarding / self-creation overrides.
       await apiFetch(`${API_BASE}/${study.id}/groups/${groupId}/config`, token, {
         method: "PATCH",
@@ -1813,21 +1917,17 @@ function CueConfigTab({
     } catch (err) {
       update(groupId, {
         saving: false,
-        error: err instanceof Error ? err.message : "Save failed",
+        error: err instanceof Error ? err.message : t("saveFailedGeneric"),
       });
     }
   }
 
   if (study.groups.length === 0) {
-    return (
-      <div className={styles.emptyState}>
-        No groups defined. Add groups in the Details tab first.
-      </div>
-    );
+    return <div className={styles.emptyState}>{t("cueConfigTab.noGroups")}</div>;
   }
 
   if (catalogLoading) {
-    return <div className={styles.emptyState}>Loading activity catalog…</div>;
+    return <div className={styles.emptyState}>{t("cueConfigTab.loadingCatalog")}</div>;
   }
 
   return (
@@ -1839,7 +1939,7 @@ function CueConfigTab({
         return (
           <div key={g.id} className={styles.cueConfigGroup}>
             <p className={styles.cueConfigGroupLabel}>
-              {g.label || `Group ${g.index}`}
+              {g.label || t("groupFallbackLabel", { index: g.index })}
             </p>
             {s.error && <div className={styles.errorMsg}>{s.error}</div>}
             <CueConfigForm
@@ -1855,7 +1955,7 @@ function CueConfigTab({
             />
             <div className={styles.formGrid}>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Onboarding (this group)</label>
+                <label className={styles.label}>{t("cueConfigTab.onboardingLabel")}</label>
                 <select
                   className={styles.select}
                   value={triStateValue(s.onboardingEnabled)}
@@ -1865,19 +1965,14 @@ function CueConfigTab({
                     })
                   }
                 >
-                  <option value="inherit">Inherit study setting</option>
-                  <option value="on">On</option>
-                  <option value="off">Off</option>
+                  <option value="inherit">{t("cueConfigTab.inheritOption")}</option>
+                  <option value="on">{t("cueConfigTab.onOption")}</option>
+                  <option value="off">{t("cueConfigTab.offOption")}</option>
                 </select>
-                <span className={styles.hint}>
-                  Overrides the study-level onboarding setting for this group
-                  only.
-                </span>
+                <span className={styles.hint}>{t("cueConfigTab.onboardingHint")}</span>
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Self habit creation (this group)
-                </label>
+                <label className={styles.label}>{t("cueConfigTab.selfHabitLabel")}</label>
                 <select
                   className={styles.select}
                   value={triStateValue(s.selfHabitCreationEnabled)}
@@ -1887,23 +1982,21 @@ function CueConfigTab({
                     })
                   }
                 >
-                  <option value="inherit">Inherit study setting</option>
-                  <option value="on">On</option>
-                  <option value="off">Off</option>
+                  <option value="inherit">{t("cueConfigTab.inheritOption")}</option>
+                  <option value="on">{t("cueConfigTab.onOption")}</option>
+                  <option value="off">{t("cueConfigTab.offOption")}</option>
                 </select>
-                <span className={styles.hint}>
-                  When off, this group cannot create their own habits.
-                </span>
+                <span className={styles.hint}>{t("cueConfigTab.selfHabitHint")}</span>
               </div>
             </div>
             <div className={styles.cueConfigFooter}>
-              {s.saved && <span className={styles.savedMsg}>Saved!</span>}
+              {s.saved && <span className={styles.savedMsg}>{t("saved")}</span>}
               <button
                 className={styles.saveBtn}
                 onClick={() => handleSave(g.id)}
                 disabled={s.saving}
               >
-                {s.saving ? "Saving…" : "Save"}
+                {s.saving ? tc("saving") : tc("save")}
               </button>
             </div>
           </div>
@@ -1915,7 +2008,14 @@ function CueConfigTab({
 
 // ── Study form modal ──────────────────────────────────────────────────────────
 
-type ModalTab = "details" | "questionnaires" | "schedule" | "codes" | "participants" | "notifications" | "cue-config";
+type ModalTab =
+  | "details"
+  | "questionnaires"
+  | "schedule"
+  | "codes"
+  | "participants"
+  | "notifications"
+  | "cue-config";
 
 function StudyModal({
   initial,
@@ -1924,6 +2024,7 @@ function StudyModal({
   onSaved,
   onSetDefault,
   onDeactivate,
+  onDelete,
 }: {
   initial: StudySummary | null;
   token: string;
@@ -1931,31 +2032,34 @@ function StudyModal({
   onSaved: () => void;
   onSetDefault: (id: string) => Promise<void>;
   onDeactivate: (id: string) => Promise<{ error?: string } | void>;
+  onDelete: (id: string, confirmName: string) => Promise<{ error?: string } | void>;
 }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
   const isEdit = initial !== null;
   const [activeTab, setActiveTab] = useState<ModalTab>("details");
   const [name, setName] = useState(initial?.name ?? "");
-  const [description, setDescription] = useState(
-    initial?.description ?? ""
-  );
-  const [recommenderEnabled, setRecommenderEnabled] = useState(
-    initial?.recommenderEnabled ?? true
-  );
-  const [onboardingEnabled, setOnboardingEnabled] = useState(
-    initial?.onboardingEnabled ?? true
-  );
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [recommenderEnabled, setRecommenderEnabled] = useState(initial?.recommenderEnabled ?? true);
+  const [onboardingEnabled, setOnboardingEnabled] = useState(initial?.onboardingEnabled ?? true);
   const [selfHabitCreationEnabled, setSelfHabitCreationEnabled] = useState(
     initial?.selfHabitCreationEnabled ?? true
   );
   const [remindersEnabled, setRemindersEnabled] = useState(
     initial?.questionnaireReminders?.enabled ?? true
   );
-  const [reminderHour, setReminderHour] = useState(
-    initial?.questionnaireReminders?.hour ?? 9
+  const [reminderHour, setReminderHour] = useState(initial?.questionnaireReminders?.hour ?? 9);
+  const [endDate, setEndDate] = useState(initial?.endDate ? initial.endDate.slice(0, 10) : "");
+  const [endOfStudyEnabled, setEndOfStudyEnabled] = useState(
+    initial?.endOfStudyNotification?.enabled ?? false
   );
-  const [groupCount, setGroupCount] = useState(
-    initial?.groups.length ?? 1
+  const [endOfStudyTitle, setEndOfStudyTitle] = useState(
+    initial?.endOfStudyNotification?.title ?? "Study complete"
   );
+  const [endOfStudyBody, setEndOfStudyBody] = useState(
+    initial?.endOfStudyNotification?.body ?? "Thank you for participating — your study has ended."
+  );
+  const [groupCount, setGroupCount] = useState(initial?.groups.length ?? 1);
   const [groupLabels, setGroupLabels] = useState<string[]>(() => {
     if (initial) return initial.groups.map((g) => g.label);
     return [""];
@@ -1965,6 +2069,12 @@ function StudyModal({
   const [deactivating, setDeactivating] = useState(false);
   const [settingDefault, setSettingDefault] = useState(false);
   const [confirmDefaultOpen, setConfirmDefaultOpen] = useState(false);
+
+  // Delete flow (download data → type name → confirm).
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteNameInput, setDeleteNameInput] = useState("");
+  const [downloading, setDownloading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   function handleGroupCountChange(n: number) {
     setGroupCount(n);
@@ -1981,7 +2091,7 @@ function StudyModal({
 
   async function handleSave() {
     if (!name.trim()) {
-      setError("Name is required.");
+      setError(t("modal.errors.nameRequired"));
       return;
     }
     setSaving(true);
@@ -1999,6 +2109,12 @@ function StudyModal({
             onboardingEnabled,
             selfHabitCreationEnabled,
             questionnaireReminders: { enabled: remindersEnabled, hour: reminderHour },
+            endDate: endDate ? new Date(`${endDate}T00:00:00Z`).toISOString() : null,
+            endOfStudyNotification: {
+              enabled: endOfStudyEnabled && !!endDate,
+              title: endOfStudyTitle.trim() || "Study complete",
+              body: endOfStudyBody.trim() || "Thank you for participating — your study has ended.",
+            },
           }),
         });
       } else {
@@ -2016,12 +2132,18 @@ function StudyModal({
             onboardingEnabled,
             selfHabitCreationEnabled,
             groups,
+            endDate: endDate ? new Date(`${endDate}T00:00:00Z`).toISOString() : null,
+            endOfStudyNotification: {
+              enabled: endOfStudyEnabled && !!endDate,
+              title: endOfStudyTitle.trim() || "Study complete",
+              body: endOfStudyBody.trim() || "Thank you for participating — your study has ended.",
+            },
           }),
         });
       }
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("saveFailedGeneric"));
     } finally {
       setSaving(false);
     }
@@ -2040,7 +2162,7 @@ function StudyModal({
       await onSetDefault(initial.id);
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to set default");
+      setError(err instanceof Error ? err.message : t("modal.errors.setDefaultFailed"));
     } finally {
       setSettingDefault(false);
     }
@@ -2058,21 +2180,66 @@ function StudyModal({
         onSaved();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Deactivate failed");
+      setError(err instanceof Error ? err.message : t("modal.errors.deactivateFailed"));
     } finally {
       setDeactivating(false);
     }
   }
 
+  async function handleDownloadData() {
+    if (!initial) return;
+    setDownloading(true);
+    setError("");
+    try {
+      const res = await fetch(`${API_BASE}/${initial.id}/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(t("modal.errors.exportFailedHttp", { status: res.status }));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const stamp = new Date().toISOString().slice(0, 10);
+      const safe = (initial.name || "study")
+        .replace(/[^a-z0-9]+/gi, "-")
+        .replace(/^-+|-+$/g, "")
+        .toLowerCase();
+      a.download = `study-${safe || "export"}-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("modal.errors.downloadFailed"));
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  async function handleDeleteConfirm() {
+    if (!initial) return;
+    setDeleting(true);
+    setError("");
+    try {
+      const result = await onDelete(initial.id, deleteNameInput);
+      if (result && (result as { error?: string }).error) {
+        setError((result as { error: string }).error);
+      } else {
+        onSaved();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("modal.errors.deleteFailed"));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
-    <div
-      className={styles.overlay}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
+    <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
         <div className={styles.modalHeader}>
           <span className={styles.modalTitle}>
-            {isEdit ? "Edit Study" : "New Study"}
+            {isEdit ? t("modal.editTitle") : t("modal.newTitle")}
           </span>
           <button className={styles.closeBtn} onClick={onClose}>
             ×
@@ -2085,45 +2252,44 @@ function StudyModal({
               className={`${styles.tab} ${activeTab === "details" ? styles.tabActive : ""}`}
               onClick={() => setActiveTab("details")}
             >
-              Details
+              {t("modal.tabs.details")}
             </button>
             <button
               className={`${styles.tab} ${activeTab === "questionnaires" ? styles.tabActive : ""}`}
               onClick={() => setActiveTab("questionnaires")}
             >
-              Questionnaires
+              {t("modal.tabs.questionnaires")}
             </button>
             <button
               className={`${styles.tab} ${activeTab === "schedule" ? styles.tabActive : ""}`}
               onClick={() => setActiveTab("schedule")}
             >
-              Schedule
+              {t("modal.tabs.schedule")}
             </button>
             <button
               className={`${styles.tab} ${activeTab === "codes" ? styles.tabActive : ""}`}
               onClick={() => setActiveTab("codes")}
             >
-              Codes
+              {t("modal.tabs.codes")}
             </button>
             <button
               className={`${styles.tab} ${activeTab === "participants" ? styles.tabActive : ""}`}
               onClick={() => setActiveTab("participants")}
             >
-              Participants
+              {t("modal.tabs.participants")}
             </button>
             <button
               className={`${styles.tab} ${activeTab === "notifications" ? styles.tabActive : ""}`}
               onClick={() => setActiveTab("notifications")}
             >
-              Notifications
+              {t("modal.tabs.notifications")}
             </button>
             <button
               className={`${styles.tab} ${activeTab === "cue-config" ? styles.tabActive : ""}`}
               onClick={() => setActiveTab("cue-config")}
             >
-              Cue Config
+              {t("modal.tabs.cueConfig")}
             </button>
-
           </div>
         )}
 
@@ -2134,31 +2300,31 @@ function StudyModal({
 
               {isEdit && initial?.isDefault && (
                 <div className={styles.defaultBadgeRow}>
-                  <span className={styles.badgeDefault}>Default study</span>
+                  <span className={styles.badgeDefault}>{t("modal.defaultBadge")}</span>
                 </div>
               )}
 
               <div className={styles.formGrid}>
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <label className={styles.label}>Name *</label>
+                  <label className={styles.label}>{t("modal.fields.nameLabel")}</label>
                   <input
                     className={styles.input}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Autumn 2025 Cohort"
+                    placeholder={t("modal.fields.namePlaceholder")}
                   />
-                  <span className={styles.hint}>Used internally; not visible to participants.</span>
+                  <span className={styles.hint}>{t("modal.fields.nameHint")}</span>
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <label className={styles.label}>Description</label>
+                  <label className={styles.label}>{tc("description")}</label>
                   <textarea
                     className={styles.textarea}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Optional description for this study"
+                    placeholder={t("modal.fields.descriptionPlaceholder")}
                   />
-                  <span className={styles.hint}>Optional. For internal reference only.</span>
+                  <span className={styles.hint}>{t("modal.fields.descriptionHint")}</span>
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
@@ -2168,12 +2334,9 @@ function StudyModal({
                       checked={recommenderEnabled}
                       onChange={(e) => setRecommenderEnabled(e.target.checked)}
                     />
-                    Enable recommender for this study
+                    {t("modal.fields.recommenderLabel")}
                   </label>
-                  <span className={styles.hint}>
-                    When disabled, participants in this study do not see the
-                    recommender screen in the app.
-                  </span>
+                  <span className={styles.hint}>{t("modal.fields.recommenderHint")}</span>
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
@@ -2183,13 +2346,9 @@ function StudyModal({
                       checked={onboardingEnabled}
                       onChange={(e) => setOnboardingEnabled(e.target.checked)}
                     />
-                    Show habit-creation onboarding for this study
+                    {t("modal.fields.onboardingLabel")}
                   </label>
-                  <span className={styles.hint}>
-                    When disabled, participants skip the first-time explainer
-                    screens (what a habit is, what cues are) when creating a
-                    habit. Can be overridden per group below.
-                  </span>
+                  <span className={styles.hint}>{t("modal.fields.onboardingHint")}</span>
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
@@ -2197,16 +2356,11 @@ function StudyModal({
                     <input
                       type="checkbox"
                       checked={selfHabitCreationEnabled}
-                      onChange={(e) =>
-                        setSelfHabitCreationEnabled(e.target.checked)
-                      }
+                      onChange={(e) => setSelfHabitCreationEnabled(e.target.checked)}
                     />
-                    Allow participants to create their own habits
+                    {t("modal.fields.selfHabitLabel")}
                   </label>
-                  <span className={styles.hint}>
-                    When disabled, participants in this study cannot create new
-                    habits themselves. Can be overridden per group below.
-                  </span>
+                  <span className={styles.hint}>{t("modal.fields.selfHabitHint")}</span>
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
@@ -2216,16 +2370,21 @@ function StudyModal({
                       checked={remindersEnabled}
                       onChange={(e) => setRemindersEnabled(e.target.checked)}
                     />
-                    Send questionnaire reminders
+                    {t("modal.fields.remindersLabel")}
                   </label>
-                  <span className={styles.hint}>
-                    When enabled, participants get a reminder notification on the
-                    day each questionnaire is due. Turn off to cancel reminders
-                    for this study (applied on the participant&apos;s next app open).
-                  </span>
+                  <span className={styles.hint}>{t("modal.fields.remindersHint")}</span>
                   {remindersEnabled && (
-                    <div style={{ marginTop: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <span className={styles.label} style={{ margin: 0 }}>Reminder time</span>
+                    <div
+                      style={{
+                        marginTop: "0.5rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <span className={styles.label} style={{ margin: 0 }}>
+                        {t("modal.fields.reminderTimeLabel")}
+                      </span>
                       <select
                         className={styles.select}
                         value={reminderHour}
@@ -2241,37 +2400,96 @@ function StudyModal({
                   )}
                 </div>
 
+                <div className={`${styles.formGroup} ${styles.formFull}`}>
+                  <label className={styles.label}>{t("modal.fields.endDateLabel")}</label>
+                  <input
+                    type="date"
+                    className={styles.input}
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                  />
+                  <span className={styles.hint}>{t("modal.fields.endDateHint")}</span>
+                </div>
+
+                <div className={`${styles.formGroup} ${styles.formFull}`}>
+                  <label className={styles.checkboxLabel}>
+                    <input
+                      type="checkbox"
+                      checked={endOfStudyEnabled}
+                      onChange={(e) => setEndOfStudyEnabled(e.target.checked)}
+                      disabled={!endDate}
+                    />
+                    {t("modal.fields.endOfStudyLabel")}
+                  </label>
+                  <span className={styles.hint}>
+                    {endDate
+                      ? t("modal.fields.endOfStudyHintEnabled")
+                      : t("modal.fields.endOfStudyHintDisabled")}
+                  </span>
+                  {endOfStudyEnabled && endDate && (
+                    <div
+                      style={{
+                        marginTop: "0.5rem",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.5rem",
+                      }}
+                    >
+                      <div>
+                        <span className={styles.label} style={{ margin: 0 }}>
+                          {t("modal.fields.notificationTitleLabel")}
+                        </span>
+                        <input
+                          className={styles.input}
+                          value={endOfStudyTitle}
+                          onChange={(e) => setEndOfStudyTitle(e.target.value)}
+                          maxLength={120}
+                        />
+                      </div>
+                      <div>
+                        <span className={styles.label} style={{ margin: 0 }}>
+                          {t("modal.fields.notificationBodyLabel")}
+                        </span>
+                        <input
+                          className={styles.input}
+                          value={endOfStudyBody}
+                          onChange={(e) => setEndOfStudyBody(e.target.value)}
+                          maxLength={500}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Number of groups</label>
+                  <label className={styles.label}>{t("modal.fields.groupCountLabel")}</label>
                   <select
                     className={styles.select}
                     value={groupCount}
-                    onChange={(e) =>
-                      handleGroupCountChange(Number(e.target.value))
-                    }
+                    onChange={(e) => handleGroupCountChange(Number(e.target.value))}
                   >
                     <option value={1}>1</option>
                     <option value={2}>2</option>
                     <option value={3}>3</option>
                     <option value={4}>4</option>
                   </select>
-                  <span className={styles.hint}>Each group is a study condition (e.g. control, intervention). Label them below.</span>
+                  <span className={styles.hint}>{t("modal.fields.groupCountHint")}</span>
                 </div>
               </div>
 
               <div className={styles.groupLabelsSection}>
-                <p className={styles.groupLabelsTitle}>Group labels</p>
+                <p className={styles.groupLabelsTitle}>{t("modal.fields.groupLabelsTitle")}</p>
                 <div className={styles.groupLabelsGrid}>
                   {Array.from({ length: groupCount }).map((_, i) => (
                     <div key={i} className={styles.formGroup}>
-                      <label className={styles.label}>Group {i + 1}</label>
+                      <label className={styles.label}>
+                        {t("groupFallbackLabel", { index: i + 1 })}
+                      </label>
                       <input
                         className={styles.input}
                         value={groupLabels[i] ?? ""}
-                        onChange={(e) =>
-                          handleGroupLabelChange(i, e.target.value)
-                        }
-                        placeholder={`Group ${i + 1}`}
+                        onChange={(e) => handleGroupLabelChange(i, e.target.value)}
+                        placeholder={t("groupFallbackLabel", { index: i + 1 })}
                       />
                     </div>
                   ))}
@@ -2279,13 +2497,7 @@ function StudyModal({
               </div>
             </>
           ) : activeTab === "questionnaires" ? (
-            initial && (
-              <QuestionnairesTab
-                study={initial}
-                token={token}
-                onSaved={onSaved}
-              />
-            )
+            initial && <QuestionnairesTab study={initial} token={token} onSaved={onSaved} />
           ) : activeTab === "schedule" ? (
             initial && <QuestionnaireScheduleTab study={initial} token={token} />
           ) : activeTab === "codes" ? (
@@ -2302,21 +2514,66 @@ function StudyModal({
         {confirmDefaultOpen && (
           <div className={styles.confirmDialog}>
             <p className={styles.confirmMsg}>
-              Set <strong>{initial?.name}</strong> as the default study?
-              Participants without a study code will be enrolled here.
+              {t.rich("modal.confirmDefault.message", {
+                name: initial?.name ?? "",
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </p>
+            <div className={styles.confirmActions}>
+              <button className={styles.cancelBtn} onClick={() => setConfirmDefaultOpen(false)}>
+                {tc("cancel")}
+              </button>
+              <button className={styles.defaultBtn} onClick={handleSetDefaultConfirm}>
+                {tc("confirm")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {confirmDeleteOpen && (
+          <div className={styles.confirmDialog}>
+            <p className={styles.confirmMsg}>
+              {t.rich("modal.confirmDelete.message", {
+                name: initial?.name ?? "",
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
+            </p>
+            <button
+              className={styles.downloadBtn}
+              onClick={handleDownloadData}
+              disabled={downloading}
+            >
+              {downloading
+                ? t("modal.confirmDelete.downloadingEllipsis")
+                : t("modal.confirmDelete.downloadButton")}
+            </button>
+            <label className={styles.confirmLabel}>
+              {t.rich("modal.confirmDelete.typeNameLabel", {
+                name: initial?.name ?? "",
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
+            </label>
+            <input
+              className={styles.confirmInput}
+              value={deleteNameInput}
+              onChange={(e) => setDeleteNameInput(e.target.value)}
+              placeholder={initial?.name ?? ""}
+              autoFocus
+            />
             <div className={styles.confirmActions}>
               <button
                 className={styles.cancelBtn}
-                onClick={() => setConfirmDefaultOpen(false)}
+                onClick={() => setConfirmDeleteOpen(false)}
+                disabled={deleting}
               >
-                Cancel
+                {tc("cancel")}
               </button>
               <button
-                className={styles.defaultBtn}
-                onClick={handleSetDefaultConfirm}
+                className={styles.deleteBtn}
+                onClick={handleDeleteConfirm}
+                disabled={deleting || deleteNameInput.trim() !== (initial?.name ?? "").trim()}
               >
-                Confirm
+                {deleting ? tc("deletingEllipsis") : t("modal.confirmDelete.deleteButton")}
               </button>
             </div>
           </div>
@@ -2332,17 +2589,19 @@ function StudyModal({
                     onClick={handleSetDefaultClick}
                     disabled={settingDefault}
                   >
-                    {settingDefault ? "Setting…" : "Set as Default"}
+                    {settingDefault
+                      ? t("modal.footer.settingDefaultEllipsis")
+                      : t("modal.footer.setDefault")}
                   </button>
                 )}
-                {initial?.isActive && (
-                  initial?.isDefault ? (
+                {initial?.isActive &&
+                  (initial?.isDefault ? (
                     <button
                       className={styles.deactivateBtn}
                       disabled
-                      title="Cannot deactivate the default study. Set another study as default first."
+                      title={t("modal.footer.deactivateDisabledTitle")}
                     >
-                      Deactivate
+                      {t("modal.footer.deactivate")}
                     </button>
                   ) : (
                     <button
@@ -2350,22 +2609,35 @@ function StudyModal({
                       onClick={handleDeactivate}
                       disabled={deactivating}
                     >
-                      {deactivating ? "Deactivating…" : "Deactivate"}
+                      {deactivating
+                        ? t("modal.footer.deactivatingEllipsis")
+                        : t("modal.footer.deactivate")}
                     </button>
-                  )
+                  ))}
+                {!initial?.isDefault && (
+                  <button
+                    className={styles.deleteBtn}
+                    onClick={() => {
+                      setDeleteNameInput("");
+                      setError("");
+                      setConfirmDeleteOpen(true);
+                    }}
+                  >
+                    {tc("delete")}
+                  </button>
                 )}
               </div>
             )}
             <div className={styles.modalFooterRight}>
               <button className={styles.cancelBtn} onClick={onClose}>
-                Cancel
+                {tc("cancel")}
               </button>
-              <button
-                className={styles.saveBtn}
-                onClick={handleSave}
-                disabled={saving}
-              >
-                {saving ? "Saving…" : isEdit ? "Save changes" : "Create"}
+              <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+                {saving
+                  ? tc("saving")
+                  : isEdit
+                    ? t("modal.footer.saveChanges")
+                    : t("modal.footer.create")}
               </button>
             </div>
           </div>
@@ -2384,6 +2656,8 @@ function StudyModal({
  * @returns The studies management page.
  */
 export default function StudiesPage() {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
   const { studies, loading, error, token, refetch: fetchList } = useStudiesData();
   const [actionError, setActionError] = useState("");
 
@@ -2417,14 +2691,24 @@ export default function StudiesPage() {
     await apiFetch(`${API_BASE}/${id}/default`, token, { method: "PUT" });
   }
 
-  async function handleDeactivate(
-    id: string
-  ): Promise<{ error?: string } | void> {
+  async function handleDeactivate(id: string): Promise<{ error?: string } | void> {
     try {
       await apiFetch(`${API_BASE}/${id}`, token, { method: "DELETE" });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Deactivate failed";
+      const msg = err instanceof Error ? err.message : t("modal.errors.deactivateFailed");
       // 409 means participants enrolled — return as error to show inline
+      return { error: msg };
+    }
+  }
+
+  async function handleDelete(id: string, confirmName: string): Promise<{ error?: string } | void> {
+    try {
+      await apiFetch(`${API_BASE}/${id}/delete`, token, {
+        method: "POST",
+        body: JSON.stringify({ confirmName }),
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("modal.errors.deleteFailed");
       return { error: msg };
     }
   }
@@ -2433,22 +2717,18 @@ export default function StudiesPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div className={styles.headerText}>
-          <h1 className={styles.title}>Studies</h1>
-          <p className={styles.subtitle}>
-            Manage studies, groups, and participant enrolment.
-          </p>
+          <h1 className={styles.title}>{t("title")}</h1>
+          <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
         <button className={styles.addButton} onClick={handleOpenCreate}>
-          + New Study
+          {t("newStudy")}
         </button>
       </div>
 
-      {actionError && (
-        <div className={styles.errorMsg}>{actionError}</div>
-      )}
+      {actionError && <div className={styles.errorMsg}>{actionError}</div>}
 
       {loading ? (
-        <div className={styles.loadingState}>Loading…</div>
+        <div className={styles.loadingState}>{tc("loading")}</div>
       ) : error ? (
         <div className={styles.errorMsg}>{error}</div>
       ) : (
@@ -2456,12 +2736,12 @@ export default function StudiesPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Status</th>
-                <th>Groups</th>
-                <th>Participants</th>
-                <th>Created</th>
-                <th>Actions</th>
+                <th>{tc("name")}</th>
+                <th>{tc("status")}</th>
+                <th>{t("table.groups")}</th>
+                <th>{t("table.participants")}</th>
+                <th>{tc("createdAt")}</th>
+                <th>{tc("actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -2469,8 +2749,7 @@ export default function StudiesPage() {
                 <tr>
                   <td colSpan={6}>
                     <div className={styles.emptyState}>
-                      No studies yet. Click &quot;New Study&quot; to create
-                      one.
+                      {t("table.noStudiesYet", { button: t("newStudy") })}
                     </div>
                   </td>
                 </tr>
@@ -2484,33 +2763,25 @@ export default function StudiesPage() {
                     <td>
                       <span className={styles.studyName}>{study.name}</span>
                       {study.isDefault && (
-                        <span className={styles.badgeDefault}>Default</span>
+                        <span className={styles.badgeDefault}>{t("table.default")}</span>
                       )}
                     </td>
                     <td>
                       <span
                         className={`${styles.badge} ${
-                          study.isActive
-                            ? styles.badgeActive
-                            : styles.badgeInactive
+                          study.isActive ? styles.badgeActive : styles.badgeInactive
                         }`}
                       >
-                        {study.isActive ? "Active" : "Inactive"}
+                        {study.isActive ? t("table.active") : t("table.inactive")}
                       </span>
                     </td>
                     <td>{study.groups.length}</td>
                     <td>{study.participantCount ?? 0}</td>
                     <td>{fmtDate(study.createdAt)}</td>
                     <td>
-                      <div
-                        className={styles.actions}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          className={styles.actionBtn}
-                          onClick={() => handleOpenEdit(study)}
-                        >
-                          Edit
+                      <div className={styles.actions} onClick={(e) => e.stopPropagation()}>
+                        <button className={styles.actionBtn} onClick={() => handleOpenEdit(study)}>
+                          {tc("edit")}
                         </button>
                       </div>
                     </td>
@@ -2530,6 +2801,7 @@ export default function StudiesPage() {
           onSaved={handleModalSaved}
           onSetDefault={handleSetDefault}
           onDeactivate={handleDeactivate}
+          onDelete={handleDelete}
         />
       )}
     </div>

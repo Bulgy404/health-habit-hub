@@ -240,6 +240,40 @@ Fragebögen werden Teilnehmenden über Studien zugänglich gemacht. Teilnehmende
 
 ---
 
+### 4c. Fragebögen nach Zeitplan einplanen
+
+Der Tab **Questionnaires** (oben) macht einen Fragebogen für eine Studie verfügbar; der Tab **Schedule** legt fest, *wann* er für jede teilnehmende Person fällig wird — als wiederkehrendes Intervall (z. B. alle 7 Tage) oder als feste Studienwochen/-tage (z. B. Baseline, Woche 4, Woche 8).
+
+**Schritt 1.** Zu **Studies** navigieren, eine Studie öffnen und den Tab **Schedule** anklicken.
+
+**Schritt 2.** Unter **Add a questionnaire** den Fragebogen auswählen, festlegen, ob er für die gesamte Studie oder nur eine Gruppe gilt, und den Turnus (wiederkehrendes Intervall oder feste Wochen/Tage) einstellen. Auf **Add assignment** klicken.
+
+**Schritt 3.** Mit dem **Schedule calendar** unterhalb des Formulars prüfen, was Teilnehmende sehen werden:
+
+| Element | Verhalten |
+|---|---|
+| **Today**-Schaltfläche | Springt im Kalender zurück zum aktuellen Monat, unabhängig davon, wie weit navigiert wurde. |
+| Klick auf einen Tag | Füllt das Formular zum Hinzufügen einer Zuweisung mit einem wiederkehrenden Turnus vor, der an diesem Tag beginnt, und scrollt dorthin — praktisch, um einen Zeitplan visuell zu skizzieren, statt Tagesabstände manuell zu berechnen. |
+| Durchgezogene Einträge | Reale Termine, die bereits für eingeschriebene Teilnehmende generiert wurden. |
+| Gestrichelte, kursive Einträge | Eine **Vorschau**, wie der Zeitplan für eine Person aussähe, die sich heute einschreibt — wird für Zuweisungen angezeigt, die noch keine eingeschriebenen Teilnehmenden haben, damit neu erstellte Zuweisungen im Kalender nicht wie "fehlend" wirken. |
+| Ausgegraute Tage | Liegen nach dem Studienenddatum (siehe unten), falls eines gesetzt ist. |
+
+> **Warum Zeitpläne relativ und nicht als Kalenderdatum angegeben sind.** Jeder Zeitplan wird als Versatz zum individuellen Einschreibedatum jeder teilnehmenden Person ausgedrückt, da Teilnehmende an unterschiedlichen Tagen einer Studie beitreten. Ein Klick auf einen Kalendertag berechnet den entsprechenden Versatz unter der Annahme, dass die Einschreibung heute erfolgt — das tatsächliche Fälligkeitsdatum für jede Person bleibt relativ zu ihrem eigenen Einschreibedatum.
+
+#### Studienenddatum & Benachrichtigung zum Studienende festlegen
+
+Im Tab **Details** der Studie:
+
+**Schritt 1.** Das **Study end date** setzen. Der Schedule-Kalender projiziert dann keine Termine mehr nach diesem Datum.
+
+**Schritt 2.** **Send end-of-study notification** aktivieren und Titel sowie Text der Benachrichtigung ausfüllen.
+
+**Schritt 3.** Auf **Save** klicken.
+
+Die Benachrichtigung wird lokal auf dem Gerät jeder teilnehmenden Person eingeplant (kein Server-Push) — beim nächsten App-Start nach dem Enddatum oder einer Textänderung — und löst automatisch am Enddatum aus, auch wenn die Person an diesem Tag offline ist. Wird die Einstellung deaktiviert oder das Enddatum entfernt, wird die anstehende Benachrichtigung beim nächsten App-Start der teilnehmenden Person storniert.
+
+---
+
 ## 5. Gespendete Gewohnheiten überwachen
 
 Das Gewohnheits-Dashboard zeigt alle gespendeten Gewohnheiten aller Teilnehmer mit Filter- und Exportfunktionen.

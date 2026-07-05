@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import 'recommendation_feature_service.dart';
 import 'recommendation_models.dart';
@@ -14,25 +15,9 @@ import 'results_screen.dart';
 // Phase descriptor
 // ---------------------------------------------------------------------------
 
-class _Phase {
-  final String label;
-  final IconData icon;
-
-  const _Phase({required this.label, required this.icon});
-}
-
-const _phases = [
-  _Phase(label: 'Asking experts\u2026', icon: Icons.menu_book),
-  _Phase(
-    label: 'Looking through your habits database\u2026',
-    icon: Icons.hub,
-  ),
-  _Phase(label: 'Reading academic papers\u2026', icon: Icons.article),
-  _Phase(
-    label: 'Generating your personalised recommendations\u2026',
-    icon: Icons.auto_awesome,
-  ),
-];
+/// Number of phases the loading animation cycles through. Kept independent of
+/// the localized labels below so the cycling logic never needs `context`.
+const _phaseCount = 4;
 
 const _minPhaseDuration = Duration(seconds: 2);
 
@@ -119,6 +104,7 @@ class _RecommendationLoadingScreenState
   /// one. A 422 carries the guard's refusal reason (e.g. "Only health-related
   /// goals are supported.") in `detail`, which the user should see verbatim.
   String _friendlyErrorMessage(Object e) {
+    final l10n = AppLocalizations.of(context)!;
     if (e is DioException) {
       final data = e.response?.data;
       if (data is Map) {
@@ -127,11 +113,10 @@ class _RecommendationLoadingScreenState
       }
       final code = e.response?.statusCode;
       if (code == 504 || e.type == DioExceptionType.receiveTimeout) {
-        return 'Generating recommendations took too long. Please try again.';
+        return l10n.recommendationLoadingTimeoutError;
       }
     }
-    return 'Something went wrong while generating recommendations. '
-        'Please try again.';
+    return l10n.recommendationLoadingGenericError;
   }
 
   // ---------------------------------------------------------------------------
@@ -139,7 +124,7 @@ class _RecommendationLoadingScreenState
   // ---------------------------------------------------------------------------
 
   Future<void> _runPhases() async {
-    for (var i = 0; i < _phases.length; i++) {
+    for (var i = 0; i < _phaseCount; i++) {
       if (!mounted) return;
       final phaseStart = DateTime.now();
 
@@ -200,7 +185,14 @@ class _RecommendationLoadingScreenState
 
   @override
   Widget build(BuildContext context) {
-    final phase = _phases[_phaseIndex];
+    final l10n = AppLocalizations.of(context)!;
+    final phaseLabels = [
+      l10n.recommendationLoadingPhaseExperts,
+      l10n.recommendationLoadingPhaseHabitsDb,
+      l10n.recommendationLoadingPhasePapers,
+      l10n.recommendationLoadingPhaseGenerating,
+    ];
+    final phaseLabel = phaseLabels[_phaseIndex];
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -224,17 +216,17 @@ class _RecommendationLoadingScreenState
                 FadeTransition(
                   opacity: _labelFade,
                   child: Text(
-                    phase.label,
+                    phaseLabel,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: colorScheme.onSurface,
-                        ),
+                      color: colorScheme.onSurface,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
                 // Progress dots
                 _PhaseDots(
-                  total: _phases.length,
+                  total: _phaseCount,
                   current: _phaseIndex,
                   color: colorScheme.primary,
                 ),
@@ -255,10 +247,7 @@ class _PhaseWidget extends StatelessWidget {
   final int phaseIndex;
   final AnimationController pulseController;
 
-  const _PhaseWidget({
-    required this.phaseIndex,
-    required this.pulseController,
-  });
+  const _PhaseWidget({required this.phaseIndex, required this.pulseController});
 
   @override
   Widget build(BuildContext context) {
@@ -302,10 +291,7 @@ class _ForceDirectedGraph extends StatelessWidget {
   final AnimationController controller;
   final Color color;
 
-  const _ForceDirectedGraph({
-    required this.controller,
-    required this.color,
-  });
+  const _ForceDirectedGraph({required this.controller, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -314,10 +300,7 @@ class _ForceDirectedGraph extends StatelessWidget {
       builder: (context, _) {
         return CustomPaint(
           size: const Size(120, 120),
-          painter: _GraphPainter(
-            animValue: controller.value,
-            color: color,
-          ),
+          painter: _GraphPainter(animValue: controller.value, color: color),
         );
       },
     );
@@ -341,10 +324,7 @@ class _GraphPainter extends CustomPainter {
       Offset(cx, cy),
       ...List.generate(6, (i) {
         final angle = (i / 6) * 2 * math.pi + animValue * 0.4;
-        return Offset(
-          cx + r * math.cos(angle),
-          cy + r * math.sin(angle),
-        );
+        return Offset(cx + r * math.cos(angle), cy + r * math.sin(angle));
       }),
     ];
 
@@ -385,10 +365,7 @@ class _ScanningDocument extends StatelessWidget {
   final AnimationController controller;
   final Color color;
 
-  const _ScanningDocument({
-    required this.controller,
-    required this.color,
-  });
+  const _ScanningDocument({required this.controller, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -441,7 +418,9 @@ class _DocumentPainter extends CustomPainter {
     final lineCount = 5;
     for (var i = 0; i < lineCount; i++) {
       final y = 20.0 + i * 16;
-      final lineWidth = i == lineCount - 1 ? size.width * 0.55 : size.width - 20;
+      final lineWidth = i == lineCount - 1
+          ? size.width * 0.55
+          : size.width - 20;
       canvas.drawLine(Offset(10, y), Offset(lineWidth, y), linePaint);
     }
 

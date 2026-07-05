@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import styles from "./page.module.css";
 
 import { apiFetch, apiUrl } from "@/lib/api";
@@ -21,6 +22,8 @@ interface AppSettings {
  * /admin/app-settings singleton.
  */
 function FeaturesSection({ token }: { token: string }) {
+  const t = useTranslations("defaultApp.features");
+  const tc = useTranslations("common");
   const [settings, setSettings] = useState<AppSettings>({
     guidedHabitCreationEnabled: true,
     communityShareDefault: true,
@@ -38,11 +41,11 @@ function FeaturesSection({ token }: { token: string }) {
       const data = await apiFetch(APP_SETTINGS_API, token);
       setSettings(data as AppSettings);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load settings");
+      setError(err instanceof Error ? err.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     load();
@@ -59,7 +62,7 @@ function FeaturesSection({ token }: { token: string }) {
       });
       setSaved(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -72,57 +75,39 @@ function FeaturesSection({ token }: { token: string }) {
 
   return (
     <div className={styles.section}>
-      <p className={styles.sectionTitle}>Features</p>
-      <p className={styles.sectionDesc}>
-        Which features are active for public users.
-      </p>
+      <p className={styles.sectionTitle}>{t("sectionTitle")}</p>
+      <p className={styles.sectionDesc}>{t("sectionDesc")}</p>
 
       {error && <div className={styles.errorMsg}>{error}</div>}
 
       {loading ? (
-        <div className={styles.loadingState}>Loading…</div>
+        <div className={styles.loadingState}>{tc("loading")}</div>
       ) : (
         <>
           <label className={styles.toggle}>
             <input
               type="checkbox"
               checked={settings.guidedHabitCreationEnabled}
-              onChange={(e) =>
-                update({ guidedHabitCreationEnabled: e.target.checked })
-              }
+              onChange={(e) => update({ guidedHabitCreationEnabled: e.target.checked })}
             />
-            <span>Guided implementation intention wizard</span>
+            <span>{t("guidedWizardLabel")}</span>
           </label>
-          <p className={styles.toggleHint}>
-            When enabled, public users are taken through a step-by-step wizard
-            (habit → cues → LLM stitch → confirm → reminder). Habit and cues
-            are always free text for public users; disabling this only skips
-            the LLM stitching step.
-          </p>
+          <p className={styles.toggleHint}>{t("guidedWizardHint")}</p>
 
           <label className={styles.toggle}>
             <input
               type="checkbox"
               checked={settings.communityShareDefault}
-              onChange={(e) =>
-                update({ communityShareDefault: e.target.checked })
-              }
+              onChange={(e) => update({ communityShareDefault: e.target.checked })}
             />
-            <span>Community sharing opt-in shown by default</span>
+            <span>{t("communitySharingLabel")}</span>
           </label>
-          <p className={styles.toggleHint}>
-            When enabled, the community sharing toggle appears at the end of
-            habit creation and is pre-selected.
-          </p>
+          <p className={styles.toggleHint}>{t("communitySharingHint")}</p>
 
           <div className={styles.footer}>
-            {saved && <span className={styles.savedMsg}>Saved!</span>}
-            <button
-              className={styles.saveBtn}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "Saving…" : "Save changes"}
+            {saved && <span className={styles.savedMsg}>{t("saved")}</span>}
+            <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+              {saving ? tc("saving") : t("saveChanges")}
             </button>
           </div>
         </>
@@ -142,6 +127,8 @@ function FeaturesSection({ token }: { token: string }) {
  * (Studies → Cue Config).
  */
 function DefaultsSection({ token }: { token: string }) {
+  const t = useTranslations("defaultApp.defaults");
+  const tc = useTranslations("common");
   const [reminderTime, setReminderTime] = useState("19:00");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -155,10 +142,10 @@ function DefaultsSection({ token }: { token: string }) {
         if (data.default_reminder_time) setReminderTime(data.default_reminder_time);
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : "Failed to load settings");
+        setError(err instanceof Error ? err.message : t("loadFailed"));
       })
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, t]);
 
   async function handleSave() {
     setSaving(true);
@@ -171,7 +158,7 @@ function DefaultsSection({ token }: { token: string }) {
       });
       setSaved(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -179,20 +166,16 @@ function DefaultsSection({ token }: { token: string }) {
 
   return (
     <div className={styles.section}>
-      <p className={styles.sectionTitle}>Defaults</p>
-      <p className={styles.sectionDesc}>
-        Public users create their habits with free-text entry — cue and
-        behavior configuration exists only per study group (Studies → Cue
-        Config).
-      </p>
+      <p className={styles.sectionTitle}>{t("sectionTitle")}</p>
+      <p className={styles.sectionDesc}>{t("sectionDesc")}</p>
 
       {loading ? (
-        <div className={styles.loadingState}>Loading…</div>
+        <div className={styles.loadingState}>{tc("loading")}</div>
       ) : (
         <>
           {error && <div className={styles.errorMsg}>{error}</div>}
           <div className={styles.formGroup} style={{ maxWidth: "16rem" }}>
-            <label className={styles.label}>Default reminder time</label>
+            <label className={styles.label}>{t("reminderTimeLabel")}</label>
             <input
               className={styles.input}
               type="time"
@@ -202,20 +185,13 @@ function DefaultsSection({ token }: { token: string }) {
                 setSaved(false);
               }}
             />
-            <span className={styles.hint}>
-              Time of day for the daily check-in push notification. Users can
-              override in their profile.
-            </span>
+            <span className={styles.hint}>{t("reminderTimeHint")}</span>
           </div>
 
           <div className={styles.footer}>
-            {saved && <span className={styles.savedMsg}>Saved!</span>}
-            <button
-              className={styles.saveBtn}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? "Saving…" : "Save changes"}
+            {saved && <span className={styles.savedMsg}>{t("saved")}</span>}
+            <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+              {saving ? tc("saving") : t("saveChanges")}
             </button>
           </div>
         </>
@@ -232,14 +208,13 @@ function DefaultsSection({ token }: { token: string }) {
  */
 export default function DefaultAppPage() {
   const { token } = useAdminGuard();
+  const t = useTranslations("defaultApp");
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Public App</h1>
-        <p className={styles.subtitle}>
-          Default experience for users who open the app without a study code.
-        </p>
+        <h1 className={styles.title}>{t("title")}</h1>
+        <p className={styles.subtitle}>{t("subtitle")}</p>
       </div>
 
       <FeaturesSection token={token} />

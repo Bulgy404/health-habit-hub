@@ -64,6 +64,18 @@ export async function ensureIndexes(database) {
     './questionnaireSchedule.js'
   );
   await ensureScheduleIndexes(database);
+
+  // Backup audit trail (admin Backups page)
+  const { ensureIndexes: ensureBackupAuditIndexes } = await import(
+    './backupAuditLog.js'
+  );
+  await ensureBackupAuditIndexes(database);
+
+  // Short-lived restore confirmation tokens (TTL-expired automatically)
+  const { ensureIndexes: ensureRestoreTokenIndexes } = await import(
+    './restoreConfirmationToken.js'
+  );
+  await ensureRestoreTokenIndexes(database);
 }
 
 export async function disconnect() {

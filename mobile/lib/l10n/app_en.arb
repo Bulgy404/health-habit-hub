@@ -954,5 +954,656 @@
   "adminNoCommentsYet": "No comments yet.",
   "@adminNoCommentsYet": {
     "description": "Empty state of the moderation list"
+  },
+  "onboardingShareHabitTitle": "Share a Habit",
+  "@onboardingShareHabitTitle": {
+    "description": "Title of the first onboarding walkthrough step"
+  },
+  "onboardingShareHabitDescription": "Share your personal habits with researchers to help build a richer understanding of everyday behaviour. Your contributions are anonymised and used only for scientific research. Every habit you share makes the dataset more valuable for everyone.",
+  "@onboardingShareHabitDescription": {
+    "description": "Body copy of the first onboarding walkthrough step"
+  },
+  "onboardingExploreAnnotateTitle": "Explore & Annotate",
+  "@onboardingExploreAnnotateTitle": {
+    "description": "Title of the second onboarding walkthrough step"
+  },
+  "onboardingExploreAnnotateDescription": "Browse the interactive habit graph to discover how habits relate to each other across the community. You can annotate connections and add context to improve the shared knowledge base. The more you explore, the richer the graph becomes.",
+  "@onboardingExploreAnnotateDescription": {
+    "description": "Body copy of the second onboarding walkthrough step"
+  },
+  "onboardingRecommendationsTitle": "Get Recommendations",
+  "@onboardingRecommendationsTitle": {
+    "description": "Title of the third onboarding walkthrough step"
+  },
+  "onboardingRecommendationsDescription": "Receive personalised habit recommendations based on your profile and the collective dataset. Our recommendation engine learns from community contributions to suggest habits that fit your lifestyle. Discover new habits that others with similar profiles have found helpful.",
+  "@onboardingRecommendationsDescription": {
+    "description": "Body copy of the third onboarding walkthrough step"
+  },
+  "onboardingSubtitle": "A citizen-science platform where your habits help build a richer understanding of everyday behaviour.",
+  "@onboardingSubtitle": {
+    "description": "Subtitle shown under the app name on the onboarding splash page"
+  },
+  "onboardingGetStarted": "Get Started",
+  "@onboardingGetStarted": {
+    "description": "Button label to begin the onboarding walkthrough from the splash page"
+  },
+  "onboardingRestoreAccount": "Restore existing account",
+  "@onboardingRestoreAccount": {
+    "description": "Button label on the onboarding splash page to restore an existing account instead of onboarding as new"
+  },
+  "onboardingSkip": "Skip",
+  "@onboardingSkip": {
+    "description": "Button label to skip ahead to the last onboarding walkthrough page"
+  },
+  "onboardingContinue": "Continue",
+  "@onboardingContinue": {
+    "description": "Button label on the final onboarding walkthrough page to proceed to consent"
+  },
+  "onboardingNext": "Next",
+  "@onboardingNext": {
+    "description": "Button label to advance to the next onboarding walkthrough page"
+  },
+  "adminQuestionnairesDeleteConfirmTitle": "Delete questionnaire?",
+  "@adminQuestionnairesDeleteConfirmTitle": {
+    "description": "Title of the confirmation dialog shown before deleting a questionnaire"
+  },
+  "adminQuestionnairesDeleteConfirmMessage": "Delete \"{title}\"? This cannot be undone.",
+  "@adminQuestionnairesDeleteConfirmMessage": {
+    "description": "Body of the confirmation dialog shown before deleting a questionnaire, includes the questionnaire title",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "adminQuestionnairesDeleteConflict": "Cannot delete: questionnaire is assigned to an active study.",
+  "@adminQuestionnairesDeleteConflict": {
+    "description": "Error shown when deleting a questionnaire fails because it is assigned to an active study (HTTP 409)"
+  },
+  "adminQuestionnairesDeleteForbidden": "Cannot delete a library questionnaire.",
+  "@adminQuestionnairesDeleteForbidden": {
+    "description": "Error shown when deleting a questionnaire fails because it is a read-only library questionnaire (HTTP 403)"
+  },
+  "adminQuestionnairesDeleteFailed": "Failed to delete questionnaire.",
+  "@adminQuestionnairesDeleteFailed": {
+    "description": "Generic error shown when deleting a questionnaire fails"
+  },
+  "adminQuestionnairesTitle": "Questionnaires",
+  "@adminQuestionnairesTitle": {
+    "description": "AppBar title for the admin questionnaires screen"
+  },
+  "adminQuestionnairesLibraryLabel": "Library",
+  "@adminQuestionnairesLibraryLabel": {
+    "description": "Label for the library questionnaires tab, and chip shown on library questionnaire cards"
+  },
+  "adminQuestionnairesCustomTab": "Custom",
+  "@adminQuestionnairesCustomTab": {
+    "description": "Tab label for researcher-created custom questionnaires"
+  },
+  "adminQuestionnairesNewTooltip": "New questionnaire",
+  "@adminQuestionnairesNewTooltip": {
+    "description": "Tooltip for the floating action button that creates a new custom questionnaire"
+  },
+  "adminQuestionnairesLoadFailed": "Failed to load questionnaires.",
+  "@adminQuestionnairesLoadFailed": {
+    "description": "Error message shown when the questionnaire list fails to load"
+  },
+  "adminQuestionnairesLibraryEmpty": "No library questionnaires found.",
+  "@adminQuestionnairesLibraryEmpty": {
+    "description": "Empty state message for the library questionnaires tab"
+  },
+  "adminQuestionnairesCustomEmpty": "No custom questionnaires yet.\nTap + to create one.",
+  "@adminQuestionnairesCustomEmpty": {
+    "description": "Empty state message for the custom questionnaires tab"
+  },
+  "adminQuestionnairesItemCount": "{count} questions",
+  "@adminQuestionnairesItemCount": {
+    "description": "Chip label showing the number of questions in a questionnaire",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminQuestionnairesInactiveChip": "Inactive",
+  "@adminQuestionnairesInactiveChip": {
+    "description": "Chip label shown on a questionnaire card when the questionnaire is inactive"
+  },
+  "adminQuestionnairesEditDialogTitle": "Edit Questionnaire",
+  "@adminQuestionnairesEditDialogTitle": {
+    "description": "Title of the questionnaire editor dialog when editing an existing questionnaire"
+  },
+  "adminQuestionnairesNewDialogTitle": "New Questionnaire",
+  "@adminQuestionnairesNewDialogTitle": {
+    "description": "Title of the questionnaire editor dialog when creating a new questionnaire"
+  },
+  "adminQuestionnairesTitleFieldLabel": "Title *",
+  "@adminQuestionnairesTitleFieldLabel": {
+    "description": "Label for the required title text field in the questionnaire editor dialog"
+  },
+  "adminQuestionnairesFieldRequiredError": "Required",
+  "@adminQuestionnairesFieldRequiredError": {
+    "description": "Validation error shown under the title field when it is left empty"
+  },
+  "adminQuestionnairesDescriptionFieldLabel": "Description",
+  "@adminQuestionnairesDescriptionFieldLabel": {
+    "description": "Label for the description text field in the questionnaire editor dialog"
+  },
+  "adminQuestionnairesQuestionsCount": "Questions ({count})",
+  "@adminQuestionnairesQuestionsCount": {
+    "description": "Section heading showing the number of questions in the questionnaire editor dialog",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminQuestionnairesAddButton": "Add",
+  "@adminQuestionnairesAddButton": {
+    "description": "Button label to add a new question in the questionnaire editor dialog"
+  },
+  "adminQuestionnairesNoQuestionsYet": "No questions yet. Tap \"Add\" to add one.",
+  "@adminQuestionnairesNoQuestionsYet": {
+    "description": "Empty state message shown when a questionnaire has no questions yet"
+  },
+  "adminQuestionnairesAllQuestionsNeedText": "All questions must have text.",
+  "@adminQuestionnairesAllQuestionsNeedText": {
+    "description": "Validation snackbar shown when saving a questionnaire with one or more blank questions"
+  },
+  "adminQuestionnairesSaveFailed": "Failed to save questionnaire.",
+  "@adminQuestionnairesSaveFailed": {
+    "description": "Snackbar message shown when saving a questionnaire fails"
+  },
+  "adminQuestionnairesCreateButton": "Create",
+  "@adminQuestionnairesCreateButton": {
+    "description": "Button label to submit the dialog when creating a new questionnaire"
+  },
+  "adminQuestionnairesQuestionNumber": "Q{number}",
+  "@adminQuestionnairesQuestionNumber": {
+    "description": "Short numbered label identifying a question's position in the questionnaire editor",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "adminQuestionnairesQuestionTextFieldLabel": "Question text",
+  "@adminQuestionnairesQuestionTextFieldLabel": {
+    "description": "Label for the question text field in the question editor"
+  },
+  "adminQuestionnairesTypeFieldLabel": "Type",
+  "@adminQuestionnairesTypeFieldLabel": {
+    "description": "Label for the question type dropdown in the question editor"
+  },
+  "adminQuestionnairesTypeOpenText": "Open text",
+  "@adminQuestionnairesTypeOpenText": {
+    "description": "Question type option: free-form open text answer"
+  },
+  "adminQuestionnairesTypeSingleChoice": "Single choice",
+  "@adminQuestionnairesTypeSingleChoice": {
+    "description": "Question type option: single choice answer"
+  },
+  "adminQuestionnairesTypeMultiChoice": "Multi choice",
+  "@adminQuestionnairesTypeMultiChoice": {
+    "description": "Question type option: multiple choice answer"
+  },
+  "adminQuestionnairesTypeScale": "Scale",
+  "@adminQuestionnairesTypeScale": {
+    "description": "Question type option: numeric scale answer"
+  },
+  "adminQuestionnairesRequiredLabel": "Required",
+  "@adminQuestionnairesRequiredLabel": {
+    "description": "Checkbox label indicating whether a question must be answered"
+  },
+  "adminQuestionnairesOptionsCount": "Options ({count})",
+  "@adminQuestionnairesOptionsCount": {
+    "description": "Section heading showing the number of answer options for a choice question",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adminQuestionnairesAddOption": "Add option",
+  "@adminQuestionnairesAddOption": {
+    "description": "Button label to add a new answer option to a choice question"
+  },
+  "adminQuestionnairesOptionLabelField": "Option {number} label",
+  "@adminQuestionnairesOptionLabelField": {
+    "description": "Label for a text field editing the label of a single answer option, numbered by its position",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "adminShellNavParticipants": "Participants",
+  "@adminShellNavParticipants": {
+    "description": "Admin shell navigation rail label for the Participants section"
+  },
+  "adminShellNavSurveys": "Surveys",
+  "@adminShellNavSurveys": {
+    "description": "Admin shell navigation rail label for the Surveys section"
+  },
+  "adminShellNavQuestionnaires": "Questionnaires",
+  "@adminShellNavQuestionnaires": {
+    "description": "Admin shell navigation rail label for the Questionnaires section"
+  },
+  "adminShellNavHabits": "Habits",
+  "@adminShellNavHabits": {
+    "description": "Admin shell navigation rail label for the Habits section"
+  },
+  "adminShellNavDevices": "Devices",
+  "@adminShellNavDevices": {
+    "description": "Admin shell navigation rail label for the Devices section"
+  },
+  "adminShellNavSettings": "Settings",
+  "@adminShellNavSettings": {
+    "description": "Admin shell navigation rail label for the Settings section"
+  },
+  "recommendationResultsTitle": "Recommendations",
+  "@recommendationResultsTitle": {
+    "description": "App bar title on the recommendation results screen"
+  },
+  "recommendationTryAgain": "Try again",
+  "@recommendationTryAgain": {
+    "description": "Button label to retry after an error or empty recommendation result"
+  },
+  "recommendationEmptyMessage": "No recommendations were generated. Try describing your goal in more detail — the more context you share, the better.",
+  "@recommendationEmptyMessage": {
+    "description": "Message shown when the recommendation API returns no results"
+  },
+  "recommendationTryDifferentGoal": "Try a different goal",
+  "@recommendationTryDifferentGoal": {
+    "description": "Bottom bar button label to go back and enter a different goal"
+  },
+  "recommendationHabitFlowError": "Could not open the habit flow. Please try again.",
+  "@recommendationHabitFlowError": {
+    "description": "Error shown when navigating to the habit-creation flow from a recommendation fails"
+  },
+  "recommendationWhyThisHelps": "Why this helps:",
+  "@recommendationWhyThisHelps": {
+    "description": "Label preceding the rationale text on a recommendation card"
+  },
+  "recommendationSourcesCount": "Sources ({count})",
+  "@recommendationSourcesCount": {
+    "description": "Expansion tile title showing the number of cited sources for a recommendation",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recommendationAddToHabits": "Add to my habits",
+  "@recommendationAddToHabits": {
+    "description": "Button label to adopt a recommendation as a new habit"
+  },
+  "recommendationFeedbackSubmitted": "Feedback submitted — thank you!",
+  "@recommendationFeedbackSubmitted": {
+    "description": "Confirmation shown after successfully submitting feedback on a recommendation"
+  },
+  "recommendationLeaveComment": "Leave a comment:",
+  "@recommendationLeaveComment": {
+    "description": "Label above the feedback comment field on a recommendation card"
+  },
+  "recommendationFeedbackHint": "Your feedback…",
+  "@recommendationFeedbackHint": {
+    "description": "Placeholder hint text in the recommendation feedback comment field"
+  },
+  "recommendationFeedbackFailed": "Failed to submit feedback",
+  "@recommendationFeedbackFailed": {
+    "description": "Error shown when submitting recommendation feedback fails"
+  },
+  "recommendationSourceLinkError": "Could not open the source link.",
+  "@recommendationSourceLinkError": {
+    "description": "Error shown when a citation source link fails to open"
+  },
+  "recommendationLoadingPhaseExperts": "Asking experts…",
+  "@recommendationLoadingPhaseExperts": {
+    "description": "First phase label on the recommendation loading screen"
+  },
+  "recommendationLoadingPhaseHabitsDb": "Looking through your habits database…",
+  "@recommendationLoadingPhaseHabitsDb": {
+    "description": "Second phase label on the recommendation loading screen"
+  },
+  "recommendationLoadingPhasePapers": "Reading academic papers…",
+  "@recommendationLoadingPhasePapers": {
+    "description": "Third phase label on the recommendation loading screen"
+  },
+  "recommendationLoadingPhaseGenerating": "Generating your personalised recommendations…",
+  "@recommendationLoadingPhaseGenerating": {
+    "description": "Fourth phase label on the recommendation loading screen"
+  },
+  "recommendationLoadingTimeoutError": "Generating recommendations took too long. Please try again.",
+  "@recommendationLoadingTimeoutError": {
+    "description": "Error shown when the recommendation request times out"
+  },
+  "recommendationLoadingGenericError": "Something went wrong while generating recommendations. Please try again.",
+  "@recommendationLoadingGenericError": {
+    "description": "Generic fallback error shown when generating recommendations fails"
+  },
+  "bubbleGraphNoHabitsInDimension": "No habits in this dimension yet.",
+  "@bubbleGraphNoHabitsInDimension": {
+    "description": "Empty state shown when a drilled-into dimension has no habit bubbles"
+  },
+  "bubbleGraphAllCategories": "All categories",
+  "@bubbleGraphAllCategories": {
+    "description": "Tooltip for the back button that returns from a dimension to the full bubble graph overview"
+  },
+  "bubbleGraphHabitCount": "{count, plural, =1{1 habit} other{{count} habits}}",
+  "@bubbleGraphHabitCount": {
+    "description": "Habit count label shown under a dimension bubble and in the dimension drill-in header",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recommendationCardWhyTitle": "Why \"{habitName}\"?",
+  "@recommendationCardWhyTitle": {
+    "description": "Bottom sheet title asking why a specific habit was recommended",
+    "placeholders": {
+      "habitName": {
+        "type": "String"
+      }
+    }
+  },
+  "recommendationCardEvidence": "Evidence",
+  "@recommendationCardEvidence": {
+    "description": "Label for the citation/evidence section in the recommendation rationale sheet"
+  },
+  "recommendationCardConfidence": "Confidence",
+  "@recommendationCardConfidence": {
+    "description": "Label preceding the confidence score bar on a recommendation card"
+  },
+  "recommendationCardWhy": "Why?",
+  "@recommendationCardWhy": {
+    "description": "Button label that opens the full rationale for a recommendation"
+  },
+  "recommendationCardDismiss": "Dismiss",
+  "@recommendationCardDismiss": {
+    "description": "Tooltip for the button that dismisses a recommendation card"
+  },
+  "recommendationCardAccept": "Accept",
+  "@recommendationCardAccept": {
+    "description": "Tooltip for the button that accepts a recommendation card"
+  },
+  "questionnaireFormRequiredQuestion": "This question is required.",
+  "@questionnaireFormRequiredQuestion": {
+    "description": "Validation error shown when a required questionnaire question is left unanswered"
+  },
+  "questionnaireFormAnswerAllRequired": "Please answer all required questions before submitting.",
+  "@questionnaireFormAnswerAllRequired": {
+    "description": "Validation error shown on final submit when required questions are unanswered"
+  },
+  "questionnaireFormProgressLabel": "Question {current} of {total}",
+  "@questionnaireFormProgressLabel": {
+    "description": "Progress indicator label showing current question number out of total",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "questionnaireFormBackButton": "Back",
+  "@questionnaireFormBackButton": {
+    "description": "Button to go back to the previous questionnaire question"
+  },
+  "questionnaireFormSubmitButton": "Submit",
+  "@questionnaireFormSubmitButton": {
+    "description": "Button to submit the completed questionnaire"
+  },
+  "questionnaireFormSaveAndContinueButton": "Save & Continue",
+  "@questionnaireFormSaveAndContinueButton": {
+    "description": "Button to save the current answer and move to the next question"
+  },
+  "questionnaireFormAnswerHint": "Your answer…",
+  "@questionnaireFormAnswerHint": {
+    "description": "Placeholder hint text for the free-text questionnaire answer field"
+  },
+  "questionnaireFallbackTitle": "Questionnaire",
+  "@questionnaireFallbackTitle": {
+    "description": "Fallback app bar title shown while the questionnaire definition is loading or unavailable"
+  },
+  "donateShareEyebrow": "SHARE A HABIT",
+  "@donateShareEyebrow": {
+    "description": "Small uppercase eyebrow label above the share-a-habit hero card"
+  },
+  "donateHeroTitle": "Share a habit with science",
+  "@donateHeroTitle": {
+    "description": "Headline on the share-a-habit hero card"
+  },
+  "donateHeroSubtitle": "Anonymous · ~2 min · Helps researchers worldwide",
+  "@donateHeroSubtitle": {
+    "description": "Subtitle on the share-a-habit hero card describing the task"
+  },
+  "donateStartSharingButton": "Start sharing",
+  "@donateStartSharingButton": {
+    "description": "Button that opens the habit-donation form"
+  },
+  "donateQuestionnaireEyebrow": "QUESTIONNAIRE",
+  "@donateQuestionnaireEyebrow": {
+    "description": "Small uppercase eyebrow label above a due-questionnaire task card"
+  },
+  "donateQuestionnaireDueSubtitle": "Short questionnaire · due now",
+  "@donateQuestionnaireDueSubtitle": {
+    "description": "Subtitle on a due-questionnaire task card"
+  },
+  "donateCompleteButton": "Complete",
+  "@donateCompleteButton": {
+    "description": "Button on a due-questionnaire task card that opens the questionnaire"
+  },
+  "donateSharedTodayTitle": "Shared today",
+  "@donateSharedTodayTitle": {
+    "description": "Heading shown once the user has already shared a habit today"
+  },
+  "donateSharedTodayBody": "Thanks for contributing! Come back tomorrow for the next one.",
+  "@donateSharedTodayBody": {
+    "description": "Body text shown once the user has already shared a habit today"
+  },
+  "donateWhyShareTitle": "Why share?",
+  "@donateWhyShareTitle": {
+    "description": "Heading for the explanatory card on why habit sharing is useful"
+  },
+  "donateWhyShareBody": "Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone's recommendations become — including yours.",
+  "@donateWhyShareBody": {
+    "description": "Body copy for the explanatory card on why habit sharing is useful"
+  },
+  "donatePleaseAnswerAllQuestions": "Please answer all questions",
+  "@donatePleaseAnswerAllQuestions": {
+    "description": "Snackbar shown when the donation form is submitted with missing answers"
+  },
+  "donateNotAHabitMessage": "This doesn't look like a habit. Try describing a regular behaviour, e.g. \"I go for a 30-minute walk every morning\".",
+  "@donateNotAHabitMessage": {
+    "description": "Message shown when the backend classifier rejects the submitted text as not being a habit"
+  },
+  "donateSavedOffline": "Saved offline — will submit when connected",
+  "@donateSavedOffline": {
+    "description": "Snackbar shown when a habit donation is queued for later submission due to no connection"
+  },
+  "donateUnauthorized": "Unauthorized. Please sign in again.",
+  "@donateUnauthorized": {
+    "description": "Snackbar shown when habit donation submission fails with a 401 response"
+  },
+  "donateAnalysisUnavailable": "Habit analysis is temporarily unavailable. Please try again in a moment.",
+  "@donateAnalysisUnavailable": {
+    "description": "Snackbar shown when habit donation submission fails with a 502/503 response"
+  },
+  "donateTodaysTasksEyebrow": "TODAY'S TASKS",
+  "@donateTodaysTasksEyebrow": {
+    "description": "Section heading above the list of today's tasks on the donate landing screen"
+  },
+  "donateCommunityLabel": "Community",
+  "@donateCommunityLabel": {
+    "description": "Label under the total-donations stat card"
+  },
+  "donateDayStreakLabel": "Day streak",
+  "@donateDayStreakLabel": {
+    "description": "Label under the sharing-streak stat card"
+  },
+  "donateFormDescribeHabitLabel": "Describe your habit",
+  "@donateFormDescribeHabitLabel": {
+    "description": "Label above the habit description text field on the donation form"
+  },
+  "donateFormHabitHint": "e.g. I go for a 30-minute walk every morning",
+  "@donateFormHabitHint": {
+    "description": "Placeholder hint text for the habit description text field"
+  },
+  "donateFormHabitValidationError": "Please describe your habit (at least 10 characters)",
+  "@donateFormHabitValidationError": {
+    "description": "Validation error when the habit description is too short"
+  },
+  "donateFormFrequencyQuestion": "How often do you do this habit?",
+  "@donateFormFrequencyQuestion": {
+    "description": "Rating question label on the donation form"
+  },
+  "donateFormFrequencyRarely": "Rarely",
+  "@donateFormFrequencyRarely": {
+    "description": "Frequency rating option on the donation form"
+  },
+  "donateFormFrequencyWeekly": "Weekly",
+  "@donateFormFrequencyWeekly": {
+    "description": "Frequency rating option on the donation form"
+  },
+  "donateFormFrequencySeveralPerWeek": "Several/week",
+  "@donateFormFrequencySeveralPerWeek": {
+    "description": "Frequency rating option on the donation form"
+  },
+  "donateFormFrequencyDaily": "Daily",
+  "@donateFormFrequencyDaily": {
+    "description": "Frequency rating option on the donation form"
+  },
+  "donateFormDurationQuestion": "How long have you had this habit?",
+  "@donateFormDurationQuestion": {
+    "description": "Rating question label on the donation form"
+  },
+  "donateFormDurationUnder1Month": "< 1 month",
+  "@donateFormDurationUnder1Month": {
+    "description": "Duration rating option on the donation form"
+  },
+  "donateFormDuration1To3Months": "1–3 months",
+  "@donateFormDuration1To3Months": {
+    "description": "Duration rating option on the donation form"
+  },
+  "donateFormDuration3To12Months": "3–12 months",
+  "@donateFormDuration3To12Months": {
+    "description": "Duration rating option on the donation form"
+  },
+  "donateFormDurationOver1Year": "> 1 year",
+  "@donateFormDurationOver1Year": {
+    "description": "Duration rating option on the donation form"
+  },
+  "donateFormHealthBenefitQuestion": "How much does it benefit your health?",
+  "@donateFormHealthBenefitQuestion": {
+    "description": "Rating question label on the donation form"
+  },
+  "donateFormRatingCaption": "1 = Not at all · 5 = Very much",
+  "@donateFormRatingCaption": {
+    "description": "Caption explaining the 1-5 rating scale endpoints on the donation form"
+  },
+  "donateFormWellbeingQuestion": "How much does it improve your wellbeing?",
+  "@donateFormWellbeingQuestion": {
+    "description": "Rating question label on the donation form"
+  },
+  "setCueNextButton": "Next",
+  "@setCueNextButton": {
+    "description": "Button to proceed from the cue-setting step to the next step"
+  },
+  "setCueNoneAvailableTitle": "No cues available yet",
+  "@setCueNoneAvailableTitle": {
+    "description": "Empty-state title shown when no study-assigned cues are available yet"
+  },
+  "setCueNoneAvailableSubtitle": "Your study coordinator will assign cues soon",
+  "@setCueNoneAvailableSubtitle": {
+    "description": "Empty-state subtitle shown when no study-assigned cues are available yet"
+  },
+  "setCueAssignedNumbered": "Cue {index} of {total} (assigned by study)",
+  "@setCueAssignedNumbered": {
+    "description": "Subtitle for an assigned cue when more than one cue was assigned",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "setCueAssignedByStudy": "Assigned by study",
+  "@setCueAssignedByStudy": {
+    "description": "Subtitle for an assigned cue when only one cue was assigned"
+  },
+  "addAnotherCueCount": "Add another cue ({current}/{max})",
+  "@addAnotherCueCount": {
+    "description": "Button label to add another self-selected cue, showing current and maximum count",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "setCueMaxReachedNote": "You can add up to {max} cues.",
+  "@setCueMaxReachedNote": {
+    "description": "Note shown once the maximum number of self-selected cues has been reached",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "couldNotLogToday": "Could not log today: {error}",
+  "@couldNotLogToday": {
+    "description": "Snackbar shown when logging today's habit completion fails",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "continueButton": "Continue",
+  "@continueButton": {
+    "description": "Generic button to proceed to the next screen"
+  },
+  "behaviorWalking": "Walking",
+  "@behaviorWalking": {
+    "description": "Behavior catalog label: walking"
+  },
+  "behaviorLightJogging": "Light jogging",
+  "@behaviorLightJogging": {
+    "description": "Behavior catalog label: light jogging"
+  },
+  "behaviorCycling": "Cycling",
+  "@behaviorCycling": {
+    "description": "Behavior catalog label: cycling"
+  },
+  "behaviorStructuredCalisthenics": "Structured calisthenics",
+  "@behaviorStructuredCalisthenics": {
+    "description": "Behavior catalog label: structured calisthenics"
+  },
+  "behaviorYoga": "Yoga",
+  "@behaviorYoga": {
+    "description": "Behavior catalog label: yoga"
+  },
+  "describeYourHabitMinLength": "Please describe your habit (min. 3 characters)",
+  "@describeYourHabitMinLength": {
+    "description": "Validation error when the free-text habit description is too short"
+  },
+  "yourHabitLabel": "Your habit",
+  "@yourHabitLabel": {
+    "description": "Text field label for entering a free-text habit description"
+  },
+  "yourHabitHint": "e.g. A 20-minute walk",
+  "@yourHabitHint": {
+    "description": "Hint text for the free-text habit description field"
+  },
+  "nextButton": "Next",
+  "@nextButton": {
+    "description": "Generic Next button label"
   }
 }

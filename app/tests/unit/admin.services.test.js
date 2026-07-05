@@ -11,7 +11,9 @@ import {
 import {
   getHabitsFeed,
   buildHabitsCSV,
+  getParticipantHabits,
 } from '../../services/adminHabitService.js';
+import { listInsights } from '../../services/adminInsightsService.js';
 import {
   getParticipantProgress,
   getSettings,
@@ -229,69 +231,120 @@ test('softDeleteParticipant returns null when participant not found', async () =
 
 // ── adminHabitService ─────────────────────────────────────────────────────────
 
+// Donated habits are sourced from Neo4j; the service maps rows returned by
+// neo4jRun. Rows with no studyId skip the Mongo group-label lookup.
+const makeNeo4j = (rows) => async () => rows;
+
 test('getHabitsFeed returns paginated results', async () => {
-  const db = makeDb({
-    habit_donations: [
-      {
-        participantId: 'p1',
-        habitName: 'Walk',
-        category: 'exercise',
-        donatedAt: new Date(),
-      },
-      {
-        participantId: 'p2',
-        habitName: 'Run',
-        category: 'exercise',
-        donatedAt: new Date(),
-      },
-    ],
-  });
-  const result = await getHabitsFeed({ db, page: 1, limit: 10 });
+  const db = makeDb({});
+  const neo4jRun = makeNeo4j([
+    {
+      id: 'h1',
+      participantId: 'p1',
+      habitName: 'Walk',
+      category: 'exercise',
+      studyId: null,
+      groupId: null,
+      donatedAt: '2026-03-02T00:00:00.000Z',
+    },
+    {
+      id: 'h2',
+      participantId: 'p2',
+      habitName: 'Run',
+      category: 'exercise',
+      studyId: null,
+      groupId: null,
+      donatedAt: '2026-03-01T00:00:00.000Z',
+    },
+  ]);
+  const result = await getHabitsFeed({ db, neo4jRun, page: 1, limit: 10 });
   assert.strictEqual(result.total, 2);
   assert.strictEqual(result.results.length, 2);
   assert.strictEqual(result.page, 1);
 });
 
 test('getHabitsFeed clamps page and limit', async () => {
-  const db = makeDb({ habit_donations: [] });
-  const result = await getHabitsFeed({ db, page: 0, limit: 200 });
+  const db = makeDb({});
+  const result = await getHabitsFeed({
+    db,
+    neo4jRun: makeNeo4j([]),
+    page: 0,
+    limit: 200,
+  });
   assert.strictEqual(result.page, 1);
   assert.strictEqual(result.limit, 100);
 });
 
 test('buildHabitsCSV returns csv string with header', async () => {
-  const db = makeDb({
-    habit_donations: [
-      {
-        participantId: 'p1',
-        habitName: 'Walk',
-        category: 'exercise',
-        donatedAt: new Date('2026-03-01'),
-      },
-    ],
-  });
-  const csv = await buildHabitsCSV({ db });
+  const db = makeDb({});
+  const neo4jRun = makeNeo4j([
+    {
+      id: 'h1',
+      participantId: 'p1',
+      habitName: 'Walk',
+      category: 'exercise',
+      studyId: null,
+      groupId: null,
+      donatedAt: '2026-03-01T00:00:00.000Z',
+    },
+  ]);
+  const csv = await buildHabitsCSV({ db, neo4jRun });
   const lines = csv.split('\n');
-  assert.strictEqual(lines[0], 'participantId,habitName,category,donatedAt');
+  assert.strictEqual(
+    lines[0],
+    'participantId,habitName,category,group,donatedAt'
+  );
   assert.ok(lines[1].startsWith('p1,Walk,exercise,'));
 });
 
 test('buildHabitsCSV escapes commas in values', async () => {
-  const db = makeDb({
-    habit_donations: [
-      {
-        participantId: 'p1',
-        habitName: 'Walk, jog, run',
-        category: 'ex',
-        donatedAt: new Date(),
-      },
-    ],
-  });
-  const csv = await buildHabitsCSV({ db });
+  const db = makeDb({});
+  const neo4jRun = makeNeo4j([
+    {
+      id: 'h1',
+      participantId: 'p1',
+      habitName: 'Walk, jog, run',
+      category: 'ex',
+      studyId: null,
+      groupId: null,
+      donatedAt: '2026-03-01T00:00:00.000Z',
+    },
+  ]);
+  const csv = await buildHabitsCSV({ db, neo4jRun });
   assert.ok(
     csv.includes('"Walk, jog, run"'),
     'comma-containing value should be quoted'
   );
+});
+
+test('getParticipantHabits maps Neo4j rows newest-first', async () => {
+  const neo4jRun = async () => [
+    {
+      id: 'h1',
+      habitName: 'Walk',
+      category: 'Physical activity',
+      isHabit: true,
+      studyId: null,
+      donatedAt: '2026-03-02T00:00:00.000Z',
+    },
+  ];
+  const habits = await getParticipantHabits({ neo4jRun, userId: 'u1' });
+  assert.strictEqual(habits.length, 1);
+  assert.strictEqual(habits[0].habitName, 'Walk');
+  assert.strictEqual(habits[0].category, 'Physical activity');
+  assert.strictEqual(habits[0].isHabit, true);
+});
+
+test('getParticipantHabits returns [] without neo4jRun', async () => {
+  const habits = await getParticipantHabits({ neo4jRun: null, userId: 'u1' });
+  assert.deepStrictEqual(habits, []);
+});
+
+test('listInsights exposes keyed metadata', () => {
+  const insights = listInsights();
+  assert.ok(insights.length > 0);
+  assert.ok(insights.every((i) => i.key && i.title && i.description));
+  assert.ok(insights.some((i) => i.key === 'totals'));
 });
 
 // ── adminStatsService ─────────────────────────────────────────────────────────

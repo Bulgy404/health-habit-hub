@@ -7,6 +7,7 @@
 export const SUPPORTED_LANGUAGES = [
   'en',
   'de',
+  'ja',
   'fr',
   'es',
   'it',

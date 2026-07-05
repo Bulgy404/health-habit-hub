@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import styles from "./page.module.css";
 import { useQuestionnairesData } from "./useQuestionnairesData";
 
@@ -49,13 +50,19 @@ function makeQuestion(): Question {
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/questionnaires";
-const PARTICIPANT_API = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/questionnaires";
+const API_BASE =
+  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/questionnaires";
+const PARTICIPANT_API =
+  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/questionnaires";
 
 /**
  * Authenticated JSON fetch helper.
@@ -107,6 +114,7 @@ function QuestionCard({
   isDragging: boolean;
   isDragOver: boolean;
 }) {
+  const t = useTranslations("questionnaires");
   const hasOptions = question.type === "single_choice" || question.type === "multi_choice";
 
   function updateField<K extends keyof Question>(key: K, value: Question[K]) {
@@ -149,14 +157,14 @@ function QuestionCard({
     >
       <div className={styles.questionCardHeader}>
         <span className={styles.dragHandle}>⠿</span>
-        <span className={styles.questionIndex}>Q{index + 1}</span>
+        <span className={styles.questionIndex}>{t("questionLabel", { index: index + 1 })}</span>
       </div>
       <div className={styles.questionCardBody}>
         <div className={styles.questionRow}>
           <div className={`${styles.formGroup} ${styles.questionTextInput}`}>
             <input
               className={styles.input}
-              placeholder="Question text"
+              placeholder={t("questionTextPlaceholder")}
               value={question.text}
               onChange={(e) => updateField("text", e.target.value)}
             />
@@ -167,32 +175,36 @@ function QuestionCard({
               value={question.type}
               onChange={(e) => updateField("type", e.target.value as QuestionType)}
             >
-              <option value="text">Text</option>
-              <option value="single_choice">Single choice</option>
-              <option value="multi_choice">Multi choice</option>
-              <option value="scale">Scale</option>
+              <option value="text">{t("types.text")}</option>
+              <option value="single_choice">{t("types.singleChoice")}</option>
+              <option value="multi_choice">{t("types.multiChoice")}</option>
+              <option value="scale">{t("types.scale")}</option>
             </select>
           </div>
         </div>
 
         {hasOptions && (
           <div className={styles.optionsSection}>
-            <p className={styles.optionsLabel}>Options</p>
+            <p className={styles.optionsLabel}>{t("optionsLabel")}</p>
             {question.options.map((opt, i) => (
               <div key={i} className={styles.optionRow}>
                 <input
                   className={styles.optionInput}
-                  placeholder={`Option ${i + 1}`}
+                  placeholder={t("optionPlaceholder", { number: i + 1 })}
                   value={opt}
                   onChange={(e) => updateOption(i, e.target.value)}
                 />
-                <button className={styles.removeOptionBtn} onClick={() => removeOption(i)} type="button">
+                <button
+                  className={styles.removeOptionBtn}
+                  onClick={() => removeOption(i)}
+                  type="button"
+                >
                   ×
                 </button>
               </div>
             ))}
             <button className={styles.addOptionBtn} onClick={addOption} type="button">
-              + Add option
+              {t("addOption")}
             </button>
           </div>
         )}
@@ -204,10 +216,10 @@ function QuestionCard({
               checked={question.required}
               onChange={(e) => updateField("required", e.target.checked)}
             />
-            Required
+            {t("required")}
           </label>
           <button className={styles.removeQBtn} onClick={onRemove} type="button">
-            Remove question
+            {t("removeQuestion")}
           </button>
         </div>
       </div>
@@ -228,6 +240,8 @@ function QuestionnaireModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("questionnaires");
+  const tc = useTranslations("common");
   const isEdit = initial !== null;
   const [title, setTitle] = useState(initial?.title ?? "");
   const [slug, setSlug] = useState(initial?.slug ?? "");
@@ -292,7 +306,7 @@ function QuestionnaireModal({
 
   async function handleSave() {
     if (!title.trim()) {
-      setError("Title is required.");
+      setError(t("titleRequiredError"));
       return;
     }
     setSaving(true);
@@ -312,7 +326,7 @@ function QuestionnaireModal({
       }
       onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -322,7 +336,9 @@ function QuestionnaireModal({
     <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
         <div className={styles.modalHeader}>
-          <span className={styles.modalTitle}>{isEdit ? "Edit Questionnaire" : "Add Questionnaire"}</span>
+          <span className={styles.modalTitle}>
+            {isEdit ? t("editQuestionnaire") : t("addQuestionnaire")}
+          </span>
           <button className={styles.closeBtn} onClick={onClose}>
             ×
           </button>
@@ -333,35 +349,35 @@ function QuestionnaireModal({
 
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Title *</label>
+              <label className={styles.label}>{t("titleLabel")}</label>
               <input
                 className={styles.input}
                 value={title}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                placeholder="e.g. Sleep Quality Index"
+                placeholder={t("titlePlaceholder")}
               />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Slug</label>
+              <label className={styles.label}>{t("slugLabel")}</label>
               <input
                 className={styles.input}
                 value={slug}
                 onChange={(e) => handleSlugChange(e.target.value)}
-                placeholder="e.g. sliq (auto-generated)"
+                placeholder={t("slugPlaceholder")}
                 disabled={isEdit}
               />
             </div>
             <div className={`${styles.formGroup} ${styles.formFull}`}>
-              <label className={styles.label}>Description</label>
+              <label className={styles.label}>{tc("description")}</label>
               <textarea
                 className={styles.textarea}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Optional description shown to participants"
+                placeholder={t("descriptionPlaceholder")}
               />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Version</label>
+              <label className={styles.label}>{t("version")}</label>
               <input
                 className={styles.input}
                 value={version}
@@ -373,14 +389,16 @@ function QuestionnaireModal({
 
           <div className={styles.builderSection}>
             <div className={styles.builderHeader}>
-              <span className={styles.builderTitle}>Questions ({questions.length})</span>
+              <span className={styles.builderTitle}>
+                {t("questionsCount", { count: questions.length })}
+              </span>
               <button className={styles.addQBtn} onClick={addQuestion} type="button">
-                + Add question
+                {t("addQuestion")}
               </button>
             </div>
 
             {questions.length === 0 ? (
-              <div className={styles.emptyQuestions}>No questions yet. Click &quot;Add question&quot; to begin.</div>
+              <div className={styles.emptyQuestions}>{t("noQuestionsYet")}</div>
             ) : (
               questions.map((q, i) => (
                 <QuestionCard
@@ -402,10 +420,10 @@ function QuestionnaireModal({
 
         <div className={styles.modalFooter}>
           <button className={styles.cancelBtn} onClick={onClose}>
-            Cancel
+            {tc("cancel")}
           </button>
           <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : isEdit ? "Save changes" : "Create"}
+            {saving ? tc("saving") : isEdit ? t("saveChanges") : t("create")}
           </button>
         </div>
       </div>
@@ -424,41 +442,56 @@ function QuestionnairePreviewModal({
   token: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("questionnaires");
+  const tc = useTranslations("common");
   const [detail, setDetail] = useState<QuestionnaireDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const typeLabel = (type: QuestionType) =>
+    ({
+      text: t("types.text"),
+      single_choice: t("types.singleChoice"),
+      multi_choice: t("types.multiChoice"),
+      scale: t("types.scale"),
+    })[type];
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       setError("");
       try {
-        const data = (await apiFetch(`${PARTICIPANT_API}/${questionnaire.slug}`, token)) as QuestionnaireDetail;
-        const questions: Question[] = (data.questions ?? []).map((q: Partial<Question> & { id?: string }) => ({
-          id: q.id ?? crypto.randomUUID(),
-          type: (q.type ?? "text") as QuestionType,
-          text: q.text ?? "",
-          required: q.required ?? false,
-          // Options may be stored as {value, label} objects (legacy format from library
-          // questionnaires). Normalize to strings for display.
-          options: Array.isArray(q.options)
-            ? q.options.map((o: unknown) =>
-                typeof o === "string"
-                  ? o
-                  : ((o as { label?: string }).label ??
-                     String((o as { value?: unknown }).value ?? o))
-              )
-            : [],
-        }));
+        const data = (await apiFetch(
+          `${PARTICIPANT_API}/${questionnaire.slug}`,
+          token
+        )) as QuestionnaireDetail;
+        const questions: Question[] = (data.questions ?? []).map(
+          (q: Partial<Question> & { id?: string }) => ({
+            id: q.id ?? crypto.randomUUID(),
+            type: (q.type ?? "text") as QuestionType,
+            text: q.text ?? "",
+            required: q.required ?? false,
+            // Options may be stored as {value, label} objects (legacy format from library
+            // questionnaires). Normalize to strings for display.
+            options: Array.isArray(q.options)
+              ? q.options.map((o: unknown) =>
+                  typeof o === "string"
+                    ? o
+                    : ((o as { label?: string }).label ??
+                      String((o as { value?: unknown }).value ?? o))
+                )
+              : [],
+          })
+        );
         setDetail({ ...questionnaire, questions });
       } catch {
-        setError("Failed to load questionnaire details.");
+        setError(t("loadDetailsFailed"));
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [questionnaire, token]);
+  }, [questionnaire, token, t]);
 
   return (
     <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -475,12 +508,12 @@ function QuestionnairePreviewModal({
             <p className={styles.previewDescription}>{questionnaire.description}</p>
           )}
           <div className={styles.previewMeta}>
-            <span>Version {questionnaire.version}</span>
-            <span className={`${styles.badge} ${styles.badgeLibrary}`}>Library</span>
+            <span>{t("versionValue", { version: questionnaire.version })}</span>
+            <span className={`${styles.badge} ${styles.badgeLibrary}`}>{t("libraryBadge")}</span>
           </div>
 
           {loading ? (
-            <div className={styles.loadingState}>Loading questions…</div>
+            <div className={styles.loadingState}>{t("loadingQuestions")}</div>
           ) : error ? (
             <div className={styles.errorMsg}>{error}</div>
           ) : detail && detail.questions.length > 0 ? (
@@ -488,11 +521,13 @@ function QuestionnairePreviewModal({
               {detail.questions.map((q, i) => (
                 <div key={q.id} className={styles.previewQuestion}>
                   <div className={styles.previewQuestionHeader}>
-                    <span className={styles.questionIndex}>Q{i + 1}</span>
-                    <span className={styles.previewQType}>{q.type.replace("_", " ")}</span>
-                    {q.required && <span className={styles.previewRequired}>Required</span>}
+                    <span className={styles.questionIndex}>
+                      {t("questionLabel", { index: i + 1 })}
+                    </span>
+                    <span className={styles.previewQType}>{typeLabel(q.type)}</span>
+                    {q.required && <span className={styles.previewRequired}>{t("required")}</span>}
                   </div>
-                  <p className={styles.previewQText}>{q.text || <em>(no text)</em>}</p>
+                  <p className={styles.previewQText}>{q.text || <em>{t("noText")}</em>}</p>
                   {q.options.length > 0 && (
                     <ul className={styles.previewOptions}>
                       {q.options.map((opt, oi) => (
@@ -504,13 +539,13 @@ function QuestionnairePreviewModal({
               ))}
             </div>
           ) : (
-            <div className={styles.emptyQuestions}>No questions defined.</div>
+            <div className={styles.emptyQuestions}>{t("noQuestionsDefined")}</div>
           )}
         </div>
 
         <div className={styles.modalFooter}>
           <button className={styles.saveBtn} onClick={onClose}>
-            Close
+            {tc("close")}
           </button>
         </div>
       </div>
@@ -529,19 +564,21 @@ function ConfirmDeleteDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useTranslations("questionnaires");
+  const tc = useTranslations("common");
   return (
     <div className={styles.confirmOverlay}>
       <div className={styles.confirmDialog}>
-        <p className={styles.confirmTitle}>Delete questionnaire?</p>
+        <p className={styles.confirmTitle}>{t("deleteQuestionnaireTitle")}</p>
         <p className={styles.confirmText}>
-          You are about to delete <strong>{title}</strong>. This action cannot be undone.
+          {t.rich("deleteConfirmText", { title, strong: (chunks) => <strong>{chunks}</strong> })}
         </p>
         <div className={styles.confirmActions}>
           <button className={styles.cancelBtn} onClick={onCancel}>
-            Cancel
+            {tc("cancel")}
           </button>
           <button className={styles.confirmDeleteBtn} onClick={onConfirm}>
-            Delete
+            {tc("delete")}
           </button>
         </div>
       </div>
@@ -560,6 +597,8 @@ function ConfirmDeleteDialog({
 export default function QuestionnairesPage() {
   const { data: session } = useSession();
   const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
+  const t = useTranslations("questionnaires");
+  const tc = useTranslations("common");
 
   const [tab, setTab] = useState<Tab>("library");
   const { questionnaires, loading, error, refetch: fetchList } = useQuestionnairesData(token);
@@ -589,14 +628,14 @@ export default function QuestionnairesPage() {
                 typeof o === "string"
                   ? o
                   : ((o as { label?: string }).label ??
-                     String((o as { value?: unknown }).value ?? o))
+                    String((o as { value?: unknown }).value ?? o))
               )
             : [],
         })),
       });
       setModalOpen(true);
     } catch {
-      setActionError("Failed to load questionnaire details.");
+      setActionError(t("loadDetailsFailed"));
     }
   }
 
@@ -626,10 +665,14 @@ export default function QuestionnairesPage() {
     } catch (err) {
       const status = (err as Error & { status?: number }).status;
       if (status === 409) {
-        setAssignedIds((prev) => { const next = new Set(prev); next.add(q.id); return next; });
-        setActionError(`"${q.title}" is assigned to an active study and cannot be deleted.`);
+        setAssignedIds((prev) => {
+          const next = new Set(prev);
+          next.add(q.id);
+          return next;
+        });
+        setActionError(t("assignedDeleteError", { title: q.title }));
       } else {
-        setActionError(err instanceof Error ? err.message : "Delete failed");
+        setActionError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     }
   }
@@ -641,12 +684,12 @@ export default function QuestionnairesPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div className={styles.headerText}>
-          <h1 className={styles.title}>Questionnaires</h1>
-          <p className={styles.subtitle}>Browse the library and manage custom questionnaires for your studies.</p>
+          <h1 className={styles.title}>{t("title")}</h1>
+          <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
         {tab === "custom" && (
           <button className={styles.addButton} onClick={handleOpenCreate}>
-            + Add Questionnaire
+            {t("addQuestionnaireButton")}
           </button>
         )}
       </div>
@@ -655,22 +698,28 @@ export default function QuestionnairesPage() {
       <div className={styles.tabs}>
         <button
           className={`${styles.tab} ${tab === "library" ? styles.tabActive : ""}`}
-          onClick={() => { setTab("library"); setActionError(""); }}
+          onClick={() => {
+            setTab("library");
+            setActionError("");
+          }}
         >
-          Library
+          {t("libraryTab")}
         </button>
         <button
           className={`${styles.tab} ${tab === "custom" ? styles.tabActive : ""}`}
-          onClick={() => { setTab("custom"); setActionError(""); }}
+          onClick={() => {
+            setTab("custom");
+            setActionError("");
+          }}
         >
-          Custom
+          {t("customTab")}
         </button>
       </div>
 
       {actionError && <div className={styles.errorMsg}>{actionError}</div>}
 
       {loading ? (
-        <div className={styles.loadingState}>Loading…</div>
+        <div className={styles.loadingState}>{tc("loading")}</div>
       ) : error ? (
         <div className={styles.errorMsg}>{error}</div>
       ) : (
@@ -681,18 +730,18 @@ export default function QuestionnairesPage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Title</th>
-                    <th>Slug</th>
-                    <th>Questions</th>
-                    <th>Version</th>
-                    <th>Actions</th>
+                    <th>{t("titleHeader")}</th>
+                    <th>{t("slugHeader")}</th>
+                    <th>{t("questionsHeader")}</th>
+                    <th>{t("version")}</th>
+                    <th>{tc("actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {libraryQuestionnaires.length === 0 ? (
                     <tr>
                       <td colSpan={5}>
-                        <div className={styles.emptyState}>No library questionnaires found.</div>
+                        <div className={styles.emptyState}>{t("noLibraryQuestionnaires")}</div>
                       </td>
                     </tr>
                   ) : (
@@ -708,9 +757,12 @@ export default function QuestionnairesPage() {
                           <div className={styles.actions}>
                             <button
                               className={styles.actionBtn}
-                              onClick={() => { setPreviewTarget(q); setActionError(""); }}
+                              onClick={() => {
+                                setPreviewTarget(q);
+                                setActionError("");
+                              }}
                             >
-                              Preview
+                              {t("preview")}
                             </button>
                           </div>
                         </td>
@@ -728,22 +780,20 @@ export default function QuestionnairesPage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Title</th>
-                    <th>Slug</th>
-                    <th>Status</th>
-                    <th>Questions</th>
-                    <th>Version</th>
-                    <th>Last updated</th>
-                    <th>Actions</th>
+                    <th>{t("titleHeader")}</th>
+                    <th>{t("slugHeader")}</th>
+                    <th>{tc("status")}</th>
+                    <th>{t("questionsHeader")}</th>
+                    <th>{t("version")}</th>
+                    <th>{t("lastUpdated")}</th>
+                    <th>{tc("actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {customQuestionnaires.length === 0 ? (
                     <tr>
                       <td colSpan={7}>
-                        <div className={styles.emptyState}>
-                          No custom questionnaires yet. Click &quot;Add Questionnaire&quot; to create one.
-                        </div>
+                        <div className={styles.emptyState}>{t("noCustomQuestionnaires")}</div>
                       </td>
                     </tr>
                   ) : (
@@ -756,8 +806,10 @@ export default function QuestionnairesPage() {
                             <span className={styles.slugCell}>{q.slug ?? "—"}</span>
                           </td>
                           <td>
-                            <span className={`${styles.badge} ${q.active ? styles.badgeActive : styles.badgeInactive}`}>
-                              {q.active ? "Active" : "Inactive"}
+                            <span
+                              className={`${styles.badge} ${q.active ? styles.badgeActive : styles.badgeInactive}`}
+                            >
+                              {q.active ? t("active") : t("inactive")}
                             </span>
                           </td>
                           <td>{q.questionCount}</td>
@@ -765,16 +817,24 @@ export default function QuestionnairesPage() {
                           <td>{fmtDate(q.updatedAt)}</td>
                           <td>
                             <div className={styles.actions}>
-                              <button className={styles.actionBtn} onClick={() => handleOpenEdit(q)}>
-                                Edit
+                              <button
+                                className={styles.actionBtn}
+                                onClick={() => handleOpenEdit(q)}
+                              >
+                                {tc("edit")}
                               </button>
                               <button
                                 className={`${styles.actionBtn} ${styles.actionBtnDanger} ${isAssigned ? styles.actionBtnDisabled : ""}`}
-                                onClick={() => { if (!isAssigned) { setDeleteTarget(q); setActionError(""); } }}
+                                onClick={() => {
+                                  if (!isAssigned) {
+                                    setDeleteTarget(q);
+                                    setActionError("");
+                                  }
+                                }}
                                 disabled={isAssigned}
-                                title={isAssigned ? "Assigned to an active study — cannot delete" : undefined}
+                                title={isAssigned ? t("assignedCannotDelete") : undefined}
                               >
-                                Delete
+                                {tc("delete")}
                               </button>
                             </div>
                           </td>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import styles from "./cue-config-form.module.css";
 
 /**
@@ -51,9 +52,8 @@ export function CueConfigForm({
   showMaxHabits?: boolean;
   showBehaviors?: boolean;
 }) {
-  const defaultKeys = activityTypes
-    .filter((a) => a.isDefault)
-    .map((a) => a.key);
+  const t = useTranslations("cueConfigForm");
+  const defaultKeys = activityTypes.filter((a) => a.isDefault).map((a) => a.key);
   const enabledKeys = value.behaviorOptions ?? defaultKeys;
 
   function toggleBehavior(key: string) {
@@ -67,25 +67,20 @@ export function CueConfigForm({
     <>
       <div className={styles.formGrid}>
         <div className={styles.formGroup}>
-          <label className={styles.label}>Cue count</label>
+          <label className={styles.label}>{t("cueCount")}</label>
           <select
             className={styles.select}
             value={value.cueCount}
-            onChange={(e) =>
-              onChange({ cueCount: e.target.value as CueConfigValue["cueCount"] })
-            }
+            onChange={(e) => onChange({ cueCount: e.target.value as CueConfigValue["cueCount"] })}
           >
-            <option value="single">Single cue</option>
-            <option value="multi">Multi-cue (recommended)</option>
+            <option value="single">{t("singleCue")}</option>
+            <option value="multi">{t("multiCue")}</option>
           </select>
-          <span className={styles.hint}>
-            Single: one cue per habit-formation session. Multi: several cues
-            presented together.
-          </span>
+          <span className={styles.hint}>{t("cueCountHint")}</span>
         </div>
 
         <div className={styles.formGroup}>
-          <label className={styles.label}>Cue source</label>
+          <label className={styles.label}>{t("cueSource")}</label>
           <select
             className={styles.select}
             value={value.cueSource}
@@ -95,19 +90,16 @@ export function CueConfigForm({
               })
             }
           >
-            <option value="high_quality">High quality (pre-rated)</option>
-            <option value="low_quality">Low quality (pre-rated)</option>
-            <option value="self_selected">Self-selected</option>
+            <option value="high_quality">{t("highQuality")}</option>
+            <option value="low_quality">{t("lowQuality")}</option>
+            <option value="self_selected">{t("selfSelected")}</option>
           </select>
-          <span className={styles.hint}>
-            How cues are sourced — pre-rated from the cue pool library, or
-            chosen by the participant themselves.
-          </span>
+          <span className={styles.hint}>{t("cueSourceHint")}</span>
         </div>
 
         {showMaxHabits && (
           <div className={styles.formGroup}>
-            <label className={styles.label}>Max habits</label>
+            <label className={styles.label}>{t("maxHabits")}</label>
             <select
               className={styles.select}
               value={value.maxHabits ?? ""}
@@ -117,23 +109,19 @@ export function CueConfigForm({
                 })
               }
             >
-              <option value="">Unlimited (public)</option>
-              <option value="1">1 (study participant)</option>
+              <option value="">{t("unlimitedPublic")}</option>
+              <option value="1">{t("oneStudyParticipant")}</option>
             </select>
-            <span className={styles.hint}>
-              Caps how many habits a participant can create. Use &quot;1&quot;
-              for single-habit study designs.
-            </span>
+            <span className={styles.hint}>{t("maxHabitsHint")}</span>
           </div>
         )}
       </div>
 
       {showBehaviors && (
         <div className={`${styles.formGroup} ${styles.behaviorsGroup}`}>
-          <label className={styles.label}>Allowed behaviors</label>
+          <label className={styles.label}>{t("allowedBehaviors")}</label>
           <span className={styles.hint}>
-            Which activity types participants can choose from. Manage the
-            catalog under <strong>Configuration → Activity Types</strong>.
+            {t.rich("allowedBehaviorsHint", { strong: (chunks) => <strong>{chunks}</strong> })}
           </span>
           <div className={styles.behaviorCheckboxes}>
             {activityTypes.map((a) => (
@@ -144,7 +132,7 @@ export function CueConfigForm({
                   onChange={() => toggleBehavior(a.key)}
                 />
                 {a.label_en}
-                {a.isDefault && <span className={styles.defaultTag}>(default)</span>}
+                {a.isDefault && <span className={styles.defaultTag}>{t("defaultTag")}</span>}
               </label>
             ))}
           </div>

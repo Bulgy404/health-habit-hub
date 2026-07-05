@@ -8,6 +8,7 @@ import {
   getHabitsFeed,
   buildHabitsCSV,
 } from '../services/adminHabitService.js';
+import { listInsights, getInsight } from '../services/adminInsightsService.js';
 import { getSettings, updateSetting } from '../services/adminStatsService.js';
 import { createSurveysRouter } from './admin/surveysRouter.js';
 import { createNotificationsRouter } from './admin/notificationsRouter.js';
@@ -19,6 +20,7 @@ import { createProfileFieldDefinitionsAdminRouter } from './profileFieldDefiniti
 import { createActivityTypeRouter } from './activityTypeRouter.js';
 import { seedActivityTypes } from '../services/activityTypeService.js';
 import { createAppSettingsRouter } from './admin/appSettingsRouter.js';
+import { createBackupsRouter } from './admin/backupsRouter.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'adminRouter' });
@@ -337,7 +339,9 @@ export function createAdminRouter({
   // GET /api/v1/admin/habits/feed/export (must be before /habits/feed)
   router.get('/habits/feed/export', async (req, res) => {
     try {
-      const { group, from, to, category, format = 'csv' } = req.query;
+      const { group, category, format = 'csv' } = req.query;
+      const from = req.query.from ?? req.query.dateFrom;
+      const to = req.query.to ?? req.query.dateTo;
 
       if (format !== 'csv') {
         return res
@@ -348,6 +352,7 @@ export function createAdminRouter({
       const database = await getDb();
       const csv = await buildHabitsCSV({
         db: database,
+        neo4jRun: queryNeo4j,
         group,
         category,
         from,
@@ -462,10 +467,13 @@ export function createAdminRouter({
   // GET /api/v1/admin/habits/feed
   router.get('/habits/feed', async (req, res) => {
     try {
-      const { group, from, to, category, page = '1', limit = '20' } = req.query;
+      const { group, category, page = '1', limit = '20' } = req.query;
+      const from = req.query.from ?? req.query.dateFrom;
+      const to = req.query.to ?? req.query.dateTo;
       const database = await getDb();
       const result = await getHabitsFeed({
         db: database,
+        neo4jRun: queryNeo4j,
         group,
         category,
         from,
@@ -517,6 +525,123 @@ export function createAdminRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
+  /**
+   * @swagger
+   * /admin/insights:
+   *   get:
+   *     summary: List available insight questions
+   *     description: Returns metadata (key, title, description) for each curated cross-database insight. Fetch an individual answer via /admin/insights/{key}.
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Insight metadata list
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 insights:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       key: { type: string, example: totals }
+   *                       title: { type: string, example: Platform totals }
+   *                       description: { type: string }
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Caller does not have admin or researcher role
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  // GET /api/v1/admin/insights — list available insight questions (metadata)
+  router.get('/insights', (req, res) => {
+    res.json({ insights: listInsights() });
+  });
+
+  /**
+   * @swagger
+   * /admin/insights/{key}:
+   *   get:
+   *     summary: Get a cached insight answer
+   *     description: Computes (or serves a Redis-cached) answer for the given insight key. The result is either a stats list or a table. Pass refresh=1 to force a recompute.
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: key
+   *         required: true
+   *         schema: { type: string }
+   *         description: Insight key (see /admin/insights)
+   *         example: donations_by_participant
+   *       - in: query
+   *         name: refresh
+   *         required: false
+   *         schema: { type: string, enum: ['1', 'true'] }
+   *         description: Force recompute instead of serving the cached value
+   *     responses:
+   *       200:
+   *         description: Insight answer
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 key: { type: string }
+   *                 title: { type: string }
+   *                 description: { type: string }
+   *                 computedAt: { type: string, format: date-time }
+   *                 cached: { type: boolean }
+   *                 result:
+   *                   type: object
+   *                   description: '{ type: "stats", items: [...] } or { type: "table", columns: [...], rows: [...] }'
+   *       404:
+   *         description: Unknown insight key
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Caller does not have admin or researcher role
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  // GET /api/v1/admin/insights/:key — cached answer (refresh=1 to recompute)
+  router.get('/insights/:key', async (req, res) => {
+    try {
+      const database = await getDb();
+      const insight = await getInsight({
+        db: database,
+        neo4jRun: queryNeo4j,
+        key: req.params.key,
+        refresh: req.query.refresh === '1' || req.query.refresh === 'true',
+      });
+      if (!insight) return res.status(404).json({ error: 'Unknown insight' });
+      res.json(insight);
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // GET /api/v1/admin/sessions
   router.get('/sessions', async (req, res) => {
     try {
@@ -602,6 +727,8 @@ export function createAdminRouter({
   );
 
   router.use('/', requireRole(ROLES.ADMIN), createAppSettingsRouter({ db }));
+
+  router.use('/', createBackupsRouter({ db }));
 
   return router;
 }

@@ -11,14 +11,17 @@ import 'habit_onboarding_widgets.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 
-/// Labels for the behavior keys returned by the backend.
-const _behaviorLabels = {
-  'walking': 'Walking',
-  'light_jogging': 'Light jogging',
-  'cycling': 'Cycling',
-  'structured_calisthenics': 'Structured calisthenics',
-  'yoga': 'Yoga',
-};
+/// Localized labels for the behavior keys returned by the backend. Mirrors
+/// the platform activity-type catalog's `label_en`/`label_de`/`label_ja`
+/// (see `app/models/activityType.js`); falls back to the raw key for any
+/// behavior option outside this fixed catalog set.
+Map<String, String> _behaviorLabels(AppLocalizations l10n) => {
+      'walking': l10n.behaviorWalking,
+      'light_jogging': l10n.behaviorLightJogging,
+      'cycling': l10n.behaviorCycling,
+      'structured_calisthenics': l10n.behaviorStructuredCalisthenics,
+      'yoga': l10n.behaviorYoga,
+    };
 
 /// Screen for selecting the target behaviour when creating a new habit
 /// intention.
@@ -96,13 +99,14 @@ class _BehaviorList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labels = _behaviorLabels(AppLocalizations.of(context)!);
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: config.behaviorOptions.length,
       separatorBuilder: (context, index) => const SizedBox(height: 8),
       itemBuilder: (context, i) {
         final key = config.behaviorOptions[i];
-        final label = _behaviorLabels[key] ?? key;
+        final label = labels[key] ?? key;
         return Card(
           child: ListTile(
             title: Text(label),
@@ -153,10 +157,10 @@ class _FreeEntryBehaviorFormState extends State<_FreeEntryBehaviorForm> {
     return slug.isEmpty ? 'custom' : slug;
   }
 
-  void _onNext() {
+  void _onNext(AppLocalizations l10n) {
     final label = _controller.text.trim();
     if (label.length < 3) {
-      setState(() => _error = 'Please describe your habit (min. 3 characters)');
+      setState(() => _error = l10n.describeYourHabitMinLength);
       return;
     }
     context.push(
@@ -171,6 +175,7 @@ class _FreeEntryBehaviorFormState extends State<_FreeEntryBehaviorForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -178,15 +183,15 @@ class _FreeEntryBehaviorFormState extends State<_FreeEntryBehaviorForm> {
         children: [
           TextField(
             controller: _controller,
-            decoration: const InputDecoration(
-              labelText: 'Your habit',
-              hintText: 'e.g. A 20-minute walk',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.yourHabitLabel,
+              hintText: l10n.yourHabitHint,
+              border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.sentences,
             maxLength: 100,
             onChanged: (_) => setState(() => _error = null),
-            onSubmitted: (_) => _onNext(),
+            onSubmitted: (_) => _onNext(l10n),
           ),
           if (_error != null)
             Text(
@@ -195,8 +200,8 @@ class _FreeEntryBehaviorFormState extends State<_FreeEntryBehaviorForm> {
             ),
           const Spacer(),
           FilledButton(
-            onPressed: _onNext,
-            child: const Text('Next'),
+            onPressed: () => _onNext(l10n),
+            child: Text(l10n.nextButton),
           ),
         ],
       ),

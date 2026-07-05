@@ -156,8 +156,8 @@ After the local stack is healthy:
 If participant creation fails, check:
 
 ```bash
-docker logs h3-2-app --tail 100
-docker logs h3-2-keycloak --tail 100
+docker logs hhh-app --tail 100
+docker logs hhh-keycloak --tail 100
 ```
 
 ### 7. Re-apply Local Keycloak Config After Reset
@@ -183,9 +183,9 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
 - [ ] Portainer installed and running
 - [ ] Ports 80 and 443 open in firewall
 - [ ] Docker installed (managed by Portainer)
-- [ ] External Docker network `h3-proxy` created on the server:
+- [ ] External Docker network `hhh-proxy` created on the server:
   ```bash
-  docker network create h3-proxy
+  docker network create hhh-proxy
   ```
 
 ### 2. DNS Configuration
@@ -219,7 +219,7 @@ sudo mkdir -p /mnt/data/appdata/hhh2/translate
 sudo chown -R 1032:1032 /mnt/data/appdata/hhh2/translate
 ```
 
-Failure to do this will cause `h3-2-translate` to start but fail to persist language packs, resulting in empty translation responses.
+Failure to do this will cause `hhh-translate` to start but fail to persist language packs, resulting in empty translation responses.
 
 ---
 
@@ -261,7 +261,7 @@ KEYCLOAK_ADMIN=admin
 KEYCLOAK_ADMIN_PASSWORD=<your-secure-keycloak-admin-password>
 KC_DB_PASSWORD=<your-secure-keycloak-db-password>
 
-# API service shared secret — MUST match in both h3-2-app and h3-2-recommender
+# API service shared secret — MUST match in both hhh-app and hhh-recommender
 # Generate with: openssl rand -hex 32
 API_SERVICE_SECRET=<your-shared-api-service-secret>
 
@@ -311,20 +311,20 @@ All containers should be running:
 
 | Container | Role |
 |-----------|------|
-| `h3-2-proxy` | Traefik reverse proxy |
-| `h3-2-app` | Node.js backend API |
-| `h3-2-mongo` | MongoDB — survey responses, recommendations, user preferences |
-| `h3-2-mongo-express` | MongoDB web UI |
-| `h3-2-neo4j` | Neo4j graph database — habit graph, BCIO ontology |
-| `h3-2-redis` | Redis — notification locks and recommendation caching |
-| `h3-2-translate` | LibreTranslate — EN↔DE habit translation |
-| `h3-2-keycloak-db` | PostgreSQL — Keycloak backend database |
-| `h3-2-keycloak` | Keycloak identity provider — authentication and authorisation |
-| `h3-2-recommender` | Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement |
-| `h3-2-lightrag` | LightRAG — graph + vector knowledge base |
-| `h3-2-knowledge-mcp` | MCP server exposing the knowledge base to AI agents |
-| `h3-2-admin` | Next.js admin panel — study management UI |
-| `h3-2-backup` | Backup service |
+| `hhh-proxy` | Traefik reverse proxy |
+| `hhh-app` | Node.js backend API |
+| `hhh-mongo` | MongoDB — survey responses, recommendations, user preferences |
+| `hhh-mongo-express` | MongoDB web UI |
+| `hhh-neo4j` | Neo4j graph database — habit graph, BCIO ontology |
+| `hhh-redis` | Redis — notification locks and recommendation caching |
+| `hhh-translate` | LibreTranslate — EN↔DE habit translation |
+| `hhh-keycloak-db` | PostgreSQL — Keycloak backend database |
+| `hhh-keycloak` | Keycloak identity provider — authentication and authorisation |
+| `hhh-recommender` | Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement |
+| `hhh-lightrag` | LightRAG — graph + vector knowledge base |
+| `hhh-knowledge-mcp` | MCP server exposing the knowledge base to AI agents |
+| `hhh-admin` | Next.js admin panel — study management UI |
+| `hhh-backup` | Backup service |
 
 ### 2. Verify SSL Certificate
 - Check Traefik logs: look for "certificate obtained"
@@ -373,13 +373,13 @@ bash scripts/deploy-keycloak.sh
 Habit nodes donated before this branch was deployed do not have a `translationDE` field. Run the backfill script to populate German translations via LibreTranslate + LLM refinement:
 
 ```bash
-docker exec h3-2-app node scripts/backfill-de-translations.js
+docker exec hhh-app node scripts/backfill-de-translations.js
 ```
 
 Dry-run mode (preview changes without writing):
 
 ```bash
-docker exec h3-2-app node scripts/backfill-de-translations.js --dry-run
+docker exec hhh-app node scripts/backfill-de-translations.js --dry-run
 ```
 
 Expected output:
@@ -393,14 +393,14 @@ Expected output:
 #### 4d. Backfill BCIO Enrichment for Existing Habits (Optional)
 
 ```bash
-docker exec h3-2-app node scripts/migrate-habits-bcio.js
+docker exec hhh-app node scripts/migrate-habits-bcio.js
 ```
 
 ### 5. Test Backup System
 
 Check backup logs:
 ```bash
-docker logs h3-2-backup
+docker logs hhh-backup
 ```
 
 Verify backup files are created:
@@ -413,13 +413,13 @@ Verify backup files are created:
 
 ### How It Works
 
-1. **External Traffic:** Internet → Ports 80/443 → Traefik (`h3-2-proxy`)
-2. **Internal Routing:** Traefik inspects Host/Path and routes to the appropriate service via the `h3-proxy` bridge network
-3. **Service Communication:** All services share the `h3-proxy` external Docker network; they address each other by service/container name
+1. **External Traffic:** Internet → Ports 80/443 → Traefik (`hhh-proxy`)
+2. **Internal Routing:** Traefik inspects Host/Path and routes to the appropriate service via the `hhh-proxy` bridge network
+3. **Service Communication:** All services share the `hhh-proxy` external Docker network; they address each other by service/container name
 
-> **Note:** In production (`docker-compose.prod.yml`) the network is named `h3-proxy` (external). It must be created on the host before the first deploy: `docker network create h3-proxy`.
+> **Note:** In production (`docker-compose.prod.yml`) the network is named `hhh-proxy` (external). It must be created on the host before the first deploy: `docker network create hhh-proxy`.
 >
-> In local mode (`docker-compose.local.yml`) the network is named `h3-2-proxy` and is created by Docker Compose automatically.
+> In local mode (`docker-compose.local.yml`) the network is named `hhh-proxy` and is created by Docker Compose automatically.
 
 ### Network Diagram
 
@@ -428,22 +428,22 @@ Internet
    |
 Port 80/443
    |
-Traefik (h3-2-proxy)
+Traefik (hhh-proxy)
    |
-h3-proxy network (bridge)
-   |-- h3-2-app          Node.js backend API
-   |-- h3-2-admin        Next.js admin panel
-   |-- h3-2-recommender  Python FastAPI — LLM/BCIO/recommendations
-   |-- h3-2-lightrag     LightRAG — graph + vector knowledge base
-   |-- h3-2-knowledge-mcp MCP server — knowledge base for AI agents
-   |-- h3-2-redis        Redis — notification locks, recommendation cache
-   |-- h3-2-keycloak     Keycloak — ports 8080 exposed for admin UI
-   |-- h3-2-keycloak-db  PostgreSQL — Keycloak database (internal only)
-   |-- h3-2-mongo        MongoDB
-   |-- h3-2-mongo-express MongoDB UI
-   |-- h3-2-neo4j        Graph DB — ports 7474/7687 exposed for SSH tunnel
-   |-- h3-2-translate    LibreTranslate — UID 1032, volume chown required
-   `-- h3-2-backup       Backup service
+hhh-proxy network (bridge)
+   |-- hhh-app          Node.js backend API
+   |-- hhh-admin        Next.js admin panel
+   |-- hhh-recommender  Python FastAPI — LLM/BCIO/recommendations
+   |-- hhh-lightrag     LightRAG — graph + vector knowledge base
+   |-- hhh-knowledge-mcp MCP server — knowledge base for AI agents
+   |-- hhh-redis        Redis — notification locks, recommendation cache
+   |-- hhh-keycloak     Keycloak — ports 8080 exposed for admin UI
+   |-- hhh-keycloak-db  PostgreSQL — Keycloak database (internal only)
+   |-- hhh-mongo        MongoDB
+   |-- hhh-mongo-express MongoDB UI
+   |-- hhh-neo4j        Graph DB — ports 7474/7687 exposed for SSH tunnel
+   |-- hhh-translate    LibreTranslate — UID 1032, volume chown required
+   `-- hhh-backup       Backup service
 ```
 
 ---
@@ -482,7 +482,7 @@ In Portainer:
    ```
 3. Check Traefik logs:
    ```bash
-   docker logs h3-2-proxy | grep -i certificate
+   docker logs hhh-proxy | grep -i certificate
    ```
 
 ### Services Can't Communicate
@@ -492,14 +492,14 @@ In Portainer:
 **Solutions:**
 1. Verify all containers are on the same network:
    ```bash
-   docker network inspect h3-proxy
+   docker network inspect hhh-proxy
    ```
 2. Check service names match those in `docker-compose.prod.yml` (internal hostnames are the service keys: `mongo`, `neo4j`, `redis`, `recommender`, `lightrag`)
 3. Verify environment variables in Portainer
 
 ### Recommender / API Service Errors
 
-**Problem:** `h3-2-recommender` or `h3-2-app` returns auth errors on internal calls
+**Problem:** `hhh-recommender` or `hhh-app` returns auth errors on internal calls
 
 **Solution:** Ensure `API_SERVICE_SECRET` is set to the **same value** in Portainer for both services and that neither container has a stale value cached. Redeploy the stack after updating the secret.
 
@@ -510,7 +510,7 @@ In Portainer:
 **Solutions:**
 1. Check backup logs:
    ```bash
-   docker logs h3-2-backup
+   docker logs hhh-backup
    ```
 2. Verify MongoDB credentials match (`MONGO_USER` / `MONGO_PASSWORD`)
 3. Ensure the `./backups` bind-mount directory has write permissions
@@ -576,12 +576,12 @@ View in Portainer:
 
 Check latest backup:
 ```bash
-docker exec h3-2-backup ls -lh /backups/full_backup_*.tar.gz | tail -5
+docker exec hhh-backup ls -lh /backups/full_backup_*.tar.gz | tail -5
 ```
 
 View backup manifest:
 ```bash
-docker exec h3-2-backup cat /backups/backup_*.manifest | tail -20
+docker exec hhh-backup cat /backups/backup_*.manifest | tail -20
 ```
 
 ---
@@ -600,7 +600,7 @@ docker exec h3-2-backup cat /backups/backup_*.manifest | tail -20
 4. Restart the affected containers
 
 ### Rotating `API_SERVICE_SECRET`
-Both `h3-2-app` and `h3-2-recommender` read `API_SERVICE_SECRET` at startup. After updating the value in Portainer, redeploy the entire stack (or restart both containers) so both services use the same new secret simultaneously.
+Both `hhh-app` and `hhh-recommender` read `API_SERVICE_SECRET` at startup. After updating the value in Portainer, redeploy the entire stack (or restart both containers) so both services use the same new secret simultaneously.
 
 ### Certificate Renewal
 Automatic via Let's Encrypt — certificates auto-renew 30 days before expiry. Monitor Traefik logs for renewal notices.
@@ -686,12 +686,12 @@ ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
 
 ```bash
 # After SSH tunnel is open, in another terminal:
-docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD} -a bolt://localhost:7687
+docker exec -it hhh-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD} -a bolt://localhost:7687
 ```
 
 Or directly via SSH (no tunnel needed):
 ```bash
-ssh service@141.76.16.16 'docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}'
+ssh service@141.76.16.16 'docker exec -it hhh-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}'
 ```
 
 ### Troubleshooting SSH Tunnel
@@ -707,7 +707,7 @@ ssh service@141.76.16.16 'docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${
 
 **Neo4j authentication fails**
 - Verify `NEO4J_PASSWORD` in Portainer matches what you are using
-- Check Neo4j container logs: `docker logs h3-2-neo4j | tail -20`
+- Check Neo4j container logs: `docker logs hhh-neo4j | tail -20`
 
 **Dropped connections after inactivity**
 - Add keepalive: `ssh -o ServerAliveInterval=60 -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16`
@@ -735,25 +735,25 @@ MongoDB is automatically initialized on first run with:
 
 **Backup MongoDB:**
 ```bash
-docker exec h3-2-mongo mongodump \
+docker exec hhh-mongo mongodump \
   --username admin --password ${MONGO_PASSWORD} \
   --authenticationDatabase admin --out /tmp/backup
 
-docker cp h3-2-mongo:/tmp/backup ./mongo-backup-$(date +%Y%m%d)
+docker cp hhh-mongo:/tmp/backup ./mongo-backup-$(date +%Y%m%d)
 ```
 
 **Restore MongoDB:**
 ```bash
-docker cp ./mongo-backup-YYYYMMDD h3-2-mongo:/tmp/restore
+docker cp ./mongo-backup-YYYYMMDD hhh-mongo:/tmp/restore
 
-docker exec h3-2-mongo mongorestore \
+docker exec hhh-mongo mongorestore \
   --username admin --password ${MONGO_PASSWORD} \
   --authenticationDatabase admin /tmp/restore
 ```
 
 **Direct CLI access:**
 ```bash
-docker exec -it h3-2-mongo mongosh -u admin -p ${MONGO_PASSWORD} --authenticationDatabase admin
+docker exec -it hhh-mongo mongosh -u admin -p ${MONGO_PASSWORD} --authenticationDatabase admin
 ```
 
 ### Neo4j Data
@@ -766,31 +766,31 @@ docker exec -it h3-2-mongo mongosh -u admin -p ${MONGO_PASSWORD} --authenticatio
 
 **Backup Neo4j:**
 ```bash
-docker stop h3-2-neo4j
+docker stop hhh-neo4j
 sudo tar -czf neo4j-backup-$(date +%Y%m%d).tar.gz /mnt/data/appdata/hhh2/neo4j/data
-docker start h3-2-neo4j
+docker start hhh-neo4j
 ```
 
 **Restore Neo4j:**
 ```bash
-docker stop h3-2-neo4j
+docker stop hhh-neo4j
 sudo tar -xzf neo4j-backup-YYYYMMDD.tar.gz -C /
-docker start h3-2-neo4j
+docker start hhh-neo4j
 ```
 
 **Direct Cypher access:**
 ```bash
-docker exec -it h3-2-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}
+docker exec -it hhh-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}
 ```
 
 ### LightRAG Data
 
-**Storage:** Named volume `h3-2-lightrag-data` (graph + vector knowledge base index). Also captured automatically by the nightly backup service.
+**Storage:** Named volume `hhh-lightrag-data` (graph + vector knowledge base index). Also captured automatically by the nightly backup service.
 
 **Backup LightRAG index:**
 ```bash
 docker run --rm \
-  -v h3-2-lightrag-data:/data \
+  -v hhh-lightrag-data:/data \
   -v $(pwd):/backup \
   alpine tar czf /backup/lightrag-backup-$(date +%Y%m%d).tar.gz -C /data .
 ```
@@ -798,14 +798,14 @@ docker run --rm \
 **Restore LightRAG index:**
 ```bash
 docker run --rm \
-  -v h3-2-lightrag-data:/data \
+  -v hhh-lightrag-data:/data \
   -v $(pwd):/backup \
   alpine tar xzf /backup/lightrag-backup-YYYYMMDD.tar.gz -C /data
 ```
 
 ### Redis Data
 
-**Storage:** Named volume `h3-2-redis-data`
+**Storage:** Named volume `hhh-redis-data`
 
 Redis is used for:
 - Notification locks (preventing duplicate push notifications)
@@ -814,7 +814,7 @@ Redis is used for:
 Redis data does not need to be backed up — it is a short-lived cache and will be repopulated automatically. If needed, the volume can be inspected with:
 
 ```bash
-docker exec -it h3-2-redis redis-cli
+docker exec -it hhh-redis redis-cli
 ```
 
 ---

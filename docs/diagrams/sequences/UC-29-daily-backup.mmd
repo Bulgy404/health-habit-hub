@@ -1,8 +1,10 @@
-%% UC-29 — Run daily backup (backup-service, daily loop after startup delay)
-%% Source: backup-service/backup.sh, docker-compose.yml
+%% UC-29 — Run a backup (backup-service, daily loop after startup delay, or
+%% triggered manually / as a pre-restore safety snapshot via the admin UI)
+%% Source: backup-service/backup.sh, backup-service/lib.sh, docker-compose.yml
 sequenceDiagram
     autonumber
-    participant CR as backup-service (daily loop)
+    participant CR as backup-service (daily loop, or backup-api on demand)
+    participant LK as Shared lock (mkdir /backups/.lock)
     participant M as MongoDB
     participant LR as LightRAG (volume)
     participant N4 as Neo4j
@@ -10,16 +12,22 @@ sequenceDiagram
     participant FS as Backup volume (./backups)
     participant WH as Alert webhook / email
 
+    Note over CR: BACKUP_TRIGGER = scheduled | manual | pre_restore_safety
+    CR->>LK: acquire_lock (fails fast, steals a stale lock from a dead PID)
+    alt lock held by a live process
+        LK-->>CR: refuse — another backup/restore is already running
+    end
     CR->>M: mongodump --archive
-    M-->>CR: dump stream
+    M-->>CR: dump stream (sets MONGO_OK)
     CR->>LR: tar -czf lightrag-data.tar.gz (read-only volume mount)
-    LR-->>CR: archive
-    CR->>N4: docker stop + neo4j-admin database dump (via docker.sock)
-    N4-->>CR: graph dump, container restarted
+    LR-->>CR: archive (sets LIGHTRAG_OK)
+    CR->>N4: docker stop hhh-neo4j + neo4j-admin database dump (via docker.sock)
+    N4-->>CR: graph dump, container restarted (sets NEO4J_OK)
     CR->>KC: realm partial-export (realm hhh)
-    KC-->>CR: realm JSON
-    CR->>FS: Write timestamped archives
-    CR->>FS: Prune backups older than BACKUP_RETENTION_DAYS (default 14)
+    KC-->>CR: realm JSON (sets KEYCLOAK_OK, or KEYCLOAK_SKIPPED if no credentials)
+    CR->>FS: Write full_backup_<DATE>.tar.gz + backup_<DATE>.manifest (human) + .manifest.json (structured, per-component flags — read by the admin UI's status endpoint)
+    CR->>FS: Prune backups/manifests older than BACKUP_RETENTION_DAYS (default 14)
+    CR->>LK: release_lock
     alt any step failed
         CR->>WH: Failure alert (ALERT_WEBHOOK_URL / ALERT_EMAIL)
     end

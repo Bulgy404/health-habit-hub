@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
 import '../../services/study_config_service.dart';
 import 'habit_onboarding_widgets.dart';
@@ -65,6 +66,7 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
     'Dein Plan entsteht…',
     'Gleich fertig…',
   ];
+  static const _messagesJa = ['きっかけと習慣をつなげています…', 'プランを作成中…', 'もうすぐ完成…'];
 
   @override
   void initState() {
@@ -105,7 +107,9 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
 
     String? stitched;
     try {
-      stitched = await ref.read(studyConfigServiceProvider).stitchIntention(
+      stitched = await ref
+          .read(studyConfigServiceProvider)
+          .stitchIntention(
             action: widget.behaviorLabel,
             cues: widget.cues.map((c) => c.text).toList(),
             language: lang,
@@ -157,10 +161,22 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
 
   Widget _buildLoading(BuildContext context) {
     final lang = ref.watch(localeProvider).languageCode;
-    final messages = lang == 'de' ? _messagesDe : _messagesEn;
+    final messages = switch (lang) {
+      'de' => _messagesDe,
+      'ja' => _messagesJa,
+      _ => _messagesEn,
+    };
     final scheme = Theme.of(context).colorScheme;
-    final cueLabel = lang == 'de' ? 'Auslöser' : 'Cue';
-    final habitLabel = lang == 'de' ? 'Gewohnheit' : 'Habit';
+    final cueLabel = switch (lang) {
+      'de' => 'Auslöser',
+      'ja' => 'きっかけ',
+      _ => 'Cue',
+    };
+    final habitLabel = switch (lang) {
+      'de' => 'Gewohnheit',
+      'ja' => '習慣',
+      _ => 'Habit',
+    };
     return Center(
       key: const ValueKey('loading'),
       child: Padding(
@@ -192,10 +208,9 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
               child: Text(
                 messages[_messageIndex],
                 key: ValueKey(_messageIndex),
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(color: scheme.onSurface),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(color: scheme.onSurface),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -212,6 +227,7 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
   }
 
   Widget _buildReveal(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final lang = ref.watch(localeProvider).languageCode;
     final scheme = Theme.of(context).colorScheme;
     return Padding(
@@ -230,10 +246,9 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
                   const SizedBox(height: 16),
                   Text(
                     HabitOnboardingCopy.intentionRevealTitleFor(lang),
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Card(
@@ -242,29 +257,28 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
                       padding: const EdgeInsets.all(18),
                       child: Text(
                         _sentence ?? '',
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.5,
-                                ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              height: 1.5,
+                            ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
                   Text(
                     HabitOnboardingCopy.intentionExplainerFor(lang),
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(height: 1.5),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(height: 1.5),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     HabitOnboardingCopy.intentionCitationFor(lang),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontStyle: FontStyle.italic,
-                          color: scheme.onSurfaceVariant,
-                        ),
+                      fontStyle: FontStyle.italic,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -275,7 +289,7 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
             width: double.infinity,
             child: FilledButton(
               onPressed: _continue,
-              child: const Text('Continue'),
+              child: Text(l10n.continueButton),
             ),
           ),
         ],
@@ -407,9 +421,7 @@ class _ProgressDots extends StatelessWidget {
           height: 8,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(4),
-            color: (isDone || isActive)
-                ? color
-                : color.withValues(alpha: 0.25),
+            color: (isDone || isActive) ? color : color.withValues(alpha: 0.25),
           ),
         );
       }),

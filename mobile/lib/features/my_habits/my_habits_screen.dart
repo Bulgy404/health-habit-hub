@@ -36,7 +36,8 @@ class MyHabitsScreen extends ConsumerWidget {
               if (!config.selfHabitCreationEnabled) {
                 return const SizedBox.shrink();
               }
-              final activeCount = intentionsAsync.value
+              final activeCount =
+                  intentionsAsync.value
                       ?.where((i) => i.status == 'active')
                       .length ??
                   0;
@@ -83,15 +84,15 @@ class MyHabitsScreen extends ConsumerWidget {
                   ),
                 );
               },
-              loading: () =>
-                  const SliverToBoxAdapter(child: SizedBox.shrink()),
+              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
               error: (_, _) =>
                   const SliverToBoxAdapter(child: SizedBox.shrink()),
             ),
             intentionsAsync.when(
               data: (intentions) {
-                final active =
-                    intentions.where((i) => i.status == 'active').toList();
+                final active = intentions
+                    .where((i) => i.status == 'active')
+                    .toList();
                 if (active.isEmpty) {
                   return SliverFillRemaining(
                     child: Center(
@@ -100,14 +101,11 @@ class MyHabitsScreen extends ConsumerWidget {
                         child: Text(
                           l10n.noHabitsYet,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
+                          style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withAlpha(128),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withAlpha(128),
                               ),
                         ),
                       ),
@@ -116,16 +114,14 @@ class MyHabitsScreen extends ConsumerWidget {
                 }
                 return SliverList.builder(
                   itemCount: active.length,
-                  itemBuilder: (context, i) =>
-                      _HabitCard(intention: active[i]),
+                  itemBuilder: (context, i) => _HabitCard(intention: active[i]),
                 );
               },
               loading: () => const SliverFillRemaining(
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (e, _) => SliverFillRemaining(
-                child: Center(child: Text(e.toString())),
-              ),
+              error: (e, _) =>
+                  SliverFillRemaining(child: Center(child: Text(e.toString()))),
             ),
           ],
         ),
@@ -153,17 +149,16 @@ class _SrhiPromptCard extends StatelessWidget {
       color: const Color(0xFFEDF7E5),
       child: ListTile(
         leading: const Icon(Icons.psychology, color: Color(0xFF45B700)),
-        title: Text(l10n.srhiCheckInTitle,
-            style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(
+          l10n.srhiCheckInTitle,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
         subtitle: Text(l10n.srhiCheckInSubtitle),
         trailing: FilledButton(
           style: FilledButton.styleFrom(minimumSize: Size.zero),
           onPressed: () => context.push(
             '/habits/${first.intentionId}/srhi/${first.weekNumber}',
-            extra: {
-              'behaviorLabel': behaviorLabel,
-              'srhiItems': srhiItems,
-            },
+            extra: {'behaviorLabel': behaviorLabel, 'srhiItems': srhiItems},
           ),
           child: Text(l10n.srhiStartButton),
         ),
@@ -205,27 +200,23 @@ class _HabitCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(intention.behaviorLabel,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      )),
+              Text(
+                intention.behaviorLabel,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 4),
               Text(
                 intention.intentionStatement,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withAlpha(153),
-                    ),
+                  color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 12),
-              DayStripWidget(
-                logs: logsMap,
-                startDate: intention.createdAt,
-              ),
+              DayStripWidget(logs: logsMap, startDate: intention.createdAt),
               trajectoryAsync.when(
                 data: (trajectory) {
                   final submitted = trajectory
@@ -238,13 +229,13 @@ class _HabitCard extends ConsumerWidget {
                   final trendIcon = delta > 0.05
                       ? Icons.trending_up
                       : delta < -0.05
-                          ? Icons.trending_down
-                          : Icons.trending_flat;
+                      ? Icons.trending_down
+                      : Icons.trending_flat;
                   final trendColor = delta > 0.05
                       ? Colors.green.shade700
                       : delta < -0.05
-                          ? Colors.orange.shade800
-                          : Colors.grey;
+                      ? Colors.orange.shade800
+                      : Colors.grey;
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Column(
@@ -261,9 +252,7 @@ class _HabitCard extends ConsumerWidget {
                             const SizedBox(width: 4),
                             Text(
                               '${latest.toStringAsFixed(1)} / 7',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelMedium
+                              style: Theme.of(context).textTheme.labelMedium
                                   ?.copyWith(
                                     fontWeight: FontWeight.w700,
                                     color: trendColor,
@@ -286,8 +275,10 @@ class _HabitCard extends ConsumerWidget {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     minimumSize: Size.zero,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                   ),
                   // Always tappable so the press gives feedback even when today
                   // is already logged (a disabled button silently does nothing,
@@ -306,7 +297,9 @@ class _HabitCard extends ConsumerWidget {
                       return;
                     }
                     try {
-                      await ref.read(myHabitsServiceProvider).logDay(
+                      await ref
+                          .read(myHabitsServiceProvider)
+                          .logDay(
                             intentionId: intention.id,
                             date: todayStr,
                             enacted: true,
@@ -322,7 +315,9 @@ class _HabitCard extends ConsumerWidget {
                       // Surface the real reason so failures are diagnosable
                       // instead of silently doing nothing.
                       messenger.showSnackBar(
-                        SnackBar(content: Text('Could not log today: $e')),
+                        SnackBar(
+                          content: Text(l10n.couldNotLogToday(e.toString())),
+                        ),
                       );
                     }
                   },

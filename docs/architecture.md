@@ -15,7 +15,7 @@ graph TD
     Flutter["Flutter App\n(Android / iOS / Web)"]
     AdminPanel["Admin Panel\n(Next.js)\n:3001"]
 
-    subgraph Docker["Docker stack (h3-proxy network)"]
+    subgraph Docker["Docker stack (hhh-proxy network)"]
         Proxy["Traefik v3\n:80 (HTTP)\n:443 (HTTPS prod)\n:8080 dashboard"]
 
         App["Node.js Backend\n(Express)\n:3000\n/api/v1/*"]
@@ -88,7 +88,7 @@ graph TD
 
 > **Flutter mobile/web**: Not a separate Docker container. Flutter runs natively on Android/iOS or as a compiled web app. In dev the backend is reached directly; in production the compiled web bundle may be hosted on the `app` service.
 >
-> **Admin panel**: Runs as a separate Docker container (`h3-admin`) on port 3001. Uses NextAuth v4 + Keycloak for authentication and enforces `admin` or `researcher` realm roles at the middleware layer.
+> **Admin panel**: Runs as a separate Docker container (`hhh-admin`) on port 3001. Uses NextAuth v4 + Keycloak for authentication and enforces `admin` or `researcher` realm roles at the middleware layer.
 
 ---
 
@@ -228,7 +228,7 @@ sequenceDiagram
 
 ### Admin Panel Auth
 
-The Next.js admin panel uses NextAuth v4 with the Keycloak provider. On each request, `src/middleware.ts` calls `getToken()` to validate the session JWT and additionally logs method, path, user `sub`, roles, and request latency (visible in `docker logs h3-2-admin`). If the decoded token's `realm_access.roles` array does not include `admin` or `researcher`, the user is redirected to `/access-denied`. The Keycloak client used is `hhh-admin` (confidential client with client secret).
+The Next.js admin panel uses NextAuth v4 with the Keycloak provider. On each request, `src/middleware.ts` calls `getToken()` to validate the session JWT and additionally logs method, path, user `sub`, roles, and request latency (visible in `docker logs hhh-admin`). If the decoded token's `realm_access.roles` array does not include `admin` or `researcher`, the user is redirected to `/access-denied`. The Keycloak client used is `hhh-admin` (confidential client with client secret).
 
 #### Inside the JWT callback
 

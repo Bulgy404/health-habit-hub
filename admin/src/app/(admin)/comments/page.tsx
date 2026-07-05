@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
 import styles from "@/components/admin-page.module.css";
 
@@ -39,6 +40,8 @@ function fmt(ts: string): string {
 export default function CommentsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const t = useTranslations("comments");
+  const tc = useTranslations("common");
   const [comments, setComments] = useState<ModerationComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,11 +58,11 @@ export default function CommentsPage() {
       setComments(list.map(normalise));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load comments");
+      setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -71,13 +74,13 @@ export default function CommentsPage() {
   }, [session, status, router, load]);
 
   async function handleDelete(id: string) {
-    if (!token || !confirm("Delete this comment? This cannot be undone.")) return;
+    if (!token || !confirm(t("confirmDelete"))) return;
     setDeleting(id);
     try {
       await apiFetch(apiUrl(`/admin/comments/${id}`), token, { method: "DELETE" });
       setComments((prev) => prev.filter((c) => c.id !== id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete comment");
+      setError(e instanceof Error ? e.message : t("deleteFailed"));
     } finally {
       setDeleting(null);
     }
@@ -87,27 +90,24 @@ export default function CommentsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Comments</h1>
-          <p className={styles.subtitle}>
-            Moderate anonymous community comments. Deleting removes the comment
-            for everyone.
-          </p>
+          <h1 className={styles.title}>{t("title")}</h1>
+          <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
       </div>
 
       {error && <p className={styles.error}>{error}</p>}
 
       {loading ? (
-        <p>Loading…</p>
+        <p>{tc("loading")}</p>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th style={{ width: "40%" }}>Comment</th>
-                <th style={{ width: "35%" }}>On habit</th>
-                <th>Posted</th>
-                <th>Actions</th>
+                <th style={{ width: "40%" }}>{t("comment")}</th>
+                <th style={{ width: "35%" }}>{t("onHabit")}</th>
+                <th>{t("posted")}</th>
+                <th>{tc("actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -122,15 +122,19 @@ export default function CommentsPage() {
                       onClick={() => handleDelete(c.id)}
                       disabled={deleting === c.id}
                     >
-                      {deleting === c.id ? "Deleting…" : "Delete"}
+                      {deleting === c.id ? tc("deletingEllipsis") : tc("delete")}
                     </button>
                   </td>
                 </tr>
               ))}
               {comments.length === 0 && (
                 <tr>
-                  <td colSpan={4} style={{ textAlign: "center", padding: "2rem" }} className={styles.muted}>
-                    No comments to moderate.
+                  <td
+                    colSpan={4}
+                    style={{ textAlign: "center", padding: "2rem" }}
+                    className={styles.muted}
+                  >
+                    {t("noComments")}
                   </td>
                 </tr>
               )}

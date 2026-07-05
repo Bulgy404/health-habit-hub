@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
 import styles from "@/components/admin-page.module.css";
 
@@ -38,6 +39,8 @@ function fmt(ts: string | null): string {
 export default function DevicesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const t = useTranslations("devices");
+  const tc = useTranslations("common");
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,11 +56,11 @@ export default function DevicesPage() {
       setSessions((Array.isArray(data) ? data : []).map(normalise));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load sessions");
+      setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -69,7 +72,7 @@ export default function DevicesPage() {
   }, [session, status, router, load]);
 
   async function handleRevoke(id: string) {
-    if (!token || !confirm("Revoke this device session? The user will be signed out.")) {
+    if (!token || !confirm(t("confirmRevoke"))) {
       return;
     }
     setRevoking(id);
@@ -77,7 +80,7 @@ export default function DevicesPage() {
       await apiFetch(apiUrl(`/admin/sessions/${id}`), token, { method: "DELETE" });
       setSessions((prev) => prev.filter((s) => s.id !== id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to revoke session");
+      setError(e instanceof Error ? e.message : t("revokeFailed"));
     } finally {
       setRevoking(null);
     }
@@ -87,27 +90,25 @@ export default function DevicesPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Devices</h1>
-          <p className={styles.subtitle}>
-            Active device sessions. Revoke a session to sign that device out.
-          </p>
+          <h1 className={styles.title}>{t("title")}</h1>
+          <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
       </div>
 
       {error && <p className={styles.error}>{error}</p>}
 
       {loading ? (
-        <p>Loading…</p>
+        <p>{tc("loading")}</p>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Participant</th>
-                <th>Device</th>
-                <th>App version</th>
-                <th>Last seen</th>
-                <th>Actions</th>
+                <th>{t("participant")}</th>
+                <th>{t("device")}</th>
+                <th>{t("appVersion")}</th>
+                <th>{t("lastSeen")}</th>
+                <th>{tc("actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -125,15 +126,19 @@ export default function DevicesPage() {
                       onClick={() => handleRevoke(s.id)}
                       disabled={revoking === s.id}
                     >
-                      {revoking === s.id ? "Revoking…" : "Revoke"}
+                      {revoking === s.id ? t("revokingEllipsis") : t("revoke")}
                     </button>
                   </td>
                 </tr>
               ))}
               {sessions.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: "center", padding: "2rem" }} className={styles.muted}>
-                    No active device sessions.
+                  <td
+                    colSpan={5}
+                    style={{ textAlign: "center", padding: "2rem" }}
+                    className={styles.muted}
+                  >
+                    {t("noSessions")}
                   </td>
                 </tr>
               )}

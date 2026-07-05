@@ -379,7 +379,7 @@ docker compose -f docker-compose.local.yml up keycloak-init
 **Fix 4:** Login succeeds at Keycloak but lands on `/access-denied`. Check the admin container logs:
 
 ```bash
-docker logs h3-2-admin
+docker logs hhh-admin
 ```
 
 Common causes:

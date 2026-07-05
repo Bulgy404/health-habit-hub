@@ -127,6 +127,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
 
   /// The green "today's task" prompt shown until a habit is shared today.
   Widget _taskCard() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF45B700),
@@ -138,7 +139,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _lang == 'de' ? 'GEWOHNHEIT TEILEN' : 'SHARE A HABIT',
+            l10n.donateShareEyebrow,
             style: const TextStyle(
               color: Colors.white70,
               fontSize: 10,
@@ -147,9 +148,9 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Share a habit with science',
-            style: TextStyle(
+          Text(
+            l10n.donateHeroTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w900,
@@ -157,9 +158,9 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            'Anonymous · ~2 min · Helps researchers worldwide',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
+          Text(
+            l10n.donateHeroSubtitle,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           const SizedBox(height: 14),
           GestureDetector(
@@ -170,9 +171,9 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(100),
               ),
-              child: const Text(
-                'Start sharing',
-                style: TextStyle(
+              child: Text(
+                l10n.donateStartSharingButton,
+                style: const TextStyle(
                   color: Color(0xFF2E8C00),
                   fontWeight: FontWeight.w800,
                   fontSize: 14,
@@ -187,7 +188,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
 
   /// A "today's task" card for a scheduled questionnaire that is currently due.
   Widget _questionnaireTaskCard(DueQuestionnaire q) {
-    final de = _lang == 'de';
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF4F46E5),
@@ -199,7 +200,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            de ? 'FRAGEBOGEN' : 'QUESTIONNAIRE',
+            l10n.donateQuestionnaireEyebrow,
             style: const TextStyle(
               color: Colors.white70,
               fontSize: 10,
@@ -219,9 +220,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
           ),
           const SizedBox(height: 6),
           Text(
-            de
-                ? 'Kurzer Fragebogen · jetzt fällig'
-                : 'Short questionnaire · due now',
+            l10n.donateQuestionnaireDueSubtitle,
             style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           const SizedBox(height: 14),
@@ -237,7 +236,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 borderRadius: BorderRadius.circular(100),
               ),
               child: Text(
-                de ? 'Ausfüllen' : 'Complete',
+                l10n.donateCompleteButton,
                 style: const TextStyle(
                   color: Color(0xFF4F46E5),
                   fontWeight: FontWeight.w800,
@@ -253,6 +252,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
 
   /// Shown once a habit has been shared today, replacing the task prompt.
   Widget _sharedTodayCard() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFEDF7E5),
@@ -269,7 +269,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _lang == 'de' ? 'Heute geteilt' : 'Shared today',
+                  l10n.donateSharedTodayTitle,
                   style: const TextStyle(
                     color: Color(0xFF2E8C00),
                     fontSize: 16,
@@ -278,10 +278,11 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  _lang == 'de'
-                      ? 'Danke für deinen Beitrag! Komm morgen für die nächste Aufgabe wieder.'
-                      : 'Thanks for contributing! Come back tomorrow for the next one.',
-                  style: const TextStyle(color: Color(0xFF3F6212), fontSize: 13),
+                  l10n.donateSharedTodayBody,
+                  style: const TextStyle(
+                    color: Color(0xFF3F6212),
+                    fontSize: 13,
+                  ),
                 ),
               ],
             ),
@@ -294,7 +295,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   /// A short, always-visible explanation of why sharing habits is useful, so
   /// the landing screen isn't sparse.
   Widget _whyShareCard() {
-    final de = _lang == 'de';
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Container(
@@ -309,27 +310,26 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.science_outlined,
-                    size: 18, color: Color(0xFF45B700)),
+                const Icon(
+                  Icons.science_outlined,
+                  size: 18,
+                  color: Color(0xFF45B700),
+                ),
                 const SizedBox(width: 8),
                 Text(
-                  de ? 'Warum teilen?' : 'Why share?',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                  l10n.donateWhyShareTitle,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             Text(
-              de
-                  ? 'Jede geteilte Gewohnheit fließt anonym in eine wachsende, öffentliche Wissensbasis darüber ein, wie Menschen im Alltag gesunde Routinen aufbauen. Je mehr echte Beispiele Forschende sehen, desto besser lassen sich hilfreichere Empfehlungen für alle entwickeln – auch für dich.'
-                  : 'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone’s recommendations become — including yours.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(height: 1.45),
+              l10n.donateWhyShareBody,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(height: 1.45),
             ),
           ],
         ),
@@ -362,10 +362,11 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     final formState = _formKey.currentState;
     if (formState == null) return;
 
+    final l10n = AppLocalizations.of(context)!;
     final values = formState.collectValues();
     if (values == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please answer all questions')),
+        SnackBar(content: Text(l10n.donatePleaseAnswerAllQuestions)),
       );
       return;
     }
@@ -375,7 +376,6 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       _notAHabitMsg = null;
     });
 
-    final l10n = AppLocalizations.of(context)!;
     final dio = ref.read(dioProvider);
 
     try {
@@ -398,9 +398,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         if (mounted) {
           setState(() {
             _submitting = false;
-            _notAHabitMsg =
-                'This doesn\'t look like a habit. Try describing a regular behaviour, '
-                'e.g. "I go for a 30-minute walk every morning".';
+            _notAHabitMsg = l10n.donateNotAHabitMessage;
           });
         }
         return;
@@ -433,7 +431,8 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       }
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;
-      final isNetworkError = e.type == DioExceptionType.connectionError ||
+      final isNetworkError =
+          e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout;
 
@@ -442,9 +441,9 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         if (mounted) {
           setState(() => _submitting = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Saved offline — will submit when connected'),
-              duration: Duration(seconds: 4),
+            SnackBar(
+              content: Text(l10n.donateSavedOffline),
+              duration: const Duration(seconds: 4),
             ),
           );
           _resetForm();
@@ -459,30 +458,28 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       if (mounted) {
         setState(() => _submitting = false);
         if (statusCode == 401) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Unauthorized. Please sign in again.')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.donateUnauthorized)));
           return;
         }
         if (statusCode == 502 || statusCode == 503) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Habit analysis is temporarily unavailable. Please try again in a moment.',
-              ),
-            ),
+            SnackBar(content: Text(l10n.donateAnalysisUnavailable)),
           );
           return;
         }
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
       }
     } catch (e) {
       debugPrint('ShareHabitScreen._submit: $e');
       if (mounted) {
         setState(() => _submitting = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.submissionFailed)));
       }
     }
   }
@@ -497,72 +494,75 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
 
     // ── Landing page ─────────────────────────────────────────────────────────
     final statsAsync = ref.watch(habitStatsProvider);
-    final dueList = ref.watch(dueQuestionnairesProvider).value
+    final dueList =
+        ref
+            .watch(dueQuestionnairesProvider)
+            .value
             ?.where((q) => q.isDue)
             .toList() ??
         const <DueQuestionnaire>[];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Health Habit Hub'),
-        titleSpacing: 16,
-      ),
+      appBar: AppBar(title: Text(l10n.appTitle), titleSpacing: 16),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(dueQuestionnairesProvider);
           ref.invalidate(habitStatsProvider);
         },
         child: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
-        children: [
-          // ── Today's tasks ─────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
-            child: Text(
-              _lang == 'de' ? 'HEUTIGE AUFGABEN' : "TODAY'S TASKS",
-              style: const TextStyle(
-                color: Color(0xFF6B7280),
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1,
-              ),
-            ),
-          ),
-          // Share-a-habit task (or a thank-you once shared today).
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-            child: _sharedToday ? _sharedTodayCard() : _taskCard(),
-          ),
-          // A card per questionnaire that is currently due.
-          for (final q in dueList)
+          padding: const EdgeInsets.only(bottom: 24),
+          children: [
+            // ── Today's tasks ─────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: _questionnaireTaskCard(q),
-            ),
-
-          // ── Why share? ────────────────────────────────────────────────────
-          _whyShareCard(),
-
-          // ── Stats row ─────────────────────────────────────────────────────
-          statsAsync.when(
-            loading: () => const SizedBox(height: 80),
-            error: (e, s) => const SizedBox(height: 12),
-            data: (stats) => Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Row(
-                children: [
-                  _StatCard(value: '${stats.total}', label: 'Community'),
-                  const SizedBox(width: 10),
-                  _StatCard(
-                    value: '$_shareStreak',
-                    label: _lang == 'de' ? 'Tage-Serie' : 'Day streak',
-                  ),
-                ],
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+              child: Text(
+                l10n.donateTodaysTasksEyebrow,
+                style: const TextStyle(
+                  color: Color(0xFF6B7280),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+            // Share-a-habit task (or a thank-you once shared today).
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+              child: _sharedToday ? _sharedTodayCard() : _taskCard(),
+            ),
+            // A card per questionnaire that is currently due.
+            for (final q in dueList)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: _questionnaireTaskCard(q),
+              ),
+
+            // ── Why share? ────────────────────────────────────────────────────
+            _whyShareCard(),
+
+            // ── Stats row ─────────────────────────────────────────────────────
+            statsAsync.when(
+              loading: () => const SizedBox(height: 80),
+              error: (e, s) => const SizedBox(height: 12),
+              data: (stats) => Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Row(
+                  children: [
+                    _StatCard(
+                      value: '${stats.total}',
+                      label: l10n.donateCommunityLabel,
+                    ),
+                    const SizedBox(width: 10),
+                    _StatCard(
+                      value: '$_shareStreak',
+                      label: l10n.donateDayStreakLabel,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -598,10 +598,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             submitting: _submitting,
             notAHabitMsg: _notAHabitMsg,
           ),
-          DonateProgressWidget(
-            submitting: _submitting,
-            onSubmit: _submit,
-          ),
+          DonateProgressWidget(submitting: _submitting, onSubmit: _submit),
         ],
       ),
     );

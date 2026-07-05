@@ -199,14 +199,14 @@ Expected — all services should show status **running** or **healthy**:
 
 ```
 NAME                  STATUS
-h3-app               running
-h3-keycloak          healthy
-h3-mongo             running
-h3-neo4j             healthy
-h3-recommender       running
-h3-lightrag          running
-h3-knowledge-mcp     running
-h3-traefik           running
+hhh-app               running
+hhh-keycloak          healthy
+hhh-mongo             running
+hhh-neo4j             healthy
+hhh-recommender       running
+hhh-lightrag          running
+hhh-knowledge-mcp     running
+hhh-proxy             running
 ```
 
 ---
@@ -492,7 +492,7 @@ Then retry `curl http://localhost:3000/api/v1/health`.
 
 If the admin app redirects to Keycloak but login fails or loops, check that:
 
-1. Keycloak is healthy (`docker compose ps` shows `h3-keycloak` as healthy).
+1. Keycloak is healthy (`docker compose ps` shows `hhh-keycloak` as healthy).
 2. The `hhh-admin` client exists in the `hhh` realm.
 3. Your Keycloak user has the `admin` or `researcher` realm role assigned.
 4. `KEYCLOAK_ISSUER` in your `admin/.env.local` matches the issuer claim in the Keycloak token (use `http://localhost:8080/realms/hhh` for local dev).

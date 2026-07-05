@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../my_habits/my_habits_provider.dart';
 import 'recommendation_feature_service.dart';
 import 'recommendation_models.dart';
@@ -33,9 +34,10 @@ class RecommendationResultsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Recommendations'),
+        title: Text(l10n.recommendationResultsTitle),
         automaticallyImplyLeading: false,
       ),
       body: _buildBody(context),
@@ -51,6 +53,7 @@ class RecommendationResultsScreen extends ConsumerWidget {
   }
 
   Widget _buildError(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -59,14 +62,11 @@ class RecommendationResultsScreen extends ConsumerWidget {
           children: [
             const Icon(Icons.error_outline, size: 56, color: Colors.red),
             const SizedBox(height: 16),
-            Text(
-              error!,
-              textAlign: TextAlign.center,
-            ),
+            Text(error!, textAlign: TextAlign.center),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Try again'),
+              child: Text(l10n.recommendationTryAgain),
             ),
           ],
         ),
@@ -75,6 +75,7 @@ class RecommendationResultsScreen extends ConsumerWidget {
   }
 
   Widget _buildEmpty(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -84,7 +85,7 @@ class RecommendationResultsScreen extends ConsumerWidget {
             const Icon(Icons.lightbulb_outline, size: 64),
             const SizedBox(height: 16),
             Text(
-              'No recommendations were generated. Try describing your goal in more detail — the more context you share, the better.',
+              l10n.recommendationEmptyMessage,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,
             ),
@@ -92,7 +93,7 @@ class RecommendationResultsScreen extends ConsumerWidget {
             FilledButton.icon(
               onPressed: () => Navigator.of(context).pop(),
               icon: const Icon(Icons.refresh),
-              label: const Text('Try again'),
+              label: Text(l10n.recommendationTryAgain),
             ),
           ],
         ),
@@ -100,10 +101,7 @@ class RecommendationResultsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildResults(
-    BuildContext context,
-    List<RecommendationItem> recs,
-  ) {
+  Widget _buildResults(BuildContext context, List<RecommendationItem> recs) {
     return ListView.builder(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: recs.length,
@@ -115,13 +113,14 @@ class RecommendationResultsScreen extends ConsumerWidget {
   }
 
   Widget _buildBottomBar(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: OutlinedButton.icon(
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.refresh),
-          label: const Text('Try a different goal'),
+          label: Text(l10n.recommendationTryDifferentGoal),
         ),
       ),
     );
@@ -187,10 +186,9 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
       );
     } catch (_) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not open the habit flow. Please try again.'),
-          ),
+          SnackBar(content: Text(l10n.recommendationHabitFlowError)),
         );
       }
     } finally {
@@ -225,8 +223,9 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         setState(() {
-          _submitError = 'Failed to submit feedback';
+          _submitError = l10n.recommendationFeedbackFailed;
           _submitting = false;
         });
       }
@@ -235,6 +234,7 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -248,8 +248,9 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
             // Title
             Text(
               widget.item.title,
-              style: textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             // Body
@@ -257,9 +258,10 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
             const SizedBox(height: 8),
             // Rationale
             Text(
-              'Why this helps:',
-              style: textTheme.labelMedium
-                  ?.copyWith(color: colorScheme.secondary),
+              l10n.recommendationWhyThisHelps,
+              style: textTheme.labelMedium?.copyWith(
+                color: colorScheme.secondary,
+              ),
             ),
             Text(widget.item.rationale, style: textTheme.bodySmall),
             // Suggested implementation-intention cue
@@ -287,9 +289,10 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 title: Text(
-                  'Sources (${widget.item.sources.length})',
-                  style: textTheme.labelMedium
-                      ?.copyWith(color: colorScheme.primary),
+                  l10n.recommendationSourcesCount(widget.item.sources.length),
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.primary,
+                  ),
                 ),
                 children: widget.item.sources
                     .map((s) => _SourceLink(source: s))
@@ -309,28 +312,31 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.playlist_add),
-                label: const Text('Add to my habits'),
+                label: Text(l10n.recommendationAddToHabits),
               ),
             ),
             const Divider(height: 24),
             // Feedback section
             if (_submitted)
               Text(
-                'Feedback submitted — thank you!',
+                l10n.recommendationFeedbackSubmitted,
                 style: textTheme.bodySmall?.copyWith(
                   color: colorScheme.primary,
                 ),
               )
             else ...[
-              Text('Leave a comment:', style: textTheme.labelMedium),
+              Text(
+                l10n.recommendationLeaveComment,
+                style: textTheme.labelMedium,
+              ),
               const SizedBox(height: 6),
               Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _commentController,
-                      decoration: const InputDecoration(
-                        hintText: 'Your feedback\u2026',
+                      decoration: InputDecoration(
+                        hintText: l10n.recommendationFeedbackHint,
                         isDense: true,
                         border: OutlineInputBorder(),
                         contentPadding: EdgeInsets.symmetric(
@@ -359,8 +365,9 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
                 const SizedBox(height: 4),
                 Text(
                   _submitError!,
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: colorScheme.error),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colorScheme.error,
+                  ),
                 ),
               ],
             ],
@@ -386,8 +393,9 @@ class _SourceLink extends StatelessWidget {
     if (uri == null) return;
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open the source link.')),
+        SnackBar(content: Text(l10n.recommendationSourceLinkError)),
       );
     }
   }

@@ -3,6 +3,7 @@ set -euo pipefail
 
 BACKUP_DIR="/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
+START_TS=$(date +%s)
 RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
 ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
 # Backward compatible: older env/docs used ALERT_EMAIL, newer scripts use BACKUP_EMAIL.
@@ -10,12 +11,31 @@ BACKUP_EMAIL=${BACKUP_EMAIL:-${ALERT_EMAIL:-}}
 KEYCLOAK_HOST=${KEYCLOAK_HOST:-keycloak}
 KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
 KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-}
+# Who/what asked for this run: "scheduled" (nightly loop, default), "manual"
+# (admin UI trigger), or "pre_restore_safety" (auto-snapshot before a restore).
+BACKUP_TRIGGER=${BACKUP_TRIGGER:-scheduled}
 
 LOG_FILE="$BACKUP_DIR/backup.log"
 
-# Error tracking
+# Error tracking (overall) and per-component success flags (for the manifest —
+# these are independent of BACKUP_ERRORS since one component's restart failure
+# shouldn't make another component's line lie about its own outcome).
 BACKUP_ERRORS=0
 ERROR_LOG=""
+MONGO_OK=true
+LIGHTRAG_OK=true
+NEO4J_OK=true
+KEYCLOAK_OK=true
+
+# shellcheck source=./lib.sh
+source "$(dirname "$0")/lib.sh"
+
+if ! acquire_lock; then
+  echo "[$(date +"%Y-%m-%d %H:%M:%S")] ERROR: Another backup or restore is already running — aborting." >> "$LOG_FILE" 2>/dev/null || true
+  echo "ERROR: Another backup or restore is already running — aborting."
+  exit 1
+fi
+trap release_lock EXIT
 
 # Timestamped logging to stdout and backup.log
 log() {
@@ -83,6 +103,7 @@ if mongodump \
   --quiet 2>/dev/null; then
   log "✓ MongoDB backup completed"
 else
+  MONGO_OK=false
   log_error "MongoDB" "mongodump failed"
 fi
 
@@ -92,6 +113,7 @@ if [ -d "/lightrag" ] && [ "$(ls -A /lightrag 2>/dev/null)" ]; then
   if tar -czf "$BACKUP_DIR/$DATE/lightrag-data.tar.gz" -C /lightrag . 2>/dev/null; then
     log "✓ LightRAG backup completed"
   else
+    LIGHTRAG_OK=false
     log_error "LightRAG" "tar archive failed"
   fi
 else
@@ -105,7 +127,7 @@ log "  Stopping Neo4j for consistent backup..."
 mkdir -p "$BACKUP_DIR/$DATE/neo4j"
 
 # Stop Neo4j container
-if docker stop h3-neo4j >/dev/null 2>&1; then
+if docker stop hhh-neo4j >/dev/null 2>&1; then
   sleep 2  # Give it a moment to shut down cleanly
 
   # Create a temporary volume and set permissions
@@ -114,7 +136,7 @@ if docker stop h3-neo4j >/dev/null 2>&1; then
 
   # Perform the Neo4j dump
   NEO4J_DUMP_OUTPUT=$(docker run --rm \
-    --volumes-from h3-neo4j \
+    --volumes-from hhh-neo4j \
     -v neo4j-backup-temp:/backup \
     neo4j:5 \
     neo4j-admin database dump neo4j --to-path=/backup --overwrite-destination=true 2>&1)
@@ -132,18 +154,20 @@ if docker stop h3-neo4j >/dev/null 2>&1; then
 
     log "✓ Neo4j dump completed"
   else
+    NEO4J_OK=false
     log_error "Neo4j" "neo4j-admin dump failed"
     docker volume rm neo4j-backup-temp >/dev/null 2>&1 || true
   fi
 
   # Restart Neo4j
   log "  Restarting Neo4j..."
-  if docker start h3-neo4j >/dev/null 2>&1; then
+  if docker start hhh-neo4j >/dev/null 2>&1; then
     log "✓ Neo4j restarted"
   else
     log_error "Neo4j" "Failed to restart container"
   fi
 else
+  NEO4J_OK=false
   log_error "Neo4j" "Failed to stop container for backup"
 fi
 
@@ -167,9 +191,11 @@ if [ -n "$KEYCLOAK_ADMIN_PASSWORD" ]; then
       2>/dev/null; then
       log "✓ Keycloak realm export completed"
     else
+      KEYCLOAK_OK=false
       log_error "Keycloak" "Realm export API call failed"
     fi
   else
+    KEYCLOAK_OK=false
     log_error "Keycloak" "Failed to obtain admin token (check KEYCLOAK_ADMIN_PASSWORD)"
   fi
 else
@@ -184,24 +210,49 @@ else
   log_error "Archive" "Failed to create unified backup archive"
 fi
 
-# Calculate size
+# Calculate size (human-readable for the text manifest/log, exact bytes for JSON)
 BACKUP_SIZE=$(du -sh "$BACKUP_DIR/full_backup_$DATE.tar.gz" 2>/dev/null | cut -f1)
+BACKUP_SIZE_BYTES=$(wc -c < "$BACKUP_DIR/full_backup_$DATE.tar.gz" 2>/dev/null | tr -d ' ' || echo 0)
+[ -n "$BACKUP_SIZE_BYTES" ] || BACKUP_SIZE_BYTES=0
+DURATION_SECONDS=$(( $(date +%s) - START_TS ))
 
 # Clean up temporary directory
 rm -rf "$BACKUP_DIR/$DATE"
 
-# Generate backup manifest
+# Generate backup manifest — per-component flags reflect whether that
+# component's own step actually succeeded, independent of unrelated errors
+# (e.g. a Keycloak failure must not make the MongoDB line say "Check logs").
 cat > "$BACKUP_DIR/backup_$DATE.manifest" <<EOF
 Backup Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-MongoDB: $([ $BACKUP_ERRORS -eq 0 ] && echo "✓" || echo "Check logs")
-LightRAG: ✓
-Neo4j: $([ $BACKUP_ERRORS -eq 0 ] && echo "✓" || echo "Check logs")
-Keycloak: $([ -n "$KEYCLOAK_ADMIN_PASSWORD" ] && echo "✓" || echo "Skipped (no credentials)")
+Trigger: $BACKUP_TRIGGER
+MongoDB: $([ "$MONGO_OK" = true ] && echo "✓" || echo "✗ Check logs")
+LightRAG: $([ "$LIGHTRAG_OK" = true ] && echo "✓" || echo "✗ Check logs")
+Neo4j: $([ "$NEO4J_OK" = true ] && echo "✓" || echo "✗ Check logs")
+Keycloak: $([ -z "$KEYCLOAK_ADMIN_PASSWORD" ] && echo "Skipped (no credentials)" || ([ "$KEYCLOAK_OK" = true ] && echo "✓" || echo "✗ Check logs"))
 Size: $BACKUP_SIZE
 File: full_backup_$DATE.tar.gz
 Retention: $RETENTION_DAYS days
 Errors: $BACKUP_ERRORS
 EOF
+
+# Structured sidecar manifest — this is what any automation (the backup-api
+# status endpoint) should read; never regex the human-readable log/manifest.
+jq -n \
+  --arg date "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+  --arg file "full_backup_$DATE.tar.gz" \
+  --arg trigger "$BACKUP_TRIGGER" \
+  --argjson sizeBytes "$BACKUP_SIZE_BYTES" \
+  --argjson mongoOk "$([ "$MONGO_OK" = true ] && echo true || echo false)" \
+  --argjson lightragOk "$([ "$LIGHTRAG_OK" = true ] && echo true || echo false)" \
+  --argjson neo4jOk "$([ "$NEO4J_OK" = true ] && echo true || echo false)" \
+  --argjson keycloakOk "$([ "$KEYCLOAK_OK" = true ] && echo true || echo false)" \
+  --argjson keycloakSkipped "$([ -z "$KEYCLOAK_ADMIN_PASSWORD" ] && echo true || echo false)" \
+  --argjson retentionDays "$RETENTION_DAYS" \
+  --argjson errors "$BACKUP_ERRORS" \
+  --arg errorLog "$ERROR_LOG" \
+  --argjson durationSeconds "$DURATION_SECONDS" \
+  '{date:$date, file:$file, trigger:$trigger, sizeBytes:$sizeBytes, mongoOk:$mongoOk, lightragOk:$lightragOk, neo4jOk:$neo4jOk, keycloakOk:$keycloakOk, keycloakSkipped:$keycloakSkipped, retentionDays:$retentionDays, errors:$errors, errorLog:$errorLog, durationSeconds:$durationSeconds}' \
+  > "$BACKUP_DIR/backup_$DATE.manifest.json"
 
 # Report results
 log ""
@@ -220,6 +271,10 @@ log ""
 log "Cleaning up backups older than $RETENTION_DAYS days..."
 DELETED_COUNT=$(find "$BACKUP_DIR" -name "full_backup_*.tar.gz" -mtime +$RETENTION_DAYS -delete -print 2>/dev/null | wc -l)
 DELETED_MANIFESTS=$(find "$BACKUP_DIR" -name "backup_*.manifest" -mtime +$RETENTION_DAYS -delete -print 2>/dev/null | wc -l)
+find "$BACKUP_DIR" -name "backup_*.manifest.json" -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
+# Uploaded backups (via the admin UI) age out on the same retention policy.
+find "$BACKUP_DIR" -name "uploaded_*.tar.gz" -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
+find "$BACKUP_DIR" -name "uploaded_*.manifest.json" -mtime +$RETENTION_DAYS -delete 2>/dev/null || true
 
 if [ "$DELETED_COUNT" -gt 0 ]; then
   log "✓ Deleted $DELETED_COUNT old backup(s) and $DELETED_MANIFESTS manifest(s)"

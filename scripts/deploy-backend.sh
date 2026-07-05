@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy the Node.js backend (h3-app) service.
+# Deploy the Node.js backend (hhh-app) service.
 # Usage: ./scripts/deploy-backend.sh [--dry-run]
 set -euo pipefail
 

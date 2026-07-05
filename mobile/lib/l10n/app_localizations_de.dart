@@ -762,4 +762,509 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get adminNoCommentsYet => 'Noch keine Kommentare.';
+
+  @override
+  String get onboardingShareHabitTitle => 'Teile eine Gewohnheit';
+
+  @override
+  String get onboardingShareHabitDescription =>
+      'Teile deine persönlichen Gewohnheiten mit Forschenden und hilf so, ein umfassenderes Verständnis des Alltagsverhaltens aufzubauen. Deine Beiträge werden anonymisiert und ausschließlich für wissenschaftliche Forschung verwendet. Jede geteilte Gewohnheit macht den Datensatz für alle wertvoller.';
+
+  @override
+  String get onboardingExploreAnnotateTitle => 'Entdecken & Kommentieren';
+
+  @override
+  String get onboardingExploreAnnotateDescription =>
+      'Durchstöbere den interaktiven Gewohnheitsgraphen und entdecke, wie Gewohnheiten in der Community miteinander zusammenhängen. Du kannst Verbindungen kommentieren und Kontext hinzufügen, um die gemeinsame Wissensbasis zu verbessern. Je mehr du entdeckst, desto reichhaltiger wird der Graph.';
+
+  @override
+  String get onboardingRecommendationsTitle => 'Empfehlungen erhalten';
+
+  @override
+  String get onboardingRecommendationsDescription =>
+      'Erhalte personalisierte Gewohnheitsempfehlungen auf Basis deines Profils und des gesamten Datensatzes. Unsere Empfehlungs-Engine lernt aus den Beiträgen der Community, um Gewohnheiten vorzuschlagen, die zu deinem Lebensstil passen. Entdecke neue Gewohnheiten, die andere mit ähnlichem Profil bereits hilfreich fanden.';
+
+  @override
+  String get onboardingSubtitle =>
+      'Eine Citizen-Science-Plattform, auf der deine Gewohnheiten helfen, ein umfassenderes Verständnis des Alltagsverhaltens aufzubauen.';
+
+  @override
+  String get onboardingGetStarted => 'Loslegen';
+
+  @override
+  String get onboardingRestoreAccount => 'Bestehendes Konto wiederherstellen';
+
+  @override
+  String get onboardingSkip => 'Überspringen';
+
+  @override
+  String get onboardingContinue => 'Fortfahren';
+
+  @override
+  String get onboardingNext => 'Weiter';
+
+  @override
+  String get adminQuestionnairesDeleteConfirmTitle => 'Fragebogen löschen?';
+
+  @override
+  String adminQuestionnairesDeleteConfirmMessage(String title) {
+    return '„$title“ löschen? Dies kann nicht rückgängig gemacht werden.';
+  }
+
+  @override
+  String get adminQuestionnairesDeleteConflict =>
+      'Löschen nicht möglich: Der Fragebogen ist einer aktiven Studie zugeordnet.';
+
+  @override
+  String get adminQuestionnairesDeleteForbidden =>
+      'Ein Bibliotheksfragebogen kann nicht gelöscht werden.';
+
+  @override
+  String get adminQuestionnairesDeleteFailed =>
+      'Fragebogen konnte nicht gelöscht werden.';
+
+  @override
+  String get adminQuestionnairesTitle => 'Fragebögen';
+
+  @override
+  String get adminQuestionnairesLibraryLabel => 'Bibliothek';
+
+  @override
+  String get adminQuestionnairesCustomTab => 'Eigene';
+
+  @override
+  String get adminQuestionnairesNewTooltip => 'Neuer Fragebogen';
+
+  @override
+  String get adminQuestionnairesLoadFailed =>
+      'Fragebögen konnten nicht geladen werden.';
+
+  @override
+  String get adminQuestionnairesLibraryEmpty =>
+      'Keine Bibliotheksfragebögen gefunden.';
+
+  @override
+  String get adminQuestionnairesCustomEmpty =>
+      'Noch keine eigenen Fragebögen.\nTippe auf +, um einen zu erstellen.';
+
+  @override
+  String adminQuestionnairesItemCount(int count) {
+    return '$count Fragen';
+  }
+
+  @override
+  String get adminQuestionnairesInactiveChip => 'Inaktiv';
+
+  @override
+  String get adminQuestionnairesEditDialogTitle => 'Fragebogen bearbeiten';
+
+  @override
+  String get adminQuestionnairesNewDialogTitle => 'Neuer Fragebogen';
+
+  @override
+  String get adminQuestionnairesTitleFieldLabel => 'Titel *';
+
+  @override
+  String get adminQuestionnairesFieldRequiredError => 'Erforderlich';
+
+  @override
+  String get adminQuestionnairesDescriptionFieldLabel => 'Beschreibung';
+
+  @override
+  String adminQuestionnairesQuestionsCount(int count) {
+    return 'Fragen ($count)';
+  }
+
+  @override
+  String get adminQuestionnairesAddButton => 'Hinzufügen';
+
+  @override
+  String get adminQuestionnairesNoQuestionsYet =>
+      'Noch keine Fragen. Tippe auf „Hinzufügen“, um eine zu erstellen.';
+
+  @override
+  String get adminQuestionnairesAllQuestionsNeedText =>
+      'Alle Fragen müssen einen Text enthalten.';
+
+  @override
+  String get adminQuestionnairesSaveFailed =>
+      'Fragebogen konnte nicht gespeichert werden.';
+
+  @override
+  String get adminQuestionnairesCreateButton => 'Erstellen';
+
+  @override
+  String adminQuestionnairesQuestionNumber(int number) {
+    return 'F$number';
+  }
+
+  @override
+  String get adminQuestionnairesQuestionTextFieldLabel => 'Fragetext';
+
+  @override
+  String get adminQuestionnairesTypeFieldLabel => 'Typ';
+
+  @override
+  String get adminQuestionnairesTypeOpenText => 'Freitext';
+
+  @override
+  String get adminQuestionnairesTypeSingleChoice => 'Einfachauswahl';
+
+  @override
+  String get adminQuestionnairesTypeMultiChoice => 'Mehrfachauswahl';
+
+  @override
+  String get adminQuestionnairesTypeScale => 'Skala';
+
+  @override
+  String get adminQuestionnairesRequiredLabel => 'Pflichtfrage';
+
+  @override
+  String adminQuestionnairesOptionsCount(int count) {
+    return 'Optionen ($count)';
+  }
+
+  @override
+  String get adminQuestionnairesAddOption => 'Option hinzufügen';
+
+  @override
+  String adminQuestionnairesOptionLabelField(int number) {
+    return 'Bezeichnung für Option $number';
+  }
+
+  @override
+  String get adminShellNavParticipants => 'Teilnehmende';
+
+  @override
+  String get adminShellNavSurveys => 'Umfragen';
+
+  @override
+  String get adminShellNavQuestionnaires => 'Fragebögen';
+
+  @override
+  String get adminShellNavHabits => 'Gewohnheiten';
+
+  @override
+  String get adminShellNavDevices => 'Geräte';
+
+  @override
+  String get adminShellNavSettings => 'Einstellungen';
+
+  @override
+  String get recommendationResultsTitle => 'Empfehlungen';
+
+  @override
+  String get recommendationTryAgain => 'Erneut versuchen';
+
+  @override
+  String get recommendationEmptyMessage =>
+      'Es wurden keine Empfehlungen generiert. Beschreiben Sie Ihr Ziel etwas genauer — je mehr Kontext Sie angeben, desto besser.';
+
+  @override
+  String get recommendationTryDifferentGoal => 'Anderes Ziel ausprobieren';
+
+  @override
+  String get recommendationHabitFlowError =>
+      'Der Gewohnheiten-Assistent konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.';
+
+  @override
+  String get recommendationWhyThisHelps => 'Warum das hilft:';
+
+  @override
+  String recommendationSourcesCount(int count) {
+    return 'Quellen ($count)';
+  }
+
+  @override
+  String get recommendationAddToHabits => 'Zu meinen Gewohnheiten hinzufügen';
+
+  @override
+  String get recommendationFeedbackSubmitted =>
+      'Feedback gesendet — vielen Dank!';
+
+  @override
+  String get recommendationLeaveComment => 'Kommentar hinterlassen:';
+
+  @override
+  String get recommendationFeedbackHint => 'Ihr Feedback…';
+
+  @override
+  String get recommendationFeedbackFailed =>
+      'Feedback konnte nicht gesendet werden';
+
+  @override
+  String get recommendationSourceLinkError =>
+      'Der Quellenlink konnte nicht geöffnet werden.';
+
+  @override
+  String get recommendationLoadingPhaseExperts => 'Experten werden befragt…';
+
+  @override
+  String get recommendationLoadingPhaseHabitsDb =>
+      'Ihre Gewohnheitendatenbank wird durchsucht…';
+
+  @override
+  String get recommendationLoadingPhasePapers =>
+      'Wissenschaftliche Studien werden gelesen…';
+
+  @override
+  String get recommendationLoadingPhaseGenerating =>
+      'Ihre persönlichen Empfehlungen werden erstellt…';
+
+  @override
+  String get recommendationLoadingTimeoutError =>
+      'Die Erstellung der Empfehlungen hat zu lange gedauert. Bitte versuchen Sie es erneut.';
+
+  @override
+  String get recommendationLoadingGenericError =>
+      'Beim Erstellen der Empfehlungen ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.';
+
+  @override
+  String get bubbleGraphNoHabitsInDimension =>
+      'Noch keine Gewohnheiten in dieser Kategorie.';
+
+  @override
+  String get bubbleGraphAllCategories => 'Alle Kategorien';
+
+  @override
+  String bubbleGraphHabitCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Gewohnheiten',
+      one: '1 Gewohnheit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recommendationCardWhyTitle(String habitName) {
+    return 'Warum „$habitName“?';
+  }
+
+  @override
+  String get recommendationCardEvidence => 'Belege';
+
+  @override
+  String get recommendationCardConfidence => 'Konfidenz';
+
+  @override
+  String get recommendationCardWhy => 'Warum?';
+
+  @override
+  String get recommendationCardDismiss => 'Verwerfen';
+
+  @override
+  String get recommendationCardAccept => 'Annehmen';
+
+  @override
+  String get questionnaireFormRequiredQuestion =>
+      'Diese Frage ist erforderlich.';
+
+  @override
+  String get questionnaireFormAnswerAllRequired =>
+      'Bitte beantworte alle Pflichtfragen, bevor du fortfährst.';
+
+  @override
+  String questionnaireFormProgressLabel(int current, int total) {
+    return 'Frage $current von $total';
+  }
+
+  @override
+  String get questionnaireFormBackButton => 'Zurück';
+
+  @override
+  String get questionnaireFormSubmitButton => 'Absenden';
+
+  @override
+  String get questionnaireFormSaveAndContinueButton => 'Speichern & weiter';
+
+  @override
+  String get questionnaireFormAnswerHint => 'Deine Antwort …';
+
+  @override
+  String get questionnaireFallbackTitle => 'Fragebogen';
+
+  @override
+  String get donateShareEyebrow => 'GEWOHNHEIT TEILEN';
+
+  @override
+  String get donateHeroTitle => 'Teile eine Gewohnheit mit der Wissenschaft';
+
+  @override
+  String get donateHeroSubtitle =>
+      'Anonym · ca. 2 Min. · Hilft Forschenden weltweit';
+
+  @override
+  String get donateStartSharingButton => 'Jetzt teilen';
+
+  @override
+  String get donateQuestionnaireEyebrow => 'FRAGEBOGEN';
+
+  @override
+  String get donateQuestionnaireDueSubtitle =>
+      'Kurzer Fragebogen · jetzt fällig';
+
+  @override
+  String get donateCompleteButton => 'Ausfüllen';
+
+  @override
+  String get donateSharedTodayTitle => 'Heute geteilt';
+
+  @override
+  String get donateSharedTodayBody =>
+      'Danke für deinen Beitrag! Komm morgen für die nächste Aufgabe wieder.';
+
+  @override
+  String get donateWhyShareTitle => 'Warum teilen?';
+
+  @override
+  String get donateWhyShareBody =>
+      'Jede geteilte Gewohnheit fließt anonym in eine wachsende, öffentliche Wissensbasis darüber ein, wie Menschen im Alltag gesunde Routinen aufbauen. Je mehr echte Beispiele Forschende sehen, desto besser lassen sich hilfreichere Empfehlungen für alle entwickeln – auch für dich.';
+
+  @override
+  String get donatePleaseAnswerAllQuestions => 'Bitte beantworte alle Fragen';
+
+  @override
+  String get donateNotAHabitMessage =>
+      'Das klingt nicht wie eine Gewohnheit. Versuche, ein regelmäßiges Verhalten zu beschreiben, z. B. „Ich gehe jeden Morgen 30 Minuten spazieren“.';
+
+  @override
+  String get donateSavedOffline =>
+      'Offline gespeichert – wird gesendet, sobald wieder eine Verbindung besteht';
+
+  @override
+  String get donateUnauthorized =>
+      'Nicht autorisiert. Bitte melde dich erneut an.';
+
+  @override
+  String get donateAnalysisUnavailable =>
+      'Die Gewohnheitsanalyse ist vorübergehend nicht verfügbar. Bitte versuche es gleich noch einmal.';
+
+  @override
+  String get donateTodaysTasksEyebrow => 'HEUTIGE AUFGABEN';
+
+  @override
+  String get donateCommunityLabel => 'Community';
+
+  @override
+  String get donateDayStreakLabel => 'Tage-Serie';
+
+  @override
+  String get donateFormDescribeHabitLabel => 'Beschreibe deine Gewohnheit';
+
+  @override
+  String get donateFormHabitHint =>
+      'z. B. Ich gehe jeden Morgen 30 Minuten spazieren';
+
+  @override
+  String get donateFormHabitValidationError =>
+      'Bitte beschreibe deine Gewohnheit (mindestens 10 Zeichen)';
+
+  @override
+  String get donateFormFrequencyQuestion =>
+      'Wie oft übst du diese Gewohnheit aus?';
+
+  @override
+  String get donateFormFrequencyRarely => 'Selten';
+
+  @override
+  String get donateFormFrequencyWeekly => 'Wöchentlich';
+
+  @override
+  String get donateFormFrequencySeveralPerWeek => 'Mehrmals/Woche';
+
+  @override
+  String get donateFormFrequencyDaily => 'Täglich';
+
+  @override
+  String get donateFormDurationQuestion =>
+      'Wie lange hast du diese Gewohnheit schon?';
+
+  @override
+  String get donateFormDurationUnder1Month => '< 1 Monat';
+
+  @override
+  String get donateFormDuration1To3Months => '1–3 Monate';
+
+  @override
+  String get donateFormDuration3To12Months => '3–12 Monate';
+
+  @override
+  String get donateFormDurationOver1Year => '> 1 Jahr';
+
+  @override
+  String get donateFormHealthBenefitQuestion =>
+      'Wie sehr nützt es deiner Gesundheit?';
+
+  @override
+  String get donateFormRatingCaption => '1 = Gar nicht · 5 = Sehr stark';
+
+  @override
+  String get donateFormWellbeingQuestion =>
+      'Wie sehr verbessert es dein Wohlbefinden?';
+
+  @override
+  String get setCueNextButton => 'Weiter';
+
+  @override
+  String get setCueNoneAvailableTitle => 'Noch keine Auslöser verfügbar';
+
+  @override
+  String get setCueNoneAvailableSubtitle =>
+      'Deine Studienkoordination wird dir bald Auslöser zuweisen';
+
+  @override
+  String setCueAssignedNumbered(int index, int total) {
+    return 'Auslöser $index von $total (von der Studie zugewiesen)';
+  }
+
+  @override
+  String get setCueAssignedByStudy => 'Von der Studie zugewiesen';
+
+  @override
+  String addAnotherCueCount(int current, int max) {
+    return 'Weiteren Auslöser hinzufügen ($current/$max)';
+  }
+
+  @override
+  String setCueMaxReachedNote(int max) {
+    return 'Du kannst bis zu $max Auslöser hinzufügen.';
+  }
+
+  @override
+  String couldNotLogToday(String error) {
+    return 'Heutiger Eintrag konnte nicht gespeichert werden: $error';
+  }
+
+  @override
+  String get continueButton => 'Weiter';
+
+  @override
+  String get behaviorWalking => 'Spazieren gehen';
+
+  @override
+  String get behaviorLightJogging => 'Leichtes Joggen';
+
+  @override
+  String get behaviorCycling => 'Radfahren';
+
+  @override
+  String get behaviorStructuredCalisthenics => 'Kalisteniktraining';
+
+  @override
+  String get behaviorYoga => 'Yoga';
+
+  @override
+  String get describeYourHabitMinLength =>
+      'Bitte beschreibe deine Gewohnheit (mind. 3 Zeichen)';
+
+  @override
+  String get yourHabitLabel => 'Deine Gewohnheit';
+
+  @override
+  String get yourHabitHint => 'z. B. Ein 20-minütiger Spaziergang';
+
+  @override
+  String get nextButton => 'Weiter';
 }

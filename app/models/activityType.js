@@ -6,6 +6,7 @@
  *   key        string     Required. Unique snake_case identifier (e.g. "swimming").
  *   label_en   string     Required. English display label.
  *   label_de   string     Optional. German display label.
+ *   label_ja   string     Optional. Japanese display label.
  *   isDefault  boolean    Required. Whether included in the platform-wide default behavior list.
  *   createdAt  Date       Required.
  */
@@ -22,6 +23,7 @@ export const VALIDATOR = {
       key: { bsonType: 'string' },
       label_en: { bsonType: 'string' },
       label_de: { bsonType: 'string' },
+      label_ja: { bsonType: 'string' },
       isDefault: { bsonType: 'bool' },
       createdAt: { bsonType: 'date' },
     },
@@ -51,25 +53,35 @@ export const SEED_ACTIVITY_TYPES = [
     key: 'walking',
     label_en: 'Walking',
     label_de: 'Spazieren gehen',
+    label_ja: 'ウォーキング',
     isDefault: true,
   },
   {
     key: 'light_jogging',
     label_en: 'Light jogging',
     label_de: 'Leichtes Joggen',
+    label_ja: '軽いジョギング',
     isDefault: true,
   },
   {
     key: 'cycling',
     label_en: 'Cycling',
     label_de: 'Radfahren',
+    label_ja: 'サイクリング',
     isDefault: true,
   },
   {
     key: 'structured_calisthenics',
     label_en: 'Structured calisthenics',
     label_de: 'Kalisteniktraining',
+    label_ja: '自重トレーニング',
     isDefault: true,
   },
-  { key: 'yoga', label_en: 'Yoga', label_de: 'Yoga', isDefault: true },
+  {
+    key: 'yoga',
+    label_en: 'Yoga',
+    label_de: 'Yoga',
+    label_ja: 'ヨガ',
+    isDefault: true,
+  },
 ];
