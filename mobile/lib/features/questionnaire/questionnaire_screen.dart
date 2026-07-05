@@ -26,7 +26,7 @@ class QuestionnaireScreen extends ConsumerWidget {
       appBar: AppBar(
         title: definitionAsync.maybeWhen(
           data: (def) => Text(def.title),
-          orElse: () => const Text('Questionnaire'),
+          orElse: () => Text(l10n.questionnaireFallbackTitle),
         ),
       ),
       body: definitionAsync.when(

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import styles from "./page.module.css";
 
 import { apiFetch, apiUrl } from "@/lib/api";
@@ -12,6 +13,7 @@ interface ActivityType {
   key: string;
   label_en: string;
   label_de?: string;
+  label_ja?: string;
   isDefault: boolean;
 }
 
@@ -23,6 +25,7 @@ interface ActivityType {
  * text.
  */
 function ActivityTypesSection({ token }: { token: string }) {
+  const t = useTranslations("settings");
   const [types, setTypes] = useState<ActivityType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,6 +34,7 @@ function ActivityTypesSection({ token }: { token: string }) {
   const [newKey, setNewKey] = useState("");
   const [newLabelEn, setNewLabelEn] = useState("");
   const [newLabelDe, setNewLabelDe] = useState("");
+  const [newLabelJa, setNewLabelJa] = useState("");
   const [newIsDefault, setNewIsDefault] = useState(false);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
@@ -42,13 +46,15 @@ function ActivityTypesSection({ token }: { token: string }) {
       const data = await apiFetch(ACTIVITY_TYPES_API, token);
       setTypes(data as ActivityType[]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load activity types");
+      setError(err instanceof Error ? err.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
-  useEffect(() => { fetchTypes(); }, [fetchTypes]);
+  useEffect(() => {
+    fetchTypes();
+  }, [fetchTypes]);
 
   async function handleToggleDefault(key: string, current: boolean) {
     try {
@@ -57,40 +63,57 @@ function ActivityTypesSection({ token }: { token: string }) {
         body: JSON.stringify({ isDefault: !current }),
       });
       setTypes((prev) =>
-        prev.map((t) => (t.key === key ? { ...t, isDefault: !current } : t))
+        prev.map((item) => (item.key === key ? { ...item, isDefault: !current } : item))
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Update failed");
+      setError(err instanceof Error ? err.message : t("updateFailed"));
     }
   }
 
   async function handleDelete(key: string) {
-    if (!confirm(`Delete activity type "${key}"? This cannot be undone.`)) return;
+    if (!confirm(t("confirmDelete", { key }))) return;
     try {
       await apiFetch(`${ACTIVITY_TYPES_API}/${encodeURIComponent(key)}`, token, {
         method: "DELETE",
       });
-      setTypes((prev) => prev.filter((t) => t.key !== key));
+      setTypes((prev) => prev.filter((item) => item.key !== key));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      setError(err instanceof Error ? err.message : t("deleteFailed"));
     }
   }
 
   async function handleAdd() {
-    const key = newKey.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+    const key = newKey
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
     const label_en = newLabelEn.trim();
-    if (!key || !label_en) { setAddError("Key and English label are required."); return; }
+    if (!key || !label_en) {
+      setAddError(t("keyAndLabelRequired"));
+      return;
+    }
     setAdding(true);
     setAddError("");
     try {
-      const created = await apiFetch(ACTIVITY_TYPES_API, token, {
+      const created = (await apiFetch(ACTIVITY_TYPES_API, token, {
         method: "POST",
-        body: JSON.stringify({ key, label_en, label_de: newLabelDe.trim() || undefined, isDefault: newIsDefault }),
-      }) as ActivityType;
+        body: JSON.stringify({
+          key,
+          label_en,
+          label_de: newLabelDe.trim() || undefined,
+          label_ja: newLabelJa.trim() || undefined,
+          isDefault: newIsDefault,
+        }),
+      })) as ActivityType;
       setTypes((prev) => [...prev, created]);
-      setNewKey(""); setNewLabelEn(""); setNewLabelDe(""); setNewIsDefault(false);
+      setNewKey("");
+      setNewLabelEn("");
+      setNewLabelDe("");
+      setNewLabelJa("");
+      setNewIsDefault(false);
     } catch (err) {
-      setAddError(err instanceof Error ? err.message : "Add failed");
+      setAddError(err instanceof Error ? err.message : t("addFailed"));
     } finally {
       setAdding(false);
     }
@@ -98,50 +121,55 @@ function ActivityTypesSection({ token }: { token: string }) {
 
   return (
     <div className={styles.section}>
-      <p className={styles.sectionTitle}>Catalog</p>
+      <p className={styles.sectionTitle}>{t("catalog")}</p>
       <p className={styles.sectionDesc}>
-        Platform-wide catalog of activity types that study participants can choose from when creating a habit.
-        Activities marked as <strong>default</strong> are pre-selected for study groups without an explicit
-        behavior restriction. Study groups can restrict or expand the list via their Cue Config.
-        Public (non-study) users enter their habit as free text and do not use this catalog.
+        {t.rich("catalogDesc", { strong: (chunks) => <strong>{chunks}</strong> })}
       </p>
 
       {error && <div className={styles.errorMsg}>{error}</div>}
 
       {loading ? (
-        <div className={styles.loadingState}>Loading…</div>
+        <div className={styles.loadingState}>{t("loadingEllipsis")}</div>
       ) : (
         <>
           <table className={styles.activityTable}>
             <thead>
               <tr>
-                <th>Key</th>
-                <th>English label</th>
-                <th>German label</th>
-                <th>Default</th>
+                <th>{t("key")}</th>
+                <th>{t("englishLabel")}</th>
+                <th>{t("germanLabel")}</th>
+                <th>{t("japaneseLabel")}</th>
+                <th>{t("default")}</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {types.map((t) => (
-                <tr key={t.key}>
-                  <td><span className={styles.activityKey}>{t.key}</span></td>
-                  <td>{t.label_en}</td>
-                  <td>{t.label_de || <span style={{ color: "var(--color-text-muted)" }}>—</span>}</td>
+              {types.map((item) => (
+                <tr key={item.key}>
+                  <td>
+                    <span className={styles.activityKey}>{item.key}</span>
+                  </td>
+                  <td>{item.label_en}</td>
+                  <td>
+                    {item.label_de || <span style={{ color: "var(--color-text-muted)" }}>—</span>}
+                  </td>
+                  <td>
+                    {item.label_ja || <span style={{ color: "var(--color-text-muted)" }}>—</span>}
+                  </td>
                   <td>
                     <input
                       type="checkbox"
                       className={styles.defaultToggle}
-                      checked={t.isDefault}
-                      onChange={() => handleToggleDefault(t.key, t.isDefault)}
-                      title="Toggle as platform default"
+                      checked={item.isDefault}
+                      onChange={() => handleToggleDefault(item.key, item.isDefault)}
+                      title={t("toggleDefaultTitle")}
                     />
                   </td>
                   <td>
                     <button
                       className={styles.deleteBtn}
-                      onClick={() => handleDelete(t.key)}
-                      title="Delete activity type"
+                      onClick={() => handleDelete(item.key)}
+                      title={t("deleteTitle")}
                     >
                       ×
                     </button>
@@ -155,43 +183,74 @@ function ActivityTypesSection({ token }: { token: string }) {
 
           <div className={styles.addActivityRow}>
             <div>
-              <label className={styles.addFieldLabel}>Key</label>
+              <label className={styles.addFieldLabel}>{t("key")}</label>
               <input
                 className={styles.input}
-                placeholder="e.g. swimming"
+                placeholder={t("keyPlaceholder")}
                 value={newKey}
                 onChange={(e) => setNewKey(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAdd();
+                }}
               />
             </div>
             <div>
-              <label className={styles.addFieldLabel}>English label</label>
+              <label className={styles.addFieldLabel}>{t("englishLabel")}</label>
               <input
                 className={styles.input}
                 placeholder="Swimming"
                 value={newLabelEn}
                 onChange={(e) => setNewLabelEn(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAdd();
+                }}
               />
             </div>
             <div>
-              <label className={styles.addFieldLabel}>German label (optional)</label>
+              <label className={styles.addFieldLabel}>{t("germanLabelOptional")}</label>
               <input
                 className={styles.input}
                 placeholder="Schwimmen"
                 value={newLabelDe}
                 onChange={(e) => setNewLabelDe(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAdd();
+                }}
               />
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", paddingTop: "1.25rem" }}>
+            <div>
+              <label className={styles.addFieldLabel}>{t("japaneseLabelOptional")}</label>
+              <input
+                className={styles.input}
+                placeholder="水泳"
+                value={newLabelJa}
+                onChange={(e) => setNewLabelJa(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAdd();
+                }}
+              />
+            </div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.35rem",
+                paddingTop: "1.25rem",
+              }}
+            >
               <input
                 type="checkbox"
                 id="new-is-default"
                 checked={newIsDefault}
                 onChange={(e) => setNewIsDefault(e.target.checked)}
               />
-              <label htmlFor="new-is-default" className={styles.addFieldLabel} style={{ margin: 0, cursor: "pointer" }}>Default</label>
+              <label
+                htmlFor="new-is-default"
+                className={styles.addFieldLabel}
+                style={{ margin: 0, cursor: "pointer" }}
+              >
+                {t("default")}
+              </label>
             </div>
             <button
               className={styles.addBtn}
@@ -199,11 +258,11 @@ function ActivityTypesSection({ token }: { token: string }) {
               disabled={adding}
               style={{ alignSelf: "flex-end" }}
             >
-              {adding ? "Adding…" : "Add activity"}
+              {adding ? t("addingEllipsis") : t("addActivity")}
             </button>
           </div>
           <p className={styles.hint} style={{ marginTop: "0.5rem" }}>
-            The key must be lowercase with underscores (e.g. <code>strength_training</code>). It is auto-normalised from what you type.
+            {t.rich("keyHint", { code: (chunks) => <code>{chunks}</code> })}
           </p>
         </>
       )}
@@ -222,14 +281,13 @@ function ActivityTypesSection({ token }: { token: string }) {
  */
 export default function ActivityTypesPage() {
   const { token } = useAdminGuard();
+  const t = useTranslations("settings");
 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Activity Types</h1>
-        <p className={styles.subtitle}>
-          The behavior catalog offered to study participants via cue configs.
-        </p>
+        <h1 className={styles.title}>{t("title")}</h1>
+        <p className={styles.subtitle}>{t("subtitle")}</p>
       </div>
 
       <ActivityTypesSection token={token} />

@@ -18,7 +18,7 @@ flowchart TB
     traefik["Traefik v3<br/>Reverse proxy · TLS (Let's Encrypt)<br/>:80 / :443"]
 
     %% ------- Application layer -------
-    subgraph appsvc["Application Services (Docker, h3-proxy network)"]
+    subgraph appsvc["Application Services (Docker, hhh-proxy network)"]
         backend["Node.js Backend<br/>Express · /api/v1/*<br/>:3000"]
         apiservice["API-service<br/>Python FastAPI · :8000<br/>classify · map-BCIO · recommend (RAG)"]
         knowledgemcp["knowledge-mcp<br/>FastMCP · SSE · :8002<br/>search_knowledge · ingest_document"]

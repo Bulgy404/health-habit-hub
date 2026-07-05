@@ -31,7 +31,7 @@ set +a
 : "${KEYCLOAK_ADMIN:?KEYCLOAK_ADMIN is required in .env}"
 : "${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD is required in .env}"
 
-KC_CONTAINER="${KC_CONTAINER:-h3-2-keycloak}"
+KC_CONTAINER="${KC_CONTAINER:-hhh-keycloak}"
 KC_SERVER="${KC_SERVER:-http://localhost:8080}"
 KC_REALM="${KC_REALM:-hhh}"
 KC_CLIENT_ID="${KC_CLIENT_ID:-hhh-flutter}"

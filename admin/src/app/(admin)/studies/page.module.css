@@ -9,7 +9,8 @@
   margin-bottom: 2rem;
 }
 
-.headerText {}
+.headerText {
+}
 
 .title {
   font-size: 1.75rem;
@@ -589,7 +590,7 @@
   background: var(--color-primary);
   cursor: pointer;
   border: 2px solid #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .allocSlider::-moz-range-thumb {
@@ -599,7 +600,7 @@
   background: var(--color-primary);
   cursor: pointer;
   border: 2px solid #fff;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .allocPct {
@@ -998,38 +999,231 @@
   justify-content: flex-end;
 }
 
+.confirmLabel {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--color-text);
+  margin: 0.25rem 0 0.4rem;
+}
+
+.confirmInput {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+
+.downloadBtn {
+  display: inline-block;
+  padding: 0.55rem 1rem;
+  background: #fff;
+  color: #1d4ed8;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  margin-bottom: 1rem;
+}
+
+.downloadBtn:hover:not(:disabled) {
+  background: #eff6ff;
+}
+
+.downloadBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.deleteBtn {
+  padding: 0.625rem 1.25rem;
+  background: #b91c1c;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  background: #991b1b;
+}
+
+.deleteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ── Cue config tab ──────────────────────────────────────────────────────────── */
 
-.cueConfigGroup { border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
-.cueConfigGroupLabel { font-weight: 600; font-size: 0.9rem; margin: 0 0 0.75rem; color: var(--color-text); }
-.cueConfigFooter { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; margin-top: 0.75rem; }
-.behaviorCheckboxes { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
-.checkboxLabel { display: flex; align-items: center; gap: 0.35rem; font-size: 0.875rem; cursor: pointer; }
-.savedMsg { font-size: 0.8rem; color: var(--color-success, #16a34a); }
+.cueConfigGroup {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.cueConfigGroupLabel {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 0 0 0.75rem;
+  color: var(--color-text);
+}
+.cueConfigFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.behaviorCheckboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.savedMsg {
+  font-size: 0.8rem;
+  color: var(--color-success, #16a34a);
+}
 
 /* ── Analytics tab ──────────────────────────────────────────────────────────── */
-.analyticsTab { padding: 0.5rem 0; }
-.analyticsSection { border: 1px solid var(--color-border); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
-.analyticsSectionHeader { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.75rem; }
-.analyticsSectionTitle { font-weight: 600; font-size: 0.9rem; margin: 0 0 0.2rem; color: var(--color-text); }
-.analyticsSectionDesc { font-size: 0.78rem; color: var(--color-text-muted); margin: 0; }
-.barChart { display: flex; flex-direction: column; gap: 0.6rem; }
-.barRow { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; border-radius: 6px; padding: 0.2rem 0.35rem; transition: background 0.15s; }
-.barRow:hover { background: var(--color-surface-alt); }
-.barRowClickable { cursor: pointer; }
-.barLabel { font-size: 0.8rem; font-weight: 600; width: 48px; flex-shrink: 0; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.barLabelWide { font-size: 0.8rem; font-weight: 600; width: 180px; flex-shrink: 0; color: var(--color-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.barTrack { flex: 1; height: 14px; background: var(--color-surface-alt); border-radius: 6px; overflow: hidden; }
-.barFill { height: 100%; border-radius: 6px; transition: width 0.4s ease; }
-.barValue { font-size: 0.8rem; font-weight: 700; color: var(--color-text); width: 36px; text-align: right; }
-.barSub { font-size: 0.75rem; color: var(--color-text-muted); width: 54px; }
-.lineChartWrap { overflow-x: auto; position: relative; }
-.lineChart { width: 100%; min-width: 300px; }
-.lineChartInteractive circle { cursor: pointer; transition: r 0.15s; }
-.lineChartInteractive circle:hover { r: 6; }
-.chartLegend { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.75rem; }
-.legendItem { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--color-text); }
-.legendDot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.analyticsTab {
+  padding: 0.5rem 0;
+}
+.analyticsSection {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.analyticsSectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.analyticsSectionTitle {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin: 0 0 0.2rem;
+  color: var(--color-text);
+}
+.analyticsSectionDesc {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+.barChart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0.2rem 0.35rem;
+  transition: background 0.15s;
+}
+.barRow:hover {
+  background: var(--color-surface-alt);
+}
+.barRowClickable {
+  cursor: pointer;
+}
+.barLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  width: 48px;
+  flex-shrink: 0;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.barLabelWide {
+  font-size: 0.8rem;
+  font-weight: 600;
+  width: 180px;
+  flex-shrink: 0;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.barTrack {
+  flex: 1;
+  height: 14px;
+  background: var(--color-surface-alt);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.barFill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.4s ease;
+}
+.barValue {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+  width: 36px;
+  text-align: right;
+}
+.barSub {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  width: 54px;
+}
+.lineChartWrap {
+  overflow-x: auto;
+  position: relative;
+}
+.lineChart {
+  width: 100%;
+  min-width: 300px;
+}
+.lineChartInteractive circle {
+  cursor: pointer;
+  transition: r 0.15s;
+}
+.lineChartInteractive circle:hover {
+  r: 6;
+}
+.chartLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--color-text);
+}
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 /* Tooltip */
 .tooltip {
   position: fixed;
@@ -1041,7 +1235,7 @@
   padding: 0.4rem 0.65rem;
   pointer-events: none;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   max-width: 240px;
   white-space: normal;
   line-height: 1.4;
@@ -1062,11 +1256,50 @@
   background: var(--color-surface-alt);
   border-bottom: 1px solid var(--color-border);
 }
-.drillPanelTitle { font-size: 0.85rem; font-weight: 600; color: var(--color-text); }
-.drillPanelClose { background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--color-text-muted); line-height: 1; padding: 0.1rem 0.25rem; }
-.drillTable { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-.drillTable th { padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border); background: var(--color-surface-alt); }
-.drillTable td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--color-border); color: var(--color-text); }
-.drillTable tr:last-child td { border-bottom: none; }
-.drillTable tr:hover td { background: var(--color-surface-alt); }
-.drillLoading { padding: 1rem; text-align: center; color: var(--color-text-muted); font-size: 0.85rem; }
+.drillPanelTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+.drillPanelClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  line-height: 1;
+  padding: 0.1rem 0.25rem;
+}
+.drillTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.drillTable th {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+.drillTable td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+.drillTable tr:last-child td {
+  border-bottom: none;
+}
+.drillTable tr:hover td {
+  background: var(--color-surface-alt);
+}
+.drillLoading {
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}

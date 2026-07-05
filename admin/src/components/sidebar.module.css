@@ -108,6 +108,30 @@
   white-space: nowrap;
 }
 
+.langSwitcher {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-sidebar-text);
+  opacity: 0.85;
+  margin-bottom: 0.625rem;
+}
+
+.langSelect {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: var(--color-sidebar-text);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.langSelect option {
+  color: #000;
+}
+
 .signOutButton {
   width: 100%;
   padding: 0.5rem 0.875rem;

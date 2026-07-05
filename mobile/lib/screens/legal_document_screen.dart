@@ -27,16 +27,14 @@ enum LegalDocumentType {
 /// imprint) fetched from the backend API and rendered in a [WebView].
 class LegalDocumentScreen extends ConsumerStatefulWidget {
   /// Creates a [LegalDocumentScreen] for the given [documentType].
-  const LegalDocumentScreen({
-    required this.documentType,
-    super.key,
-  });
+  const LegalDocumentScreen({required this.documentType, super.key});
 
   /// The type of legal document to display.
   final LegalDocumentType documentType;
 
   @override
-  ConsumerState<LegalDocumentScreen> createState() => _LegalDocumentScreenState();
+  ConsumerState<LegalDocumentScreen> createState() =>
+      _LegalDocumentScreenState();
 }
 
 class _LegalDocumentScreenState extends ConsumerState<LegalDocumentScreen> {
@@ -122,7 +120,7 @@ class _LegalDocumentScreenState extends ConsumerState<LegalDocumentScreen> {
     LegalDocumentType.privacy => l10n.privacyStatement,
     LegalDocumentType.accessibility => l10n.accessibilityStatement,
     LegalDocumentType.imprint => l10n.imprint,
-    LegalDocumentType.consent => 'Study Consent',
+    LegalDocumentType.consent => l10n.studyConsent,
   };
 
   /// Builds the localized metadata footer ("Version … · Effective …"),
@@ -139,34 +137,26 @@ class _LegalDocumentScreenState extends ConsumerState<LegalDocumentScreen> {
     }
 
     final (versionLabel, effectiveLabel, bindingNote) = switch (locale) {
-      'de' => (
-          'Version',
-          'Stand',
-          'Die deutsche Fassung ist maßgeblich.',
-        ),
-      'ja' => (
-          'バージョン',
-          '発効日',
-          'ドイツ語版が法的に優先されます。',
-        ),
-      _ => (
-          'Version',
-          'Effective',
-          'The German version is authoritative.',
-        ),
+      'de' => ('Version', 'Stand', 'Die deutsche Fassung ist maßgeblich.'),
+      'ja' => ('バージョン', '発効日', 'ドイツ語版が法的に優先されます。'),
+      _ => ('Version', 'Effective', 'The German version is authoritative.'),
     };
 
     final parts = <String>[
       if (version != null) '$versionLabel $version',
       if (effectiveDate != null) '$effectiveLabel $effectiveDate',
     ];
-    final bindingLine =
-        (binding != null && binding != locale) ? '<br>$bindingNote' : '';
+    final bindingLine = (binding != null && binding != locale)
+        ? '<br>$bindingNote'
+        : '';
     return '<footer class="doc-meta">${parts.join(' · ')}$bindingLine</footer>';
   }
 
-  String _wrapHtml(String body,
-      {Map<String, dynamic>? meta, required String locale}) {
+  String _wrapHtml(
+    String body, {
+    Map<String, dynamic>? meta,
+    required String locale,
+  }) {
     final title = _title(AppLocalizations.of(context)!);
     final footer = _metaFooter(meta, locale);
     return '''
@@ -224,8 +214,8 @@ class _LegalDocumentScreenState extends ConsumerState<LegalDocumentScreen> {
               onRetry: _loadDocument,
             )
           : _loading || _controller == null
-              ? const Center(child: CircularProgressIndicator())
-              : WebViewWidget(controller: _controller!),
+          ? const Center(child: CircularProgressIndicator())
+          : WebViewWidget(controller: _controller!),
     );
   }
 }

@@ -20,6 +20,13 @@ const _qChannelDescription = 'Reminders when a study questionnaire is due';
 const _qNotifBase = 500000;
 const _qNotifMax = 20;
 
+const _endOfStudyChannelId = 'hhh_end_of_study';
+const _endOfStudyChannelName = 'Study updates';
+const _endOfStudyChannelDescription = 'Notice when your study concludes';
+// Single dedicated id, outside both the habit-reminder (incrementing from 0)
+// and questionnaire-reminder (500000..500019) ranges.
+const _endOfStudyNotifId = 500100;
+
 final _plugin = FlutterLocalNotificationsPlugin();
 bool _tzReady = false;
 
@@ -175,6 +182,63 @@ class ReminderSchedulerService {
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
     }
+  }
+
+  /// Schedules a single local notification for the participant's study end
+  /// date (`GET /questionnaires/due`, which carries `studyEndDate` and
+  /// `endOfStudyNotification` regardless of whether any questionnaires are
+  /// currently due). Uses a dedicated id that it clears first, so toggling
+  /// the admin setting off or changing the end date replaces it cleanly.
+  Future<void> syncEndOfStudyNotification() async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '${AppConfig.apiBaseUrl}/questionnaires/due',
+    );
+    final data = response.data ?? const {};
+    await _ensureTimezone();
+
+    await _plugin.cancel(id: _endOfStudyNotifId);
+
+    final config =
+        (data['endOfStudyNotification'] as Map<String, dynamic>?) ?? const {};
+    if (config['enabled'] != true) return;
+
+    final endDateStr = data['studyEndDate']?.toString();
+    if (endDateStr == null) return;
+    final endDate = DateTime.tryParse(endDateStr);
+    if (endDate == null) return;
+
+    final localEnd = tz.TZDateTime.from(endDate, tz.local);
+    final fireAt = tz.TZDateTime(
+      tz.local,
+      localEnd.year,
+      localEnd.month,
+      localEnd.day,
+      9,
+    );
+    final now = tz.TZDateTime.now(tz.local);
+    if (!fireAt.isAfter(now)) return;
+
+    final title = config['title']?.toString() ?? 'Study complete';
+    final body =
+        config['body']?.toString() ??
+        'Thank you for participating — your study has ended.';
+
+    await _plugin.zonedSchedule(
+      id: _endOfStudyNotifId,
+      title: title,
+      body: body,
+      scheduledDate: fireAt,
+      notificationDetails: const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _endOfStudyChannelId,
+          _endOfStudyChannelName,
+          channelDescription: _endOfStudyChannelDescription,
+          importance: Importance.defaultImportance,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+    );
   }
 
   /// Cancels every pending habit reminder (e.g. on sign-out / deletion).

@@ -1,28 +1,32 @@
-import type { Config } from 'jest';
+import type { Config } from "jest";
 
 const config: Config = {
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  testEnvironment: 'jsdom',
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
+  testEnvironment: "jsdom",
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
+    "^@/(.*)$": "<rootDir>/src/$1",
     // Stub CSS modules
-    '\\.module\\.css$': '<rootDir>/src/__tests__/__mocks__/styleMock.ts',
+    "\\.module\\.css$": "<rootDir>/src/__tests__/__mocks__/styleMock.ts",
+    // next-intl ships ESM-only builds Jest's default transform can't parse;
+    // this mock does real key lookup against messages/en.json instead.
+    "^next-intl$": "<rootDir>/src/__tests__/__mocks__/next-intl.tsx",
+    "^next-intl/server$": "<rootDir>/src/__tests__/__mocks__/next-intl.tsx",
   },
   transform: {
-    '^.+\\.(ts|tsx|js|jsx)$': [
-      'babel-jest',
+    "^.+\\.(ts|tsx|js|jsx)$": [
+      "babel-jest",
       {
         presets: [
-          ['@babel/preset-env', { targets: { node: 'current' } }],
-          ['@babel/preset-react', { runtime: 'automatic' }],
-          '@babel/preset-typescript',
+          ["@babel/preset-env", { targets: { node: "current" } }],
+          ["@babel/preset-react", { runtime: "automatic" }],
+          "@babel/preset-typescript",
         ],
       },
     ],
   },
-  testMatch: ['**/__tests__/**/*.test.{ts,tsx}'],
+  testMatch: ["**/__tests__/**/*.test.{ts,tsx}"],
   // Don't transform node_modules except for specific ESM packages
-  transformIgnorePatterns: ['/node_modules/'],
+  transformIgnorePatterns: ["/node_modules/"],
 };
 
 export default config;

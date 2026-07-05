@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/models/bubble_graph.dart';
 import 'package:hhh/widgets/bubble_graph_widget.dart';
 
@@ -35,11 +36,10 @@ void main() {
   testWidgets('BubbleGraphWidget renders without throwing', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: BubbleGraphWidget(
-            graph: _sampleGraph(),
-            onHabitTap: (_, _) {},
-          ),
+          body: BubbleGraphWidget(graph: _sampleGraph(), onHabitTap: (_, _) {}),
         ),
       ),
     );
@@ -51,11 +51,10 @@ void main() {
   testWidgets('shows dimension bubble label at overview level', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
-          body: BubbleGraphWidget(
-            graph: _sampleGraph(),
-            onHabitTap: (_, _) {},
-          ),
+          body: BubbleGraphWidget(graph: _sampleGraph(), onHabitTap: (_, _) {}),
         ),
       ),
     );

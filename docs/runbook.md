@@ -100,7 +100,7 @@ KC_DB_PASSWORD=<strong-password>      # Keycloak PostgreSQL DB password
 MONGO_PASSWORD=<strong-password>
 NEO4J_PASSWORD=<strong-password>
 ADMIN_PASSWORD=<strong-password>      # application admin
-API_SERVICE_SECRET=<hex-secret>       # shared secret between h3-app and h3-recommender
+API_SERVICE_SECRET=<hex-secret>       # shared secret between hhh-app and hhh-recommender
 LIGHTRAG_API_KEY=<hex-secret>         # bearer token protecting LightRAG REST API
 ```
 
@@ -120,18 +120,18 @@ docker compose --env-file stack.env.local up -d
 Expected output (services pulling/building, then starting):
 ```
 [+] Running 12/12
- ✔ Container h3-traefik        Started
- ✔ Container h3-mongo          Started
- ✔ Container h3-neo4j          Started
- ✔ Container h3-keycloak       Started
- ✔ Container h3-recommender    Started
- ✔ Container h3-lightrag       Started
- ✔ Container h3-knowledge-mcp  Started
- ✔ Container h3-redis          Started
- ✔ Container h3-app            Started
- ✔ Container h3-mongoexpress   Started
- ✔ Container h3-libretranslate Started
- ✔ Container h3-backup         Started
+ ✔ Container hhh-proxy        Started
+ ✔ Container hhh-mongo          Started
+ ✔ Container hhh-neo4j          Started
+ ✔ Container hhh-keycloak       Started
+ ✔ Container hhh-recommender    Started
+ ✔ Container hhh-lightrag       Started
+ ✔ Container hhh-knowledge-mcp  Started
+ ✔ Container hhh-redis          Started
+ ✔ Container hhh-app            Started
+ ✔ Container hhh-mongo-express   Started
+ ✔ Container hhh-translate Started
+ ✔ Container hhh-backup         Started
 ```
 
 ### 2.4 Verify all services are healthy
@@ -189,8 +189,8 @@ bash scripts/deploy-backend.sh
 
 Expected output:
 ```
-[2026-03-15T10:00:00Z] Building h3-app...
-[2026-03-15T10:00:30Z] Starting h3-app...
+[2026-03-15T10:00:00Z] Building hhh-app...
+[2026-03-15T10:00:30Z] Starting hhh-app...
 [2026-03-15T10:00:35Z] Health check passed.
 ```
 
@@ -305,25 +305,48 @@ git checkout HEAD -- app/
 
 ## 6. Backup Verification
 
-Backups are created daily at 02:00 UTC by the `h3-backup` container.
+> **Prefer the admin UI.** The admin panel's **Backups** page (admin role
+> only) shows the last backup, per-component status, and lets you trigger a
+> backup or restore without shell access — see the
+> [Admin Guide](guides/admin-guide.md#15-managing-backups). The steps below are the
+> manual/shell fallback for when the admin UI itself is unreachable, or for
+> deeper inspection.
+
+Backups run on a loop in the `hhh-backup` container (`container_name` in
+`docker-compose.yml`) — not real cron. The loop waits ~2 minutes after the
+container starts, then runs every 24 hours, so "around 02:00 UTC" only holds
+if the container hasn't been restarted since. `hhh-backup` also runs a small
+internal HTTP API (`backup-service/api/`) that only the admin panel's
+backend talks to over the internal Docker network — it is never reachable
+from outside the stack.
 
 ### 6.1 List available backups
 
 ```bash
-docker exec h3-backup ls /backups/
+docker exec hhh-backup ls /backups/
 ```
 
 Expected output:
 ```
 full_backup_20260315_020000.tar.gz
+backup_20260315_020000.manifest
+backup_20260315_020000.manifest.json
 full_backup_20260314_020000.tar.gz
+backup_20260314_020000.manifest
+backup_20260314_020000.manifest.json
 backup.log
 ```
+
+The `.manifest.json` sidecar next to each archive is what the admin UI reads
+for status — it has an explicit boolean per component (`mongoOk`,
+`lightragOk`, `neo4jOk`, `keycloakOk`), independent of each other, so a
+Keycloak failure can never make the MongoDB line lie about its own outcome.
+The `.manifest` file is the same information in human-readable form.
 
 ### 6.2 Inspect the backup log
 
 ```bash
-docker exec h3-backup tail -50 /backups/backup.log
+docker exec hhh-backup tail -50 /backups/backup.log
 ```
 
 Expected output (successful run):
@@ -344,45 +367,82 @@ Expected output (successful run):
 ### 6.3 Verify archive integrity
 
 ```bash
-ARCHIVE=$(docker exec h3-backup ls /backups/full_backup_*.tar.gz | tail -1)
-docker exec h3-backup tar -tzf "$ARCHIVE" | head -20
+ARCHIVE=$(docker exec hhh-backup ls -t /backups/full_backup_*.tar.gz | head -1)
+docker exec hhh-backup tar -tzf "$ARCHIVE" | head -20
 ```
 
-Expected output: a list of paths inside the archive (mongo/, lightrag/, neo4j/, keycloak/).
+Expected output: a list of paths inside the archive (mongo/, lightrag-data.tar.gz, neo4j/, keycloak/).
 
 ---
 
 ## 7. Restore from Backup
 
-> **Warning:** This operation overwrites all live data. Take a fresh backup first.
+> **Warning:** This operation overwrites all live data. Prefer the admin
+> UI's Backups page (Section 6, above) — it takes a safety backup
+> automatically before restoring, requires typing the exact filename to
+> confirm, and records who did it. Use the manual procedure below only when
+> the admin UI itself is unreachable.
+
+The actual entry point is `backup-service/restore.sh <path-to-archive>`, run
+inside the `backup` container (there is no `scripts/restore.sh` in this
+repo — a prior version of this runbook referenced one that never existed).
+`restore.sh` takes an atomic lock shared with `backup.sh`, so a scheduled or
+manually-triggered backup can never run concurrently with it.
 
 ```bash
-# 1. Take a safety backup of current state
-docker exec h3-backup /backup.sh
+# 1. Take a safety backup of current state (skip only if you already have a
+#    known-good, recent one — restore.sh does NOT do this for you when run
+#    directly like this, unlike the admin UI's restore flow)
+docker exec hhh-backup /backup.sh
 
-# 2. List available timestamps
-docker exec h3-backup ls /backups/ | grep full_backup
-# Example: full_backup_20260314_020000.tar.gz → timestamp is 20260314_020000
+# 2. List available archives
+docker exec hhh-backup ls -t /backups/full_backup_*.tar.gz
 
-# 3. Run the restore script (runs inside the backup container which has mongorestore/docker CLI)
-bash scripts/restore.sh 20260314_020000
+# 3. Run the restore script against the full path inside the container
+docker exec -it hhh-backup /restore.sh /backups/full_backup_20260314_020000.tar.gz
 ```
 
 Expected interaction:
 ```
-Restore from 20260314_020000? This will overwrite current data. [y/N]
-y
-[2026-03-15 10:00:00] Extracting backup archive...
-[2026-03-15 10:00:02] 1/3 Restoring MongoDB...
-[2026-03-15 10:00:06] ✓ MongoDB restored
-[2026-03-15 10:00:06] 2/3 Restoring Neo4j...
-[2026-03-15 10:00:18] ✓ Neo4j restored
-[2026-03-15 10:00:18] 3/3 Restoring Keycloak realm...
-[2026-03-15 10:00:22] ✓ Keycloak realm restored
-[2026-03-15 10:00:22] ==========================================
-[2026-03-15 10:00:22] Restore from 20260314_020000 completed.
-[2026-03-15 10:00:22] ==========================================
+==========================================
+WARNING: FULL SYSTEM RESTORE
+==========================================
+Restoring from: full_backup_20260314_020000.tar.gz
+
+This operation will:
+  - STOP and OVERWRITE MongoDB data
+  - STOP and OVERWRITE LightRAG index
+  - STOP and OVERWRITE Neo4j graph data
+  - OVERWRITE Keycloak realm (if backup present)
+  - RESTART all affected containers
+
+Type 'YES' to continue: YES
+
+Extracting backup archive...
+✓ Archive extracted
+
+1/3 Restoring MongoDB...
+✓ MongoDB restored
+
+2/3 Restoring LightRAG index...
+✓ LightRAG index restored
+
+3/3 Restoring Neo4j...
+✓ Neo4j restored
+
+Restoring Keycloak realm (if backup present)...
+✓ Keycloak realm restored
+
+==========================================
+✓ Restore completed successfully!
+==========================================
 ```
+
+`restore.sh` exits non-zero if any component failed (it previously always
+exited 0 even on a partial failure — fixed; do not rely on old copies of
+this script's exit code). To skip the Keycloak reimport (e.g. restoring an
+archive uploaded from elsewhere, where you don't want to trust its realm
+export), pass `--skip-keycloak` as a second argument.
 
 After restore, verify service health:
 
@@ -441,7 +501,7 @@ bash scripts/deploy-backend.sh
 ### 8.4 Rotate `API_SERVICE_SECRET`
 
 `API_SERVICE_SECRET` is a shared secret used to authenticate requests between the Node.js
-backend (`h3-app`) and the Python recommender (`h3-recommender`).  Both services must be
+backend (`hhh-app`) and the Python recommender (`hhh-recommender`).  Both services must be
 restarted together after rotation.
 
 ```bash
@@ -454,14 +514,14 @@ nano stack.env.local
 # Change the line:  API_SERVICE_SECRET=<new-secret>
 
 # 3. Restart both services simultaneously so there is no window where they hold different secrets
-docker compose --env-file stack.env.local up -d h3-app h3-recommender
+docker compose --env-file stack.env.local up -d hhh-app hhh-recommender
 ```
 
 Expected output:
 ```
 [+] Running 2/2
- ✔ Container h3-app         Started
- ✔ Container h3-recommender Started
+ ✔ Container hhh-app         Started
+ ✔ Container hhh-recommender Started
 ```
 
 Verify both services are back up:
@@ -490,7 +550,7 @@ nano stack.env.local
 # Change the line:  LIGHTRAG_API_KEY=<new-secret>
 
 # 3. Restart all three services simultaneously
-docker compose --env-file stack.env.local up -d h3-lightrag h3-knowledge-mcp h3-recommender
+docker compose --env-file stack.env.local up -d hhh-lightrag hhh-knowledge-mcp hhh-recommender
 ```
 
 Verify LightRAG is back up:
@@ -572,7 +632,7 @@ curl -s http://localhost:8000/health
 ### Redis health check
 
 ```bash
-docker compose --env-file stack.env.local exec h3-redis redis-cli ping
+docker compose --env-file stack.env.local exec hhh-redis redis-cli ping
 # Expected: PONG
 ```
 
@@ -583,19 +643,19 @@ docker compose --env-file stack.env.local exec h3-redis redis-cli ping
 docker compose --env-file stack.env.local ps
 
 # Stream logs for a specific service
-docker compose --env-file stack.env.local logs -f h3-app
+docker compose --env-file stack.env.local logs -f hhh-app
 
 # Check last 50 lines of Neo4j logs
-docker compose --env-file stack.env.local logs --tail=50 h3-neo4j
+docker compose --env-file stack.env.local logs --tail=50 hhh-neo4j
 
 # Check Keycloak startup
-docker compose --env-file stack.env.local logs --tail=100 h3-keycloak | grep -E "started|error|WARN"
+docker compose --env-file stack.env.local logs --tail=100 hhh-keycloak | grep -E "started|error|WARN"
 
 # Check recommender logs
-docker compose --env-file stack.env.local logs --tail=50 h3-recommender
+docker compose --env-file stack.env.local logs --tail=50 hhh-recommender
 
 # Check Redis logs
-docker compose --env-file stack.env.local logs --tail=50 h3-redis
+docker compose --env-file stack.env.local logs --tail=50 hhh-redis
 ```
 
 ### Automated monitoring
@@ -680,11 +740,11 @@ docker compose -f docker-compose.local.yml stop redis-insight
 **Diagnosis:**
 ```bash
 # Check the JWKS URL the app is using
-docker compose --env-file stack.env.local exec h3-app env | grep KEYCLOAK_JWKS_URL
+docker compose --env-file stack.env.local exec hhh-app env | grep KEYCLOAK_JWKS_URL
 # Expected: KEYCLOAK_JWKS_URL=http://keycloak:8080/realms/hhh/protocol/openid-connect/certs
 
 # Verify the endpoint is reachable from inside the app container
-docker compose --env-file stack.env.local exec h3-app \
+docker compose --env-file stack.env.local exec hhh-app \
   wget -qO- http://keycloak:8080/realms/hhh/protocol/openid-connect/certs | head -c 100
 # Expected: {"keys":[{"kid":"...
 ```
@@ -701,23 +761,23 @@ bash scripts/deploy-backend.sh
 
 ### Keycloak DB unavailable — PostgreSQL not ready
 
-**Symptom:** `h3-keycloak` fails to start or enters a restart loop; Keycloak logs show
+**Symptom:** `hhh-keycloak` fails to start or enters a restart loop; Keycloak logs show
 `Unable to connect to datasource` or `Connection refused` pointing to `keycloak-db:5432`.
 
 **Diagnosis:**
 ```bash
 # Check whether the keycloak-db container is running and healthy
-docker compose --env-file stack.env.local ps h3-keycloak-db
+docker compose --env-file stack.env.local ps hhh-keycloak-db
 # Expected: Up (healthy)
 
 # If not healthy, inspect the PostgreSQL logs
-docker compose --env-file stack.env.local logs --tail=30 h3-keycloak-db
+docker compose --env-file stack.env.local logs --tail=30 hhh-keycloak-db
 # Common errors:
 #   "FATAL: password authentication failed" → KC_DB_PASSWORD mismatch
 #   "database 'keycloak' does not exist" → volume was wiped, re-init required
 
 # Verify the credentials env vars are set correctly in the Keycloak container
-docker compose --env-file stack.env.local exec h3-keycloak env | grep KC_DB
+docker compose --env-file stack.env.local exec hhh-keycloak env | grep KC_DB
 # Expected:
 #   KC_DB=postgres
 #   KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
@@ -725,7 +785,7 @@ docker compose --env-file stack.env.local exec h3-keycloak env | grep KC_DB
 #   KC_DB_PASSWORD=<your-password>
 
 # Test connectivity from the Keycloak container to the DB
-docker compose --env-file stack.env.local exec h3-keycloak \
+docker compose --env-file stack.env.local exec hhh-keycloak \
   sh -c 'nc -zv keycloak-db 5432 && echo OK || echo FAIL'
 # Expected: OK
 ```
@@ -733,30 +793,30 @@ docker compose --env-file stack.env.local exec h3-keycloak \
 **Fix — keycloak-db not started or unhealthy:**
 ```bash
 # Start the database first
-docker compose --env-file stack.env.local up -d h3-keycloak-db
+docker compose --env-file stack.env.local up -d hhh-keycloak-db
 
 # Wait for it to become healthy (check every 5 seconds)
 for i in $(seq 1 12); do
-  STATUS=$(docker inspect --format='{{.State.Health.Status}}' h3-keycloak-db 2>/dev/null)
+  STATUS=$(docker inspect --format='{{.State.Health.Status}}' hhh-keycloak-db 2>/dev/null)
   [ "$STATUS" = "healthy" ] && echo "DB healthy." && break
   echo "Waiting for DB... ($i/12)"; sleep 5
 done
 
 # Then start Keycloak
-docker compose --env-file stack.env.local up -d h3-keycloak
+docker compose --env-file stack.env.local up -d hhh-keycloak
 ```
 
 **Fix — password mismatch between keycloak-db and Keycloak:**
 ```bash
 # Stop both services
-docker compose --env-file stack.env.local stop h3-keycloak h3-keycloak-db
+docker compose --env-file stack.env.local stop hhh-keycloak hhh-keycloak-db
 
 # Remove the database volume to force re-initialisation with the correct password
-docker volume rm h3-keycloak-db-data
+docker volume rm hhh-keycloak-db-data
 
 # Ensure KC_DB_USERNAME and KC_DB_PASSWORD are consistent in stack.env.local
 # Then restart both services
-docker compose --env-file stack.env.local up -d h3-keycloak-db h3-keycloak
+docker compose --env-file stack.env.local up -d hhh-keycloak-db hhh-keycloak
 
 # After Keycloak starts, verify the realm was imported
 curl -s -o /dev/null -w "%{http_code}" \
@@ -764,7 +824,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 # Expected: 200
 ```
 
-> **Note:** Removing `h3-keycloak-db-data` destroys all Keycloak data (users, sessions,
+> **Note:** Removing `hhh-keycloak-db-data` destroys all Keycloak data (users, sessions,
 > client secrets).  Re-create any manually provisioned users and rotate client secrets
 > after volume re-initialisation.
 
@@ -777,31 +837,31 @@ curl -s -o /dev/null -w "%{http_code}" \
 
 **Diagnosis:**
 ```bash
-docker compose --env-file stack.env.local logs --tail=30 h3-neo4j | grep -E "Started|ERROR|WARN"
+docker compose --env-file stack.env.local logs --tail=30 hhh-neo4j | grep -E "Started|ERROR|WARN"
 # If Neo4j is still initializing you will see: "Bolt enabled on 0.0.0.0:7687."  not yet present
 ```
 
 **Fix:**
 ```bash
 # Wait for Neo4j to finish initial startup (can take 30–60 s on first boot)
-docker compose --env-file stack.env.local exec h3-neo4j \
+docker compose --env-file stack.env.local exec hhh-neo4j \
   cypher-shell -u neo4j -p "$NEO4J_PASSWORD" "RETURN 1 AS ok;"
 # Expected: ok: 1
 
 # If stuck, restart the container
-docker compose --env-file stack.env.local restart h3-neo4j
+docker compose --env-file stack.env.local restart hhh-neo4j
 ```
 
 ---
 
 ### Neo4j failed to start — data directory permissions
 
-**Symptom:** `h3-neo4j` enters a restart loop; logs show
+**Symptom:** `hhh-neo4j` enters a restart loop; logs show
 `ERROR Failed to start Neo4j: Store unavailable` or `java.io.IOException: Permission denied`.
 
 **Diagnosis:**
 ```bash
-docker compose --env-file stack.env.local logs --tail=30 h3-neo4j | grep -i "error\|permission"
+docker compose --env-file stack.env.local logs --tail=30 hhh-neo4j | grep -i "error\|permission"
 # Look for: "Permission denied" or "Cannot open file"
 
 # Check host directory ownership
@@ -812,16 +872,16 @@ ls -la /mnt/data/appdata/hhh/neo4j/
 **Fix:**
 ```bash
 # Stop the container
-docker compose --env-file stack.env.local stop h3-neo4j
+docker compose --env-file stack.env.local stop hhh-neo4j
 
 # Correct ownership (neo4j user = UID 7474)
 sudo chown -R 7474:7474 /mnt/data/appdata/hhh/neo4j
 
 # Restart
-docker compose --env-file stack.env.local up -d h3-neo4j
+docker compose --env-file stack.env.local up -d hhh-neo4j
 
 # Verify startup
-docker compose --env-file stack.env.local logs -f h3-neo4j | grep -E "Started|Bolt enabled|ERROR"
+docker compose --env-file stack.env.local logs -f hhh-neo4j | grep -E "Started|Bolt enabled|ERROR"
 # Expected: "Bolt enabled on 0.0.0.0:7687."
 ```
 
@@ -848,7 +908,7 @@ curl -s -I -X OPTIONS http://localhost:3000/api/v1/health \
 **Fix:**
 ```bash
 # Check CORS config in app/app.js — ensure the CORS middleware allows your Flutter web origin
-docker compose --env-file stack.env.local exec h3-app env | grep CORS
+docker compose --env-file stack.env.local exec hhh-app env | grep CORS
 # Add CORS_ORIGIN=https://your.domain.com to stack.env.local if missing
 
 bash scripts/deploy-backend.sh
@@ -863,23 +923,23 @@ bash scripts/deploy-backend.sh
 **Diagnosis:**
 ```bash
 # Check LightRAG container status
-docker compose --env-file stack.env.local ps h3-lightrag
+docker compose --env-file stack.env.local ps hhh-lightrag
 
 # Check LightRAG health directly
 curl -s http://localhost:9621/health
 # Expected: {"status":"ok"}
 
 # Check LightRAG logs for errors
-docker compose --env-file stack.env.local logs --tail=50 h3-lightrag
+docker compose --env-file stack.env.local logs --tail=50 hhh-lightrag
 
 # Verify LIGHTRAG_URL and LIGHTRAG_API_KEY are set on recommender
-docker compose --env-file stack.env.local exec h3-recommender env | grep LIGHTRAG
+docker compose --env-file stack.env.local exec hhh-recommender env | grep LIGHTRAG
 ```
 
 **Fix:**
 ```bash
 # Restart LightRAG and knowledge-mcp (recommender will follow via depends_on)
-docker compose --env-file stack.env.local up -d h3-lightrag h3-knowledge-mcp h3-recommender
+docker compose --env-file stack.env.local up -d hhh-lightrag hhh-knowledge-mcp hhh-recommender
 ```
 
 > **Note:** LightRAG takes ~30 seconds to initialize its storage on first start. Wait for `{"status":"ok"}` from `curl http://localhost:9621/health` before considering it failed.
@@ -901,15 +961,15 @@ ssh -L 9622:localhost:9621 your-server
 **Diagnosis:**
 ```bash
 # Verify the recommender container is running
-docker compose --env-file stack.env.local ps h3-recommender
+docker compose --env-file stack.env.local ps hhh-recommender
 # Expected: Up (healthy) or Up N seconds
 
 # Check the RECOMMENDER_URL env var in the app
-docker compose --env-file stack.env.local exec h3-app env | grep RECOMMENDER_URL
+docker compose --env-file stack.env.local exec hhh-app env | grep RECOMMENDER_URL
 # Expected: RECOMMENDER_URL=http://recommender:8000
 
 # Test connectivity from inside the app container
-docker compose --env-file stack.env.local exec h3-app \
+docker compose --env-file stack.env.local exec hhh-app \
   wget -qO- http://recommender:8000/health 2>&1 | head -c 200
 # Expected: {"status":"ok"}
 
@@ -925,7 +985,7 @@ bash scripts/deploy-recommender.sh
 ```
 
 If the container name `recommender` cannot be resolved, ensure both services share the same
-Docker network (check `docker-compose.yml` `networks:` section for `h3-app` and `recommender`).
+Docker network (check `docker-compose.yml` `networks:` section for `hhh-app` and `recommender`).
 
 ---
 
@@ -936,22 +996,22 @@ even for non-English or English habits respectively.  App logs show
 `WARN [habitsRouter] translateAndRefine failed, falling back to raw translation` or
 `WARN [habitsRouter] translateToGerman failed`.
 
-**Symptom 2:** `h3-translate` is in a restart loop or shows `unhealthy`.
+**Symptom 2:** `hhh-translate` is in a restart loop or shows `unhealthy`.
 
 **Diagnosis:**
 ```bash
 # Check container status
-docker compose --env-file stack.env.local ps h3-translate
+docker compose --env-file stack.env.local ps hhh-translate
 # Expected: Up (healthy)
 
 # Check LibreTranslate logs for startup errors
-docker compose --env-file stack.env.local logs --tail=50 h3-translate
+docker compose --env-file stack.env.local logs --tail=50 hhh-translate
 # Common errors:
 #   "Permission denied" on /home/libretranslate/.local → UID 1032 issue
 #   "No module named argostranslate" → language pack not downloaded
 
 # Test LibreTranslate directly from inside the app container
-docker compose --env-file stack.env.local exec h3-app \
+docker compose --env-file stack.env.local exec hhh-app \
   wget -qO- "http://translate:5000/translate" \
   --post-data '{"q":"Hello","source":"en","target":"de","format":"text"}' \
   --header 'Content-Type: application/json' 2>&1 | head -c 200
@@ -961,16 +1021,16 @@ docker compose --env-file stack.env.local exec h3-app \
 **Fix — UID 1032 volume permission issue:**
 ```bash
 # Stop LibreTranslate
-docker compose --env-file stack.env.local stop h3-translate
+docker compose --env-file stack.env.local stop hhh-translate
 
 # Fix ownership (libretranslate user = UID 1032)
 sudo chown -R 1032:1032 /mnt/data/appdata/hhh/translate
 
 # Restart
-docker compose --env-file stack.env.local up -d h3-translate
+docker compose --env-file stack.env.local up -d hhh-translate
 
 # Watch logs for successful language pack loading
-docker compose --env-file stack.env.local logs -f h3-translate | grep -E "Loaded|Error|ready"
+docker compose --env-file stack.env.local logs -f hhh-translate | grep -E "Loaded|Error|ready"
 # Expected: "Loaded en -> de" and "Loaded de -> en" (and ja variants if LT_LOAD_ONLY includes ja)
 ```
 
@@ -982,11 +1042,11 @@ will be populated with unrefined machine translations rather than null.
 
 ```bash
 # Check the API-service (recommender) logs
-docker compose --env-file stack.env.local logs --tail=50 h3-recommender | grep -E "error|ERROR|refine"
+docker compose --env-file stack.env.local logs --tail=50 hhh-recommender | grep -E "error|ERROR|refine"
 # Common cause: LLM_API_KEY not set or rate-limited
 
 # Verify the env var is present
-docker compose --env-file stack.env.local exec h3-recommender env | grep LLM_API_KEY
+docker compose --env-file stack.env.local exec hhh-recommender env | grep LLM_API_KEY
 # Expected: LLM_API_KEY=sk-...
 ```
 

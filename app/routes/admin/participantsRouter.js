@@ -10,6 +10,7 @@ import {
 } from '../../services/adminParticipantService.js';
 import { getParticipantProgress } from '../../services/adminStatsService.js';
 import { getParticipantResponses } from '../../services/questionnaireScheduleService.js';
+import { getParticipantHabits } from '../../services/adminHabitService.js';
 import { fastForwardParticipant } from '../../services/devToolsService.js';
 import { computeReminderPlans } from '../../services/reminderPlanService.js';
 import { logger } from '../../utils/logger.js';
@@ -460,6 +461,67 @@ export function createParticipantsRouter({
       }
 
       res.json(result);
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * @swagger
+   * /admin/participants/{id}/habits:
+   *   get:
+   *     summary: List the habits a participant created
+   *     description: Returns the participant's donated habits from Neo4j (newest first), each with its BCIO category, study, and donation date.
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema: { type: string, format: uuid }
+   *         description: Participant userId
+   *     responses:
+   *       200:
+   *         description: Participant's habits
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 habits:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id: { type: string }
+   *                       habitName: { type: string }
+   *                       category: { type: string, example: Physical activity }
+   *                       isHabit: { type: boolean }
+   *                       studyId: { type: string, nullable: true }
+   *                       donatedAt: { type: string, format: date-time, nullable: true }
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Caller does not have admin or researcher role
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  // GET /api/v1/admin/participants/:id/habits — habits created by this user
+  router.get('/participants/:id/habits', async (req, res) => {
+    try {
+      const habits = await getParticipantHabits({
+        neo4jRun,
+        userId: req.params.id,
+      });
+      res.json({ habits });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });

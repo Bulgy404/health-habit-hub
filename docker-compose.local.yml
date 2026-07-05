@@ -4,7 +4,7 @@
 services:
   proxy:
     image: traefik:v3.6.1
-    container_name: h3-2-proxy
+    container_name: hhh-proxy
     command:
       - --api.insecure=true
       - --api.dashboard=true
@@ -13,14 +13,14 @@ services:
       - --accesslog=true
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=h3-2-proxy
+      - --providers.docker.network=hhh-proxy
       - --entrypoints.web.address=:80
     restart: always
     ports:
       - "${TRAEFIK_HOST_PORT80:-80}:80"
       - "${TRAEFIK_HOST_PORT8080:-8888}:8080"
     networks:
-      - h3-2-proxy
+      - hhh-proxy
     volumes:
       - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
     labels:
@@ -32,7 +32,7 @@ services:
 
   app:
     image: hhh/app
-    container_name: h3-2-app
+    container_name: hhh-app
     build: ./app
     restart: on-failure:3
     env_file:
@@ -52,8 +52,8 @@ services:
     ports:
       - "3000:3000"
     networks:
-      - h3-2-proxy
-      - h3-2-app
+      - hhh-proxy
+      - hhh-app
     command: node --watch main.js
     depends_on:
       - proxy
@@ -75,7 +75,7 @@ services:
 
   mongo:
     image: mongo:8.2.6
-    container_name: h3-2-mongo
+    container_name: hhh-mongo
     restart: unless-stopped
     env_file:
       - .env
@@ -96,11 +96,11 @@ services:
       start_period: 30s
 
     networks:
-      - h3-2-app
+      - hhh-app
 
   neo4j:
     image: neo4j:5
-    container_name: h3-2-neo4j
+    container_name: hhh-neo4j
     restart: unless-stopped
     environment:
       - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-neo4j_password_change_me}
@@ -110,8 +110,8 @@ services:
       - "7474:7474"
       - "7687:7687"
     networks:
-      - h3-2-proxy
-      - h3-2-app
+      - hhh-proxy
+      - hhh-app
     volumes:
       - neo4j-local-data:/data
       - neo4j-local-logs:/logs
@@ -133,7 +133,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.5.5
-    container_name: h3-2-keycloak
+    container_name: hhh-keycloak
     restart: unless-stopped
     env_file:
       - .env
@@ -145,8 +145,8 @@ services:
     ports:
       - "8080:8080"
     networks:
-      - h3-2-proxy
-      - h3-2-app
+      - hhh-proxy
+      - hhh-app
     volumes:
       - keycloak-local-data:/opt/keycloak/data
       - ./keycloak/hhh-realm.json:/opt/keycloak/data/import/hhh-realm.json:ro
@@ -168,15 +168,15 @@ services:
 
   keycloak-init:
     image: quay.io/keycloak/keycloak:26.5.5
-    container_name: h3-2-keycloak-init
+    container_name: hhh-keycloak-init
     restart: "no"
     env_file:
       - .env
     volumes:
       - ./keycloak/hhh-user-profile.json:/opt/keycloak/bootstrap/hhh-user-profile.json:ro
     networks:
-      - h3-2-proxy
-      - h3-2-app
+      - hhh-proxy
+      - hhh-app
     depends_on:
       keycloak:
         condition: service_healthy
@@ -214,7 +214,7 @@ services:
 
   admin:
     image: hhh/admin
-    container_name: h3-2-admin
+    container_name: hhh-admin
     build: ./admin
     restart: on-failure:3
     env_file:
@@ -237,8 +237,8 @@ services:
     ports:
       - "3001:3001"
     networks:
-      - h3-2-proxy
-      - h3-2-app
+      - hhh-proxy
+      - hhh-app
     depends_on:
       proxy:
         condition: service_started
@@ -255,15 +255,15 @@ services:
 
   translate:
     image: libretranslate/libretranslate:v1.9.5
-    container_name: h3-2-translate
+    container_name: hhh-translate
     restart: always
     env_file:
       - .env
     ports:
       - "5001:5000"
     networks:
-      - h3-2-proxy
-      - h3-2-app
+      - hhh-proxy
+      - hhh-app
     volumes:
       - translate-local-data:/root/.local/share/argos-translate/packages
     tty: true
@@ -278,7 +278,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: h3-2-redis
+    container_name: hhh-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -286,19 +286,19 @@ services:
       - redis-local-data:/data
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     networks:
-      - h3-2-app
+      - hhh-app
 
   redis-insight:
     image: redis/redisinsight:latest
-    container_name: h3-2-redis-insight
+    container_name: hhh-redis-insight
     restart: unless-stopped
     ports:
       - "5540:5540"
     volumes:
       - redis-insight-data:/data
     networks:
-      - h3-2-proxy
-      - h3-2-app
+      - hhh-proxy
+      - hhh-app
     depends_on:
       - redis
     labels:
@@ -310,7 +310,7 @@ services:
 
   lightrag:
     image: hhh/lightrag
-    container_name: h3-2-lightrag
+    container_name: hhh-lightrag
     build: ./lightrag
     restart: on-failure:3
     env_file:
@@ -326,8 +326,8 @@ services:
     volumes:
       - lightrag-data:/app/data
     networks:
-      - h3-2-proxy
-      - h3-2-app
+      - hhh-proxy
+      - hhh-app
     logging:
       driver: json-file
       options:
@@ -336,7 +336,7 @@ services:
 
   knowledge-mcp:
     image: hhh/knowledge-mcp
-    container_name: h3-2-knowledge-mcp
+    container_name: hhh-knowledge-mcp
     build: ./knowledge-mcp
     restart: on-failure:3
     environment:
@@ -345,7 +345,7 @@ services:
     ports:
       - "8002:8002"
     networks:
-      - h3-2-app
+      - hhh-app
     depends_on:
       - lightrag
     logging:
@@ -356,7 +356,7 @@ services:
 
   mongo-express:
     image: mongo-express:1.0
-    container_name: h3-2-mongo-express
+    container_name: hhh-mongo-express
     restart: unless-stopped
     environment:
       - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USER:-admin}
@@ -366,13 +366,13 @@ services:
     ports:
       - "8081:8081"
     networks:
-      - h3-2-app
+      - hhh-app
     depends_on:
       - mongo
 
   recommender:
     image: hhh/recommender
-    container_name: h3-2-recommender
+    container_name: hhh-recommender
     build: ./API-service
     restart: on-failure:3
     env_file:
@@ -388,15 +388,15 @@ services:
     ports:
       - "8001:8000"
     networks:
-      - h3-2-proxy
-      - h3-2-app
+      - hhh-proxy
+      - hhh-app
     depends_on:
       - redis
       - lightrag
 
   prometheus:
     image: prom/prometheus:v3.4.1
-    container_name: h3-2-prometheus
+    container_name: hhh-prometheus
     restart: unless-stopped
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -408,8 +408,8 @@ services:
     ports:
       - "9090:9090"
     networks:
-      - h3-2-proxy
-      - h3-2-app
+      - hhh-proxy
+      - hhh-app
     labels:
       - traefik.enable=true
       - traefik.http.routers.prometheus.rule=Host(`prometheus.${PATH_SUFFIX:-localhost}`)
@@ -419,7 +419,7 @@ services:
 
   grafana:
     image: grafana/grafana:12.0.1
-    container_name: h3-2-grafana
+    container_name: hhh-grafana
     restart: unless-stopped
     environment:
       - GF_SECURITY_ADMIN_USER=admin
@@ -433,8 +433,8 @@ services:
     ports:
       - "3002:3000"
     networks:
-      - h3-2-proxy
-      - h3-2-app
+      - hhh-proxy
+      - hhh-app
     depends_on:
       - prometheus
     labels:
@@ -457,7 +457,7 @@ volumes:
   grafana-data:
 
 networks:
-  h3-2-proxy:
-    name: h3-2-proxy
-  h3-2-app:
-    name: h3-2-app
+  hhh-proxy:
+    name: hhh-proxy
+  hhh-app:
+    name: hhh-app

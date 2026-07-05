@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/recommendation.dart';
 
 /// Card widget displaying a single habit [Recommendation].
@@ -26,6 +27,7 @@ class RecommendationCard extends StatelessWidget {
   });
 
   void _showWhySheet(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     final citation = recommendation.ragCitation;
@@ -58,8 +60,10 @@ class RecommendationCard extends StatelessWidget {
               ),
             ),
             Text(
-              'Why "${recommendation.habitName}"?',
-              style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              l10n.recommendationCardWhyTitle(recommendation.habitName),
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 12),
             Text(recommendation.rationale, style: textTheme.bodyMedium),
@@ -68,13 +72,17 @@ class RecommendationCard extends StatelessWidget {
               Divider(color: colorScheme.outlineVariant),
               const SizedBox(height: 12),
               Text(
-                'Evidence',
-                style: textTheme.labelLarge?.copyWith(color: colorScheme.secondary),
+                l10n.recommendationCardEvidence,
+                style: textTheme.labelLarge?.copyWith(
+                  color: colorScheme.secondary,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
                 citation.sourceTitle,
-                style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                style: textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               Text(citation.excerpt, style: textTheme.bodySmall),
@@ -87,6 +95,7 @@ class RecommendationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -100,7 +109,9 @@ class RecommendationCard extends StatelessWidget {
             // Habit name — large
             Text(
               recommendation.habitName,
-              style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             // Category chip
@@ -116,7 +127,7 @@ class RecommendationCard extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'Confidence',
+                  l10n.recommendationCardConfidence,
                   style: textTheme.bodySmall,
                 ),
                 const SizedBox(width: 8),
@@ -126,10 +137,10 @@ class RecommendationCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: recommendation.confidenceScore.clamp(0.0, 1.0),
                       minHeight: 8,
-                      backgroundColor:
-                          colorScheme.surfaceContainerHighest,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                      backgroundColor: colorScheme.surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        colorScheme.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -155,7 +166,7 @@ class RecommendationCard extends StatelessWidget {
                 TextButton.icon(
                   onPressed: () => _showWhySheet(context),
                   icon: const Icon(Icons.info_outline, size: 16),
-                  label: const Text('Why?'),
+                  label: Text(l10n.recommendationCardWhy),
                   style: TextButton.styleFrom(
                     foregroundColor: colorScheme.secondary,
                     padding: EdgeInsets.zero,
@@ -166,14 +177,14 @@ class RecommendationCard extends StatelessWidget {
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  tooltip: 'Dismiss',
+                  tooltip: l10n.recommendationCardDismiss,
                   onPressed: onDismiss,
                   color: colorScheme.error,
                 ),
                 const SizedBox(width: 4),
                 IconButton(
                   icon: const Icon(Icons.check),
-                  tooltip: 'Accept',
+                  tooltip: l10n.recommendationCardAccept,
                   onPressed: onAccept,
                   color: colorScheme.primary,
                 ),

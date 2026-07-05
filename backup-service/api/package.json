@@ -1,0 +1,12 @@
+{
+  "name": "hhh-backup-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Internal-network-only HTTP API wrapping backup.sh/restore.sh for the admin panel. Never exposed outside the Docker network.",
+  "type": "module",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.19.2",
+    "multer": "^2.0.0"
+  }
+}

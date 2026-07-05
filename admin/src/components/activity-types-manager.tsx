@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
 import styles from "./admin-page.module.css";
 
@@ -22,6 +23,7 @@ interface ActivityType {
  * allowed behaviors are chosen.
  */
 export function ActivityTypesManager({ token }: { token: string }) {
+  const t = useTranslations("activityTypesManager");
   const [types, setTypes] = useState<ActivityType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,11 +42,11 @@ export function ActivityTypesManager({ token }: { token: string }) {
       setTypes(Array.isArray(data) ? (data as ActivityType[]) : []);
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load activity types");
+      setError(err instanceof Error ? err.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     fetchTypes();
@@ -56,29 +58,35 @@ export function ActivityTypesManager({ token }: { token: string }) {
         method: "PATCH",
         body: JSON.stringify({ isDefault: !current }),
       });
-      setTypes((prev) => prev.map((t) => (t.key === key ? { ...t, isDefault: !current } : t)));
+      setTypes((prev) =>
+        prev.map((item) => (item.key === key ? { ...item, isDefault: !current } : item))
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Update failed");
+      setError(err instanceof Error ? err.message : t("updateFailed"));
     }
   }
 
   async function remove(key: string) {
-    if (!confirm(`Delete activity type "${key}"? This cannot be undone.`)) return;
+    if (!confirm(t("confirmDelete", { key }))) return;
     try {
       await apiFetch(`${ACTIVITY_TYPES_API}/${encodeURIComponent(key)}`, token, {
         method: "DELETE",
       });
-      setTypes((prev) => prev.filter((t) => t.key !== key));
+      setTypes((prev) => prev.filter((item) => item.key !== key));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      setError(err instanceof Error ? err.message : t("deleteFailed"));
     }
   }
 
   async function add() {
-    const key = newKey.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
+    const key = newKey
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
     const label_en = newLabelEn.trim();
     if (!key || !label_en) {
-      setError("Key and English label are required.");
+      setError(t("keyAndLabelRequired"));
       return;
     }
     setAdding(true);
@@ -99,7 +107,7 @@ export function ActivityTypesManager({ token }: { token: string }) {
       setNewIsDefault(false);
       setError("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Add failed");
+      setError(err instanceof Error ? err.message : t("addFailed"));
     } finally {
       setAdding(false);
     }
@@ -107,56 +115,60 @@ export function ActivityTypesManager({ token }: { token: string }) {
 
   return (
     <div style={{ marginBottom: "1.5rem" }}>
-      <p className={styles.sectionTitle}>Activity type catalog (shared across studies)</p>
+      <p className={styles.sectionTitle}>{t("title")}</p>
       <p className={styles.muted} style={{ fontSize: "0.85rem", marginBottom: "0.75rem" }}>
-        Behaviors participants can pick from when a group restricts its allowed
-        behaviors below. Defaults are pre-selected for groups with no explicit
-        restriction. Free-entry (public) users don&apos;t use this catalog.
+        {t("description")}
       </p>
       {error && <p className={styles.error}>{error}</p>}
       {loading ? (
-        <p className={styles.muted}>Loading…</p>
+        <p className={styles.muted}>{t("loadingEllipsis")}</p>
       ) : (
         <>
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Key</th>
-                  <th>English</th>
-                  <th>German</th>
-                  <th>Default</th>
+                  <th>{t("key")}</th>
+                  <th>{t("english")}</th>
+                  <th>{t("german")}</th>
+                  <th>{t("default")}</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
-                {types.map((t) => (
-                  <tr key={t.key}>
-                    <td><span className={styles.code}>{t.key}</span></td>
-                    <td>{t.label_en}</td>
-                    <td>{t.label_de || <span className={styles.muted}>—</span>}</td>
+                {types.map((item) => (
+                  <tr key={item.key}>
+                    <td>
+                      <span className={styles.code}>{item.key}</span>
+                    </td>
+                    <td>{item.label_en}</td>
+                    <td>{item.label_de || <span className={styles.muted}>—</span>}</td>
                     <td>
                       <input
                         type="checkbox"
-                        checked={t.isDefault}
-                        onChange={() => toggleDefault(t.key, t.isDefault)}
-                        title="Toggle as platform default"
+                        checked={item.isDefault}
+                        onChange={() => toggleDefault(item.key, item.isDefault)}
+                        title={t("toggleDefaultTitle")}
                       />
                     </td>
                     <td>
                       <button
                         className={`${styles.actionBtn} ${styles.deleteBtn}`}
-                        onClick={() => remove(t.key)}
+                        onClick={() => remove(item.key)}
                       >
-                        Delete
+                        {t("delete")}
                       </button>
                     </td>
                   </tr>
                 ))}
                 {types.length === 0 && (
                   <tr>
-                    <td colSpan={5} className={styles.muted} style={{ textAlign: "center", padding: "1.5rem" }}>
-                      No activity types yet.
+                    <td
+                      colSpan={5}
+                      className={styles.muted}
+                      style={{ textAlign: "center", padding: "1.5rem" }}
+                    >
+                      {t("noActivityTypes")}
                     </td>
                   </tr>
                 )}
@@ -166,23 +178,47 @@ export function ActivityTypesManager({ token }: { token: string }) {
 
           <div className={styles.filters} style={{ marginTop: "0.75rem" }}>
             <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>Key</span>
-              <input className={styles.input} placeholder="e.g. swimming" value={newKey} onChange={(e) => setNewKey(e.target.value)} />
+              <span className={styles.filterLabel}>{t("key")}</span>
+              <input
+                className={styles.input}
+                placeholder={t("keyPlaceholder")}
+                value={newKey}
+                onChange={(e) => setNewKey(e.target.value)}
+              />
             </div>
             <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>English</span>
-              <input className={styles.input} placeholder="Swimming" value={newLabelEn} onChange={(e) => setNewLabelEn(e.target.value)} />
+              <span className={styles.filterLabel}>{t("english")}</span>
+              <input
+                className={styles.input}
+                placeholder="Swimming"
+                value={newLabelEn}
+                onChange={(e) => setNewLabelEn(e.target.value)}
+              />
             </div>
             <div className={styles.filterGroup}>
-              <span className={styles.filterLabel}>German (optional)</span>
-              <input className={styles.input} placeholder="Schwimmen" value={newLabelDe} onChange={(e) => setNewLabelDe(e.target.value)} />
+              <span className={styles.filterLabel}>{t("germanOptional")}</span>
+              <input
+                className={styles.input}
+                placeholder="Schwimmen"
+                value={newLabelDe}
+                onChange={(e) => setNewLabelDe(e.target.value)}
+              />
             </div>
-            <label className={styles.filterGroup} style={{ flexDirection: "row", alignItems: "center", gap: "0.35rem" }}>
-              <input type="checkbox" checked={newIsDefault} onChange={(e) => setNewIsDefault(e.target.checked)} />
-              <span className={styles.filterLabel} style={{ margin: 0 }}>Default</span>
+            <label
+              className={styles.filterGroup}
+              style={{ flexDirection: "row", alignItems: "center", gap: "0.35rem" }}
+            >
+              <input
+                type="checkbox"
+                checked={newIsDefault}
+                onChange={(e) => setNewIsDefault(e.target.checked)}
+              />
+              <span className={styles.filterLabel} style={{ margin: 0 }}>
+                {t("default")}
+              </span>
             </label>
             <button className={styles.addButton} onClick={add} disabled={adding}>
-              {adding ? "Adding…" : "Add"}
+              {adding ? t("addingEllipsis") : t("add")}
             </button>
           </div>
         </>

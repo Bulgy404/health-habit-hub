@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl, API_BASE_URL } from "@/lib/api";
 import styles from "@/components/admin-page.module.css";
 
@@ -49,7 +50,14 @@ function fmt(ts: string | null): string {
 export default function DonationsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [feed, setFeed] = useState<FeedResult>({ total: 0, page: 1, limit: PAGE_SIZE, results: [] });
+  const t = useTranslations("donations");
+  const tc = useTranslations("common");
+  const [feed, setFeed] = useState<FeedResult>({
+    total: 0,
+    page: 1,
+    limit: PAGE_SIZE,
+    results: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -82,7 +90,7 @@ export default function DonationsPage() {
       });
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load donations");
+      setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -109,7 +117,7 @@ export default function DonationsPage() {
       const res = await fetch(`${API_BASE_URL}/admin/habits/feed/export?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error(`Export failed (HTTP ${res.status})`);
+      if (!res.ok) throw new Error(t("exportHttpFailed", { status: res.status }));
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -120,7 +128,7 @@ export default function DonationsPage() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Export failed");
+      setError(e instanceof Error ? e.message : t("exportFailed"));
     }
   }
 
@@ -130,25 +138,26 @@ export default function DonationsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Habit Donations</h1>
-          <p className={styles.subtitle}>
-            Donated habits across participants. Filter and export for analysis.
-          </p>
+          <h1 className={styles.title}>{t("title")}</h1>
+          <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
         <button className={styles.addButton} onClick={handleExport}>
-          Export CSV
+          {t("exportCsv")}
         </button>
       </div>
 
       <div className={styles.filters}>
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Group</span>
+          <span className={styles.filterLabel}>{t("groupLabel")}</span>
           <select
             className={styles.select}
             value={group}
-            onChange={(e) => { setPage(1); setGroup(e.target.value); }}
+            onChange={(e) => {
+              setPage(1);
+              setGroup(e.target.value);
+            }}
           >
-            <option value="">All</option>
+            <option value="">{t("filterAll")}</option>
             <option value="G1">G1</option>
             <option value="G2">G2</option>
             <option value="G3">G3</option>
@@ -156,39 +165,58 @@ export default function DonationsPage() {
           </select>
         </div>
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Category</span>
+          <span className={styles.filterLabel}>{t("categoryLabel")}</span>
           <input
             className={styles.input}
             value={category}
-            onChange={(e) => { setPage(1); setCategory(e.target.value); }}
-            placeholder="e.g. Physical activity"
+            onChange={(e) => {
+              setPage(1);
+              setCategory(e.target.value);
+            }}
+            placeholder={t("categoryPlaceholder")}
           />
         </div>
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>From</span>
-          <input type="date" className={styles.input} value={dateFrom} onChange={(e) => { setPage(1); setDateFrom(e.target.value); }} />
+          <span className={styles.filterLabel}>{t("fromLabel")}</span>
+          <input
+            type="date"
+            className={styles.input}
+            value={dateFrom}
+            onChange={(e) => {
+              setPage(1);
+              setDateFrom(e.target.value);
+            }}
+          />
         </div>
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>To</span>
-          <input type="date" className={styles.input} value={dateTo} onChange={(e) => { setPage(1); setDateTo(e.target.value); }} />
+          <span className={styles.filterLabel}>{t("toLabel")}</span>
+          <input
+            type="date"
+            className={styles.input}
+            value={dateTo}
+            onChange={(e) => {
+              setPage(1);
+              setDateTo(e.target.value);
+            }}
+          />
         </div>
       </div>
 
       {error && <p className={styles.error}>{error}</p>}
 
       {loading ? (
-        <p>Loading…</p>
+        <p>{tc("loading")}</p>
       ) : (
         <>
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Habit</th>
-                  <th>Category</th>
-                  <th>Group</th>
-                  <th>Participant</th>
-                  <th>Donated</th>
+                  <th>{t("habitHeader")}</th>
+                  <th>{t("categoryLabel")}</th>
+                  <th>{t("groupLabel")}</th>
+                  <th>{t("participantHeader")}</th>
+                  <th>{t("donatedHeader")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -197,14 +225,20 @@ export default function DonationsPage() {
                     <td>{d.habitName || "—"}</td>
                     <td>{d.category ? <span className={styles.badge}>{d.category}</span> : "—"}</td>
                     <td>{d.group ?? "—"}</td>
-                    <td><span className={styles.code}>{d.participantId || "—"}</span></td>
+                    <td>
+                      <span className={styles.code}>{d.participantId || "—"}</span>
+                    </td>
                     <td>{fmt(d.donatedAt)}</td>
                   </tr>
                 ))}
                 {feed.results.length === 0 && (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: "center", padding: "2rem" }} className={styles.muted}>
-                      No donations match these filters.
+                    <td
+                      colSpan={5}
+                      style={{ textAlign: "center", padding: "2rem" }}
+                      className={styles.muted}
+                    >
+                      {t("noMatch")}
                     </td>
                   </tr>
                 )}
@@ -214,13 +248,21 @@ export default function DonationsPage() {
 
           <div className={styles.pagination}>
             <span className={styles.muted}>
-              {feed.total} total · page {page} of {totalPages}
+              {t("totalPageInfo", { total: feed.total, page, totalPages })}
             </span>
-            <button className={styles.pageBtn} onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-              Previous
+            <button
+              className={styles.pageBtn}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              {tc("previous")}
             </button>
-            <button className={styles.pageBtn} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
-              Next
+            <button
+              className={styles.pageBtn}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+            >
+              {tc("next")}
             </button>
           </div>
         </>

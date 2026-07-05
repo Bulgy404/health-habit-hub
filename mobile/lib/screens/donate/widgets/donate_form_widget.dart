@@ -7,6 +7,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 // ---------------------------------------------------------------------------
 // Public widget
 // ---------------------------------------------------------------------------
@@ -87,15 +89,16 @@ class DonateFormWidgetState extends State<DonateFormWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Form(
       key: formKey,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
         children: [
           // ── Habit text input ──────────────────────────────────────────────
-          const Text(
-            'Describe your habit',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          Text(
+            l10n.donateFormDescribeHabitLabel,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           TextFormField(
@@ -104,7 +107,7 @@ class DonateFormWidgetState extends State<DonateFormWidget> {
             maxLength: 500,
             enabled: !widget.submitting,
             decoration: InputDecoration(
-              hintText: 'e.g. I go for a 30-minute walk every morning',
+              hintText: l10n.donateFormHabitHint,
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(
@@ -125,7 +128,7 @@ class DonateFormWidgetState extends State<DonateFormWidget> {
             ),
             validator: (v) {
               if (v == null || v.trim().length < 10) {
-                return 'Please describe your habit (at least 10 characters)';
+                return l10n.donateFormHabitValidationError;
               }
               return null;
             },
@@ -139,20 +142,25 @@ class DonateFormWidgetState extends State<DonateFormWidget> {
 
           // ── Rating questions ──────────────────────────────────────────────
           _RatingQuestion(
-            label: 'How often do you do this habit?',
-            options: const ['Rarely', 'Weekly', 'Several/week', 'Daily'],
+            label: l10n.donateFormFrequencyQuestion,
+            options: [
+              l10n.donateFormFrequencyRarely,
+              l10n.donateFormFrequencyWeekly,
+              l10n.donateFormFrequencySeveralPerWeek,
+              l10n.donateFormFrequencyDaily,
+            ],
             selected: _frequency,
             enabled: !widget.submitting,
             onSelected: (v) => setState(() => _frequency = v),
           ),
           const SizedBox(height: 16),
           _RatingQuestion(
-            label: 'How long have you had this habit?',
-            options: const [
-              '< 1 month',
-              '1–3 months',
-              '3–12 months',
-              '> 1 year',
+            label: l10n.donateFormDurationQuestion,
+            options: [
+              l10n.donateFormDurationUnder1Month,
+              l10n.donateFormDuration1To3Months,
+              l10n.donateFormDuration3To12Months,
+              l10n.donateFormDurationOver1Year,
             ],
             selected: _duration,
             enabled: !widget.submitting,
@@ -160,21 +168,21 @@ class DonateFormWidgetState extends State<DonateFormWidget> {
           ),
           const SizedBox(height: 16),
           _RatingQuestion(
-            label: 'How much does it benefit your health?',
+            label: l10n.donateFormHealthBenefitQuestion,
             options: const ['1', '2', '3', '4', '5'],
             selected: _healthBenefit,
             enabled: !widget.submitting,
             onSelected: (v) => setState(() => _healthBenefit = v),
-            caption: '1 = Not at all · 5 = Very much',
+            caption: l10n.donateFormRatingCaption,
           ),
           const SizedBox(height: 16),
           _RatingQuestion(
-            label: 'How much does it improve your wellbeing?',
+            label: l10n.donateFormWellbeingQuestion,
             options: const ['1', '2', '3', '4', '5'],
             selected: _wellbeing,
             enabled: !widget.submitting,
             onSelected: (v) => setState(() => _wellbeing = v),
-            caption: '1 = Not at all · 5 = Very much',
+            caption: l10n.donateFormRatingCaption,
           ),
         ],
       ),
@@ -295,11 +303,12 @@ class _RatingQuestion extends StatelessWidget {
             return GestureDetector(
               onTap: enabled ? () => onSelected(value) : null,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color:
-                      isSelected ? const Color(0xFFEDF7E5) : Colors.white,
+                  color: isSelected ? const Color(0xFFEDF7E5) : Colors.white,
                   borderRadius: BorderRadius.circular(100),
                   border: Border.all(
                     color: isSelected
@@ -313,8 +322,7 @@ class _RatingQuestion extends StatelessWidget {
                   options[i],
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight:
-                        isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                     color: isSelected
                         ? const Color(0xFF2E8C00)
                         : const Color(0xFF374151),

@@ -35,6 +35,7 @@ Use this checklist when launching a new cohort of participants.
 12. [Viewing Study Analytics](#12-viewing-study-analytics)
 13. [Sending Researcher Notifications](#13-sending-researcher-notifications)
 14. [Configuring Public Default Cue Settings](#14-configuring-public-default-cue-settings)
+15. [Managing Backups](#15-managing-backups)
 
 ---
 
@@ -248,6 +249,40 @@ Questionnaires are linked to participants through studies. A participant sees th
 **Step 4.** Click **Save** — participants enrolled in the study will immediately see the assigned questionnaires on their Profile screen.
 
 > **No seed script required.** All questionnaire management — including adding new library instruments and custom researcher-designed questionnaires — is handled entirely through the admin UI.
+
+---
+
+### 4c. Scheduling Questionnaires on a Cadence
+
+The **Questionnaires** tab (above) makes a questionnaire available to a study; the **Schedule** tab controls *when* it becomes due for each participant — a recurring interval (e.g. every 7 days) or a set of fixed study weeks/days (e.g. baseline, week 4, week 8).
+
+**Step 1.** Navigate to **Studies**, open a study, and click the **Schedule** tab.
+
+**Step 2.** Under **Add a questionnaire**, pick the questionnaire, choose whether it applies to the whole study or a single group, and set its cadence (recurring interval or fixed weeks/days). Click **Add assignment**.
+
+**Step 3.** Use the **Schedule calendar** below the form to review what participants will see:
+
+| Control | Behavior |
+|---|---|
+| **Today** button | Jumps the calendar back to the current month, regardless of how far you've navigated. |
+| Click a day | Pre-fills the add-assignment form with a recurring cadence starting on that day and scrolls to it — a quick way to sketch out a schedule visually instead of computing day offsets by hand. |
+| Solid entries | Real occurrences already generated for enrolled participants. |
+| Dashed, italicized entries | A **preview** of what a participant enrolling today would see — shown for assignments that have no enrolled participants yet, so newly created assignments don't appear to be "missing" from the calendar. |
+| Greyed-out days | Past the study's end date (see below), if one is set. |
+
+> **Why cadences are relative, not calendar dates.** Every schedule is expressed as an offset from each participant's own enrollment date, since participants join a study on different days. Clicking a calendar day computes the equivalent offset assuming enrollment happens today — the actual due date for each participant is still relative to when *they* enrolled.
+
+#### Setting a Study End Date & End-of-Study Notification
+
+In the study's **Details** tab:
+
+**Step 1.** Set the **Study end date**. The Schedule calendar stops projecting occurrences past this date once set.
+
+**Step 2.** Check **Send end-of-study notification** and fill in the notification title and body.
+
+**Step 3.** Click **Save**.
+
+The notification is scheduled locally on each participant's device (not a server push) the next time their app opens after the end date or notification text changes, and fires automatically on the end date — including if the participant is offline that day. Unchecking the setting or clearing the end date cancels the pending notification on the participant's next app open.
 
 ---
 
@@ -558,6 +593,56 @@ The **Public Default Cue Config** section in Settings controls the cue experienc
 | Default reminder time | Time picker (HH:MM) | Daily reminder push notification time for public users |
 
 **Step 4.** Tap **Save Settings**. Changes take effect immediately for all public users on their next session — no app restart or re-enrolment is required.
+
+---
+
+## 15. Managing Backups
+
+> **Admin only.** The Backups page is hidden from `researcher` accounts — backups contain the full database contents, so this is restricted more tightly than most other admin pages.
+
+**Step 1.** In the Admin panel, tap **Backups** in the sidebar (under Monitoring).
+
+The page shows:
+
+| Section | Contents |
+|---|---|
+| Last backup | Date, age, size, what triggered it, and a per-component status (Mongo / LightRAG / Neo4j / Keycloak) |
+| All backups | Every backup still within the retention window, including ones you've uploaded |
+| Recent activity | Who triggered, restored, or uploaded what, and whether it succeeded |
+
+### Triggering a backup on demand
+
+**Step 1.** Tap **Trigger backup now**. This is disabled while another backup or restore is already running.
+
+**Step 2.** The page shows live progress and updates automatically; there's nothing further to do.
+
+### Uploading a backup
+
+You can upload a `.tar.gz` backup archive — for example one downloaded from offsite storage, or copied from another environment — so it can be restored from here.
+
+**Step 1.** Choose the file and tap **Upload backup**.
+
+**Step 2.** The archive is checked before it's accepted: it must actually contain at least one recognizable backup component (MongoDB dump, Neo4j dump, LightRAG index, or Keycloak realm export), and it's scanned for unsafe file paths inside it. Anything that fails this check is rejected with an explanation rather than being stored.
+
+> **Uploaded backups are labelled "detected, not verified."** The platform can tell what components are present in an uploaded file, but — unlike a backup this instance created itself — it cannot vouch for whether that data is actually intact until you restore it.
+
+### Restoring from a backup
+
+> **This is destructive.** Restoring overwrites the current MongoDB, Neo4j, and LightRAG data (and, unless you opt out, the Keycloak realm) with the contents of the chosen backup. Read this whole section before your first restore.
+
+**Step 1.** Find the backup in the list and tap **Restore**.
+
+**Step 2.** A safety backup of the *current* state is always taken automatically first — the restore only proceeds if that safety backup succeeds, so a botched restore is always recoverable. This adds some time before the actual restore starts.
+
+**Step 3.** If the backup you're restoring has a known failed component (e.g. Neo4j failed when it was originally created), the dialog shows a warning and you must explicitly tick **Restore anyway** to proceed.
+
+**Step 4.** For an **uploaded** backup specifically, decide whether to tick **Also reimport the Keycloak realm from this file** — it is off by default. A Keycloak realm export can contain client secrets and user accounts; reimporting one from a file you didn't generate yourself could hand an attacker admin access if the file were tampered with. Leave it unchecked unless you specifically need to restore Keycloak from that exact file and trust its origin.
+
+**Step 5.** Type the backup's exact filename into the confirmation field — the **Restore** button stays disabled until it matches exactly — then tap **Restore**.
+
+**Step 6.** The page shows live progress (safety backup → restoring → done). While a restore is in progress, the rest of the platform briefly refuses new requests to avoid racing the database being replaced underneath it; this clears automatically once the restore finishes.
+
+Every trigger, upload, and restore — successful or not — is recorded in the **Recent activity** table with who did it and when.
 
 ---
 

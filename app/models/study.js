@@ -21,6 +21,10 @@
  *     autoDonate:       boolean — when true habits are auto-donated to the community on creation
  *   }>
  *   questionnaires  Array<ObjectId>  Refs to questionnaires collection.
+ *   endDate      Date|null  Optional. When set, the study concludes on this date.
+ *   endOfStudyNotification  { enabled: boolean, title: string, body: string } | null
+ *                              Optional. Configures the local device notification sent to
+ *                              participants when endDate is reached.
  *   createdAt    Date
  *   updatedAt    Date
  */
@@ -98,6 +102,15 @@ export const VALIDATOR = {
       questionnaires: {
         bsonType: 'array',
         items: { bsonType: 'objectId' },
+      },
+      endDate: { bsonType: ['date', 'null'] },
+      endOfStudyNotification: {
+        bsonType: ['object', 'null'],
+        properties: {
+          enabled: { bsonType: 'bool' },
+          title: { bsonType: 'string' },
+          body: { bsonType: 'string' },
+        },
       },
       createdAt: { bsonType: 'date' },
       updatedAt: { bsonType: 'date' },

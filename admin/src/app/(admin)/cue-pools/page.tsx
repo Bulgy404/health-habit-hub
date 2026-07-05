@@ -2,12 +2,12 @@
 
 import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import styles from "./page.module.css";
 import { useCuePoolsData } from "./useCuePoolsData";
 
 const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
-  "/admin/cue-pools";
+  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/cue-pools";
 
 /**
  * Authenticated JSON fetch helper.
@@ -29,9 +29,7 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(
-      (body as { error?: string }).error ?? `HTTP ${res.status}`
-    );
+    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
   }
   return res.json();
 }
@@ -44,19 +42,22 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
  */
 export default function CuePoolsPage() {
   const { data: session } = useSession();
-  const token =
-    (session as { accessToken?: string } | null)?.accessToken ?? "";
+  const t = useTranslations("cuePools");
+  const tc = useTranslations("common");
+  const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
 
   const [page, setPage] = useState(1);
   const [filterQuality, setFilterQuality] = useState("");
   const [filterLang, setFilterLang] = useState("");
 
-  const { cues, total, loading, error, limit, refetch: fetchCues } = useCuePoolsData(
-    token,
-    page,
-    filterQuality,
-    filterLang,
-  );
+  const {
+    cues,
+    total,
+    loading,
+    error,
+    limit,
+    refetch: fetchCues,
+  } = useCuePoolsData(token, page, filterQuality, filterLang);
 
   const [showForm, setShowForm] = useState(false);
   const [newText, setNewText] = useState("");
@@ -72,13 +73,15 @@ export default function CuePoolsPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
 
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ inserted: number; skipped: number } | null>(null);
+  const [importResult, setImportResult] = useState<{ inserted: number; skipped: number } | null>(
+    null
+  );
   const [importError, setImportError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleCreate() {
     if (!newText.trim()) {
-      setCreateError("Text is required.");
+      setCreateError(t("textRequired"));
       return;
     }
     setCreating(true);
@@ -103,7 +106,7 @@ export default function CuePoolsPage() {
       await fetchCues(1);
       setPage(1);
     } catch (err) {
-      setCreateError(err instanceof Error ? err.message : "Create failed");
+      setCreateError(err instanceof Error ? err.message : t("createFailed"));
     } finally {
       setCreating(false);
     }
@@ -117,31 +120,41 @@ export default function CuePoolsPage() {
       const text = await file.text();
       const lines = text.trim().split("\n").filter(Boolean);
       if (lines.length < 2) {
-        setImportError("CSV must have a header row and at least one data row.");
+        setImportError(t("csvHeaderError"));
         setImporting(false);
         return;
       }
-      const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
-      const required = ["text", "quality", "stability", "salience", "specificity", "domain", "language"];
-      const missing = required.filter(h => !headers.includes(h));
+      const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+      const required = [
+        "text",
+        "quality",
+        "stability",
+        "salience",
+        "specificity",
+        "domain",
+        "language",
+      ];
+      const missing = required.filter((h) => !headers.includes(h));
       if (missing.length > 0) {
-        setImportError(`Missing columns: ${missing.join(", ")}`);
+        setImportError(t("missingColumns", { columns: missing.join(", ") }));
         setImporting(false);
         return;
       }
-      const cues = lines.slice(1).map(line => {
-        const vals = line.split(",").map(v => v.trim().replace(/^"|"$/g, ""));
+      const cues = lines.slice(1).map((line) => {
+        const vals = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
         return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
       });
       const data = await apiFetch(
-        (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/cue-pools/import",
+        (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
+          "/admin/cue-pools/import",
         token,
         { method: "POST", body: JSON.stringify({ cues }) }
       );
       setImportResult(data as { inserted: number; skipped: number });
-      await fetchCues(1); setPage(1);
+      await fetchCues(1);
+      setPage(1);
     } catch (err) {
-      setImportError(err instanceof Error ? err.message : "Import failed");
+      setImportError(err instanceof Error ? err.message : t("importFailed"));
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -166,10 +179,8 @@ export default function CuePoolsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div className={styles.headerText}>
-          <h1 className={styles.title}>Cue Pools</h1>
-          <p className={styles.subtitle}>
-            Manage pre-rated contextual cues for study conditions.
-          </p>
+          <h1 className={styles.title}>{t("title")}</h1>
+          <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <input
@@ -187,55 +198,51 @@ export default function CuePoolsPage() {
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
           >
-            {importing ? "Importing…" : "Import CSV"}
+            {importing ? t("importing") : t("importCsv")}
           </button>
           <button className={styles.addButton} onClick={() => setShowForm((v) => !v)}>
-            {showForm ? "Cancel" : "+ Add Cue"}
+            {showForm ? tc("cancel") : t("addCue")}
           </button>
         </div>
       </div>
 
       {showForm && (
         <div className={styles.panel}>
-          <p className={styles.panelTitle}>New cue</p>
-          {createError && (
-            <div className={styles.errorMsg}>{createError}</div>
-          )}
+          <p className={styles.panelTitle}>{t("newCueTitle")}</p>
+          {createError && <div className={styles.errorMsg}>{createError}</div>}
           <div className={styles.formGrid}>
             <div className={`${styles.formGroup} ${styles.formFull}`}>
-              <label className={styles.label}>Cue text *</label>
+              <label className={styles.label}>{t("cueTextLabel")}</label>
               <input
                 className={styles.input}
                 value={newText}
                 onChange={(e) => setNewText(e.target.value)}
-                placeholder="e.g. After dinner each evening"
+                placeholder={t("cueTextPlaceholder")}
               />
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Quality</label>
+              <label className={styles.label}>{t("qualityLabel")}</label>
               <select
                 className={styles.select}
                 value={newQuality}
-                onChange={(e) =>
-                  setNewQuality(e.target.value as "high" | "low")
-                }
+                onChange={(e) => setNewQuality(e.target.value as "high" | "low")}
               >
-                <option value="high">High</option>
-                <option value="low">Low</option>
+                <option value="high">{t("qualityHigh")}</option>
+                <option value="low">{t("qualityLow")}</option>
               </select>
-              <span className={styles.hint}>High-quality cues are shown to the high_quality condition; low to the low_quality condition.</span>
+              <span className={styles.hint}>{t("qualityHint")}</span>
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Domain</label>
+              <label className={styles.label}>{t("domainLabel")}</label>
               <input
                 className={styles.input}
                 value={newDomain}
                 onChange={(e) => setNewDomain(e.target.value)}
               />
-              <span className={styles.hint}>The activity domain this cue relates to (e.g. physical_activity).</span>
+              <span className={styles.hint}>{t("domainHint")}</span>
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Language</label>
+              <label className={styles.label}>{t("languageLabel")}</label>
               <select
                 className={styles.select}
                 value={newLang}
@@ -244,10 +251,10 @@ export default function CuePoolsPage() {
                 <option value="en">English</option>
                 <option value="de">German</option>
               </select>
-              <span className={styles.hint}>The language this cue is written in — used to match participant locale.</span>
+              <span className={styles.hint}>{t("languageHint")}</span>
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Stability (1–5)</label>
+              <label className={styles.label}>{t("stabilityLabel")}</label>
               <input
                 className={styles.input}
                 type="number"
@@ -256,10 +263,10 @@ export default function CuePoolsPage() {
                 value={newStability}
                 onChange={(e) => setNewStability(Number(e.target.value))}
               />
-              <span className={styles.hint}>How temporally consistent this cue is across days. 5 = very stable.</span>
+              <span className={styles.hint}>{t("stabilityHint")}</span>
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Salience (1–5)</label>
+              <label className={styles.label}>{t("salienceLabel")}</label>
               <input
                 className={styles.input}
                 type="number"
@@ -268,10 +275,10 @@ export default function CuePoolsPage() {
                 value={newSalience}
                 onChange={(e) => setNewSalience(Number(e.target.value))}
               />
-              <span className={styles.hint}>How noticeable or attention-grabbing this cue is. 5 = highly salient.</span>
+              <span className={styles.hint}>{t("salienceHint")}</span>
             </div>
             <div className={styles.formGroup}>
-              <label className={styles.label}>Specificity (1–5)</label>
+              <label className={styles.label}>{t("specificityLabel")}</label>
               <input
                 className={styles.input}
                 type="number"
@@ -280,16 +287,12 @@ export default function CuePoolsPage() {
                 value={newSpecificity}
                 onChange={(e) => setNewSpecificity(Number(e.target.value))}
               />
-              <span className={styles.hint}>How concrete and specific this cue context is. 5 = very specific.</span>
+              <span className={styles.hint}>{t("specificityHint")}</span>
             </div>
           </div>
           <div className={styles.formFooter}>
-            <button
-              className={styles.saveBtn}
-              onClick={handleCreate}
-              disabled={creating}
-            >
-              {creating ? "Creating…" : "Create"}
+            <button className={styles.saveBtn} onClick={handleCreate} disabled={creating}>
+              {creating ? t("creating") : t("create")}
             </button>
           </div>
         </div>
@@ -297,25 +300,31 @@ export default function CuePoolsPage() {
 
       <div className={styles.filterRow}>
         <div className={styles.formGroup}>
-          <label className={styles.label}>Quality</label>
+          <label className={styles.label}>{t("qualityLabel")}</label>
           <select
             className={styles.select}
             value={filterQuality}
-            onChange={(e) => { setFilterQuality(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setFilterQuality(e.target.value);
+              setPage(1);
+            }}
           >
-            <option value="">All</option>
-            <option value="high">High</option>
-            <option value="low">Low</option>
+            <option value="">{t("filterAll")}</option>
+            <option value="high">{t("qualityHigh")}</option>
+            <option value="low">{t("qualityLow")}</option>
           </select>
         </div>
         <div className={styles.formGroup}>
-          <label className={styles.label}>Language</label>
+          <label className={styles.label}>{t("languageLabel")}</label>
           <select
             className={styles.select}
             value={filterLang}
-            onChange={(e) => { setFilterLang(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setFilterLang(e.target.value);
+              setPage(1);
+            }}
           >
-            <option value="">All</option>
+            <option value="">{t("filterAll")}</option>
             <option value="en">English</option>
             <option value="de">German</option>
           </select>
@@ -326,29 +335,28 @@ export default function CuePoolsPage() {
 
       {importResult && (
         <div className={styles.importResult}>
-          Imported {importResult.inserted} cue{importResult.inserted !== 1 ? "s" : ""}{importResult.skipped > 0 ? `, ${importResult.skipped} skipped (invalid)` : ""}.
+          {t("importedCues", { count: importResult.inserted })}
+          {importResult.skipped > 0 ? t("importedSkipped", { count: importResult.skipped }) : ""}.
         </div>
       )}
       {importError && <div className={styles.errorMsg}>{importError}</div>}
 
       {loading ? (
-        <div className={styles.loadingState}>Loading…</div>
+        <div className={styles.loadingState}>{tc("loading")}</div>
       ) : cues.length === 0 ? (
-        <div className={styles.emptyState}>
-          No cues yet. Click &quot;+ Add Cue&quot; to create one.
-        </div>
+        <div className={styles.emptyState}>{t("emptyState", { addCue: t("addCue") })}</div>
       ) : (
         <>
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Text</th>
-                  <th>Quality</th>
-                  <th>Dimensions</th>
-                  <th>Domain</th>
-                  <th>Lang</th>
-                  <th>Action</th>
+                  <th>{t("textHeader")}</th>
+                  <th>{t("qualityLabel")}</th>
+                  <th>{t("dimensionsHeader")}</th>
+                  <th>{t("domainLabel")}</th>
+                  <th>{t("langHeader")}</th>
+                  <th>{t("actionHeader")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -358,9 +366,7 @@ export default function CuePoolsPage() {
                     <td>
                       <span
                         className={`${styles.qualityBadge} ${
-                          cue.quality === "high"
-                            ? styles.qualityHigh
-                            : styles.qualityLow
+                          cue.quality === "high" ? styles.qualityHigh : styles.qualityLow
                         }`}
                       >
                         {cue.quality}
@@ -380,7 +386,7 @@ export default function CuePoolsPage() {
                         onClick={() => handleDelete(cue.id)}
                         disabled={deleting === cue.id}
                       >
-                        {deleting === cue.id ? "…" : "Delete"}
+                        {deleting === cue.id ? "…" : tc("delete")}
                       </button>
                     </td>
                   </tr>
@@ -395,17 +401,15 @@ export default function CuePoolsPage() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
               >
-                ‹ Prev
+                {t("prev")}
               </button>
-              <span className={styles.pageInfo}>
-                Page {page} of {totalPages} ({total} total)
-              </span>
+              <span className={styles.pageInfo}>{t("pageInfo", { page, totalPages, total })}</span>
               <button
                 className={styles.pageBtn}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
               >
-                Next ›
+                {t("next")}
               </button>
             </div>
           )}

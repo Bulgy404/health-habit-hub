@@ -7,6 +7,23 @@ const SRHI = 'srhi_responses';
 const FORM_RESPONSES = 'form_responses';
 const STUDIES = 'studies';
 const QUESTIONNAIRES = 'questionnaires';
+const INTENTIONS = 'implementation_intentions';
+
+/** Normalise a Neo4j Integer (or plain value) to a JS number. */
+function toNum(v) {
+  if (v == null) return 0;
+  if (typeof v === 'object' && typeof v.toNumber === 'function') {
+    return v.toNumber();
+  }
+  return Number(v) || 0;
+}
+
+/** Coerce a Neo4j date/string to a YYYY-MM-DD string, or null. */
+function toDay(raw) {
+  if (!raw) return null;
+  if (raw instanceof Date) return raw.toISOString().slice(0, 10);
+  return String(raw).slice(0, 10);
+}
 
 /**
  * Return per-group weekly active rate: percentage of enrolled participants with at least one log in the last 7 days.
@@ -205,4 +222,142 @@ export async function getQuestionnaireCompletionRates({
       };
     })
   );
+}
+
+/**
+ * Cumulative enrolment count per group over time (recruitment progress).
+ * @param {{ studyId: string, neo4jRun: Function }} deps
+ * @returns {Promise<Array<{ groupId: string, date: string, cumulative: number }>>}
+ */
+export async function getEnrollmentTrend({ studyId, neo4jRun }) {
+  if (!neo4jRun) return [];
+  const rows = await neo4jRun(
+    `MATCH (u:User)-[e:ENROLLED_IN]->(:Study {uuid: $studyId})
+     WHERE e.enrolledAt IS NOT NULL
+     RETURN e.groupId AS groupId, e.enrolledAt AS enrolledAt`,
+    { studyId: String(studyId) }
+  );
+  if (!rows || rows.length === 0) return [];
+
+  const byGroup = {};
+  for (const r of rows) {
+    const gid = r.groupId ?? 'unknown';
+    const date = toDay(r.enrolledAt);
+    if (!date) continue;
+    byGroup[gid] = byGroup[gid] ?? [];
+    byGroup[gid].push(date);
+  }
+
+  const result = [];
+  for (const [groupId, dates] of Object.entries(byGroup)) {
+    dates.sort();
+    let cumulative = 0;
+    // Collapse to one point per date (cumulative at end of that day).
+    const perDay = {};
+    for (const d of dates) perDay[d] = (perDay[d] ?? 0) + 1;
+    for (const d of Object.keys(perDay).sort()) {
+      cumulative += perDay[d];
+      result.push({ groupId, date: d, cumulative });
+    }
+  }
+  return result.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Distinct active participants (≥1 log) per day over the last [days] days.
+ * @param {{ db, studyId, neo4jRun, days? }} deps
+ * @returns {Promise<Array<{ date: string, count: number }>>}
+ */
+export async function getDailyActive({ db, studyId, neo4jRun, days = 30 }) {
+  const enrollments = neo4jRun ? await getUsersForStudy(neo4jRun, studyId) : [];
+  const userIds = enrollments.map((e) => e.userId).filter(Boolean);
+  if (userIds.length === 0) return [];
+
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+  const rows = await db
+    .collection(DAILY_LOGS)
+    .aggregate([
+      { $match: { userId: { $in: userIds }, date: { $gte: cutoffStr } } },
+      { $group: { _id: { date: '$date', userId: '$userId' } } },
+      { $group: { _id: '$_id.date', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ])
+    .toArray();
+
+  return rows.map((r) => ({ date: r._id, count: r.count }));
+}
+
+/**
+ * Donated-habit count per group.
+ * @param {{ studyId: string, neo4jRun: Function }} deps
+ * @returns {Promise<Array<{ groupId: string, habits: number }>>}
+ */
+export async function getHabitsByGroup({ studyId, neo4jRun }) {
+  if (!neo4jRun) return [];
+  const rows = await neo4jRun(
+    `MATCH (u:User)-[e:ENROLLED_IN]->(:Study {uuid: $studyId})
+     OPTIONAL MATCH (u)-[:DONATED]->(h:Habit)
+     WHERE h IS NULL OR coalesce(h.is_habit, true) = true
+     RETURN e.groupId AS groupId, count(h) AS habits`,
+    { studyId: String(studyId) }
+  );
+  return (rows || []).map((r) => ({
+    groupId: r.groupId ?? 'unknown',
+    habits: toNum(r.habits),
+  }));
+}
+
+/**
+ * Engagement totals for a study's enrolled participants.
+ * @param {{ db, studyId, neo4jRun }} deps
+ * @returns {Promise<{ totalHabits, totalLogs, totalIntentions, avgLogsPerActive, avgIntentionsPerParticipant }>}
+ */
+export async function getEngagementSummary({ db, studyId, neo4jRun }) {
+  const enrollments = neo4jRun ? await getUsersForStudy(neo4jRun, studyId) : [];
+  const userIds = enrollments.map((e) => e.userId).filter(Boolean);
+  const empty = {
+    totalHabits: 0,
+    totalLogs: 0,
+    totalIntentions: 0,
+    avgLogsPerActive: 0,
+    avgIntentionsPerParticipant: 0,
+  };
+  if (userIds.length === 0) return empty;
+
+  const [totalLogs, totalIntentions, activeAgg] = await Promise.all([
+    db.collection(DAILY_LOGS).countDocuments({ userId: { $in: userIds } }),
+    db.collection(INTENTIONS).countDocuments({ userId: { $in: userIds } }),
+    db
+      .collection(DAILY_LOGS)
+      .aggregate([
+        { $match: { userId: { $in: userIds } } },
+        { $group: { _id: '$userId' } },
+        { $count: 'n' },
+      ])
+      .toArray(),
+  ]);
+
+  let totalHabits = 0;
+  if (neo4jRun) {
+    const hr = await neo4jRun(
+      `MATCH (u:User)-[:DONATED]->(h:Habit)
+       WHERE u.userID IN $userIds AND coalesce(h.is_habit, true) = true
+       RETURN count(h) AS n`,
+      { userIds }
+    );
+    totalHabits = toNum(hr?.[0]?.n);
+  }
+
+  const activeLoggers = activeAgg[0]?.n ?? 0;
+  return {
+    totalHabits,
+    totalLogs,
+    totalIntentions,
+    avgLogsPerActive: activeLoggers > 0 ? totalLogs / activeLoggers : 0,
+    avgIntentionsPerParticipant:
+      userIds.length > 0 ? totalIntentions / userIds.length : 0,
+  };
 }

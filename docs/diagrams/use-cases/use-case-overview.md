@@ -12,7 +12,7 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 | Researcher | Research staff, admin portal access (no KB / settings), role `researcher` |
 | Admin | Full platform access, role `admin` (inherits all researcher use cases) |
 | AI Agent | MCP client (e.g. Claude) connected to `knowledge-mcp` |
-| Backup Scheduler | Cron inside the backup-service container |
+| Backup Scheduler | Sleep-loop inside the backup-service container (not real cron) |
 | Keycloak / LLM Provider / FCM | Supporting external systems |
 
 ---
@@ -48,7 +48,7 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 |---|---|---|---|---|---|
 | UC-17 | Sign in to admin portal | researcher, admin | NextAuth + Keycloak confidential client; role check in middleware | NextAuth `/api/auth/*` | Keycloak |
 | UC-18 | Manage participants | researcher, admin | List, inspect, soft-delete participants; Keycloak user admin | `/api/v1/admin/participants*` | MongoDB, Keycloak Admin API |
-| UC-19 | Manage studies, groups & study codes | researcher, admin | Study CRUD, G1–G4 groups, per-group cue config, code generation | `/api/v1/admin/studies*` | MongoDB |
+| UC-19 | Manage studies, groups & study codes | researcher, admin | Study CRUD (incl. end date + end-of-study notification), G1–G4 groups, per-group cue config, code generation, questionnaire schedule calendar | `/api/v1/admin/studies*` | MongoDB |
 | UC-20 | Manage questionnaires | researcher, admin | Questionnaire CRUD, assignment to studies | `/api/v1/questionnaires*` | MongoDB |
 | UC-21 | Manage cue pools | researcher, admin | Cue pool CRUD + bulk CSV import of pre-rated cues | `/api/v1/admin/cue-pools*` | MongoDB |
 | UC-22 | View study analytics | researcher, admin | Weekly active rate, SRHI trajectory, dropout curve per group | `/api/v1/admin/studies/:id/analytics` | MongoDB (aggregations) |
@@ -58,12 +58,13 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 | UC-26 | View knowledge graph | admin only | Open LightRAG graph UI to inspect extracted entities | LightRAG web UI `:9621` | LightRAG |
 | UC-27 | View dashboard stats & moderate habit feed | researcher, admin | Platform stats, habit feed review & export, session management | `/api/v1/admin/stats`, `/admin/habits/feed*`, `/admin/sessions*` | MongoDB, Neo4j |
 | UC-28 | Configure platform settings | admin only | Key-value platform configuration | `PUT /api/v1/admin/settings/:key` | MongoDB |
+| UC-37 | View, trigger & restore backups | admin only | Last-backup status (per-component), on-demand trigger, and restore from an existing or uploaded archive — typed-filename confirmation, single-use restore token, automatic pre-restore safety backup, audit log; API only reachable internally, never proxied to the browser directly | `/api/v1/admin/backups*` | MongoDB, backup-api (internal, inside `hhh-backup`) |
 
 ## System use cases
 
 | ID | Use Case | Actor | Description | Components |
 |---|---|---|---|---|
-| UC-29 | Run daily backup | Backup Scheduler | Daily loop: mongodump, LightRAG data tar, neo4j-admin dump, Keycloak partial-export; configurable retention (default 14 days), webhook/email alert on failure | backup-service, MongoDB, Neo4j, LightRAG, Keycloak |
+| UC-29 | Run a backup | Backup Scheduler | Loop (~every 24h after a startup delay — not real cron): mongodump, LightRAG data tar, neo4j-admin dump, Keycloak partial-export; per-component manifest (JSON + human-readable), shared lock with restore, configurable retention (default 14 days), webhook/email alert on failure. Also runs on demand (manual trigger, or automatically as a pre-restore safety snapshot) via UC-37 | backup-service, MongoDB, Neo4j, LightRAG, Keycloak |
 | UC-30 | Query / ingest KB via MCP | AI Agent | `search_knowledge` and `ingest_document` tools over SSE | knowledge-mcp, LightRAG |
 
 ---

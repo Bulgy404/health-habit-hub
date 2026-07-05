@@ -1449,6 +1449,864 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No comments yet.'**
   String get adminNoCommentsYet;
+
+  /// Title of the first onboarding walkthrough step
+  ///
+  /// In en, this message translates to:
+  /// **'Share a Habit'**
+  String get onboardingShareHabitTitle;
+
+  /// Body copy of the first onboarding walkthrough step
+  ///
+  /// In en, this message translates to:
+  /// **'Share your personal habits with researchers to help build a richer understanding of everyday behaviour. Your contributions are anonymised and used only for scientific research. Every habit you share makes the dataset more valuable for everyone.'**
+  String get onboardingShareHabitDescription;
+
+  /// Title of the second onboarding walkthrough step
+  ///
+  /// In en, this message translates to:
+  /// **'Explore & Annotate'**
+  String get onboardingExploreAnnotateTitle;
+
+  /// Body copy of the second onboarding walkthrough step
+  ///
+  /// In en, this message translates to:
+  /// **'Browse the interactive habit graph to discover how habits relate to each other across the community. You can annotate connections and add context to improve the shared knowledge base. The more you explore, the richer the graph becomes.'**
+  String get onboardingExploreAnnotateDescription;
+
+  /// Title of the third onboarding walkthrough step
+  ///
+  /// In en, this message translates to:
+  /// **'Get Recommendations'**
+  String get onboardingRecommendationsTitle;
+
+  /// Body copy of the third onboarding walkthrough step
+  ///
+  /// In en, this message translates to:
+  /// **'Receive personalised habit recommendations based on your profile and the collective dataset. Our recommendation engine learns from community contributions to suggest habits that fit your lifestyle. Discover new habits that others with similar profiles have found helpful.'**
+  String get onboardingRecommendationsDescription;
+
+  /// Subtitle shown under the app name on the onboarding splash page
+  ///
+  /// In en, this message translates to:
+  /// **'A citizen-science platform where your habits help build a richer understanding of everyday behaviour.'**
+  String get onboardingSubtitle;
+
+  /// Button label to begin the onboarding walkthrough from the splash page
+  ///
+  /// In en, this message translates to:
+  /// **'Get Started'**
+  String get onboardingGetStarted;
+
+  /// Button label on the onboarding splash page to restore an existing account instead of onboarding as new
+  ///
+  /// In en, this message translates to:
+  /// **'Restore existing account'**
+  String get onboardingRestoreAccount;
+
+  /// Button label to skip ahead to the last onboarding walkthrough page
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get onboardingSkip;
+
+  /// Button label on the final onboarding walkthrough page to proceed to consent
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get onboardingContinue;
+
+  /// Button label to advance to the next onboarding walkthrough page
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get onboardingNext;
+
+  /// Title of the confirmation dialog shown before deleting a questionnaire
+  ///
+  /// In en, this message translates to:
+  /// **'Delete questionnaire?'**
+  String get adminQuestionnairesDeleteConfirmTitle;
+
+  /// Body of the confirmation dialog shown before deleting a questionnaire, includes the questionnaire title
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{title}\"? This cannot be undone.'**
+  String adminQuestionnairesDeleteConfirmMessage(String title);
+
+  /// Error shown when deleting a questionnaire fails because it is assigned to an active study (HTTP 409)
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot delete: questionnaire is assigned to an active study.'**
+  String get adminQuestionnairesDeleteConflict;
+
+  /// Error shown when deleting a questionnaire fails because it is a read-only library questionnaire (HTTP 403)
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot delete a library questionnaire.'**
+  String get adminQuestionnairesDeleteForbidden;
+
+  /// Generic error shown when deleting a questionnaire fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete questionnaire.'**
+  String get adminQuestionnairesDeleteFailed;
+
+  /// AppBar title for the admin questionnaires screen
+  ///
+  /// In en, this message translates to:
+  /// **'Questionnaires'**
+  String get adminQuestionnairesTitle;
+
+  /// Label for the library questionnaires tab, and chip shown on library questionnaire cards
+  ///
+  /// In en, this message translates to:
+  /// **'Library'**
+  String get adminQuestionnairesLibraryLabel;
+
+  /// Tab label for researcher-created custom questionnaires
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get adminQuestionnairesCustomTab;
+
+  /// Tooltip for the floating action button that creates a new custom questionnaire
+  ///
+  /// In en, this message translates to:
+  /// **'New questionnaire'**
+  String get adminQuestionnairesNewTooltip;
+
+  /// Error message shown when the questionnaire list fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load questionnaires.'**
+  String get adminQuestionnairesLoadFailed;
+
+  /// Empty state message for the library questionnaires tab
+  ///
+  /// In en, this message translates to:
+  /// **'No library questionnaires found.'**
+  String get adminQuestionnairesLibraryEmpty;
+
+  /// Empty state message for the custom questionnaires tab
+  ///
+  /// In en, this message translates to:
+  /// **'No custom questionnaires yet.\nTap + to create one.'**
+  String get adminQuestionnairesCustomEmpty;
+
+  /// Chip label showing the number of questions in a questionnaire
+  ///
+  /// In en, this message translates to:
+  /// **'{count} questions'**
+  String adminQuestionnairesItemCount(int count);
+
+  /// Chip label shown on a questionnaire card when the questionnaire is inactive
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get adminQuestionnairesInactiveChip;
+
+  /// Title of the questionnaire editor dialog when editing an existing questionnaire
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Questionnaire'**
+  String get adminQuestionnairesEditDialogTitle;
+
+  /// Title of the questionnaire editor dialog when creating a new questionnaire
+  ///
+  /// In en, this message translates to:
+  /// **'New Questionnaire'**
+  String get adminQuestionnairesNewDialogTitle;
+
+  /// Label for the required title text field in the questionnaire editor dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Title *'**
+  String get adminQuestionnairesTitleFieldLabel;
+
+  /// Validation error shown under the title field when it is left empty
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get adminQuestionnairesFieldRequiredError;
+
+  /// Label for the description text field in the questionnaire editor dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get adminQuestionnairesDescriptionFieldLabel;
+
+  /// Section heading showing the number of questions in the questionnaire editor dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Questions ({count})'**
+  String adminQuestionnairesQuestionsCount(int count);
+
+  /// Button label to add a new question in the questionnaire editor dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get adminQuestionnairesAddButton;
+
+  /// Empty state message shown when a questionnaire has no questions yet
+  ///
+  /// In en, this message translates to:
+  /// **'No questions yet. Tap \"Add\" to add one.'**
+  String get adminQuestionnairesNoQuestionsYet;
+
+  /// Validation snackbar shown when saving a questionnaire with one or more blank questions
+  ///
+  /// In en, this message translates to:
+  /// **'All questions must have text.'**
+  String get adminQuestionnairesAllQuestionsNeedText;
+
+  /// Snackbar message shown when saving a questionnaire fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save questionnaire.'**
+  String get adminQuestionnairesSaveFailed;
+
+  /// Button label to submit the dialog when creating a new questionnaire
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get adminQuestionnairesCreateButton;
+
+  /// Short numbered label identifying a question's position in the questionnaire editor
+  ///
+  /// In en, this message translates to:
+  /// **'Q{number}'**
+  String adminQuestionnairesQuestionNumber(int number);
+
+  /// Label for the question text field in the question editor
+  ///
+  /// In en, this message translates to:
+  /// **'Question text'**
+  String get adminQuestionnairesQuestionTextFieldLabel;
+
+  /// Label for the question type dropdown in the question editor
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get adminQuestionnairesTypeFieldLabel;
+
+  /// Question type option: free-form open text answer
+  ///
+  /// In en, this message translates to:
+  /// **'Open text'**
+  String get adminQuestionnairesTypeOpenText;
+
+  /// Question type option: single choice answer
+  ///
+  /// In en, this message translates to:
+  /// **'Single choice'**
+  String get adminQuestionnairesTypeSingleChoice;
+
+  /// Question type option: multiple choice answer
+  ///
+  /// In en, this message translates to:
+  /// **'Multi choice'**
+  String get adminQuestionnairesTypeMultiChoice;
+
+  /// Question type option: numeric scale answer
+  ///
+  /// In en, this message translates to:
+  /// **'Scale'**
+  String get adminQuestionnairesTypeScale;
+
+  /// Checkbox label indicating whether a question must be answered
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get adminQuestionnairesRequiredLabel;
+
+  /// Section heading showing the number of answer options for a choice question
+  ///
+  /// In en, this message translates to:
+  /// **'Options ({count})'**
+  String adminQuestionnairesOptionsCount(int count);
+
+  /// Button label to add a new answer option to a choice question
+  ///
+  /// In en, this message translates to:
+  /// **'Add option'**
+  String get adminQuestionnairesAddOption;
+
+  /// Label for a text field editing the label of a single answer option, numbered by its position
+  ///
+  /// In en, this message translates to:
+  /// **'Option {number} label'**
+  String adminQuestionnairesOptionLabelField(int number);
+
+  /// Admin shell navigation rail label for the Participants section
+  ///
+  /// In en, this message translates to:
+  /// **'Participants'**
+  String get adminShellNavParticipants;
+
+  /// Admin shell navigation rail label for the Surveys section
+  ///
+  /// In en, this message translates to:
+  /// **'Surveys'**
+  String get adminShellNavSurveys;
+
+  /// Admin shell navigation rail label for the Questionnaires section
+  ///
+  /// In en, this message translates to:
+  /// **'Questionnaires'**
+  String get adminShellNavQuestionnaires;
+
+  /// Admin shell navigation rail label for the Habits section
+  ///
+  /// In en, this message translates to:
+  /// **'Habits'**
+  String get adminShellNavHabits;
+
+  /// Admin shell navigation rail label for the Devices section
+  ///
+  /// In en, this message translates to:
+  /// **'Devices'**
+  String get adminShellNavDevices;
+
+  /// Admin shell navigation rail label for the Settings section
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get adminShellNavSettings;
+
+  /// App bar title on the recommendation results screen
+  ///
+  /// In en, this message translates to:
+  /// **'Recommendations'**
+  String get recommendationResultsTitle;
+
+  /// Button label to retry after an error or empty recommendation result
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get recommendationTryAgain;
+
+  /// Message shown when the recommendation API returns no results
+  ///
+  /// In en, this message translates to:
+  /// **'No recommendations were generated. Try describing your goal in more detail — the more context you share, the better.'**
+  String get recommendationEmptyMessage;
+
+  /// Bottom bar button label to go back and enter a different goal
+  ///
+  /// In en, this message translates to:
+  /// **'Try a different goal'**
+  String get recommendationTryDifferentGoal;
+
+  /// Error shown when navigating to the habit-creation flow from a recommendation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the habit flow. Please try again.'**
+  String get recommendationHabitFlowError;
+
+  /// Label preceding the rationale text on a recommendation card
+  ///
+  /// In en, this message translates to:
+  /// **'Why this helps:'**
+  String get recommendationWhyThisHelps;
+
+  /// Expansion tile title showing the number of cited sources for a recommendation
+  ///
+  /// In en, this message translates to:
+  /// **'Sources ({count})'**
+  String recommendationSourcesCount(int count);
+
+  /// Button label to adopt a recommendation as a new habit
+  ///
+  /// In en, this message translates to:
+  /// **'Add to my habits'**
+  String get recommendationAddToHabits;
+
+  /// Confirmation shown after successfully submitting feedback on a recommendation
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback submitted — thank you!'**
+  String get recommendationFeedbackSubmitted;
+
+  /// Label above the feedback comment field on a recommendation card
+  ///
+  /// In en, this message translates to:
+  /// **'Leave a comment:'**
+  String get recommendationLeaveComment;
+
+  /// Placeholder hint text in the recommendation feedback comment field
+  ///
+  /// In en, this message translates to:
+  /// **'Your feedback…'**
+  String get recommendationFeedbackHint;
+
+  /// Error shown when submitting recommendation feedback fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to submit feedback'**
+  String get recommendationFeedbackFailed;
+
+  /// Error shown when a citation source link fails to open
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the source link.'**
+  String get recommendationSourceLinkError;
+
+  /// First phase label on the recommendation loading screen
+  ///
+  /// In en, this message translates to:
+  /// **'Asking experts…'**
+  String get recommendationLoadingPhaseExperts;
+
+  /// Second phase label on the recommendation loading screen
+  ///
+  /// In en, this message translates to:
+  /// **'Looking through your habits database…'**
+  String get recommendationLoadingPhaseHabitsDb;
+
+  /// Third phase label on the recommendation loading screen
+  ///
+  /// In en, this message translates to:
+  /// **'Reading academic papers…'**
+  String get recommendationLoadingPhasePapers;
+
+  /// Fourth phase label on the recommendation loading screen
+  ///
+  /// In en, this message translates to:
+  /// **'Generating your personalised recommendations…'**
+  String get recommendationLoadingPhaseGenerating;
+
+  /// Error shown when the recommendation request times out
+  ///
+  /// In en, this message translates to:
+  /// **'Generating recommendations took too long. Please try again.'**
+  String get recommendationLoadingTimeoutError;
+
+  /// Generic fallback error shown when generating recommendations fails
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong while generating recommendations. Please try again.'**
+  String get recommendationLoadingGenericError;
+
+  /// Empty state shown when a drilled-into dimension has no habit bubbles
+  ///
+  /// In en, this message translates to:
+  /// **'No habits in this dimension yet.'**
+  String get bubbleGraphNoHabitsInDimension;
+
+  /// Tooltip for the back button that returns from a dimension to the full bubble graph overview
+  ///
+  /// In en, this message translates to:
+  /// **'All categories'**
+  String get bubbleGraphAllCategories;
+
+  /// Habit count label shown under a dimension bubble and in the dimension drill-in header
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 habit} other{{count} habits}}'**
+  String bubbleGraphHabitCount(int count);
+
+  /// Bottom sheet title asking why a specific habit was recommended
+  ///
+  /// In en, this message translates to:
+  /// **'Why \"{habitName}\"?'**
+  String recommendationCardWhyTitle(String habitName);
+
+  /// Label for the citation/evidence section in the recommendation rationale sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Evidence'**
+  String get recommendationCardEvidence;
+
+  /// Label preceding the confidence score bar on a recommendation card
+  ///
+  /// In en, this message translates to:
+  /// **'Confidence'**
+  String get recommendationCardConfidence;
+
+  /// Button label that opens the full rationale for a recommendation
+  ///
+  /// In en, this message translates to:
+  /// **'Why?'**
+  String get recommendationCardWhy;
+
+  /// Tooltip for the button that dismisses a recommendation card
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get recommendationCardDismiss;
+
+  /// Tooltip for the button that accepts a recommendation card
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get recommendationCardAccept;
+
+  /// Validation error shown when a required questionnaire question is left unanswered
+  ///
+  /// In en, this message translates to:
+  /// **'This question is required.'**
+  String get questionnaireFormRequiredQuestion;
+
+  /// Validation error shown on final submit when required questions are unanswered
+  ///
+  /// In en, this message translates to:
+  /// **'Please answer all required questions before submitting.'**
+  String get questionnaireFormAnswerAllRequired;
+
+  /// Progress indicator label showing current question number out of total
+  ///
+  /// In en, this message translates to:
+  /// **'Question {current} of {total}'**
+  String questionnaireFormProgressLabel(int current, int total);
+
+  /// Button to go back to the previous questionnaire question
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get questionnaireFormBackButton;
+
+  /// Button to submit the completed questionnaire
+  ///
+  /// In en, this message translates to:
+  /// **'Submit'**
+  String get questionnaireFormSubmitButton;
+
+  /// Button to save the current answer and move to the next question
+  ///
+  /// In en, this message translates to:
+  /// **'Save & Continue'**
+  String get questionnaireFormSaveAndContinueButton;
+
+  /// Placeholder hint text for the free-text questionnaire answer field
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer…'**
+  String get questionnaireFormAnswerHint;
+
+  /// Fallback app bar title shown while the questionnaire definition is loading or unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Questionnaire'**
+  String get questionnaireFallbackTitle;
+
+  /// Small uppercase eyebrow label above the share-a-habit hero card
+  ///
+  /// In en, this message translates to:
+  /// **'SHARE A HABIT'**
+  String get donateShareEyebrow;
+
+  /// Headline on the share-a-habit hero card
+  ///
+  /// In en, this message translates to:
+  /// **'Share a habit with science'**
+  String get donateHeroTitle;
+
+  /// Subtitle on the share-a-habit hero card describing the task
+  ///
+  /// In en, this message translates to:
+  /// **'Anonymous · ~2 min · Helps researchers worldwide'**
+  String get donateHeroSubtitle;
+
+  /// Button that opens the habit-donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Start sharing'**
+  String get donateStartSharingButton;
+
+  /// Small uppercase eyebrow label above a due-questionnaire task card
+  ///
+  /// In en, this message translates to:
+  /// **'QUESTIONNAIRE'**
+  String get donateQuestionnaireEyebrow;
+
+  /// Subtitle on a due-questionnaire task card
+  ///
+  /// In en, this message translates to:
+  /// **'Short questionnaire · due now'**
+  String get donateQuestionnaireDueSubtitle;
+
+  /// Button on a due-questionnaire task card that opens the questionnaire
+  ///
+  /// In en, this message translates to:
+  /// **'Complete'**
+  String get donateCompleteButton;
+
+  /// Heading shown once the user has already shared a habit today
+  ///
+  /// In en, this message translates to:
+  /// **'Shared today'**
+  String get donateSharedTodayTitle;
+
+  /// Body text shown once the user has already shared a habit today
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks for contributing! Come back tomorrow for the next one.'**
+  String get donateSharedTodayBody;
+
+  /// Heading for the explanatory card on why habit sharing is useful
+  ///
+  /// In en, this message translates to:
+  /// **'Why share?'**
+  String get donateWhyShareTitle;
+
+  /// Body copy for the explanatory card on why habit sharing is useful
+  ///
+  /// In en, this message translates to:
+  /// **'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone\'s recommendations become — including yours.'**
+  String get donateWhyShareBody;
+
+  /// Snackbar shown when the donation form is submitted with missing answers
+  ///
+  /// In en, this message translates to:
+  /// **'Please answer all questions'**
+  String get donatePleaseAnswerAllQuestions;
+
+  /// Message shown when the backend classifier rejects the submitted text as not being a habit
+  ///
+  /// In en, this message translates to:
+  /// **'This doesn\'t look like a habit. Try describing a regular behaviour, e.g. \"I go for a 30-minute walk every morning\".'**
+  String get donateNotAHabitMessage;
+
+  /// Snackbar shown when a habit donation is queued for later submission due to no connection
+  ///
+  /// In en, this message translates to:
+  /// **'Saved offline — will submit when connected'**
+  String get donateSavedOffline;
+
+  /// Snackbar shown when habit donation submission fails with a 401 response
+  ///
+  /// In en, this message translates to:
+  /// **'Unauthorized. Please sign in again.'**
+  String get donateUnauthorized;
+
+  /// Snackbar shown when habit donation submission fails with a 502/503 response
+  ///
+  /// In en, this message translates to:
+  /// **'Habit analysis is temporarily unavailable. Please try again in a moment.'**
+  String get donateAnalysisUnavailable;
+
+  /// Section heading above the list of today's tasks on the donate landing screen
+  ///
+  /// In en, this message translates to:
+  /// **'TODAY\'S TASKS'**
+  String get donateTodaysTasksEyebrow;
+
+  /// Label under the total-donations stat card
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get donateCommunityLabel;
+
+  /// Label under the sharing-streak stat card
+  ///
+  /// In en, this message translates to:
+  /// **'Day streak'**
+  String get donateDayStreakLabel;
+
+  /// Label above the habit description text field on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your habit'**
+  String get donateFormDescribeHabitLabel;
+
+  /// Placeholder hint text for the habit description text field
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. I go for a 30-minute walk every morning'**
+  String get donateFormHabitHint;
+
+  /// Validation error when the habit description is too short
+  ///
+  /// In en, this message translates to:
+  /// **'Please describe your habit (at least 10 characters)'**
+  String get donateFormHabitValidationError;
+
+  /// Rating question label on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'How often do you do this habit?'**
+  String get donateFormFrequencyQuestion;
+
+  /// Frequency rating option on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Rarely'**
+  String get donateFormFrequencyRarely;
+
+  /// Frequency rating option on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get donateFormFrequencyWeekly;
+
+  /// Frequency rating option on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Several/week'**
+  String get donateFormFrequencySeveralPerWeek;
+
+  /// Frequency rating option on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get donateFormFrequencyDaily;
+
+  /// Rating question label on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'How long have you had this habit?'**
+  String get donateFormDurationQuestion;
+
+  /// Duration rating option on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'< 1 month'**
+  String get donateFormDurationUnder1Month;
+
+  /// Duration rating option on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'1–3 months'**
+  String get donateFormDuration1To3Months;
+
+  /// Duration rating option on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'3–12 months'**
+  String get donateFormDuration3To12Months;
+
+  /// Duration rating option on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'> 1 year'**
+  String get donateFormDurationOver1Year;
+
+  /// Rating question label on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'How much does it benefit your health?'**
+  String get donateFormHealthBenefitQuestion;
+
+  /// Caption explaining the 1-5 rating scale endpoints on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'1 = Not at all · 5 = Very much'**
+  String get donateFormRatingCaption;
+
+  /// Rating question label on the donation form
+  ///
+  /// In en, this message translates to:
+  /// **'How much does it improve your wellbeing?'**
+  String get donateFormWellbeingQuestion;
+
+  /// Button to proceed from the cue-setting step to the next step
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get setCueNextButton;
+
+  /// Empty-state title shown when no study-assigned cues are available yet
+  ///
+  /// In en, this message translates to:
+  /// **'No cues available yet'**
+  String get setCueNoneAvailableTitle;
+
+  /// Empty-state subtitle shown when no study-assigned cues are available yet
+  ///
+  /// In en, this message translates to:
+  /// **'Your study coordinator will assign cues soon'**
+  String get setCueNoneAvailableSubtitle;
+
+  /// Subtitle for an assigned cue when more than one cue was assigned
+  ///
+  /// In en, this message translates to:
+  /// **'Cue {index} of {total} (assigned by study)'**
+  String setCueAssignedNumbered(int index, int total);
+
+  /// Subtitle for an assigned cue when only one cue was assigned
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned by study'**
+  String get setCueAssignedByStudy;
+
+  /// Button label to add another self-selected cue, showing current and maximum count
+  ///
+  /// In en, this message translates to:
+  /// **'Add another cue ({current}/{max})'**
+  String addAnotherCueCount(int current, int max);
+
+  /// Note shown once the maximum number of self-selected cues has been reached
+  ///
+  /// In en, this message translates to:
+  /// **'You can add up to {max} cues.'**
+  String setCueMaxReachedNote(int max);
+
+  /// Snackbar shown when logging today's habit completion fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not log today: {error}'**
+  String couldNotLogToday(String error);
+
+  /// Generic button to proceed to the next screen
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get continueButton;
+
+  /// Behavior catalog label: walking
+  ///
+  /// In en, this message translates to:
+  /// **'Walking'**
+  String get behaviorWalking;
+
+  /// Behavior catalog label: light jogging
+  ///
+  /// In en, this message translates to:
+  /// **'Light jogging'**
+  String get behaviorLightJogging;
+
+  /// Behavior catalog label: cycling
+  ///
+  /// In en, this message translates to:
+  /// **'Cycling'**
+  String get behaviorCycling;
+
+  /// Behavior catalog label: structured calisthenics
+  ///
+  /// In en, this message translates to:
+  /// **'Structured calisthenics'**
+  String get behaviorStructuredCalisthenics;
+
+  /// Behavior catalog label: yoga
+  ///
+  /// In en, this message translates to:
+  /// **'Yoga'**
+  String get behaviorYoga;
+
+  /// Validation error when the free-text habit description is too short
+  ///
+  /// In en, this message translates to:
+  /// **'Please describe your habit (min. 3 characters)'**
+  String get describeYourHabitMinLength;
+
+  /// Text field label for entering a free-text habit description
+  ///
+  /// In en, this message translates to:
+  /// **'Your habit'**
+  String get yourHabitLabel;
+
+  /// Hint text for the free-text habit description field
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. A 20-minute walk'**
+  String get yourHabitHint;
+
+  /// Generic Next button label
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get nextButton;
 }
 
 class _AppLocalizationsDelegate

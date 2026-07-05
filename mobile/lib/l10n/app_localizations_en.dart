@@ -738,4 +738,498 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adminNoCommentsYet => 'No comments yet.';
+
+  @override
+  String get onboardingShareHabitTitle => 'Share a Habit';
+
+  @override
+  String get onboardingShareHabitDescription =>
+      'Share your personal habits with researchers to help build a richer understanding of everyday behaviour. Your contributions are anonymised and used only for scientific research. Every habit you share makes the dataset more valuable for everyone.';
+
+  @override
+  String get onboardingExploreAnnotateTitle => 'Explore & Annotate';
+
+  @override
+  String get onboardingExploreAnnotateDescription =>
+      'Browse the interactive habit graph to discover how habits relate to each other across the community. You can annotate connections and add context to improve the shared knowledge base. The more you explore, the richer the graph becomes.';
+
+  @override
+  String get onboardingRecommendationsTitle => 'Get Recommendations';
+
+  @override
+  String get onboardingRecommendationsDescription =>
+      'Receive personalised habit recommendations based on your profile and the collective dataset. Our recommendation engine learns from community contributions to suggest habits that fit your lifestyle. Discover new habits that others with similar profiles have found helpful.';
+
+  @override
+  String get onboardingSubtitle =>
+      'A citizen-science platform where your habits help build a richer understanding of everyday behaviour.';
+
+  @override
+  String get onboardingGetStarted => 'Get Started';
+
+  @override
+  String get onboardingRestoreAccount => 'Restore existing account';
+
+  @override
+  String get onboardingSkip => 'Skip';
+
+  @override
+  String get onboardingContinue => 'Continue';
+
+  @override
+  String get onboardingNext => 'Next';
+
+  @override
+  String get adminQuestionnairesDeleteConfirmTitle => 'Delete questionnaire?';
+
+  @override
+  String adminQuestionnairesDeleteConfirmMessage(String title) {
+    return 'Delete \"$title\"? This cannot be undone.';
+  }
+
+  @override
+  String get adminQuestionnairesDeleteConflict =>
+      'Cannot delete: questionnaire is assigned to an active study.';
+
+  @override
+  String get adminQuestionnairesDeleteForbidden =>
+      'Cannot delete a library questionnaire.';
+
+  @override
+  String get adminQuestionnairesDeleteFailed =>
+      'Failed to delete questionnaire.';
+
+  @override
+  String get adminQuestionnairesTitle => 'Questionnaires';
+
+  @override
+  String get adminQuestionnairesLibraryLabel => 'Library';
+
+  @override
+  String get adminQuestionnairesCustomTab => 'Custom';
+
+  @override
+  String get adminQuestionnairesNewTooltip => 'New questionnaire';
+
+  @override
+  String get adminQuestionnairesLoadFailed => 'Failed to load questionnaires.';
+
+  @override
+  String get adminQuestionnairesLibraryEmpty =>
+      'No library questionnaires found.';
+
+  @override
+  String get adminQuestionnairesCustomEmpty =>
+      'No custom questionnaires yet.\nTap + to create one.';
+
+  @override
+  String adminQuestionnairesItemCount(int count) {
+    return '$count questions';
+  }
+
+  @override
+  String get adminQuestionnairesInactiveChip => 'Inactive';
+
+  @override
+  String get adminQuestionnairesEditDialogTitle => 'Edit Questionnaire';
+
+  @override
+  String get adminQuestionnairesNewDialogTitle => 'New Questionnaire';
+
+  @override
+  String get adminQuestionnairesTitleFieldLabel => 'Title *';
+
+  @override
+  String get adminQuestionnairesFieldRequiredError => 'Required';
+
+  @override
+  String get adminQuestionnairesDescriptionFieldLabel => 'Description';
+
+  @override
+  String adminQuestionnairesQuestionsCount(int count) {
+    return 'Questions ($count)';
+  }
+
+  @override
+  String get adminQuestionnairesAddButton => 'Add';
+
+  @override
+  String get adminQuestionnairesNoQuestionsYet =>
+      'No questions yet. Tap \"Add\" to add one.';
+
+  @override
+  String get adminQuestionnairesAllQuestionsNeedText =>
+      'All questions must have text.';
+
+  @override
+  String get adminQuestionnairesSaveFailed => 'Failed to save questionnaire.';
+
+  @override
+  String get adminQuestionnairesCreateButton => 'Create';
+
+  @override
+  String adminQuestionnairesQuestionNumber(int number) {
+    return 'Q$number';
+  }
+
+  @override
+  String get adminQuestionnairesQuestionTextFieldLabel => 'Question text';
+
+  @override
+  String get adminQuestionnairesTypeFieldLabel => 'Type';
+
+  @override
+  String get adminQuestionnairesTypeOpenText => 'Open text';
+
+  @override
+  String get adminQuestionnairesTypeSingleChoice => 'Single choice';
+
+  @override
+  String get adminQuestionnairesTypeMultiChoice => 'Multi choice';
+
+  @override
+  String get adminQuestionnairesTypeScale => 'Scale';
+
+  @override
+  String get adminQuestionnairesRequiredLabel => 'Required';
+
+  @override
+  String adminQuestionnairesOptionsCount(int count) {
+    return 'Options ($count)';
+  }
+
+  @override
+  String get adminQuestionnairesAddOption => 'Add option';
+
+  @override
+  String adminQuestionnairesOptionLabelField(int number) {
+    return 'Option $number label';
+  }
+
+  @override
+  String get adminShellNavParticipants => 'Participants';
+
+  @override
+  String get adminShellNavSurveys => 'Surveys';
+
+  @override
+  String get adminShellNavQuestionnaires => 'Questionnaires';
+
+  @override
+  String get adminShellNavHabits => 'Habits';
+
+  @override
+  String get adminShellNavDevices => 'Devices';
+
+  @override
+  String get adminShellNavSettings => 'Settings';
+
+  @override
+  String get recommendationResultsTitle => 'Recommendations';
+
+  @override
+  String get recommendationTryAgain => 'Try again';
+
+  @override
+  String get recommendationEmptyMessage =>
+      'No recommendations were generated. Try describing your goal in more detail — the more context you share, the better.';
+
+  @override
+  String get recommendationTryDifferentGoal => 'Try a different goal';
+
+  @override
+  String get recommendationHabitFlowError =>
+      'Could not open the habit flow. Please try again.';
+
+  @override
+  String get recommendationWhyThisHelps => 'Why this helps:';
+
+  @override
+  String recommendationSourcesCount(int count) {
+    return 'Sources ($count)';
+  }
+
+  @override
+  String get recommendationAddToHabits => 'Add to my habits';
+
+  @override
+  String get recommendationFeedbackSubmitted =>
+      'Feedback submitted — thank you!';
+
+  @override
+  String get recommendationLeaveComment => 'Leave a comment:';
+
+  @override
+  String get recommendationFeedbackHint => 'Your feedback…';
+
+  @override
+  String get recommendationFeedbackFailed => 'Failed to submit feedback';
+
+  @override
+  String get recommendationSourceLinkError => 'Could not open the source link.';
+
+  @override
+  String get recommendationLoadingPhaseExperts => 'Asking experts…';
+
+  @override
+  String get recommendationLoadingPhaseHabitsDb =>
+      'Looking through your habits database…';
+
+  @override
+  String get recommendationLoadingPhasePapers => 'Reading academic papers…';
+
+  @override
+  String get recommendationLoadingPhaseGenerating =>
+      'Generating your personalised recommendations…';
+
+  @override
+  String get recommendationLoadingTimeoutError =>
+      'Generating recommendations took too long. Please try again.';
+
+  @override
+  String get recommendationLoadingGenericError =>
+      'Something went wrong while generating recommendations. Please try again.';
+
+  @override
+  String get bubbleGraphNoHabitsInDimension =>
+      'No habits in this dimension yet.';
+
+  @override
+  String get bubbleGraphAllCategories => 'All categories';
+
+  @override
+  String bubbleGraphHabitCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count habits',
+      one: '1 habit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recommendationCardWhyTitle(String habitName) {
+    return 'Why \"$habitName\"?';
+  }
+
+  @override
+  String get recommendationCardEvidence => 'Evidence';
+
+  @override
+  String get recommendationCardConfidence => 'Confidence';
+
+  @override
+  String get recommendationCardWhy => 'Why?';
+
+  @override
+  String get recommendationCardDismiss => 'Dismiss';
+
+  @override
+  String get recommendationCardAccept => 'Accept';
+
+  @override
+  String get questionnaireFormRequiredQuestion => 'This question is required.';
+
+  @override
+  String get questionnaireFormAnswerAllRequired =>
+      'Please answer all required questions before submitting.';
+
+  @override
+  String questionnaireFormProgressLabel(int current, int total) {
+    return 'Question $current of $total';
+  }
+
+  @override
+  String get questionnaireFormBackButton => 'Back';
+
+  @override
+  String get questionnaireFormSubmitButton => 'Submit';
+
+  @override
+  String get questionnaireFormSaveAndContinueButton => 'Save & Continue';
+
+  @override
+  String get questionnaireFormAnswerHint => 'Your answer…';
+
+  @override
+  String get questionnaireFallbackTitle => 'Questionnaire';
+
+  @override
+  String get donateShareEyebrow => 'SHARE A HABIT';
+
+  @override
+  String get donateHeroTitle => 'Share a habit with science';
+
+  @override
+  String get donateHeroSubtitle =>
+      'Anonymous · ~2 min · Helps researchers worldwide';
+
+  @override
+  String get donateStartSharingButton => 'Start sharing';
+
+  @override
+  String get donateQuestionnaireEyebrow => 'QUESTIONNAIRE';
+
+  @override
+  String get donateQuestionnaireDueSubtitle => 'Short questionnaire · due now';
+
+  @override
+  String get donateCompleteButton => 'Complete';
+
+  @override
+  String get donateSharedTodayTitle => 'Shared today';
+
+  @override
+  String get donateSharedTodayBody =>
+      'Thanks for contributing! Come back tomorrow for the next one.';
+
+  @override
+  String get donateWhyShareTitle => 'Why share?';
+
+  @override
+  String get donateWhyShareBody =>
+      'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone\'s recommendations become — including yours.';
+
+  @override
+  String get donatePleaseAnswerAllQuestions => 'Please answer all questions';
+
+  @override
+  String get donateNotAHabitMessage =>
+      'This doesn\'t look like a habit. Try describing a regular behaviour, e.g. \"I go for a 30-minute walk every morning\".';
+
+  @override
+  String get donateSavedOffline => 'Saved offline — will submit when connected';
+
+  @override
+  String get donateUnauthorized => 'Unauthorized. Please sign in again.';
+
+  @override
+  String get donateAnalysisUnavailable =>
+      'Habit analysis is temporarily unavailable. Please try again in a moment.';
+
+  @override
+  String get donateTodaysTasksEyebrow => 'TODAY\'S TASKS';
+
+  @override
+  String get donateCommunityLabel => 'Community';
+
+  @override
+  String get donateDayStreakLabel => 'Day streak';
+
+  @override
+  String get donateFormDescribeHabitLabel => 'Describe your habit';
+
+  @override
+  String get donateFormHabitHint =>
+      'e.g. I go for a 30-minute walk every morning';
+
+  @override
+  String get donateFormHabitValidationError =>
+      'Please describe your habit (at least 10 characters)';
+
+  @override
+  String get donateFormFrequencyQuestion => 'How often do you do this habit?';
+
+  @override
+  String get donateFormFrequencyRarely => 'Rarely';
+
+  @override
+  String get donateFormFrequencyWeekly => 'Weekly';
+
+  @override
+  String get donateFormFrequencySeveralPerWeek => 'Several/week';
+
+  @override
+  String get donateFormFrequencyDaily => 'Daily';
+
+  @override
+  String get donateFormDurationQuestion => 'How long have you had this habit?';
+
+  @override
+  String get donateFormDurationUnder1Month => '< 1 month';
+
+  @override
+  String get donateFormDuration1To3Months => '1–3 months';
+
+  @override
+  String get donateFormDuration3To12Months => '3–12 months';
+
+  @override
+  String get donateFormDurationOver1Year => '> 1 year';
+
+  @override
+  String get donateFormHealthBenefitQuestion =>
+      'How much does it benefit your health?';
+
+  @override
+  String get donateFormRatingCaption => '1 = Not at all · 5 = Very much';
+
+  @override
+  String get donateFormWellbeingQuestion =>
+      'How much does it improve your wellbeing?';
+
+  @override
+  String get setCueNextButton => 'Next';
+
+  @override
+  String get setCueNoneAvailableTitle => 'No cues available yet';
+
+  @override
+  String get setCueNoneAvailableSubtitle =>
+      'Your study coordinator will assign cues soon';
+
+  @override
+  String setCueAssignedNumbered(int index, int total) {
+    return 'Cue $index of $total (assigned by study)';
+  }
+
+  @override
+  String get setCueAssignedByStudy => 'Assigned by study';
+
+  @override
+  String addAnotherCueCount(int current, int max) {
+    return 'Add another cue ($current/$max)';
+  }
+
+  @override
+  String setCueMaxReachedNote(int max) {
+    return 'You can add up to $max cues.';
+  }
+
+  @override
+  String couldNotLogToday(String error) {
+    return 'Could not log today: $error';
+  }
+
+  @override
+  String get continueButton => 'Continue';
+
+  @override
+  String get behaviorWalking => 'Walking';
+
+  @override
+  String get behaviorLightJogging => 'Light jogging';
+
+  @override
+  String get behaviorCycling => 'Cycling';
+
+  @override
+  String get behaviorStructuredCalisthenics => 'Structured calisthenics';
+
+  @override
+  String get behaviorYoga => 'Yoga';
+
+  @override
+  String get describeYourHabitMinLength =>
+      'Please describe your habit (min. 3 characters)';
+
+  @override
+  String get yourHabitLabel => 'Your habit';
+
+  @override
+  String get yourHabitHint => 'e.g. A 20-minute walk';
+
+  @override
+  String get nextButton => 'Next';
 }

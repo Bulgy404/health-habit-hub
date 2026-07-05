@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'questionnaire_models.dart';
 import 'questionnaire_provider.dart';
 import 'questionnaire_service.dart';
@@ -64,8 +65,12 @@ class _QuestionnaireFormWidgetState
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child:
-                _buildQuestion(context, question, formState.answers, notifier),
+            child: _buildQuestion(
+              context,
+              question,
+              formState.answers,
+              notifier,
+            ),
           ),
         ),
         if (_error != null)
@@ -73,8 +78,7 @@ class _QuestionnaireFormWidgetState
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               _error!,
-              style:
-                  TextStyle(color: Theme.of(context).colorScheme.error),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
         _ActionButtons(
@@ -83,7 +87,11 @@ class _QuestionnaireFormWidgetState
           isSubmitting: _isSubmitting,
           onBack: notifier.previousQuestion,
           onSaveAndContinue: () => _onSaveAndContinue(
-              context, question, formState.answers, notifier),
+            context,
+            question,
+            formState.answers,
+            notifier,
+          ),
           onSubmit: () => _onSubmit(context, formState, notifier),
         ),
       ],
@@ -102,35 +110,31 @@ class _QuestionnaireFormWidgetState
         _QuestionHeader(question: question),
         const SizedBox(height: 16),
         switch (question.type) {
-          QuestionType.singleChoice =>
-            _SingleChoiceQuestion(
-              question: question,
-              answers: answers,
-              notifier: notifier,
-              onChanged: () => setState(() => _error = null),
-            ),
-          QuestionType.multiChoice =>
-            _MultiChoiceQuestion(
-              question: question,
-              answers: answers,
-              notifier: notifier,
-              onChanged: () => setState(() => _error = null),
-            ),
-          QuestionType.scale =>
-            _ScaleQuestion(
-              question: question,
-              answers: answers,
-              notifier: notifier,
-              onChanged: () => setState(() => _error = null),
-            ),
-          QuestionType.text =>
-            _TextQuestion(
-              question: question,
-              answers: answers,
-              controller: _controllerFor(question.id),
-              notifier: notifier,
-              onChanged: () => setState(() => _error = null),
-            ),
+          QuestionType.singleChoice => _SingleChoiceQuestion(
+            question: question,
+            answers: answers,
+            notifier: notifier,
+            onChanged: () => setState(() => _error = null),
+          ),
+          QuestionType.multiChoice => _MultiChoiceQuestion(
+            question: question,
+            answers: answers,
+            notifier: notifier,
+            onChanged: () => setState(() => _error = null),
+          ),
+          QuestionType.scale => _ScaleQuestion(
+            question: question,
+            answers: answers,
+            notifier: notifier,
+            onChanged: () => setState(() => _error = null),
+          ),
+          QuestionType.text => _TextQuestion(
+            question: question,
+            answers: answers,
+            controller: _controllerFor(question.id),
+            notifier: notifier,
+            onChanged: () => setState(() => _error = null),
+          ),
         },
       ],
     );
@@ -152,7 +156,8 @@ class _QuestionnaireFormWidgetState
     QuestionnaireFormNotifier notifier,
   ) {
     if (!_validateQuestion(question, answers)) {
-      setState(() => _error = 'This question is required.');
+      final l10n = AppLocalizations.of(context)!;
+      setState(() => _error = l10n.questionnaireFormRequiredQuestion);
       return;
     }
     setState(() => _error = null);
@@ -164,17 +169,17 @@ class _QuestionnaireFormWidgetState
     QuestionnaireFormState formState,
     QuestionnaireFormNotifier notifier,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final questions = widget.definition.questions;
     final answers = formState.answers;
 
     if (!_validateQuestion(questions[formState.currentIndex], answers)) {
-      setState(() => _error = 'This question is required.');
+      setState(() => _error = l10n.questionnaireFormRequiredQuestion);
       return;
     }
     for (final q in questions) {
       if (!_validateQuestion(q, answers)) {
-        setState(
-            () => _error = 'Please answer all required questions before submitting.');
+        setState(() => _error = l10n.questionnaireFormAnswerAllRequired);
         return;
       }
     }
@@ -195,7 +200,7 @@ class _QuestionnaireFormWidgetState
     } catch (_) {
       setState(() {
         _isSubmitting = false;
-        _error = 'Submission failed. Please try again.';
+        _error = l10n.submissionFailed;
       });
     }
   }
@@ -213,13 +218,14 @@ class _ProgressHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Question $current of $total',
+            l10n.questionnaireFormProgressLabel(current, total),
             style: Theme.of(context).textTheme.labelMedium,
           ),
           const SizedBox(height: 4),
@@ -276,6 +282,7 @@ class _ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -284,7 +291,7 @@ class _ActionButtons extends StatelessWidget {
             Expanded(
               child: OutlinedButton(
                 onPressed: onBack,
-                child: const Text('Back'),
+                child: Text(l10n.questionnaireFormBackButton),
               ),
             ),
             const SizedBox(width: 12),
@@ -298,14 +305,13 @@ class _ActionButtons extends StatelessWidget {
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child:
-                                CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Submit'),
+                        : Text(l10n.questionnaireFormSubmitButton),
                   )
                 : FilledButton(
                     onPressed: onSaveAndContinue,
-                    child: const Text('Save & Continue'),
+                    child: Text(l10n.questionnaireFormSaveAndContinueButton),
                   ),
           ),
         ],
@@ -407,8 +413,7 @@ class _ScaleQuestion extends StatelessWidget {
     final maxVal = question.options.isNotEmpty
         ? (question.options.length - 1).toDouble()
         : (question.max ?? 10).toDouble();
-    final current =
-        (answers[question.id] as num?)?.toDouble() ?? minVal;
+    final current = (answers[question.id] as num?)?.toDouble() ?? minVal;
     final divisions = (maxVal - minVal).toInt();
 
     return Column(
@@ -419,7 +424,8 @@ class _ScaleQuestion extends StatelessWidget {
           min: minVal,
           max: maxVal,
           divisions: divisions > 0 ? divisions : null,
-          label: question.options.isNotEmpty &&
+          label:
+              question.options.isNotEmpty &&
                   current.toInt() < question.options.length
               ? question.options[current.toInt()].label
               : current.toInt().toString(),
@@ -481,12 +487,13 @@ class _TextQuestion extends StatelessWidget {
     if (controller.text.isEmpty && answers[question.id] != null) {
       controller.text = answers[question.id].toString();
     }
+    final l10n = AppLocalizations.of(context)!;
     return TextField(
       controller: controller,
       maxLines: 4,
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(),
-        hintText: 'Your answer…',
+      decoration: InputDecoration(
+        border: const OutlineInputBorder(),
+        hintText: l10n.questionnaireFormAnswerHint,
       ),
       onChanged: (val) {
         notifier.setAnswer(question.id, val);

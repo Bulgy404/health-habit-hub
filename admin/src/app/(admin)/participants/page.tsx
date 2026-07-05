@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl, API_BASE_URL } from "@/lib/api";
 import styles from "@/components/admin-page.module.css";
 
@@ -40,6 +41,15 @@ interface QuestionnaireResponse {
   questionnaireSlug: string;
   answers: Record<string, unknown>;
   submittedAt: string | null;
+}
+
+interface ParticipantHabit {
+  id: string;
+  habitName: string;
+  category: string;
+  isHabit: boolean;
+  studyId: string | null;
+  donatedAt: string | null;
 }
 
 interface Progress {
@@ -81,6 +91,8 @@ function fmt(ts: string | null, withTime = false): string {
 export default function ParticipantsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const t = useTranslations("participants");
+  const tc = useTranslations("common");
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -109,9 +121,13 @@ export default function ParticipantsPage() {
 
   // Questionnaire responses (answers) for the open progress participant
   const [responses, setResponses] = useState<QuestionnaireResponse[]>([]);
-  const [answersFor, setAnswersFor] = useState<
-    { slug: string; occurrence: number; answers: Record<string, unknown>; submittedAt: string | null } | null
-  >(null);
+  const [habits, setHabits] = useState<ParticipantHabit[]>([]);
+  const [answersFor, setAnswersFor] = useState<{
+    slug: string;
+    occurrence: number;
+    answers: Record<string, unknown>;
+    submittedAt: string | null;
+  } | null>(null);
 
   const token = session?.accessToken;
 
@@ -126,11 +142,11 @@ export default function ParticipantsPage() {
         .then((r) => setTestTools(Boolean(r?.enabled)))
         .catch(() => setTestTools(false));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load participants");
+      setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -154,7 +170,7 @@ export default function ParticipantsPage() {
       setShowCreate(false);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create participant");
+      setError(e instanceof Error ? e.message : t("createFailed"));
     } finally {
       setCreating(false);
     }
@@ -169,17 +185,17 @@ export default function ParticipantsPage() {
       });
       setParticipants((prev) => prev.map((p) => (p.id === id ? { ...p, group } : p)));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to update group");
+      setError(e instanceof Error ? e.message : t("groupUpdateFailed"));
     }
   }
 
   async function handleDelete(p: Participant) {
-    if (!token || !confirm(`Anonymise participant "${p.username}"? This cannot be undone.`)) return;
+    if (!token || !confirm(t("confirmAnonymise", { username: p.username }))) return;
     try {
       await apiFetch(apiUrl(`/admin/participants/${p.id}`), token, { method: "DELETE" });
       setParticipants((prev) => prev.filter((x) => x.id !== p.id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to delete participant");
+      setError(e instanceof Error ? e.message : t("deleteFailed"));
     }
   }
 
@@ -196,7 +212,7 @@ export default function ParticipantsPage() {
       // Revoke a little later so the new tab has time to load.
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to open token card");
+      setError(e instanceof Error ? e.message : t("tokenCardFailed"));
     }
   }
 
@@ -222,11 +238,11 @@ export default function ParticipantsPage() {
         token,
         { method: "POST", body: JSON.stringify({ days: ffDays }) }
       );
-      setFfMsg(`Shifted ${res?.days ?? ffDays} day(s) back. Reloading…`);
+      setFfMsg(t("ffShiftedBack", { days: res?.days ?? ffDays }));
       await openProgress(progressFor);
-      setFfMsg(`Advanced ${res?.days ?? ffDays} day(s). Open the app to re-sync.`);
+      setFfMsg(t("ffAdvanced", { days: res?.days ?? ffDays }));
     } catch (e) {
-      setFfMsg(e instanceof Error ? e.message : "Fast-forward failed");
+      setFfMsg(e instanceof Error ? e.message : t("fastForwardFailed"));
     } finally {
       setFfBusy(false);
     }
@@ -237,13 +253,27 @@ export default function ParticipantsPage() {
     setProgressFor(p);
     setProgress(null);
     setResponses([]);
+    setHabits([]);
     setFfMsg(null);
     setProgressLoading(true);
     try {
-      const [data, respData] = await Promise.all([
+      const [data, respData, habitData] = await Promise.all([
         apiFetch(apiUrl(`/admin/participants/${p.id}/progress`), token),
-        apiFetch(apiUrl(`/admin/participants/${p.id}/responses`), token).catch(() => ({ responses: [] })),
+        apiFetch(apiUrl(`/admin/participants/${p.id}/responses`), token).catch(() => ({
+          responses: [],
+        })),
+        apiFetch(apiUrl(`/admin/participants/${p.id}/habits`), token).catch(() => ({ habits: [] })),
       ]);
+      setHabits(
+        ((habitData?.habits ?? []) as Record<string, unknown>[]).map((h) => ({
+          id: String(h.id ?? ""),
+          habitName: String(h.habitName ?? ""),
+          category: String(h.category ?? "Other"),
+          isHabit: h.isHabit !== false,
+          studyId: h.studyId ? String(h.studyId) : null,
+          donatedAt: h.donatedAt ? String(h.donatedAt) : null,
+        }))
+      );
       setResponses(
         ((respData?.responses ?? []) as Record<string, unknown>[]).map((r) => ({
           responseId: String(r.responseId ?? ""),
@@ -274,14 +304,14 @@ export default function ParticipantsPage() {
           submittedAt: q.submittedAt ? String(q.submittedAt) : null,
           responseId: q.responseId ? String(q.responseId) : null,
         })),
-        timeline: (data?.timeline ?? []).map((t: Record<string, unknown>) => ({
-          type: String(t.type ?? ""),
-          timestamp: t.timestamp ? String(t.timestamp) : null,
-          detail: String(t.detail ?? ""),
+        timeline: (data?.timeline ?? []).map((tl: Record<string, unknown>) => ({
+          type: String(tl.type ?? ""),
+          timestamp: tl.timestamp ? String(tl.timestamp) : null,
+          detail: String(tl.detail ?? ""),
         })),
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load progress");
+      setError(e instanceof Error ? e.message : t("progressLoadFailed"));
       setProgressFor(null);
     } finally {
       setProgressLoading(false);
@@ -292,46 +322,49 @@ export default function ParticipantsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Participants</h1>
-          <p className={styles.subtitle}>
-            Create and manage study participants, reassign groups, and inspect progress.
-          </p>
+          <h1 className={styles.title}>{t("title")}</h1>
+          <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
-        <button className={styles.addButton} onClick={() => { setCreated(null); setShowCreate(true); }}>
-          + New participant
+        <button
+          className={styles.addButton}
+          onClick={() => {
+            setCreated(null);
+            setShowCreate(true);
+          }}
+        >
+          {t("newParticipant")}
         </button>
       </div>
 
       {error && <p className={styles.error}>{error}</p>}
 
       {loading ? (
-        <p>Loading…</p>
+        <p>{tc("loading")}</p>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>User ID</th>
-                <th>Username</th>
-                <th>Group</th>
-                <th>Enrolled</th>
-                <th>Last active</th>
-                <th>Surveys</th>
-                <th>Actions</th>
+                <th>{t("userId")}</th>
+                <th>{t("username")}</th>
+                <th>{t("group")}</th>
+                <th>{t("enrolled")}</th>
+                <th>{t("lastActive")}</th>
+                <th>{t("surveys")}</th>
+                <th>{tc("actions")}</th>
               </tr>
             </thead>
             <tbody>
               {participants.map((p) => (
                 <tr key={p.id}>
                   <td>
-                    <span
-                      className={styles.code}
-                      title="Keycloak sub — the id all habits, logs and donations are keyed by"
-                    >
+                    <span className={styles.code} title={t("keycloakSubTooltip")}>
                       {p.id}
                     </span>
                   </td>
-                  <td><span className={styles.code}>{p.username || "—"}</span></td>
+                  <td>
+                    <span className={styles.code}>{p.username || "—"}</span>
+                  </td>
                   <td>
                     <select
                       className={styles.select}
@@ -341,7 +374,11 @@ export default function ParticipantsPage() {
                       {!GROUPS.includes(p.group as (typeof GROUPS)[number]) && (
                         <option value="">{p.group || "—"}</option>
                       )}
-                      {GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+                      {GROUPS.map((g) => (
+                        <option key={g} value={g}>
+                          {g}
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td>{fmt(p.createdAt)}</td>
@@ -352,21 +389,39 @@ export default function ParticipantsPage() {
                       : "—"}
                   </td>
                   <td>
-                    <button className={`${styles.actionBtn} ${styles.primaryBtn}`} onClick={() => openProgress(p)}>Progress</button>
+                    <button
+                      className={`${styles.actionBtn} ${styles.primaryBtn}`}
+                      onClick={() => openProgress(p)}
+                    >
+                      {t("progress")}
+                    </button>
                     {p.recoveryPhrase && (
-                      <button className={styles.actionBtn} onClick={() => setPhraseFor(p)}>Recovery phrase</button>
+                      <button className={styles.actionBtn} onClick={() => setPhraseFor(p)}>
+                        {t("recoveryPhrase")}
+                      </button>
                     )}
                     {p.hasTokenCard && (
-                      <button className={styles.actionBtn} onClick={() => openTokenCard(p.id)}>Token card</button>
+                      <button className={styles.actionBtn} onClick={() => openTokenCard(p.id)}>
+                        {t("tokenCard")}
+                      </button>
                     )}
-                    <button className={`${styles.actionBtn} ${styles.deleteBtn}`} onClick={() => handleDelete(p)}>Delete</button>
+                    <button
+                      className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                      onClick={() => handleDelete(p)}
+                    >
+                      {tc("delete")}
+                    </button>
                   </td>
                 </tr>
               ))}
               {participants.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: "2rem" }} className={styles.muted}>
-                    No participants yet.
+                  <td
+                    colSpan={7}
+                    style={{ textAlign: "center", padding: "2rem" }}
+                    className={styles.muted}
+                  >
+                    {t("noParticipants")}
                   </td>
                 </tr>
               )}
@@ -379,23 +434,41 @@ export default function ParticipantsPage() {
       {showCreate && (
         <div className={styles.modalOverlay} onClick={() => setShowCreate(false)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 className={styles.modalTitle}>New participant</h2>
+            <h2 className={styles.modalTitle}>{t("newParticipantTitle")}</h2>
             <div className={styles.formRow}>
-              <label className={styles.formLabel}>Group</label>
-              <select className={styles.select} value={newGroup} onChange={(e) => setNewGroup(e.target.value as (typeof GROUPS)[number])}>
-                {GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+              <label className={styles.formLabel}>{t("group")}</label>
+              <select
+                className={styles.select}
+                value={newGroup}
+                onChange={(e) => setNewGroup(e.target.value as (typeof GROUPS)[number])}
+              >
+                {GROUPS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
               </select>
             </div>
             <div className={styles.formRow}>
-              <label className={styles.formLabel}>Token card</label>
-              <select className={styles.select} value={newFormat} onChange={(e) => setNewFormat(e.target.value as (typeof TOKEN_FORMATS)[number])}>
-                {TOKEN_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
+              <label className={styles.formLabel}>{t("tokenCard")}</label>
+              <select
+                className={styles.select}
+                value={newFormat}
+                onChange={(e) => setNewFormat(e.target.value as (typeof TOKEN_FORMATS)[number])}
+              >
+                {TOKEN_FORMATS.map((f) => (
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
+                ))}
               </select>
             </div>
             <div className={styles.formActions}>
-              <button className={styles.cancelButton} onClick={() => setShowCreate(false)}>Cancel</button>
+              <button className={styles.cancelButton} onClick={() => setShowCreate(false)}>
+                {tc("cancel")}
+              </button>
               <button className={styles.saveButton} onClick={handleCreate} disabled={creating}>
-                {creating ? "Creating…" : "Create"}
+                {creating ? t("creatingEllipsis") : tc("add")}
               </button>
             </div>
           </div>
@@ -406,16 +479,32 @@ export default function ParticipantsPage() {
       {created && (
         <div className={styles.modalOverlay} onClick={() => setCreated(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 className={styles.modalTitle}>Participant created</h2>
-            <p className={styles.subtitle}>Save these credentials now — the password is not shown again.</p>
+            <h2 className={styles.modalTitle}>{t("participantCreated")}</h2>
+            <p className={styles.subtitle}>{t("saveCredentialsNow")}</p>
             <div className={styles.credBox} style={{ marginTop: "1rem" }}>
-              <div className={styles.credRow}><span className={styles.muted}>User ID</span><span className={styles.code}>{created.userId ?? "—"}</span></div>
-              <div className={styles.credRow}><span className={styles.muted}>Username</span><span className={styles.code}>{created.username ?? "—"}</span></div>
-              <div className={styles.credRow}><span className={styles.muted}>Password</span><span className={styles.code}>{created.password ?? "—"}</span></div>
+              <div className={styles.credRow}>
+                <span className={styles.muted}>{t("userId")}</span>
+                <span className={styles.code}>{created.userId ?? "—"}</span>
+              </div>
+              <div className={styles.credRow}>
+                <span className={styles.muted}>{t("username")}</span>
+                <span className={styles.code}>{created.username ?? "—"}</span>
+              </div>
+              <div className={styles.credRow}>
+                <span className={styles.muted}>{t("password")}</span>
+                <span className={styles.code}>{created.password ?? "—"}</span>
+              </div>
             </div>
             <div className={styles.formActions}>
-              <button className={styles.secondaryButton} onClick={() => created.userId && openTokenCard(created.userId)}>Open token card</button>
-              <button className={styles.saveButton} onClick={() => setCreated(null)}>Done</button>
+              <button
+                className={styles.secondaryButton}
+                onClick={() => created.userId && openTokenCard(created.userId)}
+              >
+                {t("openTokenCard")}
+              </button>
+              <button className={styles.saveButton} onClick={() => setCreated(null)}>
+                {t("done")}
+              </button>
             </div>
           </div>
         </div>
@@ -426,14 +515,16 @@ export default function ParticipantsPage() {
         <div className={styles.modalOverlay} onClick={() => setAnswersFor(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 className={styles.modalTitle}>
-              Answers · {answersFor.slug} #{answersFor.occurrence}
+              {t("answersTitle", { slug: answersFor.slug, occurrence: answersFor.occurrence })}
             </h2>
             <p className={styles.subtitle}>
-              Submitted {answersFor.submittedAt ? fmt(answersFor.submittedAt) : "—"}
+              {t("submittedLabel", {
+                date: answersFor.submittedAt ? fmt(answersFor.submittedAt) : "—",
+              })}
             </p>
             {Object.keys(answersFor.answers).length === 0 ? (
               <p className={styles.muted} style={{ marginTop: "1rem" }}>
-                No stored answer content for this response.
+                {t("noAnswerContent")}
               </p>
             ) : (
               <div className={styles.credBox} style={{ marginTop: "1rem" }}>
@@ -448,7 +539,9 @@ export default function ParticipantsPage() {
               </div>
             )}
             <div className={styles.formActions}>
-              <button className={styles.saveButton} onClick={() => setAnswersFor(null)}>Close</button>
+              <button className={styles.saveButton} onClick={() => setAnswersFor(null)}>
+                {tc("close")}
+              </button>
             </div>
           </div>
         </div>
@@ -456,16 +549,19 @@ export default function ParticipantsPage() {
 
       {/* ── Recovery phrase modal ───────────────────────────────── */}
       {phraseFor && phraseFor.recoveryPhrase && (
-        <div className={styles.modalOverlay} onClick={() => { setPhraseFor(null); setPhraseCopied(false); }}>
+        <div
+          className={styles.modalOverlay}
+          onClick={() => {
+            setPhraseFor(null);
+            setPhraseCopied(false);
+          }}
+        >
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 className={styles.modalTitle}>Recovery phrase</h2>
-            <p className={styles.subtitle}>
-              The 24-word phrase this participant uses to restore their account.
-              Handle it like a password.
-            </p>
+            <h2 className={styles.modalTitle}>{t("recoveryPhrase")}</h2>
+            <p className={styles.subtitle}>{t("recoveryPhraseDesc")}</p>
             <div className={styles.credBox} style={{ margin: "0.75rem 0" }}>
               <div className={styles.credRow}>
-                <span className={styles.muted}>User ID</span>
+                <span className={styles.muted}>{t("userId")}</span>
                 <span className={styles.code}>{phraseFor.id}</span>
               </div>
             </div>
@@ -479,7 +575,9 @@ export default function ParticipantsPage() {
               }}
             >
               {phraseFor.recoveryPhrase.split(/\s+/).map((w, i) => (
-                <li key={i} className={styles.code}>{w}</li>
+                <li key={i} className={styles.code}>
+                  {w}
+                </li>
               ))}
             </ol>
             <div className={styles.formActions}>
@@ -494,10 +592,16 @@ export default function ParticipantsPage() {
                   }
                 }}
               >
-                {phraseCopied ? "Copied ✓" : "Copy"}
+                {phraseCopied ? t("copiedCheck") : t("copy")}
               </button>
-              <button className={styles.saveButton} onClick={() => { setPhraseFor(null); setPhraseCopied(false); }}>
-                Close
+              <button
+                className={styles.saveButton}
+                onClick={() => {
+                  setPhraseFor(null);
+                  setPhraseCopied(false);
+                }}
+              >
+                {tc("close")}
               </button>
             </div>
           </div>
@@ -508,97 +612,158 @@ export default function ParticipantsPage() {
       {progressFor && (
         <div className={styles.modalOverlay} onClick={() => setProgressFor(null)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 className={styles.modalTitle}>Progress · {progressFor.username || progressFor.id}</h2>
+            <h2 className={styles.modalTitle}>
+              {t("progressTitle", { name: progressFor.username || progressFor.id })}
+            </h2>
             {progressLoading || !progress ? (
-              <p>Loading…</p>
+              <p>{tc("loading")}</p>
             ) : (
               <>
                 <div className={styles.section}>
-                  <div className={styles.sectionTitle}>Profile</div>
-                  <div>{progress.profile.completed ? `Completed ${fmt(progress.profile.completedAt)}` : "Not completed"}</div>
+                  <div className={styles.sectionTitle}>{t("profile")}</div>
+                  <div>
+                    {progress.profile.completed
+                      ? t("completedOn", { date: fmt(progress.profile.completedAt) })
+                      : t("notCompleted")}
+                  </div>
                 </div>
                 <div className={styles.section}>
-                  <div className={styles.sectionTitle}>Habits &amp; recommendations</div>
-                  <div>{progress.habitsCount} habit(s) · {progress.recommendations.accepted} accepted / {progress.recommendations.dismissed} dismissed</div>
+                  <div className={styles.sectionTitle}>{t("habitsAndRecommendations")}</div>
+                  <div>
+                    {t("habitsSummary", {
+                      count: progress.habitsCount,
+                      accepted: progress.recommendations.accepted,
+                      dismissed: progress.recommendations.dismissed,
+                    })}
+                  </div>
                 </div>
                 <div className={styles.section}>
-                  <div className={styles.sectionTitle}>Surveys</div>
+                  <div className={styles.sectionTitle}>{t("createdHabits")}</div>
+                  {habits.length === 0 ? (
+                    <div className={styles.muted}>{t("noHabitsCreated")}</div>
+                  ) : (
+                    habits.map((h) => (
+                      <div key={h.id} className={styles.credRow}>
+                        <span>
+                          {h.habitName || "—"}
+                          {h.category && h.category !== "Other" && (
+                            <span className={styles.badge} style={{ marginLeft: 8 }}>
+                              {h.category}
+                            </span>
+                          )}
+                          {!h.isHabit && (
+                            <span className={styles.muted} style={{ marginLeft: 8 }}>
+                              {t("notAHabit")}
+                            </span>
+                          )}
+                        </span>
+                        <span className={styles.muted}>{h.donatedAt ? fmt(h.donatedAt) : "—"}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className={styles.section}>
+                  <div className={styles.sectionTitle}>{t("surveys")}</div>
                   {progress.surveys.length === 0 ? (
-                    <div className={styles.muted}>None</div>
-                  ) : progress.surveys.map((s) => (
-                    <div key={s.id} className={styles.credRow}>
-                      <span>{s.title || s.id}</span>
-                      <span className={styles.muted}>{s.completedAt ? fmt(s.completedAt) : "Pending"}</span>
-                    </div>
-                  ))}
+                    <div className={styles.muted}>{tc("none")}</div>
+                  ) : (
+                    progress.surveys.map((s) => (
+                      <div key={s.id} className={styles.credRow}>
+                        <span>{s.title || s.id}</span>
+                        <span className={styles.muted}>
+                          {s.completedAt ? fmt(s.completedAt) : t("pending")}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className={styles.section}>
-                  <div className={styles.sectionTitle}>Questionnaires</div>
+                  <div className={styles.sectionTitle}>{t("questionnaires")}</div>
                   {progress.questionnaires.length === 0 ? (
-                    <div className={styles.muted}>None scheduled.</div>
-                  ) : progress.questionnaires.map((q, i) => (
-                    <div key={i} className={styles.credRow}>
-                      <span>
-                        <span className={styles.code}>{q.questionnaireSlug}</span> · #{q.occurrence}{" "}
-                        <span className={styles.muted}>(due {fmt(q.scheduledFor)})</span>
-                      </span>
-                      <span>
-                        {q.submittedAt ? (
-                          <>
-                            <span className={styles.muted}>Done {fmt(q.submittedAt)}</span>{" "}
-                            <button className={styles.actionBtn} onClick={() => openAnswers(q)}>
-                              View answers
-                            </button>
-                          </>
-                        ) : (
-                          <span className={styles.muted}>Pending</span>
-                        )}
-                      </span>
-                    </div>
-                  ))}
+                    <div className={styles.muted}>{t("noneScheduled")}</div>
+                  ) : (
+                    progress.questionnaires.map((q, i) => (
+                      <div key={i} className={styles.credRow}>
+                        <span>
+                          <span className={styles.code}>{q.questionnaireSlug}</span> · #
+                          {q.occurrence}{" "}
+                          <span className={styles.muted}>
+                            {t("dueLabel", { date: fmt(q.scheduledFor) })}
+                          </span>
+                        </span>
+                        <span>
+                          {q.submittedAt ? (
+                            <>
+                              <span className={styles.muted}>
+                                {t("doneOn", { date: fmt(q.submittedAt) })}
+                              </span>{" "}
+                              <button className={styles.actionBtn} onClick={() => openAnswers(q)}>
+                                {t("viewAnswers")}
+                              </button>
+                            </>
+                          ) : (
+                            <span className={styles.muted}>{t("pending")}</span>
+                          )}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className={styles.section}>
-                  <div className={styles.sectionTitle}>Timeline</div>
+                  <div className={styles.sectionTitle}>{t("timeline")}</div>
                   {progress.timeline.length === 0 ? (
-                    <div className={styles.muted}>No activity recorded.</div>
-                  ) : progress.timeline.map((t, i) => (
-                    <div key={i} className={styles.credRow}>
-                      <span>{t.type}{t.detail ? ` — ${t.detail}` : ""}</span>
-                      <span className={styles.muted}>{fmt(t.timestamp, true)}</span>
-                    </div>
-                  ))}
+                    <div className={styles.muted}>{t("noActivityRecorded")}</div>
+                  ) : (
+                    progress.timeline.map((tl, i) => (
+                      <div key={i} className={styles.credRow}>
+                        <span>
+                          {tl.type}
+                          {tl.detail ? ` — ${tl.detail}` : ""}
+                        </span>
+                        <span className={styles.muted}>{fmt(tl.timestamp, true)}</span>
+                      </div>
+                    ))
+                  )}
                 </div>
               </>
             )}
             {testTools && (
               <div className={styles.section}>
-                <div className={styles.sectionTitle}>Testing · Fast-forward</div>
+                <div className={styles.sectionTitle}>{t("testingFastForward")}</div>
                 <div className={styles.muted} style={{ marginBottom: 8 }}>
-                  Shifts this participant&apos;s timeline back so upcoming
-                  questionnaire windows, logs and SRHI become due now. Dev-only —
-                  the app re-syncs due tasks and reminders on next open.
+                  {t("fastForwardDesc")}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <label className={styles.muted} htmlFor="ffDays">Advance by</label>
+                  <label className={styles.muted} htmlFor="ffDays">
+                    {t("advanceBy")}
+                  </label>
                   <input
                     id="ffDays"
                     type="number"
                     min={1}
                     max={365}
                     value={ffDays}
-                    onChange={(e) => setFfDays(Math.max(1, Math.min(365, Number(e.target.value) || 1)))}
+                    onChange={(e) =>
+                      setFfDays(Math.max(1, Math.min(365, Number(e.target.value) || 1)))
+                    }
                     style={{ width: 72 }}
                   />
-                  <span className={styles.muted}>days</span>
-                  <button className={styles.actionBtn} onClick={handleFastForward} disabled={ffBusy}>
-                    {ffBusy ? "Working…" : "Fast-forward"}
+                  <span className={styles.muted}>{t("daysLabel")}</span>
+                  <button
+                    className={styles.actionBtn}
+                    onClick={handleFastForward}
+                    disabled={ffBusy}
+                  >
+                    {ffBusy ? t("workingEllipsis") : t("fastForward")}
                   </button>
                   {ffMsg && <span className={styles.muted}>{ffMsg}</span>}
                 </div>
               </div>
             )}
             <div className={styles.formActions}>
-              <button className={styles.saveButton} onClick={() => setProgressFor(null)}>Close</button>
+              <button className={styles.saveButton} onClick={() => setProgressFor(null)}>
+                {tc("close")}
+              </button>
             </div>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import styles from "./page.module.css";
 import { useKnowledgeBaseData } from "./useKnowledgeBaseData";
 
@@ -22,8 +23,7 @@ function fmtDate(iso: string): string {
   });
 }
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/kb";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/kb";
 
 // ── Upload modal ──────────────────────────────────────────────────────────────
 
@@ -36,6 +36,8 @@ function UploadModal({
   onClose: () => void;
   onUploaded: () => void;
 }) {
+  const t = useTranslations("knowledgeBase");
+  const tc = useTranslations("common");
   const [category, setCategory] = useState("general");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -44,12 +46,12 @@ function UploadModal({
   async function handleUpload() {
     const file = fileRef.current?.files?.[0];
     if (!file) {
-      setError("Please select a PDF file.");
+      setError(t("selectFileError"));
       return;
     }
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
     if (!["pdf", "txt", "md"].includes(ext)) {
-      setError("Only PDF, TXT, and MD files are accepted.");
+      setError(t("fileTypeError"));
       return;
     }
     setUploading(true);
@@ -70,7 +72,7 @@ function UploadModal({
       }
       onUploaded();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : t("uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -80,7 +82,7 @@ function UploadModal({
     <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
         <div className={styles.modalHeader}>
-          <span className={styles.modalTitle}>Upload PDF</span>
+          <span className={styles.modalTitle}>{t("uploadModalTitle")}</span>
           <button className={styles.closeBtn} onClick={onClose}>
             ×
           </button>
@@ -90,27 +92,27 @@ function UploadModal({
           {error && <div className={styles.errorMsg}>{error}</div>}
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>PDF file *</label>
+            <label className={styles.label}>{t("pdfFileLabel")}</label>
             <input ref={fileRef} type="file" accept=".pdf,.txt,.md" className={styles.fileInput} />
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>Category</label>
+            <label className={styles.label}>{t("categoryLabel")}</label>
             <input
               className={styles.input}
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              placeholder="e.g. habit-formation"
+              placeholder={t("categoryPlaceholder")}
             />
           </div>
         </div>
 
         <div className={styles.modalFooter}>
           <button className={styles.cancelBtn} onClick={onClose}>
-            Cancel
+            {tc("cancel")}
           </button>
           <button className={styles.saveBtn} onClick={handleUpload} disabled={uploading}>
-            {uploading ? "Uploading…" : "Upload"}
+            {uploading ? t("uploading") : tc("upload")}
           </button>
         </div>
       </div>
@@ -129,20 +131,24 @@ function ConfirmDeleteDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useTranslations("knowledgeBase");
+  const tc = useTranslations("common");
   return (
     <div className={styles.confirmOverlay}>
       <div className={styles.confirmDialog}>
-        <p className={styles.confirmTitle}>Delete file?</p>
+        <p className={styles.confirmTitle}>{t("deleteFileTitle")}</p>
         <p className={styles.confirmText}>
-          You are about to permanently delete <strong>{filename}</strong> from the knowledge base.
-          This action cannot be undone.
+          {t.rich("confirmDeleteText", {
+            filename,
+            strong: (chunks) => <strong>{chunks}</strong>,
+          })}
         </p>
         <div className={styles.confirmActions}>
           <button className={styles.cancelBtn} onClick={onCancel}>
-            Cancel
+            {tc("cancel")}
           </button>
           <button className={styles.confirmDeleteBtn} onClick={onConfirm}>
-            Delete
+            {tc("delete")}
           </button>
         </div>
       </div>
@@ -161,11 +167,13 @@ function ConfirmDeleteDialog({
 export default function KnowledgeBasePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const t = useTranslations("knowledgeBase");
+  const tc = useTranslations("common");
 
   useEffect(() => {
-    if (status === 'loading') return;
-    if (!session?.roles?.includes('admin')) {
-      router.replace('/access-denied');
+    if (status === "loading") return;
+    if (!session?.roles?.includes("admin")) {
+      router.replace("/access-denied");
     }
   }, [session, status, router]);
 
@@ -191,16 +199,16 @@ export default function KnowledgeBasePage() {
         const body = await res.json().catch(() => ({}));
         throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
       }
-      setSuccessMsg(`"${filename}" deleted successfully.`);
+      setSuccessMsg(t("deleteSuccess", { filename }));
       await refetch();
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Delete failed");
+      setActionError(err instanceof Error ? err.message : t("deleteFailed"));
     }
   }
 
   async function handleUploaded() {
     setUploadOpen(false);
-    setSuccessMsg("PDF uploaded successfully.");
+    setSuccessMsg(t("uploadSuccess"));
     await refetch();
   }
 
@@ -219,10 +227,8 @@ export default function KnowledgeBasePage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div className={styles.headerText}>
-          <h1 className={styles.title}>Knowledge Base</h1>
-          <p className={styles.subtitle}>
-            Manage PDF papers used for habit recommendations. Grouped by category.
-          </p>
+          <h1 className={styles.title}>{t("title")}</h1>
+          <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
         <div className={styles.headerActions}>
           <a
@@ -231,10 +237,10 @@ export default function KnowledgeBasePage() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            ⬡ View Graph
+            ⬡ {t("viewGraph")}
           </a>
           <button className={styles.addButton} onClick={() => setUploadOpen(true)}>
-            + Upload Document
+            + {t("uploadDocument")}
           </button>
         </div>
       </div>
@@ -243,11 +249,9 @@ export default function KnowledgeBasePage() {
       {successMsg && <div className={styles.successMsg}>{successMsg}</div>}
 
       {loading ? (
-        <div className={styles.loadingState}>Loading…</div>
+        <div className={styles.loadingState}>{tc("loading")}</div>
       ) : entries.length === 0 ? (
-        <div className={styles.emptyState}>
-          No PDFs in the knowledge base yet. Click &quot;Upload PDF&quot; to add one.
-        </div>
+        <div className={styles.emptyState}>{t("emptyState")}</div>
       ) : (
         categories.map((cat) => (
           <div key={cat} style={{ marginBottom: "2rem" }}>
@@ -267,11 +271,11 @@ export default function KnowledgeBasePage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Filename</th>
-                    <th>Size</th>
-                    <th>Summary</th>
-                    <th>Upload date</th>
-                    <th>Actions</th>
+                    <th>{t("filenameColumn")}</th>
+                    <th>{t("sizeColumn")}</th>
+                    <th>{t("summaryColumn")}</th>
+                    <th>{t("uploadDateColumn")}</th>
+                    <th>{tc("actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -285,7 +289,7 @@ export default function KnowledgeBasePage() {
                         <span
                           className={`${styles.badge} ${entry.has_summary ? styles.badgeReady : styles.badgePending}`}
                         >
-                          {entry.has_summary ? "Ready" : "Pending"}
+                          {entry.has_summary ? t("statusReady") : t("statusPending")}
                         </span>
                       </td>
                       <td>{fmtDate(entry.upload_date)}</td>
@@ -295,7 +299,7 @@ export default function KnowledgeBasePage() {
                             className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
                             onClick={() => setDeleteFilename(entry.filename)}
                           >
-                            Delete
+                            {tc("delete")}
                           </button>
                         </div>
                       </td>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import styles from "./page.module.css";
 
 const VALID_TYPES = ["text", "number", "date", "select"] as const;
@@ -41,9 +42,7 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const err = new Error(
-      (body as { error?: string }).error ?? `HTTP ${res.status}`
-    );
+    const err = new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
     (err as Error & { status?: number }).status = res.status;
     throw err;
   }
@@ -63,6 +62,8 @@ function emptyForm(): ProfileFieldDefinition {
 export default function ProfileFieldsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const t = useTranslations("profileFields");
+  const tc = useTranslations("common");
   const [defs, setDefs] = useState<ProfileFieldDefinition[]>([]);
   const [form, setForm] = useState<ProfileFieldDefinition>(emptyForm());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -106,17 +107,17 @@ export default function ProfileFieldsPage() {
       setEditingId(null);
       setForm(emptyForm());
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error saving");
+      setError(e instanceof Error ? e.message : t("saveFailed"));
     }
   }
 
   async function handleDelete(fieldId: string) {
-    if (!session?.accessToken || !confirm(`Delete field '${fieldId}'?`)) return;
+    if (!session?.accessToken || !confirm(t("confirmDelete", { fieldId }))) return;
     try {
       await apiFetch(`${API_BASE}/${fieldId}`, session.accessToken, { method: "DELETE" });
       setDefs(defs.filter((d) => d.fieldId !== fieldId));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error deleting");
+      setError(e instanceof Error ? e.message : t("deleteFailed"));
     }
   }
 
@@ -136,49 +137,77 @@ export default function ProfileFieldsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div className={styles.headerText}>
-          <h1 className={styles.title}>Profile Fields</h1>
-          <p className={styles.subtitle}>
-            Configure which fields appear in the onboarding profile setup.
-          </p>
+          <h1 className={styles.title}>{t("title")}</h1>
+          <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
-        <button className={styles.addButton} onClick={() => { setForm(emptyForm()); setEditingId(null); setShowForm(true); }}>
-          + Add Field
+        <button
+          className={styles.addButton}
+          onClick={() => {
+            setForm(emptyForm());
+            setEditingId(null);
+            setShowForm(true);
+          }}
+        >
+          {t("addField")}
         </button>
       </div>
 
       {error && <p className={styles.error}>{error}</p>}
 
       {loading ? (
-        <p>Loading…</p>
+        <p>{tc("loading")}</p>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Label</th>
-                <th>Field ID</th>
-                <th>Type</th>
-                <th>Required</th>
-                <th>Order</th>
-                <th>Actions</th>
+                <th>{t("labelColumn")}</th>
+                <th>{t("fieldIdColumn")}</th>
+                <th>{t("typeColumn")}</th>
+                <th>{t("requiredColumn")}</th>
+                <th>{t("orderColumn")}</th>
+                <th>{tc("actions")}</th>
               </tr>
             </thead>
             <tbody>
               {defs.map((def) => (
                 <tr key={def.fieldId}>
                   <td>{def.label}</td>
-                  <td><code>{def.fieldId}</code></td>
+                  <td>
+                    <code>{def.fieldId}</code>
+                  </td>
                   <td>{def.type}</td>
-                  <td>{def.required ? "Yes" : "No"}</td>
+                  <td>{def.required ? tc("yes") : tc("no")}</td>
                   <td>{def.order}</td>
                   <td>
-                    <button className={`${styles.actionBtn} ${styles.editBtn}`} onClick={() => startEdit(def)}>Edit</button>
-                    <button className={`${styles.actionBtn} ${styles.deleteBtn}`} onClick={() => handleDelete(def.fieldId)}>Delete</button>
+                    <button
+                      className={`${styles.actionBtn} ${styles.editBtn}`}
+                      onClick={() => startEdit(def)}
+                    >
+                      {tc("edit")}
+                    </button>
+                    <button
+                      className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                      onClick={() => handleDelete(def.fieldId)}
+                    >
+                      {tc("delete")}
+                    </button>
                   </td>
                 </tr>
               ))}
               {defs.length === 0 && (
-                <tr><td colSpan={6} style={{ textAlign: "center", color: "var(--color-text-muted)", padding: "2rem" }}>No profile fields defined yet.</td></tr>
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{
+                      textAlign: "center",
+                      color: "var(--color-text-muted)",
+                      padding: "2rem",
+                    }}
+                  >
+                    {t("emptyState")}
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
@@ -187,31 +216,31 @@ export default function ProfileFieldsPage() {
 
       {showForm && (
         <div className={styles.formSection}>
-          <h2>{editingId ? "Edit Field" : "Add Field"}</h2>
+          <h2>{editingId ? t("editFieldTitle") : t("addFieldTitle")}</h2>
 
           <div className={styles.formRow}>
-            <label className={styles.formLabel}>Field ID</label>
+            <label className={styles.formLabel}>{t("fieldIdColumn")}</label>
             <input
               className={styles.formInput}
               value={form.fieldId}
               onChange={(e) => setForm({ ...form, fieldId: e.target.value })}
               disabled={!!editingId}
-              placeholder="e.g. birthday (lowercase, underscores only)"
+              placeholder={t("fieldIdPlaceholder")}
             />
           </div>
 
           <div className={styles.formRow}>
-            <label className={styles.formLabel}>Label</label>
+            <label className={styles.formLabel}>{t("labelColumn")}</label>
             <input
               className={styles.formInput}
               value={form.label}
               onChange={(e) => setForm({ ...form, label: e.target.value })}
-              placeholder="Shown to the user"
+              placeholder={t("labelPlaceholder")}
             />
           </div>
 
           <div className={styles.formRow}>
-            <label className={styles.formLabel}>Type</label>
+            <label className={styles.formLabel}>{t("typeColumn")}</label>
             <select
               className={styles.formSelect}
               value={form.type}
@@ -220,18 +249,28 @@ export default function ProfileFieldsPage() {
                 setNewOption("");
               }}
             >
-              {VALID_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              {VALID_TYPES.map((fieldType) => (
+                <option key={fieldType} value={fieldType}>
+                  {fieldType}
+                </option>
+              ))}
             </select>
           </div>
 
           {form.type === "select" && (
             <div className={styles.formRow}>
-              <label className={styles.formLabel}>Options</label>
+              <label className={styles.formLabel}>{t("optionsLabel")}</label>
               <div>
                 {form.options.map((opt, i) => (
                   <div key={`${opt}-${i}`} className={styles.optionRow}>
                     <span>{opt}</span>
-                    <button onClick={() => setForm({ ...form, options: form.options.filter((_, j) => j !== i) })}>✕</button>
+                    <button
+                      onClick={() =>
+                        setForm({ ...form, options: form.options.filter((_, j) => j !== i) })
+                      }
+                    >
+                      ✕
+                    </button>
                   </div>
                 ))}
                 <div className={styles.addOptionRow}>
@@ -239,17 +278,17 @@ export default function ProfileFieldsPage() {
                     className={styles.formInput}
                     value={newOption}
                     onChange={(e) => setNewOption(e.target.value)}
-                    placeholder="New option"
+                    placeholder={t("newOptionPlaceholder")}
                     onKeyDown={(e) => e.key === "Enter" && addOption()}
                   />
-                  <button onClick={addOption}>Add</button>
+                  <button onClick={addOption}>{tc("add")}</button>
                 </div>
               </div>
             </div>
           )}
 
           <div className={styles.formRow}>
-            <label className={styles.formLabel}>Required</label>
+            <label className={styles.formLabel}>{t("requiredColumn")}</label>
             <input
               type="checkbox"
               checked={form.required}
@@ -258,7 +297,7 @@ export default function ProfileFieldsPage() {
           </div>
 
           <div className={styles.formRow}>
-            <label className={styles.formLabel}>Order</label>
+            <label className={styles.formLabel}>{t("orderColumn")}</label>
             <input
               className={styles.formInput}
               type="number"
@@ -269,10 +308,17 @@ export default function ProfileFieldsPage() {
 
           <div className={styles.formActions}>
             <button className={styles.saveButton} onClick={handleSave}>
-              {editingId ? "Save" : "Create"}
+              {editingId ? tc("save") : t("create")}
             </button>
-            <button className={styles.cancelButton} onClick={() => { setShowForm(false); setEditingId(null); setForm(emptyForm()); }}>
-              Cancel
+            <button
+              className={styles.cancelButton}
+              onClick={() => {
+                setShowForm(false);
+                setEditingId(null);
+                setForm(emptyForm());
+              }}
+            >
+              {tc("cancel")}
             </button>
           </div>
         </div>

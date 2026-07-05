@@ -15,9 +15,12 @@ import {
  */
 export async function listStudies({ db, page = 1, limit = 20 }) {
   const skip = (page - 1) * limit;
+  // Exclude studies that were deleted from the admin UI (soft-deleted). Their
+  // data is retained in the backend, but they are hidden from the studies list.
+  const notDeleted = { deletedAt: { $exists: false } };
   const studies = await db
     .collection(STUDIES)
-    .find()
+    .find(notDeleted)
     .skip(skip)
     .limit(limit)
     .toArray();
@@ -36,7 +39,7 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
     counts.map((c) => [c._id.toString(), c.count])
   );
 
-  const total = await db.collection(STUDIES).countDocuments();
+  const total = await db.collection(STUDIES).countDocuments(notDeleted);
 
   return {
     total,
@@ -50,6 +53,8 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
       isActive: s.isActive,
       recommenderEnabled: s.recommenderEnabled !== false,
       questionnaireReminders: normalizeReminders(s),
+      endDate: s.endDate ?? null,
+      endOfStudyNotification: normalizeEndOfStudyNotification(s),
       groups: s.groups,
       questionnaires: (s.questionnaires || []).map((id) => id.toString()),
       participantCount: countMap[s._id.toString()] ?? 0,
@@ -73,6 +78,8 @@ export async function createStudy({
   recommenderEnabled = true,
   onboardingEnabled = true,
   selfHabitCreationEnabled = true,
+  endDate = null,
+  endOfStudyNotification,
   neo4jRun,
 }) {
   const now = new Date();
@@ -100,6 +107,10 @@ export async function createStudy({
     selfHabitCreationEnabled: selfHabitCreationEnabled !== false,
     // Local questionnaire due-date reminders (enabled, fired at `hour` local).
     questionnaireReminders: { enabled: true, hour: 9 },
+    endDate: endDate ? new Date(endDate) : null,
+    endOfStudyNotification: normalizeEndOfStudyNotification({
+      endOfStudyNotification,
+    }),
     groups: studyGroups,
     questionnaires: questionnaireIds,
     createdAt: now,
@@ -162,6 +173,8 @@ export async function getStudy({ db, id }) {
     onboardingEnabled: study.onboardingEnabled !== false,
     selfHabitCreationEnabled: study.selfHabitCreationEnabled !== false,
     questionnaireReminders: normalizeReminders(study),
+    endDate: study.endDate ?? null,
+    endOfStudyNotification: normalizeEndOfStudyNotification(study),
     groups: study.groups,
     questionnaires: (study.questionnaires || []).map((id) => id.toString()),
     createdAt: study.createdAt,
@@ -175,6 +188,19 @@ function normalizeReminders(study) {
   return {
     enabled: r ? r.enabled !== false : true,
     hour: Number.isInteger(r?.hour) ? r.hour : 9,
+  };
+}
+
+/** Normalise a study's end-of-study notification config (default: off). */
+function normalizeEndOfStudyNotification(study) {
+  const n = study?.endOfStudyNotification;
+  return {
+    enabled: n?.enabled === true,
+    title: typeof n?.title === 'string' && n.title ? n.title : 'Study complete',
+    body:
+      typeof n?.body === 'string' && n.body
+        ? n.body
+        : 'Thank you for participating — your study has ended.',
   };
 }
 
@@ -212,6 +238,12 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
         ? updates.questionnaireReminders.hour
         : 9,
     };
+  if (updates.endDate !== undefined)
+    $set.endDate = updates.endDate ? new Date(updates.endDate) : null;
+  if (updates.endOfStudyNotification !== undefined)
+    $set.endOfStudyNotification = normalizeEndOfStudyNotification({
+      endOfStudyNotification: updates.endOfStudyNotification,
+    });
 
   // Groups are additive: append new groups, keep existing ones
   if (Array.isArray(updates.groups) && updates.groups.length > 0) {
@@ -301,6 +333,41 @@ export async function softDeleteStudy({ db, id, neo4jRun }) {
       { _id: oid },
       { $set: { isActive: false, updatedAt: new Date() } }
     );
+  return { deleted: true };
+}
+
+/**
+ * Soft-delete a study from the admin UI: hides it from the studies list while
+ * retaining all of its data in the backend. Requires the caller to confirm by
+ * passing the exact study name. The default study cannot be deleted.
+ *
+ * @param {{ db: object, id: string, confirmName: string }} deps
+ * @returns {Promise<{ deleted: boolean }|{ notFound: boolean }|{ isDefault: boolean }|{ nameMismatch: true, expected: string }>}
+ */
+export async function deleteStudy({ db, id, confirmName }) {
+  let oid;
+  try {
+    oid = new ObjectId(id);
+  } catch {
+    return { notFound: true };
+  }
+
+  const existing = await db.collection(STUDIES).findOne({ _id: oid });
+  if (!existing || existing.deletedAt) return { notFound: true };
+
+  if (existing.isDefault) return { isDefault: true };
+
+  // Confirmation guard: the typed name must match exactly (trimmed).
+  if (String(confirmName ?? '').trim() !== String(existing.name ?? '').trim()) {
+    return { nameMismatch: true, expected: existing.name };
+  }
+
+  await db.collection(STUDIES).updateOne(
+    { _id: oid },
+    {
+      $set: { deletedAt: new Date(), isActive: false, updatedAt: new Date() },
+    }
+  );
   return { deleted: true };
 }
 

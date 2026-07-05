@@ -17,6 +17,12 @@ const studyGroupSchema = z.object({
   id: z.string().optional(),
 });
 
+const endOfStudyNotificationSchema = z.object({
+  enabled: z.boolean(),
+  title: z.string().min(1).max(120),
+  body: z.string().min(1).max(500),
+});
+
 export const createStudySchema = z.object({
   name: shortString,
   description: longString.optional(),
@@ -25,6 +31,8 @@ export const createStudySchema = z.object({
   recommenderEnabled: z.boolean().optional(),
   onboardingEnabled: z.boolean().optional(),
   selfHabitCreationEnabled: z.boolean().optional(),
+  endDate: z.string().datetime({ offset: true }).optional().nullable(),
+  endOfStudyNotification: endOfStudyNotificationSchema.optional(),
 });
 
 const questionnaireRemindersSchema = z.object({
@@ -40,6 +48,8 @@ export const updateStudySchema = z
     onboardingEnabled: z.boolean().optional(),
     selfHabitCreationEnabled: z.boolean().optional(),
     questionnaireReminders: questionnaireRemindersSchema.optional(),
+    endDate: z.string().datetime({ offset: true }).optional().nullable(),
+    endOfStudyNotification: endOfStudyNotificationSchema.optional(),
   })
   .strict();
 
@@ -223,6 +233,7 @@ export const createActivityTypeSchema = z.object({
   key: activityKey,
   label_en: shortString,
   label_de: z.string().max(200).trim().optional(),
+  label_ja: z.string().max(200).trim().optional(),
   isDefault: z.boolean().optional(),
 });
 
@@ -230,6 +241,7 @@ export const updateActivityTypeSchema = z
   .object({
     label_en: shortString.optional(),
     label_de: z.string().max(200).trim().optional(),
+    label_ja: z.string().max(200).trim().optional(),
     isDefault: z.boolean().optional(),
   })
   .strict();
@@ -248,3 +260,19 @@ export const createProfileFieldSchema = z.object({
 });
 
 export const updateProfileFieldSchema = createProfileFieldSchema.partial();
+
+// ── Backups ───────────────────────────────────────────────────────────────────
+
+const backupFilenameSchema = z
+  .string()
+  .regex(
+    /^(full_backup|uploaded)_[0-9_]+[A-Za-z0-9._-]*\.tar\.gz$/,
+    'must be a valid backup filename'
+  );
+
+export const restoreBackupSchema = z.object({
+  confirmFilename: backupFilenameSchema,
+  restoreToken: z.string().min(1),
+  acknowledgeWarnings: z.boolean().optional(),
+  restoreKeycloak: z.boolean().optional(),
+});

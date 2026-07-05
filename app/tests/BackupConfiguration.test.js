@@ -18,6 +18,7 @@ const BACKUP_DOCKERFILE_PATH = resolve(
   '../../backup-service/Dockerfile'
 );
 const DOCKER_COMPOSE_PATH = resolve(__dirname, '../../docker-compose.yml');
+const BACKUP_LIB_PATH = resolve(__dirname, '../../backup-service/lib.sh');
 
 // Helper to read file content
 const readFile = (path) => {
@@ -152,22 +153,94 @@ test('Backup script handles Neo4j restart', () => {
   const content = readFile(BACKUP_SCRIPT_PATH);
   assert(content !== null, 'backup.sh should be readable');
 
+  // Container name must match the actual container_name in docker-compose.yml
+  // (hhh-neo4j) — a prior mismatch (h3-neo4j) meant the stop/dump/restart
+  // sequence silently failed every night, so this is asserted explicitly.
+  assert(
+    !content.includes('h3-neo4j'),
+    'Should not reference the stale h3-neo4j container name'
+  );
+
   // Check Neo4j is stopped before backup
   assert(
-    content.includes('docker stop h3-neo4j'),
-    'Should stop Neo4j container before backup'
+    content.includes('docker stop hhh-neo4j'),
+    'Should stop the actual hhh-neo4j container before backup'
   );
 
   // Check Neo4j is restarted after backup
   assert(
-    content.includes('docker start h3-neo4j'),
-    'Should restart Neo4j container after backup'
+    content.includes('docker start hhh-neo4j'),
+    'Should restart the actual hhh-neo4j container after backup'
   );
 
   // Check for restart verification
   assert(
     content.includes('Restarting Neo4j') || content.includes('Neo4j restarted'),
     'Should verify Neo4j restart'
+  );
+});
+
+test('Backup script and restore script share a filesystem lock', () => {
+  assert(
+    existsSync(BACKUP_LIB_PATH),
+    'backup-service/lib.sh should exist with the shared lock helpers'
+  );
+  const libContent = readFile(BACKUP_LIB_PATH);
+  assert(
+    libContent.includes('acquire_lock') && libContent.includes('release_lock'),
+    'lib.sh should define acquire_lock/release_lock'
+  );
+
+  const backupContent = readFile(BACKUP_SCRIPT_PATH);
+  const restoreContent = readFile(RESTORE_SCRIPT_PATH);
+  for (const [name, content] of [
+    ['backup.sh', backupContent],
+    ['restore.sh', restoreContent],
+  ]) {
+    assert(content !== null, `${name} should be readable`);
+    assert(
+      content.includes('source') && content.includes('lib.sh'),
+      `${name} should source lib.sh`
+    );
+    assert(
+      content.includes('acquire_lock'),
+      `${name} should call acquire_lock before doing destructive work`
+    );
+  }
+});
+
+test('Backup manifest reflects per-component success, not a shared global flag', () => {
+  const content = readFile(BACKUP_SCRIPT_PATH);
+  assert(content !== null, 'backup.sh should be readable');
+
+  for (const flag of ['MONGO_OK', 'LIGHTRAG_OK', 'NEO4J_OK', 'KEYCLOAK_OK']) {
+    assert(
+      content.includes(flag),
+      `Should track a dedicated ${flag} flag for the manifest`
+    );
+  }
+
+  // The manifest lines must read from the per-component flags, not the
+  // shared error counter (which previously made every line lie whenever any
+  // other component failed).
+  assert(
+    !content.includes('MongoDB: $([ $BACKUP_ERRORS -eq 0 ]'),
+    'MongoDB manifest line should not be derived from the global error counter'
+  );
+});
+
+test('Backup script writes a structured JSON manifest', () => {
+  const content = readFile(BACKUP_SCRIPT_PATH);
+  assert(content !== null, 'backup.sh should be readable');
+
+  assert(
+    content.includes('.manifest.json'),
+    'Should write a backup_<DATE>.manifest.json sidecar'
+  );
+  assert(content.includes('jq -n'), 'Should build the JSON manifest with jq');
+  assert(
+    content.includes('BACKUP_TRIGGER'),
+    'Should record which trigger (scheduled/manual/pre_restore_safety) started the run'
   );
 });
 
@@ -197,6 +270,19 @@ test('Backup script exits with error code on failure', () => {
   assert(
     content.includes('exit $BACKUP_ERRORS'),
     'Should exit with error count for monitoring'
+  );
+});
+
+test('Restore script exits with error code on failure', () => {
+  const content = readFile(RESTORE_SCRIPT_PATH);
+  assert(content !== null, 'restore.sh should be readable');
+
+  // restore.sh previously tracked RESTORE_ERRORS but never exited non-zero
+  // with it, so a partially-failed restore (e.g. Mongo restored, Neo4j load
+  // failed) would be reported as a success by anything checking exit status.
+  assert(
+    content.includes('exit $RESTORE_ERRORS'),
+    'Should exit with the restore error count so callers can detect partial failures'
   );
 });
 

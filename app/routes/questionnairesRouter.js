@@ -58,8 +58,56 @@ export function createQuestionnairesRouter({ db } = {}) {
     }
   });
 
-  // GET /api/v1/questionnaires/due — the participant's due + upcoming
-  // scheduled questionnaires (must be declared before the /:slug route).
+  /**
+   * @swagger
+   * /questionnaires/due:
+   *   get:
+   *     summary: The participant's due + upcoming scheduled questionnaires
+   *     description: >
+   *       Returns questionnaires due now or within the next 30 days for the
+   *       authenticated participant, their reminder settings, and their
+   *       study's end date / end-of-study notification config (present even
+   *       when no questionnaires are currently due).
+   *     tags: [Questionnaires]
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Due questionnaires and study reminder/end-of-study config
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 reminders:
+   *                   type: object
+   *                   properties:
+   *                     enabled: { type: boolean }
+   *                     hour: { type: integer, minimum: 0, maximum: 23 }
+   *                 questionnaires:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       windowId: { type: string }
+   *                       questionnaireSlug: { type: string }
+   *                       questionnaireTitle: { type: string }
+   *                       occurrence: { type: integer }
+   *                       scheduledFor: { type: string, format: date-time }
+   *                       isDue: { type: boolean }
+   *                 studyEndDate:
+   *                   type: string
+   *                   format: date-time
+   *                   nullable: true
+   *                 endOfStudyNotification:
+   *                   type: object
+   *                   properties:
+   *                     enabled: { type: boolean }
+   *                     title: { type: string }
+   *                     body: { type: string }
+   *       401:
+   *         description: Missing or invalid JWT
+   */
   router.get('/due', async (req, res) => {
     try {
       const userId = req.user?.sub;

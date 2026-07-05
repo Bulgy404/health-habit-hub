@@ -606,6 +606,116 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /admin/insights:
+    get:
+      summary: List available insight questions
+      description: >-
+        Returns metadata (key, title, description) for each curated cross-database insight. Fetch an individual answer
+        via /admin/insights/{key}.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Insight metadata list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  insights:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                          example: totals
+                        title:
+                          type: string
+                          example: Platform totals
+                        description:
+                          type: string
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/insights/{key}:
+    get:
+      summary: Get a cached insight answer
+      description: >-
+        Computes (or serves a Redis-cached) answer for the given insight key. The result is either a stats list or a
+        table. Pass refresh=1 to force a recompute.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: key
+          required: true
+          schema:
+            type: string
+          description: Insight key (see /admin/insights)
+          example: donations_by_participant
+        - in: query
+          name: refresh
+          required: false
+          schema:
+            type: string
+            enum:
+              - '1'
+              - 'true'
+          description: Force recompute instead of serving the cached value
+      responses:
+        '200':
+          description: Insight answer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    type: string
+                  title:
+                    type: string
+                  description:
+                    type: string
+                  computedAt:
+                    type: string
+                    format: date-time
+                  cached:
+                    type: boolean
+                  result:
+                    type: object
+                    description: '{ type: "stats", items: [...] } or { type: "table", columns: [...], rows: [...] }'
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Unknown insight key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /admin/sessions/{sessionId}:
     delete:
       summary: Revoke a Keycloak session
@@ -1079,6 +1189,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /admin/participants/{id}/habits:
+    get:
+      summary: List the habits a participant created
+      description: >-
+        Returns the participant's donated habits from Neo4j (newest first), each with its BCIO category, study, and
+        donation date.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Participant userId
+      responses:
+        '200':
+          description: Participant's habits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  habits:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        habitName:
+                          type: string
+                        category:
+                          type: string
+                          example: Physical activity
+                        isHabit:
+                          type: boolean
+                        studyId:
+                          type: string
+                          nullable: true
+                        donatedAt:
+                          type: string
+                          format: date-time
+                          nullable: true
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /admin/participants/{id}:
     delete:
       summary: Soft-delete a participant
@@ -1122,6 +1291,95 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Participant not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/studies/{id}/export:
+    get:
+      summary: Download all data for a study
+      description: >-
+        Returns a JSON snapshot of the study, its enrollments, participants, questionnaire assignments/windows, and all
+        participant-scoped data (responses, logs, SRHI, donations, comments). Token-card binaries are omitted and
+        recovery phrases are redacted unless EXPOSE_RECOVERY_PHRASES is enabled.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Study id
+      responses:
+        '200':
+          description: JSON export bundle (attachment)
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Study not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/studies/{id}/delete:
+    post:
+      summary: Delete a study from the admin UI (soft-delete)
+      description: >-
+        Hides the study from the studies list while retaining all of its data in the backend. Requires the exact study
+        name as confirmation. The default study cannot be deleted.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Study id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - confirmName
+              properties:
+                confirmName:
+                  type: string
+                  description: Must exactly match the study's name
+      responses:
+        '200':
+          description: Study hidden from the list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '400':
+          description: Name confirmation did not match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Study not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Cannot delete the default study
           content:
             application/json:
               schema:

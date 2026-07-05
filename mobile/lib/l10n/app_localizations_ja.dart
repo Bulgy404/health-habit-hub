@@ -710,4 +710,474 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get adminNoCommentsYet => 'まだコメントはありません。';
+
+  @override
+  String get onboardingShareHabitTitle => '習慣をシェアする';
+
+  @override
+  String get onboardingShareHabitDescription =>
+      'あなたの個人的な習慣を研究者と共有し、日常の行動についてのより深い理解を築く手助けをしましょう。投稿内容は匿名化され、科学研究のみに使用されます。習慣が共有されるたびに、データセットはみんなにとってより価値のあるものになります。';
+
+  @override
+  String get onboardingExploreAnnotateTitle => '探索して注釈をつける';
+
+  @override
+  String get onboardingExploreAnnotateDescription =>
+      'インタラクティブな習慣グラフを閲覧して、コミュニティ内で習慣がどのように関連しているかを発見しましょう。つながりに注釈を付けたり、背景情報を追加したりして、共有の知識ベースをより良いものにできます。探索すればするほど、グラフはより豊かになります。';
+
+  @override
+  String get onboardingRecommendationsTitle => 'おすすめを受け取る';
+
+  @override
+  String get onboardingRecommendationsDescription =>
+      'あなたのプロフィールと全体のデータセットに基づいた、パーソナライズされた習慣のおすすめを受け取りましょう。私たちのレコメンドエンジンはコミュニティの投稿から学習し、あなたのライフスタイルに合った習慣を提案します。似たプロフィールを持つ人が役立てた新しい習慣を発見しましょう。';
+
+  @override
+  String get onboardingSubtitle =>
+      'あなたの習慣が、日常の行動についてのより深い理解を築く手助けとなる、市民参加型科学プラットフォームです。';
+
+  @override
+  String get onboardingGetStarted => 'はじめる';
+
+  @override
+  String get onboardingRestoreAccount => '既存のアカウントを復元';
+
+  @override
+  String get onboardingSkip => 'スキップ';
+
+  @override
+  String get onboardingContinue => '続ける';
+
+  @override
+  String get onboardingNext => '次へ';
+
+  @override
+  String get adminQuestionnairesDeleteConfirmTitle => 'アンケートを削除しますか?';
+
+  @override
+  String adminQuestionnairesDeleteConfirmMessage(String title) {
+    return '「$title」を削除しますか?この操作は元に戻せません。';
+  }
+
+  @override
+  String get adminQuestionnairesDeleteConflict =>
+      '削除できません: このアンケートは進行中の研究に割り当てられています。';
+
+  @override
+  String get adminQuestionnairesDeleteForbidden => 'ライブラリのアンケートは削除できません。';
+
+  @override
+  String get adminQuestionnairesDeleteFailed => 'アンケートの削除に失敗しました。';
+
+  @override
+  String get adminQuestionnairesTitle => 'アンケート';
+
+  @override
+  String get adminQuestionnairesLibraryLabel => 'ライブラリ';
+
+  @override
+  String get adminQuestionnairesCustomTab => 'カスタム';
+
+  @override
+  String get adminQuestionnairesNewTooltip => '新しいアンケート';
+
+  @override
+  String get adminQuestionnairesLoadFailed => 'アンケートの読み込みに失敗しました。';
+
+  @override
+  String get adminQuestionnairesLibraryEmpty => 'ライブラリのアンケートが見つかりません。';
+
+  @override
+  String get adminQuestionnairesCustomEmpty =>
+      'カスタムアンケートはまだありません。\n+をタップして作成してください。';
+
+  @override
+  String adminQuestionnairesItemCount(int count) {
+    return '$count問';
+  }
+
+  @override
+  String get adminQuestionnairesInactiveChip => '非アクティブ';
+
+  @override
+  String get adminQuestionnairesEditDialogTitle => 'アンケートを編集';
+
+  @override
+  String get adminQuestionnairesNewDialogTitle => '新しいアンケート';
+
+  @override
+  String get adminQuestionnairesTitleFieldLabel => 'タイトル *';
+
+  @override
+  String get adminQuestionnairesFieldRequiredError => '必須項目です';
+
+  @override
+  String get adminQuestionnairesDescriptionFieldLabel => '説明';
+
+  @override
+  String adminQuestionnairesQuestionsCount(int count) {
+    return '質問 ($count)';
+  }
+
+  @override
+  String get adminQuestionnairesAddButton => '追加';
+
+  @override
+  String get adminQuestionnairesNoQuestionsYet =>
+      '質問がまだありません。「追加」をタップして作成してください。';
+
+  @override
+  String get adminQuestionnairesAllQuestionsNeedText => 'すべての質問にテキストを入力してください。';
+
+  @override
+  String get adminQuestionnairesSaveFailed => 'アンケートの保存に失敗しました。';
+
+  @override
+  String get adminQuestionnairesCreateButton => '作成';
+
+  @override
+  String adminQuestionnairesQuestionNumber(int number) {
+    return '問$number';
+  }
+
+  @override
+  String get adminQuestionnairesQuestionTextFieldLabel => '質問文';
+
+  @override
+  String get adminQuestionnairesTypeFieldLabel => '種類';
+
+  @override
+  String get adminQuestionnairesTypeOpenText => '自由記述';
+
+  @override
+  String get adminQuestionnairesTypeSingleChoice => '単一選択';
+
+  @override
+  String get adminQuestionnairesTypeMultiChoice => '複数選択';
+
+  @override
+  String get adminQuestionnairesTypeScale => '尺度';
+
+  @override
+  String get adminQuestionnairesRequiredLabel => '必須';
+
+  @override
+  String adminQuestionnairesOptionsCount(int count) {
+    return '選択肢 ($count)';
+  }
+
+  @override
+  String get adminQuestionnairesAddOption => '選択肢を追加';
+
+  @override
+  String adminQuestionnairesOptionLabelField(int number) {
+    return '選択肢$numberのラベル';
+  }
+
+  @override
+  String get adminShellNavParticipants => '参加者';
+
+  @override
+  String get adminShellNavSurveys => '調査';
+
+  @override
+  String get adminShellNavQuestionnaires => 'アンケート';
+
+  @override
+  String get adminShellNavHabits => '習慣';
+
+  @override
+  String get adminShellNavDevices => 'デバイス';
+
+  @override
+  String get adminShellNavSettings => '設定';
+
+  @override
+  String get recommendationResultsTitle => 'おすすめ';
+
+  @override
+  String get recommendationTryAgain => 'もう一度試す';
+
+  @override
+  String get recommendationEmptyMessage =>
+      'おすすめは生成されませんでした。目標をもう少し詳しく説明してみてください。共有する情報が多いほど、より良い結果が得られます。';
+
+  @override
+  String get recommendationTryDifferentGoal => '別の目標を試す';
+
+  @override
+  String get recommendationHabitFlowError => '習慣作成画面を開けませんでした。もう一度お試しください。';
+
+  @override
+  String get recommendationWhyThisHelps => 'これが役立つ理由:';
+
+  @override
+  String recommendationSourcesCount(int count) {
+    return '情報源 ($count)';
+  }
+
+  @override
+  String get recommendationAddToHabits => '自分の習慣に追加';
+
+  @override
+  String get recommendationFeedbackSubmitted => 'フィードバックを送信しました。ありがとうございます!';
+
+  @override
+  String get recommendationLeaveComment => 'コメントを残す:';
+
+  @override
+  String get recommendationFeedbackHint => 'フィードバックを入力…';
+
+  @override
+  String get recommendationFeedbackFailed => 'フィードバックを送信できませんでした';
+
+  @override
+  String get recommendationSourceLinkError => '情報源のリンクを開けませんでした。';
+
+  @override
+  String get recommendationLoadingPhaseExperts => '専門家に確認しています…';
+
+  @override
+  String get recommendationLoadingPhaseHabitsDb => '習慣データベースを調べています…';
+
+  @override
+  String get recommendationLoadingPhasePapers => '学術論文を読んでいます…';
+
+  @override
+  String get recommendationLoadingPhaseGenerating => 'あなた専用のおすすめを生成しています…';
+
+  @override
+  String get recommendationLoadingTimeoutError =>
+      'おすすめの生成に時間がかかりすぎました。もう一度お試しください。';
+
+  @override
+  String get recommendationLoadingGenericError =>
+      'おすすめの生成中に問題が発生しました。もう一度お試しください。';
+
+  @override
+  String get bubbleGraphNoHabitsInDimension => 'このカテゴリにはまだ習慣がありません。';
+
+  @override
+  String get bubbleGraphAllCategories => 'すべてのカテゴリ';
+
+  @override
+  String bubbleGraphHabitCount(int count) {
+    return '習慣$count件';
+  }
+
+  @override
+  String recommendationCardWhyTitle(String habitName) {
+    return '「$habitName」がおすすめの理由';
+  }
+
+  @override
+  String get recommendationCardEvidence => '根拠';
+
+  @override
+  String get recommendationCardConfidence => '信頼度';
+
+  @override
+  String get recommendationCardWhy => '理由';
+
+  @override
+  String get recommendationCardDismiss => '却下';
+
+  @override
+  String get recommendationCardAccept => '承認';
+
+  @override
+  String get questionnaireFormRequiredQuestion => 'この質問は必須です。';
+
+  @override
+  String get questionnaireFormAnswerAllRequired => '送信する前に、すべての必須質問に回答してください。';
+
+  @override
+  String questionnaireFormProgressLabel(int current, int total) {
+    return '質問 $current/$total';
+  }
+
+  @override
+  String get questionnaireFormBackButton => '戻る';
+
+  @override
+  String get questionnaireFormSubmitButton => '送信';
+
+  @override
+  String get questionnaireFormSaveAndContinueButton => '保存して次へ';
+
+  @override
+  String get questionnaireFormAnswerHint => '回答を入力…';
+
+  @override
+  String get questionnaireFallbackTitle => 'アンケート';
+
+  @override
+  String get donateShareEyebrow => '習慣をシェア';
+
+  @override
+  String get donateHeroTitle => 'あなたの習慣を研究のためにシェアしよう';
+
+  @override
+  String get donateHeroSubtitle => '匿名 · 約2分 · 世界中の研究者に貢献できます';
+
+  @override
+  String get donateStartSharingButton => 'シェアを始める';
+
+  @override
+  String get donateQuestionnaireEyebrow => 'アンケート';
+
+  @override
+  String get donateQuestionnaireDueSubtitle => '短いアンケート · 今すぐ回答をお願いします';
+
+  @override
+  String get donateCompleteButton => '回答する';
+
+  @override
+  String get donateSharedTodayTitle => '本日シェア済み';
+
+  @override
+  String get donateSharedTodayBody => 'ご協力ありがとうございます！次の課題は明日また来てくださいね。';
+
+  @override
+  String get donateWhyShareTitle => 'なぜシェアするの？';
+
+  @override
+  String get donateWhyShareBody =>
+      'シェアされた習慣は匿名で集められ、人々が日常生活の中でどのように健康的な習慣を築いているかを示す、公開された知見として蓄積されていきます。研究者がより多くの実例に触れるほど、あなたを含むすべての人へのおすすめがより良いものになります。';
+
+  @override
+  String get donatePleaseAnswerAllQuestions => 'すべての質問に回答してください';
+
+  @override
+  String get donateNotAHabitMessage =>
+      'これは習慣のようには見えません。「毎朝30分散歩する」のように、繰り返し行っている行動を説明してみてください。';
+
+  @override
+  String get donateSavedOffline => 'オフラインで保存しました。接続が回復次第、自動的に送信されます';
+
+  @override
+  String get donateUnauthorized => '認証エラーです。もう一度サインインしてください。';
+
+  @override
+  String get donateAnalysisUnavailable =>
+      '習慣の分析は一時的にご利用いただけません。しばらくしてからもう一度お試しください。';
+
+  @override
+  String get donateTodaysTasksEyebrow => '今日のタスク';
+
+  @override
+  String get donateCommunityLabel => 'コミュニティ';
+
+  @override
+  String get donateDayStreakLabel => '連続日数';
+
+  @override
+  String get donateFormDescribeHabitLabel => 'あなたの習慣を教えてください';
+
+  @override
+  String get donateFormHabitHint => '例：毎朝30分散歩する';
+
+  @override
+  String get donateFormHabitValidationError => '習慣を説明してください（10文字以上）';
+
+  @override
+  String get donateFormFrequencyQuestion => 'この習慣をどのくらいの頻度で行っていますか？';
+
+  @override
+  String get donateFormFrequencyRarely => 'たまに';
+
+  @override
+  String get donateFormFrequencyWeekly => '週1回';
+
+  @override
+  String get donateFormFrequencySeveralPerWeek => '週に数回';
+
+  @override
+  String get donateFormFrequencyDaily => '毎日';
+
+  @override
+  String get donateFormDurationQuestion => 'この習慣はどのくらい続けていますか？';
+
+  @override
+  String get donateFormDurationUnder1Month => '1か月未満';
+
+  @override
+  String get donateFormDuration1To3Months => '1〜3か月';
+
+  @override
+  String get donateFormDuration3To12Months => '3〜12か月';
+
+  @override
+  String get donateFormDurationOver1Year => '1年以上';
+
+  @override
+  String get donateFormHealthBenefitQuestion => 'この習慣はあなたの健康にどれくらい役立っていますか？';
+
+  @override
+  String get donateFormRatingCaption => '1 = まったく当てはまらない · 5 = 非常に当てはまる';
+
+  @override
+  String get donateFormWellbeingQuestion => 'この習慣はあなたの幸福感をどれくらい高めていますか？';
+
+  @override
+  String get setCueNextButton => '次へ';
+
+  @override
+  String get setCueNoneAvailableTitle => 'まだきっかけが登録されていません';
+
+  @override
+  String get setCueNoneAvailableSubtitle => '研究担当者がまもなくきっかけを設定します';
+
+  @override
+  String setCueAssignedNumbered(int index, int total) {
+    return 'きっかけ $index/$total（研究により割り当て）';
+  }
+
+  @override
+  String get setCueAssignedByStudy => '研究により割り当て';
+
+  @override
+  String addAnotherCueCount(int current, int max) {
+    return 'きっかけを追加（$current/$max）';
+  }
+
+  @override
+  String setCueMaxReachedNote(int max) {
+    return 'きっかけは最大$max個まで追加できます。';
+  }
+
+  @override
+  String couldNotLogToday(String error) {
+    return '本日の記録を保存できませんでした：$error';
+  }
+
+  @override
+  String get continueButton => '次へ';
+
+  @override
+  String get behaviorWalking => 'ウォーキング';
+
+  @override
+  String get behaviorLightJogging => '軽いジョギング';
+
+  @override
+  String get behaviorCycling => 'サイクリング';
+
+  @override
+  String get behaviorStructuredCalisthenics => '自重トレーニング';
+
+  @override
+  String get behaviorYoga => 'ヨガ';
+
+  @override
+  String get describeYourHabitMinLength => '習慣を入力してください(3文字以上)';
+
+  @override
+  String get yourHabitLabel => 'あなたの習慣';
+
+  @override
+  String get yourHabitHint => '例:20分のウォーキング';
+
+  @override
+  String get nextButton => '次へ';
 }

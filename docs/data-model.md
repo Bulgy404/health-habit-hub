@@ -564,6 +564,7 @@ MongoDB stores operational data: survey definitions, participant records, profil
 | `users` | Per-user preferences (preferredLanguage) | No |
 | `questionnaires` | Questionnaire definitions (slug, title, questions) | No |
 | `form_responses` | Questionnaire form submissions (answers) from participants | No |
+| `studies` | Research studies: groups, feature toggles, end date + end-of-study notification | Yes (`isActive`/`deletedAt`) |
 | `questionnaire_assignments` | Questionnaire assigned to a study (all groups) or a specific group, with a cadence | No |
 | `questionnaire_windows` | Per-participant scheduled questionnaire occurrences + completion state | No |
 | `enrollments` | Study/group membership per participant (drives study participant counts) | No |
@@ -577,6 +578,8 @@ MongoDB stores operational data: survey definitions, participant records, profil
 | `notification_campaigns` | Researcher-composed push notification campaigns | No |
 | `consents` | Informed-consent acceptances (append-only audit trail, versioned) | No |
 | `habit_comments` | Comment-ownership mapping (author of anonymous Neo4j Comment nodes) | No |
+| `backup_audit_log` | Append-only record of admin backup trigger/restore/upload actions | No |
+| `restore_confirmation_tokens` | Short-lived, single-use tokens gating a restore call (TTL-indexed) | No |
 
 ---
 
@@ -831,7 +834,7 @@ Per-user preferences. Created/upserted by `PUT /api/v1/users/me`. If no record e
 |---|---|---|---|
 | `_id` | ObjectId | Auto | MongoDB document ID |
 | `userId` | String | Yes | Keycloak `sub` (unique) |
-| `preferredLanguage` | String | Yes | `"en"` or `"de"` |
+| `preferredLanguage` | String | Yes | `"en"`, `"de"`, or `"ja"` |
 
 **Example document:**
 ```json
@@ -892,6 +895,36 @@ On submission the response is also linked to the participant's next open
 `questionnaire_windows` entry for that questionnaire (marking that scheduled
 timepoint complete). Ad-hoc submissions with no matching window simply store the
 response without linking.
+
+---
+
+#### `studies`
+
+A research study/cohort: its experiment groups, participant-facing feature toggles, and lifecycle (end date + end-of-study notification). Managed via `.../admin/studies`.
+
+| Field | BSON Type | Required | Description |
+|---|---|---|---|
+| `_id` | ObjectId | Auto | Study ID |
+| `name` | String | Yes | Human-readable study name |
+| `description` | String | No | |
+| `isDefault` | Boolean | Yes | At most one study may be default (partial-unique index); used for round-robin enrollment without a study code |
+| `isActive` | Boolean | Yes | Soft-delete flag |
+| `recommenderEnabled` | Boolean | No | Absence = enabled. When `false`, participants don't see the recommender screen |
+| `onboardingEnabled` | Boolean | No | Absence = enabled. Per-group override in `groups[].onboardingEnabled` |
+| `selfHabitCreationEnabled` | Boolean | No | Absence = enabled. Per-group override in `groups[].selfHabitCreationEnabled` |
+| `questionnaireReminders` | Object | No | `{ enabled, hour }` — local due-date reminder config, defaults `{ true, 9 }` |
+| `endDate` | Date \| null | No | When set, the study concludes on this date; the admin schedule calendar stops projecting occurrences past it |
+| `endOfStudyNotification` | Object \| null | No | `{ enabled, title, body }` — configures the local device notification fired on `endDate`. Defaults to `enabled: false` |
+| `groups` | Array | Yes | 1–4 experiment groups: `{ id, label, index, allocationWeight, cueConfig, activityTypeConfig, reminderConfig, autoDonate, onboardingEnabled, selfHabitCreationEnabled }` |
+| `questionnaires` | Array\<ObjectId\> | Yes | Refs to `questionnaires._id` administered natively in the study (separate from cadence-based `questionnaire_assignments` below) |
+| `createdAt` / `updatedAt` | Date | Yes | Timestamps |
+
+`endOfStudyNotification` is delivered by the mobile app scheduling a local
+notification (`flutter_local_notifications`), not a server push — the app
+picks up `endDate`/`endOfStudyNotification` via `GET /api/v1/questionnaires/due`
+(present regardless of whether any questionnaires are currently due) and
+reschedules on every app start, the same pattern used for questionnaire
+reminders.
 
 ---
 
@@ -963,6 +996,15 @@ created/changed (back-filled for already-enrolled participants).
 Unique index on `(userId, assignmentId, occurrence)`. Study-level completion
 (`completed / total`) is aggregated over this collection; per-participant
 completion + answers power the admin participant view.
+
+The admin schedule calendar (`GET .../questionnaire-calendar`) reads real
+occurrences from this collection, filtered to active questionnaires. For
+assignments with no matching windows yet (no one enrolled under that
+scope/group since the assignment was created), it additionally computes
+*projected* occurrences from the assignment's cadence — anchored as if a
+participant enrolled today, and cut off at the study's `endDate` if set — so
+a newly created assignment isn't invisible on the calendar just because no
+one has enrolled under it yet.
 
 ---
 
@@ -1078,7 +1120,7 @@ Pre-rated contextual cues for study conditions.
 | `quality` | String | `"low"` or `"high"` |
 | `dimensions` | Object | `{stability: 1-5, salience: 1-5, specificity: 1-5}` |
 | `domain` | String | e.g. `"physical_activity"` |
-| `language` | String | `"en"` or `"de"` |
+| `language` | String | `"en"`, `"de"`, or `"ja"` |
 | `createdAt` | Date | |
 
 Indexes: `{quality, domain, language}`
@@ -1105,6 +1147,51 @@ Researcher-composed push notification campaigns.
 | `createdAt` | Date | |
 
 Indexes: `{status, scheduledFor}`, `{studyId}` (sparse)
+
+---
+
+#### `backup_audit_log`
+
+Append-only record of every trigger/restore/upload action taken through the
+admin **Backups** page. Written by `app/routes/admin/backupsRouter.js`
+*before* the action is attempted (not after it completes), so a crash
+mid-restore still leaves a record of who initiated it — `result` simply
+stays `"requested"` if nothing ever follows up, which is itself meaningful.
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | |
+| `byUserId` | String | Keycloak `sub` of the acting admin |
+| `byUsername` | String | Denormalised `preferred_username`, display only — never used for identity/authorization decisions |
+| `action` | String | `"trigger"` \| `"restore"` \| `"upload"` |
+| `filename` | String\|null | Target/result backup filename, when applicable |
+| `result` | String | `"requested"` \| `"succeeded"` \| `"failed"` |
+| `detail` | String\|null | Error message or extra context |
+| `createdAt` | Date | |
+
+Indexes: `{createdAt: -1}`
+
+---
+
+#### `restore_confirmation_tokens`
+
+Short-lived, single-use tokens that gate the actual restore call. An admin
+must first `POST /api/v1/admin/backups/:filename/restore-token` to get one
+scoped to that exact filename and their own user id; the restore request
+must then present it. This closes the gap where a stale or replayed restore
+request (a leaked URL, a buggy client retry) could fire a destructive
+restore well after the admin's actual intent.
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | |
+| `token` | String | Opaque random value, unique |
+| `filename` | String | The one backup this token authorizes restoring from |
+| `byUserId` | String | Keycloak `sub` — the restore call must come from the same user |
+| `createdAt` | Date | |
+| `expiresAt` | Date | 2 minutes after `createdAt`; TTL-indexed, deleted automatically |
+
+Indexes: `{token}` (unique), `{expiresAt}` (TTL, `expireAfterSeconds: 0`)
 
 ---
 

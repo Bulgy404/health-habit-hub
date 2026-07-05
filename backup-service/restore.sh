@@ -2,7 +2,18 @@
 set -euo pipefail
 
 BACKUP_FILE=$1
+# Optional second arg: pass --skip-keycloak to skip the Keycloak realm
+# reimport even if the archive contains one (used by the admin-UI restore
+# flow for uploaded/foreign archives, where a malicious realm export is the
+# single highest-blast-radius risk — Keycloak reimport there is opt-in).
+SKIP_KEYCLOAK=false
+if [ "${2:-}" = "--skip-keycloak" ]; then
+  SKIP_KEYCLOAK=true
+fi
 RESTORE_DIR="/tmp/restore-$$"
+
+# shellcheck source=./lib.sh
+source "$(dirname "$0")/lib.sh"
 
 if [ -z "$BACKUP_FILE" ]; then
   echo "Usage: docker compose run --rm backup /restore.sh <backup-file>"
@@ -35,6 +46,12 @@ if [ "$confirm" != "YES" ]; then
   echo "Restore cancelled."
   exit 0
 fi
+
+if ! acquire_lock; then
+  echo "ERROR: Another backup or restore is already running — aborting."
+  exit 1
+fi
+trap release_lock EXIT
 
 echo ""
 echo "Extracting backup archive..."
@@ -134,7 +151,9 @@ fi
 
 echo ""
 echo "Restoring Keycloak realm (if backup present)..."
-if [ -f "$RESTORE_DIR/keycloak/hhh-realm.json" ]; then
+if [ "$SKIP_KEYCLOAK" = true ]; then
+  echo "Skipped (--skip-keycloak requested)"
+elif [ -f "$RESTORE_DIR/keycloak/hhh-realm.json" ]; then
   KEYCLOAK_HOST="${KEYCLOAK_HOST:-keycloak}"
   KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
 
@@ -179,3 +198,7 @@ fi
 echo "=========================================="
 echo ""
 echo "All affected containers have been restarted."
+
+# Exit non-zero on any component failure — callers (including automation
+# driving this script) must not treat a partial restore as a success.
+exit $RESTORE_ERRORS

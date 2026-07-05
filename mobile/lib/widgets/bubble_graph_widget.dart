@@ -8,6 +8,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/bubble_graph.dart';
 import 'bubble_graph/bubble_graph_data.dart';
 import 'bubble_graph/bubble_graph_gesture_handler.dart';
@@ -79,6 +80,7 @@ class _BubbleGraphWidgetState extends State<BubbleGraphWidget>
   // ── Overview level (dimension bubbles) ────────────────────────────────────
 
   List<BubbleNode> _dimensionBubbles() {
+    final l10n = AppLocalizations.of(context)!;
     final dims = widget.graph.dimensions;
     if (dims.isEmpty) return [];
     final maxCount = dims.map((d) => d.habitCount).reduce(math.max);
@@ -88,7 +90,7 @@ class _BubbleGraphWidgetState extends State<BubbleGraphWidget>
       return BubbleNode(
         id: d.id,
         label: d.label,
-        sublabel: '${d.habitCount} habit${d.habitCount == 1 ? '' : 's'}',
+        sublabel: l10n.bubbleGraphHabitCount(d.habitCount),
         radius: r,
         color: colorFor(d.id),
         payload: d,
@@ -105,7 +107,8 @@ class _BubbleGraphWidgetState extends State<BubbleGraphWidget>
     final color = colorFor(dim.id);
     return habits.map((h) {
       final ratio = math.sqrt((h.iDoThisCount + 1) / maxAnnot);
-      final r = 18.0 + ratio * 42.0; // 18–60 px, driven by "I do this too" count
+      final r =
+          18.0 + ratio * 42.0; // 18–60 px, driven by "I do this too" count
       return BubbleNode(
         id: h.id,
         label: h.label,
@@ -121,6 +124,7 @@ class _BubbleGraphWidgetState extends State<BubbleGraphWidget>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final active = _active;
 
     Widget content;
@@ -143,7 +147,7 @@ class _BubbleGraphWidgetState extends State<BubbleGraphWidget>
             child: bubbles.isEmpty
                 ? Center(
                     child: Text(
-                      'No habits in this dimension yet.',
+                      l10n.bubbleGraphNoHabitsInDimension,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   )
@@ -176,6 +180,7 @@ class _DimensionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final color = colorFor(dimension.id);
     return Container(
       padding: const EdgeInsets.fromLTRB(4, 6, 16, 6),
@@ -184,7 +189,7 @@ class _DimensionBar extends StatelessWidget {
           IconButton(
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back),
-            tooltip: 'All categories',
+            tooltip: l10n.bubbleGraphAllCategories,
           ),
           Container(
             width: 14,
@@ -195,17 +200,16 @@ class _DimensionBar extends StatelessWidget {
           Expanded(
             child: Text(
               dimension.label,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
           Text(
-            '${dimension.habitCount} habit${dimension.habitCount == 1 ? '' : 's'}',
+            l10n.bubbleGraphHabitCount(dimension.habitCount),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
+              color: Theme.of(context).colorScheme.outline,
+            ),
           ),
         ],
       ),

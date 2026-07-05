@@ -367,12 +367,57 @@ export async function deleteAssignment({ db, studyId, assignmentId }) {
  * Open questionnaire windows for a participant that are due now or coming up
  * within [withinDays] — powers the participant "today's tasks" cards and
  * scheduled reminders. Skips windows whose questionnaire is inactive/removed.
+ * Also carries the participant's study end date / end-of-study notification
+ * config so the mobile app can schedule that notification locally, even when
+ * there are no due questionnaires left (e.g. near the end of the study).
  * @param {{ db, userId, withinDays? }} deps
  */
 export async function getDueQuestionnaires({ db, userId, withinDays = 30 }) {
   const now = new Date();
   const horizon = new Date(now.getTime() + withinDays * DAY_MS);
   const defaultReminders = { enabled: true, hour: 9 };
+  const defaultResult = {
+    reminders: defaultReminders,
+    questionnaires: [],
+    studyEndDate: null,
+    endOfStudyNotification: { enabled: false, title: '', body: '' },
+  };
+
+  // Reminder / end-of-study config live on the participant's study, resolved
+  // via their enrollment — not via a due window, since a participant may have
+  // no due questionnaires left yet still need their study's end-date config.
+  const enrollment = await db
+    .collection('enrollments')
+    .findOne({ userId: String(userId) }, { projection: { studyId: 1 } });
+  if (!enrollment) return defaultResult;
+
+  const study = await db.collection('studies').findOne(
+    { _id: enrollment.studyId },
+    {
+      projection: {
+        questionnaireReminders: 1,
+        endDate: 1,
+        endOfStudyNotification: 1,
+      },
+    }
+  );
+
+  let reminders = defaultReminders;
+  if (study?.questionnaireReminders) {
+    reminders = {
+      enabled: study.questionnaireReminders.enabled !== false,
+      hour: Number.isInteger(study.questionnaireReminders.hour)
+        ? study.questionnaireReminders.hour
+        : 9,
+    };
+  }
+  const studyEndDate = study?.endDate ?? null;
+  const endOfStudyNotification = {
+    enabled: study?.endOfStudyNotification?.enabled === true,
+    title: study?.endOfStudyNotification?.title ?? '',
+    body: study?.endOfStudyNotification?.body ?? '',
+  };
+
   const wins = await db
     .collection(WINDOWS)
     .find({
@@ -383,23 +428,11 @@ export async function getDueQuestionnaires({ db, userId, withinDays = 30 }) {
     .sort({ scheduledFor: 1 })
     .toArray();
   if (wins.length === 0) {
-    return { reminders: defaultReminders, questionnaires: [] };
-  }
-
-  // Reminder config lives on the participant's study.
-  let reminders = defaultReminders;
-  const study = await db
-    .collection('studies')
-    .findOne(
-      { _id: wins[0].studyId },
-      { projection: { questionnaireReminders: 1 } }
-    );
-  if (study?.questionnaireReminders) {
-    reminders = {
-      enabled: study.questionnaireReminders.enabled !== false,
-      hour: Number.isInteger(study.questionnaireReminders.hour)
-        ? study.questionnaireReminders.hour
-        : 9,
+    return {
+      reminders,
+      questionnaires: [],
+      studyEndDate,
+      endOfStudyNotification,
     };
   }
 
@@ -424,50 +457,96 @@ export async function getDueQuestionnaires({ db, userId, withinDays = 30 }) {
       isDue: w.scheduledFor <= now,
     }));
 
-  return { reminders, questionnaires };
+  return { reminders, questionnaires, studyEndDate, endOfStudyNotification };
 }
 
 /**
  * Scheduled questionnaire occurrences across a study, grouped by calendar date
- * (from participants' window due dates) — powers the admin schedule calendar.
+ * — powers the admin schedule calendar. Combines two sources:
+ *  - real windows already materialized for enrolled participants
+ *  - projected occurrences (tagged `projected: true`) for assignments that
+ *    have no enrolled participants yet, anchored as if someone enrolled today
+ * Both are filtered to active (non-deactivated) questionnaires, and projected
+ * occurrences are cut off at the study's endDate, if set.
  * @param {{ db, studyId }} deps
- * @returns {Promise<Array<{ date: string, items: Array<{ questionnaireSlug, total, completed }> }>>}
+ * @returns {Promise<Array<{ date: string, items: Array<{ questionnaireSlug, total, completed, projected? }> }>>}
  */
 export async function getStudyScheduleCalendar({ db, studyId }) {
   const sOid = toOid(studyId);
   if (!sOid) return [];
-  const rows = await db
-    .collection(WINDOWS)
-    .aggregate([
-      { $match: { studyId: sOid } },
-      {
-        $group: {
-          _id: {
-            date: {
-              $dateToString: { format: '%Y-%m-%d', date: '$scheduledFor' },
-            },
-            slug: '$questionnaireSlug',
-          },
-          total: { $sum: 1 },
-          completed: {
-            $sum: { $cond: [{ $ne: ['$submittedAt', null] }, 1, 0] },
-          },
-        },
-      },
-      { $sort: { '_id.date': 1 } },
-    ])
+
+  const study = await db
+    .collection('studies')
+    .findOne({ _id: sOid }, { projection: { endDate: 1 } });
+  const endDate = study?.endDate ? new Date(study.endDate) : null;
+
+  const wins = await db.collection(WINDOWS).find({ studyId: sOid }).toArray();
+  const assignments = await db
+    .collection(ASSIGNMENTS)
+    .find({ studyId: sOid, active: { $ne: false } })
     .toArray();
+
+  const slugs = [
+    ...new Set([
+      ...wins.map((w) => w.questionnaireSlug),
+      ...assignments.map((a) => a.questionnaireSlug),
+    ]),
+  ];
+  const qDocs = await db
+    .collection('questionnaires')
+    .find({ slug: { $in: slugs } })
+    .toArray();
+  const activeBySlug = Object.fromEntries(
+    qDocs.map((q) => [q.slug, q.active !== false])
+  );
+
   const byDate = new Map();
-  for (const r of rows) {
-    const d = r._id.date;
-    if (!byDate.has(d)) byDate.set(d, []);
-    byDate.get(d).push({
-      questionnaireSlug: r._id.slug,
-      total: r.total,
-      completed: r.completed,
-    });
+  const addItem = (date, item) => {
+    if (!byDate.has(date)) byDate.set(date, []);
+    byDate.get(date).push(item);
+  };
+
+  // Real, per-participant windows — grouped by (date, slug).
+  const realTotals = new Map();
+  const assignmentIdsWithRealWindows = new Set();
+  for (const w of wins) {
+    if (activeBySlug[w.questionnaireSlug] === false) continue;
+    assignmentIdsWithRealWindows.add(w.assignmentId.toString());
+    const date = w.scheduledFor.toISOString().slice(0, 10);
+    const key = `${date}|${w.questionnaireSlug}`;
+    const entry = realTotals.get(key) ?? {
+      date,
+      questionnaireSlug: w.questionnaireSlug,
+      total: 0,
+      completed: 0,
+    };
+    entry.total += 1;
+    if (w.submittedAt) entry.completed += 1;
+    realTotals.set(key, entry);
   }
-  return [...byDate.entries()].map(([date, items]) => ({ date, items }));
+  for (const { date, ...item } of realTotals.values()) addItem(date, item);
+
+  // Projected occurrences for assignments with no enrolled participants yet,
+  // anchored at "today" as a preview of what a new enrollee would see.
+  const today = new Date();
+  for (const a of assignments) {
+    if (activeBySlug[a.questionnaireSlug] === false) continue;
+    if (assignmentIdsWithRealWindows.has(a._id.toString())) continue;
+    for (const offDays of scheduleOffsets(a.cadence)) {
+      const projectedDate = new Date(today.getTime() + offDays * DAY_MS);
+      if (endDate && projectedDate > endDate) continue;
+      addItem(projectedDate.toISOString().slice(0, 10), {
+        questionnaireSlug: a.questionnaireSlug,
+        total: 1,
+        completed: 0,
+        projected: true,
+      });
+    }
+  }
+
+  return [...byDate.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([date, items]) => ({ date, items }));
 }
 
 /**

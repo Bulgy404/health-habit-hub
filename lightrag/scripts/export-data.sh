@@ -10,7 +10,7 @@
 
 set -e
 
-CONTAINER="${LIGHTRAG_CONTAINER:-h3-2-lightrag}"
+CONTAINER="${LIGHTRAG_CONTAINER:-hhh-lightrag}"
 OUT_DIR="$(dirname "$0")/../data"
 
 echo "Exporting LightRAG data from $CONTAINER → $OUT_DIR"

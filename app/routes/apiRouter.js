@@ -5,6 +5,8 @@ import { createAuthMiddleware, ROLES } from '../middleware/auth.js';
 import { requireRole } from '../middleware/requireRole.js';
 import { apiRateLimiter } from '../middleware/rateLimiter.js';
 import { sanitizeBody } from '../middleware/inputSanitizer.js';
+import { maintenanceModeGuard } from '../middleware/maintenanceMode.js';
+import { makeGetDb } from '../utils/getDb.js';
 import { createSurveyRouter } from './surveyRouter.js';
 import { createRecommendRouter } from './recommendRouter.js';
 import { createProfileRouter } from './profileRouter.js';
@@ -183,6 +185,11 @@ export function createApiRouter({
 
   // Apply rate limiting after auth so req.user.sub is available for per-user keying
   router.use(limiter);
+
+  // While a backup restore is in flight, refuse everything except the
+  // Backups admin routes themselves — nothing else should read/write Mongo
+  // while it's being dropped and reloaded underneath it.
+  router.use(maintenanceModeGuard({ getDb: makeGetDb(db) }));
 
   // Admin routes: require admin or researcher role
   router.use(

@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useCallback, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 interface StudyGroup {
   id: string;
   label: string;
   index: number;
   cueConfig?: {
-    cueCount: 'single' | 'multi';
-    cueSource: 'low_quality' | 'high_quality' | 'self_selected';
+    cueCount: "single" | "multi";
+    cueSource: "low_quality" | "high_quality" | "self_selected";
     cuePoolId: string | null;
     behaviorOptions: string[];
     maxHabits: number | null;
@@ -26,6 +26,8 @@ export interface StudySummary {
   onboardingEnabled: boolean;
   selfHabitCreationEnabled: boolean;
   questionnaireReminders?: { enabled: boolean; hour: number };
+  endDate?: string | null;
+  endOfStudyNotification?: { enabled: boolean; title: string; body: string };
   groups: StudyGroup[];
   questionnaires: string[];
   participantCount: number;
@@ -33,13 +35,12 @@ export interface StudySummary {
 }
 
 const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1') +
-  '/admin/studies';
+  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/studies";
 
 async function fetchStudies(token: string): Promise<StudySummary[]> {
   const res = await fetch(API_BASE, {
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   });
@@ -50,7 +51,7 @@ async function fetchStudies(token: string): Promise<StudySummary[]> {
   const data = await res.json();
   return Array.isArray(data)
     ? (data as StudySummary[])
-    : (data as { studies?: StudySummary[] }).studies ?? [];
+    : ((data as { studies?: StudySummary[] }).studies ?? []);
 }
 
 /**
@@ -60,22 +61,21 @@ async function fetchStudies(token: string): Promise<StudySummary[]> {
  */
 export function useStudiesData() {
   const { data: session } = useSession();
-  const token =
-    (session as { accessToken?: string } | null)?.accessToken ?? '';
+  const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
 
   const [studies, setStudies] = useState<StudySummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const refetch = useCallback(async () => {
     if (!token) return;
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const items = await fetchStudies(token);
       setStudies(items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load studies');
+      setError(err instanceof Error ? err.message : "Failed to load studies");
     } finally {
       setLoading(false);
     }

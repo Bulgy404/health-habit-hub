@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
+
 /// Storage key for the onboarding-complete flag.
 const String kOnboardingCompleteKey = 'onboarding_complete';
 
@@ -52,34 +54,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   // 4 pages total: 1 welcome page + 3 walkthrough steps.
   static const int _totalPages = 4;
 
-  static const List<_WalkthroughStep> _steps = [
+  List<_WalkthroughStep> _steps(AppLocalizations l10n) => [
     _WalkthroughStep(
       icon: Icons.volunteer_activism,
-      title: 'Share a Habit',
-      description:
-          'Share your personal habits with researchers to help build a richer '
-          'understanding of everyday behaviour. Your contributions are '
-          'anonymised and used only for scientific research. Every habit you '
-          'share makes the dataset more valuable for everyone.',
+      title: l10n.onboardingShareHabitTitle,
+      description: l10n.onboardingShareHabitDescription,
     ),
     _WalkthroughStep(
       icon: Icons.account_tree,
-      title: 'Explore & Annotate',
-      description:
-          'Browse the interactive habit graph to discover how habits relate '
-          'to each other across the community. You can annotate connections '
-          'and add context to improve the shared knowledge base. The more you '
-          'explore, the richer the graph becomes.',
+      title: l10n.onboardingExploreAnnotateTitle,
+      description: l10n.onboardingExploreAnnotateDescription,
     ),
     _WalkthroughStep(
       icon: Icons.lightbulb_outline,
-      title: 'Get Recommendations',
-      description:
-          'Receive personalised habit recommendations based on your profile '
-          'and the collective dataset. Our recommendation engine learns from '
-          'community contributions to suggest habits that fit your lifestyle. '
-          'Discover new habits that others with similar profiles have found '
-          'helpful.',
+      title: l10n.onboardingRecommendationsTitle,
+      description: l10n.onboardingRecommendationsDescription,
     ),
   ];
 
@@ -114,6 +103,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final steps = _steps(l10n);
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -124,16 +115,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 controller: _pageController,
                 onPageChanged: (page) => setState(() => _currentPage = page),
                 children: [
-                  _WelcomePage(
-                    onGetStarted: _nextPage,
-                    onRestore: _onRestore,
-                  ),
-                  for (var i = 0; i < _steps.length; i++)
+                  _WelcomePage(onGetStarted: _nextPage, onRestore: _onRestore),
+                  for (var i = 0; i < steps.length; i++)
                     _WalkthroughPage(
-                      step: _steps[i],
-                      isLast: i == _steps.length - 1,
-                      onNext: i == _steps.length - 1 ? _onContinue : _nextPage,
-                      onSkip: i == _steps.length - 1 ? null : _skipToLast,
+                      step: steps[i],
+                      isLast: i == steps.length - 1,
+                      onNext: i == steps.length - 1 ? _onContinue : _nextPage,
+                      onSkip: i == steps.length - 1 ? null : _skipToLast,
                     ),
                 ],
               ),
@@ -145,7 +133,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
-                    _steps.length,
+                    steps.length,
                     (i) => AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -176,43 +164,69 @@ class _WelcomePage extends StatelessWidget {
   final VoidCallback onGetStarted;
   final VoidCallback onRestore;
 
-  const _WelcomePage({
-    required this.onGetStarted,
-    required this.onRestore,
-  });
+  const _WelcomePage({required this.onGetStarted, required this.onRestore});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            width: 80, height: 80,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
               color: const Color(0xFFEDF7E5),
               borderRadius: BorderRadius.circular(24),
-              boxShadow: const [BoxShadow(color: Color(0x2E45B700), blurRadius: 24, offset: Offset(0, 8))],
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x2E45B700),
+                  blurRadius: 24,
+                  offset: Offset(0, 8),
+                ),
+              ],
             ),
-            child: const Icon(Icons.favorite, size: 44, color: Color(0xFF45B700)),
+            child: const Icon(
+              Icons.favorite,
+              size: 44,
+              color: Color(0xFF45B700),
+            ),
           ),
           const SizedBox(height: 28),
-          const Text(
-            'Health\nHabit Hub',
-            style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Color(0xFF111827), height: 1.1),
+          Text(
+            // appTitle is the app's brand name and is not translated; the
+            // line break here is purely presentational.
+            l10n.appTitle.replaceFirst(' ', '\n'),
+            style: const TextStyle(
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF111827),
+              height: 1.1,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 14),
-          const Text(
-            'A citizen-science platform where your habits help build a richer understanding of everyday behaviour.',
-            style: TextStyle(fontSize: 15, color: Color(0xFF6B7280), height: 1.55),
+          Text(
+            l10n.onboardingSubtitle,
+            style: const TextStyle(
+              fontSize: 15,
+              color: Color(0xFF6B7280),
+              height: 1.55,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
-          FilledButton(onPressed: onGetStarted, child: const Text('Get Started')),
+          FilledButton(
+            onPressed: onGetStarted,
+            child: Text(l10n.onboardingGetStarted),
+          ),
           const SizedBox(height: 12),
-          TextButton(onPressed: onRestore, child: const Text('Restore existing account')),
+          TextButton(
+            onPressed: onRestore,
+            child: Text(l10n.onboardingRestoreAccount),
+          ),
         ],
       ),
     );
@@ -240,6 +254,7 @@ class _WalkthroughPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -247,7 +262,10 @@ class _WalkthroughPage extends StatelessWidget {
           Align(
             alignment: Alignment.topRight,
             child: onSkip != null
-                ? TextButton(onPressed: onSkip, child: const Text('Skip'))
+                ? TextButton(
+                    onPressed: onSkip,
+                    child: Text(l10n.onboardingSkip),
+                  )
                 : const SizedBox(height: 40),
           ),
           Expanded(
@@ -255,24 +273,43 @@ class _WalkthroughPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 80, height: 80,
+                  width: 80,
+                  height: 80,
                   decoration: BoxDecoration(
                     color: const Color(0xFFEDF7E5),
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [BoxShadow(color: Color(0x2E45B700), blurRadius: 24, offset: Offset(0, 8))],
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x2E45B700),
+                        blurRadius: 24,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
                   ),
-                  child: Icon(step.icon, size: 44, color: const Color(0xFF45B700)),
+                  child: Icon(
+                    step.icon,
+                    size: 44,
+                    color: const Color(0xFF45B700),
+                  ),
                 ),
                 const SizedBox(height: 32),
                 Text(
                   step.title,
-                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF111827)),
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF111827),
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 14),
                 Text(
                   step.description,
-                  style: const TextStyle(fontSize: 15, color: Color(0xFF6B7280), height: 1.55),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF6B7280),
+                    height: 1.55,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -282,7 +319,9 @@ class _WalkthroughPage extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 32),
             child: FilledButton(
               onPressed: onNext,
-              child: Text(isLast ? 'Continue' : 'Next'),
+              child: Text(
+                isLast ? l10n.onboardingContinue : l10n.onboardingNext,
+              ),
             ),
           ),
         ],

@@ -115,8 +115,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
         return;
       }
       cues = [
-        for (final t in texts)
-          IntentionCue(text: t, source: 'self_selected'),
+        for (final t in texts) IntentionCue(text: t, source: 'self_selected'),
       ];
     }
 
@@ -177,13 +176,15 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
             // ── Validation error ───────────────────────────────────────
             if (_error != null) ...[
               const SizedBox(height: 8),
-              Text(_error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ],
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _onNext,
-              child: const Text('Next'),
+              child: Text(l10n.setCueNextButton),
             ),
           ],
         ),
@@ -192,13 +193,14 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
   }
 
   List<Widget> _buildAssignedCues(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (widget.config.assignedCues.isEmpty) {
-      return const [
+      return [
         Card(
           child: ListTile(
-            leading: Icon(Icons.hourglass_empty),
-            title: Text('No cues available yet'),
-            subtitle: Text('Your study coordinator will assign cues soon'),
+            leading: const Icon(Icons.hourglass_empty),
+            title: Text(l10n.setCueNoneAvailableTitle),
+            subtitle: Text(l10n.setCueNoneAvailableSubtitle),
           ),
         ),
       ];
@@ -214,8 +216,8 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
             title: Text(cue.text),
             subtitle: Text(
               total > 1
-                  ? 'Cue ${index + 1} of $total (assigned by study)'
-                  : 'Assigned by study',
+                  ? l10n.setCueAssignedNumbered(index + 1, total)
+                  : l10n.setCueAssignedByStudy,
             ),
           ),
         );
@@ -240,8 +242,9 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
                     labelText: _cueControllers.length == 1
                         ? 'Your cue'
                         : 'Cue ${i + 1}',
-                    hintText:
-                        i == 0 ? l10n.setCuePlaceholder : 'e.g. at home on weekdays',
+                    hintText: i == 0
+                        ? l10n.setCuePlaceholder
+                        : 'e.g. at home on weekdays',
                     border: const OutlineInputBorder(),
                   ),
                   maxLength: 200,
@@ -269,7 +272,9 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
           child: TextButton.icon(
             onPressed: _addCue,
             icon: const Icon(Icons.add),
-            label: Text('Add another cue (${_cueControllers.length}/$kMaxCues)'),
+            label: Text(
+              l10n.addAnotherCueCount(_cueControllers.length, kMaxCues),
+            ),
           ),
         ),
       );
@@ -278,7 +283,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
         Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Text(
-            'You can add up to $kMaxCues cues.',
+            l10n.setCueMaxReachedNote(kMaxCues),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
