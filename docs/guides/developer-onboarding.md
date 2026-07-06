@@ -129,7 +129,7 @@ LIGHTRAG_API_KEY=dev-lightrag-secret
 LIGHTRAG_HOST_PORT=9622
 
 # ── LibreTranslate ───────────────────────────────────────────────────────
-LT_LOAD_ONLY=de,en
+LT_LOAD_ONLY=de,en,ja,fr,nl
 LT_REQ_LIMIT=0
 LT_DEBUG=false
 LT_DISABLE_WEB_UI=false

@@ -7,7 +7,7 @@
  * other language, not change its URL.
  */
 
-export const locales = ["en", "de"] as const;
+export const locales = ["en", "de", "fr", "nl"] as const;
 export type Locale = (typeof locales)[number];
 export const defaultLocale: Locale = "en";
 export const LOCALE_COOKIE = "NEXT_LOCALE";
@@ -22,6 +22,7 @@ export function resolveLocale(
   acceptLanguage: string | null | undefined
 ): Locale {
   if (isLocale(cookieValue)) return cookieValue;
-  if (acceptLanguage?.toLowerCase().includes("de")) return "de";
-  return defaultLocale;
+  const lower = acceptLanguage?.toLowerCase() ?? "";
+  const match = locales.find((locale) => locale !== defaultLocale && lower.includes(locale));
+  return match ?? defaultLocale;
 }

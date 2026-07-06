@@ -20,7 +20,7 @@ describe('consent model', () => {
     assert.equal(props.consentVersion.pattern, '^\\d+\\.\\d+\\.\\d+$');
     assert.ok(new RegExp(props.consentVersion.pattern).test('1.0.0'));
     assert.ok(!new RegExp(props.consentVersion.pattern).test('1.0'));
-    assert.deepEqual(props.locale.enum, ['en', 'de', 'ja', null]);
+    assert.deepEqual(props.locale.enum, ['en', 'de', 'ja', 'fr', 'nl', null]);
   });
 
   test('ensureIndexes creates the userId/consentedAt compound index', async () => {

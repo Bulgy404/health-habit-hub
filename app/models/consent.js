@@ -10,8 +10,8 @@
  *   userId          string     Required. Keycloak `sub`.
  *   consentVersion  string     Required. Front-matter version of the accepted
  *                              consent document (e.g. "1.0.0").
- *   locale          string     Locale the document was read in ('en'|'de'|'ja')
- *                              or null when unknown.
+ *   locale          string     Locale the document was read in
+ *                              ('en'|'de'|'ja'|'fr'|'nl') or null when unknown.
  *   consentedAt     Date       Required. Acceptance timestamp (server time).
  */
 
@@ -29,7 +29,10 @@ export const VALIDATOR = {
         bsonType: 'string',
         pattern: '^\\d+\\.\\d+\\.\\d+$',
       },
-      locale: { bsonType: ['string', 'null'], enum: ['en', 'de', 'ja', null] },
+      locale: {
+        bsonType: ['string', 'null'],
+        enum: ['en', 'de', 'ja', 'fr', 'nl', null],
+      },
       consentedAt: { bsonType: 'date' },
     },
   },

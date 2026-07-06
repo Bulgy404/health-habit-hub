@@ -127,7 +127,7 @@ services:
     user: "1032:1032"
     env_file: .env
     environment:
-      - LT_LOAD_ONLY=${LT_LOAD_ONLY:-de,en,ja}
+      - LT_LOAD_ONLY=${LT_LOAD_ONLY:-de,en,ja,fr,nl}
       - LT_REQ_LIMIT=${LT_REQ_LIMIT:-0}
     networks:
       - hhh-proxy

@@ -67,7 +67,11 @@ class LocaleNotifier extends Notifier<Locale> {
   }
 
   bool _isSupported(String lang) =>
-    lang == 'en' || lang == 'de' || lang == 'ja';
+      lang == 'en' ||
+      lang == 'de' ||
+      lang == 'ja' ||
+      lang == 'fr' ||
+      lang == 'nl';
 
   /// Changes locale locally (immediately) and syncs to the API in the
   /// background.  Local state and storage are updated before the network call

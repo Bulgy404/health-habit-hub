@@ -3,7 +3,7 @@
  *
  * This function changes the language parameter in the current url with the selected value and links to the new url.
  *
- * @param {string} lang - The language code to set the application to (e.g., 'en', 'de', 'ja').
+ * @param {string} lang - The language code to set the application to (e.g., 'en', 'de', 'ja', 'fr', 'nl').
  */
 function changeLanguage(lang) {
   console.log('Changing Language to:', lang);

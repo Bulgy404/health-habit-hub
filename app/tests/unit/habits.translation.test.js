@@ -96,6 +96,9 @@ const LIBRE_TRANSLATE_URL = 'http://mock-libretranslate:5000/translate';
 const LITERAL_TRANSLATION = 'I go every morning running.';
 // Refined translation that the LLM produces
 const REFINED_TRANSLATION = 'Every morning I go for a run to start my day.';
+// Refined German translation that the LLM produces (target = de)
+const REFINED_TRANSLATION_DE =
+  'Jeden Morgen gehe ich laufen, um den Tag zu beginnen.';
 
 // ── Test server setup ─────────────────────────────────────────────────────────
 
@@ -158,6 +161,14 @@ before(async () => {
       }
       if (urlStr.includes('/api/v1/llm/map-bcio')) {
         return { ok: true, json: async () => ({ mappings: [] }) };
+      }
+      // Order matters: '-de' is a more specific suffix of the '/refine-translation'
+      // path, so check it first.
+      if (urlStr.includes('/api/v1/llm/refine-translation-de')) {
+        return {
+          ok: true,
+          json: async () => ({ refined_translation: REFINED_TRANSLATION_DE }),
+        };
       }
       if (urlStr.includes('/api/v1/llm/refine-translation')) {
         return {
@@ -271,6 +282,101 @@ test('English habit donation stores translationEN: null (no translation needed)'
     habit.translationEN,
     null,
     'English habits should have translationEN: null'
+  );
+  assert.strictEqual(
+    habit.translationDE,
+    REFINED_TRANSLATION_DE,
+    'English habits should still get a refined German translation'
+  );
+});
+
+test('Japanese habit donation produces both EN and DE translations', async () => {
+  const before = neo4jMock.getHabits().length;
+
+  const res = await post(
+    '/api/v1/habits/donate',
+    { sentence: '毎朝ランニングに行きます。', language: 'ja' },
+    makeToken('user-ja-1')
+  );
+
+  assert.strictEqual(res.status, 201);
+  const body = await res.json();
+  assert.strictEqual(body.is_habit, true);
+
+  const after = neo4jMock.getHabits().length;
+  assert.ok(after > before, 'A new Habit node should be created');
+
+  const habit = neo4jMock.getHabits().at(-1);
+  assert.strictEqual(habit.language, 'ja');
+  assert.strictEqual(
+    habit.translationEN,
+    REFINED_TRANSLATION,
+    'Japanese habits should get a refined English translation'
+  );
+  assert.strictEqual(
+    habit.translationDE,
+    REFINED_TRANSLATION_DE,
+    'Japanese habits should also get a refined German translation'
+  );
+});
+
+test('French habit donation produces both EN and DE translations', async () => {
+  const before = neo4jMock.getHabits().length;
+
+  const res = await post(
+    '/api/v1/habits/donate',
+    { sentence: 'Je cours tous les matins.', language: 'fr' },
+    makeToken('user-fr-1')
+  );
+
+  assert.strictEqual(res.status, 201);
+  const body = await res.json();
+  assert.strictEqual(body.is_habit, true);
+
+  const after = neo4jMock.getHabits().length;
+  assert.ok(after > before, 'A new Habit node should be created');
+
+  const habit = neo4jMock.getHabits().at(-1);
+  assert.strictEqual(habit.language, 'fr');
+  assert.strictEqual(
+    habit.translationEN,
+    REFINED_TRANSLATION,
+    'French habits should get a refined English translation'
+  );
+  assert.strictEqual(
+    habit.translationDE,
+    REFINED_TRANSLATION_DE,
+    'French habits should also get a refined German translation'
+  );
+});
+
+test('Dutch habit donation produces both EN and DE translations', async () => {
+  const before = neo4jMock.getHabits().length;
+
+  const res = await post(
+    '/api/v1/habits/donate',
+    { sentence: 'Ik ga elke ochtend hardlopen.', language: 'nl' },
+    makeToken('user-nl-1')
+  );
+
+  assert.strictEqual(res.status, 201);
+  const body = await res.json();
+  assert.strictEqual(body.is_habit, true);
+
+  const after = neo4jMock.getHabits().length;
+  assert.ok(after > before, 'A new Habit node should be created');
+
+  const habit = neo4jMock.getHabits().at(-1);
+  assert.strictEqual(habit.language, 'nl');
+  assert.strictEqual(
+    habit.translationEN,
+    REFINED_TRANSLATION,
+    'Dutch habits should get a refined English translation'
+  );
+  assert.strictEqual(
+    habit.translationDE,
+    REFINED_TRANSLATION_DE,
+    'Dutch habits should also get a refined German translation'
   );
 });
 

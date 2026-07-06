@@ -19,13 +19,13 @@ import 'router/app_router.dart';
 // ---------------------------------------------------------------------------
 
 // Health Habit Hub brand colors.
-const _kPrimary    = Color(0xFF45B700);
+const _kPrimary = Color(0xFF45B700);
 const _kPrimaryDark = Color(0xFF2E8C00);
-const _kAccent     = Color(0xFFE679AB);
-const _kBg         = Color(0xFFF4F5F2);
-const _kText       = Color(0xFF111827);
-const _kMuted      = Color(0xFF6B7280);
-const _kBorder     = Color(0xFFE5E7EB);
+const _kAccent = Color(0xFFE679AB);
+const _kBg = Color(0xFFF4F5F2);
+const _kText = Color(0xFF111827);
+const _kMuted = Color(0xFF6B7280);
+const _kBorder = Color(0xFFE5E7EB);
 const _kGreenLight = Color(0xFFEDF7E5);
 
 ThemeData _buildLightTheme() {
@@ -124,10 +124,17 @@ ThemeData _buildLightTheme() {
     chipTheme: ChipThemeData(
       backgroundColor: Colors.white,
       side: const BorderSide(color: _kBorder),
-      labelStyle: GoogleFonts.figtree(color: _kMuted, fontWeight: FontWeight.w600),
+      labelStyle: GoogleFonts.figtree(
+        color: _kMuted,
+        fontWeight: FontWeight.w600,
+      ),
       selectedColor: _kGreenLight,
     ),
-    dividerTheme: const DividerThemeData(color: _kBorder, thickness: 1, space: 1),
+    dividerTheme: const DividerThemeData(
+      color: _kBorder,
+      thickness: 1,
+      space: 1,
+    ),
     listTileTheme: ListTileThemeData(
       iconColor: _kMuted,
       titleTextStyle: GoogleFonts.figtree(
@@ -198,9 +205,7 @@ ThemeData _buildDarkTheme() {
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         textStyle: GoogleFonts.figtree(fontWeight: FontWeight.bold),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
@@ -208,9 +213,7 @@ ThemeData _buildDarkTheme() {
         backgroundColor: _kPrimary,
         foregroundColor: Colors.white,
         textStyle: GoogleFonts.figtree(fontWeight: FontWeight.bold),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -218,9 +221,7 @@ ThemeData _buildDarkTheme() {
         foregroundColor: _kPrimary,
         side: const BorderSide(color: _kPrimary, width: 1.5),
         textStyle: GoogleFonts.figtree(fontWeight: FontWeight.w600),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -283,6 +284,8 @@ class HhhApp extends ConsumerWidget {
         Locale('en'),
         Locale('de'),
         Locale('ja'),
+        Locale('fr'),
+        Locale('nl'),
       ],
     );
   }
