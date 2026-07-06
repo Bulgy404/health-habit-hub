@@ -199,7 +199,8 @@ test('GET /api/v1/users/me returns updated preferredLanguage after PUT', async (
 
 test('PUT /api/v1/users/me returns 400 for unsupported preferredLanguage', async () => {
   const token = makeToken(['user'], 'user-put-invalid');
-  const res = await put('/api/v1/users/me', { preferredLanguage: 'fr' }, token);
+  // 'xx' is not a supported UI language (see SUPPORTED_LANGUAGES in usersRouter).
+  const res = await put('/api/v1/users/me', { preferredLanguage: 'xx' }, token);
   assert.strictEqual(res.status, 400);
   const body = await res.json();
   assert.ok(body.error);
