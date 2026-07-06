@@ -383,7 +383,7 @@ export async function persistRejectedHabit(
  * @param {string} translateUrl
  * @returns {Promise<[string|null, string|null]>} [translationEN, translationDE]
  */
-async function _translateHabit(
+export async function translateHabit(
   sentence,
   language,
   translate,
@@ -469,7 +469,7 @@ export async function shareHabit({
     apiBase
   );
   const mappings = await mapBcio(uuid, contextPhrases, apiBase);
-  const [translationEN, translationDE] = await _translateHabit(
+  const [translationEN, translationDE] = await translateHabit(
     sentence,
     language,
     translate,
@@ -549,7 +549,7 @@ export async function processAcceptedHabit({
     apiBase
   );
   const mappings = await mapBcio(uuid, contextPhrases, apiBase);
-  const [translationEN, translationDE] = await _translateHabit(
+  const [translationEN, translationDE] = await translateHabit(
     sentence,
     language,
     translate,

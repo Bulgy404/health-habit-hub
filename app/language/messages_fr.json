@@ -1,0 +1,230 @@
+{
+  "reward": {
+    "geschenke": "RÉCOMPENSE 🎁🎉"
+  },
+
+  "contact": {
+    "send_us": "Envoyez-nous un message",
+    "name": "Nom",
+    "email": "E-mail",
+    "subject": "Objet",
+    "message": "Message",
+    "submit": "Envoyer le message",
+    "contact_us": "Mentions légales",
+    "address": "Adresse : Straße, Nummer, Dresden",
+    "phone": "01577/123456789",
+    "email_contact": "E-mail : Habithub@test.de"
+  },
+
+  "title": "HabitHub",
+  "aboutText": "Pourquoi le partage de données est important dans la recherche sur les habitudes",
+  "step3Text": "<p>Le partage de données sur les habitudes est essentiel pour approfondir notre compréhension du comportement humain. Les recherches montrent que <strong>74 % de toutes les maladies non transmissibles sont liées à des facteurs comportementaux</strong> - ce qui rend indispensable la compréhension de la manière dont les habitudes se forment et perdurent.</p><p><strong>Notre objectif de recherche :</strong> Nous cherchons à mettre en évidence les schémas contextuels qui rendent les habitudes durables. En analysant les situations, les environnements et les déclencheurs qui accompagnent les comportements habituels, nous pouvons aider les gens à instaurer des routines plus saines et à rompre avec celles qui sont néfastes. Votre contribution rend cette recherche possible.</p>",
+  "contextExplanationTitle": "Comprendre les catégories de contexte",
+  "contextExplanationText": "<p>Lorsque vous partagez une habitude, vous marquez différentes parties de votre phrase avec des catégories de contexte. Chaque catégorie représente un aspect différent de la situation entourant votre habitude :</p>",
+  "contextTimeReferenceDesc": "Quand l'habitude se produit-elle ?<br><em>Exemple : \"Tous les matins à 7 heures\" ou \"Après le déjeuner\"</em>",
+  "contextPhysicalSettingDesc": "Où l'habitude a-t-elle lieu ?<br><em>Exemple : \"Dans la cuisine\" ou \"À mon bureau\"</em>",
+  "contextPriorBehaviorDesc": "Quelle action déclenche l'habitude ?<br><em>Exemple : \"Après m'être brossé les dents\" ou \"Quand je vois mes chaussures de course\"</em>",
+  "contextPeopleDesc": "Qui est impliqué ou présent ?<br><em>Exemple : \"Avec ma famille\" ou \"Quand je suis seul(e)\"</em>",
+  "contextInternalStateDesc": "Comment vous sentez-vous ?<br><em>Exemple : \"Quand je me sens stressé(e)\" ou \"Plein(e) d'énergie\"</em>",
+  "contextReasoningDesc": "Pourquoi faites-vous cette habitude ?<br><em>Exemple : \"Pour rester en bonne santé\" ou \"Parce que cela me détend\"</em>",
+  "contextBehaviorDesc": "Quelle est l'action concrète de l'habitude ?<br><em>Exemple : \"Je bois un verre d'eau\" ou \"Je vais courir\"</em>",
+  "navigation": {
+    "homePageName": "<b>Hab</b>Share",
+    "donatePageName": "Accueil",
+    "aboutPageName": "À propos",
+    "contactPageName": "Contact",
+    "languageCode": "fr",
+    "language": "Français"
+  },
+
+  "footer": {
+    "imprint": "Mentions légales",
+    "privacy": "Confidentialité",
+    "accessibility": "Accessibilité"
+  },
+
+  "privacy": {
+    "title": "Politique de confidentialité",
+    "text": "<h2>1. Aperçu de la protection des données</h2>\n<h3>Informations générales</h3>\n<p>Les remarques suivantes donnent un aperçu simple de ce qui advient de vos données personnelles lorsque vous visitez ce site web. Les données personnelles sont toutes les données permettant de vous identifier personnellement. Pour des informations détaillées sur la protection des données, veuillez consulter notre politique de confidentialité complète ci-dessous.</p>\n<h3>Collecte de données sur ce site web</h3>\n<h4>Qui est responsable de la collecte des données sur ce site web ?</h4>\n<p>Le traitement des données sur ce site web est effectué par l'exploitant du site. Vous trouverez ses coordonnées dans la section « Informations sur le responsable du traitement » de la présente politique de confidentialité.</p>\n<h4>Comment collectons-nous vos données ?</h4>\n<p>Vos données sont collectées en partie lorsque vous nous les communiquez. Il peut s'agir, par exemple, de données que vous saisissez dans un formulaire de contact.</p>\n<p>D'autres données sont collectées automatiquement ou après votre consentement lors de votre visite du site web, par nos systèmes informatiques. Il s'agit principalement de données techniques (par exemple le navigateur internet, le système d'exploitation ou l'heure de consultation de la page). La collecte de ces données a lieu automatiquement dès que vous accédez à ce site web.</p>\n<h4>À quoi utilisons-nous vos données ?</h4>\n<p>Une partie des données est collectée afin de garantir une mise à disposition du site web exempte d'erreurs. D'autres données peuvent être utilisées pour analyser votre comportement d'utilisateur. Si des contrats peuvent être conclus ou engagés via le site web, les données transmises seront également traitées pour des offres contractuelles, des commandes ou d'autres demandes de service.</p>\n<h4>Quels sont vos droits concernant vos données ?</h4>\n<p>Vous avez à tout moment le droit d'obtenir gratuitement des informations sur l'origine, les destinataires et la finalité de vos données personnelles enregistrées. Vous avez également le droit de demander la rectification ou la suppression de ces données. Si vous avez donné votre consentement au traitement de données, vous pouvez le révoquer à tout moment pour l'avenir. En outre, vous avez le droit, dans certaines circonstances, de demander la limitation du traitement de vos données personnelles. Vous avez également le droit d'introduire une réclamation auprès de l'autorité de contrôle compétente.</p>\n<p>Pour cela ainsi que pour toute autre question relative à la protection des données, vous pouvez nous contacter à tout moment.</p>\n<h3>Outils d'analyse et outils tiers</h3>\n<p>Lorsque vous visitez ce site web, votre comportement de navigation peut faire l'objet d'une analyse statistique. Cela se fait principalement à l'aide de programmes d'analyse dits « outils d'analyse ».</p>\n<p>Des informations détaillées sur ces programmes d'analyse figurent dans la politique de confidentialité complète ci-dessous.</p>\n<h2>2. Hébergement</h2>\n<p>Nous hébergeons le contenu de notre site web chez le prestataire suivant :</p>\n<h3>Hébergement externe</h3>\n<p>Ce site web est hébergé en externe. Les données personnelles collectées sur ce site web sont stockées sur les serveurs de l'hébergeur/des hébergeurs. Il peut notamment s'agir d'adresses IP, de demandes de contact, de métadonnées et de données de communication, de données contractuelles, de coordonnées, de noms, d'accès au site web et d'autres données générées via un site web.</p>\n<p>L'hébergement externe est effectué aux fins de l'exécution de contrats avec nos clients potentiels et existants (art. 6 (1) b) du RGPD) et dans l'intérêt d'une mise à disposition sûre, rapide et efficace de notre offre en ligne par un prestataire professionnel (art. 6 (1) f) du RGPD). Si un consentement approprié a été obtenu, le traitement est effectué exclusivement sur la base de l'art. 6 (1) a) du RGPD et du § 25 (1) du TDDDG, dans la mesure où le consentement porte sur le stockage de cookies ou l'empreinte numérique de l'appareil. Le consentement peut être révoqué à tout moment.</p>\n<p>Notre hébergeur/nos hébergeurs ne traitera(ont) vos données que dans la mesure nécessaire à l'exécution de ses/leurs obligations de service et suivra(ont) nos instructions concernant ces données.</p>\n<p>Nous faisons appel à l'hébergeur suivant :</p>\n<p>Technische Universität Dresden<br />\nCIDS – Center for Interdisciplinary Digital Sciences<br />\n01062 Dresden<br /><br />\nTéléphone : +49 (0)351 463-40000<br />\nEmail : servicedesk@tu-dresden.de<br /><br />\nDélégué à la protection des données :<br />\nM. Jens Syckor<br />\n01062 Dresden<br /><br />\nTéléphone : +49 (0)351 463-32839<br />\nEmail : informationssicherheit@tu-dresden.de</p>\n<h2>3. Remarques générales et informations obligatoires</h2>\n<h3>Protection des données</h3>\n<p>Les exploitants de ces pages prennent la protection de vos données personnelles très au sérieux. Nous traitons vos données personnelles de manière confidentielle et conformément aux dispositions légales relatives à la protection des données ainsi qu'à la présente politique de confidentialité.</p>\n<p>Lorsque vous utilisez ce site web, diverses données personnelles sont collectées. Les données personnelles sont des données permettant de vous identifier personnellement. La présente politique de confidentialité explique quelles données nous collectons, à quelles fins nous les utilisons, ainsi que comment et dans quel but cela se produit.</p>\n<p>Veuillez noter que la transmission de données sur Internet (par exemple par e-mail) peut présenter des failles de sécurité. Une protection complète des données contre l'accès par des tiers n'est pas possible.</p>\n<h3>Informations sur le responsable du traitement</h3>\n<p>Le responsable du traitement des données sur ce site web est :</p>\n<p>TUD Dresden University of Technology<br />\nFaculty of Business and Economics<br />\nResearch Group Digital Health<br />\n01062 Dresden</p>\n<p>Téléphone : +49 351 463-37671<br />\nEmail : digital-health@tu-dresden.de</p>\n<p>Le responsable du traitement est la personne physique ou morale qui détermine seule ou conjointement les finalités et les moyens du traitement des données personnelles.</p>\n<h3>Durée de conservation des données</h3>\n<p>Sauf indication contraire, vos données personnelles resteront chez nous jusqu'à ce que la finalité du traitement des données ne s'applique plus. Si vous demandez la suppression ou révoquez votre consentement, vos données seront supprimées, sauf si nous disposons d'autres motifs juridiques de conservation (par exemple, des délais de conservation fiscaux ou commerciaux) ; dans ce cas, la suppression aura lieu une fois ces motifs caducs.</p>\n<h3>Bases juridiques du traitement</h3>\n<p>Si vous avez donné votre consentement, nous traitons vos données personnelles sur la base de l'art. 6 (1) a) du RGPD. Si des données sont nécessaires à l'exécution d'un contrat ou à des mesures précontractuelles, nous les traitons sur la base de l'art. 6 (1) b) du RGPD. Nous traitons également des données pour respecter des obligations légales (art. 6 (1) c) du RGPD) ou sur la base de notre intérêt légitime (art. 6 (1) f) du RGPD). Les bases juridiques détaillées figurent dans la politique de confidentialité complète.</p>\n<h3>Destinataires des données personnelles</h3>\n<p>Nous ne partageons des données personnelles avec des tiers que lorsque cela est nécessaire à l'exécution d'un contrat, au respect d'obligations légales ou à la poursuite d'intérêts légitimes, et toujours dans le cadre d'accords de sous-traitance appropriés.</p>\n<h3>Révocation du consentement</h3>\n<p>Vous pouvez révoquer à tout moment un consentement donné, sans que cela n'affecte la licéité du traitement effectué avant la révocation.</p>\n<h3>Droit d'opposition</h3>\n<p>Si le traitement repose sur l'art. 6 (1) e) ou f) du RGPD, vous avez le droit de vous y opposer à tout moment pour des raisons tenant à votre situation particulière. Si les données sont traitées à des fins de prospection directe, vous pouvez vous y opposer à tout moment (art. 21 du RGPD).</p>\n<h3>Réclamation auprès d'une autorité de contrôle</h3>\n<p>En cas de violation du RGPD, vous avez le droit d'introduire une réclamation auprès d'une autorité de contrôle de votre État membre de résidence ou de travail.</p>\n<h3>Portabilité des données</h3>\n<p>Vous avez le droit de recevoir les données que vous nous avez fournies dans un format structuré et lisible par machine, et de demander leur transmission directe à un autre responsable du traitement, lorsque cela est techniquement possible.</p>\n<h3>Accès, rectification, suppression</h3>\n<p>Vous avez le droit d'obtenir gratuitement des informations sur vos données personnelles enregistrées et de demander à tout moment leur rectification ou leur suppression.</p>\n<h3>Limitation du traitement</h3>\n<ul>\n  <li>Si vous contestez l'exactitude de vos données, le traitement peut être limité pendant la vérification.</li>\n  <li>Si le traitement est illicite, vous pouvez demander une limitation au lieu d'une suppression.</li>\n  <li>Si nous n'avons plus besoin de vos données mais que vous en avez besoin pour faire valoir des droits en justice, vous pouvez demander une limitation.</li>\n  <li>Si vous vous opposez conformément à l'art. 21 (1) du RGPD, le traitement peut être limité le temps de la mise en balance des intérêts.</li>\n</ul>\n<h3>Chiffrement SSL/TLS</h3>\n<p>Ce site utilise le chiffrement SSL/TLS pour protéger la transmission d'informations confidentielles. Vous pouvez reconnaître une connexion chiffrée au « https:// » et à l'icône de cadenas dans votre navigateur.</p>\n<h2>4. Collecte de données sur ce site web</h2>\n<h3>Cookies</h3>\n<p>Notre site utilise des « cookies », de petits fichiers de données stockés sur votre appareil afin de permettre l'analyse de l'utilisation du site web. Les cookies de session sont supprimés après votre visite ; les cookies persistants restent jusqu'à ce que vous les supprimiez.</p>\n<p>Les cookies peuvent être propres au site ou provenir de tiers ; ils sont utilisés pour des fonctions techniques nécessaires, à des fins d'analyse ou de publicité. Les cookies nécessaires reposent sur l'art. 6 (1) f) du RGPD ; les autres cookies requièrent votre consentement (art. 6 (1) a) du RGPD et § 25 (1) du TDDDG) et peuvent être révoqués à tout moment.</p>\n<p>Vous pouvez configurer votre navigateur pour qu'il vous informe des cookies ou les bloque ; la désactivation des cookies peut limiter les fonctionnalités du site.</p>\n<h3>Formulaire de contact</h3>\n<p>Si vous envoyez des demandes via le formulaire de contact, vos données (y compris vos coordonnées) seront enregistrées afin de traiter votre demande. Les données sont traitées sur la base de l'art. 6 (1) b) ou f) du RGPD, ou de votre consentement (art. 6 (1) a) du RGPD). Vous pouvez demander la suppression ou révoquer votre consentement à tout moment.</p>\n<h3>Demandes par e-mail, téléphone, fax</h3>\n<p>Si vous nous contactez par e-mail, téléphone ou fax, votre demande et vos données personnelles seront enregistrées et traitées afin de traiter votre requête. Le traitement des données repose sur l'art. 6 (1) b), f) ou a) du RGPD. Vous pouvez demander la suppression ou révoquer votre consentement à tout moment.</p>\n<h2>5. Plugins et outils</h2>\n<h3>Google Fonts</h3>\n<p>Ce site utilise Google Fonts pour un affichage uniforme des polices de caractères. Votre navigateur se connecte aux serveurs de Google pour charger les polices, ce qui peut entraîner l'enregistrement de votre adresse IP par Google. L'utilisation repose sur l'art. 6 (1) f) du RGPD ou, avec consentement, sur l'art. 6 (1) a) du RGPD et le § 25 (1) du TDDDG. Le consentement peut être révoqué à tout moment.</p>\n<p>Si votre navigateur ne prend pas en charge Google Fonts, une police standard est utilisée.</p>\n<p>Plus d'informations : <a href=\"https://developers.google.com/fonts/faq\" target=\"_blank\" rel=\"noopener noreferrer\">FAQ Google Fonts</a> et <a href=\"https://policies.google.com/privacy?hl=fr\" target=\"_blank\" rel=\"noopener noreferrer\">politique de confidentialité de Google</a>.</p>\n<h3>Google reCAPTCHA</h3>\n<p>Nous utilisons Google reCAPTCHA pour vérifier que les soumissions de formulaires sont effectuées par des humains. Google analyse le comportement de l'utilisateur (par exemple l'adresse IP, les mouvements de la souris) en arrière-plan et peut enregistrer des cookies. L'utilisation repose sur l'art. 6 (1) f) du RGPD ou, avec consentement, sur l'art. 6 (1) a) du RGPD et le § 25 (1) du TDDDG. Le consentement peut être révoqué à tout moment.</p>\n<p>Plus d'informations : <a href=\"https://policies.google.com/privacy?hl=fr\" target=\"_blank\" rel=\"noopener noreferrer\">Confidentialité Google</a> et <a href=\"https://policies.google.com/terms?hl=fr\" target=\"_blank\" rel=\"noopener noreferrer\">Conditions d'utilisation Google</a>.</p>\n<p>Source : <a href=\"https://www.e-recht24.de\">e-recht24.de</a></p>"
+  },
+
+  "accessibility": {
+    "title": "Déclaration d'accessibilité",
+    "text": "<p>Le groupe de recherche Digital Health s'engage à rendre ses sites web et applications mobiles accessibles, conformément à la loi allemande sur l'accessibilité des sites web (BfWebG) et au règlement allemand relatif aux technologies de l'information sans obstacles (BITV 2.0), transposant la directive européenne 2016/2102.</p><p><h4>Élaboration de la présente déclaration d'accessibilité</h4>Cette déclaration a été élaborée le 8 avril 2025 et mise à jour pour la dernière fois le 8 avril 2025. Le dernier examen de ce site web au moyen d'une auto-évaluation a été effectué le 8 avril 2025.<br>Cette déclaration se fonde sur une auto-évaluation de la conformité du site web aux exigences de la BfWebG conformément à la BITV 2.0.</p><p><h4>État de conformité aux exigences de la BITV</h4>Ce site web a été publié avant le 8 avril 2025 et ne répond pas encore pleinement à l'état actuel de l'accessibilité. Nous travaillons en permanence au développement de ce site web et nous efforçons, ce faisant, de réduire les obstacles.</p><p><h4>Contenus non accessibles</h4><ul><li>Les textes alternatifs pour les images et les éléments graphiques ne sont pas entièrement disponibles.</li><li>Les attributs ARIA permettant de s'orienter au sein des éléments ne sont pas entièrement disponibles.</li><li>L'accessibilité au clavier n'est pas entièrement assurée pour les éléments/contenus suivants : libellés relatifs au contexte et au comportement.</li><li>La position du focus clavier n'est pas clairement visible.</li><li>Les mots et sections rédigés dans d'autres langues ne sont pas signalés.</li><li>Il n'existe pas de page récapitulative dans les formulaires permettant de vérifier ou de corriger ultérieurement les saisies. Les données sont transmises directement.</li><li>Sur les pages d'accueil et de vue d'ensemble, certains éléments ne peuvent pas être passés car des titres font défaut.</li></ul></p><p><h4>Retour d'information et coordonnées de contact</h4>Si vous constatez des manquements en matière d'accessibilité, veuillez nous contacter à :<br><br>Email : <a href='mailto:digital-health@tu-dresden.de'>digital-health@tu-dresden.de</a><br>Téléphone : <a href='tel:+4935146337671'>+49 351 463-37671</a></p><p><h4>Procédure de conciliation</h4>Si vous n'êtes pas satisfait(e) du traitement de votre retour d'information, vous pouvez contacter le bureau de conciliation de l'État libre de Saxe :<br><br><p>Bureau du délégué du gouvernement de l'État libre de Saxe pour les questions relatives aux personnes en situation de handicap<br>Albertstraße 10<br>01097 Dresden</p><p>Adresse postale : Archivstraße 1, 01097 Dresden<br>Email : <a href='mailto:info.behindertenbeauftragter@sk.sachsen.de'>info.behindertenbeauftragter@sk.sachsen.de</a><br>Téléphone : <a href='tel:+4935156412161'>+49 351 564-12161</a><br>Internet : <a href='https://www.inklusion.sachsen.de'>https://www.inklusion.sachsen.de</a></p></p>"
+  },
+
+  "imprint": {
+    "title": "Mentions légales",
+    "text": "<h4>Health-Habit-Hub</h4><p>Technische Universität Dresden<br>Faculty of Business and Economics<br>Research Group Digital Health<br>01062 Dresden</p><p><h4>Contact</h4>Dipl.-Wi.-Ing. Felix Reinsch<br>Email : <a href='mailto:digital-health@tu-dresden.de'>digital-health@tu-dresden.de</a><br>Téléphone : <a href='tel:+4935146337671'>+49 351 463-37671</a></p><p><h4>Clause de non-responsabilité</h4>Le contenu de ce site web a été élaboré avec le plus grand soin. Nous ne pouvons toutefois garantir l'exactitude, l'exhaustivité ou l'actualité des informations fournies.</p><h4>Liens externes</h4>Ce site web contient des liens vers des sites web tiers externes. Nous n'avons aucune influence sur le contenu de ces sites. Le fournisseur ou l'exploitant respectif est responsable du contenu des sites liés.<p></p><h4>Informations complémentaires</h4>Pour de plus amples informations, veuillez consulter les <a href='https://tu-dresden.de/impressum'>mentions légales de la TU Dresden</a>.</p>"
+  },
+
+  "header": "Introduction",
+  "text": "Chère donatrice, cher donateur,<br> Comme vous le savez probablement, une habitude établit un lien entre un comportement et un contexte dans lequel ce comportement est exécuté de manière constante. Prenons par exemple le comportement consistant à courir 5 kilomètres. Ce comportement peut être associé au contexte du réveil un matin de week-end. Dans ce scénario, la catégorie de contexte temps (les matins de week-end) et la catégorie de contexte comportement antérieur (se réveiller le matin) se combinent pour former un contexte global. Nous souhaitons explorer les contextes que vous associez à vos comportements pour en faire une habitude. En partageant vos habitudes avec nous, vous contribuez à une meilleure compréhension de la manière dont des contextes spécifiques peuvent renforcer les comportements. Vos observations seront précieuses pour aider d'autres personnes à élaborer des habitudes solides et personnalisées.",
+  "image": "pics/intro_pic.png",
+
+  "donationHeader": "Don de données",
+  "dataDonationGuide": "Service de don de données",
+  "proceeding": "Déroulement",
+  "step1": "Saisissez votre habitude sous forme de phrase.",
+  "step2": "Marquez les parties de votre phrase et associez à chacune le contexte ou la situation indiqués ci-dessous.",
+  "step3": "Confirmez l'habitude que vous souhaitez donner en appuyant sur \"Faire un don\".",
+
+  "example1": "<p><strong>Exemple :</strong> Si j'<mark class=mark_PhysicalSetting>entre dans la cuisine</mark> et que je <mark class=mark_PriorBehavior>vois une corbeille de fruits</mark>, je <mark class=mark_Behavior>prends une pomme</mark> et je la <mark class=mark_Behavior>mange</mark>.</p>",
+  "clear": "↺",
+  "TimeReference": "Référence temporelle",
+  "PhysicalSetting": "cadre physique",
+  "PriorBehavior": "comportement antérieur",
+  "People": "Personnes",
+  "InternalState": "état interne",
+  "Reasoning": "raisonnement",
+  "Behavior": "Comportement",
+  "example2": "<h5>Exemple : Je bois un verre d'eau avant de me coucher.<h5>",
+  "submit": "Faire un don",
+  "add": "+ ajouter une autre habitude",
+
+  "demo_text": "Les informations que vous fournissez nous aideront à obtenir des données précieuses. Afin de mieux classer les données et d'améliorer les résultats de la recherche, nous vous serions reconnaissants de bien vouloir renseigner les champs ci-dessous. La participation est volontaire et anonyme. Les informations seront traitées de manière confidentielle. </br> Veuillez prendre un moment pour remplir les champs ci-dessous :",
+
+  "choose_option": "Choisissez une option !",
+
+  "sex": "Sexe :",
+  "sex_m": "masculin",
+  "sex_w": "féminin",
+  "sex_d": "divers",
+
+  "origin": "Pays d'origine :",
+
+  "graduation": "Niveau d'études le plus élevé :",
+  "g_primary": "École primaire/élémentaire",
+  "g_lower_secondary": "Premier cycle du secondaire (collège)",
+  "g_upper_secondary": "Second cycle du secondaire (baccalauréat)",
+  "g_vocational": "Formation professionnelle/technique",
+  "g_bachelor": "Licence",
+  "g_master": "Master",
+  "g_doctorate": "Doctorat (PhD/MD/EdD)",
+  "g_other": "Autre / Préfère ne pas répondre",
+
+  "age": "Âge :",
+  "weight": "Poids :",
+  "w_1": "Insuffisance pondérale",
+  "w_2": "Poids normal",
+  "w_3": "Surpoids",
+  "w_4": "Obésité",
+  "religious_affiliation": "Appartenance religieuse :",
+  "christianity": "Christianisme",
+  "islam": "Islam",
+  "judaism": "Judaïsme",
+  "hinduism": "Hindouisme",
+  "buddhism": "Bouddhisme",
+  "shintoism": "Shintoïsme",
+  "nondenominational": "Sans confession",
+  "profession": "Contexte professionnel :",
+  "study": "En études",
+  "training": "En formation",
+  "employed_full_time": "Employé(e) à temps plein",
+  "employed_part_time": "Employé(e) à temps partiel",
+  "self_employed": "Indépendant(e)/freelance",
+  "job_seeker": "En recherche d'emploi",
+  "retired": "Retraité(e)",
+  "family_care": "Travail domestique/soins familiaux",
+  "working_hours": "Horaires de travail :",
+  "shift_system_night": "Travail posté (y compris de nuit)",
+  "shift_system_day": "Travail posté (sans travail de nuit)",
+  "work_WE": "Service le week-end",
+  "free_WE_1": "Week-ends majoritairement libres",
+  "free_WE_2": "Week-ends toujours libres",
+  "flexible": "Horaires de travail flexibles",
+  "rigid": "Horaires de travail fixes",
+  "homeoffice": "Télétravail",
+  "way_to_work": "Trajet domicile-travail :",
+  "car": "En voiture",
+  "walk": "À pied",
+  "bike": "À vélo",
+  "public_transport": "Transports en commun",
+  "motorcycle": "En moto",
+  "carpool": "Covoiturage",
+  "telecommuting": "Télétravail (pas de trajet quotidien au travail)",
+  "other_way": "Autre (par exemple, télétravail avec rendez-vous occasionnels sur site)",
+  "private_context": "Contexte privé :",
+  "partner": "En couple sans enfant(s)",
+  "partner_child": "En couple avec enfant(s)",
+  "single_child": "Parent isolé avec enfant(s)",
+  "single": "Célibataire sans enfant(s)",
+  "separate_partner_child": "Vivant séparément, mais en couple avec enfant(s)",
+  "separate_single_child": "Vivant séparément, célibataire avec enfant(s)",
+  "separate_single": "Vivant séparément, célibataire sans enfant(s)",
+  "other_constellation": "Autre constellation familiale (veuillez préciser)",
+  "available_time": "Temps disponible :",
+  "more_3": "Plus de 3 heures par jour",
+  "two_to_three": "2 à 3 heures par jour",
+  "one_to_two": "1 à 2 heures par jour",
+  "half_to_one": "0,5 à 1 heure par jour",
+  "less_hours": "Moins de 0,5 heure par jour",
+  "relationship_context": "Contexte relationnel :",
+  "partner_healthy": "Mon/ma partenaire est très soucieux(-se) de sa santé et pratique régulièrement une activité physique.",
+  "partner_moderate_healthy": "Mon/ma partenaire est modérément soucieux(-se) de sa santé et pratique occasionnellement une activité physique.",
+  "partner_supportive": "Mon/ma partenaire soutient mes efforts pour mener une vie saine.",
+  "partner_less_healthy": "Mon/ma partenaire est peu soucieux(-se) de sa santé et pratique rarement une activité physique.",
+  "partner_inactive": "Mon/ma partenaire préfère un mode de vie majoritairement inactif et manifeste peu d'intérêt pour les questions de santé.",
+  "no_partner": "Je n'ai pas de partenaire.",
+  "pets": "Animaux de compagnie :",
+  "pet_regular": "J'ai un animal de compagnie avec lequel je fais régulièrement de l'exercice/des promenades.",
+  "pet_more_activity": "J'ai des animaux de compagnie qui m'incitent à être plus actif(-ve) au quotidien.",
+  "pet_no_impact": "J'ai des animaux de compagnie qui n'ont aucun effet sur mon activité physique.",
+  "no_pet": "Je n'ai pas d'animaux de compagnie.",
+
+  "slogan": "Vous avez mis VOTRE habitude sur la voie de devenir un bien commun.",
+  "thanks": "🎉 Merci pour VOTRE don et VOTRE contribution !",
+  "donate_again": "Partager une autre habitude",
+  "Rewardbox": {
+    "gift": "RÉCOMPENSE"
+  },
+
+  "Contactbox": {
+    "send_us": "Envoyez-nous un message",
+    "name": "Nom",
+    "email": "E-mail",
+    "subject": "Objet",
+    "message": "Message",
+    "submit": "Envoyer le message",
+    "contact_us": "Mentions légales",
+    "address": "Adresse : Dresdner Straße 2, 01234 Dresden",
+    "phone": "01577/123456789",
+    "email_contact": "E-mail : info@habithub.de"
+  },
+
+  "donateErrors": {
+    "emptyFieldError": "Le champ de texte ne doit pas être vide !",
+    "emptyBehaviorError": "Veuillez marquer un comportement dans le texte avant de valider.",
+    "noContextError": "Veuillez confirmer que vous n'êtes pas un robot."
+  },
+
+  "habitStrengthSlider": {
+    "title": "Dans quelle mesure souhaitez-vous arrêter ou conserver cette habitude ?",
+    "minDescription": "Arrêter définitivement",
+    "maxDescription": "Conserver définitivement",
+    "labels": [
+      "Arrêter définitivement",
+      "Plutôt arrêter",
+      "Tendance à arrêter",
+      "Neutre / Indécis(e)",
+      "Tendance à conserver",
+      "Plutôt conserver",
+      "Conserver définitivement"
+    ]
+  },
+
+  "form_descriptions": {
+    "sex": "Choisissez le sexe auquel vous vous identifiez le plus.",
+    "origin": "Sélectionnez le pays d'où vous venez.",
+    "graduation": "Sélectionnez le niveau d'études le plus élevé que vous avez atteint.",
+    "age": "Indiquez votre âge actuel en années.",
+    "weight": "Sélectionnez la catégorie de poids qui vous décrit le mieux.",
+    "occupation": "Sélectionnez l'option qui décrit le mieux votre situation professionnelle actuelle.",
+    "working_hours": "Sélectionnez l'option qui décrit le mieux vos horaires de travail.",
+    "way_to_work": "Sélectionnez l'option qui décrit le mieux votre trajet domicile-travail.",
+    "private_context": "Sélectionnez l'option qui décrit le mieux votre situation familiale actuelle.",
+    "available_time": "Sélectionnez l'option qui décrit le mieux le temps dont vous disposez pour vos habitudes.",
+    "relationship_context": "Sélectionnez l'option qui décrit le mieux l'attitude de votre partenaire à l'égard de la santé et de l'activité physique.",
+    "pets": "Sélectionnez l'option qui décrit le mieux votre relation avec les animaux de compagnie et leur influence sur votre activité physique."
+  }
+}

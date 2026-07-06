@@ -9,7 +9,7 @@ import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'usersRouter' });
 
-const SUPPORTED_LANGUAGES = ['en', 'de', 'ja'];
+const SUPPORTED_LANGUAGES = ['en', 'de', 'ja', 'fr', 'nl'];
 
 export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
   const router = express.Router();

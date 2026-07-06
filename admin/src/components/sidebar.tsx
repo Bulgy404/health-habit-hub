@@ -82,6 +82,8 @@ const NAV_SECTIONS: NavSection[] = [
 const LOCALE_LABELS: Record<Locale, string> = {
   en: "English",
   de: "Deutsch",
+  fr: "Français",
+  nl: "Nederlands",
 };
 
 /**

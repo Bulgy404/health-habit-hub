@@ -10,7 +10,7 @@
  *     salience     int    1-5 scale
  *     specificity  int    1-5 scale
  *   domain     string     Required. Cue domain/category.
- *   language   string     Required. 'en' | 'de' | 'ja'
+ *   language   string     Required. 'en' | 'de' | 'ja' | 'fr' | 'nl'
  *   createdAt  Date       Required.
  */
 
@@ -42,7 +42,7 @@ export const VALIDATOR = {
         },
       },
       domain: { bsonType: 'string' },
-      language: { bsonType: 'string', enum: ['en', 'de', 'ja'] },
+      language: { bsonType: 'string', enum: ['en', 'de', 'ja', 'fr', 'nl'] },
       createdAt: { bsonType: 'date' },
     },
   },

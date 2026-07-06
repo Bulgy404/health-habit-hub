@@ -2,7 +2,7 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import { marked } from 'marked';
 
-const ALLOWED_LANGS = new Set(['en', 'de', 'ja']);
+const ALLOWED_LANGS = new Set(['en', 'de', 'ja', 'fr', 'nl']);
 const ALLOWED_NAMES = new Set([
   'accessibility',
   'imprint',
@@ -40,7 +40,7 @@ export function parseFrontMatter(raw) {
  * Load a legal markdown document, strip and parse its front matter, and
  * render the body to HTML.
  *
- * @param {string} lang Locale code (`en` | `de` | `ja`).
+ * @param {string} lang Locale code (`en` | `de` | `ja` | `fr` | `nl`).
  * @param {string} name Document name (`accessibility` | `imprint` | `privacy`).
  * @returns {Promise<{ html: string, meta: Record<string, string> }>} Rendered
  *   HTML and document metadata (version, effectiveDate, bindingLanguage).

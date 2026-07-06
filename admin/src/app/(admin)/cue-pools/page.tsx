@@ -250,6 +250,9 @@ export default function CuePoolsPage() {
               >
                 <option value="en">English</option>
                 <option value="de">German</option>
+                <option value="ja">Japanese</option>
+                <option value="fr">French</option>
+                <option value="nl">Dutch</option>
               </select>
               <span className={styles.hint}>{t("languageHint")}</span>
             </div>
@@ -327,6 +330,9 @@ export default function CuePoolsPage() {
             <option value="">{t("filterAll")}</option>
             <option value="en">English</option>
             <option value="de">German</option>
+            <option value="ja">Japanese</option>
+            <option value="fr">French</option>
+            <option value="nl">Dutch</option>
           </select>
         </div>
       </div>

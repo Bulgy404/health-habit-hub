@@ -132,6 +132,8 @@ class UserSettingsScreen extends ConsumerWidget {
                   switch (currentLocale.languageCode) {
                     'de' => 'Deutsch',
                     'ja' => '日本語',
+                    'fr' => 'Français',
+                    'nl' => 'Nederlands',
                     _ => 'English',
                   },
                   style: const TextStyle(
@@ -269,6 +271,8 @@ class UserSettingsScreen extends ConsumerWidget {
               ('en', 'English'),
               ('de', 'Deutsch'),
               ('ja', '日本語'),
+              ('fr', 'Français'),
+              ('nl', 'Nederlands'),
             ]) ...[
               ListTile(
                 title: Text(label),
@@ -365,9 +369,7 @@ class UserSettingsScreen extends ConsumerWidget {
         ),
       );
     } catch (_) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.exportFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.exportFailed)));
     }
   }
 
@@ -409,9 +411,7 @@ class UserSettingsScreen extends ConsumerWidget {
         '${AppConfig.apiBaseUrl}/users/me',
       );
     } catch (_) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(l10n.deleteAccountFailed)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l10n.deleteAccountFailed)));
       return;
     }
     // Server-side data is gone — wipe everything locally and restart onboarding.

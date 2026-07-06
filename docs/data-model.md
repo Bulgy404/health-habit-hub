@@ -834,7 +834,7 @@ Per-user preferences. Created/upserted by `PUT /api/v1/users/me`. If no record e
 |---|---|---|---|
 | `_id` | ObjectId | Auto | MongoDB document ID |
 | `userId` | String | Yes | Keycloak `sub` (unique) |
-| `preferredLanguage` | String | Yes | `"en"`, `"de"`, or `"ja"` |
+| `preferredLanguage` | String | Yes | `"en"`, `"de"`, `"ja"`, `"fr"`, or `"nl"` |
 
 **Example document:**
 ```json
@@ -1120,7 +1120,7 @@ Pre-rated contextual cues for study conditions.
 | `quality` | String | `"low"` or `"high"` |
 | `dimensions` | Object | `{stability: 1-5, salience: 1-5, specificity: 1-5}` |
 | `domain` | String | e.g. `"physical_activity"` |
-| `language` | String | `"en"`, `"de"`, or `"ja"` |
+| `language` | String | `"en"`, `"de"`, `"ja"`, `"fr"`, or `"nl"` |
 | `createdAt` | Date | |
 
 Indexes: `{quality, domain, language}`

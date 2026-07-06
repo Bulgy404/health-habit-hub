@@ -1,0 +1,230 @@
+{
+  "reward": {
+    "geschenke": "BELONING 🎁🎉"
+  },
+
+  "contact": {
+    "send_us": "Stuur ons een bericht",
+    "name": "Naam",
+    "email": "E-mail",
+    "subject": "Onderwerp",
+    "message": "Bericht",
+    "submit": "Bericht verzenden",
+    "contact_us": "Colofon",
+    "address": "Adres: Straße, Nummer, Dresden",
+    "phone": "01577/123456789",
+    "email_contact": "E-mail: Habithub@test.de"
+  },
+
+  "title": "HabitHub",
+  "aboutText": "Waarom gegevens delen belangrijk is voor gewoonteonderzoek",
+  "step3Text": "<p>Het delen van gewoontegegevens is essentieel om ons begrip van menselijk gedrag te vergroten. Onderzoek toont aan dat <strong>74% van alle niet-overdraagbare ziekten verband houdt met gedragsfactoren</strong> - waardoor het essentieel is om te begrijpen hoe gewoonten ontstaan en blijven bestaan.</p><p><strong>Ons onderzoeksdoel:</strong> Wij willen de contextuele patronen blootleggen die ervoor zorgen dat gewoonten beklijven. Door de situaties, omgevingen en prikkels te analyseren die gewoontegedrag begeleiden, kunnen wij mensen helpen gezondere routines op te bouwen en schadelijke te doorbreken. Uw bijdrage maakt dit onderzoek mogelijk.</p>",
+  "contextExplanationTitle": "Contextcategorieën begrijpen",
+  "contextExplanationText": "<p>Wanneer u een gewoonte deelt, markeert u verschillende delen van uw zin met contextcategorieën. Elke categorie vertegenwoordigt een ander aspect van de situatie rond uw gewoonte:</p>",
+  "contextTimeReferenceDesc": "Wanneer vindt de gewoonte plaats?<br><em>Voorbeeld: \"Elke ochtend om 7 uur\" of \"Na de lunch\"</em>",
+  "contextPhysicalSettingDesc": "Waar vindt de gewoonte plaats?<br><em>Voorbeeld: \"In de keuken\" of \"Aan mijn bureau\"</em>",
+  "contextPriorBehaviorDesc": "Welke handeling activeert de gewoonte?<br><em>Voorbeeld: \"Na het tandenpoetsen\" of \"Wanneer ik mijn hardloopschoenen zie\"</em>",
+  "contextPeopleDesc": "Wie is betrokken of aanwezig?<br><em>Voorbeeld: \"Met mijn familie\" of \"Wanneer ik alleen ben\"</em>",
+  "contextInternalStateDesc": "Hoe voelt u zich?<br><em>Voorbeeld: \"Wanneer ik gestrest ben\" of \"Vol energie\"</em>",
+  "contextReasoningDesc": "Waarom doet u deze gewoonte?<br><em>Voorbeeld: \"Om gezond te blijven\" of \"Omdat het mij ontspant\"</em>",
+  "contextBehaviorDesc": "Wat is de daadwerkelijke gewoontehandeling?<br><em>Voorbeeld: \"Ik drink een glas water\" of \"Ik ga hardlopen\"</em>",
+  "navigation": {
+    "homePageName": "<b>Hab</b>Share",
+    "donatePageName": "Home",
+    "aboutPageName": "Over",
+    "contactPageName": "Contact",
+    "languageCode": "nl",
+    "language": "Nederlands"
+  },
+
+  "footer": {
+    "imprint": "Colofon",
+    "privacy": "Privacybeleid",
+    "accessibility": "Toegankelijkheid"
+  },
+
+  "privacy": {
+    "title": "Privacybeleid",
+    "text": "<h2>1. Gegevensbescherming in het kort</h2>\n<h3>Algemene informatie</h3>\n<p>De volgende informatie geeft een eenvoudig overzicht van wat er met uw persoonsgegevens gebeurt wanneer u deze website bezoekt. Persoonsgegevens zijn alle gegevens waarmee u persoonlijk geïdentificeerd kunt worden. Voor gedetailleerde informatie over gegevensbescherming verwijzen wij u naar onze volledige privacyverklaring hieronder.</p>\n<h3>Gegevensverzameling op deze website</h3>\n<h4>Wie is verantwoordelijk voor de gegevensverzameling op deze website?</h4>\n<p>De gegevensverwerking op deze website wordt uitgevoerd door de exploitant van de website. De contactgegevens vindt u in het gedeelte “Informatie over de verantwoordelijke instantie” in deze privacyverklaring.</p>\n<h4>Hoe verzamelen wij uw gegevens?</h4>\n<p>Uw gegevens worden deels verzameld doordat u ze aan ons verstrekt. Dit kan bijvoorbeeld gaan om gegevens die u invoert in een contactformulier.</p>\n<p>Andere gegevens worden automatisch of na uw toestemming verzameld door onze IT-systemen wanneer u de website bezoekt. Dit betreft voornamelijk technische gegevens (bijv. internetbrowser, besturingssysteem of tijdstip van het paginabezoek). Deze gegevens worden automatisch verzameld zodra u deze website bezoekt.</p>\n<h4>Waarvoor gebruiken wij uw gegevens?</h4>\n<p>Een deel van de gegevens wordt verzameld om een foutloze werking van de website te waarborgen. Andere gegevens kunnen worden gebruikt om uw gebruikersgedrag te analyseren. Indien via de website overeenkomsten kunnen worden gesloten of aangevraagd, worden de verstrekte gegevens ook verwerkt voor contractaanbiedingen, bestellingen of andere serviceaanvragen.</p>\n<h4>Welke rechten heeft u met betrekking tot uw gegevens?</h4>\n<p>U heeft te allen tijde het recht om kosteloos informatie te ontvangen over de herkomst, ontvangers en het doel van uw opgeslagen persoonsgegevens. U heeft ook het recht om correctie of verwijdering van deze gegevens te verzoeken. Als u toestemming heeft gegeven voor de verwerking van gegevens, kunt u deze toestemming te allen tijde intrekken met werking voor de toekomst. Verder heeft u onder bepaalde omstandigheden het recht om beperking van de verwerking van uw persoonsgegevens te verzoeken. Daarnaast heeft u het recht om een klacht in te dienen bij de bevoegde toezichthoudende autoriteit.</p>\n<p>Hiervoor en voor verdere vragen over gegevensbescherming kunt u te allen tijde contact met ons opnemen.</p>\n<h3>Analysetools en tools van derden</h3>\n<p>Wanneer u deze website bezoekt, kan uw surfgedrag statistisch worden geanalyseerd. Dit gebeurt voornamelijk met zogenaamde analyseprogramma's.</p>\n<p>Gedetailleerde informatie over deze analyseprogramma's vindt u in de volledige privacyverklaring hieronder.</p>\n<h2>2. Hosting</h2>\n<p>Wij hosten de inhoud van onze website bij de volgende aanbieder:</p>\n<h3>Externe hosting</h3>\n<p>Deze website wordt extern gehost. De persoonsgegevens die op deze website worden verzameld, worden opgeslagen op de servers van de hostingprovider(s). Dit kan onder meer IP-adressen, contactaanvragen, meta- en communicatiegegevens, contractgegevens, contactgegevens, namen, websitebezoeken en andere gegevens omvatten die via een website worden gegenereerd.</p>\n<p>Externe hosting vindt plaats met het oog op de uitvoering van overeenkomsten met onze potentiële en bestaande klanten (Art. 6(1)(b) GDPR) en in het belang van een veilige, snelle en efficiënte levering van ons online-aanbod door een professionele aanbieder (Art. 6(1)(f) GDPR). Indien passende toestemming is verkregen, vindt de verwerking uitsluitend plaats op basis van Art. 6(1)(a) GDPR en § 25(1) TDDDG, voor zover de toestemming betrekking heeft op de opslag van cookies of device fingerprinting. Toestemming kan te allen tijde worden ingetrokken.</p>\n<p>Onze hostingprovider(s) zullen uw gegevens uitsluitend verwerken voor zover dit noodzakelijk is voor de uitvoering van hun dienstverleningsverplichtingen en zullen onze instructies met betrekking tot deze gegevens opvolgen.</p>\n<p>Wij maken gebruik van de volgende hostingprovider:</p>\n<p>Technische Universität Dresden<br />\nCIDS – Center for Interdisciplinary Digital Sciences<br />\n01062 Dresden<br /><br />\nTelefoon: +49 (0)351 463-40000<br />\nE-mail: servicedesk@tu-dresden.de<br /><br />\nFunctionaris voor gegevensbescherming:<br />\nDe heer Jens Syckor<br />\n01062 Dresden<br /><br />\nTelefoon: +49 (0)351 463-32839<br />\nE-mail: informationssicherheit@tu-dresden.de</p>\n<h2>3. Algemene informatie en verplichte informatie</h2>\n<h3>Gegevensbescherming</h3>\n<p>De exploitanten van deze pagina's nemen de bescherming van uw persoonsgegevens zeer serieus. Wij behandelen uw persoonsgegevens vertrouwelijk en in overeenstemming met de wettelijke bepalingen inzake gegevensbescherming en deze privacyverklaring.</p>\n<p>Wanneer u deze website gebruikt, worden verschillende persoonsgegevens verzameld. Persoonsgegevens zijn gegevens waarmee u persoonlijk geïdentificeerd kunt worden. Deze privacyverklaring legt uit welke gegevens wij verzamelen en waarvoor wij deze gebruiken, alsmede hoe en met welk doel dit gebeurt.</p>\n<p>Houd er rekening mee dat gegevensoverdracht via internet (bijv. per e-mail) beveiligingslekken kan vertonen. Volledige bescherming van gegevens tegen toegang door derden is niet mogelijk.</p>\n<h3>Informatie over de verantwoordelijke instantie</h3>\n<p>De verantwoordelijke instantie voor de gegevensverwerking op deze website is:</p>\n<p>TUD Dresden University of Technology<br />\nFaculty of Business and Economics<br />\nResearch Group Digital Health<br />\n01062 Dresden</p>\n<p>Telefoon: +49 351 463-37671<br />\nE-mail: digital-health@tu-dresden.de</p>\n<p>De verantwoordelijke instantie is de natuurlijke of rechtspersoon die alleen of samen met anderen het doel van en de middelen voor de verwerking van persoonsgegevens vaststelt.</p>\n<h3>Bewaartermijn van gegevens</h3>\n<p>Tenzij anders aangegeven, blijven uw persoonsgegevens bij ons totdat het doel van de gegevensverwerking niet langer van toepassing is. Als u verwijdering verzoekt of toestemming intrekt, worden uw gegevens verwijderd, tenzij wij over andere wettelijke gronden voor bewaring beschikken (bijv. fiscale of handelsrechtelijke bewaartermijnen); in dat geval vindt verwijdering plaats nadat deze gronden niet langer van toepassing zijn.</p>\n<h3>Rechtsgrondslagen voor verwerking</h3>\n<p>Als u toestemming heeft gegeven, verwerken wij uw persoonsgegevens op basis van Art. 6(1)(a) GDPR. Als gegevens noodzakelijk zijn voor de uitvoering van een overeenkomst of voor precontractuele maatregelen, verwerken wij op basis van Art. 6(1)(b) GDPR. Wij verwerken gegevens ook om te voldoen aan wettelijke verplichtingen (Art. 6(1)(c) GDPR) of op basis van ons gerechtvaardigd belang (Art. 6(1)(f) GDPR). Gedetailleerde rechtsgrondslagen worden vermeld in de volledige privacyverklaring.</p>\n<h3>Ontvangers van persoonsgegevens</h3>\n<p>Wij delen persoonsgegevens met externe partijen alleen wanneer dit noodzakelijk is voor de uitvoering van overeenkomsten, wettelijke verplichtingen of gerechtvaardigde belangen, en altijd onder passende verwerkersovereenkomsten.</p>\n<h3>Intrekking van toestemming</h3>\n<p>U kunt gegeven toestemming te allen tijde intrekken, zonder dat dit gevolgen heeft voor de rechtmatigheid van de verwerking vóór de intrekking.</p>\n<h3>Recht van bezwaar</h3>\n<p>Indien de verwerking is gebaseerd op Art. 6(1)(e) of (f) GDPR, heeft u het recht om te allen tijde bezwaar te maken om redenen die verband houden met uw specifieke situatie. Indien gegevens worden verwerkt voor direct marketing, kunt u te allen tijde bezwaar maken (Art. 21 GDPR).</p>\n<h3>Klacht bij een toezichthoudende autoriteit</h3>\n<p>In geval van schendingen van de GDPR heeft u het recht om een klacht in te dienen bij een toezichthoudende autoriteit in de lidstaat waar u woont of werkt.</p>\n<h3>Gegevensoverdraagbaarheid</h3>\n<p>U heeft het recht om de gegevens die u heeft verstrekt te ontvangen in een gestructureerd, machineleesbaar formaat en te verzoeken om directe overdracht aan een andere verwerkingsverantwoordelijke, indien technisch haalbaar.</p>\n<h3>Inzage, rectificatie, verwijdering</h3>\n<p>U heeft het recht om kosteloos informatie te ontvangen over uw opgeslagen persoonsgegevens en om te allen tijde correctie of verwijdering te verzoeken.</p>\n<h3>Beperking van de verwerking</h3>\n<ul>\n  <li>Als u de juistheid van uw gegevens betwist, kan de verwerking tijdens de verificatie worden beperkt.</li>\n  <li>Als de verwerking onrechtmatig is, kunt u in plaats van verwijdering om beperking verzoeken.</li>\n  <li>Als wij uw gegevens niet meer nodig hebben, maar u deze nodig heeft voor juridische claims, kunt u om beperking verzoeken.</li>\n  <li>Als u bezwaar maakt op grond van Art. 21(1) GDPR, kan de verwerking worden beperkt terwijl de belangen worden afgewogen.</li>\n</ul>\n<h3>SSL/TLS-versleuteling</h3>\n<p>Deze website gebruikt SSL/TLS om de overdracht van vertrouwelijke informatie te beschermen. U herkent een versleutelde verbinding aan “https://” en het slotpictogram in uw browser.</p>\n<h2>4. Gegevensverzameling op deze website</h2>\n<h3>Cookies</h3>\n<p>Onze website gebruikt “cookies”, kleine gegevensbestanden die op uw apparaat worden opgeslagen om analyse van het websitegebruik mogelijk te maken. Sessiecookies worden na uw bezoek verwijderd; permanente cookies blijven behouden totdat u ze verwijdert.</p>\n<p>Cookies kunnen first-party of third-party zijn; ze worden gebruikt voor noodzakelijke technische functies, analyse of advertenties. Noodzakelijke cookies zijn gebaseerd op Art. 6(1)(f) GDPR; andere cookies vereisen uw toestemming (Art. 6(1)(a) GDPR en § 25(1) TDDDG) en kunnen te allen tijde worden ingetrokken.</p>\n<p>U kunt uw browser zo instellen dat u wordt geïnformeerd over cookies of dat cookies worden geblokkeerd; het uitschakelen van cookies kan de functionaliteit van de website beperken.</p>\n<h3>Contactformulier</h3>\n<p>Als u vragen stuurt via het contactformulier, worden uw gegevens (inclusief contactgegevens) opgeslagen om uw verzoek te verwerken. Gegevens worden verwerkt op basis van Art. 6(1)(b) of (f) GDPR, of uw toestemming (Art. 6(1)(a) GDPR). U kunt te allen tijde verwijdering verzoeken of toestemming intrekken.</p>\n<h3>Aanvragen per e-mail, telefoon, fax</h3>\n<p>Als u per e-mail, telefoon of fax contact met ons opneemt, worden uw aanvraag en persoonsgegevens opgeslagen en verwerkt om uw verzoek af te handelen. De gegevensverwerking is gebaseerd op Art. 6(1)(b), (f) of (a) GDPR. U kunt te allen tijde verwijdering verzoeken of toestemming intrekken.</p>\n<h2>5. Plug-ins en tools</h2>\n<h3>Google Fonts</h3>\n<p>Deze website gebruikt Google Fonts voor een uniforme lettertypeweergave. Uw browser maakt verbinding met de servers van Google om de lettertypen op te halen, waarbij mogelijk uw IP-adres wordt geregistreerd. Gebruik is gebaseerd op Art. 6(1)(f) GDPR of, met toestemming, Art. 6(1)(a) GDPR en § 25(1) TDDDG. Toestemming kan te allen tijde worden ingetrokken.</p>\n<p>Als uw browser Google Fonts niet ondersteunt, wordt een standaardlettertype gebruikt.</p>\n<p>Meer informatie: <a href=\"https://developers.google.com/fonts/faq\" target=\"_blank\" rel=\"noopener noreferrer\">Google Fonts FAQ</a> en <a href=\"https://policies.google.com/privacy?hl=en\" target=\"_blank\" rel=\"noopener noreferrer\">Privacybeleid van Google</a>.</p>\n<h3>Google reCAPTCHA</h3>\n<p>Wij gebruiken Google reCAPTCHA om te controleren of formulieren door mensen worden ingevuld. Google analyseert het gebruikersgedrag (bijv. IP-adres, muisbewegingen) op de achtergrond en kan cookies opslaan. Gebruik is gebaseerd op Art. 6(1)(f) GDPR of, met toestemming, Art. 6(1)(a) GDPR en § 25(1) TDDDG. Toestemming kan te allen tijde worden ingetrokken.</p>\n<p>Meer informatie: <a href=\"https://policies.google.com/privacy?hl=en\" target=\"_blank\" rel=\"noopener noreferrer\">Privacybeleid van Google</a> en <a href=\"https://policies.google.com/terms?hl=en\" target=\"_blank\" rel=\"noopener noreferrer\">Gebruiksvoorwaarden van Google</a>.</p>\n<p>Bron: <a href=\"https://www.e-recht24.de\">e-recht24.de</a></p>"
+  },
+
+  "accessibility": {
+    "title": "Toegankelijkheidsverklaring",
+    "text": "<p>De Digital Health Research Group zet zich ervoor in om haar websites en mobiele applicaties toegankelijk te maken, in overeenstemming met de Duitse wet inzake toegankelijke websites (BfWebG) en de Duitse verordening inzake toegankelijke informatietechnologie (BITV 2.0), ter uitvoering van EU-richtlijn 2016/2102.</p><p><h4>Opstelling van deze toegankelijkheidsverklaring</h4>Deze verklaring is opgesteld op 8 april 2025 en voor het laatst bijgewerkt op 8 april 2025. De laatste beoordeling van deze website door middel van een zelfevaluatie vond plaats op 8 april 2025.<br>Deze verklaring is gebaseerd op een zelfevaluatie van de mate waarin de website voldoet aan de eisen van het BfWebG in overeenstemming met BITV 2.0.</p><p><h4>Stand van de naleving van de BITV-vereisten</h4>Deze website is gepubliceerd vóór 8 april 2025 en voldoet nog niet volledig aan de huidige stand van de toegankelijkheid. Wij werken continu aan de verdere ontwikkeling van deze website en streven ernaar daarbij drempels te verminderen.</p><p><h4>Niet-toegankelijke inhoud</h4><ul><li>Alternatieve teksten voor afbeeldingen en grafische elementen zijn niet volledig beschikbaar.</li><li>ARIA-attributen voor oriëntatie binnen elementen zijn niet volledig beschikbaar.</li><li>Toetsenbordtoegankelijkheid is niet volledig beschikbaar voor de volgende elementen/inhoud: labels voor context en gedrag.</li><li>De positie van de toetsenbordfocus is niet duidelijk zichtbaar.</li><li>Woorden en gedeelten in andere talen zijn niet gemarkeerd.</li><li>Er is geen overzichtspagina in formulieren voor het achteraf controleren of corrigeren van invoer. De gegevens worden direct verzonden.</li><li>Op start- en overzichtspagina's kunnen bepaalde elementen niet worden overgeslagen omdat kopteksten ontbreken.</li></ul></p><p><h4>Feedback en contactgegevens</h4>Als u tekortkomingen op het gebied van toegankelijk ontwerp opmerkt, neem dan contact met ons op via:<br><br>Email: <a href='mailto:digital-health@tu-dresden.de'>digital-health@tu-dresden.de</a><br>Phone: <a href='tel:+4935146337671'>+49 351 463-37671</a></p><p><h4>Handhavingsprocedure</h4>Als u niet tevreden bent met de afhandeling van uw feedback, kunt u contact opnemen met de handhavingsinstantie van de Vrijstaat Saksen:<br><br><p>Kantoor van de commissaris van de Saksische deelstaatregering voor de belangen van mensen met een beperking<br>Albertstraße 10<br>01097 Dresden</p><p>Postadres: Archivstraße 1, 01097 Dresden<br>Email: <a href='mailto:info.behindertenbeauftragter@sk.sachsen.de'>info.behindertenbeauftragter@sk.sachsen.de</a><br>Phone: <a href='tel:+4935156412161'>+49 351 564-12161</a><br>Internet: <a href='https://www.inklusion.sachsen.de'>https://www.inklusion.sachsen.de</a></p></p>"
+  },
+
+  "imprint": {
+    "title": "Colofon",
+    "text": "<h4>Health-Habit-Hub</h4><p>Technische Universität Dresden<br>Faculty of Business and Economics<br>Research Group Digital Health<br>01062 Dresden</p><p><h4>Contact</h4>Dipl.-Wi.-Ing. Felix Reinsch<br>Email: <a href='mailto:digital-health@tu-dresden.de'>digital-health@tu-dresden.de</a><br>Phone: <a href='tel:+4935146337671'>+49 351 463-37671</a></p><p><h4>Disclaimer</h4>De inhoud van deze website is met de grootst mogelijke zorg samengesteld. Wij kunnen echter geen garantie geven voor de juistheid, volledigheid of actualiteit van de verstrekte informatie.</p><h4>Externe links</h4>Deze website bevat links naar externe websites van derden. Wij hebben geen invloed op de inhoud van deze sites. De betreffende aanbieder of exploitant is verantwoordelijk voor de inhoud van de gelinkte sites.<p></p><h4>Meer informatie</h4>Voor meer informatie verwijzen wij u naar het <a href='https://tu-dresden.de/impressum'>colofon van de TU Dresden</a>.</p>"
+  },
+
+  "header": "Inleiding",
+  "text": "Beste gewoontedeler,<br> Zoals u waarschijnlijk weet, legt een gewoonte een verband tussen een gedrag en een context waarin dat gedrag consistent wordt uitgevoerd. Neem bijvoorbeeld het gedrag van 5 kilometer hardlopen. Dit gedrag kan worden geassocieerd met de context van 's ochtends opstaan in het weekend. In dit scenario worden de contextcategorie tijd (weekendochtenden) en de contextcategorie gerelateerd gedrag ('s ochtends opstaan) gecombineerd tot een omvattende context. Wij zijn geïnteresseerd in het verkennen van de contexten die u aan uw gedragingen toekent om er een gewoonte van te maken. Door uw gewoonten met ons te delen, draagt u bij aan een beter begrip van hoe specifieke contexten gedrag kunnen versterken. Uw inzichten zijn van onschatbare waarde om anderen te helpen sterke, gepersonaliseerde gewoonten te ontwikkelen.",
+  "image": "pics/intro_pic.png",
+
+  "donationHeader": "Gegevens doneren",
+  "dataDonationGuide": "Afdeling gegevensdonatie",
+  "proceeding": "Werkwijze",
+  "step1": "Voer uw gewoonte in als een zin.",
+  "step2": "Markeer de delen van uw zin en ken aan elk deel de hieronder vermelde context of situatie toe.",
+  "step3": "Bevestig de gewoonte die u wilt doneren door op \"Doneren\" te drukken.",
+
+  "example1": "<p><strong>Voorbeeld:</strong> Als ik <mark class=mark_PhysicalSetting>de keuken binnenkom</mark> en <mark class=mark_PriorBehavior>een fruitmand zie</mark>, <mark class=mark_Behavior>pak ik een appel</mark> en <mark class=mark_Behavior>eet ik hem op</mark>.</p>",
+  "clear": "↺",
+  "TimeReference": "Tijdsreferentie",
+  "PhysicalSetting": "fysieke omgeving",
+  "PriorBehavior": "voorafgaand gedrag",
+  "People": "Mensen",
+  "InternalState": "innerlijke toestand",
+  "Reasoning": "motivatie",
+  "Behavior": "Gedrag",
+  "example2": "<h5>Plaatshouder: Ik drink een glas water voor het slapengaan.<h5>",
+  "submit": "Doneren",
+  "add": "+ nog een gewoonte toevoegen",
+
+  "demo_text": "De informatie die u verstrekt, helpt ons waardevolle inzichten te verkrijgen. Om de gegevens beter te kunnen classificeren en de onderzoeksresultaten te verbeteren, zouden wij het op prijs stellen als u de onderstaande informatie zou willen verstrekken. Deelname is vrijwillig en anoniem. De informatie wordt vertrouwelijk behandeld. </br> Neem een moment de tijd om de onderstaande velden in te vullen:",
+
+  "choose_option": "Kies een optie!",
+
+  "sex": "Geslacht:",
+  "sex_m": "man",
+  "sex_w": "vrouw",
+  "sex_d": "divers",
+
+  "origin": "Land van herkomst:",
+
+  "graduation": "Hoogst genoten opleiding:",
+  "g_primary": "Basisschool",
+  "g_lower_secondary": "Lager secundair onderwijs (middelbare school)",
+  "g_upper_secondary": "Hoger secundair onderwijs (diploma middelbare school)",
+  "g_vocational": "Beroeps-/technisch onderwijs",
+  "g_bachelor": "Bachelordiploma",
+  "g_master": "Masterdiploma",
+  "g_doctorate": "Doctoraat (PhD/MD/EdD)",
+  "g_other": "Anders / Zeg ik liever niet",
+
+  "age": "Leeftijd:",
+  "weight": "Gewicht:",
+  "w_1": "Ondergewicht",
+  "w_2": "Normaal gewicht",
+  "w_3": "Overgewicht",
+  "w_4": "Sterk overgewicht",
+  "religious_affiliation": "Religieuze overtuiging:",
+  "christianity": "Christendom",
+  "islam": "Islam",
+  "judaism": "Jodendom",
+  "hinduism": "Hindoeïsme",
+  "buddhism": "Boeddhisme",
+  "shintoism": "Shintoïsme",
+  "nondenominational": "Niet-religieus",
+  "profession": "Professionele context:",
+  "study": "Tijdens studie",
+  "training": "In opleiding",
+  "employed_full_time": "Voltijds in dienst",
+  "employed_part_time": "Deeltijds in dienst",
+  "self_employed": "Zelfstandige/freelancer",
+  "job_seeker": "Werkzoekende",
+  "retired": "Gepensioneerd",
+  "family_care": "Huishouden/gezinszorg",
+  "working_hours": "Werktijden:",
+  "shift_system_night": "Ploegendienst (incl. nachtdienst)",
+  "shift_system_day": "Ploegendienst (zonder nachtdienst)",
+  "work_WE": "Weekenddienst",
+  "free_WE_1": "Meestal vrij in het weekend",
+  "free_WE_2": "Altijd vrij in het weekend",
+  "flexible": "Flexibele werktijden",
+  "rigid": "Vaste werktijden",
+  "homeoffice": "Thuiswerken",
+  "way_to_work": "Manier van woon-werkverkeer:",
+  "car": "Met de auto",
+  "walk": "Te voet",
+  "bike": "Met de fiets",
+  "public_transport": "Openbaar vervoer",
+  "motorcycle": "Met de motor",
+  "carpool": "Carpoolen",
+  "telecommuting": "Telewerken (geen dagelijks woon-werkverkeer)",
+  "other_way": "Anders (bijv. thuiswerken met incidentele afspraken op locatie)",
+  "private_context": "Privésituatie:",
+  "partner": "In een relatie zonder kind(eren)",
+  "partner_child": "In een relatie met kind(eren)",
+  "single_child": "Alleenstaande ouder met kind(eren)",
+  "single": "Alleenstaande ouder zonder kind(eren)",
+  "separate_partner_child": "Gescheiden wonend, maar in een relatie met kind(eren)",
+  "separate_single_child": "Gescheiden wonend, alleenstaand met kind(eren)",
+  "separate_single": "Gescheiden wonend, alleenstaand zonder kind(eren)",
+  "other_constellation": "Andere gezinssamenstelling (graag toelichten)",
+  "available_time": "Beschikbare tijd:",
+  "more_3": "Meer dan 3 uur per dag",
+  "two_to_three": "2-3 uur per dag",
+  "one_to_two": "1-2 uur per dag",
+  "half_to_one": "0,5-1 uur per dag",
+  "less_hours": "Minder dan 0,5 uur per dag",
+  "relationship_context": "Relatiecontext:",
+  "partner_healthy": "Mijn partner is erg gezondheidsbewust en regelmatig fysiek actief.",
+  "partner_moderate_healthy": "Mijn partner is matig gezondheidsbewust en af en toe fysiek actief.",
+  "partner_supportive": "Mijn partner ondersteunt mijn inspanningen om een gezonde levensstijl te leiden.",
+  "partner_less_healthy": "Mijn partner is niet erg gezondheidsbewust en zelden fysiek actief.",
+  "partner_inactive": "Mijn partner geeft de voorkeur aan een overwegend inactieve levensstijl en toont weinig interesse in gezondheidsaspecten.",
+  "no_partner": "Ik heb geen partner.",
+  "pets": "Huisdieren:",
+  "pet_regular": "Ik heb een huisdier waarmee ik regelmatig beweeg/wandel.",
+  "pet_more_activity": "Ik heb huisdieren die mij aanmoedigen om actiever te zijn in het dagelijks leven.",
+  "pet_no_impact": "Ik heb huisdieren die geen invloed hebben op mijn fysieke activiteit.",
+  "no_pet": "Ik heb geen huisdieren.",
+
+  "slogan": "U heeft UW gewoonte op weg geholpen om een gemeengoed te worden.",
+  "thanks": "🎉 Dank u voor UW donatie en voor UW bijdrage!",
+  "donate_again": "Deel nog een gewoonte",
+  "Rewardbox": {
+    "gift": "BELONING"
+  },
+
+  "Contactbox": {
+    "send_us": "Stuur ons een bericht",
+    "name": "Naam",
+    "email": "E-mail",
+    "subject": "Onderwerp",
+    "message": "Bericht",
+    "submit": "Bericht verzenden",
+    "contact_us": "Colofon",
+    "address": "Adres: Dresdner Straße 2, 01234 Dresden",
+    "phone": "01577/123456789",
+    "email_contact": "E-mail: info@habithub.de"
+  },
+
+  "donateErrors": {
+    "emptyFieldError": "Het tekstveld mag niet leeg zijn!",
+    "emptyBehaviorError": "Markeer een gedraging in de tekst voordat u verzendt.",
+    "noContextError": "Bevestig dat u geen robot bent."
+  },
+
+  "habitStrengthSlider": {
+    "title": "In hoeverre wilt u deze gewoonte stoppen of behouden?",
+    "minDescription": "Zeker stoppen",
+    "maxDescription": "Zeker behouden",
+    "labels": [
+      "Zeker stoppen",
+      "Liever stoppen",
+      "Neigen naar stoppen",
+      "Neutraal / Onbeslist",
+      "Neigen naar behouden",
+      "Liever behouden",
+      "Zeker behouden"
+    ]
+  },
+
+  "form_descriptions": {
+    "sex": "Kies het geslacht waarmee u zich het meest identificeert.",
+    "origin": "Selecteer het land waar u vandaan komt.",
+    "graduation": "Selecteer het hoogste niveau dat u heeft afgerond.",
+    "age": "Voer uw huidige leeftijd in jaren in.",
+    "weight": "Selecteer de gewichtscategorie die het best bij u past.",
+    "occupation": "Selecteer de optie die uw huidige professionele situatie het best beschrijft.",
+    "working_hours": "Selecteer de optie die uw werktijden het best beschrijft.",
+    "way_to_work": "Selecteer de optie die uw manier van woon-werkverkeer het best beschrijft.",
+    "private_context": "Selecteer de optie die uw huidige gezinssituatie het best beschrijft.",
+    "available_time": "Selecteer de optie die het best beschrijft hoeveel tijd u beschikbaar heeft voor uw gewoonten.",
+    "relationship_context": "Selecteer de optie die de houding van uw partner ten opzichte van gezondheid en fysieke activiteit het best beschrijft.",
+    "pets": "Selecteer de optie die uw relatie met huisdieren en hun invloed op uw fysieke activiteit het best beschrijft."
+  }
+}
