@@ -233,12 +233,14 @@ export function createBackupsRouter({ db } = {}) {
       }
 
       const database = await getDb();
+      // Coerce every user-derived value to a string so a JSON body can't smuggle
+      // a query operator (e.g. { "$ne": null }) into the lookup (NoSQL injection).
       const tokenDoc = await database
         .collection('restore_confirmation_tokens')
         .findOne({
-          token: restoreToken,
-          filename,
-          byUserId: req.user.sub,
+          token: String(restoreToken),
+          filename: String(filename),
+          byUserId: String(req.user.sub),
           expiresAt: { $gt: new Date() },
         });
       if (!tokenDoc) {

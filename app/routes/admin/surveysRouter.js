@@ -540,12 +540,18 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
           }
           finalSlug = String(slug);
         } else {
+          // Bound the input length first (ReDoS-safe), then slugify. Trimming
+          // leading/trailing dashes is done with split/join rather than a
+          // backtracking-prone regex like /^-+|-+$/.
           let base = String(title || 'questionnaire')
+            .slice(0, 80)
             .toLowerCase()
-            .trim()
             .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '')
+            .split('-')
+            .filter(Boolean)
+            .join('-')
             .slice(0, 60);
+          if (!base) base = 'questionnaire';
           if (!/^[a-z]/.test(base)) base = `q-${base}`;
           finalSlug = base;
           let n = 1;

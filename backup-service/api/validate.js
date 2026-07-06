@@ -29,6 +29,24 @@ export function resolveBackupPath(filename) {
   return resolved;
 }
 
+/**
+ * Resolve a freshly-generated (server-side) backup filename to an absolute
+ * path inside BACKUP_DIR, refusing anything containing a path separator or that
+ * would resolve outside the directory. Unlike resolveBackupPath this does not
+ * enforce the download naming convention — it is a pure path-traversal barrier
+ * for write paths (uploaded archives + their manifests). Returns null if unsafe.
+ */
+export function safeJoinBackupDir(name) {
+  if (typeof name !== 'string' || !name) return null;
+  if (name.includes('/') || name.includes('\\') || name.includes('\0')) {
+    return null;
+  }
+  const base = resolve(BACKUP_DIR) + sep;
+  const resolved = resolve(BACKUP_DIR, name);
+  if (!resolved.startsWith(base)) return null;
+  return resolved;
+}
+
 const EXPECTED_ENTRIES = [
   { prefix: 'mongo/', key: 'mongo' },
   { prefix: 'neo4j/neo4j.dump', key: 'neo4j' },

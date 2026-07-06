@@ -1,9 +1,30 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 // Overridable only for local/CI smoke testing outside the container, where
 // /backups doesn't exist — production always uses the real mounted path.
 export const BACKUP_DIR = process.env.BACKUP_DIR_OVERRIDE || '/backups';
+
+/**
+ * Join a filename to BACKUP_DIR, refusing separators or anything resolving
+ * outside the directory (path-traversal barrier for manifest writes).
+ * @throws {Error} when the resulting path would escape BACKUP_DIR
+ */
+function backupDirPath(name) {
+  if (
+    typeof name !== 'string' ||
+    !name ||
+    name.includes('/') ||
+    name.includes('\\') ||
+    name.includes('\0')
+  ) {
+    throw new Error('Invalid backup filename.');
+  }
+  const base = resolve(BACKUP_DIR) + sep;
+  const resolved = resolve(BACKUP_DIR, name);
+  if (!resolved.startsWith(base)) throw new Error('Invalid backup filename.');
+  return resolved;
+}
 
 /**
  * Reads every `*.manifest.json` sidecar in /backups, newest first.
@@ -64,7 +85,7 @@ export function writeUploadedManifest({ filename, sizeBytes, presence }) {
     note: 'Flags reflect components detected in the uploaded archive, not verified backup integrity.',
   };
   writeFileSync(
-    join(BACKUP_DIR, `${filename}.manifest.json`),
+    backupDirPath(`${filename}.manifest.json`),
     JSON.stringify(manifest, null, 2)
   );
   return manifest;
