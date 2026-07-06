@@ -106,6 +106,9 @@ function createMockDb() {
                 _limit = n;
                 return cursor;
               },
+              project() {
+                return cursor;
+              },
               sort() {
                 return cursor;
               },
@@ -336,6 +339,63 @@ before(async () => {
     },
   ]);
 
+  // A study whose groups let the habits feed resolve group ids → labels.
+  const STUDY_ID = '5f000000000000000000aa01';
+  const GRP_G1 = '5f000000000000000000bb01';
+  const GRP_G2 = '5f000000000000000000bb02';
+  mockDb._seed('studies', [
+    {
+      _id: STUDY_ID,
+      name: 'Test Study',
+      groups: [
+        { id: GRP_G1, label: 'G1' },
+        { id: GRP_G2, label: 'G2' },
+      ],
+    },
+  ]);
+
+  // Donated habits now live in Neo4j; the feed reads them via neo4jRun. This
+  // cypher-aware stub returns the three donations for the feed query and the
+  // participant's habit count for getParticipantProgress.
+  const donationRows = [
+    {
+      id: 'hd-1',
+      participantId: PARTICIPANT_ID,
+      habitName: 'Walk 10k steps',
+      category: 'physical',
+      studyId: STUDY_ID,
+      groupId: GRP_G1,
+      donatedAt: '2026-01-08T08:00:00.000Z',
+    },
+    {
+      id: 'hd-2',
+      participantId: 'user-other',
+      habitName: 'Meditate 10 min',
+      category: 'mental',
+      studyId: STUDY_ID,
+      groupId: GRP_G2,
+      donatedAt: '2026-01-09T09:00:00.000Z',
+    },
+    {
+      id: 'hd-3',
+      participantId: PARTICIPANT_ID,
+      habitName: 'Drink 2L water',
+      category: 'physical',
+      studyId: STUDY_ID,
+      groupId: GRP_G1,
+      donatedAt: '2026-01-10T10:00:00.000Z',
+    },
+  ];
+  const neo4jRunStub = async (cypher = '') => {
+    if (cypher.includes('RETURN h.uuid AS id, u.userID AS participantId')) {
+      return donationRows;
+    }
+    if (cypher.includes('count(h) AS cnt')) {
+      return [{ cnt: 2 }];
+    }
+    return [];
+  };
+
   const realFetch = global.fetch;
   global.fetch = async (url, options) => {
     if (typeof url === 'string' && url.includes('/jwks')) {
@@ -353,6 +413,7 @@ before(async () => {
     expectedAudience: null,
     serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
     db: mockDb,
+    neo4jRun: neo4jRunStub,
     keycloak: mockKc,
   });
   testApp.use('/api/v1', apiRouter);
@@ -526,7 +587,9 @@ test('GET /habits/feed/export?format=csv - returns CSV', async () => {
   assert.strictEqual(res.status, 200);
   assert.ok(res.headers.get('content-type').includes('text/csv'));
   const text = await res.text();
-  assert.ok(text.startsWith('participantId,habitName,category,donatedAt'));
+  assert.ok(
+    text.startsWith('participantId,habitName,category,group,donatedAt')
+  );
   const lines = text.split('\n');
   assert.strictEqual(lines.length, 4); // header + 3 rows
 });

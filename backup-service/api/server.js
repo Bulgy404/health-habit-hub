@@ -1,14 +1,19 @@
 import express from 'express';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
 import { renameSync, unlinkSync, statSync, mkdirSync, existsSync } from 'node:fs';
-import { join, extname } from 'node:path';
+import { join, extname, resolve, sep } from 'node:path';
 import {
   BACKUP_DIR,
   listManifests,
   getManifestForFile,
   writeUploadedManifest,
 } from './manifests.js';
-import { resolveBackupPath, inspectUploadedArchive } from './validate.js';
+import {
+  resolveBackupPath,
+  inspectUploadedArchive,
+  safeJoinBackupDir,
+} from './validate.js';
 import {
   getCurrentJob,
   isJobRunning,
@@ -47,6 +52,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Rate limiter for the sensitive, expensive, state-changing endpoints
+// (backup/restore/upload). These do heavy I/O and can wipe or overwrite data,
+// so cap the request rate even though the API is already auth-gated.
+const writeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests — please slow down.' },
+});
+
 app.get('/status', (_req, res) => {
   const history = listManifests().slice(0, 30);
   res.json({
@@ -60,7 +76,7 @@ app.get('/jobs/current', (_req, res) => {
   res.json(getCurrentJob());
 });
 
-app.post('/trigger', (_req, res) => {
+app.post('/trigger', writeLimiter, (_req, res) => {
   try {
     const jobId = triggerBackup({ reason: 'manual' });
     res.status(202).json({ jobId });
@@ -69,7 +85,7 @@ app.post('/trigger', (_req, res) => {
   }
 });
 
-app.post('/restore', (req, res) => {
+app.post('/restore', writeLimiter, (req, res) => {
   const { filename, confirmFilename, acknowledgeWarnings, restoreKeycloak } =
     req.body ?? {};
 
@@ -119,13 +135,18 @@ const upload = multer({
   limits: { fileSize: UPLOAD_MAX_MB * 1024 * 1024 },
 });
 
-app.post('/upload', upload.single('file'), (req, res) => {
+app.post('/upload', writeLimiter, upload.single('file'), (req, res) => {
   const file = req.file;
   if (!file) return res.status(400).json({ error: 'No file uploaded.' });
 
   const cleanup = () => {
     try {
-      unlinkSync(file.path);
+      // Only ever unlink inside the multer temp dir — never a path derived
+      // from user input.
+      const p = resolve(file.path);
+      if (p === resolve(UPLOAD_TMP_DIR) || p.startsWith(resolve(UPLOAD_TMP_DIR) + sep)) {
+        unlinkSync(p);
+      }
     } catch {
       // already removed
     }
@@ -150,12 +171,19 @@ app.post('/upload', upload.single('file'), (req, res) => {
 
   const sanitizedName = file.originalname
     .replace(/[^A-Za-z0-9._-]/g, '_')
+    .replace(/\.{2,}/g, '_') // collapse any ".." runs so the name can't traverse
     .slice(0, 100);
   const filename = `uploaded_${Date.now()}_${sanitizedName}`.replace(
     /(?:\.tar\.gz|\.tgz)?$/i,
     '.tar.gz'
   );
-  const finalPath = join(BACKUP_DIR, filename);
+  // Defense in depth: resolve the destination and confirm it stays inside
+  // BACKUP_DIR before writing anything (path-traversal barrier).
+  const finalPath = safeJoinBackupDir(filename);
+  if (!finalPath) {
+    cleanup();
+    return res.status(400).json({ error: 'Invalid backup filename.' });
+  }
   renameSync(file.path, finalPath);
 
   const manifest = writeUploadedManifest({
