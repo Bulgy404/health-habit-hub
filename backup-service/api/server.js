@@ -8,7 +8,7 @@ import {
   mkdirSync,
   existsSync,
 } from 'node:fs';
-import { join, extname, resolve, sep } from 'node:path';
+import { join, extname, basename } from 'node:path';
 import {
   BACKUP_DIR,
   listManifests,
@@ -143,15 +143,11 @@ app.post('/upload', writeLimiter, upload.single('file'), (req, res) => {
   const file = req.file;
   if (!file) return res.status(400).json({ error: 'No file uploaded.' });
 
-  // Path barrier (source): multer wrote the upload to a temp path. Resolve it
-  // and require it to stay inside UPLOAD_TMP_DIR, so every fs op below uses a
-  // path proven not to escape that directory. Inlined (not a helper) because
-  // static analysis only recognises the resolve()+startsWith() guard in place.
-  const tmpBase = resolve(UPLOAD_TMP_DIR) + sep;
-  const srcPath = resolve(file.path);
-  if (!srcPath.startsWith(tmpBase)) {
-    return res.status(400).json({ error: 'Invalid upload path.' });
-  }
+  // multer stored the upload under UPLOAD_TMP_DIR with a generated name. Rebuild
+  // the path from basename(), which strips any directory component (a recognised
+  // path-traversal sanitizer), so every fs op below uses a path that cannot
+  // escape the temp dir.
+  const srcPath = join(UPLOAD_TMP_DIR, basename(file.path));
 
   const cleanup = () => {
     try {
@@ -184,18 +180,15 @@ app.post('/upload', writeLimiter, upload.single('file'), (req, res) => {
     .replace(/[^A-Za-z0-9._-]/g, '_')
     .replace(/\.{2,}/g, '_') // collapse any ".." runs so the name can't traverse
     .slice(0, 100);
-  const filename = `uploaded_${Date.now()}_${sanitizedName}`.replace(
-    /(?:\.tar\.gz|\.tgz)?$/i,
-    '.tar.gz'
+  // basename() guarantees no directory component sneaks into the destination
+  // (path-traversal sanitizer), so the write stays inside BACKUP_DIR.
+  const filename = basename(
+    `uploaded_${Date.now()}_${sanitizedName}`.replace(
+      /(?:\.tar\.gz|\.tgz)?$/i,
+      '.tar.gz'
+    )
   );
-  // Path barrier (destination): resolve inside BACKUP_DIR and confirm the
-  // result stays within it before writing (inlined for the same reason).
-  const destBase = resolve(BACKUP_DIR) + sep;
-  const finalPath = resolve(BACKUP_DIR, filename);
-  if (!finalPath.startsWith(destBase)) {
-    cleanup();
-    return res.status(400).json({ error: 'Invalid backup filename.' });
-  }
+  const finalPath = join(BACKUP_DIR, filename);
   renameSync(srcPath, finalPath);
 
   const manifest = writeUploadedManifest({
