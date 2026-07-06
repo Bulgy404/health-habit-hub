@@ -294,14 +294,12 @@ export async function createAssignment({
   ) {
     return { groupNotFound: true };
   }
-  // Explicit type barrier: qOid is built by toOid (new ObjectId(String(v))),
-  // so it is always an ObjectId instance here — never a user-supplied query
-  // operator object. This guard makes that guarantee obvious (NoSQL-injection
-  // safe).
-  if (!(qOid instanceof ObjectId)) return { notFound: true };
+  // Re-wrap in ObjectId at the query site so the value is provably a BSON
+  // ObjectId — never a user-supplied query operator object (NoSQL-injection
+  // barrier that static analysis recognises in place).
   const questionnaire = await db
     .collection('questionnaires')
-    .findOne({ _id: qOid });
+    .findOne({ _id: new ObjectId(qOid) });
   if (!questionnaire) return { notFound: true };
   // Completion tracking matches responses by slug; refuse to schedule a
   // questionnaire that has none (legacy custom questionnaires may lack one).

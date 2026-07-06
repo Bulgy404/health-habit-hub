@@ -1,7 +1,13 @@
 import express from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
-import { renameSync, unlinkSync, statSync, mkdirSync, existsSync } from 'node:fs';
+import {
+  renameSync,
+  unlinkSync,
+  statSync,
+  mkdirSync,
+  existsSync,
+} from 'node:fs';
 import { join, extname, resolve, sep } from 'node:path';
 import {
   BACKUP_DIR,
@@ -9,11 +15,7 @@ import {
   getManifestForFile,
   writeUploadedManifest,
 } from './manifests.js';
-import {
-  resolveBackupPath,
-  inspectUploadedArchive,
-  safeJoinBackupDir,
-} from './validate.js';
+import { resolveBackupPath, inspectUploadedArchive } from './validate.js';
 import {
   getCurrentJob,
   isJobRunning,
@@ -97,7 +99,9 @@ app.post('/restore', writeLimiter, (req, res) => {
 
   const absPath = resolveBackupPath(filename);
   if (!absPath || !existsSync(absPath)) {
-    return res.status(400).json({ error: 'Unknown or invalid backup filename.' });
+    return res
+      .status(400)
+      .json({ error: 'Unknown or invalid backup filename.' });
   }
 
   const manifest = getManifestForFile(filename);
@@ -139,14 +143,19 @@ app.post('/upload', writeLimiter, upload.single('file'), (req, res) => {
   const file = req.file;
   if (!file) return res.status(400).json({ error: 'No file uploaded.' });
 
+  // Path barrier (source): multer wrote the upload to a temp path. Resolve it
+  // and require it to stay inside UPLOAD_TMP_DIR, so every fs op below uses a
+  // path proven not to escape that directory. Inlined (not a helper) because
+  // static analysis only recognises the resolve()+startsWith() guard in place.
+  const tmpBase = resolve(UPLOAD_TMP_DIR) + sep;
+  const srcPath = resolve(file.path);
+  if (!srcPath.startsWith(tmpBase)) {
+    return res.status(400).json({ error: 'Invalid upload path.' });
+  }
+
   const cleanup = () => {
     try {
-      // Only ever unlink inside the multer temp dir — never a path derived
-      // from user input.
-      const p = resolve(file.path);
-      if (p === resolve(UPLOAD_TMP_DIR) || p.startsWith(resolve(UPLOAD_TMP_DIR) + sep)) {
-        unlinkSync(p);
-      }
+      unlinkSync(srcPath);
     } catch {
       // already removed
     }
@@ -158,12 +167,14 @@ app.post('/upload', writeLimiter, upload.single('file'), (req, res) => {
     originalExt !== '.tgz'
   ) {
     cleanup();
-    return res.status(400).json({ error: 'Only .tar.gz backup archives are accepted.' });
+    return res
+      .status(400)
+      .json({ error: 'Only .tar.gz backup archives are accepted.' });
   }
 
   let presence;
   try {
-    presence = inspectUploadedArchive(file.path);
+    presence = inspectUploadedArchive(srcPath);
   } catch (err) {
     cleanup();
     return res.status(400).json({ error: err.message });
@@ -177,14 +188,15 @@ app.post('/upload', writeLimiter, upload.single('file'), (req, res) => {
     /(?:\.tar\.gz|\.tgz)?$/i,
     '.tar.gz'
   );
-  // Defense in depth: resolve the destination and confirm it stays inside
-  // BACKUP_DIR before writing anything (path-traversal barrier).
-  const finalPath = safeJoinBackupDir(filename);
-  if (!finalPath) {
+  // Path barrier (destination): resolve inside BACKUP_DIR and confirm the
+  // result stays within it before writing (inlined for the same reason).
+  const destBase = resolve(BACKUP_DIR) + sep;
+  const finalPath = resolve(BACKUP_DIR, filename);
+  if (!finalPath.startsWith(destBase)) {
     cleanup();
     return res.status(400).json({ error: 'Invalid backup filename.' });
   }
-  renameSync(file.path, finalPath);
+  renameSync(srcPath, finalPath);
 
   const manifest = writeUploadedManifest({
     filename,
