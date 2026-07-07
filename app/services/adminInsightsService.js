@@ -106,35 +106,36 @@ const INSIGHTS = {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 7);
       const cutoffStr = cutoff.toISOString().slice(0, 10);
-      const rows = [];
-      for (const s of studies) {
-        let enrolledIds = [];
-        if (neo4jRun) {
-          const er = await neo4jRun(
-            `MATCH (u:User)-[:ENROLLED_IN]->(:Study {uuid: $uuid})
-             RETURN u.userID AS userId`,
-            { uuid: s._id.toString() }
-          );
-          enrolledIds = er.map((r) => r.userId).filter(Boolean);
-        }
-        let active = 0;
-        if (enrolledIds.length > 0) {
-          const a = await db
-            .collection('daily_behavior_logs')
-            .aggregate([
-              {
-                $match: {
-                  userId: { $in: enrolledIds },
-                  date: { $gte: cutoffStr },
+      const rows = await Promise.all(
+        studies.map(async (s) => {
+          let enrolledIds = [];
+          if (neo4jRun) {
+            const er = await neo4jRun(
+              `MATCH (u:User)-[:ENROLLED_IN]->(:Study {uuid: $uuid})
+               RETURN u.userID AS userId`,
+              { uuid: s._id.toString() }
+            );
+            enrolledIds = er.map((r) => r.userId).filter(Boolean);
+          }
+          let active = 0;
+          if (enrolledIds.length > 0) {
+            const a = await db
+              .collection('daily_behavior_logs')
+              .aggregate([
+                {
+                  $match: {
+                    userId: { $in: enrolledIds },
+                    date: { $gte: cutoffStr },
+                  },
                 },
-              },
-              { $group: { _id: '$userId' } },
-            ])
-            .toArray();
-          active = a.length;
-        }
-        rows.push({ study: s.name, enrolled: enrolledIds.length, active });
-      }
+                { $group: { _id: '$userId' } },
+              ])
+              .toArray();
+            active = a.length;
+          }
+          return { study: s.name, enrolled: enrolledIds.length, active };
+        })
+      );
       return {
         type: 'table',
         columns: [

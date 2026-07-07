@@ -1366,7 +1366,7 @@ function ParticipantsTab({ study, token }: { study: StudySummary; token: string 
     }
   }
 
-  const EXPORT_BASE = apiUrl(`/admin/studies/${study.id}/export`);
+  const EXPORT_BASE = apiUrl(`/admin/studies/${study.id}/export/zip`);
 
   async function handleExportZip() {
     setExportingZip(true);

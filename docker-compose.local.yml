@@ -49,6 +49,10 @@ services:
       - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-hhh-backend}
       - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET:-CHANGE_THIS_KEYCLOAK_BACKEND_SECRET}
       - API_SERVICE_SECRET=${API_SERVICE_SECRET}
+      # Internal-only client for the admin Backups page — see backup-service/api/.
+      - BACKUP_API_URL=http://backup:4100
+      - BACKUP_API_SECRET=${BACKUP_API_SECRET:-CHANGE_THIS_BACKUP_API_SECRET}
+      - BACKUP_UPLOAD_MAX_MB=${BACKUP_UPLOAD_MAX_MB:-2048}
     ports:
       - "3000:3000"
     networks:
@@ -60,6 +64,7 @@ services:
       - mongo
       - neo4j
       - redis
+      - backup
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
       interval: 30s
@@ -467,6 +472,79 @@ services:
       - traefik.http.routers.grafana.service=grafana
       - traefik.http.services.grafana.loadbalancer.server.port=3000
 
+  backup:
+    image: hhh/backup
+    container_name: hhh-backup
+    build: ./backup-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
+      - OFFSITE_REMOTE=${OFFSITE_REMOTE:-}
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
+      - ALERT_EMAIL=${ALERT_EMAIL:-}
+      - BACKUP_EMAIL=${BACKUP_EMAIL:-}
+      - MONGO_USER=${MONGO_USER:-admin}
+      - MONGO_PASSWORD=${MONGO_PASSWORD:-admin}
+      - MAIL_USER=${MAIL_USER:-}
+      - MAIL_PASS=${MAIL_PASS:-}
+      - MAIL_FROM=${MAIL_FROM:-}
+      # Internal-only HTTP API used by the admin panel's Backups page
+      # (status/trigger/restore/upload) — never published to the host, only
+      # reachable from other containers on hhh-proxy.
+      - BACKUP_API_SECRET=${BACKUP_API_SECRET:-CHANGE_THIS_BACKUP_API_SECRET}
+      - BACKUP_UPLOAD_MAX_MB=${BACKUP_UPLOAD_MAX_MB:-2048}
+      # docker.sock is never mounted directly into this container (that would
+      # be root-equivalent host access) — the docker CLI talks to the scoped
+      # docker-socket-proxy below instead, reachable only on the
+      # hhh-backup-internal network.
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
+    volumes:
+      - ./backups:/backups
+      - ./backup-service/rclone:/config/rclone:ro
+      - lightrag-data:/lightrag:ro
+    networks:
+      - hhh-proxy
+      - hhh-app
+      - hhh-backup-internal
+    depends_on:
+      - mongo
+      - neo4j
+      - lightrag
+      - docker-socket-proxy
+    # Also starts the internal backup-api HTTP server (see backup-service/api/)
+    # on port 4100 — no ports: block, it's only reachable inside hhh-proxy.
+
+  # See docker-compose.yml for the full rationale — same scoped-proxy
+  # pattern, kept in sync between prod and local.
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    container_name: hhh-docker-socket-proxy
+    restart: unless-stopped
+    environment:
+      - CONTAINERS=1
+      - VOLUMES=1
+      - IMAGES=1
+      - POST=1
+      - EXEC=0
+      - NETWORKS=0
+      - SWARM=0
+      - SERVICES=0
+      - NODES=0
+      - PLUGINS=0
+      - SECRETS=0
+      - CONFIGS=0
+      - BUILD=0
+      - COMMIT=0
+      - SESSION=0
+      - AUTH=0
+      - DISTRIBUTION=0
+    volumes:
+      - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
+    networks:
+      - hhh-backup-internal
+
 volumes:
   mongo-local-data:
   neo4j-local-data:
@@ -484,3 +562,6 @@ networks:
     name: hhh-proxy
   hhh-app:
     name: hhh-app
+  hhh-backup-internal:
+    name: hhh-backup-internal
+    internal: true

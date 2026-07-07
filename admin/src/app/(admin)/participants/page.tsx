@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl, API_BASE_URL } from "@/lib/api";
+import { useAdminGuard } from "@/lib/useAdminGuard";
 import styles from "@/components/admin-page.module.css";
 
 const GROUPS = ["G1", "G2", "G3", "G4"] as const;
@@ -89,13 +88,15 @@ function fmt(ts: string | null, withTime = false): string {
  * Moved here from the mobile admin section.
  */
 export default function ParticipantsPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const { token } = useAdminGuard();
   const t = useTranslations("participants");
   const tc = useTranslations("common");
+  const PAGE_SIZE = 50;
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -108,6 +109,10 @@ export default function ParticipantsPage() {
   const [progressFor, setProgressFor] = useState<Participant | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
   const [progressLoading, setProgressLoading] = useState(false);
+  // Guards against a slower request for participant A overwriting state
+  // after a faster request for participant B when rows are clicked in quick
+  // succession — only the most recent call's results are applied.
+  const progressRequestRef = useRef(0);
 
   // Dev test tools (fast-forward) — gated by ENABLE_TEST_TOOLS on the backend
   const [testTools, setTestTools] = useState(false);
@@ -129,14 +134,16 @@ export default function ParticipantsPage() {
     submittedAt: string | null;
   } | null>(null);
 
-  const token = session?.accessToken;
-
   const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await apiFetch(apiUrl("/admin/participants"), token);
-      setParticipants((Array.isArray(data) ? data : []).map(normalise));
+      const data = await apiFetch(
+        apiUrl(`/admin/participants?page=${page}&limit=${PAGE_SIZE}`),
+        token
+      );
+      setParticipants(((data?.participants ?? []) as unknown[]).map(normalise));
+      setTotal(Number(data?.total ?? 0));
       setError(null);
       apiFetch(apiUrl("/admin/participants/test-tools"), token)
         .then((r) => setTestTools(Boolean(r?.enabled)))
@@ -146,16 +153,12 @@ export default function ParticipantsPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, t, page]);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session?.roles?.includes("admin")) {
-      router.replace("/access-denied");
-      return;
-    }
     load();
-  }, [session, status, router, load]);
+  }, [load]);
 
   async function handleCreate() {
     if (!token) return;
@@ -168,7 +171,14 @@ export default function ParticipantsPage() {
       });
       setCreated({ userId: res?.userId, username: res?.username, password: res?.password });
       setShowCreate(false);
-      await load();
+      // New participants sort newest-first onto page 1. If we're already
+      // there, reload directly; otherwise jump back so it's visible (the
+      // page-change effect reloads automatically).
+      if (page === 1) {
+        await load();
+      } else {
+        setPage(1);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("createFailed"));
     } finally {
@@ -194,6 +204,7 @@ export default function ParticipantsPage() {
     try {
       await apiFetch(apiUrl(`/admin/participants/${p.id}`), token, { method: "DELETE" });
       setParticipants((prev) => prev.filter((x) => x.id !== p.id));
+      setTotal((prev) => Math.max(0, prev - 1));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("deleteFailed"));
     }
@@ -250,6 +261,7 @@ export default function ParticipantsPage() {
 
   async function openProgress(p: Participant) {
     if (!token) return;
+    const requestId = ++progressRequestRef.current;
     setProgressFor(p);
     setProgress(null);
     setResponses([]);
@@ -264,6 +276,7 @@ export default function ParticipantsPage() {
         })),
         apiFetch(apiUrl(`/admin/participants/${p.id}/habits`), token).catch(() => ({ habits: [] })),
       ]);
+      if (requestId !== progressRequestRef.current) return;
       setHabits(
         ((habitData?.habits ?? []) as Record<string, unknown>[]).map((h) => ({
           id: String(h.id ?? ""),
@@ -311,10 +324,11 @@ export default function ParticipantsPage() {
         })),
       });
     } catch (e) {
+      if (requestId !== progressRequestRef.current) return;
       setError(e instanceof Error ? e.message : t("progressLoadFailed"));
       setProgressFor(null);
     } finally {
-      setProgressLoading(false);
+      if (requestId === progressRequestRef.current) setProgressLoading(false);
     }
   }
 
@@ -427,6 +441,32 @@ export default function ParticipantsPage() {
               )}
             </tbody>
           </table>
+
+          <div className={styles.pagination}>
+            <span className={styles.muted}>
+              {t("totalPageInfo", {
+                total,
+                page,
+                totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+              })}
+            </span>
+            <button
+              className={styles.pageBtn}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              {tc("previous")}
+            </button>
+            <button
+              className={styles.pageBtn}
+              onClick={() =>
+                setPage((p) => Math.min(Math.max(1, Math.ceil(total / PAGE_SIZE)), p + 1))
+              }
+              disabled={page >= Math.max(1, Math.ceil(total / PAGE_SIZE))}
+            >
+              {tc("next")}
+            </button>
+          </div>
         </div>
       )}
 

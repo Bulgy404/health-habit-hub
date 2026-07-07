@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl, API_BASE_URL } from "@/lib/api";
+import { useAdminGuard } from "@/lib/useAdminGuard";
 import styles from "@/components/admin-page.module.css";
 
 interface Donation {
@@ -48,8 +47,7 @@ function fmt(ts: string | null): string {
  * and CSV export. Moved here from the mobile admin section.
  */
 export default function DonationsPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const { token } = useAdminGuard();
   const t = useTranslations("donations");
   const tc = useTranslations("common");
   const [feed, setFeed] = useState<FeedResult>({
@@ -65,8 +63,6 @@ export default function DonationsPage() {
   const [category, setCategory] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
-
-  const token = session?.accessToken;
 
   function buildQuery(): string {
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
@@ -98,13 +94,8 @@ export default function DonationsPage() {
   }, [token, page, group, category, dateFrom, dateTo]);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session?.roles?.includes("admin")) {
-      router.replace("/access-denied");
-      return;
-    }
     load();
-  }, [session, status, router, load]);
+  }, [load]);
 
   async function handleExport() {
     if (!token) return;

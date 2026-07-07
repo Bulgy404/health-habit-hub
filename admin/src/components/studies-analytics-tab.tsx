@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiUrl } from "@/lib/api";
 import styles from "../app/(admin)/studies/page.module.css";
 
 interface StudyGroup {
@@ -66,13 +67,14 @@ interface Tooltip {
   lines: string[];
 }
 
-const ANALYTICS_BASE = (studyId: string) =>
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
-  `/admin/studies/${studyId}/analytics`;
+const ANALYTICS_BASE = (studyId: string) => apiUrl(`/admin/studies/${studyId}/analytics`);
 
-const PARTICIPANTS_URL =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
-  "/admin/participants";
+// Study- and group-scoped (unlike /admin/participants, which has no
+// study/group filter) — the drill-down panel needs exactly this study's
+// (optionally this group's) roster, not every participant across the study.
+const STUDY_PARTICIPANTS_URL = (studyId: string, groupId: string | null) =>
+  apiUrl(`/admin/studies/${studyId}/participants?limit=500`) +
+  (groupId ? `&groupId=${groupId}` : "");
 
 const GROUP_COLORS = ["#45B700", "#E679AB", "#3B82F6", "#F59E0B", "#8B5CF6", "#EF4444"];
 
@@ -131,15 +133,16 @@ function DrillPanel({
     let cancelled = false;
     setLoading(true);
     setError("");
-    const url =
-      `${PARTICIPANTS_URL}?studyId=${studyId}` +
-      (groupId ? `&groupId=${groupId}` : "");
-    apiFetch(url, token)
-      .then((d) => {
+    apiFetch(STUDY_PARTICIPANTS_URL(studyId, groupId), token)
+      .then((d: { participants?: Record<string, unknown>[] }) => {
         if (!cancelled) {
-          const list: Participant[] = Array.isArray(d)
-            ? d
-            : (d.participants ?? []);
+          const list: Participant[] = (d.participants ?? []).map((p) => ({
+            id: String(p.userId ?? ""),
+            username: p.username ? String(p.username) : undefined,
+            groupId: p.groupId ? String(p.groupId) : undefined,
+            groupLabel: p.groupLabel ? String(p.groupLabel) : undefined,
+            enrolledAt: p.enrolledAt ? String(p.enrolledAt) : null,
+          }));
           setParticipants(list);
         }
       })

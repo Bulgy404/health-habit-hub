@@ -406,7 +406,9 @@ function _buildGroupCountSummary(enrolledUsers, groups) {
 
 /**
  * List participants enrolled in a study with per-group summary (paginated).
- * @param {{ db: object, id: string, page?: number, limit?: number, neo4jRun?: Function }} deps
+ * Optionally scoped to a single group — filtering happens before pagination
+ * so `total` and the page slice both reflect the filtered set.
+ * @param {{ db: object, id: string, page?: number, limit?: number, groupId?: string, neo4jRun?: Function }} deps
  * @returns {Promise<{ total: number, page: number, limit: number, summary: object, participants: Array }|{ notFound: boolean }>}
  */
 export async function listStudyParticipants({
@@ -414,6 +416,7 @@ export async function listStudyParticipants({
   id,
   page = 1,
   limit = 20,
+  groupId,
   neo4jRun,
 }) {
   let oid;
@@ -430,13 +433,31 @@ export async function listStudyParticipants({
   const allEnrolled = neo4jRun
     ? await getUsersForStudy(neo4jRun, id.toString())
     : [];
+  const filteredEnrolled = groupId
+    ? allEnrolled.filter((e) => e.groupId === groupId)
+    : allEnrolled;
 
-  const total = allEnrolled.length;
+  const total = filteredEnrolled.length;
   const skip = (page - 1) * limit;
-  const pageEnrolled = allEnrolled.slice(skip, skip + limit);
+  const pageEnrolled = filteredEnrolled.slice(skip, skip + limit);
 
   const groupMap = _buildGroupLabelMap(study.groups);
+  // Per-group summary always reflects the whole study, not the groupId filter.
   const perGroup = _buildGroupCountSummary(allEnrolled, study.groups);
+
+  // Enrollment data lives in Neo4j and has no username — join against Mongo
+  // for just the page being returned.
+  const pageUserIds = pageEnrolled.map((e) => e.userId).filter(Boolean);
+  const usernameDocs = pageUserIds.length
+    ? await db
+        .collection('participants')
+        .find({ userId: { $in: pageUserIds } })
+        .project({ userId: 1, username: 1 })
+        .toArray()
+    : [];
+  const usernameByUserId = Object.fromEntries(
+    usernameDocs.map((d) => [d.userId, d.username])
+  );
 
   return {
     total,
@@ -445,6 +466,7 @@ export async function listStudyParticipants({
     summary: { total, perGroup },
     participants: pageEnrolled.map((e) => ({
       userId: e.userId,
+      username: usernameByUserId[e.userId] ?? null,
       groupId: e.groupId ?? null,
       groupLabel: groupMap[e.groupId] ?? '—',
       enrolledAt: e.enrolledAt,

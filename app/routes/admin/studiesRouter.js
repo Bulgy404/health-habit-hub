@@ -504,6 +504,7 @@ export function createStudiesRouter({
         id: req.params.id,
         page,
         limit,
+        groupId: req.query.groupId ? String(req.query.groupId) : undefined,
         neo4jRun,
       });
       if (result.notFound)

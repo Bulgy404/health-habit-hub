@@ -19,11 +19,11 @@ import {
   Cell,
   ReferenceLine,
 } from "recharts";
+import { API_BASE_URL as API } from "@/lib/api";
 import styles from "./page.module.css";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1";
 const GROUP_COLORS = ["#45B700", "#E679AB", "#3B82F6", "#F59E0B", "#8B5CF6", "#EF4444"];
 
 const NEO4J_BROWSER_URL = process.env.NEXT_PUBLIC_NEO4J_BROWSER_URL ?? "http://localhost:7474";

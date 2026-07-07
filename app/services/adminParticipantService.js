@@ -9,21 +9,32 @@ function randomPassword() {
 }
 
 /**
- * List all non-deleted participants.
- * @param {{ db: object }} deps
- * @returns {Promise<Array>}
+ * List non-deleted participants, newest-enrolled first, paginated.
+ * @param {{ db: object, page?: number, limit?: number }} deps
+ * @returns {Promise<{ total: number, page: number, limit: number, participants: Array }>}
  */
-export async function listParticipants({ db }) {
-  const participants = await db
-    .collection('participants')
-    .find({ deletedAt: { $exists: false } })
-    .toArray();
+export async function listParticipants({ db, page = 1, limit = 50 }) {
+  const pageNum = Math.max(1, page);
+  const limitNum = Math.min(200, Math.max(1, limit));
+  const skip = (pageNum - 1) * limitNum;
+  const filter = { deletedAt: { $exists: false } };
+  const collection = db.collection('participants');
+
+  const [docs, total] = await Promise.all([
+    collection
+      .find(filter)
+      .sort({ enrolledAt: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .toArray(),
+    collection.countDocuments(filter),
+  ]);
 
   // Recovery phrases are account secrets; only surface them when explicitly
   // enabled (local test/verification), never in production.
   const exposePhrase = recoveryPhrasesEnabled();
 
-  return participants.map((p) => ({
+  const participants = docs.map((p) => ({
     userId: p.userId,
     username: p.username,
     group: p.group || null,
@@ -35,6 +46,8 @@ export async function listParticipants({ db }) {
     recoveryPhrase: exposePhrase ? p.recoveryPhrase || null : null,
     hasTokenCard: !!p.tokenCardPdf,
   }));
+
+  return { total, page: pageNum, limit: limitNum, participants };
 }
 
 /**

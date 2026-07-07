@@ -58,6 +58,21 @@ async def test_empty_texts_returns_422():
 
 
 @pytest.mark.asyncio
+async def test_oversized_text_returns_422():
+    """A single text over the per-string cap is rejected, even within a
+    list that respects the overall item-count limit."""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        resp = await client.post(
+            "/api/v1/llm/embed-batch",
+            json={"texts": ["x" * 2001]},
+        )
+
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_embed_texts_called_with_all_inputs():
     """embed_texts is called with the exact list of texts provided."""
     mock_embed = AsyncMock(return_value=[[0.1], [0.2], [0.3], [0.4]])

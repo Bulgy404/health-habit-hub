@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
+import { useAdminGuard } from "@/lib/useAdminGuard";
 import styles from "@/components/admin-page.module.css";
 
 interface ModerationComment {
@@ -37,41 +36,42 @@ function fmt(ts: string): string {
  * first) with the habit they're attached to, and allows deleting a comment.
  * Moved here from the mobile admin section.
  */
+const PAGE_SIZE = 100;
+
 export default function CommentsPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const { token } = useAdminGuard();
   const t = useTranslations("comments");
   const tc = useTranslations("common");
   const [comments, setComments] = useState<ModerationComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-
-  const token = session?.accessToken;
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await apiFetch(apiUrl("/admin/comments"), token);
+      const data = await apiFetch(
+        apiUrl(`/admin/comments?page=${page}&limit=${PAGE_SIZE}`),
+        token
+      );
       const list = (data?.comments ?? []) as unknown[];
       setComments(list.map(normalise));
+      setTotal(Number(data?.total ?? 0));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [token, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, t, page]);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session?.roles?.includes("admin")) {
-      router.replace("/access-denied");
-      return;
-    }
     load();
-  }, [session, status, router, load]);
+  }, [load]);
 
   async function handleDelete(id: string) {
     if (!token || !confirm(t("confirmDelete"))) return;
@@ -79,6 +79,7 @@ export default function CommentsPage() {
     try {
       await apiFetch(apiUrl(`/admin/comments/${id}`), token, { method: "DELETE" });
       setComments((prev) => prev.filter((c) => c.id !== id));
+      setTotal((prev) => Math.max(0, prev - 1));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("deleteFailed"));
     } finally {
@@ -140,6 +141,32 @@ export default function CommentsPage() {
               )}
             </tbody>
           </table>
+
+          <div className={styles.pagination}>
+            <span className={styles.muted}>
+              {t("totalPageInfo", {
+                total,
+                page,
+                totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+              })}
+            </span>
+            <button
+              className={styles.pageBtn}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              {tc("previous")}
+            </button>
+            <button
+              className={styles.pageBtn}
+              onClick={() =>
+                setPage((p) => Math.min(Math.max(1, Math.ceil(total / PAGE_SIZE)), p + 1))
+              }
+              disabled={page >= Math.max(1, Math.ceil(total / PAGE_SIZE))}
+            >
+              {tc("next")}
+            </button>
+          </div>
         </div>
       )}
     </div>

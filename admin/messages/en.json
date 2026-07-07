@@ -77,6 +77,7 @@
   "comments": {
     "title": "Comments",
     "subtitle": "Moderate anonymous community comments. Deleting removes the comment for everyone.",
+    "totalPageInfo": "{total} total · page {page} of {totalPages}",
     "comment": "Comment",
     "onHabit": "On habit",
     "posted": "Posted",
@@ -88,6 +89,7 @@
   "devices": {
     "title": "Devices",
     "subtitle": "Active device sessions. Revoke a session to sign that device out.",
+    "totalPageInfo": "{total} total · page {page} of {totalPages}",
     "participant": "Participant",
     "device": "Device",
     "appVersion": "App version",
@@ -196,6 +198,7 @@
   "participants": {
     "title": "Participants",
     "subtitle": "Create and manage study participants, reassign groups, and inspect progress.",
+    "totalPageInfo": "{total} total · page {page} of {totalPages}",
     "newParticipant": "+ New participant",
     "userId": "User ID",
     "username": "Username",

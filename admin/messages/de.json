@@ -77,6 +77,7 @@
   "comments": {
     "title": "Kommentare",
     "subtitle": "Anonyme Community-Kommentare moderieren. Löschen entfernt den Kommentar für alle.",
+    "totalPageInfo": "{total} insgesamt · Seite {page} von {totalPages}",
     "comment": "Kommentar",
     "onHabit": "Bei Gewohnheit",
     "posted": "Veröffentlicht",
@@ -88,6 +89,7 @@
   "devices": {
     "title": "Geräte",
     "subtitle": "Aktive Gerätesitzungen. Widerrufe eine Sitzung, um dieses Gerät abzumelden.",
+    "totalPageInfo": "{total} insgesamt · Seite {page} von {totalPages}",
     "participant": "Teilnehmende Person",
     "device": "Gerät",
     "appVersion": "App-Version",
@@ -196,6 +198,7 @@
   "participants": {
     "title": "Teilnehmende",
     "subtitle": "Studienteilnehmende erstellen und verwalten, Gruppen neu zuweisen und Fortschritt einsehen.",
+    "totalPageInfo": "{total} insgesamt · Seite {page} von {totalPages}",
     "newParticipant": "+ Neue teilnehmende Person",
     "userId": "Nutzer-ID",
     "username": "Benutzername",

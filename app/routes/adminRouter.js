@@ -2,7 +2,11 @@ import express from 'express';
 import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
 import { config } from '../utils/config.js';
-import { listAllComments, deleteHabitComments } from '../db/habitQueries.js';
+import {
+  listAllComments,
+  countAllComments,
+  deleteHabitComments,
+} from '../db/habitQueries.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import {
   getHabitsFeed,
@@ -310,12 +314,17 @@ export function createAdminRouter({
    *               $ref: '#/components/schemas/Error'
    */
   // GET /api/v1/admin/comments — all participant comments for moderation
-  // (newest first, with habit context). Roles enforced at mount (admin/researcher).
+  // (newest first, with habit context), paginated. Roles enforced at mount
+  // (admin/researcher).
   router.get('/comments', async (req, res) => {
     try {
+      const page = parseInt(req.query.page, 10) || 1;
       const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
-      const comments = await listAllComments(queryNeo4j, limit);
-      res.json({ comments });
+      const [comments, total] = await Promise.all([
+        listAllComments(queryNeo4j, { page, limit }),
+        countAllComments(queryNeo4j),
+      ]);
+      res.json({ comments, total, page, limit });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
@@ -437,37 +446,6 @@ export function createAdminRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  // GET /api/v1/admin/comments — all participant comments for moderation
-  // (newest first, with habit context). Roles enforced at mount (admin/researcher).
-  router.get('/comments', async (req, res) => {
-    try {
-      const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
-      const comments = await listAllComments(queryNeo4j, limit);
-      res.json({ comments });
-    } catch (err) {
-      log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
-  // DELETE /api/v1/admin/comments/:commentId — moderate (remove) a comment.
-  // Deletes the anonymous Neo4j node and the MongoDB ownership mapping.
-  router.delete('/comments/:commentId', async (req, res) => {
-    try {
-      const commentId = String(req.params.commentId);
-      await deleteHabitComments(queryNeo4j, [commentId]);
-      const database = await getDb();
-      const { deletedCount } = await database
-        .collection('habit_comments')
-        .deleteOne({ commentId });
-      log.info({ commentId, deletedCount }, '[admin] comment moderated');
-      res.json({ ok: true, commentId });
-    } catch (err) {
-      log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-
   // GET /api/v1/admin/habits/feed
   router.get('/habits/feed', async (req, res) => {
     try {
@@ -650,8 +628,22 @@ export function createAdminRouter({
   router.get('/sessions', async (req, res) => {
     try {
       const kc = getKeycloak();
-      const sessions = await kc.listSessions();
-      res.json(sessions);
+      const all = await kc.listSessions();
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const limit = Math.min(
+        200,
+        Math.max(1, parseInt(req.query.limit, 10) || 100)
+      );
+      const skip = (page - 1) * limit;
+      // Keycloak's session list has no server-side pagination params to push
+      // this down to — bounded here so the browser never has to render an
+      // unbounded list.
+      res.json({
+        total: all.length,
+        page,
+        limit,
+        sessions: all.slice(skip, skip + limit),
+      });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });

@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
+import { useAdminGuard } from "@/lib/useAdminGuard";
 import styles from "@/components/admin-page.module.css";
 
 interface DeviceSession {
@@ -36,40 +35,42 @@ function fmt(ts: string | null): string {
  * Active device sessions across participants, with the ability to revoke a
  * session (force sign-out). Moved here from the mobile admin section.
  */
+const PAGE_SIZE = 100;
+
 export default function DevicesPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const { token } = useAdminGuard();
   const t = useTranslations("devices");
   const tc = useTranslations("common");
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revoking, setRevoking] = useState<string | null>(null);
-
-  const token = session?.accessToken;
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await apiFetch(apiUrl("/admin/sessions"), token);
-      setSessions((Array.isArray(data) ? data : []).map(normalise));
+      const data = await apiFetch(
+        apiUrl(`/admin/sessions?page=${page}&limit=${PAGE_SIZE}`),
+        token
+      );
+      const list = (data?.sessions ?? []) as unknown[];
+      setSessions(list.map(normalise));
+      setTotal(Number(data?.total ?? 0));
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [token, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, t, page]);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session?.roles?.includes("admin")) {
-      router.replace("/access-denied");
-      return;
-    }
     load();
-  }, [session, status, router, load]);
+  }, [load]);
 
   async function handleRevoke(id: string) {
     if (!token || !confirm(t("confirmRevoke"))) {
@@ -79,6 +80,7 @@ export default function DevicesPage() {
     try {
       await apiFetch(apiUrl(`/admin/sessions/${id}`), token, { method: "DELETE" });
       setSessions((prev) => prev.filter((s) => s.id !== id));
+      setTotal((prev) => Math.max(0, prev - 1));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("revokeFailed"));
     } finally {
@@ -144,6 +146,32 @@ export default function DevicesPage() {
               )}
             </tbody>
           </table>
+
+          <div className={styles.pagination}>
+            <span className={styles.muted}>
+              {t("totalPageInfo", {
+                total,
+                page,
+                totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
+              })}
+            </span>
+            <button
+              className={styles.pageBtn}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+            >
+              {tc("previous")}
+            </button>
+            <button
+              className={styles.pageBtn}
+              onClick={() =>
+                setPage((p) => Math.min(Math.max(1, Math.ceil(total / PAGE_SIZE)), p + 1))
+              }
+              disabled={page >= Math.max(1, Math.ceil(total / PAGE_SIZE))}
+            >
+              {tc("next")}
+            </button>
+          </div>
         </div>
       )}
     </div>

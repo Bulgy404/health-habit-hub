@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { apiUrl } from '@/lib/api';
 
 interface KbEntry {
   filename: string;
@@ -8,8 +9,7 @@ interface KbEntry {
   upload_date: string;
 }
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1') + '/kb';
+const API_BASE = apiUrl('/kb');
 
 /**
  * Fetches and manages the list of knowledge base entries.
