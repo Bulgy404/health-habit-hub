@@ -107,7 +107,8 @@ const QUERIES = {
     '100 * (sum(rate(http_request_duration_seconds_count{status_code=~"5.."}[5m])) or vector(0)) / clamp_min(sum(rate(http_request_duration_seconds_count[5m])), 1)',
   p95LatencyMs:
     '1000 * histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))',
-  residentMemoryMB: 'process_resident_memory_bytes{job="hhh-app"} / 1024 / 1024',
+  residentMemoryMB:
+    'process_resident_memory_bytes{job="hhh-app"} / 1024 / 1024',
   cpuPercent: '100 * rate(process_cpu_seconds_total{job="hhh-app"}[5m])',
   eventLoopLagMs: '1000 * nodejs_eventloop_lag_seconds{job="hhh-app"}',
   heapUsedMB: 'nodejs_heap_size_used_bytes{job="hhh-app"} / 1024 / 1024',
