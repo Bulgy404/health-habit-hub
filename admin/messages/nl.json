@@ -64,10 +64,13 @@
     "title": "Systeem & links",
     "subtitle": "Ga naar monitoring, databases en API-documentatie. Configureer URL's via <code>NEXT_PUBLIC_*</code>-omgevingsvariabelen.",
     "descriptions": {
+      "keycloak": "Gebruikers, rollen en sessies beheren in de Keycloak-console",
       "grafana": "Dashboards & visualisatie van meetgegevens",
       "prometheus": "Ruwe meetgegevens, targets & alarmering",
       "neo4jBrowser": "Grafiekgegevens — gebruikers, gewoontes, studies, donaties",
       "mongoExpress": "MongoDB-collecties — deelnemers, antwoorden, logs",
+      "bullBoard": "BullMQ-wachtrij - wachtend, actief, mislukt",
+      "redisInsight": "Redis-sleutels, caches en geheugen inspecteren",
       "apiDocs": "OpenAPI-/Swagger-referentie voor de backend"
     }
   },

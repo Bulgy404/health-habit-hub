@@ -64,10 +64,13 @@
     "title": "System & Links",
     "subtitle": "Springe zu Überwachung, Datenbanken und API-Dokumentation. URLs werden über <code>NEXT_PUBLIC_*</code>-Umgebungsvariablen konfiguriert.",
     "descriptions": {
+      "keycloak": "Nutzer, Rollen und Sitzungen in der Keycloak-Konsole verwalten",
       "grafana": "Dashboards & Metrik-Visualisierung",
       "prometheus": "Rohmetriken, Ziele & Alarmierung",
       "neo4jBrowser": "Graphdaten — Nutzer, Gewohnheiten, Studien, Spenden",
       "mongoExpress": "MongoDB-Sammlungen — Teilnehmende, Antworten, Protokolle",
+      "bullBoard": "BullMQ-Warteschlange - wartend, aktiv, fehlgeschlagen",
+      "redisInsight": "Redis-Schlüssel, Caches und Speicher inspizieren",
       "apiDocs": "OpenAPI-/Swagger-Referenz für das Backend"
     }
   },

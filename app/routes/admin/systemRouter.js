@@ -14,9 +14,84 @@
  */
 import express from 'express';
 import { checkAllServices } from '../../utils/healthCheck.js';
+import { getHabitQueue } from '../../lib/habitQueue.js';
 import { logger } from '../../utils/logger.js';
 
 const log = logger.child({ module: 'systemRouter' });
+
+// ── Redis (for the Bull/Redis pipeline view) ────────────────────────────────
+// A lazily-created, reused client so polling the dashboard doesn't churn
+// connections. Mirrors the connection approach in app/lib/jsonCache.js.
+let _redis = null;
+async function getRedis() {
+  if (_redis) return _redis;
+  const { createClient } = await import('redis');
+  const url = process.env.REDIS_URL || 'redis://localhost:6379';
+  const client = createClient({ url });
+  client.on('error', (err) => log.warn({ err }, 'redis client error'));
+  await client.connect();
+  _redis = client;
+  return _redis;
+}
+
+function parseRedisInfo(infoStr) {
+  const out = {};
+  for (const raw of infoStr.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const idx = line.indexOf(':');
+    if (idx === -1) continue;
+    out[line.slice(0, idx)] = line.slice(idx + 1);
+  }
+  return out;
+}
+
+async function getRedisStats() {
+  try {
+    const client = await getRedis();
+    const info = parseRedisInfo(await client.info());
+    const hits = Number(info.keyspace_hits ?? 0);
+    const misses = Number(info.keyspace_misses ?? 0);
+    let totalKeys = 0;
+    for (const [k, v] of Object.entries(info)) {
+      if (/^db\d+$/.test(k)) {
+        const m = /keys=(\d+)/.exec(v);
+        if (m) totalKeys += Number(m[1]);
+      }
+    }
+    return {
+      connected: true,
+      usedMemoryMB: Number(info.used_memory ?? 0) / 1024 / 1024,
+      keyspaceHits: hits,
+      keyspaceMisses: misses,
+      hitRatePct: hits + misses > 0 ? (100 * hits) / (hits + misses) : null,
+      totalKeys,
+      connectedClients: Number(info.connected_clients ?? 0),
+      uptimeSeconds: Number(info.uptime_in_seconds ?? 0),
+    };
+  } catch (err) {
+    log.warn({ err }, 'redis stats failed');
+    return { connected: false };
+  }
+}
+
+async function getQueueStats() {
+  try {
+    const queue = getHabitQueue();
+    const counts = await queue.getJobCounts(
+      'waiting',
+      'active',
+      'completed',
+      'failed',
+      'delayed',
+      'paused'
+    );
+    return [{ name: 'habit-donations', counts }];
+  } catch (err) {
+    log.warn({ err }, 'queue stats failed');
+    return [];
+  }
+}
 
 function prometheusUrl() {
   return process.env.PROMETHEUS_URL ?? 'http://prometheus:9090';
@@ -99,6 +174,24 @@ export function createSystemRouter({ serviceChecks = {} } = {}) {
       res.status(500).json({ error: 'Failed to collect system overview.' });
     } finally {
       clearTimeout(timer);
+    }
+  });
+
+  /**
+   * GET /system/queues
+   * BullMQ job counts (the habit-donations pipeline) plus Redis stats used for
+   * caching. Powers the "Queues & cache" panel on the admin System page.
+   */
+  router.get('/system/queues', async (_req, res) => {
+    try {
+      const [queues, redis] = await Promise.all([
+        getQueueStats(),
+        getRedisStats(),
+      ]);
+      res.json({ generatedAt: new Date().toISOString(), queues, redis });
+    } catch (err) {
+      log.error({ err }, 'system queues failed');
+      res.status(500).json({ error: 'Failed to collect queue/cache stats.' });
     }
   });
 
