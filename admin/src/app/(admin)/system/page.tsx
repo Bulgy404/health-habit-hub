@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   BarChart3,
@@ -11,9 +9,17 @@ import {
   Database,
   FileJson,
   ExternalLink,
+  RefreshCw,
+  Cpu,
+  Timer,
+  Gauge,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
   type LucideIcon,
 } from "lucide-react";
-import { API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL, apiUrl, apiFetch } from "@/lib/api";
+import { useAdminGuard } from "@/lib/useAdminGuard";
 import styles from "@/components/admin-page.module.css";
 
 interface ToolLink {
@@ -64,21 +70,81 @@ const TOOLS: ToolLink[] = [
   },
 ];
 
+// ── System-health types ─────────────────────────────────────────────────────
+
+interface ServiceStatus {
+  status: "ok" | "error";
+  latencyMs: number;
+}
+
+interface Overview {
+  generatedAt: string;
+  health: {
+    status: "ok" | "error";
+    services: Record<string, ServiceStatus>;
+  };
+  prometheus: {
+    reachable: boolean;
+    values: Record<string, number | null>;
+  };
+}
+
+const REFRESH_MS = 10_000;
+
+// Service labels are product/technical names — not translated.
+const SERVICE_LABELS: Record<string, string> = {
+  mongo: "MongoDB",
+  neo4j: "Neo4j",
+  keycloak: "Keycloak",
+  recommender: "Recommender",
+};
+
+// ── Formatting ───────────────────────────────────────────────────────────────
+
+function fmt(n: number | null | undefined, digits = 1, suffix = ""): string {
+  if (n === null || n === undefined || !Number.isFinite(n)) return "—";
+  return `${n.toFixed(digits)}${suffix}`;
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
+
 /**
- * System hub — links out to the operational tools around the platform so the
- * admin portal is a single point of navigation.
+ * System hub — a live health dashboard (downstream services + Prometheus
+ * metrics) followed by quick links to the operational tools around the stack.
  */
 export default function SystemPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const { token } = useAdminGuard();
   const t = useTranslations("system");
+  const [overview, setOverview] = useState<Overview | null>(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const refresh = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = (await apiFetch(apiUrl("/admin/system/overview"), token)) as Overview;
+      setOverview(data);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load system health");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session?.roles?.includes("admin")) {
-      router.replace("/access-denied");
-    }
-  }, [session, status, router]);
+    if (!token) return;
+    refresh();
+    timerRef.current = setInterval(refresh, REFRESH_MS);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [token, refresh]);
+
+  const p = overview?.prometheus;
+  const v = p?.values ?? {};
+  const appUp = v.appUp === 1;
 
   return (
     <div className={styles.page}>
@@ -89,8 +155,108 @@ export default function SystemPage() {
             {t.rich("subtitle", { code: (chunks) => <code>{chunks}</code> })}
           </p>
         </div>
+        <button
+          className={styles.secondaryButton}
+          onClick={refresh}
+          disabled={loading}
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+        >
+          <RefreshCw size={15} />
+          Refresh
+        </button>
       </div>
 
+      {/* ── Live system health ─────────────────────────────────────────────── */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem", marginBottom: "0.5rem" }}>
+        <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
+          System health
+        </h2>
+        {overview && (
+          <span className={styles.muted} style={{ fontSize: "0.75rem" }}>
+            Updated {new Date(overview.generatedAt).toLocaleTimeString()}
+          </span>
+        )}
+      </div>
+
+      {error && <p className={styles.error}>{error}</p>}
+      {loading && !overview ? (
+        <p className={styles.muted}>Loading…</p>
+      ) : (
+        overview && (
+          <>
+            {/* Downstream service checks */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
+                gap: "0.75rem",
+                marginBottom: "1rem",
+              }}
+            >
+              {Object.entries(overview.health.services).map(([key, s]) => (
+                <div key={key} className={styles.section} style={{ padding: "0.9rem 1rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    {s.status === "ok" ? (
+                      <CheckCircle2 size={17} color="#16a34a" />
+                    ) : (
+                      <XCircle size={17} color="#dc2626" />
+                    )}
+                    <span style={{ fontWeight: 600 }}>{SERVICE_LABELS[key] ?? key}</span>
+                  </div>
+                  <div className={styles.muted} style={{ fontSize: "0.8rem", marginTop: "0.35rem" }}>
+                    {s.status === "ok" ? "Healthy" : "Unreachable"} · {s.latencyMs} ms
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Prometheus metrics */}
+            {p && !p.reachable ? (
+              <div
+                className={styles.section}
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+              >
+                <AlertTriangle size={16} color="#d97706" />
+                <span className={styles.muted} style={{ fontSize: "0.85rem" }}>
+                  Prometheus is not reachable — metrics are temporarily unavailable.
+                </span>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+                  gap: "0.75rem",
+                }}
+              >
+                <StatCard
+                  Icon={Activity}
+                  label="App target"
+                  value={appUp ? "Up" : "Down"}
+                  tone={appUp ? "ok" : "err"}
+                />
+                <StatCard Icon={Gauge} label="Requests / sec" value={fmt(v.requestsPerSec, 2)} />
+                <StatCard
+                  Icon={AlertTriangle}
+                  label="Error rate"
+                  value={fmt(v.errorRatePct, 2, "%")}
+                  tone={(v.errorRatePct ?? 0) > 5 ? "err" : "neutral"}
+                />
+                <StatCard Icon={Timer} label="p95 latency" value={fmt(v.p95LatencyMs, 0, " ms")} />
+                <StatCard Icon={Cpu} label="CPU" value={fmt(v.cpuPercent, 1, "%")} />
+                <StatCard Icon={Database} label="Memory (RSS)" value={fmt(v.residentMemoryMB, 0, " MB")} />
+                <StatCard Icon={Timer} label="Event-loop lag" value={fmt(v.eventLoopLagMs, 1, " ms")} />
+                <StatCard Icon={Database} label="Heap used" value={fmt(v.heapUsedMB, 0, " MB")} />
+              </div>
+            )}
+          </>
+        )
+      )}
+
+      {/* ── Tool links ─────────────────────────────────────────────────────── */}
+      <h2 className={styles.sectionTitle} style={{ marginTop: "1.75rem", marginBottom: "0.5rem" }}>
+        Tools & links
+      </h2>
       <div
         style={{
           display: "grid",
@@ -119,16 +285,41 @@ export default function SystemPage() {
             </div>
             <div
               className={styles.code}
-              style={{
-                fontSize: "0.72rem",
-                marginTop: "0.5rem",
-                wordBreak: "break-all",
-              }}
+              style={{ fontSize: "0.72rem", marginTop: "0.5rem", wordBreak: "break-all" }}
             >
               {tool.url}
             </div>
           </a>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Sub-components ───────────────────────────────────────────────────────────
+
+function StatCard({
+  Icon,
+  label,
+  value,
+  tone = "neutral",
+}: {
+  Icon: LucideIcon;
+  label: string;
+  value: string;
+  tone?: "ok" | "err" | "neutral";
+}) {
+  const color = tone === "ok" ? "#16a34a" : tone === "err" ? "#dc2626" : "var(--color-primary)";
+  return (
+    <div className={styles.section} style={{ padding: "0.9rem 1rem" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+        <Icon size={15} color={color} />
+        <span className={styles.muted} style={{ fontSize: "0.78rem" }}>
+          {label}
+        </span>
+      </div>
+      <div style={{ fontSize: "1.35rem", fontWeight: 700, marginTop: "0.3rem", color }}>
+        {value}
       </div>
     </div>
   );

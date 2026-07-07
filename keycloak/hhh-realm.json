@@ -150,6 +150,60 @@
         "offline_access",
         "microprofile-jwt"
       ]
+    },
+    {
+      "clientId": "grafana",
+      "name": "Grafana",
+      "description": "Confidential OIDC client for Grafana SSO via Keycloak",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "grafana-secret-change-me",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://localhost:3000/login/generic_oauth",
+        "https://${DOMAIN}/grafana/login/generic_oauth"
+      ],
+      "webOrigins": [
+        "https://${DOMAIN}"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "basic",
+        "openid",
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
     }
   ],
   "defaultRoles": [
