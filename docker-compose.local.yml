@@ -234,6 +234,10 @@ services:
       - NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}
       - NEXT_PUBLIC_NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}
       - NEXT_PUBLIC_KEYCLOAK_BROWSER_URL=http://localhost:8080
+      # Must match Grafana's own GF_SERVER_ROOT_URL below — visiting Grafana
+      # at a different host/port than its configured root_url breaks its
+      # OAuth callback and asset URLs.
+      - NEXT_PUBLIC_GRAFANA_URL=http://grafana.${PATH_SUFFIX:-localhost}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-change-me-in-production}
       - KEYCLOAK_CLIENT_ID=hhh-admin
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET:-hhh-admin-secret-change-me}
@@ -481,6 +485,7 @@ services:
       - .env
     environment:
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
+      - BACKUP_SCHEDULED_LIMIT=${BACKUP_SCHEDULED_LIMIT:-10}
       - OFFSITE_REMOTE=${OFFSITE_REMOTE:-}
       - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
       - ALERT_EMAIL=${ALERT_EMAIL:-}

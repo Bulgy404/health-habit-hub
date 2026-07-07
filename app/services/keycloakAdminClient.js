@@ -26,6 +26,9 @@ export function createKeycloakAdminClient({
     clientId || process.env.KEYCLOAK_ADMIN_CLIENT_ID || 'hhh-backend';
   const _clientSecret =
     clientSecret || process.env.KEYCLOAK_ADMIN_CLIENT_SECRET || '';
+  // The client participants authenticate through — sessions are listed
+  // per-client (Keycloak has no single "all sessions in realm" endpoint).
+  const _participantClientId = process.env.KEYCLOAK_CLIENT_ID || 'hhh-flutter';
 
   // Token cache: invalidate 5 seconds before Keycloak's default 60-second TTL
   let _cachedToken = null;
@@ -150,11 +153,31 @@ export function createKeycloakAdminClient({
       });
     },
 
+    /**
+     * Lists active sessions for the participant-facing client (hhh-flutter).
+     * Keycloak has no "all sessions in a realm" endpoint — only per-client
+     * (`/clients/{id}/user-sessions`) or per-user — so this resolves that
+     * client's internal UUID first, then lists its sessions.
+     * @returns {Promise<Array>}
+     */
     async listSessions() {
       const token = await getAdminToken();
-      const res = await fetch(`${_base}/admin/realms/${_realm}/sessions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const clientRes = await fetch(
+        `${_base}/admin/realms/${_realm}/clients?clientId=${encodeURIComponent(_participantClientId)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!clientRes.ok)
+        throw new Error(`Keycloak client lookup failed: ${clientRes.status}`);
+      const clients = await clientRes.json();
+      const clientUuid = clients[0]?.id;
+      if (!clientUuid) return [];
+
+      const res = await fetch(
+        `${_base}/admin/realms/${_realm}/clients/${clientUuid}/user-sessions?first=0&max=1000`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok)
+        throw new Error(`Keycloak session list failed: ${res.status}`);
       return res.json();
     },
 

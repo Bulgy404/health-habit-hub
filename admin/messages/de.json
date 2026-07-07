@@ -63,6 +63,52 @@
   "system": {
     "title": "System & Links",
     "subtitle": "Springe zu Überwachung, Datenbanken und API-Dokumentation. URLs werden über <code>NEXT_PUBLIC_*</code>-Umgebungsvariablen konfiguriert.",
+    "refresh": "Aktualisieren",
+    "loadFailed": "Systemzustand konnte nicht geladen werden",
+    "loadingEllipsis": "Lädt…",
+    "updatedAt": "Aktualisiert {time}",
+    "systemHealth": "Systemzustand",
+    "tools": "Werkzeuge",
+    "banner": {
+      "allOperational": "Alle Systeme funktionsfähig",
+      "servicesDown": "{count, plural, one {# Dienst ist} other {# Dienste sind}} nicht erreichbar",
+      "metricsUnavailable": "Prometheus ist nicht erreichbar — Metriken sind vorübergehend nicht verfügbar",
+      "elevatedErrorRate": "Erhöhte Fehlerrate ({rate}%)"
+    },
+    "services": "Dienste",
+    "healthy": "Fehlerfrei",
+    "unreachable": "Nicht erreichbar",
+    "issuesCount": "{count, plural, one {# Problem} other {# Probleme}}",
+    "performance": "Leistung",
+    "unavailable": "Nicht verfügbar",
+    "prometheusUnreachable": "Prometheus ist nicht erreichbar — Metriken sind vorübergehend nicht verfügbar.",
+    "up": "Erreichbar",
+    "down": "Nicht erreichbar",
+    "connected": "Verbunden",
+    "queuesAndCache": "Warteschlangen & Cache",
+    "queueStatsUnavailable": "Warteschlangen- & Cache-Statistiken nicht verfügbar.",
+    "stats": {
+      "appTarget": "App-Ziel",
+      "requestsPerSec": "Anfragen/Sek.",
+      "errorRate": "Fehlerrate",
+      "p95Latency": "p95-Latenz",
+      "cpu": "CPU",
+      "memoryRss": "Speicher (RSS)",
+      "eventLoopLag": "Event-Loop-Verzögerung",
+      "heapUsed": "Heap belegt",
+      "cacheHitRate": "Cache-Trefferquote",
+      "cachedKeys": "Zwischengespeicherte Schlüssel",
+      "redisMemory": "Redis-Speicher",
+      "redisClients": "Redis-Clients"
+    },
+    "stages": {
+      "waiting": "Wartend",
+      "active": "Aktiv",
+      "delayed": "Verzögert",
+      "completed": "Abgeschlossen",
+      "failed": "Fehlgeschlagen",
+      "paused": "Pausiert"
+    },
     "descriptions": {
       "keycloak": "Nutzer, Rollen und Sitzungen in der Keycloak-Konsole verwalten",
       "grafana": "Dashboards & Metrik-Visualisierung",
@@ -140,6 +186,7 @@
       "failed": "Fehlgeschlagen"
     },
     "safetyBackupTakenFirst": "Zuerst erstelltes Sicherheits-Backup:",
+    "stepProgress": "Schritt {step} von {totalSteps} — {label}",
     "loadingEllipsis": "Lädt…",
     "lastBackup": "Letztes Backup",
     "noBackupsYet": "Noch keine Backups.",
@@ -153,6 +200,9 @@
     "components": "Komponenten",
     "uploaded": "Hochgeladen",
     "restore": "Wiederherstellen",
+    "download": "Herunterladen",
+    "downloadingEllipsis": "Lädt herunter…",
+    "downloadFailed": "Backup konnte nicht heruntergeladen werden.",
     "recentActivity": "Letzte Aktivitäten",
     "when": "Wann",
     "who": "Wer",
@@ -162,7 +212,8 @@
     "actions": {
       "trigger": "Trigger",
       "restore": "Wiederherstellung",
-      "upload": "Upload"
+      "upload": "Upload",
+      "download": "Download"
     },
     "results": {
       "requested": "angefordert",
@@ -310,7 +361,7 @@
     "fromLabel": "Von",
     "toLabel": "Bis",
     "filterAll": "Alle",
-    "habitHeader": "Habit",
+    "habitHeader": "Gewohnheit",
     "participantHeader": "Teilnehmer",
     "donatedHeader": "Gespendet",
     "noMatch": "Keine Spenden entsprechen diesen Filtern.",
@@ -320,13 +371,13 @@
     "exportHttpFailed": "Export fehlgeschlagen (HTTP {status})"
   },
   "insights": {
-    "title": "Insights",
+    "title": "Einblicke",
     "subtitle": "Häufig gestellte Fragen über MongoDB und Neo4j hinweg, zwischengespeichert und bei Bedarf aktualisiert.",
     "reloadAll": "Alle neu laden",
     "recomputeNow": "Jetzt neu berechnen",
     "refresh": "Aktualisieren",
     "loadFailed": "Laden fehlgeschlagen",
-    "loadInsightsFailed": "Insights konnten nicht geladen werden",
+    "loadInsightsFailed": "Einblicke konnten nicht geladen werden",
     "noData": "Keine Daten.",
     "cached": "Zwischengespeichert",
     "freshlyComputed": "Neu berechnet"
@@ -737,6 +788,57 @@
       "inactiveBadge": "inaktiv",
       "errors": {
         "loadFailed": "Fragebögen konnten nicht geladen werden"
+      }
+    },
+    "analyticsTab": {
+      "loadFailedShort": "Laden fehlgeschlagen",
+      "loadingParticipants": "Teilnehmende werden geladen…",
+      "noParticipantsFound": "Keine Teilnehmenden gefunden.",
+      "columns": {
+        "participant": "Teilnehmende",
+        "group": "Gruppe",
+        "enrolled": "Eingeschrieben",
+        "status": "Status"
+      },
+      "status": {
+        "droppedOut": "Abgebrochen",
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      },
+      "loadFailed": "Fehlgeschlagen",
+      "loadingAnalytics": "Analysen werden geladen…",
+      "tooltip": {
+        "group": "Gruppe: {group}",
+        "activeOf": "Aktiv: {active} / {enrolled} eingeschrieben",
+        "rate": "Quote: {rate}%",
+        "clickToSeeParticipants": "Klicken, um Teilnehmende zu sehen →",
+        "week": "Woche {week}",
+        "meanSrhi": "Mittlerer SRHI: {score} / 7",
+        "responseCount": "n = {count} Antworten",
+        "date": "Datum: {date}",
+        "cumulativeDropouts": "Kumulierte Abbrüche: {count}",
+        "completedOf": "Abgeschlossen: {completed} / {enrolled}"
+      },
+      "weeklyActiveRate": {
+        "title": "Wöchentliche Aktivitätsrate",
+        "description": "% der eingeschriebenen Teilnehmenden mit ≥1 Eintrag in den letzten 7 Tagen. Klicke auf einen Balken, um Teilnehmende zu sehen.",
+        "empty": "Noch keine Einschreibungsdaten.",
+        "drillTitle": "{group} — Teilnehmende"
+      },
+      "srhiTrajectory": {
+        "title": "SRHI-Verlauf",
+        "description": "Mittlerer Gewohnheitsstärke-Score pro Woche und Bedingung (Skala 1–7). Für Details über Punkte hovern.",
+        "empty": "Noch keine SRHI-Daten."
+      },
+      "cumulativeDropout": {
+        "title": "Kumulierte Abbrüche",
+        "description": "Als abgebrochen markierte Teilnehmende im zeitlichen Verlauf.",
+        "empty": "Keine Abbrüche erfasst."
+      },
+      "questionnaireCompletion": {
+        "title": "Fragebogen-Abschlussquote",
+        "description": "Anteil der eingeschriebenen Teilnehmenden, die den jeweiligen Fragebogen eingereicht haben. Für Details hovern.",
+        "empty": "Dieser Studie sind keine Fragebögen zugewiesen."
       }
     },
     "scheduleTab": {

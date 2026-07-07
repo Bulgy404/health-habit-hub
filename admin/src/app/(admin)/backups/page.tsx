@@ -46,6 +46,12 @@ interface JobState {
     neo4j: boolean | null;
     keycloak: boolean | null;
   };
+  // Live progress within backup.sh's 5 stages (Mongo/LightRAG/Neo4j/Keycloak/
+  // archive) — absent once the phase moves past what has step markers
+  // (e.g. "restoring", which runs restore.sh instead).
+  step?: number;
+  totalSteps?: number;
+  stepLabel?: string;
   startedAt: string;
   finishedAt?: string;
 }
@@ -53,7 +59,7 @@ interface JobState {
 interface AuditEntry {
   id: string;
   byUsername: string;
-  action: "trigger" | "restore" | "upload";
+  action: "trigger" | "restore" | "upload" | "download";
   filename: string | null;
   result: "requested" | "succeeded" | "failed";
   detail: string | null;
@@ -104,6 +110,7 @@ export default function BackupsPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState<Manifest | null>(null);
+  const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const phaseLabel: Record<JobState["phase"], string> = {
@@ -184,6 +191,34 @@ export default function BackupsPage() {
     }
   }
 
+  async function handleDownload(manifest: Manifest) {
+    if (!token) return;
+    setDownloadingFile(manifest.file);
+    setError("");
+    try {
+      const res = await fetch(`${BASE}/${manifest.file}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = manifest.file;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("downloadFailed"));
+    } finally {
+      setDownloadingFile(null);
+    }
+  }
+
   const running = job ? IN_PROGRESS_PHASES.includes(job.phase) : false;
 
   return (
@@ -204,7 +239,10 @@ export default function BackupsPage() {
 
       {error && <p className={styles.error}>{error}</p>}
 
-      {job && (
+      {/* Only shown while a job is actually running or just failed — once
+          it's done there's nothing left to report, and "Last backup" below
+          already shows what just completed. */}
+      {job && job.phase !== "done" && (
         <div
           className={styles.tableWrap}
           style={{
@@ -216,6 +254,41 @@ export default function BackupsPage() {
           <strong>{phaseLabel[job.phase]}</strong>
           {job.type === "restore" && job.targetFilename && (
             <span className={styles.muted}> — {job.targetFilename}</span>
+          )}
+          {job.step != null && job.totalSteps != null && (
+            <div style={{ marginTop: "0.6rem" }}>
+              <div
+                role="progressbar"
+                aria-valuenow={job.step}
+                aria-valuemin={0}
+                aria-valuemax={job.totalSteps}
+                style={{
+                  height: 8,
+                  borderRadius: 4,
+                  background: "#e0e7ff",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${(job.step / job.totalSteps) * 100}%`,
+                    background: "var(--color-primary)",
+                    transition: "width 0.4s ease",
+                  }}
+                />
+              </div>
+              <div
+                className={styles.muted}
+                style={{ marginTop: "0.35rem", fontSize: "0.8rem" }}
+              >
+                {t("stepProgress", {
+                  step: job.step,
+                  totalSteps: job.totalSteps,
+                  label: job.stepLabel ?? "",
+                })}
+              </div>
+            </div>
           )}
           {job.phase === "failed" && job.error && (
             <p className={styles.error} style={{ marginTop: "0.5rem", marginBottom: 0 }}>
@@ -242,7 +315,13 @@ export default function BackupsPage() {
             {t("lastBackup")}
           </p>
           {status?.lastBackup ? (
-            <BackupRow manifest={status.lastBackup} onRestore={setRestoreTarget} highlight />
+            <BackupRow
+              manifest={status.lastBackup}
+              onRestore={setRestoreTarget}
+              onDownload={handleDownload}
+              downloading={downloadingFile === status.lastBackup.file}
+              highlight
+            />
           ) : (
             <p className={styles.muted}>{t("noBackupsYet")}</p>
           )}
@@ -300,7 +379,16 @@ export default function BackupsPage() {
                     <td>
                       <ComponentBadges manifest={m} />
                     </td>
-                    <td>
+                    <td style={{ display: "flex", gap: "0.5rem" }}>
+                      <button
+                        className={styles.actionBtn}
+                        onClick={() => handleDownload(m)}
+                        disabled={downloadingFile === m.file}
+                      >
+                        {downloadingFile === m.file
+                          ? t("downloadingEllipsis")
+                          : t("download")}
+                      </button>
                       <button
                         className={`${styles.actionBtn} ${styles.primaryBtn}`}
                         onClick={() => setRestoreTarget(m)}
@@ -446,10 +534,14 @@ function ComponentBadges({ manifest }: { manifest: Manifest }) {
 function BackupRow({
   manifest,
   onRestore,
+  onDownload,
+  downloading,
   highlight,
 }: {
   manifest: Manifest;
   onRestore: (m: Manifest) => void;
+  onDownload: (m: Manifest) => void;
+  downloading?: boolean;
   highlight?: boolean;
 }) {
   const t = useTranslations("backups");
@@ -475,12 +567,21 @@ function BackupRow({
           </div>
         </div>
         <ComponentBadges manifest={manifest} />
-        <button
-          className={`${styles.actionBtn} ${styles.primaryBtn}`}
-          onClick={() => onRestore(manifest)}
-        >
-          {t("restore")}
-        </button>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button
+            className={styles.actionBtn}
+            onClick={() => onDownload(manifest)}
+            disabled={downloading}
+          >
+            {downloading ? t("downloadingEllipsis") : t("download")}
+          </button>
+          <button
+            className={`${styles.actionBtn} ${styles.primaryBtn}`}
+            onClick={() => onRestore(manifest)}
+          >
+            {t("restore")}
+          </button>
+        </div>
       </div>
     </div>
   );

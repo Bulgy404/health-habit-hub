@@ -19,6 +19,8 @@
   --color-text: #0f172a;
   --color-text-muted: #64748b;
   --color-success: #16a34a;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
   --sidebar-width: 240px;
 }
 

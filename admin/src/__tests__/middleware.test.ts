@@ -30,6 +30,27 @@ describe('middleware', () => {
     expect(res.headers.get('location')).toContain('/api/auth/signin');
   });
 
+  it('builds callbackUrl from NEXTAUTH_URL, not the request origin', async () => {
+    // Self-hosted Next.js middleware sees req.url as the server's own bind
+    // address (e.g. http://0.0.0.0:3001), not the public-facing host — the
+    // callbackUrl must come from NEXTAUTH_URL instead, or a successful
+    // sign-in redirects the browser to an unreachable address.
+    const original = process.env.NEXTAUTH_URL;
+    process.env.NEXTAUTH_URL = 'http://admin.localhost';
+    try {
+      mockedGetToken.mockResolvedValueOnce(null);
+      const req = new NextRequest('http://0.0.0.0:3001/system');
+      const res = await middleware(req);
+      const location = res.headers.get('location')!;
+      const callbackUrl = new URL(location, 'http://0.0.0.0:3001').searchParams.get(
+        'callbackUrl'
+      );
+      expect(callbackUrl).toBe('http://admin.localhost/system');
+    } finally {
+      process.env.NEXTAUTH_URL = original;
+    }
+  });
+
   it('passes through when user has admin role', async () => {
     mockedGetToken.mockResolvedValueOnce({ roles: ['admin'] } as never);
     const req = makeRequest('/dashboard');

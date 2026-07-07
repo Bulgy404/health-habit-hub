@@ -134,7 +134,7 @@ function createMockKeycloak() {
     },
     async updateUserAttribute() {},
     async listSessions() {
-      return [{ sessionId: 'sess-1', userId: 'user-1' }];
+      return [{ id: 'sess-1', userId: 'user-1', lastAccess: Date.now() }];
     },
     async revokeSession() {},
   };

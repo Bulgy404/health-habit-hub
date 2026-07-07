@@ -63,6 +63,52 @@
   "system": {
     "title": "System & Links",
     "subtitle": "Jump to monitoring, databases and API docs. Configure URLs via <code>NEXT_PUBLIC_*</code> env vars.",
+    "refresh": "Refresh",
+    "loadFailed": "Failed to load system health",
+    "loadingEllipsis": "Loading…",
+    "updatedAt": "Updated {time}",
+    "systemHealth": "System health",
+    "tools": "Tools",
+    "banner": {
+      "allOperational": "All systems operational",
+      "servicesDown": "{count, plural, one {# service is} other {# services are}} unreachable",
+      "metricsUnavailable": "Prometheus is unreachable — metrics are temporarily unavailable",
+      "elevatedErrorRate": "Elevated error rate ({rate}%)"
+    },
+    "services": "Services",
+    "healthy": "Healthy",
+    "unreachable": "Unreachable",
+    "issuesCount": "{count, plural, one {# issue} other {# issues}}",
+    "performance": "Performance",
+    "unavailable": "Unavailable",
+    "prometheusUnreachable": "Prometheus is not reachable — metrics are temporarily unavailable.",
+    "up": "Up",
+    "down": "Down",
+    "connected": "Connected",
+    "queuesAndCache": "Queues & cache",
+    "queueStatsUnavailable": "Queue & cache stats unavailable.",
+    "stats": {
+      "appTarget": "App target",
+      "requestsPerSec": "Requests / sec",
+      "errorRate": "Error rate",
+      "p95Latency": "p95 latency",
+      "cpu": "CPU",
+      "memoryRss": "Memory (RSS)",
+      "eventLoopLag": "Event-loop lag",
+      "heapUsed": "Heap used",
+      "cacheHitRate": "Cache hit rate",
+      "cachedKeys": "Cached keys",
+      "redisMemory": "Redis memory",
+      "redisClients": "Redis clients"
+    },
+    "stages": {
+      "waiting": "Waiting",
+      "active": "Active",
+      "delayed": "Delayed",
+      "completed": "Completed",
+      "failed": "Failed",
+      "paused": "Paused"
+    },
     "descriptions": {
       "keycloak": "Manage users, roles and sessions in the Keycloak console",
       "grafana": "Dashboards & metrics visualisation",
@@ -140,6 +186,7 @@
       "failed": "Failed"
     },
     "safetyBackupTakenFirst": "Safety backup taken first:",
+    "stepProgress": "Step {step} of {totalSteps} — {label}",
     "loadingEllipsis": "Loading…",
     "lastBackup": "Last backup",
     "noBackupsYet": "No backups yet.",
@@ -153,6 +200,9 @@
     "components": "Components",
     "uploaded": "Uploaded",
     "restore": "Restore",
+    "download": "Download",
+    "downloadingEllipsis": "Downloading…",
+    "downloadFailed": "Failed to download backup.",
     "recentActivity": "Recent activity",
     "when": "When",
     "who": "Who",
@@ -162,7 +212,8 @@
     "actions": {
       "trigger": "Trigger",
       "restore": "Restore",
-      "upload": "Upload"
+      "upload": "Upload",
+      "download": "Download"
     },
     "results": {
       "requested": "requested",
@@ -737,6 +788,57 @@
       "inactiveBadge": "inactive",
       "errors": {
         "loadFailed": "Failed to load questionnaires"
+      }
+    },
+    "analyticsTab": {
+      "loadFailedShort": "Failed to load",
+      "loadingParticipants": "Loading participants…",
+      "noParticipantsFound": "No participants found.",
+      "columns": {
+        "participant": "Participant",
+        "group": "Group",
+        "enrolled": "Enrolled",
+        "status": "Status"
+      },
+      "status": {
+        "droppedOut": "Dropped out",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "loadFailed": "Failed",
+      "loadingAnalytics": "Loading analytics…",
+      "tooltip": {
+        "group": "Group: {group}",
+        "activeOf": "Active: {active} / {enrolled} enrolled",
+        "rate": "Rate: {rate}%",
+        "clickToSeeParticipants": "Click to see participants →",
+        "week": "Week {week}",
+        "meanSrhi": "Mean SRHI: {score} / 7",
+        "responseCount": "n = {count} responses",
+        "date": "Date: {date}",
+        "cumulativeDropouts": "Cumulative dropouts: {count}",
+        "completedOf": "Completed: {completed} / {enrolled}"
+      },
+      "weeklyActiveRate": {
+        "title": "Weekly Active Rate",
+        "description": "% of enrolled participants with ≥1 log in the last 7 days. Click a bar to see participants.",
+        "empty": "No enrollment data yet.",
+        "drillTitle": "{group} — participants"
+      },
+      "srhiTrajectory": {
+        "title": "SRHI Trajectory",
+        "description": "Mean habit strength score per week per condition (1–7 scale). Hover points for details.",
+        "empty": "No SRHI data yet."
+      },
+      "cumulativeDropout": {
+        "title": "Cumulative Dropout",
+        "description": "Participants marked as dropped out over time.",
+        "empty": "No dropouts recorded."
+      },
+      "questionnaireCompletion": {
+        "title": "Questionnaire Completion",
+        "description": "Share of enrolled participants who submitted each questionnaire. Hover for details.",
+        "empty": "No questionnaires assigned to this study."
       }
     },
     "scheduleTab": {

@@ -1,0 +1,15 @@
+{
+  "date": "2026-07-07T18:54:33Z",
+  "file": "full_backup_20260707_185427.tar.gz",
+  "trigger": "scheduled",
+  "sizeBytes": 353596,
+  "mongoOk": true,
+  "lightragOk": true,
+  "neo4jOk": true,
+  "keycloakOk": true,
+  "keycloakSkipped": false,
+  "retentionDays": 14,
+  "errors": 0,
+  "errorLog": "",
+  "durationSeconds": 6
+}

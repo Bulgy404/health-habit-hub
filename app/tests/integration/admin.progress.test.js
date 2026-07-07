@@ -220,20 +220,23 @@ function createMockDb() {
 // ── Mock Keycloak ─────────────────────────────────────────────────────────────
 
 function createMockKeycloak() {
+  // Shaped like Keycloak's real /clients/{id}/user-sessions response
+  // (id, userId, lastAccess epoch-ms) — the admin route maps this to the
+  // sessionId/userId/lastSeen shape the frontend renders.
   const sessions = [
     {
-      sessionId: 'sess-1',
-      participantId: 'p-abc',
-      deviceType: 'mobile',
-      appVersion: '1.0',
-      lastSeen: new Date().toISOString(),
+      id: 'sess-1',
+      userId: 'p-abc',
+      lastAccess: Date.now(),
+      start: Date.now(),
+      ipAddress: '127.0.0.1',
     },
     {
-      sessionId: 'sess-2',
-      participantId: 'p-def',
-      deviceType: 'web',
-      appVersion: '1.1',
-      lastSeen: new Date().toISOString(),
+      id: 'sess-2',
+      userId: 'p-def',
+      lastAccess: Date.now(),
+      start: Date.now(),
+      ipAddress: '127.0.0.1',
     },
   ];
   const revokedSessions = new Set();
@@ -242,7 +245,7 @@ function createMockKeycloak() {
     async assignRole() {},
     async updateUserAttribute() {},
     async listSessions() {
-      return sessions.filter((s) => !revokedSessions.has(s.sessionId));
+      return sessions.filter((s) => !revokedSessions.has(s.id));
     },
     async revokeSession(sessionId) {
       revokedSessions.add(sessionId);
