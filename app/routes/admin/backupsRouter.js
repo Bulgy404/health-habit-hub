@@ -1,6 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import { randomBytes } from 'node:crypto';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { makeGetDb } from '../../utils/getDb.js';
 import { requireRole } from '../../middleware/requireRole.js';
 import { ROLES } from '../../middleware/auth.js';
@@ -14,6 +16,7 @@ import {
   triggerBackupNow,
   triggerRestore,
   uploadBackup,
+  downloadBackup,
 } from '../../services/backupService.js';
 import { logger } from '../../utils/logger.js';
 
@@ -128,6 +131,34 @@ export function createBackupsRouter({ db } = {}) {
     } catch (err) {
       log.error({ err }, 'failed to fetch current backup job');
       res.status(err.status ?? 502).json({ error: err.message });
+    }
+  });
+
+  router.get('/backups/:filename/download', async (req, res) => {
+    const { filename } = req.params;
+    try {
+      const upstream = await downloadBackup(filename);
+      res.set({
+        'Content-Type': 'application/gzip',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      });
+      const contentLength = upstream.headers.get('content-length');
+      if (contentLength) res.set('Content-Length', contentLength);
+      const database = await getDb();
+      await writeAudit(database, {
+        req,
+        action: 'download',
+        filename,
+        result: 'succeeded',
+      });
+      await pipeline(Readable.fromWeb(upstream.body), res);
+    } catch (err) {
+      log.error({ err, filename }, 'failed to download backup');
+      if (!res.headersSent) {
+        res.status(err.status ?? 502).json({ error: err.message });
+      } else {
+        res.destroy(err);
+      }
     }
   });
 

@@ -1,0 +1,14 @@
+{
+  "jobId": "3a1b25ed-896b-44af-a2f5-bd763cf1c3e9",
+  "type": "backup",
+  "reason": "manual",
+  "phase": "done",
+  "pid": 15,
+  "startedAt": "2026-07-07T18:54:04.405Z",
+  "step": 5,
+  "totalSteps": 5,
+  "stepLabel": "Creating unified backup archive",
+  "exitCode": 0,
+  "createdFile": "full_backup_20260707_185404.tar.gz",
+  "finishedAt": "2026-07-07T18:54:16.142Z"
+}

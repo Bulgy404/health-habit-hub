@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { API_BASE_URL, apiUrl, apiFetch } from "@/lib/api";
 import { useAdminGuard } from "@/lib/useAdminGuard";
-import styles from "@/components/admin-page.module.css";
+import styles from "./page.module.css";
 
 interface ToolLink {
   name: string;
@@ -49,7 +49,7 @@ const TOOLS: ToolLink[] = [
   {
     name: "Grafana",
     descriptionKey: "grafana",
-    url: env(process.env.NEXT_PUBLIC_GRAFANA_URL, "http://localhost:3001"),
+    url: env(process.env.NEXT_PUBLIC_GRAFANA_URL, "http://grafana.localhost"),
     Icon: BarChart3,
   },
   {
@@ -157,6 +157,15 @@ const QUEUE_TONE: Record<keyof QueueCounts, "ok" | "err" | "neutral"> = {
   paused: "neutral",
 };
 
+const PIPELINE_STAGES: (keyof QueueCounts)[] = [
+  "waiting",
+  "active",
+  "delayed",
+  "completed",
+  "failed",
+  "paused",
+];
+
 // ── Formatting ───────────────────────────────────────────────────────────────
 
 function fmt(n: number | null | undefined, digits = 1, suffix = ""): string {
@@ -190,11 +199,11 @@ export default function SystemPage() {
       setQueues(q);
       setError("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load system health");
+      setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, t]);
 
   useEffect(() => {
     if (!token) return;
@@ -222,6 +231,31 @@ export default function SystemPage() {
   const appUp = v.appUp === 1;
   const redis = queues?.redis;
 
+  const downServices = overview
+    ? Object.entries(overview.health.services).filter(([, s]) => s.status !== "ok")
+    : [];
+  const errorRate = v.errorRatePct ?? 0;
+
+  let bannerTone: "ok" | "warn" | "err" = "ok";
+  let bannerText = t("banner.allOperational");
+  if (downServices.length > 0) {
+    bannerTone = "err";
+    bannerText = t("banner.servicesDown", { count: downServices.length });
+  } else if (p && !p.reachable) {
+    bannerTone = "warn";
+    bannerText = t("banner.metricsUnavailable");
+  } else if (errorRate > 5) {
+    bannerTone = "warn";
+    bannerText = t("banner.elevatedErrorRate", { rate: fmt(errorRate, 1) });
+  }
+
+  const bannerClass = {
+    ok: styles.bannerOk,
+    warn: styles.bannerWarn,
+    err: styles.bannerErr,
+  }[bannerTone];
+  const BannerIcon = bannerTone === "ok" ? CheckCircle2 : bannerTone === "warn" ? AlertTriangle : XCircle;
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
@@ -231,271 +265,253 @@ export default function SystemPage() {
             {t.rich("subtitle", { code: (chunks) => <code>{chunks}</code> })}
           </p>
         </div>
-        <button
-          className={styles.secondaryButton}
-          onClick={refresh}
-          disabled={loading}
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
-        >
+        <button className={styles.refreshBtn} onClick={refresh} disabled={loading}>
           <RefreshCw size={15} />
-          Refresh
+          {t("refresh")}
         </button>
       </div>
 
-      {/* ── Live system health ─────────────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem", marginBottom: "0.5rem" }}>
-        <h2 className={styles.sectionTitle} style={{ margin: 0 }}>
-          System health
-        </h2>
-        {overview && (
-          <span className={styles.muted} style={{ fontSize: "0.75rem" }}>
-            Updated {new Date(overview.generatedAt).toLocaleTimeString()}
-          </span>
-        )}
-      </div>
-
       {error && <p className={styles.error}>{error}</p>}
-      {loading && !overview ? (
-        <p className={styles.muted}>Loading…</p>
-      ) : (
-        overview && (
-          <>
-            {/* Downstream service checks */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))",
-                gap: "0.75rem",
-                marginBottom: "1rem",
-              }}
-            >
-              {Object.entries(overview.health.services).map(([key, s]) => (
-                <div key={key} className={styles.section} style={{ padding: "0.9rem 1rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    {s.status === "ok" ? (
-                      <CheckCircle2 size={17} color="#16a34a" />
-                    ) : (
-                      <XCircle size={17} color="#dc2626" />
-                    )}
-                    <span style={{ fontWeight: 600 }}>{SERVICE_LABELS[key] ?? key}</span>
+
+      {/* ── System health ───────────────────────────────────────────────── */}
+      <section className={styles.section}>
+        <div className={styles.sectionHead}>
+          <h2 className={styles.sectionTitle}>{t("systemHealth")}</h2>
+          {overview && (
+            <span className={styles.sectionMeta}>
+              {t("updatedAt", { time: new Date(overview.generatedAt).toLocaleTimeString() })}
+            </span>
+          )}
+        </div>
+
+        {loading && !overview ? (
+          <p className={styles.loading}>{t("loadingEllipsis")}</p>
+        ) : (
+          overview && (
+            <>
+              <div className={`${styles.banner} ${bannerClass}`}>
+                <BannerIcon size={18} />
+                <span className={styles.bannerTitle}>{bannerText}</span>
+              </div>
+
+              <div className={styles.cardGrid}>
+                {/* Downstream services overview card */}
+                <div className={styles.card}>
+                  <div className={styles.cardHead}>
+                    <Activity size={16} color="var(--color-primary)" />
+                    <span className={styles.cardTitle}>{t("services")}</span>
+                    <span
+                      className={`${styles.cardBadge} ${downServices.length === 0 ? styles.badgeOk : styles.badgeErr}`}
+                    >
+                      {downServices.length === 0
+                        ? t("healthy")
+                        : t("issuesCount", { count: downServices.length })}
+                    </span>
                   </div>
-                  <div className={styles.muted} style={{ fontSize: "0.8rem", marginTop: "0.35rem" }}>
-                    {s.status === "ok" ? "Healthy" : "Unreachable"} · {s.latencyMs} ms
+                  <div className={styles.serviceGrid}>
+                    {Object.entries(overview.health.services).map(([key, s]) => (
+                      <div key={key} className={styles.serviceCard}>
+                        <div className={styles.serviceName}>
+                          {s.status === "ok" ? (
+                            <CheckCircle2 size={16} color="var(--color-success)" />
+                          ) : (
+                            <XCircle size={16} color="var(--color-error)" />
+                          )}
+                          {SERVICE_LABELS[key] ?? key}
+                        </div>
+                        <div className={styles.serviceMeta}>
+                          {s.status === "ok" ? t("healthy") : t("unreachable")} · {s.latencyMs} ms
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Prometheus metrics */}
-            {p && !p.reachable ? (
-              <div
-                className={styles.section}
-                style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
-              >
-                <AlertTriangle size={16} color="#d97706" />
-                <span className={styles.muted} style={{ fontSize: "0.85rem" }}>
-                  Prometheus is not reachable — metrics are temporarily unavailable.
-                </span>
+                {/* Performance overview card */}
+                <div className={styles.card}>
+                  <div className={styles.cardHead}>
+                    <Gauge size={16} color="var(--color-primary)" />
+                    <span className={styles.cardTitle}>{t("performance")}</span>
+                    {p && !p.reachable && (
+                      <span className={`${styles.cardBadge} ${styles.badgeWarn}`}>
+                        {t("unavailable")}
+                      </span>
+                    )}
+                  </div>
+                  {p && !p.reachable ? (
+                    <p className={styles.emptyNote}>{t("prometheusUnreachable")}</p>
+                  ) : (
+                    <div className={styles.statGrid}>
+                      <Stat
+                        Icon={Activity}
+                        label={t("stats.appTarget")}
+                        value={appUp ? t("up") : t("down")}
+                        tone={appUp ? "ok" : "err"}
+                      />
+                      <Stat Icon={Gauge} label={t("stats.requestsPerSec")} value={fmt(v.requestsPerSec, 2)} />
+                      <Stat
+                        Icon={AlertTriangle}
+                        label={t("stats.errorRate")}
+                        value={fmt(v.errorRatePct, 2, "%")}
+                        tone={errorRate > 5 ? "err" : undefined}
+                      />
+                      <Stat Icon={Timer} label={t("stats.p95Latency")} value={fmt(v.p95LatencyMs, 0, " ms")} />
+                      <Stat Icon={Cpu} label={t("stats.cpu")} value={fmt(v.cpuPercent, 1, "%")} />
+                      <Stat
+                        Icon={Database}
+                        label={t("stats.memoryRss")}
+                        value={fmt(v.residentMemoryMB, 0, " MB")}
+                      />
+                      <Stat
+                        Icon={Timer}
+                        label={t("stats.eventLoopLag")}
+                        value={fmt(v.eventLoopLagMs, 1, " ms")}
+                      />
+                      <Stat Icon={Database} label={t("stats.heapUsed")} value={fmt(v.heapUsedMB, 0, " MB")} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Queues & cache overview card */}
+                <div className={styles.card}>
+                  <div className={styles.cardHead}>
+                    <Layers size={16} color="var(--color-primary)" />
+                    <span className={styles.cardTitle}>{t("queuesAndCache")}</span>
+                    {redis && (
+                      <span
+                        className={`${styles.cardBadge} ${redis.connected ? styles.badgeOk : styles.badgeErr}`}
+                      >
+                        {redis.connected ? t("connected") : t("down")}
+                      </span>
+                    )}
+                  </div>
+                  {queues ? (
+                    <>
+                      {queues.queues.map((q) => (
+                        <QueuePipeline key={q.name} name={q.name} counts={q.counts} />
+                      ))}
+                      <div className={styles.statGrid}>
+                        <Stat
+                          Icon={Gauge}
+                          label={t("stats.cacheHitRate")}
+                          value={fmt(redis?.hitRatePct ?? null, 1, "%")}
+                          tone={
+                            redis?.hitRatePct != null && redis.hitRatePct < 50 ? "err" : undefined
+                          }
+                        />
+                        <Stat Icon={Database} label={t("stats.cachedKeys")} value={fmt(redis?.totalKeys, 0)} />
+                        <Stat
+                          Icon={Database}
+                          label={t("stats.redisMemory")}
+                          value={fmt(redis?.usedMemoryMB, 1, " MB")}
+                        />
+                        <Stat
+                          Icon={Activity}
+                          label={t("stats.redisClients")}
+                          value={fmt(redis?.connectedClients, 0)}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <p className={styles.emptyNote}>{t("queueStatsUnavailable")}</p>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-                  gap: "0.75rem",
-                }}
-              >
-                <StatCard
-                  Icon={Activity}
-                  label="App target"
-                  value={appUp ? "Up" : "Down"}
-                  tone={appUp ? "ok" : "err"}
-                />
-                <StatCard Icon={Gauge} label="Requests / sec" value={fmt(v.requestsPerSec, 2)} />
-                <StatCard
-                  Icon={AlertTriangle}
-                  label="Error rate"
-                  value={fmt(v.errorRatePct, 2, "%")}
-                  tone={(v.errorRatePct ?? 0) > 5 ? "err" : "neutral"}
-                />
-                <StatCard Icon={Timer} label="p95 latency" value={fmt(v.p95LatencyMs, 0, " ms")} />
-                <StatCard Icon={Cpu} label="CPU" value={fmt(v.cpuPercent, 1, "%")} />
-                <StatCard Icon={Database} label="Memory (RSS)" value={fmt(v.residentMemoryMB, 0, " MB")} />
-                <StatCard Icon={Timer} label="Event-loop lag" value={fmt(v.eventLoopLagMs, 1, " ms")} />
-                <StatCard Icon={Database} label="Heap used" value={fmt(v.heapUsedMB, 0, " MB")} />
-              </div>
-            )}
-          </>
-        )
-      )}
+            </>
+          )
+        )}
+      </section>
 
-      {/* ── Queues & cache (Bull / Redis) ──────────────────────────────────── */}
-      <h2 className={styles.sectionTitle} style={{ marginTop: "1.75rem", marginBottom: "0.5rem" }}>
-        Queues &amp; cache
-      </h2>
-      {queues ? (
-        <>
-          {queues.queues.map((q) => (
-            <QueuePipeline key={q.name} name={q.name} counts={q.counts} />
-          ))}
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-              gap: "0.75rem",
-              marginTop: "0.75rem",
-            }}
-          >
-            <StatCard
-              Icon={Layers}
-              label="Redis"
-              value={redis?.connected ? "Connected" : "Down"}
-              tone={redis?.connected ? "ok" : "err"}
-            />
-            <StatCard
-              Icon={Gauge}
-              label="Cache hit rate"
-              value={fmt(redis?.hitRatePct ?? null, 1, "%")}
-              tone={
-                redis?.hitRatePct != null && redis.hitRatePct < 50 ? "err" : "neutral"
-              }
-            />
-            <StatCard Icon={Database} label="Cached keys" value={fmt(redis?.totalKeys, 0)} />
-            <StatCard Icon={Database} label="Redis memory" value={fmt(redis?.usedMemoryMB, 1, " MB")} />
-            <StatCard Icon={Activity} label="Redis clients" value={fmt(redis?.connectedClients, 0)} />
-          </div>
-        </>
-      ) : (
-        !loading && <p className={styles.muted}>Queue &amp; cache stats unavailable.</p>
-      )}
-
-      {/* ── Tool links ─────────────────────────────────────────────────────── */}
-      <h2 className={styles.sectionTitle} style={{ marginTop: "1.75rem", marginBottom: "0.5rem" }}>
-        Tools &amp; links
-      </h2>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-          gap: "1rem",
-        }}
-      >
-        {TOOLS.map((tool) => (
-          <a
-            key={tool.name}
-            href={tool.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.section}
-            style={{ textDecoration: "none", display: "block" }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-              <tool.Icon size={20} color="var(--color-primary)" />
-              <span className={styles.sectionTitle} style={{ margin: 0 }}>
-                {tool.name}
-              </span>
-              <ExternalLink size={14} className={styles.muted} style={{ marginLeft: "auto" }} />
-            </div>
-            <div className={styles.muted} style={{ fontSize: "0.82rem", marginTop: "0.4rem" }}>
-              {t(`descriptions.${tool.descriptionKey}`)}
-            </div>
-            <div
-              className={styles.code}
-              style={{ fontSize: "0.72rem", marginTop: "0.5rem", wordBreak: "break-all" }}
+      {/* ── Tools ───────────────────────────────────────────────────────── */}
+      <section className={styles.section}>
+        <div className={styles.sectionHead}>
+          <h2 className={styles.sectionTitle}>{t("tools")}</h2>
+        </div>
+        <div className={styles.toolGrid}>
+          {TOOLS.map((tool) => (
+            <a
+              key={tool.name}
+              href={tool.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.toolCard}
             >
-              {tool.url}
-            </div>
-          </a>
-        ))}
-      </div>
+              <div className={styles.toolHead}>
+                <tool.Icon size={20} color="var(--color-primary)" />
+                <span className={styles.toolName}>{tool.name}</span>
+                <ExternalLink size={14} className={styles.toolExternal} />
+              </div>
+              <div className={styles.toolDescription}>{t(`descriptions.${tool.descriptionKey}`)}</div>
+              <div className={styles.toolUrl}>{tool.url}</div>
+            </a>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
 
 // ── Sub-components ───────────────────────────────────────────────────────────
 
-function StatCard({
+function Stat({
   Icon,
   label,
   value,
-  tone = "neutral",
+  tone,
 }: {
   Icon: LucideIcon;
   label: string;
   value: string;
-  tone?: "ok" | "err" | "neutral";
+  tone?: "ok" | "err";
 }) {
-  const color = tone === "ok" ? "#16a34a" : tone === "err" ? "#dc2626" : "var(--color-primary)";
+  const valueClass =
+    tone === "ok" ? styles.statValueOk : tone === "err" ? styles.statValueErr : "";
   return (
-    <div className={styles.section} style={{ padding: "0.9rem 1rem" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
-        <Icon size={15} color={color} />
-        <span className={styles.muted} style={{ fontSize: "0.78rem" }}>
-          {label}
-        </span>
-      </div>
-      <div style={{ fontSize: "1.35rem", fontWeight: 700, marginTop: "0.3rem", color }}>
-        {value}
-      </div>
+    <div className={styles.stat}>
+      <span className={styles.statLabel}>
+        <Icon size={13} />
+        {label}
+      </span>
+      <span className={`${styles.statValue} ${valueClass}`}>{value}</span>
     </div>
   );
 }
 
-// Ordered stages of the BullMQ pipeline, rendered left-to-right with arrows.
-const PIPELINE_STAGES: (keyof QueueCounts)[] = [
-  "waiting",
-  "active",
-  "delayed",
-  "completed",
-  "failed",
-  "paused",
-];
-
-const STAGE_LABELS: Record<keyof QueueCounts, string> = {
-  waiting: "Waiting",
-  active: "Active",
-  delayed: "Delayed",
-  completed: "Completed",
-  failed: "Failed",
-  paused: "Paused",
+const STAGE_LABEL_KEYS: Record<keyof QueueCounts, string> = {
+  waiting: "waiting",
+  active: "active",
+  delayed: "delayed",
+  completed: "completed",
+  failed: "failed",
+  paused: "paused",
 };
 
 function QueuePipeline({ name, counts }: { name: string; counts: QueueCounts }) {
+  const t = useTranslations("system");
   return (
-    <div className={styles.section} style={{ padding: "1rem 1.25rem" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-        <ListChecks size={17} color="var(--color-primary)" />
-        <span style={{ fontWeight: 600 }}>{name}</span>
+    <div className={styles.pipeline}>
+      <div className={styles.pipelineName}>
+        <ListChecks size={15} color="var(--color-primary)" />
+        {name}
       </div>
-      <div style={{ display: "flex", alignItems: "stretch", gap: "0.4rem", flexWrap: "wrap" }}>
+      <div className={styles.pipelineRow}>
         {PIPELINE_STAGES.map((stage, i) => {
           const tone = QUEUE_TONE[stage];
-          const color =
-            tone === "ok" ? "#16a34a" : tone === "err" ? "#dc2626" : "var(--color-primary)";
           const count = counts[stage] ?? 0;
           return (
             <div key={stage} style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
               <div
-                style={{
-                  minWidth: 84,
-                  border: "1px solid var(--color-border, #e2e8f0)",
-                  borderRadius: 8,
-                  padding: "0.5rem 0.65rem",
-                  textAlign: "center",
-                  background: count > 0 && tone === "err" ? "#fef2f2" : "transparent",
-                }}
+                className={`${styles.pipelineStage} ${count > 0 && tone === "err" ? styles.pipelineStageErr : ""}`}
               >
-                <div style={{ fontSize: "1.25rem", fontWeight: 700, color }}>{count}</div>
-                <div className={styles.muted} style={{ fontSize: "0.72rem" }}>
-                  {STAGE_LABELS[stage]}
+                <div
+                  className={styles.pipelineCount}
+                  style={{ color: tone === "err" && count > 0 ? "var(--color-error)" : "var(--color-text)" }}
+                >
+                  {count}
                 </div>
+                <div className={styles.pipelineLabel}>{t(`stages.${STAGE_LABEL_KEYS[stage]}`)}</div>
               </div>
-              {i < PIPELINE_STAGES.length - 1 && (
-                <span className={styles.muted} style={{ fontSize: "1rem" }}>
-                  →
-                </span>
-              )}
+              {i < PIPELINE_STAGES.length - 1 && <span className={styles.pipelineArrow}>→</span>}
             </div>
           );
         })}

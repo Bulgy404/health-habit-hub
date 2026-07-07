@@ -78,6 +78,14 @@ app.get('/jobs/current', (_req, res) => {
   res.json(getCurrentJob());
 });
 
+app.get('/download/:filename', (req, res) => {
+  const absPath = resolveBackupPath(req.params.filename);
+  if (!absPath || !existsSync(absPath)) {
+    return res.status(404).json({ error: 'Backup not found.' });
+  }
+  res.download(absPath, req.params.filename);
+});
+
 app.post('/trigger', writeLimiter, (_req, res) => {
   try {
     const jobId = triggerBackup({ reason: 'manual' });

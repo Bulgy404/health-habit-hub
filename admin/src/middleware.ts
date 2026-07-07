@@ -6,7 +6,18 @@ export async function middleware(req: NextRequest) {
 
   if (!token) {
     const signInUrl = new URL("/api/auth/signin", req.url);
-    signInUrl.searchParams.set("callbackUrl", req.url);
+    // req.url's origin reflects this self-hosted Next.js server's own bind
+    // address (e.g. http://0.0.0.0:3001) rather than the public-facing host
+    // seen by the browser — using it here would bake a broken absolute URL
+    // into callbackUrl, which NextAuth later redirects to post-login. The
+    // path/query are still correct from req.url; only the origin needs to
+    // come from the known-correct configured URL instead.
+    const publicOrigin = process.env.NEXTAUTH_URL ?? req.nextUrl.origin;
+    const callbackUrl = new URL(
+      req.nextUrl.pathname + req.nextUrl.search,
+      publicOrigin
+    );
+    signInUrl.searchParams.set("callbackUrl", callbackUrl.toString());
     return NextResponse.redirect(signInUrl);
   }
 

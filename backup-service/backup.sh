@@ -5,6 +5,11 @@ BACKUP_DIR="/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 START_TS=$(date +%s)
 RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
+# Independent of the time-based retention above: a daily cron on top of a
+# 14-day time retention piles up ~14 scheduled backups in the admin UI, more
+# than anyone needs to look at. Caps *scheduled*-trigger backups specifically
+# by count, regardless of age; manual/uploaded backups are unaffected.
+SCHEDULED_BACKUP_LIMIT=${BACKUP_SCHEDULED_LIMIT:-10}
 ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
 # Backward compatible: older env/docs used ALERT_EMAIL, newer scripts use BACKUP_EMAIL.
 BACKUP_EMAIL=${BACKUP_EMAIL:-${ALERT_EMAIL:-}}
@@ -280,6 +285,34 @@ if [ "$DELETED_COUNT" -gt 0 ]; then
   log "✓ Deleted $DELETED_COUNT old backup(s) and $DELETED_MANIFESTS manifest(s)"
 else
   log "  No old backups to delete"
+fi
+
+# Cap scheduled (daily automatic) backups by count, independent of the
+# time-based retention above — read the surviving sidecar manifests, sort by
+# date descending, and delete anything past the newest $SCHEDULED_BACKUP_LIMIT.
+# Manual and uploaded backups are untouched by this cap.
+log ""
+log "Enforcing max $SCHEDULED_BACKUP_LIMIT scheduled backups..."
+DELETED_SCHEDULED=0
+EXCESS_SCHEDULED=$(
+  for m in "$BACKUP_DIR"/backup_*.manifest.json; do
+    [ -f "$m" ] || continue
+    jq -r 'select(.trigger == "scheduled") | [.date, .file] | @tsv' "$m" 2>/dev/null || true
+  done | sort -r | tail -n +$((SCHEDULED_BACKUP_LIMIT + 1)) | cut -f2
+)
+if [ -n "$EXCESS_SCHEDULED" ]; then
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    stem="${f%.tar.gz}"
+    stem="${stem#full_backup_}"
+    rm -f "$BACKUP_DIR/$f" "$BACKUP_DIR/backup_${stem}.manifest" "$BACKUP_DIR/backup_${stem}.manifest.json"
+    DELETED_SCHEDULED=$((DELETED_SCHEDULED + 1))
+  done <<< "$EXCESS_SCHEDULED"
+fi
+if [ "$DELETED_SCHEDULED" -gt 0 ]; then
+  log "✓ Deleted $DELETED_SCHEDULED excess scheduled backup(s) beyond the last $SCHEDULED_BACKUP_LIMIT"
+else
+  log "  No excess scheduled backups to delete"
 fi
 
 # ── Optional offsite sync (rclone) ──────────────────────────────────────────

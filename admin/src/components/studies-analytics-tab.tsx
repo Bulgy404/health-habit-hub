@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { apiUrl } from "@/lib/api";
 import styles from "../app/(admin)/studies/page.module.css";
 
@@ -125,6 +126,7 @@ function DrillPanel({
   token: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("studies.analyticsTab");
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -148,7 +150,7 @@ function DrillPanel({
       })
       .catch((err) => {
         if (!cancelled)
-          setError(err instanceof Error ? err.message : "Failed to load");
+          setError(err instanceof Error ? err.message : t("loadFailedShort"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -156,7 +158,7 @@ function DrillPanel({
     return () => {
       cancelled = true;
     };
-  }, [studyId, groupId, token]);
+  }, [studyId, groupId, token, t]);
 
   return (
     <div className={styles.drillPanel}>
@@ -167,19 +169,19 @@ function DrillPanel({
         </button>
       </div>
       {loading ? (
-        <div className={styles.drillLoading}>Loading participants…</div>
+        <div className={styles.drillLoading}>{t("loadingParticipants")}</div>
       ) : error ? (
         <div className={styles.drillLoading}>{error}</div>
       ) : participants.length === 0 ? (
-        <div className={styles.drillLoading}>No participants found.</div>
+        <div className={styles.drillLoading}>{t("noParticipantsFound")}</div>
       ) : (
         <table className={styles.drillTable}>
           <thead>
             <tr>
-              <th>Participant</th>
-              <th>Group</th>
-              <th>Enrolled</th>
-              <th>Status</th>
+              <th>{t("columns.participant")}</th>
+              <th>{t("columns.group")}</th>
+              <th>{t("columns.enrolled")}</th>
+              <th>{t("columns.status")}</th>
             </tr>
           </thead>
           <tbody>
@@ -195,9 +197,7 @@ function DrillPanel({
                 </td>
                 <td>{p.groupLabel ?? p.groupId ?? "—"}</td>
                 <td>
-                  {p.enrolledAt
-                    ? new Date(p.enrolledAt).toLocaleDateString("en-GB")
-                    : "—"}
+                  {p.enrolledAt ? new Date(p.enrolledAt).toLocaleDateString() : "—"}
                 </td>
                 <td>
                   <span
@@ -220,10 +220,10 @@ function DrillPanel({
                     }}
                   >
                     {p.droppedOut
-                      ? "Dropped out"
+                      ? t("status.droppedOut")
                       : p.isActive
-                      ? "Active"
-                      : "Inactive"}
+                      ? t("status.active")
+                      : t("status.inactive")}
                   </span>
                 </td>
               </tr>
@@ -249,6 +249,7 @@ export function AnalyticsTab({
   study: StudySummaryForAnalytics;
   token: string;
 }) {
+  const t = useTranslations("studies.analyticsTab");
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -268,7 +269,7 @@ export function AnalyticsTab({
       })
       .catch((err) => {
         if (!cancelled)
-          setError(err instanceof Error ? err.message : "Failed");
+          setError(err instanceof Error ? err.message : t("loadFailed"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -276,7 +277,7 @@ export function AnalyticsTab({
     return () => {
       cancelled = true;
     };
-  }, [study.id, token]);
+  }, [study.id, token, t]);
 
   const groupLabel = (gid: string) =>
     study.groups.find((g) => g.id === gid)?.label ?? gid;
@@ -286,7 +287,7 @@ export function AnalyticsTab({
 
   const hideTip = () => setTooltip(null);
 
-  if (loading) return <div className={styles.loadingState}>Loading analytics…</div>;
+  if (loading) return <div className={styles.loadingState}>{t("loadingAnalytics")}</div>;
   if (error) return <div className={styles.errorMsg}>{error}</div>;
   if (!data) return null;
 
@@ -310,14 +311,14 @@ export function AnalyticsTab({
       <div className={styles.analyticsSection}>
         <div className={styles.analyticsSectionHeader}>
           <div>
-            <p className={styles.analyticsSectionTitle}>Weekly Active Rate</p>
+            <p className={styles.analyticsSectionTitle}>{t("weeklyActiveRate.title")}</p>
             <p className={styles.analyticsSectionDesc}>
-              % of enrolled participants with ≥1 log in the last 7 days. Click a bar to see participants.
+              {t("weeklyActiveRate.description")}
             </p>
           </div>
         </div>
         {data.weeklyActiveRate.length === 0 ? (
-          <div className={styles.emptyState}>No enrollment data yet.</div>
+          <div className={styles.emptyState}>{t("weeklyActiveRate.empty")}</div>
         ) : (
           <>
             <div className={styles.barChart}>
@@ -327,16 +328,16 @@ export function AnalyticsTab({
                   className={`${styles.barRow} ${styles.barRowClickable}`}
                   onClick={() =>
                     setDrill({
-                      title: `${groupLabel(r.groupId)} — participants`,
+                      title: t("weeklyActiveRate.drillTitle", { group: groupLabel(r.groupId) }),
                       groupId: r.groupId,
                     })
                   }
                   onMouseMove={(e) =>
                     showTip(e, [
-                      `Group: ${groupLabel(r.groupId)}`,
-                      `Active: ${r.active} / ${r.enrolled} enrolled`,
-                      `Rate: ${Math.round(r.rate * 100)}%`,
-                      "Click to see participants →",
+                      t("tooltip.group", { group: groupLabel(r.groupId) }),
+                      t("tooltip.activeOf", { active: r.active, enrolled: r.enrolled }),
+                      t("tooltip.rate", { rate: Math.round(r.rate * 100) }),
+                      t("tooltip.clickToSeeParticipants"),
                     ])
                   }
                   onMouseLeave={hideTip}
@@ -380,13 +381,12 @@ export function AnalyticsTab({
 
       {/* ── SRHI Trajectory ───────────────────────────────────────────────── */}
       <div className={styles.analyticsSection}>
-        <p className={styles.analyticsSectionTitle}>SRHI Trajectory</p>
+        <p className={styles.analyticsSectionTitle}>{t("srhiTrajectory.title")}</p>
         <p className={styles.analyticsSectionDesc}>
-          Mean habit strength score per week per condition (1–7 scale). Hover
-          points for details.
+          {t("srhiTrajectory.description")}
         </p>
         {data.srhiTrajectory.length === 0 ? (
-          <div className={styles.emptyState}>No SRHI data yet.</div>
+          <div className={styles.emptyState}>{t("srhiTrajectory.empty")}</div>
         ) : (
           <div className={styles.lineChartWrap}>
             <svg
@@ -471,10 +471,10 @@ export function AnalyticsTab({
                         strokeWidth="1.5"
                         onMouseMove={(e) =>
                           showTip(e, [
-                            `Group: ${groupLabel(gid)}`,
-                            `Week ${p.weekNumber}`,
-                            `Mean SRHI: ${p.meanScore.toFixed(2)} / 7`,
-                            `n = ${p.count} responses`,
+                            t("tooltip.group", { group: groupLabel(gid) }),
+                            t("tooltip.week", { week: p.weekNumber }),
+                            t("tooltip.meanSrhi", { score: p.meanScore.toFixed(2) }),
+                            t("tooltip.responseCount", { count: p.count }),
                           ])
                         }
                         onMouseLeave={hideTip}
@@ -501,12 +501,12 @@ export function AnalyticsTab({
 
       {/* ── Cumulative Dropout ────────────────────────────────────────────── */}
       <div className={styles.analyticsSection}>
-        <p className={styles.analyticsSectionTitle}>Cumulative Dropout</p>
+        <p className={styles.analyticsSectionTitle}>{t("cumulativeDropout.title")}</p>
         <p className={styles.analyticsSectionDesc}>
-          Participants marked as dropped out over time.
+          {t("cumulativeDropout.description")}
         </p>
         {data.dropoutCurve.length === 0 ? (
-          <div className={styles.emptyState}>No dropouts recorded.</div>
+          <div className={styles.emptyState}>{t("cumulativeDropout.empty")}</div>
         ) : (
           (() => {
             const sorted = [...data.dropoutCurve].sort((a, b) =>
@@ -593,9 +593,9 @@ export function AnalyticsTab({
                             strokeWidth="1.5"
                             onMouseMove={(e) =>
                               showTip(e, [
-                                `Group: ${groupLabel(gid)}`,
-                                `Date: ${p.date}`,
-                                `Cumulative dropouts: ${p.cumulative}`,
+                                t("tooltip.group", { group: groupLabel(gid) }),
+                                t("tooltip.date", { date: p.date }),
+                                t("tooltip.cumulativeDropouts", { count: p.cumulative }),
                               ])
                             }
                             onMouseLeave={hideTip}
@@ -627,16 +627,15 @@ export function AnalyticsTab({
       {/* ── Questionnaire Completion ──────────────────────────────────────── */}
       <div className={styles.analyticsSection}>
         <p className={styles.analyticsSectionTitle}>
-          Questionnaire Completion
+          {t("questionnaireCompletion.title")}
         </p>
         <p className={styles.analyticsSectionDesc}>
-          Share of enrolled participants who submitted each questionnaire. Hover
-          for details.
+          {t("questionnaireCompletion.description")}
         </p>
         {!data.questionnaireCompletionRates ||
         data.questionnaireCompletionRates.length === 0 ? (
           <div className={styles.emptyState}>
-            No questionnaires assigned to this study.
+            {t("questionnaireCompletion.empty")}
           </div>
         ) : (
           <div className={styles.barChart}>
@@ -647,8 +646,8 @@ export function AnalyticsTab({
                 onMouseMove={(e) =>
                   showTip(e, [
                     q.title,
-                    `Completed: ${q.completed} / ${q.enrolled}`,
-                    `Rate: ${Math.round(q.rate * 100)}%`,
+                    t("tooltip.completedOf", { completed: q.completed, enrolled: q.enrolled }),
+                    t("tooltip.rate", { rate: Math.round(q.rate * 100) }),
                   ])
                 }
                 onMouseLeave={hideTip}

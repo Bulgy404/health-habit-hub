@@ -628,7 +628,16 @@ export function createAdminRouter({
   router.get('/sessions', async (req, res) => {
     try {
       const kc = getKeycloak();
-      const all = await kc.listSessions();
+      const raw = await kc.listSessions();
+      // Keycloak's session shape (id, userId, lastAccess epoch-ms, ...)
+      // normalized to what the admin UI renders.
+      const all = raw.map((s) => ({
+        sessionId: s.id,
+        userId: s.userId,
+        lastSeen: s.lastAccess ? new Date(s.lastAccess).toISOString() : null,
+        startedAt: s.start ? new Date(s.start).toISOString() : null,
+        ipAddress: s.ipAddress ?? null,
+      }));
       const page = Math.max(1, parseInt(req.query.page, 10) || 1);
       const limit = Math.min(
         200,

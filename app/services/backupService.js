@@ -48,6 +48,38 @@ async function call(path, { method = 'GET', body } = {}) {
   return data;
 }
 
+/**
+ * Streams a backup archive from backup-api. Returns the raw fetch Response
+ * (not parsed) so the caller can pipe its body straight through to the HTTP
+ * response without buffering a potentially multi-GB file in memory.
+ * @param {string} filename
+ * @returns {Promise<Response>}
+ */
+export async function downloadBackup(filename) {
+  const res = await fetch(
+    `${backupApiUrl()}/download/${encodeURIComponent(filename)}`,
+    {
+      headers: { 'X-Service-Auth-Token': backupApiSecret() },
+      // Large archives can take a while to transfer even internally —
+      // give this a much longer floor than the other, small JSON calls.
+      signal: AbortSignal.timeout(Math.max(timeoutMs(), 10 * 60_000)),
+    }
+  );
+  if (!res.ok) {
+    let message = `backup-api HTTP ${res.status}`;
+    try {
+      const data = await res.json();
+      if (data.error) message = data.error;
+    } catch {
+      // non-JSON error body — keep the generic message
+    }
+    const err = new Error(message);
+    err.status = res.status;
+    throw err;
+  }
+  return res;
+}
+
 export function getBackupStatus() {
   return call('/status');
 }

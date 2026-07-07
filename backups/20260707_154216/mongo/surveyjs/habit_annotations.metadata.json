@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"habitId":{"$numberInt":"1"},"type":{"$numberInt":"1"},"userId":{"$numberInt":"1"}},"name":"habitId_type_userId","background":true}],"uuid":"0111acf87be642c2887398903db0eda5","collectionName":"habit_annotations","type":"collection"}

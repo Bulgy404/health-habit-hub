@@ -62,7 +62,27 @@ export function isJobRunning() {
   );
 }
 
-function runScript(scriptPath, args, env, { stdinPayload } = {}) {
+// backup.sh logs each stage as "[<timestamp>] N/5 <description>..." (see
+// log() in backup.sh) — reused here to drive a live progress bar instead of
+// parsing anything script-specific to this API.
+const STEP_MARKER_RE = /\]\s+(\d+)\/(\d+)\s+([^\n]+)/g;
+
+/** Returns the last (step, totalSteps, label) marker found in `output`, or null. */
+function extractLatestStep(output) {
+  let match;
+  let last = null;
+  STEP_MARKER_RE.lastIndex = 0;
+  while ((match = STEP_MARKER_RE.exec(output))) {
+    last = {
+      step: Number(match[1]),
+      totalSteps: Number(match[2]),
+      stepLabel: match[3].trim().replace(/\.\.\.$/, ''),
+    };
+  }
+  return last;
+}
+
+function runScript(scriptPath, args, env, { stdinPayload, onOutput } = {}) {
   const logStream = createWriteStream(
     join(BACKUP_DIR, `job_${Date.now()}.log`)
   );
@@ -78,6 +98,7 @@ function runScript(scriptPath, args, env, { stdinPayload } = {}) {
     if (output.length > MAX_CAPTURED_OUTPUT) {
       output = output.slice(output.length - MAX_CAPTURED_OUTPUT);
     }
+    onOutput?.(output);
   };
   child.stdout.on('data', capture);
   child.stderr.on('data', capture);
@@ -130,9 +151,22 @@ export function triggerBackup({ reason = 'manual' } = {}) {
     throw err;
   }
   const jobId = randomUUID();
-  const { pid, donePromise } = runScript('/backup.sh', [], {
-    BACKUP_TRIGGER: reason,
-  });
+  let lastStep = 0;
+  const { pid, donePromise } = runScript(
+    '/backup.sh',
+    [],
+    { BACKUP_TRIGGER: reason },
+    {
+      onOutput: (output) => {
+        const progress = extractLatestStep(output);
+        if (!progress || progress.step === lastStep) return;
+        lastStep = progress.step;
+        const latest = readJobState();
+        if (!latest || latest.jobId !== jobId) return; // superseded
+        writeJobState({ ...latest, ...progress });
+      },
+    }
+  );
   const state = {
     jobId,
     type: 'backup',
@@ -179,9 +213,22 @@ export function triggerRestore({ absPath, filename, restoreKeycloak }) {
   writeJobState(state);
 
   (async () => {
-    const safety = runScript('/backup.sh', [], {
-      BACKUP_TRIGGER: 'pre_restore_safety',
-    });
+    let lastStep = 0;
+    const safety = runScript(
+      '/backup.sh',
+      [],
+      { BACKUP_TRIGGER: 'pre_restore_safety' },
+      {
+        onOutput: (output) => {
+          const progress = extractLatestStep(output);
+          if (!progress || progress.step === lastStep) return;
+          lastStep = progress.step;
+          const current = readJobState();
+          if (!current || current.jobId !== jobId) return;
+          writeJobState({ ...current, ...progress });
+        },
+      }
+    );
     let latest = readJobState();
     if (!latest || latest.jobId !== jobId) return;
     latest.pid = safety.pid;
@@ -201,6 +248,11 @@ export function triggerRestore({ absPath, filename, restoreKeycloak }) {
     }
     latest.safetyBackupFile = extractCreatedFilename(safetyResult.output);
     latest.phase = 'restoring';
+    // restore.sh has no step markers to parse — clear the safety backup's
+    // progress so the UI doesn't keep showing a stale "5/5" during restore.
+    delete latest.step;
+    delete latest.totalSteps;
+    delete latest.stepLabel;
     writeJobState(latest);
 
     const restoreArgs = restoreKeycloak === false ? [absPath, '--skip-keycloak'] : [absPath];
