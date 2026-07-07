@@ -246,9 +246,13 @@ export function createApiRouter({
     createCuePoolRouter({ db })
   );
 
-  // Study data export (admin + researcher only)
+  // Study CSV/ZIP data export (admin + researcher only). Mounted at a
+  // distinct path from the JSON export in studiesRouter.js's
+  // GET /admin/studies/:id/export — both used to share that path, which
+  // meant the earlier-mounted /admin router always won and this ZIP
+  // handler was unreachable.
   router.use(
-    '/admin/studies/:id/export',
+    '/admin/studies/:id/export/zip',
     requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
     createStudyExportRouter({ db })
   );

@@ -9,6 +9,7 @@ import {
   softDeleteStudy,
   setDefaultStudy,
   updateGroupCueConfig,
+  listStudyParticipants,
 } from '../../services/studyService.js';
 
 // ── Minimal in-memory DB ──────────────────────────────────────────────────────
@@ -53,6 +54,9 @@ function makeDb(initial = {}) {
             },
             limit(n) {
               results = results.slice(0, n);
+              return this;
+            },
+            project() {
               return this;
             },
           };
@@ -423,4 +427,125 @@ test('setDefaultStudy marks a study as default', async () => {
   assert.equal(result.updated, true);
   const s2 = await getStudy({ db, id: id2.toString() });
   assert.equal(s2.isDefault, true);
+});
+
+// ── listStudyParticipants ────────────────────────────────────────────────────
+
+test('listStudyParticipants returns notFound for unknown id', async () => {
+  const db = makeDb();
+  const result = await listStudyParticipants({
+    db,
+    id: 'not-an-object-id',
+    neo4jRun: async () => [],
+  });
+  assert.equal(result.notFound, true);
+});
+
+test('listStudyParticipants returns only participants in the given group', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const groupAId = new ObjectId().toString();
+  const groupBId = new ObjectId().toString();
+  const studyId = new ObjectId();
+  const db = makeDb({
+    studies: [
+      {
+        _id: studyId,
+        name: 'Grouped Study',
+        isDefault: false,
+        isActive: true,
+        groups: [
+          { id: groupAId, label: 'Group A', index: 0 },
+          { id: groupBId, label: 'Group B', index: 1 },
+        ],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+    participants: [
+      { userId: 'u1', username: 'p-u1' },
+      { userId: 'u2', username: 'p-u2' },
+      { userId: 'u3', username: 'p-u3' },
+    ],
+  });
+  const enrolled = [
+    { userId: 'u1', groupId: groupAId, enrolledAt: new Date(), studyCodeUsed: null },
+    { userId: 'u2', groupId: groupBId, enrolledAt: new Date(), studyCodeUsed: null },
+    { userId: 'u3', groupId: groupAId, enrolledAt: new Date(), studyCodeUsed: null },
+  ];
+  const neo4jRun = async () => enrolled;
+
+  const all = await listStudyParticipants({
+    db,
+    id: studyId.toString(),
+    neo4jRun,
+  });
+  assert.equal(all.total, 3);
+  assert.equal(all.participants.length, 3);
+  // Per-group summary always reflects the whole study, unfiltered.
+  assert.equal(all.summary.perGroup.find((g) => g.groupId === groupAId).count, 2);
+
+  const groupAOnly = await listStudyParticipants({
+    db,
+    id: studyId.toString(),
+    groupId: groupAId,
+    neo4jRun,
+  });
+  assert.equal(groupAOnly.total, 2);
+  assert.deepEqual(
+    groupAOnly.participants.map((p) => p.userId).sort(),
+    ['u1', 'u3']
+  );
+  assert.ok(groupAOnly.participants.every((p) => p.groupId === groupAId));
+  assert.deepEqual(
+    groupAOnly.participants.map((p) => p.username).sort(),
+    ['p-u1', 'p-u3']
+  );
+
+  const groupBOnly = await listStudyParticipants({
+    db,
+    id: studyId.toString(),
+    groupId: groupBId,
+    neo4jRun,
+  });
+  assert.equal(groupBOnly.total, 1);
+  assert.equal(groupBOnly.participants[0].userId, 'u2');
+});
+
+test('listStudyParticipants groupId filter interacts correctly with pagination', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const groupAId = new ObjectId().toString();
+  const studyId = new ObjectId();
+  const db = makeDb({
+    studies: [
+      {
+        _id: studyId,
+        name: 'Big Study',
+        isDefault: false,
+        isActive: true,
+        groups: [{ id: groupAId, label: 'Group A', index: 0 }],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+  });
+  const enrolled = [
+    { userId: 'a', groupId: groupAId, enrolledAt: new Date(), studyCodeUsed: null },
+    { userId: 'b', groupId: 'other-group', enrolledAt: new Date(), studyCodeUsed: null },
+    { userId: 'c', groupId: groupAId, enrolledAt: new Date(), studyCodeUsed: null },
+  ];
+  const result = await listStudyParticipants({
+    db,
+    id: studyId.toString(),
+    groupId: groupAId,
+    page: 1,
+    limit: 1,
+    neo4jRun: async () => enrolled,
+  });
+  // total reflects the filtered set (2), not the unfiltered study (3), and
+  // the page-1/limit-1 slice comes from within that filtered set.
+  assert.equal(result.total, 2);
+  assert.equal(result.participants.length, 1);
+  assert.equal(result.participants[0].userId, 'a');
 });

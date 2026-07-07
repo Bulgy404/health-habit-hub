@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
+import { apiUrl } from "@/lib/api";
 import styles from "./page.module.css";
 import { useQuestionnairesData } from "./useQuestionnairesData";
 
@@ -59,10 +60,8 @@ function fmtDate(iso: string | null): string {
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/questionnaires";
-const PARTICIPANT_API =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/questionnaires";
+const API_BASE = apiUrl("/admin/questionnaires");
+const PARTICIPANT_API = apiUrl("/questionnaires");
 
 /**
  * Authenticated JSON fetch helper.

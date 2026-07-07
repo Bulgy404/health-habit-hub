@@ -7,6 +7,7 @@ The caller writes the returned vectors to their respective Neo4j nodes.
 from __future__ import annotations
 
 import logging
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -18,9 +19,14 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(verify_service_token)])
 
+# Same per-string bound as the sentence-like fields on sibling endpoints
+# (classify_habit.py, recommend.py, ...) — without it, a caller could submit
+# up to 500 arbitrarily long strings, inflating embedding-API cost/latency.
+_EmbedText = Annotated[str, Field(min_length=1, max_length=2000)]
+
 
 class EmbedBatchRequest(BaseModel):
-    texts: list[str] = Field(..., min_length=1, max_length=500)
+    texts: list[_EmbedText] = Field(..., min_length=1, max_length=500)
 
 
 class EmbedBatchResponse(BaseModel):

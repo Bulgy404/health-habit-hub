@@ -60,7 +60,7 @@ function createMockDb() {
       const store = getStore(name);
       return {
         find(query) {
-          const results = [];
+          let results = [];
           for (const [, doc] of store) {
             // Filter out soft-deleted docs if query has deletedAt: { $exists: false }
             if (
@@ -77,7 +77,39 @@ function createMockDb() {
             async toArray() {
               return results;
             },
+            sort(spec) {
+              const [[field, dir]] = Object.entries(spec);
+              results = [...results].sort((a, b) => {
+                if (a[field] === b[field]) return 0;
+                if (a[field] === undefined) return 1;
+                if (b[field] === undefined) return -1;
+                return a[field] > b[field] ? dir : -dir;
+              });
+              return this;
+            },
+            skip(n) {
+              results = results.slice(n);
+              return this;
+            },
+            limit(n) {
+              results = results.slice(0, n);
+              return this;
+            },
           };
+        },
+        async countDocuments(query = {}) {
+          let count = 0;
+          for (const [, doc] of store) {
+            if (
+              query.deletedAt &&
+              query.deletedAt.$exists === false &&
+              doc.deletedAt !== undefined
+            ) {
+              continue;
+            }
+            count++;
+          }
+          return count;
         },
         async findOne(query) {
           for (const [, doc] of store) {
@@ -263,7 +295,7 @@ test('GET /api/v1/admin/participants returns empty array initially', async () =>
   const res = await get('/api/v1/admin/participants', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
-  assert.ok(Array.isArray(body));
+  assert.ok(Array.isArray(body.participants));
 });
 
 // ── POST creates participant ──────────────────────────────────────────────────
@@ -284,8 +316,8 @@ test('POST creates participant visible in GET list', async () => {
   await post('/api/v1/admin/participants', {}, token);
   const res = await get('/api/v1/admin/participants', token);
   const body = await res.json();
-  assert.ok(body.length >= 1);
-  const p = body[0];
+  assert.ok(body.participants.length >= 1);
+  const p = body.participants[0];
   assert.ok(p.userId);
   assert.ok(p.username);
   assert.ok(p.enrolledAt);
@@ -432,6 +464,6 @@ test('Deleted participant not included in GET list', async () => {
   // Should not appear in list
   const listRes = await get('/api/v1/admin/participants', token);
   const list = await listRes.json();
-  const found = list.find((p) => p.userId === userId);
+  const found = list.participants.find((p) => p.userId === userId);
   assert.strictEqual(found, undefined);
 });

@@ -3,11 +3,11 @@
 import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
+import { apiUrl } from "@/lib/api";
 import styles from "./page.module.css";
 import { useCuePoolsData } from "./useCuePoolsData";
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/cue-pools";
+const API_BASE = apiUrl("/admin/cue-pools");
 
 /**
  * Authenticated JSON fetch helper.
@@ -144,12 +144,10 @@ export default function CuePoolsPage() {
         const vals = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
         return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? ""]));
       });
-      const data = await apiFetch(
-        (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
-          "/admin/cue-pools/import",
-        token,
-        { method: "POST", body: JSON.stringify({ cues }) }
-      );
+      const data = await apiFetch(apiUrl("/admin/cue-pools/import"), token, {
+        method: "POST",
+        body: JSON.stringify({ cues }),
+      });
       setImportResult(data as { inserted: number; skipped: number });
       await fetchCues(1);
       setPage(1);

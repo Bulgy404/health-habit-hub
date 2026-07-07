@@ -19,7 +19,7 @@ function createMockDb() {
       const store = getStore(name);
       return {
         find(filter = {}) {
-          const results = [];
+          let results = [];
           for (const [, doc] of store) {
             if (
               filter.deletedAt?.$exists === false &&
@@ -33,7 +33,38 @@ function createMockDb() {
             async toArray() {
               return results;
             },
+            sort(spec) {
+              const [[field, dir]] = Object.entries(spec);
+              results = [...results].sort((a, b) => {
+                if (a[field] === b[field]) return 0;
+                if (a[field] === undefined) return 1;
+                if (b[field] === undefined) return -1;
+                return a[field] > b[field] ? dir : -dir;
+              });
+              return this;
+            },
+            skip(n) {
+              results = results.slice(n);
+              return this;
+            },
+            limit(n) {
+              results = results.slice(0, n);
+              return this;
+            },
           };
+        },
+        async countDocuments(filter = {}) {
+          let count = 0;
+          for (const [, doc] of store) {
+            if (
+              filter.deletedAt?.$exists === false &&
+              doc.deletedAt !== undefined
+            ) {
+              continue;
+            }
+            count++;
+          }
+          return count;
         },
         async findOne(query) {
           for (const [, doc] of store) {
@@ -186,12 +217,13 @@ test('GET /admin returns { ok: true }', async () => {
   assert.deepStrictEqual(await res.json(), { ok: true });
 });
 
-test('GET /admin/participants returns participant list', async () => {
+test('GET /admin/participants returns paginated participant list', async () => {
   const res = await fetch(`${baseUrl}/admin/participants`);
   assert.strictEqual(res.status, 200);
   const data = await res.json();
-  assert.ok(Array.isArray(data));
-  assert.ok(data.some((p) => p.userId === 'p-001'));
+  assert.ok(Array.isArray(data.participants));
+  assert.ok(typeof data.total === 'number');
+  assert.ok(data.participants.some((p) => p.userId === 'p-001'));
 });
 
 test('POST /admin/participants creates a new participant', async () => {

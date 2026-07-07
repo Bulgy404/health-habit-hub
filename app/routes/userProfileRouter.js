@@ -4,6 +4,7 @@ import { rateLimit } from 'express-rate-limit';
 import { makeGetDb } from '../utils/getDb.js';
 import { setUserProfileProperties } from '../db/userQueries.js';
 import { logger } from '../utils/logger.js';
+import { requireServiceToken } from '../middleware/requireServiceToken.js';
 
 const log = logger.child({ module: 'userProfileRouter' });
 
@@ -34,25 +35,25 @@ export function createUserProfileServiceRouter({ db } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
-  router.get('/service/:userId', serviceRateLimiter, async (req, res) => {
-    try {
-      const token = req.headers['x-service-auth-token'];
-      const expected = process.env.API_SERVICE_SECRET;
-      if (!token || !expected || token !== expected) {
-        return res.status(401).json({ error: 'Unauthorized' });
+  router.get(
+    '/service/:userId',
+    serviceRateLimiter,
+    requireServiceToken(),
+    async (req, res) => {
+      try {
+        const database = await getDb();
+        const doc = await database
+          .collection('user_profiles')
+          .findOne({ userId: req.params.userId });
+        if (!doc) return res.status(404).json({ error: 'Profile not found' });
+        const { _id, ...rest } = doc;
+        res.json(rest);
+      } catch (err) {
+        log.error({ err: err }, '[userProfileRouter] error');
+        res.status(500).json({ error: 'Internal server error' });
       }
-      const database = await getDb();
-      const doc = await database
-        .collection('user_profiles')
-        .findOne({ userId: req.params.userId });
-      if (!doc) return res.status(404).json({ error: 'Profile not found' });
-      const { _id, ...rest } = doc;
-      res.json(rest);
-    } catch (err) {
-      log.error({ err: err }, '[userProfileRouter] error');
-      res.status(500).json({ error: 'Internal server error' });
     }
-  });
+  );
 
   return router;
 }

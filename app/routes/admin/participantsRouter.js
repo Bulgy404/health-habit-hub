@@ -157,7 +157,9 @@ export function createParticipantsRouter({
   router.get('/participants', async (req, res) => {
     try {
       const database = await getDb();
-      const result = await listParticipants({ db: database });
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = parseInt(req.query.limit, 10) || 50;
+      const result = await listParticipants({ db: database, page, limit });
       res.json(result);
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');

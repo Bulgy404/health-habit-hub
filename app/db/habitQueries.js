@@ -330,13 +330,14 @@ export async function deleteHabitComments(queryNeo4j, commentIds) {
 }
 
 /**
- * List ALL comments across habits for researcher moderation, newest first,
- * including the habit sentence for context.
+ * List comments across habits for researcher moderation, newest first,
+ * including the habit sentence for context. Paginated via SKIP/LIMIT.
  * @param {Function} queryNeo4j
- * @param {number} [limit]
+ * @param {{ page?: number, limit?: number }} [opts]
  * @returns {Promise<Array<{id, text, createdAt, habitId, habitSentence}>>}
  */
-export async function listAllComments(queryNeo4j, limit = 100) {
+export async function listAllComments(queryNeo4j, { page = 1, limit = 100 } = {}) {
+  const skip = (Math.max(1, page) - 1) * limit;
   return queryNeo4j(
     `MATCH (c:Comment)-[:COMMENT_ON]->(h:Habit)
      RETURN c.id AS id,
@@ -345,7 +346,20 @@ export async function listAllComments(queryNeo4j, limit = 100) {
             h.uuid AS habitId,
             coalesce(h.translationEN, h.sentence) AS habitSentence
      ORDER BY c.createdAt DESC
+     SKIP toInteger($skip)
      LIMIT toInteger($limit)`,
-    { limit }
+    { skip, limit }
   );
+}
+
+/**
+ * Count all comments across habits (for pagination totals).
+ * @param {Function} queryNeo4j
+ * @returns {Promise<number>}
+ */
+export async function countAllComments(queryNeo4j) {
+  const rows = await queryNeo4j(
+    `MATCH (c:Comment) RETURN count(c) AS total`
+  );
+  return Number(rows[0]?.total ?? 0);
 }

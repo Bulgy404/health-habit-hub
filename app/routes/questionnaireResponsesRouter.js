@@ -7,6 +7,7 @@ import {
   createSubmissionWithScores,
 } from '../db/userQueries.js';
 import { markWindowSubmitted } from '../services/questionnaireScheduleService.js';
+import { requireServiceToken } from '../middleware/requireServiceToken.js';
 
 const log = logger.child({ module: 'questionnaireResponsesRouter' });
 
@@ -50,14 +51,8 @@ export function createQuestionnaireResponsesServiceRouter({
    * returns the most recent response for each slug as { [slug]: responseOrNull }.
    * Returns {} when the user is not enrolled or the study has no questionnaires.
    */
-  router.get('/service/:userId', async (req, res) => {
+  router.get('/service/:userId', requireServiceToken(), async (req, res) => {
     try {
-      const token = req.headers['x-service-auth-token'];
-      const expected = process.env.API_SERVICE_SECRET;
-      if (!token || !expected || token !== expected) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
       const { userId } = req.params;
       const database = await getDb();
 
@@ -101,32 +96,31 @@ export function createQuestionnaireResponsesServiceRouter({
     }
   });
 
-  router.get('/service/:userId/:slug', async (req, res) => {
-    try {
-      const token = req.headers['x-service-auth-token'];
-      const expected = process.env.API_SERVICE_SECRET;
-      if (!token || !expected || token !== expected) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-      const { userId, slug } = req.params;
-      const database = await getDb();
-      const responses = await database
-        .collection('form_responses')
-        .find({ userId, questionnaireSlug: slug })
-        .sort({ submittedAt: -1 })
-        .limit(1)
-        .toArray();
+  router.get(
+    '/service/:userId/:slug',
+    requireServiceToken(),
+    async (req, res) => {
+      try {
+        const { userId, slug } = req.params;
+        const database = await getDb();
+        const responses = await database
+          .collection('form_responses')
+          .find({ userId, questionnaireSlug: slug })
+          .sort({ submittedAt: -1 })
+          .limit(1)
+          .toArray();
 
-      if (responses.length === 0) {
-        return res.status(404).json({ error: 'No response found' });
+        if (responses.length === 0) {
+          return res.status(404).json({ error: 'No response found' });
+        }
+        const { _id, ...responseData } = responses[0];
+        res.json(responseData);
+      } catch (err) {
+        log.error({ err: err }, 'unhandled route error');
+        res.status(500).json({ error: 'Internal server error' });
       }
-      const { _id, ...responseData } = responses[0];
-      res.json(responseData);
-    } catch (err) {
-      log.error({ err: err }, 'unhandled route error');
-      res.status(500).json({ error: 'Internal server error' });
     }
-  });
+  );
 
   return router;
 }

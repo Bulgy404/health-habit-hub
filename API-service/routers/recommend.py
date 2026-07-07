@@ -448,7 +448,10 @@ async def recommend(
         if len(candidate_pool) > 10 else [],
         bcio_by_uuid,
     )
-    annotated_habits_json = _habits_to_json(annotated_raw, bcio_by_uuid)
+    # Sliced like the personal/community pools above — annotated_raw can
+    # still hold up to 200 entries (fetch_annotated_habits' cap), which is
+    # far more than should go directly into the prompt.
+    annotated_habits_json = _habits_to_json(annotated_raw[:20], bcio_by_uuid)
     # Full retrieval context grounds the generation; the document list tells
     # the LLM which papers it may cite in `source_filenames`.
     knowledge_context = retrieve_resp.context or "\n\n".join(

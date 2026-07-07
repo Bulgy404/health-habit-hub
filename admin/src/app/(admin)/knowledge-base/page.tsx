@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useAdminGuard } from "@/lib/useAdminGuard";
+import { apiUrl } from "@/lib/api";
 import styles from "./page.module.css";
 import { useKnowledgeBaseData } from "./useKnowledgeBaseData";
 
@@ -23,7 +23,7 @@ function fmtDate(iso: string): string {
   });
 }
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/kb";
+const API_BASE = apiUrl("/kb");
 
 // ── Upload modal ──────────────────────────────────────────────────────────────
 
@@ -165,19 +165,9 @@ function ConfirmDeleteDialog({
  * @returns The knowledge base management page.
  */
 export default function KnowledgeBasePage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const { token } = useAdminGuard();
   const t = useTranslations("knowledgeBase");
   const tc = useTranslations("common");
-
-  useEffect(() => {
-    if (status === "loading") return;
-    if (!session?.roles?.includes("admin")) {
-      router.replace("/access-denied");
-    }
-  }, [session, status, router]);
-
-  const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
 
   const { entries, loading, error: loadError, refetch } = useKnowledgeBaseData(token);
   const [actionError, setActionError] = useState("");

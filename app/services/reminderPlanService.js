@@ -240,21 +240,20 @@ export async function computeReminderPlans({ db, userId, now = new Date() }) {
     .find({ userId: String(userId), status: 'active' })
     .toArray();
 
-  const plans = [];
-  for (const doc of intentions) {
-    const [srhi, logs] = await Promise.all([
-      db
-        .collection('srhi_responses')
-        .find({ intentionId: doc._id, userId: String(userId) })
-        .sort({ weekNumber: -1 })
-        .toArray(),
-      db
-        .collection('daily_behavior_logs')
-        .find({ intentionId: doc._id, userId: String(userId) })
-        .toArray(),
-    ]);
-    plans.push(
-      computeReminderPlan({
+  const plans = await Promise.all(
+    intentions.map(async (doc) => {
+      const [srhi, logs] = await Promise.all([
+        db
+          .collection('srhi_responses')
+          .find({ intentionId: doc._id, userId: String(userId) })
+          .sort({ weekNumber: -1 })
+          .toArray(),
+        db
+          .collection('daily_behavior_logs')
+          .find({ intentionId: doc._id, userId: String(userId) })
+          .toArray(),
+      ]);
+      return computeReminderPlan({
         intention: {
           id: String(doc._id),
           reminderTime: doc.reminderTime ?? null,
@@ -266,8 +265,8 @@ export async function computeReminderPlans({ db, userId, now = new Date() }) {
         logs,
         config,
         now,
-      })
-    );
-  }
+      });
+    })
+  );
   return plans;
 }

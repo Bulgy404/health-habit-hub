@@ -297,10 +297,13 @@ async def fetch_annotated_habits(
     the caller's pipeline degrades gracefully.
     """
     try:
+        # Capped like _vector_search_user_habits' fetch(200) — an active
+        # user's full annotation history is otherwise unbounded and would
+        # feed straight into a Neo4j IN-list and, downstream, an LLM prompt.
         cursor = db["habit_annotations"].find(
             {"userId": user_id, "type": {"$in": ["helpful", "iDoThis", "like"]}},
             {"habitId": 1, "_id": 0},
-        )
+        ).limit(200)
         raw_uuids: list[str] = []
         async for doc in cursor:
             hid = doc.get("habitId")

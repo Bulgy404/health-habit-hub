@@ -21,7 +21,10 @@ class AuthInterceptor extends Interceptor {
     final token = await _authService.getAccessToken();
     if (token != null) {
       options.headers['Authorization'] = 'Bearer $token';
-      if (options.path.contains('/habits/share')) {
+      // Claims include the user's Keycloak subject ID (PII) — only decode
+      // and log them in debug builds. debugPrint is not stripped from
+      // release builds, so this must not run unconditionally.
+      if (kDebugMode && options.path.contains('/habits/share')) {
         try {
           final parts = token.split('.');
           if (parts.length == 3) {
@@ -44,7 +47,7 @@ class AuthInterceptor extends Interceptor {
           );
         }
       }
-    } else if (options.path.contains('/habits/share')) {
+    } else if (kDebugMode && options.path.contains('/habits/share')) {
       debugPrint('AuthInterceptor /habits/share: no access token available');
     }
     handler.next(options);

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { apiUrl } from "@/lib/api";
 
 interface StudyGroup {
   id: string;
@@ -34,8 +35,7 @@ export interface StudySummary {
   createdAt: string | null;
 }
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") + "/admin/studies";
+const API_BASE = apiUrl("/admin/studies");
 
 async function fetchStudies(token: string): Promise<StudySummary[]> {
   const res = await fetch(API_BASE, {

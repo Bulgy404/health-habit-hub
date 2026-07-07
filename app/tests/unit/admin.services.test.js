@@ -54,6 +54,16 @@ function makeDb(initial = {}) {
             async toArray() {
               return results.map((d) => ({ ...d }));
             },
+            sort(spec) {
+              const [[field, dir]] = Object.entries(spec);
+              results = [...results].sort((a, b) => {
+                if (a[field] === b[field]) return 0;
+                if (a[field] === undefined) return 1;
+                if (b[field] === undefined) return -1;
+                return a[field] > b[field] ? dir : -dir;
+              });
+              return this;
+            },
             skip(n) {
               results = results.slice(n);
               return this;
@@ -118,6 +128,11 @@ function makeDb(initial = {}) {
               doc.participantId !== filter.participantId
             )
               return false;
+            if (
+              filter.deletedAt?.$exists === false &&
+              doc.deletedAt !== undefined
+            )
+              return false;
             return true;
           }).length;
         },
@@ -136,8 +151,30 @@ test('listParticipants returns active participants only', async () => {
     ],
   });
   const result = await listParticipants({ db });
-  assert.strictEqual(result.length, 1);
-  assert.strictEqual(result[0].userId, 'u1');
+  assert.strictEqual(result.total, 1);
+  assert.strictEqual(result.participants.length, 1);
+  assert.strictEqual(result.participants[0].userId, 'u1');
+});
+
+test('listParticipants paginates newest-enrolled first', async () => {
+  const db = makeDb({
+    participants: [
+      { userId: 'a', username: 'p-a', enrolledAt: new Date('2024-01-01') },
+      { userId: 'b', username: 'p-b', enrolledAt: new Date('2024-03-01') },
+      { userId: 'c', username: 'p-c', enrolledAt: new Date('2024-02-01') },
+    ],
+  });
+  const page1 = await listParticipants({ db, page: 1, limit: 2 });
+  assert.strictEqual(page1.total, 3);
+  assert.deepStrictEqual(
+    page1.participants.map((p) => p.userId),
+    ['b', 'c']
+  );
+  const page2 = await listParticipants({ db, page: 2, limit: 2 });
+  assert.deepStrictEqual(
+    page2.participants.map((p) => p.userId),
+    ['a']
+  );
 });
 
 test('createParticipant creates user in db and keycloak', async () => {

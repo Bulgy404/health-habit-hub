@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { apiUrl } from '@/lib/api';
 
 export interface Cue {
   id: string;
@@ -10,9 +11,7 @@ export interface Cue {
   createdAt: string | null;
 }
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1') +
-  '/admin/cue-pools';
+const API_BASE = apiUrl('/admin/cue-pools');
 
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {

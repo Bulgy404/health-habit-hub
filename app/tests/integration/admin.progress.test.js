@@ -602,14 +602,15 @@ test('GET /habits/feed/export - 400 for unsupported format', async () => {
 
 // ── GET sessions ──────────────────────────────────────────────────────────────
 
-test('GET /api/v1/admin/sessions - returns session list', async () => {
+test('GET /api/v1/admin/sessions - returns paginated session list', async () => {
   const token = makeToken(['admin']);
   const res = await get('/api/v1/admin/sessions', token);
   assert.strictEqual(res.status, 200);
   const body = await res.json();
-  assert.ok(Array.isArray(body));
-  assert.ok(body.length >= 1);
-  assert.ok('sessionId' in body[0]);
+  assert.ok(Array.isArray(body.sessions));
+  assert.ok(typeof body.total === 'number');
+  assert.ok(body.sessions.length >= 1);
+  assert.ok('sessionId' in body.sessions[0]);
 });
 
 test('DELETE /api/v1/admin/sessions/:sessionId - revokes session', async () => {
@@ -621,7 +622,7 @@ test('DELETE /api/v1/admin/sessions/:sessionId - revokes session', async () => {
 
   // Session should no longer appear
   const listRes = await get('/api/v1/admin/sessions', token);
-  const sessions = await listRes.json();
+  const { sessions } = await listRes.json();
   const found = sessions.find((s) => s.sessionId === 'sess-1');
   assert.strictEqual(found, undefined);
 });

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { apiUrl } from '@/lib/api';
 
 export interface QuestionnaireSummary {
   id: string;
@@ -12,9 +13,7 @@ export interface QuestionnaireSummary {
   updatedAt: string | null;
 }
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1') +
-  '/admin/questionnaires';
+const API_BASE = apiUrl('/admin/questionnaires');
 
 async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {

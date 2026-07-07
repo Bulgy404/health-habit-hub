@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useAdminGuard } from "@/lib/useAdminGuard";
+import { apiUrl } from "@/lib/api";
 import styles from "./page.module.css";
 
 const VALID_TYPES = ["text", "number", "date", "select"] as const;
@@ -18,9 +18,7 @@ interface ProfileFieldDefinition {
   order: number;
 }
 
-const API_BASE =
-  (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1") +
-  "/admin/profile-field-definitions";
+const API_BASE = apiUrl("/admin/profile-field-definitions");
 
 /**
  * Authenticated JSON fetch helper.
@@ -60,8 +58,7 @@ function emptyForm(): ProfileFieldDefinition {
  * @returns The profile fields management page.
  */
 export default function ProfileFieldsPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
+  const { token } = useAdminGuard();
   const t = useTranslations("profileFields");
   const tc = useTranslations("common");
   const [defs, setDefs] = useState<ProfileFieldDefinition[]>([]);
@@ -73,31 +70,26 @@ export default function ProfileFieldsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session?.roles?.includes("admin")) {
-      router.replace("/access-denied");
-      return;
-    }
-    if (!session.accessToken) return;
-    apiFetch(API_BASE, session.accessToken)
+    if (!token) return;
+    apiFetch(API_BASE, token)
       .then(setDefs)
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [session, status, router]);
+  }, [token]);
 
   async function handleSave() {
-    if (!session?.accessToken) return;
+    if (!token) return;
     setError(null);
     try {
       if (editingId) {
         const { label, type, options, required, order } = form;
-        const updated = await apiFetch(`${API_BASE}/${editingId}`, session.accessToken, {
+        const updated = await apiFetch(`${API_BASE}/${editingId}`, token, {
           method: "PUT",
           body: JSON.stringify({ label, type, options, required, order }),
         });
         setDefs(defs.map((d) => (d.fieldId === editingId ? updated : d)));
       } else {
-        const created = await apiFetch(API_BASE, session.accessToken, {
+        const created = await apiFetch(API_BASE, token, {
           method: "POST",
           body: JSON.stringify(form),
         });
@@ -112,9 +104,9 @@ export default function ProfileFieldsPage() {
   }
 
   async function handleDelete(fieldId: string) {
-    if (!session?.accessToken || !confirm(t("confirmDelete", { fieldId }))) return;
+    if (!token || !confirm(t("confirmDelete", { fieldId }))) return;
     try {
-      await apiFetch(`${API_BASE}/${fieldId}`, session.accessToken, { method: "DELETE" });
+      await apiFetch(`${API_BASE}/${fieldId}`, token, { method: "DELETE" });
       setDefs(defs.filter((d) => d.fieldId !== fieldId));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("deleteFailed"));

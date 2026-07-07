@@ -236,6 +236,9 @@ function createMockNeo4jRun() {
       comments.unshift({ ...created, habitId: params.habitId });
       return [created];
     }
+    if (cypher.includes('RETURN count(c) AS total')) {
+      return [{ total: comments.length }];
+    }
     if (cypher.includes('AS habitSentence')) {
       // Moderation list across all habits
       return comments.map((c) => ({

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -99,6 +101,8 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     ),
   ];
 
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+
   @override
   void initState() {
     super.initState();
@@ -108,6 +112,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
       _syncHabitReminders();
       _watchConnectivity();
     });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription?.cancel();
+    super.dispose();
   }
 
   /// UC-33: refresh the adaptive local habit reminders from the latest backend
@@ -133,7 +143,9 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
   }
 
   void _watchConnectivity() {
-    Connectivity().onConnectivityChanged.listen((results) {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
+      results,
+    ) {
       if (results.any((r) => r != ConnectivityResult.none)) {
         _drainOfflineQueue();
       }
@@ -147,15 +159,15 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     final dio = ref.read(dioProvider);
     var succeeded = 0;
 
-    for (final payload in items) {
+    for (final item in items) {
       try {
         await dio.post<Map<String, dynamic>>(
           '${AppConfig.apiBaseUrl}/habits/share',
-          data: payload,
+          data: item.payload,
         );
         succeeded++;
       } catch (_) {
-        await offlineQueueService.requeue(payload);
+        await offlineQueueService.requeue(item);
       }
     }
 
