@@ -336,7 +336,10 @@ export async function deleteHabitComments(queryNeo4j, commentIds) {
  * @param {{ page?: number, limit?: number }} [opts]
  * @returns {Promise<Array<{id, text, createdAt, habitId, habitSentence}>>}
  */
-export async function listAllComments(queryNeo4j, { page = 1, limit = 100 } = {}) {
+export async function listAllComments(
+  queryNeo4j,
+  { page = 1, limit = 100 } = {}
+) {
   const skip = (Math.max(1, page) - 1) * limit;
   return queryNeo4j(
     `MATCH (c:Comment)-[:COMMENT_ON]->(h:Habit)
@@ -358,8 +361,6 @@ export async function listAllComments(queryNeo4j, { page = 1, limit = 100 } = {}
  * @returns {Promise<number>}
  */
 export async function countAllComments(queryNeo4j) {
-  const rows = await queryNeo4j(
-    `MATCH (c:Comment) RETURN count(c) AS total`
-  );
+  const rows = await queryNeo4j(`MATCH (c:Comment) RETURN count(c) AS total`);
   return Number(rows[0]?.total ?? 0);
 }

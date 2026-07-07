@@ -469,9 +469,24 @@ test('listStudyParticipants returns only participants in the given group', async
     ],
   });
   const enrolled = [
-    { userId: 'u1', groupId: groupAId, enrolledAt: new Date(), studyCodeUsed: null },
-    { userId: 'u2', groupId: groupBId, enrolledAt: new Date(), studyCodeUsed: null },
-    { userId: 'u3', groupId: groupAId, enrolledAt: new Date(), studyCodeUsed: null },
+    {
+      userId: 'u1',
+      groupId: groupAId,
+      enrolledAt: new Date(),
+      studyCodeUsed: null,
+    },
+    {
+      userId: 'u2',
+      groupId: groupBId,
+      enrolledAt: new Date(),
+      studyCodeUsed: null,
+    },
+    {
+      userId: 'u3',
+      groupId: groupAId,
+      enrolledAt: new Date(),
+      studyCodeUsed: null,
+    },
   ];
   const neo4jRun = async () => enrolled;
 
@@ -483,7 +498,10 @@ test('listStudyParticipants returns only participants in the given group', async
   assert.equal(all.total, 3);
   assert.equal(all.participants.length, 3);
   // Per-group summary always reflects the whole study, unfiltered.
-  assert.equal(all.summary.perGroup.find((g) => g.groupId === groupAId).count, 2);
+  assert.equal(
+    all.summary.perGroup.find((g) => g.groupId === groupAId).count,
+    2
+  );
 
   const groupAOnly = await listStudyParticipants({
     db,
@@ -492,15 +510,15 @@ test('listStudyParticipants returns only participants in the given group', async
     neo4jRun,
   });
   assert.equal(groupAOnly.total, 2);
-  assert.deepEqual(
-    groupAOnly.participants.map((p) => p.userId).sort(),
-    ['u1', 'u3']
-  );
+  assert.deepEqual(groupAOnly.participants.map((p) => p.userId).sort(), [
+    'u1',
+    'u3',
+  ]);
   assert.ok(groupAOnly.participants.every((p) => p.groupId === groupAId));
-  assert.deepEqual(
-    groupAOnly.participants.map((p) => p.username).sort(),
-    ['p-u1', 'p-u3']
-  );
+  assert.deepEqual(groupAOnly.participants.map((p) => p.username).sort(), [
+    'p-u1',
+    'p-u3',
+  ]);
 
   const groupBOnly = await listStudyParticipants({
     db,
@@ -531,9 +549,24 @@ test('listStudyParticipants groupId filter interacts correctly with pagination',
     ],
   });
   const enrolled = [
-    { userId: 'a', groupId: groupAId, enrolledAt: new Date(), studyCodeUsed: null },
-    { userId: 'b', groupId: 'other-group', enrolledAt: new Date(), studyCodeUsed: null },
-    { userId: 'c', groupId: groupAId, enrolledAt: new Date(), studyCodeUsed: null },
+    {
+      userId: 'a',
+      groupId: groupAId,
+      enrolledAt: new Date(),
+      studyCodeUsed: null,
+    },
+    {
+      userId: 'b',
+      groupId: 'other-group',
+      enrolledAt: new Date(),
+      studyCodeUsed: null,
+    },
+    {
+      userId: 'c',
+      groupId: groupAId,
+      enrolledAt: new Date(),
+      studyCodeUsed: null,
+    },
   ];
   const result = await listStudyParticipants({
     db,

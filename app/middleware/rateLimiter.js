@@ -17,8 +17,7 @@ export const apiRateLimiter = rateLimit({
   // endpoints on a timer. Counting a background monitoring widget against the
   // general 100-req/15-min abuse budget would exhaust it and 429 the whole
   // portal, so exempt GETs under /admin/system/ (still behind auth + role).
-  skip: (req) =>
-    req.method === 'GET' && req.path.startsWith('/admin/system/'),
+  skip: (req) => req.method === 'GET' && req.path.startsWith('/admin/system/'),
   handler(_req, res) {
     res
       .status(429)
