@@ -18,7 +18,6 @@ import {
   Tablet,
   Gift,
   MessageSquare,
-  Lightbulb,
   Server,
   DatabaseBackup,
   Globe,
@@ -49,7 +48,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/studies", labelKey: "studies", Icon: FlaskConical },
       { href: "/analytics", labelKey: "analytics", Icon: BarChart2 },
-      { href: "/insights", labelKey: "insights", Icon: Lightbulb, adminOnly: true },
     ],
   },
   {

@@ -141,6 +141,10 @@ app.get('/api', (req, res) => {
   res.json({ status: 'ok', service: 'Health Habit Hub API', version: '1.0.0' });
 });
 
+// Convenience redirect: the Swagger UI is mounted under the versioned router at
+// /api/v1/docs, but /api-docs is the conventional path people try first.
+app.get('/api-docs', (req, res) => res.redirect(301, '/api/v1/docs'));
+
 // Versioned API routes (JWT-protected)
 import createApiRouter from './routes/index.js';
 import { createInternalRouter } from './routes/internalRouter.js';

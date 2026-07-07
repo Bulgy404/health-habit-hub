@@ -21,6 +21,7 @@ import { createActivityTypeRouter } from './activityTypeRouter.js';
 import { seedActivityTypes } from '../services/activityTypeService.js';
 import { createAppSettingsRouter } from './admin/appSettingsRouter.js';
 import { createBackupsRouter } from './admin/backupsRouter.js';
+import { createSystemRouter } from './admin/systemRouter.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'adminRouter' });
@@ -729,6 +730,8 @@ export function createAdminRouter({
   router.use('/', requireRole(ROLES.ADMIN), createAppSettingsRouter({ db }));
 
   router.use('/', createBackupsRouter({ db }));
+
+  router.use('/', requireRole(ROLES.ADMIN), createSystemRouter());
 
   return router;
 }

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { BarChart2 } from "lucide-react";
+import { InsightsView } from "@/components/InsightsView";
 import {
   BarChart,
   Bar,
@@ -523,9 +524,9 @@ function ParticipantDrawer({
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+// ── Analytics view (rendered as a tab in the combined dashboard) ────────────────
 
-export default function AnalyticsPage() {
+function AnalyticsView() {
   const { data: session } = useSession();
   const token = (session as { accessToken?: string })?.accessToken ?? "";
   const t = useTranslations("analytics");
@@ -1322,6 +1323,72 @@ export default function AnalyticsPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+// ── Combined Analytics + Insights dashboard ─────────────────────────────────
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        border: "none",
+        background: "none",
+        padding: "0.6rem 1rem",
+        cursor: "pointer",
+        fontSize: "0.95rem",
+        fontWeight: active ? 700 : 500,
+        color: active ? "var(--color-primary)" : "var(--color-text-muted, #64748b)",
+        borderBottom: active ? "2px solid var(--color-primary)" : "2px solid transparent",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Unified research dashboard: Analytics (study metrics & charts) and Insights
+ * (cross-database questions) combined behind a single nav entry with tabs.
+ * The Insights tab is admin-only; researchers see Analytics alone.
+ */
+export default function AnalyticsInsightsPage() {
+  const { data: session } = useSession();
+  const isAdmin = (session?.roles ?? []).includes("admin");
+  const [tab, setTab] = useState<"analytics" | "insights">("analytics");
+
+  const activeTab = tab === "insights" && !isAdmin ? "analytics" : tab;
+
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          gap: "0.5rem",
+          padding: "1rem 1.5rem 0",
+          borderBottom: "1px solid var(--color-border, #e2e8f0)",
+        }}
+      >
+        <TabButton active={activeTab === "analytics"} onClick={() => setTab("analytics")}>
+          Analytics
+        </TabButton>
+        {isAdmin && (
+          <TabButton active={activeTab === "insights"} onClick={() => setTab("insights")}>
+            Insights
+          </TabButton>
+        )}
+      </div>
+      {activeTab === "analytics" ? <AnalyticsView /> : <InsightsView />}
     </div>
   );
 }
