@@ -253,12 +253,11 @@ services:
       ADMIN_UI_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-admin --fields id --format csv --noquotes) &&
       /opt/keycloak/bin/kcadm.sh update clients/$$ADMIN_UI_ID -r hhh -s secret="$$KEYCLOAK_ADMIN_UI_CLIENT_SECRET" &&
       GRAFANA_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=grafana --fields id --format csv --noquotes) &&
-      if [ -z "$$GRAFANA_ID" ]; then
-      echo "Creating Grafana OIDC client (realm was already imported)" &&
-      GRAFANA_ID=$$(/opt/keycloak/bin/kcadm.sh create clients -r hhh -i -s clientId=grafana -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s "redirectUris=[\"https://$$DOMAIN/grafana/login/generic_oauth\",\"http://localhost:3000/login/generic_oauth\"]" -s "webOrigins=[\"https://$$DOMAIN\"]") &&
-      /opt/keycloak/bin/kcadm.sh create clients/$$GRAFANA_ID/protocol-mappers/models -r hhh -s name="realm roles" -s protocol=openid-connect -s protocolMapper=oidc-usermodel-realm-role-mapper -s 'config."claim.name"=roles' -s 'config."jsonType.label"=String' -s 'config."multivalued"=true' -s 'config."access.token.claim"=true' -s 'config."id.token.claim"=true' -s 'config."userinfo.token.claim"=true';
+      if [ -n "$$GRAFANA_ID" ]; then
+        /opt/keycloak/bin/kcadm.sh update clients/$$GRAFANA_ID -r hhh -s secret="$$GRAFANA_CLIENT_SECRET";
+      else
+        echo "WARNING: grafana client not found — recreate the Keycloak volume (or add the client) so the realm re-imports it" >&2;
       fi &&
-      /opt/keycloak/bin/kcadm.sh update clients/$$GRAFANA_ID -r hhh -s secret="$$GRAFANA_CLIENT_SECRET" &&
       SA_ID=$$(/opt/keycloak/bin/kcadm.sh get clients/$$BACKEND_ID/service-account-user -r hhh --fields id --format csv --noquotes) &&
       /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$SA_ID --cclientid realm-management --rolename realm-admin &&
       HHH_ADMIN_USER="$${HHH_ADMIN_USER:-$$KEYCLOAK_ADMIN}" &&
@@ -409,6 +408,7 @@ services:
       - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
       - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=${GRAFANA_CLIENT_SECRET}
       - GF_AUTH_GENERIC_OAUTH_SCOPES=openid email profile roles
+      - GF_AUTH_GENERIC_OAUTH_USE_PKCE=true
       - GF_AUTH_GENERIC_OAUTH_AUTH_URL=https://${DOMAIN}/auth/realms/hhh/protocol/openid-connect/auth
       - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=https://${DOMAIN}/auth/realms/hhh/protocol/openid-connect/token
       - GF_AUTH_GENERIC_OAUTH_API_URL=https://${DOMAIN}/auth/realms/hhh/protocol/openid-connect/userinfo

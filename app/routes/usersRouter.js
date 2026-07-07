@@ -18,7 +18,10 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
   // Production fallbacks (mirrors adminRouter/habitsRouter): when not
   // injected (tests inject mocks), create real clients so account deletion
   // ALWAYS erases the Keycloak identity and the user's Comment nodes.
-  const getKeycloak = () => keycloak || createKeycloakAdminClient();
+  // Resolved once here (not per-request) so the admin token cache
+  // (55s TTL, see keycloakAdminClient.js) is actually reused across requests.
+  const kcAdmin = keycloak || createKeycloakAdminClient();
+  const getKeycloak = () => kcAdmin;
   let _neo4jDriver = null;
   async function queryNeo4j(cypher, params = {}) {
     if (neo4jRun) return neo4jRun(cypher, params);

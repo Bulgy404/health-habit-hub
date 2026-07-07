@@ -511,8 +511,15 @@ export default function ParticipantsPage() {
       )}
 
       {/* ── Answers modal ───────────────────────────────────────── */}
+      {/* Opened from inside the Progress modal, so it must stack above it.
+          Both share .modalOverlay (z-index 50) and this one renders first in
+          the DOM, so bump it above the Progress overlay explicitly. */}
       {answersFor && (
-        <div className={styles.modalOverlay} onClick={() => setAnswersFor(null)}>
+        <div
+          className={styles.modalOverlay}
+          style={{ zIndex: 60 }}
+          onClick={() => setAnswersFor(null)}
+        >
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h2 className={styles.modalTitle}>
               {t("answersTitle", { slug: answersFor.slug, occurrence: answersFor.occurrence })}

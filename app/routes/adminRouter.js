@@ -78,8 +78,11 @@ export function createAdminRouter({
     }
   })();
 
+  // Resolve once at router construction so the admin token cache
+  // (55s TTL, see keycloakAdminClient.js) is actually reused across requests.
+  const kcAdmin = keycloak || createKeycloakAdminClient();
   function getKeycloak() {
-    return keycloak || createKeycloakAdminClient();
+    return kcAdmin;
   }
 
   /**

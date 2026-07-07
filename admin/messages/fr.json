@@ -64,10 +64,13 @@
     "title": "Système et liens",
     "subtitle": "Accédez directement à la supervision, aux bases de données et à la documentation de l'API. Configurez les URL via les variables d'environnement <code>NEXT_PUBLIC_*</code>.",
     "descriptions": {
+      "keycloak": "Gérer les utilisateurs, rôles et sessions dans la console Keycloak",
       "grafana": "Tableaux de bord et visualisation des métriques",
       "prometheus": "Métriques brutes, cibles et alertes",
       "neo4jBrowser": "Données du graphe — utilisateurs, habitudes, études, dons",
       "mongoExpress": "Collections MongoDB — participants, réponses, journaux",
+      "bullBoard": "Tâches de la file BullMQ - en attente, actives, échouées",
+      "redisInsight": "Inspecter les clés, caches et mémoire Redis",
       "apiDocs": "Référence OpenAPI / Swagger pour le backend"
     }
   },

@@ -64,10 +64,13 @@
     "title": "System & Links",
     "subtitle": "Jump to monitoring, databases and API docs. Configure URLs via <code>NEXT_PUBLIC_*</code> env vars.",
     "descriptions": {
+      "keycloak": "Manage users, roles and sessions in the Keycloak console",
       "grafana": "Dashboards & metrics visualisation",
       "prometheus": "Raw metrics, targets & alerting",
       "neo4jBrowser": "Graph data — users, habits, studies, donations",
       "mongoExpress": "MongoDB collections — participants, responses, logs",
+      "bullBoard": "BullMQ queue jobs - waiting, active, failed",
+      "redisInsight": "Inspect Redis keys, caches and memory",
       "apiDocs": "OpenAPI / Swagger reference for the backend"
     }
   },
