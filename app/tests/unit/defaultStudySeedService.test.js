@@ -34,7 +34,9 @@ function makeDb() {
       },
       async findOne(filter) {
         if (filter.slug !== undefined) {
-          return [...store.values()].find((d) => d.slug === filter.slug) ?? null;
+          return (
+            [...store.values()].find((d) => d.slug === filter.slug) ?? null
+          );
         }
         if (filter.isDefault !== undefined) {
           return (
@@ -57,7 +59,9 @@ function makeDb() {
 test('seedDefaultQuestionnaires: inserts sliq, rand-36 and srhi by slug', async () => {
   const db = makeDb();
   await seedDefaultQuestionnaires(db);
-  const slugs = [...db.stores.questionnaires.values()].map((d) => d.slug).sort();
+  const slugs = [...db.stores.questionnaires.values()]
+    .map((d) => d.slug)
+    .sort();
   assert.deepStrictEqual(slugs, ['rand-36', 'sliq', 'srhi']);
 });
 

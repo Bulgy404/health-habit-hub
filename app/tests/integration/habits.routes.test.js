@@ -673,7 +673,9 @@ test('GET /admin/comments?status=flagged returns only unapproved flagged comment
   const body = await res.json();
   assert.ok(body.comments.every((c) => c.flagged === true));
   assert.ok(body.comments.some((c) => c.id === flaggedComment.id));
-  assert.ok(!body.comments.some((c) => c.text === 'A perfectly normal comment'));
+  assert.ok(
+    !body.comments.some((c) => c.text === 'A perfectly normal comment')
+  );
 });
 
 test('POST /admin/comments/:id/approve publishes a flagged comment', async () => {

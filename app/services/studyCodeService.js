@@ -367,7 +367,13 @@ export async function redeemCode({ db, userId, code, neo4jRun }) {
     enrolledAt,
   });
 
-  await scheduleQuestionnaires(db, userId, doc.studyId, group?.id ?? null, enrolledAt);
+  await scheduleQuestionnaires(
+    db,
+    userId,
+    doc.studyId,
+    group?.id ?? null,
+    enrolledAt
+  );
 
   return {
     enrolled: true,
@@ -526,7 +532,13 @@ export async function switchStudy({ db, userId, code, neo4jRun }) {
     enrolledAt: movedAt,
   });
 
-  await scheduleQuestionnaires(db, userId, doc.studyId, group?.id ?? null, movedAt);
+  await scheduleQuestionnaires(
+    db,
+    userId,
+    doc.studyId,
+    group?.id ?? null,
+    movedAt
+  );
 
   return {
     moved: true,

@@ -20,7 +20,10 @@ function makeNeo4j() {
   const rels = [];
 
   return async (cypher, params = {}) => {
-    if (cypher.includes('WHERE e.droppedOutAt IS NULL') && cypher.includes('RETURN s.uuid AS studyId')) {
+    if (
+      cypher.includes('WHERE e.droppedOutAt IS NULL') &&
+      cypher.includes('RETURN s.uuid AS studyId')
+    ) {
       // getEnrollment
       const rel = rels.find(
         (r) => r.userId === params.userId && r.droppedOutAt == null
@@ -114,9 +117,11 @@ function makeDb() {
         return {
           async findOne(filter) {
             if (filter._id) {
-              return [...studies.values()].find(
-                (s) => s._id.toString() === filter._id.toString()
-              ) ?? null;
+              return (
+                [...studies.values()].find(
+                  (s) => s._id.toString() === filter._id.toString()
+                ) ?? null
+              );
             }
             if (filter.isDefault) {
               return [...studies.values()].find((s) => s.isDefault) ?? null;
@@ -130,7 +135,8 @@ function makeDb() {
                   (s) => s._id.toString() === filter._id.toString()
                 );
             if (!doc) return null;
-            doc._skipCounter = (doc._skipCounter ?? 0) + (update.$inc?._skipCounter ?? 0);
+            doc._skipCounter =
+              (doc._skipCounter ?? 0) + (update.$inc?._skipCounter ?? 0);
             return doc;
           },
         };
@@ -144,7 +150,10 @@ function makeDb() {
               ...(existing ?? {}),
               ...update.$set,
             });
-            return { matchedCount: existing ? 1 : 0, upsertedCount: existing ? 0 : 1 };
+            return {
+              matchedCount: existing ? 1 : 0,
+              upsertedCount: existing ? 0 : 1,
+            };
           },
         };
       }
@@ -190,14 +199,27 @@ test('switchStudy moves an enrolled user to a new study and preserves history', 
   const neo4jRun = makeNeo4j();
   const studyA = addStudy(db, { name: 'Study A', groups: ['G1'] });
   const studyB = addStudy(db, { name: 'Study B', groups: ['G1'] });
-  addCode(db, { code: 'HHH-AAAAA', studyId: studyA._id, groupId: studyA.groups[0].id });
-  addCode(db, { code: 'HHH-BBBBB', studyId: studyB._id, groupId: studyB.groups[0].id });
+  addCode(db, {
+    code: 'HHH-AAAAA',
+    studyId: studyA._id,
+    groupId: studyA.groups[0].id,
+  });
+  addCode(db, {
+    code: 'HHH-BBBBB',
+    studyId: studyB._id,
+    groupId: studyB.groups[0].id,
+  });
 
   await redeemCode({ db, userId: 'u1', code: 'HHH-AAAAA', neo4jRun });
   const before = await getEnrollmentStatus({ db, userId: 'u1', neo4jRun });
   assert.strictEqual(before.studyName, 'Study A');
 
-  const result = await switchStudy({ db, userId: 'u1', code: 'HHH-BBBBB', neo4jRun });
+  const result = await switchStudy({
+    db,
+    userId: 'u1',
+    code: 'HHH-BBBBB',
+    neo4jRun,
+  });
   assert.strictEqual(result.moved, true);
   assert.strictEqual(result.studyName, 'Study B');
 
@@ -213,9 +235,18 @@ test('switchStudy rejects when not currently enrolled', async () => {
   const db = makeDb();
   const neo4jRun = makeNeo4j();
   const studyB = addStudy(db, { name: 'Study B', groups: ['G1'] });
-  addCode(db, { code: 'HHH-BBBBB', studyId: studyB._id, groupId: studyB.groups[0].id });
+  addCode(db, {
+    code: 'HHH-BBBBB',
+    studyId: studyB._id,
+    groupId: studyB.groups[0].id,
+  });
 
-  const result = await switchStudy({ db, userId: 'ghost', code: 'HHH-BBBBB', neo4jRun });
+  const result = await switchStudy({
+    db,
+    userId: 'ghost',
+    code: 'HHH-BBBBB',
+    neo4jRun,
+  });
   assert.strictEqual(result.notEnrolled, true);
 });
 
@@ -223,11 +254,24 @@ test('switchStudy rejects a code for the study the user is already in', async ()
   const db = makeDb();
   const neo4jRun = makeNeo4j();
   const studyA = addStudy(db, { name: 'Study A', groups: ['G1'] });
-  addCode(db, { code: 'HHH-AAAAA', studyId: studyA._id, groupId: studyA.groups[0].id });
-  addCode(db, { code: 'HHH-AAAA2', studyId: studyA._id, groupId: studyA.groups[0].id });
+  addCode(db, {
+    code: 'HHH-AAAAA',
+    studyId: studyA._id,
+    groupId: studyA.groups[0].id,
+  });
+  addCode(db, {
+    code: 'HHH-AAAA2',
+    studyId: studyA._id,
+    groupId: studyA.groups[0].id,
+  });
 
   await redeemCode({ db, userId: 'u1', code: 'HHH-AAAAA', neo4jRun });
-  const result = await switchStudy({ db, userId: 'u1', code: 'HHH-AAAA2', neo4jRun });
+  const result = await switchStudy({
+    db,
+    userId: 'u1',
+    code: 'HHH-AAAA2',
+    neo4jRun,
+  });
   assert.strictEqual(result.alreadyInStudy, true);
 });
 
@@ -235,10 +279,19 @@ test('switchStudy rejects an unknown code', async () => {
   const db = makeDb();
   const neo4jRun = makeNeo4j();
   const studyA = addStudy(db, { name: 'Study A', groups: ['G1'] });
-  addCode(db, { code: 'HHH-AAAAA', studyId: studyA._id, groupId: studyA.groups[0].id });
+  addCode(db, {
+    code: 'HHH-AAAAA',
+    studyId: studyA._id,
+    groupId: studyA.groups[0].id,
+  });
   await redeemCode({ db, userId: 'u1', code: 'HHH-AAAAA', neo4jRun });
 
-  const result = await switchStudy({ db, userId: 'u1', code: 'HHH-NOPE0', neo4jRun });
+  const result = await switchStudy({
+    db,
+    userId: 'u1',
+    code: 'HHH-NOPE0',
+    neo4jRun,
+  });
   assert.strictEqual(result.notFound, true);
 });
 
@@ -251,7 +304,11 @@ test('leaveStudy moves an enrolled user back to the default study', async () => 
     isDefault: true,
     groups: ['G1', 'G2'],
   });
-  addCode(db, { code: 'HHH-AAAAA', studyId: studyA._id, groupId: studyA.groups[0].id });
+  addCode(db, {
+    code: 'HHH-AAAAA',
+    studyId: studyA._id,
+    groupId: studyA.groups[0].id,
+  });
 
   await redeemCode({ db, userId: 'u1', code: 'HHH-AAAAA', neo4jRun });
   const result = await leaveStudy({ db, userId: 'u1', neo4jRun });
@@ -297,8 +354,16 @@ test('a habit donated before switching studies is unaffected by switchEnrollment
   const neo4jRun = makeNeo4j();
   const studyA = addStudy(db, { name: 'Study A', groups: ['G1'] });
   const studyB = addStudy(db, { name: 'Study B', groups: ['G1'] });
-  addCode(db, { code: 'HHH-AAAAA', studyId: studyA._id, groupId: studyA.groups[0].id });
-  addCode(db, { code: 'HHH-BBBBB', studyId: studyB._id, groupId: studyB.groups[0].id });
+  addCode(db, {
+    code: 'HHH-AAAAA',
+    studyId: studyA._id,
+    groupId: studyA.groups[0].id,
+  });
+  addCode(db, {
+    code: 'HHH-BBBBB',
+    studyId: studyB._id,
+    groupId: studyB.groups[0].id,
+  });
 
   await redeemCode({ db, userId: 'u1', code: 'HHH-AAAAA', neo4jRun });
   await switchStudy({ db, userId: 'u1', code: 'HHH-BBBBB', neo4jRun });

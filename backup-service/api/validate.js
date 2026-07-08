@@ -4,11 +4,18 @@ import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { BACKUP_DIR } from './manifests.js';
 
-// No "/" in the character classes below by design — see resolveBackupPath,
+// No "/" in the character class below by design — see resolveBackupPath,
 // which rejects any path separator outright before this ever runs. (An
 // earlier version of this regex used ".*" here, which — being unanchored to
 // "no slashes" — would have matched straight through a "../" segment.)
-const FILENAME_RE = /^(full_backup|uploaded)_[0-9_]+[A-Za-z0-9._-]*\.tar\.gz$/;
+//
+// A single quantified group, not two adjacent ones ([0-9_]+[A-Za-z0-9._-]*)
+// — the earlier two-group form let the digit/underscore run be split between
+// both groups in exponentially many ways before failing on a non-matching
+// suffix (both character classes include 0-9 and _), a classic ReDoS
+// pattern. One group can't be ambiguously split, so this is linear time
+// regardless of input.
+const FILENAME_RE = /^(full_backup|uploaded)_[A-Za-z0-9._-]+\.tar\.gz$/;
 
 /**
  * Resolves a backup filename to an absolute path, refusing anything that
