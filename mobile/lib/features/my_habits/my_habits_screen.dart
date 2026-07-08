@@ -154,17 +154,28 @@ class _SrhiPromptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
     final first = windows.first;
     return Card(
       margin: const EdgeInsets.all(16),
-      color: const Color(0xFFEDF7E5),
+      color: colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFF45B700), width: 1),
+      ),
       child: ListTile(
         leading: const Icon(Icons.psychology, color: Color(0xFF45B700)),
         title: Text(
           l10n.srhiCheckInTitle,
-          style: const TextStyle(fontWeight: FontWeight.w700),
+          style: const TextStyle(
+            color: Color(0xFF2E8C00),
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        subtitle: Text(l10n.srhiCheckInSubtitle),
+        subtitle: Text(
+          l10n.srhiCheckInSubtitle,
+          style: TextStyle(color: colorScheme.onSurfaceVariant),
+        ),
         trailing: FilledButton(
           style: FilledButton.styleFrom(minimumSize: Size.zero),
           onPressed: () => context.push(
@@ -316,6 +327,10 @@ class _HabitCard extends ConsumerWidget {
                             enacted: true,
                           );
                       ref.invalidate(intentionLogsProvider(intention.id));
+                      // Also refresh the page-level aggregate contribution
+                      // graph, so today's log shows up immediately instead of
+                      // only after a manual pull-to-refresh.
+                      ref.invalidate(allHabitsActivityProvider);
                       messenger.showSnackBar(
                         SnackBar(
                           content: Text(l10n.loggedToday),

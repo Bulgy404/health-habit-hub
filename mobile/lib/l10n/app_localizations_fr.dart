@@ -143,6 +143,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get profileSavedSuccess => 'Profil enregistré avec succès !';
 
   @override
+  String get profileEnterNumber => 'Saisissez un nombre';
+
+  @override
+  String get profileEnterText => 'Saisissez du texte';
+
+  @override
   String get couldNotLoadProfile =>
       'Impossible de charger le profil.\nVeuillez vérifier votre connexion.';
 
@@ -585,6 +591,17 @@ class AppLocalizationsFr extends AppLocalizations {
       'Sur quel objectif de santé aimeriez-vous travailler ?';
 
   @override
+  String get goalInputSubtitle =>
+      'Plus vous partagez de contexte (votre mode de vie, ce que vous avez déjà essayé, ce qui vous freine), meilleure sera votre recommandation.';
+
+  @override
+  String get goalInputHint =>
+      'p. ex. J\'ai 34 ans et je travaille de longues heures assis à un bureau. J\'ai du mal à m\'endormir avant minuit et je me réveille épuisé. J\'ai essayé de courir le soir, mais j\'abandonne après une semaine. Je veux une routine réaliste qui m\'aide à décompresser et à me sentir plus reposé.';
+
+  @override
+  String get goalInputValidationError => 'Veuillez décrire votre objectif';
+
+  @override
   String get questionnaireResponseSubmitted => 'Réponse envoyée !';
 
   @override
@@ -653,6 +670,26 @@ class AppLocalizationsFr extends AppLocalizations {
       'Lisez votre intention de mise en œuvre et confirmez-la.';
 
   @override
+  String get confirmPlanEditHint => 'Modifiez votre intention…';
+
+  @override
+  String confirmPlanReminderAtTime(String time) {
+    return 'Rappel à $time (défini par l\'étude)';
+  }
+
+  @override
+  String get confirmPlanRemindersEnabledByStudy =>
+      'Rappels activés (défini par l\'étude)';
+
+  @override
+  String get confirmPlanNoRemindersByStudy =>
+      'Aucun rappel (défini par l\'étude)';
+
+  @override
+  String get confirmPlanShareWithCommunity =>
+      'Partager cette habitude anonymement avec la communauté';
+
+  @override
   String get durationLabel => 'Durée (minutes)';
 
   @override
@@ -676,8 +713,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String srhiStem(String behavior) {
-    return 'Pour moi, $behavior est quelque chose…';
+    return '$behavior est quelque chose…';
   }
+
+  @override
+  String get srhiScaleMin => '1 = Pas du tout d\'accord';
+
+  @override
+  String get srhiScaleMax => '7 = Tout à fait d\'accord';
 
   @override
   String get srhiSubmit => 'Envoyer';
@@ -903,6 +946,43 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get onboardingNext => 'Suivant';
+
+  @override
+  String get studyCodeAppBarTitle => 'Code d\'étude';
+
+  @override
+  String get studyCodeQuestion => 'Avez-vous un code d\'étude ?';
+
+  @override
+  String get studyCodeSubtitle =>
+      'Si un chercheur vous a donné un code d\'étude, saisissez-le ici pour rejoindre son étude. Vous pouvez aussi passer cette étape.';
+
+  @override
+  String get studyCodeLabel => 'Code d\'étude';
+
+  @override
+  String get studyCodeInvalidFormat =>
+      'Saisissez un code valide au format HHH-XXXXX.';
+
+  @override
+  String get studyCodeInvalid =>
+      'Code invalide. Veuillez vérifier et réessayer.';
+
+  @override
+  String get studyCodeExpired => 'Ce code a expiré.';
+
+  @override
+  String get studyCodeAlreadyUsed => 'Ce code a déjà été utilisé.';
+
+  @override
+  String get studyCodeGenericError =>
+      'Impossible d\'utiliser ce code. Veuillez vérifier votre connexion.';
+
+  @override
+  String get studyCodeContinueButton => 'Continuer avec le code';
+
+  @override
+  String get studyCodeSkipButton => 'Passer : rejoindre sans code d\'étude';
 
   @override
   String get adminQuestionnairesDeleteConfirmTitle =>
@@ -1225,7 +1305,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get donateWhyShareBody =>
-      'Chaque habitude que vous partagez est ajoutée anonymement à un panorama ouvert et grandissant de la façon dont les gens construisent des routines saines au quotidien. Plus les chercheurs voient d\'exemples concrets, meilleures deviennent les recommandations pour tout le monde, y compris les vôtres.';
+      'Les habitudes partagées restent anonymes et aident la recherche à créer de meilleures recommandations pour tous, y compris pour vous.';
 
   @override
   String get readMoreAboutProject => 'En savoir plus sur le projet';

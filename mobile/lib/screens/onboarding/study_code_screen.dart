@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
+import '../../l10n/app_localizations.dart';
 
 // ---------------------------------------------------------------------------
 // Secure-storage key constants
@@ -72,9 +73,10 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
 
   /// Calls POST /api/v1/onboarding/redeem-code and stores the result.
   Future<void> _onSubmit() async {
+    final l10n = AppLocalizations.of(context)!;
     final code = _codeController.text.trim();
     if (!_isValidCode(code)) {
-      setState(() => _errorMessage = 'Enter a valid code in HHH-XXXXX format.');
+      setState(() => _errorMessage = l10n.studyCodeInvalidFormat);
       return;
     }
 
@@ -108,15 +110,15 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
       final body = e.response?.data;
       String message;
       if (statusCode == 404) {
-        message = 'Invalid code. Please check and try again.';
+        message = l10n.studyCodeInvalid;
       } else if (statusCode == 410) {
-        message = 'This code has expired.';
+        message = l10n.studyCodeExpired;
       } else if (statusCode == 409) {
-        message = 'This code has already been used.';
+        message = l10n.studyCodeAlreadyUsed;
       } else if (body is Map && body['error'] != null) {
         message = body['error'] as String;
       } else {
-        message = 'Could not redeem code. Please check your connection.';
+        message = l10n.studyCodeGenericError;
       }
       setState(() {
         _isLoading = false;
@@ -126,7 +128,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Could not redeem code. Please check your connection.';
+        _errorMessage = l10n.studyCodeGenericError;
       });
     }
   }
@@ -155,15 +157,16 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Study Code'),
+        title: Text(l10n.studyCodeAppBarTitle),
         actions: [
           TextButton(
             onPressed: _isLoading ? null : _onSkip,
-            child: const Text(
-              'Skip',
-              style: TextStyle(color: Colors.white, fontSize: 16),
+            child: Text(
+              l10n.onboardingSkip,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
             ),
           ),
         ],
@@ -181,7 +184,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Do you have a study code?',
+              l10n.studyCodeQuestion,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -189,8 +192,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'If a researcher gave you a study code, enter it here to '
-              'join their study. You can also skip this step.',
+              l10n.studyCodeSubtitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
                   ),
@@ -201,7 +203,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
               controller: _codeController,
               enabled: !_isLoading,
               decoration: InputDecoration(
-                labelText: 'Study code',
+                labelText: l10n.studyCodeLabel,
                 hintText: 'HHH-XXXXX',
                 border: const OutlineInputBorder(),
                 errorText: _errorMessage,
@@ -233,12 +235,12 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : const Text('Continue with code'),
+                  : Text(l10n.studyCodeContinueButton),
             ),
             const SizedBox(height: 16),
             TextButton(
               onPressed: _isLoading ? null : _onSkip,
-              child: const Text('Skip: join without a study code'),
+              child: Text(l10n.studyCodeSkipButton),
             ),
           ],
         ),

@@ -139,6 +139,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileSavedSuccess => 'Profile saved successfully!';
 
   @override
+  String get profileEnterNumber => 'Enter a number';
+
+  @override
+  String get profileEnterText => 'Enter text';
+
+  @override
   String get couldNotLoadProfile =>
       'Could not load profile.\nPlease check your connection.';
 
@@ -566,6 +572,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get healthGoalPrompt => 'What health goal would you like to work on?';
 
   @override
+  String get goalInputSubtitle =>
+      'The more context you share (your lifestyle, what you\'ve tried, and what gets in the way), the better your recommendation will be.';
+
+  @override
+  String get goalInputHint =>
+      'e.g. I\'m 34 and work long hours at a desk job. I struggle to fall asleep before midnight and wake up exhausted. I\'ve tried evening runs but give up after a week. I want a realistic routine that helps me wind down and feel more rested.';
+
+  @override
+  String get goalInputValidationError => 'Please describe your goal';
+
+  @override
   String get questionnaireResponseSubmitted => 'Response submitted!';
 
   @override
@@ -634,6 +651,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Read your implementation intention and confirm.';
 
   @override
+  String get confirmPlanEditHint => 'Edit your intention…';
+
+  @override
+  String confirmPlanReminderAtTime(String time) {
+    return 'Reminder at $time (set by study)';
+  }
+
+  @override
+  String get confirmPlanRemindersEnabledByStudy =>
+      'Reminders enabled (set by study)';
+
+  @override
+  String get confirmPlanNoRemindersByStudy => 'No reminders (set by study)';
+
+  @override
+  String get confirmPlanShareWithCommunity =>
+      'Share this habit anonymously with the community';
+
+  @override
   String get durationLabel => 'Duration (minutes)';
 
   @override
@@ -657,8 +693,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String srhiStem(String behavior) {
-    return 'My $behavior is something…';
+    return '$behavior is something…';
   }
+
+  @override
+  String get srhiScaleMin => '1 = Strongly disagree';
+
+  @override
+  String get srhiScaleMax => '7 = Strongly agree';
 
   @override
   String get srhiSubmit => 'Submit';
@@ -881,6 +923,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get onboardingNext => 'Next';
+
+  @override
+  String get studyCodeAppBarTitle => 'Study Code';
+
+  @override
+  String get studyCodeQuestion => 'Do you have a study code?';
+
+  @override
+  String get studyCodeSubtitle =>
+      'If a researcher gave you a study code, enter it here to join their study. You can also skip this step.';
+
+  @override
+  String get studyCodeLabel => 'Study code';
+
+  @override
+  String get studyCodeInvalidFormat =>
+      'Enter a valid code in HHH-XXXXX format.';
+
+  @override
+  String get studyCodeInvalid => 'Invalid code. Please check and try again.';
+
+  @override
+  String get studyCodeExpired => 'This code has expired.';
+
+  @override
+  String get studyCodeAlreadyUsed => 'This code has already been used.';
+
+  @override
+  String get studyCodeGenericError =>
+      'Could not redeem code. Please check your connection.';
+
+  @override
+  String get studyCodeContinueButton => 'Continue with code';
+
+  @override
+  String get studyCodeSkipButton => 'Skip: join without a study code';
 
   @override
   String get adminQuestionnairesDeleteConfirmTitle => 'Delete questionnaire?';
@@ -1195,7 +1273,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get donateWhyShareBody =>
-      'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone\'s recommendations become, including yours.';
+      'Shared habits stay anonymous and help researchers build better recommendations for everyone, including you.';
 
   @override
   String get readMoreAboutProject => 'Read more about the project';

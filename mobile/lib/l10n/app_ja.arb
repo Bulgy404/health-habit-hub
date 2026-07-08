@@ -171,6 +171,14 @@
   "@profileSavedSuccess": {
     "description": "Snackbar message when profile is saved successfully"
   },
+  "profileEnterNumber": "数値を入力",
+  "@profileEnterNumber": {
+    "description": "Hint text for a numeric custom profile field"
+  },
+  "profileEnterText": "テキストを入力",
+  "@profileEnterText": {
+    "description": "Hint text for a free-text custom profile field"
+  },
   "couldNotLoadProfile": "プロフィールを読み込めませんでした。\n接続を確認してください。",
   "@couldNotLoadProfile": {
     "description": "Offline banner body for profile screen"
@@ -728,6 +736,18 @@
   "@healthGoalPrompt": {
     "description": "Prompt asking the user to describe their health goal"
   },
+  "goalInputSubtitle": "背景（生活スタイル、これまで試したこと、うまくいかない理由など）を詳しく共有するほど、おすすめの精度が上がります。",
+  "@goalInputSubtitle": {
+    "description": "Instructional subtitle on the goal-input screen, encouraging detailed answers"
+  },
+  "goalInputHint": "例：34歳、デスクワークで長時間座っています。夜0時前に寝つけず、朝は疲れが取れません。夜のランニングを試しましたが1週間で挫折しました。無理なく続けられて、ぐっすり休めるようになる習慣が欲しいです。",
+  "@goalInputHint": {
+    "description": "Example placeholder text shown inside the empty goal-description text field"
+  },
+  "goalInputValidationError": "目標を入力してください",
+  "@goalInputValidationError": {
+    "description": "Validation error when the goal-description field is submitted empty"
+  },
   "questionnaireResponseSubmitted": "回答を送信しました！",
   "@questionnaireResponseSubmitted": {
     "description": "Heading on the questionnaire confirmation screen"
@@ -748,7 +768,7 @@
   "@noQuestionnairesAssigned": {
     "description": "Empty state message shown on the profile screen when the participant's study has no questionnaires"
   },
-  "questionnaireReminderMessage": "回答可能な健康アンケートがあります。",
+  "questionnaireReminderMessage": "回答可能な健康質問票があります。",
   "@questionnaireReminderMessage": {
     "description": "Snackbar shown after app startup when at least one study questionnaire is currently due"
   },
@@ -808,6 +828,32 @@
   "@confirmPlanSubtitle": {
     "description": "Subtitle on confirm plan screen"
   },
+  "confirmPlanEditHint": "意図を編集…",
+  "@confirmPlanEditHint": {
+    "description": "Hint text for the editable implementation-intention text field"
+  },
+  "confirmPlanReminderAtTime": "{time}にリマインダー（研究の設定）",
+  "@confirmPlanReminderAtTime": {
+    "description": "Read-only reminder status when the study fixes the reminder time",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "19:00"
+      }
+    }
+  },
+  "confirmPlanRemindersEnabledByStudy": "リマインダー有効（研究の設定）",
+  "@confirmPlanRemindersEnabledByStudy": {
+    "description": "Read-only reminder status when the study enables reminders without a fixed time"
+  },
+  "confirmPlanNoRemindersByStudy": "リマインダーなし（研究の設定）",
+  "@confirmPlanNoRemindersByStudy": {
+    "description": "Read-only reminder status when the study disables reminders"
+  },
+  "confirmPlanShareWithCommunity": "この習慣をコミュニティと匿名で共有する",
+  "@confirmPlanShareWithCommunity": {
+    "description": "Label for the community-sharing opt-in switch on the confirm plan screen"
+  },
   "durationLabel": "所要時間（分）",
   "@durationLabel": {
     "description": "Label for duration input in new habit flow"
@@ -836,7 +882,7 @@
   "@srhiFormTitle": {
     "description": "AppBar title on SRHI form screen"
   },
-  "srhiStem": "私の{behavior}は…",
+  "srhiStem": "{behavior}は…",
   "@srhiStem": {
     "description": "Stem sentence for SRHI items",
     "placeholders": {
@@ -844,6 +890,14 @@
         "type": "String"
       }
     }
+  },
+  "srhiScaleMin": "1 = まったくそう思わない",
+  "@srhiScaleMin": {
+    "description": "Label for the lowest point of the SRHI 1-7 agreement scale"
+  },
+  "srhiScaleMax": "7 = 強くそう思う",
+  "@srhiScaleMax": {
+    "description": "Label for the highest point of the SRHI 1-7 agreement scale"
   },
   "srhiSubmit": "送信",
   "@srhiSubmit": {
@@ -1086,6 +1140,17 @@
   "onboardingSkip": "スキップ",
   "onboardingContinue": "続ける",
   "onboardingNext": "次へ",
+  "studyCodeAppBarTitle": "研究コード",
+  "studyCodeQuestion": "研究コードをお持ちですか？",
+  "studyCodeSubtitle": "研究者から研究コードを受け取っている場合は、ここに入力してその研究に参加できます。このステップはスキップすることもできます。",
+  "studyCodeLabel": "研究コード",
+  "studyCodeInvalidFormat": "HHH-XXXXX形式の正しいコードを入力してください。",
+  "studyCodeInvalid": "無効なコードです。確認してもう一度お試しください。",
+  "studyCodeExpired": "このコードは有効期限が切れています。",
+  "studyCodeAlreadyUsed": "このコードはすでに使用されています。",
+  "studyCodeGenericError": "コードを利用できませんでした。接続を確認してください。",
+  "studyCodeContinueButton": "コードを使って続ける",
+  "studyCodeSkipButton": "スキップ：研究コードなしで参加する",
   "adminQuestionnairesDeleteConfirmTitle": "アンケートを削除しますか?",
   "adminQuestionnairesDeleteConfirmMessage": "「{title}」を削除しますか?この操作は元に戻せません。",
   "adminQuestionnairesDeleteConflict": "削除できません: このアンケートは進行中の研究に割り当てられています。",
@@ -1105,7 +1170,7 @@
   "adminQuestionnairesTitleFieldLabel": "タイトル *",
   "adminQuestionnairesFieldRequiredError": "必須項目です",
   "adminQuestionnairesDescriptionFieldLabel": "説明",
-  "adminQuestionnairesQuestionsCount": "質問 ({count})",
+  "adminQuestionnairesQuestionsCount": "質問（{count}）",
   "adminQuestionnairesAddButton": "追加",
   "adminQuestionnairesNoQuestionsYet": "質問がまだありません。「追加」をタップして作成してください。",
   "adminQuestionnairesAllQuestionsNeedText": "すべての質問にテキストを入力してください。",
@@ -1119,11 +1184,11 @@
   "adminQuestionnairesTypeMultiChoice": "複数選択",
   "adminQuestionnairesTypeScale": "尺度",
   "adminQuestionnairesRequiredLabel": "必須",
-  "adminQuestionnairesOptionsCount": "選択肢 ({count})",
+  "adminQuestionnairesOptionsCount": "選択肢（{count}）",
   "adminQuestionnairesAddOption": "選択肢を追加",
   "adminQuestionnairesOptionLabelField": "選択肢{number}のラベル",
   "adminShellNavParticipants": "参加者",
-  "adminShellNavSurveys": "調査",
+  "adminShellNavSurveys": "アンケート",
   "adminShellNavQuestionnaires": "アンケート",
   "adminShellNavHabits": "習慣",
   "adminShellNavDevices": "デバイス",
@@ -1134,7 +1199,7 @@
   "recommendationTryDifferentGoal": "別の目標を試す",
   "recommendationHabitFlowError": "習慣作成画面を開けませんでした。もう一度お試しください。",
   "recommendationWhyThisHelps": "これが役立つ理由:",
-  "recommendationSourcesCount": "情報源 ({count})",
+  "recommendationSourcesCount": "情報源（{count}）",
   "recommendationAddToHabits": "自分の習慣に追加",
   "recommendationFeedbackSubmitted": "フィードバックを送信しました。ありがとうございます!",
   "recommendationLeaveComment": "コメントを残す:",
@@ -1154,8 +1219,8 @@
   "recommendationCardEvidence": "根拠",
   "recommendationCardConfidence": "信頼度",
   "recommendationCardWhy": "理由",
-  "recommendationCardDismiss": "却下",
-  "recommendationCardAccept": "承認",
+  "recommendationCardDismiss": "興味なし",
+  "recommendationCardAccept": "追加する",
   "questionnaireFormRequiredQuestion": "この質問は必須です。",
   "questionnaireFormAnswerAllRequired": "送信する前に、すべての必須質問に回答してください。",
   "questionnaireFormProgressLabel": "質問 {current}/{total}",
@@ -1175,7 +1240,7 @@
   "donateSharedTodayBody": "ご協力ありがとうございます！共有していただいた習慣はすべて研究の役に立っています。よろしければもう一つ共有してみませんか。",
   "donateShareAnotherButton": "別の習慣を共有する",
   "donateWhyShareTitle": "なぜシェアするの？",
-  "donateWhyShareBody": "シェアされた習慣は匿名で集められ、人々が日常生活の中でどのように健康的な習慣を築いているかを示す、公開された知見として蓄積されていきます。研究者がより多くの実例に触れるほど、あなたを含むすべての人へのおすすめがより良いものになります。",
+  "donateWhyShareBody": "シェアされた習慣は匿名のまま、研究者があなたを含むすべての人へのおすすめをより良くするために役立てられます。",
   "readMoreAboutProject": "プロジェクトについてもっと詳しく",
   "donatePleaseAnswerAllQuestions": "すべての質問に回答してください",
   "donateNotAHabitMessage": "これは習慣のようには見えません。「毎朝30分散歩する」のように、繰り返し行っている行動を説明してみてください。",

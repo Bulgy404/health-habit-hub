@@ -4,6 +4,7 @@ library;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'app.dart';
@@ -18,6 +19,9 @@ const _sentryDsn = String.fromEnvironment('SENTRY_DSN');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Loads intl's date symbol data for every bundled locale, so the
+  // locale-aware month/weekday names in the contribution graph don't throw.
+  await initializeDateFormatting();
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,

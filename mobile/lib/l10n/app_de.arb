@@ -8,7 +8,7 @@
   "habitSharedSuccess": "Gewohnheit erfolgreich geteilt!",
   "submissionFailed": "Übermittlung fehlgeschlagen. Bitte erneut versuchen.",
   "noConnection": "Keine Verbindung",
-  "couldNotLoadSurvey": "Umfrage konnte nicht geladen werden.\nBitte überprüfen Sie Ihre Verbindung.",
+  "couldNotLoadSurvey": "Umfrage konnte nicht geladen werden.\nBitte überprüfe deine Verbindung.",
   "retry": "Erneut versuchen",
   "refresh": "Aktualisieren",
   "graphTab": "Graph",
@@ -19,7 +19,7 @@
   "communityAnnotations": "Community-Annotationen",
   "unknown": "Unbekannt",
   "iDoThisCount": "Das mache ich auch: {count}",
-  "helpfulCount": "Gespeichert: {count}",
+  "helpfulCount": "Gemerkt: {count}",
   "iDoThisToo": "Das mache ich auch",
   "helpful": "Merken",
   "savedSection": "Gemerkt",
@@ -31,7 +31,7 @@
   "privacyStatement": "Datenschutzerklärung",
   "accessibilityStatement": "Erklärung zur Barrierefreiheit",
   "imprint": "Impressum",
-  "couldNotLoadLegalDocument": "Dieses Dokument konnte nicht geladen werden.\nBitte überprüfen Sie Ihre Verbindung.",
+  "couldNotLoadLegalDocument": "Dieses Dokument konnte nicht geladen werden.\nBitte überprüfe deine Verbindung.",
   "save": "Speichern",
   "qrOnly": "Nur QR",
   "qrOnlyDescription": "Nur QR-Code-Token generieren",
@@ -41,7 +41,9 @@
   "bothDescription": "QR-Code und druckbare Token-Karten generieren",
   "myProfile": "Mein Profil",
   "profileSavedSuccess": "Profil erfolgreich gespeichert!",
-  "couldNotLoadProfile": "Profil konnte nicht geladen werden.\nBitte überprüfen Sie Ihre Verbindung.",
+  "profileEnterNumber": "Zahl eingeben",
+  "profileEnterText": "Text eingeben",
+  "couldNotLoadProfile": "Profil konnte nicht geladen werden.\nBitte überprüfe deine Verbindung.",
   "healthQuestionnaires": "Gesundheitsfragebögen",
   "sliqLifestyleIndex": "SLIQ: Lebensstil-Index",
   "rand36HealthSurvey": "RAND-36: Gesundheitsumfrage",
@@ -97,7 +99,7 @@
   "adminAutoRefreshOff": "Auto-Aktualisierung aus",
   "adminCouldNotOpenExportUrl": "Export-URL konnte nicht geöffnet werden",
   "adminCsvExportFailed": "CSV-Export fehlgeschlagen",
-  "adminAllDates": "Alle Daten",
+  "adminAllDates": "Alle Zeiträume",
   "adminGroup": "Gruppe",
   "adminCategory": "Kategorie",
   "adminAll": "Alle",
@@ -170,13 +172,16 @@
   "failedToLoadStats": "Statistiken konnten nicht geladen werden",
   "failedToLoadQuestionnaire": "Fragebogen konnte nicht geladen werden.",
   "getRecommendations": "Empfehlungen erhalten",
-  "healthGoalPrompt": "An welchem Gesundheitsziel möchten Sie arbeiten?",
+  "healthGoalPrompt": "An welchem Gesundheitsziel möchtest du arbeiten?",
+  "goalInputSubtitle": "Je mehr Kontext du teilst (dein Alltag, was du schon probiert hast, was dir im Weg steht), desto besser wird deine Empfehlung.",
+  "goalInputHint": "z. B. Ich bin 34 und sitze lange im Büro. Ich habe Mühe, vor Mitternacht einzuschlafen, und wache erschöpft auf. Abendliches Joggen habe ich versucht, aber nach einer Woche wieder aufgegeben. Ich möchte eine realistische Routine, die mir hilft, abzuschalten und ausgeruhter zu sein.",
+  "goalInputValidationError": "Bitte beschreibe dein Ziel",
   "questionnaireResponseSubmitted": "Antwort eingereicht!",
-  "questionnaireThankYou": "Vielen Dank für das Ausfüllen des Fragebogens. Ihre Antworten helfen dabei, Ihre Gewohnheitsempfehlungen zu personalisieren.",
+  "questionnaireThankYou": "Vielen Dank für das Ausfüllen des Fragebogens. Deine Antworten helfen dabei, deine Gewohnheitsempfehlungen zu personalisieren.",
   "backToProfile": "Zurück zum Profil",
   "thankYou": "Vielen Dank",
-  "noQuestionnairesAssigned": "Keine Fragebögen für Ihre Studie zugewiesen.",
-  "questionnaireReminderMessage": "Ein Gesundheitsfragebogen wartet auf Ihre Antworten.",
+  "noQuestionnairesAssigned": "Keine Fragebögen für deine Studie zugewiesen.",
+  "questionnaireReminderMessage": "Ein Gesundheitsfragebogen wartet auf deine Antworten.",
   "questionnaireReminderAction": "Ausfüllen",
   "myHabitsTab": "Meine Gewohnheiten",
   "newHabit": "Neue Gewohnheit",
@@ -184,13 +189,18 @@
   "logToday": "Heute eintragen",
   "loggedToday": "Eingetragen ✓",
   "pickBehaviorTitle": "Welche Gewohnheit möchtest du aufbauen?",
-  "setCueTitle": "Stichworteingabe",
-  "setCuePreRatedInstruction": "Deine Studienbedingung gibt dir folgende(n) Hinweisreiz(e) vor. Lies sie sorgfältig: das ist der Moment, in dem du handeln wirst.",
+  "setCueTitle": "Leg deinen Auslöser fest",
+  "setCuePreRatedInstruction": "Deine Studienbedingung gibt dir folgende(n) Auslöser vor. Lies sie sorgfältig: das ist der Moment, in dem du handeln wirst.",
   "setCueSelfSelectedInstruction": "Beschreibe einen konkreten Moment, der regelmäßig in deinem Alltag vorkommt.",
   "setCuePlaceholder": "z.B. Nach dem Abendessen",
-  "setCueTooShort": "Bitte beschreibe deinen Hinweisreiz mit mindestens 10 Zeichen.",
+  "setCueTooShort": "Bitte beschreibe deinen Auslöser mit mindestens 10 Zeichen.",
   "confirmPlanTitle": "Dein Plan",
   "confirmPlanSubtitle": "Lies deine Implementierungsintention und bestätige sie.",
+  "confirmPlanEditHint": "Passe deine Intention an…",
+  "confirmPlanReminderAtTime": "Erinnerung um {time} (von der Studie festgelegt)",
+  "confirmPlanRemindersEnabledByStudy": "Erinnerungen aktiviert (von der Studie festgelegt)",
+  "confirmPlanNoRemindersByStudy": "Keine Erinnerungen (von der Studie festgelegt)",
+  "confirmPlanShareWithCommunity": "Diese Gewohnheit anonym mit der Community teilen",
   "durationLabel": "Dauer (Minuten)",
   "createHabit": "Gewohnheit erstellen",
   "habitLimitReached": "Du hast die Gewohnheitsgrenze für deine Studienbedingung erreicht.",
@@ -198,7 +208,9 @@
   "srhiCheckInSubtitle": "Dauert ca. 2 Minuten.",
   "srhiStartButton": "Check-in starten",
   "srhiFormTitle": "Gewohnheits-Check-in",
-  "srhiStem": "Mein {behavior} ist etwas,",
+  "srhiStem": "{behavior} ist etwas,",
+  "srhiScaleMin": "1 = Stimme gar nicht zu",
+  "srhiScaleMax": "7 = Stimme voll zu",
   "srhiSubmit": "Absenden",
   "srhiSubmitIncomplete": "Bitte bewerte alle 12 Aussagen, bevor du absendest.",
   "weekLabel": "Woche {n}",
@@ -227,7 +239,7 @@
   "@consentUpdatedTitle": {
     "description": "App bar title when re-consenting after a version bump"
   },
-  "consentConfirmText": "Mit \"Ich willige ein\" bestätigen Sie, dass Sie die Studieninformation gelesen und verstanden haben und freiwillig teilnehmen möchten.",
+  "consentConfirmText": "Mit \"Ich willige ein\" bestätigst du, dass du die Studieninformation gelesen und verstanden hast und freiwillig teilnehmen möchtest.",
   "@consentConfirmText": {
     "description": "Text above the consent buttons"
   },
@@ -239,7 +251,7 @@
   "@consentDecline": {
     "description": "Decline button on the consent screen"
   },
-  "consentCouldNotLoad": "Die Einwilligungserklärung konnte nicht geladen werden. Bitte prüfen Sie Ihre Verbindung.",
+  "consentCouldNotLoad": "Die Einwilligungserklärung konnte nicht geladen werden. Bitte prüfe deine Verbindung.",
   "@consentCouldNotLoad": {
     "description": "Offline error on the consent screen"
   },
@@ -251,7 +263,7 @@
   "@deleteAccountTitle": {
     "description": "Title of the account-deletion confirmation dialog"
   },
-  "deleteAccountContent": "Dadurch werden Ihr Konto und alle damit verknüpften Daten dauerhaft gelöscht: Profil, Studienteilnahme, Gewohnheitspläne, tägliche Einträge, Fragebogenantworten und Empfehlungen.\n\nGespendete Gewohnheiten sind anonym gespeichert und können nicht auf Sie zurückgeführt werden.\n\nDies kann nicht rückgängig gemacht werden.",
+  "deleteAccountContent": "Dadurch werden dein Konto und alle damit verknüpften Daten dauerhaft gelöscht: Profil, Studienteilnahme, Gewohnheitspläne, tägliche Einträge, Fragebogenantworten und Empfehlungen.\n\nGespendete Gewohnheiten sind anonym gespeichert und können nicht auf dich zurückgeführt werden.\n\nDies kann nicht rückgängig gemacht werden.",
   "@deleteAccountContent": {
     "description": "Body of the account-deletion confirmation dialog"
   },
@@ -259,7 +271,7 @@
   "@deleteAccountConfirm": {
     "description": "Destructive confirm button of the deletion dialog"
   },
-  "deleteAccountFailed": "Kontolöschung fehlgeschlagen. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  "deleteAccountFailed": "Kontolöschung fehlgeschlagen. Bitte prüfe deine Verbindung und versuche es erneut.",
   "@deleteAccountFailed": {
     "description": "Snackbar when account deletion fails"
   },
@@ -267,7 +279,7 @@
   "@exportMyData": {
     "description": "Settings entry for the GDPR data export"
   },
-  "exportFailed": "Export fehlgeschlagen. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+  "exportFailed": "Export fehlgeschlagen. Bitte prüfe deine Verbindung und versuche es erneut.",
   "@exportFailed": {
     "description": "Snackbar when the data export fails"
   },
@@ -291,11 +303,11 @@
   "@signOut": {
     "description": "Settings entry to sign out"
   },
-  "signOutConfirm": "Möchten Sie sich wirklich abmelden?",
+  "signOutConfirm": "Möchtest du dich wirklich abmelden?",
   "@signOutConfirm": {
     "description": "Body of the sign-out confirmation dialog"
   },
-  "aiDisclaimer": "KI-generierte Vorschläge auf Basis Ihrer Studiendaten. Dies ist keine medizinische Beratung; wenden Sie sich bei gesundheitlichen Fragen an einen Arzt.",
+  "aiDisclaimer": "KI-generierte Vorschläge auf Basis deiner Studiendaten. Dies ist keine medizinische Beratung; wende dich bei gesundheitlichen Fragen an einen Arzt.",
   "@aiDisclaimer": {
     "description": "AI provenance and medical disclaimer on the recommendations screen"
   },
@@ -307,7 +319,7 @@
   "@noReminders": {
     "description": "Shown when reminders are disabled"
   },
-  "reminderFadingHint": "Erinnerungen werden seltener, je stärker Ihre Gewohnheit wird.",
+  "reminderFadingHint": "Erinnerungen werden seltener, je stärker deine Gewohnheit wird.",
   "@reminderFadingHint": {
     "description": "Hint explaining adaptive reminder fading"
   },
@@ -323,11 +335,11 @@
   "@commentsTitle": {
     "description": "Header of the comment section on a habit"
   },
-  "commentHint": "Teilen Sie einen Gedanken (anonym) …",
+  "commentHint": "Teile einen Gedanken (anonym) …",
   "@commentHint": {
     "description": "Placeholder of the comment input"
   },
-  "noCommentsYet": "Noch keine Kommentare. Seien Sie die/der Erste.",
+  "noCommentsYet": "Noch keine Kommentare. Sei die/der Erste.",
   "@noCommentsYet": {
     "description": "Empty state of the comment list"
   },
@@ -375,6 +387,17 @@
   "onboardingSkip": "Überspringen",
   "onboardingContinue": "Fortfahren",
   "onboardingNext": "Weiter",
+  "studyCodeAppBarTitle": "Studiencode",
+  "studyCodeQuestion": "Hast du einen Studiencode?",
+  "studyCodeSubtitle": "Wenn dir eine Forscherin oder ein Forscher einen Studiencode gegeben hat, gib ihn hier ein, um der Studie beizutreten. Du kannst diesen Schritt auch überspringen.",
+  "studyCodeLabel": "Studiencode",
+  "studyCodeInvalidFormat": "Gib einen gültigen Code im Format HHH-XXXXX ein.",
+  "studyCodeInvalid": "Ungültiger Code. Bitte überprüfe ihn und versuche es erneut.",
+  "studyCodeExpired": "Dieser Code ist abgelaufen.",
+  "studyCodeAlreadyUsed": "Dieser Code wurde bereits verwendet.",
+  "studyCodeGenericError": "Code konnte nicht eingelöst werden. Bitte überprüfe deine Verbindung.",
+  "studyCodeContinueButton": "Mit Code fortfahren",
+  "studyCodeSkipButton": "Überspringen: ohne Studiencode beitreten",
   "adminQuestionnairesDeleteConfirmTitle": "Fragebogen löschen?",
   "adminQuestionnairesDeleteConfirmMessage": "„{title}“ löschen? Dies kann nicht rückgängig gemacht werden.",
   "adminQuestionnairesDeleteConflict": "Löschen nicht möglich: Der Fragebogen ist einer aktiven Studie zugeordnet.",
@@ -419,23 +442,23 @@
   "adminShellNavSettings": "Einstellungen",
   "recommendationResultsTitle": "Empfehlungen",
   "recommendationTryAgain": "Erneut versuchen",
-  "recommendationEmptyMessage": "Es wurden keine Empfehlungen generiert. Beschreiben Sie Ihr Ziel etwas genauer: je mehr Kontext Sie angeben, desto besser.",
+  "recommendationEmptyMessage": "Es wurden keine Empfehlungen generiert. Beschreibe dein Ziel etwas genauer: je mehr Kontext du angibst, desto besser.",
   "recommendationTryDifferentGoal": "Anderes Ziel ausprobieren",
-  "recommendationHabitFlowError": "Der Gewohnheiten-Assistent konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.",
+  "recommendationHabitFlowError": "Der Gewohnheiten-Assistent konnte nicht geöffnet werden. Bitte versuche es erneut.",
   "recommendationWhyThisHelps": "Warum das hilft:",
   "recommendationSourcesCount": "Quellen ({count})",
   "recommendationAddToHabits": "Zu meinen Gewohnheiten hinzufügen",
   "recommendationFeedbackSubmitted": "Feedback gesendet, vielen Dank!",
   "recommendationLeaveComment": "Kommentar hinterlassen:",
-  "recommendationFeedbackHint": "Ihr Feedback…",
+  "recommendationFeedbackHint": "Dein Feedback…",
   "recommendationFeedbackFailed": "Feedback konnte nicht gesendet werden",
   "recommendationSourceLinkError": "Der Quellenlink konnte nicht geöffnet werden.",
   "recommendationLoadingPhaseExperts": "Experten werden befragt…",
-  "recommendationLoadingPhaseHabitsDb": "Ihre Gewohnheitendatenbank wird durchsucht…",
+  "recommendationLoadingPhaseHabitsDb": "Deine Gewohnheitendatenbank wird durchsucht…",
   "recommendationLoadingPhasePapers": "Wissenschaftliche Studien werden gelesen…",
-  "recommendationLoadingPhaseGenerating": "Ihre persönlichen Empfehlungen werden erstellt…",
-  "recommendationLoadingTimeoutError": "Die Erstellung der Empfehlungen hat zu lange gedauert. Bitte versuchen Sie es erneut.",
-  "recommendationLoadingGenericError": "Beim Erstellen der Empfehlungen ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+  "recommendationLoadingPhaseGenerating": "Deine persönlichen Empfehlungen werden erstellt…",
+  "recommendationLoadingTimeoutError": "Die Erstellung der Empfehlungen hat zu lange gedauert. Bitte versuche es erneut.",
+  "recommendationLoadingGenericError": "Beim Erstellen der Empfehlungen ist ein Fehler aufgetreten. Bitte versuche es erneut.",
   "bubbleGraphNoHabitsInDimension": "Noch keine Gewohnheiten in dieser Kategorie.",
   "bubbleGraphAllCategories": "Alle Kategorien",
   "bubbleGraphHabitCount": "{count, plural, =1{1 Gewohnheit} other{{count} Gewohnheiten}}",
@@ -464,7 +487,7 @@
   "donateSharedTodayBody": "Danke für deinen Beitrag! Jede geteilte Gewohnheit hilft unserer Forschung. Teile gerne noch eine weitere.",
   "donateShareAnotherButton": "Weitere Gewohnheit teilen",
   "donateWhyShareTitle": "Warum teilen?",
-  "donateWhyShareBody": "Jede geteilte Gewohnheit fließt anonym in eine wachsende, öffentliche Wissensbasis darüber ein, wie Menschen im Alltag gesunde Routinen aufbauen. Je mehr echte Beispiele Forschende sehen, desto besser lassen sich hilfreichere Empfehlungen für alle entwickeln, auch für dich.",
+  "donateWhyShareBody": "Geteilte Gewohnheiten bleiben anonym und helfen der Forschung, bessere Empfehlungen für alle zu entwickeln, auch für dich.",
   "readMoreAboutProject": "Mehr über das Projekt erfahren",
   "donatePleaseAnswerAllQuestions": "Bitte beantworte alle Fragen",
   "donateNotAHabitMessage": "Das klingt nicht wie eine Gewohnheit. Versuche, ein regelmäßiges Verhalten zu beschreiben, z. B. „Ich gehe jeden Morgen 30 Minuten spazieren“.",

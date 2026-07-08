@@ -246,7 +246,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             const SizedBox(height: 24),
             // Editable intention statement card
             Card(
-              color: const Color(0xFFEDF7E5),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: TextField(
@@ -257,9 +257,9 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                         fontWeight: FontWeight.w600,
                         height: 1.5,
                       ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: InputBorder.none,
-                    hintText: 'Edit your intention…',
+                    hintText: l10n.confirmPlanEditHint,
                   ),
                 ),
               ),
@@ -281,9 +281,11 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                   Text(
                     reminderCfg.enabled
                         ? hasFixedTime
-                            ? 'Reminder at ${reminderCfg.fixedTime} (set by study)'
-                            : 'Reminders enabled (set by study)'
-                        : 'No reminders (set by study)',
+                            ? l10n.confirmPlanReminderAtTime(
+                                reminderCfg.fixedTime!,
+                              )
+                            : l10n.confirmPlanRemindersEnabledByStudy
+                        : l10n.confirmPlanNoRemindersByStudy,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
@@ -320,10 +322,8 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                     onChanged: (v) => setState(() => _shareWithCommunity = v),
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Share this habit anonymously with the community',
-                    ),
+                  Expanded(
+                    child: Text(l10n.confirmPlanShareWithCommunity),
                   ),
                 ],
               ),

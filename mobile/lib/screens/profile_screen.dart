@@ -353,7 +353,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: cs.outlineVariant),
         ),
-        hintText: def.type == 'number' ? 'Enter a number' : 'Enter text',
+        hintText: def.type == 'number'
+            ? AppLocalizations.of(context)!.profileEnterNumber
+            : AppLocalizations.of(context)!.profileEnterText,
       ),
       onChanged: (v) {
         if (def.type == 'number') {

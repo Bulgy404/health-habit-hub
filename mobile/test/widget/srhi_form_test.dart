@@ -87,4 +87,26 @@ void main() {
     );
     expect(submitButton.onPressed, isNotNull);
   });
+
+  testWidgets(
+      'stem sentence drops the "My" possessive and scale endpoints render '
+      'without truncating question text', (tester) async {
+    await tester.pumpWidget(_buildSubject(_twelveItems));
+    await tester.pump();
+
+    // "Walking is something…", not "My Walking is something…".
+    expect(find.text('Walking is something…'), findsOneWidget);
+    expect(find.textContaining('My Walking'), findsNothing);
+
+    // The 1/7 scale endpoints now render once per question, below the slider.
+    expect(find.text('1 = Strongly disagree'), findsWidgets);
+    expect(find.text('7 = Strongly agree'), findsWidgets);
+
+    // Question text must never be truncated with an ellipsis.
+    final questionText = tester.widget<Text>(
+      find.text('1. I do item 1'),
+    );
+    expect(questionText.maxLines, isNull);
+    expect(questionText.overflow, isNot(TextOverflow.ellipsis));
+  });
 }

@@ -35,7 +35,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get couldNotLoadSurvey =>
-      'Umfrage konnte nicht geladen werden.\nBitte überprüfen Sie Ihre Verbindung.';
+      'Umfrage konnte nicht geladen werden.\nBitte überprüfe deine Verbindung.';
 
   @override
   String get retry => 'Erneut versuchen';
@@ -72,7 +72,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String helpfulCount(String count) {
-    return 'Gespeichert: $count';
+    return 'Gemerkt: $count';
   }
 
   @override
@@ -113,7 +113,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get couldNotLoadLegalDocument =>
-      'Dieses Dokument konnte nicht geladen werden.\nBitte überprüfen Sie Ihre Verbindung.';
+      'Dieses Dokument konnte nicht geladen werden.\nBitte überprüfe deine Verbindung.';
 
   @override
   String get save => 'Speichern';
@@ -143,8 +143,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get profileSavedSuccess => 'Profil erfolgreich gespeichert!';
 
   @override
+  String get profileEnterNumber => 'Zahl eingeben';
+
+  @override
+  String get profileEnterText => 'Text eingeben';
+
+  @override
   String get couldNotLoadProfile =>
-      'Profil konnte nicht geladen werden.\nBitte überprüfen Sie Ihre Verbindung.';
+      'Profil konnte nicht geladen werden.\nBitte überprüfe deine Verbindung.';
 
   @override
   String get healthQuestionnaires => 'Gesundheitsfragebögen';
@@ -333,7 +339,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get adminCsvExportFailed => 'CSV-Export fehlgeschlagen';
 
   @override
-  String get adminAllDates => 'Alle Daten';
+  String get adminAllDates => 'Alle Zeiträume';
 
   @override
   String get adminGroup => 'Gruppe';
@@ -586,14 +592,25 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get healthGoalPrompt =>
-      'An welchem Gesundheitsziel möchten Sie arbeiten?';
+      'An welchem Gesundheitsziel möchtest du arbeiten?';
+
+  @override
+  String get goalInputSubtitle =>
+      'Je mehr Kontext du teilst (dein Alltag, was du schon probiert hast, was dir im Weg steht), desto besser wird deine Empfehlung.';
+
+  @override
+  String get goalInputHint =>
+      'z. B. Ich bin 34 und sitze lange im Büro. Ich habe Mühe, vor Mitternacht einzuschlafen, und wache erschöpft auf. Abendliches Joggen habe ich versucht, aber nach einer Woche wieder aufgegeben. Ich möchte eine realistische Routine, die mir hilft, abzuschalten und ausgeruhter zu sein.';
+
+  @override
+  String get goalInputValidationError => 'Bitte beschreibe dein Ziel';
 
   @override
   String get questionnaireResponseSubmitted => 'Antwort eingereicht!';
 
   @override
   String get questionnaireThankYou =>
-      'Vielen Dank für das Ausfüllen des Fragebogens. Ihre Antworten helfen dabei, Ihre Gewohnheitsempfehlungen zu personalisieren.';
+      'Vielen Dank für das Ausfüllen des Fragebogens. Deine Antworten helfen dabei, deine Gewohnheitsempfehlungen zu personalisieren.';
 
   @override
   String get backToProfile => 'Zurück zum Profil';
@@ -603,11 +620,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get noQuestionnairesAssigned =>
-      'Keine Fragebögen für Ihre Studie zugewiesen.';
+      'Keine Fragebögen für deine Studie zugewiesen.';
 
   @override
   String get questionnaireReminderMessage =>
-      'Ein Gesundheitsfragebogen wartet auf Ihre Antworten.';
+      'Ein Gesundheitsfragebogen wartet auf deine Antworten.';
 
   @override
   String get questionnaireReminderAction => 'Ausfüllen';
@@ -632,11 +649,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pickBehaviorTitle => 'Welche Gewohnheit möchtest du aufbauen?';
 
   @override
-  String get setCueTitle => 'Stichworteingabe';
+  String get setCueTitle => 'Leg deinen Auslöser fest';
 
   @override
   String get setCuePreRatedInstruction =>
-      'Deine Studienbedingung gibt dir folgende(n) Hinweisreiz(e) vor. Lies sie sorgfältig: das ist der Moment, in dem du handeln wirst.';
+      'Deine Studienbedingung gibt dir folgende(n) Auslöser vor. Lies sie sorgfältig: das ist der Moment, in dem du handeln wirst.';
 
   @override
   String get setCueSelfSelectedInstruction =>
@@ -647,7 +664,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get setCueTooShort =>
-      'Bitte beschreibe deinen Hinweisreiz mit mindestens 10 Zeichen.';
+      'Bitte beschreibe deinen Auslöser mit mindestens 10 Zeichen.';
 
   @override
   String get confirmPlanTitle => 'Dein Plan';
@@ -655,6 +672,26 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get confirmPlanSubtitle =>
       'Lies deine Implementierungsintention und bestätige sie.';
+
+  @override
+  String get confirmPlanEditHint => 'Passe deine Intention an…';
+
+  @override
+  String confirmPlanReminderAtTime(String time) {
+    return 'Erinnerung um $time (von der Studie festgelegt)';
+  }
+
+  @override
+  String get confirmPlanRemindersEnabledByStudy =>
+      'Erinnerungen aktiviert (von der Studie festgelegt)';
+
+  @override
+  String get confirmPlanNoRemindersByStudy =>
+      'Keine Erinnerungen (von der Studie festgelegt)';
+
+  @override
+  String get confirmPlanShareWithCommunity =>
+      'Diese Gewohnheit anonym mit der Community teilen';
 
   @override
   String get durationLabel => 'Dauer (Minuten)';
@@ -680,8 +717,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String srhiStem(String behavior) {
-    return 'Mein $behavior ist etwas,';
+    return '$behavior ist etwas,';
   }
+
+  @override
+  String get srhiScaleMin => '1 = Stimme gar nicht zu';
+
+  @override
+  String get srhiScaleMax => '7 = Stimme voll zu';
 
   @override
   String get srhiSubmit => 'Absenden';
@@ -757,7 +800,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get consentConfirmText =>
-      'Mit \"Ich willige ein\" bestätigen Sie, dass Sie die Studieninformation gelesen und verstanden haben und freiwillig teilnehmen möchten.';
+      'Mit \"Ich willige ein\" bestätigst du, dass du die Studieninformation gelesen und verstanden hast und freiwillig teilnehmen möchtest.';
 
   @override
   String get consentAccept => 'Ich willige ein';
@@ -767,7 +810,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get consentCouldNotLoad =>
-      'Die Einwilligungserklärung konnte nicht geladen werden. Bitte prüfen Sie Ihre Verbindung.';
+      'Die Einwilligungserklärung konnte nicht geladen werden. Bitte prüfe deine Verbindung.';
 
   @override
   String get deleteAccount => 'Konto löschen';
@@ -777,21 +820,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get deleteAccountContent =>
-      'Dadurch werden Ihr Konto und alle damit verknüpften Daten dauerhaft gelöscht: Profil, Studienteilnahme, Gewohnheitspläne, tägliche Einträge, Fragebogenantworten und Empfehlungen.\n\nGespendete Gewohnheiten sind anonym gespeichert und können nicht auf Sie zurückgeführt werden.\n\nDies kann nicht rückgängig gemacht werden.';
+      'Dadurch werden dein Konto und alle damit verknüpften Daten dauerhaft gelöscht: Profil, Studienteilnahme, Gewohnheitspläne, tägliche Einträge, Fragebogenantworten und Empfehlungen.\n\nGespendete Gewohnheiten sind anonym gespeichert und können nicht auf dich zurückgeführt werden.\n\nDies kann nicht rückgängig gemacht werden.';
 
   @override
   String get deleteAccountConfirm => 'Endgültig löschen';
 
   @override
   String get deleteAccountFailed =>
-      'Kontolöschung fehlgeschlagen. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.';
+      'Kontolöschung fehlgeschlagen. Bitte prüfe deine Verbindung und versuche es erneut.';
 
   @override
   String get exportMyData => 'Meine Daten exportieren';
 
   @override
   String get exportFailed =>
-      'Export fehlgeschlagen. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut.';
+      'Export fehlgeschlagen. Bitte prüfe deine Verbindung und versuche es erneut.';
 
   @override
   String get myDataSection => 'Meine Daten';
@@ -809,11 +852,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get signOut => 'Abmelden';
 
   @override
-  String get signOutConfirm => 'Möchten Sie sich wirklich abmelden?';
+  String get signOutConfirm => 'Möchtest du dich wirklich abmelden?';
 
   @override
   String get aiDisclaimer =>
-      'KI-generierte Vorschläge auf Basis Ihrer Studiendaten. Dies ist keine medizinische Beratung; wenden Sie sich bei gesundheitlichen Fragen an einen Arzt.';
+      'KI-generierte Vorschläge auf Basis deiner Studiendaten. Dies ist keine medizinische Beratung; wende dich bei gesundheitlichen Fragen an einen Arzt.';
 
   @override
   String get dailyReminderLabel => 'Tägliche Erinnerung';
@@ -823,7 +866,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get reminderFadingHint =>
-      'Erinnerungen werden seltener, je stärker Ihre Gewohnheit wird.';
+      'Erinnerungen werden seltener, je stärker deine Gewohnheit wird.';
 
   @override
   String get doneButton => 'Fertig';
@@ -835,10 +878,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commentsTitle => 'Kommentare';
 
   @override
-  String get commentHint => 'Teilen Sie einen Gedanken (anonym) …';
+  String get commentHint => 'Teile einen Gedanken (anonym) …';
 
   @override
-  String get noCommentsYet => 'Noch keine Kommentare. Seien Sie die/der Erste.';
+  String get noCommentsYet => 'Noch keine Kommentare. Sei die/der Erste.';
 
   @override
   String get couldNotPostComment => 'Kommentar konnte nicht gesendet werden';
@@ -906,6 +949,43 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get onboardingNext => 'Weiter';
+
+  @override
+  String get studyCodeAppBarTitle => 'Studiencode';
+
+  @override
+  String get studyCodeQuestion => 'Hast du einen Studiencode?';
+
+  @override
+  String get studyCodeSubtitle =>
+      'Wenn dir eine Forscherin oder ein Forscher einen Studiencode gegeben hat, gib ihn hier ein, um der Studie beizutreten. Du kannst diesen Schritt auch überspringen.';
+
+  @override
+  String get studyCodeLabel => 'Studiencode';
+
+  @override
+  String get studyCodeInvalidFormat =>
+      'Gib einen gültigen Code im Format HHH-XXXXX ein.';
+
+  @override
+  String get studyCodeInvalid =>
+      'Ungültiger Code. Bitte überprüfe ihn und versuche es erneut.';
+
+  @override
+  String get studyCodeExpired => 'Dieser Code ist abgelaufen.';
+
+  @override
+  String get studyCodeAlreadyUsed => 'Dieser Code wurde bereits verwendet.';
+
+  @override
+  String get studyCodeGenericError =>
+      'Code konnte nicht eingelöst werden. Bitte überprüfe deine Verbindung.';
+
+  @override
+  String get studyCodeContinueButton => 'Mit Code fortfahren';
+
+  @override
+  String get studyCodeSkipButton => 'Überspringen: ohne Studiencode beitreten';
 
   @override
   String get adminQuestionnairesDeleteConfirmTitle => 'Fragebogen löschen?';
@@ -1062,14 +1142,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recommendationEmptyMessage =>
-      'Es wurden keine Empfehlungen generiert. Beschreiben Sie Ihr Ziel etwas genauer: je mehr Kontext Sie angeben, desto besser.';
+      'Es wurden keine Empfehlungen generiert. Beschreibe dein Ziel etwas genauer: je mehr Kontext du angibst, desto besser.';
 
   @override
   String get recommendationTryDifferentGoal => 'Anderes Ziel ausprobieren';
 
   @override
   String get recommendationHabitFlowError =>
-      'Der Gewohnheiten-Assistent konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.';
+      'Der Gewohnheiten-Assistent konnte nicht geöffnet werden. Bitte versuche es erneut.';
 
   @override
   String get recommendationWhyThisHelps => 'Warum das hilft:';
@@ -1090,7 +1170,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get recommendationLeaveComment => 'Kommentar hinterlassen:';
 
   @override
-  String get recommendationFeedbackHint => 'Ihr Feedback…';
+  String get recommendationFeedbackHint => 'Dein Feedback…';
 
   @override
   String get recommendationFeedbackFailed =>
@@ -1105,7 +1185,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recommendationLoadingPhaseHabitsDb =>
-      'Ihre Gewohnheitendatenbank wird durchsucht…';
+      'Deine Gewohnheitendatenbank wird durchsucht…';
 
   @override
   String get recommendationLoadingPhasePapers =>
@@ -1113,15 +1193,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recommendationLoadingPhaseGenerating =>
-      'Ihre persönlichen Empfehlungen werden erstellt…';
+      'Deine persönlichen Empfehlungen werden erstellt…';
 
   @override
   String get recommendationLoadingTimeoutError =>
-      'Die Erstellung der Empfehlungen hat zu lange gedauert. Bitte versuchen Sie es erneut.';
+      'Die Erstellung der Empfehlungen hat zu lange gedauert. Bitte versuche es erneut.';
 
   @override
   String get recommendationLoadingGenericError =>
-      'Beim Erstellen der Empfehlungen ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.';
+      'Beim Erstellen der Empfehlungen ist ein Fehler aufgetreten. Bitte versuche es erneut.';
 
   @override
   String get bubbleGraphNoHabitsInDimension =>
@@ -1227,7 +1307,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get donateWhyShareBody =>
-      'Jede geteilte Gewohnheit fließt anonym in eine wachsende, öffentliche Wissensbasis darüber ein, wie Menschen im Alltag gesunde Routinen aufbauen. Je mehr echte Beispiele Forschende sehen, desto besser lassen sich hilfreichere Empfehlungen für alle entwickeln, auch für dich.';
+      'Geteilte Gewohnheiten bleiben anonym und helfen der Forschung, bessere Empfehlungen für alle zu entwickeln, auch für dich.';
 
   @override
   String get readMoreAboutProject => 'Mehr über das Projekt erfahren';

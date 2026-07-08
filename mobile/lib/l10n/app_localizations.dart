@@ -350,6 +350,18 @@ abstract class AppLocalizations {
   /// **'Profile saved successfully!'**
   String get profileSavedSuccess;
 
+  /// Hint text for a numeric custom profile field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number'**
+  String get profileEnterNumber;
+
+  /// Hint text for a free-text custom profile field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter text'**
+  String get profileEnterText;
+
   /// Offline banner body for profile screen
   ///
   /// In en, this message translates to:
@@ -1130,6 +1142,24 @@ abstract class AppLocalizations {
   /// **'What health goal would you like to work on?'**
   String get healthGoalPrompt;
 
+  /// Instructional subtitle on the goal-input screen, encouraging detailed answers
+  ///
+  /// In en, this message translates to:
+  /// **'The more context you share (your lifestyle, what you\'ve tried, and what gets in the way), the better your recommendation will be.'**
+  String get goalInputSubtitle;
+
+  /// Example placeholder text shown inside the empty goal-description text field
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. I\'m 34 and work long hours at a desk job. I struggle to fall asleep before midnight and wake up exhausted. I\'ve tried evening runs but give up after a week. I want a realistic routine that helps me wind down and feel more rested.'**
+  String get goalInputHint;
+
+  /// Validation error when the goal-description field is submitted empty
+  ///
+  /// In en, this message translates to:
+  /// **'Please describe your goal'**
+  String get goalInputValidationError;
+
   /// Heading on the questionnaire confirmation screen
   ///
   /// In en, this message translates to:
@@ -1250,6 +1280,36 @@ abstract class AppLocalizations {
   /// **'Read your implementation intention and confirm.'**
   String get confirmPlanSubtitle;
 
+  /// Hint text for the editable implementation-intention text field
+  ///
+  /// In en, this message translates to:
+  /// **'Edit your intention…'**
+  String get confirmPlanEditHint;
+
+  /// Read-only reminder status when the study fixes the reminder time
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder at {time} (set by study)'**
+  String confirmPlanReminderAtTime(String time);
+
+  /// Read-only reminder status when the study enables reminders without a fixed time
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders enabled (set by study)'**
+  String get confirmPlanRemindersEnabledByStudy;
+
+  /// Read-only reminder status when the study disables reminders
+  ///
+  /// In en, this message translates to:
+  /// **'No reminders (set by study)'**
+  String get confirmPlanNoRemindersByStudy;
+
+  /// Label for the community-sharing opt-in switch on the confirm plan screen
+  ///
+  /// In en, this message translates to:
+  /// **'Share this habit anonymously with the community'**
+  String get confirmPlanShareWithCommunity;
+
   /// Label for duration input in new habit flow
   ///
   /// In en, this message translates to:
@@ -1295,8 +1355,20 @@ abstract class AppLocalizations {
   /// Stem sentence for SRHI items
   ///
   /// In en, this message translates to:
-  /// **'My {behavior} is something…'**
+  /// **'{behavior} is something…'**
   String srhiStem(String behavior);
+
+  /// Label for the lowest point of the SRHI 1-7 agreement scale
+  ///
+  /// In en, this message translates to:
+  /// **'1 = Strongly disagree'**
+  String get srhiScaleMin;
+
+  /// Label for the highest point of the SRHI 1-7 agreement scale
+  ///
+  /// In en, this message translates to:
+  /// **'7 = Strongly agree'**
+  String get srhiScaleMax;
 
   /// Submit button on SRHI form screen
   ///
@@ -1705,6 +1777,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next'**
   String get onboardingNext;
+
+  /// AppBar title on the study-code onboarding screen
+  ///
+  /// In en, this message translates to:
+  /// **'Study Code'**
+  String get studyCodeAppBarTitle;
+
+  /// Heading on the study-code onboarding screen
+  ///
+  /// In en, this message translates to:
+  /// **'Do you have a study code?'**
+  String get studyCodeQuestion;
+
+  /// Explanatory subtitle on the study-code onboarding screen
+  ///
+  /// In en, this message translates to:
+  /// **'If a researcher gave you a study code, enter it here to join their study. You can also skip this step.'**
+  String get studyCodeSubtitle;
+
+  /// Text field label for the study code input
+  ///
+  /// In en, this message translates to:
+  /// **'Study code'**
+  String get studyCodeLabel;
+
+  /// Validation error when the entered study code doesn't match the expected format
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid code in HHH-XXXXX format.'**
+  String get studyCodeInvalidFormat;
+
+  /// Error shown when the server rejects the study code as unknown (404)
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid code. Please check and try again.'**
+  String get studyCodeInvalid;
+
+  /// Error shown when the study code has expired (410)
+  ///
+  /// In en, this message translates to:
+  /// **'This code has expired.'**
+  String get studyCodeExpired;
+
+  /// Error shown when the study code was already redeemed (409)
+  ///
+  /// In en, this message translates to:
+  /// **'This code has already been used.'**
+  String get studyCodeAlreadyUsed;
+
+  /// Fallback error when redeeming the study code fails for an unrecognised reason
+  ///
+  /// In en, this message translates to:
+  /// **'Could not redeem code. Please check your connection.'**
+  String get studyCodeGenericError;
+
+  /// Primary button to submit the entered study code
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with code'**
+  String get studyCodeContinueButton;
+
+  /// Secondary button to skip entering a study code and join the default study
+  ///
+  /// In en, this message translates to:
+  /// **'Skip: join without a study code'**
+  String get studyCodeSkipButton;
 
   /// Title of the confirmation dialog shown before deleting a questionnaire
   ///
@@ -2243,7 +2381,7 @@ abstract class AppLocalizations {
   /// Body copy for the explanatory card on why habit sharing is useful
   ///
   /// In en, this message translates to:
-  /// **'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone\'s recommendations become, including yours.'**
+  /// **'Shared habits stay anonymous and help researchers build better recommendations for everyone, including you.'**
   String get donateWhyShareBody;
 
   /// Tap target on the why-share card opening the About the project info page
