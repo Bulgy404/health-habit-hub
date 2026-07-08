@@ -160,6 +160,82 @@ class AppLocalizationsDe extends AppLocalizations {
       'Konto auf diesem Gerät wiederherstellen';
 
   @override
+  String get studyMembershipTitle => 'Studie';
+
+  @override
+  String get studyMembershipCurrentLabel => 'Aktuelle Studie';
+
+  @override
+  String get studyMembershipDefaultLabel =>
+      'Allgemeine Studie (ohne Studiencode)';
+
+  @override
+  String studyMembershipGroupLabel(String groupLabel) {
+    return 'Gruppe: $groupLabel';
+  }
+
+  @override
+  String get studyMembershipLoadFailed =>
+      'Deine Studieninformationen konnten nicht geladen werden.';
+
+  @override
+  String get studyMembershipJoinButton => 'Einer anderen Studie beitreten';
+
+  @override
+  String get studyMembershipLeaveButton => 'Studie verlassen';
+
+  @override
+  String get studyMembershipJoinDialogTitle => 'Studie beitreten';
+
+  @override
+  String get studyMembershipJoinDialogBody =>
+      'Gib den Studiencode ein, den dir eine Forscherin oder ein Forscher gegeben hat. Bereits geteilte Gewohnheiten, Protokolle und Antworten bleiben bei deiner aktuellen Studie; nur was du ab jetzt tust, zählt für die neue Studie.';
+
+  @override
+  String get studyMembershipCodeLabel => 'Studiencode';
+
+  @override
+  String get studyMembershipJoinConfirm => 'Beitreten';
+
+  @override
+  String studyMembershipJoinSuccess(String studyName) {
+    return 'Du bist $studyName beigetreten.';
+  }
+
+  @override
+  String get studyMembershipAlreadyInStudy =>
+      'Du bist bereits in dieser Studie.';
+
+  @override
+  String get studyMembershipInvalidCode =>
+      'Ungültiger Code. Bitte überprüfen und erneut versuchen.';
+
+  @override
+  String get studyMembershipCodeExpired => 'Dieser Code ist abgelaufen.';
+
+  @override
+  String get studyMembershipCodeUsedUp =>
+      'Dieser Code wurde bereits vollständig eingelöst.';
+
+  @override
+  String get studyMembershipJoinFailed =>
+      'Beitritt zur Studie fehlgeschlagen. Bitte überprüfe deine Verbindung.';
+
+  @override
+  String get studyMembershipLeaveConfirmTitle => 'Diese Studie verlassen?';
+
+  @override
+  String get studyMembershipLeaveConfirmBody =>
+      'Du wechselst in die allgemeine Studie. Es wird nichts gelöscht: Deine bisherigen Gewohnheiten, Protokolle und Fragebogenantworten bleiben genau erhalten und weiterhin dieser Studie zugeordnet.';
+
+  @override
+  String get studyMembershipLeaveSuccess => 'Du hast die Studie verlassen.';
+
+  @override
+  String get studyMembershipLeaveFailed =>
+      'Verlassen der Studie fehlgeschlagen. Bitte überprüfe deine Verbindung.';
+
+  @override
   String get profileCompleted => 'Profil ausgefüllt';
 
   @override
@@ -652,6 +728,28 @@ class AppLocalizationsDe extends AppLocalizations {
       'SRHI-Daten erscheinen nach deinem ersten wöchentlichen Check-in.';
 
   @override
+  String get srhiExplanationTitle => 'Was ist SRHI?';
+
+  @override
+  String get srhiExplanationBody =>
+      'Der Self-Report Habit Index (SRHI) misst, wie automatisch sich dieses Verhalten für dich anfühlt, auf einer Skala von 1 bis 7. Ein höherer Wert bedeutet weniger bewussten Aufwand: ein Zeichen dafür, dass die Gewohnheit Teil deiner Routine wird.';
+
+  @override
+  String get srhiScoreLabel => 'Aktueller SRHI-Wert';
+
+  @override
+  String get srhiScoreUnavailable => 'Noch nicht verfügbar';
+
+  @override
+  String get srhiNextCheckInLabel => 'Nächster Check-in';
+
+  @override
+  String get srhiNextCheckInDue => 'Jetzt fällig';
+
+  @override
+  String get srhiNextCheckInNone => 'Nicht geplant';
+
+  @override
   String get consentTitle => 'Studieninformation & Einwilligung';
 
   @override
@@ -1130,6 +1228,9 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get donateWhyShareBody =>
       'Jede geteilte Gewohnheit fließt anonym in eine wachsende, öffentliche Wissensbasis darüber ein, wie Menschen im Alltag gesunde Routinen aufbauen. Je mehr echte Beispiele Forschende sehen, desto besser lassen sich hilfreichere Empfehlungen für alle entwickeln, auch für dich.';
+
+  @override
+  String get readMoreAboutProject => 'Mehr über das Projekt erfahren';
 
   @override
   String get donatePleaseAnswerAllQuestions => 'Bitte beantworte alle Fragen';

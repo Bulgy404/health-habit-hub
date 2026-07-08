@@ -70,11 +70,14 @@ class _GoalInputScreenState extends State<GoalInputScreen> {
               TextFormField(
                 controller: _controller,
                 maxLines: 5,
-                style: const TextStyle(fontSize: 14),
+                style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
                 decoration: InputDecoration(
                   hintText:
                       'e.g. I\'m 34 and work long hours at a desk job. I struggle to fall asleep before midnight and wake up exhausted. I\'ve tried evening runs but give up after a week. I want a realistic routine that helps me wind down and feel more rested.',
-                  hintStyle: const TextStyle(color: Color(0xFF9CA3AF), height: 1.5),
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.5,
+                  ),
                   filled: true,
                   fillColor: Theme.of(context).colorScheme.surface,
                   border: OutlineInputBorder(

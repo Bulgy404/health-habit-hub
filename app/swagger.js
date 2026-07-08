@@ -58,6 +58,17 @@ const options = {
             latencyMs: { type: 'number', example: 12 },
           },
         },
+        EnrollmentResult: {
+          type: 'object',
+          description:
+            'Study/group a participant ended up in after an enroll, switch, or leave call.',
+          properties: {
+            studyId: { type: 'string' },
+            groupId: { type: 'string', nullable: true },
+            studyName: { type: 'string', nullable: true },
+            groupLabel: { type: 'string', nullable: true },
+          },
+        },
         HealthResponse: {
           type: 'object',
           properties: {
@@ -178,6 +189,7 @@ const options = {
     path.join(__dirname, 'routes', 'habitsRouter.js'),
     path.join(__dirname, 'routes', 'recommendRouter.js'),
     path.join(__dirname, 'routes', 'profileRouter.js'),
+    path.join(__dirname, 'routes', 'studyEnrollRouter.js'),
   ],
 };
 

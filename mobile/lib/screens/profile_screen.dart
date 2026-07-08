@@ -1,11 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
+import '../features/my_habits/my_habits_provider.dart';
 import '../features/questionnaire/questionnaire_service.dart';
 import '../l10n/app_localizations.dart';
 import '../screens/onboarding/profile_fields.dart';
@@ -533,6 +535,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 24),
           _StudyQuestionnairesSection(l10n: l10n),
+          const SizedBox(height: 24),
+          const _StudyMembershipSection(),
           const SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: () => context.push('/onboarding/restore'),
@@ -608,6 +612,293 @@ class _StudyQuestionnairesSection extends ConsumerWidget {
             );
           },
         ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Study membership
+// ---------------------------------------------------------------------------
+
+/// Current-enrollment display plus "join a different study" / "leave study"
+/// actions for the account screen.
+///
+/// Switching or leaving never deletes or re-attributes past data: habits,
+/// logs, and questionnaire answers already submitted keep the studyId they
+/// were stamped with at the time (see habitDonationService.js on the
+/// backend) — only activity from this point on counts toward the new study.
+class _StudyMembershipSection extends ConsumerStatefulWidget {
+  const _StudyMembershipSection();
+
+  @override
+  ConsumerState<_StudyMembershipSection> createState() =>
+      _StudyMembershipSectionState();
+}
+
+class _StudyMembershipSectionState
+    extends ConsumerState<_StudyMembershipSection> {
+  static const _baseUrl = AppConfig.apiBaseUrl;
+
+  bool _loading = true;
+  String? _studyName;
+  String? _groupLabel;
+  bool _isDefaultStudy = true;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get<Map<String, dynamic>>(
+        '$_baseUrl/onboarding/enrollment',
+      );
+      final data = res.data ?? {};
+      if (!mounted) return;
+      setState(() {
+        _studyName = data['studyName'] as String?;
+        _groupLabel = data['groupLabel'] as String?;
+        _isDefaultStudy = data['isDefaultStudy'] as bool? ?? true;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  void _showSnack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Maps a switch/leave request's error response to a localized message.
+  String _errorMessage(AppLocalizations l10n, DioException e, {required bool isJoin}) {
+    final status = e.response?.statusCode;
+    if (isJoin) {
+      if (status == 404) return l10n.studyMembershipInvalidCode;
+      if (status == 410) {
+        final body = e.response?.data;
+        final err = body is Map ? body['error'] as String? : null;
+        return err?.contains('limit') == true
+            ? l10n.studyMembershipCodeUsedUp
+            : l10n.studyMembershipCodeExpired;
+      }
+      if (status == 409) return l10n.studyMembershipAlreadyInStudy;
+      return l10n.studyMembershipJoinFailed;
+    }
+    return l10n.studyMembershipLeaveFailed;
+  }
+
+  Future<void> _submitJoin(String code) async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _busy = true);
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.post<Map<String, dynamic>>(
+        '$_baseUrl/onboarding/switch-study',
+        data: {'code': code},
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      final studyName = res.data?['studyName'] as String? ?? '';
+      _showSnack(l10n.studyMembershipJoinSuccess(studyName));
+      ref.invalidate(habitConfigProvider);
+      await _load();
+    } on DioException catch (e) {
+      if (!mounted) return;
+      _showSnack(_errorMessage(l10n, e, isJoin: true));
+    } catch (_) {
+      if (!mounted) return;
+      _showSnack(l10n.studyMembershipJoinFailed);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _openJoinDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController();
+    String? errorText;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: Text(l10n.studyMembershipJoinDialogTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.studyMembershipJoinDialogBody),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                enabled: !_busy,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: l10n.studyMembershipCodeLabel,
+                  hintText: 'HHH-XXXXX',
+                  border: const OutlineInputBorder(),
+                  errorText: errorText,
+                ),
+                textCapitalization: TextCapitalization.characters,
+                inputFormatters: [
+                  TextInputFormatter.withFunction((oldValue, newValue) {
+                    return newValue.copyWith(text: newValue.text.toUpperCase());
+                  }),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: _busy ? null : () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: _busy
+                  ? null
+                  : () {
+                      final code = controller.text.trim();
+                      if (!RegExp(r'^HHH-[A-Z0-9]{5}$').hasMatch(code)) {
+                        setDialogState(
+                          () => errorText = l10n.studyMembershipInvalidCode,
+                        );
+                        return;
+                      }
+                      _submitJoin(code);
+                    },
+              child: Text(l10n.studyMembershipJoinConfirm),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmLeave() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.studyMembershipLeaveConfirmTitle),
+        content: Text(l10n.studyMembershipLeaveConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _busy = true);
+    try {
+      final dio = ref.read(dioProvider);
+      await dio.post<void>('$_baseUrl/onboarding/leave-study');
+      if (!mounted) return;
+      _showSnack(l10n.studyMembershipLeaveSuccess);
+      ref.invalidate(habitConfigProvider);
+      await _load();
+    } on DioException catch (e) {
+      if (!mounted) return;
+      _showSnack(_errorMessage(l10n, e, isJoin: false));
+    } catch (_) {
+      if (!mounted) return;
+      _showSnack(l10n.studyMembershipLeaveFailed);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_studyName == null && _isDefaultStudy) {
+      // GET /enrollment failed or returned nothing usable — fail silently
+      // rather than show a confusing partial section.
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.groups_outlined, color: cs.primary, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              l10n.studyMembershipTitle,
+              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.studyMembershipCurrentLabel,
+                style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _isDefaultStudy
+                    ? l10n.studyMembershipDefaultLabel
+                    : (_studyName ?? ''),
+                style: tt.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              if (_groupLabel != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  l10n.studyMembershipGroupLabel(_groupLabel!),
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _busy ? null : _openJoinDialog,
+          icon: const Icon(Icons.qr_code, size: 16),
+          label: Text(l10n.studyMembershipJoinButton),
+        ),
+        if (!_isDefaultStudy) ...[
+          const SizedBox(height: 8),
+          TextButton.icon(
+            onPressed: _busy ? null : _confirmLeave,
+            icon: Icon(Icons.logout, size: 16, color: cs.error),
+            label: Text(
+              l10n.studyMembershipLeaveButton,
+              style: TextStyle(color: cs.error),
+            ),
+          ),
+        ],
       ],
     );
   }

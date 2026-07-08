@@ -187,6 +187,92 @@
   "@rand36HealthSurvey": {
     "description": "Button label for the RAND-36 questionnaire"
   },
+  "studyMembershipTitle": "研究",
+  "@studyMembershipTitle": {
+    "description": "Section heading for study membership on the account screen"
+  },
+  "studyMembershipCurrentLabel": "現在の研究",
+  "@studyMembershipCurrentLabel": {
+    "description": "Label above the current study name"
+  },
+  "studyMembershipDefaultLabel": "一般研究（研究コードなし）",
+  "@studyMembershipDefaultLabel": {
+    "description": "Shown as the study name when the participant is in the default study rather than a code-joined one"
+  },
+  "studyMembershipGroupLabel": "グループ: {groupLabel}",
+  "@studyMembershipGroupLabel": {
+    "description": "Shows the participant's group within their current study",
+    "placeholders": { "groupLabel": { "type": "String" } }
+  },
+  "studyMembershipLoadFailed": "研究情報を読み込めませんでした。",
+  "@studyMembershipLoadFailed": {
+    "description": "Error shown when the current enrollment fails to load"
+  },
+  "studyMembershipJoinButton": "別の研究に参加する",
+  "@studyMembershipJoinButton": {
+    "description": "Button opening the join-a-study dialog"
+  },
+  "studyMembershipLeaveButton": "研究から離脱する",
+  "@studyMembershipLeaveButton": {
+    "description": "Button that leaves the current code-joined study, returning to the general study"
+  },
+  "studyMembershipJoinDialogTitle": "研究に参加する",
+  "@studyMembershipJoinDialogTitle": {
+    "description": "Title of the join-a-study dialog"
+  },
+  "studyMembershipJoinDialogBody": "研究者から受け取った研究コードを入力してください。すでに共有した習慣・記録・回答は現在の研究に残ります。今後の行動のみが新しい研究に反映されます。",
+  "@studyMembershipJoinDialogBody": {
+    "description": "Explanatory body text in the join-a-study dialog"
+  },
+  "studyMembershipCodeLabel": "研究コード",
+  "@studyMembershipCodeLabel": {
+    "description": "Label for the study code text field"
+  },
+  "studyMembershipJoinConfirm": "参加する",
+  "@studyMembershipJoinConfirm": {
+    "description": "Confirm button in the join-a-study dialog"
+  },
+  "studyMembershipJoinSuccess": "{studyName}に参加しました。",
+  "@studyMembershipJoinSuccess": {
+    "description": "Snackbar shown after successfully switching to a new study",
+    "placeholders": { "studyName": { "type": "String" } }
+  },
+  "studyMembershipAlreadyInStudy": "すでにその研究に参加しています。",
+  "@studyMembershipAlreadyInStudy": {
+    "description": "Error when the entered code targets the study the participant is already in"
+  },
+  "studyMembershipInvalidCode": "無効なコードです。確認してもう一度お試しください。",
+  "@studyMembershipInvalidCode": {
+    "description": "Error for an unrecognized study code"
+  },
+  "studyMembershipCodeExpired": "このコードは有効期限が切れています。",
+  "@studyMembershipCodeExpired": {
+    "description": "Error for an expired study code"
+  },
+  "studyMembershipCodeUsedUp": "このコードはすでに使い切られています。",
+  "@studyMembershipCodeUsedUp": {
+    "description": "Error for a study code that has hit its redemption limit"
+  },
+  "studyMembershipJoinFailed": "研究に参加できませんでした。接続を確認してください。",
+  "@studyMembershipJoinFailed": {
+    "description": "Generic fallback error when joining a study fails"
+  },
+  "studyMembershipLeaveConfirmTitle": "この研究から離脱しますか？",
+  "@studyMembershipLeaveConfirmTitle": {
+    "description": "Title of the leave-study confirmation dialog"
+  },
+  "studyMembershipLeaveConfirmBody": "一般研究に移動します。データは削除されません。これまでの習慣・記録・アンケートの回答はそのまま保持され、引き続きこの研究に紐づけられます。",
+  "@studyMembershipLeaveConfirmBody": {
+    "description": "Explanatory body text in the leave-study confirmation dialog"
+  },
+  "studyMembershipLeaveSuccess": "研究から離脱しました。",
+  "@studyMembershipLeaveSuccess": {
+    "description": "Snackbar shown after successfully leaving a study"
+  },
+  "studyMembershipLeaveFailed": "研究から離脱できませんでした。接続を確認してください。",
+  "@studyMembershipLeaveFailed": {
+    "description": "Generic fallback error when leaving a study fails"
+  },
   "restoreAccountOnDevice": "この端末でアカウントを復元",
   "@restoreAccountOnDevice": {
     "description": "Button label to restore account on current device"
@@ -816,6 +902,34 @@
   "@noTrajectoryYet": {
     "description": "Empty state for trajectory chart"
   },
+  "srhiExplanationTitle": "SRHIとは？",
+  "@srhiExplanationTitle": {
+    "description": "Title of the dismissible SRHI explainer card on the habit detail screen"
+  },
+  "srhiExplanationBody": "SRHI（習慣自己報告指標）は、この行動がどれくらい自動的に感じられるかを1〜7の尺度で測定します。スコアが高いほど意識的な努力が少なくて済み、習慣が日常に定着しつつあることを示します。",
+  "@srhiExplanationBody": {
+    "description": "Body text of the dismissible SRHI explainer card"
+  },
+  "srhiScoreLabel": "現在のSRHIスコア",
+  "@srhiScoreLabel": {
+    "description": "Label above the latest SRHI score figure"
+  },
+  "srhiScoreUnavailable": "まだ利用できません",
+  "@srhiScoreUnavailable": {
+    "description": "Shown instead of a score figure before the first check-in is submitted"
+  },
+  "srhiNextCheckInLabel": "次回のチェックイン",
+  "@srhiNextCheckInLabel": {
+    "description": "Label for the next scheduled SRHI check-in date"
+  },
+  "srhiNextCheckInDue": "現在対応可能",
+  "@srhiNextCheckInDue": {
+    "description": "Shown instead of a date when the next SRHI check-in is already due"
+  },
+  "srhiNextCheckInNone": "予定なし",
+  "@srhiNextCheckInNone": {
+    "description": "Shown when there is no upcoming SRHI check-in for this habit"
+  },
   "consentTitle": "研究の説明と同意",
   "@consentTitle": {
     "description": "App bar title of the informed-consent screen"
@@ -1062,6 +1176,7 @@
   "donateShareAnotherButton": "別の習慣を共有する",
   "donateWhyShareTitle": "なぜシェアするの？",
   "donateWhyShareBody": "シェアされた習慣は匿名で集められ、人々が日常生活の中でどのように健康的な習慣を築いているかを示す、公開された知見として蓄積されていきます。研究者がより多くの実例に触れるほど、あなたを含むすべての人へのおすすめがより良いものになります。",
+  "readMoreAboutProject": "プロジェクトについてもっと詳しく",
   "donatePleaseAnswerAllQuestions": "すべての質問に回答してください",
   "donateNotAHabitMessage": "これは習慣のようには見えません。「毎朝30分散歩する」のように、繰り返し行っている行動を説明してみてください。",
   "donateSavedOffline": "オフラインで保存しました。接続が回復次第、自動的に送信されます",

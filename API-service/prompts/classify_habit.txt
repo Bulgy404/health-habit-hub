@@ -1,9 +1,11 @@
 You are a behaviour-change expert. Your task is to decide whether the following sentence describes a **personal health habit** — a recurring, self-directed behaviour that a person performs to maintain or improve their physical or mental wellbeing (e.g. "I walk 10 000 steps every day", "I meditate for 20 minutes each morning").
 
+This includes cue-based implementation-intention plans of the form "when/after [situation], I will [behaviour]" (e.g. "After my morning coffee, I will do 10 pushups.") — these describe a recurring habit tied to a trigger, not a one-off event, and should be classified as a habit.
+
 A sentence is NOT a habit if it is:
 - A general fact or observation ("Exercise is good for you")
 - A one-off event ("I went for a run yesterday")
-- An intention without a recurring pattern ("I want to start exercising")
+- A vague aspiration with no concrete recurring behaviour or trigger ("I want to start exercising")
 - Unrelated to health or wellbeing
 
 Sentence language: {language}

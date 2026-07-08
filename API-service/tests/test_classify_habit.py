@@ -1,11 +1,14 @@
 """Unit tests for POST /api/v1/llm/classify-habit."""
 import json
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from main import app
+
+PROMPT_PATH = Path(__file__).resolve().parent.parent / "prompts" / "classify_habit.txt"
 
 
 @pytest.mark.asyncio
@@ -96,3 +99,20 @@ async def test_cache_hit_returns_cached_value():
     data = resp.json()
     assert data["is_habit"] is True
     assert data["confidence"] == pytest.approx(0.99)
+
+
+def test_prompt_treats_implementation_intentions_as_habits():
+    """Regression guard: the mobile app's guided habit-creation flow (and any
+    habit later shared from a recommendation) submits cue-based
+    "when/after X, I will Y" implementation-intention sentences, not free-text
+    habit descriptions. The prompt previously excluded "an intention without a
+    recurring pattern", which the LLM was classifying this cue-triggered,
+    recurring phrasing under — silently rejecting it (persistRejectedHabit in
+    habitDonationService.js), so those habits never got context extraction,
+    BCIO mapping, or embeddings like a normally-donated habit does. Asserts
+    the prompt explicitly carves out this phrasing so the fix isn't quietly
+    reverted.
+    """
+    text = PROMPT_PATH.read_text()
+    assert "implementation-intention" in text
+    assert "when/after" in text or "when" in text.lower()

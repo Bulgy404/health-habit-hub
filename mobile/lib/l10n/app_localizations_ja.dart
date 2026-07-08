@@ -151,6 +151,75 @@ class AppLocalizationsJa extends AppLocalizations {
   String get restoreAccountOnDevice => 'この端末でアカウントを復元';
 
   @override
+  String get studyMembershipTitle => '研究';
+
+  @override
+  String get studyMembershipCurrentLabel => '現在の研究';
+
+  @override
+  String get studyMembershipDefaultLabel => '一般研究（研究コードなし）';
+
+  @override
+  String studyMembershipGroupLabel(String groupLabel) {
+    return 'グループ: $groupLabel';
+  }
+
+  @override
+  String get studyMembershipLoadFailed => '研究情報を読み込めませんでした。';
+
+  @override
+  String get studyMembershipJoinButton => '別の研究に参加する';
+
+  @override
+  String get studyMembershipLeaveButton => '研究から離脱する';
+
+  @override
+  String get studyMembershipJoinDialogTitle => '研究に参加する';
+
+  @override
+  String get studyMembershipJoinDialogBody =>
+      '研究者から受け取った研究コードを入力してください。すでに共有した習慣・記録・回答は現在の研究に残ります。今後の行動のみが新しい研究に反映されます。';
+
+  @override
+  String get studyMembershipCodeLabel => '研究コード';
+
+  @override
+  String get studyMembershipJoinConfirm => '参加する';
+
+  @override
+  String studyMembershipJoinSuccess(String studyName) {
+    return '$studyNameに参加しました。';
+  }
+
+  @override
+  String get studyMembershipAlreadyInStudy => 'すでにその研究に参加しています。';
+
+  @override
+  String get studyMembershipInvalidCode => '無効なコードです。確認してもう一度お試しください。';
+
+  @override
+  String get studyMembershipCodeExpired => 'このコードは有効期限が切れています。';
+
+  @override
+  String get studyMembershipCodeUsedUp => 'このコードはすでに使い切られています。';
+
+  @override
+  String get studyMembershipJoinFailed => '研究に参加できませんでした。接続を確認してください。';
+
+  @override
+  String get studyMembershipLeaveConfirmTitle => 'この研究から離脱しますか？';
+
+  @override
+  String get studyMembershipLeaveConfirmBody =>
+      '一般研究に移動します。データは削除されません。これまでの習慣・記録・アンケートの回答はそのまま保持され、引き続きこの研究に紐づけられます。';
+
+  @override
+  String get studyMembershipLeaveSuccess => '研究から離脱しました。';
+
+  @override
+  String get studyMembershipLeaveFailed => '研究から離脱できませんでした。接続を確認してください。';
+
+  @override
   String get profileCompleted => 'プロフィール完了';
 
   @override
@@ -607,6 +676,28 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noTrajectoryYet => 'SRHIデータは最初の週次チェックイン後に表示されます。';
 
   @override
+  String get srhiExplanationTitle => 'SRHIとは？';
+
+  @override
+  String get srhiExplanationBody =>
+      'SRHI（習慣自己報告指標）は、この行動がどれくらい自動的に感じられるかを1〜7の尺度で測定します。スコアが高いほど意識的な努力が少なくて済み、習慣が日常に定着しつつあることを示します。';
+
+  @override
+  String get srhiScoreLabel => '現在のSRHIスコア';
+
+  @override
+  String get srhiScoreUnavailable => 'まだ利用できません';
+
+  @override
+  String get srhiNextCheckInLabel => '次回のチェックイン';
+
+  @override
+  String get srhiNextCheckInDue => '現在対応可能';
+
+  @override
+  String get srhiNextCheckInNone => '予定なし';
+
+  @override
   String get consentTitle => '研究の説明と同意';
 
   @override
@@ -1054,6 +1145,9 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get donateWhyShareBody =>
       'シェアされた習慣は匿名で集められ、人々が日常生活の中でどのように健康的な習慣を築いているかを示す、公開された知見として蓄積されていきます。研究者がより多くの実例に触れるほど、あなたを含むすべての人へのおすすめがより良いものになります。';
+
+  @override
+  String get readMoreAboutProject => 'プロジェクトについてもっと詳しく';
 
   @override
   String get donatePleaseAnswerAllQuestions => 'すべての質問に回答してください';

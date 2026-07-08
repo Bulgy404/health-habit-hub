@@ -83,7 +83,14 @@
     "noComments": "Aucun commentaire à modérer.",
     "confirmDelete": "Supprimer ce commentaire ? Cette action est irréversible.",
     "loadFailed": "Échec du chargement des commentaires",
-    "deleteFailed": "Échec de la suppression du commentaire"
+    "deleteFailed": "Échec de la suppression du commentaire",
+    "flaggedTitle": "Signalés pour examen",
+    "flaggedSubtitle": "Signalés automatiquement par la modération de contenu. Approuvez pour publier, ou supprimez pour rejeter.",
+    "noFlaggedComments": "Rien n'est signalé pour examen pour le moment.",
+    "flagReason": "Motif",
+    "approve": "Approuver",
+    "approving": "Approbation en cours…",
+    "approveFailed": "Échec de l'approbation du commentaire"
   },
   "devices": {
     "title": "Appareils",

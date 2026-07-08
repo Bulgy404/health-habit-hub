@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
-import '../../widgets/habit_heatmap_widget.dart';
+import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/srhi_sparkline_widget.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
@@ -108,7 +108,7 @@ class HabitDetailScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                // ── Heatmap ──────────────────────────────────────────────
+                // ── Activity log (GitHub-style contribution graph) ────────
                 const SizedBox(height: 16),
                 Text(l10n.heatmapTitle,
                     style: Theme.of(context)
@@ -125,16 +125,16 @@ class HabitDetailScreen extends ConsumerWidget {
                               .bodySmall
                               ?.copyWith(color: Colors.grey));
                     }
-                    final logsMap = {for (final l in logs) l.date: l.enacted};
-                    return HabitHeatmapWidget(
-                      logs: logsMap,
-                      startDate: intention.createdAt,
-                    );
+                    final counts = <DateTime, int>{
+                      for (final l in logs)
+                        if (l.enacted) _parseDateKey(l.date): 1,
+                    };
+                    return ContributionGraphWidget(counts: counts);
                   },
                   loading: () => const LinearProgressIndicator(),
                   error: (e, _) => Text(e.toString()),
                 ),
-                // ── SRHI trajectory sparkline ─────────────────────────────
+                // ── Habit strength (SRHI) ─────────────────────────────────
                 const SizedBox(height: 24),
                 Text(l10n.trajectoryTitle,
                     style: Theme.of(context)
@@ -146,16 +146,38 @@ class HabitDetailScreen extends ConsumerWidget {
                   data: (trajectory) {
                     final submitted =
                         trajectory.where((p) => p.score != null).toList();
-                    if (submitted.isEmpty) {
-                      return Text(l10n.noTrajectoryYet,
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.copyWith(color: Colors.grey));
-                    }
-                    return SrhiSparklineWidget(
-                      trajectory: trajectory,
-                      height: 120,
+                    final latestScore =
+                        submitted.isEmpty ? null : submitted.last.score;
+                    final nextDue = trajectory
+                        .where((p) => p.submittedAt == null && p.scheduledFor != null)
+                        .map((p) => p.scheduledFor!)
+                        .fold<DateTime?>(
+                          null,
+                          (earliest, d) =>
+                              earliest == null || d.isBefore(earliest)
+                                  ? d
+                                  : earliest,
+                        );
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SrhiExplanationCard(
+                          score: latestScore,
+                          nextDue: nextDue,
+                        ),
+                        const SizedBox(height: 12),
+                        if (submitted.isEmpty)
+                          Text(l10n.noTrajectoryYet,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: Colors.grey))
+                        else
+                          SrhiSparklineWidget(
+                            trajectory: trajectory,
+                            height: 120,
+                          ),
+                      ],
                     );
                   },
                   loading: () => const LinearProgressIndicator(),
@@ -166,6 +188,163 @@ class HabitDetailScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// Parses a `'YYYY-MM-DD'` log date string into a midnight-normalised
+/// [DateTime], matching [ContributionGraphWidget]'s key format.
+DateTime _parseDateKey(String date) {
+  final parts = date.split('-');
+  return DateTime(
+    int.parse(parts[0]),
+    int.parse(parts[1]),
+    int.parse(parts[2]),
+  );
+}
+
+/// SRHI score figure, next-check-in date, and a short dismissible
+/// explanation of what SRHI is. Shown above the trajectory sparkline.
+class _SrhiExplanationCard extends StatefulWidget {
+  const _SrhiExplanationCard({required this.score, required this.nextDue});
+
+  /// Latest submitted SRHI score (1–7 scale), or `null` if none yet.
+  final double? score;
+
+  /// Date of the next not-yet-submitted check-in, or `null` if none scheduled.
+  final DateTime? nextDue;
+
+  @override
+  State<_SrhiExplanationCard> createState() => _SrhiExplanationCardState();
+}
+
+class _SrhiExplanationCardState extends State<_SrhiExplanationCard> {
+  bool _explanationDismissed = false;
+
+  String _formatDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
+    final today = DateTime.now();
+    final todayNorm = DateTime(today.year, today.month, today.day);
+    final nextDue = widget.nextDue;
+    final nextDueLabel = nextDue == null
+        ? l10n.srhiNextCheckInNone
+        : (!nextDue.isAfter(todayNorm)
+            ? l10n.srhiNextCheckInDue
+            : _formatDate(nextDue));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _SrhiStat(
+                    label: l10n.srhiScoreLabel,
+                    value: widget.score == null
+                        ? l10n.srhiScoreUnavailable
+                        : widget.score!.toStringAsFixed(1),
+                    valueColor: const Color(0xFF45B700),
+                  ),
+                ),
+                Expanded(
+                  child: _SrhiStat(
+                    label: l10n.srhiNextCheckInLabel,
+                    value: nextDueLabel,
+                    valueColor: colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+            if (!_explanationDismissed) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.srhiExplanationTitle,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.srhiExplanationBody,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      visualDensity: VisualDensity.compact,
+                      tooltip: MaterialLocalizations.of(context)
+                          .closeButtonTooltip,
+                      onPressed: () =>
+                          setState(() => _explanationDismissed = true),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SrhiStat extends StatelessWidget {
+  const _SrhiStat({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+  });
+
+  final String label;
+  final String value;
+  final Color valueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall
+              ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: Theme.of(context)
+              .textTheme
+              .titleMedium
+              ?.copyWith(fontWeight: FontWeight.w800, color: valueColor),
+        ),
+      ],
     );
   }
 }

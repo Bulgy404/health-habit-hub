@@ -1,6 +1,6 @@
 # Health Habit Hub — System Architecture
 
-> **Related:** the full diagram suite (system architecture, UML use case diagram, 30 per-use-case sequence diagrams, domain class diagram) lives in [`docs/diagrams/`](diagrams/README.md) as renderable Mermaid/PlantUML sources. The use case catalogue with code traceability is in [`diagrams/use-cases/use-case-overview.md`](diagrams/use-cases/use-case-overview.md).
+> **Related:** the full diagram suite (system architecture, UML use case diagram, 39 per-use-case sequence diagrams, domain class diagram) lives in [`docs/diagrams/`](diagrams/README.md) as renderable Mermaid/PlantUML sources. The use case catalogue with code traceability is in [`diagrams/use-cases/use-case-overview.md`](diagrams/use-cases/use-case-overview.md).
 
 ## Overview
 
@@ -135,43 +135,59 @@ The donation pipeline ingests a habit sentence from the Flutter app, enriches it
 ```mermaid
 sequenceDiagram
     participant Flutter
-    participant Backend as Node.js Backend<br/>(habitsRouter.js)
+    participant Backend as Node.js Backend<br/>(habitsCrudRouter.js)
+    participant Queue as BullMQ Queue<br/>(habitQueue.js)
     participant LibreTranslate
     participant APIService as API-service<br/>(FastAPI)
     participant Neo4j
 
-    Flutter->>Backend: POST /api/v1/habits/donate<br/>Authorization: Bearer <token><br/>{ sentence, language }
+    Flutter->>Backend: POST /api/v1/habits/share<br/>Authorization: Bearer <token><br/>{ sentence, language }
     Backend->>Backend: Validate JWT (requireRole: user)
 
-    alt language ≠ "en*"
-        Backend->>LibreTranslate: POST /translate<br/>{ q: sentence, source: lang, target: "en" }
-        LibreTranslate-->>Backend: { translatedText }
-        Backend->>APIService: POST /api/v1/llm/refine-translation<br/>{ original, raw_translation, language }
-        APIService-->>Backend: { refined_translation }
+    Backend->>APIService: POST /api/v1/llm/classify-habit<br/>{ sentence, language }
+    APIService-->>Backend: { is_habit, confidence }
+
+    alt is_habit = false
+        Backend->>Neo4j: CREATE (h:Habit {is_habit:false, ...})<br/>(persistRejectedHabit — no further enrichment)
+        Backend-->>Flutter: 200 { is_habit: false, message }
+    else is_habit = true
+        Backend->>Queue: enqueue donation job<br/>(202 returned immediately)
+        Backend-->>Flutter: 202 { jobId, status: "pending" }
+        Queue->>Queue: processAcceptedHabit() picks up job
+
+        alt language ≠ "en*"
+            Queue->>LibreTranslate: POST /translate<br/>{ q: sentence, source: lang, target: "en" }
+            LibreTranslate-->>Queue: { translatedText }
+        end
+
+        Queue->>APIService: POST /api/v1/llm/classify-context<br/>{ sentence: translationEN }
+        APIService-->>Queue: { contexts: [{ text, dimension }] }
+
+        Queue->>APIService: POST /api/v1/llm/map-bcio<br/>{ contexts: [...] }
+        APIService-->>Queue: { mappings: [{ text, bcio_concept, bcio_uri }] }
+
+        Queue->>APIService: POST /api/v1/llm/embed-habit<br/>{ sentence, contexts, bcio_concepts }
+        APIService-->>Queue: { embeddings }
+
+        Queue->>Neo4j: CREATE (h:Habit { uuid, sentence, language,<br/>translationEN, translationDE, embedding })<br/>MERGE Context nodes → HAS_CONTEXT relationships<br/>MERGE BCIOConcept nodes → MAPS_TO relationships<br/>(:Habit)-[:DONATED_IN]->(:Study) when enrolled
     end
-
-    Backend->>APIService: POST /api/v1/llm/classify-context<br/>{ sentence: translationEN }
-    APIService-->>Backend: { contexts: [{ text, dimension }] }
-
-    Backend->>APIService: POST /api/v1/llm/map-bcio<br/>{ contexts: [...] }
-    APIService-->>Backend: { mappings: [{ text, bcio_concept, bcio_uri }] }
-
-    Backend->>Neo4j: CREATE (h:Habit { uuid, original, language,<br/>translationEN, translationDE })<br/>MERGE Context nodes → HAS_CONTEXT relationships<br/>MERGE BCIOConcept nodes → MAPS_TO relationships
-    Neo4j-->>Backend: nodes created
-
-    Backend-->>Flutter: 201 { message: "Habit donated" }
 ```
+
+The synchronous `shareHabit()` path (no queue configured — test mode) runs the same
+stages inline instead of enqueuing them; the classify step and the fork on
+`is_habit` are identical either way.
 
 ### Pipeline Stages
 
 | Stage | Service | Input | Output | Notes |
 |---|---|---|---|---|
 | Auth | Node.js Backend | JWT Bearer token | `req.user` with roles | JWKS fetched from Keycloak |
+| Habit Classification | API-service LLM | `sentence`, `language` | `{ is_habit, confidence }` | Uses `classify_habit` prompt. **The prompt explicitly accepts cue-based "when/after X, I will Y" implementation-intention phrasing as a valid recurring habit** (not just free-text descriptions) — this covers both the guided habit-creation flow and habits shared from a recommendation, which submit sentences in exactly that shape. Rejected sentences (`is_habit:false`) stop here with a bare `Habit` node and skip every stage below. |
 | Translation | LibreTranslate | `sentence` (non-English) | Raw English draft | Only runs when `language` does not start with `en` |
-| Translation Refinement | API-service LLM | Raw English draft + original | Natural English | Falls back to raw draft on LLM timeout (10 s) |
 | Context Classification | API-service LLM | `translationEN` | `[{ text, dimension }]` | Uses `classify-context` prompt |
 | BCIO Mapping | API-service LLM | Context phrases | `[{ bcio_concept, bcio_uri }]` | Uses `map-bcio` prompt + RAG over `bcio.owl` |
-| Graph Persistence | Neo4j | Enriched habit data | `Habit`, `Context`, `BCIOConcept` nodes | MERGE ensures idempotency |
+| Embedding | API-service LLM | Sentence + contexts + BCIO concepts | Vector embeddings | Powers the community habit vector search used by the recommender (M3 pipeline below) |
+| Graph Persistence | Neo4j | Enriched habit data | `Habit`, `Context`, `BCIOConcept` nodes, `DONATED_IN` edge (study-enrolled donors only) | MERGE ensures idempotency; `studyId` is stamped on the `Habit` node from the donor's enrollment **at donation time** and is never rewritten afterwards — see *Study Enrollment, Switching & Leaving* below |
 
 ---
 
@@ -655,12 +671,78 @@ Participants can like and comment on habits in the explore graph. Likes are a
 third annotation type (`POST /habits/:uuid/annotate {type: "like"}`,
 deduplicated per user in `habit_annotations`, mirrored as `annotations_like`
 on the `Habit` node). Comments are **anonymous** `(:Comment {id, text,
-createdAt})-[:COMMENT_ON]->(:Habit)` nodes; authorship is recorded only in
-MongoDB `habit_comments` so account deletion can erase a participant's
-comments without de-anonymising the graph. Like counts flow into the
-recommendation pipeline: the community-habit vector search returns
-`community_likes` per habit and the LLM prompt instructs preferring
-well-liked habits when they fit the user.
+createdAt, flagged, approved, flagReason})-[:COMMENT_ON]->(:Habit)` nodes;
+authorship is recorded only in MongoDB `habit_comments` so account deletion
+can erase a participant's comments without de-anonymising the graph. Like
+counts flow into the recommendation pipeline: the community-habit vector
+search returns `community_likes` per habit and the LLM prompt instructs
+preferring well-liked habits when they fit the user.
+
+**Auto-moderation:** every comment is screened synchronously by
+`commentModerationService.js` on `POST /habits/:id/comments` — a **local
+wordlist + regex check** (`obscenity` for profanity/slurs, including common
+leetspeak obfuscation, plus regex heuristics for links/emails/phone numbers
+as spam/PII signals), not an LLM call. This was a deliberate choice over an
+LLM-based screen: for short, anonymous community reactions a local check is
+instant, free, and has no external service that can fail or add latency —
+the tradeoff is it can't catch context-dependent harassment that uses no
+flagged words, or nuanced misinformation, which is out of scope for a
+wordlist by nature. Comments it flags are created with `approved:false` and
+excluded from `getHabitComments()`'s public listing (and from the
+`commentCount` shown on habits) until a researcher/admin reviews them in the
+admin "Flagged for review" queue (`GET /admin/comments?status=flagged`) and
+either approves (`POST /admin/comments/:id/approve` → `approved:true`) or
+deletes them. Comments it doesn't flag are approved immediately, so
+researchers only ever have to look at the minority that actually need a
+judgment call. See `docs/diagrams/sequences/UC-34-comment-like-habits.mmd`.
+
+### Study Enrollment, Switching & Leaving (UC-09)
+
+A participant is enrolled via `POST /onboarding/redeem-code` (study code) or
+`POST /onboarding/skip-code` (round-robin into the default study) during
+onboarding, and can subsequently move between studies from the account
+screen without losing any data:
+
+- **`POST /onboarding/switch-study`** — redeems a new code and moves the
+  participant to the study/group it targets.
+- **`POST /onboarding/leave-study`** — moves the participant back to the
+  default study (round-robin group assignment), the "leave study" action.
+- **`GET /onboarding/enrollment`** — current study/group, for display.
+
+**Data provenance is preserved across switches.** Habit nodes are stamped
+with the donor's `studyId` **at donation time** (see the donation pipeline
+above) and that property is never rewritten — so habits, logs, and
+questionnaire answers submitted before a switch stay attributed to the study
+that was active when they were created, regardless of which study the
+participant is in now. Only activity from the point of the switch onward
+counts toward the new study.
+
+**Neo4j models enrollment history, not just current state:** a participant
+can accumulate multiple `(:User)-[:ENROLLED_IN]->(:Study)` relationships over
+their lifetime — switching/leaving sets `droppedOutAt` on the current
+relationship (kept, not deleted, so `getDropoutCurve()` per-study analytics
+still see it) and creates a fresh relationship to the new study. Reads
+(`getEnrollment()`) always select the relationship with `droppedOutAt IS
+NULL` — there is exactly one at a time by construction.
+
+**MongoDB `enrollments`** mirrors the *current* enrollment only (one document
+per user, upserted on every enroll/switch/leave via
+`_upsertMongoEnrollment()`), used by dropout CSV export, admin stats,
+notification targeting, and questionnaire-window scheduling. This mirror was
+previously never written by the real enrollment flow — only by the demo seed
+script — which meant those downstream reads silently saw nothing for real
+participants; this is now fixed as part of wiring up switch/leave.
+
+**Boot-time default study/questionnaire safety net:** `skip-code` (and
+therefore `leave-study`, which reuses the same default-study round-robin)
+requires a default study with the SLIQ/RAND-36/SRHI questionnaire library
+already seeded. Two divergent, unwired manual seed scripts previously meant
+a fresh deploy that skipped `make seed` had neither, and participants hit
+"failed to load questionnaires" with no default study to fall back into.
+`app/services/defaultStudySeedService.js` now runs idempotently on every
+backend boot (from `adminRouter.js`'s existing self-seeding hook) to
+guarantee both exist, self-healing any deploy regardless of whether the
+manual seed script was ever run.
 
 ### New MongoDB Collections
 
@@ -676,7 +758,7 @@ well-liked habits when they fit the user.
 
 *Updated: 2026-06-10 | Fuseki removed from architecture docs (service retired from compose stack); backup targets corrected*
 
-*Updated: 2026-06-10 | Diagram suite added under `docs/diagrams/` (architecture, use cases, 30 sequence diagrams, class diagram)*
+*Updated: 2026-06-10 | Diagram suite added under `docs/diagrams/` (architecture, use cases, 39 sequence diagrams, class diagram)*
 
 *Updated: 2026-06-03 | LightRAG upgraded to 1.5.0*
 

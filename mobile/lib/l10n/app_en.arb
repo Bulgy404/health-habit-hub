@@ -194,6 +194,92 @@
   "@restoreAccountOnDevice": {
     "description": "Button label to restore account on current device"
   },
+  "studyMembershipTitle": "Study",
+  "@studyMembershipTitle": {
+    "description": "Section heading for study membership on the account screen"
+  },
+  "studyMembershipCurrentLabel": "Current study",
+  "@studyMembershipCurrentLabel": {
+    "description": "Label above the current study name"
+  },
+  "studyMembershipDefaultLabel": "General study (no study code)",
+  "@studyMembershipDefaultLabel": {
+    "description": "Shown as the study name when the participant is in the default study rather than a code-joined one"
+  },
+  "studyMembershipGroupLabel": "Group: {groupLabel}",
+  "@studyMembershipGroupLabel": {
+    "description": "Shows the participant's group within their current study",
+    "placeholders": { "groupLabel": { "type": "String" } }
+  },
+  "studyMembershipLoadFailed": "Couldn't load your study information.",
+  "@studyMembershipLoadFailed": {
+    "description": "Error shown when the current enrollment fails to load"
+  },
+  "studyMembershipJoinButton": "Join a different study",
+  "@studyMembershipJoinButton": {
+    "description": "Button opening the join-a-study dialog"
+  },
+  "studyMembershipLeaveButton": "Leave study",
+  "@studyMembershipLeaveButton": {
+    "description": "Button that leaves the current code-joined study, returning to the general study"
+  },
+  "studyMembershipJoinDialogTitle": "Join a study",
+  "@studyMembershipJoinDialogTitle": {
+    "description": "Title of the join-a-study dialog"
+  },
+  "studyMembershipJoinDialogBody": "Enter the study code a researcher gave you. Habits, logs, and answers you've already shared stay with your current study; only what you do from now on counts toward the new one.",
+  "@studyMembershipJoinDialogBody": {
+    "description": "Explanatory body text in the join-a-study dialog"
+  },
+  "studyMembershipCodeLabel": "Study code",
+  "@studyMembershipCodeLabel": {
+    "description": "Label for the study code text field"
+  },
+  "studyMembershipJoinConfirm": "Join",
+  "@studyMembershipJoinConfirm": {
+    "description": "Confirm button in the join-a-study dialog"
+  },
+  "studyMembershipJoinSuccess": "You've joined {studyName}.",
+  "@studyMembershipJoinSuccess": {
+    "description": "Snackbar shown after successfully switching to a new study",
+    "placeholders": { "studyName": { "type": "String" } }
+  },
+  "studyMembershipAlreadyInStudy": "You're already in that study.",
+  "@studyMembershipAlreadyInStudy": {
+    "description": "Error when the entered code targets the study the participant is already in"
+  },
+  "studyMembershipInvalidCode": "Invalid code. Please check and try again.",
+  "@studyMembershipInvalidCode": {
+    "description": "Error for an unrecognized study code"
+  },
+  "studyMembershipCodeExpired": "This code has expired.",
+  "@studyMembershipCodeExpired": {
+    "description": "Error for an expired study code"
+  },
+  "studyMembershipCodeUsedUp": "This code has already been fully used.",
+  "@studyMembershipCodeUsedUp": {
+    "description": "Error for a study code that has hit its redemption limit"
+  },
+  "studyMembershipJoinFailed": "Couldn't join that study. Please check your connection.",
+  "@studyMembershipJoinFailed": {
+    "description": "Generic fallback error when joining a study fails"
+  },
+  "studyMembershipLeaveConfirmTitle": "Leave this study?",
+  "@studyMembershipLeaveConfirmTitle": {
+    "description": "Title of the leave-study confirmation dialog"
+  },
+  "studyMembershipLeaveConfirmBody": "You'll move to the general study. Nothing is deleted: your existing habits, logs, and questionnaire answers stay exactly as they are, still attributed to this study.",
+  "@studyMembershipLeaveConfirmBody": {
+    "description": "Explanatory body text in the leave-study confirmation dialog"
+  },
+  "studyMembershipLeaveSuccess": "You've left the study.",
+  "@studyMembershipLeaveSuccess": {
+    "description": "Snackbar shown after successfully leaving a study"
+  },
+  "studyMembershipLeaveFailed": "Couldn't leave the study. Please check your connection.",
+  "@studyMembershipLeaveFailed": {
+    "description": "Generic fallback error when leaving a study fails"
+  },
   "profileCompleted": "Profile Completed",
   "@profileCompleted": {
     "description": "Card title when profile has been completed"
@@ -819,6 +905,34 @@
   "@noTrajectoryYet": {
     "description": "Empty state for trajectory chart"
   },
+  "srhiExplanationTitle": "What's SRHI?",
+  "@srhiExplanationTitle": {
+    "description": "Title of the dismissible SRHI explainer card on the habit detail screen"
+  },
+  "srhiExplanationBody": "The Self-Report Habit Index (SRHI) measures how automatic this behavior feels to you, on a scale from 1 to 7. A higher score means it takes less conscious effort: a sign the habit is becoming part of your routine.",
+  "@srhiExplanationBody": {
+    "description": "Body text of the dismissible SRHI explainer card"
+  },
+  "srhiScoreLabel": "Current SRHI score",
+  "@srhiScoreLabel": {
+    "description": "Label above the latest SRHI score figure"
+  },
+  "srhiScoreUnavailable": "Not yet available",
+  "@srhiScoreUnavailable": {
+    "description": "Shown instead of a score figure before the first check-in is submitted"
+  },
+  "srhiNextCheckInLabel": "Next check-in",
+  "@srhiNextCheckInLabel": {
+    "description": "Label for the next scheduled SRHI check-in date"
+  },
+  "srhiNextCheckInDue": "Due now",
+  "@srhiNextCheckInDue": {
+    "description": "Shown instead of a date when the next SRHI check-in is already due"
+  },
+  "srhiNextCheckInNone": "None scheduled",
+  "@srhiNextCheckInNone": {
+    "description": "Shown when there is no upcoming SRHI check-in for this habit"
+  },
   "consentTitle": "Study Information & Consent",
   "@consentTitle": {
     "description": "App bar title of the informed-consent screen"
@@ -1423,6 +1537,10 @@
   "donateWhyShareBody": "Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone's recommendations become, including yours.",
   "@donateWhyShareBody": {
     "description": "Body copy for the explanatory card on why habit sharing is useful"
+  },
+  "readMoreAboutProject": "Read more about the project",
+  "@readMoreAboutProject": {
+    "description": "Tap target on the why-share card opening the About the project info page"
   },
   "donatePleaseAnswerAllQuestions": "Please answer all questions",
   "@donatePleaseAnswerAllQuestions": {

@@ -1,0 +1,46 @@
+%% UC-38 — Switch or leave a study (after onboarding is already complete)
+%% Companion to UC-09 (first-time enrollment). Both actions move the
+%% participant's *active* ENROLLED_IN relationship: the current one gets
+%% droppedOutAt set (kept as history, not deleted, for getDropoutCurve()
+%% per-study analytics) and a fresh relationship is created to the new
+%% study. Already-donated Habit nodes keep the studyId they were stamped
+%% with at donation time — this never rewrites past data, only where
+%% *future* activity is attributed.
+sequenceDiagram
+    autonumber
+    actor P as Participant
+    participant F as Flutter App (Account screen)
+    participant B as Backend (studyEnrollRouter)
+    participant M as MongoDB
+    participant N as Neo4j
+
+    P->>F: Open Study membership section
+    F->>B: GET /api/v1/onboarding/enrollment
+    B->>N: MATCH (u)-[e:ENROLLED_IN]->(s) WHERE e.droppedOutAt IS NULL
+    N-->>B: current studyId, groupId
+    B-->>F: {studyName, groupLabel, isDefaultStudy}
+
+    rect rgba(200,230,255,0.3)
+    Note over P,N: Switch to a different study
+    P->>F: Enter a new study code, tap "Join"
+    F->>B: POST /api/v1/onboarding/switch-study {code}
+    B->>M: findOne(study_codes, {code}) + validate not expired/exhausted/same-study
+    B->>M: $inc redemptionCount (atomic claim)
+    B->>N: SET (current ENROLLED_IN).droppedOutAt = now()
+    B->>N: MERGE new Study, CREATE new ENROLLED_IN {enrolledAt, groupId, studyCodeUsed}
+    B->>M: upsert(enrollments, {userId}, {studyId, groupId, ...}) — current-state mirror
+    B-->>F: 200 {studyName, groupLabel}
+    Note right of N: Habits donated before this point keep their old studyId — see UC-03
+    end
+
+    rect rgba(255,220,200,0.3)
+    Note over P,N: Leave study (back to the general/default study)
+    P->>F: Tap "Leave study" → confirm
+    F->>B: POST /api/v1/onboarding/leave-study
+    B->>M: findOneAndUpdate(studies, {isDefault:true}, {$inc: _skipCounter}) — round-robin group
+    B->>N: SET (current ENROLLED_IN).droppedOutAt = now()
+    B->>N: MERGE default Study, CREATE new ENROLLED_IN {enrolledAt, groupId, studyCodeUsed:null}
+    B->>M: upsert(enrollments, {userId}, {studyId: defaultStudyId, ...})
+    B-->>F: 200 {studyName: "Default Study", groupLabel}
+    Note right of N: No data deleted — past habits/logs/SRHI answers stay attributed to the study just left
+    end

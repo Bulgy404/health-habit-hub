@@ -232,28 +232,56 @@ function createMockNeo4jRun() {
         id: params.id,
         text: params.text,
         createdAt: params.createdAt,
+        flagged: params.flagged,
+        approved: params.approved,
       };
-      comments.unshift({ ...created, habitId: params.habitId });
+      comments.unshift({
+        ...created,
+        habitId: params.habitId,
+        flagReason: params.reason,
+      });
       return [created];
     }
+    if (cypher.includes('SET c.approved = true, c.flagged = false')) {
+      const c = comments.find((c) => c.id === params.commentId);
+      if (!c) return [];
+      c.approved = true;
+      c.flagged = false;
+      return [{ id: c.id }];
+    }
     if (cypher.includes('RETURN count(c) AS total')) {
-      return [{ total: comments.length }];
+      const flaggedOnly = cypher.includes('c.flagged = true');
+      const filtered = flaggedOnly
+        ? comments.filter((c) => c.flagged && !c.approved)
+        : comments;
+      return [{ total: filtered.length }];
     }
     if (cypher.includes('AS habitSentence')) {
-      // Moderation list across all habits
-      return comments.map((c) => ({
+      // Moderation list across all habits, optionally flagged-only.
+      const flaggedOnly = cypher.includes('c.flagged = true');
+      const filtered = flaggedOnly
+        ? comments.filter((c) => c.flagged && !c.approved)
+        : comments;
+      return filtered.map((c) => ({
         id: c.id,
         text: c.text,
         createdAt: c.createdAt,
         habitId: c.habitId,
         habitSentence:
           FIXTURE_HABITS.find((h) => h.id === c.habitId)?.name ?? '',
+        flagged: c.flagged ?? false,
+        approved: c.approved ?? true,
+        flagReason: c.flagReason ?? null,
       }));
     }
     if (cypher.includes('MATCH (c:Comment)-[:COMMENT_ON]')) {
       return comments
-        .filter((c) => c.habitId === params.habitId)
-        .map(({ habitId: _habitId, ...rest }) => rest);
+        .filter(
+          (c) =>
+            c.habitId === params.habitId &&
+            (c.approved === true || c.approved === undefined)
+        )
+        .map(({ habitId: _habitId, flagReason: _flagReason, ...rest }) => rest);
     }
     if (cypher.includes('WHERE c.id IN $commentIds')) {
       for (const cid of params.commentIds ?? []) {
@@ -607,6 +635,88 @@ test('moderation list returns all comments with habit context', async () => {
   assert.ok(entry);
   assert.strictEqual(entry.habitId, 'habit-2');
   assert.ok(entry.habitSentence.length > 0);
+});
+
+test('a flagged comment is held out of the public habit comment list', async () => {
+  const created = await post(
+    '/api/v1/habits/habit-1/comments',
+    { text: 'This is fucking inappropriate' },
+    makeToken()
+  );
+  const { comment } = await created.json();
+  assert.strictEqual(comment.flagged, true);
+  assert.strictEqual(comment.approved, false);
+
+  const list = await get('/api/v1/habits/habit-1/comments', makeToken());
+  const listBody = await list.json();
+  assert.ok(!listBody.comments.some((c) => c.id === comment.id));
+});
+
+test('GET /admin/comments?status=flagged returns only unapproved flagged comments', async () => {
+  const flagged = await post(
+    '/api/v1/habits/habit-1/comments',
+    { text: 'Another fucking comment' },
+    makeToken()
+  );
+  const { comment: flaggedComment } = await flagged.json();
+  await post(
+    '/api/v1/habits/habit-1/comments',
+    { text: 'A perfectly normal comment' },
+    makeToken()
+  );
+
+  const res = await get(
+    '/api/v1/admin/comments?status=flagged',
+    makeToken(['admin'])
+  );
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(body.comments.every((c) => c.flagged === true));
+  assert.ok(body.comments.some((c) => c.id === flaggedComment.id));
+  assert.ok(!body.comments.some((c) => c.text === 'A perfectly normal comment'));
+});
+
+test('POST /admin/comments/:id/approve publishes a flagged comment', async () => {
+  const created = await post(
+    '/api/v1/habits/habit-1/comments',
+    { text: 'Yet another fucking comment' },
+    makeToken()
+  );
+  const { comment } = await created.json();
+
+  const beforeApproval = await get(
+    '/api/v1/habits/habit-1/comments',
+    makeToken()
+  );
+  const beforeBody = await beforeApproval.json();
+  assert.ok(!beforeBody.comments.some((c) => c.id === comment.id));
+
+  const approveRes = await fetch(
+    `${baseUrl}/api/v1/admin/comments/${comment.id}/approve`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${makeToken(['admin'])}` },
+    }
+  );
+  assert.strictEqual(approveRes.status, 200);
+
+  const afterApproval = await get(
+    '/api/v1/habits/habit-1/comments',
+    makeToken()
+  );
+  const afterBody = await afterApproval.json();
+  assert.ok(afterBody.comments.some((c) => c.id === comment.id));
+});
+
+test('POST /admin/comments/:id/approve returns 404 for an unknown comment', async () => {
+  const res = await fetch(
+    `${baseUrl}/api/v1/admin/comments/does-not-exist/approve`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${makeToken(['admin'])}` },
+    }
+  );
+  assert.strictEqual(res.status, 404);
 });
 
 test('DELETE /admin/comments/:id removes node and ownership mapping', async () => {

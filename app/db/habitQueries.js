@@ -73,6 +73,7 @@ export async function getAllHabits(queryNeo4j) {
          head(collect(b.bcio_concept_label)) AS bcioLabel,
          head(collect(b.bcio_concept_id))    AS bcioId
     OPTIONAL MATCH (h)<-[:COMMENT_ON]-(cm:Comment)
+    WHERE cm IS NULL OR cm.approved = true OR cm.approved IS NULL
     WITH h, bcioLabel, bcioId, count(cm) AS commentCount
     RETURN h.uuid AS uuid,
            h.sentence AS original,
@@ -113,6 +114,7 @@ export async function getPublicHabits(queryNeo4j) {
          head(collect(b.bcio_concept_label)) AS bcioLabel,
          head(collect(b.bcio_concept_id))    AS bcioId
     OPTIONAL MATCH (h)<-[:COMMENT_ON]-(cm:Comment)
+    WHERE cm IS NULL OR cm.approved = true OR cm.approved IS NULL
     WITH h, bcioLabel, bcioId, count(cm) AS commentCount
     RETURN h.uuid AS id,
            h.sentence AS name,
@@ -284,23 +286,46 @@ export async function getHabitGraph(queryNeo4j) {
  * Create an anonymous Comment node attached to a habit. Ownership is tracked
  * separately in MongoDB (`habit_comments`) so accounts can be erased without
  * de-anonymising the graph.
+ *
+ * `flagged`/`approved` implement auto-moderation: comments the LLM moderator
+ * flags are held out of the public listing (`getHabitComments`) until a
+ * researcher/admin approves or deletes them via the admin moderation queue.
+ * Unflagged comments are approved immediately so researchers only ever have
+ * to look at the ones that actually need a decision.
  * @param {Function} queryNeo4j
  * @param {string} habitId  Habit uuid
- * @param {{ id: string, text: string }} comment
+ * @param {{ id: string, text: string, flagged?: boolean, reason?: string|null }} comment
  * @returns {Promise<object|null>} created comment or null if habit not found
  */
-export async function addHabitComment(queryNeo4j, habitId, { id, text }) {
+export async function addHabitComment(
+  queryNeo4j,
+  habitId,
+  { id, text, flagged = false, reason = null }
+) {
   const rows = await queryNeo4j(
     `MATCH (h:Habit {uuid: $habitId})
-     CREATE (c:Comment {id: $id, text: $text, createdAt: $createdAt})-[:COMMENT_ON]->(h)
-     RETURN c.id AS id, c.text AS text, c.createdAt AS createdAt`,
-    { habitId, id, text, createdAt: new Date().toISOString() }
+     CREATE (c:Comment {
+       id: $id, text: $text, createdAt: $createdAt,
+       flagged: $flagged, approved: $approved, flagReason: $reason
+     })-[:COMMENT_ON]->(h)
+     RETURN c.id AS id, c.text AS text, c.createdAt AS createdAt,
+            c.flagged AS flagged, c.approved AS approved`,
+    {
+      habitId,
+      id,
+      text,
+      createdAt: new Date().toISOString(),
+      flagged,
+      approved: !flagged,
+      reason,
+    }
   );
   return rows[0] ?? null;
 }
 
 /**
- * List comments for a habit, newest first.
+ * List approved comments for a habit, newest first. Flagged comments awaiting
+ * moderation are excluded — see [[approveComment]].
  * @param {Function} queryNeo4j
  * @param {string} habitId
  * @param {number} [limit]
@@ -308,12 +333,31 @@ export async function addHabitComment(queryNeo4j, habitId, { id, text }) {
  */
 export async function getHabitComments(queryNeo4j, habitId, limit = 50) {
   return queryNeo4j(
+    // approved IS NULL grandfathers in comments created before moderation
+    // existed, which never got an `approved` property set at all.
     `MATCH (c:Comment)-[:COMMENT_ON]->(h:Habit {uuid: $habitId})
+     WHERE c.approved = true OR c.approved IS NULL
      RETURN c.id AS id, c.text AS text, c.createdAt AS createdAt
      ORDER BY c.createdAt DESC
      LIMIT toInteger($limit)`,
     { habitId, limit }
   );
+}
+
+/**
+ * Approve a flagged comment so it becomes publicly visible.
+ * @param {Function} queryNeo4j
+ * @param {string} commentId
+ * @returns {Promise<boolean>} true if a comment was found and approved
+ */
+export async function approveComment(queryNeo4j, commentId) {
+  const rows = await queryNeo4j(
+    `MATCH (c:Comment {id: $commentId})
+     SET c.approved = true, c.flagged = false
+     RETURN c.id AS id`,
+    { commentId }
+  );
+  return rows.length > 0;
 }
 
 /**
@@ -330,24 +374,42 @@ export async function deleteHabitComments(queryNeo4j, commentIds) {
 }
 
 /**
+ * WHERE clause fragment for filtering comments by moderation status.
+ * 'flagged' = held for review (auto-flagged, not yet approved). 'all' (default)
+ * = every comment, flagged or not.
+ * @param {'all'|'flagged'} status
+ * @returns {string}
+ */
+function _commentStatusFilter(status) {
+  return status === 'flagged'
+    ? 'WHERE c.flagged = true AND c.approved = false'
+    : '';
+}
+
+/**
  * List comments across habits for researcher moderation, newest first,
- * including the habit sentence for context. Paginated via SKIP/LIMIT.
+ * including the habit sentence for context and moderation status. Paginated
+ * via SKIP/LIMIT.
  * @param {Function} queryNeo4j
- * @param {{ page?: number, limit?: number }} [opts]
- * @returns {Promise<Array<{id, text, createdAt, habitId, habitSentence}>>}
+ * @param {{ page?: number, limit?: number, status?: 'all'|'flagged' }} [opts]
+ * @returns {Promise<Array<{id, text, createdAt, habitId, habitSentence, flagged, approved, flagReason}>>}
  */
 export async function listAllComments(
   queryNeo4j,
-  { page = 1, limit = 100 } = {}
+  { page = 1, limit = 100, status = 'all' } = {}
 ) {
   const skip = (Math.max(1, page) - 1) * limit;
   return queryNeo4j(
     `MATCH (c:Comment)-[:COMMENT_ON]->(h:Habit)
+     ${_commentStatusFilter(status)}
      RETURN c.id AS id,
             c.text AS text,
             c.createdAt AS createdAt,
             h.uuid AS habitId,
-            coalesce(h.translationEN, h.sentence) AS habitSentence
+            coalesce(h.translationEN, h.sentence) AS habitSentence,
+            coalesce(c.flagged, false) AS flagged,
+            coalesce(c.approved, true) AS approved,
+            c.flagReason AS flagReason
      ORDER BY c.createdAt DESC
      SKIP toInteger($skip)
      LIMIT toInteger($limit)`,
@@ -356,11 +418,15 @@ export async function listAllComments(
 }
 
 /**
- * Count all comments across habits (for pagination totals).
+ * Count comments across habits (for pagination totals), optionally filtered
+ * to those still awaiting moderation.
  * @param {Function} queryNeo4j
+ * @param {{ status?: 'all'|'flagged' }} [opts]
  * @returns {Promise<number>}
  */
-export async function countAllComments(queryNeo4j) {
-  const rows = await queryNeo4j(`MATCH (c:Comment) RETURN count(c) AS total`);
+export async function countAllComments(queryNeo4j, { status = 'all' } = {}) {
+  const rows = await queryNeo4j(
+    `MATCH (c:Comment) ${_commentStatusFilter(status)} RETURN count(c) AS total`
+  );
   return Number(rows[0]?.total ?? 0);
 }

@@ -156,6 +156,79 @@ class AppLocalizationsNl extends AppLocalizations {
   String get restoreAccountOnDevice => 'Account herstellen op dit apparaat';
 
   @override
+  String get studyMembershipTitle => 'Studie';
+
+  @override
+  String get studyMembershipCurrentLabel => 'Huidige studie';
+
+  @override
+  String get studyMembershipDefaultLabel => 'Algemene studie (geen studiecode)';
+
+  @override
+  String studyMembershipGroupLabel(String groupLabel) {
+    return 'Groep: $groupLabel';
+  }
+
+  @override
+  String get studyMembershipLoadFailed =>
+      'Kon je studie-informatie niet laden.';
+
+  @override
+  String get studyMembershipJoinButton => 'Deelnemen aan een andere studie';
+
+  @override
+  String get studyMembershipLeaveButton => 'Studie verlaten';
+
+  @override
+  String get studyMembershipJoinDialogTitle => 'Deelnemen aan een studie';
+
+  @override
+  String get studyMembershipJoinDialogBody =>
+      'Voer de studiecode in die je van een onderzoeker hebt gekregen. Gewoontes, logs en antwoorden die je al hebt gedeeld blijven bij je huidige studie; alleen wat je vanaf nu doet telt mee voor de nieuwe studie.';
+
+  @override
+  String get studyMembershipCodeLabel => 'Studiecode';
+
+  @override
+  String get studyMembershipJoinConfirm => 'Deelnemen';
+
+  @override
+  String studyMembershipJoinSuccess(String studyName) {
+    return 'Je hebt je aangesloten bij $studyName.';
+  }
+
+  @override
+  String get studyMembershipAlreadyInStudy => 'Je zit al in die studie.';
+
+  @override
+  String get studyMembershipInvalidCode =>
+      'Ongeldige code. Controleer en probeer het opnieuw.';
+
+  @override
+  String get studyMembershipCodeExpired => 'Deze code is verlopen.';
+
+  @override
+  String get studyMembershipCodeUsedUp => 'Deze code is al volledig gebruikt.';
+
+  @override
+  String get studyMembershipJoinFailed =>
+      'Kon niet deelnemen aan die studie. Controleer je verbinding.';
+
+  @override
+  String get studyMembershipLeaveConfirmTitle => 'Deze studie verlaten?';
+
+  @override
+  String get studyMembershipLeaveConfirmBody =>
+      'Je gaat naar de algemene studie. Er wordt niets verwijderd: je bestaande gewoontes, logs en vragenlijstantwoorden blijven precies zoals ze zijn, nog steeds toegeschreven aan deze studie.';
+
+  @override
+  String get studyMembershipLeaveSuccess => 'Je hebt de studie verlaten.';
+
+  @override
+  String get studyMembershipLeaveFailed =>
+      'Kon de studie niet verlaten. Controleer je verbinding.';
+
+  @override
   String get profileCompleted => 'Profiel voltooid';
 
   @override
@@ -636,6 +709,28 @@ class AppLocalizationsNl extends AppLocalizations {
       'SRHI-gegevens verschijnen na je eerste wekelijkse check-in.';
 
   @override
+  String get srhiExplanationTitle => 'Wat is SRHI?';
+
+  @override
+  String get srhiExplanationBody =>
+      'De Self-Report Habit Index (SRHI) meet hoe automatisch dit gedrag voor je aanvoelt, op een schaal van 1 tot 7. Een hogere score betekent minder bewuste inspanning: een teken dat de gewoonte deel wordt van je routine.';
+
+  @override
+  String get srhiScoreLabel => 'Huidige SRHI-score';
+
+  @override
+  String get srhiScoreUnavailable => 'Nog niet beschikbaar';
+
+  @override
+  String get srhiNextCheckInLabel => 'Volgende check-in';
+
+  @override
+  String get srhiNextCheckInDue => 'Nu verschuldigd';
+
+  @override
+  String get srhiNextCheckInNone => 'Niet gepland';
+
+  @override
   String get consentTitle => 'Studie-informatie & toestemming';
 
   @override
@@ -1111,6 +1206,9 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get donateWhyShareBody =>
       'Elke gewoonte die je deelt wordt anoniem toegevoegd aan een groeiend, open beeld van hoe mensen in het dagelijks leven gezonde routines opbouwen. Hoe meer echte voorbeelden onderzoekers zien, hoe beter de aanbevelingen voor iedereen worden, ook voor jou.';
+
+  @override
+  String get readMoreAboutProject => 'Meer lezen over het project';
 
   @override
   String get donatePleaseAnswerAllQuestions => 'Beantwoord alle vragen';

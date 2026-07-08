@@ -1,6 +1,8 @@
 %% UC-09 — Enroll in study (redeem or skip study code)
 %% Enrollment edge is now stored in Neo4j (ENROLLED_IN relationship);
 %% group config stays in MongoDB studies collection.
+%% Covers first-time onboarding only — see UC-38 for switching to a
+%% different study or leaving one after onboarding is already complete.
 sequenceDiagram
     autonumber
     actor P as Participant
@@ -11,7 +13,7 @@ sequenceDiagram
 
     P->>F: Enter study code (or skip)
     alt redeem code
-        F->>B: POST /api/v1/enroll/redeem-code {code}
+        F->>B: POST /api/v1/onboarding/redeem-code {code}
         B->>M: findOne(study_codes, {code})
         M-->>B: code {studyId, groupId, maxRedemptions, expiresAt}
         B->>B: Validate not expired / not exhausted
@@ -23,7 +25,7 @@ sequenceDiagram
         N-->>B: enrollment created
         B-->>F: 200 enrolled in study group
     else skip code
-        F->>B: POST /api/v1/enroll/skip-code
+        F->>B: POST /api/v1/onboarding/skip-code
         B->>N: MATCH (u:User {userID})-[:ENROLLED_IN]->() — already enrolled?
         N-->>B: no existing enrollment
         B->>M: findOneAndUpdate(studies, {isDefault:true}, {$inc: _skipCounter})

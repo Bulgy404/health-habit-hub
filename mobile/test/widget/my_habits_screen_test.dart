@@ -7,6 +7,7 @@ import 'package:hhh/features/my_habits/my_habits_models.dart';
 import 'package:hhh/features/my_habits/my_habits_screen.dart';
 import 'package:hhh/features/my_habits/my_habits_service.dart';
 import 'package:hhh/l10n/app_localizations.dart';
+import 'package:hhh/widgets/contribution_graph_widget.dart';
 
 final _fakeDio = Dio();
 
@@ -119,6 +120,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('No habits yet'), findsOneWidget);
+    // The contribution graph is a standing fixture at the top of the page,
+    // not conditional on having any habits — it should still render (empty).
+    expect(find.byType(ContributionGraphWidget), findsOneWidget);
   });
 
   testWidgets('shows SRHI prompt card when windows are due', (tester) async {

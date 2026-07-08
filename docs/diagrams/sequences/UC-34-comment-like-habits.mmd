@@ -1,9 +1,14 @@
 %% UC-34 — Comment & like habits in the explore graph (community signal -> LLM)
+%% Comments are auto-moderated by a local wordlist/regex check (not an LLM
+%% call — see commentModerationService.js) before being persisted.
 sequenceDiagram
     autonumber
     actor P as Participant
+    actor R as Researcher/Admin
     participant F as Flutter App (Explore)
-    participant B as Backend (habitsCrudRouter)
+    participant AF as Admin Panel
+    participant B as Backend (habitsCrudRouter / adminRouter)
+    participant Mod as commentModerationService<br/>(local wordlist + regex)
     participant M as MongoDB
     participant N4 as Neo4j
     participant AI as API-service (recommend)
@@ -16,12 +21,34 @@ sequenceDiagram
 
     P->>F: Write a comment
     F->>B: POST /habits/:uuid/comments {text}
-    B->>N4: CREATE (:Comment {id, text, createdAt})-[:COMMENT_ON]->(:Habit) — anonymous node
+    B->>Mod: moderateComment({text})
+    Mod-->>B: {flagged, reason} (profanity/slur wordlist, or link/email/phone regex)
+    alt flagged
+        B->>N4: CREATE (:Comment {id, text, createdAt,<br/>flagged:true, approved:false, flagReason})-[:COMMENT_ON]->(:Habit)
+    else clean
+        B->>N4: CREATE (:Comment {id, text, createdAt,<br/>flagged:false, approved:true})-[:COMMENT_ON]->(:Habit)
+    end
     B->>M: insert(habit_comments {commentId, userId}) — ownership only (rate limit + GDPR erasure)
-    B-->>F: 201 comment
+    B-->>F: 201 comment {flagged, approved}
     F->>B: GET /habits/:uuid/comments
-    B->>N4: MATCH (c:Comment)-[:COMMENT_ON]->(h) ORDER BY createdAt DESC
-    B-->>F: anonymous comment list
+    B->>N4: MATCH (c:Comment)-[:COMMENT_ON]->(h)<br/>WHERE c.approved = true ORDER BY createdAt DESC
+    B-->>F: anonymous, approved comment list only
+
+    Note over R,N4: Flagged-comment review (admin panel)
+    R->>AF: Open Comments → "Flagged for review"
+    AF->>B: GET /admin/comments?status=flagged
+    B->>N4: MATCH (c:Comment) WHERE c.flagged=true AND c.approved=false
+    B-->>AF: flagged comments + flagReason
+    alt approve
+        R->>AF: Approve
+        AF->>B: POST /admin/comments/:id/approve
+        B->>N4: SET c.approved=true, c.flagged=false
+    else reject
+        R->>AF: Delete
+        AF->>B: DELETE /admin/comments/:id
+        B->>N4: DETACH DELETE c
+        B->>M: deleteOne(habit_comments {commentId})
+    end
 
     Note over AI,N4: Recommendation generation (UC-07):
     AI->>N4: vector search community habits incl. coalesce(h.annotations_like, 0)

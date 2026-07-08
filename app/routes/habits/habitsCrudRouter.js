@@ -20,6 +20,7 @@ import {
   getHabitComments,
   getRelatedHabits,
 } from '../../db/habitQueries.js';
+import { moderateComment } from '../../services/commentModerationService.js';
 import { habitShareLimiter } from '../../middleware/rateLimiter.js';
 import { logger } from '../../utils/logger.js';
 
@@ -350,9 +351,15 @@ export function createHabitsCrudRouter({
 
       const habitId = req.params.id;
       const commentId = randomUUID();
+      // Auto-moderation: flagged comments are held out of the public listing
+      // until a researcher/admin reviews them (see the admin comments queue),
+      // so most comments never need a human to look at them at all.
+      const { flagged, reason } = moderateComment({ text });
       const created = await addHabitComment(queryNeo4j, habitId, {
         id: commentId,
         text,
+        flagged,
+        reason,
       });
       if (!created) {
         return res.status(404).json({ error: 'Habit not found' });
