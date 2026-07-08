@@ -380,6 +380,132 @@ abstract class AppLocalizations {
   /// **'Restore account on this device'**
   String get restoreAccountOnDevice;
 
+  /// Section heading for study membership on the account screen
+  ///
+  /// In en, this message translates to:
+  /// **'Study'**
+  String get studyMembershipTitle;
+
+  /// Label above the current study name
+  ///
+  /// In en, this message translates to:
+  /// **'Current study'**
+  String get studyMembershipCurrentLabel;
+
+  /// Shown as the study name when the participant is in the default study rather than a code-joined one
+  ///
+  /// In en, this message translates to:
+  /// **'General study (no study code)'**
+  String get studyMembershipDefaultLabel;
+
+  /// Shows the participant's group within their current study
+  ///
+  /// In en, this message translates to:
+  /// **'Group: {groupLabel}'**
+  String studyMembershipGroupLabel(String groupLabel);
+
+  /// Error shown when the current enrollment fails to load
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your study information.'**
+  String get studyMembershipLoadFailed;
+
+  /// Button opening the join-a-study dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Join a different study'**
+  String get studyMembershipJoinButton;
+
+  /// Button that leaves the current code-joined study, returning to the general study
+  ///
+  /// In en, this message translates to:
+  /// **'Leave study'**
+  String get studyMembershipLeaveButton;
+
+  /// Title of the join-a-study dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Join a study'**
+  String get studyMembershipJoinDialogTitle;
+
+  /// Explanatory body text in the join-a-study dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the study code a researcher gave you. Habits, logs, and answers you\'ve already shared stay with your current study; only what you do from now on counts toward the new one.'**
+  String get studyMembershipJoinDialogBody;
+
+  /// Label for the study code text field
+  ///
+  /// In en, this message translates to:
+  /// **'Study code'**
+  String get studyMembershipCodeLabel;
+
+  /// Confirm button in the join-a-study dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Join'**
+  String get studyMembershipJoinConfirm;
+
+  /// Snackbar shown after successfully switching to a new study
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve joined {studyName}.'**
+  String studyMembershipJoinSuccess(String studyName);
+
+  /// Error when the entered code targets the study the participant is already in
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re already in that study.'**
+  String get studyMembershipAlreadyInStudy;
+
+  /// Error for an unrecognized study code
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid code. Please check and try again.'**
+  String get studyMembershipInvalidCode;
+
+  /// Error for an expired study code
+  ///
+  /// In en, this message translates to:
+  /// **'This code has expired.'**
+  String get studyMembershipCodeExpired;
+
+  /// Error for a study code that has hit its redemption limit
+  ///
+  /// In en, this message translates to:
+  /// **'This code has already been fully used.'**
+  String get studyMembershipCodeUsedUp;
+
+  /// Generic fallback error when joining a study fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t join that study. Please check your connection.'**
+  String get studyMembershipJoinFailed;
+
+  /// Title of the leave-study confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Leave this study?'**
+  String get studyMembershipLeaveConfirmTitle;
+
+  /// Explanatory body text in the leave-study confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll move to the general study. Nothing is deleted: your existing habits, logs, and questionnaire answers stay exactly as they are, still attributed to this study.'**
+  String get studyMembershipLeaveConfirmBody;
+
+  /// Snackbar shown after successfully leaving a study
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve left the study.'**
+  String get studyMembershipLeaveSuccess;
+
+  /// Generic fallback error when leaving a study fails
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t leave the study. Please check your connection.'**
+  String get studyMembershipLeaveFailed;
+
   /// Card title when profile has been completed
   ///
   /// In en, this message translates to:
@@ -1250,6 +1376,48 @@ abstract class AppLocalizations {
   /// **'SRHI data will appear after your first weekly check-in.'**
   String get noTrajectoryYet;
 
+  /// Title of the dismissible SRHI explainer card on the habit detail screen
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s SRHI?'**
+  String get srhiExplanationTitle;
+
+  /// Body text of the dismissible SRHI explainer card
+  ///
+  /// In en, this message translates to:
+  /// **'The Self-Report Habit Index (SRHI) measures how automatic this behavior feels to you, on a scale from 1 to 7. A higher score means it takes less conscious effort: a sign the habit is becoming part of your routine.'**
+  String get srhiExplanationBody;
+
+  /// Label above the latest SRHI score figure
+  ///
+  /// In en, this message translates to:
+  /// **'Current SRHI score'**
+  String get srhiScoreLabel;
+
+  /// Shown instead of a score figure before the first check-in is submitted
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet available'**
+  String get srhiScoreUnavailable;
+
+  /// Label for the next scheduled SRHI check-in date
+  ///
+  /// In en, this message translates to:
+  /// **'Next check-in'**
+  String get srhiNextCheckInLabel;
+
+  /// Shown instead of a date when the next SRHI check-in is already due
+  ///
+  /// In en, this message translates to:
+  /// **'Due now'**
+  String get srhiNextCheckInDue;
+
+  /// Shown when there is no upcoming SRHI check-in for this habit
+  ///
+  /// In en, this message translates to:
+  /// **'None scheduled'**
+  String get srhiNextCheckInNone;
+
   /// App bar title of the informed-consent screen
   ///
   /// In en, this message translates to:
@@ -2077,6 +2245,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone\'s recommendations become, including yours.'**
   String get donateWhyShareBody;
+
+  /// Tap target on the why-share card opening the About the project info page
+  ///
+  /// In en, this message translates to:
+  /// **'Read more about the project'**
+  String get readMoreAboutProject;
 
   /// Snackbar shown when the donation form is submitted with missing answers
   ///

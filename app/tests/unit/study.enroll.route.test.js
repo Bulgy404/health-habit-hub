@@ -88,8 +88,18 @@ function makeDb(initial = {}) {
 function makeNeo4jRun() {
   const enrollments = new Map(); // userId → { studyId, groupId, ... }
   return async (cypher, params = {}) => {
-    if (cypher.includes('RETURN u IS NOT NULL AS exists')) {
+    if (cypher.includes('RETURN e IS NOT NULL AS exists')) {
       return [{ exists: enrollments.has(String(params.userId)) }];
+    }
+    if (cypher.includes('SET e.droppedOutAt = $movedAt')) {
+      if (!enrollments.has(String(params.userId))) return [];
+      enrollments.set(String(params.userId), {
+        studyId: params.newStudyId,
+        groupId: params.newGroupId ?? null,
+        enrolledAt: params.movedAt ?? null,
+        studyCodeUsed: params.studyCodeUsed ?? null,
+      });
+      return [{ enrolledAt: params.movedAt }];
     }
     if (cypher.includes('CREATE (u)-[e:ENROLLED_IN]')) {
       enrollments.set(String(params.userId), {
@@ -113,10 +123,12 @@ function makeNeo4jRun() {
 let server;
 let baseUrl;
 
-before(async () => {
-  const studyId = new ObjectId();
-  const groupId = new ObjectId();
+const studyId = new ObjectId();
+const groupId = new ObjectId();
+const studyId2 = new ObjectId();
+const groupId2 = new ObjectId();
 
+before(async () => {
   const db = makeDb({
     studies: [
       {
@@ -129,12 +141,31 @@ before(async () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
+      {
+        _id: studyId2,
+        name: 'Other Study',
+        isDefault: false,
+        isActive: true,
+        groups: [{ id: groupId2, label: 'Group A', index: 1 }],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     ],
     studyCodes: [
       {
         code: 'HHH-ABCDE',
         studyId,
         groupId,
+        maxRedemptions: null,
+        redemptionCount: 0,
+        expiresAt: null,
+        createdAt: new Date(),
+      },
+      {
+        code: 'HHH-OTHER',
+        studyId: studyId2,
+        groupId: groupId2,
         maxRedemptions: null,
         redemptionCount: 0,
         expiresAt: null,
@@ -267,4 +298,105 @@ test('POST /redeem-code returns 409 when the user is already enrolled', async ()
   assert.strictEqual(second.status, 409);
   const body = await second.json();
   assert.match(body.error, /Already enrolled/);
+});
+
+// ── GET /enrollment, POST /switch-study, POST /leave-study ────────────────────
+
+async function post(path, body, testUser) {
+  return fetch(`${baseUrl}/api/v1/onboarding/${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-test-user': testUser,
+    },
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
+async function get(path, testUser) {
+  return fetch(`${baseUrl}/api/v1/onboarding/${path}`, {
+    headers: { 'x-test-user': testUser },
+  });
+}
+
+test('GET /enrollment returns 404 for a user with no enrollment', async () => {
+  const res = await get('enrollment', 'never-enrolled-user');
+  assert.strictEqual(res.status, 404);
+});
+
+test('GET /enrollment returns the current study after redeeming a code', async () => {
+  await post('redeem-code', { code: 'HHH-OTHER' }, 'enrollment-status-user');
+  const res = await get('enrollment', 'enrollment-status-user');
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.strictEqual(body.studyName, 'Other Study');
+  assert.strictEqual(body.isDefaultStudy, false);
+});
+
+test('POST /switch-study moves the user to the new study', async () => {
+  await post('redeem-code', { code: 'HHH-OTHER' }, 'switch-user');
+  const res = await post('switch-study', { code: 'HHH-ABCDE' }, 'switch-user');
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.strictEqual(body.studyName, 'Test Study');
+
+  const status = await get('enrollment', 'switch-user');
+  const statusBody = await status.json();
+  assert.strictEqual(statusBody.studyName, 'Test Study');
+});
+
+test('POST /switch-study returns 409 when not currently enrolled', async () => {
+  const res = await post(
+    'switch-study',
+    { code: 'HHH-OTHER' },
+    'never-enrolled-switch-user'
+  );
+  assert.strictEqual(res.status, 409);
+});
+
+test('POST /switch-study returns 409 for a code targeting the current study', async () => {
+  await post('redeem-code', { code: 'HHH-OTHER' }, 'switch-same-user');
+  const res = await post(
+    'switch-study',
+    { code: 'HHH-OTHER' },
+    'switch-same-user'
+  );
+  assert.strictEqual(res.status, 409);
+  const body = await res.json();
+  assert.match(body.error, /Already enrolled in that study/);
+});
+
+test('POST /switch-study returns 400 for an invalid code format', async () => {
+  await post('redeem-code', { code: 'HHH-OTHER' }, 'switch-badcode-user');
+  const res = await post(
+    'switch-study',
+    { code: 'nope' },
+    'switch-badcode-user'
+  );
+  assert.strictEqual(res.status, 400);
+});
+
+test('POST /leave-study moves the user from a code-joined study back to the default study', async () => {
+  await post('redeem-code', { code: 'HHH-OTHER' }, 'leave-user');
+  const res = await post('leave-study', null, 'leave-user');
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.strictEqual(body.studyName, 'Test Study');
+
+  const status = await get('enrollment', 'leave-user');
+  const statusBody = await status.json();
+  assert.strictEqual(statusBody.isDefaultStudy, true);
+});
+
+test('POST /leave-study returns 409 when already in the default study', async () => {
+  await post('redeem-code', { code: 'HHH-ABCDE' }, 'leave-default-user');
+  const res = await post('leave-study', null, 'leave-default-user');
+  assert.strictEqual(res.status, 409);
+  const body = await res.json();
+  assert.match(body.error, /Already enrolled in the default study/);
+});
+
+test('POST /leave-study returns 409 when not currently enrolled', async () => {
+  const res = await post('leave-study', null, 'never-enrolled-leave-user');
+  assert.strictEqual(res.status, 409);
 });

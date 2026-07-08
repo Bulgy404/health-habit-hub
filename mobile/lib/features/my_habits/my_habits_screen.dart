@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/day_strip_widget.dart';
 import '../../widgets/srhi_sparkline_widget.dart';
 import 'my_habits_models.dart';
@@ -25,6 +26,7 @@ class MyHabitsScreen extends ConsumerWidget {
     final configAsync = ref.watch(habitConfigProvider);
     final intentionsAsync = ref.watch(intentionsProvider);
     final dueSrhiAsync = ref.watch(dueSrhiProvider);
+    final activityAsync = ref.watch(allHabitsActivityProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -61,9 +63,18 @@ class MyHabitsScreen extends ConsumerWidget {
           ref.invalidate(habitConfigProvider);
           ref.invalidate(intentionsProvider);
           ref.invalidate(dueSrhiProvider);
+          ref.invalidate(allHabitsActivityProvider);
         },
         child: CustomScrollView(
           slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                child: ContributionGraphWidget(
+                  counts: activityAsync.value ?? const {},
+                ),
+              ),
+            ),
             dueSrhiAsync.when(
               data: (windows) {
                 if (windows.isEmpty) {

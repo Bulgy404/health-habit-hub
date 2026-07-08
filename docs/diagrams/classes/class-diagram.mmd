@@ -223,6 +223,7 @@ classDiagram
         +String language
         +String translationEN
         +String translationDE
+        +String studyId
         +Int annotations_like
         +Int annotations_helpful
         +Int annotations_iDoThis
@@ -242,6 +243,9 @@ classDiagram
         +String id
         +String text
         +String createdAt
+        +Boolean flagged
+        +Boolean approved
+        +String flagReason
     }
     class HabitCommentOwnership {
         <<MongoDB habit_comments>>

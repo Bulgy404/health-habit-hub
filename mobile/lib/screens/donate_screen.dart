@@ -363,6 +363,29 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 context,
               ).textTheme.bodyMedium?.copyWith(height: 1.45),
             ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () => context.push('/about-project'),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.readMoreAboutProject,
+                    style: const TextStyle(
+                      color: Color(0xFF45B700),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.arrow_forward,
+                    size: 14,
+                    color: Color(0xFF45B700),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -654,11 +677,12 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
           boxShadow: _kCardShadow,
         ),
@@ -675,7 +699,7 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               label,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+              style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
             ),
           ],
         ),

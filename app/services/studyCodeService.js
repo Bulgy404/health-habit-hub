@@ -2,7 +2,12 @@ import { randomBytes } from 'node:crypto';
 import { ObjectId } from '../models/survey.js';
 import { COLLECTION as CODES } from '../models/studyCode.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
-import { getEnrollment, createEnrollment } from './enrollmentNeo4j.js';
+import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
+import {
+  getEnrollment,
+  createEnrollment,
+  switchEnrollment,
+} from './enrollmentNeo4j.js';
 import { generateWindowsForUser } from './questionnaireScheduleService.js';
 
 /** Best-effort: create the participant's questionnaire windows on enrollment. */
@@ -17,6 +22,45 @@ async function scheduleQuestionnaires(
     await generateWindowsForUser({ db, userId, studyId, groupId, enrolledAt });
   } catch {
     // Non-fatal: windows can be regenerated when an assignment changes.
+  }
+}
+
+/**
+ * Keep the Mongo `enrollments` collection (used by dropout exports, admin
+ * stats, notification targeting, and questionnaire scheduling — see
+ * models/enrollment.js) in sync with the Neo4j ENROLLED_IN relationship,
+ * which is the source of truth for "who is enrolled where right now".
+ * Upserts so this self-heals for any participant enrolled before this
+ * collection was wired up.
+ * @param {{ db: object, userId: string, studyId: string, groupId: string|null, studyCodeUsed: string|null, enrolledAt: Date }} deps
+ */
+async function _upsertMongoEnrollment(
+  db,
+  { userId, studyId, groupId, studyCodeUsed, enrolledAt }
+) {
+  // groupId is required by the enrollments schema; skip rather than crash
+  // the (Neo4j-backed, already-succeeded) enrollment if it's ever missing —
+  // e.g. a code pointing at a since-deleted group.
+  if (!groupId) return;
+  try {
+    await db.collection(ENROLLMENTS).updateOne(
+      { userId: String(userId) },
+      {
+        $set: {
+          userId: String(userId),
+          studyId: new ObjectId(studyId),
+          groupId: new ObjectId(groupId),
+          studyCodeUsed: studyCodeUsed ?? null,
+          enrolledAt,
+          droppedOutAt: null,
+          cueConfig: null,
+        },
+      },
+      { upsert: true }
+    );
+  } catch {
+    // Non-fatal: Neo4j is the source of truth for enrollment; this mirror
+    // can be repaired later. Don't fail the enrollment call over it.
   }
 }
 
@@ -236,6 +280,38 @@ async function _selectGroupWeighted(db, study) {
 }
 
 /**
+ * Return the authenticated user's current study/group, with human-readable
+ * names, for display in the app's account screen.
+ * @param {{ db: object, userId: string, neo4jRun: Function }} deps
+ * @returns {Promise<{ studyId: string, groupId: string|null, studyName: string|null, groupLabel: string|null, isDefaultStudy: boolean, studyCodeUsed: string|null }|{ notEnrolled: boolean }>}
+ */
+export async function getEnrollmentStatus({ db, userId, neo4jRun }) {
+  const current = await getEnrollment(neo4jRun, userId);
+  if (!current) return { notEnrolled: true };
+
+  let study = null;
+  try {
+    study = await db
+      .collection(STUDIES)
+      .findOne({ _id: new ObjectId(current.studyId) });
+  } catch {
+    // bad studyId — study stays null
+  }
+  const group = study
+    ? (study.groups || []).find((g) => g.id.toString() === current.groupId)
+    : null;
+
+  return {
+    studyId: current.studyId,
+    groupId: current.groupId,
+    studyName: study?.name ?? null,
+    groupLabel: group?.label ?? null,
+    isDefaultStudy: study?.isDefault === true,
+    studyCodeUsed: current.studyCodeUsed,
+  };
+}
+
+/**
  * Redeem an enrollment code for the authenticated user, enrolling them in the associated study group.
  * @param {{ db: object, userId: string, code: string, neo4jRun: Function }} deps
  * @returns {Promise<{ enrolled: boolean, studyId: string, groupId: string, studyName: string|null, groupLabel: string|null }|{ notFound: boolean }|{ expired: boolean }|{ exhausted: boolean }|{ alreadyEnrolled: boolean }>}
@@ -282,13 +358,16 @@ export async function redeemCode({ db, userId, code, neo4jRun }) {
     return { alreadyEnrolled: true };
   }
 
-  await scheduleQuestionnaires(
-    db,
+  const enrolledAt = new Date();
+  await _upsertMongoEnrollment(db, {
     userId,
-    doc.studyId,
-    group?.id ?? null,
-    new Date()
-  );
+    studyId: doc.studyId,
+    groupId: group?.id ?? null,
+    studyCodeUsed: upperCode,
+    enrolledAt,
+  });
+
+  await scheduleQuestionnaires(db, userId, doc.studyId, group?.id ?? null, enrolledAt);
 
   return {
     enrolled: true,
@@ -348,12 +427,13 @@ export async function skipCode({ db, userId, neo4jRun }) {
   const idx = (study._skipCounter - 1) % study.groups.length;
   const selectedGroup = study.groups[idx];
 
+  const enrolledAt = new Date();
   const enrollResult = await createEnrollment(neo4jRun, {
     userId,
     studyId: study._id.toString(),
     groupId: selectedGroup.id.toString(),
     studyCodeUsed: null,
-    enrolledAt: new Date(),
+    enrolledAt,
   });
 
   if (enrollResult.alreadyEnrolled) {
@@ -371,11 +451,158 @@ export async function skipCode({ db, userId, neo4jRun }) {
     };
   }
 
+  await _upsertMongoEnrollment(db, {
+    userId,
+    studyId: study._id,
+    groupId: selectedGroup.id,
+    studyCodeUsed: null,
+    enrolledAt,
+  });
+
   return {
     enrolled: true,
     studyId: study._id.toString(),
     groupId: selectedGroup.id.toString(),
     studyName: study.name,
+    groupLabel: selectedGroup.label,
+  };
+}
+
+/**
+ * Move an already-enrolled participant to a different study via a new
+ * enrollment code. Habits they've already donated keep the studyId they were
+ * stamped with at donation time (studies own their historical data, not
+ * participants) — only future donations are attributed to the new study.
+ * @param {{ db: object, userId: string, code: string, neo4jRun: Function }} deps
+ * @returns {Promise<{ moved: boolean, studyId: string, groupId: string, studyName: string|null, groupLabel: string|null }|{ notEnrolled: boolean }|{ notFound: boolean }|{ expired: boolean }|{ exhausted: boolean }|{ alreadyInStudy: boolean }>}
+ */
+export async function switchStudy({ db, userId, code, neo4jRun }) {
+  const current = await getEnrollment(neo4jRun, userId);
+  if (!current) return { notEnrolled: true };
+
+  const upperCode = code.toUpperCase();
+  const doc = await db.collection(CODES).findOne({ code: upperCode });
+  if (!doc) return { notFound: true };
+  if (doc.expiresAt && doc.expiresAt < new Date()) return { expired: true };
+
+  if (doc.studyId.toString() === current.studyId) {
+    return { alreadyInStudy: true };
+  }
+
+  const claimed = await _claimRedemptionSlot(db, upperCode, doc.maxRedemptions);
+  if (!claimed) return { exhausted: true };
+
+  const study = await db.collection(STUDIES).findOne({ _id: doc.studyId });
+  let group;
+  if (doc.groupId) {
+    group = study?.groups?.find(
+      (g) => g.id.toString() === doc.groupId.toString()
+    );
+  } else {
+    group = await _selectGroupWeighted(db, study);
+  }
+
+  const movedAt = new Date();
+  const moveResult = await switchEnrollment(neo4jRun, {
+    userId,
+    newStudyId: doc.studyId.toString(),
+    newGroupId: group?.id?.toString() ?? null,
+    studyCodeUsed: upperCode,
+    movedAt,
+  });
+
+  if (moveResult.noActiveEnrollment) {
+    await db
+      .collection(CODES)
+      .updateOne({ code: upperCode }, { $inc: { redemptionCount: -1 } });
+    return { notEnrolled: true };
+  }
+
+  await _upsertMongoEnrollment(db, {
+    userId,
+    studyId: doc.studyId,
+    groupId: group?.id ?? null,
+    studyCodeUsed: upperCode,
+    enrolledAt: movedAt,
+  });
+
+  await scheduleQuestionnaires(db, userId, doc.studyId, group?.id ?? null, movedAt);
+
+  return {
+    moved: true,
+    studyId: doc.studyId.toString(),
+    groupId: group?.id?.toString() ?? null,
+    studyName: study?.name ?? null,
+    groupLabel: group?.label ?? null,
+  };
+}
+
+/**
+ * Move an already-enrolled participant back to the default study — the
+ * "leave study" action. Nothing is deleted: past habits, logs, and
+ * questionnaire responses stay exactly as they were donated/submitted,
+ * still attributed to the study the participant is leaving.
+ * @param {{ db: object, userId: string, neo4jRun: Function }} deps
+ * @returns {Promise<{ moved: boolean, studyId: string, groupId: string, studyName: string|null, groupLabel: string|null }|{ notEnrolled: boolean }|{ noDefaultStudy: boolean }|{ noGroups: boolean }|{ alreadyInDefaultStudy: boolean }>}
+ */
+export async function leaveStudy({ db, userId, neo4jRun }) {
+  const current = await getEnrollment(neo4jRun, userId);
+  if (!current) return { notEnrolled: true };
+
+  const defaultStudy = await db
+    .collection(STUDIES)
+    .findOne({ isDefault: true, isActive: true });
+  if (!defaultStudy) return { noDefaultStudy: true };
+  if (!defaultStudy.groups || defaultStudy.groups.length === 0) {
+    return { noGroups: true };
+  }
+
+  if (defaultStudy._id.toString() === current.studyId) {
+    return { alreadyInDefaultStudy: true };
+  }
+
+  const updatedStudy = await db
+    .collection(STUDIES)
+    .findOneAndUpdate(
+      { _id: defaultStudy._id },
+      { $inc: { _skipCounter: 1 } },
+      { returnDocument: 'after' }
+    );
+  const idx = (updatedStudy._skipCounter - 1) % updatedStudy.groups.length;
+  const selectedGroup = updatedStudy.groups[idx];
+
+  const movedAt = new Date();
+  const moveResult = await switchEnrollment(neo4jRun, {
+    userId,
+    newStudyId: updatedStudy._id.toString(),
+    newGroupId: selectedGroup.id.toString(),
+    studyCodeUsed: null,
+    movedAt,
+  });
+
+  if (moveResult.noActiveEnrollment) return { notEnrolled: true };
+
+  await _upsertMongoEnrollment(db, {
+    userId,
+    studyId: updatedStudy._id,
+    groupId: selectedGroup.id,
+    studyCodeUsed: null,
+    enrolledAt: movedAt,
+  });
+
+  await scheduleQuestionnaires(
+    db,
+    userId,
+    updatedStudy._id,
+    selectedGroup.id,
+    movedAt
+  );
+
+  return {
+    moved: true,
+    studyId: updatedStudy._id.toString(),
+    groupId: selectedGroup.id.toString(),
+    studyName: updatedStudy.name,
     groupLabel: selectedGroup.label,
   };
 }

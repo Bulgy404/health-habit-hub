@@ -14,7 +14,12 @@
  */
 export async function getEnrollment(neo4jRun, userId) {
   const rows = await neo4jRun(
+    // droppedOutAt IS NULL selects the active membership. A user can have
+    // multiple ENROLLED_IN relationships over time (see switchEnrollment) —
+    // the dropped ones are kept as history for per-study dropout analytics
+    // (studyAnalyticsService.getDropoutCurve), but only one is ever active.
     `MATCH (u:User {userID: $userId})-[e:ENROLLED_IN]->(s:Study)
+     WHERE e.droppedOutAt IS NULL
      RETURN s.uuid AS studyId, e.groupId AS groupId,
             e.enrolledAt AS enrolledAt, e.studyCodeUsed AS studyCodeUsed
      LIMIT 1`,
@@ -77,10 +82,13 @@ export async function createEnrollment(
   neo4jRun,
   { userId, studyId, groupId, studyCodeUsed, enrolledAt }
 ) {
-  // Step 1: check for existing enrollment
+  // Step 1: check for an existing *active* enrollment (droppedOutAt IS NULL —
+  // a user who has switched/left studies before may have historical dropped
+  // relationships, which should not block a fresh enrollment).
   const checkRows = await neo4jRun(
-    `OPTIONAL MATCH (u:User {userID: $userId})-[:ENROLLED_IN]->(:Study)
-     RETURN u IS NOT NULL AS exists LIMIT 1`,
+    `OPTIONAL MATCH (u:User {userID: $userId})-[e:ENROLLED_IN]->(:Study)
+     WHERE e.droppedOutAt IS NULL
+     RETURN e IS NOT NULL AS exists LIMIT 1`,
     { userId: String(userId) }
   );
   const exists = checkRows?.[0]?.exists ?? false;
@@ -108,6 +116,53 @@ export async function createEnrollment(
     }
   );
   return { created: true };
+}
+
+/**
+ * Move an already-enrolled user to a different study (or back to the
+ * default study, for "leave study"). The old ENROLLED_IN relationship is
+ * kept, not deleted — it's marked with droppedOutAt so per-study dropout
+ * analytics (getDropoutCurve) still see it, and so the user's history in
+ * the study they're leaving is preserved. A fresh relationship is created
+ * to the new study. Habits already donated under the old relationship keep
+ * the studyId they were stamped with at donation time (see
+ * habitDonationService.js) — only future donations pick up the new study.
+ *
+ * No-ops (returns { noActiveEnrollment: true }) if the user has no current
+ * active enrollment to move — callers should already be enrolled.
+ * @param {Function} neo4jRun
+ * @param {{ userId: string, newStudyId: string, newGroupId: string|null, studyCodeUsed: string|null, movedAt?: any }} params
+ */
+export async function switchEnrollment(
+  neo4jRun,
+  { userId, newStudyId, newGroupId, studyCodeUsed, movedAt }
+) {
+  const at =
+    movedAt instanceof Date
+      ? movedAt.toISOString()
+      : (movedAt ?? new Date().toISOString());
+
+  const rows = await neo4jRun(
+    `MATCH (u:User {userID: $userId})-[e:ENROLLED_IN]->(:Study)
+     WHERE e.droppedOutAt IS NULL
+     SET e.droppedOutAt = $movedAt
+     WITH u
+     MERGE (s:Study {uuid: $newStudyId})
+     CREATE (u)-[ne:ENROLLED_IN]->(s)
+     SET ne.enrolledAt = $movedAt,
+         ne.groupId = $newGroupId,
+         ne.studyCodeUsed = $studyCodeUsed
+     RETURN ne.enrolledAt AS enrolledAt`,
+    {
+      userId: String(userId),
+      movedAt: at,
+      newStudyId: String(newStudyId),
+      newGroupId: newGroupId ? String(newGroupId) : null,
+      studyCodeUsed: studyCodeUsed ?? null,
+    }
+  );
+  if (!rows || rows.length === 0) return { noActiveEnrollment: true };
+  return { moved: true, enrolledAt: at };
 }
 
 /**

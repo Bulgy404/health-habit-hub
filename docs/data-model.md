@@ -53,6 +53,7 @@ Created by `POST /api/v1/habits/donate`. Each donated habit that is classified a
 | `created_at` | String | Yes | ISO-8601 timestamp of donation |
 | `translationEN` | String | No | LLM-refined English translation; `null` for English-language habits |
 | `translationDE` | String | No | LLM-refined German translation; `null` until produced by translate pipeline |
+| `studyId` | String \| null | No | The donor's active study at the moment of donation (from `ENROLLED_IN.studyId`, resolved via `getEnrollment()`); `null` for non-enrolled/public donors. Stamped once and never rewritten — see `DONATED_IN` below. |
 
 ---
 
@@ -80,6 +81,22 @@ BCIO ontology concepts mapped from context phrases. Created/merged by `map-bcio`
 
 ---
 
+#### `Comment`
+
+Anonymous community comment on a habit, created by `POST
+/api/v1/habits/:id/comments`. Authorship is recorded only in MongoDB
+`habit_comments` (see §3.2), never on this node, so account deletion can
+erase a participant's comments without de-anonymising the graph.
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `id` | String | Yes | UUID, matches the `habit_comments.commentId` ownership mapping |
+| `text` | String | Yes | Comment body (1–500 characters) |
+| `createdAt` | String | Yes | ISO-8601 timestamp |
+| `flagged` | Boolean | Yes | `true` if the auto-moderator (`commentModerationService.js` — a local `obscenity` wordlist + link/email/phone regex, not an LLM call) flagged this comment for human review. Comments created before moderation existed have no `flagged` property; readers should treat a missing property the same as `false`. |
+| `approved` | Boolean | Yes | `true` once the comment is safe to show publicly — set immediately on creation unless `flagged`, in which case a researcher/admin must approve it via `POST /admin/comments/:id/approve` (or delete it). `getHabitComments()`'s public listing filters on `approved = true OR approved IS NULL` (the latter grandfathers in pre-moderation comments). |
+| `flagReason` | String \| null | No | Short reason the moderator gave for flagging, shown to researchers in the admin "Flagged for review" queue |
+
 #### New Relationship Types
 
 | Relationship | From | To | Properties | Description |
@@ -87,7 +104,9 @@ BCIO ontology concepts mapped from context phrases. Created/merged by `map-bcio`
 | `HAS_CONTEXT` | `Habit` | `Context` | `dimension` (String) | Links a habit to its extracted context phrases |
 | `MAPS_TO` | `Context` | `BCIOConcept` | `confidence` (Float), `phrase` (String), `dimension` (String) | Links a context phrase to its BCIO concept mapping |
 | `DONATED` | `User` | `Habit` | `at` (ISO String) | Links a participant to a habit they donated (in addition to the scalar `Habit.userID`) |
-| `DONATED_IN` | `Habit` | `Study` | — | Links a donated habit to the study its donor was enrolled in (only for study-enrolled donors). Enables traversals like "all habits donated in study X" |
+| `DONATED_IN` | `Habit` | `Study` | — | Links a donated habit to the study its donor was enrolled in (only for study-enrolled donors). Enables traversals like "all habits donated in study X". **Immutable**: stamped from the donor's enrollment at the moment of donation and never rewritten, so switching or leaving a study afterwards does not re-attribute past habits — see `ENROLLED_IN` below and `docs/architecture.md`'s *Study Enrollment, Switching & Leaving* section. |
+| `COMMENT_ON` | `Comment` | `Habit` | — | Links an anonymous comment to the habit it was posted on |
+| `ENROLLED_IN` | `User` | `Study` | `groupId` (String), `enrolledAt` (ISO String), `studyCodeUsed` (String \| null), `droppedOutAt` (ISO String \| null) | A participant's membership in one study. **A user can accumulate multiple `ENROLLED_IN` relationships over their lifetime** — switching or leaving a study (`POST /onboarding/switch-study` / `/leave-study`) sets `droppedOutAt` on the current relationship (kept as history, not deleted, so per-study dropout-curve analytics still see it) and creates a fresh relationship to the new study. Exactly one relationship per user has `droppedOutAt IS NULL` at a time — that's the active one, and `getEnrollment()` reads always filter on it. |
 
 > `User` nodes are keyed by `userID` (the Keycloak subject) with a uniqueness constraint (`user_userID`). Donations are also queryable from the scalar `Habit.userID` / `Habit.studyId` properties, but the `DONATED` / `DONATED_IN` edges make donor→habit→study traversals first-class.
 
@@ -567,7 +586,7 @@ MongoDB stores operational data: survey definitions, participant records, profil
 | `studies` | Research studies: groups, feature toggles, end date + end-of-study notification | Yes (`isActive`/`deletedAt`) |
 | `questionnaire_assignments` | Questionnaire assigned to a study (all groups) or a specific group, with a cadence | No |
 | `questionnaire_windows` | Per-participant scheduled questionnaire occurrences + completion state | No |
-| `enrollments` | Study/group membership per participant (drives study participant counts) | No |
+| `enrollments` | Read-side mirror of each participant's *current* study/group (source of truth is Neo4j `ENROLLED_IN`); powers dropout export, admin stats, notification targeting, questionnaire scheduling | No |
 | `recommendations` | Recommendation records from the Python recommender | No |
 | `recommendation_feedback` | Free-text feedback on individual recommendations | No |
 | `habits` | Non-habit submissions saved for manual review | No |
@@ -925,6 +944,37 @@ picks up `endDate`/`endOfStudyNotification` via `GET /api/v1/questionnaires/due`
 (present regardless of whether any questionnaires are currently due) and
 reschedules on every app start, the same pattern used for questionnaire
 reminders.
+
+---
+
+#### `enrollments`
+
+One document per participant, mirroring their **current** study/group
+membership. **Neo4j's `ENROLLED_IN` relationship is the source of truth**
+(see §1.1's `ENROLLED_IN` relationship entry, and `docs/architecture.md`'s
+*Study Enrollment, Switching & Leaving* section) — this collection is an
+upserted read-side mirror used by dropout CSV export, admin stats,
+notification targeting, and questionnaire-window scheduling, none of which
+want to query Neo4j directly. Unlike `ENROLLED_IN`, this collection does
+**not** keep history: switching or leaving a study overwrites the same
+document in place rather than creating a new one.
+
+| Field | BSON Type | Required | Description |
+|---|---|---|---|
+| `_id` | ObjectId | Auto | Enrollment ID |
+| `userId` | String | Yes | Keycloak `sub`. Unique index — one document per user |
+| `studyId` | ObjectId | Yes | Ref to `studies._id` — the participant's *current* study |
+| `groupId` | ObjectId | Yes | Ref to `studies.groups[].id` |
+| `studyCodeUsed` | String \| null | No | The code redeemed to join the current study; `null` if enrolled via round-robin (no code) |
+| `enrolledAt` | Date | Yes | When the *current* study/group membership began (reset on every switch/leave) |
+| `lastActiveAt` | Date \| null | No | Updated on each daily log write (`touchEnrollmentActivity`) |
+| `droppedOutAt` | Date \| null | No | Reserved for a future "paused within current study" state; switching/leaving always immediately re-enrolls elsewhere rather than leaving this set, so it's rarely non-null in practice — the real per-study dropout history lives on `ENROLLED_IN` relationships in Neo4j, not here |
+| `cueConfig` | Object \| null | No | Resolved cue config cache; reset to `null` on switch/leave so it re-resolves against the new study/group |
+
+Upserted (not just updated) by `_upsertMongoEnrollment()` on every
+enroll/switch/leave call, so it self-heals if it was ever missing —
+including for participants who enrolled before this collection was reliably
+written (see the boot-time bug note in `docs/architecture.md`).
 
 ---
 

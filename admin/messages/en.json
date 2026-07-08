@@ -130,7 +130,14 @@
     "noComments": "No comments to moderate.",
     "confirmDelete": "Delete this comment? This cannot be undone.",
     "loadFailed": "Failed to load comments",
-    "deleteFailed": "Failed to delete comment"
+    "deleteFailed": "Failed to delete comment",
+    "flaggedTitle": "Flagged for review",
+    "flaggedSubtitle": "Automatically flagged by content moderation. Approve to publish, or delete to reject.",
+    "noFlaggedComments": "Nothing flagged for review right now.",
+    "flagReason": "Reason",
+    "approve": "Approve",
+    "approving": "Approving…",
+    "approveFailed": "Failed to approve comment"
   },
   "devices": {
     "title": "Devices",

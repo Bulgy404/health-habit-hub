@@ -29,7 +29,7 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 | UC-06 | Complete questionnaire | Fetch assigned questionnaire, submit form response | `GET /api/v1/participant/questionnaires`, `POST /api/v1/questionnaire-responses` | MongoDB, Neo4j |
 | UC-07 | Request recommendations | Guarded goal input (injection screen + LLM refusal → 422) → 7-way parallel fetch → GDS re-rank → hybrid retrieve → single LLM call (goal-language output, suggested cues, paper citations with DOI links); Redis-cached; habit UUIDs logged server-side only | `POST /api/v1/recommend/generate` | API-service, LightRAG, Redis, MongoDB, Neo4j |
 | UC-08 | View recommendations & give feedback | List own recommendations; per-recommendation free-text feedback | `GET /api/v1/recommendations/me`, `POST /api/v1/recommendations/:id/feedback` | MongoDB |
-| UC-09 | Enroll in study | Redeem study code (assigns group) or skip into default study | `POST /api/v1/enroll/redeem-code`, `/enroll/skip-code` | MongoDB |
+| UC-09 | Enroll in study | Redeem study code (assigns group) or skip into default study | `POST /api/v1/onboarding/redeem-code`, `/onboarding/skip-code` | MongoDB, Neo4j |
 | UC-10 | Retrieve habit config | Resolved cue config + randomly drawn pre-rated cues + SRHI items for the user's group | `GET /api/v1/me/habit-config` | MongoDB (studies, cue_pools, enrollments) |
 | UC-11 | Create implementation intention | If-then habit plan (behaviour, cue(s), duration); enforces `maxHabits` | `POST /api/v1/habits/intentions` | MongoDB |
 | UC-12 | Log daily behaviour | Mark intention done / not done; idempotent upsert on (intention, date) | `POST /api/v1/habits/intentions/:id/logs` | MongoDB |
@@ -40,7 +40,8 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 | UC-31 | Give informed consent | Mandatory pre-registration consent screen (HabConnect IC); versioned acceptance recorded server-side | `GET /:lng/consent`, `POST /api/v1/users/me/consent` | Backend, MongoDB |
 | UC-32 | Delete account | In-app GDPR/App-Store account deletion: wipes all participant-linked MongoDB data, the user's Comment nodes, + Keycloak identity; data export via `GET /users/me/export` (Art. 20) | `DELETE /api/v1/users/me`, `GET /api/v1/users/me/export` | MongoDB, Neo4j, Keycloak Admin API |
 | UC-33 | Receive adaptive habit reminders | Local notifications at a user-picked time; frequency fades as autonomy score (SRHI + adherence + streak) rises, with hysteresis and recovery; weights tunable via admin_settings | `GET /api/v1/habits/intentions/reminder-plans` | MongoDB, device notifications |
-| UC-34 | Comment & like habits | Anonymous likes (counter on Habit node) and comments (Comment nodes); like counts feed the LLM recommendation prompt as community signal; researchers moderate via `GET/DELETE /admin/comments*` | `POST /habits/:id/annotate (like)`, `GET/POST /habits/:id/comments` | Neo4j, MongoDB |
+| UC-34 | Comment & like habits | Anonymous likes (counter on Habit node) and comments (Comment nodes); like counts feed the LLM recommendation prompt as community signal; comments are auto-flagged by a local wordlist/regex check (not an LLM call) and held from public view until a researcher approves or deletes them via `GET /admin/comments?status=flagged`, `POST /admin/comments/:id/approve`, `DELETE /admin/comments/:id` | `POST /habits/:id/annotate (like)`, `GET/POST /habits/:id/comments` | Neo4j, MongoDB |
+| UC-38 | Switch or leave a study | After onboarding, move to a different study via a new code, or leave back to the default study; already-donated habits/logs/SRHI answers keep the studyId they were attributed to at the time — nothing is deleted or re-attributed | `GET /api/v1/onboarding/enrollment`, `POST /onboarding/switch-study`, `POST /onboarding/leave-study` | MongoDB, Neo4j |
 
 ## Researcher / Admin use cases (admin portal)
 
@@ -76,7 +77,7 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 | Auth & identity | UC-01, UC-02, UC-17, UC-31, UC-32 | `app/middleware/auth.js`, `app/routes/onboardRouter.js`, `admin/src/lib/auth.ts`, `keycloak/` |
 | Donation pipeline | UC-03, UC-04, UC-34 | `app/routes/habits/`, `app/services/habitDonationService.js`, `API-service/routers/classify_*.py`, `map_bcio.py` |
 | Recommendations | UC-07, UC-08 | `app/routes/recommendRouter.js`, `API-service/routers/recommend.py`, `retrieve.py` |
-| DFG study module | UC-09 – UC-13, UC-19, UC-21 – UC-24, UC-33 | `app/services/intentionService.js`, `dailyLogService.js`, `srhiService.js`, `cuePoolService.js`, `exportService.js`, `studyAnalyticsService.js`, `notificationCampaignService.js` |
+| DFG study module | UC-09 – UC-13, UC-19, UC-21 – UC-24, UC-33, UC-38 | `app/services/intentionService.js`, `dailyLogService.js`, `srhiService.js`, `cuePoolService.js`, `exportService.js`, `studyAnalyticsService.js`, `notificationCampaignService.js`, `studyCodeService.js` |
 | Questionnaires & profiles | UC-05, UC-06, UC-20 | `app/routes/questionnaires*`, `profileFieldDefinitionsRouter.js`, `userProfileRouter.js` |
 | Knowledge base | UC-25, UC-26, UC-30 | `app/routes/kbRouter.js`, `API-service/kb/`, `lightrag/`, `knowledge-mcp/` |
 | Operations | UC-29 | `backup-service/` |

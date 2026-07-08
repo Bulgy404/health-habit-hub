@@ -6,6 +6,7 @@ import {
   listAllComments,
   countAllComments,
   deleteHabitComments,
+  approveComment,
 } from '../db/habitQueries.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import {
@@ -323,16 +324,74 @@ export function createAdminRouter({
    *             schema:
    *               $ref: '#/components/schemas/Error'
    */
-  // GET /api/v1/admin/comments — all participant comments for moderation
-  // (newest first, with habit context), paginated. Roles enforced at mount
-  // (admin/researcher).
+  /**
+   * @swagger
+   * /admin/comments:
+   *   get:
+   *     summary: List community comments for moderation
+   *     description: >
+   *       Paginated, newest first, with habit context. `?status=flagged`
+   *       returns only comments the automated moderator (local wordlist +
+   *       link/email/phone regex — not an LLM call) held for review; the
+   *       default ('all') returns every comment regardless of status.
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: query
+   *         name: status
+   *         schema: { type: string, enum: [all, flagged], default: all }
+   *       - in: query
+   *         name: page
+   *         schema: { type: integer, default: 1, minimum: 1 }
+   *       - in: query
+   *         name: limit
+   *         schema: { type: integer, default: 100, maximum: 500 }
+   *     responses:
+   *       200:
+   *         description: Paginated comment list
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 total: { type: integer }
+   *                 page: { type: integer }
+   *                 limit: { type: integer }
+   *                 comments:
+   *                   type: array
+   *                   items:
+   *                     type: object
+   *                     properties:
+   *                       id: { type: string }
+   *                       text: { type: string }
+   *                       createdAt: { type: string, format: date-time }
+   *                       habitId: { type: string }
+   *                       habitSentence: { type: string }
+   *                       flagged: { type: boolean }
+   *                       approved: { type: boolean }
+   *                       flagReason: { type: string, nullable: true }
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Caller does not have admin or researcher role
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   router.get('/comments', async (req, res) => {
     try {
       const page = parseInt(req.query.page, 10) || 1;
       const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+      const status = req.query.status === 'flagged' ? 'flagged' : 'all';
       const [comments, total] = await Promise.all([
-        listAllComments(queryNeo4j, { page, limit }),
-        countAllComments(queryNeo4j),
+        listAllComments(queryNeo4j, { page, limit, status }),
+        countAllComments(queryNeo4j, { status }),
       ]);
       res.json({ comments, total, page, limit });
     } catch (err) {
@@ -341,8 +400,107 @@ export function createAdminRouter({
     }
   });
 
-  // DELETE /api/v1/admin/comments/:commentId — moderate (remove) a comment.
-  // Deletes the anonymous Neo4j node and the MongoDB ownership mapping.
+  /**
+   * @swagger
+   * /admin/comments/{commentId}/approve:
+   *   post:
+   *     summary: Publish a flagged comment
+   *     description: >
+   *       Marks a flagged comment as approved (visible in the public habit
+   *       comment list) after a researcher/admin has reviewed it and judged
+   *       it OK. Used from the admin "Flagged for review" queue.
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: commentId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200:
+   *         description: Comment approved
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 ok: { type: boolean, example: true }
+   *                 commentId: { type: string }
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Caller does not have admin or researcher role
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       404:
+   *         description: Comment not found
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
+  router.post('/comments/:commentId/approve', async (req, res) => {
+    try {
+      const commentId = String(req.params.commentId);
+      const approved = await approveComment(queryNeo4j, commentId);
+      if (!approved) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+      log.info({ commentId }, '[admin] comment approved');
+      res.json({ ok: true, commentId });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  /**
+   * @swagger
+   * /admin/comments/{commentId}:
+   *   delete:
+   *     summary: Delete (or reject) a comment
+   *     description: >
+   *       Deletes the anonymous Neo4j Comment node and the MongoDB ownership
+   *       mapping. Used both to reject a flagged comment and to remove an
+   *       already-published one.
+   *     tags: [Admin]
+   *     security:
+   *       - bearerAuth: []
+   *     parameters:
+   *       - in: path
+   *         name: commentId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200:
+   *         description: Comment deleted
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 ok: { type: boolean, example: true }
+   *                 commentId: { type: string }
+   *       401:
+   *         description: Missing or invalid JWT
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   *       403:
+   *         description: Caller does not have admin or researcher role
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/Error'
+   */
   router.delete('/comments/:commentId', async (req, res) => {
     try {
       const commentId = String(req.params.commentId);

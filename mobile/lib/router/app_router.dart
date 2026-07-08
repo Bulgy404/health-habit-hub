@@ -30,6 +30,7 @@ import '../screens/onboarding/restore_screen.dart';
 import '../screens/onboarding/study_code_screen.dart';
 import '../screens/onboarding/welcome_screen.dart';
 import '../screens/profile_screen.dart';
+import '../screens/project_info_screen.dart';
 import '../screens/shell_screen.dart';
 import '../screens/user_settings_screen.dart';
 import 'redirect.dart';
@@ -61,6 +62,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/consent-update',
         builder: (context, state) => const ConsentScreen(isUpdate: true),
+      ),
+      GoRoute(
+        path: '/about-project',
+        builder: (context, state) => const ProjectInfoScreen(),
       ),
       GoRoute(
         path: '/onboarding/passphrase',

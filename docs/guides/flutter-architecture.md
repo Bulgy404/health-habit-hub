@@ -107,29 +107,31 @@ Navigation uses **GoRouter** configured in `main.dart` via a `RouterNotifier`/`r
 | `/onboarding/welcome` | `WelcomeScreen` | First-run onboarding |
 | `/onboarding/passphrase` | `PassphraseScreen` | BIP-39 backup passphrase |
 | `/onboarding/restore` | `RestoreScreen` | Restore account from passphrase |
-| `/donate` | `DonateScreen` | Native habit-donation form (posts to `/api/v1/habits/donate`) |
+| `/share` | `ShareHabitScreen` | Tab root: landing hero + why-share card ("Read more" → `/about-project`) when idle, native habit-share form (posts to `/api/v1/habits/share`) once started. Shared-today state shows a prominent "Share another habit" CTA rather than blocking further sharing |
+| `/donate` | — | Redirects to `/share` (legacy alias) |
+| `/about-project` | `ProjectInfoScreen` | "About HabConnect" info page: how shared habits are used, what cues are, the recommender pipeline (with a small step-diagram), adaptive reminders, SRHI — links out to the project's GitHub repo |
 | `/explore` | `ExploreScreen` | Browse donated habits |
 | `/recommend` | `GoalInputScreen` | Enter a health goal |
 | `/recommend/loading` | `LoadingScreen` | Waits for recommendation result |
-| `/profile` | `ProfileScreen` | User profile + questionnaire links |
 | `/settings` | `UserSettingsScreen` | Language selector |
+| `/settings/profile` | `ProfileScreen` | Profile fields, health questionnaires links, and the **Study membership** section (current study/group, "Join a different study" code dialog, "Leave study" — both round-trip through `/onboarding/switch-study` / `/onboarding/leave-study` without touching already-donated data) |
 | `/questionnaire/:slug` | `QuestionnaireScreen` | Generic questionnaire by slug |
 | `/questionnaire/:slug/confirmation` | `QuestionnaireConfirmationScreen` | Post-submit confirmation |
 | `/admin/*` | `AdminShellScreen` + sub-routes | Admin panel (role-guarded) |
-| `/habits` | `MyHabitsScreen` | Tab root: SRHI prompt card + habit card list |
+| `/habits` | `MyHabitsScreen` | Tab root: GitHub-style `ContributionGraphWidget` (aggregate across all habits, shown even with none) + SRHI prompt card + habit card list |
 | `/habits/new/behavior` | `NewHabitScreen1Behavior` | Pick behavior from `habitConfig.behaviorOptions` |
 | `/habits/new/cue` | `NewHabitScreen2Cue` | Select pre-rated or free-text cue |
 | `/habits/new/confirm` | `NewHabitScreen3Confirm` | Confirm if-then statement, pick duration, submit |
-| `/habits/:intentionId` | `HabitDetailScreen` | Heatmap + SRHI trajectory + abandon action |
+| `/habits/:intentionId` | `HabitDetailScreen` | Per-habit `ContributionGraphWidget` activity log + SRHI score/next-due-date card with a dismissible "What's SRHI?" explanation + SRHI trajectory sparkline + abandon action |
 | `/habits/:intentionId/srhi/:weekNumber` | `SrhiFormScreen` | 12-item 1–7 slider SRHI check-in form |
 
 ### Auth guard
 
 The GoRouter `redirect` callback runs before every navigation:
 
-1. If the user is **not logged in** and the target route is protected (`/donate`, `/explore`, `/recommend`, `/profile`, `/settings`, `/questionnaire`, `/admin`), redirect to `/onboarding/welcome`.
-2. If the user **is logged in** and navigates to `/login` or `/onboarding/*`, redirect to `/donate` (the main screen).
-3. If the user **lacks the `admin` role** and navigates to `/admin/*`, redirect to `/donate`.
+1. If the user is **not logged in** and the target route is protected (`/share`, `/donate`, `/explore`, `/recommend`, `/settings`, `/questionnaire`), redirect to `/onboarding/welcome`.
+2. If the user **is logged in** and navigates to `/onboarding/welcome`, redirect to `/share` (the main screen).
+3. If the participant's study disables the recommender, navigating to `/recommend` redirects to `/habits` (defence-in-depth — the tab is also hidden in `ShellScreen`).
 
 The auth check runs on `isLoggedInProvider` (a `FutureProvider<bool>` that calls `AuthService.isLoggedIn()`).
 
@@ -163,7 +165,9 @@ The app uses **Riverpod** (`flutter_riverpod`). All providers are declared at mo
 | `intentionsProvider` | `features/my_habits/my_habits_provider.dart` | `FutureProvider<List<Intention>>` — user's active intentions |
 | `dueSrhiProvider` | `features/my_habits/my_habits_provider.dart` | `FutureProvider<List<SrhiWindow>>` — pending SRHI check-in windows |
 | `intentionLogsProvider(id)` | `features/my_habits/my_habits_provider.dart` | `FutureProvider.family` — daily logs for a given intention |
-| `srhiTrajectoryProvider(id)` | `features/my_habits/my_habits_provider.dart` | `FutureProvider.family` — SRHI score history for a given intention |
+| `srhiTrajectoryProvider(id)` | `features/my_habits/my_habits_provider.dart` | `FutureProvider.family` — SRHI score history for a given intention (each point now also carries `scheduledFor`, used to compute the next-due date shown on the habit detail screen) |
+| `allHabitsActivityProvider` | `features/my_habits/my_habits_provider.dart` | `FutureProvider<Map<DateTime, int>>` — enactment counts across every active intention, feeding the aggregate `ContributionGraphWidget` on `/habits` |
+| `dueQuestionnaireProvider` | `screens/shell_screen.dart` | `Provider<Future<String? > Function()>` — fetches the slug of a currently-due questionnaire (or `null`) for the post-startup in-app reminder snackbar; a plain function-returning provider (not `FutureProvider`) so `ShellScreen` can call it on demand from `initState` and so tests can override it with a stub instead of making a real network call |
 
 ### Locale provider
 
@@ -365,6 +369,19 @@ The "New Habit" button on `MyHabitsScreen` is hidden when `intentions.length >= 
 
 `MyHabitsScreen` shows a prompt card when `dueSrhiProvider` returns one or more pending windows. Tapping the card navigates to `/habits/:intentionId/srhi/:weekNumber`. `SrhiFormScreen` renders all 12 SRHI items as 1–7 sliders; the submit button is gated until every slider has been moved. On submit it calls `POST /api/v1/srhi/:id/week/:n` and then invalidates `dueSrhiProvider` and `srhiTrajectoryProvider(id)`.
 
+On `HabitDetailScreen`, the "Habit strength" section shows the latest submitted SRHI score (or "Not yet available"), the next scheduled check-in date (or "Due now" / "None scheduled") computed from `srhiTrajectoryProvider`'s not-yet-submitted points, and a short "What's SRHI?" explanation card the user can dismiss (per-screen-visit local state, not persisted) — above the existing SRHI trajectory sparkline.
+
+### Activity visualization (`ContributionGraphWidget`)
+
+`widgets/contribution_graph_widget.dart` is a GitHub-style calendar heatmap (weeks as columns, month/weekday labels, colour intensity by count) used in two places:
+
+- **`/habits` (aggregate)** — `allHabitsActivityProvider` sums enactment counts across every active intention per day; shown as a standing fixture at the top of the page even when the participant has no habits yet (renders as an all-empty grid rather than being hidden).
+- **`/habits/:intentionId` (per-habit)** — the "Activity log" section, scoped to that one intention's own logs (0/1 intensity, since a single habit is either logged or not on a given day).
+
+Colours derive from `Theme.of(context).colorScheme` (empty cells: `surfaceContainerHighest`; filled cells: a green scale), so the graph reads correctly in both light and dark mode rather than assuming a light background.
+
+**Backend contract note:** `GET /habits/intentions/:id/logs` returns each log's `intentionId` alongside `date`/`enacted`/`loggedAt` — this was previously omitted, which made the Flutter model's non-nullable `intentionId` field always fail to parse, silently breaking *every* consumer of daily logs (the day-strip on `MyHabitsScreen`, the heatmap, and this widget). The Flutter model now also falls back to an empty string instead of throwing if a future regression reintroduces the gap.
+
 ### API endpoints
 
 | Endpoint | Direction | Purpose |
@@ -373,11 +390,15 @@ The "New Habit" button on `MyHabitsScreen` is hidden when `intentions.length >= 
 | `GET /api/v1/habits/intentions` | read | List user intentions |
 | `POST /api/v1/habits/intentions` | write | Create new intention |
 | `PATCH /api/v1/habits/intentions/:id/status` | write | Abandon / pause intention |
-| `GET /api/v1/habits/intentions/:id/logs` | read | Daily log history |
+| `GET /api/v1/habits/intentions/:id/logs` | read | Daily log history (each entry includes `intentionId`) |
 | `POST /api/v1/habits/intentions/:id/logs` | write | Record daily enactment |
 | `GET /api/v1/srhi/due` | read | Pending SRHI windows |
 | `POST /api/v1/srhi/:id/week/:n` | write | Submit SRHI check-in |
-| `GET /api/v1/srhi/:id/trajectory` | read | SRHI score history |
+| `GET /api/v1/srhi/:id/trajectory` | read | SRHI score history (each point includes `scheduledFor`, used for the next-due-date display) |
+| `GET /api/v1/onboarding/enrollment` | read | Current study/group — powers the Study membership section on `/settings/profile` |
+| `POST /api/v1/onboarding/switch-study` | write | Move to a different study via code — see `docs/architecture.md`'s *Study Enrollment, Switching & Leaving* |
+| `POST /api/v1/onboarding/leave-study` | write | Move back to the default study |
+| `GET /api/v1/questionnaires/due` | read | Also drives the post-startup in-app reminder snackbar (`dueQuestionnaireProvider`, `ShellScreen`) in addition to the existing local push-notification scheduling |
 
 ---
 

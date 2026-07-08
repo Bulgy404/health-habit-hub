@@ -159,6 +159,82 @@ class AppLocalizationsFr extends AppLocalizations {
   String get restoreAccountOnDevice => 'Restaurer le compte sur cet appareil';
 
   @override
+  String get studyMembershipTitle => 'Étude';
+
+  @override
+  String get studyMembershipCurrentLabel => 'Étude actuelle';
+
+  @override
+  String get studyMembershipDefaultLabel =>
+      'Étude générale (sans code d\'étude)';
+
+  @override
+  String studyMembershipGroupLabel(String groupLabel) {
+    return 'Groupe : $groupLabel';
+  }
+
+  @override
+  String get studyMembershipLoadFailed =>
+      'Impossible de charger vos informations d\'étude.';
+
+  @override
+  String get studyMembershipJoinButton => 'Rejoindre une autre étude';
+
+  @override
+  String get studyMembershipLeaveButton => 'Quitter l\'étude';
+
+  @override
+  String get studyMembershipJoinDialogTitle => 'Rejoindre une étude';
+
+  @override
+  String get studyMembershipJoinDialogBody =>
+      'Saisissez le code d\'étude fourni par un chercheur. Les habitudes, journaux et réponses déjà partagés restent associés à votre étude actuelle ; seul ce que vous faites à partir de maintenant compte pour la nouvelle étude.';
+
+  @override
+  String get studyMembershipCodeLabel => 'Code d\'étude';
+
+  @override
+  String get studyMembershipJoinConfirm => 'Rejoindre';
+
+  @override
+  String studyMembershipJoinSuccess(String studyName) {
+    return 'Vous avez rejoint $studyName.';
+  }
+
+  @override
+  String get studyMembershipAlreadyInStudy =>
+      'Vous êtes déjà dans cette étude.';
+
+  @override
+  String get studyMembershipInvalidCode =>
+      'Code invalide. Veuillez vérifier et réessayer.';
+
+  @override
+  String get studyMembershipCodeExpired => 'Ce code a expiré.';
+
+  @override
+  String get studyMembershipCodeUsedUp =>
+      'Ce code a déjà été entièrement utilisé.';
+
+  @override
+  String get studyMembershipJoinFailed =>
+      'Impossible de rejoindre cette étude. Veuillez vérifier votre connexion.';
+
+  @override
+  String get studyMembershipLeaveConfirmTitle => 'Quitter cette étude ?';
+
+  @override
+  String get studyMembershipLeaveConfirmBody =>
+      'Vous passerez à l\'étude générale. Rien n\'est supprimé : vos habitudes, journaux et réponses aux questionnaires existants restent inchangés et toujours associés à cette étude.';
+
+  @override
+  String get studyMembershipLeaveSuccess => 'Vous avez quitté l\'étude.';
+
+  @override
+  String get studyMembershipLeaveFailed =>
+      'Impossible de quitter l\'étude. Veuillez vérifier votre connexion.';
+
+  @override
   String get profileCompleted => 'Profil complété';
 
   @override
@@ -648,6 +724,28 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les données SRHI apparaîtront après votre premier bilan hebdomadaire.';
 
   @override
+  String get srhiExplanationTitle => 'Qu\'est-ce que le SRHI ?';
+
+  @override
+  String get srhiExplanationBody =>
+      'Le Self-Report Habit Index (SRHI) mesure à quel point ce comportement vous semble automatique, sur une échelle de 1 à 7. Un score plus élevé signifie moins d\'effort conscient : un signe que l\'habitude s\'intègre à votre routine.';
+
+  @override
+  String get srhiScoreLabel => 'Score SRHI actuel';
+
+  @override
+  String get srhiScoreUnavailable => 'Pas encore disponible';
+
+  @override
+  String get srhiNextCheckInLabel => 'Prochain bilan';
+
+  @override
+  String get srhiNextCheckInDue => 'À faire maintenant';
+
+  @override
+  String get srhiNextCheckInNone => 'Aucun programmé';
+
+  @override
   String get consentTitle => 'Informations sur l\'étude et consentement';
 
   @override
@@ -1128,6 +1226,9 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get donateWhyShareBody =>
       'Chaque habitude que vous partagez est ajoutée anonymement à un panorama ouvert et grandissant de la façon dont les gens construisent des routines saines au quotidien. Plus les chercheurs voient d\'exemples concrets, meilleures deviennent les recommandations pour tout le monde, y compris les vôtres.';
+
+  @override
+  String get readMoreAboutProject => 'En savoir plus sur le projet';
 
   @override
   String get donatePleaseAnswerAllQuestions =>

@@ -41,3 +41,34 @@ final srhiTrajectoryProvider =
       .watch(myHabitsServiceProvider)
       .fetchTrajectory(intentionId);
 });
+
+/// Daily enactment counts across every active intention, keyed by
+/// midnight-normalised date — feeds the GitHub-style contribution graph at
+/// the top of the My Habits page. A day's count is how many distinct habits
+/// were logged as enacted that day, so busier days render darker green.
+final allHabitsActivityProvider = FutureProvider<Map<DateTime, int>>((
+  ref,
+) async {
+  final intentions = await ref.watch(intentionsProvider.future);
+  final active = intentions.where((i) => i.status == 'active').toList();
+  final service = ref.watch(myHabitsServiceProvider);
+  final logsByIntention = await Future.wait(
+    active.map((i) => service.fetchLogs(i.id)),
+  );
+
+  final counts = <DateTime, int>{};
+  for (final logs in logsByIntention) {
+    for (final log in logs) {
+      if (!log.enacted) continue;
+      final parts = log.date.split('-');
+      if (parts.length != 3) continue;
+      final year = int.tryParse(parts[0]);
+      final month = int.tryParse(parts[1]);
+      final day = int.tryParse(parts[2]);
+      if (year == null || month == null || day == null) continue;
+      final key = DateTime(year, month, day);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+  }
+  return counts;
+});

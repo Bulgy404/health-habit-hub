@@ -83,7 +83,14 @@
     "noComments": "Geen reacties om te modereren.",
     "confirmDelete": "Deze reactie verwijderen? Dit kan niet ongedaan worden gemaakt.",
     "loadFailed": "Reacties konden niet worden geladen",
-    "deleteFailed": "Reactie kon niet worden verwijderd"
+    "deleteFailed": "Reactie kon niet worden verwijderd",
+    "flaggedTitle": "Gemarkeerd ter beoordeling",
+    "flaggedSubtitle": "Automatisch gemarkeerd door contentmoderatie. Keur goed om te publiceren, of verwijder om af te wijzen.",
+    "noFlaggedComments": "Op dit moment niets gemarkeerd ter beoordeling.",
+    "flagReason": "Reden",
+    "approve": "Goedkeuren",
+    "approving": "Goedkeuren…",
+    "approveFailed": "Kon reactie niet goedkeuren"
   },
   "devices": {
     "title": "Apparaten",

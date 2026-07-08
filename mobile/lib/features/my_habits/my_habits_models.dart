@@ -292,6 +292,7 @@ class SrhiTrajectoryPoint {
     required this.weekNumber,
     this.score,
     this.submittedAt,
+    this.scheduledFor,
   });
 
   /// Study week number for this data point.
@@ -303,6 +304,10 @@ class SrhiTrajectoryPoint {
   /// Timestamp when this measurement was submitted.
   final DateTime? submittedAt;
 
+  /// Date this week's check-in is (or was) scheduled for. Present for
+  /// not-yet-submitted windows too, so the next due date can be shown.
+  final DateTime? scheduledFor;
+
   /// Deserialises from JSON.
   factory SrhiTrajectoryPoint.fromJson(Map<String, dynamic> json) =>
       SrhiTrajectoryPoint(
@@ -311,6 +316,9 @@ class SrhiTrajectoryPoint {
             json['score'] != null ? (json['score'] as num).toDouble() : null,
         submittedAt: json['submittedAt'] != null
             ? DateTime.parse(json['submittedAt'] as String)
+            : null,
+        scheduledFor: json['scheduledFor'] != null
+            ? DateTime.parse(json['scheduledFor'] as String)
             : null,
       );
 }

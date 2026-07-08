@@ -130,7 +130,14 @@
     "noComments": "Keine Kommentare zu moderieren.",
     "confirmDelete": "Diesen Kommentar löschen? Dies kann nicht rückgängig gemacht werden.",
     "loadFailed": "Kommentare konnten nicht geladen werden",
-    "deleteFailed": "Kommentar konnte nicht gelöscht werden"
+    "deleteFailed": "Kommentar konnte nicht gelöscht werden",
+    "flaggedTitle": "Zur Überprüfung markiert",
+    "flaggedSubtitle": "Automatisch durch die Inhaltsmoderation markiert. Genehmigen zum Veröffentlichen oder Löschen zum Ablehnen.",
+    "noFlaggedComments": "Aktuell nichts zur Überprüfung markiert.",
+    "flagReason": "Grund",
+    "approve": "Genehmigen",
+    "approving": "Wird genehmigt…",
+    "approveFailed": "Kommentar konnte nicht genehmigt werden"
   },
   "devices": {
     "title": "Geräte",

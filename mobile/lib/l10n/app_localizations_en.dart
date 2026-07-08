@@ -155,6 +155,80 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restoreAccountOnDevice => 'Restore account on this device';
 
   @override
+  String get studyMembershipTitle => 'Study';
+
+  @override
+  String get studyMembershipCurrentLabel => 'Current study';
+
+  @override
+  String get studyMembershipDefaultLabel => 'General study (no study code)';
+
+  @override
+  String studyMembershipGroupLabel(String groupLabel) {
+    return 'Group: $groupLabel';
+  }
+
+  @override
+  String get studyMembershipLoadFailed =>
+      'Couldn\'t load your study information.';
+
+  @override
+  String get studyMembershipJoinButton => 'Join a different study';
+
+  @override
+  String get studyMembershipLeaveButton => 'Leave study';
+
+  @override
+  String get studyMembershipJoinDialogTitle => 'Join a study';
+
+  @override
+  String get studyMembershipJoinDialogBody =>
+      'Enter the study code a researcher gave you. Habits, logs, and answers you\'ve already shared stay with your current study; only what you do from now on counts toward the new one.';
+
+  @override
+  String get studyMembershipCodeLabel => 'Study code';
+
+  @override
+  String get studyMembershipJoinConfirm => 'Join';
+
+  @override
+  String studyMembershipJoinSuccess(String studyName) {
+    return 'You\'ve joined $studyName.';
+  }
+
+  @override
+  String get studyMembershipAlreadyInStudy => 'You\'re already in that study.';
+
+  @override
+  String get studyMembershipInvalidCode =>
+      'Invalid code. Please check and try again.';
+
+  @override
+  String get studyMembershipCodeExpired => 'This code has expired.';
+
+  @override
+  String get studyMembershipCodeUsedUp =>
+      'This code has already been fully used.';
+
+  @override
+  String get studyMembershipJoinFailed =>
+      'Couldn\'t join that study. Please check your connection.';
+
+  @override
+  String get studyMembershipLeaveConfirmTitle => 'Leave this study?';
+
+  @override
+  String get studyMembershipLeaveConfirmBody =>
+      'You\'ll move to the general study. Nothing is deleted: your existing habits, logs, and questionnaire answers stay exactly as they are, still attributed to this study.';
+
+  @override
+  String get studyMembershipLeaveSuccess => 'You\'ve left the study.';
+
+  @override
+  String get studyMembershipLeaveFailed =>
+      'Couldn\'t leave the study. Please check your connection.';
+
+  @override
   String get profileCompleted => 'Profile Completed';
 
   @override
@@ -631,6 +705,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'SRHI data will appear after your first weekly check-in.';
 
   @override
+  String get srhiExplanationTitle => 'What\'s SRHI?';
+
+  @override
+  String get srhiExplanationBody =>
+      'The Self-Report Habit Index (SRHI) measures how automatic this behavior feels to you, on a scale from 1 to 7. A higher score means it takes less conscious effort: a sign the habit is becoming part of your routine.';
+
+  @override
+  String get srhiScoreLabel => 'Current SRHI score';
+
+  @override
+  String get srhiScoreUnavailable => 'Not yet available';
+
+  @override
+  String get srhiNextCheckInLabel => 'Next check-in';
+
+  @override
+  String get srhiNextCheckInDue => 'Due now';
+
+  @override
+  String get srhiNextCheckInNone => 'None scheduled';
+
+  @override
   String get consentTitle => 'Study Information & Consent';
 
   @override
@@ -1100,6 +1196,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get donateWhyShareBody =>
       'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone\'s recommendations become, including yours.';
+
+  @override
+  String get readMoreAboutProject => 'Read more about the project';
 
   @override
   String get donatePleaseAnswerAllQuestions => 'Please answer all questions';

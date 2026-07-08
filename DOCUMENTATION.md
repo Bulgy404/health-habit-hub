@@ -512,6 +512,7 @@ Users without these roles see the `/access-denied` page. The Next.js edge middle
 - **Participant management** — list, create, and manage study participants
 - **Questionnaire authoring** — create and publish questionnaires
 - **Study configuration** — manage study groups and enrollment codes
+- **Comment moderation** — a local wordlist/regex check (not an LLM call — see `docs/architecture.md`'s *Community Signals* section) auto-flags inappropriate community comments for review; researchers approve or delete flagged comments in a dedicated queue rather than reviewing every comment
 - **Knowledge base** — view and manage the habit knowledge base
 - **Data export** — export questionnaire response data
 
@@ -604,9 +605,16 @@ The interactive Swagger UI is served by the running backend at `/api/v1/docs`. T
 | `PUT` | `/api/v1/profile` | JWT (participant+) | Update user profile |
 | `GET` | `/api/v1/questionnaires` | JWT (participant+) | List questionnaires |
 | `POST` | `/api/v1/questionnaire-responses` | JWT (participant+) | Submit questionnaire response (links the answer to the next open scheduled window) |
-| `POST` | `/api/v1/onboarding` | JWT (participant) | Redeem study enrollment code |
+| `POST` | `/api/v1/onboarding/redeem-code` | JWT (participant) | Redeem a study enrollment code (first-time onboarding) |
+| `POST` | `/api/v1/onboarding/skip-code` | JWT (participant) | Enroll in the default study (round-robin group), no code |
+| `GET` | `/api/v1/onboarding/enrollment` | JWT (participant) | Current study/group, for the account screen |
+| `POST` | `/api/v1/onboarding/switch-study` | JWT (participant) | Move to a different study via code, without touching already-donated data |
+| `POST` | `/api/v1/onboarding/leave-study` | JWT (participant) | Move back to the default study ("leave study") |
 | `GET/POST/PUT/DELETE` | `/api/v1/admin/studies/:id/questionnaire-assignments` | JWT (admin, researcher) | Assign a questionnaire to a study/group on a cadence; list assignments + completion |
 | `GET` | `/api/v1/admin/participants/:id/responses` | JWT (admin, researcher) | A participant's questionnaire answers (for the admin answer viewer) |
+| `GET` | `/api/v1/admin/comments` | JWT (admin, researcher) | Paginated comment moderation list; `?status=flagged` for the review queue |
+| `POST` | `/api/v1/admin/comments/:id/approve` | JWT (admin, researcher) | Publish a flagged comment |
+| `DELETE` | `/api/v1/admin/comments/:id` | JWT (admin, researcher) | Delete/reject a comment |
 | `GET/POST` | `/api/v1/admin/*` | JWT (admin, researcher) | Admin operations (participants, studies, exports) |
 | `GET/POST` | `/api/v1/kb/*` | JWT (admin, researcher) | Knowledge base management |
 
