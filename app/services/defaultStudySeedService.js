@@ -37,7 +37,6 @@ export async function seedDefaultQuestionnaires(db) {
     readFileSync(QUESTIONNAIRES_SEED_PATH, 'utf8')
   );
   for (const q of questionnaires) {
-    // eslint-disable-next-line no-unused-vars
     const { _id, ...doc } = q;
     await collection.updateOne(
       { slug: doc.slug },
@@ -82,8 +81,5 @@ export async function seedDefaultStudy(db) {
     createdAt: now,
     updatedAt: now,
   });
-  log.info(
-    { questionnaireCount: qIds.length },
-    'Default study seeded'
-  );
+  log.info({ questionnaireCount: qIds.length }, 'Default study seeded');
 }

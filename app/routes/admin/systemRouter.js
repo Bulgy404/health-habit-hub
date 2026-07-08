@@ -153,32 +153,36 @@ export function createSystemRouter({ serviceChecks = {} } = {}) {
    * metrics. Never 500s on a Prometheus outage — it reports reachability so the
    * UI can degrade gracefully.
    */
-  router.get('/system/overview', requireRole(ROLES.ADMIN), async (_req, res) => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 4000);
-    try {
-      const [health, metrics] = await Promise.all([
-        checkAllServices(serviceChecks),
-        collectMetrics(controller.signal).then(
-          (m) => ({ reachable: true, values: m }),
-          (err) => {
-            log.warn({ err }, 'Prometheus unreachable');
-            return { reachable: false, values: {} };
-          }
-        ),
-      ]);
-      res.json({
-        generatedAt: new Date().toISOString(),
-        health,
-        prometheus: metrics,
-      });
-    } catch (err) {
-      log.error({ err }, 'system overview failed');
-      res.status(500).json({ error: 'Failed to collect system overview.' });
-    } finally {
-      clearTimeout(timer);
+  router.get(
+    '/system/overview',
+    requireRole(ROLES.ADMIN),
+    async (_req, res) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4000);
+      try {
+        const [health, metrics] = await Promise.all([
+          checkAllServices(serviceChecks),
+          collectMetrics(controller.signal).then(
+            (m) => ({ reachable: true, values: m }),
+            (err) => {
+              log.warn({ err }, 'Prometheus unreachable');
+              return { reachable: false, values: {} };
+            }
+          ),
+        ]);
+        res.json({
+          generatedAt: new Date().toISOString(),
+          health,
+          prometheus: metrics,
+        });
+      } catch (err) {
+        log.error({ err }, 'system overview failed');
+        res.status(500).json({ error: 'Failed to collect system overview.' });
+      } finally {
+        clearTimeout(timer);
+      }
     }
-  });
+  );
 
   /**
    * GET /system/queues

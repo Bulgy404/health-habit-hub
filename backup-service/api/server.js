@@ -65,6 +65,19 @@ const writeLimiter = rateLimit({
   message: { error: 'Too many requests — please slow down.' },
 });
 
+// Separate, more generous limiter for /download: not destructive like
+// trigger/restore/upload, but still heavy filesystem + bandwidth I/O
+// (backup archives can be many GB), so an unthrottled loop against it —
+// even from an authenticated but compromised/misbehaving caller — could
+// still exhaust disk I/O or bandwidth.
+const downloadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests — please slow down.' },
+});
+
 app.get('/status', (_req, res) => {
   const history = listManifests().slice(0, 30);
   res.json({
@@ -78,7 +91,7 @@ app.get('/jobs/current', (_req, res) => {
   res.json(getCurrentJob());
 });
 
-app.get('/download/:filename', (req, res) => {
+app.get('/download/:filename', downloadLimiter, (req, res) => {
   const absPath = resolveBackupPath(req.params.filename);
   if (!absPath || !existsSync(absPath)) {
     return res.status(404).json({ error: 'Backup not found.' });

@@ -316,7 +316,9 @@ export function createStudyEnrollRouter({ db, neo4jRun } = {}) {
       if (result.exhausted)
         return res.status(410).json({ error: 'Code redemption limit reached' });
       if (result.alreadyInStudy)
-        return res.status(409).json({ error: 'Already enrolled in that study' });
+        return res
+          .status(409)
+          .json({ error: 'Already enrolled in that study' });
 
       res.json({
         studyId: result.studyId,

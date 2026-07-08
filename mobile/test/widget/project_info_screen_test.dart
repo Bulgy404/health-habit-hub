@@ -16,25 +16,21 @@ Widget _wrap({Locale locale = const Locale('en')}) {
   );
 }
 
+/// The page is a long ListView of static content — a tall test surface means
+/// every section is actually built (ListView only builds children near the
+/// visible viewport), so assertions don't need to scroll first.
+void _useTallSurface(WidgetTester tester) {
+  tester.view.physicalSize = const Size(400, 4000);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
 void main() {
-  setUp(() {
-    // The page is a long ListView of static content — a tall test surface
-    // means every section is actually built (ListView only builds children
-    // near the visible viewport), so assertions don't need to scroll first.
-    TestWidgetsFlutterBinding.ensureInitialized().window
-      ..physicalSizeTestValue = const Size(400, 4000)
-      ..devicePixelRatioTestValue = 1.0;
-  });
-
-  tearDown(() {
-    TestWidgetsFlutterBinding.ensureInitialized().window
-      ..clearPhysicalSizeTestValue()
-      ..clearDevicePixelRatioTestValue();
-  });
-
   testWidgets('renders the About HabConnect title and all section headings', (
     tester,
   ) async {
+    _useTallSurface(tester);
     await tester.pumpWidget(_wrap());
     await tester.pumpAndSettle();
 
@@ -51,6 +47,7 @@ void main() {
   testWidgets('renders the recommender flow diagram steps in order', (
     tester,
   ) async {
+    _useTallSurface(tester);
     await tester.pumpWidget(_wrap());
     await tester.pumpAndSettle();
 
@@ -61,6 +58,7 @@ void main() {
   });
 
   testWidgets('renders German copy for a German locale', (tester) async {
+    _useTallSurface(tester);
     await tester.pumpWidget(_wrap(locale: const Locale('de')));
     await tester.pumpAndSettle();
 
