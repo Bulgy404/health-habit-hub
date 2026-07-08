@@ -286,7 +286,7 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Write these 24 words down — the only way to recover your account if you lose your phone.',
+                    'Write these 24 words down: the only way to recover your account if you lose your phone.',
                     style: TextStyle(color: Color(0xFF92400E), fontWeight: FontWeight.w600, fontSize: 13),
                   ),
                 ),

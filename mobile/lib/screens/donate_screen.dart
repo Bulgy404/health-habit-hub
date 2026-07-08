@@ -251,6 +251,8 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   }
 
   /// Shown once a habit has been shared today, replacing the task prompt.
+  /// Keeps the daily confirmation message but still encourages sharing more
+  /// via a prominent green CTA that re-opens the donate form.
   Widget _sharedTodayCard() {
     final l10n = AppLocalizations.of(context)!;
     return Container(
@@ -260,31 +262,61 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         border: Border.all(color: const Color(0xFF45B700), width: 1),
       ),
       padding: const EdgeInsets.all(18),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.check_circle, color: Color(0xFF2E8C00), size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.donateSharedTodayTitle,
-                  style: const TextStyle(
-                    color: Color(0xFF2E8C00),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
+          Row(
+            children: [
+              const Icon(
+                Icons.check_circle,
+                color: Color(0xFF2E8C00),
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.donateSharedTodayTitle,
+                      style: const TextStyle(
+                        color: Color(0xFF2E8C00),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.donateSharedTodayBody,
+                      style: const TextStyle(
+                        color: Color(0xFF3F6212),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.donateSharedTodayBody,
-                  style: const TextStyle(
-                    color: Color(0xFF3F6212),
-                    fontSize: 13,
-                  ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => setState(() => _surveyMode = true),
+              icon: const Icon(Icons.add_circle_outline),
+              label: Text(l10n.donateShareAnotherButton),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF45B700),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                textStyle: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
                 ),
-              ],
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100),
+                ),
+              ),
             ),
           ),
         ],

@@ -1,6 +1,6 @@
 ---
-version: 1.1.0
-effectiveDate: 2025-05-13
+version: 1.2.0
+effectiveDate: 2026-07-08
 bindingLanguage: de
 ---
 
@@ -99,12 +99,16 @@ Ihre anonymisierten Daten werden für folgende Zwecke genutzt:
 
 ### Internationale Datenübermittlung
 
+Ihre Daten können mit internationalen Forschungspartnern geteilt werden. Unabhängig vom Empfänger werden dabei ausschließlich anonymisierte und aggregierte Daten übermittelt – niemals einzelne, identifizierbare Datensätze.
+
 Bestimmte anonymisierte und aggregierte Datensätze (z. B. zur Formulierung von Gewohnheiten) werden an folgende Partner weitergegeben:
 
 - **Tohoku University, Japan** (Center for Smart Aging Research)
 - **Memorial University of Newfoundland, Kanada** (Faculty of Business Administration)
+- **Vrije Universiteit Brussel (VUB), Belgien**
+- **Universitair Ziekenhuis Brussel (UZ Brussel), Belgien** (Abteilung für Klinische Ernährung / Department of Clinical Nutrition)
 
-Für beide Länder liegt ein EU-Angemessenheitsbeschluss vor. Es werden ausschließlich anonymisierte Daten übermittelt – beispielsweise: „Gruppe A hat im Durchschnitt mehr Gewohnheiten eingetragen als Gruppe B."
+Für Japan und Kanada liegt ein EU-Angemessenheitsbeschluss vor. Belgien ist EU-Mitgliedstaat; die Übermittlung dorthin stellt daher keine internationale Datenübermittlung im Sinne der DSGVO dar. In jedem Fall werden ausschließlich anonymisierte Daten übermittelt – beispielsweise: „Gruppe A hat im Durchschnitt mehr Gewohnheiten eingetragen als Gruppe B."
 
 ### Wie lange werden die Daten gespeichert?
 

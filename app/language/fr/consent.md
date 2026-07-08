@@ -1,6 +1,6 @@
 ---
-version: 1.1.0
-effectiveDate: 2025-05-13
+version: 1.2.0
+effectiveDate: 2026-07-08
 bindingLanguage: de
 ---
 
@@ -101,12 +101,16 @@ Vos données anonymisées seront utilisées pour :
 
 ### Transferts internationaux de données
 
+Vos données peuvent être partagées avec des partenaires de recherche internationaux. Quel que soit le destinataire, seules des données anonymisées et agrégées sont transférées — jamais des enregistrements individuels identifiables.
+
 Certains jeux de données anonymisés et agrégés (par exemple, sur la formulation des habitudes) sont partagés avec les partenaires suivants :
 
 - **Tohoku University, Japon** (Center for Smart Aging Research)
 - **Memorial University of Newfoundland, Canada** (Faculty of Business Administration)
+- **Vrije Universiteit Brussel (VUB), Belgique**
+- **Universitair Ziekenhuis Brussel (UZ Brussel), Belgique** (Department of Clinical Nutrition)
 
-Ces deux pays font l'objet d'une décision d'adéquation de l'UE. Seules des données anonymisées sont transférées — par exemple : « Le groupe A a enregistré en moyenne plus d'habitudes que le groupe B. »
+Le Japon et le Canada font tous deux l'objet d'une décision d'adéquation de l'UE. La Belgique est un État membre de l'UE ; le transfert de données vers ce pays n'est donc pas considéré comme un transfert international de données au sens du RGPD. Dans tous les cas, seules des données anonymisées sont transférées — par exemple : « Le groupe A a enregistré en moyenne plus d'habitudes que le groupe B. »
 
 ### Combien de temps les données sont-elles conservées ?
 

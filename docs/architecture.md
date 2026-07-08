@@ -4,7 +4,7 @@
 
 ## Overview
 
-Health Habit Hub (HHH) is a research platform for collecting, annotating, and recommending behavioural habits. It consists of thirteen Docker services orchestrated via `docker-compose`, a Flutter mobile/web app, a Next.js admin panel, and a Python-based recommender/enrichment microservice. All HTTP traffic is routed through a Traefik reverse proxy.
+Health Habit Hub (HHH) is a research platform for collecting, annotating, and recommending behavioural habits. It consists of eighteen Docker services orchestrated via `docker-compose` (including monitoring — Prometheus/Grafana — and a scoped Docker socket proxy for the backup service), a Flutter mobile/web app, a Next.js admin panel, and a Python-based recommender/enrichment microservice. All HTTP traffic is routed through a Traefik reverse proxy.
 
 ---
 
@@ -26,9 +26,9 @@ graph TD
 
         KnowledgeMCP["knowledge-mcp\n:8002\nMCP server wrapping LightRAG"]
 
-        Keycloak["Keycloak 26.5.5\n:8080\n/auth/realms/hhh"]
+        Keycloak["Keycloak 26.5.5\n:8080 (local only — prod has no published port)\n/auth/realms/hhh"]
 
-        Neo4j["Neo4j 5\n:7474 (HTTP)\n:7687 (Bolt)"]
+        Neo4j["Neo4j 5\n:7474 (HTTP)\n:7687 (Bolt)\ninternal-only in prod, no published port"]
 
         Mongo["MongoDB\n:27017"]
 
@@ -36,7 +36,15 @@ graph TD
 
         MongoExpress["Mongo Express\n:8081\n/mongo admin UI"]
 
-        Backup["Backup Service\n(cron daily 02:00)"]
+        Redis["Redis\n:6379\nnotification locks, recommendation cache"]
+
+        Prometheus["Prometheus\n:9090\ninternal-only, no published port in prod"]
+
+        Grafana["Grafana\n:3000\n/grafana · Keycloak SSO"]
+
+        Backup["Backup Service\n(sleep-loop, every 24h)"]
+
+        DockerProxy["docker-socket-proxy\nscoped Docker API for Backup\n(hhh-backup-internal network)"]
     end
 
     Flutter -->|"HTTPS :443 / HTTP :80"| Proxy
@@ -46,23 +54,32 @@ graph TD
     Proxy -->|"Host: keycloak.* / PathPrefix:/auth"| Keycloak
     Proxy -->|"PathPrefix:/mongo"| MongoExpress
     Proxy -->|"Host: translate.*"| LibreTranslate
-    Proxy -->|"Host: neo4j.*"| Neo4j
+    Proxy -->|"Host: neo4j.* (local only)"| Neo4j
+    Proxy -->|"PathPrefix:/grafana"| Grafana
 
     App -->|"JWKS validation"| Keycloak
     AdminPanel -->|"JWKS validation\n(NextAuth)"| Keycloak
     App -->|"Bolt protocol"| Neo4j
     App -->|"MongoDB driver :27017"| Mongo
     App -->|"HTTP /api/v1/llm/*\n/api/v1/kb/*"| APIService
+    App -->|"redis client"| Redis
+    App -->|"HTTP status/trigger/download"| Backup
 
     APIService -->|"HTTP /query\n/documents/*"| LightRAG
     APIService -->|"Bolt protocol"| Neo4j
     APIService -->|"HTTP /translate"| LibreTranslate
+    APIService -->|"redis client"| Redis
     KnowledgeMCP -->|"HTTP /query\n/documents/text"| LightRAG
 
     Backup -->|"mongodump"| Mongo
     Backup -->|"tar lightrag-data"| LightRAG
-    Backup -->|"neo4j-admin dump"| Neo4j
+    Backup -->|"neo4j-admin dump (via docker-socket-proxy)"| DockerProxy
     Backup -->|"Keycloak REST API /partial-export"| Keycloak
+    DockerProxy -->|"scoped container/volume calls"| Neo4j
+
+    Prometheus -->|"scrape /metrics"| App
+    Grafana -->|"query"| Prometheus
+    Grafana -->|"OIDC login"| Keycloak
 
     MongoExpress -->|"MongoDB driver"| Mongo
 ```
@@ -78,13 +95,17 @@ graph TD
 | **api-service** | Python 3.11 + FastAPI | LLM inference (context classification, BCIO mapping, translation refinement, RAG recommendations); KB CRUD proxied to LightRAG | 8000 | `localhost:8001` | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `REDIS_URL`, `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
 | **lightrag** | LightRAG 1.5.0 (Python) | Graph+vector knowledge base; builds entity graph from uploaded documents; exposes REST query API and built-in graph visualization UI | 9621 | `localhost:9622` | `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_API_BASE`, `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `LIGHTRAG_API_KEY` |
 | **knowledge-mcp** | FastMCP (Python) | MCP server wrapping LightRAG; exposes `search_knowledge` and `ingest_document` tools for AI agent use via SSE transport | 8002 | `localhost:8002` | `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
-| **keycloak** | Keycloak 26.5.5 | OIDC/OAuth2 identity provider; manages realms, users, roles | 8080 | `localhost:8080` | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KC_DB`, `KC_HTTP_RELATIVE_PATH` (prod) |
-| **admin** | Next.js 14 (App Router), Recharts | Researcher/admin web panel: study management, dedicated analytics dashboard (Recharts, study filter, KPI cards, SRHI/active-rate/dropout/questionnaire charts, participant table), questionnaire management, cue pools, knowledge base, notification campaigns, settings | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER` |
-| **neo4j** | Neo4j 5 | Graph database; stores habit graph with BCIO alignment | 7474 (HTTP), 7687 (Bolt) | `neo4j.localhost:7474` | `NEO4J_AUTH` (`user/password`) |
+| **keycloak** | Keycloak 26.5.5 | OIDC/OAuth2 identity provider; manages realms, users, roles | 8080 | `localhost:8080` (local only — prod has no published port, routed at `/auth` via Traefik) | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KC_DB`, `KC_HTTP_RELATIVE_PATH` (prod) |
+| **admin** | Next.js 14 (App Router), Recharts | Researcher/admin web panel: study management, merged Analytics/Insights dashboard with tab navigation (Recharts, study filter, KPI cards, SRHI/active-rate/dropout/questionnaire charts, participant table), questionnaire management, cue pools, knowledge base, notification campaigns, backups (progress bar + download), System health / Tools pages, settings | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER`, `NEXT_PUBLIC_GRAFANA_URL` |
+| **neo4j** | Neo4j 5 | Graph database; stores habit graph with BCIO alignment | 7474 (HTTP), 7687 (Bolt) | `neo4j.localhost:7474` (local only — **internal-only in prod, no published port**; use `docker exec -it hhh-neo4j cypher-shell`, see [`DEPLOYMENT.md`](../DEPLOYMENT.md)) | `NEO4J_AUTH` (`user/password`) |
 | **mongo** | MongoDB (latest) | Document store; holds questionnaires, form responses, recommendations, user preferences | 27017 | Internal only | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`, `MONGO_INITDB_DATABASE` |
 | **mongo-express** | Mongo Express | MongoDB admin web UI (production only — not in docker-compose.local.yml) | 8081 | `https://<DOMAIN>/mongo` (prod only) | `ME_CONFIG_MONGODB_URL`, `ME_CONFIG_BASICAUTH_USERNAME`, `ME_CONFIG_BASICAUTH_PASSWORD` |
 | **translate** | LibreTranslate | Self-hosted machine translation API (en/de/ja/fr/nl) | 5000 | `http://translate.localhost` (via Traefik) or `localhost:5001` (direct) | `LT_LOAD_ONLY`, `LT_REQ_LIMIT` |
-| **backup** | Custom Alpine + daily loop | Daily backups of MongoDB, LightRAG, Neo4j, Keycloak; configurable retention (default 14 days) | — | Internal only | `BACKUP_RETENTION_DAYS`, `ALERT_WEBHOOK_URL`, `BACKUP_EMAIL`, `MONGO_USER`, `MONGO_PASSWORD` |
+| **redis** | Redis | Notification-dedup locks and recommendation response cache; not backed up (short-lived, repopulates automatically) | 6379 | Internal only | — |
+| **prometheus** | Prometheus v3.4.1 | Scrapes `app:9091/metrics`, 30-day retention | 9090 | `prometheus.localhost` (local); internal-only in prod (no published/routed port) | — |
+| **grafana** | Grafana OSS 12.0.1 | Dashboards over Prometheus data; Keycloak SSO (OIDC), realm role → Grafana role mapping | 3000 | `grafana.localhost` (local); `https://<DOMAIN>/grafana` (prod, via Traefik) | `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_CLIENT_SECRET`, `NEXT_PUBLIC_GRAFANA_URL` (admin-panel link) |
+| **backup** | Custom Alpine + sleep-loop | Backs up MongoDB, LightRAG, Neo4j, Keycloak. Starts 2 min after container boot, then repeats every 24h (not a real cron — drifts on container restart). Time-based retention plus a hard cap on scheduled-trigger backups; also runs the internal `backup-api` HTTP server (status/trigger/restore/upload/download) the admin panel's Backups page talks to | — (backup-api on 4100, internal only) | Internal only | `BACKUP_RETENTION_DAYS` (default 14), `BACKUP_SCHEDULED_LIMIT` (default 10, caps scheduled backups regardless of age), `ALERT_WEBHOOK_URL`, `BACKUP_EMAIL`, `MONGO_USER`, `MONGO_PASSWORD` |
+| **docker-socket-proxy** | tecnativa/docker-socket-proxy | Scoped Docker API in front of the real `docker.sock`, reachable only by `backup` over the internal `hhh-backup-internal` network; exposes only the container/volume/image calls `backup.sh`/`restore.sh` need (no EXEC, NETWORKS, SECRETS, etc.) instead of a raw socket mount | 2375 (internal only) | Internal only | — |
 
 > **Flutter mobile/web**: Not a separate Docker container. Flutter runs natively on Android/iOS or as a compiled web app. In dev the backend is reached directly; in production the compiled web bundle may be hosted on the `app` service.
 >

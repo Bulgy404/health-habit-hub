@@ -1,6 +1,6 @@
 ---
-version: 1.1.0
-effectiveDate: 2025-05-13
+version: 1.2.0
+effectiveDate: 2026-07-08
 bindingLanguage: de
 ---
 
@@ -101,12 +101,16 @@ Your anonymised data will be used for:
 
 ### International data transfers
 
+Your data may be shared with international research partners. Regardless of the recipient, only anonymised and aggregated data is ever transferred — never individual, identifiable records.
+
 Certain anonymised and aggregated datasets (e.g. on the formulation of habits) are shared with the following partners:
 
 - **Tohoku University, Japan** (Center for Smart Aging Research)
 - **Memorial University of Newfoundland, Canada** (Faculty of Business Administration)
+- **Vrije Universiteit Brussel (VUB), Belgium**
+- **Universitair Ziekenhuis Brussel (UZ Brussel), Belgium** (Department of Clinical Nutrition)
 
-Both countries have received an EU adequacy decision. Only anonymised data is transferred — for example: "Group A logged more habits on average than Group B."
+Japan and Canada have both received an EU adequacy decision. Belgium is an EU member state, so transfers there are not considered an international data transfer under the GDPR. In every case, only anonymised data is transferred — for example: "Group A logged more habits on average than Group B."
 
 ### How long is the data stored?
 

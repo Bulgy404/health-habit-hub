@@ -16,10 +16,11 @@ This guide covers deploying Health Habit Hub to production using Portainer on th
 
 Use this section when you want to run the stack on your own machine for development or manual testing.
 
-There are two local modes:
+There is one supported local mode:
 
-1. `docker-compose.local.yml` — local Docker development stack. Starts the backend, Keycloak (dev-file DB), databases, Traefik, the Next.js admin panel, Redis, and the recommender with local-friendly defaults. Uses `*.localhost` hostnames via Traefik.
-2. `docker-compose.yml` — full app-like stack that mirrors the shared Docker setup more closely and also exposes services on explicit localhost ports. Uses `dev-file` Keycloak, no Redis in this mode.
+- `docker-compose.local.yml` — local Docker development stack (also what `make dev` runs). Starts the backend, Keycloak (dev-file DB), databases, Traefik, the Next.js admin panel, Redis, the backup service, and the recommender with local-friendly defaults. Uses `*.localhost` hostnames via Traefik on plain HTTP.
+
+`docker-compose.yml` is the **production** stack (see [Portainer Deployment Steps](#portainer-deployment-steps) below) — it terminates TLS via Let's Encrypt against a real `DOMAIN` and routes everything under a single hostname with path prefixes (`https://${DOMAIN}/admin`, `/auth`, `/grafana`, …), not `*.localhost` subdomains. It isn't meant for ad-hoc local testing; running `docker compose up` (no `-f` flag defaults to this file) locally will just hang or fail waiting on a real ACME challenge unless you've pointed a real domain at your machine. Always pass `-f docker-compose.local.yml` for local work.
 
 ### 1. Prepare Local Environment
 
@@ -45,13 +46,7 @@ Recommended local defaults already present in `.env.example`:
 - `PATH_SUFFIX=localhost`
 - `APP_HOST_PORT=3000`
 - `TRAEFIK_HOST_PORT80=80`
-- `TRAEFIK_HOST_PORT8080=8080`
-
-Before using the full Traefik-based `docker-compose.yml`, change this in `.env` to avoid a port clash with Keycloak:
-
-```env
-TRAEFIK_HOST_PORT8080=8888
-```
+- `TRAEFIK_HOST_PORT8080=8888` (not `8080` — Keycloak also publishes `8080:8080` in `docker-compose.local.yml`, so `8080` here fails to bind at container start)
 
 ### 2. Clean Local Database Init
 
@@ -103,36 +98,20 @@ Expected local URLs in this mode:
 | Keycloak Admin Console | `http://localhost:8080/admin/` | Login with `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
 | Keycloak Realm Metadata | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | Quick realm import check |
 | Translation | `http://localhost:5001` | LibreTranslate in `docker-compose.local.yml` |
-| Neo4j Browser | `http://localhost:7474` | Login with `neo4j` + `NEO4J_PASSWORD` |
+| Neo4j Browser | `http://localhost:7474` | Login with `neo4j` + `NEO4J_PASSWORD` (local-only — not published in production) |
 | LightRAG | `http://localhost:9622` | Graph + vector knowledge base UI |
 | Recommender | `http://localhost:8001/docs` | FastAPI docs |
 | Redis | `localhost:6379` | No auth in local mode |
 | Prometheus | `http://prometheus.localhost` | Scrapes app metrics from `app:9091` |
 | Grafana | `http://grafana.localhost` | Login: `admin` / `KEYCLOAK_ADMIN_PASSWORD`. Pre-built HHH dashboard auto-provisioned |
 
-### 4. Start Full Local Stack
-
-```bash
-docker compose up -d --build
-```
-
-This stack also starts Traefik and the Next.js admin app. Use these local URLs:
-
-| Service | Local URL |
-|---------|-----------|
-| Main app via Traefik | `http://app.localhost` |
-| Admin panel via Traefik | `http://admin.localhost` |
-| Traefik dashboard | `http://proxy.localhost` |
-| Traefik raw dashboard port | `http://localhost:8888` |
-| Keycloak admin console | `http://localhost:8080/admin/` |
-| Recommender API docs | `http://localhost:8000/docs` |
-
 Notes:
 - `*.localhost` resolves locally on modern browsers, so `app.localhost` and `admin.localhost` should work without editing `/etc/hosts`.
 - The admin app uses the `hhh-admin` Keycloak client and requires a Keycloak user with the `admin` or `researcher` realm role.
-- Redis is included in `docker-compose.yml`, `docker-compose.local.yml`, and `docker-compose.prod.yml` — it is the API-service response cache and is required by all stacks.
+- Redis is included in both `docker-compose.yml` and `docker-compose.local.yml` — it is the API-service response cache and is required by both stacks.
+- The `backup` service and its `docker-socket-proxy` sidecar also start with this stack — see [`docs/runbook.md`](docs/runbook.md) for how backups work locally.
 
-### 5. Create a Local Admin User in Keycloak
+### 4. Create a Local Admin User in Keycloak
 
 1. Open `http://localhost:8080/admin/`
 2. Log in with:
@@ -144,7 +123,7 @@ Notes:
 6. Under **Role mapping**, assign realm role `admin` or `researcher`
 7. Open `http://admin.localhost` and sign in with that account
 
-### 6. Verify Onboarding / Recovery Locally
+### 5. Verify Onboarding / Recovery Locally
 
 After the local stack is healthy:
 
@@ -160,7 +139,7 @@ docker logs hhh-app --tail 100
 docker logs hhh-keycloak --tail 100
 ```
 
-### 7. Re-apply Local Keycloak Config After Reset
+### 6. Re-apply Local Keycloak Config After Reset
 
 After wiping Keycloak storage, re-run the repo deploy helper so local Keycloak picks up:
 - the realm import
@@ -238,7 +217,7 @@ Failure to do this will cause `hhh-translate` to start but fail to persist langu
 ### Step 3: Configure Git Repository
 - **Repository URL:** `https://github.com/helict/health-habit-hub-2`
 - **Repository reference:** `refs/heads/master`
-- **Compose path:** `docker-compose.prod.yml`
+- **Compose path:** `docker-compose.yml`
 - **GitOps updates:** Enable
   - Polling interval: 5 minutes
   - Re-pull image: Enable
@@ -286,6 +265,10 @@ ALERT_WEBHOOK_URL=<your-webhook-url>
 
 # Backup retention
 BACKUP_RETENTION_DAYS=14
+
+# Max number of scheduled (automatic) backups kept, regardless of age —
+# manual/uploaded backups are not counted or capped by this
+BACKUP_SCHEDULED_LIMIT=10
 
 # LibreTranslate language packs
 LT_LOAD_ONLY=de,en,ja   # comma-separated ISO codes
@@ -337,7 +320,7 @@ All containers should be running:
 - [ ] Admin panel: `https://habit.wiwi.tu-dresden.de/admin`
 - [ ] Mongo Express: `https://habit.wiwi.tu-dresden.de/mongo`
 - [ ] Translation API: `https://habit.wiwi.tu-dresden.de/translate`
-- [ ] Neo4j browser: `http://localhost:7474` (via SSH tunnel — see below)
+- [ ] Neo4j: `docker exec -it hhh-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}` (internal-only, no browser — see below)
 - [ ] Traefik dashboard: `https://habit.wiwi.tu-dresden.de/dashboard`
 
 ### 4. Run One-time Migration Scripts (First Deploy of This Branch Only)
@@ -417,7 +400,7 @@ Verify backup files are created:
 2. **Internal Routing:** Traefik inspects Host/Path and routes to the appropriate service via the `hhh-proxy` bridge network
 3. **Service Communication:** All services share the `hhh-proxy` external Docker network; they address each other by service/container name
 
-> **Note:** In production (`docker-compose.prod.yml`) the network is named `hhh-proxy` (external). It must be created on the host before the first deploy: `docker network create hhh-proxy`.
+> **Note:** In production (`docker-compose.yml`) the network is named `hhh-proxy` (external). It must be created on the host before the first deploy: `docker network create hhh-proxy`.
 >
 > In local mode (`docker-compose.local.yml`) the network is named `hhh-proxy` and is created by Docker Compose automatically.
 
@@ -437,13 +420,19 @@ hhh-proxy network (bridge)
    |-- hhh-lightrag     LightRAG — graph + vector knowledge base
    |-- hhh-knowledge-mcp MCP server — knowledge base for AI agents
    |-- hhh-redis        Redis — notification locks, recommendation cache
-   |-- hhh-keycloak     Keycloak — ports 8080 exposed for admin UI
+   |-- hhh-keycloak     Keycloak — routed at /auth, no published port
    |-- hhh-keycloak-db  PostgreSQL — Keycloak database (internal only)
    |-- hhh-mongo        MongoDB
    |-- hhh-mongo-express MongoDB UI
-   |-- hhh-neo4j        Graph DB — ports 7474/7687 exposed for SSH tunnel
+   |-- hhh-neo4j        Graph DB — internal-only, no published port (see below)
    |-- hhh-translate    LibreTranslate — UID 1032, volume chown required
-   `-- hhh-backup       Backup service
+   |-- hhh-prometheus   Metrics — internal-only, no published port
+   |-- hhh-grafana      Dashboards — routed at /grafana, Keycloak SSO
+   `-- hhh-backup       Backup service — also joins hhh-backup-internal
+
+hhh-backup-internal network (bridge, internal-only)
+   |-- hhh-backup             (also on hhh-proxy)
+   `-- hhh-docker-socket-proxy  Scoped Docker API — no direct socket mount
 ```
 
 ---
@@ -494,7 +483,7 @@ In Portainer:
    ```bash
    docker network inspect hhh-proxy
    ```
-2. Check service names match those in `docker-compose.prod.yml` (internal hostnames are the service keys: `mongo`, `neo4j`, `redis`, `recommender`, `lightrag`)
+2. Check service names match those in `docker-compose.yml` (internal hostnames are the service keys: `mongo`, `neo4j`, `redis`, `recommender`, `lightrag`)
 3. Verify environment variables in Portainer
 
 ### Recommender / API Service Errors
@@ -556,7 +545,7 @@ The pre-built **HHH App Metrics** dashboard (`monitoring/grafana/dashboards/hhh-
 
 Prometheus scrapes the Node.js app at `http://app:9091/metrics` (prom-client, standard default metrics + `http_request_duration_seconds` histogram). The scrape target and interval are configured in `monitoring/prometheus.yml`.
 
-> **Production:** Prometheus and Grafana are not yet in `docker-compose.prod.yml`. Add them when you want persistent metrics in production, and consider restricting Grafana behind Traefik auth middleware.
+> **Production:** `docker-compose.yml` also runs Prometheus and Grafana. Prometheus has no published port and no Traefik route — it's reachable only from other containers on `hhh-proxy` (Grafana, and the app's own `/admin/system/overview` proxy), never directly from the internet. Grafana is exposed at `https://${DOMAIN}/grafana`, access-gated by Keycloak SSO (`GF_AUTH_GENERIC_OAUTH_*`, mapping the `admin`/`researcher` realm roles to Grafana's Admin/Editor roles) rather than a separate Traefik auth middleware.
 
 ### Container Logs
 
@@ -632,86 +621,33 @@ Automatic via Let's Encrypt — certificates auto-renew 30 days before expiry. M
 | Keycloak Realm Metadata | — | `http://keycloak.localhost/realms/hhh/.well-known/openid-configuration` | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` |
 | Mongo Express | `https://habit.wiwi.tu-dresden.de/mongo` | not in `docker-compose.local.yml` | `http://localhost:8081` (with `docker compose up`) |
 | Translation | `https://habit.wiwi.tu-dresden.de/translate` | `http://translate.localhost` | `http://localhost:5001` |
-| Neo4j Browser | SSH tunnel only (see below) | `http://neo4j.localhost` | `http://localhost:7474` |
-| LightRAG | SSH tunnel only | `http://localhost:9622` | `http://localhost:9622` |
+| Neo4j Browser | not exposed (internal-only, see below) | `http://neo4j.localhost` | `http://localhost:7474` |
+| LightRAG | not exposed (internal-only) | `http://localhost:9622` | `http://localhost:9622` |
 | Recommender API docs | — | not routed via Traefik locally | `http://localhost:8001/docs` |
-| Prometheus | — (not in prod yet) | `http://prometheus.localhost` | `http://localhost:9090` |
-| Grafana | — (not in prod yet) | `http://grafana.localhost` | `http://localhost:3002` |
+| Prometheus | not exposed (internal-only) | `http://prometheus.localhost` | `http://localhost:9090` |
+| Grafana | `https://habit.wiwi.tu-dresden.de/grafana` | `http://grafana.localhost` | `http://localhost:3002` |
 | Traefik Dashboard | `https://habit.wiwi.tu-dresden.de/dashboard` | `http://proxy.localhost` | `http://localhost:8888` |
 
 ---
 
-## Accessing Neo4j Browser via SSH Tunnel
+## Accessing Neo4j in Production
 
-Neo4j Browser requires an SSH tunnel for secure access. The container exposes ports 7474 and 7687 on the host but these are not publicly accessible through Traefik.
+Neo4j is internal-only in production: `docker-compose.yml` does not publish ports 7474/7687 on the host at all (same treatment as Prometheus), so there is nothing to reach even with an SSH tunnel. Neo4j is only reachable from other containers on the internal `hhh-proxy` network.
 
-### What is SSH Tunneling?
-
-SSH tunneling (port forwarding) creates a secure encrypted connection that forwards traffic from your local machine to the remote server. This lets you access Neo4j's browser and Bolt protocol without exposing those ports to the internet.
-
-### Connection Methods
-
-#### Option 1: Using Domain Name (Recommended)
+For ad-hoc production queries, use `cypher-shell` directly inside the container over SSH — this works because `docker exec` goes through the Docker daemon, not a published network port, so no port needs to be open:
 
 ```bash
-ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@habit.wiwi.tu-dresden.de
+ssh service@habit.wiwi.tu-dresden.de 'docker exec -it hhh-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}'
 ```
 
-#### Option 2: Using IP Address
+Or SSH in first and run it interactively:
 
 ```bash
-ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
-```
-
-### How to Access Neo4j Browser
-
-1. **Start the SSH tunnel** in a terminal (keep it open):
-   ```bash
-   ssh -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16
-   ```
-
-2. **Open Neo4j Browser** in your web browser:
-   - Navigate to: `http://localhost:7474`
-
-3. **Authenticate** with Neo4j credentials:
-   - **Username:** `neo4j`
-   - **Password:** value of `NEO4J_PASSWORD` in Portainer
-   - **Connection URL:** `neo4j://localhost:7687` (auto-populated)
-
-4. The tunnel maps:
-   - Port 7474 (HTTP Browser): `localhost:7474` → `server:7474`
-   - Port 7687 (Bolt Protocol): `localhost:7687` → `server:7687`
-
-### Advanced: Cypher Shell
-
-```bash
-# After SSH tunnel is open, in another terminal:
+ssh service@habit.wiwi.tu-dresden.de
 docker exec -it hhh-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD} -a bolt://localhost:7687
 ```
 
-Or directly via SSH (no tunnel needed):
-```bash
-ssh service@141.76.16.16 'docker exec -it hhh-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}'
-```
-
-### Troubleshooting SSH Tunnel
-
-**"Connection refused" on localhost:7474**
-- Ensure the SSH tunnel terminal is still open
-- Verify Neo4j container is running: `docker ps | grep neo4j`
-- Check if another process is using port 7474 locally: `lsof -i :7474`
-
-**SSH connection fails**
-- Verify SSH key authentication is configured
-- Test with verbose output: `ssh -v service@141.76.16.16`
-
-**Neo4j authentication fails**
-- Verify `NEO4J_PASSWORD` in Portainer matches what you are using
-- Check Neo4j container logs: `docker logs hhh-neo4j | tail -20`
-
-**Dropped connections after inactivity**
-- Add keepalive: `ssh -o ServerAliveInterval=60 -L 7474:localhost:7474 -L 7687:localhost:7687 service@141.76.16.16`
-- Consider running the tunnel inside `screen` or `tmux`
+If you need the graphical Neo4j Browser for a one-off investigation, temporarily publish the port yourself (e.g. `docker run --rm -it --network hhh-proxy --link hhh-neo4j alpine ...` or a short-lived `docker compose` port override), use it, then remove the override — do not leave 7474/7687 published on the host as a standing change. For routine local development, use `docker-compose.local.yml`, where Neo4j Browser is already reachable at `http://neo4j.localhost`.
 
 ---
 
@@ -822,11 +758,11 @@ docker exec -it hhh-redis redis-cli
 ## Additional Notes
 
 - Backups run daily (the backup container loops every 24 hours with a 2-minute startup delay)
-- Backup retention: 14 days by default (configurable via `BACKUP_RETENTION_DAYS`)
+- Backup retention: 14 days by default (configurable via `BACKUP_RETENTION_DAYS`), plus a cap of the last 10 scheduled backups regardless of age (configurable via `BACKUP_SCHEDULED_LIMIT`)
 - All persistent data is stored in named Docker volumes or host-mounted directories under `/mnt/data/appdata/hhh2/`
 - SSL certificates are stored in `/mnt/data/appdata/hhh2/traefik-certs/`
 - LibreTranslate volume at `/mnt/data/appdata/hhh2/translate` must be owned by UID 1032 before first deploy
-- Neo4j requires an SSH tunnel for browser access in production
+- Neo4j has no published port in production (internal-only) — use `docker exec -it hhh-neo4j cypher-shell` over SSH, see "Accessing Neo4j in Production" above
 
 ---
 

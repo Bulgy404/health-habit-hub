@@ -219,8 +219,7 @@ health-habit-hub/
 ├── tests/                          # Integration / e2e tests
 ├── Ontology.ttl                    # BCIO/habit ontology
 ├── docker-compose.local.yml        # Local development compose file
-├── docker-compose.yml              # Base compose file
-├── docker-compose.prod.yml         # Production compose file
+├── docker-compose.yml              # Production compose file
 ├── Makefile                        # Developer convenience targets
 ├── stack.env                       # Environment variable template (override in Portainer)
 └── DEPLOYMENT.md                   # Production deployment guide
@@ -284,7 +283,7 @@ health-habit-hub/
 
 | Component | Technology |
 |-----------|-----------|
-| Container orchestration | Docker Compose (local), Portainer + `docker-compose.prod.yml` (production) |
+| Container orchestration | Docker Compose (local), Portainer + `docker-compose.yml` (production) |
 | Reverse proxy | Traefik v3.6.1 |
 | TLS | Let's Encrypt (ACME, automatic renewal via Traefik) |
 | Identity provider | Keycloak 26.5.5 (PostgreSQL backend in production) |
@@ -403,7 +402,7 @@ All variables are defined in `stack.env`. In production, override sensitive valu
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `BACKUP_RETENTION_DAYS` | `14` | Days to retain backup archives |
+| `BACKUP_RETENTION_DAYS` | `14` | Days to retain backup archives (time-based; applies to all backups). Also caps daily automatic (scheduled-trigger) backups by count, using the same number — manual/uploaded backups are unaffected by the count cap |
 | `ALERT_EMAIL` | — | Email address for backup alert notifications |
 | `BACKUP_EMAIL` | — | Email address for backup reports |
 | `ALERT_WEBHOOK_URL` | _(empty)_ | Optional Slack/Discord/Teams webhook URL |
@@ -469,20 +468,21 @@ For the full deployment procedure, see:
 
 ### Approach
 
-Production runs on a single server managed via **Portainer** connected to the Git repository. The stack is defined in `docker-compose.prod.yml`.
+Production runs on a single server managed via **Portainer** connected to the Git repository. The stack is defined in `docker-compose.yml`.
 
 Key differences from local:
 
 - Traefik performs TLS termination with automatic Let's Encrypt certificate renewal
 - Keycloak uses a dedicated PostgreSQL container (not `dev-file` mode)
 - All passwords and secrets are injected via Portainer's environment variables (not from `stack.env` in Git)
-- The backup service runs on a daily cron schedule, storing archives in the `backups/` volume
+- The backup service isn't real cron — it's a sleep loop (`sleep 120`, then `sleep 86400` between runs) that drifts on container restart — storing archives in the `backups/` volume. Scheduled (automatic) backups are additionally capped by count, using the same `BACKUP_RETENTION_DAYS` value as the time-based retention, so the admin panel's backup list doesn't grow unbounded.
+- The backup container never mounts the Docker socket directly — it talks to a scoped `docker-socket-proxy` sidecar instead (see `docs/runbook.md`)
 
 ### Deployment Steps (summary)
 
 1. Connect Portainer to the Git repository
 2. Configure all environment variables in Portainer (override `stack.env` defaults with real secrets)
-3. Deploy the `docker-compose.prod.yml` stack via Portainer UI
+3. Deploy the `docker-compose.yml` stack via Portainer UI
 4. On first deploy, the `keycloak-init` one-shot container sets `sslRequired=external`, configures client secrets, and grants the backend service account `realm-admin`
 
 ---

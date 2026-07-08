@@ -235,7 +235,7 @@ class DailyLog {
 
   /// Deserialises from the daily logs API response.
   factory DailyLog.fromJson(Map<String, dynamic> json) => DailyLog(
-        intentionId: json['intentionId'] as String,
+        intentionId: json['intentionId'] as String? ?? '',
         date: json['date'] as String,
         enacted: json['enacted'] as bool,
         loggedAt: DateTime.parse(json['loggedAt'] as String),

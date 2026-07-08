@@ -1,6 +1,6 @@
 ---
-version: 1.1.0
-effectiveDate: 2025-05-13
+version: 1.2.0
+effectiveDate: 2026-07-08
 bindingLanguage: de
 ---
 
@@ -101,12 +101,16 @@ Uw geanonimiseerde gegevens worden gebruikt voor:
 
 ### Internationale gegevensoverdracht
 
+Uw gegevens kunnen worden gedeeld met internationale onderzoekspartners. Ongeacht de ontvanger worden uitsluitend geanonimiseerde en geaggregeerde gegevens overgedragen — nooit individuele, herleidbare gegevens.
+
 Bepaalde geanonimiseerde en geaggregeerde datasets (bijv. over de formulering van gewoonten) worden gedeeld met de volgende partners:
 
 - **Tohoku University, Japan** (Center for Smart Aging Research)
 - **Memorial University of Newfoundland, Canada** (Faculty of Business Administration)
+- **Vrije Universiteit Brussel (VUB), België**
+- **Universitair Ziekenhuis Brussel (UZ Brussel), België** (Department of Clinical Nutrition)
 
-Beide landen hebben een adequaatheidsbesluit van de EU ontvangen. Er worden uitsluitend geanonimiseerde gegevens overgedragen — bijvoorbeeld: "Groep A heeft gemiddeld meer gewoonten geregistreerd dan Groep B."
+Japan en Canada hebben beide een adequaatheidsbesluit van de EU ontvangen. België is een EU-lidstaat; overdracht daarheen wordt daarom niet beschouwd als een internationale gegevensoverdracht in de zin van de AVG. In alle gevallen worden uitsluitend geanonimiseerde gegevens overgedragen — bijvoorbeeld: "Groep A heeft gemiddeld meer gewoonten geregistreerd dan Groep B."
 
 ### Hoe lang worden de gegevens bewaard?
 

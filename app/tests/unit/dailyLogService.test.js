@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { ObjectId } from 'mongodb';
-import { upsertLog } from '../../services/dailyLogService.js';
+import { upsertLog, getLogs } from '../../services/dailyLogService.js';
 
 function makeDb() {
   const logs = [];
@@ -97,4 +97,26 @@ test('upsertLog: updates on duplicate date', async () => {
     .toArray();
   assert.equal(logs.length, 1);
   assert.equal(logs[0].enacted, false);
+});
+
+test('getLogs: includes intentionId as a string on each returned log', async () => {
+  // Regression test: getLogs() previously omitted intentionId from the
+  // returned objects entirely, which made the Flutter client's non-nullable
+  // `json['intentionId'] as String` cast always throw — the daily log fetch
+  // always errored, so the "log today" circle never turned green and the
+  // habit-detail activity log crashed with "type 'Null' is not a subtype of
+  // type 'String'".
+  const db = makeDb();
+  const intentionId = new ObjectId();
+  await upsertLog({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    date: '2026-06-01',
+    enacted: true,
+  });
+  const logs = await getLogs({ db, intentionId: intentionId.toString() });
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0].intentionId, intentionId.toString());
+  assert.equal(typeof logs[0].intentionId, 'string');
 });

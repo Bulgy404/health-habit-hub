@@ -27,7 +27,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get habitSharedSuccess => 'Habit shared successfully!';
 
   @override
-  String get submissionFailed => 'Submission failed — please try again.';
+  String get submissionFailed => 'Submission failed. Please try again.';
 
   @override
   String get noConnection => 'No connection';
@@ -146,10 +146,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get healthQuestionnaires => 'Health Questionnaires';
 
   @override
-  String get sliqLifestyleIndex => 'SLIQ — Lifestyle Index';
+  String get sliqLifestyleIndex => 'SLIQ: Lifestyle Index';
 
   @override
-  String get rand36HealthSurvey => 'RAND-36 — Health Survey';
+  String get rand36HealthSurvey => 'RAND-36: Health Survey';
 
   @override
   String get restoreAccountOnDevice => 'Restore account on this device';
@@ -462,7 +462,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adminSurveyEditor => 'Survey Editor';
 
   @override
-  String get adminInvalidJson => 'Invalid JSON — please fix before saving';
+  String get adminInvalidJson => 'Invalid JSON, please fix before saving';
 
   @override
   String get adminSurveySaved => 'Survey saved';
@@ -509,6 +509,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'No questionnaires assigned to your study.';
 
   @override
+  String get questionnaireReminderMessage =>
+      'You have a health questionnaire ready to fill out.';
+
+  @override
+  String get questionnaireReminderAction => 'Fill out';
+
+  @override
   String get myHabitsTab => 'My Habits';
 
   @override
@@ -532,7 +539,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setCuePreRatedInstruction =>
-      'Your study condition assigns the following cue(s). Read them carefully — this is when you will act.';
+      'Your study condition assigns the following cue(s). Read them carefully: this is when you will act.';
 
   @override
   String get setCueSelfSelectedInstruction =>
@@ -687,7 +694,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aiDisclaimer =>
-      'AI-generated suggestions based on your study data. This is not medical advice — consult a doctor for health concerns.';
+      'AI-generated suggestions based on your study data. This is not medical advice; consult a doctor for health concerns.';
 
   @override
   String get dailyReminderLabel => 'Daily reminder';
@@ -712,7 +719,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commentHint => 'Share a thought (anonymous)…';
 
   @override
-  String get noCommentsYet => 'No comments yet — be the first.';
+  String get noCommentsYet => 'No comments yet. Be the first.';
 
   @override
   String get couldNotPostComment => 'Could not post comment';
@@ -932,7 +939,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recommendationEmptyMessage =>
-      'No recommendations were generated. Try describing your goal in more detail — the more context you share, the better.';
+      'No recommendations were generated. Try describing your goal in more detail: the more context you share, the better.';
 
   @override
   String get recommendationTryDifferentGoal => 'Try a different goal';
@@ -954,7 +961,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recommendationFeedbackSubmitted =>
-      'Feedback submitted — thank you!';
+      'Feedback submitted, thank you!';
 
   @override
   String get recommendationLeaveComment => 'Leave a comment:';
@@ -1082,14 +1089,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get donateSharedTodayBody =>
-      'Thanks for contributing! Come back tomorrow for the next one.';
+      'Thanks for contributing! Every habit you share helps our research. Feel free to add another.';
+
+  @override
+  String get donateShareAnotherButton => 'Share another habit';
 
   @override
   String get donateWhyShareTitle => 'Why share?';
 
   @override
   String get donateWhyShareBody =>
-      'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone\'s recommendations become — including yours.';
+      'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone\'s recommendations become, including yours.';
 
   @override
   String get donatePleaseAnswerAllQuestions => 'Please answer all questions';
@@ -1099,7 +1109,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'This doesn\'t look like a habit. Try describing a regular behaviour, e.g. \"I go for a 30-minute walk every morning\".';
 
   @override
-  String get donateSavedOffline => 'Saved offline — will submit when connected';
+  String get donateSavedOffline => 'Saved offline, will submit when connected';
 
   @override
   String get donateUnauthorized => 'Unauthorized. Please sign in again.';

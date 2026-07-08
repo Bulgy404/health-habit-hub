@@ -31,6 +31,12 @@ Verwenden Sie diese Checkliste beim Start einer neuen Teilnehmerkohorte.
 7. [Gerätesitzungen widerrufen](#7-gerätesitzungen-widerrufen)
 8. [Token-Karten-Format in den Einstellungen konfigurieren](#8-token-karten-format-in-den-einstellungen-konfigurieren)
 9. [Spracheinstellungen für Teilnehmer](#9-spracheinstellungen-für-teilnehmer)
+10. [Verwaltung des Cue-Pools](#10-verwaltung-des-cue-pools)
+11. [Studienbedingungen konfigurieren (Cue-Konfiguration)](#11-studienbedingungen-konfigurieren-cue-konfiguration)
+12. [Studien-Analytik einsehen](#12-studien-analytik-einsehen)
+13. [Benachrichtigungen an Teilnehmende senden](#13-benachrichtigungen-an-teilnehmende-senden)
+14. [Das Erlebnis der öffentlichen App konfigurieren](#14-das-erlebnis-der-öffentlichen-app-konfigurieren)
+15. [Backups verwalten](#15-backups-verwalten)
 
 ---
 
@@ -417,6 +423,213 @@ Die App unterstützt Englisch und Deutsch. Jeder Teilnehmer kann seine bevorzugt
 > **Hinweis für Admins:** Die Sprachpräferenz eines Teilnehmers kann nicht aus dem Admin-Panel heraus gesetzt werden. Sprache ist eine persönliche Einstellung, die jeder Teilnehmer in seinem eigenen Einstellungsbildschirm konfiguriert. Falls ein Teilnehmer meldet, dass Inhalte in der falschen Sprache angezeigt werden, bitten Sie ihn, die Einstellungen zu öffnen und die bevorzugte Sprache erneut auszuwählen.
 
 > **Technischer Hinweis:** Das Backend speichert die Präferenz als `preferredLanguage: 'en'` oder `preferredLanguage: 'de'` in der MongoDB-Collection `users` (indiziert nach Keycloak-Subject-ID). Der Query-Parameter `GET /api/v1/habits?lang=de` wird von der Flutter-App automatisch anhand der gespeicherten Präferenz gesetzt — er muss nicht manuell konfiguriert werden.
+
+---
+
+## 10. Verwaltung des Cue-Pools
+
+Der Cue-Pool ist eine Bibliothek vorbewerteter kontextueller Cues, die von der Empfehlungs-Engine verwendet wird. Er ist sowohl für die Rolle `admin` als auch für `researcher` über **Cue-Pools** in der linken Seitenleiste zugänglich.
+
+### Cues anzeigen und filtern
+
+Die Liste zeigt für jeden Cue den Text, ein Qualitäts-Badge (hoch / niedrig), die Dimensionswerte (Stabilität, Auffälligkeit, Spezifität auf einer Skala von 1–5), die Domäne und die Sprache. Verwenden Sie die Dropdowns **Qualität** und **Sprache** oberhalb der Liste, um die angezeigten Zeilen zu filtern.
+
+### Einen einzelnen Cue erstellen
+
+**Schritt 1.** Tippen Sie auf **+ Cue hinzufügen**.
+
+**Schritt 2.** Füllen Sie das Formular aus:
+
+| Feld | Gültige Werte |
+|---|---|
+| Text | Freitext — der Cue-Satz |
+| Qualität | `low` oder `high` |
+| Domäne | z. B. `health`, `fitness`, `nutrition` |
+| Sprache | z. B. `en`, `de` |
+| Stabilität | Ganzzahl 1–5 |
+| Auffälligkeit | Ganzzahl 1–5 |
+| Spezifität | Ganzzahl 1–5 |
+
+**Schritt 3.** Tippen Sie auf **Erstellen**. Der Cue erscheint sofort in der Liste.
+
+### CSV-Massenimport
+
+**Schritt 1.** Tippen Sie auf **CSV importieren** und wählen Sie eine `.csv`-Datei von Ihrem Computer aus.
+
+Die Datei muss folgende Spalten enthalten (die Reihenfolge ist unerheblich):
+
+```
+text,quality,stability,salience,specificity,domain,language
+```
+
+Gültige Werte: `quality` muss `low` oder `high` sein; die Dimensionswerte müssen Ganzzahlen von 1–5 sein.
+
+**Schritt 2.** Nach dem Hochladen zeigt ein Ergebnisdialog die Anzahl der **eingefügten** und **übersprungenen** Zeilen an (übersprungene Zeilen weisen Validierungsfehler auf und werden einzeln aufgeführt).
+
+### Einen Cue löschen
+
+Tippen Sie in einer Cue-Zeile auf das **Löschen**-Symbol (Papierkorb) und bestätigen Sie den Dialog. Das Löschen erfolgt sofort und ist endgültig.
+
+---
+
+## 11. Studienbedingungen konfigurieren (Cue-Konfiguration)
+
+> **Empfehlungssystem-Schalter (auf Studienebene).** Der Tab **Details** der Studie enthält die Checkbox *„Empfehlungssystem für diese Studie aktivieren"*. Ist sie deaktiviert, sehen die in dieser Studie eingeschriebenen Teilnehmenden den Empfehlungsbildschirm (den Tab „Empfehlungen") in der App nicht mehr. Die Einstellung gilt für die gesamte Studie (alle Gruppen) und ist standardmäßig aktiviert; die Änderung wird wirksam, sobald die App der teilnehmenden Person das nächste Mal ihre Konfiguration aktualisiert.
+
+Jede Studiengruppe kann eigene Einstellungen zur Cue-Zustellung haben. Diese werden im Tab **Cue-Konfiguration** innerhalb des Bearbeitungsdialogs einer Studie verwaltet.
+
+**Schritt 1.** Navigieren Sie im Admin-Panel zu **Studien**.
+
+**Schritt 2.** Öffnen Sie eine Studie durch Klick auf ihre Zeile und klicken Sie anschließend auf den Tab **Cue-Konfiguration**.
+
+**Schritt 3.** Konfigurieren Sie für jede aufgeführte Gruppe die folgenden Einstellungen:
+
+| Einstellung | Optionen | Beschreibung |
+|---|---|---|
+| Cue-Anzahl | Einzeln / Multi | Ob Teilnehmende pro Sitzung einen oder mehrere Cues sehen |
+| Cue-Quelle | `low_quality` / `high_quality` / `self_selected` | Pool, aus dem die Cues stammen |
+| Erlaubte Verhaltensweisen | Checkliste | Verhaltenstypen, die Teilnehmende für diese Gruppe protokollieren dürfen |
+| Max. Gewohnheiten | 1 / Unbegrenzt | `1` beschränkt Teilnehmende auf die Studienbedingungen; Unbegrenzt entspricht dem öffentlichen App-Erlebnis |
+
+**Schritt 4.** Tippen Sie für jede Gruppe einzeln auf den **Speichern**-Button. Die Einstellungen anderer Gruppen bleiben davon unberührt.
+
+---
+
+## 12. Studien-Analytik einsehen
+
+Die eigenständige **Analytik**-Seite (`/analytics`) ist das primäre Dashboard zur Studienüberwachung. Sie ist sowohl für die Rolle `admin` als auch für `researcher` zugänglich.
+
+**Schritt 1.** Klicken Sie in der linken Seitenleiste auf **Analytik**.
+
+**Schritt 2.** Wählen Sie oben auf der Seite eine Studie aus dem Dropdown aus. Alle Diagramme und die Teilnehmertabelle aktualisieren sich automatisch.
+
+### KPI-Kacheln
+
+| Kachel | Was sie zeigt |
+|---|---|
+| Eingeschrieben insgesamt | Alle Teilnehmenden, die aktuell in der Studie aktiv sind |
+| Aktiv (letzte 7 Tage) | Prozentsatz, der in der vergangenen Woche mindestens ein Verhalten protokolliert hat (gelb ab 10 % Inaktivität, rot ab 20 %) |
+| Anzahl / Rate der Studienabbrüche | Kumulierte Abbruchzahlen; die Rate ist farbcodiert |
+| Ø SRHI (letzte Woche) | Durchschnittlicher Selbstbericht-Score zur Gewohnheitsstärke über alle Gruppen zum jüngsten wöchentlichen Messzeitpunkt |
+| Fragebogen-Rücklaufquote | Durchschnittliche Rücklaufquote über alle zugewiesenen Fragebögen |
+
+### Diagramme
+
+| Diagramm | Was es zeigt |
+|---|---|
+| Wöchentliche Aktivrate | Balkendiagramm — Prozentsatz der eingeschriebenen Teilnehmenden pro Gruppe, die in den letzten 7 Tagen aktiv waren |
+| SRHI-Verlauf | Liniendiagramm — mittlerer SRHI-Score pro Gruppe und Woche; gestrichelte Referenzlinie bei Score 4 (Gewohnheitsschwelle) |
+| Kumulierte Studienabbrüche | Stufendiagramm — laufende Abbruchzahl pro Gruppe im Zeitverlauf |
+| Fragebogen-Rücklaufquote | Horizontales Balkendiagramm — Rücklaufquote pro Fragebogen |
+
+### Teilnehmertabelle und Detail-Panel
+
+Die Tabelle unterhalb der Diagramme listet alle eingeschriebenen Teilnehmenden mit Benutzername, Gruppe, Einschreibedatum, Datum der letzten Aktivität, einer eingebetteten Fortschrittsleiste für den Fragebogen-Abschluss sowie einem Status-Badge. Klicken Sie auf eine beliebige Zeile, um das Teilnehmerdetail-Panel zu öffnen (eine vollständige Beschreibung der Panel-Inhalte, einschließlich des Bereichs **Erinnerungen**, finden Sie in Abschnitt 6).
+
+---
+
+## 13. Benachrichtigungen an Teilnehmende senden
+
+Push-Benachrichtigungen können über den Tab **Benachrichtigungen** im Bearbeitungsdialog einer Studie an Studienteilnehmende gesendet werden. Dies steht den Rollen `admin` und `researcher` zur Verfügung.
+
+### Eine Benachrichtigung verfassen und senden
+
+**Schritt 1.** Navigieren Sie zu **Studien**, öffnen Sie eine Studie und klicken Sie auf den Tab **Benachrichtigungen**.
+
+**Schritt 2.** Geben Sie einen **Titel** und einen **Text** für die Push-Benachrichtigung ein.
+
+**Schritt 3.** Wählen Sie die Zielgruppe:
+
+| Zieloption | Wer sie erhält |
+|---|---|
+| Alle Teilnehmenden | Jede Person, die aktuell in der Studie eingeschrieben ist |
+| Bestimmte Gruppe | Nur Teilnehmende der ausgewählten Gruppe (z. B. G1) |
+| Alle in der Studie Eingeschriebenen | Synonym zu „Alle Teilnehmenden" — zur Klarheit bei Konfigurationen mit mehreren Studien enthalten |
+
+**Schritt 4.** Wählen Sie den Sendezeitpunkt:
+- **Sofort senden** — wählen Sie bei **Sendezeitpunkt** die Option **Jetzt** und tippen Sie auf **Senden**; der Versand beginnt innerhalb weniger Sekunden.
+- **Planen** — aktivieren Sie die Datums-/Uhrzeitauswahl, indem Sie die Option **Planen** wählen, legen Sie das gewünschte Datum und die Uhrzeit fest und tippen Sie dann auf **Senden**.
+
+### Geplante Kampagnen verwalten
+
+Ausstehende Kampagnen werden im unteren Bereich des Tabs **Benachrichtigungen** aufgelistet. Jede Zeile zeigt Datum/Uhrzeit der geplanten Versendung, Zielgruppe und Status. Um eine ausstehende Kampagne zu stornieren, tippen Sie in ihrer Zeile auf **Abbrechen**.
+
+---
+
+## 14. Das Erlebnis der öffentlichen App konfigurieren
+
+Die Seite **App-Einstellungen** (Bereich „Öffentliche App" in der Seitenleiste, Smartphone-Symbol) steuert das Erlebnis für App-Store-Nutzer, die in keiner Studie eingeschrieben sind. Nur `admin`-Konten können diese Seite sehen und ändern. Öffentliche Nutzer geben ihre Gewohnheit und Auslöser immer als Freitext ein — eine Auslöser- oder Verhaltenskonfiguration existiert nur pro Studiengruppe (Abschnitt 11, Cue-Konfiguration).
+
+**Schritt 1.** Klicken Sie im Admin-Panel in der Seitenleiste unter **Öffentliche App** auf **App-Einstellungen**.
+
+**Schritt 2.** Aktivieren oder deaktivieren Sie im Abschnitt **Funktionen** die folgenden Optionen:
+
+| Einstellung | Beschreibung |
+|---|---|
+| Geführter Assistent für Vorsatzbildung | Wenn aktiviert, werden öffentliche Nutzer durch einen schrittweisen Assistenten geführt (Gewohnheit → Auslöser → KI-Verknüpfung → Bestätigung → Erinnerung). Gewohnheit und Auslöser sind für öffentliche Nutzer immer Freitext; das Deaktivieren überspringt nur den KI-Verknüpfungsschritt. |
+| Community-Teilen-Option standardmäßig angezeigt | Wenn aktiviert, erscheint der Community-Teilen-Schalter am Ende der Gewohnheitserstellung und ist bereits vorausgewählt. |
+
+Tippen Sie auf **Änderungen speichern**, um die Einstellungen zu übernehmen.
+
+**Schritt 3.** Legen Sie im Abschnitt **Standardwerte** die **Standard-Erinnerungszeit** fest — die Tageszeit für die tägliche Check-in-Push-Benachrichtigung (Teilnehmende können dies in ihrem eigenen Profil überschreiben).
+
+Tippen Sie auf **Änderungen speichern**, um die Einstellungen zu übernehmen. Änderungen werden sofort für alle öffentlichen Nutzer in ihrer nächsten Sitzung wirksam — weder ein App-Neustart noch eine erneute Einschreibung sind erforderlich.
+
+---
+
+## 15. Backups verwalten
+
+> **Nur Admin.** Die Backups-Seite ist für `researcher`-Konten ausgeblendet — Backups enthalten den vollständigen Datenbankinhalt, weshalb dieser Bereich strenger eingeschränkt ist als die meisten anderen Admin-Seiten.
+
+**Schritt 1.** Tippen Sie im Admin-Panel in der Seitenleiste (unter Überwachung) auf **Backups**.
+
+Die Seite zeigt:
+
+| Bereich | Inhalt |
+|---|---|
+| Letztes Backup | Datum, Alter, Größe, Auslöser, Status pro Komponente (Mongo / LightRAG / Neo4j / Keycloak) sowie einen **Herunterladen**-Button |
+| Alle Backups | Jedes Backup, das sich noch innerhalb des Aufbewahrungsfensters befindet, einschließlich selbst hochgeladener Backups, jeweils mit eigenem **Herunterladen**-Button |
+| Letzte Aktivitäten | Wer was ausgelöst, wiederhergestellt, hochgeladen oder heruntergeladen hat und ob es erfolgreich war |
+
+> **Aufbewahrung.** Automatische (geplante) Backups, die älter als das Aufbewahrungsfenster sind, werden automatisch gelöscht, und — unabhängig davon — werden stets nur die 10 neuesten geplanten Backups aufbewahrt, unabhängig von ihrem Alter, damit die Liste nicht unbegrenzt wächst. Manuelle und hochgeladene Backups unterliegen dieser Anzahlbegrenzung nicht.
+
+### Ein Backup manuell auslösen
+
+**Schritt 1.** Tippen Sie auf **Backup jetzt auslösen**. Dies ist deaktiviert, solange bereits ein anderes Backup oder eine Wiederherstellung läuft.
+
+**Schritt 2.** Eine Fortschrittsanzeige verfolgt das Backup Schritt für Schritt (z. B. „Schritt 3 von 5 — Neo4j wird gesichert") und aktualisiert sich automatisch; nach Abschluss wechselt sie zu **Fertig**. Es ist nichts weiter zu tun.
+
+### Ein Backup herunterladen
+
+Tippen Sie neben einem beliebigen Backup — der hervorgehobenen Zeile „Letztes Backup" oder einer beliebigen Zeile in der Liste „Alle Backups" — auf **Herunterladen**, um dessen `.tar.gz`-Archiv lokal zu speichern, zum Beispiel um eine Kopie außerhalb des Systems aufzubewahren. Der Download wird unter **Letzte Aktivitäten** protokolliert.
+
+### Ein Backup hochladen
+
+Sie können ein `.tar.gz`-Backup-Archiv hochladen — zum Beispiel eines, das aus einem externen Speicher heruntergeladen oder aus einer anderen Umgebung kopiert wurde —, damit es von hier aus wiederhergestellt werden kann.
+
+**Schritt 1.** Wählen Sie die Datei aus und tippen Sie auf **Backup hochladen**.
+
+**Schritt 2.** Das Archiv wird vor der Annahme geprüft: Es muss mindestens eine erkennbare Backup-Komponente enthalten (MongoDB-Dump, Neo4j-Dump, LightRAG-Index oder Keycloak-Realm-Export) und wird auf unsichere Dateipfade darin überprüft. Alles, was diese Prüfung nicht besteht, wird mit einer Erklärung abgelehnt, statt gespeichert zu werden.
+
+> **Hochgeladene Backups werden als „erkannt, nicht verifiziert" gekennzeichnet.** Die Plattform kann erkennen, welche Komponenten in einer hochgeladenen Datei enthalten sind, aber — anders als bei einem Backup, das diese Instanz selbst erstellt hat — kann sie erst nach einer Wiederherstellung bestätigen, ob diese Daten tatsächlich intakt sind.
+
+### Aus einem Backup wiederherstellen
+
+> **Dies ist destruktiv.** Eine Wiederherstellung überschreibt die aktuellen MongoDB-, Neo4j- und LightRAG-Daten (und, sofern Sie nicht widersprechen, den Keycloak-Realm) mit dem Inhalt des ausgewählten Backups. Lesen Sie diesen gesamten Abschnitt, bevor Sie Ihre erste Wiederherstellung durchführen.
+
+**Schritt 1.** Suchen Sie das Backup in der Liste und tippen Sie auf **Wiederherstellen**.
+
+**Schritt 2.** Zunächst wird immer automatisch ein Sicherheits-Backup des *aktuellen* Zustands erstellt — die Wiederherstellung wird nur fortgesetzt, wenn dieses Sicherheits-Backup erfolgreich ist, sodass eine missglückte Wiederherstellung stets rückgängig gemacht werden kann. Dies verlängert die Zeit, bevor die eigentliche Wiederherstellung beginnt.
+
+**Schritt 3.** Wenn das Backup, das Sie wiederherstellen, eine bekannt fehlgeschlagene Komponente enthält (z. B. ist Neo4j bei der ursprünglichen Erstellung fehlgeschlagen), zeigt der Dialog eine Warnung an, und Sie müssen explizit **Trotzdem wiederherstellen** aktivieren, um fortzufahren.
+
+**Schritt 4.** Entscheiden Sie speziell bei einem **hochgeladenen** Backup, ob Sie **Auch den Keycloak-Realm aus dieser Datei neu importieren** aktivieren möchten — standardmäßig ist dies deaktiviert. Ein Keycloak-Realm-Export kann Client-Secrets und Benutzerkonten enthalten; das erneute Importieren eines Exports aus einer Datei, die Sie nicht selbst erzeugt haben, könnte einem Angreifer Admin-Zugriff verschaffen, falls die Datei manipuliert wurde. Lassen Sie die Option deaktiviert, außer Sie müssen Keycloak gezielt aus genau dieser Datei wiederherstellen und vertrauen deren Herkunft.
+
+**Schritt 5.** Geben Sie den exakten Dateinamen des Backups in das Bestätigungsfeld ein — der **Wiederherstellen**-Button bleibt deaktiviert, bis er exakt übereinstimmt — und tippen Sie dann auf **Wiederherstellen**.
+
+**Schritt 6.** Die Seite zeigt den Live-Fortschritt (Sicherheits-Backup → Wiederherstellung → Fertig). Während eine Wiederherstellung läuft, verweigert die übrige Plattform kurzzeitig neue Anfragen, um zu vermeiden, dass die im Hintergrund ausgetauschte Datenbank in einen Wettlaufzustand gerät; dies hebt sich automatisch auf, sobald die Wiederherstellung abgeschlossen ist.
+
+Jeder Auslöse-, Upload- und Wiederherstellungsvorgang — ob erfolgreich oder nicht — wird in der Tabelle **Letzte Aktivitäten** mit Angabe von Person und Zeitpunkt protokolliert.
 
 ---
 

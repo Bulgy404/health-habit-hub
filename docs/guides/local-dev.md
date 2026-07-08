@@ -99,6 +99,10 @@ This runs `docker compose -f docker-compose.local.yml up -d`, starting:
 | **lightrag** | LightRAG knowledge base (REST API + graph UI) | `localhost:9622` |
 | **knowledge-mcp** | MCP server wrapping LightRAG | `localhost:8002` |
 | **translate** | LibreTranslate | `localhost:5001` |
+| **backup** | Backup service (scheduled backups + internal API for the admin panel's Backups page) | internal only (backup-api on port `4100`) |
+| **docker-socket-proxy** | Scoped Docker API used only by `backup` (no direct `docker.sock` mount) | internal only |
+| **prometheus** | Metrics collection, scrapes `app` | `http://prometheus.localhost` / `localhost:9090` |
+| **grafana** | Dashboards over Prometheus data, Keycloak SSO login | `http://grafana.localhost` / `localhost:3002` |
 
 > The Apache Jena **Fuseki** triple store has been retired and is no longer part of the compose stack — see [`../migration.md`](../migration.md). BCIO mapping now runs on in-process embeddings in the recommender service.
 

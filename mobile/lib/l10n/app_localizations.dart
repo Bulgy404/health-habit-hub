@@ -143,7 +143,7 @@ abstract class AppLocalizations {
   /// Snackbar message when a form submission fails
   ///
   /// In en, this message translates to:
-  /// **'Submission failed — please try again.'**
+  /// **'Submission failed. Please try again.'**
   String get submissionFailed;
 
   /// Offline banner heading
@@ -365,13 +365,13 @@ abstract class AppLocalizations {
   /// Button label for the SLIQ questionnaire
   ///
   /// In en, this message translates to:
-  /// **'SLIQ — Lifestyle Index'**
+  /// **'SLIQ: Lifestyle Index'**
   String get sliqLifestyleIndex;
 
   /// Button label for the RAND-36 questionnaire
   ///
   /// In en, this message translates to:
-  /// **'RAND-36 — Health Survey'**
+  /// **'RAND-36: Health Survey'**
   String get rand36HealthSurvey;
 
   /// Button label to restore account on current device
@@ -947,7 +947,7 @@ abstract class AppLocalizations {
   /// Snackbar message when survey JSON is invalid
   ///
   /// In en, this message translates to:
-  /// **'Invalid JSON — please fix before saving'**
+  /// **'Invalid JSON, please fix before saving'**
   String get adminInvalidJson;
 
   /// Snackbar message when survey is saved successfully
@@ -1034,6 +1034,18 @@ abstract class AppLocalizations {
   /// **'No questionnaires assigned to your study.'**
   String get noQuestionnairesAssigned;
 
+  /// Snackbar shown after app startup when at least one study questionnaire is currently due
+  ///
+  /// In en, this message translates to:
+  /// **'You have a health questionnaire ready to fill out.'**
+  String get questionnaireReminderMessage;
+
+  /// Snackbar action button that opens the due questionnaire
+  ///
+  /// In en, this message translates to:
+  /// **'Fill out'**
+  String get questionnaireReminderAction;
+
   /// Bottom nav tab label for My Habits
   ///
   /// In en, this message translates to:
@@ -1079,7 +1091,7 @@ abstract class AppLocalizations {
   /// Instruction shown for pre-rated cues
   ///
   /// In en, this message translates to:
-  /// **'Your study condition assigns the following cue(s). Read them carefully — this is when you will act.'**
+  /// **'Your study condition assigns the following cue(s). Read them carefully: this is when you will act.'**
   String get setCuePreRatedInstruction;
 
   /// Instruction shown for self-selected cues
@@ -1355,7 +1367,7 @@ abstract class AppLocalizations {
   /// AI provenance and medical disclaimer on the recommendations screen
   ///
   /// In en, this message translates to:
-  /// **'AI-generated suggestions based on your study data. This is not medical advice — consult a doctor for health concerns.'**
+  /// **'AI-generated suggestions based on your study data. This is not medical advice; consult a doctor for health concerns.'**
   String get aiDisclaimer;
 
   /// Label of the reminder section in habit creation
@@ -1403,7 +1415,7 @@ abstract class AppLocalizations {
   /// Empty state of the comment list
   ///
   /// In en, this message translates to:
-  /// **'No comments yet — be the first.'**
+  /// **'No comments yet. Be the first.'**
   String get noCommentsYet;
 
   /// Snackbar when posting a comment fails
@@ -1793,7 +1805,7 @@ abstract class AppLocalizations {
   /// Message shown when the recommendation API returns no results
   ///
   /// In en, this message translates to:
-  /// **'No recommendations were generated. Try describing your goal in more detail — the more context you share, the better.'**
+  /// **'No recommendations were generated. Try describing your goal in more detail: the more context you share, the better.'**
   String get recommendationEmptyMessage;
 
   /// Bottom bar button label to go back and enter a different goal
@@ -1829,7 +1841,7 @@ abstract class AppLocalizations {
   /// Confirmation shown after successfully submitting feedback on a recommendation
   ///
   /// In en, this message translates to:
-  /// **'Feedback submitted — thank you!'**
+  /// **'Feedback submitted, thank you!'**
   String get recommendationFeedbackSubmitted;
 
   /// Label above the feedback comment field on a recommendation card
@@ -2045,8 +2057,14 @@ abstract class AppLocalizations {
   /// Body text shown once the user has already shared a habit today
   ///
   /// In en, this message translates to:
-  /// **'Thanks for contributing! Come back tomorrow for the next one.'**
+  /// **'Thanks for contributing! Every habit you share helps our research. Feel free to add another.'**
   String get donateSharedTodayBody;
+
+  /// Prominent button on the shared-today card that lets the user share an additional habit the same day
+  ///
+  /// In en, this message translates to:
+  /// **'Share another habit'**
+  String get donateShareAnotherButton;
 
   /// Heading for the explanatory card on why habit sharing is useful
   ///
@@ -2057,7 +2075,7 @@ abstract class AppLocalizations {
   /// Body copy for the explanatory card on why habit sharing is useful
   ///
   /// In en, this message translates to:
-  /// **'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone\'s recommendations become — including yours.'**
+  /// **'Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone\'s recommendations become, including yours.'**
   String get donateWhyShareBody;
 
   /// Snackbar shown when the donation form is submitted with missing answers
@@ -2075,7 +2093,7 @@ abstract class AppLocalizations {
   /// Snackbar shown when a habit donation is queued for later submission due to no connection
   ///
   /// In en, this message translates to:
-  /// **'Saved offline — will submit when connected'**
+  /// **'Saved offline, will submit when connected'**
   String get donateSavedOffline;
 
   /// Snackbar shown when habit donation submission fails with a 401 response

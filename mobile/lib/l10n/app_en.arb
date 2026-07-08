@@ -24,7 +24,7 @@
   "@habitSharedSuccess": {
     "description": "Snackbar message when habit sharing succeeds"
   },
-  "submissionFailed": "Submission failed — please try again.",
+  "submissionFailed": "Submission failed. Please try again.",
   "@submissionFailed": {
     "description": "Snackbar message when a form submission fails"
   },
@@ -182,11 +182,11 @@
   "@healthQuestionnaires": {
     "description": "Section heading for health questionnaire buttons"
   },
-  "sliqLifestyleIndex": "SLIQ — Lifestyle Index",
+  "sliqLifestyleIndex": "SLIQ: Lifestyle Index",
   "@sliqLifestyleIndex": {
     "description": "Button label for the SLIQ questionnaire"
   },
-  "rand36HealthSurvey": "RAND-36 — Health Survey",
+  "rand36HealthSurvey": "RAND-36: Health Survey",
   "@rand36HealthSurvey": {
     "description": "Button label for the RAND-36 questionnaire"
   },
@@ -605,7 +605,7 @@
   "@adminSurveyEditor": {
     "description": "Fallback AppBar title for the survey editor screen"
   },
-  "adminInvalidJson": "Invalid JSON — please fix before saving",
+  "adminInvalidJson": "Invalid JSON, please fix before saving",
   "@adminInvalidJson": {
     "description": "Snackbar message when survey JSON is invalid"
   },
@@ -665,6 +665,14 @@
   "@noQuestionnairesAssigned": {
     "description": "Empty state message shown on the profile screen when the participant's study has no questionnaires"
   },
+  "questionnaireReminderMessage": "You have a health questionnaire ready to fill out.",
+  "@questionnaireReminderMessage": {
+    "description": "Snackbar shown after app startup when at least one study questionnaire is currently due"
+  },
+  "questionnaireReminderAction": "Fill out",
+  "@questionnaireReminderAction": {
+    "description": "Snackbar action button that opens the due questionnaire"
+  },
   "myHabitsTab": "My Habits",
   "@myHabitsTab": {
     "description": "Bottom nav tab label for My Habits"
@@ -693,7 +701,7 @@
   "@setCueTitle": {
     "description": "Screen 2 of new habit flow"
   },
-  "setCuePreRatedInstruction": "Your study condition assigns the following cue(s). Read them carefully — this is when you will act.",
+  "setCuePreRatedInstruction": "Your study condition assigns the following cue(s). Read them carefully: this is when you will act.",
   "@setCuePreRatedInstruction": {
     "description": "Instruction shown for pre-rated cues"
   },
@@ -887,7 +895,7 @@
   "@signOutConfirm": {
     "description": "Body of the sign-out confirmation dialog"
   },
-  "aiDisclaimer": "AI-generated suggestions based on your study data. This is not medical advice — consult a doctor for health concerns.",
+  "aiDisclaimer": "AI-generated suggestions based on your study data. This is not medical advice; consult a doctor for health concerns.",
   "@aiDisclaimer": {
     "description": "AI provenance and medical disclaimer on the recommendations screen"
   },
@@ -919,7 +927,7 @@
   "@commentHint": {
     "description": "Placeholder of the comment input"
   },
-  "noCommentsYet": "No comments yet — be the first.",
+  "noCommentsYet": "No comments yet. Be the first.",
   "@noCommentsYet": {
     "description": "Empty state of the comment list"
   },
@@ -1209,7 +1217,7 @@
   "@recommendationTryAgain": {
     "description": "Button label to retry after an error or empty recommendation result"
   },
-  "recommendationEmptyMessage": "No recommendations were generated. Try describing your goal in more detail — the more context you share, the better.",
+  "recommendationEmptyMessage": "No recommendations were generated. Try describing your goal in more detail: the more context you share, the better.",
   "@recommendationEmptyMessage": {
     "description": "Message shown when the recommendation API returns no results"
   },
@@ -1238,7 +1246,7 @@
   "@recommendationAddToHabits": {
     "description": "Button label to adopt a recommendation as a new habit"
   },
-  "recommendationFeedbackSubmitted": "Feedback submitted — thank you!",
+  "recommendationFeedbackSubmitted": "Feedback submitted, thank you!",
   "@recommendationFeedbackSubmitted": {
     "description": "Confirmation shown after successfully submitting feedback on a recommendation"
   },
@@ -1400,15 +1408,19 @@
   "@donateSharedTodayTitle": {
     "description": "Heading shown once the user has already shared a habit today"
   },
-  "donateSharedTodayBody": "Thanks for contributing! Come back tomorrow for the next one.",
+  "donateSharedTodayBody": "Thanks for contributing! Every habit you share helps our research. Feel free to add another.",
   "@donateSharedTodayBody": {
     "description": "Body text shown once the user has already shared a habit today"
+  },
+  "donateShareAnotherButton": "Share another habit",
+  "@donateShareAnotherButton": {
+    "description": "Prominent button on the shared-today card that lets the user share an additional habit the same day"
   },
   "donateWhyShareTitle": "Why share?",
   "@donateWhyShareTitle": {
     "description": "Heading for the explanatory card on why habit sharing is useful"
   },
-  "donateWhyShareBody": "Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone's recommendations become — including yours.",
+  "donateWhyShareBody": "Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone's recommendations become, including yours.",
   "@donateWhyShareBody": {
     "description": "Body copy for the explanatory card on why habit sharing is useful"
   },
@@ -1420,7 +1432,7 @@
   "@donateNotAHabitMessage": {
     "description": "Message shown when the backend classifier rejects the submitted text as not being a habit"
   },
-  "donateSavedOffline": "Saved offline — will submit when connected",
+  "donateSavedOffline": "Saved offline, will submit when connected",
   "@donateSavedOffline": {
     "description": "Snackbar shown when a habit donation is queued for later submission due to no connection"
   },

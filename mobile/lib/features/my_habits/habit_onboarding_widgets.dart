@@ -32,12 +32,12 @@ class HabitOnboardingCopy {
   static const habitBody = _Copy(
     en:
         'A habit is a small action you repeat regularly until it becomes '
-        'automatic — something you do almost without thinking. Start by '
+        'automatic: something you do almost without thinking. Start by '
         'choosing one specific action you would like to make part of your '
         'routine.',
     de:
         'Eine Gewohnheit ist eine kleine Handlung, die du regelmäßig '
-        'wiederholst, bis sie automatisch abläuft – etwas, das du fast ohne '
+        'wiederholst, bis sie automatisch abläuft: etwas, das du fast ohne '
         'Nachdenken tust. Wähle zuerst eine konkrete Handlung, die zur '
         'Routine werden soll.',
     ja:
@@ -53,13 +53,13 @@ class HabitOnboardingCopy {
   );
   static const cueBody = _Copy(
     en:
-        'A cue is the moment or situation that triggers your habit — like '
+        'A cue is the moment or situation that triggers your habit, like '
         '"after my morning coffee". Linking your action to something you '
         'already do every day makes it far more likely to stick. Add one or '
         'more cues that fit your routine.',
     de:
         'Ein Auslöser ist der Moment oder die Situation, die deine Gewohnheit '
-        'anstößt – z. B. „nach meinem Morgenkaffee". Wenn du deine Handlung '
+        'anstößt, z. B. „nach meinem Morgenkaffee". Wenn du deine Handlung '
         'mit etwas verknüpfst, das du ohnehin täglich tust, bleibt sie viel '
         'eher bestehen. Füge einen oder mehrere Auslöser hinzu, die zu deinem '
         'Alltag passen.',

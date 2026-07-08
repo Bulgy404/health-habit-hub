@@ -97,7 +97,7 @@ void main() {
 
     // AppBar action says 'Skip'; TextButton below field says longer text.
     expect(find.text('Skip'), findsOneWidget);
-    expect(find.text('Skip — join without a study code'), findsOneWidget);
+    expect(find.text('Skip: join without a study code'), findsOneWidget);
   });
 
   testWidgets('code input forces uppercase', (tester) async {

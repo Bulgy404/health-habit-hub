@@ -3,6 +3,8 @@ import { makeGetDb } from '../../utils/getDb.js';
 import { COLLECTION, DEFAULTS } from '../../models/appSettings.js';
 import { validate } from '../../middleware/validate.js';
 import { updateAppSettingsSchema } from '../../schemas/adminSchemas.js';
+import { requireRole } from '../../middleware/requireRole.js';
+import { ROLES } from '../../middleware/auth.js';
 import { logger } from '../../utils/logger.js';
 
 const log = logger.child({ module: 'appSettingsRouter' });
@@ -24,7 +26,7 @@ export function createAppSettingsRouter({ db } = {}) {
   }
 
   // GET /api/v1/admin/app-settings
-  router.get('/app-settings', async (req, res) => {
+  router.get('/app-settings', requireRole(ROLES.ADMIN), async (req, res) => {
     try {
       const database = await getDb();
       res.json(await getSettings(database));
@@ -37,6 +39,7 @@ export function createAppSettingsRouter({ db } = {}) {
   // PUT /api/v1/admin/app-settings
   router.put(
     '/app-settings',
+    requireRole(ROLES.ADMIN),
     validate(updateAppSettingsSchema),
     async (req, res) => {
       try {

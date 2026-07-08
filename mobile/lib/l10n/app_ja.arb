@@ -179,11 +179,11 @@
   "@healthQuestionnaires": {
     "description": "Section heading for health questionnaire buttons"
   },
-  "sliqLifestyleIndex": "SLIQ — ライフスタイル指標",
+  "sliqLifestyleIndex": "SLIQ：ライフスタイル指標",
   "@sliqLifestyleIndex": {
     "description": "Button label for the SLIQ questionnaire"
   },
-  "rand36HealthSurvey": "RAND-36 — 健康調査",
+  "rand36HealthSurvey": "RAND-36：健康調査",
   "@rand36HealthSurvey": {
     "description": "Button label for the RAND-36 questionnaire"
   },
@@ -602,7 +602,7 @@
   "@adminSurveyEditor": {
     "description": "Fallback AppBar title for the survey editor screen"
   },
-  "adminInvalidJson": "無効なJSONです — 保存前に修正してください",
+  "adminInvalidJson": "無効なJSONです。保存前に修正してください",
   "@adminInvalidJson": {
     "description": "Snackbar message when survey JSON is invalid"
   },
@@ -662,6 +662,14 @@
   "@noQuestionnairesAssigned": {
     "description": "Empty state message shown on the profile screen when the participant's study has no questionnaires"
   },
+  "questionnaireReminderMessage": "回答可能な健康アンケートがあります。",
+  "@questionnaireReminderMessage": {
+    "description": "Snackbar shown after app startup when at least one study questionnaire is currently due"
+  },
+  "questionnaireReminderAction": "回答する",
+  "@questionnaireReminderAction": {
+    "description": "Snackbar action button that opens the due questionnaire"
+  },
   "myHabitsTab": "マイ習慣",
   "@myHabitsTab": {
     "description": "Bottom nav tab label for My Habits"
@@ -690,7 +698,7 @@
   "@setCueTitle": {
     "description": "Screen 2 of new habit flow"
   },
-  "setCuePreRatedInstruction": "あなたの研究条件では次のきっかけが割り当てられます。よく読んでください — これが行動するタイミングです。",
+  "setCuePreRatedInstruction": "あなたの研究条件では次のきっかけが割り当てられます。よく読んでください。これが行動するタイミングです。",
   "@setCuePreRatedInstruction": {
     "description": "Instruction shown for pre-rated cues"
   },
@@ -1050,7 +1058,8 @@
   "donateQuestionnaireDueSubtitle": "短いアンケート · 今すぐ回答をお願いします",
   "donateCompleteButton": "回答する",
   "donateSharedTodayTitle": "本日シェア済み",
-  "donateSharedTodayBody": "ご協力ありがとうございます！次の課題は明日また来てくださいね。",
+  "donateSharedTodayBody": "ご協力ありがとうございます！共有していただいた習慣はすべて研究の役に立っています。よろしければもう一つ共有してみませんか。",
+  "donateShareAnotherButton": "別の習慣を共有する",
   "donateWhyShareTitle": "なぜシェアするの？",
   "donateWhyShareBody": "シェアされた習慣は匿名で集められ、人々が日常生活の中でどのように健康的な習慣を築いているかを示す、公開された知見として蓄積されていきます。研究者がより多くの実例に触れるほど、あなたを含むすべての人へのおすすめがより良いものになります。",
   "donatePleaseAnswerAllQuestions": "すべての質問に回答してください",
