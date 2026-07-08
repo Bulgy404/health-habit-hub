@@ -156,11 +156,17 @@ export function Sidebar() {
           </select>
         </div>
         <button
-          onClick={() =>
-            signOut({
-              callbackUrl: `${process.env.NEXT_PUBLIC_KEYCLOAK_BROWSER_URL}/realms/hhh/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(process.env.NEXT_PUBLIC_NEXTAUTH_URL ?? "")}&client_id=hhh-admin`,
-            })
-          }
+          onClick={async () => {
+            // next-auth's default redirect callback only allows callbackUrls
+            // on the same origin as NEXTAUTH_URL, so passing the Keycloak
+            // logout URL as callbackUrl gets silently discarded — it clears
+            // the local session but leaves the Keycloak SSO session alive,
+            // so the very next auth check logs the user straight back in.
+            // Clear the local session first, then navigate to Keycloak's
+            // end-session endpoint directly to end the SSO session too.
+            await signOut({ redirect: false });
+            window.location.href = `${process.env.NEXT_PUBLIC_KEYCLOAK_BROWSER_URL}/realms/hhh/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(process.env.NEXT_PUBLIC_NEXTAUTH_URL ?? "")}&client_id=hhh-admin`;
+          }}
           className={styles.signOutButton}
         >
           <LogOut size={14} strokeWidth={1.75} />

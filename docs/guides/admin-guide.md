@@ -34,7 +34,7 @@ Use this checklist when launching a new cohort of participants.
 11. [Configuring Study Conditions (Cue Config)](#11-configuring-study-conditions-cue-config)
 12. [Viewing Study Analytics](#12-viewing-study-analytics)
 13. [Sending Researcher Notifications](#13-sending-researcher-notifications)
-14. [Configuring Public Default Cue Settings](#14-configuring-public-default-cue-settings)
+14. [Configuring the Public App Experience](#14-configuring-the-public-app-experience)
 15. [Managing Backups](#15-managing-backups)
 
 ---
@@ -576,23 +576,24 @@ Pending campaigns are listed in the lower section of the Notifications tab. Each
 
 ---
 
-## 14. Configuring Public Default Cue Settings
+## 14. Configuring the Public App Experience
 
-The **Public Default Cue Config** section in Settings controls the cue experience for app-store users who are not enrolled in any study. Only `admin` accounts can modify these settings.
+The **App Settings** page (Public App section in the sidebar, Smartphone icon) controls the experience for app-store users who are not enrolled in any study. Only `admin` accounts can see and modify this page. Public users always enter their habit and cues as free text — cue and behavior configuration only exists per study group (Section 11, Cue Config).
 
-**Step 1.** In the Admin panel, tap **Settings** (gear icon in the sidebar footer).
+**Step 1.** In the Admin panel, click **App Settings** under **Public App** in the sidebar.
 
-**Step 2.** Scroll to the **Public Default Cue Config** section.
+**Step 2.** In the **Features** section, toggle:
 
-**Step 3.** Adjust the settings as needed:
+| Setting | Description |
+|---|---|
+| Guided implementation intention wizard | When enabled, public users are taken through a step-by-step wizard (habit → cues → LLM stitch → confirm → reminder). Habit and cues are always free text; disabling this only skips the LLM-stitching step. |
+| Community sharing opt-in shown by default | When enabled, the community-sharing toggle appears at the end of habit creation and is pre-selected. |
 
-| Setting | Options | Description |
-|---|---|---|
-| Default cue count | Single / Multi | Number of cues shown per session to public users |
-| Default cue source | `low_quality` / `high_quality` / `self_selected` | Pool from which cues are drawn for public users |
-| Default reminder time | Time picker (HH:MM) | Daily reminder push notification time for public users |
+Tap **Save changes** to apply.
 
-**Step 4.** Tap **Save Settings**. Changes take effect immediately for all public users on their next session — no app restart or re-enrolment is required.
+**Step 3.** In the **Defaults** section, set the **Default reminder time** — the time of day for the daily check-in push notification (participants can override this in their own profile).
+
+Tap **Save changes** to apply. Changes take effect immediately for all public users on their next session — no app restart or re-enrolment is required.
 
 ---
 
@@ -606,15 +607,21 @@ The page shows:
 
 | Section | Contents |
 |---|---|
-| Last backup | Date, age, size, what triggered it, and a per-component status (Mongo / LightRAG / Neo4j / Keycloak) |
-| All backups | Every backup still within the retention window, including ones you've uploaded |
-| Recent activity | Who triggered, restored, or uploaded what, and whether it succeeded |
+| Last backup | Date, age, size, what triggered it, a per-component status (Mongo / LightRAG / Neo4j / Keycloak), and a **Download** button |
+| All backups | Every backup still within the retention window, including ones you've uploaded, each with its own **Download** button |
+| Recent activity | Who triggered, restored, uploaded, or downloaded what, and whether it succeeded |
+
+> **Retention.** Automatic (scheduled) backups older than the retention window are deleted automatically, and — separately — only the 10 most recent scheduled backups are ever kept regardless of age, so the list doesn't grow unbounded. Manual and uploaded backups are not subject to that count cap.
 
 ### Triggering a backup on demand
 
 **Step 1.** Tap **Trigger backup now**. This is disabled while another backup or restore is already running.
 
-**Step 2.** The page shows live progress and updates automatically; there's nothing further to do.
+**Step 2.** A progress bar tracks the backup step-by-step (e.g. "Step 3 of 5 — Backing up Neo4j") and updates automatically; once finished it switches to **Completed**. There's nothing further to do.
+
+### Downloading a backup
+
+Tap **Download** next to any backup — the highlighted "Last backup" row or any row in the "All backups" list — to save its `.tar.gz` archive locally, for example to keep an offsite copy. The download is logged in **Recent activity**.
 
 ### Uploading a backup
 

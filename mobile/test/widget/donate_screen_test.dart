@@ -19,6 +19,7 @@ import 'package:hhh/screens/donate_screen.dart';
 import 'package:hhh/services/auth_service.dart';
 import 'package:hhh/services/habit_service.dart';
 import 'package:hhh/services/survey_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Shared no-op Dio instance for fake service constructors.
 /// Tests override surveyServiceProvider so HTTP calls never happen.
@@ -119,6 +120,29 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Start sharing'));
+    await tester.pump();
+
+    expect(find.text('How often do you do this habit?'), findsOneWidget);
+  });
+
+  testWidgets(
+      'shows a prominent "Share another habit" button once already shared today, and it opens the form',
+      (tester) async {
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    SharedPreferences.setMockInitialValues({
+      'last_habit_share_date': todayStr,
+      'habit_share_streak': 1,
+    });
+
+    await tester.pumpWidget(_buildSubject(_FakeSurveyService.throwing()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Shared today'), findsOneWidget);
+    expect(find.text('Share another habit'), findsOneWidget);
+
+    await tester.tap(find.text('Share another habit'));
     await tester.pump();
 
     expect(find.text('How often do you do this habit?'), findsOneWidget);

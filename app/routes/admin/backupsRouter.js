@@ -113,8 +113,13 @@ export function createBackupsRouter({ db } = {}) {
   });
 
   // Every route here is admin-only — backups are considered too sensitive
-  // for the researcher role, unlike most other admin data.
-  router.use(requireRole(ROLES.ADMIN));
+  // for the researcher role, unlike most other admin data. Scoped to
+  // '/backups' (not a bare router.use(...)): this router is mounted at '/'
+  // in adminRouter.js, so an unscoped gate would run for every request that
+  // falls through to this mount point — including sibling admin sub-resources
+  // mounted separately in apiRouter.js (e.g. /admin/cue-pools) — wrongly
+  // 403ing non-admin roles for paths this router doesn't even own.
+  router.use('/backups', requireRole(ROLES.ADMIN));
 
   router.get('/backups/status', async (_req, res) => {
     try {

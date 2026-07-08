@@ -477,7 +477,7 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
                 Icon(Icons.translate, size: 14, color: cs.tertiary),
                 const SizedBox(width: 6),
                 Text(
-                  'In ${_node.language.toUpperCase()} — no translation yet',
+                  'In ${_node.language.toUpperCase()}, no translation yet',
                   style: tt.bodySmall?.copyWith(color: cs.tertiary),
                 ),
               ],

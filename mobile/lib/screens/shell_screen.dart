@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
 import '../features/my_habits/my_habits_provider.dart';
+import '../l10n/app_localizations.dart';
 import '../services/consent_service.dart';
 import '../services/offline_queue_service.dart';
 import '../services/push_notification_service.dart';
@@ -22,6 +23,33 @@ final reconsentRequiredProvider = Provider<Future<bool> Function(String)>((
   ref,
 ) {
   return (locale) => isReconsentRequired(ref.read(dioProvider), locale);
+});
+
+/// Fetches the slug of a currently-due study questionnaire, or `null` if
+/// none is due (or the request fails, e.g. offline).
+///
+/// Exposed as a provider so [ShellScreen] can be tested without making a
+/// real network request — see [habitReminderSyncProvider] for the same
+/// pattern.
+final dueQuestionnaireProvider = Provider<Future<String?> Function()>((ref) {
+  return () async {
+    try {
+      final response = await ref
+          .read(dioProvider)
+          .get<Map<String, dynamic>>(
+            '${AppConfig.apiBaseUrl}/questionnaires/due',
+          );
+      final items = (response.data?['questionnaires'] as List<dynamic>? ?? [])
+          .whereType<Map<String, dynamic>>();
+      final due = items.firstWhere(
+        (it) => it['isDue'] == true,
+        orElse: () => const {},
+      );
+      return due['questionnaireSlug']?.toString();
+    } catch (_) {
+      return null;
+    }
+  };
 });
 
 /// Synchronizes adaptive habit reminders and study-questionnaire reminders.
@@ -111,6 +139,7 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
       _initNotifications();
       _syncHabitReminders();
       _watchConnectivity();
+      _remindDueQuestionnaires();
     });
   }
 
@@ -130,6 +159,30 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     } catch (_) {
       // Offline / plugins unavailable — retried on next start.
     }
+  }
+
+  /// Surfaces an in-app reminder right after startup when a study
+  /// questionnaire is currently due, in addition to the local push
+  /// notification [ReminderSchedulerService.syncQuestionnaireReminders]
+  /// schedules for later. Silently does nothing when offline or when no
+  /// questionnaire is due — this is a courtesy nudge, not a hard requirement.
+  Future<void> _remindDueQuestionnaires() async {
+    final slug = await ref.read(dueQuestionnaireProvider)();
+    if (slug == null || !mounted) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.questionnaireReminderMessage),
+        action: SnackBarAction(
+          label: l10n.questionnaireReminderAction,
+          onPressed: () {
+            if (mounted) context.push('/questionnaire/$slug');
+          },
+        ),
+        duration: const Duration(seconds: 8),
+      ),
+    );
   }
 
   /// UC-31: when the informed-consent document version was bumped since this

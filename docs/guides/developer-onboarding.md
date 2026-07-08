@@ -8,7 +8,7 @@ Welcome to the Health Habit Hub project. This guide takes you from zero to a ful
 
 1. [Required Tools](#1-required-tools)
 2. [Clone and Branch Setup](#2-clone-and-branch-setup)
-3. [Create stack.env](#3-create-stackenv)
+3. [Create .env](#3-create-env)
 4. [Start Services with Docker Compose](#4-start-services-with-docker-compose)
 5. [Run Flutter App in Chrome](#5-run-flutter-app-in-chrome)
 6. [Run Flutter App in Android Emulator](#6-run-flutter-app-in-android-emulator)
@@ -61,112 +61,48 @@ Doctor summary (to see all details, run flutter doctor -v):
 git clone https://github.com/your-org/health-habit-hub.git
 cd health-habit-hub
 
-# Switch to the unified development branch
-git checkout ralph/hhh-platform-unified
+# Make sure you're on the main branch
+git checkout main
 
 # Verify you are on the correct branch
 git branch --show-current
-# Expected output: ralph/hhh-platform-unified
+# Expected output: main
 ```
+
+Create a feature branch off `main` for your work as usual; `main` is the branch used for PRs and is kept deployable.
 
 ---
 
-## 3. Create stack.env
+## 3. Create .env
 
-The Docker stack reads all secrets and configuration from a `stack.env` file at the repo root. Copy the template and fill in your local values:
+The Docker stack reads all secrets and configuration from a `.env` file at the repo root (loaded automatically by Docker Compose, and per-service via `env_file: .env` in the compose files). Copy the template and fill in your local values:
 
 ```bash
-cp stack.env stack.env.local
+cp .env.example .env
 ```
 
-Edit `stack.env.local` with values suitable for local development. Below is a minimal template that works out-of-the-box for local development (all `CHANGE_THIS_*` values replaced with safe defaults):
+`.env.example` is self-documenting — every variable has an inline comment, and every `CHANGE_THIS_*` placeholder must be replaced before starting services (any non-empty string works for local dev; use strong random values in production). Notably:
 
-```ini
-# ── Domain ─────────────────────────────────────────────────────────────
-DOMAIN=localhost
-SERVER_IP=127.0.0.1
-ACME_EMAIL=dev@localhost
+- `API_SERVICE_SECRET` is the shared secret between the Node.js backend and the Python API service (recommender).
+- `LIGHTRAG_API_KEY` is the bearer token that protects the LightRAG REST API — it must match between the `lightrag`, `knowledge-mcp`, and `recommender` containers (`.env.example` uses the same placeholder for all three, so a single `sed` replace keeps them in sync).
+- `PATH_SUFFIX` (default `localhost`) controls the `*.localhost` subdomains Traefik routes locally (`app.localhost`, `admin.localhost`, etc.) — leave it as `localhost` unless you have a reason to change it.
+- `DOMAIN`/`ACME_EMAIL` only matter for `docker-compose.yml` (production, real TLS); they're unused locally.
 
-# ── App ────────────────────────────────────────────────────────────────
-APP_BASE_PATH=/
-NODE_ENV=development
-
-# NOTE: the Apache Jena Fuseki triple store has been retired — there are no
-# longer any FUSEKI_*/DB_* variables. BCIO mapping runs on in-process
-# embeddings in the recommender service. See ../migration.md.
-
-# ── MongoDB ─────────────────────────────────────────────────────────────
-MONGO_HOST=mongo
-MONGO_PORT=27017
-MONGO_USER=admin
-MONGO_PASSWORD=devpassword
-MONGO_DB=surveyjs
-MONGO_AUTH_SOURCE=admin
-MONGO_SERVER_SELECTION_TIMEOUT_MS=30000
-MONGO_SOCKET_TIMEOUT_MS=30000
-
-# ── Graph backend ───────────────────────────────────────────────────────
-GRAPH_BACKEND=neo4j
-
-# ── Neo4j ───────────────────────────────────────────────────────────────
-NEO4J_URI=bolt://neo4j:7687
-NEO4J_USER=neo4j
-NEO4J_PASSWORD=devpassword
-
-# ── Keycloak ─────────────────────────────────────────────────────────────
-KEYCLOAK_ADMIN=admin
-KEYCLOAK_ADMIN_PASSWORD=devpassword
-
-# ── Recommender ──────────────────────────────────────────────────────────
-RECOMMENDER_URL=http://recommender:8000
-
-# ── API Service ───────────────────────────────────────────────────────────
-API_SERVICE_SECRET=dev-secret-change-in-production
-
-# ── LightRAG Knowledge Base ───────────────────────────────────────────────
-LIGHTRAG_URL=http://lightrag:9621
-LIGHTRAG_API_KEY=dev-lightrag-secret
-LIGHTRAG_HOST_PORT=9622
-
-# ── LibreTranslate ───────────────────────────────────────────────────────
-LT_LOAD_ONLY=de,en,ja,fr,nl
-LT_REQ_LIMIT=0
-LT_DEBUG=false
-LT_DISABLE_WEB_UI=false
-
-# ── Backup ───────────────────────────────────────────────────────────────
-BACKUP_RETENTION_DAYS=7
-BACKUP_EMAIL=dev@localhost
-ALERT_WEBHOOK_URL=
-
-# ── Admin app password ───────────────────────────────────────────────────
-ADMIN_PASSWORD=devpassword
-
-# ── Mail (dev — set to empty to disable) ─────────────────────────────────
-MAIL_USER=
-MAIL_PASS=
-MAIL_FROM=noreply@localhost
-MAIL_RECEIVER=dev@localhost
-
-# ── Traefik ──────────────────────────────────────────────────────────────
-TRAEFIK_DASHBOARD_AUTH=admin:$$apr1$$devhash
-```
-
-`API_SERVICE_SECRET` is the shared secret between the Node.js backend and the Python API service (recommender). `LIGHTRAG_API_KEY` is the bearer token that protects the LightRAG REST API — it must match between the `lightrag`, `knowledge-mcp`, and `recommender` containers. Any non-empty string works locally; use strong random values in production.
-
-> **Note:** Never commit `stack.env.local` to Git — it is listed in `.gitignore`. For production deployments use the values in `stack.env` overridden in Portainer.
+> **Note:** Never commit `.env` to Git — it's covered by `.gitignore` (only `.env.example` is tracked). For production deployments, the same variables are supplied via Portainer's stack environment — see [`DEPLOYMENT.md`](../../DEPLOYMENT.md).
 
 ---
 
 ## 4. Start Services with Docker Compose
 
 ```bash
-# Start all backend services in detached mode
-docker compose --env-file stack.env.local up -d
+# Start all backend services in detached mode (or: make dev)
+docker compose -f docker-compose.local.yml up -d --build
 
 # Watch logs during startup (Ctrl+C to stop following)
-docker compose logs -f
+docker compose -f docker-compose.local.yml logs -f
 ```
+
+`docker-compose.local.yml` is the local-dev stack — plain HTTP, `*.localhost` subdomains via Traefik, no TLS. `docker-compose.yml` (no `-f` needed since it's the default) is the production stack (Traefik + Let's Encrypt, single domain) and should not be used for local development.
 
 Wait approximately 60–90 seconds for Keycloak and Neo4j to initialise. Then verify all services are healthy:
 
@@ -192,10 +128,10 @@ Expected output:
 Confirm Docker containers are running:
 
 ```bash
-docker compose ps
+docker compose -f docker-compose.local.yml ps
 ```
 
-Expected — all services should show status **running** or **healthy**:
+Expected — all services should show status **running** or **healthy** (this list is illustrative, not exhaustive — the full local stack also includes `hhh-redis`, `hhh-admin`, `hhh-backup`, `hhh-docker-socket-proxy`, `hhh-prometheus`, and `hhh-grafana`):
 
 ```
 NAME                  STATUS
@@ -374,10 +310,13 @@ npm install
 npm test
 ```
 
-Expected output:
+The backend uses Node's built-in test runner (not Jest) via `node --test`. Expected output ends with:
 
 ```
-Tests:       265 passed, 265 total
+ℹ tests 586
+ℹ suites 21
+ℹ pass 586
+ℹ fail 0
 ```
 
 | Terminal | Screenshot |
@@ -463,7 +402,7 @@ PASS [no orphan contexts]: 0 violations
 
 ### Port conflicts
 
-If `docker compose up` fails with "address already in use", find and stop the conflicting process:
+If `docker compose -f docker-compose.local.yml up` fails with "address already in use", find and stop the conflicting process:
 
 ```bash
 # Find what is using port 3000
@@ -480,7 +419,7 @@ Keycloak takes 30–60 s to start. If the health endpoint returns `"keycloak": {
 
 ```bash
 # Watch Keycloak logs
-docker compose logs -f keycloak
+docker compose -f docker-compose.local.yml logs -f keycloak
 
 # Wait until you see:
 # ... Keycloak 26.5.5 on JVM ... started in ...ms
@@ -492,7 +431,7 @@ Then retry `curl http://localhost:3000/api/v1/health`.
 
 If the admin app redirects to Keycloak but login fails or loops, check that:
 
-1. Keycloak is healthy (`docker compose ps` shows `hhh-keycloak` as healthy).
+1. Keycloak is healthy (`docker compose -f docker-compose.local.yml ps` shows `hhh-keycloak` as healthy).
 2. The `hhh-admin` client exists in the `hhh` realm.
 3. Your Keycloak user has the `admin` or `researcher` realm role assigned.
 4. `KEYCLOAK_ISSUER` in your `admin/.env.local` matches the issuer claim in the Keycloak token (use `http://localhost:8080/realms/hhh` for local dev).
@@ -501,16 +440,16 @@ If the admin app redirects to Keycloak but login fails or loops, check that:
 
 If the Flutter web app shows network errors in Chrome DevTools, the backend CORS origin is not configured for `localhost`.
 
-Set the `CORS_ORIGIN` variable in your `stack.env.local`:
+Set the `ALLOWED_ORIGINS` variable (comma-separated) in your `.env`:
 
 ```ini
-CORS_ORIGIN=http://localhost:8080
+ALLOWED_ORIGINS=http://admin.localhost,http://researcher.localhost,http://localhost:3001
 ```
 
 Restart the app container:
 
 ```bash
-docker compose restart app
+docker compose -f docker-compose.local.yml restart app
 ```
 
 ### Keycloak realm not imported
@@ -519,10 +458,10 @@ If you see `404` on Keycloak realm endpoints, the realm import may have failed o
 
 ```bash
 # Inspect Keycloak startup logs
-docker compose logs keycloak | grep -i "import\|error\|realm"
+docker compose -f docker-compose.local.yml logs keycloak | grep -i "import\|error\|realm"
 
 # Re-import manually
-docker compose exec keycloak \
+docker compose -f docker-compose.local.yml exec keycloak \
   /opt/keycloak/bin/kc.sh import --dir /opt/keycloak/data/import
 ```
 
@@ -595,7 +534,7 @@ Expected: `http://localhost:8080/realms/hhh`
 **Check 4 — MongoDB reachable from app container**
 
 ```bash
-docker compose exec app node -e "const {MongoClient}=require('mongodb'); MongoClient.connect(process.env.MONGO_HOST?'mongodb://'+process.env.MONGO_USER+':'+process.env.MONGO_PASSWORD+'@'+process.env.MONGO_HOST+':'+process.env.MONGO_PORT:'mongodb://localhost:27017').then(()=>{console.log('OK');process.exit(0)}).catch(e=>{console.log('FAIL',e.message);process.exit(1)})"
+docker compose -f docker-compose.local.yml exec app node -e "const {MongoClient}=require('mongodb'); MongoClient.connect(process.env.MONGO_HOST?'mongodb://'+process.env.MONGO_USER+':'+process.env.MONGO_PASSWORD+'@'+process.env.MONGO_HOST+':'+process.env.MONGO_PORT:'mongodb://localhost:27017').then(()=>{console.log('OK');process.exit(0)}).catch(e=>{console.log('FAIL',e.message);process.exit(1)})"
 ```
 
 Expected: `OK`
@@ -605,7 +544,7 @@ Expected: `OK`
 **Check 5 — Neo4j reachable**
 
 ```bash
-docker compose exec neo4j cypher-shell -u neo4j -p devpassword "RETURN 'OK' AS status;"
+docker compose -f docker-compose.local.yml exec neo4j cypher-shell -u neo4j -p devpassword "RETURN 'OK' AS status;"
 ```
 
 Expected:

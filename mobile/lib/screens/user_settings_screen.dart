@@ -364,7 +364,7 @@ class UserSettingsScreen extends ConsumerWidget {
               name: 'health-habit-hub-export.json',
             ),
           ],
-          subject: 'Health Habit Hub — my data export',
+          subject: 'Health Habit Hub: my data export',
           fileNameOverrides: ['health-habit-hub-export.json'],
         ),
       );

@@ -23,6 +23,10 @@ import { ROLES } from '../middleware/auth.js';
 import { createProfileFieldDefinitionsAdminRouter } from './profileFieldDefinitionsRouter.js';
 import { createActivityTypeRouter } from './activityTypeRouter.js';
 import { seedActivityTypes } from '../services/activityTypeService.js';
+import {
+  seedDefaultQuestionnaires,
+  seedDefaultStudy,
+} from '../services/defaultStudySeedService.js';
 import { createAppSettingsRouter } from './admin/appSettingsRouter.js';
 import { createBackupsRouter } from './admin/backupsRouter.js';
 import { createSystemRouter } from './admin/systemRouter.js';
@@ -71,12 +75,18 @@ export function createAdminRouter({
   const router = express.Router();
   const getDb = makeGetDb(db);
 
-  // Seed default settings and activity types asynchronously on router creation
+  // Seed default settings, activity types, the questionnaire library, and the
+  // default study asynchronously on router creation. Idempotent — safe to
+  // run on every boot, so a fresh deploy that never ran `make seed` still
+  // ends up with a usable default study (questionnaire seeding must run
+  // first: seedDefaultStudy looks up SLIQ/RAND-36 by slug to link them).
   (async () => {
     try {
       const database = await getDb();
       await seedDefaultSettings(database);
       await seedActivityTypes(database);
+      await seedDefaultQuestionnaires(database);
+      await seedDefaultStudy(database);
     } catch {
       // Non-fatal: initialization errors are ignored
     }
@@ -731,11 +741,17 @@ export function createAdminRouter({
     createActivityTypeRouter({ db })
   );
 
-  router.use('/', requireRole(ROLES.ADMIN), createAppSettingsRouter({ db }));
+  // Role checks for these live on their own routes (scoped per-path) rather
+  // than here — a requireRole gate on this catch-all '/' mount would run for
+  // every unmatched request that falls through this router, including
+  // sibling admin sub-resources mounted separately in apiRouter.js (e.g.
+  // /admin/cue-pools), wrongly 403ing non-admin roles for paths this
+  // sub-router doesn't even own.
+  router.use('/', createAppSettingsRouter({ db }));
 
   router.use('/', createBackupsRouter({ db }));
 
-  router.use('/', requireRole(ROLES.ADMIN), createSystemRouter());
+  router.use('/', createSystemRouter());
 
   return router;
 }

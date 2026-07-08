@@ -238,7 +238,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
             const SizedBox(height: 16),
             TextButton(
               onPressed: _isLoading ? null : _onSkip,
-              child: const Text('Skip — join without a study code'),
+              child: const Text('Skip: join without a study code'),
             ),
           ],
         ),

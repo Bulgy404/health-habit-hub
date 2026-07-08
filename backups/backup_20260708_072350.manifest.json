@@ -1,8 +1,8 @@
 {
-  "date": "2026-07-07T18:54:33Z",
-  "file": "full_backup_20260707_185427.tar.gz",
+  "date": "2026-07-08T07:24:08Z",
+  "file": "full_backup_20260708_072350.tar.gz",
   "trigger": "scheduled",
-  "sizeBytes": 353596,
+  "sizeBytes": 19864119,
   "mongoOk": true,
   "lightragOk": true,
   "neo4jOk": true,
@@ -11,5 +11,5 @@
   "retentionDays": 14,
   "errors": 0,
   "errorLog": "",
-  "durationSeconds": 6
+  "durationSeconds": 18
 }

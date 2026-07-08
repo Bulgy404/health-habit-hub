@@ -27,7 +27,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get habitSharedSuccess => 'Gewoonte succesvol gedeeld!';
 
   @override
-  String get submissionFailed => 'Verzenden mislukt — probeer het opnieuw.';
+  String get submissionFailed => 'Verzenden mislukt. Probeer het opnieuw.';
 
   @override
   String get noConnection => 'Geen verbinding';
@@ -147,10 +147,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get healthQuestionnaires => 'Gezondheidsvragenlijsten';
 
   @override
-  String get sliqLifestyleIndex => 'SLIQ — Leefstijlindex';
+  String get sliqLifestyleIndex => 'SLIQ: leefstijlindex';
 
   @override
-  String get rand36HealthSurvey => 'RAND-36 — Gezondheidsvragenlijst';
+  String get rand36HealthSurvey => 'RAND-36: gezondheidsvragenlijst';
 
   @override
   String get restoreAccountOnDevice => 'Account herstellen op dit apparaat';
@@ -468,7 +468,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get adminInvalidJson =>
-      'Ongeldige JSON — corrigeer dit voordat u opslaat';
+      'Ongeldige JSON, corrigeer dit voordat u opslaat';
 
   @override
   String get adminSurveySaved => 'Enquête opgeslagen';
@@ -515,6 +515,13 @@ class AppLocalizationsNl extends AppLocalizations {
       'Er zijn geen vragenlijsten aan uw studie toegewezen.';
 
   @override
+  String get questionnaireReminderMessage =>
+      'Er staat een gezondheidsvragenlijst voor u klaar.';
+
+  @override
+  String get questionnaireReminderAction => 'Invullen';
+
+  @override
   String get myHabitsTab => 'Mijn gewoontes';
 
   @override
@@ -538,7 +545,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get setCuePreRatedInstruction =>
-      'Jouw studieconditie wijst de volgende aanleiding(en) toe. Lees ze aandachtig door — dit is het moment waarop je in actie komt.';
+      'Jouw studieconditie wijst de volgende aanleiding(en) toe. Lees ze aandachtig door: dit is het moment waarop je in actie komt.';
 
   @override
   String get setCueSelfSelectedInstruction =>
@@ -692,7 +699,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get aiDisclaimer =>
-      'Door AI gegenereerde suggesties op basis van uw studiegegevens. Dit is geen medisch advies — raadpleeg bij gezondheidsklachten een arts.';
+      'Door AI gegenereerde suggesties op basis van uw studiegegevens. Dit is geen medisch advies; raadpleeg bij gezondheidsklachten een arts.';
 
   @override
   String get dailyReminderLabel => 'Dagelijkse herinnering';
@@ -717,7 +724,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get commentHint => 'Deel een gedachte (anoniem)…';
 
   @override
-  String get noCommentsYet => 'Nog geen reacties — wees de eerste.';
+  String get noCommentsYet => 'Nog geen reacties. Wees de eerste.';
 
   @override
   String get couldNotPostComment => 'Kon reactie niet plaatsen';
@@ -940,7 +947,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get recommendationEmptyMessage =>
-      'Er zijn geen aanbevelingen gegenereerd. Probeer uw doel wat gedetailleerder te beschrijven — hoe meer context u deelt, hoe beter.';
+      'Er zijn geen aanbevelingen gegenereerd. Probeer uw doel wat gedetailleerder te beschrijven: hoe meer context u deelt, hoe beter.';
 
   @override
   String get recommendationTryDifferentGoal => 'Probeer een ander doel';
@@ -961,7 +968,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get recommendationAddToHabits => 'Toevoegen aan mijn gewoontes';
 
   @override
-  String get recommendationFeedbackSubmitted => 'Feedback verzonden — bedankt!';
+  String get recommendationFeedbackSubmitted => 'Feedback verzonden, bedankt!';
 
   @override
   String get recommendationLeaveComment => 'Laat een reactie achter:';
@@ -1093,14 +1100,17 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get donateSharedTodayBody =>
-      'Bedankt voor je bijdrage! Kom morgen terug voor de volgende.';
+      'Bedankt voor je bijdrage! Elke gedeelde gewoonte helpt ons onderzoek, deel gerust nog een gewoonte.';
+
+  @override
+  String get donateShareAnotherButton => 'Nog een gewoonte delen';
 
   @override
   String get donateWhyShareTitle => 'Waarom delen?';
 
   @override
   String get donateWhyShareBody =>
-      'Elke gewoonte die je deelt wordt anoniem toegevoegd aan een groeiend, open beeld van hoe mensen in het dagelijks leven gezonde routines opbouwen. Hoe meer echte voorbeelden onderzoekers zien, hoe beter de aanbevelingen voor iedereen worden — ook voor jou.';
+      'Elke gewoonte die je deelt wordt anoniem toegevoegd aan een groeiend, open beeld van hoe mensen in het dagelijks leven gezonde routines opbouwen. Hoe meer echte voorbeelden onderzoekers zien, hoe beter de aanbevelingen voor iedereen worden, ook voor jou.';
 
   @override
   String get donatePleaseAnswerAllQuestions => 'Beantwoord alle vragen';
@@ -1111,7 +1121,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get donateSavedOffline =>
-      'Offline opgeslagen — wordt verzonden zodra er verbinding is';
+      'Offline opgeslagen, wordt verzonden zodra er verbinding is';
 
   @override
   String get donateUnauthorized => 'Niet geautoriseerd. Log opnieuw in.';

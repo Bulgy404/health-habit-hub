@@ -142,10 +142,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get healthQuestionnaires => '健康に関する質問票';
 
   @override
-  String get sliqLifestyleIndex => 'SLIQ — ライフスタイル指標';
+  String get sliqLifestyleIndex => 'SLIQ：ライフスタイル指標';
 
   @override
-  String get rand36HealthSurvey => 'RAND-36 — 健康調査';
+  String get rand36HealthSurvey => 'RAND-36：健康調査';
 
   @override
   String get restoreAccountOnDevice => 'この端末でアカウントを復元';
@@ -447,7 +447,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get adminSurveyEditor => 'アンケートエディター';
 
   @override
-  String get adminInvalidJson => '無効なJSONです — 保存前に修正してください';
+  String get adminInvalidJson => '無効なJSONです。保存前に修正してください';
 
   @override
   String get adminSurveySaved => 'アンケートを保存しました';
@@ -493,6 +493,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noQuestionnairesAssigned => 'あなたの研究に割り当てられた質問票はありません。';
 
   @override
+  String get questionnaireReminderMessage => '回答可能な健康アンケートがあります。';
+
+  @override
+  String get questionnaireReminderAction => '回答する';
+
+  @override
   String get myHabitsTab => 'マイ習慣';
 
   @override
@@ -515,7 +521,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get setCuePreRatedInstruction =>
-      'あなたの研究条件では次のきっかけが割り当てられます。よく読んでください — これが行動するタイミングです。';
+      'あなたの研究条件では次のきっかけが割り当てられます。よく読んでください。これが行動するタイミングです。';
 
   @override
   String get setCueSelfSelectedInstruction =>
@@ -1036,7 +1042,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get donateSharedTodayTitle => '本日シェア済み';
 
   @override
-  String get donateSharedTodayBody => 'ご協力ありがとうございます！次の課題は明日また来てくださいね。';
+  String get donateSharedTodayBody =>
+      'ご協力ありがとうございます！共有していただいた習慣はすべて研究の役に立っています。よろしければもう一つ共有してみませんか。';
+
+  @override
+  String get donateShareAnotherButton => '別の習慣を共有する';
 
   @override
   String get donateWhyShareTitle => 'なぜシェアするの？';

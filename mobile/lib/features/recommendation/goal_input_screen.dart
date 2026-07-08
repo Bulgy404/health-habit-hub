@@ -61,7 +61,7 @@ class _GoalInputScreenState extends State<GoalInputScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'The more context you share — your lifestyle, what you\'ve tried, and what gets in the way — the better your recommendation will be.',
+                'The more context you share (your lifestyle, what you\'ve tried, and what gets in the way), the better your recommendation will be.',
                 style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.5),
                 textAlign: TextAlign.center,
               ),

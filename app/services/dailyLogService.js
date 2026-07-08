@@ -39,6 +39,7 @@ export async function getLogs({ db, intentionId, from, to }) {
   }
   const docs = await db.collection(COLLECTION).find(filter).toArray();
   return docs.map((d) => ({
+    intentionId: d.intentionId.toString(),
     date: d.date,
     enacted: d.enacted,
     loggedAt: d.loggedAt,

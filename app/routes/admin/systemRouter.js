@@ -15,6 +15,8 @@
 import express from 'express';
 import { checkAllServices } from '../../utils/healthCheck.js';
 import { getHabitQueue } from '../../lib/habitQueue.js';
+import { requireRole } from '../../middleware/requireRole.js';
+import { ROLES } from '../../middleware/auth.js';
 import { logger } from '../../utils/logger.js';
 
 const log = logger.child({ module: 'systemRouter' });
@@ -151,7 +153,7 @@ export function createSystemRouter({ serviceChecks = {} } = {}) {
    * metrics. Never 500s on a Prometheus outage — it reports reachability so the
    * UI can degrade gracefully.
    */
-  router.get('/system/overview', async (_req, res) => {
+  router.get('/system/overview', requireRole(ROLES.ADMIN), async (_req, res) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
     try {
@@ -183,7 +185,7 @@ export function createSystemRouter({ serviceChecks = {} } = {}) {
    * BullMQ job counts (the habit-donations pipeline) plus Redis stats used for
    * caching. Powers the "Queues & cache" panel on the admin System page.
    */
-  router.get('/system/queues', async (_req, res) => {
+  router.get('/system/queues', requireRole(ROLES.ADMIN), async (_req, res) => {
     try {
       const [queues, redis] = await Promise.all([
         getQueueStats(),

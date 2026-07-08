@@ -28,7 +28,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get submissionFailed =>
-      'Übermittlung fehlgeschlagen — bitte erneut versuchen.';
+      'Übermittlung fehlgeschlagen. Bitte erneut versuchen.';
 
   @override
   String get noConnection => 'Keine Verbindung';
@@ -150,10 +150,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get healthQuestionnaires => 'Gesundheitsfragebögen';
 
   @override
-  String get sliqLifestyleIndex => 'SLIQ — Lebensstil-Index';
+  String get sliqLifestyleIndex => 'SLIQ: Lebensstil-Index';
 
   @override
-  String get rand36HealthSurvey => 'RAND-36 — Gesundheitsumfrage';
+  String get rand36HealthSurvey => 'RAND-36: Gesundheitsumfrage';
 
   @override
   String get restoreAccountOnDevice =>
@@ -480,7 +480,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get adminInvalidJson =>
-      'Ungültiges JSON — bitte vor dem Speichern korrigieren';
+      'Ungültiges JSON, bitte vor dem Speichern korrigieren';
 
   @override
   String get adminSurveySaved => 'Umfrage gespeichert';
@@ -530,6 +530,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Keine Fragebögen für Ihre Studie zugewiesen.';
 
   @override
+  String get questionnaireReminderMessage =>
+      'Ein Gesundheitsfragebogen wartet auf Ihre Antworten.';
+
+  @override
+  String get questionnaireReminderAction => 'Ausfüllen';
+
+  @override
   String get myHabitsTab => 'Meine Gewohnheiten';
 
   @override
@@ -553,7 +560,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get setCuePreRatedInstruction =>
-      'Deine Studienbedingung gibt dir folgende(n) Hinweisreiz(e) vor. Lies sie sorgfältig – das ist der Moment, in dem du handeln wirst.';
+      'Deine Studienbedingung gibt dir folgende(n) Hinweisreiz(e) vor. Lies sie sorgfältig: das ist der Moment, in dem du handeln wirst.';
 
   @override
   String get setCueSelfSelectedInstruction =>
@@ -708,7 +715,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get aiDisclaimer =>
-      'KI-generierte Vorschläge auf Basis Ihrer Studiendaten. Dies ist keine medizinische Beratung — wenden Sie sich bei gesundheitlichen Fragen an einen Arzt.';
+      'KI-generierte Vorschläge auf Basis Ihrer Studiendaten. Dies ist keine medizinische Beratung; wenden Sie sich bei gesundheitlichen Fragen an einen Arzt.';
 
   @override
   String get dailyReminderLabel => 'Tägliche Erinnerung';
@@ -733,8 +740,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commentHint => 'Teilen Sie einen Gedanken (anonym) …';
 
   @override
-  String get noCommentsYet =>
-      'Noch keine Kommentare — seien Sie die/der Erste.';
+  String get noCommentsYet => 'Noch keine Kommentare. Seien Sie die/der Erste.';
 
   @override
   String get couldNotPostComment => 'Kommentar konnte nicht gesendet werden';
@@ -958,7 +964,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recommendationEmptyMessage =>
-      'Es wurden keine Empfehlungen generiert. Beschreiben Sie Ihr Ziel etwas genauer — je mehr Kontext Sie angeben, desto besser.';
+      'Es wurden keine Empfehlungen generiert. Beschreiben Sie Ihr Ziel etwas genauer: je mehr Kontext Sie angeben, desto besser.';
 
   @override
   String get recommendationTryDifferentGoal => 'Anderes Ziel ausprobieren';
@@ -980,7 +986,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recommendationFeedbackSubmitted =>
-      'Feedback gesendet — vielen Dank!';
+      'Feedback gesendet, vielen Dank!';
 
   @override
   String get recommendationLeaveComment => 'Kommentar hinterlassen:';
@@ -1113,14 +1119,17 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get donateSharedTodayBody =>
-      'Danke für deinen Beitrag! Komm morgen für die nächste Aufgabe wieder.';
+      'Danke für deinen Beitrag! Jede geteilte Gewohnheit hilft unserer Forschung. Teile gerne noch eine weitere.';
+
+  @override
+  String get donateShareAnotherButton => 'Weitere Gewohnheit teilen';
 
   @override
   String get donateWhyShareTitle => 'Warum teilen?';
 
   @override
   String get donateWhyShareBody =>
-      'Jede geteilte Gewohnheit fließt anonym in eine wachsende, öffentliche Wissensbasis darüber ein, wie Menschen im Alltag gesunde Routinen aufbauen. Je mehr echte Beispiele Forschende sehen, desto besser lassen sich hilfreichere Empfehlungen für alle entwickeln – auch für dich.';
+      'Jede geteilte Gewohnheit fließt anonym in eine wachsende, öffentliche Wissensbasis darüber ein, wie Menschen im Alltag gesunde Routinen aufbauen. Je mehr echte Beispiele Forschende sehen, desto besser lassen sich hilfreichere Empfehlungen für alle entwickeln, auch für dich.';
 
   @override
   String get donatePleaseAnswerAllQuestions => 'Bitte beantworte alle Fragen';
@@ -1131,7 +1140,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get donateSavedOffline =>
-      'Offline gespeichert – wird gesendet, sobald wieder eine Verbindung besteht';
+      'Offline gespeichert, wird gesendet, sobald wieder eine Verbindung besteht';
 
   @override
   String get donateUnauthorized =>

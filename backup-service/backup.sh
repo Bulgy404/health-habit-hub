@@ -5,11 +5,11 @@ BACKUP_DIR="/backups"
 DATE=$(date +%Y%m%d_%H%M%S)
 START_TS=$(date +%s)
 RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
-# Independent of the time-based retention above: a daily cron on top of a
-# 14-day time retention piles up ~14 scheduled backups in the admin UI, more
-# than anyone needs to look at. Caps *scheduled*-trigger backups specifically
-# by count, regardless of age; manual/uploaded backups are unaffected.
-SCHEDULED_BACKUP_LIMIT=${BACKUP_SCHEDULED_LIMIT:-10}
+# Scheduled (daily automatic) backups are additionally capped by count, using
+# the same number as the time-based retention above, so a daily cron settles
+# at "last $RETENTION_DAYS scheduled backups" in the admin UI instead of
+# waiting on mtime to catch up. Manual/uploaded backups are unaffected.
+SCHEDULED_BACKUP_LIMIT=$RETENTION_DAYS
 ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
 # Backward compatible: older env/docs used ALERT_EMAIL, newer scripts use BACKUP_EMAIL.
 BACKUP_EMAIL=${BACKUP_EMAIL:-${ALERT_EMAIL:-}}
@@ -287,9 +287,9 @@ else
   log "  No old backups to delete"
 fi
 
-# Cap scheduled (daily automatic) backups by count, independent of the
-# time-based retention above — read the surviving sidecar manifests, sort by
-# date descending, and delete anything past the newest $SCHEDULED_BACKUP_LIMIT.
+# Cap scheduled (daily automatic) backups by count, using the same number as
+# the time-based retention above — read the surviving sidecar manifests, sort
+# by date descending, and delete anything past the newest $SCHEDULED_BACKUP_LIMIT.
 # Manual and uploaded backups are untouched by this cap.
 log ""
 log "Enforcing max $SCHEDULED_BACKUP_LIMIT scheduled backups..."
