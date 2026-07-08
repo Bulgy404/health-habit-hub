@@ -327,22 +327,36 @@ Die CSV-Datei enthält folgende Spalten: `participant_pseudonym`, `study_group`,
 
 ## 6. Teilnehmerfortschritt verfolgen
 
-Die Teilnehmerfortschritts-Ansicht zeigt Aktivitätszusammenfassungen für jeden Teilnehmer, um inaktive oder in Schwierigkeiten befindliche Teilnehmer zu identifizieren.
+Das Teilnehmer-Detail-Panel auf der Seite **Analytik** zeigt eine vollständige Aktivitätszusammenfassung für jede teilnehmende Person und ist die zentrale Stelle, um den Fortschritt einzelner Teilnehmender zu beobachten.
 
-**Schritt 1.** Tippen Sie im Admin-Panel auf **Teilnehmer** und öffnen Sie die Detailansicht eines Teilnehmers.
+**Schritt 1.** Navigieren Sie in der linken Seitenleiste zu **Analytik**.
 
-**Schritt 2.** Scrollen Sie zum Abschnitt **Aktivität**. Er zeigt:
-- **Datum der ersten Anmeldung** (oder „Noch nicht angemeldet")
-- **Profilfragebogen ausgefüllt** (Ja / Nein)
-- **Gespendete Gewohnheiten** (Gesamtzahl und pro Woche)
-- **Datum der letzten Aktivität**
-- **Anzahl angenommener / abgelehnter Empfehlungen**
+**Schritt 2.** Wählen Sie oben auf der Seite eine Studie aus dem Dropdown-Menü aus.
 
-| Screenshot | Beschriftungen |
+**Schritt 3.** Scrollen Sie zur Teilnehmertabelle am Ende der Seite und klicken Sie auf eine beliebige Zeile. Ein Panel schiebt sich von rechts ein.
+
+Das Panel enthält vier Abschnitte:
+
+| Abschnitt | Was angezeigt wird |
 |---|---|
-| ![Teilnehmerfortschritt-Ansicht](../assets/screenshots/admin/06-participant-progress.png) | **(1)** Datum der ersten Anmeldung (oder „Noch nicht angemeldet"-Banner). **(2)** Profilabschluss-Badge — grünes Häkchen, wenn ausgefüllt. **(3)** Gespendete Gewohnheiten — Nummerierungs-Badge mit wöchentlichem Sparkline. **(4)** Empfehlungsbereich — Verhältnisbalken angenommen vs. abgelehnt. **(5)** Zeitstempel der letzten Aktivität. |
+| **Zusammenfassung** | Erstellte Gewohnheiten, abgeschlossene Fragebögen, angenommene/abgelehnte Empfehlungen, Profilabschluss, Datum der letzten Aktivität |
+| **Erinnerungen** | Aktuelle Erinnerungshäufigkeit, Autonomie-Score mit Score-Balken sowie die Aufschlüsselung nach einzelnen Signalen (siehe unten) |
+| **Abgeschlossene Fragebögen** | Liste der von der teilnehmenden Person eingereichten Fragebögen mit Abschlussdatum |
+| **Aktivitätsverlauf** | Chronologisches Protokoll aller erfassten Ereignisse (Einschreibung, Anmeldungen, Gewohnheitserstellung, Fragebogen-Einreichungen usw.) |
 
-*Abbildung 6: Teilnehmer-Aktivitätszusammenfassung.*
+### Aufschlüsselung des Erinnerungsplans
+
+Der Abschnitt **Erinnerungen** zeigt, wie der adaptive Ausblend-Algorithmus die Gewohnheitsautomatisierung der teilnehmenden Person für jeden aktiven Vorsatz eingeschätzt hat:
+
+| Feld | Bedeutung |
+|---|---|
+| **Häufigkeits-Badge** | Aktuelle Erinnerungsfrequenz — `Täglich` (rot) → `Alle 2 Tage` (orange) → `Zweimal wöchentlich` (gelb) → `Wöchentlich` (grün) → `Aus` (grau) |
+| **Score-Balken** | Autonomie-Score 0–1; höher = automatischer, weniger Erinnerungen nötig |
+| **SRHI** | Beitrag aus dem letzten wöchentlichen Selbstbericht zur Gewohnheitsstärke der teilnehmenden Person (Gewichtung 50 %) |
+| **Adhärenz 14 Tage** | Beitrag aus dem Anteil der letzten 14 Tage mit protokollierter Ausführung (Gewichtung 35 %) |
+| **Serie** | Beitrag aus der aktuellen zusammenhängenden Tagesserie, begrenzt auf 14 Tage (Gewichtung 15 %) |
+
+Hat die teilnehmende Person keine aktiven Vorsätze, zeigt der Abschnitt „Keine aktiven Vorsätze".
 
 > **Tipp:** Verwenden Sie den Filter **„Noch keine Anmeldungen"** in der Teilnehmerlistenansicht (Gruppenfilter → Status: Noch nie angemeldet), um Teilnehmer zu identifizieren, die ihre Token-Karten noch nicht aktiviert haben.
 
