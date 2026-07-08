@@ -136,6 +136,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get profileSavedSuccess => 'プロフィールを保存しました！';
 
   @override
+  String get profileEnterNumber => '数値を入力';
+
+  @override
+  String get profileEnterText => 'テキストを入力';
+
+  @override
   String get couldNotLoadProfile => 'プロフィールを読み込めませんでした。\n接続を確認してください。';
 
   @override
@@ -546,6 +552,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get healthGoalPrompt => 'どのような健康目標に取り組みたいですか？';
 
   @override
+  String get goalInputSubtitle =>
+      '背景（生活スタイル、これまで試したこと、うまくいかない理由など）を詳しく共有するほど、おすすめの精度が上がります。';
+
+  @override
+  String get goalInputHint =>
+      '例：34歳、デスクワークで長時間座っています。夜0時前に寝つけず、朝は疲れが取れません。夜のランニングを試しましたが1週間で挫折しました。無理なく続けられて、ぐっすり休めるようになる習慣が欲しいです。';
+
+  @override
+  String get goalInputValidationError => '目標を入力してください';
+
+  @override
   String get questionnaireResponseSubmitted => '回答を送信しました！';
 
   @override
@@ -562,7 +579,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noQuestionnairesAssigned => 'あなたの研究に割り当てられた質問票はありません。';
 
   @override
-  String get questionnaireReminderMessage => '回答可能な健康アンケートがあります。';
+  String get questionnaireReminderMessage => '回答可能な健康質問票があります。';
 
   @override
   String get questionnaireReminderAction => '回答する';
@@ -609,6 +626,23 @@ class AppLocalizationsJa extends AppLocalizations {
   String get confirmPlanSubtitle => '実行意図を読んで確認してください。';
 
   @override
+  String get confirmPlanEditHint => '意図を編集…';
+
+  @override
+  String confirmPlanReminderAtTime(String time) {
+    return '$timeにリマインダー（研究の設定）';
+  }
+
+  @override
+  String get confirmPlanRemindersEnabledByStudy => 'リマインダー有効（研究の設定）';
+
+  @override
+  String get confirmPlanNoRemindersByStudy => 'リマインダーなし（研究の設定）';
+
+  @override
+  String get confirmPlanShareWithCommunity => 'この習慣をコミュニティと匿名で共有する';
+
+  @override
   String get durationLabel => '所要時間（分）';
 
   @override
@@ -631,8 +665,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String srhiStem(String behavior) {
-    return '私の$behaviorは…';
+    return '$behaviorは…';
   }
+
+  @override
+  String get srhiScaleMin => '1 = まったくそう思わない';
+
+  @override
+  String get srhiScaleMax => '7 = 強くそう思う';
 
   @override
   String get srhiSubmit => '送信';
@@ -849,6 +889,40 @@ class AppLocalizationsJa extends AppLocalizations {
   String get onboardingNext => '次へ';
 
   @override
+  String get studyCodeAppBarTitle => '研究コード';
+
+  @override
+  String get studyCodeQuestion => '研究コードをお持ちですか？';
+
+  @override
+  String get studyCodeSubtitle =>
+      '研究者から研究コードを受け取っている場合は、ここに入力してその研究に参加できます。このステップはスキップすることもできます。';
+
+  @override
+  String get studyCodeLabel => '研究コード';
+
+  @override
+  String get studyCodeInvalidFormat => 'HHH-XXXXX形式の正しいコードを入力してください。';
+
+  @override
+  String get studyCodeInvalid => '無効なコードです。確認してもう一度お試しください。';
+
+  @override
+  String get studyCodeExpired => 'このコードは有効期限が切れています。';
+
+  @override
+  String get studyCodeAlreadyUsed => 'このコードはすでに使用されています。';
+
+  @override
+  String get studyCodeGenericError => 'コードを利用できませんでした。接続を確認してください。';
+
+  @override
+  String get studyCodeContinueButton => 'コードを使って続ける';
+
+  @override
+  String get studyCodeSkipButton => 'スキップ：研究コードなしで参加する';
+
+  @override
   String get adminQuestionnairesDeleteConfirmTitle => 'アンケートを削除しますか?';
 
   @override
@@ -913,7 +987,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String adminQuestionnairesQuestionsCount(int count) {
-    return '質問 ($count)';
+    return '質問（$count）';
   }
 
   @override
@@ -960,7 +1034,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String adminQuestionnairesOptionsCount(int count) {
-    return '選択肢 ($count)';
+    return '選択肢（$count）';
   }
 
   @override
@@ -975,7 +1049,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get adminShellNavParticipants => '参加者';
 
   @override
-  String get adminShellNavSurveys => '調査';
+  String get adminShellNavSurveys => 'アンケート';
 
   @override
   String get adminShellNavQuestionnaires => 'アンケート';
@@ -1010,7 +1084,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String recommendationSourcesCount(int count) {
-    return '情報源 ($count)';
+    return '情報源（$count）';
   }
 
   @override
@@ -1077,10 +1151,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recommendationCardWhy => '理由';
 
   @override
-  String get recommendationCardDismiss => '却下';
+  String get recommendationCardDismiss => '興味なし';
 
   @override
-  String get recommendationCardAccept => '承認';
+  String get recommendationCardAccept => '追加する';
 
   @override
   String get questionnaireFormRequiredQuestion => 'この質問は必須です。';
@@ -1144,7 +1218,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get donateWhyShareBody =>
-      'シェアされた習慣は匿名で集められ、人々が日常生活の中でどのように健康的な習慣を築いているかを示す、公開された知見として蓄積されていきます。研究者がより多くの実例に触れるほど、あなたを含むすべての人へのおすすめがより良いものになります。';
+      'シェアされた習慣は匿名のまま、研究者があなたを含むすべての人へのおすすめをより良くするために役立てられます。';
 
   @override
   String get readMoreAboutProject => 'プロジェクトについてもっと詳しく';

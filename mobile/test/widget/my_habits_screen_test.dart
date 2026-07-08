@@ -22,6 +22,11 @@ class _FakeMyHabitsService extends MyHabitsService {
   final List<Intention> intentions;
   final List<SrhiWindow> dueSrhi;
 
+  /// Set by [logDay] and read back by [fetchLogs], so tests can verify that
+  /// providers depending on logs actually refetch (rather than serving a
+  /// stale cached value) after a log is recorded.
+  bool loggedToday = false;
+
   @override
   Future<HabitConfig> fetchHabitConfig() async => config;
 
@@ -32,7 +37,29 @@ class _FakeMyHabitsService extends MyHabitsService {
   Future<List<SrhiWindow>> fetchDueSrhi() async => dueSrhi;
 
   @override
-  Future<List<DailyLog>> fetchLogs(String intentionId, {String? from, String? to}) async => [];
+  Future<List<DailyLog>> fetchLogs(String intentionId, {String? from, String? to}) async {
+    if (!loggedToday) return [];
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    return [
+      DailyLog(
+        intentionId: intentionId,
+        date: todayStr,
+        enacted: true,
+        loggedAt: now,
+      ),
+    ];
+  }
+
+  @override
+  Future<void> logDay({
+    required String intentionId,
+    required String date,
+    required bool enacted,
+  }) async {
+    loggedToday = true;
+  }
 
   @override
   Future<List<SrhiTrajectoryPoint>> fetchTrajectory(String intentionId) async => [];
@@ -42,12 +69,14 @@ Widget _buildSubject({
   required HabitConfig config,
   required List<Intention> intentions,
   List<SrhiWindow> dueSrhi = const [],
+  _FakeMyHabitsService? service,
 }) {
-  final fakeService = _FakeMyHabitsService(
-    config: config,
-    intentions: intentions,
-    dueSrhi: dueSrhi,
-  );
+  final fakeService = service ??
+      _FakeMyHabitsService(
+        config: config,
+        intentions: intentions,
+        dueSrhi: dueSrhi,
+      );
   return ProviderScope(
     overrides: [
       myHabitsServiceProvider.overrideWithValue(fakeService),
@@ -147,5 +176,56 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Weekly habit check-in'), findsOneWidget);
+  });
+
+  testWidgets(
+      'the page-level activity graph updates immediately after logging a habit '
+      '(without a manual pull-to-refresh)', (tester) async {
+    final fakeService = _FakeMyHabitsService(
+      config: const HabitConfig(
+        cueCount: 'multi',
+        cueSource: 'high_quality',
+        behaviorOptions: ['walking'],
+        maxHabits: null,
+        srhiItems: [],
+      ),
+      intentions: [_activeIntention],
+    );
+
+    await tester.pumpWidget(
+      _buildSubject(
+        config: fakeService.config,
+        intentions: fakeService.intentions,
+        service: fakeService,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Log today'), findsOneWidget);
+    // Before logging, the page-level graph (fed by allHabitsActivityProvider)
+    // has no data yet.
+    expect(
+      tester.widget<ContributionGraphWidget>(
+        find.byType(ContributionGraphWidget),
+      ).counts,
+      isEmpty,
+    );
+
+    await tester.tap(find.text('Log today'));
+    // Lets the logDay POST, the intentionLogsProvider + allHabitsActivityProvider
+    // invalidation, and the resulting refetch all settle — with no manual
+    // RefreshIndicator pull in between.
+    await tester.pumpAndSettle();
+
+    expect(find.text('Logged ✓'), findsWidgets);
+    // The page-level graph must reflect today's log immediately, not just
+    // the per-habit day strip — this is the bug: allHabitsActivityProvider
+    // wasn't being invalidated alongside intentionLogsProvider.
+    expect(
+      tester.widget<ContributionGraphWidget>(
+        find.byType(ContributionGraphWidget),
+      ).counts,
+      isNotEmpty,
+    );
   });
 }

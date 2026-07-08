@@ -6,6 +6,8 @@
 /// [DonateProgressWidget] / [DonateSuccessWidget].
 library;
 
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,6 +22,7 @@ import '../providers/locale_provider.dart';
 import '../services/habit_service.dart';
 import '../services/offline_queue_service.dart';
 import '../services/survey_service.dart';
+import '../widgets/contribution_graph_widget.dart';
 import 'donate/widgets/donate_form_widget.dart';
 import 'donate/widgets/donate_progress_widget.dart';
 
@@ -68,8 +71,15 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   /// Consecutive-day sharing streak (persisted per device).
   int _shareStreak = 0;
 
+  /// Number of habits shared on each day this device has shared on,
+  /// keyed by a midnight-normalised date. Feeds the share-activity graph.
+  Map<DateTime, int> _shareCounts = {};
+
   static const _lastShareDateKey = 'last_habit_share_date';
   static const _streakKey = 'habit_share_streak';
+  static const _shareCountsKey = 'habit_share_counts_json';
+
+  static DateTime _atMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
 
   static String _dateStr(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-'
@@ -88,6 +98,28 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     _loadSharedToday();
   }
 
+  /// Parses the persisted `{"yyyy-MM-dd": count}` JSON blob into a
+  /// midnight-normalised [DateTime] map for [ContributionGraphWidget].
+  static Map<DateTime, int> _decodeShareCounts(String? json) {
+    if (json == null) return {};
+    try {
+      final decoded = jsonDecode(json) as Map<String, dynamic>;
+      final counts = <DateTime, int>{};
+      for (final entry in decoded.entries) {
+        final parts = entry.key.split('-');
+        if (parts.length != 3) continue;
+        final year = int.tryParse(parts[0]);
+        final month = int.tryParse(parts[1]);
+        final day = int.tryParse(parts[2]);
+        if (year == null || month == null || day == null) continue;
+        counts[DateTime(year, month, day)] = (entry.value as num).toInt();
+      }
+      return counts;
+    } catch (_) {
+      return {};
+    }
+  }
+
   Future<void> _loadSharedToday() async {
     final prefs = await SharedPreferences.getInstance();
     final last = prefs.getString(_lastShareDateKey);
@@ -95,10 +127,12 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     // The streak is "alive" only if the last share was today or yesterday;
     // otherwise a day was missed and it has reset.
     final alive = last == _todayStr() || last == _yesterdayStr();
+    final counts = _decodeShareCounts(prefs.getString(_shareCountsKey));
     if (mounted) {
       setState(() {
         _sharedToday = last == _todayStr();
         _shareStreak = alive ? streak : 0;
+        _shareCounts = counts;
       });
     }
   }
@@ -117,10 +151,25 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     }
     await prefs.setString(_lastShareDateKey, _todayStr());
     await prefs.setInt(_streakKey, newStreak);
+
+    final today = DateTime.now();
+    final todayKey = _atMidnight(today);
+    final updatedCounts = {
+      ..._shareCounts,
+      todayKey: (_shareCounts[todayKey] ?? 0) + 1,
+    };
+    await prefs.setString(
+      _shareCountsKey,
+      jsonEncode(
+        updatedCounts.map((date, count) => MapEntry(_dateStr(date), count)),
+      ),
+    );
+
     if (mounted) {
       setState(() {
         _sharedToday = true;
         _shareStreak = newStreak;
+        _shareCounts = updatedCounts;
       });
     }
   }
@@ -255,11 +304,13 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   /// via a prominent green CTA that re-opens the donate form.
   Widget _sharedTodayCard() {
     final l10n = AppLocalizations.of(context)!;
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFEDF7E5),
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFF45B700), width: 1),
+        boxShadow: _kCardShadow,
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -288,8 +339,8 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                     const SizedBox(height: 4),
                     Text(
                       l10n.donateSharedTodayBody,
-                      style: const TextStyle(
-                        color: Color(0xFF3F6212),
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
                         fontSize: 13,
                       ),
                     ),
@@ -567,9 +618,18 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 24),
           children: [
+            // ── Share activity graph ─────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+              child: ContributionGraphWidget(
+                counts: _shareCounts,
+                baseColorLight: const Color(0xFFFFD8A8),
+                baseColor: const Color(0xFFE8590C),
+              ),
+            ),
             // ── Today's tasks ─────────────────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 6),
               child: Text(
                 l10n.donateTodaysTasksEyebrow,
                 style: const TextStyle(
@@ -592,9 +652,6 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 child: _questionnaireTaskCard(q),
               ),
 
-            // ── Why share? ────────────────────────────────────────────────────
-            _whyShareCard(),
-
             // ── Stats row ─────────────────────────────────────────────────────
             statsAsync.when(
               loading: () => const SizedBox(height: 80),
@@ -616,6 +673,9 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 ),
               ),
             ),
+
+            // ── Why share? ────────────────────────────────────────────────────
+            _whyShareCard(),
           ],
         ),
       ),

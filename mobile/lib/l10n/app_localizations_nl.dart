@@ -110,7 +110,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get couldNotLoadLegalDocument =>
-      'Dit document kon niet worden geladen.\nControleer uw verbinding.';
+      'Dit document kon niet worden geladen.\nControleer je verbinding.';
 
   @override
   String get save => 'Opslaan';
@@ -140,8 +140,14 @@ class AppLocalizationsNl extends AppLocalizations {
   String get profileSavedSuccess => 'Profiel succesvol opgeslagen!';
 
   @override
+  String get profileEnterNumber => 'Voer een getal in';
+
+  @override
+  String get profileEnterText => 'Voer tekst in';
+
+  @override
   String get couldNotLoadProfile =>
-      'Kan profiel niet laden.\nControleer uw verbinding.';
+      'Kan profiel niet laden.\nControleer je verbinding.';
 
   @override
   String get healthQuestionnaires => 'Gezondheidsvragenlijsten';
@@ -568,14 +574,25 @@ class AppLocalizationsNl extends AppLocalizations {
   String get getRecommendations => 'Aanbevelingen ontvangen';
 
   @override
-  String get healthGoalPrompt => 'Aan welk gezondheidsdoel wilt u werken?';
+  String get healthGoalPrompt => 'Aan welk gezondheidsdoel wil je werken?';
+
+  @override
+  String get goalInputSubtitle =>
+      'Hoe meer context je deelt (je leefstijl, wat je al geprobeerd hebt, wat in de weg staat), hoe beter je aanbeveling wordt.';
+
+  @override
+  String get goalInputHint =>
+      'bijv. Ik ben 34 en werk lange dagen achter een bureau. Ik heb moeite om voor middernacht in slaap te vallen en word uitgeput wakker. Ik heb \'s avonds hardlopen geprobeerd, maar geef het na een week op. Ik wil een realistische routine die me helpt te ontspannen en uitgeruster te voelen.';
+
+  @override
+  String get goalInputValidationError => 'Beschrijf je doel';
 
   @override
   String get questionnaireResponseSubmitted => 'Antwoord verzonden!';
 
   @override
   String get questionnaireThankYou =>
-      'Bedankt voor het invullen van de vragenlijst. Uw antwoorden helpen om uw gewoonteaanbevelingen te personaliseren.';
+      'Bedankt voor het invullen van de vragenlijst. Je antwoorden helpen om je gewoonteaanbevelingen te personaliseren.';
 
   @override
   String get backToProfile => 'Terug naar profiel';
@@ -585,11 +602,11 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get noQuestionnairesAssigned =>
-      'Er zijn geen vragenlijsten aan uw studie toegewezen.';
+      'Er zijn geen vragenlijsten aan je studie toegewezen.';
 
   @override
   String get questionnaireReminderMessage =>
-      'Er staat een gezondheidsvragenlijst voor u klaar.';
+      'Er staat een gezondheidsvragenlijst voor je klaar.';
 
   @override
   String get questionnaireReminderAction => 'Invullen';
@@ -638,6 +655,26 @@ class AppLocalizationsNl extends AppLocalizations {
       'Lees je implementatie-intentie door en bevestig deze.';
 
   @override
+  String get confirmPlanEditHint => 'Pas je intentie aan…';
+
+  @override
+  String confirmPlanReminderAtTime(String time) {
+    return 'Herinnering om $time (ingesteld door de studie)';
+  }
+
+  @override
+  String get confirmPlanRemindersEnabledByStudy =>
+      'Herinneringen ingeschakeld (ingesteld door de studie)';
+
+  @override
+  String get confirmPlanNoRemindersByStudy =>
+      'Geen herinneringen (ingesteld door de studie)';
+
+  @override
+  String get confirmPlanShareWithCommunity =>
+      'Deel deze gewoonte anoniem met de community';
+
+  @override
   String get durationLabel => 'Duur (minuten)';
 
   @override
@@ -661,8 +698,14 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String srhiStem(String behavior) {
-    return 'Mijn $behavior is iets…';
+    return '$behavior is iets…';
   }
+
+  @override
+  String get srhiScaleMin => '1 = Helemaal mee oneens';
+
+  @override
+  String get srhiScaleMax => '7 = Helemaal mee eens';
 
   @override
   String get srhiSubmit => 'Verzenden';
@@ -738,7 +781,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get consentConfirmText =>
-      'Door op \"Ik geef toestemming\" te tikken bevestigt u dat u de studie-informatie hebt gelezen en begrepen en vrijwillig instemt met deelname.';
+      'Door op \"Ik geef toestemming\" te tikken bevestig je dat je de studie-informatie hebt gelezen en begrepen en vrijwillig instemt met deelname.';
 
   @override
   String get consentAccept => 'Ik geef toestemming';
@@ -748,7 +791,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get consentCouldNotLoad =>
-      'Het toestemmingsdocument kon niet worden geladen. Controleer uw verbinding.';
+      'Het toestemmingsdocument kon niet worden geladen. Controleer je verbinding.';
 
   @override
   String get deleteAccount => 'Account verwijderen';
@@ -758,21 +801,21 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get deleteAccountContent =>
-      'Dit verwijdert uw account en alle bijbehorende gegevens permanent: uw profiel, studie-inschrijving, gewoonteplannen, dagelijkse registraties, vragenlijstantwoorden en aanbevelingen.\n\nGedeelde gewoontes worden anoniem opgeslagen en kunnen niet naar u worden herleid.\n\nDit kan niet ongedaan worden gemaakt.';
+      'Dit verwijdert je account en alle bijbehorende gegevens permanent: je profiel, studie-inschrijving, gewoonteplannen, dagelijkse registraties, vragenlijstantwoorden en aanbevelingen.\n\nGedeelde gewoontes worden anoniem opgeslagen en kunnen niet naar jou worden herleid.\n\nDit kan niet ongedaan worden gemaakt.';
 
   @override
   String get deleteAccountConfirm => 'Definitief verwijderen';
 
   @override
   String get deleteAccountFailed =>
-      'Verwijderen van account mislukt. Controleer uw verbinding en probeer het opnieuw.';
+      'Verwijderen van account mislukt. Controleer je verbinding en probeer het opnieuw.';
 
   @override
   String get exportMyData => 'Mijn gegevens exporteren';
 
   @override
   String get exportFailed =>
-      'Exporteren mislukt. Controleer uw verbinding en probeer het opnieuw.';
+      'Exporteren mislukt. Controleer je verbinding en probeer het opnieuw.';
 
   @override
   String get myDataSection => 'Mijn gegevens';
@@ -790,11 +833,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get signOut => 'Afmelden';
 
   @override
-  String get signOutConfirm => 'Weet u zeker dat u zich wilt afmelden?';
+  String get signOutConfirm => 'Weet je zeker dat je je wilt afmelden?';
 
   @override
   String get aiDisclaimer =>
-      'Door AI gegenereerde suggesties op basis van uw studiegegevens. Dit is geen medisch advies; raadpleeg bij gezondheidsklachten een arts.';
+      'Door AI gegenereerde suggesties op basis van je studiegegevens. Dit is geen medisch advies; raadpleeg bij gezondheidsklachten een arts.';
 
   @override
   String get dailyReminderLabel => 'Dagelijkse herinnering';
@@ -885,6 +928,43 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get onboardingNext => 'Volgende';
+
+  @override
+  String get studyCodeAppBarTitle => 'Studiecode';
+
+  @override
+  String get studyCodeQuestion => 'Heb je een studiecode?';
+
+  @override
+  String get studyCodeSubtitle =>
+      'Als een onderzoeker je een studiecode heeft gegeven, vul deze hier in om aan hun studie deel te nemen. Je kunt deze stap ook overslaan.';
+
+  @override
+  String get studyCodeLabel => 'Studiecode';
+
+  @override
+  String get studyCodeInvalidFormat =>
+      'Vul een geldige code in het formaat HHH-XXXXX in.';
+
+  @override
+  String get studyCodeInvalid =>
+      'Ongeldige code. Controleer de code en probeer het opnieuw.';
+
+  @override
+  String get studyCodeExpired => 'Deze code is verlopen.';
+
+  @override
+  String get studyCodeAlreadyUsed => 'Deze code is al gebruikt.';
+
+  @override
+  String get studyCodeGenericError =>
+      'Code kon niet worden verzilverd. Controleer je verbinding.';
+
+  @override
+  String get studyCodeContinueButton => 'Doorgaan met code';
+
+  @override
+  String get studyCodeSkipButton => 'Overslaan: deelnemen zonder studiecode';
 
   @override
   String get adminQuestionnairesDeleteConfirmTitle =>
@@ -1042,7 +1122,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get recommendationEmptyMessage =>
-      'Er zijn geen aanbevelingen gegenereerd. Probeer uw doel wat gedetailleerder te beschrijven: hoe meer context u deelt, hoe beter.';
+      'Er zijn geen aanbevelingen gegenereerd. Probeer je doel wat gedetailleerder te beschrijven: hoe meer context je deelt, hoe beter.';
 
   @override
   String get recommendationTryDifferentGoal => 'Probeer een ander doel';
@@ -1069,7 +1149,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get recommendationLeaveComment => 'Laat een reactie achter:';
 
   @override
-  String get recommendationFeedbackHint => 'Uw feedback…';
+  String get recommendationFeedbackHint => 'Jouw feedback…';
 
   @override
   String get recommendationFeedbackFailed =>
@@ -1084,7 +1164,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get recommendationLoadingPhaseHabitsDb =>
-      'Uw gewoontedatabase wordt doorzocht…';
+      'Je gewoontedatabase wordt doorzocht…';
 
   @override
   String get recommendationLoadingPhasePapers =>
@@ -1092,7 +1172,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get recommendationLoadingPhaseGenerating =>
-      'Uw persoonlijke aanbevelingen worden gegenereerd…';
+      'Je persoonlijke aanbevelingen worden gegenereerd…';
 
   @override
   String get recommendationLoadingTimeoutError =>
@@ -1205,7 +1285,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get donateWhyShareBody =>
-      'Elke gewoonte die je deelt wordt anoniem toegevoegd aan een groeiend, open beeld van hoe mensen in het dagelijks leven gezonde routines opbouwen. Hoe meer echte voorbeelden onderzoekers zien, hoe beter de aanbevelingen voor iedereen worden, ook voor jou.';
+      'Gedeelde gewoontes blijven anoniem en helpen onderzoekers betere aanbevelingen te maken voor iedereen, ook voor jou.';
 
   @override
   String get readMoreAboutProject => 'Meer lezen over het project';

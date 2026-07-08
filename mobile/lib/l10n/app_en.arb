@@ -174,6 +174,14 @@
   "@profileSavedSuccess": {
     "description": "Snackbar message when profile is saved successfully"
   },
+  "profileEnterNumber": "Enter a number",
+  "@profileEnterNumber": {
+    "description": "Hint text for a numeric custom profile field"
+  },
+  "profileEnterText": "Enter text",
+  "@profileEnterText": {
+    "description": "Hint text for a free-text custom profile field"
+  },
   "couldNotLoadProfile": "Could not load profile.\nPlease check your connection.",
   "@couldNotLoadProfile": {
     "description": "Offline banner body for profile screen"
@@ -731,6 +739,18 @@
   "@healthGoalPrompt": {
     "description": "Prompt asking the user to describe their health goal"
   },
+  "goalInputSubtitle": "The more context you share (your lifestyle, what you've tried, and what gets in the way), the better your recommendation will be.",
+  "@goalInputSubtitle": {
+    "description": "Instructional subtitle on the goal-input screen, encouraging detailed answers"
+  },
+  "goalInputHint": "e.g. I'm 34 and work long hours at a desk job. I struggle to fall asleep before midnight and wake up exhausted. I've tried evening runs but give up after a week. I want a realistic routine that helps me wind down and feel more rested.",
+  "@goalInputHint": {
+    "description": "Example placeholder text shown inside the empty goal-description text field"
+  },
+  "goalInputValidationError": "Please describe your goal",
+  "@goalInputValidationError": {
+    "description": "Validation error when the goal-description field is submitted empty"
+  },
   "questionnaireResponseSubmitted": "Response submitted!",
   "@questionnaireResponseSubmitted": {
     "description": "Heading on the questionnaire confirmation screen"
@@ -811,6 +831,32 @@
   "@confirmPlanSubtitle": {
     "description": "Subtitle on confirm plan screen"
   },
+  "confirmPlanEditHint": "Edit your intention…",
+  "@confirmPlanEditHint": {
+    "description": "Hint text for the editable implementation-intention text field"
+  },
+  "confirmPlanReminderAtTime": "Reminder at {time} (set by study)",
+  "@confirmPlanReminderAtTime": {
+    "description": "Read-only reminder status when the study fixes the reminder time",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "19:00"
+      }
+    }
+  },
+  "confirmPlanRemindersEnabledByStudy": "Reminders enabled (set by study)",
+  "@confirmPlanRemindersEnabledByStudy": {
+    "description": "Read-only reminder status when the study enables reminders without a fixed time"
+  },
+  "confirmPlanNoRemindersByStudy": "No reminders (set by study)",
+  "@confirmPlanNoRemindersByStudy": {
+    "description": "Read-only reminder status when the study disables reminders"
+  },
+  "confirmPlanShareWithCommunity": "Share this habit anonymously with the community",
+  "@confirmPlanShareWithCommunity": {
+    "description": "Label for the community-sharing opt-in switch on the confirm plan screen"
+  },
   "durationLabel": "Duration (minutes)",
   "@durationLabel": {
     "description": "Label for duration input in new habit flow"
@@ -839,7 +885,7 @@
   "@srhiFormTitle": {
     "description": "AppBar title on SRHI form screen"
   },
-  "srhiStem": "My {behavior} is something…",
+  "srhiStem": "{behavior} is something…",
   "@srhiStem": {
     "description": "Stem sentence for SRHI items",
     "placeholders": {
@@ -847,6 +893,14 @@
         "type": "String"
       }
     }
+  },
+  "srhiScaleMin": "1 = Strongly disagree",
+  "@srhiScaleMin": {
+    "description": "Label for the lowest point of the SRHI 1-7 agreement scale"
+  },
+  "srhiScaleMax": "7 = Strongly agree",
+  "@srhiScaleMax": {
+    "description": "Label for the highest point of the SRHI 1-7 agreement scale"
   },
   "srhiSubmit": "Submit",
   "@srhiSubmit": {
@@ -1124,6 +1178,50 @@
   "onboardingNext": "Next",
   "@onboardingNext": {
     "description": "Button label to advance to the next onboarding walkthrough page"
+  },
+  "studyCodeAppBarTitle": "Study Code",
+  "@studyCodeAppBarTitle": {
+    "description": "AppBar title on the study-code onboarding screen"
+  },
+  "studyCodeQuestion": "Do you have a study code?",
+  "@studyCodeQuestion": {
+    "description": "Heading on the study-code onboarding screen"
+  },
+  "studyCodeSubtitle": "If a researcher gave you a study code, enter it here to join their study. You can also skip this step.",
+  "@studyCodeSubtitle": {
+    "description": "Explanatory subtitle on the study-code onboarding screen"
+  },
+  "studyCodeLabel": "Study code",
+  "@studyCodeLabel": {
+    "description": "Text field label for the study code input"
+  },
+  "studyCodeInvalidFormat": "Enter a valid code in HHH-XXXXX format.",
+  "@studyCodeInvalidFormat": {
+    "description": "Validation error when the entered study code doesn't match the expected format"
+  },
+  "studyCodeInvalid": "Invalid code. Please check and try again.",
+  "@studyCodeInvalid": {
+    "description": "Error shown when the server rejects the study code as unknown (404)"
+  },
+  "studyCodeExpired": "This code has expired.",
+  "@studyCodeExpired": {
+    "description": "Error shown when the study code has expired (410)"
+  },
+  "studyCodeAlreadyUsed": "This code has already been used.",
+  "@studyCodeAlreadyUsed": {
+    "description": "Error shown when the study code was already redeemed (409)"
+  },
+  "studyCodeGenericError": "Could not redeem code. Please check your connection.",
+  "@studyCodeGenericError": {
+    "description": "Fallback error when redeeming the study code fails for an unrecognised reason"
+  },
+  "studyCodeContinueButton": "Continue with code",
+  "@studyCodeContinueButton": {
+    "description": "Primary button to submit the entered study code"
+  },
+  "studyCodeSkipButton": "Skip: join without a study code",
+  "@studyCodeSkipButton": {
+    "description": "Secondary button to skip entering a study code and join the default study"
   },
   "adminQuestionnairesDeleteConfirmTitle": "Delete questionnaire?",
   "@adminQuestionnairesDeleteConfirmTitle": {
@@ -1534,7 +1632,7 @@
   "@donateWhyShareTitle": {
     "description": "Heading for the explanatory card on why habit sharing is useful"
   },
-  "donateWhyShareBody": "Every habit you share is added anonymously to a growing, open picture of how people build healthy routines in everyday life. The more real examples researchers see, the better everyone's recommendations become, including yours.",
+  "donateWhyShareBody": "Shared habits stay anonymous and help researchers build better recommendations for everyone, including you.",
   "@donateWhyShareBody": {
     "description": "Body copy for the explanatory card on why habit sharing is useful"
   },

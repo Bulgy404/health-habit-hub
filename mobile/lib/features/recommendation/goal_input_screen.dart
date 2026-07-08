@@ -55,13 +55,13 @@ class _GoalInputScreenState extends State<GoalInputScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                "What's your health goal?",
+                l10n.healthGoalPrompt,
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Theme.of(context).colorScheme.onSurface, height: 1.2),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'The more context you share (your lifestyle, what you\'ve tried, and what gets in the way), the better your recommendation will be.',
+                l10n.goalInputSubtitle,
                 style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant, height: 1.5),
                 textAlign: TextAlign.center,
               ),
@@ -72,8 +72,7 @@ class _GoalInputScreenState extends State<GoalInputScreen> {
                 maxLines: 5,
                 style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface),
                 decoration: InputDecoration(
-                  hintText:
-                      'e.g. I\'m 34 and work long hours at a desk job. I struggle to fall asleep before midnight and wake up exhausted. I\'ve tried evening runs but give up after a week. I want a realistic routine that helps me wind down and feel more rested.',
+                  hintText: l10n.goalInputHint,
                   hintStyle: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     height: 1.5,
@@ -95,7 +94,9 @@ class _GoalInputScreenState extends State<GoalInputScreen> {
                   contentPadding: const EdgeInsets.all(14),
                 ),
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Please describe your goal';
+                  if (v == null || v.trim().isEmpty) {
+                    return l10n.goalInputValidationError;
+                  }
                   return null;
                 },
               ),
