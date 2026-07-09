@@ -17,6 +17,7 @@ import {
   triggerRestore,
   uploadBackup,
   downloadBackup,
+  deleteBackup,
 } from '../../services/backupService.js';
 import { logger } from '../../utils/logger.js';
 
@@ -164,6 +165,31 @@ export function createBackupsRouter({ db } = {}) {
       } else {
         res.destroy(err);
       }
+    }
+  });
+
+  router.delete('/backups/:filename', async (req, res) => {
+    const { filename } = req.params;
+    const database = await getDb();
+    await writeAudit(database, { req, action: 'delete', filename, result: 'requested' });
+    try {
+      const result = await deleteBackup(filename);
+      await writeAudit(database, {
+        req,
+        action: 'delete',
+        filename,
+        result: 'succeeded',
+      });
+      res.json(result);
+    } catch (err) {
+      await writeAudit(database, {
+        req,
+        action: 'delete',
+        filename,
+        result: 'failed',
+        detail: err.message,
+      });
+      res.status(err.status ?? 502).json({ error: err.message });
     }
   });
 

@@ -421,15 +421,33 @@ class _SourceLink extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                source.displayLabel,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: textTheme.bodySmall?.copyWith(
-                  color: hasLink ? colorScheme.primary : null,
-                  decoration: hasLink ? TextDecoration.underline : null,
-                  decorationColor: colorScheme.primary,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (source.quote.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Text(
+                        '“${source.quote}”',
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.bodySmall?.copyWith(
+                          fontStyle: FontStyle.italic,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  Text(
+                    source.displayLabel,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: textTheme.bodySmall?.copyWith(
+                      color: hasLink ? colorScheme.primary : null,
+                      decoration: hasLink ? TextDecoration.underline : null,
+                      decorationColor: colorScheme.primary,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

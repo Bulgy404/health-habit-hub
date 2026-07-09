@@ -13,6 +13,7 @@ import {
   BACKUP_DIR,
   listManifests,
   getManifestForFile,
+  findManifestFilenames,
   writeUploadedManifest,
 } from './manifests.js';
 import { resolveBackupPath, inspectUploadedArchive } from './validate.js';
@@ -97,6 +98,35 @@ app.get('/download/:filename', downloadLimiter, (req, res) => {
     return res.status(404).json({ error: 'Backup not found.' });
   }
   res.download(absPath, req.params.filename);
+});
+
+app.delete('/:filename', writeLimiter, (req, res) => {
+  if (isJobRunning()) {
+    return res
+      .status(409)
+      .json({ error: 'A backup or restore is currently running.' });
+  }
+  const absPath = resolveBackupPath(req.params.filename);
+  if (!absPath || !existsSync(absPath)) {
+    return res.status(404).json({ error: 'Backup not found.' });
+  }
+  unlinkSync(absPath);
+  const manifestNames = findManifestFilenames(req.params.filename);
+  if (manifestNames) {
+    try {
+      unlinkSync(join(BACKUP_DIR, manifestNames.jsonName));
+    } catch {
+      // best-effort — the archive itself is already gone
+    }
+    if (manifestNames.textName) {
+      try {
+        unlinkSync(join(BACKUP_DIR, manifestNames.textName));
+      } catch {
+        // best-effort
+      }
+    }
+  }
+  res.json({ ok: true });
 });
 
 app.post('/trigger', writeLimiter, (_req, res) => {

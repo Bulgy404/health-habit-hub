@@ -92,6 +92,10 @@ export function triggerBackupNow() {
   return call('/trigger', { method: 'POST' });
 }
 
+export function deleteBackup(filename) {
+  return call(`/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+}
+
 export function triggerRestore({
   filename,
   acknowledgeWarnings,

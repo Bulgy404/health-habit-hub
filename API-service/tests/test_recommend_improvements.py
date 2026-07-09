@@ -18,7 +18,7 @@ _LLM_REPLY = json.dumps(
                 "rationale": "Bewegung verbessert den Schlaf (Wood und Rünger, 2016).",
                 "suggested_cue": "nachdem ich das Abendessen beendet habe",
                 "selected_habit_uuids": [],
-                "source_filenames": [],
+                "sources": [],
             }
         ]
     }

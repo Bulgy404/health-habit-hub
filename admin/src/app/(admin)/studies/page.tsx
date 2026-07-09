@@ -2064,6 +2064,13 @@ function StudyModal({
     if (initial) return initial.groups.map((g) => g.label);
     return [""];
   });
+  // Tracks each slot's existing group id (if any) so edits are matched back
+  // to the same group instead of being recreated; undefined slots are new
+  // groups. Shrinking the count drops ids from the end.
+  const [groupIds, setGroupIds] = useState<(string | undefined)[]>(() => {
+    if (initial) return initial.groups.map((g) => g.id);
+    return [undefined];
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [deactivating, setDeactivating] = useState(false);
@@ -2083,6 +2090,11 @@ function StudyModal({
       while (next.length < n) next.push("");
       return next.slice(0, n);
     });
+    setGroupIds((prev) => {
+      const next = [...prev];
+      while (next.length < n) next.push(undefined);
+      return next.slice(0, n);
+    });
   }
 
   function handleGroupLabelChange(i: number, val: string) {
@@ -2098,13 +2110,16 @@ function StudyModal({
     setError("");
     try {
       if (isEdit) {
-        // updateStudySchema is strict: only name/description/recommenderEnabled
-        // are accepted. Groups are not editable via this endpoint.
+        const groups = groupLabels.slice(0, groupCount).map((label, i) => ({
+          label: label.trim() || `Group ${i + 1}`,
+          ...(groupIds[i] ? { id: groupIds[i] } : {}),
+        }));
         await apiFetch(`${API_BASE}/${initial!.id}`, token, {
           method: "PUT",
           body: JSON.stringify({
             name: name.trim(),
             description: description.trim(),
+            groups,
             recommenderEnabled,
             onboardingEnabled,
             selfHabitCreationEnabled,
@@ -2474,6 +2489,11 @@ function StudyModal({
                     <option value={4}>4</option>
                   </select>
                   <span className={styles.hint}>{t("modal.fields.groupCountHint")}</span>
+                  {isEdit && groupCount < (initial?.groups.length ?? groupCount) && (
+                    <span className={styles.hint} style={{ color: "#b45309" }}>
+                      {t("modal.fields.groupCountRemovalWarning")}
+                    </span>
+                  )}
                 </div>
               </div>
 

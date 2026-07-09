@@ -220,13 +220,19 @@
       "trigger": "Trigger",
       "restore": "Wiederherstellung",
       "upload": "Upload",
-      "download": "Download"
+      "download": "Download",
+      "delete": "Löschen"
     },
     "results": {
       "requested": "angefordert",
       "succeeded": "erfolgreich",
       "failed": "fehlgeschlagen"
     },
+    "delete": "Löschen",
+    "deletingEllipsis": "Wird gelöscht…",
+    "deleteBackup": "Backup löschen",
+    "deleteWarning": "<strong>Dies löscht die Backup-Datei und ihr Manifest dauerhaft.</strong> Das kann nicht rückgängig gemacht werden — stelle sicher, dass du sie nicht mehr benötigst, bevor du fortfährst.",
+    "deleteFailed": "Backup konnte nicht gelöscht werden",
     "timeAgo": {
       "justNow": "gerade eben",
       "minutes": "vor {count} Min.",
@@ -758,6 +764,7 @@
         "notificationBodyLabel": "Benachrichtigungstext",
         "groupCountLabel": "Anzahl der Gruppen",
         "groupCountHint": "Jede Gruppe ist eine Studienbedingung (z. B. Kontrolle, Intervention). Beschrifte sie unten.",
+        "groupCountRemovalWarning": "Beim Entfernen einer Gruppe werden Teilnehmende, Codes und geplante Daten darin in die erste verbleibende Gruppe verschoben.",
         "groupLabelsTitle": "Gruppenbezeichnungen"
       },
       "confirmDefault": {

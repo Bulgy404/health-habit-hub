@@ -136,13 +136,16 @@ class SourceRef(BaseModel):
     """A user-facing citation of an academic paper backing a recommendation.
 
     ``excerpt`` carries the preformatted citation string (kept under its old
-    name for mobile-client compatibility); ``url`` links to the paper.
+    name for mobile-client compatibility); ``quote`` is a verbatim sentence
+    or two copied from the paper that grounds the recommendation, when the
+    LLM supplied one; ``url`` links to the paper.
     """
 
     filename: str
     excerpt: str
     title: str = ""
     url: str = ""
+    quote: str = ""
 
 
 class RecommendationItem(BaseModel):
@@ -178,7 +181,7 @@ async def _get_redis() -> Optional[aioredis.Redis]:
     return await get_redis()
 
 
-def _source_ref(filename: str) -> dict[str, str]:
+def _source_ref(filename: str, quote: str = "") -> dict[str, str]:
     """Build a user-facing citation dict (with link) for a KB document."""
     c = build_citation(filename)
     return {
@@ -186,11 +189,30 @@ def _source_ref(filename: str) -> dict[str, str]:
         "excerpt": c["citation"],
         "title": c["title"],
         "url": c["url"],
+        "quote": quote,
     }
 
 
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def _quote_is_grounded(quote: str, context: str) -> bool:
+    """Check the LLM's quote actually appears in the retrieved context.
+
+    Guards against a fabricated or paraphrased "quote" being shown to users
+    as if it were the paper's own wording. Whitespace is normalised (the
+    context is reflowed across chunk/newline boundaries) but casing and
+    punctuation must match, since this is meant to be verbatim.
+    """
+    if not quote:
+        return False
+    needle = _WHITESPACE_RE.sub(" ", quote).strip()
+    haystack = _WHITESPACE_RE.sub(" ", context)
+    return bool(needle) and needle in haystack
+
+
 def _parse_llm_response(
-    raw: str, sources: list[SourceItem]
+    raw: str, sources: list[SourceItem], knowledge_context: str = ""
 ) -> list[dict[str, Any]]:
     """Parse LLM JSON; resolve per-item paper citations and habit UUIDs.
 
@@ -218,14 +240,20 @@ def _parse_llm_response(
             uuids = item.get("selected_habit_uuids", [])
             if not isinstance(uuids, list):
                 uuids = []
-            cited = item.get("source_filenames", [])
+            cited = item.get("sources", [])
             if not isinstance(cited, list):
                 cited = []
-            refs = [
-                _source_ref(valid[str(f).lower()])
-                for f in cited
-                if str(f).lower() in valid
-            ]
+            refs = []
+            for c in cited:
+                if not isinstance(c, dict):
+                    continue
+                fname = str(c.get("filename", ""))
+                if fname.lower() not in valid:
+                    continue
+                quote = str(c.get("quote", "") or "").strip()
+                if not _quote_is_grounded(quote, knowledge_context):
+                    quote = ""
+                refs.append(_source_ref(valid[fname.lower()], quote))
             result.append(
                 {
                     "title": str(item.get("title", "")),
@@ -453,7 +481,7 @@ async def recommend(
     # far more than should go directly into the prompt.
     annotated_habits_json = _habits_to_json(annotated_raw[:20], bcio_by_uuid)
     # Full retrieval context grounds the generation; the document list tells
-    # the LLM which papers it may cite in `source_filenames`.
+    # the LLM which papers it may cite in `sources`.
     knowledge_context = retrieve_resp.context or "\n\n".join(
         s.excerpt for s in retrieve_resp.sources
     )
@@ -512,7 +540,7 @@ async def recommend(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=refusal
         )
 
-    recs = _parse_llm_response(raw, retrieve_resp.sources)
+    recs = _parse_llm_response(raw, retrieve_resp.sources, knowledge_context)
 
     recommendation_id = str(uuid4())
     generated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()

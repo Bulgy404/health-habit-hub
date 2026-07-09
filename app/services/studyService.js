@@ -1,12 +1,101 @@
 import { ObjectId } from '../models/survey.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { COLLECTION as ENROLLMENTS } from '../models/enrollment.js';
+import { COLLECTION as STUDY_CODES } from '../models/studyCode.js';
+import { COLLECTION as SRHI_RESPONSES } from '../models/srhiResponse.js';
+import { COLLECTION as IMPLEMENTATION_INTENTIONS } from '../models/implementationIntention.js';
+import { ASSIGNMENTS as QUESTIONNAIRE_ASSIGNMENTS } from '../models/questionnaireSchedule.js';
 import {
   getUsersForStudy,
   countEnrollments,
   getEnrollment,
   syncStudy,
 } from './enrollmentNeo4j.js';
+
+/**
+ * When a study's groups shrink, every reference to a removed group
+ * (enrollments, enrollment codes, questionnaire assignments, SRHI responses,
+ * implementation intentions, and the Neo4j ENROLLED_IN edge) must move onto
+ * the fallback group so nothing is left pointing at a group that no longer
+ * exists.
+ * @param {{ db: object, neo4jRun?: Function, studyOid: ObjectId, removedGroupIds: string[], fallbackGroupId: string }} deps
+ */
+async function _reassignRemovedGroups({
+  db,
+  neo4jRun,
+  studyOid,
+  removedGroupIds,
+  fallbackGroupId,
+}) {
+  if (removedGroupIds.length === 0) return;
+  const removedOids = removedGroupIds.map((id) => new ObjectId(id));
+  const fallbackOid = new ObjectId(fallbackGroupId);
+
+  await db
+    .collection(ENROLLMENTS)
+    .updateMany(
+      { studyId: studyOid, groupId: { $in: removedOids } },
+      { $set: { groupId: fallbackOid } }
+    );
+
+  await db
+    .collection(STUDY_CODES)
+    .updateMany(
+      { studyId: studyOid, groupId: { $in: removedOids } },
+      { $set: { groupId: fallbackOid } }
+    );
+
+  await db
+    .collection(SRHI_RESPONSES)
+    .updateMany(
+      { studyId: studyOid, groupId: { $in: removedOids } },
+      { $set: { groupId: fallbackOid } }
+    );
+
+  await db
+    .collection(IMPLEMENTATION_INTENTIONS)
+    .updateMany(
+      { studyId: studyOid, groupId: { $in: removedOids } },
+      { $set: { groupId: fallbackOid } }
+    );
+
+  // questionnaire_assignments has a unique (studyId, groupId, questionnaireId)
+  // index — if the fallback group already has the same questionnaire
+  // assigned, reassigning would collide, so drop the now-redundant duplicate
+  // instead of moving it.
+  const assignments = db.collection(QUESTIONNAIRE_ASSIGNMENTS);
+  const orphaned = await assignments
+    .find({ studyId: studyOid, groupId: { $in: removedOids } })
+    .toArray();
+  for (const a of orphaned) {
+    const duplicate = await assignments.findOne({
+      studyId: studyOid,
+      groupId: fallbackOid,
+      questionnaireId: a.questionnaireId,
+    });
+    if (duplicate) {
+      await assignments.deleteOne({ _id: a._id });
+    } else {
+      await assignments.updateOne(
+        { _id: a._id },
+        { $set: { groupId: fallbackOid } }
+      );
+    }
+  }
+
+  if (neo4jRun) {
+    await neo4jRun(
+      `MATCH (u:User)-[e:ENROLLED_IN]->(s:Study {uuid: $studyId})
+       WHERE e.groupId IN $removedIds
+       SET e.groupId = $fallbackId`,
+      {
+        studyId: studyOid.toString(),
+        removedIds: removedGroupIds.map(String),
+        fallbackId: fallbackGroupId.toString(),
+      }
+    );
+  }
+}
 
 /**
  * List all studies with participant count per study (paginated).
@@ -205,7 +294,10 @@ function normalizeEndOfStudyNotification(study) {
 }
 
 /**
- * Update a study. Groups are additive — existing groups are kept and new ones are appended.
+ * Update a study. Groups are a full replace: existing groups are matched by
+ * id (their config is preserved, only the label can change here); any
+ * existing group whose id is absent from `updates.groups` is removed, and
+ * every reference to it is reassigned onto the first remaining group.
  * @param {{ db: object, id: string, updates: object, neo4jRun?: Function }} deps
  * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}
  */
@@ -245,24 +337,51 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
       endOfStudyNotification: updates.endOfStudyNotification,
     });
 
-  // Groups are additive: append new groups, keep existing ones
+  // Groups: full replace, matched by id. Ids missing from the incoming array
+  // are removed and their references reassigned onto the first remaining
+  // group (see _reassignRemovedGroups).
   if (Array.isArray(updates.groups) && updates.groups.length > 0) {
     const existingGroups = existing.groups || [];
-    const existingLabels = new Set(existingGroups.map((g) => g.label));
-    const newGroups = updates.groups
-      .filter((g) => !existingLabels.has(g.label))
-      .map((g, i) => ({
+    const existingById = new Map(
+      existingGroups.map((g) => [g.id.toString(), g])
+    );
+
+    const newGroups = updates.groups.map((g, i) => {
+      const match = g.id ? existingById.get(g.id) : undefined;
+      if (match) return { ...match, label: g.label, index: i + 1 };
+      return {
         id: new ObjectId(),
         label: g.label,
-        index: existingGroups.length + i + 1,
-        cueConfig: g.cueConfig ?? null,
-        activityTypeConfig: g.activityTypeConfig ?? null,
-        reminderConfig: g.reminderConfig ?? null,
-        autoDonate: g.autoDonate ?? false,
-        onboardingEnabled: g.onboardingEnabled ?? null,
-        selfHabitCreationEnabled: g.selfHabitCreationEnabled ?? null,
-      }));
-    $set.groups = [...existingGroups, ...newGroups];
+        index: i + 1,
+        cueConfig: null,
+        activityTypeConfig: null,
+        reminderConfig: null,
+        autoDonate: false,
+        onboardingEnabled: null,
+        selfHabitCreationEnabled: null,
+      };
+    });
+
+    const keptIds = new Set(
+      updates.groups
+        .filter((g) => g.id && existingById.has(g.id))
+        .map((g) => g.id)
+    );
+    const removedGroupIds = existingGroups
+      .map((g) => g.id.toString())
+      .filter((id) => !keptIds.has(id));
+
+    if (removedGroupIds.length > 0) {
+      await _reassignRemovedGroups({
+        db,
+        neo4jRun,
+        studyOid: oid,
+        removedGroupIds,
+        fallbackGroupId: newGroups[0].id.toString(),
+      });
+    }
+
+    $set.groups = newGroups;
   }
 
   if (Array.isArray(updates.questionnaires)) {

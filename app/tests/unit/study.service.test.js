@@ -91,6 +91,12 @@ function makeDb(initial = {}) {
           }
           return { matchedCount: count };
         },
+        async deleteOne(filter) {
+          const idx = s.findIndex((doc) => matchFilter(doc, filter));
+          if (idx === -1) return { deletedCount: 0 };
+          s.splice(idx, 1);
+          return { deletedCount: 1 };
+        },
         aggregate(pipeline) {
           // Simple $match + $group support
           let docs = [...s];
@@ -239,10 +245,15 @@ test('updateStudy returns notFound for unknown id', async () => {
   assert.equal(result.notFound, true);
 });
 
-test('updateStudy appends new groups without removing existing ones', async () => {
+test('updateStudy: groups matched by id are kept (config preserved) and new ones without an id are added', async () => {
   const { ObjectId } = await import('../../models/survey.js');
   const id = new ObjectId();
-  const existingGroup = { id: new ObjectId(), label: 'Group 1', index: 1 };
+  const existingGroup = {
+    id: new ObjectId(),
+    label: 'Group 1',
+    index: 1,
+    cueConfig: { cueCount: 'single' },
+  };
   const db = makeDb({
     studies: [
       {
@@ -261,12 +272,108 @@ test('updateStudy appends new groups without removing existing ones', async () =
   const result = await updateStudy({
     db,
     id: id.toString(),
-    updates: { groups: [{ label: 'Group 2' }] },
+    updates: {
+      groups: [
+        { id: existingGroup.id.toString(), label: 'Group 1' },
+        { label: 'Group 2' },
+      ],
+    },
   });
   assert.equal(result.updated, true);
-  // Verify the store has 2 groups
   const updated = await getStudy({ db, id: id.toString() });
   assert.equal(updated.groups.length, 2);
+  // The matched group keeps its id and existing config, not just its label.
+  assert.equal(updated.groups[0].id, existingGroup.id.toString());
+  assert.deepEqual(updated.groups[0].cueConfig, { cueCount: 'single' });
+  assert.equal(updated.groups[1].label, 'Group 2');
+});
+
+test('updateStudy: dropping a group id reassigns its enrollments and codes to the first remaining group', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const keptGroup = { id: new ObjectId(), label: 'Group 1', index: 1 };
+  const removedGroup = { id: new ObjectId(), label: 'Group 2', index: 2 };
+  const db = makeDb({
+    studies: [
+      {
+        _id: studyId,
+        name: 'S',
+        description: null,
+        isDefault: true,
+        isActive: true,
+        groups: [keptGroup, removedGroup],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+    enrollments: [
+      { _id: new ObjectId(), userId: 'u1', studyId, groupId: removedGroup.id, enrolledAt: new Date() },
+      { _id: new ObjectId(), userId: 'u2', studyId, groupId: keptGroup.id, enrolledAt: new Date() },
+    ],
+    studyCodes: [
+      { _id: new ObjectId(), code: 'HHH-AAAAA', studyId, groupId: removedGroup.id, redemptionCount: 0, createdAt: new Date() },
+    ],
+  });
+
+  const result = await updateStudy({
+    db,
+    id: studyId.toString(),
+    updates: { groups: [{ id: keptGroup.id.toString(), label: 'Group 1' }] },
+  });
+  assert.equal(result.updated, true);
+
+  const updated = await getStudy({ db, id: studyId.toString() });
+  assert.equal(updated.groups.length, 1);
+  assert.equal(updated.groups[0].id, keptGroup.id.toString());
+
+  const enrollments = await db.collection('enrollments').find({}).toArray();
+  assert.ok(
+    enrollments.every((e) => e.groupId.toString() === keptGroup.id.toString())
+  );
+
+  const codes = await db.collection('studyCodes').find({}).toArray();
+  assert.equal(codes[0].groupId.toString(), keptGroup.id.toString());
+});
+
+test('updateStudy: reassigning a questionnaire assignment onto a group that already has the same questionnaire drops the duplicate instead of colliding', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const keptGroup = { id: new ObjectId(), label: 'Group 1', index: 1 };
+  const removedGroup = { id: new ObjectId(), label: 'Group 2', index: 2 };
+  const questionnaireId = new ObjectId();
+  const db = makeDb({
+    studies: [
+      {
+        _id: studyId,
+        name: 'S',
+        description: null,
+        isDefault: false,
+        isActive: true,
+        groups: [keptGroup, removedGroup],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+    questionnaire_assignments: [
+      { _id: new ObjectId(), studyId, groupId: keptGroup.id, questionnaireId },
+      { _id: new ObjectId(), studyId, groupId: removedGroup.id, questionnaireId },
+    ],
+  });
+
+  await updateStudy({
+    db,
+    id: studyId.toString(),
+    updates: { groups: [{ id: keptGroup.id.toString(), label: 'Group 1' }] },
+  });
+
+  const assignments = await db
+    .collection('questionnaire_assignments')
+    .find({})
+    .toArray();
+  assert.equal(assignments.length, 1);
+  assert.equal(assignments[0].groupId.toString(), keptGroup.id.toString());
 });
 
 // ── softDeleteStudy ───────────────────────────────────────────────────────────

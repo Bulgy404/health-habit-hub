@@ -306,6 +306,9 @@ export function createRecommendRouter({ recommenderUrl } = {}) {
    *                             excerpt:
    *                               type: string
    *                               description: Preformatted citation, e.g. "Wood & Rünger (2016) — Psychology of Habit"
+   *                             quote:
+   *                               type: string
+   *                               description: Verbatim sentence(s) from the paper backing this recommendation, when the LLM supplied one; empty otherwise
    *                             url:
    *                               type: string
    *                               description: DOI/publisher link when curated in references.json; empty otherwise

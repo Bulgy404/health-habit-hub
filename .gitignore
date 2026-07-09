@@ -28,9 +28,10 @@ yarn.lock
 .env*
 !.env.example
 
-# Backup files
-backups/*.tar.gz
-backups/*.manifest
+# Backup files — everything here is runtime-generated (tarballs, manifests,
+# raw mongo dump dirs, job state); keep the directory in git via .gitkeep only.
+backups/*
+!backups/.gitkeep
 analytics/*.tar.gz
 
 # Test coverage output

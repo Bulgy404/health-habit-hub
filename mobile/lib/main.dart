@@ -9,6 +9,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'app.dart';
 import 'firebase_options.dart';
+import 'services/fresh_install_guard.dart';
 
 /// Sentry DSN injected at build time:
 ///   flutter build ios --dart-define=SENTRY_DSN=https://...
@@ -19,6 +20,10 @@ const _sentryDsn = String.fromEnvironment('SENTRY_DSN');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Must run before anything reads onboarding/auth state from secure
+  // storage — see fresh_install_guard.dart for why that state can survive
+  // a reinstall on its own.
+  await ensureFreshInstallState();
   // Loads intl's date symbol data for every bundled locale, so the
   // locale-aware month/weekday names in the contribution graph don't throw.
   await initializeDateFormatting();

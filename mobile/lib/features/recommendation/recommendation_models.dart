@@ -5,7 +5,8 @@ library;
 ///
 /// Since the citation rework the backend sends one entry per academic paper:
 /// [excerpt] carries the preformatted citation (e.g. "Wood & Rünger (2016) —
-/// Psychology of Habit") and [url] links to the paper.
+/// Psychology of Habit"), [quote] carries the paper's own wording backing the
+/// recommendation (when supplied), and [url] links to the paper.
 class RecommendationSourceRef {
   /// Source filename (e.g. a research paper slug).
   final String filename;
@@ -19,12 +20,17 @@ class RecommendationSourceRef {
   /// Link to the paper (DOI or scholar search), if provided.
   final String url;
 
+  /// Verbatim sentence(s) copied from the paper that ground this
+  /// recommendation. Empty if the backend didn't supply one.
+  final String quote;
+
   /// Creates a [RecommendationSourceRef].
   const RecommendationSourceRef({
     required this.filename,
     required this.excerpt,
     this.title = '',
     this.url = '',
+    this.quote = '',
   });
 
   /// Deserialises a [RecommendationSourceRef] from JSON.
@@ -34,6 +40,7 @@ class RecommendationSourceRef {
       excerpt: json['excerpt'] as String? ?? '',
       title: json['title'] as String? ?? '',
       url: json['url'] as String? ?? '',
+      quote: json['quote'] as String? ?? '',
     );
   }
 

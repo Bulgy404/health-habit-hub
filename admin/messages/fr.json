@@ -167,13 +167,20 @@
     "actions": {
       "trigger": "Déclenchement",
       "restore": "Restauration",
-      "upload": "Téléversement"
+      "upload": "Téléversement",
+      "download": "Téléchargement",
+      "delete": "Suppression"
     },
     "results": {
       "requested": "demandé",
       "succeeded": "réussi",
       "failed": "échoué"
     },
+    "delete": "Supprimer",
+    "deletingEllipsis": "Suppression…",
+    "deleteBackup": "Supprimer la sauvegarde",
+    "deleteWarning": "<strong>Cela supprime définitivement le fichier de sauvegarde et son manifeste.</strong> Cette action est irréversible — assurez-vous de ne plus en avoir besoin avant de continuer.",
+    "deleteFailed": "Échec de la suppression de la sauvegarde",
     "timeAgo": {
       "justNow": "à l'instant",
       "minutes": "il y a {count} min",
@@ -704,6 +711,7 @@
         "notificationBodyLabel": "Corps de la notification",
         "groupCountLabel": "Nombre de groupes",
         "groupCountHint": "Chaque groupe correspond à une condition de l'étude (p. ex. contrôle, intervention). Nommez-les ci-dessous.",
+        "groupCountRemovalWarning": "Supprimer un groupe déplace ses participants, codes et données planifiées vers le premier groupe restant.",
         "groupLabelsTitle": "Libellés des groupes"
       },
       "confirmDefault": {

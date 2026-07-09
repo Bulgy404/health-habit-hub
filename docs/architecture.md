@@ -355,7 +355,7 @@ Model `LLM_RECOMMEND_MODEL` (falls back to `LLM_MODEL`), temperature 0.2, option
 - write `title`, `body`, `rationale`, and `suggested_cue` **in the language of the goal** (German goal → German output),
 - propose a concrete `suggested_cue` ("when/where" trigger phrase) per recommendation for the implementation-intention flow,
 - not repeat habits the user already practises or was previously recommended,
-- cite papers per recommendation via `source_filenames` (validated server-side against the actually retrieved documents),
+- cite papers per recommendation via `sources` — `{filename, quote}` pairs, `filename` validated server-side against the actually retrieved documents and `quote` validated as a verbatim (whitespace-normalised) substring of the retrieved context, dropped otherwise,
 - keep rationales in plain language — no UUIDs, BCIO codes, or other internal identifiers.
 
 **Stage 5 — response shaping, persist, cache**
@@ -363,7 +363,7 @@ Cited filenames are resolved to user-facing citations via `citations.py`. `selec
 
 ### Paper citations
 
-Knowledge-base PDFs follow the Zotero export pattern `Authors - Year - Title.pdf`. For every cited document, `API-service/citations.py` produces `{filename, title, authors, year, url, citation}`:
+Knowledge-base PDFs follow the Zotero export pattern `Authors - Year - Title.pdf`. For every cited document, `API-service/citations.py` produces `{filename, title, authors, year, url, citation}`, which the endpoint merges with the LLM-supplied `quote` (the paper's own wording backing the recommendation, or `""` if none was grounded) into the client-facing `SourceRef`:
 
 - If `API-service/data/references.json` has a curated entry for the filename, its `url` (ideally a DOI link) and optional metadata are used → the app renders a **tappable citation**.
 - Otherwise the citation is shown as plain `Author (Year) — Title` text, parsed from the filename. **No links are guessed or fabricated.**
@@ -416,11 +416,11 @@ Every data source queried during a single recommendation run:
 | `{annotated_habits_json}` | Habits the user liked/saved — MongoDB `habit_annotations` → Neo4j |
 | `{community_habits_json}` | GDS FastRP re-ranked community habits |
 | `{sources_json}` | LightRAG hybrid context (capped at `RECOMMEND_MAX_CONTEXT_CHARS`) |
-| `{source_documents_json}` | `[{filename, citation}]` — papers the model may cite in `source_filenames` |
+| `{source_documents_json}` | `[{filename, citation}]` — papers the model may cite in `sources` |
 | `{prior_feedback}` | MongoDB `recommendation_feedback` comments, one per line (or `"None"`) |
 | `{previous_titles}` | Titles previously recommended to this user (or `"None"`) |
 
-The LLM returns `{recommendations: [{title, body, rationale, suggested_cue, selected_habit_uuids, source_filenames}]}` — or `{"refused": true, "reason": …}` when the goal guard triggers. The client response exposes `title · body · rationale · suggested_cue · sources` (citations with optional links); `selected_habit_uuids` stays server-side.
+The LLM returns `{recommendations: [{title, body, rationale, suggested_cue, selected_habit_uuids, sources: [{filename, quote}]}]}` — or `{"refused": true, "reason": …}` when the goal guard triggers. The client response exposes `title · body · rationale · suggested_cue · sources` (citations with optional links and an optional verbatim `quote`); `selected_habit_uuids` stays server-side.
 
 The detailed data-flow with all queries is rendered in [`docs/diagrams/architecture/recommendation-pipeline.mmd`](diagrams/architecture/recommendation-pipeline.mmd). The LLM call structure and final prompt composition are shown in [`docs/diagrams/sequences/UC-recommend-llm-prompt.mmd`](diagrams/sequences/UC-recommend-llm-prompt.mmd).
 
