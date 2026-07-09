@@ -75,14 +75,36 @@ _LLM_REPLY_WITH_CITATIONS = json.dumps(
                 "body": "Go to bed at the same time daily.",
                 "rationale": "Consistency strengthens habits (Wood and Rünger, 2016).",
                 "selected_habit_uuids": ["uuid-1"],
-                "source_filenames": ["Wood and Rünger - 2016 - Psychology of Habit.pdf"],
+                "sources": [
+                    {
+                        "filename": "Wood and Rünger - 2016 - Psychology of Habit.pdf",
+                        "quote": "Habits form via repeated context-response pairing.",
+                    }
+                ],
             },
             {
                 "title": "No caffeine after 14:00",
                 "body": "Skip coffee in the afternoon.",
                 "rationale": "Improves sleep onset.",
                 "selected_habit_uuids": [],
-                "source_filenames": ["Invented - 2020 - Fake Paper.pdf"],
+                "sources": [
+                    {
+                        "filename": "Invented - 2020 - Fake Paper.pdf",
+                        "quote": "This paper doesn't exist.",
+                    }
+                ],
+            },
+            {
+                "title": "Wind-down routine",
+                "body": "Dim lights an hour before bed.",
+                "rationale": "Signals bedtime to the body (Wood and Rünger, 2016).",
+                "selected_habit_uuids": [],
+                "sources": [
+                    {
+                        "filename": "Wood and Rünger - 2016 - Psychology of Habit.pdf",
+                        "quote": "This sentence was never in the retrieved context.",
+                    }
+                ],
             },
         ]
     }
@@ -93,7 +115,10 @@ def _retrieve_mock_with_docs():
     from routers.retrieve import RetrieveResponse, SourceItem
 
     return RetrieveResponse(
-        context="full lightrag context blob",
+        context=(
+            "full lightrag context blob. "
+            "Habits form via repeated context-response pairing."
+        ),
         sources=[
             SourceItem(
                 filename="Wood and Rünger - 2016 - Psychology of Habit.pdf",
@@ -153,6 +178,8 @@ async def test_recommend_returns_paper_citations_with_links():
     # Curated DOI from references.json is used as the link.
     assert src[0]["url"] == "https://doi.org/10.1146/annurev-psych-122414-033417"
     assert src[0]["excerpt"] == "Wood and Rünger (2016) — Psychology of Habit"
+    # Quote is verbatim in the retrieved context → kept.
+    assert src[0]["quote"] == "Habits form via repeated context-response pairing."
 
     # Walker has no curated reference → plain-text citation without a link.
     walker = next(
@@ -167,6 +194,14 @@ async def test_recommend_returns_paper_citations_with_links():
         "Wood and Rünger - 2016 - Psychology of Habit.pdf",
         "Walker - 2017 - Why We Sleep.pdf",
     }
+    # Fallback sources carry no per-item quote.
+    assert all(s["quote"] == "" for s in recs[1]["sources"])
+
+    # Rec 3 cited a real filename but with a quote absent from the retrieved
+    # context → the fabricated/ungrounded quote is dropped, citation kept.
+    src3 = recs[2]["sources"]
+    assert src3[0]["filename"] == "Wood and Rünger - 2016 - Psychology of Habit.pdf"
+    assert src3[0]["quote"] == ""
 
     # No graph identifiers anywhere in the client payload.
     for rec in recs:

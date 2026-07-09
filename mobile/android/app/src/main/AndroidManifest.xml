@@ -2,7 +2,8 @@
     <application
         android:label="Health-Habit-Hub"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon">
+        android:icon="@mipmap/launcher_icon"
+        android:allowBackup="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"

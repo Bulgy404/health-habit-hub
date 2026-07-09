@@ -167,13 +167,20 @@
     "actions": {
       "trigger": "Starten",
       "restore": "Herstellen",
-      "upload": "Uploaden"
+      "upload": "Uploaden",
+      "download": "Downloaden",
+      "delete": "Verwijderen"
     },
     "results": {
       "requested": "aangevraagd",
       "succeeded": "geslaagd",
       "failed": "mislukt"
     },
+    "delete": "Verwijderen",
+    "deletingEllipsis": "Bezig met verwijderen…",
+    "deleteBackup": "Back-up verwijderen",
+    "deleteWarning": "<strong>Dit verwijdert het back-upbestand en zijn manifest permanent.</strong> Dit kan niet ongedaan worden gemaakt — zorg dat je het niet meer nodig hebt voordat je doorgaat.",
+    "deleteFailed": "Back-up kon niet worden verwijderd",
     "timeAgo": {
       "justNow": "zojuist",
       "minutes": "{count}m geleden",
@@ -704,6 +711,7 @@
         "notificationBodyLabel": "Inhoud van melding",
         "groupCountLabel": "Aantal groepen",
         "groupCountHint": "Elke groep is een studieconditie (bijv. controle, interventie). Benoem ze hieronder.",
+        "groupCountRemovalWarning": "Het verwijderen van een groep verplaatst deelnemers, codes en geplande gegevens ervan naar de eerste overgebleven groep.",
         "groupLabelsTitle": "Groepslabels"
       },
       "confirmDefault": {

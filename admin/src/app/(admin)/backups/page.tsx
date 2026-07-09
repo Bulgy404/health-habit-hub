@@ -59,7 +59,7 @@ interface JobState {
 interface AuditEntry {
   id: string;
   byUsername: string;
-  action: "trigger" | "restore" | "upload" | "download";
+  action: "trigger" | "restore" | "upload" | "download" | "delete";
   filename: string | null;
   result: "requested" | "succeeded" | "failed";
   detail: string | null;
@@ -110,6 +110,7 @@ export default function BackupsPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState<Manifest | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Manifest | null>(null);
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -319,7 +320,9 @@ export default function BackupsPage() {
               manifest={status.lastBackup}
               onRestore={setRestoreTarget}
               onDownload={handleDownload}
+              onDelete={setDeleteTarget}
               downloading={downloadingFile === status.lastBackup.file}
+              disabled={running}
               highlight
             />
           ) : (
@@ -395,6 +398,14 @@ export default function BackupsPage() {
                         disabled={running}
                       >
                         {t("restore")}
+                      </button>
+                      <button
+                        className={styles.actionBtn}
+                        style={{ color: "#dc2626" }}
+                        onClick={() => setDeleteTarget(m)}
+                        disabled={running}
+                      >
+                        {t("delete")}
                       </button>
                     </td>
                   </tr>
@@ -479,6 +490,18 @@ export default function BackupsPage() {
           }}
         />
       )}
+
+      {deleteTarget && token && (
+        <DeleteModal
+          manifest={deleteTarget}
+          token={token}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={async () => {
+            setDeleteTarget(null);
+            await refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -535,13 +558,17 @@ function BackupRow({
   manifest,
   onRestore,
   onDownload,
+  onDelete,
   downloading,
+  disabled,
   highlight,
 }: {
   manifest: Manifest;
   onRestore: (m: Manifest) => void;
   onDownload: (m: Manifest) => void;
+  onDelete: (m: Manifest) => void;
   downloading?: boolean;
+  disabled?: boolean;
   highlight?: boolean;
 }) {
   const t = useTranslations("backups");
@@ -578,8 +605,17 @@ function BackupRow({
           <button
             className={`${styles.actionBtn} ${styles.primaryBtn}`}
             onClick={() => onRestore(manifest)}
+            disabled={disabled}
           >
             {t("restore")}
+          </button>
+          <button
+            className={styles.actionBtn}
+            style={{ color: "#dc2626" }}
+            onClick={() => onDelete(manifest)}
+            disabled={disabled}
+          >
+            {t("delete")}
           </button>
         </div>
       </div>
@@ -733,6 +769,96 @@ function RestoreModal({
             disabled={!canSubmit}
           >
             {submitting ? t("startingRestoreEllipsis") : t("restore")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteModal({
+  manifest,
+  token,
+  onClose,
+  onDeleted,
+}: {
+  manifest: Manifest;
+  token: string;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const t = useTranslations("backups");
+  const [typedFilename, setTypedFilename] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const canSubmit = typedFilename === manifest.file && !submitting;
+
+  async function handleConfirm() {
+    setSubmitting(true);
+    setError("");
+    try {
+      await apiFetch(`${BASE}/${manifest.file}`, token, { method: "DELETE" });
+      onDeleted();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("deleteFailed"));
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <h2 className={styles.modalTitle}>{t("deleteBackup")}</h2>
+
+        <div
+          style={{
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: 8,
+            padding: "0.75rem 1rem",
+            marginBottom: "1rem",
+            fontSize: "0.85rem",
+          }}
+        >
+          {t.rich("deleteWarning", { strong: (chunks) => <strong>{chunks}</strong> })}
+        </div>
+
+        <p style={{ marginBottom: "0.75rem" }}>
+          <span className={styles.code}>{manifest.file}</span>
+        </p>
+
+        <label
+          style={{
+            display: "block",
+            marginBottom: "0.5rem",
+            fontWeight: 600,
+            fontSize: "0.875rem",
+          }}
+        >
+          {t("typeFilenameToConfirm")}
+        </label>
+        <input
+          className={styles.input}
+          style={{ width: "100%", marginBottom: "1rem" }}
+          value={typedFilename}
+          onChange={(e) => setTypedFilename(e.target.value)}
+          placeholder={manifest.file}
+        />
+
+        {error && <p className={styles.error}>{error}</p>}
+
+        <div className={styles.formActions}>
+          <button className={styles.cancelButton} onClick={onClose} disabled={submitting}>
+            {t("cancel")}
+          </button>
+          <button
+            className={styles.saveButton}
+            style={{ background: "#dc2626" }}
+            onClick={handleConfirm}
+            disabled={!canSubmit}
+          >
+            {submitting ? t("deletingEllipsis") : t("delete")}
           </button>
         </div>
       </div>

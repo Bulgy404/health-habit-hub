@@ -100,6 +100,9 @@ function startFakeBackupApi() {
       if (req.url === '/restore') {
         return res.end(JSON.stringify({ jobId: 'job-2' }));
       }
+      if (req.method === 'DELETE') {
+        return res.end(JSON.stringify({ ok: true }));
+      }
       res.statusCode = 404;
       res.end(JSON.stringify({ error: 'not found' }));
     });
@@ -181,6 +184,39 @@ test('POST /backups/trigger records a requested + succeeded audit entry', async 
   assert.strictEqual(entries[0].action, 'trigger');
   assert.strictEqual(entries[0].result, 'requested');
   assert.strictEqual(entries[1].result, 'succeeded');
+});
+
+test('DELETE /backups/:filename proxies to backup-api and records a requested + succeeded audit entry', async () => {
+  const filename = 'full_backup_20260101_000009.tar.gz';
+  const res = await fetch(`${baseUrl}/api/v1/admin/backups/${filename}`, {
+    method: 'DELETE',
+  });
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.strictEqual(body.ok, true);
+
+  const entries = db._collections.backup_audit_log.filter(
+    (e) => e.filename === filename
+  );
+  assert.strictEqual(entries.length, 2);
+  assert.strictEqual(entries[0].action, 'delete');
+  assert.strictEqual(entries[0].result, 'requested');
+  assert.strictEqual(entries[1].result, 'succeeded');
+
+  const deleteRequest = fakeBackupApiRequests.find(
+    (r) => r.method === 'DELETE'
+  );
+  assert.ok(deleteRequest, 'expected the DELETE to be forwarded to backup-api');
+  assert.strictEqual(deleteRequest.url, `/${filename}`);
+});
+
+test('non-admin (researcher) cannot delete a backup', async () => {
+  currentRoles = ['researcher'];
+  const res = await fetch(
+    `${baseUrl}/api/v1/admin/backups/full_backup_20260101_000010.tar.gz`,
+    { method: 'DELETE' }
+  );
+  assert.strictEqual(res.status, 403);
 });
 
 test('POST /backups/upload rejects a non-.tar.gz filename before ever contacting backup-api', async () => {

@@ -14,15 +14,19 @@ const QUESTIONNAIRES_SEED_PATH = resolve(
 );
 const QUESTIONNAIRES_COLLECTION = 'questionnaires';
 
-const DEFAULT_GROUPS = [1, 2, 3, 4].map((index) => ({
-  id: new ObjectId(),
-  label: `Group ${index}`,
-  index,
-  cueConfig: null,
-  activityTypeConfig: null,
-  reminderConfig: { enabled: true, fixedTime: null },
-  autoDonate: false,
-}));
+// Organic app-store signups (no study code) all land in this one group — the
+// default study has no experimental arms to randomize into.
+const DEFAULT_GROUPS = [
+  {
+    id: new ObjectId(),
+    label: 'Group 1',
+    index: 1,
+    cueConfig: null,
+    activityTypeConfig: null,
+    reminderConfig: { enabled: true, fixedTime: null },
+    autoDonate: false,
+  },
+];
 
 /**
  * Upsert the built-in questionnaire library (SLIQ, RAND-36, SRHI) by slug.

@@ -182,7 +182,10 @@ export function createKeycloakAdminClient({
     },
 
     async revokeSession(sessionId) {
-      if (!/^[0-9a-f-]{36}$/i.test(String(sessionId))) {
+      // Keycloak session ids aren't always canonical 36-char UUIDs (depends
+      // on the session storage provider) — validate the charset only, so no
+      // path-traversal/URL-injection characters reach the request path below.
+      if (!/^[A-Za-z0-9_-]{1,100}$/.test(String(sessionId))) {
         throw new Error('Invalid sessionId');
       }
       const token = await getAdminToken();

@@ -345,11 +345,10 @@ async function seedDefaultStudy() {
       description: 'Pre-configured default study. Participants without a study code are enrolled here.',
       isDefault: true,
       isActive: true,
+      // Organic app-store signups (no study code) all land in this one group —
+      // the default study has no experimental arms to randomize into.
       groups: [
         { id: new ObjectId(), label: 'Group 1', index: 1, cueConfig: null, activityTypeConfig: null, reminderConfig: { enabled: true, fixedTime: null }, autoDonate: false },
-        { id: new ObjectId(), label: 'Group 2', index: 2, cueConfig: null, activityTypeConfig: null, reminderConfig: { enabled: true, fixedTime: null }, autoDonate: false },
-        { id: new ObjectId(), label: 'Group 3', index: 3, cueConfig: null, activityTypeConfig: null, reminderConfig: { enabled: true, fixedTime: null }, autoDonate: false },
-        { id: new ObjectId(), label: 'Group 4', index: 4, cueConfig: null, activityTypeConfig: null, reminderConfig: { enabled: true, fixedTime: null }, autoDonate: false },
       ],
       questionnaires: qIds,
       createdAt: now,

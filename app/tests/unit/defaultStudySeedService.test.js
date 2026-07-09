@@ -79,7 +79,7 @@ test('seedDefaultStudy: creates a default study linking sliq + rand-36 (not srhi
 
   const study = [...db.stores.studies.values()].find((s) => s.isDefault);
   assert.ok(study, 'default study should exist');
-  assert.strictEqual(study.groups.length, 4);
+  assert.strictEqual(study.groups.length, 1);
 
   const linkedSlugs = study.questionnaires
     .map((id) =>

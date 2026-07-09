@@ -59,6 +59,40 @@ export function getManifestForFile(filename) {
 }
 
 /**
+ * Locates the on-disk manifest sidecar(s) for a backup archive, by matching
+ * each manifest's own `file` field rather than assuming a naming convention —
+ * scheduled/manual backups are named `backup_<stamp>.manifest[.json]` while
+ * uploaded ones are named `<filename>.manifest.json` (see backup.sh and
+ * writeUploadedManifest below), so the two can't be derived from `filename`
+ * by string manipulation alone.
+ * @returns {{ jsonName: string, textName: string|null }|null}
+ */
+export function findManifestFilenames(filename) {
+  let entries;
+  try {
+    entries = readdirSync(BACKUP_DIR);
+  } catch {
+    return null;
+  }
+  for (const name of entries) {
+    if (!name.endsWith('.manifest.json')) continue;
+    let data;
+    try {
+      data = JSON.parse(readFileSync(join(BACKUP_DIR, name), 'utf8'));
+    } catch {
+      continue; // skip unreadable/corrupt manifest
+    }
+    if (data.file !== filename) continue;
+    const textName = name.slice(0, -'.json'.length); // "<x>.manifest.json" -> "<x>.manifest"
+    return {
+      jsonName: name,
+      textName: entries.includes(textName) ? textName : null,
+    };
+  }
+  return null;
+}
+
+/**
  * Writes a manifest for an uploaded backup archive. Uses the same field
  * names as backup.sh's manifest (`mongoOk`/`lightragOk`/`neo4jOk`/
  * `keycloakOk`) so the restore endpoint's "don't restore a known-bad backup"

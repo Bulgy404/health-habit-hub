@@ -220,13 +220,19 @@
       "trigger": "Trigger",
       "restore": "Restore",
       "upload": "Upload",
-      "download": "Download"
+      "download": "Download",
+      "delete": "Delete"
     },
     "results": {
       "requested": "requested",
       "succeeded": "succeeded",
       "failed": "failed"
     },
+    "delete": "Delete",
+    "deletingEllipsis": "Deleting…",
+    "deleteBackup": "Delete backup",
+    "deleteWarning": "<strong>This permanently deletes the backup file and its manifest.</strong> This cannot be undone — make sure you don't need it before continuing.",
+    "deleteFailed": "Failed to delete backup",
     "timeAgo": {
       "justNow": "just now",
       "minutes": "{count}m ago",
@@ -758,6 +764,7 @@
         "notificationBodyLabel": "Notification body",
         "groupCountLabel": "Number of groups",
         "groupCountHint": "Each group is a study condition (e.g. control, intervention). Label them below.",
+        "groupCountRemovalWarning": "Removing a group moves any participants, codes, and scheduled data in it to the first remaining group.",
         "groupLabelsTitle": "Group labels"
       },
       "confirmDefault": {
