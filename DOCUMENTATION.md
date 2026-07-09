@@ -485,6 +485,14 @@ Key differences from local:
 3. Deploy the `docker-compose.yml` stack via Portainer UI
 4. On first deploy, the `keycloak-init` one-shot container sets `sslRequired=external`, configures client secrets, and grants the backend service account `realm-admin`
 
+### Mobile App Release (iOS)
+
+Backend/admin changes ship instantly on deploy — the mobile app binary does not, since it needs Apple's review. Releasing an update:
+
+- **[`mobile/RELEASING.md`](mobile/RELEASING.md)** — one-time Apple Developer / App Store Connect setup, and the release checklist
+
+Pushing a `mobile-v*` tag (e.g. `mobile-v1.0.1`) triggers `.github/workflows/mobile-release.yml`, which builds the app via `fastlane` (`mobile/fastlane/Fastfile`) and uploads it to TestFlight automatically. Submitting a tested TestFlight build for public App Store review is a separate, manually-triggered step (Actions tab → **Mobile Release** → **Run workflow** → lane `release`) — deliberately not automatic, so a bad tag can't reach real users without a human checking it first. Note this is a different tag prefix from the backend's `v*` used by `release.yml`, so the two pipelines never collide.
+
 ---
 
 ## 8. Admin Application

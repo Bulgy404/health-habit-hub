@@ -1,0 +1,5 @@
+app_identifier("de.felixreinsch.healthhabithub")
+team_id("M9D25U4X72")
+
+# No apple_id here on purpose — CI authenticates with an App Store Connect
+# API key (see Fastfile), which doesn't need an Apple ID or 2FA.

@@ -121,9 +121,41 @@ class _ContributionGraphWidgetState extends State<ContributionGraphWidget> {
     final colorScheme = Theme.of(context).colorScheme;
     final localeName = Localizations.localeOf(context).toString();
     final today = _atMidnight(DateTime.now());
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Always render enough weeks to overflow the available width by at
+        // least one column. A fixed week count can otherwise fit entirely
+        // within wide viewports, leaving the graph looking static — with
+        // no scrollable overflow, the user can never drag it, and the
+        // lazy-load-more-history trigger in _onScroll (which only fires
+        // when scrolled near the left edge) could never be reached either.
+        final minWeeksForOverflow =
+            (constraints.maxWidth / _columnWidth).ceil() + 1;
+        final effectiveWeeks = _visibleWeeks < minWeeksForOverflow
+            ? minWeeksForOverflow.clamp(0, ContributionGraphWidget._maxWeeks)
+            : _visibleWeeks;
+        return _buildGrid(
+          context,
+          colorScheme,
+          localeName,
+          today,
+          effectiveWeeks,
+        );
+      },
+    );
+  }
+
+  Widget _buildGrid(
+    BuildContext context,
+    ColorScheme colorScheme,
+    String localeName,
+    DateTime today,
+    int visibleWeeks,
+  ) {
     // Start on the Sunday on/before (today - weeks*7 + 1 days), so the grid
     // always ends with the current, possibly-partial week.
-    final daysBack = _visibleWeeks * 7 - 1;
+    final daysBack = visibleWeeks * 7 - 1;
     final rangeStart = today.subtract(Duration(days: daysBack));
     final gridStart = rangeStart.subtract(
       Duration(days: rangeStart.weekday % 7),
