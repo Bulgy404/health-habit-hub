@@ -51,3 +51,17 @@ lib/firebase_options.dart
 android/app/google-services.json
 ios/GoogleService-Info.plist
 ios/Runner/GoogleService-Info.plist
+
+# Fastlane — release pipeline (see RELEASING.md)
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+# Generated at build time by the `beta` lane from a secret-provided profile
+# name — never commit a real ExportOptions.plist.
+ios/ExportOptions.plist
+# Signing assets decoded from CI secrets — never commit these.
+ios/*.p12
+ios/*.mobileprovision
+*.ipa
+*.dSYM.zip

@@ -19,7 +19,6 @@ import '../features/questionnaire/questionnaire_service.dart';
 import '../core/dio_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
-import '../services/habit_service.dart';
 import '../services/offline_queue_service.dart';
 import '../services/survey_service.dart';
 import '../widgets/contribution_graph_widget.dart';
@@ -68,15 +67,11 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   /// Whether a habit was already shared today (persisted per device).
   bool _sharedToday = false;
 
-  /// Consecutive-day sharing streak (persisted per device).
-  int _shareStreak = 0;
-
   /// Number of habits shared on each day this device has shared on,
   /// keyed by a midnight-normalised date. Feeds the share-activity graph.
   Map<DateTime, int> _shareCounts = {};
 
   static const _lastShareDateKey = 'last_habit_share_date';
-  static const _streakKey = 'habit_share_streak';
   static const _shareCountsKey = 'habit_share_counts_json';
 
   static DateTime _atMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
@@ -86,9 +81,6 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       '${d.day.toString().padLeft(2, '0')}';
 
   static String _todayStr() => _dateStr(DateTime.now());
-
-  static String _yesterdayStr() =>
-      _dateStr(DateTime.now().subtract(const Duration(days: 1)));
 
   @override
   void initState() {
@@ -123,15 +115,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   Future<void> _loadSharedToday() async {
     final prefs = await SharedPreferences.getInstance();
     final last = prefs.getString(_lastShareDateKey);
-    final streak = prefs.getInt(_streakKey) ?? 0;
-    // The streak is "alive" only if the last share was today or yesterday;
-    // otherwise a day was missed and it has reset.
-    final alive = last == _todayStr() || last == _yesterdayStr();
     final counts = _decodeShareCounts(prefs.getString(_shareCountsKey));
     if (mounted) {
       setState(() {
         _sharedToday = last == _todayStr();
-        _shareStreak = alive ? streak : 0;
         _shareCounts = counts;
       });
     }
@@ -139,18 +126,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
 
   Future<void> _markSharedToday() async {
     final prefs = await SharedPreferences.getInstance();
-    final last = prefs.getString(_lastShareDateKey);
-    final prevStreak = prefs.getInt(_streakKey) ?? 0;
-    final int newStreak;
-    if (last == _todayStr()) {
-      newStreak = prevStreak < 1 ? 1 : prevStreak; // already counted today
-    } else if (last == _yesterdayStr()) {
-      newStreak = prevStreak + 1; // continued the streak
-    } else {
-      newStreak = 1; // first share, or streak was broken
-    }
     await prefs.setString(_lastShareDateKey, _todayStr());
-    await prefs.setInt(_streakKey, newStreak);
 
     final today = DateTime.now();
     final todayKey = _atMidnight(today);
@@ -168,7 +144,6 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     if (mounted) {
       setState(() {
         _sharedToday = true;
-        _shareStreak = newStreak;
         _shareCounts = updatedCounts;
       });
     }
@@ -599,7 +574,6 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     if (_surveyMode) return _buildFormScaffold(l10n);
 
     // ── Landing page ─────────────────────────────────────────────────────────
-    final statsAsync = ref.watch(habitStatsProvider);
     final dueList =
         ref
             .watch(dueQuestionnairesProvider)
@@ -613,7 +587,6 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(dueQuestionnairesProvider);
-          ref.invalidate(habitStatsProvider);
         },
         child: ListView(
           padding: const EdgeInsets.only(bottom: 24),
@@ -651,28 +624,6 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                 child: _questionnaireTaskCard(q),
               ),
-
-            // ── Stats row ─────────────────────────────────────────────────────
-            statsAsync.when(
-              loading: () => const SizedBox(height: 80),
-              error: (e, s) => const SizedBox(height: 12),
-              data: (stats) => Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Row(
-                  children: [
-                    _StatCard(
-                      value: '${stats.total}',
-                      label: l10n.donateCommunityLabel,
-                    ),
-                    const SizedBox(width: 10),
-                    _StatCard(
-                      value: '$_shareStreak',
-                      label: l10n.donateDayStreakLabel,
-                    ),
-                  ],
-                ),
-              ),
-            ),
 
             // ── Why share? ────────────────────────────────────────────────────
             _whyShareCard(),
@@ -715,54 +666,6 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
           ),
           DonateProgressWidget(submitting: _submitting, onSubmit: _submit),
         ],
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Stat card
-// ---------------------------------------------------------------------------
-
-/// A compact stat display card used in the landing hero section.
-class _StatCard extends StatelessWidget {
-  /// Creates a [_StatCard].
-  const _StatCard({this.value, required this.label});
-
-  /// Numeric value to display.
-  final String? value;
-
-  /// Descriptive label shown below the value.
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: _kCardShadow,
-        ),
-        child: Column(
-          children: [
-            Text(
-              value ?? '-',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: Color(0xFF45B700),
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
-            ),
-          ],
-        ),
       ),
     );
   }

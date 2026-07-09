@@ -1,0 +1,88 @@
+name: Mobile Release
+
+# Builds the iOS app and uploads it to TestFlight. Distinct from release.yml
+# (which only cuts GitHub Releases from `v*` tags) — this pipeline actually
+# ships a binary to Apple, so it uses its own `mobile-v*` tag prefix to avoid
+# firing on every backend release tag.
+#
+# Setup required before this will run successfully: see mobile/RELEASING.md
+# for the full checklist of Apple Developer / App Store Connect steps and
+# the GitHub secrets they produce.
+
+on:
+  push:
+    tags:
+      - "mobile-v*"
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "Fastlane lane to run"
+        type: choice
+        options:
+          - beta
+          - release
+        default: beta
+
+permissions:
+  contents: read
+
+jobs:
+  ios-release:
+    name: iOS ${{ inputs.lane || 'beta' }}
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # The shared ./.github/actions/setup-flutter composite action stubs
+      # Firebase config for regular CI runs — a real release build needs the
+      # production config instead, decoded from secrets here.
+      - name: Install production Firebase config
+        working-directory: mobile
+        env:
+          IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+          FIREBASE_OPTIONS_DART_BASE64: ${{ secrets.FIREBASE_OPTIONS_DART_BASE64 }}
+        run: |
+          echo "$IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          echo "$FIREBASE_OPTIONS_DART_BASE64" | base64 --decode > lib/firebase_options.dart
+
+      - name: Install Flutter dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+          working-directory: mobile
+
+      - name: Decode signing certificate and provisioning profile
+        working-directory: mobile
+        env:
+          IOS_DIST_CERTIFICATE_BASE64: ${{ secrets.IOS_DIST_CERTIFICATE_BASE64 }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          echo "$IOS_DIST_CERTIFICATE_BASE64" | base64 --decode > ios/dist_certificate.p12
+          echo "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > ios/profile.mobileprovision
+
+      - name: Run fastlane
+        working-directory: mobile
+        env:
+          IOS_CERTIFICATE_PATH: ios/dist_certificate.p12
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DIST_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_PATH: ios/profile.mobileprovision
+          IOS_PROVISIONING_PROFILE_NAME: ${{ secrets.IOS_PROVISIONING_PROFILE_NAME }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+        run: bundle exec fastlane ios ${{ inputs.lane || 'beta' }}
+
+      - name: Clean up signing assets
+        if: always()
+        working-directory: mobile
+        run: rm -f ios/dist_certificate.p12 ios/profile.mobileprovision ios/ExportOptions.plist lib/firebase_options.dart ios/Runner/GoogleService-Info.plist
