@@ -142,11 +142,33 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
   int _expiresIn = 300;
   bool _confirmed = false;
   String _errorMessage = '';
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _fetchCredentials();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _toggleConfirmed() {
+    setState(() => _confirmed = !_confirmed);
+    if (!_confirmed) return;
+    // Scroll the Continue button into view once confirmed, so the user
+    // doesn't have to manually scroll down to tap it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   /// Calls POST /api/v1/onboard to auto-create a Keycloak user and derives
@@ -268,6 +290,7 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
 
   Widget _buildSuccess() {
     return SingleChildScrollView(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -307,7 +330,7 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
           const SizedBox(height: 14),
           // Checkbox
           InkWell(
-            onTap: () => setState(() => _confirmed = !_confirmed),
+            onTap: _toggleConfirmed,
             borderRadius: BorderRadius.circular(8),
             child: Row(
               children: [

@@ -115,6 +115,21 @@ class MyHabitsService {
     }
   }
 
+  /// Removes the log entry for [intentionId] on [date] entirely, undoing a
+  /// previous [logDay] call (as opposed to logging `enacted: false`, which
+  /// would record an explicit miss instead of clearing the entry).
+  Future<void> deleteLog({
+    required String intentionId,
+    required String date,
+  }) async {
+    try {
+      await _dio.delete('$_base/habits/intentions/$intentionId/logs/$date');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      throw NetworkException(e.message ?? 'Network error');
+    }
+  }
+
   /// Returns daily logs for [intentionId], optionally filtered to [from]–[to].
   Future<List<DailyLog>> fetchLogs(
     String intentionId, {

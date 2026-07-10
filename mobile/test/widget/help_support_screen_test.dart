@@ -71,4 +71,38 @@ void main() {
     expect(launched!.scheme, 'mailto');
     expect(launched!.path, AppConfig.supportEmail);
   });
+
+  testWidgets(
+      'shows a fallback message when no email app can be launched',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildSubject(launcher: (_) async => false),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Send email'));
+    await tester.pump();
+
+    expect(
+      find.textContaining(AppConfig.supportEmail),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      'shows a fallback message when launching the mail app throws',
+      (tester) async {
+    await tester.pumpWidget(
+      _buildSubject(launcher: (_) async => throw Exception('no mail app')),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Send email'));
+    await tester.pump();
+
+    expect(
+      find.textContaining(AppConfig.supportEmail),
+      findsOneWidget,
+    );
+  });
 }

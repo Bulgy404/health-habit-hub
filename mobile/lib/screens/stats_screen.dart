@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/habit_stats.dart';
 import '../providers/show_in_graph_provider.dart';
+import '../services/habit_service.dart';
 
 /// Displays the current user's habit statistics and per-dimension breakdown.
 class StatsScreen extends ConsumerWidget {
@@ -15,6 +16,7 @@ class StatsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statsAsync = ref.watch(myStatsProvider);
+    final communityStatsAsync = ref.watch(habitStatsProvider);
 
     return statsAsync.when(
       loading: () => const _StatsSkeleton(),
@@ -35,7 +37,10 @@ class StatsScreen extends ConsumerWidget {
           ],
         ),
       ),
-      data: (stats) => _StatsContent(stats: stats),
+      data: (stats) => _StatsContent(
+        stats: stats,
+        communityStatsAsync: communityStatsAsync,
+      ),
     );
   }
 }
@@ -46,18 +51,27 @@ class StatsScreen extends ConsumerWidget {
 
 class _StatsContent extends ConsumerWidget {
   final MyStats stats;
-  const _StatsContent({required this.stats});
+  final AsyncValue<HabitStats> communityStatsAsync;
+  const _StatsContent({required this.stats, required this.communityStatsAsync});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final tt = Theme.of(context).textTheme;
 
     return RefreshIndicator(
-      onRefresh: () async => ref.invalidate(myStatsProvider),
+      onRefresh: () async {
+        ref.invalidate(myStatsProvider);
+        ref.invalidate(habitStatsProvider);
+      },
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _TotalCard(total: stats.total),
+          const SizedBox(height: 24),
+          Text('Community',
+              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 12),
+          _CommunitySection(statsAsync: communityStatsAsync),
           if (stats.byDimension.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text('Habits by Context',
@@ -144,6 +158,118 @@ class _TotalCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Community overview: totals, top categories, 30-day trend
+// ---------------------------------------------------------------------------
+
+class _CommunitySection extends StatelessWidget {
+  final AsyncValue<HabitStats> statsAsync;
+  const _CommunitySection({required this.statsAsync});
+
+  @override
+  Widget build(BuildContext context) {
+    return statsAsync.when(
+      loading: () => const _SkeletonBox(width: double.infinity, height: 88),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (stats) {
+        final topCategories = [...stats.byCategory]
+          ..sort((a, b) => b.count.compareTo(a.count));
+        final cs = Theme.of(context).colorScheme;
+        final tt = Theme.of(context).textTheme;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Card(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                child: Row(
+                  children: [
+                    Icon(Icons.groups_outlined, size: 40, color: cs.secondary),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${stats.total}',
+                          style: tt.displaySmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: cs.secondary,
+                          ),
+                        ),
+                        Text('habits donated by the community',
+                            style: tt.bodyMedium),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (topCategories.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: topCategories.take(5).map((c) {
+                  return Chip(
+                    avatar: const Icon(Icons.category_outlined, size: 16),
+                    label: Text('${c.category} · ${c.count}'),
+                  );
+                }).toList(),
+              ),
+            ],
+            if (stats.byDay.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text('Last 30 days', style: tt.labelLarge),
+              const SizedBox(height: 8),
+              SizedBox(height: 80, child: _TrendSparkline(data: stats.byDay)),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _TrendSparkline extends StatelessWidget {
+  final List<DayCount> data;
+  const _TrendSparkline({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final spots = data
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value.count.toDouble()))
+        .toList();
+    final maxY =
+        data.map((d) => d.count).fold(0, (a, b) => math.max(a, b)).toDouble();
+
+    return LineChart(
+      LineChartData(
+        gridData: const FlGridData(show: false),
+        titlesData: const FlTitlesData(show: false),
+        borderData: FlBorderData(show: false),
+        minY: 0,
+        maxY: maxY > 0 ? maxY * 1.2 : 5,
+        lineBarsData: [
+          LineChartBarData(
+            spots: spots,
+            isCurved: true,
+            color: cs.secondary,
+            barWidth: 2,
+            dotData: const FlDotData(show: false),
+            belowBarData:
+                BarAreaData(show: true, color: cs.secondary.withAlpha(40)),
+          ),
+        ],
       ),
     );
   }

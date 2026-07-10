@@ -7,13 +7,13 @@ import { createApiRouter } from '../../routes/apiRouter.js';
 
 // Regression coverage for a bug where researcher-role requests to
 // /admin/cue-pools got wrongly 403'd. Root cause: adminRouter.js mounted
-// createAppSettingsRouter/createSystemRouter (and backupsRouter internally
-// gated itself) with an admin-only requireRole check applied to a catch-all
-// '/' mount, so the check ran for *every* request that fell through to that
-// point in the middleware chain — including sibling admin sub-resources
-// mounted separately in apiRouter.js, not just the routes those routers
-// actually own. See app/routes/admin/{appSettingsRouter,systemRouter,
-// backupsRouter}.js and app/routes/adminRouter.js.
+// createSystemRouter (and backupsRouter internally gated itself) with an
+// admin-only requireRole check applied to a catch-all '/' mount, so the
+// check ran for *every* request that fell through to that point in the
+// middleware chain — including sibling admin sub-resources mounted
+// separately in apiRouter.js, not just the routes those routers actually
+// own. See app/routes/admin/{systemRouter,backupsRouter}.js and
+// app/routes/adminRouter.js.
 
 // ── Key material ─────────────────────────────────────────────────────────────
 
@@ -163,18 +163,6 @@ test('GET /api/v1/admin/cue-pools - plain user role is forbidden', async () => {
   const token = makeToken(['user']);
   const res = await get('/api/v1/admin/cue-pools', token);
   assert.strictEqual(res.status, 403);
-});
-
-test('GET /api/v1/admin/app-settings - researcher still correctly forbidden (admin-only route)', async () => {
-  const token = makeToken(['researcher']);
-  const res = await get('/api/v1/admin/app-settings', token);
-  assert.strictEqual(res.status, 403);
-});
-
-test('GET /api/v1/admin/app-settings - admin allowed', async () => {
-  const token = makeToken(['admin']);
-  const res = await get('/api/v1/admin/app-settings', token);
-  assert.strictEqual(res.status, 200);
 });
 
 test('GET /api/v1/admin/system/overview - researcher still correctly forbidden (admin-only route)', async () => {

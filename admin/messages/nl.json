@@ -35,7 +35,6 @@
   "sidebar": {
     "brand": "HHH Portal",
     "sections": {
-      "publicApp": "Publieke app",
       "research": "Onderzoek",
       "operations": "Operaties",
       "configuration": "Configuratie",
@@ -43,7 +42,6 @@
       "support": "Ondersteuning"
     },
     "nav": {
-      "appSettings": "App-instellingen",
       "studies": "Studies",
       "analytics": "Analyse",
       "insights": "Inzichten",
@@ -481,32 +479,6 @@
     "cached": "Gecachet",
     "freshlyComputed": "Zojuist berekend"
   },
-  "defaultApp": {
-    "title": "Publieke app",
-    "subtitle": "Standaardervaring voor gebruikers die de app openen zonder studiecode.",
-    "features": {
-      "sectionTitle": "Functies",
-      "sectionDesc": "Welke functies actief zijn voor publieke gebruikers.",
-      "loadFailed": "Instellingen konden niet worden geladen",
-      "saveFailed": "Opslaan mislukt",
-      "guidedWizardLabel": "Begeleide wizard voor uitvoeringsintenties",
-      "guidedWizardHint": "Indien ingeschakeld, doorlopen publieke gebruikers een stapsgewijze wizard (gewoonte → cues → LLM-koppeling → bevestigen → herinnering). Gewoonte en cues zijn voor publieke gebruikers altijd vrije tekst; het uitschakelen hiervan slaat alleen de LLM-koppelingsstap over.",
-      "communitySharingLabel": "Optie voor delen met community standaard getoond",
-      "communitySharingHint": "Indien ingeschakeld, verschijnt de schakelaar voor delen met de community aan het einde van het aanmaken van een gewoonte en is deze al vooraf geselecteerd.",
-      "saved": "Opgeslagen!",
-      "saveChanges": "Wijzigingen opslaan"
-    },
-    "defaults": {
-      "sectionTitle": "Standaardwaarden",
-      "sectionDesc": "Publieke gebruikers maken hun gewoontes aan met vrije tekst — cue- en gedragsconfiguratie bestaat alleen per studiegroep (Studies → Cue-configuratie).",
-      "loadFailed": "Instellingen konden niet worden geladen",
-      "saveFailed": "Opslaan mislukt",
-      "reminderTimeLabel": "Standaard herinneringstijd",
-      "reminderTimeHint": "Tijdstip van de dagelijkse check-in-pushmelding. Gebruikers kunnen dit in hun profiel overschrijven.",
-      "saved": "Opgeslagen!",
-      "saveChanges": "Wijzigingen opslaan"
-    }
-  },
   "profileFields": {
     "title": "Profielvelden",
     "subtitle": "Configureer welke velden worden weergegeven bij het instellen van het onboardingprofiel.",
@@ -603,6 +575,7 @@
     "saveChanges": "Wijzigingen opslaan",
     "create": "Aanmaken",
     "titleRequiredError": "Titel is verplicht.",
+    "questionTextRequiredError": "Vraag {index} heeft tekst nodig in ten minste één geselecteerde taal.",
     "saveFailed": "Opslaan mislukt",
     "versionValue": "Versie {version}",
     "libraryBadge": "Bibliotheek",

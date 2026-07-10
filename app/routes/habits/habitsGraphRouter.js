@@ -70,7 +70,7 @@ export function createHabitsGraphRouter({ queryNeo4j, getDb } = {}) {
   router.get('/graph', async (req, res) => {
     try {
       const [rows, database] = await Promise.all([
-        getHabitGraph(queryNeo4j),
+        getHabitGraph(queryNeo4j, req.query.lang),
         getDb(),
       ]);
 
@@ -154,7 +154,7 @@ export function createHabitsGraphRouter({ queryNeo4j, getDb } = {}) {
   router.get('/bubble-graph', async (req, res) => {
     try {
       const [rows, database] = await Promise.all([
-        getHabitBubbleGraph(queryNeo4j),
+        getHabitBubbleGraph(queryNeo4j, req.query.lang),
         getDb(),
       ]);
 

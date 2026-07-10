@@ -166,7 +166,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
             onPressed: _isLoading ? null : _onSkip,
             child: Text(
               l10n.onboardingSkip,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
           ),
         ],

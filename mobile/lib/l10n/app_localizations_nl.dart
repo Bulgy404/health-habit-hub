@@ -615,6 +615,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get myHabitsTab => 'Mijn gewoontes';
 
   @override
+  String get exploreSavedTab => 'Opgeslagen';
+
+  @override
   String get navTabShare => 'Delen';
 
   @override
@@ -638,6 +641,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get loggedToday => 'Geregistreerd ✓';
+
+  @override
+  String get habitUnlogged => 'Registratie verwijderd';
 
   @override
   String get pickBehaviorTitle => 'Welke gewoonte wil je vormen?';
@@ -1409,6 +1415,20 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
+  String get setCueLabelSingle => 'Jouw aanleiding';
+
+  @override
+  String setCueLabelNumbered(int number) {
+    return 'Aanleiding $number';
+  }
+
+  @override
+  String get setCueRemoveTooltip => 'Aanleiding verwijderen';
+
+  @override
+  String get setCueExtraPlaceholder => 'bijv. thuis op doordeweekse dagen';
+
+  @override
   String couldNotLogToday(String error) {
     return 'Kon vandaag niet registreren: $error';
   }
@@ -1456,6 +1476,11 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get sendEmail => 'E-mail versturen';
+
+  @override
+  String couldNotOpenEmailApp(String email) {
+    return 'Kon geen e-mailapp openen. Stuur direct een e-mail naar $email.';
+  }
 
   @override
   String get frequentlyAskedQuestions => 'Veelgestelde vragen';

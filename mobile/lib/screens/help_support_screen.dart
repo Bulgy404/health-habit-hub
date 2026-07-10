@@ -33,6 +33,27 @@ class HelpSupportScreen extends StatelessWidget {
     );
   }
 
+  // launchUrl's returned bool/thrown PlatformException were previously
+  // ignored entirely, so a device with no mail app configured (or, on
+  // Android 11+, a missing <queries> manifest entry for the mailto scheme)
+  // made this button silently do nothing.
+  Future<void> _sendEmail(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final uri = _mailtoUri(context);
+    var launched = false;
+    try {
+      launched = await launcher(uri);
+    } catch (_) {
+      launched = false;
+    }
+    if (!launched) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.couldNotOpenEmailApp(AppConfig.supportEmail))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -67,7 +88,7 @@ class HelpSupportScreen extends StatelessWidget {
                 icon: Icons.mail_outline,
                 title: l10n.sendEmail,
                 trailing: const Icon(Icons.chevron_right, size: 18),
-                onTap: () => launcher(_mailtoUri(context)),
+                onTap: () => _sendEmail(context),
               ),
             ],
           ),

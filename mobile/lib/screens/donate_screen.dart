@@ -596,8 +596,6 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
               child: ContributionGraphWidget(
                 counts: _shareCounts,
-                baseColorLight: const Color(0xFFFFD8A8),
-                baseColor: const Color(0xFFE8590C),
               ),
             ),
             // ── Today's tasks ─────────────────────────────────────────────────

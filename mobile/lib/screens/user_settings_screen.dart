@@ -364,13 +364,20 @@ class UserSettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _showAppearancePicker(
+  Future<void> _showAppearancePicker(
     BuildContext context,
     WidgetRef ref,
     ThemeMode current,
-  ) {
+  ) async {
     final l10n = AppLocalizations.of(context)!;
-    showModalBottomSheet<void>(
+    // Return the picked mode instead of applying it from inside the sheet's
+    // onTap: changing themeModeProvider synchronously rebuilds MaterialApp
+    // (and its Theme InheritedWidget) while the closing sheet's own Elements
+    // — which read Theme.of(sheetContext) — are still mid-teardown, which
+    // trips Flutter's InheritedElement `_dependents.isEmpty` assertion.
+    // Awaiting showModalBottomSheet's future instead only applies the change
+    // once the sheet's route (and its dependents) has fully unmounted.
+    final selected = await showModalBottomSheet<ThemeMode>(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -400,11 +407,7 @@ class UserSettingsScreen extends ConsumerWidget {
                 trailing: current == mode
                     ? const Icon(Icons.check, color: Color(0xFF45B700))
                     : null,
-                onTap: () async {
-                  Navigator.of(sheetContext).pop();
-                  await Future<void>.delayed(Duration.zero);
-                  await ref.read(themeModeProvider.notifier).setMode(mode);
-                },
+                onTap: () => Navigator.of(sheetContext).pop(mode),
               ),
             ],
             const SizedBox(height: 8),
@@ -412,6 +415,9 @@ class UserSettingsScreen extends ConsumerWidget {
         ),
       ),
     );
+    if (selected != null) {
+      await ref.read(themeModeProvider.notifier).setMode(selected);
+    }
   }
 
   /// GDPR Art. 20 — downloads every document linked to this account as a

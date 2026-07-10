@@ -38,6 +38,28 @@ class _RotatePassphraseScreenState
   _RotateState _state = _RotateState.idle;
   List<String> _words = const [];
   bool _confirmed = false;
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _toggleConfirmed() {
+    setState(() => _confirmed = !_confirmed);
+    if (!_confirmed) return;
+    // Scroll the Done button into view once confirmed, so the user doesn't
+    // have to manually scroll down to tap it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    });
+  }
 
   Future<void> _confirmAndRotate() async {
     final l10n = AppLocalizations.of(context)!;
@@ -189,6 +211,7 @@ class _RotatePassphraseScreenState
 
   Widget _buildSuccess(AppLocalizations l10n) {
     return SingleChildScrollView(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -212,7 +235,7 @@ class _RotatePassphraseScreenState
           ),
           const SizedBox(height: 14),
           InkWell(
-            onTap: () => setState(() => _confirmed = !_confirmed),
+            onTap: _toggleConfirmed,
             borderRadius: BorderRadius.circular(8),
             child: Row(
               children: [

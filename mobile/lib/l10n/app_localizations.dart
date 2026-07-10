@@ -1208,6 +1208,12 @@ abstract class AppLocalizations {
   /// **'My Habits'**
   String get myHabitsTab;
 
+  /// Label for the Explore tab showing the user's saved/liked donated habits (distinct from the top-level 'My Habits' page, which tracks the user's own habits)
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get exploreSavedTab;
+
   /// Bottom nav tab label for the share-a-habit screen
   ///
   /// In en, this message translates to:
@@ -1255,6 +1261,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Logged ✓'**
   String get loggedToday;
+
+  /// Snackbar shown after tapping an already-logged habit card's button again to undo today's log
+  ///
+  /// In en, this message translates to:
+  /// **'Log removed'**
+  String get habitUnlogged;
 
   /// Screen 1 of new habit flow
   ///
@@ -2600,6 +2612,30 @@ abstract class AppLocalizations {
   /// **'You can add up to {max} cues.'**
   String setCueMaxReachedNote(int max);
 
+  /// Text field label for a self-selected cue when there is only one cue field
+  ///
+  /// In en, this message translates to:
+  /// **'Your cue'**
+  String get setCueLabelSingle;
+
+  /// Text field label for a self-selected cue when there is more than one cue field
+  ///
+  /// In en, this message translates to:
+  /// **'Cue {number}'**
+  String setCueLabelNumbered(int number);
+
+  /// Tooltip on the button that removes a self-selected cue field
+  ///
+  /// In en, this message translates to:
+  /// **'Remove cue'**
+  String get setCueRemoveTooltip;
+
+  /// Hint text for self-selected cue fields after the first one
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. at home on weekdays'**
+  String get setCueExtraPlaceholder;
+
   /// Snackbar shown when logging today's habit completion fails
   ///
   /// In en, this message translates to:
@@ -2689,6 +2725,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send email'**
   String get sendEmail;
+
+  /// Shown when no email app could be launched from the Help & Support screen's Send email button
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open an email app. Please email {email} directly.'**
+  String couldNotOpenEmailApp(String email);
 
   /// Section label for the FAQ list on the Help & Support screen
   ///

@@ -144,6 +144,10 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
       _initNotifications();
       _syncHabitReminders();
       _watchConnectivity();
+      // _watchConnectivity only fires on a connectivity *change*, so a cold
+      // start that's already online would otherwise leave anything queued
+      // from a previous offline session stuck until the next transition.
+      _drainOfflineQueueIfOnline();
       _remindDueQuestionnaires();
     });
   }
@@ -208,6 +212,13 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
         _drainOfflineQueue();
       }
     });
+  }
+
+  Future<void> _drainOfflineQueueIfOnline() async {
+    final results = await Connectivity().checkConnectivity();
+    if (results.any((r) => r != ConnectivityResult.none)) {
+      await _drainOfflineQueue();
+    }
   }
 
   Future<void> _drainOfflineQueue() async {

@@ -42,5 +42,13 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Required so url_launcher can resolve a mail app for mailto: URIs
+             (Help & Support "Send email" button) — without this, launchUrl
+             silently fails to find any app on Android 11+ even when one is
+             installed. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="mailto"/>
+        </intent>
     </queries>
 </manifest>

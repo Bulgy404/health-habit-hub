@@ -68,7 +68,8 @@ describe("Sidebar", () => {
     expect(screen.getByText("Knowledge Base")).toBeInTheDocument();
     // Activity Types moved into the study settings (Cue Config tab).
     expect(screen.queryByText("Activity Types")).not.toBeInTheDocument();
-    expect(screen.getByText("App Settings")).toBeInTheDocument();
+    // Public App settings removed — managed via the default study instead.
+    expect(screen.queryByText("App Settings")).not.toBeInTheDocument();
   });
 
   it("shows Profile Fields for admin", () => {

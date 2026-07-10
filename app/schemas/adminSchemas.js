@@ -14,20 +14,25 @@ const slugString = z
 /**
  * Per-language text used by questionnaires and cue pools — a map of
  * language code -> string, e.g. `{ en: 'Hello', de: 'Hallo' }`. Every key
- * must be one of SUPPORTED_LANGS; at least one entry must be non-empty.
+ * must be one of SUPPORTED_LANGS.
  * @param {number} [maxLen] Max length per language entry.
+ * @param {{ requireNonEmpty?: boolean }} [opts] Set requireNonEmpty: false for
+ *   genuinely optional text (e.g. a description) where `{}` is a valid value —
+ *   not to be confused with wrapping the whole schema in `.optional()`, which
+ *   only permits omitting the field, not sending an empty object.
  */
-function localeText(maxLen = 500) {
+function localeText(maxLen = 500, { requireNonEmpty = true } = {}) {
   const shape = {};
   for (const lang of SUPPORTED_LANGS) {
     shape[lang] = z.string().max(maxLen).trim().optional();
   }
-  return z
-    .object(shape)
-    .strict()
-    .refine((v) => !isLocaleTextEmpty(v), {
+  let schema = z.object(shape).strict();
+  if (requireNonEmpty) {
+    schema = schema.refine((v) => !isLocaleTextEmpty(v), {
       message: 'at least one language must have non-empty text',
     });
+  }
+  return schema;
 }
 
 const languagesSchema = z
@@ -173,13 +178,6 @@ export const updateQuestionnaireAssignmentSchema = z
   })
   .strict();
 
-export const updateAppSettingsSchema = z
-  .object({
-    guidedHabitCreationEnabled: z.boolean().optional(),
-    communityShareDefault: z.boolean().optional(),
-  })
-  .strict();
-
 // ── Questionnaires ────────────────────────────────────────────────────────────
 
 const questionOptionSchema = z.object({
@@ -198,7 +196,7 @@ const questionSchema = z.object({
 export const createQuestionnaireSchema = z.object({
   slug: slugString.optional(),
   title: localeText(200),
-  description: localeText(2000).optional(),
+  description: localeText(2000, { requireNonEmpty: false }).optional(),
   version: z.string().max(20).optional(),
   languages: languagesSchema,
   questions: z.array(questionSchema).max(200).optional(),
@@ -206,7 +204,7 @@ export const createQuestionnaireSchema = z.object({
 
 export const updateQuestionnaireSchema = z.object({
   title: localeText(200).optional(),
-  description: localeText(2000).optional(),
+  description: localeText(2000, { requireNonEmpty: false }).optional(),
   version: z.string().max(20).optional(),
   languages: languagesSchema.optional(),
   questions: z.array(questionSchema).max(200).optional(),

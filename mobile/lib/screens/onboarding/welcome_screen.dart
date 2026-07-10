@@ -107,7 +107,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     final l10n = AppLocalizations.of(context)!;
     final steps = _steps(l10n);
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [

@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { ObjectId } from 'mongodb';
-import { upsertLog, getLogs } from '../../services/dailyLogService.js';
+import {
+  upsertLog,
+  getLogs,
+  deleteLog,
+} from '../../services/dailyLogService.js';
 
 function makeDb() {
   const logs = [];
@@ -40,6 +44,16 @@ function makeDb() {
                 return results;
               },
             };
+          },
+          async deleteOne(filter) {
+            const idx = logs.findIndex(
+              (d) =>
+                d.intentionId?.toString() === filter.intentionId?.toString() &&
+                d.date === filter.date
+            );
+            if (idx === -1) return { deletedCount: 0 };
+            logs.splice(idx, 1);
+            return { deletedCount: 1 };
           },
         };
       if (name === 'enrollments')
@@ -119,4 +133,33 @@ test('getLogs: includes intentionId as a string on each returned log', async () 
   assert.equal(logs.length, 1);
   assert.equal(logs[0].intentionId, intentionId.toString());
   assert.equal(typeof logs[0].intentionId, 'string');
+});
+
+test('deleteLog: removes the entry for that date, leaving others intact', async () => {
+  const db = makeDb();
+  const intentionId = new ObjectId();
+  await upsertLog({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    date: '2026-06-01',
+    enacted: true,
+  });
+  await upsertLog({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    date: '2026-06-02',
+    enacted: true,
+  });
+
+  await deleteLog({
+    db,
+    intentionId: intentionId.toString(),
+    date: '2026-06-01',
+  });
+
+  const logs = await getLogs({ db, intentionId: intentionId.toString() });
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0].date, '2026-06-02');
 });

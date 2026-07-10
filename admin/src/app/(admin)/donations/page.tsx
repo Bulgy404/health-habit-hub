@@ -60,9 +60,20 @@ export default function DonationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [group, setGroup] = useState("");
+  const [categoryInput, setCategoryInput] = useState("");
   const [category, setCategory] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+
+  // Debounce the category text box so typing doesn't trigger a fetch (and a
+  // full Neo4j re-scan) on every keystroke.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setPage(1);
+      setCategory(categoryInput);
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [categoryInput]);
 
   function buildQuery(): string {
     const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
@@ -159,11 +170,8 @@ export default function DonationsPage() {
           <span className={styles.filterLabel}>{t("categoryLabel")}</span>
           <input
             className={styles.input}
-            value={category}
-            onChange={(e) => {
-              setPage(1);
-              setCategory(e.target.value);
-            }}
+            value={categoryInput}
+            onChange={(e) => setCategoryInput(e.target.value)}
             placeholder={t("categoryPlaceholder")}
           />
         </div>

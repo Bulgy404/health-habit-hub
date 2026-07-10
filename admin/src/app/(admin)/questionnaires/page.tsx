@@ -114,8 +114,14 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
     },
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const err = new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      details?: { path: string; message: string }[];
+    };
+    const detailText = body.details?.length
+      ? `: ${body.details.map((d) => `${d.path} — ${d.message}`).join("; ")}`
+      : "";
+    const err = new Error((body.error ?? `HTTP ${res.status}`) + detailText);
     (err as Error & { status?: number }).status = res.status;
     throw err;
   }
@@ -359,21 +365,33 @@ function QuestionnaireModal({
   }
 
   async function handleSave() {
-    if (!Object.values(title).some(Boolean)) {
+    const prunedTitle = pruneLocaleText(title, languages);
+    // Validate against the *pruned* text, not the raw state: a language typed
+    // into earlier and then deselected still lingers in state but won't be
+    // sent, so checking the raw map would pass client-side and then fail the
+    // server's non-empty check with an opaque "Validation failed".
+    if (!Object.values(prunedTitle).some(Boolean)) {
       setError(t("titleRequiredError"));
+      return;
+    }
+    const prunedQuestions = questions.map((q) => ({
+      ...q,
+      text: pruneLocaleText(q.text, languages),
+      options: q.options.map((o) => ({ ...o, label: pruneLocaleText(o.label, languages) })),
+    }));
+    const emptyQuestionIndex = prunedQuestions.findIndex(
+      (q) => !Object.values(q.text).some(Boolean)
+    );
+    if (emptyQuestionIndex !== -1) {
+      setError(t("questionTextRequiredError", { index: emptyQuestionIndex + 1 }));
       return;
     }
     setSaving(true);
     setError("");
     try {
-      const prunedQuestions = questions.map((q) => ({
-        ...q,
-        text: pruneLocaleText(q.text, languages),
-        options: q.options.map((o) => ({ ...o, label: pruneLocaleText(o.label, languages) })),
-      }));
       const payload = {
         slug: slug || undefined,
-        title: pruneLocaleText(title, languages),
+        title: prunedTitle,
         description: pruneLocaleText(description, languages),
         version,
         languages,

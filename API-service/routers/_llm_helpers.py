@@ -12,6 +12,23 @@ logger = logging.getLogger(__name__)
 # Type alias for the LLM callable signature used by chat_complete.
 _LLMCallable = Callable[..., Awaitable[str]]
 
+# ISO 639-1 code -> display name used in translation prompt text.
+LANGUAGE_DISPLAY_NAMES = {
+    "en": "English",
+    "de": "German",
+    "ja": "Japanese",
+    "fr": "French",
+    "nl": "Dutch",
+}
+
+
+def display_language_name(code: str) -> str:
+    """Map an ISO 639-1 code to its English display name for prompt text.
+
+    Falls back to the raw code if it isn't one of the app's known locales.
+    """
+    return LANGUAGE_DISPLAY_NAMES.get(code.lower()[:2], code)
+
 
 def load_prompt_template(relative_path: str) -> str:
     """Load a prompt template from the prompts directory.

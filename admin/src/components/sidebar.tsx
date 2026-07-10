@@ -14,7 +14,6 @@ import {
   BookOpen,
   LogOut,
   Activity,
-  Smartphone,
   Users,
   Tablet,
   Gift,
@@ -46,10 +45,6 @@ interface NavSection {
 }
 
 const NAV_SECTIONS: NavSection[] = [
-  {
-    titleKey: "publicApp",
-    items: [{ href: "/default-app", labelKey: "appSettings", Icon: Smartphone, adminOnly: true }],
-  },
   {
     titleKey: "research",
     items: [

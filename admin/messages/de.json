@@ -35,7 +35,6 @@
   "sidebar": {
     "brand": "HHH Portal",
     "sections": {
-      "publicApp": "Öffentliche App",
       "research": "Forschung",
       "operations": "Betrieb",
       "configuration": "Konfiguration",
@@ -43,7 +42,6 @@
       "support": "Support"
     },
     "nav": {
-      "appSettings": "App-Einstellungen",
       "studies": "Studien",
       "analytics": "Analytik",
       "insights": "Erkenntnisse",
@@ -481,32 +479,6 @@
     "cached": "Zwischengespeichert",
     "freshlyComputed": "Neu berechnet"
   },
-  "defaultApp": {
-    "title": "Öffentliche App",
-    "subtitle": "Standarderlebnis für Nutzer, die die App ohne Studiencode öffnen.",
-    "features": {
-      "sectionTitle": "Funktionen",
-      "sectionDesc": "Welche Funktionen für öffentliche Nutzer aktiv sind.",
-      "loadFailed": "Einstellungen konnten nicht geladen werden",
-      "saveFailed": "Speichern fehlgeschlagen",
-      "guidedWizardLabel": "Geführter Assistent für Vorsatzbildung",
-      "guidedWizardHint": "Wenn aktiviert, werden öffentliche Nutzer durch einen schrittweisen Assistenten geführt (Gewohnheit → Auslöser → KI-Verknüpfung → Bestätigung → Erinnerung). Gewohnheit und Auslöser sind für öffentliche Nutzer immer Freitext; das Deaktivieren überspringt nur den KI-Verknüpfungsschritt.",
-      "communitySharingLabel": "Community-Teilen-Option standardmäßig angezeigt",
-      "communitySharingHint": "Wenn aktiviert, erscheint der Community-Teilen-Schalter am Ende der Gewohnheitserstellung und ist bereits vorausgewählt.",
-      "saved": "Gespeichert!",
-      "saveChanges": "Änderungen speichern"
-    },
-    "defaults": {
-      "sectionTitle": "Standardwerte",
-      "sectionDesc": "Öffentliche Nutzer legen ihre Gewohnheiten als Freitext an – die Konfiguration von Auslösern und Verhalten existiert nur pro Studiengruppe (Studien → Auslöser-Konfiguration).",
-      "loadFailed": "Einstellungen konnten nicht geladen werden",
-      "saveFailed": "Speichern fehlgeschlagen",
-      "reminderTimeLabel": "Standard-Erinnerungszeit",
-      "reminderTimeHint": "Tageszeit für die tägliche Check-in-Push-Benachrichtigung. Nutzer können dies in ihrem Profil überschreiben.",
-      "saved": "Gespeichert!",
-      "saveChanges": "Änderungen speichern"
-    }
-  },
   "profileFields": {
     "title": "Profilfelder",
     "subtitle": "Konfigurieren Sie, welche Felder beim Onboarding-Profil-Setup angezeigt werden.",
@@ -603,6 +575,7 @@
     "saveChanges": "Änderungen speichern",
     "create": "Erstellen",
     "titleRequiredError": "Titel ist erforderlich.",
+    "questionTextRequiredError": "Frage {index} benötigt einen Text in mindestens einer ausgewählten Sprache.",
     "saveFailed": "Speichern fehlgeschlagen",
     "versionValue": "Version {version}",
     "libraryBadge": "Bibliothek",

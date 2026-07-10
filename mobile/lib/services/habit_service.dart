@@ -28,11 +28,13 @@ class HabitService {
         .toList();
   }
 
-  /// Returns the authenticated user's donated habits + dimension breakdown.
-  Future<MyStats> fetchMyStats() async {
+  /// Returns the authenticated user's donated habits + dimension breakdown,
+  /// with habit labels resolved in [lang].
+  Future<MyStats> fetchMyStats(String lang) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '$_baseUrl/habits/my-stats',
+        queryParameters: {'lang': lang},
       );
       return MyStats.fromJson(response.data ?? {});
     } on DioException catch (e) {
@@ -50,10 +52,13 @@ class HabitService {
   }
 
   /// Returns the bubble-graph: dimensions → habits, for the drill-down view.
-  Future<BubbleGraph> fetchBubbleGraph() async {
+  /// [lang] resolves each habit's display label to the matching translation
+  /// (or the original sentence, if the habit was donated in that language).
+  Future<BubbleGraph> fetchBubbleGraph(String lang) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
         '$_baseUrl/habits/bubble-graph',
+        queryParameters: {'lang': lang},
       );
       return BubbleGraph.fromJson(response.data ?? {'dimensions': []});
     } on DioException catch (e) {
@@ -192,4 +197,13 @@ final habitServiceProvider = Provider<HabitService>((ref) {
 /// Cached per Riverpod lifecycle; re-evaluated when habitServiceProvider rebuilds.
 final habitStatsProvider = FutureProvider<HabitStats>((ref) {
   return ref.watch(habitServiceProvider).fetchStats();
+});
+
+/// The authenticated user's own annotations ('helpful'/'iDoThis'), grouped by
+/// type. Backs the Explore "Saved" tab; invalidated whenever that tab is
+/// revisited (see `ExploreScreen._handleTabChange`) so a habit annotated
+/// moments ago — including one the user donated themself — shows up
+/// immediately instead of waiting on a stale cached fetch.
+final myAnnotationsProvider = FutureProvider<Map<String, List<String>>>((ref) {
+  return ref.watch(habitServiceProvider).fetchMyAnnotations();
 });

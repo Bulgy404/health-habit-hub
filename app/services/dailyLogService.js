@@ -25,6 +25,20 @@ export async function upsertLog({ db, intentionId, userId, date, enacted }) {
 }
 
 /**
+ * Delete the daily behavior log entry for a given intention and date,
+ * reverting it to "not logged" — distinct from `upsertLog({ enacted: false })`,
+ * which records an explicit miss rather than clearing the entry.
+ * @param {{ db: object, intentionId: string, date: string }} deps
+ * @returns {Promise<void>}
+ */
+export async function deleteLog({ db, intentionId, date }) {
+  const oid = new ObjectId(intentionId);
+  await db
+    .collection(COLLECTION)
+    .deleteOne({ intentionId: oid, date: String(date) });
+}
+
+/**
  * Retrieve daily log entries for an intention, optionally filtered by date range.
  * @param {{ db: object, intentionId: string, from?: string, to?: string }} deps
  * @returns {Promise<Array<{ date: string, enacted: boolean, loggedAt: Date }>>}

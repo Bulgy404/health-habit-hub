@@ -610,6 +610,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myHabitsTab => 'My Habits';
 
   @override
+  String get exploreSavedTab => 'Saved';
+
+  @override
   String get navTabShare => 'Share';
 
   @override
@@ -633,6 +636,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get loggedToday => 'Logged ✓';
+
+  @override
+  String get habitUnlogged => 'Log removed';
 
   @override
   String get pickBehaviorTitle => 'What habit do you want to form?';
@@ -1397,6 +1403,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get setCueLabelSingle => 'Your cue';
+
+  @override
+  String setCueLabelNumbered(int number) {
+    return 'Cue $number';
+  }
+
+  @override
+  String get setCueRemoveTooltip => 'Remove cue';
+
+  @override
+  String get setCueExtraPlaceholder => 'e.g. at home on weekdays';
+
+  @override
   String couldNotLogToday(String error) {
     return 'Could not log today: $error';
   }
@@ -1444,6 +1464,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sendEmail => 'Send email';
+
+  @override
+  String couldNotOpenEmailApp(String email) {
+    return 'Could not open an email app. Please email $email directly.';
+  }
 
   @override
   String get frequentlyAskedQuestions => 'Frequently asked questions';

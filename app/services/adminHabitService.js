@@ -27,6 +27,65 @@ function toIso(v) {
   return String(v);
 }
 
+/** Levenshtein edit distance between two strings. */
+function levenshteinDistance(a, b) {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const curr = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = curr;
+  }
+  return prev[b.length];
+}
+
+function tokenize(str) {
+  return str
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+/**
+ * Score how well `category` matches a (lowercased, trimmed) search `needle`.
+ * Lower is better; `null` means no match. Exact/prefix/substring hits rank
+ * above fuzzy ones, so a typo like "hidration" still finds "Hydration" but
+ * an exact "hydration" search keeps ranking first.
+ */
+function fuzzyCategoryScore(category, needle) {
+  if (!needle) return 0;
+  const categoryLower = category.toLowerCase();
+  if (categoryLower === needle) return 0;
+  if (categoryLower.startsWith(needle)) return 1;
+  if (categoryLower.includes(needle)) return 2;
+
+  const categoryTokens = tokenize(categoryLower);
+  const needleTokens = tokenize(needle);
+  if (needleTokens.length === 0) return 0;
+
+  let distanceSum = 0;
+  for (const nt of needleTokens) {
+    let best = Infinity;
+    for (const ct of categoryTokens) {
+      if (ct.startsWith(nt) || ct.includes(nt)) {
+        best = 0;
+        break;
+      }
+      const threshold = nt.length <= 3 ? 1 : nt.length <= 6 ? 2 : 3;
+      const dist = levenshteinDistance(nt, ct);
+      if (dist <= threshold && dist < best) best = dist;
+    }
+    if (best === Infinity) return null;
+    distanceSum += best;
+  }
+  return 3 + distanceSum;
+}
+
 /**
  * Fetch all donated habits from Neo4j with donor, category (BCIO label), study
  * and enrolment group, then apply filters/pagination in JS. Group labels are
@@ -108,8 +167,12 @@ async function fetchDonatedHabits({ db, neo4jRun, group, category, from, to }) {
     mapped = mapped.filter((r) => r.donatedAt && r.donatedAt <= toEnd);
   }
   if (category) {
-    const needle = category.toLowerCase();
-    mapped = mapped.filter((r) => r.category.toLowerCase().includes(needle));
+    const needle = category.trim().toLowerCase();
+    mapped = mapped
+      .map((r) => ({ row: r, score: fuzzyCategoryScore(r.category, needle) }))
+      .filter(({ score }) => score !== null)
+      .sort((a, b) => a.score - b.score) // stable: ties keep donatedAt DESC order
+      .map(({ row }) => row);
   }
   if (group) {
     mapped = mapped.filter((r) => (r.group ?? '') === group);

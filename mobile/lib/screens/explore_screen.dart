@@ -8,6 +8,7 @@ import '../models/bubble_graph.dart';
 import '../models/habit_node.dart';
 import '../providers/annotation_state_provider.dart';
 import '../providers/bubble_graph_provider.dart';
+import '../providers/locale_provider.dart';
 import '../providers/show_in_graph_provider.dart';
 import '../services/habit_service.dart';
 import '../widgets/bubble_graph_widget.dart';
@@ -46,17 +47,35 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   late TabController _tabController;
   BubbleGraph? _graphOverride;
   String? _pulseHabitId;
+  int _lastTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(_handleTabChange);
   }
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
+  }
+
+  // Stats are fetched once and cached; re-pull them every time the user
+  // revisits the Stats tab so newly donated/annotated habits show up without
+  // requiring a manual pull-to-refresh.
+  void _handleTabChange() {
+    final index = _tabController.index;
+    if (index == _lastTabIndex) return;
+    _lastTabIndex = index;
+    if (index == 1) {
+      ref.invalidate(myStatsProvider);
+      ref.invalidate(habitStatsProvider);
+    } else if (index == 2) {
+      ref.invalidate(myAnnotationsProvider);
+    }
   }
 
   void _showHabitDetail(
@@ -233,7 +252,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           tabs: [
             Tab(icon: const Icon(Icons.bubble_chart), text: l10n.graphTab),
             Tab(icon: const Icon(Icons.bar_chart), text: l10n.statsTab),
-            Tab(icon: const Icon(Icons.bookmark_outline), text: l10n.myHabitsTab),
+            Tab(icon: const Icon(Icons.bookmark_outline), text: l10n.exploreSavedTab),
           ],
         ),
       ),
@@ -244,7 +263,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           const StatsScreen(),
           _MyHabitsTab(
             graph: graphAsync.value,
-            habitService: ref.read(habitServiceProvider),
             onHabitTap: (habitId, dimensionId) {
               _tabController.animateTo(0);
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -413,6 +431,12 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
     final helpfulActive =
         annotationState[_node.id]?.contains('helpful') ?? false;
     final busy = _loadingType != null;
+    final viewerLang = ref.watch(localeProvider).languageCode;
+    // The habit's own donation language matching the viewer's language means
+    // the displayed text already IS that original — nothing is missing, so
+    // don't show the "no translation yet" warning in that case.
+    final sameLangAsViewer =
+        _node.language.toLowerCase() == viewerLang.toLowerCase();
 
     // Prefer similarity-ranked related habits from the backend; otherwise fall
     // back to a local same-category heuristic. Either way, cap at 10.
@@ -470,7 +494,9 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
                 ),
               ],
             ),
-          ] else if (!_node.hasTranslation && _node.language.isNotEmpty) ...[
+          ] else if (!_node.hasTranslation &&
+              _node.language.isNotEmpty &&
+              !sameLangAsViewer) ...[
             const SizedBox(height: 8),
             Row(
               children: [
@@ -744,48 +770,18 @@ class _CountBadge extends StatelessWidget {
 // My Habits tab — overview of the user's saved and iDoThis annotations
 // ---------------------------------------------------------------------------
 
-class _MyHabitsTab extends StatefulWidget {
+class _MyHabitsTab extends ConsumerWidget {
   final BubbleGraph? graph;
-  final HabitService habitService;
   final void Function(String habitId, String dimensionId) onHabitTap;
 
   const _MyHabitsTab({
     required this.graph,
-    required this.habitService,
     required this.onHabitTap,
   });
 
-  @override
-  State<_MyHabitsTab> createState() => _MyHabitsTabState();
-}
-
-class _MyHabitsTabState extends State<_MyHabitsTab>
-    with AutomaticKeepAliveClientMixin {
-  Map<String, List<String>>? _annotations;
-  bool _loading = true;
-  String? _error;
-
-  @override
-  bool get wantKeepAlive => true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final data = await widget.habitService.fetchMyAnnotations();
-      if (mounted) setState(() { _annotations = data; _loading = false; });
-    } catch (_) {
-      if (mounted) setState(() { _error = 'Failed to load'; _loading = false; });
-    }
-  }
-
   String _habitName(String id) {
-    if (widget.graph == null) return id;
-    for (final dim in widget.graph!.dimensions) {
+    if (graph == null) return id;
+    for (final dim in graph!.dimensions) {
       for (final h in dim.habits) {
         if (h.id == id) return h.label;
       }
@@ -794,8 +790,8 @@ class _MyHabitsTabState extends State<_MyHabitsTab>
   }
 
   String? _dimensionId(String habitId) {
-    if (widget.graph == null) return null;
-    for (final dim in widget.graph!.dimensions) {
+    if (graph == null) return null;
+    for (final dim in graph!.dimensions) {
       for (final h in dim.habits) {
         if (h.id == habitId) return dim.id;
       }
@@ -806,86 +802,87 @@ class _MyHabitsTabState extends State<_MyHabitsTab>
   void _tapHabit(String habitId) {
     final dimId = _dimensionId(habitId);
     if (dimId == null) return;
-    widget.onHabitTap(habitId, dimId);
+    onHabitTap(habitId, dimId);
   }
 
   @override
-  Widget build(BuildContext context) {
-    super.build(context);
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context)!;
+    final annotationsAsync = ref.watch(myAnnotationsProvider);
 
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) {
-      return Center(
+    return annotationsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (_, _) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(_error!, style: tt.bodyMedium),
+            Text('Failed to load', style: tt.bodyMedium),
             const SizedBox(height: 12),
             TextButton.icon(
-              onPressed: () { setState(() { _loading = true; _error = null; }); _load(); },
+              onPressed: () => ref.invalidate(myAnnotationsProvider),
               icon: const Icon(Icons.refresh),
               label: Text(l10n.retry),
             ),
           ],
         ),
-      );
-    }
-
-    final iDoThisIds = _annotations?['iDoThis'] ?? [];
-    final savedIds = _annotations?['helpful'] ?? [];
-
-    if (iDoThisIds.isEmpty && savedIds.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.bookmark_outline, size: 48, color: cs.outline),
-            const SizedBox(height: 12),
-            Text(
-              l10n.myHabitsTab,
-              style: tt.titleMedium?.copyWith(color: cs.outline),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Tap "${l10n.iDoThisToo}" or "${l10n.helpful}" on any habit to see it here.',
-              style: tt.bodySmall?.copyWith(color: cs.outline),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _load,
-      child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
-          if (iDoThisIds.isNotEmpty)
-            _AnnotationSection(
-              icon: Icons.thumb_up,
-              label: l10n.iDoThisToo,
-              color: Colors.green.shade700,
-              habitIds: iDoThisIds,
-              habitName: _habitName,
-              onTap: _tapHabit,
-              canNavigate: widget.graph != null,
-            ),
-          if (savedIds.isNotEmpty)
-            _AnnotationSection(
-              icon: Icons.bookmark,
-              label: l10n.savedSection,
-              color: cs.primary,
-              habitIds: savedIds,
-              habitName: _habitName,
-              onTap: _tapHabit,
-              canNavigate: widget.graph != null,
-            ),
-        ],
       ),
+      data: (annotations) {
+        final iDoThisIds = annotations['iDoThis'] ?? [];
+        final savedIds = annotations['helpful'] ?? [];
+
+        if (iDoThisIds.isEmpty && savedIds.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.bookmark_outline, size: 48, color: cs.outline),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.exploreSavedTab,
+                  style: tt.titleMedium?.copyWith(color: cs.outline),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Tap "${l10n.iDoThisToo}" or "${l10n.helpful}" on any habit to see it here.',
+                  style: tt.bodySmall?.copyWith(color: cs.outline),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async => ref.invalidate(myAnnotationsProvider),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              if (iDoThisIds.isNotEmpty)
+                _AnnotationSection(
+                  icon: Icons.thumb_up,
+                  label: l10n.iDoThisToo,
+                  color: Colors.green.shade700,
+                  habitIds: iDoThisIds,
+                  habitName: _habitName,
+                  onTap: _tapHabit,
+                  canNavigate: graph != null,
+                ),
+              if (savedIds.isNotEmpty)
+                _AnnotationSection(
+                  icon: Icons.bookmark,
+                  label: l10n.savedSection,
+                  color: cs.primary,
+                  habitIds: savedIds,
+                  habitName: _habitName,
+                  onTap: _tapHabit,
+                  canNavigate: graph != null,
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
