@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
+import 'habit_onboarding_prefs.dart';
 import 'habit_onboarding_widgets.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
@@ -38,9 +39,24 @@ class PickBehaviorScreen extends ConsumerStatefulWidget {
 }
 
 class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
-  // Session-only dismiss: the explainer shows whenever onboarding is enabled,
-  // until the user taps the card's close button on this screen.
-  bool _introDismissed = false;
+  // Persisted per-device (see HabitOnboardingPrefs): once dismissed, the
+  // explainer stays dismissed across app restarts, not just this session.
+  // Null while the stored value is still loading — showIntro treats that as
+  // "don't show yet" so the card doesn't flash in then disappear.
+  bool? _hasSeenIntro;
+
+  @override
+  void initState() {
+    super.initState();
+    HabitOnboardingPrefs.hasSeenHabitIntro().then((seen) {
+      if (mounted) setState(() => _hasSeenIntro = seen);
+    });
+  }
+
+  void _dismissIntro() {
+    setState(() => _hasSeenIntro = true);
+    HabitOnboardingPrefs.markHabitIntroSeen();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +70,7 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(e.toString())),
         data: (config) {
-          final showIntro = config.onboardingEnabled && !_introDismissed;
+          final showIntro = config.onboardingEnabled && _hasSeenIntro == false;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -65,7 +81,7 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
                     icon: Icons.self_improvement,
                     title: HabitOnboardingCopy.habitTitleFor(lang),
                     body: HabitOnboardingCopy.habitBodyFor(lang),
-                    onDismiss: () => setState(() => _introDismissed = true),
+                    onDismiss: _dismissIntro,
                   ),
                 ),
               Padding(

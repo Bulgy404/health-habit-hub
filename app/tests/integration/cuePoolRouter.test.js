@@ -33,7 +33,11 @@ function makeDb() {
             skip(n) {
               return {
                 limit(m) {
-                  return { async toArray() { return results.slice(n, n + m); } };
+                  return {
+                    async toArray() {
+                      return results.slice(n, n + m);
+                    },
+                  };
                 },
               };
             },

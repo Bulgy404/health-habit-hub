@@ -102,7 +102,9 @@ test('listUsersByRole fetches the role-users endpoint', async () => {
   const users = await client.listUsersByRole('admin');
 
   assert.deepStrictEqual(users, [{ id: 'u1', username: 'alice' }]);
-  assert.ok(calls.some((u) => u.endsWith('/admin/realms/hhh/roles/admin/users')));
+  assert.ok(
+    calls.some((u) => u.endsWith('/admin/realms/hhh/roles/admin/users'))
+  );
 });
 
 test('searchUsers fetches the users search endpoint with the query', async () => {
@@ -118,7 +120,9 @@ test('searchUsers fetches the users search endpoint with the query', async () =>
   await client.searchUsers('ali ce');
 
   assert.ok(
-    calls.some((u) => u.includes('search=ali%20ce') || u.includes('search=ali+ce'))
+    calls.some(
+      (u) => u.includes('search=ali%20ce') || u.includes('search=ali+ce')
+    )
   );
 });
 
@@ -130,7 +134,10 @@ test('removeRole DELETEs the role mapping', async () => {
       return tokenResponse();
     }
     if (String(url).includes('/roles/researcher')) {
-      return { ok: true, json: async () => ({ id: 'role-1', name: 'researcher' }) };
+      return {
+        ok: true,
+        json: async () => ({ id: 'role-1', name: 'researcher' }),
+      };
     }
     return { ok: true, json: async () => ({}) };
   });
@@ -148,7 +155,10 @@ test('removeRole throws when the mapping delete fails', async () => {
       return tokenResponse();
     }
     if (opts?.method === 'DELETE') return { ok: false, status: 500 };
-    return { ok: true, json: async () => ({ id: 'role-1', name: 'researcher' }) };
+    return {
+      ok: true,
+      json: async () => ({ id: 'role-1', name: 'researcher' }),
+    };
   });
 
   await assert.rejects(

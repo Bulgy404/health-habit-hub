@@ -6,11 +6,9 @@
  * @param {string} lang - The language code to set the application to (e.g., 'en', 'de', 'ja', 'fr', 'nl').
  */
 function changeLanguage(lang) {
-  console.log('Changing Language to:', lang);
   const targetUrl = window.location.pathname.replace(
     /\/\w{2}\//,
     '/' + lang + '/'
   );
-  console.log('new URL:', targetUrl);
   window.location.href = targetUrl;
 }

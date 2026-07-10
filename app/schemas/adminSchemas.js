@@ -30,7 +30,10 @@ function localeText(maxLen = 500) {
     });
 }
 
-const languagesSchema = z.array(z.enum(SUPPORTED_LANGS)).min(1).max(SUPPORTED_LANGS.length);
+const languagesSchema = z
+  .array(z.enum(SUPPORTED_LANGS))
+  .min(1)
+  .max(SUPPORTED_LANGS.length);
 
 // ── Studies ───────────────────────────────────────────────────────────────────
 

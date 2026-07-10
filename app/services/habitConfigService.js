@@ -48,7 +48,12 @@ async function readAppSettings(db) {
  * @param {{ db: object, userId: string, neo4jRun: Function, lang?: string }} deps
  * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array, maxHabits: number|null, assignedCues: Array, recommenderEnabled: boolean, guidedHabitCreationEnabled: boolean, communityShareDefault: boolean }>}
  */
-export async function resolveHabitConfig({ db, userId, neo4jRun, lang = 'en' }) {
+export async function resolveHabitConfig({
+  db,
+  userId,
+  neo4jRun,
+  lang = 'en',
+}) {
   // Get enrollment from Neo4j
   const enrollment = neo4jRun ? await getEnrollment(neo4jRun, userId) : null;
 

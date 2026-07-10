@@ -29,7 +29,7 @@ export async function renderSurvey(req, res) {
       locale: req.lang,
     });
   } catch (err) {
-    console.error(err);
+    log.error({ err }, 'renderSurvey failed');
     res.status(500).json({ error: 'Server error' });
   }
 }
@@ -44,11 +44,9 @@ export async function submitSurvey(req, res) {
       userId: req.userId,
     };
     await db.collection('results').insertOne(submission);
-    console.log(
-      '[survey] Recorded submission for surveyId:',
-      submission.surveyId,
-      'userId:',
-      submission.userId
+    log.info(
+      { surveyId: submission.surveyId, userId: submission.userId },
+      'Recorded survey submission'
     );
     res.cookie('demographicsCompleted', 'true', {
       maxAge: 365 * 24 * 60 * 60 * 1000,

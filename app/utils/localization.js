@@ -23,8 +23,6 @@ export function loadLanguageFiles() {
       rawJson = fs.readFileSync(path.join(__dirname, '..', 'language', file));
       parsedJson = JSON.parse(rawJson);
       languageDataMap.set(parsedJson.navigation.languageCode, parsedJson);
-
-      //console.log('Languagefile loaded:', file, 'with Code:', parsedjson.navigation.languageCode)
     }
   });
 
@@ -48,13 +46,10 @@ function addAllLanguages() {
   languageDataMap.values().forEach((data) => {
     data.navigation.allLanguages = allLanguages;
   });
-
-  //console.log(allLanguages);
 }
 
 function configureData() {
   languageDataMap.values().forEach((data) => {
-    //console.log(data.navigation.languageCode, ':', hide_about.includes(data.navigation.languageCode))
     if (hide_about.includes(data.navigation.languageCode)) {
       data.navigation.show_about = 1;
     } else {
@@ -81,6 +76,5 @@ export function getLanguageMessages(lang) {
 }
 
 export function getLanguageCodes() {
-  //console.log(languageDataMap.keys());
   return Array.from(languageDataMap.keys());
 }

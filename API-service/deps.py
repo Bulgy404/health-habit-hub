@@ -20,11 +20,12 @@ _mongo: Optional[motor.motor_asyncio.AsyncIOMotorClient] = None  # type: ignore[
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """FastAPI lifespan context: initialise Redis, MongoDB, and warm up the BCIO index on startup."""
-    global _redis, _mongo
+    global _redis
 
     redis_url = os.environ.get("REDIS_URL", "redis://redis:6379")
     _redis = aioredis.from_url(redis_url, decode_responses=True)
 
+    # _build_mongo_client() has its own `global _mongo` and does the assignment.
     _build_mongo_client()
 
     from routers.map_bcio import _get_index

@@ -49,7 +49,10 @@ function makeToken(sub = 'user-1', roles = ['user']) {
 
 const SLIQ = {
   slug: 'sliq',
-  title: { en: 'Short Lifestyle Indicator Questionnaire (SLIQ)', de: 'Kurzer Lebensstil-Indikator (SLIQ)' },
+  title: {
+    en: 'Short Lifestyle Indicator Questionnaire (SLIQ)',
+    de: 'Kurzer Lebensstil-Indikator (SLIQ)',
+  },
   description: { en: 'A validated 4-item instrument.' },
   version: '1.0.0',
   languages: ['en', 'de'],
@@ -57,7 +60,10 @@ const SLIQ = {
   questions: [
     {
       id: 'sliq_diet',
-      text: { en: 'How would you rate your overall diet?', de: 'Wie bewerten Sie Ihre Ernährung?' },
+      text: {
+        en: 'How would you rate your overall diet?',
+        de: 'Wie bewerten Sie Ihre Ernährung?',
+      },
       type: 'single_choice',
       options: [
         { value: '0', label: { en: 'Very unhealthy', de: 'Sehr ungesund' } },
