@@ -939,6 +939,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /admin/audit-log:
+    get:
+      summary: List general admin action audit entries
+      description: >
+        Paginated, newest first. Covers every mutating admin request except /backups/* (which has its own dedicated
+        audit log, see /backups/audit-log).
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - in: query
+          name: resourceType
+          schema:
+            type: string
+        - in: query
+          name: byUserId
+          schema:
+            type: string
+        - in: query
+          name: action
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated audit entries
+        '403':
+          description: Caller does not have admin role
   /admin/notifications/send:
     post:
       summary: Send push notification immediately to study participants
@@ -2261,6 +2295,11 @@ paths:
                               excerpt:
                                 type: string
                                 description: Preformatted citation, e.g. "Wood & Rünger (2016) — Psychology of Habit"
+                              quote:
+                                type: string
+                                description: >-
+                                  Verbatim sentence(s) from the paper backing this recommendation, when the LLM supplied
+                                  one; empty otherwise
                               url:
                                 type: string
                                 description: DOI/publisher link when curated in references.json; empty otherwise
