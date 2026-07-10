@@ -629,6 +629,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get myHabitsTab => 'Mes habitudes';
 
   @override
+  String get exploreSavedTab => 'Enregistrées';
+
+  @override
   String get navTabShare => 'Partager';
 
   @override
@@ -652,6 +655,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get loggedToday => 'Enregistré ✓';
+
+  @override
+  String get habitUnlogged => 'Enregistrement supprimé';
 
   @override
   String get pickBehaviorTitle => 'Quelle habitude souhaitez-vous former ?';
@@ -1434,6 +1440,20 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get setCueLabelSingle => 'Votre signal';
+
+  @override
+  String setCueLabelNumbered(int number) {
+    return 'Signal $number';
+  }
+
+  @override
+  String get setCueRemoveTooltip => 'Supprimer le signal';
+
+  @override
+  String get setCueExtraPlaceholder => 'ex. à la maison en semaine';
+
+  @override
   String couldNotLogToday(String error) {
     return 'Impossible d\'enregistrer aujourd\'hui : $error';
   }
@@ -1481,6 +1501,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get sendEmail => 'Envoyer un e-mail';
+
+  @override
+  String couldNotOpenEmailApp(String email) {
+    return 'Impossible d\'ouvrir une application e-mail. Veuillez écrire directement à $email.';
+  }
 
   @override
   String get frequentlyAskedQuestions => 'Questions fréquentes';

@@ -27,14 +27,14 @@ void _useTallSurface(WidgetTester tester) {
 }
 
 void main() {
-  testWidgets('renders the About HabConnect title and all section headings', (
-    tester,
-  ) async {
+  testWidgets(
+      'renders the About Health Habit Hub title and all section headings',
+      (tester) async {
     _useTallSurface(tester);
     await tester.pumpWidget(_wrap());
     await tester.pumpAndSettle();
 
-    expect(find.text('About HabConnect'), findsOneWidget);
+    expect(find.text('About Health Habit Hub'), findsOneWidget);
     expect(find.text('How your shared habit is used'), findsOneWidget);
     expect(find.text("What's a cue?"), findsOneWidget);
     expect(find.text('Why this matters'), findsOneWidget);
@@ -62,7 +62,7 @@ void main() {
     await tester.pumpWidget(_wrap(locale: const Locale('de')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Über HabConnect'), findsOneWidget);
+    expect(find.text('Über Health Habit Hub'), findsOneWidget);
     expect(find.text('Was ist ein Auslöser?'), findsOneWidget);
   });
 }

@@ -38,9 +38,10 @@ void main() {
             },
           ],
         }),
+        queryParameters: {'lang': 'en'},
       );
 
-      final graph = await service.fetchBubbleGraph();
+      final graph = await service.fetchBubbleGraph('en');
 
       expect(graph.dimensions.length, 1);
       expect(graph.dimensions.first.id, 'TIME');

@@ -9,6 +9,7 @@ import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/providers/show_in_graph_provider.dart';
 import 'package:hhh/screens/stats_screen.dart';
 import 'package:hhh/services/auth_service.dart';
+import 'package:hhh/services/habit_service.dart';
 
 // ---------------------------------------------------------------------------
 // Fakes
@@ -27,11 +28,17 @@ class _FakeAuthService extends AuthService {
 // state (loading, error, data) without going through async plumbing.
 // ---------------------------------------------------------------------------
 
-Widget _buildSubject(AsyncValue<MyStats> statsState) {
+Widget _buildSubject(
+  AsyncValue<MyStats> statsState, {
+  AsyncValue<HabitStats> communityStatsState = const AsyncData(
+    HabitStats(total: 0, byCategory: [], byDay: []),
+  ),
+}) {
   return ProviderScope(
     overrides: [
       authServiceProvider.overrideWithValue(_FakeAuthService()),
       myStatsProvider.overrideWithValue(statsState),
+      habitStatsProvider.overrideWithValue(communityStatsState),
     ],
     child: MaterialApp(
       localizationsDelegates: const [

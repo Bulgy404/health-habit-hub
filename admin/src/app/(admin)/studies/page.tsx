@@ -50,11 +50,14 @@ interface StudySummary {
   createdAt: string | null;
 }
 
+/** Per-language text, e.g. `{ en: 'Hello', de: 'Hallo' }`, as returned by the questionnaires API. */
+type LocaleText = Partial<Record<"en" | "de" | "fr" | "ja" | "nl", string>>;
+
 interface QuestionnaireSummary {
   id: string;
   slug: string;
-  title: string;
-  description: string;
+  title: LocaleText;
+  description: LocaleText;
   isLibrary: boolean;
   active: boolean;
 }
@@ -91,6 +94,12 @@ interface SentNotification {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Resolves a locale-text map to a single display string, preferring English. */
+function previewText(map: LocaleText | undefined): string {
+  if (!map) return "";
+  return map.en || Object.values(map).find(Boolean) || "";
+}
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -215,7 +224,7 @@ function QuestionnairesTab({
                       checked={selected.has(q.id)}
                       onChange={() => toggleId(q.id)}
                     />
-                    <span className={styles.qTitle}>{q.title}</span>
+                    <span className={styles.qTitle}>{previewText(q.title)}</span>
                     {!q.active && (
                       <span className={styles.qInactive}>
                         {t("questionnairesTab.inactiveBadge")}
@@ -238,7 +247,7 @@ function QuestionnairesTab({
                       checked={selected.has(q.id)}
                       onChange={() => toggleId(q.id)}
                     />
-                    <span className={styles.qTitle}>{q.title}</span>
+                    <span className={styles.qTitle}>{previewText(q.title)}</span>
                     {!q.active && (
                       <span className={styles.qInactive}>
                         {t("questionnairesTab.inactiveBadge")}
@@ -495,7 +504,7 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
               <option value="">{t("scheduleTab.selectPlaceholder")}</option>
               {allQ.map((q) => (
                 <option key={q.id} value={q.id}>
-                  {q.title}
+                  {previewText(q.title)}
                 </option>
               ))}
             </select>

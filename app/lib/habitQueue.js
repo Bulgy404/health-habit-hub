@@ -1,5 +1,5 @@
 import { Queue, Worker, Job } from 'bullmq';
-import { processAcceptedHabit } from '../services/habitDonationService.js';
+import { shareHabit } from '../services/habitDonationService.js';
 import { translateHabit } from '../utils/translate.js';
 import { logger } from '../utils/logger.js';
 
@@ -76,7 +76,10 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
         wellbeingImpact,
       } = job.data;
 
-      const result = await processAcceptedHabit({
+      // Classification now happens here rather than synchronously in the
+      // route handler, so /habits/share can respond as soon as the job is
+      // enqueued instead of waiting on the classifier LLM call.
+      const result = await shareHabit({
         uuid,
         sentence,
         language,
@@ -94,7 +97,7 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
       });
 
       // Return value is stored in job.returnvalue in Redis.
-      return { uuid: result.uuid };
+      return { uuid: result.uuid ?? uuid, is_habit: result.is_habit };
     },
     { connection: redisConnection(), concurrency: 3 }
   );

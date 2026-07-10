@@ -131,7 +131,7 @@ export function createHabitsStatsRouter({ getDb, queryNeo4j } = {}) {
       }
 
       const [rows, database] = await Promise.all([
-        getUserHabits(queryNeo4j, userId),
+        getUserHabits(queryNeo4j, userId, req.query.lang),
         getDb(),
       ]);
 

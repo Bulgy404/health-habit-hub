@@ -156,15 +156,21 @@ before(async () => {
       if (urlStr.includes('/api/v1/llm/map-bcio')) {
         return { ok: true, json: async () => ({ mappings: [] }) };
       }
-      if (urlStr.includes('/api/v1/llm/refine-translation-de')) {
+      if (urlStr.includes('/api/v1/llm/refine-translation-lang')) {
+        const body = JSON.parse(options?.body || '{}');
+        if (body.target_language === 'de') {
+          return {
+            ok: true,
+            json: async () => ({
+              refined_translation: REFINED_DE_TRANSLATION,
+            }),
+          };
+        }
+        // Other targets (ja/fr/nl) — not asserted on in these tests.
         return {
           ok: true,
-          json: async () => ({ refined_translation: REFINED_DE_TRANSLATION }),
+          json: async () => ({ refined_translation: body.raw_translation }),
         };
-      }
-      // refine-translation (EN endpoint) — not called for English habits
-      if (urlStr.includes('/api/v1/llm/refine-translation')) {
-        return { ok: true, json: async () => ({ refined_translation: '' }) };
       }
       return {
         ok: false,
@@ -332,16 +338,13 @@ test('English habit donation uses raw LibreTranslate output when LLM refine-de s
       if (urlStr.includes('/api/v1/llm/map-bcio')) {
         return { ok: true, json: async () => ({ mappings: [] }) };
       }
-      if (urlStr.includes('/api/v1/llm/refine-translation-de')) {
-        // Simulate LLM failure
+      if (urlStr.includes('/api/v1/llm/refine-translation-lang')) {
+        // Simulate LLM failure for every target language.
         return {
           ok: false,
           status: 503,
           json: async () => ({ error: 'Service unavailable' }),
         };
-      }
-      if (urlStr.includes('/api/v1/llm/refine-translation')) {
-        return { ok: true, json: async () => ({ refined_translation: '' }) };
       }
     }
 

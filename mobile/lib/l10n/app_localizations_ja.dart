@@ -588,6 +588,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get myHabitsTab => 'マイ習慣';
 
   @override
+  String get exploreSavedTab => '保存済み';
+
+  @override
   String get navTabShare => '共有';
 
   @override
@@ -610,6 +613,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get loggedToday => '記録済み ✓';
+
+  @override
+  String get habitUnlogged => '記録を削除しました';
 
   @override
   String get pickBehaviorTitle => 'どんな習慣を身につけたいですか？';
@@ -1337,6 +1343,20 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get setCueLabelSingle => 'あなたのきっかけ';
+
+  @override
+  String setCueLabelNumbered(int number) {
+    return 'きっかけ $number';
+  }
+
+  @override
+  String get setCueRemoveTooltip => 'きっかけを削除';
+
+  @override
+  String get setCueExtraPlaceholder => '例：平日の自宅で';
+
+  @override
   String couldNotLogToday(String error) {
     return '本日の記録を保存できませんでした：$error';
   }
@@ -1383,6 +1403,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get sendEmail => 'メールを送る';
+
+  @override
+  String couldNotOpenEmailApp(String email) {
+    return 'メールアプリを開けませんでした。$email まで直接メールを送ってください。';
+  }
 
   @override
   String get frequentlyAskedQuestions => 'よくある質問';

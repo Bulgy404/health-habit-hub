@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/habit_stats.dart';
 import '../services/habit_service.dart';
+import 'locale_provider.dart';
 
 /// Identifies a specific habit within a dimension for graph navigation.
 class HabitGraphSelection {
@@ -43,7 +44,9 @@ final showInGraphProvider =
 
 /// The authenticated user's donated habits and dimension stats.
 ///
-/// Fetches from [HabitService.fetchMyStats].
+/// Fetches from [HabitService.fetchMyStats], re-resolving habit labels
+/// whenever the app's language changes.
 final myStatsProvider = FutureProvider<MyStats>((ref) {
-  return ref.watch(habitServiceProvider).fetchMyStats();
+  final lang = ref.watch(localeProvider).languageCode;
+  return ref.watch(habitServiceProvider).fetchMyStats(lang);
 });

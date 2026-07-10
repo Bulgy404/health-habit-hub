@@ -40,20 +40,21 @@ class _Section {
 
 const _intro = _Copy(
   en:
-      "HabConnect studies how everyday habits form, and how personalized "
-      "recommendations can help people build healthier routines. Everything "
-      "you share and every habit you track contributes to that research, "
-      "anonymously.",
+      "The Health Habit Hub study investigates how everyday habits form, "
+      "and how personalized recommendations can help people build "
+      "healthier routines. Everything you share and every habit you track "
+      "contributes to that research, anonymously.",
   de:
-      "HabConnect untersucht, wie sich Alltagsgewohnheiten bilden und wie "
-      "personalisierte Empfehlungen Menschen dabei helfen können, gesündere "
-      "Routinen aufzubauen. Alles, was du teilst, und jede Gewohnheit, die du "
-      "verfolgst, trägt anonym zu dieser Forschung bei.",
+      "Die Health Habit Hub-Studie untersucht, wie sich Alltagsgewohnheiten "
+      "bilden und wie personalisierte Empfehlungen Menschen dabei helfen "
+      "können, gesündere Routinen aufzubauen. Alles, was du teilst, und "
+      "jede Gewohnheit, die du verfolgst, trägt anonym zu dieser Forschung "
+      "bei.",
   ja:
-      "HabConnectは、日常の習慣がどのように形成されるか、そしてパーソナライズ"
-      "された推奨がより健康的なルーティンの構築にどう役立つかを研究していま"
-      "す。あなたが共有するすべての情報と記録するすべての習慣が、匿名でこの"
-      "研究に貢献します。",
+      "Health Habit Hub研究は、日常の習慣がどのように形成されるか、そして"
+      "パーソナライズされた推奨がより健康的なルーティンの構築にどう役立つ"
+      "かを研究しています。あなたが共有するすべての情報と記録するすべての"
+      "習慣が、匿名でこの研究に貢献します。",
 );
 
 const _sections = [
@@ -131,26 +132,27 @@ const _sections = [
     ),
     body: _Copy(
       en:
-          "Most health advice is generic. HabConnect's goal is the "
-          "opposite: recommendations built from real examples of how real "
-          "people actually build habits, tested and refined with the "
-          "community that uses this app. The more habits shared, the "
-          "better those recommendations get for everyone, including future "
-          "participants.",
+          "Most health advice is generic. The Health Habit Hub study's "
+          "goal is the opposite: recommendations built from real examples "
+          "of how real people actually build habits, tested and refined "
+          "with the community that uses this app. The more habits shared, "
+          "the better those recommendations get for everyone, including "
+          "future participants.",
       de:
           "Die meisten Gesundheitstipps sind allgemein gehalten. Das Ziel "
-          "von HabConnect ist das Gegenteil: Empfehlungen, die auf echten "
-          "Beispielen basieren, wie Menschen tatsächlich Gewohnheiten "
-          "aufbauen, getestet und verfeinert mit der Community, die diese "
-          "App nutzt. Je mehr Gewohnheiten geteilt werden, desto besser "
-          "werden diese Empfehlungen für alle, auch für zukünftige "
-          "Teilnehmende.",
+          "der Health Habit Hub-Studie ist das Gegenteil: Empfehlungen, "
+          "die auf echten Beispielen basieren, wie Menschen tatsächlich "
+          "Gewohnheiten aufbauen, getestet und verfeinert mit der "
+          "Community, die diese App nutzt. Je mehr Gewohnheiten geteilt "
+          "werden, desto besser werden diese Empfehlungen für alle, auch "
+          "für zukünftige Teilnehmende.",
       ja:
-          "多くの健康アドバイスは一般的なものです。HabConnectの目的はその逆"
-          "です。実際に人々がどのように習慣を築いているかという実例に基づ"
-          "き、このアプリを使うコミュニティとともにテストと改善を重ねた推奨"
-          "を提供することです。共有される習慣が増えるほど、これらの推奨は将"
-          "来の参加者を含むすべての人にとってより良いものになります。",
+          "多くの健康アドバイスは一般的なものです。Health Habit Hub研究の"
+          "目的はその逆です。実際に人々がどのように習慣を築いているかとい"
+          "う実例に基づき、このアプリを使うコミュニティとともにテストと改"
+          "善を重ねた推奨を提供することです。共有される習慣が増えるほど、"
+          "これらの推奨は将来の参加者を含むすべての人にとってより良いもの"
+          "になります。",
     ),
   ),
   _Section(
@@ -251,15 +253,15 @@ const _flowSteps = [
 ];
 
 const _pageTitle = _Copy(
-  en: 'About HabConnect',
-  de: 'Über HabConnect',
-  ja: 'HabConnectについて',
+  en: 'About Health Habit Hub',
+  de: 'Über Health Habit Hub',
+  ja: 'Health Habit Hubについて',
 );
 
 const _openSourceNote = _Copy(
-  en: 'HabConnect is open source.',
-  de: 'HabConnect ist Open Source.',
-  ja: 'HabConnectはオープンソースです。',
+  en: 'Health Habit Hub is open source.',
+  de: 'Health Habit Hub ist Open Source.',
+  ja: 'Health Habit Hubはオープンソースです。',
 );
 
 const _viewOnGithub = _Copy(

@@ -253,11 +253,11 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
                   controller: _cueControllers[i],
                   decoration: InputDecoration(
                     labelText: _cueControllers.length == 1
-                        ? 'Your cue'
-                        : 'Cue ${i + 1}',
+                        ? l10n.setCueLabelSingle
+                        : l10n.setCueLabelNumbered(i + 1),
                     hintText: i == 0
                         ? l10n.setCuePlaceholder
-                        : 'e.g. at home on weekdays',
+                        : l10n.setCueExtraPlaceholder,
                     border: const OutlineInputBorder(),
                   ),
                   maxLength: 200,
@@ -269,7 +269,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
               if (_cueControllers.length > 1)
                 IconButton(
                   icon: const Icon(Icons.remove_circle_outline),
-                  tooltip: 'Remove cue',
+                  tooltip: l10n.setCueRemoveTooltip,
                   onPressed: () => _removeCue(i),
                 ),
             ],

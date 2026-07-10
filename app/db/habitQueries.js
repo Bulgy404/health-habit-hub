@@ -6,6 +6,34 @@
  * driver. This keeps Cypher strings out of route handlers and service layers.
  */
 
+// Habit nodes carry a translation slot per app locale (translationEN,
+// translationDE, translationJA, translationFR, translationNL).
+const TRANSLATABLE_LANGS = ['en', 'de', 'ja', 'fr', 'nl'];
+
+/** Normalises a requested display language to one with a translation slot, defaulting to 'en'. */
+function normalizeDisplayLang(lang) {
+  const code = String(lang || '')
+    .slice(0, 2)
+    .toLowerCase();
+  return TRANSLATABLE_LANGS.includes(code) ? code : 'en';
+}
+
+/**
+ * Cypher expression picking a Habit node's display label in the requested
+ * language: the original sentence when the habit was already donated in
+ * that language (translating it back would be redundant and lossy), else
+ * the matching translation slot, falling back to the English translation
+ * and finally the original sentence if neither exists yet.
+ * @param {string} habitVar - Cypher variable bound to the Habit node (e.g. 'h')
+ */
+function localizedLabelExpr(habitVar) {
+  return `
+    CASE WHEN toLower(left(coalesce(${habitVar}.language, ''), 2)) = $lang
+      THEN ${habitVar}.sentence
+      ELSE coalesce(properties(${habitVar})[$transKey], ${habitVar}.translationEN, ${habitVar}.sentence)
+    END`;
+}
+
 // Neo4j returns Integer objects for integer properties; normalise them to JS numbers.
 function neoInt(val) {
   if (val == null) return 0;
@@ -165,19 +193,27 @@ export async function getHabitsByCategory(queryNeo4j) {
  * A habit may appear in multiple dimensions (one row per dimension it has context in).
  * Includes seeded habits so the view is populated from day one.
  * @param {Function} queryNeo4j
+ * @param {string} [lang='en'] - Viewer's app language; picks which translation slot habitLabel resolves to.
  * @returns {Promise<Array>} Array of { habitId, habitLabel, originalText, language, dimension }
  */
-export async function getHabitBubbleGraph(queryNeo4j) {
-  return queryNeo4j(`
+export async function getHabitBubbleGraph(queryNeo4j, lang = 'en') {
+  const normalizedLang = normalizeDisplayLang(lang);
+  return queryNeo4j(
+    `
     MATCH (h:Habit {is_habit: true})-[:HAS_CONTEXT]->(c:Context)
     RETURN DISTINCT
-      h.uuid                                AS habitId,
-      coalesce(h.translationEN, h.sentence) AS habitLabel,
-      coalesce(h.sentence, '')              AS originalText,
-      coalesce(h.language, '')              AS language,
-      c.dimension                           AS dimension
+      h.uuid                     AS habitId,
+      ${localizedLabelExpr('h')} AS habitLabel,
+      coalesce(h.sentence, '')   AS originalText,
+      coalesce(h.language, '')   AS language,
+      c.dimension                AS dimension
     ORDER BY c.dimension, habitLabel
-  `);
+  `,
+    {
+      lang: normalizedLang,
+      transKey: `translation${normalizedLang.toUpperCase()}`,
+    }
+  );
 }
 
 /**
@@ -185,21 +221,27 @@ export async function getHabitBubbleGraph(queryNeo4j) {
  * One row per (habit, dimension) pair — callers must group by habitId.
  * @param {Function} queryNeo4j
  * @param {string} userId  Keycloak subject UUID
+ * @param {string} [lang='en'] - Viewer's app language; picks which translation slot habitLabel resolves to.
  * @returns {Promise<Array>} Array of { habitId, habitLabel, originalText, language, dimension }
  */
-export async function getUserHabits(queryNeo4j, userId) {
+export async function getUserHabits(queryNeo4j, userId, lang = 'en') {
+  const normalizedLang = normalizeDisplayLang(lang);
   return queryNeo4j(
     `
     MATCH (h:Habit {is_habit: true, userID: $userId})-[:HAS_CONTEXT]->(c:Context)
     RETURN DISTINCT
-      h.uuid                                AS habitId,
-      coalesce(h.translationEN, h.sentence) AS habitLabel,
-      coalesce(h.sentence, '')              AS originalText,
-      coalesce(h.language, '')              AS language,
-      c.dimension                           AS dimension
+      h.uuid                     AS habitId,
+      ${localizedLabelExpr('h')} AS habitLabel,
+      coalesce(h.sentence, '')   AS originalText,
+      coalesce(h.language, '')   AS language,
+      c.dimension                AS dimension
     ORDER BY habitLabel
   `,
-    { userId }
+    {
+      userId,
+      lang: normalizedLang,
+      transKey: `translation${normalizedLang.toUpperCase()}`,
+    }
   );
 }
 
@@ -267,19 +309,27 @@ export async function updateHabitAnnotation(queryNeo4j, habitId, type, delta) {
  * from day one, consistent with getPublicHabits.
  * Deduplication is done by the caller (see createHabitsRouter GET /graph).
  * @param {Function} queryNeo4j
+ * @param {string} [lang='en'] - Viewer's app language; picks which translation slot habitLabel resolves to.
  * @returns {Promise<Array>}
  */
-export async function getHabitGraph(queryNeo4j) {
-  return queryNeo4j(`
+export async function getHabitGraph(queryNeo4j, lang = 'en') {
+  const normalizedLang = normalizeDisplayLang(lang);
+  return queryNeo4j(
+    `
     MATCH (b:BCIOConcept)<-[:MAPS_TO]-(:Context)<-[:HAS_CONTEXT]-(h:Habit)
     RETURN DISTINCT
-      h.uuid                                   AS habitId,
-      coalesce(h.translationEN, h.sentence)    AS habitLabel,
-      coalesce(h.sentence, '')                 AS originalText,
-      coalesce(h.language, '')                 AS language,
-      b.bcio_concept_id                        AS conceptId,
-      b.bcio_concept_label                     AS conceptLabel
-  `);
+      h.uuid                     AS habitId,
+      ${localizedLabelExpr('h')} AS habitLabel,
+      coalesce(h.sentence, '')   AS originalText,
+      coalesce(h.language, '')   AS language,
+      b.bcio_concept_id          AS conceptId,
+      b.bcio_concept_label       AS conceptLabel
+  `,
+    {
+      lang: normalizedLang,
+      transKey: `translation${normalizedLang.toUpperCase()}`,
+    }
+  );
 }
 
 /**

@@ -8,7 +8,7 @@ import {
   listIntentions,
   updateIntentionStatus,
 } from '../services/intentionService.js';
-import { upsertLog, getLogs } from '../services/dailyLogService.js';
+import { upsertLog, getLogs, deleteLog } from '../services/dailyLogService.js';
 import { generateWindows } from '../services/srhiService.js';
 import { logger } from '../utils/logger.js';
 
@@ -170,6 +170,23 @@ export function createIntentionsRouter({ db } = {}) {
         enacted,
       });
       res.status(201).json({ logged: true });
+    } catch (err) {
+      log.error({ err: err }, '[intentions] error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // Un-log a day: removes the entry entirely (back to "not logged"), as
+  // opposed to POSTing enacted:false which records an explicit miss.
+  router.delete('/:id/logs/:date', async (req, res) => {
+    try {
+      const database = await getDb();
+      await deleteLog({
+        db: database,
+        intentionId: req.params.id,
+        date: req.params.date,
+      });
+      res.json({ deleted: true });
     } catch (err) {
       log.error({ err: err }, '[intentions] error');
       res.status(500).json({ error: 'Internal server error' });

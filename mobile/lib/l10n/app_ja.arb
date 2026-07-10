@@ -777,6 +777,7 @@
     "description": "Snackbar action button that opens the due questionnaire"
   },
   "myHabitsTab": "マイ習慣",
+  "exploreSavedTab": "保存済み",
   "navTabShare": "共有",
   "navTabExplore": "探索",
   "navTabRecommend": "おすすめ",
@@ -797,6 +798,7 @@
     "description": "Button on habit card to log today's enactment"
   },
   "loggedToday": "記録済み ✓",
+  "habitUnlogged": "記録を削除しました",
   "@loggedToday": {
     "description": "Shown on habit card when today is already logged"
   },
@@ -1277,6 +1279,10 @@
   "setCueAssignedByStudy": "研究により割り当て",
   "addAnotherCueCount": "きっかけを追加（{current}/{max}）",
   "setCueMaxReachedNote": "きっかけは最大{max}個まで追加できます。",
+  "setCueLabelSingle": "あなたのきっかけ",
+  "setCueLabelNumbered": "きっかけ {number}",
+  "setCueRemoveTooltip": "きっかけを削除",
+  "setCueExtraPlaceholder": "例：平日の自宅で",
   "couldNotLogToday": "本日の記録を保存できませんでした：{error}",
   "continueButton": "次へ",
   "behaviorWalking": "ウォーキング",
@@ -1292,6 +1298,7 @@
   "contactResearchTeam": "研究チームに連絡する",
   "contactResearchTeamDescription": "質問や問題がありますか？メールを送っていただければ、折り返しご連絡します。",
   "sendEmail": "メールを送る",
+  "couldNotOpenEmailApp": "メールアプリを開けませんでした。{email} まで直接メールを送ってください。",
   "frequentlyAskedQuestions": "よくある質問",
   "faqPassphraseQuestion": "復元用パスフレーズを紛失しました。どうすればいいですか？",
   "faqPassphraseAnswer": "24単語のパスフレーズはアカウントを復元する唯一の方法です。まだお持ちの場合は、ウェルカム画面の「アカウントを復元」をご利用ください。紛失した場合、残念ながらアカウントとデータは復元できません。最初からやり直したい場合はお問い合わせください。",

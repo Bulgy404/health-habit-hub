@@ -783,6 +783,10 @@
   "@myHabitsTab": {
     "description": "Bottom nav tab label for My Habits"
   },
+  "exploreSavedTab": "Saved",
+  "@exploreSavedTab": {
+    "description": "Label for the Explore tab showing the user's saved/liked donated habits (distinct from the top-level 'My Habits' page, which tracks the user's own habits)"
+  },
   "navTabShare": "Share",
   "@navTabShare": {
     "description": "Bottom nav tab label for the share-a-habit screen"
@@ -814,6 +818,10 @@
   "loggedToday": "Logged ✓",
   "@loggedToday": {
     "description": "Shown on habit card when today is already logged"
+  },
+  "habitUnlogged": "Log removed",
+  "@habitUnlogged": {
+    "description": "Snackbar shown after tapping an already-logged habit card's button again to undo today's log"
   },
   "pickBehaviorTitle": "What habit do you want to form?",
   "@pickBehaviorTitle": {
@@ -1801,6 +1809,27 @@
       }
     }
   },
+  "setCueLabelSingle": "Your cue",
+  "@setCueLabelSingle": {
+    "description": "Text field label for a self-selected cue when there is only one cue field"
+  },
+  "setCueLabelNumbered": "Cue {number}",
+  "@setCueLabelNumbered": {
+    "description": "Text field label for a self-selected cue when there is more than one cue field",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "setCueRemoveTooltip": "Remove cue",
+  "@setCueRemoveTooltip": {
+    "description": "Tooltip on the button that removes a self-selected cue field"
+  },
+  "setCueExtraPlaceholder": "e.g. at home on weekdays",
+  "@setCueExtraPlaceholder": {
+    "description": "Hint text for self-selected cue fields after the first one"
+  },
   "couldNotLogToday": "Could not log today: {error}",
   "@couldNotLogToday": {
     "description": "Snackbar shown when logging today's habit completion fails",
@@ -1865,6 +1894,15 @@
   "sendEmail": "Send email",
   "@sendEmail": {
     "description": "Button that opens the mail app addressed to the study team"
+  },
+  "couldNotOpenEmailApp": "Could not open an email app. Please email {email} directly.",
+  "@couldNotOpenEmailApp": {
+    "description": "Shown when no email app could be launched from the Help & Support screen's Send email button",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
   },
   "frequentlyAskedQuestions": "Frequently asked questions",
   "@frequentlyAskedQuestions": {

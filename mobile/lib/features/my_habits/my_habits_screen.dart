@@ -212,9 +212,13 @@ class _HabitCard extends ConsumerWidget {
     final todayStr =
         '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
     final todayLogged = logsMap.containsKey(todayStr);
+    final loggedColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.green.shade900.withAlpha(90)
+        : Colors.green.shade50;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      color: todayLogged ? loggedColor : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () {
@@ -296,7 +300,7 @@ class _HabitCard extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               Align(
-                alignment: Alignment.centerRight,
+                alignment: Alignment.center,
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     minimumSize: Size.zero,
@@ -305,30 +309,27 @@ class _HabitCard extends ConsumerWidget {
                       vertical: 8,
                     ),
                   ),
-                  // Always tappable so the press gives feedback even when today
-                  // is already logged (a disabled button silently does nothing,
-                  // which reads as "the button is broken").
+                  // Tapping again while logged un-logs today, so the button is
+                  // always tappable and always does something visible.
                   onPressed: () async {
                     // Capture the messenger before the await so feedback still
                     // shows if the widget rebuilds.
                     final messenger = ScaffoldMessenger.of(context);
-                    if (todayLogged) {
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.loggedToday),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                      return;
-                    }
+                    final wasLogged = todayLogged;
                     try {
-                      await ref
-                          .read(myHabitsServiceProvider)
-                          .logDay(
-                            intentionId: intention.id,
-                            date: todayStr,
-                            enacted: true,
-                          );
+                      final service = ref.read(myHabitsServiceProvider);
+                      if (wasLogged) {
+                        await service.deleteLog(
+                          intentionId: intention.id,
+                          date: todayStr,
+                        );
+                      } else {
+                        await service.logDay(
+                          intentionId: intention.id,
+                          date: todayStr,
+                          enacted: true,
+                        );
+                      }
                       // A short tap confirms the log landed without requiring
                       // the user to read the snackbar — this is the app's
                       // core loop, so it should feel rewarding.
@@ -340,7 +341,9 @@ class _HabitCard extends ConsumerWidget {
                       ref.invalidate(allHabitsActivityProvider);
                       messenger.showSnackBar(
                         SnackBar(
-                          content: Text(l10n.loggedToday),
+                          content: Text(
+                            wasLogged ? l10n.habitUnlogged : l10n.loggedToday,
+                          ),
                           duration: const Duration(seconds: 2),
                         ),
                       );
@@ -360,17 +363,10 @@ class _HabitCard extends ConsumerWidget {
                       scale: animation,
                       child: FadeTransition(opacity: animation, child: child),
                     ),
-                    child: todayLogged
-                        ? Row(
-                            key: const ValueKey('logged'),
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.check_circle, size: 18),
-                              const SizedBox(width: 6),
-                              Text(l10n.loggedToday),
-                            ],
-                          )
-                        : Text(l10n.logToday, key: const ValueKey('unlogged')),
+                    child: Text(
+                      todayLogged ? l10n.loggedToday : l10n.logToday,
+                      key: ValueKey(todayLogged),
+                    ),
                   ),
                 ),
               ),

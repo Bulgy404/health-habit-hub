@@ -1,8 +1,6 @@
 import express from 'express';
 import { randomUUID } from 'node:crypto';
 import {
-  classifyHabit,
-  persistRejectedHabit,
   enqueueHabitDonation,
   shareHabit,
 } from '../../services/habitDonationService.js';
@@ -382,8 +380,10 @@ export function createHabitsCrudRouter({
   });
 
   // POST /api/v1/habits/share (and /donate alias)
-  // Classify synchronously; rejected habits return 200 immediately, accepted
-  // habits are enqueued and return 202 so the LLM pipeline runs off the request.
+  // Enqueues the habit and returns 202 as soon as it's written to Redis;
+  // classification and the rest of the pipeline run off-request in the
+  // BullMQ worker (see lib/habitQueue.js). Falls back to the fully
+  // synchronous shareHabit() when no queue is configured (tests).
   async function handleShareHabit(req, res) {
     const {
       sentence,
@@ -469,37 +469,18 @@ export function createHabitsCrudRouter({
         return res.status(result.is_habit ? 201 : 200).json(result);
       }
 
-      // Step 1 (sync, fast): classify — keeps the immediate "not a habit" UX.
-      const classified = await classifyHabit(
-        sentence,
-        language,
-        userId,
-        apiBase
-      );
-
-      if (!classified.is_habit) {
-        const result = await persistRejectedHabit(
-          {
-            uuid,
-            sentence,
-            language,
-            userID: userId,
-            confidence: classified.confidence,
-          },
-          queryNeo4j,
-          getDb
-        );
-        return res.status(200).json(result);
-      }
-
-      // Step 2 (async): enqueue the expensive pipeline and return 202 immediately.
+      // Classification (and the rest of the pipeline) now runs inside the
+      // BullMQ worker rather than here, so the response only waits on the
+      // Redis enqueue — not on the classifier LLM call. This trades the
+      // previous "instant not-a-habit" rejection for a fast "shared"
+      // response; the true accept/reject outcome is available afterwards
+      // via GET /habits/jobs/:jobId.
       const { jobId } = await enqueueHabitDonation({
         uuid,
         sentence,
         language,
         userID: userId,
         studyId,
-        confidence: classified.confidence,
         frequency: frequency ?? null,
         duration: duration ?? null,
         healthBenefit: health_benefit ?? null,

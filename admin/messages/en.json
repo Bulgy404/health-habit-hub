@@ -35,7 +35,6 @@
   "sidebar": {
     "brand": "HHH Portal",
     "sections": {
-      "publicApp": "Public App",
       "research": "Research",
       "operations": "Operations",
       "configuration": "Configuration",
@@ -43,7 +42,6 @@
       "support": "Support"
     },
     "nav": {
-      "appSettings": "App Settings",
       "studies": "Studies",
       "analytics": "Analytics",
       "insights": "Insights",
@@ -481,32 +479,6 @@
     "cached": "Cached",
     "freshlyComputed": "Freshly computed"
   },
-  "defaultApp": {
-    "title": "Public App",
-    "subtitle": "Default experience for users who open the app without a study code.",
-    "features": {
-      "sectionTitle": "Features",
-      "sectionDesc": "Which features are active for public users.",
-      "loadFailed": "Failed to load settings",
-      "saveFailed": "Save failed",
-      "guidedWizardLabel": "Guided implementation intention wizard",
-      "guidedWizardHint": "When enabled, public users are taken through a step-by-step wizard (habit → cues → LLM stitch → confirm → reminder). Habit and cues are always free text for public users; disabling this only skips the LLM stitching step.",
-      "communitySharingLabel": "Community sharing opt-in shown by default",
-      "communitySharingHint": "When enabled, the community sharing toggle appears at the end of habit creation and is pre-selected.",
-      "saved": "Saved!",
-      "saveChanges": "Save changes"
-    },
-    "defaults": {
-      "sectionTitle": "Defaults",
-      "sectionDesc": "Public users create their habits with free-text entry — cue and behavior configuration exists only per study group (Studies → Cue Config).",
-      "loadFailed": "Failed to load settings",
-      "saveFailed": "Save failed",
-      "reminderTimeLabel": "Default reminder time",
-      "reminderTimeHint": "Time of day for the daily check-in push notification. Users can override in their profile.",
-      "saved": "Saved!",
-      "saveChanges": "Save changes"
-    }
-  },
   "profileFields": {
     "title": "Profile Fields",
     "subtitle": "Configure which fields appear in the onboarding profile setup.",
@@ -603,6 +575,7 @@
     "saveChanges": "Save changes",
     "create": "Create",
     "titleRequiredError": "Title is required.",
+    "questionTextRequiredError": "Question {index} needs text in at least one selected language.",
     "saveFailed": "Save failed",
     "versionValue": "Version {version}",
     "libraryBadge": "Library",

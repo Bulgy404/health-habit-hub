@@ -62,6 +62,14 @@ class _FakeMyHabitsService extends MyHabitsService {
   }
 
   @override
+  Future<void> deleteLog({
+    required String intentionId,
+    required String date,
+  }) async {
+    loggedToday = false;
+  }
+
+  @override
   Future<List<SrhiTrajectoryPoint>> fetchTrajectory(String intentionId) async => [];
 }
 

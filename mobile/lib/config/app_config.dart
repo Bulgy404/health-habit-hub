@@ -37,6 +37,6 @@ abstract final class AppConfig {
   /// Contact address shown on the Help & Support screen.
   static const supportEmail = String.fromEnvironment(
     'SUPPORT_EMAIL',
-    defaultValue: 'digital-health@tu-dresden.de',
+    defaultValue: 'felix.reinsch@tu-dresden.de',
   );
 }

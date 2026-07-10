@@ -29,7 +29,6 @@ import {
   seedDefaultQuestionnaires,
   seedDefaultStudy,
 } from '../services/defaultStudySeedService.js';
-import { createAppSettingsRouter } from './admin/appSettingsRouter.js';
 import { createBackupsRouter } from './admin/backupsRouter.js';
 import { createSystemRouter } from './admin/systemRouter.js';
 import { createAuditLogRouter } from './admin/auditLogRouter.js';
@@ -913,8 +912,6 @@ export function createAdminRouter({
   // sibling admin sub-resources mounted separately in apiRouter.js (e.g.
   // /admin/cue-pools), wrongly 403ing non-admin roles for paths this
   // sub-router doesn't even own.
-  router.use('/', createAppSettingsRouter({ db }));
-
   router.use('/', createBackupsRouter({ db }));
 
   router.use('/', createSystemRouter());

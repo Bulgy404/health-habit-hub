@@ -162,18 +162,18 @@ before(async () => {
       if (urlStr.includes('/api/v1/llm/map-bcio')) {
         return { ok: true, json: async () => ({ mappings: [] }) };
       }
-      // Order matters: '-de' is a more specific suffix of the '/refine-translation'
-      // path, so check it first.
-      if (urlStr.includes('/api/v1/llm/refine-translation-de')) {
-        return {
-          ok: true,
-          json: async () => ({ refined_translation: REFINED_TRANSLATION_DE }),
+      if (urlStr.includes('/api/v1/llm/refine-translation-lang')) {
+        const body = JSON.parse(options?.body || '{}');
+        const refinedByTarget = {
+          en: REFINED_TRANSLATION,
+          de: REFINED_TRANSLATION_DE,
         };
-      }
-      if (urlStr.includes('/api/v1/llm/refine-translation')) {
         return {
           ok: true,
-          json: async () => ({ refined_translation: REFINED_TRANSLATION }),
+          json: async () => ({
+            refined_translation:
+              refinedByTarget[body.target_language] ?? body.raw_translation,
+          }),
         };
       }
       return {
@@ -429,7 +429,7 @@ test('German habit donation uses raw LibreTranslate output when LLM refine step 
       if (urlStr.includes('/api/v1/llm/map-bcio')) {
         return { ok: true, json: async () => ({ mappings: [] }) };
       }
-      if (urlStr.includes('/api/v1/llm/refine-translation')) {
+      if (urlStr.includes('/api/v1/llm/refine-translation-lang')) {
         // Simulate LLM failure
         return {
           ok: false,
@@ -461,6 +461,95 @@ test('German habit donation uses raw LibreTranslate output when LLM refine step 
       habit.translationEN,
       LITERAL_TRANSLATION,
       'When LLM fails, raw LibreTranslate output should be stored as translationEN'
+    );
+  } finally {
+    global.fetch = savedFetch;
+  }
+});
+
+test('German habit donation falls back to LLM-only translation when LibreTranslate itself fails', async () => {
+  const savedFetch = global.fetch;
+  const LLM_ONLY_TRANSLATION = 'I sleep early every evening.';
+
+  global.fetch = async (url, options) => {
+    const urlStr = typeof url === 'string' ? url : url.toString();
+
+    if (urlStr.includes('/jwks'))
+      return { ok: true, json: async () => mockJwks };
+
+    // LibreTranslate itself is down.
+    if (urlStr.includes('mock-libretranslate')) {
+      return {
+        ok: false,
+        status: 503,
+        json: async () => ({ error: 'Service unavailable' }),
+      };
+    }
+
+    if (urlStr.includes('mock-api-service')) {
+      if (urlStr.includes('/api/v1/llm/classify-habit')) {
+        return {
+          ok: true,
+          json: async () => ({
+            uuid: 'test-uuid',
+            sentence: JSON.parse(options?.body || '{}').sentence,
+            language: 'de',
+            is_habit: true,
+            confidence: 0.9,
+          }),
+        };
+      }
+      if (urlStr.includes('/api/v1/llm/classify-context')) {
+        return {
+          ok: true,
+          json: async () => ({
+            TIME: [],
+            PHYSICAL_SETTING: [],
+            PRIOR_BEHAVIOR: [],
+            OTHER_PEOPLE: [],
+            INTERNAL_STATE: [],
+            BEHAVIOR: ['running'],
+            REASONING: [],
+          }),
+        };
+      }
+      if (urlStr.includes('/api/v1/llm/map-bcio')) {
+        return { ok: true, json: async () => ({ mappings: [] }) };
+      }
+      if (urlStr.includes('/api/v1/llm/translate-lang')) {
+        const body = JSON.parse(options?.body || '{}');
+        return {
+          ok: true,
+          json: async () => ({
+            translation:
+              body.target_language === 'en' ? LLM_ONLY_TRANSLATION : 'x',
+          }),
+        };
+      }
+    }
+
+    return originalFetch(url, options);
+  };
+
+  try {
+    const before = neo4jMock.getHabits().length;
+
+    const res = await post(
+      '/api/v1/habits/donate',
+      { sentence: 'Ich schlafe jeden Abend früh.', language: 'de' },
+      makeToken('user-de-3')
+    );
+
+    assert.strictEqual(res.status, 201);
+
+    const after = neo4jMock.getHabits().length;
+    assert.ok(after > before);
+
+    const habit = neo4jMock.getHabits().at(-1);
+    assert.strictEqual(
+      habit.translationEN,
+      LLM_ONLY_TRANSLATION,
+      'When LibreTranslate itself fails, the LLM-only translation should be used instead of skipping translationEN'
     );
   } finally {
     global.fetch = savedFetch;

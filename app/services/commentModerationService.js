@@ -14,13 +14,43 @@
  */
 
 import {
+  DataSet,
   RegExpMatcher,
   englishDataset,
   englishRecommendedTransformers,
 } from 'obscenity';
 
+import {
+  GERMAN_PATTERNS,
+  FRENCH_PATTERNS,
+  DUTCH_PATTERNS,
+  JAPANESE_PATTERNS,
+} from './commentModerationWordlists.js';
+
+// englishDataset is the base list; the extra languages are layered on top so
+// one matcher covers comments in any of the app's 5 supported languages
+// (en/de/fr/ja/nl) instead of only flagging English profanity.
+const dataset = new DataSet()
+  .addAll(englishDataset)
+  .addPhrase((phrase) => {
+    for (const p of GERMAN_PATTERNS) phrase.addPattern(p);
+    return phrase.setMetadata({ originalWord: 'de' });
+  })
+  .addPhrase((phrase) => {
+    for (const p of FRENCH_PATTERNS) phrase.addPattern(p);
+    return phrase.setMetadata({ originalWord: 'fr' });
+  })
+  .addPhrase((phrase) => {
+    for (const p of DUTCH_PATTERNS) phrase.addPattern(p);
+    return phrase.setMetadata({ originalWord: 'nl' });
+  })
+  .addPhrase((phrase) => {
+    for (const p of JAPANESE_PATTERNS) phrase.addPattern(p);
+    return phrase.setMetadata({ originalWord: 'ja' });
+  });
+
 const matcher = new RegExpMatcher({
-  ...englishDataset.build(),
+  ...dataset.build(),
   ...englishRecommendedTransformers,
 });
 

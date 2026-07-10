@@ -35,7 +35,6 @@
   "sidebar": {
     "brand": "HHH Portal",
     "sections": {
-      "publicApp": "Application publique",
       "research": "Recherche",
       "operations": "Opérations",
       "configuration": "Configuration",
@@ -43,7 +42,6 @@
       "support": "Assistance"
     },
     "nav": {
-      "appSettings": "Paramètres de l'application",
       "studies": "Études",
       "analytics": "Analytique",
       "insights": "Perspectives",
@@ -481,32 +479,6 @@
     "cached": "Mis en cache",
     "freshlyComputed": "Recalculé récemment"
   },
-  "defaultApp": {
-    "title": "Application publique",
-    "subtitle": "Expérience par défaut pour les utilisateurs qui ouvrent l'application sans code d'étude.",
-    "features": {
-      "sectionTitle": "Fonctionnalités",
-      "sectionDesc": "Quelles fonctionnalités sont actives pour les utilisateurs publics.",
-      "loadFailed": "Échec du chargement des paramètres",
-      "saveFailed": "Échec de l'enregistrement",
-      "guidedWizardLabel": "Assistant guidé d'intention de mise en œuvre",
-      "guidedWizardHint": "Lorsque cette option est activée, les utilisateurs publics sont guidés à travers un assistant étape par étape (habitude → repères → assemblage par LLM → confirmation → rappel). L'habitude et les repères restent toujours en texte libre pour les utilisateurs publics ; la désactivation de cette option ne saute que l'étape d'assemblage par LLM.",
-      "communitySharingLabel": "Option de partage communautaire affichée par défaut",
-      "communitySharingHint": "Lorsque cette option est activée, le bouton de partage communautaire apparaît à la fin de la création de l'habitude et est présélectionné.",
-      "saved": "Enregistré !",
-      "saveChanges": "Enregistrer les modifications"
-    },
-    "defaults": {
-      "sectionTitle": "Valeurs par défaut",
-      "sectionDesc": "Les utilisateurs publics créent leurs habitudes en texte libre — la configuration des repères et des comportements n'existe que par groupe d'étude (Études → Configuration des repères).",
-      "loadFailed": "Échec du chargement des paramètres",
-      "saveFailed": "Échec de l'enregistrement",
-      "reminderTimeLabel": "Heure de rappel par défaut",
-      "reminderTimeHint": "Heure de la journée pour la notification push de suivi quotidien. Les utilisateurs peuvent la modifier dans leur profil.",
-      "saved": "Enregistré !",
-      "saveChanges": "Enregistrer les modifications"
-    }
-  },
   "profileFields": {
     "title": "Champs de profil",
     "subtitle": "Configurez les champs qui apparaissent lors de la configuration du profil d'intégration.",
@@ -603,6 +575,7 @@
     "saveChanges": "Enregistrer les modifications",
     "create": "Créer",
     "titleRequiredError": "Le titre est obligatoire.",
+    "questionTextRequiredError": "La question {index} nécessite un texte dans au moins une langue sélectionnée.",
     "saveFailed": "Échec de l'enregistrement",
     "versionValue": "Version {version}",
     "libraryBadge": "Bibliothèque",

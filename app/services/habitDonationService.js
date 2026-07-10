@@ -165,6 +165,9 @@ async function _createHabitNode(
     wellbeingImpact,
     translationEN,
     translationDE,
+    translationJA,
+    translationFR,
+    translationNL,
     createdAt,
   },
   queryNeo4j
@@ -181,6 +184,8 @@ async function _createHabitNode(
        is_habit: true, habit_confidence: $habit_confidence, userID: $userID,
        studyId: $studyId, created_at: $created_at,
        translationEN: $translationEN, translationDE: $translationDE,
+       translationJA: $translationJA, translationFR: $translationFR,
+       translationNL: $translationNL,
        frequency: $frequency, duration: $duration,
        health_benefit: $health_benefit, wellbeing_impact: $wellbeing_impact})`,
     {
@@ -193,6 +198,9 @@ async function _createHabitNode(
       created_at: createdAt,
       translationEN: translationEN || null,
       translationDE: translationDE || null,
+      translationJA: translationJA || null,
+      translationFR: translationFR || null,
+      translationNL: translationNL || null,
       frequency: frequency ?? null,
       duration: duration ?? null,
       health_benefit: healthBenefit ?? null,
@@ -294,6 +302,9 @@ async function writeToNeo4j(
     wellbeingImpact,
     translationEN,
     translationDE,
+    translationJA,
+    translationFR,
+    translationNL,
     contextPhrases,
     mappings,
   },
@@ -314,6 +325,9 @@ async function writeToNeo4j(
       wellbeingImpact,
       translationEN,
       translationDE,
+      translationJA,
+      translationFR,
+      translationNL,
       createdAt,
     },
     queryNeo4j
@@ -368,20 +382,23 @@ export async function persistRejectedHabit(
   };
 }
 
+// Every habit gets a translation slot per app locale.
+const APP_LANGS = ['en', 'de', 'ja', 'fr', 'nl'];
+
 /**
- * Produce EN and DE translations for a confirmed habit sentence in parallel.
+ * Produce translations of a confirmed habit sentence into every app language
+ * other than the one it was donated in, in parallel.
  *
- * Rules:
- *  - English habits  → translationEN = null (already EN), translationDE = translated
- *  - German habits   → translationEN = translated, translationDE = null (already DE)
- *  - Other languages → both translations produced in parallel from the source language
+ * The language matching the habit's own source language is skipped (null)
+ * — the original `sentence` already serves as that language's display
+ * text, so translating it back would be redundant.
  *
  * @param {string} sentence
  * @param {string} language
- * @param {Function} translate
+ * @param {Function} translate - translate(sentence, src, tgt, base, url) => string|null
  * @param {string} apiBase
  * @param {string} translateUrl
- * @returns {Promise<[string|null, string|null]>} [translationEN, translationDE]
+ * @returns {Promise<{translationEN: string|null, translationDE: string|null, translationJA: string|null, translationFR: string|null, translationNL: string|null}>}
  */
 export async function translateHabit(
   sentence,
@@ -390,34 +407,26 @@ export async function translateHabit(
   apiBase,
   translateUrl
 ) {
-  const isEN = language && language.startsWith('en');
-  const isDE = language && language.startsWith('de');
-  const sourceLang = isEN ? 'en' : language;
+  const sourceLang2 = (language || '').slice(0, 2).toLowerCase();
+  const targets = APP_LANGS.filter((lang) => lang !== sourceLang2);
 
-  return Promise.all([
-    // EN: skip for English habits (sentence is already in English)
-    !isEN
-      ? translate(
-          sentence,
-          sourceLang,
-          'en',
-          '/api/v1/llm/refine-translation',
-          apiBase,
-          translateUrl
-        )
-      : Promise.resolve(null),
-    // DE: skip for German habits (sentence is already in German)
-    !isDE
-      ? translate(
-          sentence,
-          sourceLang,
-          'de',
-          '/api/v1/llm/refine-translation-de',
-          apiBase,
-          translateUrl
-        )
-      : Promise.resolve(null),
-  ]);
+  const results = await Promise.all(
+    targets.map((target) =>
+      translate(sentence, sourceLang2, target, apiBase, translateUrl)
+    )
+  );
+
+  const translations = {
+    translationEN: null,
+    translationDE: null,
+    translationJA: null,
+    translationFR: null,
+    translationNL: null,
+  };
+  targets.forEach((target, i) => {
+    translations[`translation${target.toUpperCase()}`] = results[i];
+  });
+  return translations;
 }
 
 /**
@@ -431,7 +440,7 @@ export async function translateHabit(
  * @param {Function} params.queryNeo4j - Neo4j query function (cypher, params) => rows
  * @param {Function} params.getDb      - Async getter for MongoDB database instance
  * @param {string} params.apiBase      - Base URL for the recommender/LLM API service
- * @param {Function} params.translate  - translate(sentence, src, tgt, endpoint, base, url) => string|null
+ * @param {Function} params.translate  - translate(sentence, src, tgt, base, url) => string|null
  * @param {string} params.translateUrl - LibreTranslate endpoint URL
  *
  * @returns {{ is_habit: boolean, uuid?: string, message: string }}
@@ -469,7 +478,13 @@ export async function shareHabit({
     apiBase
   );
   const mappings = await mapBcio(uuid, contextPhrases, apiBase);
-  const [translationEN, translationDE] = await translateHabit(
+  const {
+    translationEN,
+    translationDE,
+    translationJA,
+    translationFR,
+    translationNL,
+  } = await translateHabit(
     sentence,
     language,
     translate,
@@ -491,6 +506,9 @@ export async function shareHabit({
       wellbeingImpact,
       translationEN,
       translationDE,
+      translationJA,
+      translationFR,
+      translationNL,
       contextPhrases,
       mappings,
     },
@@ -515,80 +533,6 @@ export async function shareHabit({
 }
 
 export const donateHabit = shareHabit;
-
-// ---------------------------------------------------------------------------
-// Async donation helpers (used by the BullMQ worker path)
-// ---------------------------------------------------------------------------
-
-/**
- * Run the expensive pipeline steps for an already-classified habit:
- * extractContext → mapBcio → translate → writeToNeo4j → embed.
- * Classification is intentionally skipped — call classifyHabit first.
- */
-export async function processAcceptedHabit({
-  uuid,
-  sentence,
-  language,
-  userID,
-  studyId = null,
-  confidence,
-  frequency = null,
-  duration = null,
-  healthBenefit = null,
-  wellbeingImpact = null,
-  queryNeo4j,
-  getDb: _getDb,
-  apiBase,
-  translate,
-  translateUrl,
-}) {
-  const contextPhrases = await extractContext(
-    uuid,
-    sentence,
-    language,
-    apiBase
-  );
-  const mappings = await mapBcio(uuid, contextPhrases, apiBase);
-  const [translationEN, translationDE] = await translateHabit(
-    sentence,
-    language,
-    translate,
-    apiBase,
-    translateUrl
-  );
-
-  await writeToNeo4j(
-    {
-      uuid,
-      sentence,
-      language,
-      confidence: confidence ?? 1,
-      userID,
-      studyId,
-      frequency,
-      duration,
-      healthBenefit,
-      wellbeingImpact,
-      translationEN,
-      translationDE,
-      contextPhrases,
-      mappings,
-    },
-    queryNeo4j
-  );
-
-  await embedAndStoreHabit({
-    uuid,
-    sentence,
-    translationEN,
-    contextPhrases,
-    mappings,
-    apiBase,
-    queryNeo4j,
-  });
-
-  return { is_habit: true, uuid };
-}
 
 /**
  * Save a habit donation job to the BullMQ queue and return the jobId immediately.
