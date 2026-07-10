@@ -62,4 +62,22 @@ void main() {
 
     expect(find.text('Time'), findsOneWidget);
   });
+
+  testWidgets('exposes a Semantics label combining name and habit count',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: BubbleGraphWidget(graph: _sampleGraph(), onHabitTap: (_, _) {}),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('Time, 2 habits'), findsOneWidget);
+    handle.dispose();
+  });
 }

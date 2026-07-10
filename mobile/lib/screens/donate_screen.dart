@@ -642,6 +642,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
           title: Text(l10n.shareHabit),
           leading: IconButton(
             icon: const Icon(Icons.close),
+            tooltip: l10n.close,
             onPressed: _resetForm,
           ),
         ),
@@ -654,6 +655,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         title: Text(l10n.shareHabit),
         leading: IconButton(
           icon: const Icon(Icons.close),
+          tooltip: l10n.close,
           onPressed: () => setState(() => _surveyMode = false),
         ),
       ),

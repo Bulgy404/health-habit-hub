@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { SUPPORTED_LANGS, isLocaleTextEmpty } from '../utils/localeText.js';
 
 // ── Reusable primitives ───────────────────────────────────────────────────────
 
@@ -9,6 +10,27 @@ const slugString = z
   .string()
   .regex(/^[a-z][a-z0-9_-]*$/, 'must be lowercase alphanumeric with _ or -')
   .max(100);
+
+/**
+ * Per-language text used by questionnaires and cue pools — a map of
+ * language code -> string, e.g. `{ en: 'Hello', de: 'Hallo' }`. Every key
+ * must be one of SUPPORTED_LANGS; at least one entry must be non-empty.
+ * @param {number} [maxLen] Max length per language entry.
+ */
+function localeText(maxLen = 500) {
+  const shape = {};
+  for (const lang of SUPPORTED_LANGS) {
+    shape[lang] = z.string().max(maxLen).trim().optional();
+  }
+  return z
+    .object(shape)
+    .strict()
+    .refine((v) => !isLocaleTextEmpty(v), {
+      message: 'at least one language must have non-empty text',
+    });
+}
+
+const languagesSchema = z.array(z.enum(SUPPORTED_LANGS)).min(1).max(SUPPORTED_LANGS.length);
 
 // ── Studies ───────────────────────────────────────────────────────────────────
 
@@ -157,19 +179,34 @@ export const updateAppSettingsSchema = z
 
 // ── Questionnaires ────────────────────────────────────────────────────────────
 
+const questionOptionSchema = z.object({
+  value: z.string().min(1).max(200),
+  label: localeText(500),
+});
+
+const questionSchema = z.object({
+  id: z.string().min(1).max(200),
+  type: z.enum(['single_choice', 'multi_choice', 'scale', 'text']),
+  text: localeText(2000),
+  required: z.boolean().optional(),
+  options: z.array(questionOptionSchema).max(50).optional(),
+});
+
 export const createQuestionnaireSchema = z.object({
   slug: slugString.optional(),
-  title: shortString,
-  description: longString.optional(),
+  title: localeText(200),
+  description: localeText(2000).optional(),
   version: z.string().max(20).optional(),
-  questions: z.array(z.record(z.unknown())).max(200).optional(),
+  languages: languagesSchema,
+  questions: z.array(questionSchema).max(200).optional(),
 });
 
 export const updateQuestionnaireSchema = z.object({
-  title: shortString.optional(),
-  description: longString.optional(),
+  title: localeText(200).optional(),
+  description: localeText(2000).optional(),
   version: z.string().max(20).optional(),
-  questions: z.array(z.record(z.unknown())).max(200).optional(),
+  languages: languagesSchema.optional(),
+  questions: z.array(questionSchema).max(200).optional(),
 });
 
 // ── Surveys ───────────────────────────────────────────────────────────────────
@@ -207,16 +244,32 @@ export const updateSurveyGroupsSchema = z.object({
 
 // ── Cue pools ─────────────────────────────────────────────────────────────────
 
-export const createCueSchema = z.object({
-  text: z.string().min(1).max(1000).trim(),
-  quality: z.enum(['high', 'low']),
-  dimensions: z.array(z.string().max(200)).min(1).max(20),
-  domain: z.string().min(1).max(200).trim(),
-  language: z.string().min(2).max(10),
+// The 3 psychometric quality ratings (1-5) used to weight cue selection —
+// unrelated to the behaviour-dimension tags (TIME, PHYSICAL_SETTING, ...)
+// used elsewhere for intentions; both are informally called "dimensions"
+// but are separate concepts.
+const cueDimensionsSchema = z.object({
+  stability: z.number().int().min(1).max(5),
+  salience: z.number().int().min(1).max(5),
+  specificity: z.number().int().min(1).max(5),
 });
 
+export const createCueSchema = z.object({
+  text: localeText(1000),
+  languages: languagesSchema,
+  quality: z.enum(['high', 'low']),
+  dimensions: cueDimensionsSchema,
+  domain: z.string().min(1).max(200).trim(),
+});
+
+// CSV rows arrive as flat string-keyed objects (parsed client-side from a
+// wide-format CSV: text_en,text_de,text_fr,text_ja,text_nl,quality,
+// stability,salience,specificity,domain). importCues() in cuePoolService.js
+// does its own per-field validation/coercion (parseInt, trim, etc.) rather
+// than relying on Zod for numeric coercion, so this only checks the outer
+// array shape.
 export const importCuesSchema = z.object({
-  cues: z.array(createCueSchema).min(1).max(500),
+  cues: z.array(z.record(z.string())).min(1).max(500),
 });
 
 // ── Activity types ────────────────────────────────────────────────────────────

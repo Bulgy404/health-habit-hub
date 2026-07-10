@@ -1,10 +1,15 @@
 import express from 'express';
 import neo4j from 'neo4j-driver';
+import { randomBytes } from 'node:crypto';
 import { makeGetDb } from '../utils/getDb.js';
 import { deleteHabitComments } from '../db/habitQueries.js';
 import { deleteEnrollment } from '../services/enrollmentNeo4j.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import { config } from '../utils/config.js';
+import {
+  recoveryPhraseFromCredentials,
+  recoveryPhrasesEnabled,
+} from '../utils/recoveryPhrase.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'usersRouter' });
@@ -22,6 +27,9 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
   // (55s TTL, see keycloakAdminClient.js) is actually reused across requests.
   const kcAdmin = keycloak || createKeycloakAdminClient();
   const getKeycloak = () => kcAdmin;
+  const kcBase = process.env.KEYCLOAK_URL || 'http://keycloak:8080';
+  const kcRealm = process.env.KEYCLOAK_REALM || 'hhh';
+  const kcClientId = process.env.KEYCLOAK_CLIENT_ID || 'hhh-flutter';
   let _neo4jDriver = null;
   async function queryNeo4j(cypher, params = {}) {
     if (neo4jRun) return neo4jRun(cypher, params);
@@ -187,6 +195,85 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
       res.json(payload);
     } catch (err) {
       log.error({ err: err }, '[usersRouter] export error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/v1/users/me/rotate-credentials — recovery-passphrase rotation.
+  // Resets the Keycloak password only (the username/account stays the same),
+  // then re-authenticates so the participant gets a fresh token pair without
+  // being signed out. Returns the same shape as POST /onboard so the mobile
+  // app can re-derive the 24-word phrase with its existing encoder.
+  router.post('/me/rotate-credentials', async (req, res) => {
+    try {
+      const userId = String(req.user.sub);
+      const kc = getKeycloak();
+
+      const token = await kc.getAdminToken();
+      const userRes = await fetch(
+        `${kcBase}/admin/realms/${kcRealm}/users/${encodeURIComponent(userId)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!userRes.ok) {
+        return res.status(502).json({ error: 'Failed to look up account.' });
+      }
+      const kcUser = await userRes.json();
+      const username = kcUser.username;
+
+      // Same generation as onboarding (16 bytes → 12 recovery-phrase words).
+      const newPassword = randomBytes(16).toString('hex');
+      await kc.resetPassword(userId, newPassword);
+
+      const tokenRes = await fetch(
+        `${kcBase}/realms/${kcRealm}/protocol/openid-connect/token`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'password',
+            client_id: kcClientId,
+            username,
+            password: newPassword,
+            scope: 'openid profile email',
+          }),
+        }
+      );
+      if (!tokenRes.ok) {
+        return res
+          .status(502)
+          .json({ error: 'Failed to obtain token after credential rotation.' });
+      }
+      const tokenData = await tokenRes.json();
+
+      try {
+        const database = await getDb();
+        await database.collection('participants').updateOne(
+          { userId },
+          {
+            $set: {
+              recoveryPhrase: recoveryPhrasesEnabled()
+                ? recoveryPhraseFromCredentials(username, newPassword)
+                : null,
+            },
+          }
+        );
+      } catch (dbErr) {
+        log.warn(
+          { err: dbErr?.message },
+          '[usersRouter] rotate-credentials: failed to update stored recovery phrase'
+        );
+      }
+
+      log.info({ userId }, '[usersRouter] credentials rotated');
+      res.json({
+        username,
+        password: newPassword,
+        access_token: tokenData.access_token,
+        refresh_token: tokenData.refresh_token,
+        expires_in: tokenData.expires_in,
+      });
+    } catch (err) {
+      log.error({ err: err }, '[usersRouter] rotate-credentials error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });

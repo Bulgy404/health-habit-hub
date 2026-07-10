@@ -2,6 +2,7 @@
 import { ObjectId } from 'mongodb';
 import { ASSIGNMENTS, WINDOWS } from '../models/questionnaireSchedule.js';
 import { getUsersForStudy } from './enrollmentNeo4j.js';
+import { resolveLocaleText } from '../utils/localeText.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -311,7 +312,15 @@ export async function createAssignment({
     groupId: gOid,
     questionnaireId: qOid,
     questionnaireSlug: questionnaire.slug,
-    questionnaireTitle: questionnaire.title ?? questionnaire.slug,
+    // Denormalized admin-facing snapshot label — English default, since this
+    // is only ever displayed in the admin schedule calendar, not to
+    // participants (who get a properly locale-resolved title elsewhere).
+    questionnaireTitle:
+      resolveLocaleText(
+        questionnaire.title,
+        'en',
+        questionnaire.languages || ['en']
+      ) || questionnaire.slug,
     cadence,
     active: true,
     createdAt: now,
@@ -373,9 +382,14 @@ export async function deleteAssignment({ db, studyId, assignmentId }) {
  * Also carries the participant's study end date / end-of-study notification
  * config so the mobile app can schedule that notification locally, even when
  * there are no due questionnaires left (e.g. near the end of the study).
- * @param {{ db, userId, withinDays? }} deps
+ * @param {{ db, userId, withinDays?, lang? }} deps
  */
-export async function getDueQuestionnaires({ db, userId, withinDays = 30 }) {
+export async function getDueQuestionnaires({
+  db,
+  userId,
+  withinDays = 30,
+  lang = 'en',
+}) {
   const now = new Date();
   const horizon = new Date(now.getTime() + withinDays * DAY_MS);
   const defaultReminders = { enabled: true, hour: 9 };
@@ -445,7 +459,13 @@ export async function getDueQuestionnaires({ db, userId, withinDays = 30 }) {
     .find({ slug: { $in: slugs } })
     .toArray();
   const bySlug = Object.fromEntries(
-    qDocs.map((q) => [q.slug, { title: q.title, active: q.active !== false }])
+    qDocs.map((q) => [
+      q.slug,
+      {
+        title: resolveLocaleText(q.title, lang, q.languages || ['en']),
+        active: q.active !== false,
+      },
+    ])
   );
 
   const questionnaires = wins

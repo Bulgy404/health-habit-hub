@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hhh/features/my_habits/my_habits_provider.dart';
+import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/screens/shell_screen.dart';
 
@@ -89,7 +90,11 @@ Widget _buildSubject(
       dueQuestionnaireProvider.overrideWithValue(() async => null),
       recommenderEnabledProvider.overrideWithValue(recommenderEnabled),
     ],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+    ),
   );
 }
 
@@ -106,8 +111,8 @@ void main() {
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.text('Share'), findsOneWidget);
     expect(find.text('Explore'), findsOneWidget);
-    expect(find.text('Habits'), findsOneWidget);
-    expect(find.text('Recs'), findsOneWidget);
+    expect(find.text('My Habits'), findsOneWidget);
+    expect(find.text('Recommend'), findsOneWidget);
     expect(find.text('Account'), findsOneWidget);
   });
 
@@ -127,7 +132,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Recs'), findsOneWidget);
+    expect(find.text('Recommend'), findsOneWidget);
   });
 
   testWidgets('hides Recs tab when recommender disabled for the study', (
@@ -139,9 +144,9 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Recs'), findsNothing);
+    expect(find.text('Recommend'), findsNothing);
     // Other tabs remain.
-    expect(find.text('Habits'), findsOneWidget);
+    expect(find.text('My Habits'), findsOneWidget);
     expect(find.text('Account'), findsOneWidget);
   });
 
@@ -162,7 +167,11 @@ void main() {
           dueQuestionnaireProvider.overrideWithValue(() async => null),
           recommenderEnabledProvider.overrideWithValue(true),
         ],
-        child: MaterialApp.router(routerConfig: router),
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
       ),
     );
     await tester.pump();

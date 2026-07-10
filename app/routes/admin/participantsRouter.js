@@ -168,12 +168,34 @@ export function createParticipantsRouter({
   });
 
   // POST /api/v1/admin/participants
+  // Optional `count` (bounded 1-50) creates several participants in one
+  // request — e.g. to print a batch of token cards for a study session.
+  // Response shape is unchanged for the default single-create case.
   router.post('/participants', async (req, res) => {
     try {
       const database = await getDb();
       const kc = getKeycloak();
-      const result = await createParticipant({ db: database, kc });
-      res.status(201).json(result);
+      const count = Math.max(
+        1,
+        Math.min(50, parseInt(req.body?.count, 10) || 1)
+      );
+
+      if (count === 1) {
+        const result = await createParticipant({ db: database, kc });
+        res.locals.auditAction = 'create_participant';
+        res.locals.auditResourceType = 'participant';
+        res.locals.auditResourceId = result.userId;
+        return res.status(201).json(result);
+      }
+
+      const participants = [];
+      for (let i = 0; i < count; i++) {
+        participants.push(await createParticipant({ db: database, kc }));
+      }
+      res.locals.auditAction = 'bulk_create_participants';
+      res.locals.auditResourceType = 'participant';
+      res.locals.auditResourceId = `${count} participants`;
+      res.status(201).json({ participants });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });
@@ -279,6 +301,9 @@ export function createParticipantsRouter({
         return res.status(404).json({ error: 'Participant not found' });
       }
 
+      res.locals.auditAction = 'reassign_participant_group';
+      res.locals.auditResourceType = 'participant';
+      res.locals.auditResourceId = id;
       res.json(result);
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
@@ -619,6 +644,9 @@ export function createParticipantsRouter({
         return res.status(404).json({ error: 'Participant not found' });
       }
 
+      res.locals.auditAction = 'anonymize_participant';
+      res.locals.auditResourceType = 'participant';
+      res.locals.auditResourceId = id;
       res.json(result);
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');

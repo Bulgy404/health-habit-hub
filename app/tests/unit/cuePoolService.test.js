@@ -22,7 +22,10 @@ function makeDb(cues = []) {
         find(filter = {}) {
           const results = store.filter((d) => {
             if (filter.quality && d.quality !== filter.quality) return false;
-            if (filter.language && d.language !== filter.language) return false;
+            // Mongo matches a scalar against an array field as
+            // "array contains value" — mirror that here.
+            if (filter.languages && !d.languages?.includes(filter.languages))
+              return false;
             return true;
           });
           return {
@@ -61,13 +64,14 @@ test('createCue: stores a cue and returns it', async () => {
   const db = makeDb();
   const result = await createCue({
     db,
-    text: 'After dinner each evening',
+    text: { en: 'After dinner each evening' },
+    languages: ['en'],
     quality: 'high',
     dimensions: { stability: 5, salience: 4, specificity: 5 },
     domain: 'physical_activity',
-    language: 'en',
   });
-  assert.equal(result.text, 'After dinner each evening');
+  assert.deepEqual(result.text, { en: 'After dinner each evening' });
+  assert.deepEqual(result.languages, ['en']);
   assert.equal(result.quality, 'high');
   assert.ok(result.id);
 });
@@ -77,11 +81,11 @@ test('deleteCue: removes a cue by id', async () => {
   const db = makeDb([
     {
       _id: id,
-      text: 'x',
+      text: { en: 'x' },
+      languages: ['en'],
       quality: 'low',
-      dimensions: {},
+      dimensions: { stability: 1, salience: 1, specificity: 1 },
       domain: 'd',
-      language: 'en',
       createdAt: new Date(),
     },
   ]);
@@ -119,44 +123,65 @@ test('pickAssignedCues: returns empty array for self_selected source', async () 
   assert.deepEqual(result, []);
 });
 
-test('pickAssignedCues: returns one cue for single count', async () => {
+test('pickAssignedCues: returns one cue for single count, resolved to the requested language', async () => {
   const db = makePoolDb([
     {
       _id: 'c1',
-      text: 'After dinner',
+      text: { en: 'After dinner', de: 'Nach dem Abendessen' },
+      languages: ['en', 'de'],
       quality: 'high',
       dimensions: { stability: 5, salience: 5, specificity: 5 },
       domain: 'physical_activity',
-      language: 'en',
     },
   ]);
   const result = await pickAssignedCues({
     db,
     cueSource: 'high_quality',
     cueCount: 'single',
+    lang: 'de',
   });
   assert.equal(result.length, 1);
-  assert.equal(result[0].text, 'After dinner');
+  assert.equal(result[0].text, 'Nach dem Abendessen');
   assert.equal(result[0].source, 'pre_rated');
+});
+
+test('pickAssignedCues: falls back to English when the requested language is unavailable', async () => {
+  const db = makePoolDb([
+    {
+      _id: 'c1',
+      text: { en: 'After dinner' },
+      languages: ['en'],
+      quality: 'high',
+      dimensions: { stability: 5, salience: 5, specificity: 5 },
+      domain: 'physical_activity',
+    },
+  ]);
+  const result = await pickAssignedCues({
+    db,
+    cueSource: 'high_quality',
+    cueCount: 'single',
+    lang: 'ja',
+  });
+  assert.equal(result[0].text, 'After dinner');
 });
 
 test('pickAssignedCues: returns two cues for multi count', async () => {
   const db = makePoolDb([
     {
       _id: 'c1',
-      text: 'After dinner',
+      text: { en: 'After dinner' },
+      languages: ['en'],
       quality: 'low',
       dimensions: { stability: 2, salience: 2, specificity: 2 },
       domain: 'physical_activity',
-      language: 'en',
     },
     {
       _id: 'c2',
-      text: 'On weekends',
+      text: { en: 'On weekends' },
+      languages: ['en'],
       quality: 'low',
       dimensions: { stability: 2, salience: 2, specificity: 2 },
       domain: 'physical_activity',
-      language: 'en',
     },
   ]);
   const result = await pickAssignedCues({
@@ -196,70 +221,90 @@ function makeImportDb() {
   };
 }
 
-test('importCues: inserts valid rows and returns count', async () => {
+test('importCues: inserts valid wide-format rows and returns count', async () => {
   const mockDb = makeImportDb();
   const rows = [
     {
-      text: 'After dinner',
+      text_en: 'After dinner',
       quality: 'high',
-      stability: 5,
-      salience: 5,
-      specificity: 5,
+      stability: '5',
+      salience: '5',
+      specificity: '5',
       domain: 'physical_activity',
-      language: 'en',
     },
     {
-      text: 'On weekends',
+      text_de: 'Am Wochenende',
       quality: 'low',
-      stability: 2,
-      salience: 2,
-      specificity: 2,
+      stability: '2',
+      salience: '2',
+      specificity: '2',
       domain: 'physical_activity',
-      language: 'de',
     },
   ];
   const result = await importCues({ db: mockDb, rows });
   assert.equal(result.inserted, 2);
   assert.equal(result.skipped, 0);
   assert.equal(mockDb.inserted.length, 2);
-  assert.equal(mockDb.inserted[0].text, 'After dinner');
+  assert.deepEqual(mockDb.inserted[0].text, { en: 'After dinner' });
+  assert.deepEqual(mockDb.inserted[0].languages, ['en']);
   assert.equal(mockDb.inserted[0].quality, 'high');
   assert.deepEqual(mockDb.inserted[0].dimensions, {
     stability: 5,
     salience: 5,
     specificity: 5,
   });
+  assert.deepEqual(mockDb.inserted[1].text, { de: 'Am Wochenende' });
+  assert.deepEqual(mockDb.inserted[1].languages, ['de']);
+});
+
+test('importCues: a row with multiple language columns gets all of them', async () => {
+  const mockDb = makeImportDb();
+  const rows = [
+    {
+      text_en: 'After dinner',
+      text_de: 'Nach dem Abendessen',
+      quality: 'high',
+      stability: '3',
+      salience: '3',
+      specificity: '3',
+      domain: 'physical_activity',
+    },
+  ];
+  const result = await importCues({ db: mockDb, rows });
+  assert.equal(result.inserted, 1);
+  assert.deepEqual(mockDb.inserted[0].text, {
+    en: 'After dinner',
+    de: 'Nach dem Abendessen',
+  });
+  assert.deepEqual(mockDb.inserted[0].languages.sort(), ['de', 'en']);
 });
 
 test('importCues: skips rows with missing required fields', async () => {
   const mockDb = makeImportDb();
   const rows = [
     {
-      text: '',
+      // no text_* column filled in at all
       quality: 'high',
-      stability: 5,
-      salience: 5,
-      specificity: 5,
+      stability: '5',
+      salience: '5',
+      specificity: '5',
       domain: 'physical_activity',
-      language: 'en',
     },
     {
-      text: 'Valid cue',
+      text_en: 'Valid cue',
       quality: 'low',
-      stability: 3,
-      salience: 3,
-      specificity: 3,
+      stability: '3',
+      salience: '3',
+      specificity: '3',
       domain: 'physical_activity',
-      language: 'en',
     },
     {
-      text: 'Bad quality',
+      text_en: 'Bad quality',
       quality: 'medium',
-      stability: 3,
-      salience: 3,
-      specificity: 3,
+      stability: '3',
+      salience: '3',
+      specificity: '3',
       domain: 'physical_activity',
-      language: 'en',
     },
   ];
   const result = await importCues({ db: mockDb, rows });

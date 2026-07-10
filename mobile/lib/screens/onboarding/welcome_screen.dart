@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../theme/app_colors.dart';
 
 /// Storage key for the onboarding-complete flag.
 const String kOnboardingCompleteKey = 'onboarding_complete';
@@ -169,6 +170,7 @@ class _WelcomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final colors = context.appColors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -178,31 +180,27 @@ class _WelcomePage extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: const Color(0xFFEDF7E5),
+              color: colors.greenLight,
               borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
+              boxShadow: [
                 BoxShadow(
-                  color: Color(0x2E45B700),
+                  color: colors.primary.withAlpha(0x2E),
                   blurRadius: 24,
-                  offset: Offset(0, 8),
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.favorite,
-              size: 44,
-              color: Color(0xFF45B700),
-            ),
+            child: Icon(Icons.favorite, size: 44, color: colors.primary),
           ),
           const SizedBox(height: 28),
           Text(
             // appTitle is the app's brand name and is not translated; the
             // line break here is purely presentational.
             l10n.appTitle.replaceFirst(' ', '\n'),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF111827),
+              color: colors.text,
               height: 1.1,
             ),
             textAlign: TextAlign.center,
@@ -210,11 +208,7 @@ class _WelcomePage extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             l10n.onboardingSubtitle,
-            style: const TextStyle(
-              fontSize: 15,
-              color: Color(0xFF6B7280),
-              height: 1.55,
-            ),
+            style: TextStyle(fontSize: 15, color: colors.muted, height: 1.55),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
@@ -255,6 +249,7 @@ class _WalkthroughPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final colors = context.appColors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -276,38 +271,34 @@ class _WalkthroughPage extends StatelessWidget {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEDF7E5),
+                    color: colors.greenLight,
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
-                        color: Color(0x2E45B700),
+                        color: colors.primary.withAlpha(0x2E),
                         blurRadius: 24,
-                        offset: Offset(0, 8),
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
-                  child: Icon(
-                    step.icon,
-                    size: 44,
-                    color: const Color(0xFF45B700),
-                  ),
+                  child: Icon(step.icon, size: 44, color: colors.primary),
                 ),
                 const SizedBox(height: 32),
                 Text(
                   step.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF111827),
+                    color: colors.text,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 14),
                 Text(
                   step.description,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
-                    color: Color(0xFF6B7280),
+                    color: colors.muted,
                     height: 1.55,
                   ),
                   textAlign: TextAlign.center,

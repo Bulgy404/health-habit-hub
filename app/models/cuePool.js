@@ -3,14 +3,18 @@
  *
  * Schema:
  *   _id        ObjectId   Auto-generated
- *   text       string     Required. The cue text.
+ *   text       object     Required. Locale-text map, e.g. { en: '...', de: '...' } —
+ *                          at least one of SUPPORTED_LANGS (see utils/localeText.js)
+ *                          must be non-empty.
+ *   languages  string[]   Required. Which languages this cue is available in
+ *                          (a subset of the keys present in `text`).
  *   quality    string     Required. 'low' | 'high'
- *   dimensions object     Required. Cue quality dimensions.
+ *   dimensions object     Required. Cue quality dimensions (unrelated to the
+ *                          behaviour-dimension tags used for intentions).
  *     stability    int    1-5 scale
  *     salience     int    1-5 scale
  *     specificity  int    1-5 scale
  *   domain     string     Required. Cue domain/category.
- *   language   string     Required. 'en' | 'de' | 'ja' | 'fr' | 'nl'
  *   createdAt  Date       Required.
  */
 
@@ -22,15 +26,20 @@ export const VALIDATOR = {
     bsonType: 'object',
     required: [
       'text',
+      'languages',
       'quality',
       'dimensions',
       'domain',
-      'language',
       'createdAt',
     ],
     properties: {
       _id: { bsonType: 'objectId' },
-      text: { bsonType: 'string' },
+      text: { bsonType: 'object' },
+      languages: {
+        bsonType: 'array',
+        items: { bsonType: 'string', enum: ['en', 'de', 'fr', 'ja', 'nl'] },
+        minItems: 1,
+      },
       quality: { bsonType: 'string', enum: ['low', 'high'] },
       dimensions: {
         bsonType: 'object',
@@ -42,7 +51,6 @@ export const VALIDATOR = {
         },
       },
       domain: { bsonType: 'string' },
-      language: { bsonType: 'string', enum: ['en', 'de', 'ja', 'fr', 'nl'] },
       createdAt: { bsonType: 'date' },
     },
   },
@@ -56,7 +64,7 @@ export const VALIDATOR = {
 export async function ensureIndexes(db) {
   const col = db.collection(COLLECTION);
   await col.createIndex(
-    { quality: 1, domain: 1, language: 1 },
+    { quality: 1, domain: 1, languages: 1 },
     { name: 'cue_pools_quality_domain_lang' }
   );
 }

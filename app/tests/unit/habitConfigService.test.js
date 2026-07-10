@@ -169,7 +169,14 @@ test('resolveHabitConfig: pre-rated study participant gets assignedCues from poo
         { id: groupId, label: 'G1', index: 1, cueConfig: studyCueConfig },
       ],
     },
-    cuePools: [{ _id: 'pool-1', text: 'After dinner', quality: 'high' }],
+    cuePools: [
+      {
+        _id: 'pool-1',
+        text: { en: 'After dinner' },
+        languages: ['en'],
+        quality: 'high',
+      },
+    ],
   });
   const neo4jRun = async () => [
     {

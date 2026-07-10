@@ -33,4 +33,10 @@ abstract final class AppConfig {
     'WS_BASE_URL',
     defaultValue: 'ws://localhost:3000/ws',
   );
+
+  /// Contact address shown on the Help & Support screen.
+  static const supportEmail = String.fromEnvironment(
+    'SUPPORT_EMAIL',
+    defaultValue: 'digital-health@tu-dresden.de',
+  );
 }

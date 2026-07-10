@@ -13,6 +13,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../theme/app_colors.dart';
+
 const _kProjectGithubUrl =
     'https://github.com/Bulgy404/health-habit-hub';
 
@@ -339,7 +341,7 @@ class _InfoSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(section.icon, size: 18, color: const Color(0xFF45B700)),
+            Icon(section.icon, size: 18, color: context.appColors.primary),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -411,7 +413,7 @@ class _FlowChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: const Color(0xFF45B700)),
+        border: Border.all(color: context.appColors.primary),
       ),
       child: Text(
         label,

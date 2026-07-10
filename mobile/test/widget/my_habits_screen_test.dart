@@ -28,7 +28,7 @@ class _FakeMyHabitsService extends MyHabitsService {
   bool loggedToday = false;
 
   @override
-  Future<HabitConfig> fetchHabitConfig() async => config;
+  Future<HabitConfig> fetchHabitConfig(String lang) async => config;
 
   @override
   Future<List<Intention>> listIntentions() async => intentions;

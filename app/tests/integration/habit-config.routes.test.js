@@ -86,7 +86,8 @@ function createMockDb({ enrollment } = {}) {
               const n = sampleStage?.$sample?.size ?? 1;
               return Array.from({ length: n }, (_, i) => ({
                 _id: i === 0 ? cueId : new ObjectId(),
-                text: `After dinner cue ${i + 1}`,
+                text: { en: `After dinner cue ${i + 1}` },
+                languages: ['en'],
                 quality: 'high',
               }));
             },

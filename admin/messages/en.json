@@ -39,7 +39,8 @@
       "research": "Research",
       "operations": "Operations",
       "configuration": "Configuration",
-      "monitoring": "Monitoring"
+      "monitoring": "Monitoring",
+      "support": "Support"
     },
     "nav": {
       "appSettings": "App Settings",
@@ -55,9 +56,15 @@
       "profileFields": "Profile Fields",
       "knowledgeBase": "Knowledge Base",
       "system": "System & Links",
-      "backups": "Backups"
+      "backups": "Backups",
+      "auditLog": "Audit Log",
+      "team": "Team & Roles",
+      "help": "Help"
     },
     "language": "Language",
+    "toggleTheme": "Toggle theme",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
     "signOut": "Sign out"
   },
   "system": {
@@ -259,6 +266,75 @@
     "uploadFailed": "Failed to upload backup",
     "restoreStartFailed": "Failed to start restore"
   },
+  "auditLog": {
+    "title": "Audit Log",
+    "subtitle": "Every mutating admin action, except Backups (see the Backups page for its own audit trail).",
+    "resourceTypeLabel": "Resource",
+    "limitLabel": "Show",
+    "filterAll": "All",
+    "resourceTypes": {
+      "study": "Study",
+      "participant": "Participant",
+      "questionnaire": "Questionnaire",
+      "team_member": "Team member"
+    },
+    "when": "When",
+    "who": "Who",
+    "action": "Action",
+    "resource": "Resource",
+    "result": "Status",
+    "loadFailed": "Failed to load the audit log"
+  },
+  "team": {
+    "title": "Team & Roles",
+    "subtitle": "Manage who has admin or researcher access. Role changes take effect immediately.",
+    "addMember": "Add team member",
+    "searchPlaceholder": "Search by username or email",
+    "searchButton": "Search",
+    "noSearchResults": "No matching accounts found.",
+    "member": "Member",
+    "roles": "Roles",
+    "actions": "Actions",
+    "grantAdmin": "Grant admin",
+    "grantResearcher": "Grant researcher",
+    "revoke": "Revoke",
+    "revokeConfirm": "Revoke {role} from {username}?",
+    "roleAdmin": "Admin",
+    "roleResearcher": "Researcher",
+    "noMembers": "No one currently holds admin or researcher access.",
+    "loadFailed": "Failed to load the team",
+    "searchFailed": "Search failed",
+    "grantFailed": "Failed to grant role",
+    "revokeFailed": "Failed to revoke role"
+  },
+  "help": {
+    "title": "Help",
+    "subtitle": "Quick tips for each part of the admin portal.",
+    "studies": {
+      "title": "Studies",
+      "body": "Create a study, configure its groups and cue pools, generate invite codes, and assign questionnaires. Deleting a study requires typing its exact name to confirm — enrolled participants block deletion until reassigned or removed."
+    },
+    "participants": {
+      "title": "Participants",
+      "body": "Create participants one at a time or in bulk, print or download their token cards, reassign their group, and inspect their progress (surveys, habits, recommendations). Deleting a participant anonymizes their record rather than erasing it outright."
+    },
+    "questionnaires": {
+      "title": "Questionnaires",
+      "body": "Build and edit questionnaires, then assign them to a study. A questionnaire already assigned to a study can't be deleted — remove the assignment first."
+    },
+    "cuePools": {
+      "title": "Cue Pools",
+      "body": "Manage the catalog of habit cues offered to participants. Import a CSV to add many cues at once, then assign a cue pool to a study group's cue configuration on the Studies page."
+    },
+    "analytics": {
+      "title": "Analytics",
+      "body": "Engagement, habit, and questionnaire-completion metrics per study and group. Use the Studies page's per-study export for a full data download."
+    },
+    "backups": {
+      "title": "Backups",
+      "body": "Trigger a backup, restore from a previous one, or upload/download archives. Every action here is recorded in its own audit trail, separate from the general Audit Log."
+    }
+  },
   "participants": {
     "title": "Participants",
     "subtitle": "Create and manage study participants, reassign groups, and inspect progress.",
@@ -320,7 +396,15 @@
     "fastForwardFailed": "Fast-forward failed",
     "confirmAnonymise": "Anonymise participant \"{username}\"? This cannot be undone.",
     "ffShiftedBack": "Shifted {days} day(s) back. Reloading…",
-    "ffAdvanced": "Advanced {days} day(s). Open the app to re-sync."
+    "ffAdvanced": "Advanced {days} day(s). Open the app to re-sync.",
+    "count": "Count",
+    "selectAllOnPage": "Select all on this page",
+    "selectParticipant": "Select {username}",
+    "selectedCount": "{count} selected",
+    "exportSelected": "Export selected (CSV)",
+    "deleteSelected": "Delete selected",
+    "confirmBulkAnonymise": "Anonymise {count} selected participants? This cannot be undone.",
+    "bulkParticipantsCreated": "{count} participants created"
   },
   "cuePools": {
     "title": "Cue Pools",
@@ -329,6 +413,8 @@
     "importCsv": "Import CSV",
     "addCue": "+ Add Cue",
     "newCueTitle": "New cue",
+    "languagesLabel": "Available languages",
+    "editingLanguage": "Editing: {language}",
     "cueTextLabel": "Cue text *",
     "cueTextPlaceholder": "e.g. After dinner each evening",
     "qualityLabel": "Quality",
@@ -476,6 +562,9 @@
     "customTab": "Custom",
     "titleHeader": "Title",
     "slugHeader": "Slug",
+    "languagesHeader": "Languages",
+    "languagesLabel": "Available languages",
+    "editingLanguage": "Editing: {language}",
     "questionsHeader": "Questions",
     "version": "Version",
     "lastUpdated": "Last updated",

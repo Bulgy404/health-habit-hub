@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
+import '../../providers/locale_provider.dart';
 import 'questionnaire_models.dart';
 
 /// REST client for the questionnaire API endpoints.
@@ -17,10 +18,15 @@ class QuestionnaireService {
 
   final Dio _dio;
 
-  /// Fetches the full [QuestionnaireDefinition] for [slug].
-  Future<QuestionnaireDefinition> fetchQuestionnaire(String slug) async {
+  /// Fetches the full [QuestionnaireDefinition] for [slug], with title,
+  /// question text, and option labels resolved in [lang].
+  Future<QuestionnaireDefinition> fetchQuestionnaire(
+    String slug,
+    String lang,
+  ) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '$_baseUrl/questionnaires/$slug',
+      queryParameters: {'lang': lang},
     );
     return QuestionnaireDefinition.fromJson(response.data ?? {});
   }
@@ -40,10 +46,12 @@ class QuestionnaireService {
   }
 
   /// Returns the participant's due + upcoming scheduled questionnaires
-  /// (from the questionnaire scheduling system).
-  Future<List<DueQuestionnaire>> fetchDueQuestionnaires() async {
+  /// (from the questionnaire scheduling system), with titles resolved in
+  /// [lang].
+  Future<List<DueQuestionnaire>> fetchDueQuestionnaires(String lang) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '$_baseUrl/questionnaires/due',
+      queryParameters: {'lang': lang},
     );
     final list =
         (response.data?['questionnaires'] as List<dynamic>?) ?? const [];
@@ -53,10 +61,14 @@ class QuestionnaireService {
         .toList();
   }
 
-  /// Returns the questionnaires assigned to the participant's enrolled study.
-  Future<List<ParticipantQuestionnaire>> fetchParticipantQuestionnaires() async {
+  /// Returns the questionnaires assigned to the participant's enrolled
+  /// study, with titles resolved in [lang].
+  Future<List<ParticipantQuestionnaire>> fetchParticipantQuestionnaires(
+    String lang,
+  ) async {
     final response = await _dio.get<List<dynamic>>(
       '$_baseUrl/participant/questionnaires',
+      queryParameters: {'lang': lang},
     );
     return (response.data ?? [])
         .cast<Map<String, dynamic>>()
@@ -118,19 +130,22 @@ final questionnaireServiceProvider = Provider<QuestionnaireService>((ref) {
 /// The participant's due + upcoming scheduled questionnaires.
 final dueQuestionnairesProvider =
     FutureProvider<List<DueQuestionnaire>>((ref) async {
-  return ref.watch(questionnaireServiceProvider).fetchDueQuestionnaires();
+  final lang = ref.watch(localeProvider).languageCode;
+  return ref.watch(questionnaireServiceProvider).fetchDueQuestionnaires(lang);
 });
 
 /// Fetches a [QuestionnaireDefinition] by [slug].
 final questionnaireProvider =
     FutureProvider.family<QuestionnaireDefinition, String>((ref, slug) async {
   final service = ref.watch(questionnaireServiceProvider);
-  return service.fetchQuestionnaire(slug);
+  final lang = ref.watch(localeProvider).languageCode;
+  return service.fetchQuestionnaire(slug, lang);
 });
 
 /// Fetches all questionnaires assigned to the current participant's study.
 final participantQuestionnairesProvider =
     FutureProvider<List<ParticipantQuestionnaire>>((ref) async {
   final service = ref.watch(questionnaireServiceProvider);
-  return service.fetchParticipantQuestionnaires();
+  final lang = ref.watch(localeProvider).languageCode;
+  return service.fetchParticipantQuestionnaires(lang);
 });

@@ -633,6 +633,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get myHabitsTab => 'Meine Gewohnheiten';
 
   @override
+  String get navTabShare => 'Teilen';
+
+  @override
+  String get navTabExplore => 'Entdecken';
+
+  @override
+  String get navTabRecommend => 'Empfehlungen';
+
+  @override
+  String get navTabAccount => 'Konto';
+
+  @override
   String get newHabit => 'Neue Gewohnheit';
 
   @override
@@ -1457,4 +1469,111 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get nextButton => 'Weiter';
+
+  @override
+  String get helpAndSupport => 'Hilfe & Support';
+
+  @override
+  String get contactResearchTeam => 'Forschungsteam kontaktieren';
+
+  @override
+  String get contactResearchTeamDescription =>
+      'Haben Sie eine Frage oder ein Problem? Schreiben Sie uns eine E-Mail, wir melden uns bei Ihnen.';
+
+  @override
+  String get sendEmail => 'E-Mail senden';
+
+  @override
+  String get frequentlyAskedQuestions => 'Häufig gestellte Fragen';
+
+  @override
+  String get faqPassphraseQuestion =>
+      'Ich habe meine Wiederherstellungs-Passphrase verloren — was nun?';
+
+  @override
+  String get faqPassphraseAnswer =>
+      'Ihre 24-Wort-Passphrase ist der einzige Weg, Ihr Konto wiederherzustellen. Falls Sie sie noch haben, nutzen Sie „Konto wiederherstellen“ auf dem Startbildschirm. Falls Sie sie verloren haben, können Konto und Daten leider nicht wiederhergestellt werden — kontaktieren Sie uns, wenn Sie neu starten möchten.';
+
+  @override
+  String get faqDataQuestion =>
+      'Kann ich meine Daten exportieren oder löschen?';
+
+  @override
+  String get faqDataAnswer =>
+      'Ja. Gehen Sie zu Einstellungen → Meine Daten exportieren, um alles herunterzuladen, was mit Ihrem Konto verknüpft ist, oder zu Einstellungen → Konto löschen, um es dauerhaft zu entfernen. Das Löschen kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get faqOfflineQuestion =>
+      'Was passiert, wenn die Verbindung während der Nutzung abbricht?';
+
+  @override
+  String get faqOfflineAnswer =>
+      'Gewohnheits-Einträge, die Sie offline absenden, werden auf Ihrem Gerät gespeichert und automatisch gesendet, sobald Sie wieder online sind.';
+
+  @override
+  String get faqNotificationsQuestion =>
+      'Kann ich bestimmte Erinnerungen ausschalten?';
+
+  @override
+  String get faqNotificationsAnswer =>
+      'Ja. Gehen Sie zu Einstellungen → Benachrichtigungen, um Erinnerungen für Gewohnheiten, Fragebögen oder Studien-Updates einzeln ein- oder auszuschalten.';
+
+  @override
+  String get faqConsentQuestion => 'Kann ich meine Einwilligung widerrufen?';
+
+  @override
+  String get faqConsentAnswer =>
+      'Ja, jederzeit. Gehen Sie zu Einstellungen → Studieneinwilligung, um zu sehen, wozu Sie zugestimmt haben, oder zu Einstellungen → Konto löschen, um zu widerrufen und Ihre Daten zu löschen.';
+
+  @override
+  String get notificationsSection => 'Benachrichtigungen';
+
+  @override
+  String get habitReminders => 'Gewohnheits-Erinnerungen';
+
+  @override
+  String get questionnaireReminders => 'Fragebogen-Erinnerungen';
+
+  @override
+  String get studyUpdateNotifications => 'Studien-Updates';
+
+  @override
+  String get changeRecoveryPassphrase => 'Wiederherstellungs-Passphrase ändern';
+
+  @override
+  String get rotatePassphraseTitle => 'Wiederherstellungs-Passphrase ändern?';
+
+  @override
+  String get rotatePassphraseWarning =>
+      'Ihre aktuelle 24-Wort-Passphrase funktioniert danach sofort nicht mehr. Speichern Sie die neue Passphrase unbedingt sicher.';
+
+  @override
+  String get rotatePassphraseConfirm => 'Neue Passphrase erstellen';
+
+  @override
+  String get rotatePassphraseNewTitle =>
+      'Ihre neue Wiederherstellungs-Passphrase';
+
+  @override
+  String get rotatePassphraseNewSubtitle =>
+      'Schreiben Sie diese 24 Wörter auf oder speichern Sie sie sicher. Sie benötigen sie, um Ihr Konto wiederherzustellen.';
+
+  @override
+  String get rotatePassphraseSavedCheckbox => 'Ich habe sie aufgeschrieben';
+
+  @override
+  String get rotatePassphraseDone => 'Fertig';
+
+  @override
+  String get rotatePassphraseFailed =>
+      'Neue Passphrase konnte nicht erstellt werden. Bitte Verbindung prüfen und erneut versuchen.';
+
+  @override
+  String get copyToClipboard => 'In Zwischenablage kopieren';
+
+  @override
+  String get passphraseCopied => 'Passphrase in Zwischenablage kopiert';
+
+  @override
+  String get close => 'Schließen';
 }

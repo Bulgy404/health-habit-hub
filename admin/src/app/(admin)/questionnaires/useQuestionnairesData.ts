@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { apiUrl } from '@/lib/api';
 
+/** Per-language text, e.g. `{ en: 'Hello', de: 'Hallo' }`. */
+export type LocaleText = Partial<Record<'en' | 'de' | 'fr' | 'ja' | 'nl', string>>;
+export type Lang = keyof Required<LocaleText>;
+
 export interface QuestionnaireSummary {
   id: string;
   slug: string;
-  title: string;
-  description: string;
+  title: LocaleText;
+  description: LocaleText;
   version: string;
+  languages: Lang[];
   active: boolean;
   isLibrary: boolean;
   questionCount: number;

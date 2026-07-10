@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/dio_provider.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/reminder_scheduler_service.dart';
+import '../../theme/app_colors.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
@@ -170,7 +171,7 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
                                       ?.copyWith(
                                         fontWeight: FontWeight.w800,
                                         color: touched
-                                            ? const Color(0xFF45B700)
+                                            ? context.appColors.primary
                                             : colorScheme.onSurfaceVariant,
                                       ),
                                 ),

@@ -12,20 +12,38 @@ import { useQuestionnairesData } from "./useQuestionnairesData";
 type Tab = "library" | "custom";
 type QuestionType = "single_choice" | "multi_choice" | "scale" | "text";
 
+/** Per-language text, e.g. `{ en: 'Hello', de: 'Hallo' }`. */
+type LocaleText = Partial<Record<"en" | "de" | "fr" | "ja" | "nl", string>>;
+type Lang = keyof Required<LocaleText>;
+const SUPPORTED_LANGS: Lang[] = ["en", "de", "fr", "ja", "nl"];
+const LANG_LABELS: Record<Lang, string> = {
+  en: "English",
+  de: "Deutsch",
+  fr: "Français",
+  ja: "日本語",
+  nl: "Nederlands",
+};
+
+interface QuestionOption {
+  value: string;
+  label: LocaleText;
+}
+
 interface Question {
   id: string;
   type: QuestionType;
-  text: string;
+  text: LocaleText;
   required: boolean;
-  options: string[];
+  options: QuestionOption[];
 }
 
 interface QuestionnaireSummary {
   id: string;
   slug: string;
-  title: string;
-  description: string;
+  title: LocaleText;
+  description: LocaleText;
   version: string;
+  languages: Lang[];
   active: boolean;
   isLibrary: boolean;
   questionCount: number;
@@ -38,6 +56,21 @@ interface QuestionnaireDetail extends QuestionnaireSummary {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+/** Resolves a locale-text map to a single string for display (admin-side preview only). */
+function previewText(map: LocaleText | undefined, lang: Lang = "en"): string {
+  if (!map) return "";
+  return map[lang] || map.en || Object.values(map).find(Boolean) || "";
+}
+
+/** Strips language keys not in [languages] from a locale-text map. */
+function pruneLocaleText(map: LocaleText, languages: Lang[]): LocaleText {
+  const next: LocaleText = {};
+  for (const lang of languages) {
+    if (map[lang]) next[lang] = map[lang];
+  }
+  return next;
+}
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -46,7 +79,7 @@ function slugify(text: string): string {
 }
 
 function makeQuestion(): Question {
-  return { id: crypto.randomUUID(), type: "text", text: "", required: false, options: [] };
+  return { id: crypto.randomUUID(), type: "text", text: {}, required: false, options: [] };
 }
 
 function fmtDate(iso: string | null): string {
@@ -61,7 +94,6 @@ function fmtDate(iso: string | null): string {
 // ── API helpers ───────────────────────────────────────────────────────────────
 
 const API_BASE = apiUrl("/admin/questionnaires");
-const PARTICIPANT_API = apiUrl("/questionnaires");
 
 /**
  * Authenticated JSON fetch helper.
@@ -95,6 +127,7 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
 function QuestionCard({
   question,
   index,
+  activeLang,
   onChange,
   onRemove,
   onDragStart,
@@ -105,6 +138,7 @@ function QuestionCard({
 }: {
   question: Question;
   index: number;
+  activeLang: Lang;
   onChange: (q: Question) => void;
   onRemove: () => void;
   onDragStart: () => void;
@@ -124,13 +158,20 @@ function QuestionCard({
     onChange(updated);
   }
 
-  function addOption() {
-    onChange({ ...question, options: [...question.options, ""] });
+  function updateText(value: string) {
+    onChange({ ...question, text: { ...question.text, [activeLang]: value } });
   }
 
-  function updateOption(i: number, val: string) {
+  function addOption() {
+    onChange({
+      ...question,
+      options: [...question.options, { value: String(question.options.length), label: {} }],
+    });
+  }
+
+  function updateOptionLabel(i: number, val: string) {
     const opts = [...question.options];
-    opts[i] = val;
+    opts[i] = { ...opts[i], label: { ...opts[i].label, [activeLang]: val } };
     onChange({ ...question, options: opts });
   }
 
@@ -164,8 +205,8 @@ function QuestionCard({
             <input
               className={styles.input}
               placeholder={t("questionTextPlaceholder")}
-              value={question.text}
-              onChange={(e) => updateField("text", e.target.value)}
+              value={question.text[activeLang] ?? ""}
+              onChange={(e) => updateText(e.target.value)}
             />
           </div>
           <div className={styles.formGroup}>
@@ -190,8 +231,8 @@ function QuestionCard({
                 <input
                   className={styles.optionInput}
                   placeholder={t("optionPlaceholder", { number: i + 1 })}
-                  value={opt}
-                  onChange={(e) => updateOption(i, e.target.value)}
+                  value={opt.label[activeLang] ?? ""}
+                  onChange={(e) => updateOptionLabel(i, e.target.value)}
                 />
                 <button
                   className={styles.removeOptionBtn}
@@ -242,11 +283,13 @@ function QuestionnaireModal({
   const t = useTranslations("questionnaires");
   const tc = useTranslations("common");
   const isEdit = initial !== null;
-  const [title, setTitle] = useState(initial?.title ?? "");
+  const [title, setTitle] = useState<LocaleText>(initial?.title ?? {});
   const [slug, setSlug] = useState(initial?.slug ?? "");
   const [slugManual, setSlugManual] = useState(isEdit);
-  const [description, setDescription] = useState(initial?.description ?? "");
+  const [description, setDescription] = useState<LocaleText>(initial?.description ?? {});
   const [version, setVersion] = useState(initial?.version ?? "1");
+  const [languages, setLanguages] = useState<Lang[]>(initial?.languages ?? ["en"]);
+  const [activeLang, setActiveLang] = useState<Lang>(initial?.languages?.[0] ?? "en");
   const [questions, setQuestions] = useState<Question[]>(initial?.questions ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -254,10 +297,22 @@ function QuestionnaireModal({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   function handleTitleChange(val: string) {
-    setTitle(val);
+    setTitle((prev) => ({ ...prev, [activeLang]: val }));
     if (!slugManual) {
       setSlug(slugify(val));
     }
+  }
+
+  function toggleLanguage(lang: Lang) {
+    setLanguages((prev) => {
+      const next = prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang];
+      // Keep at least one language selected.
+      if (next.length === 0) return prev;
+      if (activeLang === lang && !next.includes(lang)) {
+        setActiveLang(next[0]);
+      }
+      return next;
+    });
   }
 
   function handleSlugChange(val: string) {
@@ -304,14 +359,26 @@ function QuestionnaireModal({
   }
 
   async function handleSave() {
-    if (!title.trim()) {
+    if (!Object.values(title).some(Boolean)) {
       setError(t("titleRequiredError"));
       return;
     }
     setSaving(true);
     setError("");
     try {
-      const payload = { slug: slug || undefined, title, description, version, questions };
+      const prunedQuestions = questions.map((q) => ({
+        ...q,
+        text: pruneLocaleText(q.text, languages),
+        options: q.options.map((o) => ({ ...o, label: pruneLocaleText(o.label, languages) })),
+      }));
+      const payload = {
+        slug: slug || undefined,
+        title: pruneLocaleText(title, languages),
+        description: pruneLocaleText(description, languages),
+        version,
+        languages,
+        questions: prunedQuestions,
+      };
       if (isEdit) {
         await apiFetch(`${API_BASE}/${initial!.id}`, token, {
           method: "PUT",
@@ -346,12 +413,41 @@ function QuestionnaireModal({
         <div className={styles.modalBody}>
           {error && <div className={styles.errorMsg}>{error}</div>}
 
+          <div className={styles.formGroup} style={{ marginBottom: "1rem" }}>
+            <label className={styles.label}>{t("languagesLabel")}</label>
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              {SUPPORTED_LANGS.map((lang) => (
+                <label key={lang} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <input
+                    type="checkbox"
+                    checked={languages.includes(lang)}
+                    onChange={() => toggleLanguage(lang)}
+                  />
+                  {LANG_LABELS[lang]}
+                </label>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
+              {languages.map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  className={styles.actionBtn}
+                  onClick={() => setActiveLang(lang)}
+                  style={activeLang === lang ? { fontWeight: 700, textDecoration: "underline" } : undefined}
+                >
+                  {t("editingLanguage", { language: LANG_LABELS[lang] })}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
               <label className={styles.label}>{t("titleLabel")}</label>
               <input
                 className={styles.input}
-                value={title}
+                value={title[activeLang] ?? ""}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder={t("titlePlaceholder")}
               />
@@ -370,8 +466,8 @@ function QuestionnaireModal({
               <label className={styles.label}>{tc("description")}</label>
               <textarea
                 className={styles.textarea}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                value={description[activeLang] ?? ""}
+                onChange={(e) => setDescription((prev) => ({ ...prev, [activeLang]: e.target.value }))}
                 placeholder={t("descriptionPlaceholder")}
               />
             </div>
@@ -404,6 +500,7 @@ function QuestionnaireModal({
                   key={q.id}
                   question={q}
                   index={i}
+                  activeLang={activeLang}
                   onChange={(updated) => updateQuestion(i, updated)}
                   onRemove={() => removeQuestion(i)}
                   onDragStart={() => handleDragStart(i)}
@@ -446,6 +543,7 @@ function QuestionnairePreviewModal({
   const [detail, setDetail] = useState<QuestionnaireDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [previewLang, setPreviewLang] = useState<Lang>(questionnaire.languages?.[0] ?? "en");
 
   const typeLabel = (type: QuestionType) =>
     ({
@@ -460,29 +558,14 @@ function QuestionnairePreviewModal({
       setLoading(true);
       setError("");
       try {
+        // The admin endpoint (by id) returns the full, unresolved locale-map
+        // data needed to preview every language — the participant-facing
+        // endpoint (by slug) would only ever return one resolved language.
         const data = (await apiFetch(
-          `${PARTICIPANT_API}/${questionnaire.slug}`,
+          `${API_BASE}/${questionnaire.id}`,
           token
         )) as QuestionnaireDetail;
-        const questions: Question[] = (data.questions ?? []).map(
-          (q: Partial<Question> & { id?: string }) => ({
-            id: q.id ?? crypto.randomUUID(),
-            type: (q.type ?? "text") as QuestionType,
-            text: q.text ?? "",
-            required: q.required ?? false,
-            // Options may be stored as {value, label} objects (legacy format from library
-            // questionnaires). Normalize to strings for display.
-            options: Array.isArray(q.options)
-              ? q.options.map((o: unknown) =>
-                  typeof o === "string"
-                    ? o
-                    : ((o as { label?: string }).label ??
-                      String((o as { value?: unknown }).value ?? o))
-                )
-              : [],
-          })
-        );
-        setDetail({ ...questionnaire, questions });
+        setDetail(data);
       } catch {
         setError(t("loadDetailsFailed"));
       } finally {
@@ -492,19 +575,38 @@ function QuestionnairePreviewModal({
     load();
   }, [questionnaire, token, t]);
 
+  const languages = detail?.languages ?? questionnaire.languages ?? ["en"];
+
   return (
     <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
         <div className={styles.modalHeader}>
-          <span className={styles.modalTitle}>{questionnaire.title}</span>
+          <span className={styles.modalTitle}>{previewText(questionnaire.title, previewLang)}</span>
           <button className={styles.closeBtn} onClick={onClose}>
             ×
           </button>
         </div>
 
         <div className={styles.modalBody}>
-          {questionnaire.description && (
-            <p className={styles.previewDescription}>{questionnaire.description}</p>
+          {languages.length > 1 && (
+            <div style={{ display: "flex", gap: "6px", marginBottom: "12px", flexWrap: "wrap" }}>
+              {languages.map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  className={styles.actionBtn}
+                  onClick={() => setPreviewLang(lang)}
+                  style={previewLang === lang ? { fontWeight: 700, textDecoration: "underline" } : undefined}
+                >
+                  {LANG_LABELS[lang]}
+                </button>
+              ))}
+            </div>
+          )}
+          {previewText(questionnaire.description, previewLang) && (
+            <p className={styles.previewDescription}>
+              {previewText(questionnaire.description, previewLang)}
+            </p>
           )}
           <div className={styles.previewMeta}>
             <span>{t("versionValue", { version: questionnaire.version })}</span>
@@ -526,11 +628,13 @@ function QuestionnairePreviewModal({
                     <span className={styles.previewQType}>{typeLabel(q.type)}</span>
                     {q.required && <span className={styles.previewRequired}>{t("required")}</span>}
                   </div>
-                  <p className={styles.previewQText}>{q.text || <em>{t("noText")}</em>}</p>
+                  <p className={styles.previewQText}>
+                    {previewText(q.text, previewLang) || <em>{t("noText")}</em>}
+                  </p>
                   {q.options.length > 0 && (
                     <ul className={styles.previewOptions}>
                       {q.options.map((opt, oi) => (
-                        <li key={oi}>{opt}</li>
+                        <li key={oi}>{previewText(opt.label, previewLang)}</li>
                       ))}
                     </ul>
                   )}
@@ -613,24 +717,37 @@ export default function QuestionnairesPage() {
   async function handleOpenEdit(q: QuestionnaireSummary) {
     setActionError("");
     try {
-      const data = (await apiFetch(`${PARTICIPANT_API}/${q.slug}`, token)) as QuestionnaireDetail;
+      // The admin endpoint (by id) returns the full, unresolved locale-map
+      // data needed to edit every language — the participant-facing
+      // endpoint (by slug) only ever returns one resolved language, and
+      // saving that back would silently destroy every other translation.
+      const data = (await apiFetch(`${API_BASE}/${q.id}`, token)) as QuestionnaireDetail;
       setEditTarget({
         ...q,
-        questions: (data.questions ?? []).map((qq: Partial<Question> & { id?: string }) => ({
-          id: qq.id ?? crypto.randomUUID(),
-          type: (qq.type ?? "text") as QuestionType,
-          text: qq.text ?? "",
-          required: qq.required ?? false,
-          // Normalize {value, label} options (library format) to plain strings.
-          options: Array.isArray(qq.options)
-            ? qq.options.map((o: unknown) =>
-                typeof o === "string"
-                  ? o
-                  : ((o as { label?: string }).label ??
-                    String((o as { value?: unknown }).value ?? o))
-              )
-            : [],
-        })),
+        title: data.title ?? {},
+        description: data.description ?? {},
+        languages: data.languages ?? ["en"],
+        questions: (data.questions ?? []).map(
+          (qq: Partial<Question> & { id?: string; text?: unknown; options?: unknown[] }) => ({
+            id: qq.id ?? crypto.randomUUID(),
+            type: (qq.type ?? "text") as QuestionType,
+            text: typeof qq.text === "string" ? { en: qq.text } : (qq.text as LocaleText) ?? {},
+            required: qq.required ?? false,
+            options: Array.isArray(qq.options)
+              ? qq.options.map((o: unknown, oi: number) =>
+                  typeof o === "string"
+                    ? { value: String(oi), label: { en: o } }
+                    : {
+                        value: (o as { value?: string }).value ?? String(oi),
+                        label:
+                          typeof (o as { label?: unknown }).label === "string"
+                            ? { en: (o as { label: string }).label }
+                            : ((o as { label?: LocaleText }).label ?? {}),
+                      }
+                )
+              : [],
+          })
+        ),
       });
       setModalOpen(true);
     } catch {
@@ -669,7 +786,7 @@ export default function QuestionnairesPage() {
           next.add(q.id);
           return next;
         });
-        setActionError(t("assignedDeleteError", { title: q.title }));
+        setActionError(t("assignedDeleteError", { title: previewText(q.title) }));
       } else {
         setActionError(err instanceof Error ? err.message : t("deleteFailed"));
       }
@@ -731,6 +848,7 @@ export default function QuestionnairesPage() {
                   <tr>
                     <th>{t("titleHeader")}</th>
                     <th>{t("slugHeader")}</th>
+                    <th>{t("languagesHeader")}</th>
                     <th>{t("questionsHeader")}</th>
                     <th>{t("version")}</th>
                     <th>{tc("actions")}</th>
@@ -739,17 +857,18 @@ export default function QuestionnairesPage() {
                 <tbody>
                   {libraryQuestionnaires.length === 0 ? (
                     <tr>
-                      <td colSpan={5}>
+                      <td colSpan={6}>
                         <div className={styles.emptyState}>{t("noLibraryQuestionnaires")}</div>
                       </td>
                     </tr>
                   ) : (
                     libraryQuestionnaires.map((q) => (
                       <tr key={q.id}>
-                        <td>{q.title}</td>
+                        <td>{previewText(q.title)}</td>
                         <td>
                           <span className={styles.slugCell}>{q.slug}</span>
                         </td>
+                        <td>{(q.languages ?? []).map((l) => l.toUpperCase()).join(", ")}</td>
                         <td>{q.questionCount}</td>
                         <td>{q.version}</td>
                         <td>
@@ -782,6 +901,7 @@ export default function QuestionnairesPage() {
                     <th>{t("titleHeader")}</th>
                     <th>{t("slugHeader")}</th>
                     <th>{tc("status")}</th>
+                    <th>{t("languagesHeader")}</th>
                     <th>{t("questionsHeader")}</th>
                     <th>{t("version")}</th>
                     <th>{t("lastUpdated")}</th>
@@ -791,7 +911,7 @@ export default function QuestionnairesPage() {
                 <tbody>
                   {customQuestionnaires.length === 0 ? (
                     <tr>
-                      <td colSpan={7}>
+                      <td colSpan={8}>
                         <div className={styles.emptyState}>{t("noCustomQuestionnaires")}</div>
                       </td>
                     </tr>
@@ -800,7 +920,7 @@ export default function QuestionnairesPage() {
                       const isAssigned = assignedIds.has(q.id);
                       return (
                         <tr key={q.id}>
-                          <td>{q.title}</td>
+                          <td>{previewText(q.title)}</td>
                           <td>
                             <span className={styles.slugCell}>{q.slug ?? "—"}</span>
                           </td>
@@ -811,6 +931,7 @@ export default function QuestionnairesPage() {
                               {q.active ? t("active") : t("inactive")}
                             </span>
                           </td>
+                          <td>{(q.languages ?? []).map((l) => l.toUpperCase()).join(", ")}</td>
                           <td>{q.questionCount}</td>
                           <td>{q.version}</td>
                           <td>{fmtDate(q.updatedAt)}</td>
@@ -867,7 +988,7 @@ export default function QuestionnairesPage() {
 
       {deleteTarget && (
         <ConfirmDeleteDialog
-          title={deleteTarget.title}
+          title={previewText(deleteTarget.title)}
           onCancel={() => setDeleteTarget(null)}
           onConfirm={() => handleDelete(deleteTarget)}
         />

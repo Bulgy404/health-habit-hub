@@ -2,13 +2,19 @@
 library;
 
 // mobile/lib/features/my_habits/my_habits_screen.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../theme/app_colors.dart';
 import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/day_strip_widget.dart';
+import '../../widgets/empty_state.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/srhi_sparkline_widget.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
@@ -105,21 +111,16 @@ class MyHabitsScreen extends ConsumerWidget {
                     .where((i) => i.status == 'active')
                     .toList();
                 if (active.isEmpty) {
+                  final canCreate =
+                      configAsync.value?.selfHabitCreationEnabled ?? false;
                   return SliverFillRemaining(
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Text(
-                          l10n.noHabitsYet,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurface.withAlpha(128),
-                              ),
-                        ),
-                      ),
+                    child: EmptyState(
+                      icon: Icons.checklist_rtl,
+                      message: l10n.noHabitsYet,
+                      ctaLabel: canCreate ? l10n.newHabit : null,
+                      onCta: canCreate
+                          ? () => context.push('/habits/new/behavior')
+                          : null,
                     ),
                   );
                 }
@@ -129,7 +130,11 @@ class MyHabitsScreen extends ConsumerWidget {
                 );
               },
               loading: () => const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
+                hasScrollBody: false,
+                child: Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: HabitListSkeleton(),
+                ),
               ),
               error: (e, _) =>
                   SliverFillRemaining(child: Center(child: Text(e.toString()))),
@@ -155,22 +160,20 @@ class _SrhiPromptCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
+    final colors = context.appColors;
     final first = windows.first;
     return Card(
       margin: const EdgeInsets.all(16),
       color: colorScheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFF45B700), width: 1),
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: colors.primary, width: 1),
       ),
       child: ListTile(
-        leading: const Icon(Icons.psychology, color: Color(0xFF45B700)),
+        leading: Icon(Icons.psychology, color: colors.primary),
         title: Text(
           l10n.srhiCheckInTitle,
-          style: const TextStyle(
-            color: Color(0xFF2E8C00),
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: colors.primaryDark, fontWeight: FontWeight.w700),
         ),
         subtitle: Text(
           l10n.srhiCheckInSubtitle,
@@ -326,6 +329,10 @@ class _HabitCard extends ConsumerWidget {
                             date: todayStr,
                             enacted: true,
                           );
+                      // A short tap confirms the log landed without requiring
+                      // the user to read the snackbar — this is the app's
+                      // core loop, so it should feel rewarding.
+                      unawaited(HapticFeedback.lightImpact());
                       ref.invalidate(intentionLogsProvider(intention.id));
                       // Also refresh the page-level aggregate contribution
                       // graph, so today's log shows up immediately instead of
@@ -347,7 +354,24 @@ class _HabitCard extends ConsumerWidget {
                       );
                     }
                   },
-                  child: Text(todayLogged ? l10n.loggedToday : l10n.logToday),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    transitionBuilder: (child, animation) => ScaleTransition(
+                      scale: animation,
+                      child: FadeTransition(opacity: animation, child: child),
+                    ),
+                    child: todayLogged
+                        ? Row(
+                            key: const ValueKey('logged'),
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.check_circle, size: 18),
+                              const SizedBox(width: 6),
+                              Text(l10n.loggedToday),
+                            ],
+                          )
+                        : Text(l10n.logToday, key: const ValueKey('unlogged')),
+                  ),
                 ),
               ),
             ],

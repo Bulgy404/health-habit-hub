@@ -588,6 +588,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get myHabitsTab => 'マイ習慣';
 
   @override
+  String get navTabShare => '共有';
+
+  @override
+  String get navTabExplore => '探索';
+
+  @override
+  String get navTabRecommend => 'おすすめ';
+
+  @override
+  String get navTabAccount => 'アカウント';
+
+  @override
   String get newHabit => '新しい習慣';
 
   @override
@@ -1358,4 +1370,105 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get nextButton => '次へ';
+
+  @override
+  String get helpAndSupport => 'ヘルプとサポート';
+
+  @override
+  String get contactResearchTeam => '研究チームに連絡する';
+
+  @override
+  String get contactResearchTeamDescription =>
+      '質問や問題がありますか？メールを送っていただければ、折り返しご連絡します。';
+
+  @override
+  String get sendEmail => 'メールを送る';
+
+  @override
+  String get frequentlyAskedQuestions => 'よくある質問';
+
+  @override
+  String get faqPassphraseQuestion => '復元用パスフレーズを紛失しました。どうすればいいですか？';
+
+  @override
+  String get faqPassphraseAnswer =>
+      '24単語のパスフレーズはアカウントを復元する唯一の方法です。まだお持ちの場合は、ウェルカム画面の「アカウントを復元」をご利用ください。紛失した場合、残念ながらアカウントとデータは復元できません。最初からやり直したい場合はお問い合わせください。';
+
+  @override
+  String get faqDataQuestion => 'データのエクスポートや削除はできますか？';
+
+  @override
+  String get faqDataAnswer =>
+      'はい。設定 → マイデータをエクスポート で、アカウントに紐づくすべてのデータをダウンロードできます。設定 → アカウントを削除 で完全に削除することもできます。削除は取り消せません。';
+
+  @override
+  String get faqOfflineQuestion => 'アプリ使用中に接続が切れたらどうなりますか？';
+
+  @override
+  String get faqOfflineAnswer =>
+      'オフライン中に送信した習慣の記録は端末に保存され、オンラインに戻ると自動的に送信されます。';
+
+  @override
+  String get faqNotificationsQuestion => '特定のリマインダーをオフにできますか？';
+
+  @override
+  String get faqNotificationsAnswer =>
+      'はい。設定 → 通知 で、習慣・アンケート・研究アップデートのリマインダーを個別にオン/オフできます。';
+
+  @override
+  String get faqConsentQuestion => '同意を撤回できますか？';
+
+  @override
+  String get faqConsentAnswer =>
+      'はい、いつでも可能です。設定 → 研究への同意 で同意内容を確認できます。設定 → アカウントを削除 で同意を撤回しデータを削除できます。';
+
+  @override
+  String get notificationsSection => '通知';
+
+  @override
+  String get habitReminders => '習慣のリマインダー';
+
+  @override
+  String get questionnaireReminders => 'アンケートのリマインダー';
+
+  @override
+  String get studyUpdateNotifications => '研究の更新情報';
+
+  @override
+  String get changeRecoveryPassphrase => '復元用パスフレーズを変更';
+
+  @override
+  String get rotatePassphraseTitle => '復元用パスフレーズを変更しますか？';
+
+  @override
+  String get rotatePassphraseWarning =>
+      '現在の24単語のパスフレーズはすぐに使用できなくなります。新しいパスフレーズは必ず安全な場所に保存してください。';
+
+  @override
+  String get rotatePassphraseConfirm => '新しいパスフレーズを生成';
+
+  @override
+  String get rotatePassphraseNewTitle => '新しい復元用パスフレーズ';
+
+  @override
+  String get rotatePassphraseNewSubtitle =>
+      'この24単語を書き留めるか、安全な場所に保存してください。アカウントの復元に必要です。';
+
+  @override
+  String get rotatePassphraseSavedCheckbox => '書き留めました';
+
+  @override
+  String get rotatePassphraseDone => '完了';
+
+  @override
+  String get rotatePassphraseFailed => '新しいパスフレーズを生成できませんでした。接続を確認して再試行してください。';
+
+  @override
+  String get copyToClipboard => 'クリップボードにコピー';
+
+  @override
+  String get passphraseCopied => 'パスフレーズをクリップボードにコピーしました';
+
+  @override
+  String get close => '閉じる';
 }

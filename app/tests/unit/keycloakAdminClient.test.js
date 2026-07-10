@@ -48,6 +48,115 @@ test('revokeSession rejects ids containing path-traversal characters', async () 
   );
 });
 
+test('resetPassword PUTs a non-temporary password credential', async () => {
+  const calls = [];
+  const client = makeClient(async (url, opts) => {
+    calls.push({ url: String(url), opts });
+    if (String(url).includes('/protocol/openid-connect/token')) {
+      return tokenResponse();
+    }
+    return { ok: true, json: async () => ({}) };
+  });
+
+  await client.resetPassword('user-1', 'new-pass-hex');
+
+  const call = calls.find((c) => String(c.url).includes('/reset-password'));
+  assert.ok(call, 'expected a reset-password call');
+  assert.strictEqual(call.opts.method, 'PUT');
+  assert.ok(call.url.endsWith('/admin/realms/hhh/users/user-1/reset-password'));
+  const body = JSON.parse(call.opts.body);
+  assert.deepStrictEqual(body, {
+    type: 'password',
+    value: 'new-pass-hex',
+    temporary: false,
+  });
+});
+
+test('resetPassword throws when Keycloak rejects the request', async () => {
+  const client = makeClient(async (url) => {
+    if (String(url).includes('/protocol/openid-connect/token')) {
+      return tokenResponse();
+    }
+    return { ok: false, status: 400 };
+  });
+
+  await assert.rejects(
+    () => client.resetPassword('user-1', 'new-pass'),
+    /Keycloak resetPassword failed: 400/
+  );
+});
+
+test('listUsersByRole fetches the role-users endpoint', async () => {
+  const calls = [];
+  const client = makeClient(async (url) => {
+    calls.push(String(url));
+    if (String(url).includes('/protocol/openid-connect/token')) {
+      return tokenResponse();
+    }
+    return {
+      ok: true,
+      json: async () => [{ id: 'u1', username: 'alice' }],
+    };
+  });
+
+  const users = await client.listUsersByRole('admin');
+
+  assert.deepStrictEqual(users, [{ id: 'u1', username: 'alice' }]);
+  assert.ok(calls.some((u) => u.endsWith('/admin/realms/hhh/roles/admin/users')));
+});
+
+test('searchUsers fetches the users search endpoint with the query', async () => {
+  const calls = [];
+  const client = makeClient(async (url) => {
+    calls.push(String(url));
+    if (String(url).includes('/protocol/openid-connect/token')) {
+      return tokenResponse();
+    }
+    return { ok: true, json: async () => [] };
+  });
+
+  await client.searchUsers('ali ce');
+
+  assert.ok(
+    calls.some((u) => u.includes('search=ali%20ce') || u.includes('search=ali+ce'))
+  );
+});
+
+test('removeRole DELETEs the role mapping', async () => {
+  const calls = [];
+  const client = makeClient(async (url, opts) => {
+    calls.push({ url: String(url), opts });
+    if (String(url).includes('/protocol/openid-connect/token')) {
+      return tokenResponse();
+    }
+    if (String(url).includes('/roles/researcher')) {
+      return { ok: true, json: async () => ({ id: 'role-1', name: 'researcher' }) };
+    }
+    return { ok: true, json: async () => ({}) };
+  });
+
+  await client.removeRole('user-1', 'researcher');
+
+  const deleteCall = calls.find((c) => c.opts?.method === 'DELETE');
+  assert.ok(deleteCall, 'expected a DELETE call');
+  assert.ok(deleteCall.url.endsWith('/users/user-1/role-mappings/realm'));
+});
+
+test('removeRole throws when the mapping delete fails', async () => {
+  const client = makeClient(async (url, opts) => {
+    if (String(url).includes('/protocol/openid-connect/token')) {
+      return tokenResponse();
+    }
+    if (opts?.method === 'DELETE') return { ok: false, status: 500 };
+    return { ok: true, json: async () => ({ id: 'role-1', name: 'researcher' }) };
+  });
+
+  await assert.rejects(
+    () => client.removeRole('user-1', 'researcher'),
+    /Keycloak removeRole failed: 500/
+  );
+});
+
 test('revokeSession rejects ids with slashes or whitespace', async () => {
   const client = makeClient(async () => tokenResponse());
   await assert.rejects(

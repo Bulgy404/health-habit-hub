@@ -26,9 +26,10 @@ void main() {
           {'slug': 'sliq', 'title': 'SLIQ — Lifestyle Index'},
           {'slug': 'rand-36', 'title': 'RAND-36 — Health Survey'},
         ]),
+        queryParameters: {'lang': 'en'},
       );
 
-      final result = await service.fetchParticipantQuestionnaires();
+      final result = await service.fetchParticipantQuestionnaires('en');
 
       expect(result.length, 2);
       expect(result[0].slug, 'sliq');
@@ -36,13 +37,28 @@ void main() {
       expect(result[1].slug, 'rand-36');
     });
 
+    test('sends the requested language in the query parameter', () async {
+      adapter.onGet(
+        '$_base/participant/questionnaires',
+        (server) => server.reply(200, [
+          {'slug': 'sliq', 'title': 'SLIQ — Lebensstil-Index'},
+        ]),
+        queryParameters: {'lang': 'de'},
+      );
+
+      final result = await service.fetchParticipantQuestionnaires('de');
+
+      expect(result.single.title, 'SLIQ — Lebensstil-Index');
+    });
+
     test('returns empty list when study has no questionnaires', () async {
       adapter.onGet(
         '$_base/participant/questionnaires',
         (server) => server.reply(200, <dynamic>[]),
+        queryParameters: {'lang': 'en'},
       );
 
-      final result = await service.fetchParticipantQuestionnaires();
+      final result = await service.fetchParticipantQuestionnaires('en');
 
       expect(result, isEmpty);
     });
@@ -51,10 +67,11 @@ void main() {
       adapter.onGet(
         '$_base/participant/questionnaires',
         (server) => server.reply(500, <String, dynamic>{}),
+        queryParameters: {'lang': 'en'},
       );
 
       expect(
-        () => service.fetchParticipantQuestionnaires(),
+        () => service.fetchParticipantQuestionnaires('en'),
         throwsA(isA<DioException>()),
       );
     });

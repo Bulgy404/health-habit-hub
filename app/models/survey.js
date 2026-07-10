@@ -71,6 +71,12 @@ export async function ensureIndexes(database) {
   );
   await ensureBackupAuditIndexes(database);
 
+  // General admin action audit trail (all other admin mutations)
+  const { ensureIndexes: ensureAdminAuditIndexes } = await import(
+    './adminAuditLog.js'
+  );
+  await ensureAdminAuditIndexes(database);
+
   // Short-lived restore confirmation tokens (TTL-expired automatically)
   const { ensureIndexes: ensureRestoreTokenIndexes } = await import(
     './restoreConfirmationToken.js'

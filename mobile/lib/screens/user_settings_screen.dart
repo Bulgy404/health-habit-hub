@@ -11,11 +11,10 @@ import '../core/dio_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/locale_provider.dart';
+import '../providers/notification_prefs_provider.dart';
 import '../providers/theme_provider.dart';
+import '../widgets/settings_card.dart';
 
-const _kCardShadow = [
-  BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4)),
-];
 const _kGreenGlow = [
   BoxShadow(color: Color(0x4745B700), blurRadius: 28, offset: Offset(0, 8)),
 ];
@@ -30,6 +29,7 @@ class UserSettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final currentLocale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
+    final notificationPrefs = ref.watch(notificationPrefsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Account')),
@@ -109,10 +109,10 @@ class UserSettingsScreen extends ConsumerWidget {
           ),
 
           // ── Profile section ────────────────────────────────────────
-          _SectionLabel(l10n.myProfile),
-          _SettingsCard(
+          SectionLabel(l10n.myProfile),
+          SettingsCard(
             children: [
-              _SettingsRow(
+              SettingsRow(
                 icon: Icons.assignment_ind,
                 title: l10n.myProfile,
                 trailing: const Icon(Icons.chevron_right, size: 18),
@@ -122,10 +122,10 @@ class UserSettingsScreen extends ConsumerWidget {
           ),
 
           // ── Preferences ────────────────────────────────────────────
-          _SectionLabel(l10n.settings),
-          _SettingsCard(
+          SectionLabel(l10n.settings),
+          SettingsCard(
             children: [
-              _SettingsRow(
+              SettingsRow(
                 icon: Icons.language,
                 title: l10n.language,
                 trailing: Text(
@@ -148,7 +148,7 @@ class UserSettingsScreen extends ConsumerWidget {
                 ),
               ),
               const Divider(height: 1, indent: 52),
-              _SettingsRow(
+              SettingsRow(
                 icon: Icons.dark_mode,
                 title: l10n.appearance,
                 trailing: Text(
@@ -163,25 +163,95 @@ class UserSettingsScreen extends ConsumerWidget {
             ],
           ),
 
-          // ── Legal ──────────────────────────────────────────────────
-          _SectionLabel(l10n.legalSection),
-          _SettingsCard(
+          // ── Notifications ────────────────────────────────────────────
+          SectionLabel(l10n.notificationsSection),
+          SettingsCard(
             children: [
-              _SettingsRow(
+              SettingsRow(
+                icon: Icons.fitness_center,
+                title: l10n.habitReminders,
+                trailing: Switch(
+                  value: notificationPrefs.habitReminders,
+                  onChanged: (value) => ref
+                      .read(notificationPrefsProvider.notifier)
+                      .setHabitReminders(value),
+                ),
+                onTap: () => ref
+                    .read(notificationPrefsProvider.notifier)
+                    .setHabitReminders(!notificationPrefs.habitReminders),
+              ),
+              const Divider(height: 1, indent: 52),
+              SettingsRow(
+                icon: Icons.fact_check_outlined,
+                title: l10n.questionnaireReminders,
+                trailing: Switch(
+                  value: notificationPrefs.questionnaireReminders,
+                  onChanged: (value) => ref
+                      .read(notificationPrefsProvider.notifier)
+                      .setQuestionnaireReminders(value),
+                ),
+                onTap: () => ref
+                    .read(notificationPrefsProvider.notifier)
+                    .setQuestionnaireReminders(
+                      !notificationPrefs.questionnaireReminders,
+                    ),
+              ),
+              const Divider(height: 1, indent: 52),
+              SettingsRow(
+                icon: Icons.campaign_outlined,
+                title: l10n.studyUpdateNotifications,
+                trailing: Switch(
+                  value: notificationPrefs.studyUpdates,
+                  onChanged: (value) => ref
+                      .read(notificationPrefsProvider.notifier)
+                      .setStudyUpdates(value),
+                ),
+                onTap: () => ref
+                    .read(notificationPrefsProvider.notifier)
+                    .setStudyUpdates(!notificationPrefs.studyUpdates),
+              ),
+            ],
+          ),
+
+          // ── Help & Support ───────────────────────────────────────────
+          SectionLabel(l10n.helpAndSupport),
+          SettingsCard(
+            children: [
+              SettingsRow(
+                icon: Icons.help_outline,
+                title: l10n.helpAndSupport,
+                trailing: const Icon(Icons.chevron_right, size: 18),
+                onTap: () => context.push('/settings/help'),
+              ),
+              const Divider(height: 1, indent: 52),
+              SettingsRow(
+                icon: Icons.key_outlined,
+                title: l10n.changeRecoveryPassphrase,
+                trailing: const Icon(Icons.chevron_right, size: 18),
+                onTap: () => context.push('/settings/rotate-passphrase'),
+              ),
+            ],
+          ),
+
+          // ── Legal ──────────────────────────────────────────────────
+          SectionLabel(l10n.legalSection),
+          SettingsCard(
+            children: [
+              SettingsRow(
                 icon: Icons.lock_outline,
                 title: l10n.privacyStatement,
                 trailing: const Icon(Icons.chevron_right, size: 18),
                 onTap: () => context.push('/settings/privacy'),
               ),
               const Divider(height: 1, indent: 52),
-              _SettingsRow(
+              SettingsRow(
                 icon: Icons.fact_check_outlined,
                 title: l10n.studyConsent,
                 trailing: const Icon(Icons.chevron_right, size: 18),
                 onTap: () => context.push('/settings/consent'),
               ),
               const Divider(height: 1, indent: 52),
-              _SettingsRow(
+              SettingsRow(
                 icon: Icons.info_outline,
                 title: l10n.imprint,
                 trailing: const Icon(Icons.chevron_right, size: 18),
@@ -191,10 +261,10 @@ class UserSettingsScreen extends ConsumerWidget {
           ),
 
           // ── My data (GDPR) ─────────────────────────────────────────
-          _SectionLabel(l10n.myDataSection),
-          _SettingsCard(
+          SectionLabel(l10n.myDataSection),
+          SettingsCard(
             children: [
-              _SettingsRow(
+              SettingsRow(
                 icon: Icons.download_outlined,
                 title: l10n.exportMyData,
                 trailing: const Icon(Icons.chevron_right, size: 18),
@@ -205,9 +275,9 @@ class UserSettingsScreen extends ConsumerWidget {
 
           // ── Sign out ───────────────────────────────────────────────
           const SizedBox(height: 8),
-          _SettingsCard(
+          SettingsCard(
             children: [
-              _SettingsRow(
+              SettingsRow(
                 icon: Icons.logout,
                 title: l10n.signOut,
                 iconColor: const Color(0xFFDC2626),
@@ -219,9 +289,9 @@ class UserSettingsScreen extends ConsumerWidget {
 
           // ── Delete account (App Store Guideline 5.1.1(v)) ──────────
           const SizedBox(height: 8),
-          _SettingsCard(
+          SettingsCard(
             children: [
-              _SettingsRow(
+              SettingsRow(
                 icon: Icons.delete_forever,
                 title: l10n.deleteAccount,
                 iconColor: const Color(0xFFDC2626),
@@ -447,99 +517,6 @@ class UserSettingsScreen extends ConsumerWidget {
             child: Text(l10n.signOut),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Shared sub-widgets ──────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(18, 20, 18, 6),
-      child: Text(
-        text.toUpperCase(),
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
-          color: Theme.of(context).colorScheme.outline,
-        ),
-      ),
-    );
-  }
-}
-
-class _SettingsCard extends StatelessWidget {
-  const _SettingsCard({required this.children});
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: _kCardShadow,
-        ),
-        child: Column(children: children),
-      ),
-    );
-  }
-}
-
-class _SettingsRow extends StatelessWidget {
-  const _SettingsRow({
-    required this.icon,
-    required this.title,
-    this.trailing,
-    this.onTap,
-    this.iconColor,
-    this.titleColor,
-  });
-
-  final IconData icon;
-  final String title;
-  final Widget? trailing;
-  final VoidCallback? onTap;
-  final Color? iconColor;
-  final Color? titleColor;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: iconColor ?? Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                  color: titleColor ?? Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ),
-            ?trailing,
-          ],
-        ),
       ),
     );
   }

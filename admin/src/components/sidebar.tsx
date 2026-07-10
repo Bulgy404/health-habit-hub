@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -21,9 +22,15 @@ import {
   Server,
   DatabaseBackup,
   Globe,
+  History,
+  UserCog,
+  HelpCircle,
+  Menu,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { locales, LOCALE_COOKIE, type Locale } from "@/lib/locale";
+import { ThemeToggle } from "./theme-toggle";
 import styles from "./sidebar.module.css";
 
 interface NavItem {
@@ -73,7 +80,13 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: "/system", labelKey: "system", Icon: Server, adminOnly: true },
       { href: "/backups", labelKey: "backups", Icon: DatabaseBackup, adminOnly: true },
+      { href: "/audit-log", labelKey: "auditLog", Icon: History, adminOnly: true },
+      { href: "/team", labelKey: "team", Icon: UserCog, adminOnly: true },
     ],
+  },
+  {
+    titleKey: "support",
+    items: [{ href: "/help", labelKey: "help", Icon: HelpCircle }],
   },
 ];
 
@@ -96,8 +109,14 @@ export function Sidebar() {
   const { data: session } = useSession();
   const t = useTranslations("sidebar");
   const locale = useLocale();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const isAdmin = (session?.roles ?? []).includes("admin");
+
+  // Close the drawer automatically on navigation (small-screen use case).
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   function handleLocaleChange(next: string) {
     // A plain preference cookie, not security-sensitive — set client-side and
@@ -107,11 +126,28 @@ export function Sidebar() {
   }
 
   return (
-    <aside className={styles.sidebar}>
-      <div className={styles.brand}>
-        <Activity size={20} strokeWidth={2} className={styles.brandIcon} />
-        <span className={styles.brandName}>{t("brand")}</span>
-      </div>
+    <>
+      <button
+        type="button"
+        className={styles.menuButton}
+        onClick={() => setMobileOpen((open) => !open)}
+        aria-label={t(mobileOpen ? "closeMenu" : "openMenu")}
+        aria-expanded={mobileOpen}
+      >
+        {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+      </button>
+      {mobileOpen && (
+        <div
+          className={styles.backdrop}
+          onClick={() => setMobileOpen(false)}
+          aria-hidden
+        />
+      )}
+      <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
+        <div className={styles.brand}>
+          <Activity size={20} strokeWidth={2} className={styles.brandIcon} />
+          <span className={styles.brandName}>{t("brand")}</span>
+        </div>
 
       <nav className={styles.nav}>
         {NAV_SECTIONS.map((section) => {
@@ -155,6 +191,7 @@ export function Sidebar() {
             ))}
           </select>
         </div>
+        <ThemeToggle label={t("toggleTheme")} />
         <button
           onClick={async () => {
             // next-auth's default redirect callback only allows callbackUrls
@@ -173,6 +210,7 @@ export function Sidebar() {
           {t("signOut")}
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

@@ -60,11 +60,16 @@ services:
       - hhh-app
     command: node --watch main.js
     depends_on:
-      - proxy
-      - mongo
-      - neo4j
-      - redis
-      - backup
+      proxy:
+        condition: service_started
+      mongo:
+        condition: service_started
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      backup:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
       interval: 30s
@@ -515,10 +520,14 @@ services:
       - hhh-app
       - hhh-backup-internal
     depends_on:
-      - mongo
-      - neo4j
-      - lightrag
-      - docker-socket-proxy
+      mongo:
+        condition: service_started
+      neo4j:
+        condition: service_healthy
+      lightrag:
+        condition: service_started
+      docker-socket-proxy:
+        condition: service_started
     # Also starts the internal backup-api HTTP server (see backup-service/api/)
     # on port 4100 — no ports: block, it's only reachable inside hhh-proxy.
 

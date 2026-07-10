@@ -4,6 +4,7 @@ import { makeGetDb } from '../utils/getDb.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { COLLECTION_DEVICE_TOKENS } from '../services/notificationService.js';
 import { getEnrollment } from '../services/enrollmentNeo4j.js';
+import { resolveLocaleText } from '../utils/localeText.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'participantRouter' });
@@ -46,6 +47,7 @@ export function createParticipantRouter({ db, neo4jRun } = {}) {
     try {
       const userId = req.user?.sub;
       if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      const lang = req.query.lang || 'en';
 
       const database = await getDb();
 
@@ -86,14 +88,24 @@ export function createParticipantRouter({ db, neo4jRun } = {}) {
         .toArray();
 
       res.json(
-        docs.map((q) => ({
-          id: q._id.toString(),
-          slug: q.slug,
-          title: q.title,
-          description: q.description || '',
-          version: q.version || '1',
-          questions: q.questions || [],
-        }))
+        docs.map((q) => {
+          const languages = q.languages || ['en'];
+          return {
+            id: q._id.toString(),
+            slug: q.slug,
+            title: resolveLocaleText(q.title, lang, languages),
+            description: resolveLocaleText(q.description, lang, languages),
+            version: q.version || '1',
+            questions: (q.questions || []).map((question) => ({
+              ...question,
+              text: resolveLocaleText(question.text, lang, languages),
+              options: (question.options || []).map((o) => ({
+                ...o,
+                label: resolveLocaleText(o.label, lang, languages),
+              })),
+            })),
+          };
+        })
       );
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');

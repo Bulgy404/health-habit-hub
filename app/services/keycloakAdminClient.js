@@ -2,7 +2,7 @@
  * Create a Keycloak admin client with a cached admin token (55 s TTL).
  * Exposes user management operations against the configured realm.
  * @param {{ base?: string, realm?: string, clientId?: string, clientSecret?: string }} [opts]
- * @returns {{ getAdminToken: Function, createUser: Function, assignRole: Function, updateUserAttribute: Function, listSessions: Function, revokeSession: Function }}
+ * @returns {{ getAdminToken: Function, createUser: Function, assignRole: Function, removeRole: Function, resetPassword: Function, listUsersByRole: Function, searchUsers: Function, updateUserAttribute: Function, listSessions: Function, revokeSession: Function }}
  * @throws {Error} If the base URL is invalid or uses an unsupported protocol.
  */
 export function createKeycloakAdminClient({
@@ -139,6 +139,97 @@ export function createKeycloakAdminClient({
       if (!res.ok && res.status !== 404) {
         throw new Error(`Keycloak deleteUser failed: ${res.status}`);
       }
+    },
+
+    /**
+     * Resets a user's password to [newPassword] (non-temporary — the user is
+     * not forced to change it again). Used for recovery-passphrase rotation:
+     * the participant's Keycloak username stays the same, only the password
+     * half of the credential pair changes.
+     * @param {string} userId Keycloak user id (`sub` claim).
+     * @param {string} newPassword
+     */
+    async resetPassword(userId, newPassword) {
+      const token = await getAdminToken();
+      const res = await fetch(
+        `${_base}/admin/realms/${_realm}/users/${encodeURIComponent(userId)}/reset-password`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            type: 'password',
+            value: newPassword,
+            temporary: false,
+          }),
+        }
+      );
+      if (!res.ok)
+        throw new Error(`Keycloak resetPassword failed: ${res.status}`);
+    },
+
+    /**
+     * Lists users currently holding [roleName] (realm role) — used by the
+     * admin Team & Roles page.
+     * @param {string} roleName
+     * @returns {Promise<Array<{id: string, username: string, email?: string}>>}
+     */
+    async listUsersByRole(roleName) {
+      const token = await getAdminToken();
+      const res = await fetch(
+        `${_base}/admin/realms/${_realm}/roles/${encodeURIComponent(roleName)}/users`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok)
+        throw new Error(`Keycloak listUsersByRole failed: ${res.status}`);
+      return res.json();
+    },
+
+    /**
+     * Searches realm users by username/email/name — used by the admin Team &
+     * Roles page to find an account to grant a role to.
+     * @param {string} query
+     * @returns {Promise<Array<{id: string, username: string, email?: string}>>}
+     */
+    async searchUsers(query) {
+      const token = await getAdminToken();
+      const res = await fetch(
+        `${_base}/admin/realms/${_realm}/users?search=${encodeURIComponent(query)}&max=25`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!res.ok) throw new Error(`Keycloak searchUsers failed: ${res.status}`);
+      return res.json();
+    },
+
+    /**
+     * Removes [roleName] (realm role) from [userId] — the inverse of
+     * `assignRole`.
+     * @param {string} userId
+     * @param {string} roleName
+     */
+    async removeRole(userId, roleName) {
+      const token = await getAdminToken();
+      const rolesRes = await fetch(
+        `${_base}/admin/realms/${_realm}/roles/${encodeURIComponent(roleName)}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!rolesRes.ok)
+        throw new Error(`Keycloak role lookup failed: ${rolesRes.status}`);
+      const role = await rolesRes.json();
+      const res = await fetch(
+        `${_base}/admin/realms/${_realm}/users/${encodeURIComponent(userId)}/role-mappings/realm`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify([role]),
+        }
+      );
+      if (!res.ok) throw new Error(`Keycloak removeRole failed: ${res.status}`);
     },
 
     async updateUserAttribute(userId, key, value) {

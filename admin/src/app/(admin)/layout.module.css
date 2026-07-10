@@ -1,7 +1,6 @@
 .shell {
   display: flex;
   min-height: 100vh;
-  min-width: 1280px;
 }
 
 .main {
@@ -10,4 +9,21 @@
   padding: 2rem;
   background-color: var(--color-bg);
   min-height: 100vh;
+  min-width: 0;
+}
+
+@media (max-width: 1024px) {
+  .main {
+    padding: 1.25rem;
+    /* Sidebar becomes an off-canvas drawer below this breakpoint (see
+       sidebar.module.css), so it no longer reserves horizontal space. */
+    margin-left: 0;
+    padding-top: 4.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .main {
+    padding: 1rem;
+  }
 }

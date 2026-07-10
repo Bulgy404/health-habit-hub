@@ -1,25 +1,26 @@
 import { ObjectId } from 'mongodb';
 import { COLLECTION } from '../models/cuePool.js';
+import { SUPPORTED_LANGS, resolveLocaleText } from '../utils/localeText.js';
 
 /**
  * Insert a new cue document into the cue pool.
- * @param {{ db: object, text: string, quality: string, dimensions: object, domain: string, language: string }} deps
+ * @param {{ db: object, text: Record<string,string>, languages: string[], quality: string, dimensions: {stability:number,salience:number,specificity:number}, domain: string }} deps
  * @returns {Promise<object>} The created cue including its generated id.
  */
 export async function createCue({
   db,
   text,
+  languages,
   quality,
   dimensions,
   domain,
-  language,
 }) {
   const doc = {
     text,
+    languages,
     quality,
     dimensions,
     domain,
-    language,
     createdAt: new Date(),
   };
   const result = await db.collection(COLLECTION).insertOne(doc);
@@ -27,7 +28,8 @@ export async function createCue({
 }
 
 /**
- * Return a paginated list of cues, optionally filtered by quality and language.
+ * Return a paginated list of cues, optionally filtered by quality and
+ * language (matches cues whose `languages` array contains the given code).
  * @param {{ db: object, quality?: string, language?: string, page?: number, limit?: number }} deps
  * @returns {Promise<{ total: number, page: number, limit: number, cues: Array }>}
  */
@@ -40,7 +42,8 @@ export async function listCues({
 }) {
   const filter = {};
   if (quality) filter.quality = String(quality);
-  if (language) filter.language = String(language);
+  // Mongo matches a scalar against an array field as "array contains value".
+  if (language) filter.languages = String(language);
   const skip = (page - 1) * limit;
   const [docs, total] = await Promise.all([
     db.collection(COLLECTION).find(filter).skip(skip).limit(limit).toArray(),
@@ -66,9 +69,11 @@ export async function deleteCue({ db, id }) {
 }
 
 /**
- * Randomly pick 1 or 2 pre-rated cues from the pool matching the quality tier.
- * Returns an empty array for self_selected (user provides their own cue).
- * @param {{ db: object, cueSource: string, cueCount: string, cuePoolId?: string|null }} deps
+ * Randomly pick 1 or 2 pre-rated cues from the pool matching the quality
+ * tier, resolving each cue's text to [lang] (falling back per
+ * resolveLocaleText's rules). Returns an empty array for self_selected (user
+ * provides their own cue).
+ * @param {{ db: object, cueSource: string, cueCount: string, cuePoolId?: string|null, lang?: string }} deps
  * @returns {Promise<Array<{ text: string, source: string, cueId: string }>>}
  */
 export async function pickAssignedCues({
@@ -76,6 +81,7 @@ export async function pickAssignedCues({
   cueSource,
   cueCount,
   cuePoolId = null,
+  lang = 'en',
 }) {
   if (cueSource === 'self_selected') return [];
 
@@ -99,7 +105,7 @@ export async function pickAssignedCues({
     .toArray();
 
   return docs.map((d) => ({
-    text: d.text,
+    text: resolveLocaleText(d.text, lang, d.languages || ['en']),
     source: 'pre_rated',
     cueId: d._id.toString(),
   }));
@@ -109,17 +115,19 @@ function serialize(doc) {
   return {
     id: doc._id.toString(),
     text: doc.text,
+    languages: doc.languages || [],
     quality: doc.quality,
     dimensions: doc.dimensions,
     domain: doc.domain,
-    language: doc.language,
     createdAt: doc.createdAt,
   };
 }
 
 /**
- * Bulk-insert cues from a parsed row array, skipping rows with missing or invalid fields.
- * Each row must have: text, quality, stability (1-5), salience (1-5), specificity (1-5), domain, language.
+ * Bulk-insert cues from a parsed row array, skipping rows with missing or
+ * invalid fields. Each row is a flat string-keyed object parsed from a
+ * wide-format CSV: text_en, text_de, text_fr, text_ja, text_nl (at least one
+ * non-empty), quality, stability/salience/specificity (1-5), domain.
  * @param {{ db: object, rows: Array<object> }} deps
  * @returns {Promise<{ inserted: number, skipped: number }>}
  */
@@ -130,30 +138,35 @@ export async function importCues({ db, rows }) {
   let skipped = 0;
 
   for (const row of rows) {
-    const text = (row.text ?? '').trim();
+    const text = {};
+    for (const lang of SUPPORTED_LANGS) {
+      const val = (row[`text_${lang}`] ?? '').trim();
+      if (val) text[lang] = val;
+    }
+    const languages = Object.keys(text);
+
     const quality = (row.quality ?? '').trim();
     const stability = parseInt(row.stability, 10);
     const salience = parseInt(row.salience, 10);
     const specificity = parseInt(row.specificity, 10);
     const domain = (row.domain ?? '').trim();
-    const language = (row.language ?? '').trim();
 
     const validQuality = ['low', 'high'].includes(quality);
     const validDims = [stability, salience, specificity].every(
       (n) => n >= 1 && n <= 5
     );
 
-    if (!text || !validQuality || !validDims || !domain || !language) {
+    if (!languages.length || !validQuality || !validDims || !domain) {
       skipped++;
       continue;
     }
 
     valid.push({
       text,
+      languages,
       quality,
       dimensions: { stability, salience, specificity },
       domain,
-      language,
       createdAt: new Date(),
     });
   }

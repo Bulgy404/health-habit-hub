@@ -629,6 +629,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get myHabitsTab => 'Mes habitudes';
 
   @override
+  String get navTabShare => 'Partager';
+
+  @override
+  String get navTabExplore => 'Explorer';
+
+  @override
+  String get navTabRecommend => 'Recommandé';
+
+  @override
+  String get navTabAccount => 'Compte';
+
+  @override
   String get newHabit => 'Nouvelle habitude';
 
   @override
@@ -1456,4 +1468,110 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get nextButton => 'Suivant';
+
+  @override
+  String get helpAndSupport => 'Aide et assistance';
+
+  @override
+  String get contactResearchTeam => 'Contacter l\'équipe de recherche';
+
+  @override
+  String get contactResearchTeamDescription =>
+      'Une question ou un problème ? Envoyez-nous un e-mail, nous vous répondrons.';
+
+  @override
+  String get sendEmail => 'Envoyer un e-mail';
+
+  @override
+  String get frequentlyAskedQuestions => 'Questions fréquentes';
+
+  @override
+  String get faqPassphraseQuestion =>
+      'J\'ai perdu ma phrase de récupération — que faire ?';
+
+  @override
+  String get faqPassphraseAnswer =>
+      'Votre phrase de 24 mots est le seul moyen de récupérer votre compte. Si vous l\'avez encore, utilisez « Restaurer le compte » sur l\'écran d\'accueil. Si vous l\'avez perdue, votre compte et vos données ne peuvent malheureusement pas être récupérés — contactez-nous si vous souhaitez recommencer.';
+
+  @override
+  String get faqDataQuestion => 'Puis-je exporter ou supprimer mes données ?';
+
+  @override
+  String get faqDataAnswer =>
+      'Oui. Allez dans Paramètres → Exporter mes données pour télécharger tout ce qui est lié à votre compte, ou Paramètres → Supprimer le compte pour l\'effacer définitivement. La suppression est irréversible.';
+
+  @override
+  String get faqOfflineQuestion =>
+      'Que se passe-t-il si je perds la connexion pendant l\'utilisation de l\'application ?';
+
+  @override
+  String get faqOfflineAnswer =>
+      'Les enregistrements d\'habitudes soumis hors ligne sont conservés sur votre appareil et envoyés automatiquement dès que vous êtes de nouveau en ligne.';
+
+  @override
+  String get faqNotificationsQuestion =>
+      'Puis-je désactiver certains rappels ?';
+
+  @override
+  String get faqNotificationsAnswer =>
+      'Oui. Allez dans Paramètres → Notifications pour activer ou désactiver individuellement les rappels d\'habitudes, de questionnaires ou de mises à jour de l\'étude.';
+
+  @override
+  String get faqConsentQuestion => 'Puis-je retirer mon consentement ?';
+
+  @override
+  String get faqConsentAnswer =>
+      'Oui, à tout moment. Allez dans Paramètres → Consentement à l\'étude pour revoir ce que vous avez accepté, ou Paramètres → Supprimer le compte pour retirer votre consentement et effacer vos données.';
+
+  @override
+  String get notificationsSection => 'Notifications';
+
+  @override
+  String get habitReminders => 'Rappels d\'habitudes';
+
+  @override
+  String get questionnaireReminders => 'Rappels de questionnaires';
+
+  @override
+  String get studyUpdateNotifications => 'Mises à jour de l\'étude';
+
+  @override
+  String get changeRecoveryPassphrase => 'Changer la phrase de récupération';
+
+  @override
+  String get rotatePassphraseTitle => 'Changer votre phrase de récupération ?';
+
+  @override
+  String get rotatePassphraseWarning =>
+      'Votre phrase actuelle de 24 mots cessera immédiatement de fonctionner. Veillez à sauvegarder la nouvelle phrase en lieu sûr.';
+
+  @override
+  String get rotatePassphraseConfirm => 'Générer une nouvelle phrase';
+
+  @override
+  String get rotatePassphraseNewTitle =>
+      'Votre nouvelle phrase de récupération';
+
+  @override
+  String get rotatePassphraseNewSubtitle =>
+      'Notez ces 24 mots ou conservez-les en lieu sûr. Vous en aurez besoin pour récupérer votre compte.';
+
+  @override
+  String get rotatePassphraseSavedCheckbox => 'Je l\'ai notée';
+
+  @override
+  String get rotatePassphraseDone => 'Terminé';
+
+  @override
+  String get rotatePassphraseFailed =>
+      'Impossible de générer une nouvelle phrase. Vérifiez votre connexion et réessayez.';
+
+  @override
+  String get copyToClipboard => 'Copier dans le presse-papiers';
+
+  @override
+  String get passphraseCopied => 'Phrase copiée dans le presse-papiers';
+
+  @override
+  String get close => 'Fermer';
 }

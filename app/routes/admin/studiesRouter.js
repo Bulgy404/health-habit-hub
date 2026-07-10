@@ -107,6 +107,9 @@ export function createStudiesRouter({
         endOfStudyNotification,
         neo4jRun,
       });
+      res.locals.auditAction = 'create_study';
+      res.locals.auditResourceType = 'study';
+      res.locals.auditResourceId = study._id.toString();
       res.status(201).json({
         id: study._id.toString(),
         name: study.name,
@@ -154,6 +157,9 @@ export function createStudiesRouter({
       });
       if (result.notFound)
         return res.status(404).json({ error: 'Study not found' });
+      res.locals.auditAction = 'update_study';
+      res.locals.auditResourceType = 'study';
+      res.locals.auditResourceId = req.params.id;
       res.json({ ok: true });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
@@ -259,6 +265,9 @@ export function createStudiesRouter({
           .status(409)
           .json({ error: 'Study has enrolled participants' });
       }
+      res.locals.auditAction = 'deactivate_study';
+      res.locals.auditResourceType = 'study';
+      res.locals.auditResourceId = req.params.id;
       res.json({ ok: true });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
@@ -394,6 +403,9 @@ export function createStudiesRouter({
           error: 'Study name confirmation does not match.',
         });
       }
+      res.locals.auditAction = 'delete_study';
+      res.locals.auditResourceType = 'study';
+      res.locals.auditResourceId = req.params.id;
       res.json({ ok: true });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');

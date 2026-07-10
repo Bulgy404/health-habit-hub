@@ -1,11 +1,13 @@
 // mobile/lib/features/my_habits/my_habits_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/locale_provider.dart';
 import 'my_habits_models.dart';
 import 'my_habits_service.dart';
 
 /// Resolved cue configuration for the current user (study or public default).
 final habitConfigProvider = FutureProvider<HabitConfig>((ref) {
-  return ref.watch(myHabitsServiceProvider).fetchHabitConfig();
+  final lang = ref.watch(localeProvider).languageCode;
+  return ref.watch(myHabitsServiceProvider).fetchHabitConfig(lang);
 });
 
 /// Whether the recommender feature is enabled for the current participant's

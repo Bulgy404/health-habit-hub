@@ -37,15 +37,15 @@ export function createCuePoolRouter({ db } = {}) {
 
   router.post('/', validate(createCueSchema), async (req, res) => {
     try {
-      const { text, quality, dimensions, domain, language } = req.body;
+      const { text, languages, quality, dimensions, domain } = req.body;
       const database = await getDb();
       const result = await createCue({
         db: database,
         text,
+        languages,
         quality,
         dimensions,
         domain,
-        language,
       });
       res.status(201).json(result);
     } catch (err) {
