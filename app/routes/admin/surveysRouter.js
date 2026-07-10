@@ -629,8 +629,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
             .status(403)
             .json({ error: 'Cannot modify a library questionnaire' });
         }
-        const { title, description, version, languages, questions } =
-          req.body;
+        const { title, description, version, languages, questions } = req.body;
         const update = { updatedAt: new Date() };
         if (title !== undefined) update.title = title;
         if (description !== undefined) update.description = description;

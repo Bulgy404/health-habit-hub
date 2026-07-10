@@ -237,13 +237,7 @@
       }
     ],
     "isLibrary": true,
-    "languages": [
-      "en",
-      "de",
-      "fr",
-      "ja",
-      "nl"
-    ]
+    "languages": ["en", "de", "fr", "ja", "nl"]
   },
   {
     "_id": "questionnaire-rand-36",
@@ -2261,13 +2255,7 @@
       }
     ],
     "isLibrary": true,
-    "languages": [
-      "en",
-      "de",
-      "fr",
-      "ja",
-      "nl"
-    ]
+    "languages": ["en", "de", "fr", "ja", "nl"]
   },
   {
     "_id": "questionnaire-srhi",
@@ -3059,12 +3047,6 @@
       }
     ],
     "isLibrary": true,
-    "languages": [
-      "en",
-      "de",
-      "fr",
-      "ja",
-      "nl"
-    ]
+    "languages": ["en", "de", "fr", "ja", "nl"]
   }
 ]

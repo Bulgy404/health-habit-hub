@@ -308,11 +308,30 @@ test('updateStudy: dropping a group id reassigns its enrollments and codes to th
       },
     ],
     enrollments: [
-      { _id: new ObjectId(), userId: 'u1', studyId, groupId: removedGroup.id, enrolledAt: new Date() },
-      { _id: new ObjectId(), userId: 'u2', studyId, groupId: keptGroup.id, enrolledAt: new Date() },
+      {
+        _id: new ObjectId(),
+        userId: 'u1',
+        studyId,
+        groupId: removedGroup.id,
+        enrolledAt: new Date(),
+      },
+      {
+        _id: new ObjectId(),
+        userId: 'u2',
+        studyId,
+        groupId: keptGroup.id,
+        enrolledAt: new Date(),
+      },
     ],
     studyCodes: [
-      { _id: new ObjectId(), code: 'HHH-AAAAA', studyId, groupId: removedGroup.id, redemptionCount: 0, createdAt: new Date() },
+      {
+        _id: new ObjectId(),
+        code: 'HHH-AAAAA',
+        studyId,
+        groupId: removedGroup.id,
+        redemptionCount: 0,
+        createdAt: new Date(),
+      },
     ],
   });
 
@@ -358,7 +377,12 @@ test('updateStudy: reassigning a questionnaire assignment onto a group that alre
     ],
     questionnaire_assignments: [
       { _id: new ObjectId(), studyId, groupId: keptGroup.id, questionnaireId },
-      { _id: new ObjectId(), studyId, groupId: removedGroup.id, questionnaireId },
+      {
+        _id: new ObjectId(),
+        studyId,
+        groupId: removedGroup.id,
+        questionnaireId,
+      },
     ],
   });
 

@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger.js';
+import { COLLECTION } from '../models/adminAuditLog.js';
 
 const log = logger.child({ module: 'auditAdminActions' });
 
@@ -33,16 +34,18 @@ export function createAuditAdminActionsMiddleware({ getDb }) {
       (async () => {
         try {
           const database = await getDb();
-          await database.collection('admin_audit_log').insertOne({
+          await database.collection(COLLECTION).insertOne({
             byUserId: req.user?.sub ?? 'unknown',
-            byUsername: req.user?.preferred_username ?? req.user?.sub ?? 'unknown',
+            byUsername:
+              req.user?.preferred_username ?? req.user?.sub ?? 'unknown',
             method: req.method,
             action: res.locals.auditAction ?? `${req.method} ${req.path}`,
             resourceType: res.locals.auditResourceType ?? null,
             resourceId: res.locals.auditResourceId ?? null,
             statusCode: res.statusCode,
             result: res.statusCode < 400 ? 'succeeded' : 'failed',
-            detail: res.statusCode >= 400 ? (res.locals.auditDetail ?? null) : null,
+            detail:
+              res.statusCode >= 400 ? (res.locals.auditDetail ?? null) : null,
             createdAt: new Date(),
           });
         } catch (err) {

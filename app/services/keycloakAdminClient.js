@@ -199,7 +199,8 @@ export function createKeycloakAdminClient({
         `${_base}/admin/realms/${_realm}/users?search=${encodeURIComponent(query)}&max=25`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      if (!res.ok) throw new Error(`Keycloak searchUsers failed: ${res.status}`);
+      if (!res.ok)
+        throw new Error(`Keycloak searchUsers failed: ${res.status}`);
       return res.json();
     },
 

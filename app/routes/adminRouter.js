@@ -2,6 +2,7 @@ import express from 'express';
 import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
 import { config } from '../utils/config.js';
+import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../models/habitComment.js';
 import {
   listAllComments,
   countAllComments,
@@ -514,7 +515,7 @@ export function createAdminRouter({
       await deleteHabitComments(queryNeo4j, [commentId]);
       const database = await getDb();
       const { deletedCount } = await database
-        .collection('habit_comments')
+        .collection(HABIT_COMMENTS_COLLECTION)
         .deleteOne({ commentId });
       log.info({ commentId, deletedCount }, '[admin] comment moderated');
       res.json({ ok: true, commentId });

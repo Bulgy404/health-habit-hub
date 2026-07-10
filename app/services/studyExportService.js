@@ -6,6 +6,7 @@
 
 import { ObjectId } from 'mongodb';
 import { recoveryPhrasesEnabled } from '../utils/recoveryPhrase.js';
+import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../models/habitComment.js';
 
 /** Collections keyed by participant `userId` that hold their generated data. */
 const USER_SCOPED_COLLECTIONS = [
@@ -15,7 +16,7 @@ const USER_SCOPED_COLLECTIONS = [
   'daily_behavior_logs',
   'srhi_responses',
   'habit_donations',
-  'habit_comments',
+  HABIT_COMMENTS_COLLECTION,
   'habit_annotations',
   'recommendations',
   'recommendation_feedback',

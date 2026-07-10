@@ -10,11 +10,14 @@ import { jsonBodyParser } from './middleware/requestParser.js';
 import { securityHeaders } from './middleware/securityHeaders.js';
 import { staticFileMiddleware } from './middleware/staticFileMiddleware.js';
 import { config } from './utils/config.js';
+import { logger } from './utils/logger.js';
 import {
   getLanguageCodes,
   getLanguageMessages,
   loadLanguageFiles,
 } from './utils/localization.js';
+
+const log = logger.child({ module: 'startup' });
 
 // Express config — public legal pages (rendered by the Flutter app)
 import imprintRouter from './routes/imprintRouter.js';
@@ -28,7 +31,7 @@ app.use(securityHeaders);
 app.set('trust proxy', 1);
 const port = config.port;
 const contextPath = process.env.APP_BASE_PATH || '/';
-console.log('ContextPath: ', contextPath);
+log.info({ contextPath }, 'Resolved context path');
 // Serve static files from the public directory
 const publicPath = path.join(process.cwd(), 'app/public');
 app.use(express.static(publicPath));
@@ -177,9 +180,7 @@ if (process.env.NODE_ENV !== 'production') {
     serverAdapter: boardAdapter,
   });
   app.use('/admin/queues', boardAdapter.getRouter());
-  console.log(
-    '[bull-board] Queue dashboard: http://app.localhost/admin/queues'
-  );
+  log.info('Queue dashboard: http://app.localhost/admin/queues');
 }
 
 // Crash/error reporting (no-op unless SENTRY_DSN is set).
@@ -191,9 +192,7 @@ ensureNeo4jSchema();
 // Ensure required MongoDB indexes exist (idempotent — no-op if already present).
 connectMongo()
   .then((db) => ensureIndexes(db))
-  .catch((err) =>
-    console.error('[startup] Failed to ensure MongoDB indexes:', err)
-  );
+  .catch((err) => log.error({ err }, 'Failed to ensure MongoDB indexes'));
 
 // Seed default profile field definitions (gender, age_group) if not already present.
 runSeedDefaultProfileFields();
@@ -220,13 +219,13 @@ const { broadcast } = createRecommendationWsServer(httpServer, { verifyToken });
 app.use('/api/internal', express.json(), createInternalRouter({ broadcast }));
 
 if (!process.env.API_SERVICE_SECRET) {
-  console.warn(
-    '[startup] API_SERVICE_SECRET is not set — Python API service is unauthenticated'
+  log.warn(
+    'API_SERVICE_SECRET is not set — Python API service is unauthenticated'
   );
 }
 
 httpServer.listen(port, () => {
-  console.log(`Server is running on http://app.localhost`);
+  log.info('Server is running on http://app.localhost');
 });
 
 // Internal-only metrics server — not exposed via Traefik.
@@ -238,5 +237,5 @@ metricsApp.get('/metrics', async (_req, res) => {
 });
 const metricsPort = process.env.METRICS_PORT ?? 9091;
 createServer(metricsApp).listen(metricsPort, () => {
-  console.log(`Metrics server is running on port ${metricsPort}`);
+  log.info({ metricsPort }, 'Metrics server is running');
 });

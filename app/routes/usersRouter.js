@@ -3,6 +3,7 @@ import neo4j from 'neo4j-driver';
 import { randomBytes } from 'node:crypto';
 import { makeGetDb } from '../utils/getDb.js';
 import { deleteHabitComments } from '../db/habitQueries.js';
+import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../models/habitComment.js';
 import { deleteEnrollment } from '../services/enrollmentNeo4j.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import { config } from '../utils/config.js';
@@ -158,7 +159,7 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
     'recommendation_feedback',
     'deviceTokens',
     'consents',
-    'habit_comments',
+    HABIT_COMMENTS_COLLECTION,
   ];
 
   // GET /api/v1/users/me/export – GDPR Art. 20 data portability.
@@ -287,7 +288,7 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
       // (ownership is only known via the habit_comments mapping).
       try {
         const ownComments = await database
-          .collection('habit_comments')
+          .collection(HABIT_COMMENTS_COLLECTION)
           .find({ userId })
           .toArray();
         await deleteHabitComments(

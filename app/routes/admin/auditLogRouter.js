@@ -3,6 +3,7 @@ import { makeGetDb } from '../../utils/getDb.js';
 import { requireRole } from '../../middleware/requireRole.js';
 import { ROLES } from '../../middleware/auth.js';
 import { logger } from '../../utils/logger.js';
+import { COLLECTION } from '../../models/adminAuditLog.js';
 
 const log = logger.child({ module: 'auditLogRouter' });
 
@@ -57,7 +58,7 @@ export function createAuditLogRouter({ db } = {}) {
       if (req.query.action) query.action = req.query.action;
 
       const entries = await database
-        .collection('admin_audit_log')
+        .collection(COLLECTION)
         .find(query)
         .sort({ createdAt: -1 })
         .limit(limit)

@@ -9,7 +9,11 @@ import { ROLES } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
 import { restoreBackupSchema } from '../../schemas/adminSchemas.js';
 import { setMaintenanceMode } from '../../middleware/maintenanceMode.js';
-import { TOKEN_TTL_MS } from '../../models/restoreConfirmationToken.js';
+import {
+  COLLECTION as RESTORE_TOKENS_COLLECTION,
+  TOKEN_TTL_MS,
+} from '../../models/restoreConfirmationToken.js';
+import { COLLECTION as BACKUP_AUDIT_COLLECTION } from '../../models/backupAuditLog.js';
 import {
   getBackupStatus,
   getCurrentBackupJob,
@@ -35,7 +39,7 @@ function actorFrom(req) {
 
 async function writeAudit(db, { req, action, filename, result, detail }) {
   try {
-    await db.collection('backup_audit_log').insertOne({
+    await db.collection(BACKUP_AUDIT_COLLECTION).insertOne({
       ...actorFrom(req),
       action,
       filename: filename ?? null,
@@ -171,7 +175,12 @@ export function createBackupsRouter({ db } = {}) {
   router.delete('/backups/:filename', async (req, res) => {
     const { filename } = req.params;
     const database = await getDb();
-    await writeAudit(database, { req, action: 'delete', filename, result: 'requested' });
+    await writeAudit(database, {
+      req,
+      action: 'delete',
+      filename,
+      result: 'requested',
+    });
     try {
       const result = await deleteBackup(filename);
       await writeAudit(database, {
@@ -262,7 +271,7 @@ export function createBackupsRouter({ db } = {}) {
       const token = randomBytes(24).toString('hex');
       const now = new Date();
       const expiresAt = new Date(now.getTime() + TOKEN_TTL_MS);
-      await database.collection('restore_confirmation_tokens').insertOne({
+      await database.collection(RESTORE_TOKENS_COLLECTION).insertOne({
         token,
         filename,
         byUserId: req.user.sub,
@@ -298,7 +307,7 @@ export function createBackupsRouter({ db } = {}) {
       // Coerce every user-derived value to a string so a JSON body can't smuggle
       // a query operator (e.g. { "$ne": null }) into the lookup (NoSQL injection).
       const tokenDoc = await database
-        .collection('restore_confirmation_tokens')
+        .collection(RESTORE_TOKENS_COLLECTION)
         .findOne({
           token: String(restoreToken),
           filename: String(filename),
@@ -312,7 +321,7 @@ export function createBackupsRouter({ db } = {}) {
         });
       }
       await database
-        .collection('restore_confirmation_tokens')
+        .collection(RESTORE_TOKENS_COLLECTION)
         .deleteOne({ _id: tokenDoc._id }); // single-use
 
       await writeAudit(database, {
@@ -353,7 +362,7 @@ export function createBackupsRouter({ db } = {}) {
         Math.max(1, parseInt(req.query.limit, 10) || 50)
       );
       const entries = await database
-        .collection('backup_audit_log')
+        .collection(BACKUP_AUDIT_COLLECTION)
         .find({})
         .sort({ createdAt: -1 })
         .limit(limit)

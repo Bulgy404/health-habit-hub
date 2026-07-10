@@ -7,6 +7,7 @@ import {
   shareHabit,
 } from '../../services/habitDonationService.js';
 import { getEnrollment } from '../../services/enrollmentNeo4j.js';
+import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../../models/habitComment.js';
 import { translateHabit } from '../../utils/translate.js';
 import { getJobStatus } from '../../lib/habitQueue.js';
 import { getOrComputeStitch } from '../../lib/stitchCache.js';
@@ -366,7 +367,7 @@ export function createHabitsCrudRouter({
       }
 
       const database = await getDb();
-      await database.collection('habit_comments').insertOne({
+      await database.collection(HABIT_COMMENTS_COLLECTION).insertOne({
         commentId,
         habitId: String(habitId),
         userId: String(userId),

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
+import 'habit_onboarding_prefs.dart';
 import 'habit_onboarding_widgets.dart';
 import 'my_habits_models.dart';
 
@@ -45,8 +46,11 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
   /// One controller per self-selected cue field. Starts with a single cue.
   final List<TextEditingController> _cueControllers = [TextEditingController()];
   String? _error;
-  // Session-only dismiss for the cue explainer card.
-  bool _introDismissed = false;
+  // Persisted per-device (see HabitOnboardingPrefs): once dismissed, the
+  // explainer stays dismissed across app restarts, not just this session.
+  // Null while the stored value is still loading — showIntro treats that as
+  // "don't show yet" so the card doesn't flash in then disappear.
+  bool? _hasSeenIntro;
 
   @override
   void initState() {
@@ -55,6 +59,14 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
     if (cue != null && cue.isNotEmpty) {
       _cueControllers.first.text = cue;
     }
+    HabitOnboardingPrefs.hasSeenCueIntro().then((seen) {
+      if (mounted) setState(() => _hasSeenIntro = seen);
+    });
+  }
+
+  void _dismissIntro() {
+    setState(() => _hasSeenIntro = true);
+    HabitOnboardingPrefs.markCueIntroSeen();
   }
 
   @override
@@ -143,7 +155,8 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
     final l10n = AppLocalizations.of(context)!;
     final lang = ref.watch(localeProvider).languageCode;
     final isPreRated = widget.config.cueSource != 'self_selected';
-    final showIntro = widget.config.onboardingEnabled && !_introDismissed;
+    final showIntro =
+        widget.config.onboardingEnabled && _hasSeenIntro == false;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.setCueTitle)),
@@ -156,7 +169,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
                 icon: Icons.alarm_on,
                 title: HabitOnboardingCopy.cueTitleFor(lang),
                 body: HabitOnboardingCopy.cueBodyFor(lang),
-                onDismiss: () => setState(() => _introDismissed = true),
+                onDismiss: _dismissIntro,
               ),
               const SizedBox(height: 16),
             ],

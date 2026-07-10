@@ -67,25 +67,29 @@ export function createTeamRouter({ keycloak } = {}) {
   });
 
   // POST /api/v1/admin/team/:userId/roles — grant admin or researcher.
-  router.post('/team/:userId/roles', requireRole(ROLES.ADMIN), async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const { role } = req.body || {};
-      if (!MANAGEABLE_ROLES.includes(role)) {
-        return res.status(400).json({
-          error: `role must be one of: ${MANAGEABLE_ROLES.join(', ')}`,
-        });
+  router.post(
+    '/team/:userId/roles',
+    requireRole(ROLES.ADMIN),
+    async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const { role } = req.body || {};
+        if (!MANAGEABLE_ROLES.includes(role)) {
+          return res.status(400).json({
+            error: `role must be one of: ${MANAGEABLE_ROLES.join(', ')}`,
+          });
+        }
+        await kcAdmin.assignRole(userId, role);
+        res.locals.auditAction = `grant_role_${role}`;
+        res.locals.auditResourceType = 'team_member';
+        res.locals.auditResourceId = userId;
+        res.json({ ok: true, userId, role });
+      } catch (err) {
+        log.error({ err }, 'failed to grant role');
+        res.status(500).json({ error: 'Internal server error' });
       }
-      await kcAdmin.assignRole(userId, role);
-      res.locals.auditAction = `grant_role_${role}`;
-      res.locals.auditResourceType = 'team_member';
-      res.locals.auditResourceId = userId;
-      res.json({ ok: true, userId, role });
-    } catch (err) {
-      log.error({ err }, 'failed to grant role');
-      res.status(500).json({ error: 'Internal server error' });
     }
-  });
+  );
 
   // DELETE /api/v1/admin/team/:userId/roles/:role — revoke admin or researcher.
   router.delete(
