@@ -60,10 +60,14 @@ services:
     networks:
       - hhh-proxy
     depends_on:
-      - mongo
-      - neo4j
-      - redis
-      - backup
+      mongo:
+        condition: service_started
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      backup:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
       interval: 30s
@@ -345,9 +349,14 @@ services:
     networks:
       - hhh-proxy
     depends_on:
-      - redis
-      - lightrag
-      - mongo
+      redis:
+        condition: service_started
+      lightrag:
+        condition: service_started
+      mongo:
+        condition: service_started
+      neo4j:
+        condition: service_healthy
 
   admin:
     image: hhh/admin
@@ -473,10 +482,14 @@ services:
       - hhh-proxy
       - hhh-backup-internal
     depends_on:
-      - mongo
-      - neo4j
-      - lightrag
-      - docker-socket-proxy
+      mongo:
+        condition: service_started
+      neo4j:
+        condition: service_healthy
+      lightrag:
+        condition: service_started
+      docker-socket-proxy:
+        condition: service_started
     # Also starts the internal backup-api HTTP server (see backup-service/api/)
     # used by the admin panel. The schedule itself is a sleep loop, not real
     # cron — see docs/runbook.md — so "next backup" drifts by up to a few

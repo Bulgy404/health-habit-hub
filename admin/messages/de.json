@@ -39,7 +39,8 @@
       "research": "Forschung",
       "operations": "Betrieb",
       "configuration": "Konfiguration",
-      "monitoring": "Überwachung"
+      "monitoring": "Überwachung",
+      "support": "Support"
     },
     "nav": {
       "appSettings": "App-Einstellungen",
@@ -55,9 +56,15 @@
       "profileFields": "Profilfelder",
       "knowledgeBase": "Wissensdatenbank",
       "system": "System & Links",
-      "backups": "Backups"
+      "backups": "Backups",
+      "auditLog": "Audit-Log",
+      "team": "Team & Rollen",
+      "help": "Hilfe"
     },
     "language": "Sprache",
+    "toggleTheme": "Design wechseln",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen",
     "signOut": "Abmelden"
   },
   "system": {
@@ -259,6 +266,75 @@
     "uploadFailed": "Backup konnte nicht hochgeladen werden",
     "restoreStartFailed": "Wiederherstellung konnte nicht gestartet werden"
   },
+  "auditLog": {
+    "title": "Audit-Log",
+    "subtitle": "Alle ändernden Admin-Aktionen, außer Backups (siehe die Backups-Seite für deren eigenes Audit-Log).",
+    "resourceTypeLabel": "Ressource",
+    "limitLabel": "Anzeigen",
+    "filterAll": "Alle",
+    "resourceTypes": {
+      "study": "Studie",
+      "participant": "Teilnehmende",
+      "questionnaire": "Fragebogen",
+      "team_member": "Teammitglied"
+    },
+    "when": "Wann",
+    "who": "Wer",
+    "action": "Aktion",
+    "resource": "Ressource",
+    "result": "Status",
+    "loadFailed": "Audit-Log konnte nicht geladen werden"
+  },
+  "team": {
+    "title": "Team & Rollen",
+    "subtitle": "Verwalten Sie, wer Admin- oder Forschungszugriff hat. Rollenänderungen wirken sofort.",
+    "addMember": "Teammitglied hinzufügen",
+    "searchPlaceholder": "Nach Benutzername oder E-Mail suchen",
+    "searchButton": "Suchen",
+    "noSearchResults": "Keine passenden Konten gefunden.",
+    "member": "Mitglied",
+    "roles": "Rollen",
+    "actions": "Aktionen",
+    "grantAdmin": "Admin gewähren",
+    "grantResearcher": "Forschungszugriff gewähren",
+    "revoke": "Entziehen",
+    "revokeConfirm": "{role} von {username} entziehen?",
+    "roleAdmin": "Admin",
+    "roleResearcher": "Forschung",
+    "noMembers": "Aktuell hat niemand Admin- oder Forschungszugriff.",
+    "loadFailed": "Team konnte nicht geladen werden",
+    "searchFailed": "Suche fehlgeschlagen",
+    "grantFailed": "Rolle konnte nicht gewährt werden",
+    "revokeFailed": "Rolle konnte nicht entzogen werden"
+  },
+  "help": {
+    "title": "Hilfe",
+    "subtitle": "Kurze Tipps zu jedem Bereich des Admin-Portals.",
+    "studies": {
+      "title": "Studien",
+      "body": "Erstellen Sie eine Studie, konfigurieren Sie deren Gruppen und Cue-Pools, generieren Sie Einladungscodes und weisen Sie Fragebögen zu. Zum Löschen einer Studie muss deren exakter Name zur Bestätigung eingegeben werden — eingeschriebene Teilnehmende verhindern das Löschen, bis sie umverteilt oder entfernt wurden."
+    },
+    "participants": {
+      "title": "Teilnehmende",
+      "body": "Erstellen Sie Teilnehmende einzeln oder in großer Zahl, drucken oder laden Sie deren Token-Karten herunter, weisen Sie eine neue Gruppe zu und prüfen Sie deren Fortschritt (Umfragen, Gewohnheiten, Empfehlungen). Das Löschen eines Teilnehmenden anonymisiert den Datensatz, statt ihn vollständig zu entfernen."
+    },
+    "questionnaires": {
+      "title": "Fragebögen",
+      "body": "Erstellen und bearbeiten Sie Fragebögen und weisen Sie sie einer Studie zu. Ein bereits einer Studie zugewiesener Fragebogen kann nicht gelöscht werden — entfernen Sie zuerst die Zuweisung."
+    },
+    "cuePools": {
+      "title": "Cue-Pools",
+      "body": "Verwalten Sie den Katalog der Gewohnheits-Auslöser, die Teilnehmenden angeboten werden. Importieren Sie eine CSV-Datei, um viele Auslöser auf einmal hinzuzufügen, und weisen Sie dann auf der Studien-Seite einen Cue-Pool der Cue-Konfiguration einer Studiengruppe zu."
+    },
+    "analytics": {
+      "title": "Analytik",
+      "body": "Engagement-, Gewohnheits- und Fragebogen-Abschlussmetriken pro Studie und Gruppe. Nutzen Sie den studienspezifischen Export auf der Studien-Seite für einen vollständigen Datendownload."
+    },
+    "backups": {
+      "title": "Backups",
+      "body": "Backup starten, aus einem vorherigen wiederherstellen oder Archive hoch-/herunterladen. Jede Aktion hier wird in einem eigenen Audit-Log erfasst, getrennt vom allgemeinen Audit-Log."
+    }
+  },
   "participants": {
     "title": "Teilnehmende",
     "subtitle": "Studienteilnehmende erstellen und verwalten, Gruppen neu zuweisen und Fortschritt einsehen.",
@@ -320,7 +396,15 @@
     "fastForwardFailed": "Vorspulen fehlgeschlagen",
     "confirmAnonymise": "Teilnehmende Person „{username}“ anonymisieren? Dies kann nicht rückgängig gemacht werden.",
     "ffShiftedBack": "Um {days} Tag(e) zurückverschoben. Lädt neu…",
-    "ffAdvanced": "Um {days} Tag(e) vorgespult. Öffne die App zum Neusynchronisieren."
+    "ffAdvanced": "Um {days} Tag(e) vorgespult. Öffne die App zum Neusynchronisieren.",
+    "count": "Anzahl",
+    "selectAllOnPage": "Alle auf dieser Seite auswählen",
+    "selectParticipant": "{username} auswählen",
+    "selectedCount": "{count} ausgewählt",
+    "exportSelected": "Auswahl exportieren (CSV)",
+    "deleteSelected": "Auswahl löschen",
+    "confirmBulkAnonymise": "{count} ausgewählte Teilnehmende anonymisieren? Dies kann nicht rückgängig gemacht werden.",
+    "bulkParticipantsCreated": "{count} Teilnehmende erstellt"
   },
   "cuePools": {
     "title": "Cue-Pools",
@@ -329,6 +413,8 @@
     "importCsv": "CSV importieren",
     "addCue": "+ Cue hinzufügen",
     "newCueTitle": "Neuer Cue",
+    "languagesLabel": "Verfügbare Sprachen",
+    "editingLanguage": "Bearbeitung: {language}",
     "cueTextLabel": "Cue-Text *",
     "cueTextPlaceholder": "z. B. Jeden Abend nach dem Essen",
     "qualityLabel": "Qualität",
@@ -476,6 +562,9 @@
     "customTab": "Benutzerdefiniert",
     "titleHeader": "Titel",
     "slugHeader": "Slug",
+    "languagesHeader": "Sprachen",
+    "languagesLabel": "Verfügbare Sprachen",
+    "editingLanguage": "Bearbeitung: {language}",
     "questionsHeader": "Fragen",
     "version": "Version",
     "lastUpdated": "Zuletzt aktualisiert",

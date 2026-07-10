@@ -71,6 +71,40 @@ describe('QuestionnairesPage', () => {
     expect(screen.getByText('Add Questionnaire', { selector: 'span' })).toBeInTheDocument();
   });
 
+  it('entering a title per language and saving sends a locale-map payload', async () => {
+    const user = userEvent.setup();
+    render(<QuestionnairesPage />);
+
+    await user.click(screen.getByRole('button', { name: /^custom$/i }));
+    await user.click(screen.getByRole('button', { name: /add questionnaire/i }));
+
+    // English title (default active language)
+    const titleInput = screen.getByPlaceholderText(/sleep quality index/i);
+    await user.type(titleInput, 'Baseline Survey');
+
+    // Enable German and switch to it
+    await user.click(screen.getByRole('checkbox', { name: /deutsch/i }));
+    await user.click(screen.getByRole('button', { name: /editing: deutsch/i }));
+    await user.type(titleInput, 'Basisumfrage');
+
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: jest.fn().mockResolvedValue({ ok: true, id: 'new-id' }),
+    } as unknown as Response);
+
+    await user.click(screen.getByRole('button', { name: /^create$/i }));
+
+    await waitFor(() => {
+      const postCall = (global.fetch as jest.Mock).mock.calls.find(
+        (c) => c[1]?.method === 'POST'
+      );
+      expect(postCall).toBeDefined();
+      const body = JSON.parse(postCall![1].body);
+      expect(body.title).toEqual({ en: 'Baseline Survey', de: 'Basisumfrage' });
+      expect(body.languages.sort()).toEqual(['de', 'en']);
+    });
+  });
+
   it('shows delete confirm dialog when Delete is clicked on a custom questionnaire', async () => {
     const user = userEvent.setup();
 
@@ -80,9 +114,10 @@ describe('QuestionnairesPage', () => {
         {
           id: '1',
           slug: 'my-q',
-          title: 'My Q',
-          description: '',
+          title: { en: 'My Q' },
+          description: {},
           version: '1',
+          languages: ['en'],
           active: true,
           isLibrary: false,
           questionCount: 0,
@@ -117,9 +152,10 @@ describe('QuestionnairesPage', () => {
           {
             id: '1',
             slug: 'my-q',
-            title: 'My Q',
-            description: '',
+            title: { en: 'My Q' },
+            description: {},
             version: '1',
+            languages: ['en'],
             active: true,
             isLibrary: false,
             questionCount: 0,

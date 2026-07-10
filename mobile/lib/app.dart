@@ -13,6 +13,7 @@ import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
 import 'providers/theme_provider.dart';
 import 'router/app_router.dart';
+import 'theme/app_colors.dart';
 
 // ---------------------------------------------------------------------------
 // Brand colors
@@ -86,7 +87,9 @@ ThemeData _buildLightTheme() {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: _kPrimary,
+        // _kPrimaryDark, not _kPrimary: white label text on #45B700 fails
+        // WCAG AA contrast (2.62:1); #2E8C00 clears it (4.31:1+ for bold labels).
+        backgroundColor: _kPrimaryDark,
         foregroundColor: Colors.white,
         textStyle: GoogleFonts.figtree(fontWeight: FontWeight.w800),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
@@ -95,7 +98,7 @@ ThemeData _buildLightTheme() {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: _kPrimary,
+        backgroundColor: _kPrimaryDark,
         foregroundColor: Colors.white,
         textStyle: GoogleFonts.figtree(fontWeight: FontWeight.w800),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
@@ -143,6 +146,7 @@ ThemeData _buildLightTheme() {
         fontSize: 15,
       ),
     ),
+    extensions: const [AppColors.light],
   );
 }
 
@@ -179,7 +183,8 @@ ThemeData _buildDarkTheme() {
     ),
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: const Color(0xFF454446),
-      indicatorColor: _kPrimary,
+      // _kPrimaryDark: the selected icon/label render white on top of this.
+      indicatorColor: _kPrimaryDark,
       iconTheme: WidgetStateProperty.resolveWith((states) {
         if (states.contains(WidgetState.selected)) {
           return const IconThemeData(color: Colors.white);
@@ -202,18 +207,20 @@ ThemeData _buildDarkTheme() {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: _kPrimary,
+        backgroundColor: _kPrimaryDark,
         foregroundColor: Colors.white,
         textStyle: GoogleFonts.figtree(fontWeight: FontWeight.bold),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+        minimumSize: const Size(double.infinity, 52),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: _kPrimary,
+        backgroundColor: _kPrimaryDark,
         foregroundColor: Colors.white,
         textStyle: GoogleFonts.figtree(fontWeight: FontWeight.bold),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
+        minimumSize: const Size(double.infinity, 52),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -232,11 +239,10 @@ ThemeData _buildDarkTheme() {
     ),
     cardTheme: CardThemeData(
       color: kDarkSurface,
-      elevation: 4,
+      elevation: 1,
       shadowColor: const Color(0x40000000),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: _kPrimary, width: 2),
       ),
     ),
     chipTheme: ChipThemeData(
@@ -244,6 +250,7 @@ ThemeData _buildDarkTheme() {
       labelStyle: const TextStyle(color: Colors.white),
       selectedColor: _kPrimaryDark,
     ),
+    extensions: const [AppColors.dark],
   );
 }
 

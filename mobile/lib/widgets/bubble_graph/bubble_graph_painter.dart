@@ -90,67 +90,77 @@ class _BubbleChipWidgetState extends State<BubbleChipWidget>
     final fontSize = (r * 0.28).clamp(8.0, 15.0);
     final subSize = (r * 0.22).clamp(7.0, 12.0);
 
-    return GestureDetector(
+    final semanticLabel = bubble.sublabel == null
+        ? bubble.label
+        : '${bubble.label}, ${bubble.sublabel}';
+
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      excludeSemantics: true,
       onTap: widget.onTap,
-      onPanUpdate: (details) => widget.onDrag(details.delta),
-      child: AnimatedBuilder(
-        animation: _pulseController,
-        builder: (context, child) {
-          final glowBoost = bubble.pulse ? _glowAnim.value : 0.0;
-          return Transform.scale(
-            scale: bubble.pulse ? _scaleAnim.value : 1.0,
-            child: Container(
-              width: r * 2,
-              height: r * 2,
-              decoration: BoxDecoration(
-                color: bubble.color.withAlpha(220),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: bubble.color.withAlpha(
-                      (90 + 110 * glowBoost).toInt(),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        onPanUpdate: (details) => widget.onDrag(details.delta),
+        child: AnimatedBuilder(
+          animation: _pulseController,
+          builder: (context, child) {
+            final glowBoost = bubble.pulse ? _glowAnim.value : 0.0;
+            return Transform.scale(
+              scale: bubble.pulse ? _scaleAnim.value : 1.0,
+              child: Container(
+                width: r * 2,
+                height: r * 2,
+                decoration: BoxDecoration(
+                  color: bubble.color.withAlpha(220),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: bubble.color.withAlpha(
+                        (90 + 110 * glowBoost).toInt(),
+                      ),
+                      blurRadius: 14 + 18 * glowBoost,
+                      spreadRadius: 2 + 5 * glowBoost,
+                      offset: const Offset(0, 3),
                     ),
-                    blurRadius: 14 + 18 * glowBoost,
-                    spreadRadius: 2 + 5 * glowBoost,
-                    offset: const Offset(0, 3),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: child,
+              ),
+            );
+          },
+          child: Padding(
+            padding: EdgeInsets.all(r * 0.14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  bubble.label,
+                  textAlign: TextAlign.center,
+                  maxLines: bubble.sublabel != null ? 3 : 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.bold,
+                    height: 1.2,
+                  ),
+                ),
+                if (bubble.sublabel != null) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    bubble.sublabel!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withAlpha(200),
+                      fontSize: subSize,
+                      height: 1.1,
+                    ),
                   ),
                 ],
-              ),
-              alignment: Alignment.center,
-              child: child,
-            ),
-          );
-        },
-        child: Padding(
-          padding: EdgeInsets.all(r * 0.14),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                bubble.label,
-                textAlign: TextAlign.center,
-                maxLines: bubble.sublabel != null ? 3 : 4,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: fontSize,
-                  fontWeight: FontWeight.bold,
-                  height: 1.2,
-                ),
-              ),
-              if (bubble.sublabel != null) ...[
-                const SizedBox(height: 3),
-                Text(
-                  bubble.sublabel!,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withAlpha(200),
-                    fontSize: subSize,
-                    height: 1.1,
-                  ),
-                ),
               ],
-            ],
+            ),
           ),
         ),
       ),

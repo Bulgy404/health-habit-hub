@@ -45,10 +45,10 @@ async function readAppSettings(db) {
  * cueConfig is always resolved live from the study group in MongoDB (no snapshot).
  * Priority: study group cueConfig (live) > free-entry public config.
  * Also includes the platform-wide app feature flags (app_settings singleton).
- * @param {{ db: object, userId: string, neo4jRun: Function }} deps
+ * @param {{ db: object, userId: string, neo4jRun: Function, lang?: string }} deps
  * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array, maxHabits: number|null, assignedCues: Array, recommenderEnabled: boolean, guidedHabitCreationEnabled: boolean, communityShareDefault: boolean }>}
  */
-export async function resolveHabitConfig({ db, userId, neo4jRun }) {
+export async function resolveHabitConfig({ db, userId, neo4jRun, lang = 'en' }) {
   // Get enrollment from Neo4j
   const enrollment = neo4jRun ? await getEnrollment(neo4jRun, userId) : null;
 
@@ -112,6 +112,7 @@ export async function resolveHabitConfig({ db, userId, neo4jRun }) {
     cueSource,
     cueCount,
     cuePoolId,
+    lang,
   });
 
   const appSettings = await readAppSettings(db);

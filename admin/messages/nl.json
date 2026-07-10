@@ -39,7 +39,8 @@
       "research": "Onderzoek",
       "operations": "Operaties",
       "configuration": "Configuratie",
-      "monitoring": "Monitoring"
+      "monitoring": "Monitoring",
+      "support": "Ondersteuning"
     },
     "nav": {
       "appSettings": "App-instellingen",
@@ -55,9 +56,15 @@
       "profileFields": "Profielvelden",
       "knowledgeBase": "Kennisbank",
       "system": "Systeem & links",
-      "backups": "Back-ups"
+      "backups": "Back-ups",
+      "auditLog": "Auditlogboek",
+      "team": "Team & rollen",
+      "help": "Hulp"
     },
     "language": "Taal",
+    "toggleTheme": "Thema wisselen",
+    "openMenu": "Menu openen",
+    "closeMenu": "Menu sluiten",
     "signOut": "Afmelden"
   },
   "system": {
@@ -72,7 +79,53 @@
       "bullBoard": "BullMQ-wachtrij - wachtend, actief, mislukt",
       "redisInsight": "Redis-sleutels, caches en geheugen inspecteren",
       "apiDocs": "OpenAPI-/Swagger-referentie voor de backend"
-    }
+    },
+    "banner": {
+      "allOperational": "Alle systemen operationeel",
+      "elevatedErrorRate": "Verhoogd foutpercentage ({rate}%)",
+      "metricsUnavailable": "Prometheus is onbereikbaar — statistieken zijn tijdelijk niet beschikbaar",
+      "servicesDown": "{count, plural, one {# service is} other {# services zijn}} onbereikbaar"
+    },
+    "connected": "Verbonden",
+    "down": "Uit",
+    "healthy": "Gezond",
+    "issuesCount": "{count, plural, one {# probleem} other {# problemen}}",
+    "loadFailed": "Kan systeemstatus niet laden",
+    "loadingEllipsis": "Laden…",
+    "performance": "Prestaties",
+    "prometheusUnreachable": "Prometheus is niet bereikbaar — statistieken zijn tijdelijk niet beschikbaar.",
+    "queueStatsUnavailable": "Wachtrij- en cachestatistieken niet beschikbaar.",
+    "queuesAndCache": "Wachtrijen & cache",
+    "refresh": "Vernieuwen",
+    "services": "Services",
+    "stages": {
+      "active": "Actief",
+      "completed": "Voltooid",
+      "delayed": "Vertraagd",
+      "failed": "Mislukt",
+      "paused": "Gepauzeerd",
+      "waiting": "Wachtend"
+    },
+    "stats": {
+      "appTarget": "App-doel",
+      "cacheHitRate": "Cache-hitratio",
+      "cachedKeys": "Gecachte keys",
+      "cpu": "CPU",
+      "errorRate": "Foutpercentage",
+      "eventLoopLag": "Event-loop-vertraging",
+      "heapUsed": "Heap gebruikt",
+      "memoryRss": "Geheugen (RSS)",
+      "p95Latency": "p95-latentie",
+      "redisClients": "Redis-clients",
+      "redisMemory": "Redis-geheugen",
+      "requestsPerSec": "Aanvragen / sec"
+    },
+    "systemHealth": "Systeemstatus",
+    "tools": "Tools",
+    "unavailable": "Niet beschikbaar",
+    "unreachable": "Onbereikbaar",
+    "up": "Actief",
+    "updatedAt": "Bijgewerkt {time}"
   },
   "comments": {
     "title": "Reacties",
@@ -90,7 +143,8 @@
     "flagReason": "Reden",
     "approve": "Goedkeuren",
     "approving": "Goedkeuren…",
-    "approveFailed": "Kon reactie niet goedkeuren"
+    "approveFailed": "Kon reactie niet goedkeuren",
+    "totalPageInfo": "{total} totaal · pagina {page} van {totalPages}"
   },
   "devices": {
     "title": "Apparaten",
@@ -104,7 +158,8 @@
     "noSessions": "Geen actieve apparaatsessies.",
     "confirmRevoke": "Deze apparaatsessie intrekken? De gebruiker wordt afgemeld.",
     "loadFailed": "Sessies konden niet worden geladen",
-    "revokeFailed": "Sessie kon niet worden ingetrokken"
+    "revokeFailed": "Sessie kon niet worden ingetrokken",
+    "totalPageInfo": "{total} totaal · pagina {page} van {totalPages}"
   },
   "settings": {
     "title": "Activiteitstypen",
@@ -205,7 +260,80 @@
     "loadFailed": "Back-upstatus kon niet worden geladen",
     "triggerFailed": "Back-up kon niet worden gestart",
     "uploadFailed": "Back-up kon niet worden geüpload",
-    "restoreStartFailed": "Herstellen kon niet worden gestart"
+    "restoreStartFailed": "Herstellen kon niet worden gestart",
+    "download": "Downloaden",
+    "downloadFailed": "Downloaden van back-up mislukt.",
+    "downloadingEllipsis": "Downloaden…",
+    "stepProgress": "Stap {step} van {totalSteps} — {label}"
+  },
+  "auditLog": {
+    "title": "Auditlogboek",
+    "subtitle": "Alle wijzigende adminacties, behalve back-ups (zie de Back-ups-pagina voor dat eigen auditlogboek).",
+    "resourceTypeLabel": "Bron",
+    "limitLabel": "Weergeven",
+    "filterAll": "Alle",
+    "resourceTypes": {
+      "study": "Studie",
+      "participant": "Deelnemer",
+      "questionnaire": "Vragenlijst",
+      "team_member": "Teamlid"
+    },
+    "when": "Wanneer",
+    "who": "Wie",
+    "action": "Actie",
+    "resource": "Bron",
+    "result": "Status",
+    "loadFailed": "Kan het auditlogboek niet laden"
+  },
+  "team": {
+    "title": "Team & rollen",
+    "subtitle": "Beheer wie admin- of onderzoekerstoegang heeft. Rolwijzigingen gaan direct in.",
+    "addMember": "Teamlid toevoegen",
+    "searchPlaceholder": "Zoeken op gebruikersnaam of e-mail",
+    "searchButton": "Zoeken",
+    "noSearchResults": "Geen bijpassende accounts gevonden.",
+    "member": "Lid",
+    "roles": "Rollen",
+    "actions": "Acties",
+    "grantAdmin": "Admin toekennen",
+    "grantResearcher": "Onderzoeker toekennen",
+    "revoke": "Intrekken",
+    "revokeConfirm": "{role} van {username} intrekken?",
+    "roleAdmin": "Admin",
+    "roleResearcher": "Onderzoeker",
+    "noMembers": "Niemand heeft momenteel admin- of onderzoekerstoegang.",
+    "loadFailed": "Kan het team niet laden",
+    "searchFailed": "Zoeken mislukt",
+    "grantFailed": "Kan rol niet toekennen",
+    "revokeFailed": "Kan rol niet intrekken"
+  },
+  "help": {
+    "title": "Hulp",
+    "subtitle": "Korte tips voor elk onderdeel van het adminportaal.",
+    "studies": {
+      "title": "Studies",
+      "body": "Maak een studie aan, configureer de groepen en cue-pools, genereer uitnodigingscodes en wijs vragenlijsten toe. Voor het verwijderen van een studie moet de exacte naam ter bevestiging worden ingevoerd — ingeschreven deelnemers blokkeren verwijdering totdat ze zijn herverdeeld of verwijderd."
+    },
+    "participants": {
+      "title": "Deelnemers",
+      "body": "Maak deelnemers één voor één of in bulk aan, print of download hun tokenkaarten, wijs een nieuwe groep toe en bekijk hun voortgang (vragenlijsten, gewoontes, aanbevelingen). Het verwijderen van een deelnemer anonimiseert het record in plaats van het volledig te wissen."
+    },
+    "questionnaires": {
+      "title": "Vragenlijsten",
+      "body": "Maak en bewerk vragenlijsten en wijs ze toe aan een studie. Een vragenlijst die al aan een studie is toegewezen kan niet worden verwijderd — verwijder eerst de toewijzing."
+    },
+    "cuePools": {
+      "title": "Cue-pools",
+      "body": "Beheer de catalogus van gewoonte-aanleidingen die aan deelnemers worden aangeboden. Importeer een CSV om veel aanleidingen in één keer toe te voegen, en wijs vervolgens op de Studies-pagina een cue-pool toe aan de cue-configuratie van een studiegroep."
+    },
+    "analytics": {
+      "title": "Analyse",
+      "body": "Betrokkenheids-, gewoonte- en vragenlijst-voltooiingsstatistieken per studie en groep. Gebruik de export per studie op de Studies-pagina voor een volledige gegevensdownload."
+    },
+    "backups": {
+      "title": "Back-ups",
+      "body": "Start een back-up, herstel vanuit een eerdere, of upload/download archieven. Elke actie hier wordt vastgelegd in een eigen auditlogboek, los van het algemene auditlogboek."
+    }
   },
   "participants": {
     "title": "Deelnemers",
@@ -267,7 +395,16 @@
     "fastForwardFailed": "Vooruitspoelen mislukt",
     "confirmAnonymise": "Deelnemer \"{username}\" anonimiseren? Dit kan niet ongedaan worden gemaakt.",
     "ffShiftedBack": "{days} dag(en) teruggezet. Opnieuw laden…",
-    "ffAdvanced": "{days} dag(en) vooruitgespoeld. Open de app om opnieuw te synchroniseren."
+    "ffAdvanced": "{days} dag(en) vooruitgespoeld. Open de app om opnieuw te synchroniseren.",
+    "totalPageInfo": "{total} totaal · pagina {page} van {totalPages}",
+    "count": "Aantal",
+    "selectAllOnPage": "Alles op deze pagina selecteren",
+    "selectParticipant": "{username} selecteren",
+    "selectedCount": "{count} geselecteerd",
+    "exportSelected": "Selectie exporteren (CSV)",
+    "deleteSelected": "Selectie verwijderen",
+    "confirmBulkAnonymise": "{count} geselecteerde deelnemers anonimiseren? Dit kan niet ongedaan worden gemaakt.",
+    "bulkParticipantsCreated": "{count} deelnemers aangemaakt"
   },
   "cuePools": {
     "title": "Cue-pools",
@@ -276,6 +413,8 @@
     "importCsv": "CSV importeren",
     "addCue": "+ Cue toevoegen",
     "newCueTitle": "Nieuwe cue",
+    "languagesLabel": "Beschikbare talen",
+    "editingLanguage": "Bewerken: {language}",
     "cueTextLabel": "Cue-tekst *",
     "cueTextPlaceholder": "bijv. Elke avond na het eten",
     "qualityLabel": "Kwaliteit",
@@ -423,6 +562,9 @@
     "customTab": "Aangepast",
     "titleHeader": "Titel",
     "slugHeader": "Slug",
+    "languagesHeader": "Talen",
+    "languagesLabel": "Beschikbare talen",
+    "editingLanguage": "Bewerken: {language}",
     "questionsHeader": "Vragen",
     "version": "Versie",
     "lastUpdated": "Laatst bijgewerkt",
@@ -903,6 +1045,57 @@
       "onboardingHint": "Overschrijft de studiebrede onboarding-instelling alleen voor deze groep.",
       "selfHabitLabel": "Eigen gewoontes aanmaken (deze groep)",
       "selfHabitHint": "Indien uit, kan deze groep geen eigen gewoontes aanmaken."
+    },
+    "analyticsTab": {
+      "columns": {
+        "enrolled": "Ingeschreven",
+        "group": "Groep",
+        "participant": "Deelnemer",
+        "status": "Status"
+      },
+      "cumulativeDropout": {
+        "description": "Deelnemers die in de loop van de tijd als uitgevallen zijn gemarkeerd.",
+        "empty": "Geen uitval geregistreerd.",
+        "title": "Cumulatieve uitval"
+      },
+      "loadFailed": "Mislukt",
+      "loadFailedShort": "Laden mislukt",
+      "loadingAnalytics": "Analyse laden…",
+      "loadingParticipants": "Deelnemers laden…",
+      "noParticipantsFound": "Geen deelnemers gevonden.",
+      "questionnaireCompletion": {
+        "description": "Aandeel ingeschreven deelnemers dat elke vragenlijst heeft ingediend. Beweeg erover voor details.",
+        "empty": "Geen vragenlijsten toegewezen aan deze studie.",
+        "title": "Voltooiing vragenlijsten"
+      },
+      "srhiTrajectory": {
+        "description": "Gemiddelde score gewoontesterkte per week per conditie (schaal 1–7). Beweeg over punten voor details.",
+        "empty": "Nog geen SRHI-gegevens.",
+        "title": "SRHI-traject"
+      },
+      "status": {
+        "active": "Actief",
+        "droppedOut": "Uitgevallen",
+        "inactive": "Inactief"
+      },
+      "tooltip": {
+        "activeOf": "Actief: {active} / {enrolled} ingeschreven",
+        "clickToSeeParticipants": "Klik om deelnemers te zien →",
+        "completedOf": "Voltooid: {completed} / {enrolled}",
+        "cumulativeDropouts": "Cumulatieve uitval: {count}",
+        "date": "Datum: {date}",
+        "group": "Groep: {group}",
+        "meanSrhi": "Gemiddelde SRHI: {score} / 7",
+        "rate": "Percentage: {rate}%",
+        "responseCount": "n = {count} reacties",
+        "week": "Week {week}"
+      },
+      "weeklyActiveRate": {
+        "description": "% ingeschreven deelnemers met ≥1 registratie in de afgelopen 7 dagen. Klik op een balk om deelnemers te zien.",
+        "drillTitle": "{group} — deelnemers",
+        "empty": "Nog geen inschrijvingsgegevens.",
+        "title": "Wekelijkse actieve ratio"
+      }
     }
   }
 }

@@ -239,6 +239,34 @@ test('POST /admin/participants creates a new participant', async () => {
   assert.ok(data.tokenCardUrl, 'should return tokenCardUrl');
 });
 
+test('POST /admin/participants with count creates several participants', async () => {
+  const res = await fetch(`${baseUrl}/admin/participants`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ count: 3 }),
+  });
+  assert.strictEqual(res.status, 201);
+  const data = await res.json();
+  assert.strictEqual(data.participants.length, 3);
+  const userIds = data.participants.map((p) => p.userId);
+  assert.strictEqual(new Set(userIds).size, 3, 'userIds should be unique');
+  for (const p of data.participants) {
+    assert.ok(p.username.startsWith('p-'));
+    assert.ok(p.tokenCardUrl);
+  }
+});
+
+test('POST /admin/participants clamps count to the 1-50 range', async () => {
+  const res = await fetch(`${baseUrl}/admin/participants`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ count: 999 }),
+  });
+  assert.strictEqual(res.status, 201);
+  const data = await res.json();
+  assert.strictEqual(data.participants.length, 50);
+});
+
 test('PATCH /admin/participants/:id/group - valid group updates successfully', async () => {
   const res = await fetch(`${baseUrl}/admin/participants/p-001/group`, {
     method: 'PATCH',

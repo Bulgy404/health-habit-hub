@@ -49,40 +49,41 @@ function makeToken(sub = 'user-1', roles = ['user']) {
 
 const SLIQ = {
   slug: 'sliq',
-  title: 'Short Lifestyle Indicator Questionnaire (SLIQ)',
-  description: 'A validated 4-item instrument.',
+  title: { en: 'Short Lifestyle Indicator Questionnaire (SLIQ)', de: 'Kurzer Lebensstil-Indikator (SLIQ)' },
+  description: { en: 'A validated 4-item instrument.' },
   version: '1.0.0',
+  languages: ['en', 'de'],
   active: true,
   questions: [
     {
       id: 'sliq_diet',
-      text: 'How would you rate your overall diet?',
+      text: { en: 'How would you rate your overall diet?', de: 'Wie bewerten Sie Ihre Ernährung?' },
       type: 'single_choice',
       options: [
-        { value: '0', label: 'Very unhealthy' },
-        { value: '3', label: 'Very healthy' },
+        { value: '0', label: { en: 'Very unhealthy', de: 'Sehr ungesund' } },
+        { value: '3', label: { en: 'Very healthy', de: 'Sehr gesund' } },
       ],
       required: true,
     },
     {
       id: 'sliq_physical_activity',
-      text: 'How much physical activity?',
+      text: { en: 'How much physical activity?' },
       type: 'single_choice',
-      options: [{ value: '0', label: 'None' }],
+      options: [{ value: '0', label: { en: 'None' } }],
       required: true,
     },
     {
       id: 'sliq_smoking',
-      text: 'Smoking status?',
+      text: { en: 'Smoking status?' },
       type: 'single_choice',
-      options: [{ value: '3', label: 'Never smoked' }],
+      options: [{ value: '3', label: { en: 'Never smoked' } }],
       required: true,
     },
     {
       id: 'sliq_alcohol',
-      text: 'Alcohol per week?',
+      text: { en: 'Alcohol per week?' },
       type: 'single_choice',
-      options: [{ value: '3', label: 'Do not drink' }],
+      options: [{ value: '3', label: { en: 'Do not drink' } }],
       required: true,
     },
   ],
@@ -90,24 +91,26 @@ const SLIQ = {
 
 const RAND36 = {
   slug: 'rand-36',
-  title: 'RAND 36-Item Health Survey',
-  description: 'A 36-item health survey.',
+  title: { en: 'RAND 36-Item Health Survey' },
+  description: { en: 'A 36-item health survey.' },
   version: '1.0.0',
+  languages: ['en'],
   active: true,
   questions: Array.from({ length: 36 }, (_, i) => ({
     id: `rand36_q${i + 1}`,
-    text: `Question ${i + 1}`,
+    text: { en: `Question ${i + 1}` },
     type: 'single_choice',
-    options: [{ value: '1', label: 'Excellent' }],
+    options: [{ value: '1', label: { en: 'Excellent' } }],
     required: true,
   })),
 };
 
 const INACTIVE = {
   slug: 'inactive-q',
-  title: 'Inactive Questionnaire',
-  description: 'Should not be returned.',
+  title: { en: 'Inactive Questionnaire' },
+  description: { en: 'Should not be returned.' },
   version: '1.0.0',
+  languages: ['en'],
   active: false,
   questions: [],
 };
@@ -235,8 +238,20 @@ test('GET /questionnaires — each entry has required fields', async () => {
   }
   const sliq = body.find((q) => q.slug === 'sliq');
   assert.strictEqual(sliq.questionCount, 4);
+  assert.strictEqual(sliq.title, SLIQ.title.en);
   const rand36 = body.find((q) => q.slug === 'rand-36');
   assert.strictEqual(rand36.questionCount, 36);
+});
+
+test('GET /questionnaires?lang=de — resolves to the German translation when available', async () => {
+  const token = makeToken('user-1', ['user']);
+  const res = await get('/questionnaires?lang=de', token);
+  const body = await res.json();
+  const sliq = body.find((q) => q.slug === 'sliq');
+  assert.strictEqual(sliq.title, SLIQ.title.de);
+  // rand-36 has no German translation — falls back to English.
+  const rand36 = body.find((q) => q.slug === 'rand-36');
+  assert.strictEqual(rand36.title, RAND36.title.en);
 });
 
 test('GET /questionnaires/:slug — returns full definition for sliq', async () => {
@@ -247,13 +262,31 @@ test('GET /questionnaires/:slug — returns full definition for sliq', async () 
   assert.strictEqual(body.slug, 'sliq');
   assert.ok(Array.isArray(body.questions));
   assert.strictEqual(body.questions.length, 4);
-  // Verify question structure
+  // Verify question structure and content resolves to the default (English).
   const q = body.questions[0];
   assert.ok(typeof q.id === 'string');
-  assert.ok(typeof q.text === 'string');
+  assert.strictEqual(q.text, SLIQ.questions[0].text.en);
   assert.ok(typeof q.type === 'string');
   assert.ok(Array.isArray(q.options));
+  assert.strictEqual(q.options[0].label, SLIQ.questions[0].options[0].label.en);
   assert.ok(typeof q.required === 'boolean');
+});
+
+test('GET /questionnaires/:slug?lang=de — resolves question text and option labels to German', async () => {
+  const token = makeToken('user-1', ['user']);
+  const res = await get('/questionnaires/sliq?lang=de', token);
+  const body = await res.json();
+  assert.strictEqual(body.title, SLIQ.title.de);
+  const q = body.questions[0];
+  assert.strictEqual(q.text, SLIQ.questions[0].text.de);
+  assert.strictEqual(q.options[0].label, SLIQ.questions[0].options[0].label.de);
+});
+
+test('GET /questionnaires/:slug?lang=ja — falls back to English when Japanese is unavailable', async () => {
+  const token = makeToken('user-1', ['user']);
+  const res = await get('/questionnaires/sliq?lang=ja', token);
+  const body = await res.json();
+  assert.strictEqual(body.title, SLIQ.title.en);
 });
 
 test('GET /questionnaires/:slug — returns 36 questions for rand-36', async () => {

@@ -468,8 +468,9 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
           id: q._id.toString(),
           slug: q.slug,
           title: q.title,
-          description: q.description || '',
+          description: q.description || {},
           version: q.version || '1',
+          languages: q.languages || ['en'],
           active: q.active !== false,
           isLibrary: q.isLibrary === true,
           questionCount: Array.isArray(q.questions) ? q.questions.length : 0,
@@ -503,8 +504,9 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         id: doc._id.toString(),
         slug: doc.slug || null,
         title: doc.title,
-        description: doc.description || '',
+        description: doc.description || {},
         version: doc.version || '1',
+        languages: doc.languages || ['en'],
         active: doc.active !== false,
         isLibrary: doc.isLibrary === true,
         questions: Array.isArray(doc.questions) ? doc.questions : [],
@@ -522,7 +524,8 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
     validate(createQuestionnaireSchema),
     async (req, res) => {
       try {
-        const { slug, title, description, version, questions } = req.body;
+        const { slug, title, description, version, languages, questions } =
+          req.body;
         const database = await getDb();
 
         // Every questionnaire needs a slug — responses and questionnaire
@@ -542,8 +545,16 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         } else {
           // Bound the input length first (ReDoS-safe), then slugify. Trimming
           // leading/trailing dashes is done with split/join rather than a
-          // backtracking-prone regex like /^-+|-+$/.
-          let base = String(title || 'questionnaire')
+          // backtracking-prone regex like /^-+|-+$/. title is a locale-text
+          // map — use whichever language reads best for a slug base: the
+          // first configured language, falling back to English, then any
+          // non-empty entry.
+          const titleForSlug =
+            title?.[languages?.[0]] ||
+            title?.en ||
+            Object.values(title || {}).find(Boolean) ||
+            'questionnaire';
+          let base = String(titleForSlug)
             .slice(0, 80)
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
@@ -569,8 +580,9 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         const doc = {
           slug: finalSlug,
           title,
-          description: description || '',
+          description: description || {},
           version: version || '1',
+          languages,
           active: true,
           isLibrary: false,
           questions: Array.isArray(questions) ? questions : [],
@@ -617,11 +629,13 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
             .status(403)
             .json({ error: 'Cannot modify a library questionnaire' });
         }
-        const { title, description, version, questions } = req.body;
+        const { title, description, version, languages, questions } =
+          req.body;
         const update = { updatedAt: new Date() };
         if (title !== undefined) update.title = title;
         if (description !== undefined) update.description = description;
         if (version !== undefined) update.version = version;
+        if (languages !== undefined) update.languages = languages;
         if (questions !== undefined) update.questions = questions;
         await database
           .collection('questionnaires')
@@ -649,6 +663,11 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
       if (result.matchedCount === 0) {
         return res.status(404).json({ error: 'Questionnaire not found' });
       }
+      res.locals.auditAction = active
+        ? 'activate_questionnaire'
+        : 'deactivate_questionnaire';
+      res.locals.auditResourceType = 'questionnaire';
+      res.locals.auditResourceId = slug;
       res.json({ ok: true, slug, active });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
@@ -688,6 +707,9 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
           .json({ error: 'Questionnaire is assigned to an active study' });
       }
       await database.collection('questionnaires').deleteOne({ _id: oid });
+      res.locals.auditAction = 'delete_questionnaire';
+      res.locals.auditResourceType = 'questionnaire';
+      res.locals.auditResourceId = id;
       res.json({ ok: true, id, deleted: true });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');

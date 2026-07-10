@@ -2,1170 +2,3069 @@
   {
     "_id": "questionnaire-sliq",
     "slug": "sliq",
-    "title": "Short Lifestyle Indicator Questionnaire (SLIQ)",
-    "description": "A validated 4-item instrument measuring diet quality, physical activity, smoking, and alcohol consumption.",
+    "title": {
+      "en": "Short Lifestyle Indicator Questionnaire (SLIQ)",
+      "de": "Kurzfragebogen zum Lebensstil (SLIQ)",
+      "fr": "Questionnaire court sur le mode de vie (SLIQ)",
+      "ja": "簡易ライフスタイル指標質問票(SLIQ)",
+      "nl": "Korte levensstijlvragenlijst (SLIQ)"
+    },
+    "description": {
+      "en": "A validated 4-item instrument measuring diet quality, physical activity, smoking, and alcohol consumption.",
+      "de": "Ein validiertes 4-Item-Instrument zur Erfassung von Ernährungsqualität, körperlicher Aktivität, Rauchen und Alkoholkonsum.",
+      "fr": "Un instrument validé à 4 items évaluant la qualité de l'alimentation, l'activité physique, le tabagisme et la consommation d'alcool.",
+      "ja": "食事の質、身体活動、喫煙、飲酒を測定する、妥当性が確認された4項目の測定尺度です。",
+      "nl": "Een gevalideerd instrument met 4 items dat de kwaliteit van het dieet, lichamelijke activiteit, roken en alcoholgebruik meet."
+    },
     "version": "1.0.0",
     "active": true,
     "questions": [
       {
         "id": "sliq_diet",
-        "text": "How would you rate your overall diet?",
+        "text": {
+          "en": "How would you rate your overall diet?",
+          "de": "Wie würden Sie Ihre Ernährung insgesamt bewerten?",
+          "fr": "Comment évalueriez-vous votre alimentation en général ?",
+          "ja": "全体的に見て、あなたの食事はどのように評価しますか?",
+          "nl": "Hoe zou u uw voeding over het algemeen beoordelen?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "0",
-            "label": "Very unhealthy (eat lots of junk food, very few fruits/vegetables)"
+            "label": {
+              "en": "Very unhealthy (eat lots of junk food, very few fruits/vegetables)",
+              "de": "Sehr ungesund (viel Junkfood, sehr wenig Obst/Gemüse)",
+              "fr": "Très malsaine (beaucoup de fast-food, très peu de fruits/légumes)",
+              "ja": "非常に不健康(ジャンクフードが多く、果物や野菜がほとんどない)",
+              "nl": "Zeer ongezond (veel junkfood, heel weinig groente/fruit)"
+            }
           },
           {
             "value": "1",
-            "label": "Unhealthy (eat some junk food, few fruits/vegetables)"
+            "label": {
+              "en": "Unhealthy (eat some junk food, few fruits/vegetables)",
+              "de": "Ungesund (etwas Junkfood, wenig Obst/Gemüse)",
+              "fr": "Malsaine (un peu de fast-food, peu de fruits/légumes)",
+              "ja": "不健康(ジャンクフードがやや多く、果物や野菜が少ない)",
+              "nl": "Ongezond (wat junkfood, weinig groente/fruit)"
+            }
           },
           {
             "value": "2",
-            "label": "Reasonably healthy (limit junk food, eat some fruits/vegetables)"
+            "label": {
+              "en": "Reasonably healthy (limit junk food, eat some fruits/vegetables)",
+              "de": "Recht gesund (wenig Junkfood, etwas Obst/Gemüse)",
+              "fr": "Raisonnablement saine (peu de fast-food, quelques fruits/légumes)",
+              "ja": "まあ健康的(ジャンクフードを控え、果物や野菜を多少摂る)",
+              "nl": "Redelijk gezond (beperkt junkfood, wat groente/fruit)"
+            }
           },
           {
             "value": "3",
-            "label": "Very healthy (rarely eat junk food, eat lots of fruits/vegetables)"
+            "label": {
+              "en": "Very healthy (rarely eat junk food, eat lots of fruits/vegetables)",
+              "de": "Sehr gesund (selten Junkfood, viel Obst/Gemüse)",
+              "fr": "Très saine (rarement du fast-food, beaucoup de fruits/légumes)",
+              "ja": "非常に健康的(ジャンクフードはほとんど食べず、果物や野菜を多く摂る)",
+              "nl": "Zeer gezond (zelden junkfood, veel groente/fruit)"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "sliq_physical_activity",
-        "text": "How much moderate or vigorous physical activity do you do per week?",
+        "text": {
+          "en": "How much moderate or vigorous physical activity do you do per week?",
+          "de": "Wie viel moderate oder intensive körperliche Aktivität betreiben Sie pro Woche?",
+          "fr": "Combien de temps d'activité physique modérée ou intense pratiquez-vous par semaine ?",
+          "ja": "1週間にどのくらいの中強度または高強度の身体活動を行っていますか?",
+          "nl": "Hoeveel matige of intensieve lichaamsbeweging doet u per week?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "0",
-            "label": "None"
+            "label": {
+              "en": "None",
+              "de": "Keine",
+              "fr": "Aucune",
+              "ja": "まったくしていない",
+              "nl": "Geen"
+            }
           },
           {
             "value": "1",
-            "label": "Less than 30 minutes"
+            "label": {
+              "en": "Less than 30 minutes",
+              "de": "Weniger als 30 Minuten",
+              "fr": "Moins de 30 minutes",
+              "ja": "30分未満",
+              "nl": "Minder dan 30 minuten"
+            }
           },
           {
             "value": "2",
-            "label": "30–149 minutes"
+            "label": {
+              "en": "30–149 minutes",
+              "de": "30–149 Minuten",
+              "fr": "30 à 149 minutes",
+              "ja": "30～149分",
+              "nl": "30–149 minuten"
+            }
           },
           {
             "value": "3",
-            "label": "150 minutes or more"
+            "label": {
+              "en": "150 minutes or more",
+              "de": "150 Minuten oder mehr",
+              "fr": "150 minutes ou plus",
+              "ja": "150分以上",
+              "nl": "150 minuten of meer"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "sliq_smoking",
-        "text": "Which best describes your smoking status?",
+        "text": {
+          "en": "Which best describes your smoking status?",
+          "de": "Was beschreibt Ihren Raucherstatus am besten?",
+          "fr": "Quelle affirmation décrit le mieux votre statut tabagique ?",
+          "ja": "あなたの喫煙状況に最も当てはまるものはどれですか?",
+          "nl": "Wat beschrijft uw rookstatus het best?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "0",
-            "label": "I currently smoke daily"
+            "label": {
+              "en": "I currently smoke daily",
+              "de": "Ich rauche derzeit täglich",
+              "fr": "Je fume actuellement tous les jours",
+              "ja": "現在、毎日タバコを吸っている",
+              "nl": "Ik rook momenteel dagelijks"
+            }
           },
           {
             "value": "1",
-            "label": "I currently smoke, but not daily"
+            "label": {
+              "en": "I currently smoke, but not daily",
+              "de": "Ich rauche derzeit, aber nicht täglich",
+              "fr": "Je fume actuellement, mais pas tous les jours",
+              "ja": "現在吸っているが、毎日ではない",
+              "nl": "Ik rook momenteel, maar niet dagelijks"
+            }
           },
           {
             "value": "2",
-            "label": "I used to smoke but have quit"
+            "label": {
+              "en": "I used to smoke but have quit",
+              "de": "Ich habe früher geraucht, aber aufgehört",
+              "fr": "J'ai fumé auparavant mais j'ai arrêté",
+              "ja": "以前は吸っていたが、やめた",
+              "nl": "Ik rookte vroeger, maar ben gestopt"
+            }
           },
           {
             "value": "3",
-            "label": "I have never smoked"
+            "label": {
+              "en": "I have never smoked",
+              "de": "Ich habe nie geraucht",
+              "fr": "Je n'ai jamais fumé",
+              "ja": "一度も吸ったことがない",
+              "nl": "Ik heb nooit gerookt"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "sliq_alcohol",
-        "text": "How many standard alcoholic drinks do you consume per week on average?",
+        "text": {
+          "en": "How many standard alcoholic drinks do you consume per week on average?",
+          "de": "Wie viele Standardgetränke mit Alkohol konsumieren Sie im Durchschnitt pro Woche?",
+          "fr": "Combien de verres d'alcool standards consommez-vous en moyenne par semaine ?",
+          "ja": "1週間に平均してどのくらいの標準的な量のアルコールを摂取しますか?",
+          "nl": "Hoeveel standaard alcoholische drankjes drinkt u gemiddeld per week?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "0",
-            "label": "14 or more drinks"
+            "label": {
+              "en": "14 or more drinks",
+              "de": "14 oder mehr Getränke",
+              "fr": "14 verres ou plus",
+              "ja": "14杯以上",
+              "nl": "14 of meer drankjes"
+            }
           },
           {
             "value": "1",
-            "label": "8–13 drinks"
+            "label": {
+              "en": "8–13 drinks",
+              "de": "8–13 Getränke",
+              "fr": "8 à 13 verres",
+              "ja": "8～13杯",
+              "nl": "8–13 drankjes"
+            }
           },
           {
             "value": "2",
-            "label": "1–7 drinks"
+            "label": {
+              "en": "1–7 drinks",
+              "de": "1–7 Getränke",
+              "fr": "1 à 7 verres",
+              "ja": "1～7杯",
+              "nl": "1–7 drankjes"
+            }
           },
           {
             "value": "3",
-            "label": "I do not drink alcohol"
+            "label": {
+              "en": "I do not drink alcohol",
+              "de": "Ich trinke keinen Alkohol",
+              "fr": "Je ne bois pas d'alcool",
+              "ja": "アルコールを飲まない",
+              "nl": "Ik drink geen alcohol"
+            }
           }
         ],
         "required": true
       }
     ],
-    "isLibrary": true
+    "isLibrary": true,
+    "languages": [
+      "en",
+      "de",
+      "fr",
+      "ja",
+      "nl"
+    ]
   },
   {
     "_id": "questionnaire-rand-36",
     "slug": "rand-36",
-    "title": "RAND 36-Item Health Survey (RAND-36 / SF-36)",
-    "description": "A 36-item validated instrument measuring eight health concepts: physical functioning, role limitations due to physical health, role limitations due to emotional problems, energy/fatigue, emotional well-being, social functioning, pain, and general health.",
+    "title": {
+      "en": "RAND 36-Item Health Survey (RAND-36 / SF-36)",
+      "de": "RAND 36-Item Gesundheitsfragebogen (RAND-36 / SF-36)",
+      "fr": "Questionnaire de santé RAND à 36 items (RAND-36 / SF-36)",
+      "ja": "RAND 36項目健康調査(RAND-36 / SF-36)",
+      "nl": "RAND 36-item Gezondheidsvragenlijst (RAND-36 / SF-36)"
+    },
+    "description": {
+      "en": "A 36-item validated instrument measuring eight health concepts: physical functioning, role limitations due to physical health, role limitations due to emotional problems, energy/fatigue, emotional well-being, social functioning, pain, and general health.",
+      "de": "Ein validiertes 36-Item-Instrument zur Messung von acht Gesundheitskonzepten: körperliche Funktionsfähigkeit, körperliche Rollenfunktion, emotionale Rollenfunktion, Vitalität/Erschöpfung, psychisches Wohlbefinden, soziale Funktionsfähigkeit, Schmerzen und allgemeine Gesundheitswahrnehmung.",
+      "fr": "Un instrument validé à 36 items mesurant huit concepts de santé : le fonctionnement physique, les limitations dues à l'état physique, les limitations dues à l'état émotionnel, l'énergie/la fatigue, le bien-être émotionnel, le fonctionnement social, la douleur et la santé générale.",
+      "ja": "身体機能、身体的健康による役割制限、精神的健康による役割制限、活力/倦怠感、心の健康、社会生活機能、痛み、健康感の8つの健康概念を測定する、妥当性が確認された36項目の尺度です。",
+      "nl": "Een gevalideerd instrument met 36 items dat acht gezondheidsconcepten meet: fysiek functioneren, sociaal functioneren, rolbeperkingen door fysiek probleem, rolbeperkingen door emotioneel probleem, mentale gezondheid, vitaliteit, pijn en algemene gezondheidsbeleving."
+    },
     "version": "1.0.0",
     "active": true,
     "questions": [
       {
         "id": "rand36_q1",
-        "text": "In general, would you say your health is:",
+        "text": {
+          "en": "In general, would you say your health is:",
+          "de": "Wie würden Sie im Allgemeinen Ihren Gesundheitszustand beschreiben?",
+          "fr": "D'une manière générale, diriez-vous que votre santé est :",
+          "ja": "全体的に見て、あなたの健康状態はいかがですか?",
+          "nl": "Wat vindt u, over het algemeen genomen, van uw gezondheid?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Excellent"
+            "label": {
+              "en": "Excellent",
+              "de": "Ausgezeichnet",
+              "fr": "Excellente",
+              "ja": "非常に良い",
+              "nl": "Uitstekend"
+            }
           },
           {
             "value": "2",
-            "label": "Very good"
+            "label": {
+              "en": "Very good",
+              "de": "Sehr gut",
+              "fr": "Très bonne",
+              "ja": "良い",
+              "nl": "Zeer goed"
+            }
           },
           {
             "value": "3",
-            "label": "Good"
+            "label": {
+              "en": "Good",
+              "de": "Gut",
+              "fr": "Bonne",
+              "ja": "まあ良い",
+              "nl": "Goed"
+            }
           },
           {
             "value": "4",
-            "label": "Fair"
+            "label": {
+              "en": "Fair",
+              "de": "Weniger gut",
+              "fr": "Passable",
+              "ja": "普通",
+              "nl": "Matig"
+            }
           },
           {
             "value": "5",
-            "label": "Poor"
+            "label": {
+              "en": "Poor",
+              "de": "Schlecht",
+              "fr": "Mauvaise",
+              "ja": "悪い",
+              "nl": "Slecht"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q2",
-        "text": "Compared to one year ago, how would you rate your health in general now?",
+        "text": {
+          "en": "Compared to one year ago, how would you rate your health in general now?",
+          "de": "Im Vergleich zum letzten Jahr, wie würden Sie Ihren Gesundheitszustand im Allgemeinen jetzt beurteilen?",
+          "fr": "Par rapport à l'année dernière, comment évalueriez-vous votre état de santé général actuellement ?",
+          "ja": "1年前と比べて、現在のあなたの健康状態を全体的にどう評価しますか?",
+          "nl": "In vergelijking met een jaar geleden, hoe zou u nu uw gezondheid in het algemeen beoordelen?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Much better now than one year ago"
+            "label": {
+              "en": "Much better now than one year ago",
+              "de": "Viel besser als vor einem Jahr",
+              "fr": "Beaucoup mieux qu'il y a un an",
+              "ja": "1年前よりずっと良い",
+              "nl": "Veel beter dan een jaar geleden"
+            }
           },
           {
             "value": "2",
-            "label": "Somewhat better now than one year ago"
+            "label": {
+              "en": "Somewhat better now than one year ago",
+              "de": "Etwas besser als vor einem Jahr",
+              "fr": "Un peu mieux qu'il y a un an",
+              "ja": "1年前より少し良い",
+              "nl": "Iets beter dan een jaar geleden"
+            }
           },
           {
             "value": "3",
-            "label": "About the same as one year ago"
+            "label": {
+              "en": "About the same as one year ago",
+              "de": "Etwa gleich wie vor einem Jahr",
+              "fr": "À peu près pareil qu'il y a un an",
+              "ja": "1年前とだいたい同じ",
+              "nl": "Ongeveer hetzelfde als een jaar geleden"
+            }
           },
           {
             "value": "4",
-            "label": "Somewhat worse now than one year ago"
+            "label": {
+              "en": "Somewhat worse now than one year ago",
+              "de": "Etwas schlechter als vor einem Jahr",
+              "fr": "Un peu moins bien qu'il y a un an",
+              "ja": "1年前より少し悪い",
+              "nl": "Iets slechter dan een jaar geleden"
+            }
           },
           {
             "value": "5",
-            "label": "Much worse now than one year ago"
+            "label": {
+              "en": "Much worse now than one year ago",
+              "de": "Viel schlechter als vor einem Jahr",
+              "fr": "Beaucoup moins bien qu'il y a un an",
+              "ja": "1年前よりずっと悪い",
+              "nl": "Veel slechter dan een jaar geleden"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q3",
-        "text": "The following items are about activities you might do during a typical day. Does your health now limit you in vigorous activities, such as running, lifting heavy objects, participating in strenuous sports?",
+        "text": {
+          "en": "The following items are about activities you might do during a typical day. Does your health now limit you in vigorous activities, such as running, lifting heavy objects, participating in strenuous sports?",
+          "de": "Die folgenden Fragen betreffen Tätigkeiten, die Sie vielleicht im Laufe eines normalen Tages ausüben. Sind Sie durch Ihren derzeitigen Gesundheitszustand bei anstrengenden Tätigkeiten wie Laufen, das Heben schwerer Gegenstände oder die Teilnahme an anstrengendem Sport eingeschränkt?",
+          "fr": "Les questions suivantes portent sur les activités que vous pourriez avoir à faire au cours d'une journée normale. Votre état de santé vous limite-t-il actuellement pour les activités physiques intenses telles que courir, soulever des objets lourds ou pratiquer un sport exigeant ?",
+          "ja": "ランニング、重い物を持ち上げる、激しいスポーツをするなどの激しい活動は、現在の健康状態によって制限されていますか?",
+          "nl": "De volgende vragen gaan over dagelijkse bezigheden. Wordt u door uw gezondheid op dit moment beperkt bij forse inspanning, zoals hardlopen, zware voorwerpen tillen of inspannend sporten?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes, limited a lot"
+            "label": {
+              "en": "Yes, limited a lot",
+              "de": "Ja, stark eingeschränkt",
+              "fr": "Oui, beaucoup limité",
+              "ja": "はい、大いに制限される",
+              "nl": "Ja, ernstig beperkt"
+            }
           },
           {
             "value": "2",
-            "label": "Yes, limited a little"
+            "label": {
+              "en": "Yes, limited a little",
+              "de": "Ja, etwas eingeschränkt",
+              "fr": "Oui, un peu limité",
+              "ja": "はい、少し制限される",
+              "nl": "Ja, een beetje beperkt"
+            }
           },
           {
             "value": "3",
-            "label": "No, not limited at all"
+            "label": {
+              "en": "No, not limited at all",
+              "de": "Nein, überhaupt nicht eingeschränkt",
+              "fr": "Non, pas limité du tout",
+              "ja": "いいえ、全く制限されない",
+              "nl": "Nee, helemaal niet beperkt"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q4",
-        "text": "Does your health now limit you in moderate activities, such as moving a table, pushing a vacuum cleaner, bowling, or playing golf?",
+        "text": {
+          "en": "Does your health now limit you in moderate activities, such as moving a table, pushing a vacuum cleaner, bowling, or playing golf?",
+          "de": "Sind Sie durch Ihren derzeitigen Gesundheitszustand bei mittelschweren Tätigkeiten wie dem Verschieben eines Tisches, Staubsaugen, Kegeln oder Golf spielen eingeschränkt?",
+          "fr": "Votre état de santé vous limite-t-il actuellement pour les activités modérées telles que déplacer une table, passer l'aspirateur, jouer aux quilles ou au golf ?",
+          "ja": "テーブルを移動させる、掃除機をかける、ボウリングやゴルフをするなどの中程度の活動は、現在の健康状態によって制限されていますか?",
+          "nl": "Wordt u door uw gezondheid op dit moment beperkt bij matige inspanning, zoals het verplaatsen van een tafel, stofzuigen of fietsen?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes, limited a lot"
+            "label": {
+              "en": "Yes, limited a lot",
+              "de": "Ja, stark eingeschränkt",
+              "fr": "Oui, beaucoup limité",
+              "ja": "はい、大いに制限される",
+              "nl": "Ja, ernstig beperkt"
+            }
           },
           {
             "value": "2",
-            "label": "Yes, limited a little"
+            "label": {
+              "en": "Yes, limited a little",
+              "de": "Ja, etwas eingeschränkt",
+              "fr": "Oui, un peu limité",
+              "ja": "はい、少し制限される",
+              "nl": "Ja, een beetje beperkt"
+            }
           },
           {
             "value": "3",
-            "label": "No, not limited at all"
+            "label": {
+              "en": "No, not limited at all",
+              "de": "Nein, überhaupt nicht eingeschränkt",
+              "fr": "Non, pas limité du tout",
+              "ja": "いいえ、全く制限されない",
+              "nl": "Nee, helemaal niet beperkt"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q5",
-        "text": "Does your health now limit you in lifting or carrying groceries?",
+        "text": {
+          "en": "Does your health now limit you in lifting or carrying groceries?",
+          "de": "Sind Sie durch Ihren derzeitigen Gesundheitszustand beim Heben oder Tragen von Einkaufstaschen eingeschränkt?",
+          "fr": "Votre état de santé vous limite-t-il actuellement pour soulever ou porter des courses ?",
+          "ja": "買い物袋を持ち上げたり運んだりすることは、現在の健康状態によって制限されていますか?",
+          "nl": "Wordt u door uw gezondheid op dit moment beperkt bij het tillen of dragen van boodschappen?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes, limited a lot"
+            "label": {
+              "en": "Yes, limited a lot",
+              "de": "Ja, stark eingeschränkt",
+              "fr": "Oui, beaucoup limité",
+              "ja": "はい、大いに制限される",
+              "nl": "Ja, ernstig beperkt"
+            }
           },
           {
             "value": "2",
-            "label": "Yes, limited a little"
+            "label": {
+              "en": "Yes, limited a little",
+              "de": "Ja, etwas eingeschränkt",
+              "fr": "Oui, un peu limité",
+              "ja": "はい、少し制限される",
+              "nl": "Ja, een beetje beperkt"
+            }
           },
           {
             "value": "3",
-            "label": "No, not limited at all"
+            "label": {
+              "en": "No, not limited at all",
+              "de": "Nein, überhaupt nicht eingeschränkt",
+              "fr": "Non, pas limité du tout",
+              "ja": "いいえ、全く制限されない",
+              "nl": "Nee, helemaal niet beperkt"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q6",
-        "text": "Does your health now limit you in climbing several flights of stairs?",
+        "text": {
+          "en": "Does your health now limit you in climbing several flights of stairs?",
+          "de": "Sind Sie durch Ihren derzeitigen Gesundheitszustand beim Steigen mehrerer Treppenabsätze eingeschränkt?",
+          "fr": "Votre état de santé vous limite-t-il actuellement pour monter plusieurs étages à pied ?",
+          "ja": "階段を数階分上ることは、現在の健康状態によって制限されていますか?",
+          "nl": "Wordt u door uw gezondheid op dit moment beperkt bij het oplopen van een paar trappen?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes, limited a lot"
+            "label": {
+              "en": "Yes, limited a lot",
+              "de": "Ja, stark eingeschränkt",
+              "fr": "Oui, beaucoup limité",
+              "ja": "はい、大いに制限される",
+              "nl": "Ja, ernstig beperkt"
+            }
           },
           {
             "value": "2",
-            "label": "Yes, limited a little"
+            "label": {
+              "en": "Yes, limited a little",
+              "de": "Ja, etwas eingeschränkt",
+              "fr": "Oui, un peu limité",
+              "ja": "はい、少し制限される",
+              "nl": "Ja, een beetje beperkt"
+            }
           },
           {
             "value": "3",
-            "label": "No, not limited at all"
+            "label": {
+              "en": "No, not limited at all",
+              "de": "Nein, überhaupt nicht eingeschränkt",
+              "fr": "Non, pas limité du tout",
+              "ja": "いいえ、全く制限されない",
+              "nl": "Nee, helemaal niet beperkt"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q7",
-        "text": "Does your health now limit you in climbing one flight of stairs?",
+        "text": {
+          "en": "Does your health now limit you in climbing one flight of stairs?",
+          "de": "Sind Sie durch Ihren derzeitigen Gesundheitszustand beim Steigen eines Treppenabsatzes eingeschränkt?",
+          "fr": "Votre état de santé vous limite-t-il actuellement pour monter un étage à pied ?",
+          "ja": "階段を1階分上ることは、現在の健康状態によって制限されていますか?",
+          "nl": "Wordt u door uw gezondheid op dit moment beperkt bij het oplopen van één trap?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes, limited a lot"
+            "label": {
+              "en": "Yes, limited a lot",
+              "de": "Ja, stark eingeschränkt",
+              "fr": "Oui, beaucoup limité",
+              "ja": "はい、大いに制限される",
+              "nl": "Ja, ernstig beperkt"
+            }
           },
           {
             "value": "2",
-            "label": "Yes, limited a little"
+            "label": {
+              "en": "Yes, limited a little",
+              "de": "Ja, etwas eingeschränkt",
+              "fr": "Oui, un peu limité",
+              "ja": "はい、少し制限される",
+              "nl": "Ja, een beetje beperkt"
+            }
           },
           {
             "value": "3",
-            "label": "No, not limited at all"
+            "label": {
+              "en": "No, not limited at all",
+              "de": "Nein, überhaupt nicht eingeschränkt",
+              "fr": "Non, pas limité du tout",
+              "ja": "いいえ、全く制限されない",
+              "nl": "Nee, helemaal niet beperkt"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q8",
-        "text": "Does your health now limit you in bending, kneeling, or stooping?",
+        "text": {
+          "en": "Does your health now limit you in bending, kneeling, or stooping?",
+          "de": "Sind Sie durch Ihren derzeitigen Gesundheitszustand beim Beugen, Knien oder Bücken eingeschränkt?",
+          "fr": "Votre état de santé vous limite-t-il actuellement pour vous pencher, vous mettre à genoux ou vous accroupir ?",
+          "ja": "かがんだり、ひざまずいたり、しゃがんだりすることは、現在の健康状態によって制限されていますか?",
+          "nl": "Wordt u door uw gezondheid op dit moment beperkt bij buigen, knielen of bukken?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes, limited a lot"
+            "label": {
+              "en": "Yes, limited a lot",
+              "de": "Ja, stark eingeschränkt",
+              "fr": "Oui, beaucoup limité",
+              "ja": "はい、大いに制限される",
+              "nl": "Ja, ernstig beperkt"
+            }
           },
           {
             "value": "2",
-            "label": "Yes, limited a little"
+            "label": {
+              "en": "Yes, limited a little",
+              "de": "Ja, etwas eingeschränkt",
+              "fr": "Oui, un peu limité",
+              "ja": "はい、少し制限される",
+              "nl": "Ja, een beetje beperkt"
+            }
           },
           {
             "value": "3",
-            "label": "No, not limited at all"
+            "label": {
+              "en": "No, not limited at all",
+              "de": "Nein, überhaupt nicht eingeschränkt",
+              "fr": "Non, pas limité du tout",
+              "ja": "いいえ、全く制限されない",
+              "nl": "Nee, helemaal niet beperkt"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q9",
-        "text": "Does your health now limit you in walking more than a mile?",
+        "text": {
+          "en": "Does your health now limit you in walking more than a mile?",
+          "de": "Sind Sie durch Ihren derzeitigen Gesundheitszustand beim Gehen von mehr als einem Kilometer eingeschränkt?",
+          "fr": "Votre état de santé vous limite-t-il actuellement pour marcher plus d'un kilomètre ?",
+          "ja": "1キロメートル以上歩くことは、現在の健康状態によって制限されていますか?",
+          "nl": "Wordt u door uw gezondheid op dit moment beperkt bij het lopen van meer dan een kilometer?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes, limited a lot"
+            "label": {
+              "en": "Yes, limited a lot",
+              "de": "Ja, stark eingeschränkt",
+              "fr": "Oui, beaucoup limité",
+              "ja": "はい、大いに制限される",
+              "nl": "Ja, ernstig beperkt"
+            }
           },
           {
             "value": "2",
-            "label": "Yes, limited a little"
+            "label": {
+              "en": "Yes, limited a little",
+              "de": "Ja, etwas eingeschränkt",
+              "fr": "Oui, un peu limité",
+              "ja": "はい、少し制限される",
+              "nl": "Ja, een beetje beperkt"
+            }
           },
           {
             "value": "3",
-            "label": "No, not limited at all"
+            "label": {
+              "en": "No, not limited at all",
+              "de": "Nein, überhaupt nicht eingeschränkt",
+              "fr": "Non, pas limité du tout",
+              "ja": "いいえ、全く制限されない",
+              "nl": "Nee, helemaal niet beperkt"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q10",
-        "text": "Does your health now limit you in walking several blocks?",
+        "text": {
+          "en": "Does your health now limit you in walking several blocks?",
+          "de": "Sind Sie durch Ihren derzeitigen Gesundheitszustand beim Gehen mehrerer Straßenblocks eingeschränkt?",
+          "fr": "Votre état de santé vous limite-t-il actuellement pour marcher plusieurs centaines de mètres ?",
+          "ja": "数百メートル歩くことは、現在の健康状態によって制限されていますか?",
+          "nl": "Wordt u door uw gezondheid op dit moment beperkt bij het lopen van een halve kilometer?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes, limited a lot"
+            "label": {
+              "en": "Yes, limited a lot",
+              "de": "Ja, stark eingeschränkt",
+              "fr": "Oui, beaucoup limité",
+              "ja": "はい、大いに制限される",
+              "nl": "Ja, ernstig beperkt"
+            }
           },
           {
             "value": "2",
-            "label": "Yes, limited a little"
+            "label": {
+              "en": "Yes, limited a little",
+              "de": "Ja, etwas eingeschränkt",
+              "fr": "Oui, un peu limité",
+              "ja": "はい、少し制限される",
+              "nl": "Ja, een beetje beperkt"
+            }
           },
           {
             "value": "3",
-            "label": "No, not limited at all"
+            "label": {
+              "en": "No, not limited at all",
+              "de": "Nein, überhaupt nicht eingeschränkt",
+              "fr": "Non, pas limité du tout",
+              "ja": "いいえ、全く制限されない",
+              "nl": "Nee, helemaal niet beperkt"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q11",
-        "text": "Does your health now limit you in walking one block?",
+        "text": {
+          "en": "Does your health now limit you in walking one block?",
+          "de": "Sind Sie durch Ihren derzeitigen Gesundheitszustand beim Gehen eines einzelnen Straßenblocks eingeschränkt?",
+          "fr": "Votre état de santé vous limite-t-il actuellement pour marcher une centaine de mètres ?",
+          "ja": "100メートル歩くことは、現在の健康状態によって制限されていますか?",
+          "nl": "Wordt u door uw gezondheid op dit moment beperkt bij het lopen van honderd meter?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes, limited a lot"
+            "label": {
+              "en": "Yes, limited a lot",
+              "de": "Ja, stark eingeschränkt",
+              "fr": "Oui, beaucoup limité",
+              "ja": "はい、大いに制限される",
+              "nl": "Ja, ernstig beperkt"
+            }
           },
           {
             "value": "2",
-            "label": "Yes, limited a little"
+            "label": {
+              "en": "Yes, limited a little",
+              "de": "Ja, etwas eingeschränkt",
+              "fr": "Oui, un peu limité",
+              "ja": "はい、少し制限される",
+              "nl": "Ja, een beetje beperkt"
+            }
           },
           {
             "value": "3",
-            "label": "No, not limited at all"
+            "label": {
+              "en": "No, not limited at all",
+              "de": "Nein, überhaupt nicht eingeschränkt",
+              "fr": "Non, pas limité du tout",
+              "ja": "いいえ、全く制限されない",
+              "nl": "Nee, helemaal niet beperkt"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q12",
-        "text": "Does your health now limit you in bathing or dressing yourself?",
+        "text": {
+          "en": "Does your health now limit you in bathing or dressing yourself?",
+          "de": "Sind Sie durch Ihren derzeitigen Gesundheitszustand beim Baden oder Anziehen eingeschränkt?",
+          "fr": "Votre état de santé vous limite-t-il actuellement pour vous laver ou vous habiller ?",
+          "ja": "入浴や着替えをすることは、現在の健康状態によって制限されていますか?",
+          "nl": "Wordt u door uw gezondheid op dit moment beperkt bij het wassen of aankleden van uzelf?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes, limited a lot"
+            "label": {
+              "en": "Yes, limited a lot",
+              "de": "Ja, stark eingeschränkt",
+              "fr": "Oui, beaucoup limité",
+              "ja": "はい、大いに制限される",
+              "nl": "Ja, ernstig beperkt"
+            }
           },
           {
             "value": "2",
-            "label": "Yes, limited a little"
+            "label": {
+              "en": "Yes, limited a little",
+              "de": "Ja, etwas eingeschränkt",
+              "fr": "Oui, un peu limité",
+              "ja": "はい、少し制限される",
+              "nl": "Ja, een beetje beperkt"
+            }
           },
           {
             "value": "3",
-            "label": "No, not limited at all"
+            "label": {
+              "en": "No, not limited at all",
+              "de": "Nein, überhaupt nicht eingeschränkt",
+              "fr": "Non, pas limité du tout",
+              "ja": "いいえ、全く制限されない",
+              "nl": "Nee, helemaal niet beperkt"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q13",
-        "text": "During the past 4 weeks, have you cut down the amount of time you spent on work or other activities due to your physical health?",
+        "text": {
+          "en": "During the past 4 weeks, have you cut down the amount of time you spent on work or other activities due to your physical health?",
+          "de": "Hatten Sie in den letzten 4 Wochen aufgrund Ihrer körperlichen Gesundheit weniger Zeit für Arbeit oder andere Tätigkeiten aufgewendet?",
+          "fr": "Au cours des 4 dernières semaines, avez-vous, en raison de votre état de santé physique, réduit le temps passé à travailler ou à d'autres activités ?",
+          "ja": "過去4週間、身体的な健康上の理由で、仕事や他の活動に費やす時間を減らしましたか?",
+          "nl": "Heeft u, ten gevolge van uw lichamelijke gezondheid, de afgelopen 4 weken minder tijd kunnen besteden aan werk of andere bezigheden?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes"
+            "label": {
+              "en": "Yes",
+              "de": "Ja",
+              "fr": "Oui",
+              "ja": "はい",
+              "nl": "Ja"
+            }
           },
           {
             "value": "2",
-            "label": "No"
+            "label": {
+              "en": "No",
+              "de": "Nein",
+              "fr": "Non",
+              "ja": "いいえ",
+              "nl": "Nee"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q14",
-        "text": "During the past 4 weeks, have you accomplished less than you would like due to your physical health?",
+        "text": {
+          "en": "During the past 4 weeks, have you accomplished less than you would like due to your physical health?",
+          "de": "Haben Sie in den letzten 4 Wochen aufgrund Ihrer körperlichen Gesundheit weniger erreicht, als Sie wollten?",
+          "fr": "Au cours des 4 dernières semaines, avez-vous, en raison de votre état de santé physique, accompli moins de choses que vous ne l'auriez souhaité ?",
+          "ja": "過去4週間、身体的な健康上の理由で、やりたかったことよりも達成できたことが少なかったですか?",
+          "nl": "Heeft u, ten gevolge van uw lichamelijke gezondheid, de afgelopen 4 weken minder bereikt dan u zou willen?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes"
+            "label": {
+              "en": "Yes",
+              "de": "Ja",
+              "fr": "Oui",
+              "ja": "はい",
+              "nl": "Ja"
+            }
           },
           {
             "value": "2",
-            "label": "No"
+            "label": {
+              "en": "No",
+              "de": "Nein",
+              "fr": "Non",
+              "ja": "いいえ",
+              "nl": "Nee"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q15",
-        "text": "During the past 4 weeks, were you limited in the kind of work or other activities due to your physical health?",
+        "text": {
+          "en": "During the past 4 weeks, were you limited in the kind of work or other activities due to your physical health?",
+          "de": "Waren Sie in den letzten 4 Wochen aufgrund Ihrer körperlichen Gesundheit in der Art der Arbeit oder anderer Tätigkeiten eingeschränkt?",
+          "fr": "Au cours des 4 dernières semaines, avez-vous été limité, en raison de votre état de santé physique, dans le type de travail ou d'autres activités ?",
+          "ja": "過去4週間、身体的な健康上の理由で、仕事や他の活動の種類が制限されましたか?",
+          "nl": "Was u, ten gevolge van uw lichamelijke gezondheid, de afgelopen 4 weken beperkt in het soort werk of het soort bezigheden?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes"
+            "label": {
+              "en": "Yes",
+              "de": "Ja",
+              "fr": "Oui",
+              "ja": "はい",
+              "nl": "Ja"
+            }
           },
           {
             "value": "2",
-            "label": "No"
+            "label": {
+              "en": "No",
+              "de": "Nein",
+              "fr": "Non",
+              "ja": "いいえ",
+              "nl": "Nee"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q16",
-        "text": "During the past 4 weeks, did you have difficulty performing the work or other activities due to your physical health (for example, it took extra effort)?",
+        "text": {
+          "en": "During the past 4 weeks, did you have difficulty performing the work or other activities due to your physical health (for example, it took extra effort)?",
+          "de": "Hatten Sie in den letzten 4 Wochen aufgrund Ihrer körperlichen Gesundheit Schwierigkeiten, Ihre Arbeit oder andere Tätigkeiten auszuführen (z. B. mussten Sie sich besonders anstrengen)?",
+          "fr": "Au cours des 4 dernières semaines, avez-vous eu, en raison de votre état de santé physique, des difficultés à accomplir votre travail ou d'autres activités (par exemple, cela vous a demandé un effort supplémentaire) ?",
+          "ja": "過去4週間、身体的な健康上の理由で、仕事や他の活動を行うのが困難でしたか(例えば、余分な努力が必要でしたか)?",
+          "nl": "Had u, ten gevolge van uw lichamelijke gezondheid, de afgelopen 4 weken moeite met het werk of andere bezigheden (kostte het u bijvoorbeeld extra inspanning)?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes"
+            "label": {
+              "en": "Yes",
+              "de": "Ja",
+              "fr": "Oui",
+              "ja": "はい",
+              "nl": "Ja"
+            }
           },
           {
             "value": "2",
-            "label": "No"
+            "label": {
+              "en": "No",
+              "de": "Nein",
+              "fr": "Non",
+              "ja": "いいえ",
+              "nl": "Nee"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q17",
-        "text": "During the past 4 weeks, have you cut down the amount of time you spent on work or other activities due to any emotional problems (such as feeling depressed or anxious)?",
+        "text": {
+          "en": "During the past 4 weeks, have you cut down the amount of time you spent on work or other activities due to any emotional problems (such as feeling depressed or anxious)?",
+          "de": "Hatten Sie in den letzten 4 Wochen aufgrund emotionaler Probleme (wie Niedergeschlagenheit oder Angstgefühle) weniger Zeit für Arbeit oder andere Tätigkeiten aufgewendet?",
+          "fr": "Au cours des 4 dernières semaines, avez-vous, en raison de problèmes émotionnels (comme le fait de vous sentir déprimé ou anxieux), réduit le temps passé à travailler ou à d'autres activités ?",
+          "ja": "過去4週間、情緒的な問題(気分の落ち込みや不安など)のために、仕事や他の活動に費やす時間を減らしましたか?",
+          "nl": "Heeft u, ten gevolge van een emotioneel probleem (bijvoorbeeld doordat u zich depressief of angstig voelde), de afgelopen 4 weken minder tijd kunnen besteden aan werk of andere bezigheden?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes"
+            "label": {
+              "en": "Yes",
+              "de": "Ja",
+              "fr": "Oui",
+              "ja": "はい",
+              "nl": "Ja"
+            }
           },
           {
             "value": "2",
-            "label": "No"
+            "label": {
+              "en": "No",
+              "de": "Nein",
+              "fr": "Non",
+              "ja": "いいえ",
+              "nl": "Nee"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q18",
-        "text": "During the past 4 weeks, have you accomplished less than you would like due to any emotional problems (such as feeling depressed or anxious)?",
+        "text": {
+          "en": "During the past 4 weeks, have you accomplished less than you would like due to any emotional problems (such as feeling depressed or anxious)?",
+          "de": "Haben Sie in den letzten 4 Wochen aufgrund emotionaler Probleme (wie Niedergeschlagenheit oder Angstgefühle) weniger erreicht, als Sie wollten?",
+          "fr": "Au cours des 4 dernières semaines, avez-vous, en raison de problèmes émotionnels (comme le fait de vous sentir déprimé ou anxieux), accompli moins de choses que vous ne l'auriez souhaité ?",
+          "ja": "過去4週間、情緒的な問題(気分の落ち込みや不安など)のために、やりたかったことよりも達成できたことが少なかったですか?",
+          "nl": "Heeft u, ten gevolge van een emotioneel probleem (bijvoorbeeld doordat u zich depressief of angstig voelde), de afgelopen 4 weken minder bereikt dan u zou willen?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes"
+            "label": {
+              "en": "Yes",
+              "de": "Ja",
+              "fr": "Oui",
+              "ja": "はい",
+              "nl": "Ja"
+            }
           },
           {
             "value": "2",
-            "label": "No"
+            "label": {
+              "en": "No",
+              "de": "Nein",
+              "fr": "Non",
+              "ja": "いいえ",
+              "nl": "Nee"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q19",
-        "text": "During the past 4 weeks, did you not do work or other activities as carefully as usual due to any emotional problems (such as feeling depressed or anxious)?",
+        "text": {
+          "en": "During the past 4 weeks, did you not do work or other activities as carefully as usual due to any emotional problems (such as feeling depressed or anxious)?",
+          "de": "Haben Sie in den letzten 4 Wochen aufgrund emotionaler Probleme (wie Niedergeschlagenheit oder Angstgefühle) Ihre Arbeit oder andere Tätigkeiten nicht so sorgfältig wie üblich ausgeführt?",
+          "fr": "Au cours des 4 dernières semaines, avez-vous, en raison de problèmes émotionnels (comme le fait de vous sentir déprimé ou anxieux), fait votre travail ou d'autres activités avec moins de soin que d'habitude ?",
+          "ja": "過去4週間、情緒的な問題(気分の落ち込みや不安など)のために、仕事や他の活動を普段ほど注意深く行えませんでしたか?",
+          "nl": "Heeft u, ten gevolge van een emotioneel probleem (bijvoorbeeld doordat u zich depressief of angstig voelde), de afgelopen 4 weken het werk of andere bezigheden niet zo zorgvuldig gedaan als u gewend bent?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Yes"
+            "label": {
+              "en": "Yes",
+              "de": "Ja",
+              "fr": "Oui",
+              "ja": "はい",
+              "nl": "Ja"
+            }
           },
           {
             "value": "2",
-            "label": "No"
+            "label": {
+              "en": "No",
+              "de": "Nein",
+              "fr": "Non",
+              "ja": "いいえ",
+              "nl": "Nee"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q20",
-        "text": "During the past 4 weeks, to what extent has your physical health or emotional problems interfered with your normal social activities with family, friends, neighbours, or groups?",
+        "text": {
+          "en": "During the past 4 weeks, to what extent has your physical health or emotional problems interfered with your normal social activities with family, friends, neighbours, or groups?",
+          "de": "Inwieweit haben Ihre körperliche Gesundheit oder emotionale Probleme in den letzten 4 Wochen Ihre normalen sozialen Aktivitäten mit Familie, Freunden, Nachbarn oder anderen Personen beeinträchtigt?",
+          "fr": "Au cours des 4 dernières semaines, dans quelle mesure votre état de santé physique ou vos problèmes émotionnels ont-ils gêné votre vie sociale normale avec votre famille, vos amis, vos voisins ou d'autres personnes ?",
+          "ja": "過去4週間、身体的な健康状態や情緒的な問題は、家族、友人、近所の人、その他の人々との通常の社会的活動をどの程度妨げましたか?",
+          "nl": "In hoeverre hebben uw lichamelijke gezondheid of emotionele problemen u de afgelopen 4 weken belemmerd in uw normale sociale bezigheden met gezin, vrienden, buren of anderen?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Not at all"
+            "label": {
+              "en": "Not at all",
+              "de": "Überhaupt nicht",
+              "fr": "Pas du tout",
+              "ja": "全くない",
+              "nl": "Helemaal niet"
+            }
           },
           {
             "value": "2",
-            "label": "Slightly"
+            "label": {
+              "en": "Slightly",
+              "de": "Etwas",
+              "fr": "Un peu",
+              "ja": "少しある",
+              "nl": "Enigszins"
+            }
           },
           {
             "value": "3",
-            "label": "Moderately"
+            "label": {
+              "en": "Moderately",
+              "de": "Mäßig",
+              "fr": "Moyennement",
+              "ja": "中程度にある",
+              "nl": "Nogal"
+            }
           },
           {
             "value": "4",
-            "label": "Quite a bit"
+            "label": {
+              "en": "Quite a bit",
+              "de": "Ziemlich",
+              "fr": "Beaucoup",
+              "ja": "かなりある",
+              "nl": "Veel"
+            }
           },
           {
             "value": "5",
-            "label": "Extremely"
+            "label": {
+              "en": "Extremely",
+              "de": "Sehr stark",
+              "fr": "Énormément",
+              "ja": "非常にある",
+              "nl": "Heel erg veel"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q21",
-        "text": "How much bodily pain have you had during the past 4 weeks?",
+        "text": {
+          "en": "How much bodily pain have you had during the past 4 weeks?",
+          "de": "Wie stark waren Ihre Schmerzen in den letzten 4 Wochen?",
+          "fr": "Au cours des 4 dernières semaines, quelle a été l'intensité de vos douleurs physiques ?",
+          "ja": "過去4週間、身体的な痛みはどの程度ありましたか?",
+          "nl": "Hoeveel pijn had u de afgelopen 4 weken?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "None"
+            "label": {
+              "en": "None",
+              "de": "Keine",
+              "fr": "Aucune",
+              "ja": "全くない",
+              "nl": "Geen"
+            }
           },
           {
             "value": "2",
-            "label": "Very mild"
+            "label": {
+              "en": "Very mild",
+              "de": "Sehr leicht",
+              "fr": "Très légère",
+              "ja": "ごくわずか",
+              "nl": "Heel licht"
+            }
           },
           {
             "value": "3",
-            "label": "Mild"
+            "label": {
+              "en": "Mild",
+              "de": "Leicht",
+              "fr": "Légère",
+              "ja": "軽い",
+              "nl": "Licht"
+            }
           },
           {
             "value": "4",
-            "label": "Moderate"
+            "label": {
+              "en": "Moderate",
+              "de": "Mäßig",
+              "fr": "Modérée",
+              "ja": "中程度",
+              "nl": "Nogal"
+            }
           },
           {
             "value": "5",
-            "label": "Severe"
+            "label": {
+              "en": "Severe",
+              "de": "Stark",
+              "fr": "Sévère",
+              "ja": "重い",
+              "nl": "Ernstig"
+            }
           },
           {
             "value": "6",
-            "label": "Very severe"
+            "label": {
+              "en": "Very severe",
+              "de": "Sehr stark",
+              "fr": "Très sévère",
+              "ja": "非常に重い",
+              "nl": "Heel ernstig"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q22",
-        "text": "During the past 4 weeks, how much did pain interfere with your normal work (including both work outside the home and housework)?",
+        "text": {
+          "en": "During the past 4 weeks, how much did pain interfere with your normal work (including both work outside the home and housework)?",
+          "de": "Wie stark haben Schmerzen in den letzten 4 Wochen Ihre normale Arbeit beeinträchtigt (sowohl außerhäusliche Arbeit als auch Hausarbeit)?",
+          "fr": "Au cours des 4 dernières semaines, dans quelle mesure la douleur a-t-elle gêné votre travail habituel (à la fois le travail à l'extérieur de la maison et les tâches ménagères) ?",
+          "ja": "過去4週間、痛みは通常の仕事(家庭外の仕事と家事の両方を含む)をどの程度妨げましたか?",
+          "nl": "In welke mate heeft pijn u de afgelopen 4 weken belemmerd bij uw normale werkzaamheden (zowel werk buitenshuis als huishoudelijk werk)?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Not at all"
+            "label": {
+              "en": "Not at all",
+              "de": "Überhaupt nicht",
+              "fr": "Pas du tout",
+              "ja": "全くない",
+              "nl": "Helemaal niet"
+            }
           },
           {
             "value": "2",
-            "label": "A little bit"
+            "label": {
+              "en": "A little bit",
+              "de": "Ein wenig",
+              "fr": "Un peu",
+              "ja": "少しある",
+              "nl": "Een klein beetje"
+            }
           },
           {
             "value": "3",
-            "label": "Moderately"
+            "label": {
+              "en": "Moderately",
+              "de": "Mäßig",
+              "fr": "Moyennement",
+              "ja": "中程度にある",
+              "nl": "Nogal"
+            }
           },
           {
             "value": "4",
-            "label": "Quite a bit"
+            "label": {
+              "en": "Quite a bit",
+              "de": "Ziemlich",
+              "fr": "Beaucoup",
+              "ja": "かなりある",
+              "nl": "Veel"
+            }
           },
           {
             "value": "5",
-            "label": "Extremely"
+            "label": {
+              "en": "Extremely",
+              "de": "Sehr stark",
+              "fr": "Énormément",
+              "ja": "非常にある",
+              "nl": "Heel erg veel"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q23",
-        "text": "These questions are about how you feel and how things have been with you during the past 4 weeks. How much of the time during the past 4 weeks did you feel full of pep?",
+        "text": {
+          "en": "These questions are about how you feel and how things have been with you during the past 4 weeks. How much of the time during the past 4 weeks did you feel full of pep?",
+          "de": "Wie oft fühlten Sie sich in den letzten 4 Wochen voller Schwung?",
+          "fr": "Au cours des 4 dernières semaines, combien de fois vous êtes-vous senti plein d'entrain ?",
+          "ja": "過去4週間で、元気いっぱいだと感じたのはどのくらいの時間でしたか?",
+          "nl": "Hoe vaak voelde u zich gedurende de afgelopen 4 weken levenslustig?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "All of the time"
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Voortdurend"
+            }
           },
           {
             "value": "2",
-            "label": "Most of the time"
+            "label": {
+              "en": "Most of the time",
+              "de": "Die meiste Zeit",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
           },
           {
             "value": "3",
-            "label": "A good bit of the time"
+            "label": {
+              "en": "A good bit of the time",
+              "de": "Einen guten Teil der Zeit",
+              "fr": "Une bonne partie du temps",
+              "ja": "かなりの間",
+              "nl": "Vaak"
+            }
           },
           {
             "value": "4",
-            "label": "Some of the time"
+            "label": {
+              "en": "Some of the time",
+              "de": "Manchmal",
+              "fr": "Parfois",
+              "ja": "いくらか",
+              "nl": "Soms"
+            }
           },
           {
             "value": "5",
-            "label": "A little of the time"
+            "label": {
+              "en": "A little of the time",
+              "de": "Ein wenig der Zeit",
+              "fr": "Rarement",
+              "ja": "わずかな時間",
+              "nl": "Zelden"
+            }
           },
           {
             "value": "6",
-            "label": "None of the time"
+            "label": {
+              "en": "None of the time",
+              "de": "Nie",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Nooit"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q24",
-        "text": "How much of the time during the past 4 weeks have you been a very nervous person?",
+        "text": {
+          "en": "How much of the time during the past 4 weeks have you been a very nervous person?",
+          "de": "Wie oft waren Sie in den letzten 4 Wochen sehr nervös?",
+          "fr": "Au cours des 4 dernières semaines, combien de fois avez-vous été une personne très nerveuse ?",
+          "ja": "過去4週間で、非常に神経質になっていたのはどのくらいの時間でしたか?",
+          "nl": "Hoe vaak voelde u zich gedurende de afgelopen 4 weken erg zenuwachtig?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "All of the time"
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Voortdurend"
+            }
           },
           {
             "value": "2",
-            "label": "Most of the time"
+            "label": {
+              "en": "Most of the time",
+              "de": "Die meiste Zeit",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
           },
           {
             "value": "3",
-            "label": "A good bit of the time"
+            "label": {
+              "en": "A good bit of the time",
+              "de": "Einen guten Teil der Zeit",
+              "fr": "Une bonne partie du temps",
+              "ja": "かなりの間",
+              "nl": "Vaak"
+            }
           },
           {
             "value": "4",
-            "label": "Some of the time"
+            "label": {
+              "en": "Some of the time",
+              "de": "Manchmal",
+              "fr": "Parfois",
+              "ja": "いくらか",
+              "nl": "Soms"
+            }
           },
           {
             "value": "5",
-            "label": "A little of the time"
+            "label": {
+              "en": "A little of the time",
+              "de": "Ein wenig der Zeit",
+              "fr": "Rarement",
+              "ja": "わずかな時間",
+              "nl": "Zelden"
+            }
           },
           {
             "value": "6",
-            "label": "None of the time"
+            "label": {
+              "en": "None of the time",
+              "de": "Nie",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Nooit"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q25",
-        "text": "How much of the time during the past 4 weeks have you felt so down in the dumps that nothing could cheer you up?",
+        "text": {
+          "en": "How much of the time during the past 4 weeks have you felt so down in the dumps that nothing could cheer you up?",
+          "de": "Wie oft fühlten Sie sich in den letzten 4 Wochen so niedergeschlagen, dass Sie nichts aufheitern konnte?",
+          "fr": "Au cours des 4 dernières semaines, combien de fois vous êtes-vous senti si découragé que rien ne pouvait vous réconforter ?",
+          "ja": "過去4週間で、何をしても気分が晴れないほど落ち込んでいたのはどのくらいの時間でしたか?",
+          "nl": "Hoe vaak zat u gedurende de afgelopen 4 weken zo erg in de put dat niets u kon opvrolijken?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "All of the time"
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Voortdurend"
+            }
           },
           {
             "value": "2",
-            "label": "Most of the time"
+            "label": {
+              "en": "Most of the time",
+              "de": "Die meiste Zeit",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
           },
           {
             "value": "3",
-            "label": "A good bit of the time"
+            "label": {
+              "en": "A good bit of the time",
+              "de": "Einen guten Teil der Zeit",
+              "fr": "Une bonne partie du temps",
+              "ja": "かなりの間",
+              "nl": "Vaak"
+            }
           },
           {
             "value": "4",
-            "label": "Some of the time"
+            "label": {
+              "en": "Some of the time",
+              "de": "Manchmal",
+              "fr": "Parfois",
+              "ja": "いくらか",
+              "nl": "Soms"
+            }
           },
           {
             "value": "5",
-            "label": "A little of the time"
+            "label": {
+              "en": "A little of the time",
+              "de": "Ein wenig der Zeit",
+              "fr": "Rarement",
+              "ja": "わずかな時間",
+              "nl": "Zelden"
+            }
           },
           {
             "value": "6",
-            "label": "None of the time"
+            "label": {
+              "en": "None of the time",
+              "de": "Nie",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Nooit"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q26",
-        "text": "How much of the time during the past 4 weeks have you felt calm and peaceful?",
+        "text": {
+          "en": "How much of the time during the past 4 weeks have you felt calm and peaceful?",
+          "de": "Wie oft fühlten Sie sich in den letzten 4 Wochen ruhig und gelassen?",
+          "fr": "Au cours des 4 dernières semaines, combien de fois vous êtes-vous senti calme et paisible ?",
+          "ja": "過去4週間で、穏やかで平静な気持ちだったのはどのくらいの時間でしたか?",
+          "nl": "Hoe vaak voelde u zich gedurende de afgelopen 4 weken kalm en rustig?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "All of the time"
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Voortdurend"
+            }
           },
           {
             "value": "2",
-            "label": "Most of the time"
+            "label": {
+              "en": "Most of the time",
+              "de": "Die meiste Zeit",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
           },
           {
             "value": "3",
-            "label": "A good bit of the time"
+            "label": {
+              "en": "A good bit of the time",
+              "de": "Einen guten Teil der Zeit",
+              "fr": "Une bonne partie du temps",
+              "ja": "かなりの間",
+              "nl": "Vaak"
+            }
           },
           {
             "value": "4",
-            "label": "Some of the time"
+            "label": {
+              "en": "Some of the time",
+              "de": "Manchmal",
+              "fr": "Parfois",
+              "ja": "いくらか",
+              "nl": "Soms"
+            }
           },
           {
             "value": "5",
-            "label": "A little of the time"
+            "label": {
+              "en": "A little of the time",
+              "de": "Ein wenig der Zeit",
+              "fr": "Rarement",
+              "ja": "わずかな時間",
+              "nl": "Zelden"
+            }
           },
           {
             "value": "6",
-            "label": "None of the time"
+            "label": {
+              "en": "None of the time",
+              "de": "Nie",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Nooit"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q27",
-        "text": "How much of the time during the past 4 weeks did you have a lot of energy?",
+        "text": {
+          "en": "How much of the time during the past 4 weeks did you have a lot of energy?",
+          "de": "Wie oft hatten Sie in den letzten 4 Wochen viel Energie?",
+          "fr": "Au cours des 4 dernières semaines, combien de fois avez-vous eu beaucoup d'énergie ?",
+          "ja": "過去4週間で、活力にあふれていたのはどのくらいの時間でしたか?",
+          "nl": "Hoe vaak voelde u zich gedurende de afgelopen 4 weken erg energiek?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "All of the time"
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Voortdurend"
+            }
           },
           {
             "value": "2",
-            "label": "Most of the time"
+            "label": {
+              "en": "Most of the time",
+              "de": "Die meiste Zeit",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
           },
           {
             "value": "3",
-            "label": "A good bit of the time"
+            "label": {
+              "en": "A good bit of the time",
+              "de": "Einen guten Teil der Zeit",
+              "fr": "Une bonne partie du temps",
+              "ja": "かなりの間",
+              "nl": "Vaak"
+            }
           },
           {
             "value": "4",
-            "label": "Some of the time"
+            "label": {
+              "en": "Some of the time",
+              "de": "Manchmal",
+              "fr": "Parfois",
+              "ja": "いくらか",
+              "nl": "Soms"
+            }
           },
           {
             "value": "5",
-            "label": "A little of the time"
+            "label": {
+              "en": "A little of the time",
+              "de": "Ein wenig der Zeit",
+              "fr": "Rarement",
+              "ja": "わずかな時間",
+              "nl": "Zelden"
+            }
           },
           {
             "value": "6",
-            "label": "None of the time"
+            "label": {
+              "en": "None of the time",
+              "de": "Nie",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Nooit"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q28",
-        "text": "How much of the time during the past 4 weeks have you felt downhearted and blue?",
+        "text": {
+          "en": "How much of the time during the past 4 weeks have you felt downhearted and blue?",
+          "de": "Wie oft fühlten Sie sich in den letzten 4 Wochen niedergeschlagen und traurig?",
+          "fr": "Au cours des 4 dernières semaines, combien de fois vous êtes-vous senti triste et abattu ?",
+          "ja": "過去4週間で、ひどく落ち込んで憂鬱だったのはどのくらいの時間でしたか?",
+          "nl": "Hoe vaak voelde u zich gedurende de afgelopen 4 weken neerslachtig en somber?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "All of the time"
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Voortdurend"
+            }
           },
           {
             "value": "2",
-            "label": "Most of the time"
+            "label": {
+              "en": "Most of the time",
+              "de": "Die meiste Zeit",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
           },
           {
             "value": "3",
-            "label": "A good bit of the time"
+            "label": {
+              "en": "A good bit of the time",
+              "de": "Einen guten Teil der Zeit",
+              "fr": "Une bonne partie du temps",
+              "ja": "かなりの間",
+              "nl": "Vaak"
+            }
           },
           {
             "value": "4",
-            "label": "Some of the time"
+            "label": {
+              "en": "Some of the time",
+              "de": "Manchmal",
+              "fr": "Parfois",
+              "ja": "いくらか",
+              "nl": "Soms"
+            }
           },
           {
             "value": "5",
-            "label": "A little of the time"
+            "label": {
+              "en": "A little of the time",
+              "de": "Ein wenig der Zeit",
+              "fr": "Rarement",
+              "ja": "わずかな時間",
+              "nl": "Zelden"
+            }
           },
           {
             "value": "6",
-            "label": "None of the time"
+            "label": {
+              "en": "None of the time",
+              "de": "Nie",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Nooit"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q29",
-        "text": "How much of the time during the past 4 weeks did you feel worn out?",
+        "text": {
+          "en": "How much of the time during the past 4 weeks did you feel worn out?",
+          "de": "Wie oft fühlten Sie sich in den letzten 4 Wochen erschöpft?",
+          "fr": "Au cours des 4 dernières semaines, combien de fois vous êtes-vous senti épuisé ?",
+          "ja": "過去4週間で、疲れ果てていたのはどのくらいの時間でしたか?",
+          "nl": "Hoe vaak voelde u zich gedurende de afgelopen 4 weken uitgeblust?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "All of the time"
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Voortdurend"
+            }
           },
           {
             "value": "2",
-            "label": "Most of the time"
+            "label": {
+              "en": "Most of the time",
+              "de": "Die meiste Zeit",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
           },
           {
             "value": "3",
-            "label": "A good bit of the time"
+            "label": {
+              "en": "A good bit of the time",
+              "de": "Einen guten Teil der Zeit",
+              "fr": "Une bonne partie du temps",
+              "ja": "かなりの間",
+              "nl": "Vaak"
+            }
           },
           {
             "value": "4",
-            "label": "Some of the time"
+            "label": {
+              "en": "Some of the time",
+              "de": "Manchmal",
+              "fr": "Parfois",
+              "ja": "いくらか",
+              "nl": "Soms"
+            }
           },
           {
             "value": "5",
-            "label": "A little of the time"
+            "label": {
+              "en": "A little of the time",
+              "de": "Ein wenig der Zeit",
+              "fr": "Rarement",
+              "ja": "わずかな時間",
+              "nl": "Zelden"
+            }
           },
           {
             "value": "6",
-            "label": "None of the time"
+            "label": {
+              "en": "None of the time",
+              "de": "Nie",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Nooit"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q30",
-        "text": "How much of the time during the past 4 weeks have you been a happy person?",
+        "text": {
+          "en": "How much of the time during the past 4 weeks have you been a happy person?",
+          "de": "Wie oft waren Sie in den letzten 4 Wochen ein glücklicher Mensch?",
+          "fr": "Au cours des 4 dernières semaines, combien de fois avez-vous été une personne heureuse ?",
+          "ja": "過去4週間で、幸せだと感じたのはどのくらいの時間でしたか?",
+          "nl": "Hoe vaak voelde u zich gedurende de afgelopen 4 weken gelukkig?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "All of the time"
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Voortdurend"
+            }
           },
           {
             "value": "2",
-            "label": "Most of the time"
+            "label": {
+              "en": "Most of the time",
+              "de": "Die meiste Zeit",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
           },
           {
             "value": "3",
-            "label": "A good bit of the time"
+            "label": {
+              "en": "A good bit of the time",
+              "de": "Einen guten Teil der Zeit",
+              "fr": "Une bonne partie du temps",
+              "ja": "かなりの間",
+              "nl": "Vaak"
+            }
           },
           {
             "value": "4",
-            "label": "Some of the time"
+            "label": {
+              "en": "Some of the time",
+              "de": "Manchmal",
+              "fr": "Parfois",
+              "ja": "いくらか",
+              "nl": "Soms"
+            }
           },
           {
             "value": "5",
-            "label": "A little of the time"
+            "label": {
+              "en": "A little of the time",
+              "de": "Ein wenig der Zeit",
+              "fr": "Rarement",
+              "ja": "わずかな時間",
+              "nl": "Zelden"
+            }
           },
           {
             "value": "6",
-            "label": "None of the time"
+            "label": {
+              "en": "None of the time",
+              "de": "Nie",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Nooit"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q31",
-        "text": "How much of the time during the past 4 weeks did you feel tired?",
+        "text": {
+          "en": "How much of the time during the past 4 weeks did you feel tired?",
+          "de": "Wie oft fühlten Sie sich in den letzten 4 Wochen müde?",
+          "fr": "Au cours des 4 dernières semaines, combien de fois vous êtes-vous senti fatigué ?",
+          "ja": "過去4週間で、疲れを感じたのはどのくらいの時間でしたか?",
+          "nl": "Hoe vaak voelde u zich gedurende de afgelopen 4 weken moe?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "All of the time"
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Voortdurend"
+            }
           },
           {
             "value": "2",
-            "label": "Most of the time"
+            "label": {
+              "en": "Most of the time",
+              "de": "Die meiste Zeit",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
           },
           {
             "value": "3",
-            "label": "A good bit of the time"
+            "label": {
+              "en": "A good bit of the time",
+              "de": "Einen guten Teil der Zeit",
+              "fr": "Une bonne partie du temps",
+              "ja": "かなりの間",
+              "nl": "Vaak"
+            }
           },
           {
             "value": "4",
-            "label": "Some of the time"
+            "label": {
+              "en": "Some of the time",
+              "de": "Manchmal",
+              "fr": "Parfois",
+              "ja": "いくらか",
+              "nl": "Soms"
+            }
           },
           {
             "value": "5",
-            "label": "A little of the time"
+            "label": {
+              "en": "A little of the time",
+              "de": "Ein wenig der Zeit",
+              "fr": "Rarement",
+              "ja": "わずかな時間",
+              "nl": "Zelden"
+            }
           },
           {
             "value": "6",
-            "label": "None of the time"
+            "label": {
+              "en": "None of the time",
+              "de": "Nie",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Nooit"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q32",
-        "text": "During the past 4 weeks, how much of the time has your physical health or emotional problems interfered with your social activities (like visiting with friends, relatives, etc.)?",
+        "text": {
+          "en": "During the past 4 weeks, how much of the time has your physical health or emotional problems interfered with your social activities (like visiting with friends, relatives, etc.)?",
+          "de": "Wie oft haben Ihre körperliche Gesundheit oder emotionale Probleme in den letzten 4 Wochen Ihre sozialen Aktivitäten (wie Besuche bei Freunden oder Verwandten) beeinträchtigt?",
+          "fr": "Au cours des 4 dernières semaines, combien de fois votre état de santé physique ou vos problèmes émotionnels ont-ils gêné vos activités sociales (comme les visites à des amis ou des proches) ?",
+          "ja": "過去4週間、身体的な健康状態や情緒的な問題は、友人や親戚を訪ねるなどの社会的活動をどのくらいの頻度で妨げましたか?",
+          "nl": "Hoe vaak hebben uw lichamelijke gezondheid of emotionele problemen gedurende de afgelopen 4 weken uw sociale activiteiten (zoals bezoek aan vrienden of naaste familieleden) belemmerd?"
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "All of the time"
+            "label": {
+              "en": "All of the time",
+              "de": "Die ganze Zeit",
+              "fr": "Tout le temps",
+              "ja": "いつも",
+              "nl": "Voortdurend"
+            }
           },
           {
             "value": "2",
-            "label": "Most of the time"
+            "label": {
+              "en": "Most of the time",
+              "de": "Die meiste Zeit",
+              "fr": "La plupart du temps",
+              "ja": "ほとんどいつも",
+              "nl": "Meestal"
+            }
           },
           {
             "value": "3",
-            "label": "Some of the time"
+            "label": {
+              "en": "Some of the time",
+              "de": "Manchmal",
+              "fr": "Parfois",
+              "ja": "いくらか",
+              "nl": "Soms"
+            }
           },
           {
             "value": "4",
-            "label": "A little of the time"
+            "label": {
+              "en": "A little of the time",
+              "de": "Ein wenig der Zeit",
+              "fr": "Rarement",
+              "ja": "わずかな時間",
+              "nl": "Zelden"
+            }
           },
           {
             "value": "5",
-            "label": "None of the time"
+            "label": {
+              "en": "None of the time",
+              "de": "Nie",
+              "fr": "Jamais",
+              "ja": "まったくない",
+              "nl": "Nooit"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q33",
-        "text": "I seem to get sick a little easier than other people. (True or False?)",
+        "text": {
+          "en": "I seem to get sick a little easier than other people. (True or False?)",
+          "de": "Ich werde offenbar leichter krank als andere Menschen.",
+          "fr": "Je semble tomber malade un peu plus facilement que les autres personnes.",
+          "ja": "私は他の人よりも少し病気になりやすいようだ。",
+          "nl": "Ik lijk gemakkelijker ziek te worden dan andere mensen."
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Definitely true"
+            "label": {
+              "en": "Definitely true",
+              "de": "Trifft genau zu",
+              "fr": "Tout à fait vrai",
+              "ja": "全くその通り",
+              "nl": "Volkomen juist"
+            }
           },
           {
             "value": "2",
-            "label": "Mostly true"
+            "label": {
+              "en": "Mostly true",
+              "de": "Trifft weitgehend zu",
+              "fr": "Plutôt vrai",
+              "ja": "だいたいその通り",
+              "nl": "Grotendeels juist"
+            }
           },
           {
             "value": "3",
-            "label": "Don't know"
+            "label": {
+              "en": "Don't know",
+              "de": "Weiß nicht",
+              "fr": "Je ne sais pas",
+              "ja": "わからない",
+              "nl": "Weet ik niet"
+            }
           },
           {
             "value": "4",
-            "label": "Mostly false"
+            "label": {
+              "en": "Mostly false",
+              "de": "Trifft weitgehend nicht zu",
+              "fr": "Plutôt faux",
+              "ja": "だいたい違う",
+              "nl": "Grotendeels onjuist"
+            }
           },
           {
             "value": "5",
-            "label": "Definitely false"
+            "label": {
+              "en": "Definitely false",
+              "de": "Trifft überhaupt nicht zu",
+              "fr": "Tout à fait faux",
+              "ja": "全く違う",
+              "nl": "Volkomen onjuist"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q34",
-        "text": "I am as healthy as anybody I know. (True or False?)",
+        "text": {
+          "en": "I am as healthy as anybody I know. (True or False?)",
+          "de": "Ich bin so gesund wie jeder andere, den ich kenne.",
+          "fr": "Je suis en aussi bonne santé que n'importe qui de mon entourage.",
+          "ja": "私は知っている他の誰とも同じくらい健康だ。",
+          "nl": "Ik ben net zo gezond als andere mensen die ik ken."
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Definitely true"
+            "label": {
+              "en": "Definitely true",
+              "de": "Trifft genau zu",
+              "fr": "Tout à fait vrai",
+              "ja": "全くその通り",
+              "nl": "Volkomen juist"
+            }
           },
           {
             "value": "2",
-            "label": "Mostly true"
+            "label": {
+              "en": "Mostly true",
+              "de": "Trifft weitgehend zu",
+              "fr": "Plutôt vrai",
+              "ja": "だいたいその通り",
+              "nl": "Grotendeels juist"
+            }
           },
           {
             "value": "3",
-            "label": "Don't know"
+            "label": {
+              "en": "Don't know",
+              "de": "Weiß nicht",
+              "fr": "Je ne sais pas",
+              "ja": "わからない",
+              "nl": "Weet ik niet"
+            }
           },
           {
             "value": "4",
-            "label": "Mostly false"
+            "label": {
+              "en": "Mostly false",
+              "de": "Trifft weitgehend nicht zu",
+              "fr": "Plutôt faux",
+              "ja": "だいたい違う",
+              "nl": "Grotendeels onjuist"
+            }
           },
           {
             "value": "5",
-            "label": "Definitely false"
+            "label": {
+              "en": "Definitely false",
+              "de": "Trifft überhaupt nicht zu",
+              "fr": "Tout à fait faux",
+              "ja": "全く違う",
+              "nl": "Volkomen onjuist"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q35",
-        "text": "I expect my health to get worse. (True or False?)",
+        "text": {
+          "en": "I expect my health to get worse. (True or False?)",
+          "de": "Ich erwarte, dass sich mein Gesundheitszustand verschlechtern wird.",
+          "fr": "Je m'attends à ce que ma santé se détériore.",
+          "ja": "私は自分の健康が悪化すると予想している。",
+          "nl": "Ik verwacht dat mijn gezondheid achteruit zal gaan."
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Definitely true"
+            "label": {
+              "en": "Definitely true",
+              "de": "Trifft genau zu",
+              "fr": "Tout à fait vrai",
+              "ja": "全くその通り",
+              "nl": "Volkomen juist"
+            }
           },
           {
             "value": "2",
-            "label": "Mostly true"
+            "label": {
+              "en": "Mostly true",
+              "de": "Trifft weitgehend zu",
+              "fr": "Plutôt vrai",
+              "ja": "だいたいその通り",
+              "nl": "Grotendeels juist"
+            }
           },
           {
             "value": "3",
-            "label": "Don't know"
+            "label": {
+              "en": "Don't know",
+              "de": "Weiß nicht",
+              "fr": "Je ne sais pas",
+              "ja": "わからない",
+              "nl": "Weet ik niet"
+            }
           },
           {
             "value": "4",
-            "label": "Mostly false"
+            "label": {
+              "en": "Mostly false",
+              "de": "Trifft weitgehend nicht zu",
+              "fr": "Plutôt faux",
+              "ja": "だいたい違う",
+              "nl": "Grotendeels onjuist"
+            }
           },
           {
             "value": "5",
-            "label": "Definitely false"
+            "label": {
+              "en": "Definitely false",
+              "de": "Trifft überhaupt nicht zu",
+              "fr": "Tout à fait faux",
+              "ja": "全く違う",
+              "nl": "Volkomen onjuist"
+            }
           }
         ],
         "required": true
       },
       {
         "id": "rand36_q36",
-        "text": "My health is excellent. (True or False?)",
+        "text": {
+          "en": "My health is excellent. (True or False?)",
+          "de": "Meine Gesundheit ist ausgezeichnet.",
+          "fr": "Ma santé est excellente.",
+          "ja": "私の健康状態は非常に良い。",
+          "nl": "Mijn gezondheid is uitstekend."
+        },
         "type": "single_choice",
         "options": [
           {
             "value": "1",
-            "label": "Definitely true"
+            "label": {
+              "en": "Definitely true",
+              "de": "Trifft genau zu",
+              "fr": "Tout à fait vrai",
+              "ja": "全くその通り",
+              "nl": "Volkomen juist"
+            }
           },
           {
             "value": "2",
-            "label": "Mostly true"
+            "label": {
+              "en": "Mostly true",
+              "de": "Trifft weitgehend zu",
+              "fr": "Plutôt vrai",
+              "ja": "だいたいその通り",
+              "nl": "Grotendeels juist"
+            }
           },
           {
             "value": "3",
-            "label": "Don't know"
+            "label": {
+              "en": "Don't know",
+              "de": "Weiß nicht",
+              "fr": "Je ne sais pas",
+              "ja": "わからない",
+              "nl": "Weet ik niet"
+            }
           },
           {
             "value": "4",
-            "label": "Mostly false"
+            "label": {
+              "en": "Mostly false",
+              "de": "Trifft weitgehend nicht zu",
+              "fr": "Plutôt faux",
+              "ja": "だいたい違う",
+              "nl": "Grotendeels onjuist"
+            }
           },
           {
             "value": "5",
-            "label": "Definitely false"
+            "label": {
+              "en": "Definitely false",
+              "de": "Trifft überhaupt nicht zu",
+              "fr": "Tout à fait faux",
+              "ja": "全く違う",
+              "nl": "Volkomen onjuist"
+            }
           }
         ],
         "required": true
       }
     ],
-    "isLibrary": true
+    "isLibrary": true,
+    "languages": [
+      "en",
+      "de",
+      "fr",
+      "ja",
+      "nl"
+    ]
   },
   {
     "_id": "questionnaire-srhi",
     "slug": "srhi",
-    "title": "Self-Report Habit Index (SRHI)",
-    "description": "A 12-item validated instrument measuring the strength of a habit. Think of your self-selected target behavior when answering each item. Rate how much you agree with each statement on a scale from 1 (Strongly disagree) to 5 (Strongly agree).",
+    "title": {
+      "en": "Self-Report Habit Index (SRHI)",
+      "de": "Self-Report Habit Index (SRHI)",
+      "fr": "Self-Report Habit Index (SRHI)",
+      "ja": "Self-Report Habit Index (SRHI)",
+      "nl": "Self-Report Habit Index (SRHI)"
+    },
+    "description": {
+      "en": "A 12-item validated instrument measuring the strength of a habit. Think of your self-selected target behavior when answering each item. Rate how much you agree with each statement on a scale from 1 (Strongly disagree) to 5 (Strongly agree).",
+      "de": "Ein validiertes 12-Item-Instrument zur Messung der Gewohnheitsstärke. Denken Sie beim Beantworten jeder Aussage an das von Ihnen ausgewählte Zielverhalten. Bewerten Sie, wie sehr Sie jeder Aussage zustimmen, auf einer Skala von 1 (Stimme überhaupt nicht zu) bis 5 (Stimme voll zu).",
+      "fr": "Un instrument validé à 12 items mesurant la force d'une habitude. Pensez au comportement cible que vous avez choisi en répondant à chaque item. Évaluez votre degré d'accord avec chaque affirmation sur une échelle de 1 (Pas du tout d'accord) à 5 (Tout à fait d'accord).",
+      "ja": "習慣の強さを測定する、妥当性が確認された12項目の測定尺度です。各項目に回答する際は、あなたが選んだ対象行動を思い浮かべてください。各文にどの程度同意するかを、1(まったく同意しない)から5(強く同意する)までの尺度で評価してください。",
+      "nl": "Een gevalideerd instrument met 12 items dat de sterkte van een gewoonte meet. Denk bij het beantwoorden van elk item aan het door u gekozen doelgedrag. Geef aan in hoeverre u met elke uitspraak instemt op een schaal van 1 (Helemaal niet mee eens) tot 5 (Helemaal mee eens)."
+    },
     "version": "1.0.0",
     "active": true,
     "questions": [
       {
         "id": "srhi_1",
-        "text": "My target behavior is something I do automatically.",
+        "text": {
+          "en": "My target behavior is something I do automatically.",
+          "de": "Mein Zielverhalten ist etwas, das ich automatisch tue.",
+          "fr": "Mon comportement cible est quelque chose que je fais automatiquement.",
+          "ja": "私の対象行動は、自動的に行っていることです。",
+          "nl": "Mijn doelgedrag is iets wat ik automatisch doe."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       },
       {
         "id": "srhi_2",
-        "text": "My target behavior is something I do without thinking.",
+        "text": {
+          "en": "My target behavior is something I do without thinking.",
+          "de": "Mein Zielverhalten ist etwas, das ich tue, ohne darüber nachzudenken.",
+          "fr": "Mon comportement cible est quelque chose que je fais sans y penser.",
+          "ja": "私の対象行動は、何も考えずに行っていることです。",
+          "nl": "Mijn doelgedrag is iets wat ik doe zonder erover na te denken."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       },
       {
         "id": "srhi_3",
-        "text": "My target behavior is something that belongs to my (daily, weekly, monthly) routine.",
+        "text": {
+          "en": "My target behavior is something that belongs to my (daily, weekly, monthly) routine.",
+          "de": "Mein Zielverhalten ist etwas, das zu meiner (täglichen, monatlichen, wöchentlichen) Routine gehört.",
+          "fr": "Mon comportement cible fait partie de ma routine (quotidienne, hebdomadaire, mensuelle).",
+          "ja": "私の対象行動は、私の(毎日・毎週・毎月の)習慣の一部です。",
+          "nl": "Mijn doelgedrag is iets dat bij mijn (dagelijkse, wekelijkse, maandelijkse) routine hoort."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       },
       {
         "id": "srhi_4",
-        "text": "My target behavior is something I start doing before I realize I'm doing it.",
+        "text": {
+          "en": "My target behavior is something I start doing before I realize I'm doing it.",
+          "de": "Mein Zielverhalten ist etwas, mit dem ich anfange, ohne zu bemerken, dass ich es tue.",
+          "fr": "Mon comportement cible est quelque chose que je commence à faire avant même de m'en rendre compte.",
+          "ja": "私の対象行動は、気づく前から始めてしまっていることです。",
+          "nl": "Mijn doelgedrag is iets waarmee ik begin voordat ik me ervan bewust ben dat ik het doe."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       },
       {
         "id": "srhi_5",
-        "text": "My target behavior is something I would find hard not to do.",
+        "text": {
+          "en": "My target behavior is something I would find hard not to do.",
+          "de": "Mein Zielverhalten ist etwas, das mir schwerfallen würde, es nicht zu tun.",
+          "fr": "Mon comportement cible est quelque chose qu'il me serait difficile de ne pas faire.",
+          "ja": "私の対象行動は、やらないでいるのが難しいと感じることです。",
+          "nl": "Mijn doelgedrag is iets wat ik moeilijk zou vinden om niet te doen."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       },
       {
         "id": "srhi_6",
-        "text": "My target behavior is something that's typically 'me'.",
+        "text": {
+          "en": "My target behavior is something that's typically 'me'.",
+          "de": "Mein Zielverhalten ist etwas, das typisch für mich ist.",
+          "fr": "Mon comportement cible est quelque chose qui est typiquement « moi ».",
+          "ja": "私の対象行動は、まさに「自分らしい」と感じることです。",
+          "nl": "Mijn doelgedrag is iets dat typisch 'ik' is."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       },
       {
         "id": "srhi_7",
-        "text": "My target behavior is something I have been doing for a long time.",
+        "text": {
+          "en": "My target behavior is something I have been doing for a long time.",
+          "de": "Mein Zielverhalten ist etwas, das ich schon seit langer Zeit mache.",
+          "fr": "Mon comportement cible est quelque chose que je fais depuis longtemps.",
+          "ja": "私の対象行動は、長い間続けてきたことです。",
+          "nl": "Mijn doelgedrag is iets dat ik al heel lang doe."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       },
       {
         "id": "srhi_8",
-        "text": "My target behavior is something I do without having to consciously remember it.",
+        "text": {
+          "en": "My target behavior is something I do without having to consciously remember it.",
+          "de": "Mein Zielverhalten ist etwas, das ich tue, ohne mich bewusst erinnern zu müssen.",
+          "fr": "Mon comportement cible est quelque chose que je fais sans avoir besoin de m'en souvenir consciemment.",
+          "ja": "私の対象行動は、意識して思い出さなくても行っていることです。",
+          "nl": "Mijn doelgedrag is iets wat ik doe zonder dat ik het me bewust hoef te herinneren."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       },
       {
         "id": "srhi_9",
-        "text": "My target behavior is something that makes me feel weird if I do not do it.",
+        "text": {
+          "en": "My target behavior is something that makes me feel weird if I do not do it.",
+          "de": "Mein Zielverhalten ist etwas, bei dem ich mich komisch fühle, wenn ich es nicht tue.",
+          "fr": "Mon comportement cible est quelque chose qui me met mal à l'aise si je ne le fais pas.",
+          "ja": "私の対象行動は、やらないと変な感じがすることです。",
+          "nl": "Mijn doelgedrag is iets waarbij ik me vreemd voel als ik het niet doe."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       },
       {
         "id": "srhi_10",
-        "text": "My target behavior is something I do without any effort.",
+        "text": {
+          "en": "My target behavior is something that would require effort not to do.",
+          "de": "Mein Zielverhalten ist etwas, das mich Anstrengung kosten würde, es nicht zu tun.",
+          "fr": "Mon comportement cible est quelque chose qui exigerait un effort pour ne pas le faire.",
+          "ja": "私の対象行動は、やらないようにするには努力が必要なことです。",
+          "nl": "Mijn doelgedrag is iets waarvoor ik moeite zou moeten doen om het niet te doen."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       },
       {
         "id": "srhi_11",
-        "text": "My target behavior is something I need to do.",
+        "text": {
+          "en": "My target behavior is something I do frequently.",
+          "de": "Mein Zielverhalten ist etwas, das ich häufig tue.",
+          "fr": "Mon comportement cible est quelque chose que je fais fréquemment.",
+          "ja": "私の対象行動は、頻繁に行っていることです。",
+          "nl": "Mijn doelgedrag is iets wat ik vaak doe."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       },
       {
         "id": "srhi_12",
-        "text": "My target behavior is something I do at this particular time, in this particular place.",
+        "text": {
+          "en": "My target behavior is something I have no need to think about doing.",
+          "de": "Mein Zielverhalten ist etwas, worüber ich nicht nachdenken muss, um es zu tun.",
+          "fr": "Mon comportement cible est quelque chose que je n'ai pas besoin de réfléchir pour faire.",
+          "ja": "私の対象行動は、行うために考える必要がないことです。",
+          "nl": "Mijn doelgedrag is iets waarover ik niet hoef na te denken om het te doen."
+        },
         "type": "single_choice",
         "options": [
-          { "value": "1", "label": "1 — Strongly disagree" },
-          { "value": "2", "label": "2 — Disagree" },
-          { "value": "3", "label": "3 — Neutral" },
-          { "value": "4", "label": "4 — Agree" },
-          { "value": "5", "label": "5 — Strongly agree" }
+          {
+            "value": "1",
+            "label": {
+              "en": "1 — Strongly disagree",
+              "de": "1 — Stimme überhaupt nicht zu",
+              "fr": "1 — Pas du tout d'accord",
+              "ja": "1 — 全くそう思わない",
+              "nl": "1 — Helemaal niet mee eens"
+            }
+          },
+          {
+            "value": "2",
+            "label": {
+              "en": "2 — Disagree",
+              "de": "2 — Stimme nicht zu",
+              "fr": "2 — Pas d'accord",
+              "ja": "2 — そう思わない",
+              "nl": "2 — Niet mee eens"
+            }
+          },
+          {
+            "value": "3",
+            "label": {
+              "en": "3 — Neutral",
+              "de": "3 — Neutral",
+              "fr": "3 — Neutre",
+              "ja": "3 — どちらでもない",
+              "nl": "3 — Neutraal"
+            }
+          },
+          {
+            "value": "4",
+            "label": {
+              "en": "4 — Agree",
+              "de": "4 — Stimme zu",
+              "fr": "4 — D'accord",
+              "ja": "4 — そう思う",
+              "nl": "4 — Mee eens"
+            }
+          },
+          {
+            "value": "5",
+            "label": {
+              "en": "5 — Strongly agree",
+              "de": "5 — Stimme voll zu",
+              "fr": "5 — Tout à fait d'accord",
+              "ja": "5 — 強くそう思う",
+              "nl": "5 — Helemaal mee eens"
+            }
+          }
         ],
         "required": true
       }
     ],
-    "isLibrary": true
+    "isLibrary": true,
+    "languages": [
+      "en",
+      "de",
+      "fr",
+      "ja",
+      "nl"
+    ]
   }
 ]

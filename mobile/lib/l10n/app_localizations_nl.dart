@@ -615,6 +615,18 @@ class AppLocalizationsNl extends AppLocalizations {
   String get myHabitsTab => 'Mijn gewoontes';
 
   @override
+  String get navTabShare => 'Delen';
+
+  @override
+  String get navTabExplore => 'Ontdekken';
+
+  @override
+  String get navTabRecommend => 'Advies';
+
+  @override
+  String get navTabAccount => 'Account';
+
+  @override
   String get newHabit => 'Nieuwe gewoonte';
 
   @override
@@ -1431,4 +1443,109 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get nextButton => 'Volgende';
+
+  @override
+  String get helpAndSupport => 'Hulp en ondersteuning';
+
+  @override
+  String get contactResearchTeam => 'Onderzoeksteam contacteren';
+
+  @override
+  String get contactResearchTeamDescription =>
+      'Heb je een vraag of probleem? Stuur ons een e-mail, we nemen contact met je op.';
+
+  @override
+  String get sendEmail => 'E-mail versturen';
+
+  @override
+  String get frequentlyAskedQuestions => 'Veelgestelde vragen';
+
+  @override
+  String get faqPassphraseQuestion => 'Ik ben mijn herstelzin kwijt — wat nu?';
+
+  @override
+  String get faqPassphraseAnswer =>
+      'Je zin van 24 woorden is de enige manier om je account te herstellen. Heb je hem nog, gebruik dan \"Account herstellen\" op het welkomstscherm. Ben je hem kwijt, dan kunnen je account en gegevens helaas niet worden hersteld — neem contact met ons op als je opnieuw wilt beginnen.';
+
+  @override
+  String get faqDataQuestion =>
+      'Kan ik mijn gegevens exporteren of verwijderen?';
+
+  @override
+  String get faqDataAnswer =>
+      'Ja. Ga naar Instellingen → Mijn gegevens exporteren om alles te downloaden dat aan je account is gekoppeld, of Instellingen → Account verwijderen om het permanent te wissen. Verwijderen kan niet ongedaan worden gemaakt.';
+
+  @override
+  String get faqOfflineQuestion =>
+      'Wat gebeurt er als ik offline ben tijdens het gebruik van de app?';
+
+  @override
+  String get faqOfflineAnswer =>
+      'Gewoonte-registraties die je offline verstuurt, worden op je apparaat bewaard en automatisch verzonden zodra je weer online bent.';
+
+  @override
+  String get faqNotificationsQuestion =>
+      'Kan ik bepaalde herinneringen uitzetten?';
+
+  @override
+  String get faqNotificationsAnswer =>
+      'Ja. Ga naar Instellingen → Meldingen om herinneringen voor gewoontes, vragenlijsten of studie-updates afzonderlijk aan of uit te zetten.';
+
+  @override
+  String get faqConsentQuestion => 'Kan ik mijn toestemming intrekken?';
+
+  @override
+  String get faqConsentAnswer =>
+      'Ja, op elk moment. Ga naar Instellingen → Studietoestemming om te bekijken waarmee je hebt ingestemd, of Instellingen → Account verwijderen om in te trekken en je gegevens te wissen.';
+
+  @override
+  String get notificationsSection => 'Meldingen';
+
+  @override
+  String get habitReminders => 'Gewoonte-herinneringen';
+
+  @override
+  String get questionnaireReminders => 'Vragenlijst-herinneringen';
+
+  @override
+  String get studyUpdateNotifications => 'Studie-updates';
+
+  @override
+  String get changeRecoveryPassphrase => 'Herstelzin wijzigen';
+
+  @override
+  String get rotatePassphraseTitle => 'Herstelzin wijzigen?';
+
+  @override
+  String get rotatePassphraseWarning =>
+      'Je huidige zin van 24 woorden werkt hierna direct niet meer. Bewaar de nieuwe zin zeker op een veilige plek.';
+
+  @override
+  String get rotatePassphraseConfirm => 'Nieuwe zin genereren';
+
+  @override
+  String get rotatePassphraseNewTitle => 'Je nieuwe herstelzin';
+
+  @override
+  String get rotatePassphraseNewSubtitle =>
+      'Schrijf deze 24 woorden op of bewaar ze op een veilige plek. Je hebt ze nodig om je account te herstellen.';
+
+  @override
+  String get rotatePassphraseSavedCheckbox => 'Ik heb het opgeschreven';
+
+  @override
+  String get rotatePassphraseDone => 'Klaar';
+
+  @override
+  String get rotatePassphraseFailed =>
+      'Kon geen nieuwe zin genereren. Controleer je verbinding en probeer het opnieuw.';
+
+  @override
+  String get copyToClipboard => 'Kopiëren naar klembord';
+
+  @override
+  String get passphraseCopied => 'Zin gekopieerd naar klembord';
+
+  @override
+  String get close => 'Sluiten';
 }

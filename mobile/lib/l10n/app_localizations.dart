@@ -1208,6 +1208,30 @@ abstract class AppLocalizations {
   /// **'My Habits'**
   String get myHabitsTab;
 
+  /// Bottom nav tab label for the share-a-habit screen
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get navTabShare;
+
+  /// Bottom nav tab label for the explore-habits screen
+  ///
+  /// In en, this message translates to:
+  /// **'Explore'**
+  String get navTabExplore;
+
+  /// Bottom nav tab label for the recommendations screen. Previously abbreviated to "Recs", which was ambiguous.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommend'**
+  String get navTabRecommend;
+
+  /// Bottom nav tab label for the account/settings screen
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get navTabAccount;
+
   /// Button to start new habit flow
   ///
   /// In en, this message translates to:
@@ -2641,6 +2665,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next'**
   String get nextButton;
+
+  /// Settings entry and title of the help/contact/FAQ screen
+  ///
+  /// In en, this message translates to:
+  /// **'Help & Support'**
+  String get helpAndSupport;
+
+  /// Section label for the contact card on the Help & Support screen
+  ///
+  /// In en, this message translates to:
+  /// **'Contact the research team'**
+  String get contactResearchTeam;
+
+  /// Body text above the send-email button
+  ///
+  /// In en, this message translates to:
+  /// **'Have a question or ran into a problem? Send us an email and we\'ll get back to you.'**
+  String get contactResearchTeamDescription;
+
+  /// Button that opens the mail app addressed to the study team
+  ///
+  /// In en, this message translates to:
+  /// **'Send email'**
+  String get sendEmail;
+
+  /// Section label for the FAQ list on the Help & Support screen
+  ///
+  /// In en, this message translates to:
+  /// **'Frequently asked questions'**
+  String get frequentlyAskedQuestions;
+
+  /// FAQ question about a lost recovery passphrase
+  ///
+  /// In en, this message translates to:
+  /// **'I lost my recovery passphrase — what do I do?'**
+  String get faqPassphraseQuestion;
+
+  /// FAQ answer about a lost recovery passphrase
+  ///
+  /// In en, this message translates to:
+  /// **'Your 24-word passphrase is the only way to recover your account. If you still have it, use \"Restore account\" on the welcome screen. If you\'ve lost it, your account and data unfortunately cannot be recovered — contact us if you\'d like to start over.'**
+  String get faqPassphraseAnswer;
+
+  /// FAQ question about exporting or deleting data
+  ///
+  /// In en, this message translates to:
+  /// **'Can I export or delete my data?'**
+  String get faqDataQuestion;
+
+  /// FAQ answer about exporting or deleting data
+  ///
+  /// In en, this message translates to:
+  /// **'Yes. Go to Settings → Export my data to download everything linked to your account, or Settings → Delete account to permanently erase it. Deletion cannot be undone.'**
+  String get faqDataAnswer;
+
+  /// FAQ question about offline behavior
+  ///
+  /// In en, this message translates to:
+  /// **'What happens if I lose connection while using the app?'**
+  String get faqOfflineQuestion;
+
+  /// FAQ answer about offline behavior
+  ///
+  /// In en, this message translates to:
+  /// **'Habit check-ins you submit while offline are saved on your device and sent automatically once you\'re back online.'**
+  String get faqOfflineAnswer;
+
+  /// FAQ question about muting notification types
+  ///
+  /// In en, this message translates to:
+  /// **'Can I turn off certain reminders?'**
+  String get faqNotificationsQuestion;
+
+  /// FAQ answer about muting notification types
+  ///
+  /// In en, this message translates to:
+  /// **'Yes. Go to Settings → Notifications to turn habit, questionnaire, or study-update reminders on or off individually.'**
+  String get faqNotificationsAnswer;
+
+  /// FAQ question about withdrawing consent
+  ///
+  /// In en, this message translates to:
+  /// **'Can I withdraw my consent?'**
+  String get faqConsentQuestion;
+
+  /// FAQ answer about withdrawing consent
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, at any time. Go to Settings → Study consent to review what you agreed to, or Settings → Delete account to withdraw and erase your data.'**
+  String get faqConsentAnswer;
+
+  /// Settings section label for notification-channel toggles
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notificationsSection;
+
+  /// Settings toggle for local habit-reminder notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Habit reminders'**
+  String get habitReminders;
+
+  /// Settings toggle for local questionnaire-due notifications
+  ///
+  /// In en, this message translates to:
+  /// **'Questionnaire reminders'**
+  String get questionnaireReminders;
+
+  /// Settings toggle for the end-of-study notification
+  ///
+  /// In en, this message translates to:
+  /// **'Study updates'**
+  String get studyUpdateNotifications;
+
+  /// Settings entry to rotate the recovery passphrase
+  ///
+  /// In en, this message translates to:
+  /// **'Change recovery passphrase'**
+  String get changeRecoveryPassphrase;
+
+  /// Title of the passphrase-rotation confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Change your recovery passphrase?'**
+  String get rotatePassphraseTitle;
+
+  /// Warning shown before and during passphrase rotation
+  ///
+  /// In en, this message translates to:
+  /// **'Your current 24-word phrase will stop working immediately. Make sure to save the new one somewhere safe.'**
+  String get rotatePassphraseWarning;
+
+  /// Button that confirms and triggers passphrase rotation
+  ///
+  /// In en, this message translates to:
+  /// **'Generate new phrase'**
+  String get rotatePassphraseConfirm;
+
+  /// Heading shown above the newly generated passphrase
+  ///
+  /// In en, this message translates to:
+  /// **'Your new recovery passphrase'**
+  String get rotatePassphraseNewTitle;
+
+  /// Subtitle shown above the newly generated passphrase
+  ///
+  /// In en, this message translates to:
+  /// **'Write these 24 words down or store them somewhere safe. You\'ll need them to recover your account.'**
+  String get rotatePassphraseNewSubtitle;
+
+  /// Checkbox label confirming the new passphrase was saved
+  ///
+  /// In en, this message translates to:
+  /// **'I have written it down'**
+  String get rotatePassphraseSavedCheckbox;
+
+  /// Button that finishes the passphrase-rotation flow
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get rotatePassphraseDone;
+
+  /// Error shown when passphrase rotation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not generate a new passphrase. Please check your connection and try again.'**
+  String get rotatePassphraseFailed;
+
+  /// Generic button label to copy text to the clipboard
+  ///
+  /// In en, this message translates to:
+  /// **'Copy to clipboard'**
+  String get copyToClipboard;
+
+  /// Snackbar shown after copying the passphrase
+  ///
+  /// In en, this message translates to:
+  /// **'Passphrase copied to clipboard'**
+  String get passphraseCopied;
+
+  /// Generic tooltip/label for a close icon button
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
 }
 
 class _AppLocalizationsDelegate

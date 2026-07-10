@@ -101,28 +101,33 @@ class ShellScreen extends ConsumerStatefulWidget {
 class _ShellScreenState extends ConsumerState<ShellScreen> {
   // `branch` is the index of the matching StatefulShellBranch in app_router.dart.
   // Keep these in sync with the branch order there.
-  static const _allTabs = [
+  List<_TabConfig> _allTabs(AppLocalizations l10n) => [
     _TabConfig(
-      label: 'Share',
+      label: l10n.navTabShare,
       icon: Icons.volunteer_activism,
       path: '/share',
       branch: 0,
     ),
-    _TabConfig(label: 'Explore', icon: Icons.hub, path: '/explore', branch: 1),
     _TabConfig(
-      label: 'Habits',
+      label: l10n.navTabExplore,
+      icon: Icons.hub,
+      path: '/explore',
+      branch: 1,
+    ),
+    _TabConfig(
+      label: l10n.myHabitsTab,
       icon: Icons.self_improvement,
       path: '/habits',
       branch: 2,
     ),
     _TabConfig(
-      label: 'Recs',
+      label: l10n.navTabRecommend,
       icon: Icons.lightbulb,
       path: '/recommend',
       branch: 3,
     ),
     _TabConfig(
-      label: 'Account',
+      label: l10n.navTabAccount,
       icon: Icons.manage_accounts,
       path: '/settings',
       branch: 4,
@@ -265,13 +270,14 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Study-level feature flag: hide the recommender tab when the participant's
     // study disables it. Defaults to enabled while the config loads / on error.
     final recommenderEnabled = ref.watch(recommenderEnabledProvider);
 
     // Filter tabs by capability. `branch` carries the real router branch index,
     // so visible-index → branch mapping works regardless of which tabs are hidden.
-    final visibleTabs = _allTabs.where((t) {
+    final visibleTabs = _allTabs(l10n).where((t) {
       if (t.path == '/recommend') return recommenderEnabled;
       return true;
     }).toList();

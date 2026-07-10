@@ -39,7 +39,8 @@
       "research": "Recherche",
       "operations": "Opérations",
       "configuration": "Configuration",
-      "monitoring": "Supervision"
+      "monitoring": "Supervision",
+      "support": "Assistance"
     },
     "nav": {
       "appSettings": "Paramètres de l'application",
@@ -55,9 +56,15 @@
       "profileFields": "Champs de profil",
       "knowledgeBase": "Base de connaissances",
       "system": "Système et liens",
-      "backups": "Sauvegardes"
+      "backups": "Sauvegardes",
+      "auditLog": "Journal d'audit",
+      "team": "Équipe et rôles",
+      "help": "Aide"
     },
     "language": "Langue",
+    "toggleTheme": "Changer de thème",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
     "signOut": "Déconnexion"
   },
   "system": {
@@ -72,7 +79,53 @@
       "bullBoard": "Tâches de la file BullMQ - en attente, actives, échouées",
       "redisInsight": "Inspecter les clés, caches et mémoire Redis",
       "apiDocs": "Référence OpenAPI / Swagger pour le backend"
-    }
+    },
+    "banner": {
+      "allOperational": "Tous les systèmes sont opérationnels",
+      "elevatedErrorRate": "Taux d'erreur élevé ({rate}%)",
+      "metricsUnavailable": "Prometheus est inaccessible — les métriques sont temporairement indisponibles",
+      "servicesDown": "{count, plural, one {# service est} other {# services sont}} inaccessibles"
+    },
+    "connected": "Connecté",
+    "down": "Hors service",
+    "healthy": "Sain",
+    "issuesCount": "{count, plural, one {# problème} other {# problèmes}}",
+    "loadFailed": "Échec du chargement de l'état du système",
+    "loadingEllipsis": "Chargement…",
+    "performance": "Performance",
+    "prometheusUnreachable": "Prometheus est inaccessible — les métriques sont temporairement indisponibles.",
+    "queueStatsUnavailable": "Statistiques de file d'attente et de cache indisponibles.",
+    "queuesAndCache": "Files d'attente et cache",
+    "refresh": "Actualiser",
+    "services": "Services",
+    "stages": {
+      "active": "Actif",
+      "completed": "Terminé",
+      "delayed": "Retardé",
+      "failed": "Échoué",
+      "paused": "En pause",
+      "waiting": "En attente"
+    },
+    "stats": {
+      "appTarget": "Cible de l'application",
+      "cacheHitRate": "Taux de succès du cache",
+      "cachedKeys": "Clés en cache",
+      "cpu": "CPU",
+      "errorRate": "Taux d'erreur",
+      "eventLoopLag": "Latence de la boucle d'événements",
+      "heapUsed": "Tas utilisé",
+      "memoryRss": "Mémoire (RSS)",
+      "p95Latency": "Latence p95",
+      "redisClients": "Clients Redis",
+      "redisMemory": "Mémoire Redis",
+      "requestsPerSec": "Requêtes / sec"
+    },
+    "systemHealth": "État du système",
+    "tools": "Outils",
+    "unavailable": "Indisponible",
+    "unreachable": "Inaccessible",
+    "up": "En service",
+    "updatedAt": "Mis à jour {time}"
   },
   "comments": {
     "title": "Commentaires",
@@ -90,7 +143,8 @@
     "flagReason": "Motif",
     "approve": "Approuver",
     "approving": "Approbation en cours…",
-    "approveFailed": "Échec de l'approbation du commentaire"
+    "approveFailed": "Échec de l'approbation du commentaire",
+    "totalPageInfo": "{total} au total · page {page} sur {totalPages}"
   },
   "devices": {
     "title": "Appareils",
@@ -104,7 +158,8 @@
     "noSessions": "Aucune session d'appareil active.",
     "confirmRevoke": "Révoquer cette session d'appareil ? L'utilisateur sera déconnecté.",
     "loadFailed": "Échec du chargement des sessions",
-    "revokeFailed": "Échec de la révocation de la session"
+    "revokeFailed": "Échec de la révocation de la session",
+    "totalPageInfo": "{total} au total · page {page} sur {totalPages}"
   },
   "settings": {
     "title": "Types d'activité",
@@ -205,7 +260,80 @@
     "loadFailed": "Échec du chargement de l'état des sauvegardes",
     "triggerFailed": "Échec du déclenchement de la sauvegarde",
     "uploadFailed": "Échec du téléversement de la sauvegarde",
-    "restoreStartFailed": "Échec du démarrage de la restauration"
+    "restoreStartFailed": "Échec du démarrage de la restauration",
+    "download": "Télécharger",
+    "downloadFailed": "Échec du téléchargement de la sauvegarde.",
+    "downloadingEllipsis": "Téléchargement…",
+    "stepProgress": "Étape {step} sur {totalSteps} — {label}"
+  },
+  "auditLog": {
+    "title": "Journal d'audit",
+    "subtitle": "Toutes les actions admin modificatrices, sauf les sauvegardes (voir la page Sauvegardes pour son propre journal).",
+    "resourceTypeLabel": "Ressource",
+    "limitLabel": "Afficher",
+    "filterAll": "Tous",
+    "resourceTypes": {
+      "study": "Étude",
+      "participant": "Participant",
+      "questionnaire": "Questionnaire",
+      "team_member": "Membre de l'équipe"
+    },
+    "when": "Quand",
+    "who": "Qui",
+    "action": "Action",
+    "resource": "Ressource",
+    "result": "Statut",
+    "loadFailed": "Impossible de charger le journal d'audit"
+  },
+  "team": {
+    "title": "Équipe et rôles",
+    "subtitle": "Gérez qui a un accès admin ou chercheur. Les changements de rôle prennent effet immédiatement.",
+    "addMember": "Ajouter un membre",
+    "searchPlaceholder": "Rechercher par nom d'utilisateur ou e-mail",
+    "searchButton": "Rechercher",
+    "noSearchResults": "Aucun compte correspondant trouvé.",
+    "member": "Membre",
+    "roles": "Rôles",
+    "actions": "Actions",
+    "grantAdmin": "Accorder admin",
+    "grantResearcher": "Accorder chercheur",
+    "revoke": "Révoquer",
+    "revokeConfirm": "Révoquer {role} de {username} ?",
+    "roleAdmin": "Admin",
+    "roleResearcher": "Chercheur",
+    "noMembers": "Personne n'a actuellement d'accès admin ou chercheur.",
+    "loadFailed": "Impossible de charger l'équipe",
+    "searchFailed": "Recherche échouée",
+    "grantFailed": "Impossible d'accorder le rôle",
+    "revokeFailed": "Impossible de révoquer le rôle"
+  },
+  "help": {
+    "title": "Aide",
+    "subtitle": "Conseils rapides pour chaque partie du portail admin.",
+    "studies": {
+      "title": "Études",
+      "body": "Créez une étude, configurez ses groupes et bassins de repères, générez des codes d'invitation et assignez des questionnaires. Supprimer une étude nécessite de taper son nom exact pour confirmer — les participants inscrits bloquent la suppression jusqu'à réaffectation ou suppression."
+    },
+    "participants": {
+      "title": "Participants",
+      "body": "Créez des participants un par un ou en masse, imprimez ou téléchargez leurs cartes de jeton, réaffectez leur groupe, et consultez leur progression (questionnaires, habitudes, recommandations). Supprimer un participant anonymise son enregistrement plutôt que de l'effacer entièrement."
+    },
+    "questionnaires": {
+      "title": "Questionnaires",
+      "body": "Créez et modifiez des questionnaires, puis assignez-les à une étude. Un questionnaire déjà assigné à une étude ne peut pas être supprimé — retirez d'abord l'affectation."
+    },
+    "cuePools": {
+      "title": "Bassins de repères",
+      "body": "Gérez le catalogue de repères d'habitudes proposés aux participants. Importez un CSV pour ajouter plusieurs repères à la fois, puis assignez un bassin de repères à la configuration d'un groupe d'étude sur la page Études."
+    },
+    "analytics": {
+      "title": "Analytique",
+      "body": "Métriques d'engagement, d'habitudes et d'achèvement des questionnaires par étude et groupe. Utilisez l'export par étude de la page Études pour un téléchargement complet des données."
+    },
+    "backups": {
+      "title": "Sauvegardes",
+      "body": "Déclenchez une sauvegarde, restaurez à partir d'une précédente, ou téléchargez/importez des archives. Chaque action ici est enregistrée dans son propre journal d'audit, séparé du journal d'audit général."
+    }
   },
   "participants": {
     "title": "Participants",
@@ -267,7 +395,16 @@
     "fastForwardFailed": "Échec de l'avance rapide",
     "confirmAnonymise": "Anonymiser le participant « {username} » ? Cette action est irréversible.",
     "ffShiftedBack": "Décalé de {days} jour(s) en arrière. Rechargement…",
-    "ffAdvanced": "Avancé de {days} jour(s). Ouvrez l'application pour resynchroniser."
+    "ffAdvanced": "Avancé de {days} jour(s). Ouvrez l'application pour resynchroniser.",
+    "totalPageInfo": "{total} au total · page {page} sur {totalPages}",
+    "count": "Nombre",
+    "selectAllOnPage": "Tout sélectionner sur cette page",
+    "selectParticipant": "Sélectionner {username}",
+    "selectedCount": "{count} sélectionné(s)",
+    "exportSelected": "Exporter la sélection (CSV)",
+    "deleteSelected": "Supprimer la sélection",
+    "confirmBulkAnonymise": "Anonymiser {count} participants sélectionnés ? Cette action est irréversible.",
+    "bulkParticipantsCreated": "{count} participants créés"
   },
   "cuePools": {
     "title": "Bassins de repères",
@@ -276,6 +413,8 @@
     "importCsv": "Importer un CSV",
     "addCue": "+ Ajouter un repère",
     "newCueTitle": "Nouveau repère",
+    "languagesLabel": "Langues disponibles",
+    "editingLanguage": "Édition : {language}",
     "cueTextLabel": "Texte du repère *",
     "cueTextPlaceholder": "p. ex. Après le dîner chaque soir",
     "qualityLabel": "Qualité",
@@ -331,7 +470,7 @@
     "exportHttpFailed": "Échec de l'export (HTTP {status})"
   },
   "insights": {
-    "title": "Insights",
+    "title": "Perspectives",
     "subtitle": "Questions fréquentes portant sur MongoDB et Neo4j, mises en cache et actualisées à la demande.",
     "reloadAll": "Tout recharger",
     "recomputeNow": "Recalculer maintenant",
@@ -423,6 +562,9 @@
     "customTab": "Personnalisés",
     "titleHeader": "Titre",
     "slugHeader": "Slug",
+    "languagesHeader": "Langues",
+    "languagesLabel": "Langues disponibles",
+    "editingLanguage": "Édition : {language}",
     "questionsHeader": "Questions",
     "version": "Version",
     "lastUpdated": "Dernière mise à jour",
@@ -475,7 +617,7 @@
     "subtitle": "Indicateurs au niveau de l'étude pour les chercheurs",
     "studyLabel": "Étude",
     "noStudies": "Aucune étude",
-    "inactiveSuffix": " (inactive)",
+    "inactiveSuffix": " (inactif)",
     "selectStudyPrompt": "Sélectionnez une étude ci-dessus pour afficher l'analytique",
     "loadingAnalytics": "Chargement de l'analytique…",
     "default": "Par défaut",
@@ -667,8 +809,8 @@
       "pageInfo": "Page {page} sur {totalPages} ({total} au total)"
     },
     "table": {
-      "active": "Active",
-      "inactive": "Inactive",
+      "active": "Actif",
+      "inactive": "Inactif",
       "default": "Par défaut",
       "groups": "Groupes",
       "participants": "Participants",
@@ -903,6 +1045,57 @@
       "onboardingHint": "Remplace le paramètre d'intégration au niveau de l'étude pour ce groupe uniquement.",
       "selfHabitLabel": "Création d'habitude autonome (ce groupe)",
       "selfHabitHint": "Lorsque désactivé, ce groupe ne peut pas créer ses propres habitudes."
+    },
+    "analyticsTab": {
+      "columns": {
+        "enrolled": "Inscrit",
+        "group": "Groupe",
+        "participant": "Participant",
+        "status": "Statut"
+      },
+      "cumulativeDropout": {
+        "description": "Participants marqués comme ayant abandonné au fil du temps.",
+        "empty": "Aucun abandon enregistré.",
+        "title": "Abandon cumulé"
+      },
+      "loadFailed": "Échec",
+      "loadFailedShort": "Échec du chargement",
+      "loadingAnalytics": "Chargement de l'analytique…",
+      "loadingParticipants": "Chargement des participants…",
+      "noParticipantsFound": "Aucun participant trouvé.",
+      "questionnaireCompletion": {
+        "description": "Part des participants inscrits ayant soumis chaque questionnaire. Survolez pour plus de détails.",
+        "empty": "Aucun questionnaire assigné à cette étude.",
+        "title": "Achèvement des questionnaires"
+      },
+      "srhiTrajectory": {
+        "description": "Score moyen de force d'habitude par semaine et par condition (échelle 1–7). Survolez les points pour plus de détails.",
+        "empty": "Aucune donnée SRHI pour le moment.",
+        "title": "Trajectoire SRHI"
+      },
+      "status": {
+        "active": "Actif",
+        "droppedOut": "Abandonné",
+        "inactive": "Inactif"
+      },
+      "tooltip": {
+        "activeOf": "Actifs : {active} / {enrolled} inscrits",
+        "clickToSeeParticipants": "Cliquez pour voir les participants →",
+        "completedOf": "Terminé : {completed} / {enrolled}",
+        "cumulativeDropouts": "Abandons cumulés : {count}",
+        "date": "Date : {date}",
+        "group": "Groupe : {group}",
+        "meanSrhi": "SRHI moyen : {score} / 7",
+        "rate": "Taux : {rate}%",
+        "responseCount": "n = {count} réponses",
+        "week": "Semaine {week}"
+      },
+      "weeklyActiveRate": {
+        "description": "% de participants inscrits avec ≥1 entrée au cours des 7 derniers jours. Cliquez sur une barre pour voir les participants.",
+        "drillTitle": "{group} — participants",
+        "empty": "Aucune donnée d'inscription pour le moment.",
+        "title": "Taux d'activité hebdomadaire"
+      }
     }
   }
 }

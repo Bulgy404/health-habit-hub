@@ -18,6 +18,7 @@ export function createHabitConfigRouter({ db, neo4jRun } = {}) {
         db: database,
         userId: req.user.sub,
         neo4jRun,
+        lang: req.query.lang || 'en',
       });
       res.json({ ...config, srhiItems: SRHI_ITEMS });
     } catch (err) {

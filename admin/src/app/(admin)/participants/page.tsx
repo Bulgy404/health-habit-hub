@@ -102,8 +102,14 @@ export default function ParticipantsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newGroup, setNewGroup] = useState<(typeof GROUPS)[number]>("G1");
   const [newFormat, setNewFormat] = useState<(typeof TOKEN_FORMATS)[number]>("both");
+  const [newCount, setNewCount] = useState(1);
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<CreatedParticipant | null>(null);
+  const [bulkCreated, setBulkCreated] = useState<CreatedParticipant[] | null>(null);
+
+  // Bulk row selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Progress modal
   const [progressFor, setProgressFor] = useState<Participant | null>(null);
@@ -167,9 +173,17 @@ export default function ParticipantsPage() {
     try {
       const res = await apiFetch(apiUrl("/admin/participants"), token, {
         method: "POST",
-        body: JSON.stringify({ group: newGroup, tokenCardFormat: newFormat }),
+        body: JSON.stringify({
+          group: newGroup,
+          tokenCardFormat: newFormat,
+          count: newCount,
+        }),
       });
-      setCreated({ userId: res?.userId, username: res?.username, password: res?.password });
+      if (newCount > 1 && Array.isArray(res?.participants)) {
+        setBulkCreated(res.participants as CreatedParticipant[]);
+      } else {
+        setCreated({ userId: res?.userId, username: res?.username, password: res?.password });
+      }
       setShowCreate(false);
       // New participants sort newest-first onto page 1. If we're already
       // there, reload directly; otherwise jump back so it's visible (the
@@ -183,6 +197,70 @@ export default function ParticipantsPage() {
       setError(e instanceof Error ? e.message : t("createFailed"));
     } finally {
       setCreating(false);
+    }
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllOnPage() {
+    setSelectedIds((prev) => {
+      const allOnPageSelected = participants.every((p) => prev.has(p.id));
+      if (allOnPageSelected) {
+        const next = new Set(prev);
+        participants.forEach((p) => next.delete(p.id));
+        return next;
+      }
+      const next = new Set(prev);
+      participants.forEach((p) => next.add(p.id));
+      return next;
+    });
+  }
+
+  function handleExportSelected() {
+    const rows = participants.filter((p) => selectedIds.has(p.id));
+    const header = ["userId", "username", "group", "enrolledAt", "lastActiveAt"];
+    const csv = [
+      header.join(","),
+      ...rows.map((p) =>
+        [p.id, p.username, p.group, p.createdAt ?? "", p.lastActiveAt ?? ""]
+          .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+          .join(",")
+      ),
+    ].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `participants-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDeleteSelected() {
+    if (!token) return;
+    if (!window.confirm(t("confirmBulkAnonymise", { count: selectedIds.size }))) return;
+    setBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      for (const id of ids) {
+        await apiFetch(apiUrl(`/admin/participants/${id}`), token, { method: "DELETE" });
+      }
+      setParticipants((prev) => prev.filter((p) => !selectedIds.has(p.id)));
+      setTotal((prev) => Math.max(0, prev - ids.length));
+      setSelectedIds(new Set());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("deleteFailed"));
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -352,13 +430,68 @@ export default function ParticipantsPage() {
 
       {error && <p className={styles.error}>{error}</p>}
 
+      {selectedIds.size > 0 && (
+        <div className={styles.filters}>
+          <span className={styles.filterLabel}>
+            {t("selectedCount", { count: selectedIds.size })}
+          </span>
+          <button className={styles.actionBtn} onClick={handleExportSelected}>
+            {t("exportSelected")}
+          </button>
+          <button
+            className={`${styles.actionBtn} ${styles.deleteBtn}`}
+            onClick={handleDeleteSelected}
+            disabled={bulkDeleting}
+          >
+            {bulkDeleting ? tc("deletingEllipsis") : t("deleteSelected")}
+          </button>
+        </div>
+      )}
+
       {loading ? (
-        <p>{tc("loading")}</p>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th />
+                <th>{t("userId")}</th>
+                <th>{t("username")}</th>
+                <th>{t("group")}</th>
+                <th>{t("enrolled")}</th>
+                <th>{t("lastActive")}</th>
+                <th>{t("surveys")}</th>
+                <th>{tc("actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <tr key={i} className={styles.skeletonRow}>
+                  {Array.from({ length: 8 }).map((__, j) => (
+                    <td key={j}>
+                      <span className={styles.skeletonBar} style={{ width: j === 0 ? "16px" : "80%" }} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={
+                      participants.length > 0 &&
+                      participants.every((p) => selectedIds.has(p.id))
+                    }
+                    onChange={toggleSelectAllOnPage}
+                    aria-label={t("selectAllOnPage")}
+                  />
+                </th>
                 <th>{t("userId")}</th>
                 <th>{t("username")}</th>
                 <th>{t("group")}</th>
@@ -371,6 +504,14 @@ export default function ParticipantsPage() {
             <tbody>
               {participants.map((p) => (
                 <tr key={p.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(p.id)}
+                      onChange={() => toggleSelected(p.id)}
+                      aria-label={t("selectParticipant", { username: p.username })}
+                    />
+                  </td>
                   <td>
                     <span className={styles.code} title={t("keycloakSubTooltip")}>
                       {p.id}
@@ -431,7 +572,7 @@ export default function ParticipantsPage() {
               {participants.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     style={{ textAlign: "center", padding: "2rem" }}
                     className={styles.muted}
                   >
@@ -503,12 +644,63 @@ export default function ParticipantsPage() {
                 ))}
               </select>
             </div>
+            <div className={styles.formRow}>
+              <label className={styles.formLabel}>{t("count")}</label>
+              <input
+                type="number"
+                min={1}
+                max={50}
+                className={styles.input}
+                value={newCount}
+                onChange={(e) =>
+                  setNewCount(Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1)))
+                }
+              />
+            </div>
             <div className={styles.formActions}>
               <button className={styles.cancelButton} onClick={() => setShowCreate(false)}>
                 {tc("cancel")}
               </button>
               <button className={styles.saveButton} onClick={handleCreate} disabled={creating}>
                 {creating ? t("creatingEllipsis") : tc("add")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk-created participants ─────────────────────────────── */}
+      {bulkCreated && (
+        <div className={styles.modalOverlay} onClick={() => setBulkCreated(null)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <h2 className={styles.modalTitle}>
+              {t("bulkParticipantsCreated", { count: bulkCreated.length })}
+            </h2>
+            <ul style={{ listStyle: "none", padding: 0, margin: "12px 0" }}>
+              {bulkCreated.map((p) => (
+                <li
+                  key={p.userId}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "6px 0",
+                    borderBottom: "1px solid #e5e7eb",
+                  }}
+                >
+                  <span className={styles.code}>{p.username}</span>
+                  <button
+                    className={styles.actionBtn}
+                    onClick={() => p.userId && openTokenCard(p.userId)}
+                  >
+                    {t("tokenCard")}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <div className={styles.formActions}>
+              <button className={styles.saveButton} onClick={() => setBulkCreated(null)}>
+                {t("done")}
               </button>
             </div>
           </div>

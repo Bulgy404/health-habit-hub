@@ -22,6 +22,7 @@ import '../features/recommendation/loading_screen.dart';
 import '../providers/auth_provider.dart';
 import '../screens/donate_screen.dart';
 import '../screens/explore_screen.dart';
+import '../screens/help_support_screen.dart';
 import '../screens/legal_document_screen.dart';
 import '../screens/onboarding/consent_screen.dart';
 import '../screens/onboarding/passphrase_screen.dart';
@@ -31,6 +32,7 @@ import '../screens/onboarding/study_code_screen.dart';
 import '../screens/onboarding/welcome_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/project_info_screen.dart';
+import '../screens/rotate_passphrase_screen.dart';
 import '../screens/shell_screen.dart';
 import '../screens/user_settings_screen.dart';
 import 'redirect.dart';
@@ -250,6 +252,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => const LegalDocumentScreen(
                       documentType: LegalDocumentType.consent,
                     ),
+                  ),
+                  GoRoute(
+                    path: 'help',
+                    builder: (context, state) => const HelpSupportScreen(),
+                  ),
+                  GoRoute(
+                    path: 'rotate-passphrase',
+                    builder: (context, state) => const RotatePassphraseScreen(),
                   ),
                 ],
               ),

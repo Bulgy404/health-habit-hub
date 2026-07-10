@@ -783,6 +783,22 @@
   "@myHabitsTab": {
     "description": "Bottom nav tab label for My Habits"
   },
+  "navTabShare": "Share",
+  "@navTabShare": {
+    "description": "Bottom nav tab label for the share-a-habit screen"
+  },
+  "navTabExplore": "Explore",
+  "@navTabExplore": {
+    "description": "Bottom nav tab label for the explore-habits screen"
+  },
+  "navTabRecommend": "Recommend",
+  "@navTabRecommend": {
+    "description": "Bottom nav tab label for the recommendations screen. Previously abbreviated to \"Recs\", which was ambiguous."
+  },
+  "navTabAccount": "Account",
+  "@navTabAccount": {
+    "description": "Bottom nav tab label for the account/settings screen"
+  },
   "newHabit": "New Habit",
   "@newHabit": {
     "description": "Button to start new habit flow"
@@ -1833,5 +1849,129 @@
   "nextButton": "Next",
   "@nextButton": {
     "description": "Generic Next button label"
+  },
+  "helpAndSupport": "Help & Support",
+  "@helpAndSupport": {
+    "description": "Settings entry and title of the help/contact/FAQ screen"
+  },
+  "contactResearchTeam": "Contact the research team",
+  "@contactResearchTeam": {
+    "description": "Section label for the contact card on the Help & Support screen"
+  },
+  "contactResearchTeamDescription": "Have a question or ran into a problem? Send us an email and we'll get back to you.",
+  "@contactResearchTeamDescription": {
+    "description": "Body text above the send-email button"
+  },
+  "sendEmail": "Send email",
+  "@sendEmail": {
+    "description": "Button that opens the mail app addressed to the study team"
+  },
+  "frequentlyAskedQuestions": "Frequently asked questions",
+  "@frequentlyAskedQuestions": {
+    "description": "Section label for the FAQ list on the Help & Support screen"
+  },
+  "faqPassphraseQuestion": "I lost my recovery passphrase — what do I do?",
+  "@faqPassphraseQuestion": {
+    "description": "FAQ question about a lost recovery passphrase"
+  },
+  "faqPassphraseAnswer": "Your 24-word passphrase is the only way to recover your account. If you still have it, use \"Restore account\" on the welcome screen. If you've lost it, your account and data unfortunately cannot be recovered — contact us if you'd like to start over.",
+  "@faqPassphraseAnswer": {
+    "description": "FAQ answer about a lost recovery passphrase"
+  },
+  "faqDataQuestion": "Can I export or delete my data?",
+  "@faqDataQuestion": {
+    "description": "FAQ question about exporting or deleting data"
+  },
+  "faqDataAnswer": "Yes. Go to Settings → Export my data to download everything linked to your account, or Settings → Delete account to permanently erase it. Deletion cannot be undone.",
+  "@faqDataAnswer": {
+    "description": "FAQ answer about exporting or deleting data"
+  },
+  "faqOfflineQuestion": "What happens if I lose connection while using the app?",
+  "@faqOfflineQuestion": {
+    "description": "FAQ question about offline behavior"
+  },
+  "faqOfflineAnswer": "Habit check-ins you submit while offline are saved on your device and sent automatically once you're back online.",
+  "@faqOfflineAnswer": {
+    "description": "FAQ answer about offline behavior"
+  },
+  "faqNotificationsQuestion": "Can I turn off certain reminders?",
+  "@faqNotificationsQuestion": {
+    "description": "FAQ question about muting notification types"
+  },
+  "faqNotificationsAnswer": "Yes. Go to Settings → Notifications to turn habit, questionnaire, or study-update reminders on or off individually.",
+  "@faqNotificationsAnswer": {
+    "description": "FAQ answer about muting notification types"
+  },
+  "faqConsentQuestion": "Can I withdraw my consent?",
+  "@faqConsentQuestion": {
+    "description": "FAQ question about withdrawing consent"
+  },
+  "faqConsentAnswer": "Yes, at any time. Go to Settings → Study consent to review what you agreed to, or Settings → Delete account to withdraw and erase your data.",
+  "@faqConsentAnswer": {
+    "description": "FAQ answer about withdrawing consent"
+  },
+  "notificationsSection": "Notifications",
+  "@notificationsSection": {
+    "description": "Settings section label for notification-channel toggles"
+  },
+  "habitReminders": "Habit reminders",
+  "@habitReminders": {
+    "description": "Settings toggle for local habit-reminder notifications"
+  },
+  "questionnaireReminders": "Questionnaire reminders",
+  "@questionnaireReminders": {
+    "description": "Settings toggle for local questionnaire-due notifications"
+  },
+  "studyUpdateNotifications": "Study updates",
+  "@studyUpdateNotifications": {
+    "description": "Settings toggle for the end-of-study notification"
+  },
+  "changeRecoveryPassphrase": "Change recovery passphrase",
+  "@changeRecoveryPassphrase": {
+    "description": "Settings entry to rotate the recovery passphrase"
+  },
+  "rotatePassphraseTitle": "Change your recovery passphrase?",
+  "@rotatePassphraseTitle": {
+    "description": "Title of the passphrase-rotation confirmation dialog"
+  },
+  "rotatePassphraseWarning": "Your current 24-word phrase will stop working immediately. Make sure to save the new one somewhere safe.",
+  "@rotatePassphraseWarning": {
+    "description": "Warning shown before and during passphrase rotation"
+  },
+  "rotatePassphraseConfirm": "Generate new phrase",
+  "@rotatePassphraseConfirm": {
+    "description": "Button that confirms and triggers passphrase rotation"
+  },
+  "rotatePassphraseNewTitle": "Your new recovery passphrase",
+  "@rotatePassphraseNewTitle": {
+    "description": "Heading shown above the newly generated passphrase"
+  },
+  "rotatePassphraseNewSubtitle": "Write these 24 words down or store them somewhere safe. You'll need them to recover your account.",
+  "@rotatePassphraseNewSubtitle": {
+    "description": "Subtitle shown above the newly generated passphrase"
+  },
+  "rotatePassphraseSavedCheckbox": "I have written it down",
+  "@rotatePassphraseSavedCheckbox": {
+    "description": "Checkbox label confirming the new passphrase was saved"
+  },
+  "rotatePassphraseDone": "Done",
+  "@rotatePassphraseDone": {
+    "description": "Button that finishes the passphrase-rotation flow"
+  },
+  "rotatePassphraseFailed": "Could not generate a new passphrase. Please check your connection and try again.",
+  "@rotatePassphraseFailed": {
+    "description": "Error shown when passphrase rotation fails"
+  },
+  "copyToClipboard": "Copy to clipboard",
+  "@copyToClipboard": {
+    "description": "Generic button label to copy text to the clipboard"
+  },
+  "passphraseCopied": "Passphrase copied to clipboard",
+  "@passphraseCopied": {
+    "description": "Snackbar shown after copying the passphrase"
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Generic tooltip/label for a close icon button"
   }
 }

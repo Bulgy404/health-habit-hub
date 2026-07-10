@@ -610,6 +610,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get myHabitsTab => 'My Habits';
 
   @override
+  String get navTabShare => 'Share';
+
+  @override
+  String get navTabExplore => 'Explore';
+
+  @override
+  String get navTabRecommend => 'Recommend';
+
+  @override
+  String get navTabAccount => 'Account';
+
+  @override
   String get newHabit => 'New Habit';
 
   @override
@@ -1419,4 +1431,108 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get nextButton => 'Next';
+
+  @override
+  String get helpAndSupport => 'Help & Support';
+
+  @override
+  String get contactResearchTeam => 'Contact the research team';
+
+  @override
+  String get contactResearchTeamDescription =>
+      'Have a question or ran into a problem? Send us an email and we\'ll get back to you.';
+
+  @override
+  String get sendEmail => 'Send email';
+
+  @override
+  String get frequentlyAskedQuestions => 'Frequently asked questions';
+
+  @override
+  String get faqPassphraseQuestion =>
+      'I lost my recovery passphrase — what do I do?';
+
+  @override
+  String get faqPassphraseAnswer =>
+      'Your 24-word passphrase is the only way to recover your account. If you still have it, use \"Restore account\" on the welcome screen. If you\'ve lost it, your account and data unfortunately cannot be recovered — contact us if you\'d like to start over.';
+
+  @override
+  String get faqDataQuestion => 'Can I export or delete my data?';
+
+  @override
+  String get faqDataAnswer =>
+      'Yes. Go to Settings → Export my data to download everything linked to your account, or Settings → Delete account to permanently erase it. Deletion cannot be undone.';
+
+  @override
+  String get faqOfflineQuestion =>
+      'What happens if I lose connection while using the app?';
+
+  @override
+  String get faqOfflineAnswer =>
+      'Habit check-ins you submit while offline are saved on your device and sent automatically once you\'re back online.';
+
+  @override
+  String get faqNotificationsQuestion => 'Can I turn off certain reminders?';
+
+  @override
+  String get faqNotificationsAnswer =>
+      'Yes. Go to Settings → Notifications to turn habit, questionnaire, or study-update reminders on or off individually.';
+
+  @override
+  String get faqConsentQuestion => 'Can I withdraw my consent?';
+
+  @override
+  String get faqConsentAnswer =>
+      'Yes, at any time. Go to Settings → Study consent to review what you agreed to, or Settings → Delete account to withdraw and erase your data.';
+
+  @override
+  String get notificationsSection => 'Notifications';
+
+  @override
+  String get habitReminders => 'Habit reminders';
+
+  @override
+  String get questionnaireReminders => 'Questionnaire reminders';
+
+  @override
+  String get studyUpdateNotifications => 'Study updates';
+
+  @override
+  String get changeRecoveryPassphrase => 'Change recovery passphrase';
+
+  @override
+  String get rotatePassphraseTitle => 'Change your recovery passphrase?';
+
+  @override
+  String get rotatePassphraseWarning =>
+      'Your current 24-word phrase will stop working immediately. Make sure to save the new one somewhere safe.';
+
+  @override
+  String get rotatePassphraseConfirm => 'Generate new phrase';
+
+  @override
+  String get rotatePassphraseNewTitle => 'Your new recovery passphrase';
+
+  @override
+  String get rotatePassphraseNewSubtitle =>
+      'Write these 24 words down or store them somewhere safe. You\'ll need them to recover your account.';
+
+  @override
+  String get rotatePassphraseSavedCheckbox => 'I have written it down';
+
+  @override
+  String get rotatePassphraseDone => 'Done';
+
+  @override
+  String get rotatePassphraseFailed =>
+      'Could not generate a new passphrase. Please check your connection and try again.';
+
+  @override
+  String get copyToClipboard => 'Copy to clipboard';
+
+  @override
+  String get passphraseCopied => 'Passphrase copied to clipboard';
+
+  @override
+  String get close => 'Close';
 }

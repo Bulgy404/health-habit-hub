@@ -31,6 +31,9 @@ import {
 import { createAppSettingsRouter } from './admin/appSettingsRouter.js';
 import { createBackupsRouter } from './admin/backupsRouter.js';
 import { createSystemRouter } from './admin/systemRouter.js';
+import { createAuditLogRouter } from './admin/auditLogRouter.js';
+import { createTeamRouter } from './admin/teamRouter.js';
+import { createAuditAdminActionsMiddleware } from '../middleware/auditAdminActions.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'adminRouter' });
@@ -75,6 +78,10 @@ export function createAdminRouter({
 
   const router = express.Router();
   const getDb = makeGetDb(db);
+
+  // Audits every mutating admin request (see auditAdminActions.js for why
+  // this is mounted first, before any domain sub-router).
+  router.use(createAuditAdminActionsMiddleware({ getDb }));
 
   // Seed default settings, activity types, the questionnaire library, and the
   // default study asynchronously on router creation. Idempotent — safe to
@@ -910,6 +917,10 @@ export function createAdminRouter({
   router.use('/', createBackupsRouter({ db }));
 
   router.use('/', createSystemRouter());
+
+  router.use('/', createAuditLogRouter({ db }));
+
+  router.use('/', createTeamRouter({ db, keycloak: kcAdmin }));
 
   return router;
 }

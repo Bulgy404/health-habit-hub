@@ -18,10 +18,15 @@ class MyHabitsService {
   final Dio _dio;
   static const _base = AppConfig.apiBaseUrl;
 
-  /// Fetches the participant's resolved habit configuration from the backend.
-  Future<HabitConfig> fetchHabitConfig() async {
+  /// Fetches the participant's resolved habit configuration from the
+  /// backend, with any locale-dependent content (e.g. assigned cue text)
+  /// resolved in [lang] (e.g. 'en' or 'de').
+  Future<HabitConfig> fetchHabitConfig(String lang) async {
     try {
-      final res = await _dio.get<Map<String, dynamic>>('$_base/me/habit-config');
+      final res = await _dio.get<Map<String, dynamic>>(
+        '$_base/me/habit-config',
+        queryParameters: {'lang': lang},
+      );
       return HabitConfig.fromJson(res.data ?? {});
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) throw const UnauthorisedException();

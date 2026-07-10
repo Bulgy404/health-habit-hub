@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
+import '../../theme/app_colors.dart';
 import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/srhi_sparkline_widget.dart';
 import 'my_habits_provider.dart';
@@ -252,7 +253,7 @@ class _SrhiExplanationCardState extends State<_SrhiExplanationCard> {
                     value: widget.score == null
                         ? l10n.srhiScoreUnavailable
                         : widget.score!.toStringAsFixed(1),
-                    valueColor: const Color(0xFF45B700),
+                    valueColor: context.appColors.primary,
                   ),
                 ),
                 Expanded(

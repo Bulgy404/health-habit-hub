@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
 import '../../services/study_config_service.dart';
+import '../../theme/app_colors.dart';
 import 'habit_onboarding_widgets.dart';
 import 'my_habits_models.dart';
 
@@ -252,7 +253,7 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
                   ),
                   const SizedBox(height: 20),
                   Card(
-                    color: const Color(0xFFEDF7E5),
+                    color: context.appColors.greenLight,
                     child: Padding(
                       padding: const EdgeInsets.all(18),
                       child: Text(

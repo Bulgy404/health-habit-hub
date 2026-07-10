@@ -1,9 +1,30 @@
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
 import { getDueQuestionnaires } from '../services/questionnaireScheduleService.js';
+import { resolveLocaleText } from '../utils/localeText.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'questionnairesRouter' });
+
+/** Resolves a questionnaire doc's title/description/questions to flat strings for [lang]. */
+function resolveQuestionnaire(doc, lang) {
+  const languages = doc.languages || ['en'];
+  return {
+    slug: doc.slug,
+    title: resolveLocaleText(doc.title, lang, languages),
+    description: resolveLocaleText(doc.description, lang, languages),
+    version: doc.version,
+    languages,
+    questions: (doc.questions || []).map((q) => ({
+      ...q,
+      text: resolveLocaleText(q.text, lang, languages),
+      options: (q.options || []).map((o) => ({
+        ...o,
+        label: resolveLocaleText(o.label, lang, languages),
+      })),
+    })),
+  };
+}
 
 export function createQuestionnairesRouter({ db } = {}) {
   const router = express.Router();
@@ -38,19 +59,23 @@ export function createQuestionnairesRouter({ db } = {}) {
    */
   router.get('/', async (req, res) => {
     try {
+      const lang = req.query.lang || 'en';
       const database = await getDb();
       const docs = await database
         .collection('questionnaires')
         .find({ active: true })
         .toArray();
       res.json(
-        docs.map((q) => ({
-          slug: q.slug,
-          title: q.title,
-          description: q.description,
-          version: q.version,
-          questionCount: Array.isArray(q.questions) ? q.questions.length : 0,
-        }))
+        docs.map((q) => {
+          const languages = q.languages || ['en'];
+          return {
+            slug: q.slug,
+            title: resolveLocaleText(q.title, lang, languages),
+            description: resolveLocaleText(q.description, lang, languages),
+            version: q.version,
+            questionCount: Array.isArray(q.questions) ? q.questions.length : 0,
+          };
+        })
       );
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
@@ -112,8 +137,9 @@ export function createQuestionnairesRouter({ db } = {}) {
     try {
       const userId = req.user?.sub;
       if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      const lang = req.query.lang || 'en';
       const database = await getDb();
-      const due = await getDueQuestionnaires({ db: database, userId });
+      const due = await getDueQuestionnaires({ db: database, userId, lang });
       res.json(due);
     } catch (err) {
       log.error({ err: err }, '[questionnaires] due error');
@@ -162,6 +188,7 @@ export function createQuestionnairesRouter({ db } = {}) {
   router.get('/:slug', async (req, res) => {
     try {
       const { slug } = req.params;
+      const lang = req.query.lang || 'en';
       const database = await getDb();
       const doc = await database
         .collection('questionnaires')
@@ -169,13 +196,7 @@ export function createQuestionnairesRouter({ db } = {}) {
       if (!doc) {
         return res.status(404).json({ error: 'Questionnaire not found' });
       }
-      res.json({
-        slug: doc.slug,
-        title: doc.title,
-        description: doc.description,
-        version: doc.version,
-        questions: doc.questions || [],
-      });
+      res.json(resolveQuestionnaire(doc, lang));
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });

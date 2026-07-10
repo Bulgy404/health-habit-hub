@@ -7,6 +7,24 @@ import { apiUrl } from "@/lib/api";
 import styles from "./page.module.css";
 import { useCuePoolsData } from "./useCuePoolsData";
 
+/** Per-language text, e.g. `{ en: 'Hello', de: 'Hallo' }`. */
+type LocaleText = Partial<Record<"en" | "de" | "fr" | "ja" | "nl", string>>;
+type Lang = keyof Required<LocaleText>;
+const SUPPORTED_LANGS: Lang[] = ["en", "de", "fr", "ja", "nl"];
+const LANG_LABELS: Record<Lang, string> = {
+  en: "English",
+  de: "Deutsch",
+  fr: "Français",
+  ja: "日本語",
+  nl: "Nederlands",
+};
+
+/** Resolves a locale-text map to a single string for display (admin-side preview only). */
+function previewText(map: LocaleText | undefined, lang: Lang = "en"): string {
+  if (!map) return "";
+  return map[lang] || map.en || Object.values(map).find(Boolean) || "";
+}
+
 const API_BASE = apiUrl("/admin/cue-pools");
 
 /**
@@ -60,10 +78,11 @@ export default function CuePoolsPage() {
   } = useCuePoolsData(token, page, filterQuality, filterLang);
 
   const [showForm, setShowForm] = useState(false);
-  const [newText, setNewText] = useState("");
+  const [newText, setNewText] = useState<LocaleText>({});
+  const [newLanguages, setNewLanguages] = useState<Lang[]>(["en"]);
+  const [activeLang, setActiveLang] = useState<Lang>("en");
   const [newQuality, setNewQuality] = useState<"high" | "low">("high");
   const [newDomain, setNewDomain] = useState("physical_activity");
-  const [newLang, setNewLang] = useState("en");
   const [newStability, setNewStability] = useState(3);
   const [newSalience, setNewSalience] = useState(3);
   const [newSpecificity, setNewSpecificity] = useState(3);
@@ -79,8 +98,19 @@ export default function CuePoolsPage() {
   const [importError, setImportError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  function toggleNewLanguage(lang: Lang) {
+    setNewLanguages((prev) => {
+      const next = prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang];
+      if (next.length === 0) return prev;
+      if (activeLang === lang && !next.includes(lang)) {
+        setActiveLang(next[0]);
+      }
+      return next;
+    });
+  }
+
   async function handleCreate() {
-    if (!newText.trim()) {
+    if (!Object.values(newText).some(Boolean)) {
       setCreateError(t("textRequired"));
       return;
     }
@@ -90,10 +120,13 @@ export default function CuePoolsPage() {
       await apiFetch(API_BASE, token, {
         method: "POST",
         body: JSON.stringify({
-          text: newText.trim(),
+          text: newLanguages.reduce<LocaleText>((acc, lang) => {
+            if (newText[lang]) acc[lang] = newText[lang];
+            return acc;
+          }, {}),
+          languages: newLanguages,
           quality: newQuality,
           domain: newDomain,
-          language: newLang,
           dimensions: {
             stability: newStability,
             salience: newSalience,
@@ -101,7 +134,7 @@ export default function CuePoolsPage() {
           },
         }),
       });
-      setNewText("");
+      setNewText({});
       setShowForm(false);
       await fetchCues(1);
       setPage(1);
@@ -125,16 +158,10 @@ export default function CuePoolsPage() {
         return;
       }
       const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
-      const required = [
-        "text",
-        "quality",
-        "stability",
-        "salience",
-        "specificity",
-        "domain",
-        "language",
-      ];
+      const required = ["quality", "stability", "salience", "specificity", "domain"];
       const missing = required.filter((h) => !headers.includes(h));
+      const hasTextColumn = SUPPORTED_LANGS.some((lang) => headers.includes(`text_${lang}`));
+      if (!hasTextColumn) missing.push(`text_${SUPPORTED_LANGS.join(" or text_")}`);
       if (missing.length > 0) {
         setImportError(t("missingColumns", { columns: missing.join(", ") }));
         setImporting(false);
@@ -208,13 +235,46 @@ export default function CuePoolsPage() {
         <div className={styles.panel}>
           <p className={styles.panelTitle}>{t("newCueTitle")}</p>
           {createError && <div className={styles.errorMsg}>{createError}</div>}
+
+          <div className={styles.formGroup} style={{ marginBottom: "1rem" }}>
+            <label className={styles.label}>{t("languagesLabel")}</label>
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              {SUPPORTED_LANGS.map((lang) => (
+                <label key={lang} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <input
+                    type="checkbox"
+                    checked={newLanguages.includes(lang)}
+                    onChange={() => toggleNewLanguage(lang)}
+                  />
+                  {LANG_LABELS[lang]}
+                </label>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
+              {newLanguages.map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => setActiveLang(lang)}
+                  style={
+                    activeLang === lang
+                      ? { fontWeight: 700, textDecoration: "underline" }
+                      : undefined
+                  }
+                >
+                  {t("editingLanguage", { language: LANG_LABELS[lang] })}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className={styles.formGrid}>
             <div className={`${styles.formGroup} ${styles.formFull}`}>
               <label className={styles.label}>{t("cueTextLabel")}</label>
               <input
                 className={styles.input}
-                value={newText}
-                onChange={(e) => setNewText(e.target.value)}
+                value={newText[activeLang] ?? ""}
+                onChange={(e) => setNewText((prev) => ({ ...prev, [activeLang]: e.target.value }))}
                 placeholder={t("cueTextPlaceholder")}
               />
             </div>
@@ -238,21 +298,6 @@ export default function CuePoolsPage() {
                 onChange={(e) => setNewDomain(e.target.value)}
               />
               <span className={styles.hint}>{t("domainHint")}</span>
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>{t("languageLabel")}</label>
-              <select
-                className={styles.select}
-                value={newLang}
-                onChange={(e) => setNewLang(e.target.value)}
-              >
-                <option value="en">English</option>
-                <option value="de">German</option>
-                <option value="ja">Japanese</option>
-                <option value="fr">French</option>
-                <option value="nl">Dutch</option>
-              </select>
-              <span className={styles.hint}>{t("languageHint")}</span>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>{t("stabilityLabel")}</label>
@@ -326,11 +371,11 @@ export default function CuePoolsPage() {
             }}
           >
             <option value="">{t("filterAll")}</option>
-            <option value="en">English</option>
-            <option value="de">German</option>
-            <option value="ja">Japanese</option>
-            <option value="fr">French</option>
-            <option value="nl">Dutch</option>
+            {SUPPORTED_LANGS.map((lang) => (
+              <option key={lang} value={lang}>
+                {LANG_LABELS[lang]}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -366,7 +411,7 @@ export default function CuePoolsPage() {
               <tbody>
                 {cues.map((cue) => (
                   <tr key={cue.id}>
-                    <td>{cue.text}</td>
+                    <td>{previewText(cue.text)}</td>
                     <td>
                       <span
                         className={`${styles.qualityBadge} ${
@@ -383,7 +428,7 @@ export default function CuePoolsPage() {
                       </span>
                     </td>
                     <td>{cue.domain}</td>
-                    <td>{cue.language}</td>
+                    <td>{(cue.languages ?? []).map((l) => l.toUpperCase()).join(", ")}</td>
                     <td>
                       <button
                         className={styles.deleteBtn}

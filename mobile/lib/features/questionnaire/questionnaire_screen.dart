@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../theme/app_colors.dart';
 import 'questionnaire_form_widget.dart';
 import 'questionnaire_service.dart';
 
@@ -81,10 +82,10 @@ class QuestionnaireConfirmationScreen extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.check_circle_outline,
                 size: 72,
-                color: Color(0xFF45b700),
+                color: context.appColors.primary,
               ),
               const SizedBox(height: 20),
               Text(

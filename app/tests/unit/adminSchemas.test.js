@@ -156,61 +156,112 @@ describe('updateSurveyGroupsSchema', () => {
 
 describe('createQuestionnaireSchema', () => {
   it('accepts minimum fields', () => {
-    ok(createQuestionnaireSchema, { title: 'Baseline' });
+    ok(createQuestionnaireSchema, {
+      title: { en: 'Baseline' },
+      languages: ['en'],
+    });
   });
 
   it('rejects empty title', () => {
-    fail(createQuestionnaireSchema, { title: '' });
+    fail(createQuestionnaireSchema, { title: { en: '' }, languages: ['en'] });
   });
 
   it('rejects invalid slug', () => {
-    fail(createQuestionnaireSchema, { title: 'T', slug: 'Has Spaces' });
+    fail(createQuestionnaireSchema, {
+      title: { en: 'T' },
+      languages: ['en'],
+      slug: 'Has Spaces',
+    });
+  });
+
+  it('rejects an unsupported language key in title', () => {
+    fail(createQuestionnaireSchema, {
+      title: { en: 'T', xx: 'nope' },
+      languages: ['en'],
+    });
   });
 });
 
 // ── createCueSchema ───────────────────────────────────────────────────────────
 
+const validDimensions = { stability: 3, salience: 3, specificity: 3 };
+
 describe('createCueSchema', () => {
   it('accepts valid cue', () => {
     ok(createCueSchema, {
-      text: 'Exercise in the morning',
+      text: { en: 'Exercise in the morning' },
+      languages: ['en'],
       quality: 'high',
-      dimensions: ['time', 'location'],
+      dimensions: validDimensions,
       domain: 'physical activity',
-      language: 'en',
+    });
+  });
+
+  it('accepts a cue with multiple language variants', () => {
+    ok(createCueSchema, {
+      text: { en: 'Exercise in the morning', de: 'Morgens Sport treiben' },
+      languages: ['en', 'de'],
+      quality: 'high',
+      dimensions: validDimensions,
+      domain: 'physical activity',
+    });
+  });
+
+  it('rejects a cue with no non-empty text', () => {
+    fail(createCueSchema, {
+      text: {},
+      languages: ['en'],
+      quality: 'high',
+      dimensions: validDimensions,
+      domain: 'physical activity',
     });
   });
 
   it('rejects invalid quality', () => {
     fail(createCueSchema, {
-      text: 'x',
+      text: { en: 'x' },
+      languages: ['en'],
       quality: 'medium',
-      dimensions: ['d'],
+      dimensions: validDimensions,
       domain: 'x',
-      language: 'en',
     });
   });
 
-  it('rejects empty dimensions', () => {
+  it('rejects a dimension value out of the 1-5 range', () => {
     fail(createCueSchema, {
-      text: 'x',
+      text: { en: 'x' },
+      languages: ['en'],
       quality: 'high',
-      dimensions: [],
+      dimensions: { stability: 6, salience: 3, specificity: 3 },
       domain: 'x',
-      language: 'en',
+    });
+  });
+
+  it('rejects an unsupported language in languages', () => {
+    fail(createCueSchema, {
+      text: { en: 'x' },
+      languages: ['xx'],
+      quality: 'high',
+      dimensions: validDimensions,
+      domain: 'x',
     });
   });
 });
 
 // ── importCuesSchema ──────────────────────────────────────────────────────────
+// CSV rows arrive as flat string-keyed objects (wide format: text_en, text_de,
+// ..., quality, stability, salience, specificity, domain) — importCuesSchema
+// only checks the outer array shape; importCues() does the real per-field
+// validation (see cuePoolService.test.js).
 
 describe('importCuesSchema', () => {
   const validCue = {
-    text: 'Wake up at 7',
+    text_en: 'Wake up at 7',
     quality: 'low',
-    dimensions: ['time'],
+    stability: '3',
+    salience: '3',
+    specificity: '3',
     domain: 'sleep',
-    language: 'en',
   };
 
   it('accepts array of valid cues', () => {

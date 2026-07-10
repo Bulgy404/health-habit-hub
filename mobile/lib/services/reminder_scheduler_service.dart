@@ -5,6 +5,7 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../config/app_config.dart';
+import 'notification_prefs.dart';
 
 const _channelId = 'hhh_habit_reminders';
 const _channelName = 'Habit reminders';
@@ -68,15 +69,20 @@ class ReminderSchedulerService {
   }
 
   /// Fetches current plans and replaces all pending habit reminders.
+  ///
+  /// No-ops (and cancels any already-pending habit reminders) when the user
+  /// has disabled this channel via [NotificationPrefs.habitRemindersEnabled].
   Future<void> syncReminders() async {
+    await _ensureTimezone();
+    await _plugin.cancelAll();
+    if (!await NotificationPrefs.habitRemindersEnabled()) return;
+
     final response = await _dio.get<Map<String, dynamic>>(
       '${AppConfig.apiBaseUrl}/habits/intentions/reminder-plans',
     );
     final plans = (response.data?['plans'] as List<dynamic>? ?? [])
         .whereType<Map<String, dynamic>>()
         .toList();
-    await _ensureTimezone();
-    await _plugin.cancelAll();
 
     var notificationId = 0;
     for (final plan in plans) {
@@ -126,10 +132,6 @@ class ReminderSchedulerService {
   /// Uses a dedicated id range that it clears first, so it never disturbs the
   /// habit reminders.
   Future<void> syncQuestionnaireReminders() async {
-    final response = await _dio.get<Map<String, dynamic>>(
-      '${AppConfig.apiBaseUrl}/questionnaires/due',
-    );
-    final data = response.data ?? const {};
     await _ensureTimezone();
 
     // Always clear the existing questionnaire reminders first, so toggling the
@@ -137,6 +139,15 @@ class ReminderSchedulerService {
     for (var i = 0; i < _qNotifMax; i++) {
       await _plugin.cancel(id: _qNotifBase + i);
     }
+
+    // User-controlled: skip the fetch entirely when the user has muted this
+    // channel in Settings → Notifications.
+    if (!await NotificationPrefs.questionnaireRemindersEnabled()) return;
+
+    final response = await _dio.get<Map<String, dynamic>>(
+      '${AppConfig.apiBaseUrl}/questionnaires/due',
+    );
+    final data = response.data ?? const {};
 
     // Study-controlled: skip entirely when reminders are disabled.
     final reminders = (data['reminders'] as Map<String, dynamic>?) ?? const {};
@@ -190,13 +201,17 @@ class ReminderSchedulerService {
   /// currently due). Uses a dedicated id that it clears first, so toggling
   /// the admin setting off or changing the end date replaces it cleanly.
   Future<void> syncEndOfStudyNotification() async {
+    await _ensureTimezone();
+    await _plugin.cancel(id: _endOfStudyNotifId);
+
+    // User-controlled: skip the fetch entirely when the user has muted this
+    // channel in Settings → Notifications.
+    if (!await NotificationPrefs.studyUpdatesEnabled()) return;
+
     final response = await _dio.get<Map<String, dynamic>>(
       '${AppConfig.apiBaseUrl}/questionnaires/due',
     );
     final data = response.data ?? const {};
-    await _ensureTimezone();
-
-    await _plugin.cancel(id: _endOfStudyNotifId);
 
     final config =
         (data['endOfStudyNotification'] as Map<String, dynamic>?) ?? const {};

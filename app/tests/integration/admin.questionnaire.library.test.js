@@ -240,9 +240,10 @@ test('GET /api/v1/admin/questionnaires - returns all questionnaires with isLibra
     {
       _id: libId,
       slug: 'sliq',
-      title: 'SLIQ',
-      description: '',
+      title: { en: 'SLIQ' },
+      description: {},
       version: '1',
+      languages: ['en'],
       active: true,
       isLibrary: true,
       questions: [],
@@ -252,9 +253,10 @@ test('GET /api/v1/admin/questionnaires - returns all questionnaires with isLibra
     {
       _id: customId,
       slug: null,
-      title: 'Custom Q',
-      description: '',
+      title: { en: 'Custom Q' },
+      description: {},
       version: '1',
+      languages: ['en'],
       active: true,
       isLibrary: false,
       questions: [],
@@ -294,9 +296,10 @@ test('POST /api/v1/admin/questionnaires - creates custom questionnaire with isLi
   const res = await post(
     '/api/v1/admin/questionnaires',
     {
-      title: 'My Custom Survey',
-      description: 'Test',
-      questions: [{ id: 'q1', text: 'Question 1', type: 'text' }],
+      title: { en: 'My Custom Survey' },
+      description: { en: 'Test' },
+      languages: ['en'],
+      questions: [{ id: 'q1', text: { en: 'Question 1' }, type: 'text' }],
     },
     token
   );
@@ -329,7 +332,7 @@ test('PUT /api/v1/admin/questionnaires/:id - 403 for library questionnaire', asy
 
   const res = await put(
     `/api/v1/admin/questionnaires/${sliq.id}`,
-    { title: 'Modified SLIQ' },
+    { title: { en: 'Modified SLIQ' } },
     adminToken
   );
   assert.strictEqual(res.status, 403);
@@ -340,14 +343,14 @@ test('PUT /api/v1/admin/questionnaires/:id - updates custom questionnaire', asyn
   const adminToken = makeToken(['admin']);
   const createRes = await post(
     '/api/v1/admin/questionnaires',
-    { title: 'To Update', questions: [] },
+    { title: { en: 'To Update' }, languages: ['en'], questions: [] },
     adminToken
   );
   const { id } = await createRes.json();
 
   const res = await put(
     `/api/v1/admin/questionnaires/${id}`,
-    { title: 'Updated Title' },
+    { title: { en: 'Updated Title' } },
     adminToken
   );
   assert.strictEqual(res.status, 200);
@@ -360,7 +363,7 @@ test('PUT /api/v1/admin/questionnaires/:id - 404 for invalid id', async () => {
   const fakeId = new ObjectId();
   const res = await put(
     `/api/v1/admin/questionnaires/${fakeId}`,
-    { title: 'X' },
+    { title: { en: 'X' } },
     token
   );
   assert.strictEqual(res.status, 404);
@@ -383,7 +386,7 @@ test('DELETE /api/v1/admin/questionnaires/:id - deletes custom questionnaire', a
   const adminToken = makeToken(['admin']);
   const createRes = await post(
     '/api/v1/admin/questionnaires',
-    { title: 'To Delete', questions: [] },
+    { title: { en: 'To Delete' }, languages: ['en'], questions: [] },
     adminToken
   );
   const { id } = await createRes.json();
@@ -399,7 +402,7 @@ test('DELETE /api/v1/admin/questionnaires/:id - 409 if assigned to active study'
   // Create a questionnaire
   const createRes = await post(
     '/api/v1/admin/questionnaires',
-    { title: 'Assigned Q', questions: [] },
+    { title: { en: 'Assigned Q' }, languages: ['en'], questions: [] },
     adminToken
   );
   const { id } = await createRes.json();
@@ -441,8 +444,9 @@ test('GET /api/v1/participant/questionnaires - returns study questionnaires for 
   const createRes = await post(
     '/api/v1/admin/questionnaires',
     {
-      title: 'Participant Q',
-      questions: [{ id: 'q1', text: 'Q1', type: 'text' }],
+      title: { en: 'Participant Q' },
+      languages: ['en'],
+      questions: [{ id: 'q1', text: { en: 'Q1' }, type: 'text' }],
     },
     adminToken
   );
