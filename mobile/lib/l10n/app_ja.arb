@@ -1106,6 +1106,46 @@
   "@couldNotPostComment": {
     "description": "Snackbar when posting a comment fails"
   },
+  "commentPendingReview": "コメントは審査のために送信されました。承認され次第表示されます。",
+  "@commentPendingReview": {
+    "description": "Snackbar shown instead of the comment when auto-moderation flagged it"
+  },
+  "reportComment": "報告",
+  "@reportComment": {
+    "description": "Tooltip/button label to report a comment"
+  },
+  "reportCommentTitle": "コメントを報告しますか?",
+  "@reportCommentTitle": {
+    "description": "Title of the report-comment confirmation dialog"
+  },
+  "reportCommentBody": "このコメントは直ちに非表示になり、研究チームの審査に送られます。",
+  "@reportCommentBody": {
+    "description": "Body text of the report-comment confirmation dialog"
+  },
+  "commentReported": "コメントを報告しました",
+  "@commentReported": {
+    "description": "Snackbar after successfully reporting a comment"
+  },
+  "couldNotReportComment": "コメントを報告できませんでした",
+  "@couldNotReportComment": {
+    "description": "Snackbar when reporting a comment fails"
+  },
+  "commentsDisabledMessage": "コメント機能はオフになっています。表示・投稿するには設定でオンにしてください。",
+  "@commentsDisabledMessage": {
+    "description": "Shown instead of the comment section when the user has disabled comments"
+  },
+  "communitySection": "コミュニティ",
+  "@communitySection": {
+    "description": "Section label above the community-comments toggle in Settings"
+  },
+  "communityComments": "コミュニティコメント",
+  "@communityComments": {
+    "description": "Settings row title for the comments on/off toggle"
+  },
+  "communityCommentsSubtitle": "オフにすると、共有された習慣へのコメントの投稿と閲覧が非表示になります。",
+  "@communityCommentsSubtitle": {
+    "description": "Settings row subtitle explaining the comments toggle"
+  },
   "likeTooltip": "",
   "@likeTooltip": {
     "description": "Tooltip of the like button"
@@ -1157,7 +1197,7 @@
   "studyCodeGenericError": "コードを利用できませんでした。接続を確認してください。",
   "studyCodeSkipError": "コードなしでの参加に失敗しました。接続を確認してもう一度お試しください。",
   "studyCodeContinueButton": "コードを使って続ける",
-  "studyCodeSkipButton": "スキップ：研究コードなしで参加する",
+  "studyCodeSkipButton": "研究コードなしで参加する",
   "adminQuestionnairesDeleteConfirmTitle": "アンケートを削除しますか?",
   "adminQuestionnairesDeleteConfirmMessage": "「{title}」を削除しますか?この操作は元に戻せません。",
   "adminQuestionnairesDeleteConflict": "削除できません: このアンケートは進行中の研究に割り当てられています。",

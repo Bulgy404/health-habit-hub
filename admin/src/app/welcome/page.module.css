@@ -1,0 +1,110 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg);
+  padding: 2rem;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 3rem 2.5rem;
+  max-width: 520px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.icon {
+  color: var(--color-primary-action);
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.title {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.75rem;
+}
+
+.message {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-border);
+  transition: background-color 0.2s;
+}
+
+.dotActive {
+  background-color: var(--color-primary-action);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.skipButton {
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.skipButton:hover {
+  color: var(--color-text);
+}
+
+.rightActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.secondaryButton {
+  background-color: var(--color-surface-alt);
+  color: var(--color-text);
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-border);
+}
+
+.secondaryButton:hover {
+  background-color: var(--color-border);
+}
+
+.button {
+  background-color: var(--color-primary-action);
+  color: #ffffff;
+  padding: 0.625rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.button:hover {
+  background-color: var(--color-primary-action-hover);
+}

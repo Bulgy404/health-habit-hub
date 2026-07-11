@@ -1700,6 +1700,66 @@ abstract class AppLocalizations {
   /// **'Could not post comment'**
   String get couldNotPostComment;
 
+  /// Snackbar shown instead of the comment when auto-moderation flagged it
+  ///
+  /// In en, this message translates to:
+  /// **'Your comment was submitted for review and will appear once approved.'**
+  String get commentPendingReview;
+
+  /// Tooltip/button label to report a comment
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get reportComment;
+
+  /// Title of the report-comment confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Report comment?'**
+  String get reportCommentTitle;
+
+  /// Body text of the report-comment confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'This comment will be hidden immediately and sent to the study team for review.'**
+  String get reportCommentBody;
+
+  /// Snackbar after successfully reporting a comment
+  ///
+  /// In en, this message translates to:
+  /// **'Comment reported'**
+  String get commentReported;
+
+  /// Snackbar when reporting a comment fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not report comment'**
+  String get couldNotReportComment;
+
+  /// Shown instead of the comment section when the user has disabled comments
+  ///
+  /// In en, this message translates to:
+  /// **'Comments are turned off. Enable them in Settings to view and post.'**
+  String get commentsDisabledMessage;
+
+  /// Section label above the community-comments toggle in Settings
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get communitySection;
+
+  /// Settings row title for the comments on/off toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Community comments'**
+  String get communityComments;
+
+  /// Settings row subtitle explaining the comments toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off to hide comment posting and viewing on shared habits.'**
+  String get communityCommentsSubtitle;
+
   /// Unused — like annotation removed
   ///
   /// In en, this message translates to:
@@ -1883,7 +1943,7 @@ abstract class AppLocalizations {
   /// Secondary button to skip entering a study code and join the default study
   ///
   /// In en, this message translates to:
-  /// **'Skip: join without a study code'**
+  /// **'Join without study code'**
   String get studyCodeSkipButton;
 
   /// Title of the confirmation dialog shown before deleting a questionnaire

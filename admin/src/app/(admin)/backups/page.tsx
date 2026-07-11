@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import { apiFetch, apiUpload, apiUrl } from "@/lib/api";
+import { ToggleSwitch } from "@/components/toggle-switch";
 import styles from "@/components/admin-page.module.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -15,14 +16,30 @@ interface Manifest {
   trigger: string;
   sizeBytes: number;
   mongoOk: boolean;
+  mongoIncluded?: boolean;
   lightragOk: boolean;
+  lightragIncluded?: boolean;
   neo4jOk: boolean;
+  neo4jIncluded?: boolean;
   keycloakOk: boolean;
   keycloakSkipped: boolean;
+  // Absent on backups taken before the Keycloak database dump existed —
+  // only the realm-config export (keycloakOk above) was ever captured then.
+  keycloakDbOk?: boolean;
+  keycloakDbSkipped?: boolean;
+  keycloakIncluded?: boolean;
   errors: number;
   errorLog: string;
   durationSeconds: number | null;
   note?: string;
+}
+
+/** Which services a backup/restore trigger included — omitted key = included. */
+interface ServiceSelection {
+  mongo?: boolean;
+  neo4j?: boolean;
+  lightrag?: boolean;
+  keycloak?: boolean;
 }
 
 interface StatusResponse {
@@ -84,16 +101,36 @@ function formatDate(iso: string): string {
   return isNaN(d.getTime()) ? "—" : d.toLocaleString();
 }
 
+type ComponentStatus = "ok" | "failed" | "skipped" | "excluded";
+
+function componentStatus(
+  included: boolean | undefined,
+  ok: boolean,
+  skipped?: boolean
+): ComponentStatus {
+  if (included === false) return "excluded";
+  if (skipped) return "skipped";
+  return ok ? "ok" : "failed";
+}
+
 // Component names (Mongo, LightRAG, Neo4j, Keycloak) are product/technical
 // names and are not translated.
-function componentBadges(m: Manifest) {
-  const items: { label: string; ok: boolean | null }[] = [
-    { label: "Mongo", ok: m.mongoOk },
-    { label: "LightRAG", ok: m.lightragOk },
-    { label: "Neo4j", ok: m.neo4jOk },
-    { label: "Keycloak", ok: m.keycloakSkipped ? null : m.keycloakOk },
+function componentBadges(m: Manifest): { label: string; status: ComponentStatus }[] {
+  // keycloakDbOk/keycloakDbSkipped are absent on backups taken before the DB
+  // dump existed — fold in only when present, so older backups keep judging
+  // "Keycloak" solely on the realm export they actually had.
+  const dbTracked = m.keycloakDbOk !== undefined;
+  const keycloakOk = m.keycloakOk && (!dbTracked || !!m.keycloakDbOk);
+  const keycloakSkipped = m.keycloakSkipped && (!dbTracked || !!m.keycloakDbSkipped);
+  return [
+    { label: "Mongo", status: componentStatus(m.mongoIncluded, m.mongoOk) },
+    { label: "LightRAG", status: componentStatus(m.lightragIncluded, m.lightragOk) },
+    { label: "Neo4j", status: componentStatus(m.neo4jIncluded, m.neo4jOk) },
+    {
+      label: "Keycloak",
+      status: componentStatus(m.keycloakIncluded, keycloakOk, keycloakSkipped),
+    },
   ];
-  return items;
 }
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -111,6 +148,7 @@ export default function BackupsPage() {
   const [uploading, setUploading] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState<Manifest | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Manifest | null>(null);
+  const [showTriggerOptions, setShowTriggerOptions] = useState(false);
   const [downloadingFile, setDownloadingFile] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -163,12 +201,16 @@ export default function BackupsPage() {
     };
   }, [job, refresh]);
 
-  async function handleTrigger() {
+  async function handleTrigger(services: ServiceSelection) {
     if (!token) return;
     setTriggering(true);
     setError("");
     try {
-      await apiFetch(`${BASE}/trigger`, token, { method: "POST" });
+      await apiFetch(`${BASE}/trigger`, token, {
+        method: "POST",
+        body: JSON.stringify({ services }),
+      });
+      setShowTriggerOptions(false);
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("triggerFailed"));
@@ -231,7 +273,7 @@ export default function BackupsPage() {
         </div>
         <button
           className={styles.addButton}
-          onClick={handleTrigger}
+          onClick={() => setShowTriggerOptions(true)}
           disabled={triggering || running}
         >
           {triggering ? t("startingEllipsis") : t("triggerNow")}
@@ -502,6 +544,14 @@ export default function BackupsPage() {
           }}
         />
       )}
+
+      {showTriggerOptions && (
+        <TriggerModal
+          submitting={triggering}
+          onClose={() => setShowTriggerOptions(false)}
+          onConfirm={handleTrigger}
+        />
+      )}
     </div>
   );
 }
@@ -520,26 +570,27 @@ function TimeAgo({ iso }: { iso: string }) {
   return <>{t("timeAgo.days", { count: Math.round(hours / 24) })}</>;
 }
 
+const STATUS_STYLE: Record<ComponentStatus, { bg: string; fg: string }> = {
+  ok: { bg: "#f0fdf4", fg: "#16a34a" },
+  failed: { bg: "#fef2f2", fg: "#dc2626" },
+  skipped: { bg: "#f1f5f9", fg: "#64748b" },
+  excluded: { bg: "#f1f5f9", fg: "#94a3b8" },
+};
+
 function ComponentBadges({ manifest }: { manifest: Manifest }) {
   const t = useTranslations("backups");
   return (
     <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-      {componentBadges(manifest).map(({ label, ok }) => (
+      {componentBadges(manifest).map(({ label, status }) => (
         <span
           key={label}
-          title={
-            ok === null
-              ? t("componentStatus.skipped", { label })
-              : ok
-                ? t("componentStatus.ok", { label })
-                : t("componentStatus.failed", { label })
-          }
+          title={t(`componentStatus.${status}`, { label })}
           style={{
             fontSize: "0.7rem",
             padding: "0.1rem 0.4rem",
             borderRadius: 4,
-            background: ok === null ? "#f1f5f9" : ok ? "#f0fdf4" : "#fef2f2",
-            color: ok === null ? "#64748b" : ok ? "#16a34a" : "#dc2626",
+            background: STATUS_STYLE[status].bg,
+            color: STATUS_STYLE[status].fg,
           }}
         >
           {label}
@@ -642,7 +693,7 @@ function RestoreModal({
   const [error, setError] = useState("");
 
   const failedComponents = componentBadges(manifest)
-    .filter((c) => c.ok === false)
+    .filter((c) => c.status === "failed")
     .map((c) => c.label);
   const hasWarnings = failedComponents.length > 0;
   const canSubmit =
@@ -713,29 +764,24 @@ function RestoreModal({
               strong: (chunks) => <strong>{chunks}</strong>,
               components: failedComponents.join(", "),
             })}
-            <label
+            <ToggleSwitch
               className={styles.checkboxLabel}
-              style={{ display: "flex", marginTop: "0.5rem" }}
-            >
-              <input
-                type="checkbox"
-                checked={acknowledgeWarnings}
-                onChange={(e) => setAcknowledgeWarnings(e.target.checked)}
-              />
-              {t("restoreAnyway")}
-            </label>
+              wrapperStyle={{ marginTop: "0.5rem" }}
+              checked={acknowledgeWarnings}
+              onChange={(e) => setAcknowledgeWarnings(e.target.checked)}
+              label={t("restoreAnyway")}
+            />
           </div>
         )}
 
         {manifest.source === "uploaded" && (
-          <label className={styles.checkboxLabel} style={{ display: "flex", marginBottom: "1rem" }}>
-            <input
-              type="checkbox"
-              checked={restoreKeycloak}
-              onChange={(e) => setRestoreKeycloak(e.target.checked)}
-            />
-            {t("reimportKeycloakLabel")}
-          </label>
+          <ToggleSwitch
+            className={styles.checkboxLabel}
+            wrapperStyle={{ marginBottom: "1rem" }}
+            checked={restoreKeycloak}
+            onChange={(e) => setRestoreKeycloak(e.target.checked)}
+            label={t("reimportKeycloakLabel")}
+          />
         )}
 
         <label
@@ -859,6 +905,82 @@ function DeleteModal({
             disabled={!canSubmit}
           >
             {submitting ? t("deletingEllipsis") : t("delete")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TriggerModal({
+  submitting,
+  onClose,
+  onConfirm,
+}: {
+  submitting: boolean;
+  onClose: () => void;
+  onConfirm: (services: ServiceSelection) => void;
+}) {
+  const t = useTranslations("backups");
+  // All included by default — matches every backup before this option existed.
+  const [mongo, setMongo] = useState(true);
+  const [neo4j, setNeo4j] = useState(true);
+  const [lightrag, setLightrag] = useState(true);
+  const [keycloak, setKeycloak] = useState(true);
+
+  const noneSelected = !mongo && !neo4j && !lightrag && !keycloak;
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <h2 className={styles.modalTitle}>{t("triggerOptionsTitle")}</h2>
+        <p style={{ marginBottom: "1rem", fontSize: "0.9rem" }} className={styles.muted}>
+          {t("triggerOptionsSubtitle")}
+        </p>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1rem" }}>
+          <ToggleSwitch
+            checked={mongo}
+            onChange={(e) => setMongo(e.target.checked)}
+            label="Mongo"
+          />
+          <ToggleSwitch
+            checked={neo4j}
+            onChange={(e) => setNeo4j(e.target.checked)}
+            label="Neo4j"
+          />
+          <ToggleSwitch
+            checked={lightrag}
+            onChange={(e) => setLightrag(e.target.checked)}
+            label="LightRAG"
+          />
+          <div>
+            <ToggleSwitch
+              checked={keycloak}
+              onChange={(e) => setKeycloak(e.target.checked)}
+              label="Keycloak"
+            />
+            <p
+              className={styles.muted}
+              style={{ fontSize: "0.75rem", margin: "0.15rem 0 0 3rem" }}
+            >
+              {t("keycloakToggleHint")}
+            </p>
+          </div>
+        </div>
+
+        {noneSelected && <p className={styles.error}>{t("noServicesSelected")}</p>}
+
+        <div className={styles.formActions}>
+          <button className={styles.cancelButton} onClick={onClose} disabled={submitting}>
+            {t("cancel")}
+          </button>
+          <button
+            className={styles.saveButton}
+            onClick={() => onConfirm({ mongo, neo4j, lightrag, keycloak })}
+            disabled={submitting || noneSelected}
+          >
+            {submitting ? t("startingEllipsis") : t("startBackup")}
           </button>
         </div>
       </div>

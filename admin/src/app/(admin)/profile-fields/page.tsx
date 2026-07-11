@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import { apiUrl } from "@/lib/api";
+import { ToggleSwitch } from "@/components/toggle-switch";
 import styles from "./page.module.css";
 
 const VALID_TYPES = ["text", "number", "date", "select"] as const;
@@ -281,8 +282,7 @@ export default function ProfileFieldsPage() {
 
           <div className={styles.formRow}>
             <label className={styles.formLabel}>{t("requiredColumn")}</label>
-            <input
-              type="checkbox"
+            <ToggleSwitch
               checked={form.required}
               onChange={(e) => setForm({ ...form, required: e.target.checked })}
             />

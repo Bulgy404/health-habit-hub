@@ -881,6 +881,40 @@ class AppLocalizationsEn extends AppLocalizations {
   String get couldNotPostComment => 'Could not post comment';
 
   @override
+  String get commentPendingReview =>
+      'Your comment was submitted for review and will appear once approved.';
+
+  @override
+  String get reportComment => 'Report';
+
+  @override
+  String get reportCommentTitle => 'Report comment?';
+
+  @override
+  String get reportCommentBody =>
+      'This comment will be hidden immediately and sent to the study team for review.';
+
+  @override
+  String get commentReported => 'Comment reported';
+
+  @override
+  String get couldNotReportComment => 'Could not report comment';
+
+  @override
+  String get commentsDisabledMessage =>
+      'Comments are turned off. Enable them in Settings to view and post.';
+
+  @override
+  String get communitySection => 'Community';
+
+  @override
+  String get communityComments => 'Community comments';
+
+  @override
+  String get communityCommentsSubtitle =>
+      'Turn off to hide comment posting and viewing on shared habits.';
+
+  @override
   String get likeTooltip => '';
 
   @override
@@ -980,7 +1014,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studyCodeContinueButton => 'Continue with code';
 
   @override
-  String get studyCodeSkipButton => 'Skip: join without a study code';
+  String get studyCodeSkipButton => 'Join without study code';
 
   @override
   String get adminQuestionnairesDeleteConfirmTitle => 'Delete questionnaire?';

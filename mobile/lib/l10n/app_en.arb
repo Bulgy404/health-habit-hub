@@ -1127,6 +1127,46 @@
   "@couldNotPostComment": {
     "description": "Snackbar when posting a comment fails"
   },
+  "commentPendingReview": "Your comment was submitted for review and will appear once approved.",
+  "@commentPendingReview": {
+    "description": "Snackbar shown instead of the comment when auto-moderation flagged it"
+  },
+  "reportComment": "Report",
+  "@reportComment": {
+    "description": "Tooltip/button label to report a comment"
+  },
+  "reportCommentTitle": "Report comment?",
+  "@reportCommentTitle": {
+    "description": "Title of the report-comment confirmation dialog"
+  },
+  "reportCommentBody": "This comment will be hidden immediately and sent to the study team for review.",
+  "@reportCommentBody": {
+    "description": "Body text of the report-comment confirmation dialog"
+  },
+  "commentReported": "Comment reported",
+  "@commentReported": {
+    "description": "Snackbar after successfully reporting a comment"
+  },
+  "couldNotReportComment": "Could not report comment",
+  "@couldNotReportComment": {
+    "description": "Snackbar when reporting a comment fails"
+  },
+  "commentsDisabledMessage": "Comments are turned off. Enable them in Settings to view and post.",
+  "@commentsDisabledMessage": {
+    "description": "Shown instead of the comment section when the user has disabled comments"
+  },
+  "communitySection": "Community",
+  "@communitySection": {
+    "description": "Section label above the community-comments toggle in Settings"
+  },
+  "communityComments": "Community comments",
+  "@communityComments": {
+    "description": "Settings row title for the comments on/off toggle"
+  },
+  "communityCommentsSubtitle": "Turn off to hide comment posting and viewing on shared habits.",
+  "@communityCommentsSubtitle": {
+    "description": "Settings row subtitle explaining the comments toggle"
+  },
   "likeTooltip": "",
   "@likeTooltip": {
     "description": "Unused — like annotation removed"
@@ -1247,7 +1287,7 @@
   "@studyCodeContinueButton": {
     "description": "Primary button to submit the entered study code"
   },
-  "studyCodeSkipButton": "Skip: join without a study code",
+  "studyCodeSkipButton": "Join without study code",
   "@studyCodeSkipButton": {
     "description": "Secondary button to skip entering a study code and join the default study"
   },

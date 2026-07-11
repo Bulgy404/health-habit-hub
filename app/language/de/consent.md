@@ -6,7 +6,7 @@ bindingLanguage: de
 
 # Einwilligungserklärung zur HabConnect-Studie
 
-> **Die Health-Habit-Hub App** ist die Studien-App der **HabConnect – from Habit to Health**-Studie der Technischen Universität Dresden.
+> **Die Health Habit Hub App** ist die Studien-App der **HabConnect – from Habit to Health**-Studie der Technischen Universität Dresden.
 
 ---
 
@@ -26,7 +26,7 @@ Bevor Sie die Details lesen, hier die wesentlichen Punkte zusammengefasst:
 
 Sehr geehrte Interessentin, sehr geehrter Interessent,
 
-herzlichen Dank für Ihr Interesse an unserer wissenschaftlichen Studie. Die **Health-Habit-Hub App** gehört zur **HabConnect – from Habit to Health**-Studie, die von der Technischen Universität Dresden, Fakultät Wirtschaftswissenschaften, Forschungsgruppe Digital Health geplant und durchgeführt wird. Die Studie wird von unserer Einrichtung selbst finanziert und wurde von einer unabhängigen Ethikkommission geprüft, die keine Einwände erhoben hat.
+herzlichen Dank für Ihr Interesse an unserer wissenschaftlichen Studie. Die **Health Habit Hub App** gehört zur **HabConnect – from Habit to Health**-Studie, die von der Technischen Universität Dresden, Fakultät Wirtschaftswissenschaften, Forschungsgruppe Digital Health geplant und durchgeführt wird. Die Studie wird von unserer Einrichtung selbst finanziert und wurde von einer unabhängigen Ethikkommission geprüft, die keine Einwände erhoben hat.
 
 Ihre Teilnahme ist freiwillig. Sie können jederzeit aufhören, ohne Gründe nennen zu müssen und ohne dass Ihnen dadurch Nachteile entstehen.
 
@@ -50,7 +50,7 @@ Das Ziel: wissenschaftlich fundierte, alltagstaugliche Empfehlungen entwickeln, 
 
 Es gibt keine feste Teilnahmedauer – Sie entscheiden selbst, wie lange und wie intensiv Sie mitmachen.
 
-**In der Health-Habit-Hub App** können Sie:
+**In der Health Habit Hub App** können Sie:
 
 - Ihre Alltagsgewohnheiten beschreiben und teilen (z. B. „Jeden Morgen mache ich nach dem Aufwachen 10 Kniebeugen.")
 - Personalisierte Empfehlungen für gesunde Gewohnheiten erhalten und angeben, ob Sie diese umgesetzt haben

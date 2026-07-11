@@ -6,7 +6,7 @@ bindingLanguage: de
 
 # 印刷情報
 
-## Health-Habit-Hub
+## Health Habit Hub
 
 ドレスデン工科大学
 経営経済学部

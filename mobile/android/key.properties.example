@@ -1,0 +1,4 @@
+storePassword=CHANGE_THIS_STORE_PASSWORD
+keyPassword=CHANGE_THIS_KEY_PASSWORD
+keyAlias=CHANGE_THIS_KEY_ALIAS
+storeFile=/absolute/path/to/release.jks

@@ -10,6 +10,7 @@ import { useActivityTypes } from "@/lib/useActivityTypes";
 import { CueConfigForm } from "@/components/cue-config-form";
 import { HabitEntryModeForm } from "@/components/habit-entry-mode-form";
 import { ActivityTypesManager } from "@/components/activity-types-manager";
+import { ToggleSwitch } from "@/components/toggle-switch";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -2403,14 +2404,12 @@ function StudyModal({
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <label className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={remindersEnabled}
-                      onChange={(e) => setRemindersEnabled(e.target.checked)}
-                    />
-                    {t("modal.fields.remindersLabel")}
-                  </label>
+                  <ToggleSwitch
+                    className={styles.checkboxLabel}
+                    checked={remindersEnabled}
+                    onChange={(e) => setRemindersEnabled(e.target.checked)}
+                    label={t("modal.fields.remindersLabel")}
+                  />
                   <span className={styles.hint}>{t("modal.fields.remindersHint")}</span>
                   {remindersEnabled && (
                     <div
@@ -2451,15 +2450,13 @@ function StudyModal({
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <label className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={endOfStudyEnabled}
-                      onChange={(e) => setEndOfStudyEnabled(e.target.checked)}
-                      disabled={!endDate}
-                    />
-                    {t("modal.fields.endOfStudyLabel")}
-                  </label>
+                  <ToggleSwitch
+                    className={styles.checkboxLabel}
+                    checked={endOfStudyEnabled}
+                    onChange={(e) => setEndOfStudyEnabled(e.target.checked)}
+                    disabled={!endDate}
+                    label={t("modal.fields.endOfStudyLabel")}
+                  />
                   <span className={styles.hint}>
                     {endDate
                       ? t("modal.fields.endOfStudyHintEnabled")

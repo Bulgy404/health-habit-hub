@@ -902,6 +902,40 @@ class AppLocalizationsFr extends AppLocalizations {
   String get couldNotPostComment => 'Impossible de publier le commentaire';
 
   @override
+  String get commentPendingReview =>
+      'Votre commentaire a été soumis pour examen et apparaîtra une fois approuvé.';
+
+  @override
+  String get reportComment => 'Signaler';
+
+  @override
+  String get reportCommentTitle => 'Signaler ce commentaire ?';
+
+  @override
+  String get reportCommentBody =>
+      'Ce commentaire sera immédiatement masqué et transmis à l\'équipe de l\'étude pour examen.';
+
+  @override
+  String get commentReported => 'Commentaire signalé';
+
+  @override
+  String get couldNotReportComment => 'Impossible de signaler le commentaire';
+
+  @override
+  String get commentsDisabledMessage =>
+      'Les commentaires sont désactivés. Activez-les dans les paramètres pour les afficher et en publier.';
+
+  @override
+  String get communitySection => 'Communauté';
+
+  @override
+  String get communityComments => 'Commentaires de la communauté';
+
+  @override
+  String get communityCommentsSubtitle =>
+      'Désactivez pour masquer la publication et la consultation des commentaires sur les habitudes partagées.';
+
+  @override
   String get likeTooltip => '';
 
   @override
@@ -1004,7 +1038,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get studyCodeContinueButton => 'Continuer avec le code';
 
   @override
-  String get studyCodeSkipButton => 'Passer : rejoindre sans code d\'étude';
+  String get studyCodeSkipButton => 'Rejoindre sans code d\'étude';
 
   @override
   String get adminQuestionnairesDeleteConfirmTitle =>

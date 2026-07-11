@@ -154,6 +154,7 @@ class _RestoreScreenState extends State<RestoreScreen> {
                 hintText: 'word1 word2 word3 …',
                 border: const OutlineInputBorder(),
                 errorText: _error,
+                errorMaxLines: 3,
               ),
             ),
             const SizedBox(height: 24),
