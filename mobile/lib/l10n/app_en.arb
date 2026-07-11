@@ -1239,6 +1239,10 @@
   "@studyCodeGenericError": {
     "description": "Fallback error when redeeming the study code fails for an unrecognised reason"
   },
+  "studyCodeSkipError": "Could not join without a code. Please check your connection and try again.",
+  "@studyCodeSkipError": {
+    "description": "Shown when skipping study-code entry (enrolling in the default study) fails"
+  },
   "studyCodeContinueButton": "Continue with code",
   "@studyCodeContinueButton": {
     "description": "Primary button to submit the entered study code"
@@ -1842,26 +1846,6 @@
   "continueButton": "Continue",
   "@continueButton": {
     "description": "Generic button to proceed to the next screen"
-  },
-  "behaviorWalking": "Walking",
-  "@behaviorWalking": {
-    "description": "Behavior catalog label: walking"
-  },
-  "behaviorLightJogging": "Light jogging",
-  "@behaviorLightJogging": {
-    "description": "Behavior catalog label: light jogging"
-  },
-  "behaviorCycling": "Cycling",
-  "@behaviorCycling": {
-    "description": "Behavior catalog label: cycling"
-  },
-  "behaviorStructuredCalisthenics": "Structured calisthenics",
-  "@behaviorStructuredCalisthenics": {
-    "description": "Behavior catalog label: structured calisthenics"
-  },
-  "behaviorYoga": "Yoga",
-  "@behaviorYoga": {
-    "description": "Behavior catalog label: yoga"
   },
   "describeYourHabitMinLength": "Please describe your habit (min. 3 characters)",
   "@describeYourHabitMinLength": {

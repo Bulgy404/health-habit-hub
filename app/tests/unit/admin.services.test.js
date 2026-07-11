@@ -12,6 +12,7 @@ import {
   getHabitsFeed,
   buildHabitsCSV,
   getParticipantHabits,
+  listHabitCategories,
 } from '../../services/adminHabitService.js';
 import { listInsights } from '../../services/adminInsightsService.js';
 import {
@@ -298,6 +299,78 @@ test('getHabitsFeed returns paginated results', async () => {
   assert.strictEqual(result.total, 2);
   assert.strictEqual(result.results.length, 2);
   assert.strictEqual(result.page, 1);
+});
+
+test('getHabitsFeed category filter is an exact match, not substring/fuzzy', async () => {
+  const db = makeDb({});
+  const neo4jRun = makeNeo4j([
+    {
+      id: 'h1',
+      participantId: 'p1',
+      habitName: 'Walk',
+      category: 'Physical activity',
+      studyId: null,
+      groupId: null,
+      donatedAt: '2026-03-02T00:00:00.000Z',
+    },
+    {
+      id: 'h2',
+      participantId: 'p2',
+      habitName: 'Meditate',
+      category: 'Physical activity extended', // must not match a substring/prefix query
+      studyId: null,
+      groupId: null,
+      donatedAt: '2026-03-01T00:00:00.000Z',
+    },
+  ]);
+  const result = await getHabitsFeed({
+    db,
+    neo4jRun,
+    category: 'Physical activity',
+    page: 1,
+    limit: 10,
+  });
+  assert.strictEqual(result.total, 1);
+  assert.strictEqual(result.results[0].id, 'h1');
+});
+
+test('listHabitCategories returns the distinct set of categories in use, sorted', async () => {
+  const neo4jRun = async (cypher, params) => {
+    assert.ok(cypher.includes('DISTINCT'));
+    assert.strictEqual(params.transKey, 'bcio_concept_label_en');
+    return [
+      { category: 'Other' },
+      { category: 'Physical activity' },
+      { category: 'Self-monitoring' },
+    ];
+  };
+  const categories = await listHabitCategories({ neo4jRun });
+  assert.deepStrictEqual(categories, [
+    'Other',
+    'Physical activity',
+    'Self-monitoring',
+  ]);
+});
+
+test('listHabitCategories requests the localised BCIO label property for a supported lang', async () => {
+  const neo4jRun = async (cypher, params) => {
+    assert.strictEqual(params.transKey, 'bcio_concept_label_de');
+    return [];
+  };
+  await listHabitCategories({ neo4jRun, lang: 'de' });
+});
+
+test('listHabitCategories falls back to english for an unsupported lang', async () => {
+  const neo4jRun = async (cypher, params) => {
+    assert.strictEqual(params.transKey, 'bcio_concept_label_en');
+    return [];
+  };
+  await listHabitCategories({ neo4jRun, lang: 'ja' });
+});
+
+test('listHabitCategories returns [] without neo4jRun', async () => {
+  const categories = await listHabitCategories({ neo4jRun: null });
+  assert.deepStrictEqual(categories, []);
 });
 
 test('getHabitsFeed clamps page and limit', async () => {

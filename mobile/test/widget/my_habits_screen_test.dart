@@ -116,7 +116,7 @@ void main() {
       config: const HabitConfig(
         cueCount: 'single',
         cueSource: 'high_quality',
-        behaviorOptions: ['walking'],
+        behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
         maxHabits: 1,
         srhiItems: [],
       ),
@@ -132,7 +132,7 @@ void main() {
       config: const HabitConfig(
         cueCount: 'multi',
         cueSource: 'high_quality',
-        behaviorOptions: ['walking'],
+        behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
         maxHabits: null,
         srhiItems: [],
       ),
@@ -148,7 +148,7 @@ void main() {
       config: const HabitConfig(
         cueCount: 'multi',
         cueSource: 'high_quality',
-        behaviorOptions: ['walking'],
+        behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
         maxHabits: null,
         srhiItems: [],
       ),
@@ -167,7 +167,7 @@ void main() {
       config: const HabitConfig(
         cueCount: 'multi',
         cueSource: 'high_quality',
-        behaviorOptions: ['walking'],
+        behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
         maxHabits: null,
         srhiItems: [],
       ),
@@ -193,7 +193,7 @@ void main() {
       config: const HabitConfig(
         cueCount: 'multi',
         cueSource: 'high_quality',
-        behaviorOptions: ['walking'],
+        behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
         maxHabits: null,
         srhiItems: [],
       ),

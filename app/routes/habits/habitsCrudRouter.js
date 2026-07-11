@@ -6,7 +6,7 @@ import {
 } from '../../services/habitDonationService.js';
 import { getEnrollment } from '../../services/enrollmentNeo4j.js';
 import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../../models/habitComment.js';
-import { translateHabit } from '../../utils/translate.js';
+import { translateHabit, translateTerm } from '../../utils/translate.js';
 import { getJobStatus } from '../../lib/habitQueue.js';
 import { getOrComputeStitch } from '../../lib/stitchCache.js';
 import { SUPPORTED_LANGUAGES } from '../../utils/constants.js';
@@ -464,6 +464,7 @@ export function createHabitsCrudRouter({
           getDb,
           apiBase,
           translate: translateHabit,
+          translateTerm,
           translateUrl,
         });
         return res.status(result.is_habit ? 201 : 200).json(result);

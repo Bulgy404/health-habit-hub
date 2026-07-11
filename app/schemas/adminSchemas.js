@@ -289,6 +289,8 @@ export const createActivityTypeSchema = z.object({
   label_en: shortString,
   label_de: z.string().max(200).trim().optional(),
   label_ja: z.string().max(200).trim().optional(),
+  label_fr: z.string().max(200).trim().optional(),
+  label_nl: z.string().max(200).trim().optional(),
   isDefault: z.boolean().optional(),
 });
 
@@ -297,6 +299,8 @@ export const updateActivityTypeSchema = z
     label_en: shortString.optional(),
     label_de: z.string().max(200).trim().optional(),
     label_ja: z.string().max(200).trim().optional(),
+    label_fr: z.string().max(200).trim().optional(),
+    label_nl: z.string().max(200).trim().optional(),
     isDefault: z.boolean().optional(),
   })
   .strict();

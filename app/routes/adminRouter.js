@@ -13,6 +13,7 @@ import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import {
   getHabitsFeed,
   buildHabitsCSV,
+  listHabitCategories,
 } from '../services/adminHabitService.js';
 import { listInsights, getInsight } from '../services/adminInsightsService.js';
 import { getSettings, updateSetting } from '../services/adminStatsService.js';
@@ -524,6 +525,22 @@ export function createAdminRouter({
     }
   });
 
+  // GET /api/v1/admin/habits/categories — distinct BCIO category labels
+  // currently in use, localised to ?lang, for the donations feed's category
+  // filter dropdown.
+  router.get('/habits/categories', async (req, res) => {
+    try {
+      const categories = await listHabitCategories({
+        neo4jRun: queryNeo4j,
+        lang: req.query.lang,
+      });
+      res.json({ categories });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // GET /api/v1/admin/habits/feed/export (must be before /habits/feed)
   router.get('/habits/feed/export', async (req, res) => {
     try {
@@ -545,6 +562,7 @@ export function createAdminRouter({
         category,
         from,
         to,
+        lang: req.query.lang,
       });
 
       res.set({
@@ -637,6 +655,7 @@ export function createAdminRouter({
         to,
         page: parseInt(page, 10) || 1,
         limit: parseInt(limit, 10) || 20,
+        lang: req.query.lang,
       });
       res.json(result);
     } catch (err) {

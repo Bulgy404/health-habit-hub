@@ -11,6 +11,8 @@ interface ActivityType {
   key: string;
   label_en: string;
   label_de?: string;
+  label_fr?: string;
+  label_nl?: string;
   isDefault: boolean;
 }
 
@@ -31,6 +33,8 @@ export function ActivityTypesManager({ token }: { token: string }) {
   const [newKey, setNewKey] = useState("");
   const [newLabelEn, setNewLabelEn] = useState("");
   const [newLabelDe, setNewLabelDe] = useState("");
+  const [newLabelFr, setNewLabelFr] = useState("");
+  const [newLabelNl, setNewLabelNl] = useState("");
   const [newIsDefault, setNewIsDefault] = useState(false);
   const [adding, setAdding] = useState(false);
 
@@ -97,6 +101,8 @@ export function ActivityTypesManager({ token }: { token: string }) {
           key,
           label_en,
           label_de: newLabelDe.trim() || undefined,
+          label_fr: newLabelFr.trim() || undefined,
+          label_nl: newLabelNl.trim() || undefined,
           isDefault: newIsDefault,
         }),
       })) as ActivityType;
@@ -104,6 +110,8 @@ export function ActivityTypesManager({ token }: { token: string }) {
       setNewKey("");
       setNewLabelEn("");
       setNewLabelDe("");
+      setNewLabelFr("");
+      setNewLabelNl("");
       setNewIsDefault(false);
       setError("");
     } catch (err) {
@@ -131,6 +139,8 @@ export function ActivityTypesManager({ token }: { token: string }) {
                   <th>{t("key")}</th>
                   <th>{t("english")}</th>
                   <th>{t("german")}</th>
+                  <th>{t("french")}</th>
+                  <th>{t("dutch")}</th>
                   <th>{t("default")}</th>
                   <th></th>
                 </tr>
@@ -143,6 +153,8 @@ export function ActivityTypesManager({ token }: { token: string }) {
                     </td>
                     <td>{item.label_en}</td>
                     <td>{item.label_de || <span className={styles.muted}>—</span>}</td>
+                    <td>{item.label_fr || <span className={styles.muted}>—</span>}</td>
+                    <td>{item.label_nl || <span className={styles.muted}>—</span>}</td>
                     <td>
                       <input
                         type="checkbox"
@@ -164,7 +176,7 @@ export function ActivityTypesManager({ token }: { token: string }) {
                 {types.length === 0 && (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={7}
                       className={styles.muted}
                       style={{ textAlign: "center", padding: "1.5rem" }}
                     >
@@ -202,6 +214,24 @@ export function ActivityTypesManager({ token }: { token: string }) {
                 placeholder="Schwimmen"
                 value={newLabelDe}
                 onChange={(e) => setNewLabelDe(e.target.value)}
+              />
+            </div>
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>{t("frenchOptional")}</span>
+              <input
+                className={styles.input}
+                placeholder="Natation"
+                value={newLabelFr}
+                onChange={(e) => setNewLabelFr(e.target.value)}
+              />
+            </div>
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>{t("dutchOptional")}</span>
+              <input
+                className={styles.input}
+                placeholder="Zwemmen"
+                value={newLabelNl}
+                onChange={(e) => setNewLabelNl(e.target.value)}
               />
             </div>
             <label

@@ -44,13 +44,23 @@ export function createActivityTypeRouter({ db } = {}) {
   // POST /api/v1/admin/activity-types
   router.post('/', validate(createActivityTypeSchema), async (req, res) => {
     try {
-      const { key, label_en, label_de, label_ja, isDefault } = req.body;
+      const {
+        key,
+        label_en,
+        label_de,
+        label_ja,
+        label_fr,
+        label_nl,
+        isDefault,
+      } = req.body;
       const database = await getDb();
       const result = await createActivityType(database, {
         key,
         label_en,
         label_de,
         label_ja,
+        label_fr,
+        label_nl,
         isDefault,
       });
       if (result.error)

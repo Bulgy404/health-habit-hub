@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { apiFetch, apiUrl, API_BASE_URL } from "@/lib/api";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import styles from "@/components/admin-page.module.css";
@@ -50,6 +50,7 @@ export default function DonationsPage() {
   const { token } = useAdminGuard();
   const t = useTranslations("donations");
   const tc = useTranslations("common");
+  const locale = useLocale();
   const [feed, setFeed] = useState<FeedResult>({
     total: 0,
     page: 1,
@@ -60,23 +61,36 @@ export default function DonationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [group, setGroup] = useState("");
-  const [categoryInput, setCategoryInput] = useState("");
   const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  // Debounce the category text box so typing doesn't trigger a fetch (and a
-  // full Neo4j re-scan) on every keystroke.
+  // The category filter is a dropdown of the actual BCIO labels in use
+  // (localised to the admin's own language), not free text — a substring/
+  // fuzzy search over category names was unreliable since admins couldn't
+  // know the exact wording the classifier assigned.
   useEffect(() => {
-    const handle = setTimeout(() => {
-      setPage(1);
-      setCategory(categoryInput);
-    }, 300);
-    return () => clearTimeout(handle);
-  }, [categoryInput]);
+    if (!token) return;
+    let cancelled = false;
+    apiFetch(apiUrl(`/admin/habits/categories?lang=${locale}`), token)
+      .then((data) => {
+        if (!cancelled) setCategories((data?.categories ?? []) as string[]);
+      })
+      .catch(() => {
+        // Non-fatal: the dropdown just falls back to "All categories".
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, locale]);
 
   function buildQuery(): string {
-    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(PAGE_SIZE),
+      lang: locale,
+    });
     if (group) params.set("group", group);
     if (category) params.set("category", category);
     if (dateFrom) params.set("dateFrom", dateFrom);
@@ -102,7 +116,7 @@ export default function DonationsPage() {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, page, group, category, dateFrom, dateTo]);
+  }, [token, page, group, category, dateFrom, dateTo, locale]);
 
   useEffect(() => {
     load();
@@ -111,7 +125,7 @@ export default function DonationsPage() {
   async function handleExport() {
     if (!token) return;
     try {
-      const params = new URLSearchParams({ format: "csv" });
+      const params = new URLSearchParams({ format: "csv", lang: locale });
       if (group) params.set("group", group);
       if (category) params.set("category", category);
       if (dateFrom) params.set("dateFrom", dateFrom);
@@ -168,12 +182,21 @@ export default function DonationsPage() {
         </div>
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>{t("categoryLabel")}</span>
-          <input
-            className={styles.input}
-            value={categoryInput}
-            onChange={(e) => setCategoryInput(e.target.value)}
-            placeholder={t("categoryPlaceholder")}
-          />
+          <select
+            className={styles.select}
+            value={category}
+            onChange={(e) => {
+              setPage(1);
+              setCategory(e.target.value);
+            }}
+          >
+            <option value="">{t("filterAll")}</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
         </div>
         <div className={styles.filterGroup}>
           <span className={styles.filterLabel}>{t("fromLabel")}</span>

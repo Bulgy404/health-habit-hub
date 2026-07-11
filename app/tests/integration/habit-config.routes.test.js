@@ -193,7 +193,12 @@ test('returns the enrollment cueConfig for an enrolled participant', async () =>
 
   assert.strictEqual(body.cueCount, 'multi');
   assert.strictEqual(body.cueSource, 'high_quality');
-  assert.deepStrictEqual(body.behaviorOptions, ['walking', 'meditation']);
+  // The mock DB has no activity_types catalog entries, so each key falls
+  // back to itself as the label (see habitConfigService's resolveBehaviorLabels).
+  assert.deepStrictEqual(body.behaviorOptions, [
+    { key: 'walking', label: 'walking' },
+    { key: 'meditation', label: 'meditation' },
+  ]);
   assert.strictEqual(body.maxHabits, 2);
 });
 

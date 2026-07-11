@@ -29,6 +29,26 @@ class SrhiItem {
       );
 }
 
+/// One selectable entry in the structured-activity catalog, already resolved
+/// to the app's current language server-side (falls back to English, then
+/// the raw key, if no translation exists for that activity type).
+class BehaviorOption {
+  /// Creates a [BehaviorOption].
+  const BehaviorOption({required this.key, required this.label});
+
+  /// Stable identifier submitted as `behaviorKey` when creating a habit.
+  final String key;
+
+  /// Display label in the app's current language.
+  final String label;
+
+  /// Deserialises from JSON.
+  factory BehaviorOption.fromJson(Map<String, dynamic> json) => BehaviorOption(
+        key: json['key'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+      );
+}
+
 /// Resolved cue configuration returned by GET /api/v1/me/habit-config.
 class HabitConfig {
   /// Creates a [HabitConfig].
@@ -56,8 +76,9 @@ class HabitConfig {
   /// Optional pool ID for pre-rated cues.
   final String? cuePoolId;
 
-  /// Behaviour keys the participant may choose from.
-  final List<String> behaviorOptions;
+  /// Structured activities the participant may choose from, localised to the
+  /// app's current language. Empty means free-text habit entry.
+  final List<BehaviorOption> behaviorOptions;
 
   /// Maximum allowed intentions; `null` = unlimited (public user).
   final int? maxHabits;
@@ -100,7 +121,9 @@ class HabitConfig {
         cueSource: json['cueSource'] as String? ?? 'high_quality',
         cuePoolId: json['cuePoolId'] as String?,
         behaviorOptions: (json['behaviorOptions'] as List<dynamic>?)
-                ?.cast<String>() ??
+                ?.cast<Map<String, dynamic>>()
+                .map(BehaviorOption.fromJson)
+                .toList() ??
             const [],
         maxHabits: json['maxHabits'] as int?,
         srhiItems: (json['srhiItems'] as List<dynamic>?)

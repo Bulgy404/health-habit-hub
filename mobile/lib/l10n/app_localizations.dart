@@ -1868,6 +1868,12 @@ abstract class AppLocalizations {
   /// **'Could not redeem code. Please check your connection.'**
   String get studyCodeGenericError;
 
+  /// Shown when skipping study-code entry (enrolling in the default study) fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not join without a code. Please check your connection and try again.'**
+  String get studyCodeSkipError;
+
   /// Primary button to submit the entered study code
   ///
   /// In en, this message translates to:
@@ -2647,36 +2653,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Continue'**
   String get continueButton;
-
-  /// Behavior catalog label: walking
-  ///
-  /// In en, this message translates to:
-  /// **'Walking'**
-  String get behaviorWalking;
-
-  /// Behavior catalog label: light jogging
-  ///
-  /// In en, this message translates to:
-  /// **'Light jogging'**
-  String get behaviorLightJogging;
-
-  /// Behavior catalog label: cycling
-  ///
-  /// In en, this message translates to:
-  /// **'Cycling'**
-  String get behaviorCycling;
-
-  /// Behavior catalog label: structured calisthenics
-  ///
-  /// In en, this message translates to:
-  /// **'Structured calisthenics'**
-  String get behaviorStructuredCalisthenics;
-
-  /// Behavior catalog label: yoga
-  ///
-  /// In en, this message translates to:
-  /// **'Yoga'**
-  String get behaviorYoga;
 
   /// Validation error when the free-text habit description is too short
   ///

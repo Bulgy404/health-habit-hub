@@ -7,6 +7,8 @@
  *   label_en   string     Required. English display label.
  *   label_de   string     Optional. German display label.
  *   label_ja   string     Optional. Japanese display label.
+ *   label_fr   string     Optional. French display label.
+ *   label_nl   string     Optional. Dutch display label.
  *   isDefault  boolean    Required. Whether included in the platform-wide default behavior list.
  *   createdAt  Date       Required.
  */
@@ -24,6 +26,8 @@ export const VALIDATOR = {
       label_en: { bsonType: 'string' },
       label_de: { bsonType: 'string' },
       label_ja: { bsonType: 'string' },
+      label_fr: { bsonType: 'string' },
+      label_nl: { bsonType: 'string' },
       isDefault: { bsonType: 'bool' },
       createdAt: { bsonType: 'date' },
     },
@@ -54,6 +58,8 @@ export const SEED_ACTIVITY_TYPES = [
     label_en: 'Walking',
     label_de: 'Spazieren gehen',
     label_ja: 'ウォーキング',
+    label_fr: 'Marche',
+    label_nl: 'Wandelen',
     isDefault: true,
   },
   {
@@ -61,6 +67,8 @@ export const SEED_ACTIVITY_TYPES = [
     label_en: 'Light jogging',
     label_de: 'Leichtes Joggen',
     label_ja: '軽いジョギング',
+    label_fr: 'Jogging léger',
+    label_nl: 'Licht joggen',
     isDefault: true,
   },
   {
@@ -68,6 +76,8 @@ export const SEED_ACTIVITY_TYPES = [
     label_en: 'Cycling',
     label_de: 'Radfahren',
     label_ja: 'サイクリング',
+    label_fr: 'Vélo',
+    label_nl: 'Fietsen',
     isDefault: true,
   },
   {
@@ -75,6 +85,8 @@ export const SEED_ACTIVITY_TYPES = [
     label_en: 'Structured calisthenics',
     label_de: 'Kalisteniktraining',
     label_ja: '自重トレーニング',
+    label_fr: 'Callisthénie structurée',
+    label_nl: 'Gestructureerde calisthenics',
     isDefault: true,
   },
   {
@@ -82,6 +94,8 @@ export const SEED_ACTIVITY_TYPES = [
     label_en: 'Yoga',
     label_de: 'Yoga',
     label_ja: 'ヨガ',
+    label_fr: 'Yoga',
+    label_nl: 'Yoga',
     isDefault: true,
   },
 ];

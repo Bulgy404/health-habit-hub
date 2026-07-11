@@ -198,6 +198,48 @@ export async function translateHabit(
   return _translateWithLLMOnly(sentence, sourceLang, targetLang, apiBase);
 }
 
+/**
+ * Translate a short controlled-vocabulary term (e.g. a BCIO concept label)
+ * directly via the LLM — no LibreTranslate draft, since a habit-sentence
+ * translation prompt would produce unnaturally verbose output for a
+ * two-or-three-word ontology term.
+ * Returns the translated term, or null if the LLM call fails.
+ */
+export async function translateTerm(term, sourceLang, targetLang, apiBase) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let res;
+    try {
+      res = await globalThis.fetch(`${apiBase}/api/v1/llm/translate-term`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          term,
+          source_language: sourceLang,
+          target_language: targetLang,
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (!res.ok) {
+      log.warn(
+        `[translate] LLM translate-term (${targetLang}) returned ${res.status} — no translation available`
+      );
+      return null;
+    }
+    const data = await res.json();
+    return data.translation || null;
+  } catch (err) {
+    log.warn(
+      `[translate] LLM translate-term (${targetLang}) error/timeout: ${err.message} — no translation available`
+    );
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 export async function translateText(text, from, to, endpoint, retries = 3) {

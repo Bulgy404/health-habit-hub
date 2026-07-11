@@ -27,8 +27,8 @@ interface CueConfig {
   cueCount: "single" | "multi";
   cueSource: "low_quality" | "high_quality" | "self_selected";
   cuePoolId: string | null;
-  /** null means "use platform defaults" (resolved when catalog loads) */
-  behaviorOptions: string[] | null;
+  /** Empty = free-text habit entry; non-empty = structured catalog picks. */
+  behaviorOptions: string[];
   maxHabits: number | null;
 }
 
@@ -1857,7 +1857,6 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
   const t = useTranslations("studies");
   const tc = useTranslations("common");
   const { activityTypes, loading: catalogLoading } = useActivityTypes(token);
-  const defaultKeys = activityTypes.filter((a) => a.isDefault).map((a) => a.key);
 
   const [groupStates, setGroupStates] = useState<
     Record<
@@ -1878,9 +1877,12 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
           cueCount: g.cueConfig?.cueCount ?? "multi",
           cueSource: g.cueConfig?.cueSource ?? "high_quality",
           cuePoolId: g.cueConfig?.cuePoolId ?? null,
-          // null means "platform defaults"; the shared form resolves it
-          // against the catalog for display
-          behaviorOptions: g.cueConfig?.behaviorOptions ?? null,
+          // A group with no saved cueConfig at all (e.g. the seeded default
+          // study) behaves as free-text habit entry at runtime
+          // (resolveHabitConfig falls back to PUBLIC_FREE_ENTRY) — default
+          // to an empty array here too, so the tab reflects that instead of
+          // showing every isDefault catalog entry pre-checked but unsaved.
+          behaviorOptions: g.cueConfig?.behaviorOptions ?? [],
           maxHabits: g.cueConfig?.maxHabits ?? null,
           // null = inherit study-level flag
           onboardingEnabled: g.onboardingEnabled ?? null,
@@ -1910,7 +1912,9 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
           cueCount: s.cueCount,
           cueSource: s.cueSource,
           cuePoolId: s.cuePoolId,
-          behaviorOptions: s.behaviorOptions ?? defaultKeys,
+          // Explicit: [] means free text, never silently substituted with
+          // the platform defaults.
+          behaviorOptions: s.behaviorOptions,
           maxHabits: s.maxHabits,
         }),
       });

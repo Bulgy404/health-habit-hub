@@ -979,6 +979,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Code kon niet worden verzilverd. Controleer je verbinding.';
 
   @override
+  String get studyCodeSkipError =>
+      'Deelnemen zonder code is mislukt. Controleer je verbinding en probeer het opnieuw.';
+
+  @override
   String get studyCodeContinueButton => 'Doorgaan met code';
 
   @override
@@ -1435,21 +1439,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get continueButton => 'Doorgaan';
-
-  @override
-  String get behaviorWalking => 'Wandelen';
-
-  @override
-  String get behaviorLightJogging => 'Licht joggen';
-
-  @override
-  String get behaviorCycling => 'Fietsen';
-
-  @override
-  String get behaviorStructuredCalisthenics => 'Gestructureerde calisthenics';
-
-  @override
-  String get behaviorYoga => 'Yoga';
 
   @override
   String get describeYourHabitMinLength =>

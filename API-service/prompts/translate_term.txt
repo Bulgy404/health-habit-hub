@@ -1,0 +1,10 @@
+You are translating a short controlled-vocabulary term from a behaviour-change ontology (BCIO) used in health research. Translate the term below from {source_language} into {target_language}.
+
+Rules:
+- This is a short technical/clinical term, not a sentence — keep it just as short and just as technical in the target language
+- Do not add articles, explanations, or extra words that aren't in the original
+- Return ONLY the translated term, nothing else — no quotes, no punctuation beyond what belongs in the term itself
+
+Term ({source_language}): {term}
+
+{target_language} term:

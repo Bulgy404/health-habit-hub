@@ -10,12 +10,18 @@ const studyCueConfig = {
   maxHabits: 1,
 };
 
+const defaultActivityTypes = [
+  { key: 'walking', label_en: 'Walking' },
+  { key: 'yoga', label_en: 'Yoga' },
+];
+
 function makeDb({
   enrollment = null,
   study = null,
   adminSettings = [],
   cuePools = [],
   appSettings = null,
+  activityTypes = defaultActivityTypes,
 } = {}) {
   return {
     collection(name) {
@@ -38,6 +44,10 @@ function makeDb({
       if (name === 'app_settings')
         return {
           findOne: async () => appSettings,
+        };
+      if (name === 'activity_types')
+        return {
+          find: () => ({ toArray: async () => activityTypes }),
         };
       throw new Error(`unexpected collection: ${name}`);
     },
@@ -69,7 +79,57 @@ test('resolveHabitConfig: study participant gets group cueConfig', async () => {
   assert.equal(config.cueCount, 'single');
   assert.equal(config.cueSource, 'high_quality');
   assert.equal(config.maxHabits, 1);
-  assert.deepEqual(config.behaviorOptions, ['walking', 'yoga']);
+  assert.deepEqual(config.behaviorOptions, [
+    { key: 'walking', label: 'Walking' },
+    { key: 'yoga', label: 'Yoga' },
+  ]);
+});
+
+test('resolveHabitConfig: behaviorOptions resolve to the requested language, falling back to English then the raw key', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      groups: [
+        {
+          id: groupId,
+          label: 'G1',
+          index: 1,
+          cueConfig: {
+            ...studyCueConfig,
+            behaviorOptions: ['walking', 'yoga', 'swimming'],
+          },
+        },
+      ],
+    },
+    activityTypes: [
+      { key: 'walking', label_en: 'Walking', label_de: 'Spazieren gehen' },
+      { key: 'yoga', label_en: 'Yoga' }, // no German translation yet
+      // 'swimming' isn't in the catalog at all (e.g. deleted after being assigned)
+    ],
+  });
+  const neo4jRun = async () => [
+    {
+      studyId: studyId.toString(),
+      groupId: groupId.toString(),
+      enrolledAt: null,
+      studyCodeUsed: null,
+    },
+  ];
+  const config = await resolveHabitConfig({
+    db,
+    userId: 'u1',
+    neo4jRun,
+    lang: 'de',
+  });
+  assert.deepEqual(config.behaviorOptions, [
+    { key: 'walking', label: 'Spazieren gehen' },
+    { key: 'yoga', label: 'Yoga' }, // falls back to English
+    { key: 'swimming', label: 'swimming' }, // falls back to the raw key
+  ]);
 });
 
 test('resolveHabitConfig: public user gets free-entry config', async () => {

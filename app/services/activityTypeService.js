@@ -38,6 +38,8 @@ export async function listActivityTypes(db) {
           label_en: 1,
           label_de: 1,
           label_ja: 1,
+          label_fr: 1,
+          label_nl: 1,
           isDefault: 1,
           createdAt: 1,
         },
@@ -50,11 +52,11 @@ export async function listActivityTypes(db) {
 /**
  * Create a new activity type.
  * @param {import('mongodb').Db} db
- * @param {{ key: string, label_en: string, label_de?: string, label_ja?: string, isDefault?: boolean }} data
+ * @param {{ key: string, label_en: string, label_de?: string, label_ja?: string, label_fr?: string, label_nl?: string, isDefault?: boolean }} data
  */
 export async function createActivityType(
   db,
-  { key, label_en, label_de, label_ja, isDefault }
+  { key, label_en, label_de, label_ja, label_fr, label_nl, isDefault }
 ) {
   if (typeof key !== 'string' || !key)
     throw new TypeError('key must be a non-empty string');
@@ -66,6 +68,8 @@ export async function createActivityType(
     label_en: String(label_en),
     label_de: label_de != null ? String(label_de) : '',
     label_ja: label_ja != null ? String(label_ja) : '',
+    label_fr: label_fr != null ? String(label_fr) : '',
+    label_nl: label_nl != null ? String(label_nl) : '',
     isDefault: Boolean(isDefault),
     createdAt: new Date(),
   };
@@ -75,6 +79,8 @@ export async function createActivityType(
     label_en: doc.label_en,
     label_de: doc.label_de,
     label_ja: doc.label_ja,
+    label_fr: doc.label_fr,
+    label_nl: doc.label_nl,
     isDefault: doc.isDefault,
   };
 }
@@ -83,7 +89,7 @@ export async function createActivityType(
  * Update an activity type (partial patch — only supplied fields change).
  * @param {import('mongodb').Db} db
  * @param {string} key
- * @param {{ label_en?: string, label_de?: string, label_ja?: string, isDefault?: boolean }} patch
+ * @param {{ label_en?: string, label_de?: string, label_ja?: string, label_fr?: string, label_nl?: string, isDefault?: boolean }} patch
  */
 export async function updateActivityType(db, key, patch) {
   if (typeof key !== 'string' || !key)
@@ -97,6 +103,10 @@ export async function updateActivityType(db, key, patch) {
     $set.label_de = patch.label_de != null ? String(patch.label_de) : '';
   if (patch.label_ja !== undefined)
     $set.label_ja = patch.label_ja != null ? String(patch.label_ja) : '';
+  if (patch.label_fr !== undefined)
+    $set.label_fr = patch.label_fr != null ? String(patch.label_fr) : '';
+  if (patch.label_nl !== undefined)
+    $set.label_nl = patch.label_nl != null ? String(patch.label_nl) : '';
   if (patch.isDefault !== undefined) $set.isDefault = Boolean(patch.isDefault);
   // Guard against an empty patch: MongoDB throws "'$set' is empty" if we pass
   // { $set: {} }. A no-op PATCH should just confirm the doc exists, not 500.
