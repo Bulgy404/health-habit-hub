@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl, API_BASE_URL } from "@/lib/api";
 import { useAdminGuard } from "@/lib/useAdminGuard";
+import { ToggleSwitch } from "@/components/toggle-switch";
 import styles from "@/components/admin-page.module.css";
 
 const GROUPS = ["G1", "G2", "G3", "G4"] as const;
@@ -482,8 +483,7 @@ export default function ParticipantsPage() {
             <thead>
               <tr>
                 <th>
-                  <input
-                    type="checkbox"
+                  <ToggleSwitch
                     checked={
                       participants.length > 0 &&
                       participants.every((p) => selectedIds.has(p.id))
@@ -505,8 +505,7 @@ export default function ParticipantsPage() {
               {participants.map((p) => (
                 <tr key={p.id}>
                   <td>
-                    <input
-                      type="checkbox"
+                    <ToggleSwitch
                       checked={selectedIds.has(p.id)}
                       onChange={() => toggleSelected(p.id)}
                       aria-label={t("selectParticipant", { username: p.username })}

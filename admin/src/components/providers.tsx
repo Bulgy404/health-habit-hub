@@ -3,6 +3,9 @@
 import { signIn, useSession } from "next-auth/react";
 import { SessionProvider } from "next-auth/react";
 import { useEffect } from "react";
+import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
+import { ThemeProvider } from "@mui/material/styles";
+import { muiTheme } from "@/lib/mui-theme";
 
 /**
  * Watches for a session token-refresh failure and re-triggers sign-in so the
@@ -22,8 +25,12 @@ function SessionGuard({ children }: { children: React.ReactNode }) {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
-      <SessionGuard>{children}</SessionGuard>
-    </SessionProvider>
+    <AppRouterCacheProvider options={{ key: "mui" }}>
+      <ThemeProvider theme={muiTheme}>
+        <SessionProvider>
+          <SessionGuard>{children}</SessionGuard>
+        </SessionProvider>
+      </ThemeProvider>
+    </AppRouterCacheProvider>
   );
 }

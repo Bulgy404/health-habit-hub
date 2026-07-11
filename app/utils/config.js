@@ -1,3 +1,12 @@
+// Refuse to boot a production process on the well-known 'password' default —
+// dev/test keep the fallback for ergonomics (docker-compose.local.yml sets
+// its own throwaway default; CI sets NEO4J_PASSWORD explicitly).
+if (!process.env.NEO4J_PASSWORD && process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'NEO4J_PASSWORD must be set in production — refusing to start with an insecure default credential.'
+  );
+}
+
 const config = {
   path: process.env.PATH || './',
   port: process.env.PORT || 3000,

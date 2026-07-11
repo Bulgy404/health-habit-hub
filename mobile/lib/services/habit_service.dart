@@ -151,6 +151,11 @@ class HabitService {
   }
 
   /// Posts an anonymous comment on habit [id]. Returns the created comment.
+  ///
+  /// The comment may come back with [HabitComment.approved] false if the
+  /// backend's auto-moderation flagged it — callers must not display it in
+  /// that case (see [_NodeDetailSheetState._postComment]), even locally on
+  /// the poster's own device.
   Future<HabitComment> addComment(String id, String text) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '$_baseUrl/habits/$id/comments',
@@ -159,6 +164,15 @@ class HabitService {
     return HabitComment.fromJson(
       response.data!['comment'] as Map<String, dynamic>,
     );
+  }
+
+  /// Reports comment [commentId] on habit [id] as objectionable.
+  ///
+  /// Immediately pulls it out of the public listing (server-side) and
+  /// re-queues it for admin/researcher review — it stays hidden from
+  /// everyone, including the original poster, until re-approved.
+  Future<void> reportComment(String id, String commentId) {
+    return _dio.post<void>('$_baseUrl/habits/$id/comments/$commentId/report');
   }
 }
 
@@ -169,13 +183,19 @@ class HabitComment {
     required this.id,
     required this.text,
     required this.createdAt,
+    this.approved = true,
   });
 
   /// Parses a comment from the API response.
+  ///
+  /// `approved` is absent from list-endpoint entries (already filtered
+  /// server-side to approved-only), so it defaults to true there; the
+  /// create-comment response always includes it explicitly.
   factory HabitComment.fromJson(Map<String, dynamic> json) => HabitComment(
         id: json['id']?.toString() ?? '',
         text: json['text']?.toString() ?? '',
         createdAt: json['createdAt']?.toString() ?? '',
+        approved: json['approved'] as bool? ?? true,
       );
 
   /// Neo4j Comment node id.
@@ -186,6 +206,9 @@ class HabitComment {
 
   /// ISO timestamp.
   final String createdAt;
+
+  /// Whether this comment has passed moderation and is publicly visible.
+  final bool approved;
 }
 
 /// Provides the singleton [HabitService] instance.

@@ -16,6 +16,10 @@
   "maxDeltaTimeSeconds": 43200,
   "permanentLockout": false,
   "passwordPolicy": "length(12) and notUsername(undefined) and notEmail(undefined)",
+  "eventsEnabled": true,
+  "eventsExpiration": 7776000,
+  "adminEventsEnabled": true,
+  "adminEventsDetailsEnabled": true,
   "roles": {
     "realm": [
       {

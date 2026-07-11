@@ -159,32 +159,6 @@
     "revokeFailed": "Échec de la révocation de la session",
     "totalPageInfo": "{total} au total · page {page} sur {totalPages}"
   },
-  "settings": {
-    "title": "Types d'activité",
-    "subtitle": "Le catalogue de comportements proposé aux participants à l'étude via les configurations de repères.",
-    "catalog": "Catalogue",
-    "catalogDesc": "Catalogue à l'échelle de la plateforme des types d'activité que les participants à l'étude peuvent choisir lors de la création d'une habitude. Les activités marquées comme <strong>par défaut</strong> sont présélectionnées pour les groupes d'étude sans restriction de comportement explicite. Les groupes d'étude peuvent restreindre ou étendre la liste via leur configuration de repères. Les utilisateurs publics (hors étude) saisissent leur habitude en texte libre et n'utilisent pas ce catalogue.",
-    "loadingEllipsis": "Chargement…",
-    "key": "Clé",
-    "englishLabel": "Libellé anglais",
-    "germanLabel": "Libellé allemand",
-    "japaneseLabel": "Libellé japonais",
-    "germanLabelOptional": "Libellé allemand (facultatif)",
-    "japaneseLabelOptional": "Libellé japonais (facultatif)",
-    "default": "Par défaut",
-    "toggleDefaultTitle": "Basculer comme valeur par défaut de la plateforme",
-    "deleteTitle": "Supprimer le type d'activité",
-    "keyPlaceholder": "p. ex. swimming",
-    "addActivity": "Ajouter une activité",
-    "addingEllipsis": "Ajout…",
-    "keyHint": "La clé doit être en minuscules avec des tirets bas (p. ex. <code>strength_training</code>). Elle est normalisée automatiquement à partir de votre saisie.",
-    "loadFailed": "Échec du chargement des types d'activité",
-    "updateFailed": "Échec de la mise à jour",
-    "deleteFailed": "Échec de la suppression",
-    "addFailed": "Échec de l'ajout",
-    "keyAndLabelRequired": "La clé et le libellé anglais sont obligatoires.",
-    "confirmDelete": "Supprimer le type d'activité « {key} » ? Cette action est irréversible."
-  },
   "backups": {
     "title": "Sauvegardes",
     "subtitle": "Consultez la dernière sauvegarde, déclenchez-en une à la demande ou restaurez à partir d'une archive existante ou importée. La restauration est destructive — une sauvegarde de sécurité est toujours effectuée au préalable.",
@@ -308,6 +282,11 @@
   "help": {
     "title": "Aide",
     "subtitle": "Conseils rapides pour chaque partie du portail admin.",
+    "contact": {
+      "title": "Contact & assistance",
+      "body": "Questions, bugs ou suggestions — contactez-nous directement :",
+      "repoBody": "Code source et suivi des problèmes sur GitHub :"
+    },
     "studies": {
       "title": "Études",
       "body": "Créez une étude, configurez ses groupes et bassins de repères, générez des codes d'invitation et assignez des questionnaires. Supprimer une étude nécessite de taper son nom exact pour confirmer — les participants inscrits bloquent la suppression jusqu'à réaffectation ou suppression."
@@ -732,15 +711,15 @@
     "maxHabitsHint": "Limite le nombre d'habitudes qu'un participant peut créer. Utilisez « 1 » pour les études conçues autour d'une seule habitude.",
     "habitEntryMode": "Saisie de l'habitude",
     "habitEntryModeHint": "Texte libre : les participants décrivent eux-mêmes leur habitude. Activités structurées : les participants choisissent dans un catalogue que vous définissez.",
-    "freeTextMode": "Texte libre",
-    "structuredMode": "Activités structurées",
-    "allowedBehaviorsHint": "Les types d'activité parmi lesquels les participants peuvent choisir. Gérez le catalogue dans <strong>Configuration → Types d'activité</strong>.",
+    "allowedBehaviorsHint": "Les types d'activité parmi lesquels les participants peuvent choisir. Gérez le catalogue ci-dessous.",
+    "emptySelectionWarning": "Aucune activité sélectionnée — les participants verront la saisie libre tant que vous n'en choisissez pas au moins une.",
     "noActivityTypes": "Aucun type d'activité dans le catalogue pour l'instant — ajoutez-en ci-dessous.",
-    "defaultTag": "(par défaut)"
+    "defaultTag": "(par défaut)",
+    "orphanedTag": "(supprimé du catalogue)"
   },
   "activityTypesManager": {
     "title": "Catalogue des types d'activité (partagé entre les études)",
-    "description": "Comportements parmi lesquels les participants peuvent choisir lorsqu'un groupe restreint ci-dessous ses comportements autorisés. Les valeurs par défaut sont présélectionnées pour les groupes sans restriction explicite. Les utilisateurs en saisie libre (public) n'utilisent pas ce catalogue.",
+    "description": "Activités parmi lesquelles les participants peuvent choisir lorsque la saisie de l'habitude d'une étude est réglée sur « Structurée » (onglet Détails). Les marquages « par défaut » sont uniquement informatifs. Les utilisateurs en saisie libre (public ou texte libre) n'utilisent pas ce catalogue.",
     "loadingEllipsis": "Chargement…",
     "key": "Clé",
     "english": "Anglais",
@@ -750,6 +729,8 @@
     "frenchOptional": "Français (facultatif)",
     "dutch": "Néerlandais",
     "dutchOptional": "Néerlandais (facultatif)",
+    "japanese": "Japonais",
+    "japaneseOptional": "Japonais (optionnel)",
     "default": "Par défaut",
     "delete": "Supprimer",
     "noActivityTypes": "Aucun type d'activité pour le moment.",
@@ -1017,7 +998,6 @@
     },
     "cueConfigTab": {
       "noGroups": "Aucun groupe défini. Ajoutez d'abord des groupes dans l'onglet Détails.",
-      "loadingCatalog": "Chargement du catalogue d'activités…",
       "onboardingLabel": "Intégration (ce groupe)",
       "inheritOption": "Hériter du paramètre de l'étude",
       "onOption": "Activé",
@@ -1077,5 +1057,25 @@
         "title": "Taux d'activité hebdomadaire"
       }
     }
+  },
+  "welcome": {
+    "steps": {
+      "0": {
+        "title": "Bienvenue sur le portail HHH",
+        "description": "C'est ici que vous gérez les études, les participants et les outils qui les accompagnent. Faisons un rapide tour d'horizon."
+      },
+      "1": {
+        "title": "Repérez-vous facilement",
+        "description": "Études, Participants, Questionnaires et Cue Pools se trouvent dans la barre latérale. Analytics et Insights vous aident à suivre la progression d'une étude en cours."
+      },
+      "2": {
+        "title": "Vous êtes prêt·e",
+        "description": "Rendez-vous sur la page Études pour créer votre première étude ou consulter une étude existante."
+      }
+    },
+    "skip": "Passer",
+    "back": "Retour",
+    "next": "Suivant",
+    "getStarted": "Commencer"
   }
 }

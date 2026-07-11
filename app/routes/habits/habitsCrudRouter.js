@@ -17,6 +17,7 @@ import {
   updateHabitAnnotation,
   addHabitComment,
   getHabitComments,
+  reportComment,
   getRelatedHabits,
 } from '../../db/habitQueries.js';
 import { moderateComment } from '../../services/commentModerationService.js';
@@ -373,6 +374,29 @@ export function createHabitsCrudRouter({
       });
 
       res.status(201).json({ habitId, comment: created });
+    } catch (err) {
+      log.error({ err: err }, 'unhandled route error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // POST /api/v1/habits/:id/comments/:commentId/report — App Store Guideline
+  // 1.2: lets a participant report an objectionable comment. Immediately
+  // pulls it out of the public listing (same effect as auto-moderation) and
+  // re-queues it in the admin moderation queue for a human decision — it
+  // never becomes visible again, to anyone, including the original poster,
+  // until a researcher/admin re-approves it.
+  router.post('/:id/comments/:commentId/report', async (req, res) => {
+    try {
+      const userId = req.user?.sub;
+      if (!userId || typeof userId !== 'string') {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      const found = await reportComment(queryNeo4j, req.params.commentId);
+      if (!found) {
+        return res.status(404).json({ error: 'Comment not found' });
+      }
+      res.json({ ok: true, commentId: req.params.commentId });
     } catch (err) {
       log.error({ err: err }, 'unhandled route error');
       res.status(500).json({ error: 'Internal server error' });

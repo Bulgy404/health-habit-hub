@@ -1232,8 +1232,21 @@ async function seedTestStudyCohort(db) {
 
 // ── Main ───────────────────────────────────────────────────────────────────
 
+function assertNotProduction() {
+  if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_PROD_SEED) {
+    console.error(
+      '✗ Refusing to run: NODE_ENV=production. This script creates a ' +
+        'known-password test account ("testuser"/"testpass1234") and fake ' +
+        'study/participant data — not something you want in a real deployment. ' +
+        'Set ALLOW_PROD_SEED=true if you really mean to run this against production.'
+    );
+    process.exit(1);
+  }
+}
+
 async function main() {
   console.log('=== Health Habit Hub — Local Seed Script ===');
+  assertNotProduction();
   try {
     await seedMongo();
     await seedSurveys();

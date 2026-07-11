@@ -67,3 +67,16 @@
   color: var(--color-text-muted);
   margin-left: 0.25rem;
 }
+
+.orphanedTag {
+  font-size: 0.7rem;
+  color: #b45309;
+  margin-left: 0.25rem;
+}
+
+.warningMsg {
+  font-size: 0.78rem;
+  color: #b45309;
+  line-height: 1.4;
+  margin-top: 0.25rem;
+}

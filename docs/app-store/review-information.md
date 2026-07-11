@@ -31,6 +31,31 @@ researcher-curated knowledge base.
   All functionality works if permission is denied (Guideline 4.5.4).
 - **No tracking:** no advertising or analytics SDKs; `NSPrivacyTracking` is
   `false` in the privacy manifest. No ATT prompt needed.
+- **Community comments (Guideline 1.2):** participants can leave short
+  anonymous comments on shared habits. Comments are auto-moderated
+  server-side before publication; any comment can be reported via the flag
+  icon, which hides it immediately and re-queues it for researcher/admin
+  review. Comments can be turned off entirely from Settings → Community
+  comments (this app's block-equivalent, since comments carry no visible
+  identity to block a specific poster from).
+
+## Privacy Policy URL (App Store Connect → App Information)
+
+The in-app privacy document is served dynamically per locale from the
+backend (`{appBaseUrl}/{locale}/privacy`), so there is no URL hardcoded in
+the app. For the **App Privacy Policy URL** field in App Store Connect, use
+the English version of the currently deployed backend:
+
+```
+https://<production-domain>/en/privacy
+```
+
+**Before submitting:** confirm `<production-domain>` — the value currently
+set in this checkout's `.env` (`DOMAIN=habit.felixreinsch.de`) looks like a
+personal/dev deployment, not necessarily the final production host. Resolve
+against whatever domain the App Store build's `API_BASE_URL` --dart-define
+actually points to, then verify the URL loads in a browser before pasting it
+into Connect.
 
 ## Demo access for review
 
@@ -39,7 +64,7 @@ researcher-curated knowledge base.
 | Demo flow | Launch app → "Get Started" → consent screen → auto-generated anonymous account (no credentials needed) |
 | Study code (for the enrollment step) | `HHH-REVW1` *(create before submission: Admin portal → Studies → Codes; set no expiry, generous redemption limit)* |
 | Alternative | Tap "Skip" on the study-code screen to join the default study |
-| Restore flow test | The 12-word passphrase shown during onboarding restores the account via "Restore existing account" |
+| Restore flow test | The 24-word passphrase shown during onboarding restores the account via "Restore existing account" |
 
 **Before each submission:** verify `HHH-REVW1` (or the current review code) is
 active: `POST /api/v1/enroll/redeem-code` must accept it. Generate via the
@@ -55,7 +80,9 @@ admin portal or `scripts/` seeding.
 > account deletion is under Settings → Delete account. Habit recommendations
 > are AI-generated and clearly labelled as not being medical advice. To review
 > the full study flow, use study code HHH-REVW1 on the enrollment screen (or
-> tap Skip). Push notifications are optional. Contact:
+> tap Skip). Push notifications are optional. Community comments on shared
+> habits are auto-moderated, reportable via a flag icon, and can be turned off
+> entirely under Settings → Community comments. Contact:
 > felix.reinsch@tu-dresden.de.
 
 ## App Privacy (nutrition labels) — declare in App Store Connect
@@ -82,3 +109,5 @@ Matches `ios/Runner/PrivacyInfo.xcprivacy` (which must stay in sync).
 | 1.4.1 medical disclaimer | ✅ | Recommendations screen banner |
 | 4.5.4 push optional | ✅ | Requested post-onboarding; app fully functional when denied |
 | 4.8 Sign in with Apple | n/a | First-party auth only |
+| 1.2 user-generated content | ✅ | Server-side auto-moderation; report button re-queues for admin review and hides immediately from everyone incl. reporter; Settings → Community comments toggle to disable the feature entirely |
+| Export compliance (`ITSAppUsesNonExemptEncryption`) | ✅ | Set to `false` in `ios/Runner/Info.plist` — standard/exempt encryption only (TLS, OS keychain, local passphrase encoding) |

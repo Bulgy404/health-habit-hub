@@ -249,6 +249,15 @@ function createMockNeo4jRun() {
       c.flagged = false;
       return [{ id: c.id }];
     }
+    if (cypher.includes('SET c.flagged = true, c.approved = false')) {
+      const c = comments.find((c) => c.id === params.commentId);
+      if (!c) return [];
+      c.flagged = true;
+      c.approved = false;
+      c.flagReason = c.flagReason ?? 'Reported by a participant';
+      c.reportCount = (c.reportCount ?? 0) + 1;
+      return [{ id: c.id }];
+    }
     if (cypher.includes('RETURN count(c) AS total')) {
       const flaggedOnly = cypher.includes('c.flagged = true');
       const filtered = flaggedOnly
@@ -739,4 +748,60 @@ test('DELETE /admin/comments/:id removes node and ownership mapping', async () =
   const list = await get('/api/v1/habits/habit-1/comments', makeToken());
   const listBody = await list.json();
   assert.ok(!listBody.comments.some((c) => c.id === comment.id));
+});
+
+// ── POST /:id/comments/:commentId/report ────────────────────────────────────
+
+test('POST /:id/comments/:commentId/report requires auth', async () => {
+  const res = await post(
+    '/api/v1/habits/habit-1/comments/some-id/report',
+    {}
+  );
+  assert.strictEqual(res.status, 401);
+});
+
+test('POST /:id/comments/:commentId/report returns 404 for an unknown comment', async () => {
+  const res = await post(
+    '/api/v1/habits/habit-1/comments/does-not-exist/report',
+    {},
+    makeToken()
+  );
+  assert.strictEqual(res.status, 404);
+});
+
+test('reporting a comment removes it from the public list and re-flags it for review', async () => {
+  const created = await post(
+    '/api/v1/habits/habit-1/comments',
+    { text: 'A perfectly normal comment that gets reported' },
+    makeToken()
+  );
+  const { comment } = await created.json();
+  assert.strictEqual(comment.approved, true);
+
+  // Visible before the report.
+  const before = await get('/api/v1/habits/habit-1/comments', makeToken());
+  const beforeBody = await before.json();
+  assert.ok(beforeBody.comments.some((c) => c.id === comment.id));
+
+  const report = await post(
+    `/api/v1/habits/habit-1/comments/${comment.id}/report`,
+    {},
+    makeToken()
+  );
+  assert.strictEqual(report.status, 200);
+  const reportBody = await report.json();
+  assert.strictEqual(reportBody.commentId, comment.id);
+
+  // Gone from the public list — including for the reporter's own device.
+  const after = await get('/api/v1/habits/habit-1/comments', makeToken());
+  const afterBody = await after.json();
+  assert.ok(!afterBody.comments.some((c) => c.id === comment.id));
+
+  // Back in the admin moderation queue awaiting re-approval.
+  const queue = await get(
+    '/api/v1/admin/comments?status=flagged',
+    makeToken(['admin'])
+  );
+  const queueBody = await queue.json();
+  assert.ok(queueBody.comments.some((c) => c.id === comment.id));
 });

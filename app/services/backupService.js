@@ -88,8 +88,14 @@ export function getCurrentBackupJob() {
   return call('/jobs/current');
 }
 
-export function triggerBackupNow() {
-  return call('/trigger', { method: 'POST' });
+/**
+ * @param {{ mongo?: boolean, neo4j?: boolean, lightrag?: boolean, keycloak?: boolean }} [services]
+ *   Which components to include in this backup — any omitted key defaults to
+ *   included (true). Omit entirely for "back up everything" (unchanged
+ *   default behavior).
+ */
+export function triggerBackupNow(services) {
+  return call('/trigger', { method: 'POST', body: services ? { services } : undefined });
 }
 
 export function deleteBackup(filename) {

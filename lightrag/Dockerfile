@@ -16,6 +16,13 @@ COPY knowledge/ /app/inputs/
 # Regenerate with: ./lightrag/scripts/export-data.sh
 COPY data/ /app/data/
 
+# Non-root: /app/data is a named volume (lightrag-data), so Docker
+# initializes it from this ownership on first creation — unlike a host bind
+# mount, this is safe to chown at build time.
+RUN groupadd --system lightrag && useradd --system --gid lightrag lightrag \
+    && chown -R lightrag:lightrag /app
+USER lightrag
+
 ENV PYTHONUNBUFFERED=1
 
 EXPOSE 9621

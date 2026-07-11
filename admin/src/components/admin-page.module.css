@@ -26,6 +26,15 @@
   font-size: 0.95rem;
 }
 
+.contactLink {
+  color: var(--color-primary-action);
+  text-decoration: underline;
+}
+
+.contactLink:hover {
+  color: var(--color-primary-action-hover);
+}
+
 .addButton {
   display: inline-flex;
   align-items: center;

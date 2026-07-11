@@ -155,7 +155,13 @@ import { createRecommendationWsServer } from './ws/recommendationWs.js';
 import { createTokenVerifier } from './middleware/auth.js';
 import { startNotificationScheduler } from './services/notificationService.js';
 import { makeGetDb } from './utils/getDb.js';
-import { connect as connectMongo, ensureIndexes } from './models/survey.js';
+import {
+  connect as connectMongo,
+  disconnect as disconnectMongo,
+  ensureIndexes,
+} from './models/survey.js';
+import { closeHabitQueue } from './lib/habitQueue.js';
+import { closeAllNeo4jDrivers } from './utils/neo4jDrivers.js';
 import { runSeedDefaultProfileFields } from './db/seedProfileFields.js';
 import { ensureNeo4jSchema } from './utils/neo4jSchema.js';
 import {
@@ -198,7 +204,7 @@ connectMongo()
 runSeedDefaultProfileFields();
 
 // Start scheduled notification dispatcher (runs every 60 s)
-startNotificationScheduler({
+const notificationTask = startNotificationScheduler({
   getDb: makeGetDb(),
   redisUrl: process.env.REDIS_URL,
 });
@@ -215,7 +221,10 @@ app.use(errorReportingMiddleware());
 
 const httpServer = createServer(app);
 const verifyToken = createTokenVerifier();
-const { broadcast } = createRecommendationWsServer(httpServer, { verifyToken });
+const { broadcast, close: closeRecommendationWs } = createRecommendationWsServer(
+  httpServer,
+  { verifyToken }
+);
 app.use('/api/internal', express.json(), createInternalRouter({ broadcast }));
 
 if (!process.env.API_SERVICE_SECRET) {
@@ -236,6 +245,45 @@ metricsApp.get('/metrics', async (_req, res) => {
   res.end(await register.metrics());
 });
 const metricsPort = process.env.METRICS_PORT ?? 9091;
-createServer(metricsApp).listen(metricsPort, () => {
+const metricsServer = createServer(metricsApp).listen(metricsPort, () => {
   log.info({ metricsPort }, 'Metrics server is running');
 });
+
+// Graceful shutdown — stop accepting new connections, let in-flight requests
+// drain, then close outbound connections (Mongo, Redis/BullMQ, WS) before
+// exiting. Without this, a rolling deploy's SIGTERM hard-kills the process
+// mid-request and leaves connection-pool sockets dangling.
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  log.info({ signal }, 'Shutting down gracefully');
+
+  const forceExitTimer = setTimeout(() => {
+    log.error('Graceful shutdown timed out — forcing exit');
+    process.exit(1);
+  }, 10_000);
+  forceExitTimer.unref();
+
+  try {
+    notificationTask?.stop();
+    closeRecommendationWs?.();
+    await Promise.all([
+      new Promise((resolve) => httpServer.close(resolve)),
+      new Promise((resolve) => metricsServer.close(resolve)),
+      closeHabitQueue(),
+      closeAllNeo4jDrivers(),
+      disconnectMongo(),
+    ]);
+    log.info('Shutdown complete');
+    clearTimeout(forceExitTimer);
+    process.exit(0);
+  } catch (err) {
+    log.error({ err }, 'Error during graceful shutdown');
+    clearTimeout(forceExitTimer);
+    process.exit(1);
+  }
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

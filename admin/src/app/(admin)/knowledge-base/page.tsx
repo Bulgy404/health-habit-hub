@@ -25,6 +25,12 @@ function fmtDate(iso: string): string {
 
 const API_BASE = apiUrl("/kb");
 
+// LightRAG's own WebUI (knowledge-graph visualizer) — internal-only in
+// production (no Traefik route), so this only resolves to something useful
+// when explicitly configured. Falls back to the local dev port mapping.
+const LIGHTRAG_WEBUI_URL =
+  process.env.NEXT_PUBLIC_LIGHTRAG_WEBUI_URL?.trim() || "http://localhost:9622";
+
 // ── Upload modal ──────────────────────────────────────────────────────────────
 
 function UploadModal({
@@ -223,7 +229,7 @@ export default function KnowledgeBasePage() {
         <div className={styles.headerActions}>
           <a
             className={styles.reindexButton}
-            href="http://localhost:9622"
+            href={LIGHTRAG_WEBUI_URL}
             target="_blank"
             rel="noopener noreferrer"
           >

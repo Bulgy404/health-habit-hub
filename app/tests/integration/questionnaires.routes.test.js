@@ -185,6 +185,7 @@ before(async () => {
       expectedIssuer: null,
       expectedAudience: null,
       db,
+      neo4jRun: async () => ({ records: [] }),
     })
   );
 

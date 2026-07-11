@@ -1,7 +1,11 @@
 db = db.getSiblingDB("surveyjs");
 
-db.createCollection("surveys");
-console.log("Collection 'surveys' created.");
+// Guarded rather than unconditional createCollection+insertMany: this file
+// only runs automatically on a genuinely fresh Mongo data volume (Docker's
+// /docker-entrypoint-initdb.d mechanism), but a manual re-run via `mongosh`
+// against an already-seeded database should skip rather than error
+// (createCollection on an existing collection) or duplicate documents.
+if (db.surveys.countDocuments() === 0) {
 db.surveys.insertMany([
 {
   "id": "1", 
@@ -1637,11 +1641,13 @@ db.surveys.insertMany([
 }
 
 ]);
+} else {
+  console.log("Collection 'surveys' already has data — skipping seed.");
+}
 
 console.log("Survey data inserted successfully. Survey count:", db.surveys.countDocuments());
 
-db.createCollection("results");
-console.log("Collection 'results' created.");
+if (db.results.countDocuments() === 0) {
 db.results.insertMany([
     {
       id: 1,
@@ -1806,6 +1812,9 @@ db.results.insertMany([
       }
     }
 ]);
+} else {
+  console.log("Collection 'results' already has data — skipping seed.");
+}
 
 console.log("Results data inserted successfully. Results count:", db.results.countDocuments());
 console.log("Initialization complete!");

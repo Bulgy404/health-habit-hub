@@ -1,6 +1,8 @@
 import express from 'express';
 import neo4j from 'neo4j-driver';
 import { rateLimit } from 'express-rate-limit';
+import { config } from '../utils/config.js';
+import { registerNeo4jDriver } from '../utils/neo4jDrivers.js';
 import { makeGetDb } from '../utils/getDb.js';
 import { setUserProfileProperties } from '../db/userQueries.js';
 import { logger } from '../utils/logger.js';
@@ -65,12 +67,10 @@ export function createUserProfileRouter({ db, neo4jRun } = {}) {
   const _neo4jDriver = neo4jRun
     ? null
     : neo4j.driver(
-        process.env.NEO4J_URI || 'bolt://neo4j:7687',
-        neo4j.auth.basic(
-          process.env.NEO4J_USER || 'neo4j',
-          process.env.NEO4J_PASSWORD || 'password'
-        )
+        config.neo4j.uri,
+        neo4j.auth.basic(config.neo4j.user, config.neo4j.password)
       );
+  registerNeo4jDriver(_neo4jDriver);
 
   async function queryNeo4j(cypher, params = {}) {
     if (neo4jRun) return neo4jRun(cypher, params);

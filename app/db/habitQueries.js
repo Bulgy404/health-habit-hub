@@ -411,6 +411,27 @@ export async function approveComment(queryNeo4j, commentId) {
 }
 
 /**
+ * Report a comment: pulls it out of the public listing immediately and
+ * re-queues it in the admin moderation queue ([[listAllComments]] with
+ * `status: 'flagged'`), same as an auto-flagged comment — a reviewer must
+ * approve it again before it becomes visible to anyone.
+ * @param {Function} queryNeo4j
+ * @param {string} commentId
+ * @returns {Promise<boolean>} true if a comment was found and flagged
+ */
+export async function reportComment(queryNeo4j, commentId) {
+  const rows = await queryNeo4j(
+    `MATCH (c:Comment {id: $commentId})
+     SET c.flagged = true, c.approved = false,
+         c.flagReason = coalesce(c.flagReason, 'Reported by a participant'),
+         c.reportCount = coalesce(c.reportCount, 0) + 1
+     RETURN c.id AS id`,
+    { commentId }
+  );
+  return rows.length > 0;
+}
+
+/**
  * Delete Comment nodes by id (GDPR account erasure path).
  * @param {Function} queryNeo4j
  * @param {string[]} commentIds
@@ -442,7 +463,7 @@ function _commentStatusFilter(status) {
  * via SKIP/LIMIT.
  * @param {Function} queryNeo4j
  * @param {{ page?: number, limit?: number, status?: 'all'|'flagged' }} [opts]
- * @returns {Promise<Array<{id, text, createdAt, habitId, habitSentence, flagged, approved, flagReason}>>}
+ * @returns {Promise<Array<{id, text, createdAt, habitId, habitSentence, flagged, approved, flagReason, reportCount}>>}
  */
 export async function listAllComments(
   queryNeo4j,
@@ -459,7 +480,8 @@ export async function listAllComments(
             coalesce(h.translationEN, h.sentence) AS habitSentence,
             coalesce(c.flagged, false) AS flagged,
             coalesce(c.approved, true) AS approved,
-            c.flagReason AS flagReason
+            c.flagReason AS flagReason,
+            coalesce(c.reportCount, 0) AS reportCount
      ORDER BY c.createdAt DESC
      SKIP toInteger($skip)
      LIMIT toInteger($limit)`,

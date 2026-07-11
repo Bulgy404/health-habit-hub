@@ -143,8 +143,24 @@ function parseRestoreResult(output) {
   };
 }
 
+/**
+ * Maps a { mongo, neo4j, lightrag, keycloak } services-selection object (any
+ * key may be omitted — omitted means "include") to the BACKUP_INCLUDE_* env
+ * vars backup.sh reads. Absent by default: every component included, same as
+ * before this option existed.
+ */
+function includeEnvFromServices(services) {
+  const include = (key) => (services?.[key] === false ? 'false' : 'true');
+  return {
+    BACKUP_INCLUDE_MONGO: include('mongo'),
+    BACKUP_INCLUDE_NEO4J: include('neo4j'),
+    BACKUP_INCLUDE_LIGHTRAG: include('lightrag'),
+    BACKUP_INCLUDE_KEYCLOAK: include('keycloak'),
+  };
+}
+
 /** Triggers a backup.sh run in the background. Throws if one is already running. */
-export function triggerBackup({ reason = 'manual' } = {}) {
+export function triggerBackup({ reason = 'manual', services } = {}) {
   if (isJobRunning()) {
     const err = new Error('A backup or restore is already running.');
     err.status = 409;
@@ -155,7 +171,7 @@ export function triggerBackup({ reason = 'manual' } = {}) {
   const { pid, donePromise } = runScript(
     '/backup.sh',
     [],
-    { BACKUP_TRIGGER: reason },
+    { BACKUP_TRIGGER: reason, ...includeEnvFromServices(services) },
     {
       onOutput: (output) => {
         const progress = extractLatestStep(output);
@@ -171,6 +187,7 @@ export function triggerBackup({ reason = 'manual' } = {}) {
     jobId,
     type: 'backup',
     reason,
+    services: services ?? null,
     phase: 'running',
     pid,
     startedAt: new Date().toISOString(),

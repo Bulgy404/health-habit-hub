@@ -54,6 +54,8 @@ function createMockDb({ enrollment } = {}) {
               return {
                 _id: enrollment.studyId,
                 recommenderEnabled: true,
+                habitEntryMode: 'structured',
+                structuredActivityKeys: ['walking', 'meditation'],
                 groups: [
                   {
                     id: enrollment.groupId,
@@ -124,7 +126,6 @@ const enrollmentFixture = {
     cueCount: 'multi',
     cueSource: 'high_quality',
     cuePoolId: null,
-    behaviorOptions: ['walking', 'meditation'],
     maxHabits: 2,
   },
 };

@@ -1,5 +1,7 @@
 import express from 'express';
 import neo4j from 'neo4j-driver';
+import { config } from '../utils/config.js';
+import { registerNeo4jDriver } from '../utils/neo4jDrivers.js';
 import { makeGetDb } from '../utils/getDb.js';
 import { createHabitsCrudRouter } from './habits/habitsCrudRouter.js';
 import { createHabitsStatsRouter } from './habits/habitsStatsRouter.js';
@@ -32,12 +34,10 @@ export function createHabitsRouter({
   const _neo4jDriver = neo4jRun
     ? null
     : neo4j.driver(
-        process.env.NEO4J_URI || 'bolt://neo4j:7687',
-        neo4j.auth.basic(
-          process.env.NEO4J_USER || 'neo4j',
-          process.env.NEO4J_PASSWORD || 'password'
-        )
+        config.neo4j.uri,
+        neo4j.auth.basic(config.neo4j.user, config.neo4j.password)
       );
+  registerNeo4jDriver(_neo4jDriver);
 
   // Returns Array<Object> — either from injected neo4jRun or reusing the shared driver
   async function queryNeo4j(cypher, params = {}) {

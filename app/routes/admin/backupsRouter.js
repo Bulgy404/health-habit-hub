@@ -7,7 +7,10 @@ import { makeGetDb } from '../../utils/getDb.js';
 import { requireRole } from '../../middleware/requireRole.js';
 import { ROLES } from '../../middleware/auth.js';
 import { validate } from '../../middleware/validate.js';
-import { restoreBackupSchema } from '../../schemas/adminSchemas.js';
+import {
+  restoreBackupSchema,
+  triggerBackupSchema,
+} from '../../schemas/adminSchemas.js';
 import { setMaintenanceMode } from '../../middleware/maintenanceMode.js';
 import {
   COLLECTION as RESTORE_TOKENS_COLLECTION,

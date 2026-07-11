@@ -6,7 +6,6 @@ import {
   COLLECTION as APP_SETTINGS,
   DEFAULTS as APP_SETTINGS_DEFAULTS,
 } from '../models/appSettings.js';
-import { DEFAULT_BEHAVIOR_KEYS } from '../utils/srhi.js';
 import { pickAssignedCues } from './cuePoolService.js';
 import { getEnrollment } from './enrollmentNeo4j.js';
 
@@ -48,15 +47,13 @@ async function resolveBehaviorLabels(db, keys, lang) {
 /**
  * Configuration for users without a study-group cueConfig (public app-store
  * users, or enrolled users whose group has no cue config yet): fully free
- * entry. The user types their own habit (no activity-type catalog, signalled
- * by empty behaviorOptions) and their own cues (self_selected, so no
- * pre-rated cue assignment).
+ * entry — the user types their own habit and their own cues (self_selected,
+ * so no pre-rated cue assignment).
  */
 const PUBLIC_FREE_ENTRY = {
   cueCount: 'multi',
   cueSource: 'self_selected',
   cuePoolId: null,
-  behaviorOptions: [],
   maxHabits: null,
 };
 
@@ -101,6 +98,10 @@ export async function resolveHabitConfig({
   // group-level value overrides it.
   let onboardingEnabled = true;
   let selfHabitCreationEnabled = true;
+  // Structured-activity keys are a study-wide setting (applies to every
+  // group in the study), not a per-group one — unlike cueConfig, which is
+  // still resolved per group below. Empty means free-text habit entry.
+  let behaviorKeys = [];
 
   if (enrollment?.studyId) {
     let studyOid;
@@ -117,6 +118,9 @@ export async function resolveHabitConfig({
         recommenderEnabled = study.recommenderEnabled !== false;
         onboardingEnabled = study.onboardingEnabled !== false;
         selfHabitCreationEnabled = study.selfHabitCreationEnabled !== false;
+        if (study.habitEntryMode === 'structured') {
+          behaviorKeys = study.structuredActivityKeys ?? [];
+        }
 
         // Resolve cueConfig and per-group flag overrides live from the group.
         if (enrollment.groupId) {
@@ -135,17 +139,15 @@ export async function resolveHabitConfig({
     }
   }
 
-  let cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits;
+  let cueCount, cueSource, cuePoolId, maxHabits;
 
   if (cueConfig) {
     cueCount = cueConfig.cueCount;
     cueSource = cueConfig.cueSource;
     cuePoolId = cueConfig.cuePoolId ?? null;
-    behaviorOptions = cueConfig.behaviorOptions ?? DEFAULT_BEHAVIOR_KEYS;
     maxHabits = cueConfig.maxHabits ?? null;
   } else {
-    ({ cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits } =
-      PUBLIC_FREE_ENTRY);
+    ({ cueCount, cueSource, cuePoolId, maxHabits } = PUBLIC_FREE_ENTRY);
   }
 
   const assignedCues = await pickAssignedCues({
@@ -159,7 +161,7 @@ export async function resolveHabitConfig({
   const appSettings = await readAppSettings(db);
   const resolvedBehaviorOptions = await resolveBehaviorLabels(
     db,
-    behaviorOptions,
+    behaviorKeys,
     lang
   );
 
