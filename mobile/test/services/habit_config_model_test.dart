@@ -7,7 +7,9 @@ void main() {
       final config = HabitConfig.fromJson(const {
         'cueCount': 'single',
         'cueSource': 'self_selected',
-        'behaviorOptions': ['walking'],
+        'behaviorOptions': [
+          {'key': 'walking', 'label': 'Walking'},
+        ],
         'guidedHabitCreationEnabled': false,
         'communityShareDefault': false,
       });
@@ -21,7 +23,9 @@ void main() {
       final config = HabitConfig.fromJson(const {
         'cueCount': 'multi',
         'cueSource': 'high_quality',
-        'behaviorOptions': ['walking'],
+        'behaviorOptions': [
+          {'key': 'walking', 'label': 'Walking'},
+        ],
       });
 
       expect(config.guidedHabitCreationEnabled, true);

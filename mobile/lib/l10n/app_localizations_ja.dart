@@ -935,6 +935,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get studyCodeGenericError => 'コードを利用できませんでした。接続を確認してください。';
 
   @override
+  String get studyCodeSkipError => 'コードなしでの参加に失敗しました。接続を確認してもう一度お試しください。';
+
+  @override
   String get studyCodeContinueButton => 'コードを使って続ける';
 
   @override
@@ -1363,21 +1366,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get continueButton => '次へ';
-
-  @override
-  String get behaviorWalking => 'ウォーキング';
-
-  @override
-  String get behaviorLightJogging => '軽いジョギング';
-
-  @override
-  String get behaviorCycling => 'サイクリング';
-
-  @override
-  String get behaviorStructuredCalisthenics => '自重トレーニング';
-
-  @override
-  String get behaviorYoga => 'ヨガ';
 
   @override
   String get describeYourHabitMinLength => '習慣を入力してください(3文字以上)';

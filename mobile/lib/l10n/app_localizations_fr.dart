@@ -997,6 +997,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible d\'utiliser ce code. Veuillez vérifier votre connexion.';
 
   @override
+  String get studyCodeSkipError =>
+      'Impossible de continuer sans code. Veuillez vérifier votre connexion et réessayer.';
+
+  @override
   String get studyCodeContinueButton => 'Continuer avec le code';
 
   @override
@@ -1460,21 +1464,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get continueButton => 'Continuer';
-
-  @override
-  String get behaviorWalking => 'Marche';
-
-  @override
-  String get behaviorLightJogging => 'Jogging léger';
-
-  @override
-  String get behaviorCycling => 'Vélo';
-
-  @override
-  String get behaviorStructuredCalisthenics => 'Callisthénie structurée';
-
-  @override
-  String get behaviorYoga => 'Yoga';
 
   @override
   String get describeYourHabitMinLength =>

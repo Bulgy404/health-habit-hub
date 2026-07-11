@@ -4,6 +4,7 @@
 // loading state on submit, skip navigation, and error display.
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,6 +16,28 @@ import 'package:hhh/screens/onboarding/study_code_screen.dart';
 
 // AppConfig.apiBaseUrl defaults to 'http://localhost:3000/api/v1' in tests.
 const _base = 'http://localhost:3000/api/v1';
+
+// flutter_secure_storage has no platform implementation in the plain widget
+// test environment, so calls on its MethodChannel never resolve and hang
+// pumpAndSettle forever — every test in this file exercises it via
+// _redirectIfAlreadyEnrolled's storage.read in initState, and the
+// skip-success path also does a storage.write.
+const _secureStorageChannel = MethodChannel(
+  'plugins.it_nomads.com/flutter_secure_storage',
+);
+
+void _mockSecureStorage() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(_secureStorageChannel, (call) async {
+    switch (call.method) {
+      case 'readAll':
+        return <String, String>{};
+      default:
+        return null;
+    }
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -66,6 +89,7 @@ void main() {
   setUp(() {
     dio = Dio();
     adapter = DioAdapter(dio: dio, matcher: const UrlRequestMatcher());
+    _mockSecureStorage();
   });
 
   testWidgets('shows "Do you have a study code?" heading', (tester) async {
@@ -173,4 +197,43 @@ void main() {
     expect(find.text('This code has already been used.'), findsOneWidget);
   });
 
+  testWidgets('tapping Skip enrols in the default study and navigates on success',
+      (tester) async {
+    adapter.onPost(
+      '$_base/onboarding/skip-code',
+      (server) => server.reply(200, <String, dynamic>{}),
+    );
+
+    await tester.pumpWidget(_buildSubject(dio));
+    await tester.pump();
+
+    await tester.tap(find.text('Skip: join without a study code'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Share'), findsOneWidget);
+  });
+
+  testWidgets(
+      'tapping Skip shows an error and stays on the screen when skip-code fails',
+      (tester) async {
+    adapter.onPost(
+      '$_base/onboarding/skip-code',
+      (server) => server.reply(503, <String, dynamic>{}),
+    );
+
+    await tester.pumpWidget(_buildSubject(dio));
+    await tester.pump();
+
+    await tester.tap(find.text('Skip: join without a study code'));
+    await tester.pumpAndSettle();
+
+    // Must not have silently proceeded into an unenrolled state.
+    expect(find.text('Share'), findsNothing);
+    expect(
+      find.text(
+        'Could not join without a code. Please check your connection and try again.',
+      ),
+      findsOneWidget,
+    );
+  });
 }

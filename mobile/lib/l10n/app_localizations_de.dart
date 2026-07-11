@@ -1000,6 +1000,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Code konnte nicht eingelöst werden. Bitte überprüfe deine Verbindung.';
 
   @override
+  String get studyCodeSkipError =>
+      'Beitritt ohne Code fehlgeschlagen. Bitte überprüfe deine Verbindung und versuche es erneut.';
+
+  @override
   String get studyCodeContinueButton => 'Mit Code fortfahren';
 
   @override
@@ -1461,21 +1465,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get continueButton => 'Weiter';
-
-  @override
-  String get behaviorWalking => 'Spazieren gehen';
-
-  @override
-  String get behaviorLightJogging => 'Leichtes Joggen';
-
-  @override
-  String get behaviorCycling => 'Radfahren';
-
-  @override
-  String get behaviorStructuredCalisthenics => 'Kalisteniktraining';
-
-  @override
-  String get behaviorYoga => 'Yoga';
 
   @override
   String get describeYourHabitMinLength =>

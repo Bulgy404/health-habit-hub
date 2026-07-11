@@ -1,6 +1,6 @@
 import { Queue, Worker, Job } from 'bullmq';
 import { shareHabit } from '../services/habitDonationService.js';
-import { translateHabit } from '../utils/translate.js';
+import { translateHabit, translateTerm } from '../utils/translate.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'habitQueue' });
@@ -93,6 +93,7 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
         getDb,
         apiBase,
         translate: translateHabit,
+        translateTerm,
         translateUrl,
       });
 

@@ -22,6 +22,7 @@ from routers.refine_translation_lang import router as refine_translation_lang_ro
 from routers.retrieve import router as retrieve_router
 from routers.stitch_intention import router as stitch_intention_router
 from routers.translate_lang import router as translate_lang_router
+from routers.translate_term import router as translate_term_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -35,6 +36,7 @@ app.include_router(extract_habits_router, prefix="/api/v1")
 app.include_router(extract_profile_router, prefix="/api/v1")
 app.include_router(refine_translation_lang_router, prefix="/api/v1")
 app.include_router(translate_lang_router, prefix="/api/v1")
+app.include_router(translate_term_router, prefix="/api/v1")
 app.include_router(retrieve_router, prefix="/api/v1")
 app.include_router(recommend_router, prefix="/api/v1")
 app.include_router(stitch_intention_router, prefix="/api/v1")

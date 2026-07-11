@@ -134,7 +134,14 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
   }
 
   /// Calls POST /api/v1/onboarding/skip-code to enrol in the default study.
+  ///
+  /// Only marks onboarding complete and navigates on if the call actually
+  /// succeeds — this used to swallow the error and proceed regardless,
+  /// which left the participant permanently unenrolled server-side (nothing
+  /// re-attempts skip-code on a later launch, since this screen auto-skips
+  /// once [kStudyEnrolledKey] is set — see _redirectIfAlreadyEnrolled).
   Future<void> _onSkip() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -144,8 +151,12 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
       final dio = ref.read(dioProvider);
       await dio.post<void>('${AppConfig.apiBaseUrl}/onboarding/skip-code');
     } catch (_) {
-      // Silently ignore network errors for skip — enrolment in default study
-      // can be retried server-side.
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = l10n.studyCodeSkipError;
+      });
+      return;
     }
 
     const storage = FlutterSecureStorage();

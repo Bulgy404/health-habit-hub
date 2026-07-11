@@ -973,6 +973,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Could not redeem code. Please check your connection.';
 
   @override
+  String get studyCodeSkipError =>
+      'Could not join without a code. Please check your connection and try again.';
+
+  @override
   String get studyCodeContinueButton => 'Continue with code';
 
   @override
@@ -1423,21 +1427,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get continueButton => 'Continue';
-
-  @override
-  String get behaviorWalking => 'Walking';
-
-  @override
-  String get behaviorLightJogging => 'Light jogging';
-
-  @override
-  String get behaviorCycling => 'Cycling';
-
-  @override
-  String get behaviorStructuredCalisthenics => 'Structured calisthenics';
-
-  @override
-  String get behaviorYoga => 'Yoga';
 
   @override
   String get describeYourHabitMinLength =>

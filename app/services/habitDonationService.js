@@ -266,25 +266,85 @@ async function _writeContextNodes(uuid, contextPhrases, queryNeo4j) {
   }
 }
 
+// Languages the admin portal supports, for localised BCIO concept labels
+// (kept separate from the app's habit-translation languages — the admin
+// portal doesn't support ja, and mobile never displays BCIO concept labels,
+// so there's no reason to pay for a ja translation here).
+const ADMIN_BCIO_LANGS = ['de', 'fr', 'nl'];
+
 /**
  * Merge BCIOConcept nodes and their MAPS_TO relationships from Context nodes.
+ *
+ * BCIOConcept nodes are deduplicated across every habit ever donated (MERGE
+ * on bcio_concept_id), so the ontology is a small, mostly-stable set —
+ * translating a concept's label into the admin portal's languages is a
+ * one-time cost per genuinely new concept, not a per-donation one. Existing
+ * concepts are looked up first so already-translated ones are never
+ * re-translated (and never overwritten with `ON CREATE SET`).
+ *
  * @param {Array} mappings - Sanitised BCIO mapping objects
  * @param {Function} queryNeo4j
+ * @param {{ apiBase?: string, translateTerm?: Function }} [deps]
  * @returns {Promise<void>}
  */
-async function _writeBcioMappings(mappings, queryNeo4j) {
-  if (mappings.length > 0) {
-    await queryNeo4j(
-      `UNWIND $mappings AS m
-       MERGE (b:BCIOConcept {bcio_concept_id: m.bcio_concept_id})
-       ON CREATE SET b.bcio_concept_label = m.bcio_concept_label
-       WITH b, m
-       MERGE (c:Context {text: m.phrase, dimension: m.dimension})
-       MERGE (c)-[r:MAPS_TO {phrase: m.phrase, dimension: m.dimension}]->(b)
-       SET r.mapping_confidence = m.confidence`,
-      { mappings }
+async function _writeBcioMappings(mappings, queryNeo4j, deps = {}) {
+  if (mappings.length === 0) return;
+  const { apiBase, translateTerm } = deps;
+
+  const uniqueIds = [...new Set(mappings.map((m) => m.bcio_concept_id))];
+  const existingRows = await queryNeo4j(
+    `UNWIND $ids AS id
+     MATCH (b:BCIOConcept {bcio_concept_id: id})
+     RETURN b.bcio_concept_id AS id`,
+    { ids: uniqueIds }
+  );
+  const existingIds = new Set(existingRows.map((r) => r.id));
+
+  const newConcepts = [];
+  const seen = new Set();
+  for (const m of mappings) {
+    if (existingIds.has(m.bcio_concept_id) || seen.has(m.bcio_concept_id))
+      continue;
+    seen.add(m.bcio_concept_id);
+    newConcepts.push(m);
+  }
+
+  const labelsByConceptId = {};
+  if (newConcepts.length > 0 && apiBase && translateTerm) {
+    await Promise.all(
+      newConcepts.map(async (m) => {
+        const translated = await Promise.all(
+          ADMIN_BCIO_LANGS.map((lang) =>
+            translateTerm(m.bcio_concept_label, 'en', lang, apiBase)
+          )
+        );
+        labelsByConceptId[m.bcio_concept_id] = Object.fromEntries(
+          ADMIN_BCIO_LANGS.map((lang, i) => [lang, translated[i]])
+        );
+      })
     );
   }
+
+  const enrichedMappings = mappings.map((m) => ({
+    ...m,
+    bcio_concept_label_de: labelsByConceptId[m.bcio_concept_id]?.de ?? null,
+    bcio_concept_label_fr: labelsByConceptId[m.bcio_concept_id]?.fr ?? null,
+    bcio_concept_label_nl: labelsByConceptId[m.bcio_concept_id]?.nl ?? null,
+  }));
+
+  await queryNeo4j(
+    `UNWIND $mappings AS m
+     MERGE (b:BCIOConcept {bcio_concept_id: m.bcio_concept_id})
+     ON CREATE SET b.bcio_concept_label = m.bcio_concept_label,
+       b.bcio_concept_label_de = m.bcio_concept_label_de,
+       b.bcio_concept_label_fr = m.bcio_concept_label_fr,
+       b.bcio_concept_label_nl = m.bcio_concept_label_nl
+     WITH b, m
+     MERGE (c:Context {text: m.phrase, dimension: m.dimension})
+     MERGE (c)-[r:MAPS_TO {phrase: m.phrase, dimension: m.dimension}]->(b)
+     SET r.mapping_confidence = m.confidence`,
+    { mappings: enrichedMappings }
+  );
 }
 
 /** Write Habit node, Context nodes, and BCIOConcept nodes to Neo4j. */
@@ -308,7 +368,8 @@ async function writeToNeo4j(
     contextPhrases,
     mappings,
   },
-  queryNeo4j
+  queryNeo4j,
+  { apiBase, translateTerm } = {}
 ) {
   const createdAt = new Date().toISOString();
   await _createHabitNode(
@@ -333,7 +394,7 @@ async function writeToNeo4j(
     queryNeo4j
   );
   await _writeContextNodes(uuid, contextPhrases, queryNeo4j);
-  await _writeBcioMappings(mappings, queryNeo4j);
+  await _writeBcioMappings(mappings, queryNeo4j, { apiBase, translateTerm });
 }
 
 /**
@@ -442,6 +503,7 @@ export async function translateHabit(
  * @param {string} params.apiBase      - Base URL for the recommender/LLM API service
  * @param {Function} params.translate  - translate(sentence, src, tgt, base, url) => string|null
  * @param {string} params.translateUrl - LibreTranslate endpoint URL
+ * @param {Function} [params.translateTerm] - translateTerm(term, src, tgt, base) => string|null, used to localise new BCIO concept labels for the admin portal
  *
  * @returns {{ is_habit: boolean, uuid?: string, message: string }}
  */
@@ -459,6 +521,7 @@ export async function shareHabit({
   getDb,
   apiBase,
   translate,
+  translateTerm,
   translateUrl,
 }) {
   const classified = await classifyHabit(sentence, language, userID, apiBase);
@@ -512,7 +575,8 @@ export async function shareHabit({
       contextPhrases,
       mappings,
     },
-    queryNeo4j
+    queryNeo4j,
+    { apiBase, translateTerm }
   );
 
   await embedAndStoreHabit({

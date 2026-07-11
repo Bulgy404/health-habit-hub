@@ -1,11 +1,11 @@
 /// GitHub-style contribution/activity calendar graph.
 ///
-/// Renders weeks as columns (Sunday at the top of each column, like GitHub's
-/// own contribution graph and the `contributions_chart` package this mirrors:
-/// https://pub.dev/packages/contributions_chart), with month labels above and
-/// weekday labels on the left. Colour intensity scales with the count for
-/// that day; an all-zero grid (e.g. before any habit has been logged) still
-/// renders — every cell simply shows as "empty".
+/// Renders weeks as columns (Monday at the top of each column — unlike
+/// GitHub's own Sunday-start graph, chosen to match the ISO/European week
+/// convention), with month labels above and weekday labels on the left.
+/// Colour intensity scales with the count for that day; an all-zero grid
+/// (e.g. before any habit has been logged) still renders — every cell simply
+/// shows as "empty".
 ///
 /// Colours are theme-aware: the empty-cell colour and the intensity scale
 /// both derive from [ColorScheme]/[baseColor] so the graph reads correctly
@@ -153,12 +153,12 @@ class _ContributionGraphWidgetState extends State<ContributionGraphWidget> {
     DateTime today,
     int visibleWeeks,
   ) {
-    // Start on the Sunday on/before (today - weeks*7 + 1 days), so the grid
+    // Start on the Monday on/before (today - weeks*7 + 1 days), so the grid
     // always ends with the current, possibly-partial week.
     final daysBack = visibleWeeks * 7 - 1;
     final rangeStart = today.subtract(Duration(days: daysBack));
     final gridStart = rangeStart.subtract(
-      Duration(days: rangeStart.weekday % 7),
+      Duration(days: (rangeStart.weekday - DateTime.monday) % 7),
     );
 
     final resolvedMax =
@@ -207,11 +207,11 @@ class _ContributionGraphWidgetState extends State<ContributionGraphWidget> {
       return _monthAbbreviation(firstDayOfColumn, localeName);
     }
 
-    // Row 0 of each column is always a Sunday (see gridStart above). Label
+    // Row 0 of each column is always a Monday (see gridStart above). Label
     // Monday/Wednesday/Friday using the locale's short weekday name, instead
     // of the hardcoded English abbreviations used previously.
     String weekdayLabelFor(int row) {
-      if (row != 1 && row != 3 && row != 5) return '';
+      if (row != 0 && row != 2 && row != 4) return '';
       return _weekdayAbbreviation(row, localeName);
     }
 
@@ -316,7 +316,7 @@ const _kFallbackMonths = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
-const _kFallbackWeekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const _kFallbackWeekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 /// Locale-aware abbreviated month name, degrading to a hardcoded English
 /// fallback if intl's locale data hasn't been initialised (e.g. a widget
@@ -330,15 +330,15 @@ String _monthAbbreviation(DateTime date, String locale) {
   }
 }
 
-/// Locale-aware abbreviated weekday name for grid [row] (0 = Sunday), with
+/// Locale-aware abbreviated weekday name for grid [row] (0 = Monday), with
 /// the same fallback as [_monthAbbreviation].
 String _weekdayAbbreviation(int row, String locale) {
   try {
-    // 2023-01-01 was a Sunday; any Sunday-anchored week is a valid stand-in
+    // 2023-01-02 was a Monday; any Monday-anchored week is a valid stand-in
     // reference date for resolving the locale's weekday name for this row.
     return DateFormat.E(
       locale,
-    ).format(DateTime(2023, 1, 1).add(Duration(days: row)));
+    ).format(DateTime(2023, 1, 2).add(Duration(days: row)));
   } catch (_) {
     return _kFallbackWeekdays[row];
   }

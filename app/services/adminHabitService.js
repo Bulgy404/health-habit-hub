@@ -27,63 +27,16 @@ function toIso(v) {
   return String(v);
 }
 
-/** Levenshtein edit distance between two strings. */
-function levenshteinDistance(a, b) {
-  if (a === b) return 0;
-  if (a.length === 0) return b.length;
-  if (b.length === 0) return a.length;
-  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
-  for (let i = 1; i <= a.length; i++) {
-    const curr = [i];
-    for (let j = 1; j <= b.length; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
-    }
-    prev = curr;
-  }
-  return prev[b.length];
-}
+// Languages the admin portal supports, for localised BCIO concept labels
+// (see habitDonationService.js's ADMIN_BCIO_LANGS, where these are produced).
+const ADMIN_BCIO_LANGS = ['de', 'fr', 'nl'];
 
-function tokenize(str) {
-  return str
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .filter(Boolean);
-}
-
-/**
- * Score how well `category` matches a (lowercased, trimmed) search `needle`.
- * Lower is better; `null` means no match. Exact/prefix/substring hits rank
- * above fuzzy ones, so a typo like "hidration" still finds "Hydration" but
- * an exact "hydration" search keeps ranking first.
- */
-function fuzzyCategoryScore(category, needle) {
-  if (!needle) return 0;
-  const categoryLower = category.toLowerCase();
-  if (categoryLower === needle) return 0;
-  if (categoryLower.startsWith(needle)) return 1;
-  if (categoryLower.includes(needle)) return 2;
-
-  const categoryTokens = tokenize(categoryLower);
-  const needleTokens = tokenize(needle);
-  if (needleTokens.length === 0) return 0;
-
-  let distanceSum = 0;
-  for (const nt of needleTokens) {
-    let best = Infinity;
-    for (const ct of categoryTokens) {
-      if (ct.startsWith(nt) || ct.includes(nt)) {
-        best = 0;
-        break;
-      }
-      const threshold = nt.length <= 3 ? 1 : nt.length <= 6 ? 2 : 3;
-      const dist = levenshteinDistance(nt, ct);
-      if (dist <= threshold && dist < best) best = dist;
-    }
-    if (best === Infinity) return null;
-    distanceSum += best;
-  }
-  return 3 + distanceSum;
+/** Normalises a requested display language to one with a translated BCIO label, defaulting to 'en'. */
+function normalizeAdminLang(lang) {
+  const code = String(lang || '')
+    .slice(0, 2)
+    .toLowerCase();
+  return ADMIN_BCIO_LANGS.includes(code) ? code : 'en';
 }
 
 /**
@@ -92,11 +45,25 @@ function fuzzyCategoryScore(category, needle) {
  * resolved from the Mongo `studies` collection so the admin sees human labels
  * (e.g. "G1") rather than raw group ObjectIds.
  *
- * @param {{ db, neo4jRun, group?, category?, from?, to? }} deps
+ * @param {{ db, neo4jRun, group?, category?, from?, to?, lang?: string }} deps
  * @returns {Promise<Array<{id,participantId,habitName,category,group,studyId,donatedAt}>>}
  */
-async function fetchDonatedHabits({ db, neo4jRun, group, category, from, to }) {
+async function fetchDonatedHabits({
+  db,
+  neo4jRun,
+  group,
+  category,
+  from,
+  to,
+  lang,
+}) {
   if (!neo4jRun) return [];
+
+  const normalizedLang = normalizeAdminLang(lang);
+  // For 'en', $transKey resolves to a property that's never actually stored
+  // (the canonical English label lives on bcio_concept_label, unsuffixed),
+  // so the coalesce below falls straight through to it — no special-casing.
+  const transKey = `bcio_concept_label_${normalizedLang}`;
 
   const rows = await neo4jRun(
     `MATCH (u:User)-[d:DONATED]->(h:Habit)
@@ -105,13 +72,13 @@ async function fetchDonatedHabits({ db, neo4jRun, group, category, from, to }) {
      OPTIONAL MATCH (u)-[e:ENROLLED_IN]->(st:Study)
        WHERE h.studyId IS NOT NULL AND st.uuid = h.studyId
      WITH h, u, d,
-          head(collect(DISTINCT b.bcio_concept_label)) AS bcioLabel,
+          head(collect(DISTINCT coalesce(properties(b)[$transKey], b.bcio_concept_label))) AS bcioLabel,
           head(collect(DISTINCT e.groupId))            AS groupId
      RETURN h.uuid AS id, u.userID AS participantId, h.sentence AS habitName,
             coalesce(bcioLabel, 'Other') AS category, h.studyId AS studyId,
             groupId AS groupId, coalesce(d.at, h.created_at) AS donatedAt
      ORDER BY donatedAt DESC`,
-    {}
+    { transKey }
   );
 
   // Resolve group ObjectId → label per study.
@@ -167,17 +134,39 @@ async function fetchDonatedHabits({ db, neo4jRun, group, category, from, to }) {
     mapped = mapped.filter((r) => r.donatedAt && r.donatedAt <= toEnd);
   }
   if (category) {
-    const needle = category.trim().toLowerCase();
-    mapped = mapped
-      .map((r) => ({ row: r, score: fuzzyCategoryScore(r.category, needle) }))
-      .filter(({ score }) => score !== null)
-      .sort((a, b) => a.score - b.score) // stable: ties keep donatedAt DESC order
-      .map(({ row }) => row);
+    mapped = mapped.filter((r) => r.category === category);
   }
   if (group) {
     mapped = mapped.filter((r) => (r.group ?? '') === group);
   }
   return mapped;
+}
+
+/**
+ * Return the distinct set of BCIO category labels currently used by donated
+ * habits, localised to `lang`, sorted alphabetically. Backs the admin
+ * donations page's category filter dropdown — every value this returns is
+ * guaranteed to match what `fetchDonatedHabits`'s `category` filter expects,
+ * since both use the same coalesce-to-localised-label logic.
+ * @param {{ neo4jRun, lang?: string }} deps
+ * @returns {Promise<string[]>}
+ */
+export async function listHabitCategories({ neo4jRun, lang }) {
+  if (!neo4jRun) return [];
+  const normalizedLang = normalizeAdminLang(lang);
+  const transKey = `bcio_concept_label_${normalizedLang}`;
+
+  const rows = await neo4jRun(
+    `MATCH (u:User)-[:DONATED]->(h:Habit)
+     WHERE coalesce(h.is_habit, true) = true
+     OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(:Context)-[:MAPS_TO]->(b:BCIOConcept)
+     WITH h, head(collect(DISTINCT coalesce(properties(b)[$transKey], b.bcio_concept_label))) AS bcioLabel
+     WITH DISTINCT coalesce(bcioLabel, 'Other') AS category
+     RETURN category
+     ORDER BY category`,
+    { transKey }
+  );
+  return rows.map((r) => r.category);
 }
 
 /**
@@ -211,7 +200,7 @@ export async function getParticipantHabits({ neo4jRun, userId }) {
 
 /**
  * Return a paginated habits-donation feed.
- * @param {{ db, neo4jRun, group?, category?, from?, to?, page?, limit? }} deps
+ * @param {{ db, neo4jRun, group?, category?, from?, to?, page?, limit?, lang?: string }} deps
  * @returns {Promise<{ total: number, page: number, limit: number, results: Array }>}
  */
 export async function getHabitsFeed({
@@ -223,6 +212,7 @@ export async function getHabitsFeed({
   to,
   page = 1,
   limit = 20,
+  lang,
 }) {
   const pageNum = Math.max(1, page);
   const limitNum = Math.min(100, Math.max(1, limit));
@@ -235,6 +225,7 @@ export async function getHabitsFeed({
     category,
     from,
     to,
+    lang,
   });
 
   return {
@@ -247,7 +238,7 @@ export async function getHabitsFeed({
 
 /**
  * Build a CSV string of all donated habits matching the given filters.
- * @param {{ db, neo4jRun, group?, category?, from?, to? }} deps
+ * @param {{ db, neo4jRun, group?, category?, from?, to?, lang?: string }} deps
  * @returns {Promise<string>}
  */
 export async function buildHabitsCSV({
@@ -257,6 +248,7 @@ export async function buildHabitsCSV({
   category,
   from,
   to,
+  lang,
 }) {
   const docs = await fetchDonatedHabits({
     db,
@@ -265,6 +257,7 @@ export async function buildHabitsCSV({
     category,
     from,
     to,
+    lang,
   });
 
   const header = 'participantId,habitName,category,group,donatedAt';
