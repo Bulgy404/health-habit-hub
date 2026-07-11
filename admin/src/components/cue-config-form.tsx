@@ -86,18 +86,23 @@ export function CueConfigForm({
       {showMaxHabits && (
         <div className={styles.formGroup}>
           <label className={styles.label}>{t("maxHabits")}</label>
-          <select
-            className={styles.select}
+          <input
+            type="number"
+            min={1}
+            step={1}
+            className={styles.input}
+            placeholder={t("unlimitedPublic")}
             value={value.maxHabits ?? ""}
-            onChange={(e) =>
+            onChange={(e) => {
+              const parsed = Number(e.target.value);
               onChange({
-                maxHabits: e.target.value ? Number(e.target.value) : null,
-              })
-            }
-          >
-            <option value="">{t("unlimitedPublic")}</option>
-            <option value="1">{t("oneStudyParticipant")}</option>
-          </select>
+                maxHabits:
+                  e.target.value && Number.isFinite(parsed) && parsed >= 1
+                    ? Math.floor(parsed)
+                    : null,
+              });
+            }}
+          />
           <span className={styles.hint}>{t("maxHabitsHint")}</span>
         </div>
       )}

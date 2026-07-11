@@ -1,38 +1,25 @@
 import { createTheme } from "@mui/material/styles";
 
 /**
- * MUI theme mapped onto the app's own CSS custom properties (see globals.css)
- * rather than hardcoded hex values, so MUI components stay in sync with the
- * existing light/dark toggle (which flips `[data-theme]`, not a React
- * palette.mode) without any extra wiring.
+ * MUI palette colors must be statically parseable (hex/rgb/hsl) because
+ * createTheme() derives shades and contrast text from them at import time —
+ * `var(...)` strings crash it with MUI error #9. So the palette carries the
+ * light-theme hex values from globals.css, and anything that must follow the
+ * app's [data-theme] light/dark toggle at runtime uses `var(...)` in
+ * CSS-output positions instead: the styleOverrides below and the sx prop in
+ * toggle-switch.tsx (which is what actually colors the switches).
  */
 export const muiTheme = createTheme({
   palette: {
     primary: {
-      main: "var(--color-primary-action)",
-      dark: "var(--color-primary-action-hover)",
+      main: "#2e8c00", // --color-primary-action (light)
+      dark: "#256f00", // --color-primary-action-hover (light)
       contrastText: "#ffffff",
     },
-    error: {
-      main: "var(--color-error)",
-    },
-    warning: {
-      main: "var(--color-warning)",
-    },
-    success: {
-      main: "var(--color-success)",
-    },
-    info: {
-      main: "var(--color-info)",
-    },
-    text: {
-      primary: "var(--color-text)",
-      secondary: "var(--color-text-muted)",
-    },
-    background: {
-      default: "var(--color-bg)",
-      paper: "var(--color-surface)",
-    },
+    error: { main: "#dc2626" }, // --color-error (light)
+    warning: { main: "#d97706" }, // --color-warning (light)
+    success: { main: "#16a34a" }, // --color-success (light)
+    info: { main: "#1d4ed8" }, // --color-info (light)
   },
   typography: {
     fontFamily:
@@ -40,5 +27,16 @@ export const muiTheme = createTheme({
   },
   shape: {
     borderRadius: 8,
+  },
+  components: {
+    MuiFormControlLabel: {
+      styleOverrides: {
+        // Labels inherit the app's themed text color instead of MUI's static
+        // palette, so they stay readable when [data-theme] flips to dark.
+        label: {
+          color: "var(--color-text)",
+        },
+      },
+    },
   },
 });

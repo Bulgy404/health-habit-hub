@@ -96,7 +96,7 @@ graph TD
 | **lightrag** | LightRAG 1.5.0 (Python) | Graph+vector knowledge base; builds entity graph from uploaded documents; exposes REST query API and built-in graph visualization UI | 9621 | `localhost:9622` | `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_API_BASE`, `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `LIGHTRAG_API_KEY` |
 | **knowledge-mcp** | FastMCP (Python) | MCP server wrapping LightRAG; exposes `search_knowledge` and `ingest_document` tools for AI agent use via SSE transport | 8002 | `localhost:8002` | `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
 | **keycloak** | Keycloak 26.5.5 | OIDC/OAuth2 identity provider; manages realms, users, roles | 8080 | `localhost:8080` (local only — prod has no published port, routed at `/auth` via Traefik) | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KC_DB`, `KC_HTTP_RELATIVE_PATH` (prod) |
-| **admin** | Next.js 14 (App Router), Recharts | Researcher/admin web panel: study management, merged Analytics/Insights dashboard with tab navigation (Recharts, study filter, KPI cards, SRHI/active-rate/dropout/questionnaire charts, participant table), questionnaire management, cue pools, knowledge base, notification campaigns, backups (progress bar + download), System health / Tools pages, settings | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER`, `NEXT_PUBLIC_GRAFANA_URL` |
+| **admin** | Next.js 15 (App Router), React 18, MUI (Material UI) v7 + Emotion, CSS Modules, Recharts | Researcher/admin web panel: study management, merged Analytics/Insights dashboard with tab navigation (Recharts, study filter, KPI cards, SRHI/active-rate/dropout/questionnaire charts, participant table), questionnaire management, cue pools, knowledge base, notification campaigns, backups (progress bar + download), System health / Tools pages, settings | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER`, `NEXT_PUBLIC_GRAFANA_URL` |
 | **neo4j** | Neo4j 5 | Graph database; stores habit graph with BCIO alignment | 7474 (HTTP), 7687 (Bolt) | `neo4j.localhost:7474` (local only — **internal-only in prod, no published port**; use `docker exec -it hhh-neo4j cypher-shell`, see [`DEPLOYMENT.md`](../DEPLOYMENT.md)) | `NEO4J_AUTH` (`user/password`) |
 | **mongo** | MongoDB (latest) | Document store; holds questionnaires, form responses, recommendations, user preferences | 27017 | Internal only | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`, `MONGO_INITDB_DATABASE` |
 | **mongo-express** | Mongo Express | MongoDB admin web UI (production only — not in docker-compose.local.yml) | 8081 | `https://<DOMAIN>/mongo` (prod only) | `ME_CONFIG_MONGODB_URL`, `ME_CONFIG_BASICAUTH_USERNAME`, `ME_CONFIG_BASICAUTH_PASSWORD` |
@@ -262,6 +262,16 @@ sequenceDiagram
 | `admin` | Platform administrators | All `researcher` permissions + full admin panel access including Knowledge Base and Settings |
 
 > **Note:** The `user` role was previously named `participant`. It was renamed across `app/middleware/roles.js`, `keycloak/hhh-realm.json`, and `scripts/seed-local.js` to align with Keycloak terminology and to avoid clashing with the domain term "participant" used in study admin contexts.
+
+### Admin Panel UI Stack
+
+The admin panel is a **Next.js 15** (App Router) / **React 18** application written in TypeScript. Its UI is built from three layers that coexist:
+
+- **MUI (Material UI) v7** with the **Emotion** styling engine — the component library (switches, form controls, etc.). MUI is wired in `admin/src/components/providers.tsx` via `AppRouterCacheProvider` (SSR-safe style injection) and a `ThemeProvider` fed by `admin/src/lib/mui-theme.ts`.
+- **CSS Modules** (`*.module.css`) — the primary styling mechanism for bespoke layout and components (e.g. `cue-config-form.module.css`), driven by CSS custom properties in `globals.css`.
+- **Recharts** — analytics/insights charts (see the Analytics page section below).
+
+**Theming note:** the app's light/dark toggle flips a `[data-theme]` attribute on `<html>` (stamped pre-hydration by an inline bootstrap script — hence `suppressHydrationWarning` on the `<html>` element in `layout.tsx`), *not* a React `palette.mode`. Because `createTheme()` derives shades and contrast text at import time and cannot parse `var(...)` strings (MUI error #9), `mui-theme.ts` uses static light-theme hex values for the palette, and defers anything that must follow the runtime toggle to `var(...)` in CSS-output positions (`styleOverrides` and component `sx` props). See `admin/src/__tests__/mui-theme.test.tsx` for the guard against reintroducing `var(...)` palette values.
 
 ### Admin Panel Auth
 

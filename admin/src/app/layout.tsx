@@ -15,7 +15,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const messages = await getMessages();
 
   return (
-    <html lang={locale}>
+    // suppressHydrationWarning: themeBootstrapScript stamps data-theme on
+    // <html> before hydration, so the client attribute set never matches the
+    // server-rendered markup — that's expected, not a bug.
+    <html lang={locale} suppressHydrationWarning>
       <head>
         {/* eslint-disable-next-line react/no-danger -- static script, no user input */}
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />

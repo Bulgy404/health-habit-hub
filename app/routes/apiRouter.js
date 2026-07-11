@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express from 'express';
+import neo4j from 'neo4j-driver';
 import swaggerUi from 'swagger-ui-express';
 import { createAuthMiddleware, ROLES } from '../middleware/auth.js';
 import { requireRole } from '../middleware/requireRole.js';
@@ -7,6 +8,8 @@ import { apiRateLimiter } from '../middleware/rateLimiter.js';
 import { sanitizeBody } from '../middleware/inputSanitizer.js';
 import { maintenanceModeGuard } from '../middleware/maintenanceMode.js';
 import { makeGetDb } from '../utils/getDb.js';
+import { config } from '../utils/config.js';
+import { registerNeo4jDriver } from '../utils/neo4jDrivers.js';
 import { createSurveyRouter } from './surveyRouter.js';
 import { createRecommendRouter } from './recommendRouter.js';
 import { createProfileRouter } from './profileRouter.js';
@@ -76,6 +79,37 @@ export function createApiRouter({
     expectedAudience,
   });
   const limiter = rateLimiter || apiRateLimiter;
+
+  // Shared Neo4j run helper for the subrouters that don't provision their own
+  // driver. The real app boot (app.js) constructs this router without a
+  // `neo4jRun`, so without this fallback every Neo4j-backed subrouter throws
+  // "neo4jRun is not a function" (e.g. POST /onboarding/skip-code). Tests
+  // inject a mock `neo4jRun`, in which case no real driver is created.
+  //
+  // habitsRouter is deliberately NOT switched to this helper below: it
+  // self-provisions a driver and treats an undefined `neo4jRun` as the signal
+  // to enable its BullMQ queue (see queueEnabled there), so it keeps receiving
+  // the raw `neo4jRun`.
+  const _neo4jDriver = neo4jRun
+    ? null
+    : neo4j.driver(
+        config.neo4j.uri,
+        neo4j.auth.basic(config.neo4j.user, config.neo4j.password)
+      );
+  if (_neo4jDriver) registerNeo4jDriver(_neo4jDriver);
+
+  // Returns Array<Object> — either from the injected neo4jRun or the shared
+  // driver above. Sessions are short-lived; the driver lives for the process.
+  async function runNeo4j(cypher, params = {}) {
+    if (neo4jRun) return neo4jRun(cypher, params);
+    const session = _neo4jDriver.session();
+    try {
+      const result = await session.run(cypher, params);
+      return result.records.map((r) => r.toObject());
+    } finally {
+      await session.close();
+    }
+  }
 
   /**
    * @swagger
@@ -177,7 +211,7 @@ export function createApiRouter({
   router.use(
     '/questionnaire-responses',
     apiRateLimiter,
-    createQuestionnaireResponsesServiceRouter({ db, neo4jRun })
+    createQuestionnaireResponsesServiceRouter({ db, neo4jRun: runNeo4j })
   );
 
   // All routes below require a valid JWT
@@ -195,7 +229,7 @@ export function createApiRouter({
   router.use(
     '/admin',
     requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
-    createAdminRouter({ db, neo4jRun, keycloak, tokenCardService })
+    createAdminRouter({ db, neo4jRun: runNeo4j, keycloak, tokenCardService })
   );
 
   // Surveys routes: require user, admin, or researcher role
@@ -229,14 +263,14 @@ export function createApiRouter({
   router.use(
     '/srhi',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createSrhiRouter({ db, neo4jRun })
+    createSrhiRouter({ db, neo4jRun: runNeo4j })
   );
 
   // Resolved habit config (user + admin + researcher)
   router.use(
     '/me/habit-config',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createHabitConfigRouter({ db, neo4jRun })
+    createHabitConfigRouter({ db, neo4jRun: runNeo4j })
   );
 
   // Cue pool management (admin + researcher only)
@@ -261,7 +295,7 @@ export function createApiRouter({
   router.use(
     '/admin/notifications',
     requireRole(ROLES.ADMIN, ROLES.RESEARCHER),
-    createNotificationCampaignRouter({ db, neo4jRun })
+    createNotificationCampaignRouter({ db, neo4jRun: runNeo4j })
   );
 
   // Recommend routes: require user, admin, or researcher role
@@ -289,7 +323,7 @@ export function createApiRouter({
   router.use(
     '/questionnaire-responses',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createQuestionnaireResponsesRouter({ db, neo4jRun })
+    createQuestionnaireResponsesRouter({ db, neo4jRun: runNeo4j })
   );
 
   // Recommendations routes: require user, admin, or researcher role
@@ -303,7 +337,7 @@ export function createApiRouter({
   router.use(
     '/users',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createUsersRouter({ db, keycloak, neo4jRun })
+    createUsersRouter({ db, keycloak, neo4jRun: runNeo4j })
   );
 
   // Knowledge base routes: require admin role only
@@ -317,7 +351,7 @@ export function createApiRouter({
   router.use(
     '/onboarding',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createStudyEnrollRouter({ db, neo4jRun })
+    createStudyEnrollRouter({ db, neo4jRun: runNeo4j })
   );
 
   // Study config for the current participant: require user, admin, or researcher role
@@ -331,14 +365,14 @@ export function createApiRouter({
   router.use(
     '/participant',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createParticipantRouter({ db, neo4jRun })
+    createParticipantRouter({ db, neo4jRun: runNeo4j })
   );
 
   // User profile: require user, admin, or researcher role
   router.use(
     '/user-profile',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createUserProfileRouter({ db, neo4jRun })
+    createUserProfileRouter({ db, neo4jRun: runNeo4j })
   );
 
   // Profile field definitions (public read): require user, admin, or researcher role

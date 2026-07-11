@@ -141,6 +141,7 @@
   border-radius: 6px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
+  color: var(--color-text);
   font-size: 0.8rem;
   cursor: pointer;
   font-weight: 500;

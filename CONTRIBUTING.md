@@ -203,6 +203,8 @@ These create a pre-release on GitHub and do **not** update the `latest` release 
 - Linter: **ESLint** — `cd app && npx eslint .`
 - Module system: ESM (`import`/`export`) in the backend; TypeScript in `admin/`
 
+**Admin UI (`admin/`):** Next.js 15 / React 18. Build shared UI from **MUI (Material UI) v7** components (Emotion engine), and use **CSS Modules** (`*.module.css`) for bespoke styling — both keyed to the CSS custom properties in `globals.css` so light/dark theming (the `[data-theme]` toggle) stays consistent. Don't put `var(...)` values in the MUI `createTheme()` palette (`mui-theme.ts`) — `createTheme` can't parse them; keep runtime-themed colors in `styleOverrides`/`sx` instead.
+
 ### Python (API-service, knowledge-mcp, scripts)
 
 - Formatter: **Ruff** (or Black) — `ruff format .`

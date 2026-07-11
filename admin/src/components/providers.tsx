@@ -27,7 +27,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AppRouterCacheProvider options={{ key: "mui" }}>
       <ThemeProvider theme={muiTheme}>
-        <SessionProvider>
+        {/*
+          Keycloak access tokens live ~5 min (realm default). Poll the session
+          a bit sooner so NextAuth's jwt callback re-issues the access token
+          before it expires, keeping session.accessToken valid for API calls
+          without a manual page reload. refetchOnWindowFocus additionally
+          recovers the moment the user returns to an idle tab.
+        */}
+        <SessionProvider refetchInterval={4 * 60} refetchOnWindowFocus>
           <SessionGuard>{children}</SessionGuard>
         </SessionProvider>
       </ThemeProvider>
