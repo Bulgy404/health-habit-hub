@@ -80,7 +80,7 @@ describe('CuePoolsPage', () => {
     const textInput = screen.getByPlaceholderText(/after dinner each evening/i);
     await user.type(textInput, 'Walk after lunch');
 
-    await user.click(screen.getByRole('checkbox', { name: /deutsch/i }));
+    await user.click(screen.getByRole('switch', { name: /deutsch/i }));
     await user.click(screen.getByRole('button', { name: /editing: deutsch/i }));
     await user.type(textInput, 'Nach dem Mittagessen spazieren');
 

@@ -83,7 +83,7 @@ describe('QuestionnairesPage', () => {
     await user.type(titleInput, 'Baseline Survey');
 
     // Enable German and switch to it
-    await user.click(screen.getByRole('checkbox', { name: /deutsch/i }));
+    await user.click(screen.getByRole('switch', { name: /deutsch/i }));
     await user.click(screen.getByRole('button', { name: /editing: deutsch/i }));
     await user.type(titleInput, 'Basisumfrage');
 
