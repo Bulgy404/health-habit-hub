@@ -52,11 +52,26 @@ export function ToggleSwitch({
   labelPlacement = "end",
   className,
   wrapperStyle,
+  "aria-label": ariaLabel,
+  slotProps,
   ...switchProps
 }: ToggleSwitchProps) {
+  // MUI spreads unknown props (incl. aria-label) onto the non-interactive
+  // root span; route it to the real <input> so assistive tech and
+  // label-based queries land on the element that actually toggles.
+  const mergedSlotProps = ariaLabel
+    ? { ...slotProps, input: { "aria-label": ariaLabel, ...slotProps?.input } }
+    : slotProps;
+
   if (!label) {
     return (
-      <Switch sx={switchSx} className={className} style={wrapperStyle} {...switchProps} />
+      <Switch
+        sx={switchSx}
+        className={className}
+        style={wrapperStyle}
+        slotProps={mergedSlotProps}
+        {...switchProps}
+      />
     );
   }
 
@@ -64,7 +79,7 @@ export function ToggleSwitch({
     <FormControlLabel
       className={className}
       style={wrapperStyle}
-      control={<Switch sx={switchSx} {...switchProps} />}
+      control={<Switch sx={switchSx} slotProps={mergedSlotProps} {...switchProps} />}
       label={label}
       labelPlacement={labelPlacement}
     />
