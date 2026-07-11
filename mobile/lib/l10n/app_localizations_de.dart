@@ -905,6 +905,40 @@ class AppLocalizationsDe extends AppLocalizations {
   String get couldNotPostComment => 'Kommentar konnte nicht gesendet werden';
 
   @override
+  String get commentPendingReview =>
+      'Dein Kommentar wurde zur Überprüfung eingereicht und erscheint nach der Freigabe.';
+
+  @override
+  String get reportComment => 'Melden';
+
+  @override
+  String get reportCommentTitle => 'Kommentar melden?';
+
+  @override
+  String get reportCommentBody =>
+      'Dieser Kommentar wird sofort ausgeblendet und dem Studienteam zur Überprüfung vorgelegt.';
+
+  @override
+  String get commentReported => 'Kommentar gemeldet';
+
+  @override
+  String get couldNotReportComment => 'Kommentar konnte nicht gemeldet werden';
+
+  @override
+  String get commentsDisabledMessage =>
+      'Kommentare sind deaktiviert. Aktiviere sie in den Einstellungen, um sie anzuzeigen und zu schreiben.';
+
+  @override
+  String get communitySection => 'Community';
+
+  @override
+  String get communityComments => 'Community-Kommentare';
+
+  @override
+  String get communityCommentsSubtitle =>
+      'Deaktivieren, um das Schreiben und Ansehen von Kommentaren zu geteilten Gewohnheiten auszublenden.';
+
+  @override
   String get likeTooltip => '';
 
   @override
@@ -1007,7 +1041,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get studyCodeContinueButton => 'Mit Code fortfahren';
 
   @override
-  String get studyCodeSkipButton => 'Überspringen: ohne Studiencode beitreten';
+  String get studyCodeSkipButton => 'Ohne Studiencode beitreten';
 
   @override
   String get adminQuestionnairesDeleteConfirmTitle => 'Fragebogen löschen?';

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { apiUrl } from "@/lib/api";
+import { ToggleSwitch } from "@/components/toggle-switch";
 import styles from "./page.module.css";
 import { useQuestionnairesData } from "./useQuestionnairesData";
 
@@ -256,14 +257,12 @@ function QuestionCard({
         )}
 
         <div className={styles.questionFooter}>
-          <label className={styles.requiredToggle}>
-            <input
-              type="checkbox"
-              checked={question.required}
-              onChange={(e) => updateField("required", e.target.checked)}
-            />
-            {t("required")}
-          </label>
+          <ToggleSwitch
+            className={styles.requiredToggle}
+            checked={question.required}
+            onChange={(e) => updateField("required", e.target.checked)}
+            label={t("required")}
+          />
           <button className={styles.removeQBtn} onClick={onRemove} type="button">
             {t("removeQuestion")}
           </button>
@@ -435,14 +434,12 @@ function QuestionnaireModal({
             <label className={styles.label}>{t("languagesLabel")}</label>
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
               {SUPPORTED_LANGS.map((lang) => (
-                <label key={lang} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                  <input
-                    type="checkbox"
-                    checked={languages.includes(lang)}
-                    onChange={() => toggleLanguage(lang)}
-                  />
-                  {LANG_LABELS[lang]}
-                </label>
+                <ToggleSwitch
+                  key={lang}
+                  checked={languages.includes(lang)}
+                  onChange={() => toggleLanguage(lang)}
+                  label={LANG_LABELS[lang]}
+                />
               ))}
             </div>
             <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>

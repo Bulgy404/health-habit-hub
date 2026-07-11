@@ -6,7 +6,7 @@ bindingLanguage: de
 
 # Impressum
 
-## Health-Habit-Hub
+## Health Habit Hub
 
 Technische Universität Dresden  
 Fakultät Wirtschaftswissenschaften  

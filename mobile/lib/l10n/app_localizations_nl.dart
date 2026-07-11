@@ -886,6 +886,40 @@ class AppLocalizationsNl extends AppLocalizations {
   String get couldNotPostComment => 'Kon reactie niet plaatsen';
 
   @override
+  String get commentPendingReview =>
+      'Je reactie is ingediend ter beoordeling en verschijnt zodra deze is goedgekeurd.';
+
+  @override
+  String get reportComment => 'Rapporteren';
+
+  @override
+  String get reportCommentTitle => 'Reactie rapporteren?';
+
+  @override
+  String get reportCommentBody =>
+      'Deze reactie wordt direct verborgen en voorgelegd aan het onderzoeksteam ter beoordeling.';
+
+  @override
+  String get commentReported => 'Reactie gerapporteerd';
+
+  @override
+  String get couldNotReportComment => 'Kon reactie niet rapporteren';
+
+  @override
+  String get commentsDisabledMessage =>
+      'Reacties zijn uitgeschakeld. Zet ze aan in Instellingen om te bekijken en te plaatsen.';
+
+  @override
+  String get communitySection => 'Community';
+
+  @override
+  String get communityComments => 'Community-reacties';
+
+  @override
+  String get communityCommentsSubtitle =>
+      'Zet uit om het plaatsen en bekijken van reacties op gedeelde gewoontes te verbergen.';
+
+  @override
   String get likeTooltip => '';
 
   @override
@@ -986,7 +1020,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get studyCodeContinueButton => 'Doorgaan met code';
 
   @override
-  String get studyCodeSkipButton => 'Overslaan: deelnemen zonder studiecode';
+  String get studyCodeSkipButton => 'Deelnemen zonder studiecode';
 
   @override
   String get adminQuestionnairesDeleteConfirmTitle =>

@@ -846,6 +846,38 @@ class AppLocalizationsJa extends AppLocalizations {
   String get couldNotPostComment => 'コメントを投稿できませんでした';
 
   @override
+  String get commentPendingReview => 'コメントは審査のために送信されました。承認され次第表示されます。';
+
+  @override
+  String get reportComment => '報告';
+
+  @override
+  String get reportCommentTitle => 'コメントを報告しますか?';
+
+  @override
+  String get reportCommentBody => 'このコメントは直ちに非表示になり、研究チームの審査に送られます。';
+
+  @override
+  String get commentReported => 'コメントを報告しました';
+
+  @override
+  String get couldNotReportComment => 'コメントを報告できませんでした';
+
+  @override
+  String get commentsDisabledMessage =>
+      'コメント機能はオフになっています。表示・投稿するには設定でオンにしてください。';
+
+  @override
+  String get communitySection => 'コミュニティ';
+
+  @override
+  String get communityComments => 'コミュニティコメント';
+
+  @override
+  String get communityCommentsSubtitle =>
+      'オフにすると、共有された習慣へのコメントの投稿と閲覧が非表示になります。';
+
+  @override
   String get likeTooltip => '';
 
   @override
@@ -941,7 +973,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get studyCodeContinueButton => 'コードを使って続ける';
 
   @override
-  String get studyCodeSkipButton => 'スキップ：研究コードなしで参加する';
+  String get studyCodeSkipButton => '研究コードなしで参加する';
 
   @override
   String get adminQuestionnairesDeleteConfirmTitle => 'アンケートを削除しますか?';

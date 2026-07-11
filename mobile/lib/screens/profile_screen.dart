@@ -749,6 +749,7 @@ class _StudyMembershipSectionState
                   hintText: 'HHH-XXXXX',
                   border: const OutlineInputBorder(),
                   errorText: errorText,
+                  errorMaxLines: 3,
                 ),
                 textCapitalization: TextCapitalization.characters,
                 inputFormatters: [

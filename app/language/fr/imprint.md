@@ -6,7 +6,7 @@ bindingLanguage: de
 
 # Mentions légales
 
-## Health-Habit-Hub
+## Health Habit Hub
 
 Technical University of Dresden
 Faculty of Business Administration and Economics

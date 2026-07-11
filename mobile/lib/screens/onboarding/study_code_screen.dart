@@ -172,15 +172,6 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.studyCodeAppBarTitle),
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _onSkip,
-            child: Text(
-              l10n.onboardingSkip,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -218,6 +209,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
                 hintText: 'HHH-XXXXX',
                 border: const OutlineInputBorder(),
                 errorText: _errorMessage,
+                errorMaxLines: 3,
               ),
               textCapitalization: TextCapitalization.characters,
               inputFormatters: [

@@ -6,7 +6,7 @@ bindingLanguage: de
 
 # Consent to Participate in the HabConnect Study
 
-> **The Health-Habit-Hub app** is the study app for the **HabConnect – from Habit to Health** study conducted by Technische Universität Dresden.
+> **The Health Habit Hub app** is the study app for the **HabConnect – from Habit to Health** study conducted by Technische Universität Dresden.
 
 > This is a convenience translation. The German version of this document is authoritative.
 
@@ -28,7 +28,7 @@ Before reading the full details, here is a quick summary:
 
 Dear prospective participant,
 
-Thank you for your interest in our research. The **Health-Habit-Hub app** is part of the **HabConnect – from Habit to Health** study, planned and conducted by the Digital Health Research Group, Faculty of Business and Economics, Technische Universität Dresden. The study is self-funded by our institution and has been reviewed by an independent ethics committee, which raised no objections.
+Thank you for your interest in our research. The **Health Habit Hub app** is part of the **HabConnect – from Habit to Health** study, planned and conducted by the Digital Health Research Group, Faculty of Business and Economics, Technische Universität Dresden. The study is self-funded by our institution and has been reviewed by an independent ethics committee, which raised no objections.
 
 Your participation is voluntary. You can stop at any time without giving a reason and without any disadvantage to you.
 
@@ -52,7 +52,7 @@ The goal is to develop scientifically sound, practical recommendations that help
 
 There is no fixed participation period — you decide how long and how intensively you take part.
 
-**In the Health-Habit-Hub app** you can:
+**In the Health Habit Hub app** you can:
 
 - Describe and share your everyday habits (e.g. "Every morning after waking up, I brush my teeth and do 10 squats.")
 - Receive personalised recommendations for healthy habits and log whether you have followed them

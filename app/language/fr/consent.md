@@ -6,7 +6,7 @@ bindingLanguage: de
 
 # Consentement à la participation à l'étude HabConnect
 
-> **L'application Health-Habit-Hub** est l'application d'étude de l'étude **HabConnect – from Habit to Health**, menée par la Technische Universität Dresden.
+> **L'application Health Habit Hub** est l'application d'étude de l'étude **HabConnect – from Habit to Health**, menée par la Technische Universität Dresden.
 
 > Ceci est une traduction de courtoisie. La version allemande du présent document fait foi.
 
@@ -28,7 +28,7 @@ Avant de lire tous les détails, voici un résumé rapide :
 
 Chère participante, cher participant potentiel,
 
-Merci de l'intérêt que vous portez à notre recherche. **L'application Health-Habit-Hub** fait partie de l'étude **HabConnect – from Habit to Health**, planifiée et menée par le groupe de recherche Digital Health, Faculté des sciences économiques et de gestion, Technische Universität Dresden. L'étude est autofinancée par notre établissement et a été examinée par un comité d'éthique indépendant, qui n'a soulevé aucune objection.
+Merci de l'intérêt que vous portez à notre recherche. **L'application Health Habit Hub** fait partie de l'étude **HabConnect – from Habit to Health**, planifiée et menée par le groupe de recherche Digital Health, Faculté des sciences économiques et de gestion, Technische Universität Dresden. L'étude est autofinancée par notre établissement et a été examinée par un comité d'éthique indépendant, qui n'a soulevé aucune objection.
 
 Votre participation est volontaire. Vous pouvez arrêter à tout moment sans avoir à en donner la raison et sans que cela n'entraîne d'inconvénient pour vous.
 
@@ -52,7 +52,7 @@ L'objectif est de développer des recommandations scientifiquement fondées et a
 
 Il n'y a pas de durée de participation fixe — vous décidez vous-même combien de temps et avec quelle intensité vous participez.
 
-**Dans l'application Health-Habit-Hub, vous pouvez :**
+**Dans l'application Health Habit Hub, vous pouvez :**
 
 - Décrire et partager vos habitudes quotidiennes (par exemple : « Tous les matins, après le réveil, je me brosse les dents et fais 10 squats. »)
 - Recevoir des recommandations personnalisées pour des habitudes saines et indiquer si vous les avez suivies

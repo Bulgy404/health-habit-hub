@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { apiUrl } from "@/lib/api";
+import { ToggleSwitch } from "@/components/toggle-switch";
 import styles from "./page.module.css";
 import { useCuePoolsData } from "./useCuePoolsData";
 
@@ -240,14 +241,12 @@ export default function CuePoolsPage() {
             <label className={styles.label}>{t("languagesLabel")}</label>
             <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
               {SUPPORTED_LANGS.map((lang) => (
-                <label key={lang} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                  <input
-                    type="checkbox"
-                    checked={newLanguages.includes(lang)}
-                    onChange={() => toggleNewLanguage(lang)}
-                  />
-                  {LANG_LABELS[lang]}
-                </label>
+                <ToggleSwitch
+                  key={lang}
+                  checked={newLanguages.includes(lang)}
+                  onChange={() => toggleNewLanguage(lang)}
+                  label={LANG_LABELS[lang]}
+                />
               ))}
             </div>
             <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>

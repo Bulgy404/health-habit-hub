@@ -353,6 +353,46 @@
   "@couldNotPostComment": {
     "description": "Snackbar when posting a comment fails"
   },
+  "commentPendingReview": "Dein Kommentar wurde zur Überprüfung eingereicht und erscheint nach der Freigabe.",
+  "@commentPendingReview": {
+    "description": "Snackbar shown instead of the comment when auto-moderation flagged it"
+  },
+  "reportComment": "Melden",
+  "@reportComment": {
+    "description": "Tooltip/button label to report a comment"
+  },
+  "reportCommentTitle": "Kommentar melden?",
+  "@reportCommentTitle": {
+    "description": "Title of the report-comment confirmation dialog"
+  },
+  "reportCommentBody": "Dieser Kommentar wird sofort ausgeblendet und dem Studienteam zur Überprüfung vorgelegt.",
+  "@reportCommentBody": {
+    "description": "Body text of the report-comment confirmation dialog"
+  },
+  "commentReported": "Kommentar gemeldet",
+  "@commentReported": {
+    "description": "Snackbar after successfully reporting a comment"
+  },
+  "couldNotReportComment": "Kommentar konnte nicht gemeldet werden",
+  "@couldNotReportComment": {
+    "description": "Snackbar when reporting a comment fails"
+  },
+  "commentsDisabledMessage": "Kommentare sind deaktiviert. Aktiviere sie in den Einstellungen, um sie anzuzeigen und zu schreiben.",
+  "@commentsDisabledMessage": {
+    "description": "Shown instead of the comment section when the user has disabled comments"
+  },
+  "communitySection": "Community",
+  "@communitySection": {
+    "description": "Section label above the community-comments toggle in Settings"
+  },
+  "communityComments": "Community-Kommentare",
+  "@communityComments": {
+    "description": "Settings row title for the comments on/off toggle"
+  },
+  "communityCommentsSubtitle": "Deaktivieren, um das Schreiben und Ansehen von Kommentaren zu geteilten Gewohnheiten auszublenden.",
+  "@communityCommentsSubtitle": {
+    "description": "Settings row subtitle explaining the comments toggle"
+  },
   "likeTooltip": "",
   "@likeTooltip": {
     "description": "Tooltip of the like button"
@@ -404,7 +444,7 @@
   "studyCodeGenericError": "Code konnte nicht eingelöst werden. Bitte überprüfe deine Verbindung.",
   "studyCodeSkipError": "Beitritt ohne Code fehlgeschlagen. Bitte überprüfe deine Verbindung und versuche es erneut.",
   "studyCodeContinueButton": "Mit Code fortfahren",
-  "studyCodeSkipButton": "Überspringen: ohne Studiencode beitreten",
+  "studyCodeSkipButton": "Ohne Studiencode beitreten",
   "adminQuestionnairesDeleteConfirmTitle": "Fragebogen löschen?",
   "adminQuestionnairesDeleteConfirmMessage": "„{title}“ löschen? Dies kann nicht rückgängig gemacht werden.",
   "adminQuestionnairesDeleteConflict": "Löschen nicht möglich: Der Fragebogen ist einer aktiven Studie zugeordnet.",

@@ -6,7 +6,7 @@ bindingLanguage: de
 
 # Toestemming voor deelname aan de HabConnect-studie
 
-> **De Health-Habit-Hub-app** is de studie-app voor de studie **HabConnect – from Habit to Health** van de Technische Universität Dresden.
+> **De Health Habit Hub-app** is de studie-app voor de studie **HabConnect – from Habit to Health** van de Technische Universität Dresden.
 
 > Dit is een vertaling ter informatie. De Duitse versie van dit document is bindend.
 
@@ -28,7 +28,7 @@ Voordat u de volledige details leest, hier een korte samenvatting:
 
 Geachte potentiële deelnemer,
 
-Hartelijk dank voor uw interesse in ons onderzoek. De **Health-Habit-Hub-app** maakt deel uit van de studie **HabConnect – from Habit to Health**, gepland en uitgevoerd door de Digital Health Research Group, Faculty of Business and Economics, Technische Universität Dresden. De studie wordt door onze instelling zelf gefinancierd en is beoordeeld door een onafhankelijke ethische commissie, die geen bezwaren heeft geuit.
+Hartelijk dank voor uw interesse in ons onderzoek. De **Health Habit Hub-app** maakt deel uit van de studie **HabConnect – from Habit to Health**, gepland en uitgevoerd door de Digital Health Research Group, Faculty of Business and Economics, Technische Universität Dresden. De studie wordt door onze instelling zelf gefinancierd en is beoordeeld door een onafhankelijke ethische commissie, die geen bezwaren heeft geuit.
 
 Uw deelname is vrijwillig. U kunt op elk moment stoppen zonder opgaaf van redenen en zonder dat dit nadelige gevolgen voor u heeft.
 
@@ -52,7 +52,7 @@ Het doel is om wetenschappelijk onderbouwde, praktische aanbevelingen te ontwikk
 
 Er is geen vaste deelnameperiode — u bepaalt zelf hoe lang en hoe intensief u deelneemt.
 
-**In de Health-Habit-Hub-app kunt u:**
+**In de Health Habit Hub-app kunt u:**
 
 - Uw dagelijkse gewoonten beschrijven en delen (bijv. "Elke ochtend na het opstaan poets ik mijn tanden en doe ik 10 squats.")
 - Gepersonaliseerde aanbevelingen voor gezonde gewoonten ontvangen en aangeven of u deze heeft opgevolgd
