@@ -113,7 +113,7 @@ prod-keycloak: ## Import realm, align secrets, grant service-account permissions
 	KEYCLOAK_ADMIN_CLIENT_SECRET=$$(grep '^KEYCLOAK_ADMIN_CLIENT_SECRET=' .env | cut -d= -f2-) \
 	bash scripts/deploy-keycloak.sh
 
-prod-seed: ## Seed MongoDB, Neo4j, and Keycloak via Docker (run once after first deploy)
+prod-seed: ## Seed MongoDB and Neo4j baseline data via Docker (run once after first deploy)
 	docker run --rm \
 	  --network hhh-proxy \
 	  --env-file .env \
@@ -122,7 +122,6 @@ prod-seed: ## Seed MongoDB, Neo4j, and Keycloak via Docker (run once after first
 	  -v $(CURDIR)/scripts:/workspace/scripts \
 	  -e MONGO_HOST=mongo \
 	  -e NEO4J_HTTP=http://neo4j:7474 \
-	  -e KEYCLOAK_URL=http://keycloak:8080 \
 	  -w /workspace/app \
 	  node:20-alpine \
 	  sh -c "npm install --omit=dev --silent && node /workspace/scripts/seed-local.js"
