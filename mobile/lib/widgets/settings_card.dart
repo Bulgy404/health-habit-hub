@@ -60,6 +60,7 @@ class SettingsRow extends StatelessWidget {
   const SettingsRow({
     required this.icon,
     required this.title,
+    this.subtitle,
     this.trailing,
     this.onTap,
     this.iconColor,
@@ -72,6 +73,9 @@ class SettingsRow extends StatelessWidget {
 
   /// Row title.
   final String title;
+
+  /// Optional explanatory text shown under the title.
+  final String? subtitle;
 
   /// Optional trailing widget (chevron, value label, switch, ...).
   final Widget? trailing;
@@ -101,13 +105,30 @@ class SettingsRow extends StatelessWidget {
             ),
             const SizedBox(width: 14),
             Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                  color: titleColor ?? Theme.of(context).colorScheme.onSurface,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color:
+                          titleColor ?? Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             ?trailing,

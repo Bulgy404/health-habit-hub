@@ -8,6 +8,7 @@ import { useStudiesData } from "./useStudiesData";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { useActivityTypes } from "@/lib/useActivityTypes";
 import { CueConfigForm } from "@/components/cue-config-form";
+import { HabitEntryModeForm } from "@/components/habit-entry-mode-form";
 import { ActivityTypesManager } from "@/components/activity-types-manager";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -27,8 +28,6 @@ interface CueConfig {
   cueCount: "single" | "multi";
   cueSource: "low_quality" | "high_quality" | "self_selected";
   cuePoolId: string | null;
-  /** Empty = free-text habit entry; non-empty = structured catalog picks. */
-  behaviorOptions: string[];
   maxHabits: number | null;
 }
 
@@ -41,6 +40,10 @@ interface StudySummary {
   recommenderEnabled: boolean;
   onboardingEnabled: boolean;
   selfHabitCreationEnabled: boolean;
+  /** Study-wide — applies to every group. Off (default) = free-text habit entry. */
+  habitEntryMode: "freeText" | "structured";
+  /** Activity-type catalog keys offered when habitEntryMode is 'structured'. */
+  structuredActivityKeys: string[];
   questionnaireReminders?: { enabled: boolean; hour: number };
   endDate?: string | null;
   endOfStudyNotification?: { enabled: boolean; title: string; body: string };
@@ -217,20 +220,22 @@ function QuestionnairesTab({
               <p className={styles.qSectionTitle}>{t("questionnairesTab.libraryTitle")}</p>
               <div className={styles.qList}>
                 {library.map((q) => (
-                  <label key={q.id} className={styles.qItem}>
-                    <input
-                      type="checkbox"
-                      className={styles.qCheckbox}
-                      checked={selected.has(q.id)}
-                      onChange={() => toggleId(q.id)}
-                    />
-                    <span className={styles.qTitle}>{previewText(q.title)}</span>
-                    {!q.active && (
-                      <span className={styles.qInactive}>
-                        {t("questionnairesTab.inactiveBadge")}
-                      </span>
-                    )}
-                  </label>
+                  <ToggleSwitch
+                    key={q.id}
+                    className={styles.qItem}
+                    checked={selected.has(q.id)}
+                    onChange={() => toggleId(q.id)}
+                    label={
+                      <>
+                        <span className={styles.qTitle}>{previewText(q.title)}</span>
+                        {!q.active && (
+                          <span className={styles.qInactive}>
+                            {t("questionnairesTab.inactiveBadge")}
+                          </span>
+                        )}
+                      </>
+                    }
+                  />
                 ))}
               </div>
             </div>
@@ -240,20 +245,22 @@ function QuestionnairesTab({
               <p className={styles.qSectionTitle}>{t("questionnairesTab.customTitle")}</p>
               <div className={styles.qList}>
                 {custom.map((q) => (
-                  <label key={q.id} className={styles.qItem}>
-                    <input
-                      type="checkbox"
-                      className={styles.qCheckbox}
-                      checked={selected.has(q.id)}
-                      onChange={() => toggleId(q.id)}
-                    />
-                    <span className={styles.qTitle}>{previewText(q.title)}</span>
-                    {!q.active && (
-                      <span className={styles.qInactive}>
-                        {t("questionnairesTab.inactiveBadge")}
-                      </span>
-                    )}
-                  </label>
+                  <ToggleSwitch
+                    key={q.id}
+                    className={styles.qItem}
+                    checked={selected.has(q.id)}
+                    onChange={() => toggleId(q.id)}
+                    label={
+                      <>
+                        <span className={styles.qTitle}>{previewText(q.title)}</span>
+                        {!q.active && (
+                          <span className={styles.qInactive}>
+                            {t("questionnairesTab.inactiveBadge")}
+                          </span>
+                        )}
+                      </>
+                    }
+                  />
                 ))}
               </div>
             </div>
@@ -1856,7 +1863,6 @@ function triStateParse(v: string): boolean | null {
 function CueConfigTab({ study, token }: { study: StudySummary; token: string }) {
   const t = useTranslations("studies");
   const tc = useTranslations("common");
-  const { activityTypes, loading: catalogLoading } = useActivityTypes(token);
 
   const [groupStates, setGroupStates] = useState<
     Record<
@@ -1877,12 +1883,6 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
           cueCount: g.cueConfig?.cueCount ?? "multi",
           cueSource: g.cueConfig?.cueSource ?? "high_quality",
           cuePoolId: g.cueConfig?.cuePoolId ?? null,
-          // A group with no saved cueConfig at all (e.g. the seeded default
-          // study) behaves as free-text habit entry at runtime
-          // (resolveHabitConfig falls back to PUBLIC_FREE_ENTRY) — default
-          // to an empty array here too, so the tab reflects that instead of
-          // showing every isDefault catalog entry pre-checked but unsaved.
-          behaviorOptions: g.cueConfig?.behaviorOptions ?? [],
           maxHabits: g.cueConfig?.maxHabits ?? null,
           // null = inherit study-level flag
           onboardingEnabled: g.onboardingEnabled ?? null,
@@ -1912,9 +1912,6 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
           cueCount: s.cueCount,
           cueSource: s.cueSource,
           cuePoolId: s.cuePoolId,
-          // Explicit: [] means free text, never silently substituted with
-          // the platform defaults.
-          behaviorOptions: s.behaviorOptions,
           maxHabits: s.maxHabits,
         }),
       });
@@ -1939,13 +1936,8 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
     return <div className={styles.emptyState}>{t("cueConfigTab.noGroups")}</div>;
   }
 
-  if (catalogLoading) {
-    return <div className={styles.emptyState}>{t("cueConfigTab.loadingCatalog")}</div>;
-  }
-
   return (
     <div>
-      <ActivityTypesManager token={token} />
       {study.groups.map((g) => {
         const s = groupStates[g.id];
         if (!s) return null;
@@ -1959,11 +1951,9 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
               value={{
                 cueCount: s.cueCount,
                 cueSource: s.cueSource,
-                behaviorOptions: s.behaviorOptions,
                 maxHabits: s.maxHabits,
               }}
               onChange={(patch) => update(g.id, patch)}
-              activityTypes={activityTypes}
               showMaxHabits
             />
             <div className={styles.formGrid}>
@@ -2058,6 +2048,13 @@ function StudyModal({
   const [selfHabitCreationEnabled, setSelfHabitCreationEnabled] = useState(
     initial?.selfHabitCreationEnabled ?? true
   );
+  const [habitEntryMode, setHabitEntryMode] = useState<"freeText" | "structured">(
+    initial?.habitEntryMode ?? "freeText"
+  );
+  const [structuredActivityKeys, setStructuredActivityKeys] = useState<string[]>(
+    initial?.structuredActivityKeys ?? []
+  );
+  const { activityTypes } = useActivityTypes(token);
   const [remindersEnabled, setRemindersEnabled] = useState(
     initial?.questionnaireReminders?.enabled ?? true
   );
@@ -2136,6 +2133,10 @@ function StudyModal({
             recommenderEnabled,
             onboardingEnabled,
             selfHabitCreationEnabled,
+            habitEntryMode,
+            // Explicit: [] means free text, never silently substituted with
+            // the platform defaults.
+            structuredActivityKeys,
             questionnaireReminders: { enabled: remindersEnabled, hour: reminderHour },
             endDate: endDate ? new Date(`${endDate}T00:00:00Z`).toISOString() : null,
             endOfStudyNotification: {
@@ -2159,6 +2160,8 @@ function StudyModal({
             recommenderEnabled,
             onboardingEnabled,
             selfHabitCreationEnabled,
+            habitEntryMode,
+            structuredActivityKeys,
             groups,
             endDate: endDate ? new Date(`${endDate}T00:00:00Z`).toISOString() : null,
             endOfStudyNotification: {
@@ -2356,39 +2359,47 @@ function StudyModal({
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <label className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={recommenderEnabled}
-                      onChange={(e) => setRecommenderEnabled(e.target.checked)}
-                    />
-                    {t("modal.fields.recommenderLabel")}
-                  </label>
+                  <ToggleSwitch
+                    className={styles.checkboxLabel}
+                    checked={recommenderEnabled}
+                    onChange={(e) => setRecommenderEnabled(e.target.checked)}
+                    label={t("modal.fields.recommenderLabel")}
+                  />
                   <span className={styles.hint}>{t("modal.fields.recommenderHint")}</span>
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <label className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={onboardingEnabled}
-                      onChange={(e) => setOnboardingEnabled(e.target.checked)}
-                    />
-                    {t("modal.fields.onboardingLabel")}
-                  </label>
+                  <ToggleSwitch
+                    className={styles.checkboxLabel}
+                    checked={onboardingEnabled}
+                    onChange={(e) => setOnboardingEnabled(e.target.checked)}
+                    label={t("modal.fields.onboardingLabel")}
+                  />
                   <span className={styles.hint}>{t("modal.fields.onboardingHint")}</span>
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <label className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={selfHabitCreationEnabled}
-                      onChange={(e) => setSelfHabitCreationEnabled(e.target.checked)}
-                    />
-                    {t("modal.fields.selfHabitLabel")}
-                  </label>
+                  <ToggleSwitch
+                    className={styles.checkboxLabel}
+                    checked={selfHabitCreationEnabled}
+                    onChange={(e) => setSelfHabitCreationEnabled(e.target.checked)}
+                    label={t("modal.fields.selfHabitLabel")}
+                  />
                   <span className={styles.hint}>{t("modal.fields.selfHabitHint")}</span>
+                </div>
+
+                <div className={`${styles.formGroup} ${styles.formFull}`}>
+                  <HabitEntryModeForm
+                    value={{ habitEntryMode, structuredActivityKeys }}
+                    onChange={(patch) => {
+                      if (patch.habitEntryMode !== undefined)
+                        setHabitEntryMode(patch.habitEntryMode);
+                      if (patch.structuredActivityKeys !== undefined)
+                        setStructuredActivityKeys(patch.structuredActivityKeys);
+                    }}
+                    activityTypes={activityTypes}
+                  />
+                  {habitEntryMode === "structured" && <ActivityTypesManager token={token} />}
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>

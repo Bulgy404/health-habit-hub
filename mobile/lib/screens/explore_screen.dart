@@ -8,6 +8,7 @@ import '../models/bubble_graph.dart';
 import '../models/habit_node.dart';
 import '../providers/annotation_state_provider.dart';
 import '../providers/bubble_graph_provider.dart';
+import '../providers/comments_enabled_provider.dart';
 import '../providers/locale_provider.dart';
 import '../providers/show_in_graph_provider.dart';
 import '../services/habit_service.dart';
@@ -319,7 +320,7 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
   void initState() {
     super.initState();
     _node = widget.initialNode;
-    _loadComments();
+    if (ref.read(commentsEnabledProvider)) _loadComments();
     _loadRelated();
   }
 
@@ -364,7 +365,18 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
       final created = await widget.habitService.addComment(_node.id, text);
       _commentController.clear();
       if (mounted) {
-        setState(() => _comments = [created, ...?_comments]);
+        // A flagged comment must never be shown, even on the poster's own
+        // device — it only becomes visible once a researcher/admin approves
+        // it, at which point it will appear via the normal fetch-on-open path.
+        if (created.approved) {
+          setState(() => _comments = [created, ...?_comments]);
+        } else if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.commentPendingReview),
+            ),
+          );
+        }
       }
     } catch (_) {
       if (mounted) {
@@ -376,6 +388,49 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
       }
     } finally {
       if (mounted) setState(() => _postingComment = false);
+    }
+  }
+
+  /// Reports [comment] as objectionable (Guideline 1.2). The backend pulls it
+  /// out of the public listing immediately and re-queues it for admin
+  /// review, so it's removed from the local list right away too.
+  Future<void> _reportComment(HabitComment comment) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.reportCommentTitle),
+        content: Text(l10n.reportCommentBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.reportComment),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(
+      () => _comments = _comments?.where((c) => c.id != comment.id).toList(),
+    );
+    try {
+      await widget.habitService.reportComment(_node.id, comment.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.commentReported)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _comments = [comment, ...?_comments]);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.couldNotReportComment)),
+        );
+      }
     }
   }
 
@@ -431,6 +486,7 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
     final helpfulActive =
         annotationState[_node.id]?.contains('helpful') ?? false;
     final busy = _loadingType != null;
+    final commentsEnabled = ref.watch(commentsEnabledProvider);
     final viewerLang = ref.watch(localeProvider).languageCode;
     // The habit's own donation language matching the viewer's language means
     // the displayed text already IS that original — nothing is missing, so
@@ -642,58 +698,77 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
           const SizedBox(height: 20),
           Text(l10n.commentsTitle, style: tt.titleSmall),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _commentController,
-                  maxLength: 500,
-                  decoration: InputDecoration(
-                    hintText: l10n.commentHint,
-                    counterText: '',
-                    isDense: true,
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                onPressed: _postingComment ? null : _postComment,
-                icon: _postingComment
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.send, size: 18),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (_comments == null)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(8),
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else if (_comments!.isEmpty)
-            Text(l10n.noCommentsYet, style: tt.bodySmall)
-          else
-            ..._comments!.take(20).map(
-                  (c) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.chat_bubble_outline,
-                            size: 14, color: cs.outline),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(c.text, style: tt.bodySmall)),
-                      ],
+          if (!commentsEnabled)
+            Text(l10n.commentsDisabledMessage, style: tt.bodySmall)
+          else ...[
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _commentController,
+                    maxLength: 500,
+                    decoration: InputDecoration(
+                      hintText: l10n.commentHint,
+                      counterText: '',
+                      isDense: true,
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: _postingComment ? null : _postComment,
+                  icon: _postingComment
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send, size: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (_comments == null)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(8),
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            else if (_comments!.isEmpty)
+              Text(l10n.noCommentsYet, style: tt.bodySmall)
+            else
+              ..._comments!.take(20).map(
+                    (c) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.chat_bubble_outline,
+                              size: 14, color: cs.outline),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(c.text, style: tt.bodySmall)),
+                          Tooltip(
+                            message: l10n.reportComment,
+                            child: InkWell(
+                              onTap: () => _reportComment(c),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.flag_outlined,
+                                  size: 14,
+                                  color: cs.outline,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+          ],
 
           // Related habits — bounded scrollable container, always below buttons
           if (related.isNotEmpty) ...[

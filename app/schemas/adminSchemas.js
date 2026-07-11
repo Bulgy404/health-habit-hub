@@ -61,6 +61,8 @@ export const createStudySchema = z.object({
   recommenderEnabled: z.boolean().optional(),
   onboardingEnabled: z.boolean().optional(),
   selfHabitCreationEnabled: z.boolean().optional(),
+  habitEntryMode: z.enum(['freeText', 'structured']).optional(),
+  structuredActivityKeys: z.array(z.string().max(200)).max(20).optional(),
   endDate: z.string().datetime({ offset: true }).optional().nullable(),
   endOfStudyNotification: endOfStudyNotificationSchema.optional(),
 });
@@ -78,6 +80,8 @@ export const updateStudySchema = z
     recommenderEnabled: z.boolean().optional(),
     onboardingEnabled: z.boolean().optional(),
     selfHabitCreationEnabled: z.boolean().optional(),
+    habitEntryMode: z.enum(['freeText', 'structured']).optional(),
+    structuredActivityKeys: z.array(z.string().max(200)).max(20).optional(),
     questionnaireReminders: questionnaireRemindersSchema.optional(),
     endDate: z.string().datetime({ offset: true }).optional().nullable(),
     endOfStudyNotification: endOfStudyNotificationSchema.optional(),
@@ -110,7 +114,6 @@ export const cueConfigSchema = z.object({
   cueCount: z.enum(['single', 'multi']),
   cueSource: z.enum(['high_quality', 'low_quality', 'self_selected']),
   cuePoolId: mongoId.optional().nullable(),
-  behaviorOptions: z.array(z.string().max(200)).max(20).optional(),
   maxHabits: z.number().int().min(1).max(20).optional().nullable(),
 });
 
@@ -334,4 +337,17 @@ export const restoreBackupSchema = z.object({
   restoreToken: z.string().min(1),
   acknowledgeWarnings: z.boolean().optional(),
   restoreKeycloak: z.boolean().optional(),
+});
+
+export const triggerBackupSchema = z.object({
+  // Which components to include — any omitted key defaults to included.
+  services: z
+    .object({
+      mongo: z.boolean().optional(),
+      neo4j: z.boolean().optional(),
+      lightrag: z.boolean().optional(),
+      keycloak: z.boolean().optional(),
+    })
+    .strict()
+    .optional(),
 });

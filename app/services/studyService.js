@@ -141,6 +141,9 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
       isDefault: s.isDefault,
       isActive: s.isActive,
       recommenderEnabled: s.recommenderEnabled !== false,
+      habitEntryMode:
+        s.habitEntryMode === 'structured' ? 'structured' : 'freeText',
+      structuredActivityKeys: s.structuredActivityKeys ?? [],
       questionnaireReminders: normalizeReminders(s),
       endDate: s.endDate ?? null,
       endOfStudyNotification: normalizeEndOfStudyNotification(s),
@@ -167,6 +170,8 @@ export async function createStudy({
   recommenderEnabled = true,
   onboardingEnabled = true,
   selfHabitCreationEnabled = true,
+  habitEntryMode = 'freeText',
+  structuredActivityKeys = [],
   endDate = null,
   endOfStudyNotification,
   neo4jRun,
@@ -194,6 +199,10 @@ export async function createStudy({
     recommenderEnabled: recommenderEnabled !== false,
     onboardingEnabled: onboardingEnabled !== false,
     selfHabitCreationEnabled: selfHabitCreationEnabled !== false,
+    habitEntryMode: habitEntryMode === 'structured' ? 'structured' : 'freeText',
+    structuredActivityKeys: Array.isArray(structuredActivityKeys)
+      ? structuredActivityKeys
+      : [],
     // Local questionnaire due-date reminders (enabled, fired at `hour` local).
     questionnaireReminders: { enabled: true, hour: 9 },
     endDate: endDate ? new Date(endDate) : null,
@@ -261,6 +270,9 @@ export async function getStudy({ db, id }) {
     recommenderEnabled: study.recommenderEnabled !== false,
     onboardingEnabled: study.onboardingEnabled !== false,
     selfHabitCreationEnabled: study.selfHabitCreationEnabled !== false,
+    habitEntryMode:
+      study.habitEntryMode === 'structured' ? 'structured' : 'freeText',
+    structuredActivityKeys: study.structuredActivityKeys ?? [],
     questionnaireReminders: normalizeReminders(study),
     endDate: study.endDate ?? null,
     endOfStudyNotification: normalizeEndOfStudyNotification(study),
@@ -323,6 +335,13 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
     $set.onboardingEnabled = updates.onboardingEnabled;
   if (updates.selfHabitCreationEnabled !== undefined)
     $set.selfHabitCreationEnabled = updates.selfHabitCreationEnabled;
+  if (updates.habitEntryMode !== undefined)
+    $set.habitEntryMode =
+      updates.habitEntryMode === 'structured' ? 'structured' : 'freeText';
+  if (updates.structuredActivityKeys !== undefined)
+    $set.structuredActivityKeys = Array.isArray(updates.structuredActivityKeys)
+      ? updates.structuredActivityKeys
+      : [];
   if (updates.questionnaireReminders !== undefined)
     $set.questionnaireReminders = {
       enabled: updates.questionnaireReminders.enabled !== false,

@@ -90,6 +90,8 @@ export function createStudiesRouter({
         recommenderEnabled,
         onboardingEnabled,
         selfHabitCreationEnabled,
+        habitEntryMode,
+        structuredActivityKeys,
         endDate,
         endOfStudyNotification,
       } = req.body;
@@ -103,6 +105,8 @@ export function createStudiesRouter({
         recommenderEnabled,
         onboardingEnabled,
         selfHabitCreationEnabled,
+        habitEntryMode,
+        structuredActivityKeys,
         endDate,
         endOfStudyNotification,
         neo4jRun,
@@ -119,6 +123,8 @@ export function createStudiesRouter({
         recommenderEnabled: study.recommenderEnabled !== false,
         onboardingEnabled: study.onboardingEnabled !== false,
         selfHabitCreationEnabled: study.selfHabitCreationEnabled !== false,
+        habitEntryMode: study.habitEntryMode,
+        structuredActivityKeys: study.structuredActivityKeys,
         endDate: study.endDate ?? null,
         endOfStudyNotification: study.endOfStudyNotification,
         groups: study.groups,
@@ -195,8 +201,7 @@ export function createStudiesRouter({
     validate(cueConfigSchema),
     async (req, res) => {
       try {
-        const { cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits } =
-          req.body;
+        const { cueCount, cueSource, cuePoolId, maxHabits } = req.body;
         const database = await getDb();
         const result = await updateGroupCueConfig({
           db: database,
@@ -206,7 +211,6 @@ export function createStudiesRouter({
             cueCount,
             cueSource,
             cuePoolId: cuePoolId ?? null,
-            behaviorOptions: behaviorOptions ?? [],
             maxHabits: maxHabits ?? null,
           },
         });

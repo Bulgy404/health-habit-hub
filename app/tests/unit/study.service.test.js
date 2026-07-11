@@ -192,6 +192,22 @@ test('createStudy inserts a study with correct defaults', async () => {
   assert.equal(study.groups[0].label, 'Group A');
   assert.equal(study.groups[0].index, 1);
   assert.equal(study.groups[1].index, 2);
+  // Structured activities default off — new studies start as free-text entry.
+  assert.equal(study.habitEntryMode, 'freeText');
+  assert.deepEqual(study.structuredActivityKeys, []);
+});
+
+test('createStudy persists a structured habitEntryMode and its activity keys', async () => {
+  const db = makeDb();
+  const study = await createStudy({
+    db,
+    name: 'Structured Study',
+    groups: [{ label: 'Group A' }],
+    habitEntryMode: 'structured',
+    structuredActivityKeys: ['walking', 'yoga'],
+  });
+  assert.equal(study.habitEntryMode, 'structured');
+  assert.deepEqual(study.structuredActivityKeys, ['walking', 'yoga']);
 });
 
 // ── getStudy ──────────────────────────────────────────────────────────────────
@@ -243,6 +259,40 @@ test('updateStudy returns notFound for unknown id', async () => {
     updates: { name: 'x' },
   });
   assert.equal(result.notFound, true);
+});
+
+test('updateStudy: sets habitEntryMode and structuredActivityKeys', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const id = new ObjectId();
+  const db = makeDb({
+    studies: [
+      {
+        _id: id,
+        name: 'S',
+        description: null,
+        isDefault: false,
+        isActive: true,
+        habitEntryMode: 'freeText',
+        structuredActivityKeys: [],
+        groups: [],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+  });
+  const result = await updateStudy({
+    db,
+    id: id.toString(),
+    updates: {
+      habitEntryMode: 'structured',
+      structuredActivityKeys: ['walking', 'meditation'],
+    },
+  });
+  assert.equal(result.updated, true);
+  const updated = await getStudy({ db, id: id.toString() });
+  assert.equal(updated.habitEntryMode, 'structured');
+  assert.deepEqual(updated.structuredActivityKeys, ['walking', 'meditation']);
 });
 
 test('updateStudy: groups matched by id are kept (config preserved) and new ones without an id are added', async () => {
@@ -496,7 +546,6 @@ test('updateGroupCueConfig: sets cueConfig on a specific group', async () => {
     cueCount: 'single',
     cueSource: 'high_quality',
     cuePoolId: null,
-    behaviorOptions: ['walking', 'yoga'],
     maxHabits: 1,
   };
   const result = await updateGroupCueConfig({
@@ -519,7 +568,6 @@ test('updateGroupCueConfig: returns notFound for missing study', async () => {
       cueCount: 'single',
       cueSource: 'high_quality',
       cuePoolId: null,
-      behaviorOptions: [],
       maxHabits: null,
     },
   });

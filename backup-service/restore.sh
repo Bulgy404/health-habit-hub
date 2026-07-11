@@ -37,7 +37,7 @@ echo "This operation will:"
 echo "  - STOP and OVERWRITE MongoDB data"
 echo "  - STOP and OVERWRITE LightRAG index"
 echo "  - STOP and OVERWRITE Neo4j graph data"
-echo "  - OVERWRITE Keycloak realm (if backup present)"
+echo "  - OVERWRITE Keycloak database and realm config (if backup present)"
 echo "  - RESTART all affected containers"
 echo ""
 read -rp "Type 'YES' to continue: " confirm
@@ -147,10 +147,38 @@ else
   echo "Warning: No Neo4j backup found in archive"
 fi
 
-# ── 5. Keycloak realm ─────────────────────────────────────────────────────────
+# ── 4. Keycloak ───────────────────────────────────────────────────────────────
+# Restores both the realm config (via admin API partialImport) and the actual
+# Postgres database (via pg_restore) — the DB holds user accounts/credentials,
+# which the realm export never contained. --skip-keycloak skips both.
 
 echo ""
-echo "Restoring Keycloak realm (if backup present)..."
+echo "Restoring Keycloak database (if backup present)..."
+KC_DB_HOST="${KC_DB_HOST:-keycloak-db}"
+KC_DB_USERNAME="${KC_DB_USERNAME:-keycloak}"
+if [ "$SKIP_KEYCLOAK" = true ]; then
+  echo "Skipped (--skip-keycloak requested)"
+elif [ -f "$RESTORE_DIR/keycloak/keycloak-db.dump" ]; then
+  if [ -n "${KC_DB_PASSWORD:-}" ]; then
+    if PGPASSWORD="$KC_DB_PASSWORD" pg_restore \
+      -h "$KC_DB_HOST" \
+      -U "$KC_DB_USERNAME" \
+      -d keycloak \
+      --clean --if-exists \
+      "$RESTORE_DIR/keycloak/keycloak-db.dump" 2>/dev/null; then
+      echo "✓ Keycloak database restored"
+    else
+      log_error "Keycloak" "pg_restore of keycloak-db failed"
+    fi
+  else
+    echo "Warning: KC_DB_PASSWORD not set, skipping Keycloak database restore"
+  fi
+else
+  echo "Warning: No Keycloak database dump found in archive"
+fi
+
+echo ""
+echo "Restoring Keycloak realm config (if backup present)..."
 if [ "$SKIP_KEYCLOAK" = true ]; then
   echo "Skipped (--skip-keycloak requested)"
 elif [ -f "$RESTORE_DIR/keycloak/hhh-realm.json" ]; then

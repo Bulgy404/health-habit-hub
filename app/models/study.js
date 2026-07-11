@@ -10,12 +10,19 @@
  *   recommenderEnabled boolean  Optional. When false, participants in this study do not see
  *                              the recommender screen in the app. Defaults to true (treated as
  *                              enabled when absent, for backward compatibility).
+ *   habitEntryMode  string     Optional. 'freeText' (default) or 'structured'. Study-wide —
+ *                              applies to every group. When 'structured', the new-habit screen
+ *                              shows a picker over structuredActivityKeys instead of a free-text
+ *                              field. Defaults to 'freeText' when absent.
+ *   structuredActivityKeys  Array<string>  Optional. Activity-type catalog keys (see
+ *                              activity_types collection) offered when habitEntryMode is
+ *                              'structured'. Ignored (and should be empty) otherwise.
  *   groups       Array<{    Experiment groups for this study.
  *     id:               ObjectId
  *     label:            string
  *     index:            1|2|3|4
  *     allocationWeight: int (1–100, default 1) — relative weight for round-robin enrollment via study codes.
- *     cueConfig:        { restricted: boolean, cueCount, cueSource, cuePoolId, behaviorOptions, maxHabits } | null
+ *     cueConfig:        { restricted: boolean, cueCount, cueSource, cuePoolId, maxHabits } | null
  *     activityTypeConfig: { restricted: boolean, allowedActivityTypeIds: ObjectId[] } | null
  *     reminderConfig:   { enabled: boolean, fixedTime: string|null } | null  — fixedTime is "HH:MM"
  *     autoDonate:       boolean — when true habits are auto-donated to the community on creation
@@ -51,6 +58,12 @@ export const VALIDATOR = {
       isActive: { bsonType: 'bool' },
       // Optional: absence is treated as enabled (true) for backward compatibility.
       recommenderEnabled: { bsonType: 'bool' },
+      // Optional: absence is treated as 'freeText' for backward compatibility.
+      habitEntryMode: { bsonType: 'string', enum: ['freeText', 'structured'] },
+      structuredActivityKeys: {
+        bsonType: 'array',
+        items: { bsonType: 'string' },
+      },
       groups: {
         bsonType: 'array',
         items: {
@@ -71,10 +84,6 @@ export const VALIDATOR = {
                   enum: ['low_quality', 'high_quality', 'self_selected'],
                 },
                 cuePoolId: { bsonType: ['objectId', 'null'] },
-                behaviorOptions: {
-                  bsonType: 'array',
-                  items: { bsonType: 'string' },
-                },
                 maxHabits: { bsonType: ['int', 'null'] },
               },
             },

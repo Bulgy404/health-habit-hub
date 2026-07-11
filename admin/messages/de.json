@@ -159,32 +159,6 @@
     "loadFailed": "Sitzungen konnten nicht geladen werden",
     "revokeFailed": "Sitzung konnte nicht widerrufen werden"
   },
-  "settings": {
-    "title": "Aktivitätstypen",
-    "subtitle": "Der Verhaltenskatalog, der Studienteilnehmenden über Cue-Konfigurationen angeboten wird.",
-    "catalog": "Katalog",
-    "catalogDesc": "Plattformweiter Katalog von Aktivitätstypen, aus denen Studienteilnehmende beim Erstellen einer Gewohnheit wählen können. Als <strong>Standard</strong> markierte Aktivitäten sind für Studiengruppen ohne explizite Verhaltensbeschränkung vorausgewählt. Studiengruppen können die Liste über ihre Cue-Konfiguration einschränken oder erweitern. Öffentliche (nicht studienbezogene) Nutzende geben ihre Gewohnheit als Freitext ein und verwenden diesen Katalog nicht.",
-    "loadingEllipsis": "Lädt…",
-    "key": "Schlüssel",
-    "englishLabel": "Englische Bezeichnung",
-    "germanLabel": "Deutsche Bezeichnung",
-    "japaneseLabel": "Japanische Bezeichnung",
-    "germanLabelOptional": "Deutsche Bezeichnung (optional)",
-    "japaneseLabelOptional": "Japanische Bezeichnung (optional)",
-    "default": "Standard",
-    "toggleDefaultTitle": "Als Plattformstandard umschalten",
-    "deleteTitle": "Aktivitätstyp löschen",
-    "keyPlaceholder": "z. B. swimming",
-    "addActivity": "Aktivität hinzufügen",
-    "addingEllipsis": "Wird hinzugefügt…",
-    "keyHint": "Der Schlüssel muss aus Kleinbuchstaben mit Unterstrichen bestehen (z. B. <code>strength_training</code>). Er wird automatisch aus deiner Eingabe normalisiert.",
-    "loadFailed": "Aktivitätstypen konnten nicht geladen werden",
-    "updateFailed": "Aktualisierung fehlgeschlagen",
-    "deleteFailed": "Löschen fehlgeschlagen",
-    "addFailed": "Hinzufügen fehlgeschlagen",
-    "keyAndLabelRequired": "Schlüssel und englische Bezeichnung sind erforderlich.",
-    "confirmDelete": "Aktivitätstyp „{key}“ löschen? Dies kann nicht rückgängig gemacht werden."
-  },
   "backups": {
     "title": "Backups",
     "subtitle": "Zeigt das letzte Backup an, ermöglicht das Auslösen eines Backups auf Abruf oder die Wiederherstellung aus einem vorhandenen oder hochgeladenen Archiv. Eine Wiederherstellung ist destruktiv — es wird immer zuerst ein Sicherheits-Backup erstellt.",
@@ -308,6 +282,11 @@
   "help": {
     "title": "Hilfe",
     "subtitle": "Kurze Tipps zu jedem Bereich des Admin-Portals.",
+    "contact": {
+      "title": "Kontakt & Support",
+      "body": "Fragen, Fehler oder Funktionswünsche — wende dich direkt an:",
+      "repoBody": "Quellcode und Issue-Tracker auf GitHub:"
+    },
     "studies": {
       "title": "Studien",
       "body": "Erstellen Sie eine Studie, konfigurieren Sie deren Gruppen und Cue-Pools, generieren Sie Einladungscodes und weisen Sie Fragebögen zu. Zum Löschen einer Studie muss deren exakter Name zur Bestätigung eingegeben werden — eingeschriebene Teilnehmende verhindern das Löschen, bis sie umverteilt oder entfernt wurden."
@@ -732,15 +711,15 @@
     "maxHabitsHint": "Begrenzt, wie viele Gewohnheiten eine teilnehmende Person erstellen kann. Verwende „1“ für Studiendesigns mit nur einer Gewohnheit.",
     "habitEntryMode": "Gewohnheitseingabe",
     "habitEntryModeHint": "Freitext: Teilnehmende beschreiben ihre eigene Gewohnheit selbst. Strukturierte Aktivitäten: Teilnehmende wählen aus einem von dir festgelegten Katalog.",
-    "freeTextMode": "Freitext",
-    "structuredMode": "Strukturierte Aktivitäten",
-    "allowedBehaviorsHint": "Aus welchen Aktivitätstypen Teilnehmende wählen können. Verwalte den Katalog unter <strong>Konfiguration → Aktivitätstypen</strong>.",
+    "allowedBehaviorsHint": "Aus welchen Aktivitätstypen Teilnehmende wählen können. Verwalte den Katalog weiter unten.",
+    "emptySelectionWarning": "Keine Aktivitäten ausgewählt — Teilnehmende sehen weiterhin die Freitext-Eingabe, bis du mindestens eine auswählst.",
     "noActivityTypes": "Noch keine Aktivitätstypen im Katalog — füge unten welche hinzu.",
-    "defaultTag": "(Standard)"
+    "defaultTag": "(Standard)",
+    "orphanedTag": "(aus Katalog entfernt)"
   },
   "activityTypesManager": {
     "title": "Aktivitätstyp-Katalog (studienübergreifend)",
-    "description": "Verhaltensweisen, aus denen Teilnehmende wählen können, wenn eine Gruppe ihre erlaubten Verhaltensweisen unten einschränkt. Standardwerte sind für Gruppen ohne explizite Einschränkung vorausgewählt. Frei eintragende (öffentliche) Nutzende verwenden diesen Katalog nicht.",
+    "description": "Aktivitäten, aus denen Teilnehmende wählen können, wenn die Gewohnheitseingabe einer Studie auf „Strukturiert“ (Reiter „Details“) gesetzt ist. Standard-Markierungen dienen nur zur Information. Nutzer mit freier Eingabe (öffentlich oder Freitext) verwenden diesen Katalog nicht.",
     "loadingEllipsis": "Lädt…",
     "key": "Schlüssel",
     "english": "Englisch",
@@ -750,6 +729,8 @@
     "frenchOptional": "Französisch (optional)",
     "dutch": "Niederländisch",
     "dutchOptional": "Niederländisch (optional)",
+    "japanese": "Japanisch",
+    "japaneseOptional": "Japanisch (optional)",
     "default": "Standard",
     "delete": "Löschen",
     "noActivityTypes": "Noch keine Aktivitätstypen.",
@@ -1068,7 +1049,6 @@
     },
     "cueConfigTab": {
       "noGroups": "Keine Gruppen definiert. Füge zuerst Gruppen im Tab Details hinzu.",
-      "loadingCatalog": "Aktivitätskatalog wird geladen…",
       "onboardingLabel": "Onboarding (diese Gruppe)",
       "inheritOption": "Studieneinstellung übernehmen",
       "onOption": "An",
@@ -1077,5 +1057,25 @@
       "selfHabitLabel": "Eigene Gewohnheitserstellung (diese Gruppe)",
       "selfHabitHint": "Wenn aus, kann diese Gruppe keine eigenen Gewohnheiten erstellen."
     }
+  },
+  "welcome": {
+    "steps": {
+      "0": {
+        "title": "Willkommen im HHH-Portal",
+        "description": "Hier verwalten Sie Studien, Teilnehmende und die zugehörigen Werkzeuge. Werfen wir kurz einen Blick auf die wichtigsten Bereiche."
+      },
+      "1": {
+        "title": "So finden Sie sich zurecht",
+        "description": "Studien, Teilnehmende, Fragebögen und Cue Pools finden Sie in der Seitenleiste. Analytics und Insights helfen Ihnen, den Fortschritt einer laufenden Studie zu verfolgen."
+      },
+      "2": {
+        "title": "Los geht's",
+        "description": "Öffnen Sie die Studien-Seite, um Ihre erste Studie anzulegen oder eine bestehende zu prüfen."
+      }
+    },
+    "skip": "Überspringen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "getStarted": "Loslegen"
   }
 }

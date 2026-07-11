@@ -144,6 +144,7 @@ before(async () => {
     expectedIssuer: null,
     expectedAudience: null,
     serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
+    neo4jRun: async () => ({ records: [] }),
     db: mockDb,
   });
   testApp.use('/api/v1', apiRouter);

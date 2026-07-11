@@ -159,32 +159,6 @@
     "loadFailed": "Failed to load sessions",
     "revokeFailed": "Failed to revoke session"
   },
-  "settings": {
-    "title": "Activity Types",
-    "subtitle": "The behavior catalog offered to study participants via cue configs.",
-    "catalog": "Catalog",
-    "catalogDesc": "Platform-wide catalog of activity types that study participants can choose from when creating a habit. Activities marked as <strong>default</strong> are pre-selected for study groups without an explicit behavior restriction. Study groups can restrict or expand the list via their Cue Config. Public (non-study) users enter their habit as free text and do not use this catalog.",
-    "loadingEllipsis": "Loading…",
-    "key": "Key",
-    "englishLabel": "English label",
-    "germanLabel": "German label",
-    "japaneseLabel": "Japanese label",
-    "germanLabelOptional": "German label (optional)",
-    "japaneseLabelOptional": "Japanese label (optional)",
-    "default": "Default",
-    "toggleDefaultTitle": "Toggle as platform default",
-    "deleteTitle": "Delete activity type",
-    "keyPlaceholder": "e.g. swimming",
-    "addActivity": "Add activity",
-    "addingEllipsis": "Adding…",
-    "keyHint": "The key must be lowercase with underscores (e.g. <code>strength_training</code>). It is auto-normalised from what you type.",
-    "loadFailed": "Failed to load activity types",
-    "updateFailed": "Update failed",
-    "deleteFailed": "Delete failed",
-    "addFailed": "Add failed",
-    "keyAndLabelRequired": "Key and English label are required.",
-    "confirmDelete": "Delete activity type \"{key}\"? This cannot be undone."
-  },
   "backups": {
     "title": "Backups",
     "subtitle": "View the last backup, trigger one on demand, or restore from an existing or uploaded archive. Restoring is destructive — a safety backup is always taken first.",
@@ -308,6 +282,11 @@
   "help": {
     "title": "Help",
     "subtitle": "Quick tips for each part of the admin portal.",
+    "contact": {
+      "title": "Contact & Support",
+      "body": "Questions, bugs, or feature requests — reach out directly:",
+      "repoBody": "Source code and issue tracker on GitHub:"
+    },
     "studies": {
       "title": "Studies",
       "body": "Create a study, configure its groups and cue pools, generate invite codes, and assign questionnaires. Deleting a study requires typing its exact name to confirm — enrolled participants block deletion until reassigned or removed."
@@ -732,15 +711,15 @@
     "maxHabitsHint": "Caps how many habits a participant can create. Use \"1\" for single-habit study designs.",
     "habitEntryMode": "Habit entry",
     "habitEntryModeHint": "Free text: participants type and describe their own habit. Structured activities: participants pick from a fixed catalog you define.",
-    "freeTextMode": "Free text",
-    "structuredMode": "Structured activities",
-    "allowedBehaviorsHint": "Which activity types participants can choose from. Manage the catalog under <strong>Configuration → Activity Types</strong>.",
+    "allowedBehaviorsHint": "Which activity types participants can choose from. Manage the catalog below.",
+    "emptySelectionWarning": "No activities selected — participants will see free-text entry until you pick at least one.",
     "noActivityTypes": "No activity types in the catalog yet — add some below.",
-    "defaultTag": "(default)"
+    "defaultTag": "(default)",
+    "orphanedTag": "(removed from catalog)"
   },
   "activityTypesManager": {
     "title": "Activity type catalog (shared across studies)",
-    "description": "Behaviors participants can pick from when a group restricts its allowed behaviors below. Defaults are pre-selected for groups with no explicit restriction. Free-entry (public) users don't use this catalog.",
+    "description": "Behaviors participants can pick from when a study's habit entry is set to Structured (Details tab). Defaults are informational only. Free-entry (public and free-text) users don't use this catalog.",
     "loadingEllipsis": "Loading…",
     "key": "Key",
     "english": "English",
@@ -750,6 +729,8 @@
     "frenchOptional": "French (optional)",
     "dutch": "Dutch",
     "dutchOptional": "Dutch (optional)",
+    "japanese": "Japanese",
+    "japaneseOptional": "Japanese (optional)",
     "default": "Default",
     "delete": "Delete",
     "noActivityTypes": "No activity types yet.",
@@ -1068,7 +1049,6 @@
     },
     "cueConfigTab": {
       "noGroups": "No groups defined. Add groups in the Details tab first.",
-      "loadingCatalog": "Loading activity catalog…",
       "onboardingLabel": "Onboarding (this group)",
       "inheritOption": "Inherit study setting",
       "onOption": "On",
@@ -1077,5 +1057,25 @@
       "selfHabitLabel": "Self habit creation (this group)",
       "selfHabitHint": "When off, this group cannot create their own habits."
     }
+  },
+  "welcome": {
+    "steps": {
+      "0": {
+        "title": "Welcome to the HHH Portal",
+        "description": "This is where you manage studies, participants, and the tools that support them. Let's take a quick look around."
+      },
+      "1": {
+        "title": "Find your way around",
+        "description": "Studies, Participants, Questionnaires, and Cue Pools live in the sidebar. Analytics and Insights help you track progress once a study is running."
+      },
+      "2": {
+        "title": "You're ready to go",
+        "description": "Head to the Studies page to create your first study or review an existing one."
+      }
+    },
+    "skip": "Skip",
+    "back": "Back",
+    "next": "Next",
+    "getStarted": "Get started"
   }
 }

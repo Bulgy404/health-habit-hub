@@ -159,32 +159,6 @@
     "revokeFailed": "Sessie kon niet worden ingetrokken",
     "totalPageInfo": "{total} totaal · pagina {page} van {totalPages}"
   },
-  "settings": {
-    "title": "Activiteitstypen",
-    "subtitle": "De gedragscatalogus die aan studiedeelnemers wordt aangeboden via cue-configuraties.",
-    "catalog": "Catalogus",
-    "catalogDesc": "Platformbrede catalogus van activiteitstypen waaruit studiedeelnemers kunnen kiezen bij het aanmaken van een gewoonte. Activiteiten die zijn gemarkeerd als <strong>standaard</strong> zijn vooraf geselecteerd voor studiegroepen zonder expliciete gedragsbeperking. Studiegroepen kunnen de lijst via hun cue-configuratie beperken of uitbreiden. Publieke (niet-studie) gebruikers voeren hun gewoonte in als vrije tekst en gebruiken deze catalogus niet.",
-    "loadingEllipsis": "Bezig met laden…",
-    "key": "Sleutel",
-    "englishLabel": "Engelse benaming",
-    "germanLabel": "Duitse benaming",
-    "japaneseLabel": "Japanse benaming",
-    "germanLabelOptional": "Duitse benaming (optioneel)",
-    "japaneseLabelOptional": "Japanse benaming (optioneel)",
-    "default": "Standaard",
-    "toggleDefaultTitle": "Als platformstandaard in-/uitschakelen",
-    "deleteTitle": "Activiteitstype verwijderen",
-    "keyPlaceholder": "bijv. swimming",
-    "addActivity": "Activiteit toevoegen",
-    "addingEllipsis": "Bezig met toevoegen…",
-    "keyHint": "De sleutel moet uit kleine letters met underscores bestaan (bijv. <code>strength_training</code>). Deze wordt automatisch genormaliseerd op basis van uw invoer.",
-    "loadFailed": "Activiteitstypen konden niet worden geladen",
-    "updateFailed": "Bijwerken mislukt",
-    "deleteFailed": "Verwijderen mislukt",
-    "addFailed": "Toevoegen mislukt",
-    "keyAndLabelRequired": "Sleutel en Engelse benaming zijn verplicht.",
-    "confirmDelete": "Activiteitstype \"{key}\" verwijderen? Dit kan niet ongedaan worden gemaakt."
-  },
   "backups": {
     "title": "Back-ups",
     "subtitle": "Bekijk de laatste back-up, start er handmatig een, of herstel vanaf een bestaand of geüpload archief. Herstellen is destructief — er wordt altijd eerst een veiligheidsback-up gemaakt.",
@@ -308,6 +282,11 @@
   "help": {
     "title": "Hulp",
     "subtitle": "Korte tips voor elk onderdeel van het adminportaal.",
+    "contact": {
+      "title": "Contact & ondersteuning",
+      "body": "Vragen, bugs of functiewensen — neem direct contact op:",
+      "repoBody": "Broncode en issue tracker op GitHub:"
+    },
     "studies": {
       "title": "Studies",
       "body": "Maak een studie aan, configureer de groepen en cue-pools, genereer uitnodigingscodes en wijs vragenlijsten toe. Voor het verwijderen van een studie moet de exacte naam ter bevestiging worden ingevoerd — ingeschreven deelnemers blokkeren verwijdering totdat ze zijn herverdeeld of verwijderd."
@@ -732,15 +711,15 @@
     "maxHabitsHint": "Beperkt hoeveel gewoontes een deelnemer kan aanmaken. Gebruik \"1\" voor studieontwerpen met één gewoonte.",
     "habitEntryMode": "Invoer van gewoonte",
     "habitEntryModeHint": "Vrije tekst: deelnemers beschrijven hun eigen gewoonte zelf. Gestructureerde activiteiten: deelnemers kiezen uit een catalogus die jij samenstelt.",
-    "freeTextMode": "Vrije tekst",
-    "structuredMode": "Gestructureerde activiteiten",
-    "allowedBehaviorsHint": "Uit welke activiteitstypen deelnemers kunnen kiezen. Beheer de catalogus onder <strong>Configuratie → Activiteitstypen</strong>.",
+    "allowedBehaviorsHint": "Uit welke activiteitstypen deelnemers kunnen kiezen. Beheer de catalogus hieronder.",
+    "emptySelectionWarning": "Geen activiteiten geselecteerd — deelnemers zien vrije tekstinvoer totdat je er minstens één kiest.",
     "noActivityTypes": "Nog geen activiteitstypen in de catalogus — voeg er hieronder toe.",
-    "defaultTag": "(standaard)"
+    "defaultTag": "(standaard)",
+    "orphanedTag": "(verwijderd uit catalogus)"
   },
   "activityTypesManager": {
     "title": "Activiteitstypecatalogus (gedeeld tussen studies)",
-    "description": "Gedragingen waaruit deelnemers kunnen kiezen wanneer een groep de toegestane gedragingen hieronder beperkt. Standaardwaarden zijn vooraf geselecteerd voor groepen zonder expliciete beperking. Vrij invoerende (publieke) gebruikers gebruiken deze catalogus niet.",
+    "description": "Activiteiten waaruit deelnemers kunnen kiezen wanneer de gewoonte-invoer van een studie is ingesteld op 'Gestructureerd' (tabblad Details). Standaardmarkeringen zijn alleen informatief. Gebruikers met vrije invoer (publiek of vrije tekst) gebruiken deze catalogus niet.",
     "loadingEllipsis": "Bezig met laden…",
     "key": "Sleutel",
     "english": "Engels",
@@ -750,6 +729,8 @@
     "frenchOptional": "Frans (optioneel)",
     "dutch": "Nederlands",
     "dutchOptional": "Nederlands (optioneel)",
+    "japanese": "Japans",
+    "japaneseOptional": "Japans (optioneel)",
     "default": "Standaard",
     "delete": "Verwijderen",
     "noActivityTypes": "Nog geen activiteitstypen.",
@@ -1017,7 +998,6 @@
     },
     "cueConfigTab": {
       "noGroups": "Geen groepen gedefinieerd. Voeg eerst groepen toe in het tabblad Details.",
-      "loadingCatalog": "Activiteitencatalogus wordt geladen…",
       "onboardingLabel": "Onboarding (deze groep)",
       "inheritOption": "Studie-instelling overnemen",
       "onOption": "Aan",
@@ -1077,5 +1057,25 @@
         "title": "Wekelijkse actieve ratio"
       }
     }
+  },
+  "welcome": {
+    "steps": {
+      "0": {
+        "title": "Welkom bij het HHH-portaal",
+        "description": "Hier beheert u studies, deelnemers en de bijbehorende tools. Laten we kort de belangrijkste onderdelen bekijken."
+      },
+      "1": {
+        "title": "Zo vindt u uw weg",
+        "description": "Studies, Deelnemers, Vragenlijsten en Cue Pools vindt u in de zijbalk. Analytics en Insights helpen u de voortgang van een lopende studie te volgen."
+      },
+      "2": {
+        "title": "U bent klaar om te beginnen",
+        "description": "Ga naar de Studies-pagina om uw eerste studie aan te maken of een bestaande studie te bekijken."
+      }
+    },
+    "skip": "Overslaan",
+    "back": "Terug",
+    "next": "Volgende",
+    "getStarted": "Aan de slag"
   }
 }

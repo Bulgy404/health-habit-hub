@@ -6,7 +6,6 @@ const studyCueConfig = {
   cueCount: 'single',
   cueSource: 'high_quality',
   cuePoolId: null,
-  behaviorOptions: ['walking', 'yoga'],
   maxHabits: 1,
 };
 
@@ -62,6 +61,8 @@ test('resolveHabitConfig: study participant gets group cueConfig', async () => {
     study: {
       _id: studyId,
       recommenderEnabled: true,
+      habitEntryMode: 'structured',
+      structuredActivityKeys: ['walking', 'yoga'],
       groups: [
         { id: groupId, label: 'G1', index: 1, cueConfig: studyCueConfig },
       ],
@@ -93,16 +94,10 @@ test('resolveHabitConfig: behaviorOptions resolve to the requested language, fal
     study: {
       _id: studyId,
       recommenderEnabled: true,
+      habitEntryMode: 'structured',
+      structuredActivityKeys: ['walking', 'yoga', 'swimming'],
       groups: [
-        {
-          id: groupId,
-          label: 'G1',
-          index: 1,
-          cueConfig: {
-            ...studyCueConfig,
-            behaviorOptions: ['walking', 'yoga', 'swimming'],
-          },
-        },
+        { id: groupId, label: 'G1', index: 1, cueConfig: studyCueConfig },
       ],
     },
     activityTypes: [
@@ -130,6 +125,34 @@ test('resolveHabitConfig: behaviorOptions resolve to the requested language, fal
     { key: 'yoga', label: 'Yoga' }, // falls back to English
     { key: 'swimming', label: 'swimming' }, // falls back to the raw key
   ]);
+});
+
+test('resolveHabitConfig: structuredActivityKeys are ignored when habitEntryMode is freeText', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      habitEntryMode: 'freeText',
+      // Present but should be ignored — the toggle, not the list, decides.
+      structuredActivityKeys: ['walking', 'yoga'],
+      groups: [
+        { id: groupId, label: 'G1', index: 1, cueConfig: studyCueConfig },
+      ],
+    },
+  });
+  const neo4jRun = async () => [
+    {
+      studyId: studyId.toString(),
+      groupId: groupId.toString(),
+      enrolledAt: null,
+      studyCodeUsed: null,
+    },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.deepEqual(config.behaviorOptions, []);
 });
 
 test('resolveHabitConfig: public user gets free-entry config', async () => {

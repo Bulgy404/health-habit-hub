@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
+import { ToggleSwitch } from "@/components/toggle-switch";
 import styles from "./admin-page.module.css";
 
 const ACTIVITY_TYPES_API = apiUrl("/admin/activity-types");
@@ -13,16 +14,18 @@ interface ActivityType {
   label_de?: string;
   label_fr?: string;
   label_nl?: string;
+  label_ja?: string;
   isDefault: boolean;
 }
 
 /**
- * Manage the platform-wide catalog of activity types that study groups can offer
- * as behavior options (via each group's Cue Config → Allowed behaviors). The
- * catalog is shared across all studies; public/free-entry users are unaffected.
+ * Manage the platform-wide catalog of activity types that a study can offer
+ * as structured habit-entry options (via its Details tab → Habit entry
+ * toggle). The catalog is shared across all studies; public/free-entry users
+ * are unaffected.
  *
- * Rendered inside the study settings modal (Cue Config tab), next to where the
- * allowed behaviors are chosen.
+ * Rendered inside the study settings modal (Details tab), next to where the
+ * allowed activities are chosen.
  */
 export function ActivityTypesManager({ token }: { token: string }) {
   const t = useTranslations("activityTypesManager");
@@ -35,6 +38,7 @@ export function ActivityTypesManager({ token }: { token: string }) {
   const [newLabelDe, setNewLabelDe] = useState("");
   const [newLabelFr, setNewLabelFr] = useState("");
   const [newLabelNl, setNewLabelNl] = useState("");
+  const [newLabelJa, setNewLabelJa] = useState("");
   const [newIsDefault, setNewIsDefault] = useState(false);
   const [adding, setAdding] = useState(false);
 
@@ -103,6 +107,7 @@ export function ActivityTypesManager({ token }: { token: string }) {
           label_de: newLabelDe.trim() || undefined,
           label_fr: newLabelFr.trim() || undefined,
           label_nl: newLabelNl.trim() || undefined,
+          label_ja: newLabelJa.trim() || undefined,
           isDefault: newIsDefault,
         }),
       })) as ActivityType;
@@ -112,6 +117,7 @@ export function ActivityTypesManager({ token }: { token: string }) {
       setNewLabelDe("");
       setNewLabelFr("");
       setNewLabelNl("");
+      setNewLabelJa("");
       setNewIsDefault(false);
       setError("");
     } catch (err) {
@@ -141,6 +147,7 @@ export function ActivityTypesManager({ token }: { token: string }) {
                   <th>{t("german")}</th>
                   <th>{t("french")}</th>
                   <th>{t("dutch")}</th>
+                  <th>{t("japanese")}</th>
                   <th>{t("default")}</th>
                   <th></th>
                 </tr>
@@ -155,9 +162,9 @@ export function ActivityTypesManager({ token }: { token: string }) {
                     <td>{item.label_de || <span className={styles.muted}>—</span>}</td>
                     <td>{item.label_fr || <span className={styles.muted}>—</span>}</td>
                     <td>{item.label_nl || <span className={styles.muted}>—</span>}</td>
+                    <td>{item.label_ja || <span className={styles.muted}>—</span>}</td>
                     <td>
-                      <input
-                        type="checkbox"
+                      <ToggleSwitch
                         checked={item.isDefault}
                         onChange={() => toggleDefault(item.key, item.isDefault)}
                         title={t("toggleDefaultTitle")}
@@ -176,7 +183,7 @@ export function ActivityTypesManager({ token }: { token: string }) {
                 {types.length === 0 && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className={styles.muted}
                       style={{ textAlign: "center", padding: "1.5rem" }}
                     >
@@ -234,19 +241,20 @@ export function ActivityTypesManager({ token }: { token: string }) {
                 onChange={(e) => setNewLabelNl(e.target.value)}
               />
             </div>
-            <label
-              className={styles.filterGroup}
-              style={{ flexDirection: "row", alignItems: "center", gap: "0.35rem" }}
-            >
+            <div className={styles.filterGroup}>
+              <span className={styles.filterLabel}>{t("japaneseOptional")}</span>
               <input
-                type="checkbox"
-                checked={newIsDefault}
-                onChange={(e) => setNewIsDefault(e.target.checked)}
+                className={styles.input}
+                placeholder="水泳"
+                value={newLabelJa}
+                onChange={(e) => setNewLabelJa(e.target.value)}
               />
-              <span className={styles.filterLabel} style={{ margin: 0 }}>
-                {t("default")}
-              </span>
-            </label>
+            </div>
+            <ToggleSwitch
+              checked={newIsDefault}
+              onChange={(e) => setNewIsDefault(e.target.checked)}
+              label={t("default")}
+            />
             <button className={styles.addButton} onClick={add} disabled={adding}>
               {adding ? t("addingEllipsis") : t("add")}
             </button>

@@ -26,6 +26,13 @@ export function createKeycloakAdminClient({
     clientId || process.env.KEYCLOAK_ADMIN_CLIENT_ID || 'hhh-backend';
   const _clientSecret =
     clientSecret || process.env.KEYCLOAK_ADMIN_CLIENT_SECRET || '';
+  // An empty secret won't authenticate — Keycloak will reject it at request
+  // time with no clear signal at boot. Fail fast instead in production.
+  if (!_clientSecret && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'KEYCLOAK_ADMIN_CLIENT_SECRET must be set in production — refusing to start with an empty admin client secret.'
+    );
+  }
   // The client participants authenticate through — sessions are listed
   // per-client (Keycloak has no single "all sessions in realm" endpoint).
   const _participantClientId = process.env.KEYCLOAK_CLIENT_ID || 'hhh-flutter';

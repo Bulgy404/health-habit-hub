@@ -10,6 +10,7 @@ import '../config/app_config.dart';
 import '../core/dio_provider.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
+import '../providers/comments_enabled_provider.dart';
 import '../providers/locale_provider.dart';
 import '../providers/notification_prefs_provider.dart';
 import '../providers/theme_provider.dart';
@@ -30,6 +31,7 @@ class UserSettingsScreen extends ConsumerWidget {
     final currentLocale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
     final notificationPrefs = ref.watch(notificationPrefsProvider);
+    final commentsEnabled = ref.watch(commentsEnabledProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Account')),
@@ -159,6 +161,27 @@ class UserSettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 onTap: () => _showAppearancePicker(context, ref, themeMode),
+              ),
+            ],
+          ),
+
+          // ── Community ───────────────────────────────────────────────
+          SectionLabel(l10n.communitySection),
+          SettingsCard(
+            children: [
+              SettingsRow(
+                icon: Icons.forum_outlined,
+                title: l10n.communityComments,
+                subtitle: l10n.communityCommentsSubtitle,
+                trailing: Switch(
+                  value: commentsEnabled,
+                  onChanged: (value) => ref
+                      .read(commentsEnabledProvider.notifier)
+                      .setEnabled(value),
+                ),
+                onTap: () => ref
+                    .read(commentsEnabledProvider.notifier)
+                    .setEnabled(!commentsEnabled),
               ),
             ],
           ),

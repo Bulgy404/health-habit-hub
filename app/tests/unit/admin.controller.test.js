@@ -197,6 +197,11 @@ before(async () => {
       db: mockDb,
       keycloak: mockKc,
       tokenCardService: mockTokenSvc,
+      // Without this, any exercised route lazily creates a real
+      // neo4j.driver() pointed at a nonexistent server — it never actually
+      // connects to anything in these tests, but the driver's background
+      // reconnect timers keep the process alive indefinitely.
+      neo4jRun: async () => ({ records: [] }),
     })
   );
 
@@ -333,6 +338,7 @@ test('GET /admin/participants/:id/token-card - participant exists but no tokenCa
       db: noCardDb,
       keycloak: createMockKeycloak(),
       tokenCardService: createMockTokenCardService(),
+      neo4jRun: async () => ({ records: [] }),
     })
   );
   const noCardServer = createServer(noCardApp);

@@ -33,6 +33,11 @@ services:
       - traefik.http.routers.dashboard.service=api@internal
       - traefik.http.routers.dashboard.middlewares=dashboard-auth
       - traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   app:
     image: hhh/app
@@ -81,6 +86,11 @@ services:
       - traefik.http.routers.app.tls.certresolver=letsencrypt
       - traefik.http.routers.app.service=app
       - traefik.http.services.app.loadbalancer.server.port=3000
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   mongo:
     image: mongo:7.0
@@ -102,6 +112,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   mongo-express:
     image: mongo-express:1.0
@@ -118,6 +133,18 @@ services:
       - hhh-proxy
     depends_on:
       - mongo
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:8081/mongo/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     labels:
       - traefik.enable=true
       - traefik.http.routers.mongo-express.rule=Host(`${DOMAIN}`) && PathPrefix(`/mongo`)
@@ -125,6 +152,16 @@ services:
       - traefik.http.routers.mongo-express.tls.certresolver=letsencrypt
       - traefik.http.routers.mongo-express.service=mongo-express
       - traefik.http.services.mongo-express.loadbalancer.server.port=8081
+      # Second auth layer in front of mongo-express's own basic auth — this is
+      # a full DB admin UI, so a single leaked/weak ME_CONFIG_BASICAUTH_PASSWORD
+      # shouldn't be the only thing standing between it and the internet.
+      - traefik.http.routers.mongo-express.middlewares=mongo-express-auth
+      - traefik.http.middlewares.mongo-express-auth.basicauth.users=${MONGO_EXPRESS_TRAEFIK_AUTH}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   translate:
     image: libretranslate/libretranslate:latest
@@ -141,6 +178,18 @@ services:
       - translate-data:/home/libretranslate/.local/share/argos-translate/packages
     depends_on:
       - app
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:5000/languages', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     labels:
       - traefik.enable=true
       - traefik.http.routers.translate.rule=Host(`${DOMAIN}`) && PathPrefix(`/translate`)
@@ -150,6 +199,11 @@ services:
       - traefik.http.services.translate.loadbalancer.server.port=5000
       - traefik.http.middlewares.translate-strip.stripprefix.prefixes=/translate
       - traefik.http.routers.translate.middlewares=translate-strip
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   neo4j:
     image: neo4j:5
@@ -175,6 +229,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   keycloak-db:
     image: postgres:16-alpine
@@ -194,6 +253,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.5.5
@@ -231,6 +295,11 @@ services:
       - traefik.http.routers.keycloak.tls.certresolver=letsencrypt
       - traefik.http.routers.keycloak.service=keycloak
       - traefik.http.services.keycloak.loadbalancer.server.port=8080
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   keycloak-init:
     image: quay.io/keycloak/keycloak:26.5.5
@@ -279,6 +348,11 @@ services:
       /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$HHH_ADMIN_ID --rolename admin &&
       /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$HHH_ADMIN_ID --rolename researcher &&
       echo "HHH admin user $$HHH_ADMIN_USER provisioned successfully (id=$$HHH_ADMIN_ID)"'
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   redis:
     image: redis:7-alpine
@@ -289,6 +363,20 @@ services:
     volumes:
       - redis-data:/data
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      # Password is interpolated by docker-compose at parse time, same as
+      # in `command:` above — visible via `docker inspect`, no worse than
+      # the existing exposure there.
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} --no-auth-warning ping | grep -q PONG"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   lightrag:
     image: hhh/lightrag
@@ -307,6 +395,20 @@ services:
       - lightrag-data:/app/data
     networks:
       - hhh-proxy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-sf",
+          "-H",
+          "X-API-Key: ${LIGHTRAG_API_KEY}",
+          "http://localhost:9621/documents",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     logging:
       driver: json-file
       options:
@@ -325,6 +427,14 @@ services:
       - hhh-proxy
     depends_on:
       - lightrag
+    healthcheck:
+      # FastMCP serves SSE, not a plain REST endpoint — a TCP-connect check
+      # is a safer liveness probe than GETing the SSE stream path.
+      test: ["CMD", "python3", "-c", "import socket; socket.create_connection(('localhost', 8002), timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     logging:
       driver: json-file
       options:
@@ -357,6 +467,23 @@ services:
         condition: service_started
       neo4j:
         condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   admin:
     image: hhh/admin
@@ -382,6 +509,18 @@ services:
         condition: service_healthy
       keycloak-init:
         condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3001/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     labels:
       - traefik.enable=true
       - traefik.http.routers.admin.rule=Host(`${DOMAIN}`) && PathPrefix(`/admin`)
@@ -389,6 +528,11 @@ services:
       - traefik.http.routers.admin.tls.certresolver=letsencrypt
       - traefik.http.routers.admin.service=admin
       - traefik.http.services.admin.loadbalancer.server.port=3001
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   prometheus:
     image: prom/prometheus:v3.4.1
@@ -402,6 +546,17 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=30d
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   grafana:
     image: grafana/grafana-oss:12.0.1
@@ -439,6 +594,14 @@ services:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
+    healthcheck:
+      # GF_SERVER_SERVE_FROM_SUB_PATH=true means the API is mounted under
+      # /grafana internally too, not just at the public router path.
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/grafana/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     labels:
       - traefik.enable=true
       - traefik.http.routers.grafana.rule=Host(`${DOMAIN}`) && PathPrefix(`/grafana`)
@@ -446,6 +609,11 @@ services:
       - traefik.http.routers.grafana.tls.certresolver=letsencrypt
       - traefik.http.routers.grafana.service=grafana
       - traefik.http.services.grafana.loadbalancer.server.port=3000
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   backup:
     image: hhh/backup
@@ -464,6 +632,11 @@ services:
       - MAIL_USER=${MAIL_USER:-}
       - MAIL_PASS=${MAIL_PASS:-}
       - MAIL_FROM=${MAIL_FROM:-}
+      # Reachable directly over hhh-proxy (pg_dump/psql connect over the network
+      # to the running server — unlike Neo4j's offline neo4j-admin dump, no
+      # docker-socket-proxy access is needed for the Keycloak DB backup/restore).
+      - KC_DB_USERNAME=${KC_DB_USERNAME:-keycloak}
+      - KC_DB_PASSWORD=${KC_DB_PASSWORD}
       # Internal-only HTTP API used by the admin panel's Backups page
       # (status/trigger/restore/upload) — never published to the host, only
       # reachable from other containers on hhh-proxy.
@@ -476,6 +649,10 @@ services:
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
     volumes:
       - ./backups:/backups
+      # If OFFSITE_REMOTE is set: this container now runs backup.sh/restore.sh
+      # as a non-root user (docker-entrypoint.sh chowns /backups on start, but
+      # cannot chown this read-only mount) — ensure these files are readable
+      # by "other" on the host, e.g. `chmod -R o+r ./backup-service/rclone`.
       - ./backup-service/rclone:/config/rclone:ro
       - lightrag-data:/lightrag:ro
     networks:
@@ -488,6 +665,8 @@ services:
         condition: service_healthy
       lightrag:
         condition: service_started
+      keycloak-db:
+        condition: service_healthy
       docker-socket-proxy:
         condition: service_started
     # Also starts the internal backup-api HTTP server (see backup-service/api/)
@@ -501,6 +680,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Scoped proxy in front of the real docker.sock — only the backup
   # container can reach it (hhh-backup-internal is not joined by anything
@@ -517,6 +701,10 @@ services:
   # --volumes-from hhh-neo4j` in backup.sh/restore.sh with `docker exec`
   # into the already-running neo4j container so no socket access is needed
   # at all; that's a larger change tracked separately.
+  # No healthcheck: this image is a minimal, security-hardened Go binary with
+  # no shell/curl/wget/python available to probe it with, by design (smaller
+  # attack surface). `backup`'s `depends_on: condition: service_started`
+  # above is the extent of orchestration that makes sense here.
   docker-socket-proxy:
     image: tecnativa/docker-socket-proxy:0.3.0
     container_name: hhh-docker-socket-proxy
@@ -543,6 +731,11 @@ services:
       - ${DOCKER_SOCKET_PATH:-/var/run/docker.sock}:/var/run/docker.sock:ro
     networks:
       - hhh-backup-internal
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   hhh-proxy:

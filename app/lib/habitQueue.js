@@ -11,6 +11,7 @@ function redisConnection() {
 }
 
 let _queue = null;
+let _worker = null;
 
 // Defer Queue construction until first use so importing this module does not
 // attempt a Redis connection at load time (which breaks tests without Redis).
@@ -27,6 +28,15 @@ export function getHabitQueue() {
     });
   }
   return _queue;
+}
+
+/**
+ * Close the queue and worker's Redis connections, if they were ever created.
+ * Called on graceful shutdown (SIGTERM/SIGINT) — a no-op in test mode, where
+ * neither is ever instantiated.
+ */
+export async function closeHabitQueue() {
+  await Promise.all([_worker?.close(), _queue?.close()]);
 }
 
 /**
@@ -110,5 +120,6 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
     );
   });
 
+  _worker = worker;
   return worker;
 }

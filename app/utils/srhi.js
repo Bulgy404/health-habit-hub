@@ -55,20 +55,6 @@ export const SRHI_ITEMS = [
 
 export const SRHI_ITEM_IDS = SRHI_ITEMS.map((i) => i.id);
 
-export const BEHAVIOR_OPTIONS = [
-  { key: 'walking', en: 'Walking', de: 'Spazieren gehen' },
-  { key: 'light_jogging', en: 'Light jogging', de: 'Leichtes Joggen' },
-  { key: 'cycling', en: 'Cycling', de: 'Radfahren' },
-  {
-    key: 'structured_calisthenics',
-    en: 'Structured calisthenics',
-    de: 'Kalisteniktraining',
-  },
-  { key: 'yoga', en: 'Yoga', de: 'Yoga' },
-];
-
-export const DEFAULT_BEHAVIOR_KEYS = BEHAVIOR_OPTIONS.map((b) => b.key);
-
 export const CUE_SOURCES = /** @type {const} */ ([
   'low_quality',
   'high_quality',

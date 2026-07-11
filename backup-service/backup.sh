@@ -16,9 +16,21 @@ BACKUP_EMAIL=${BACKUP_EMAIL:-${ALERT_EMAIL:-}}
 KEYCLOAK_HOST=${KEYCLOAK_HOST:-keycloak}
 KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
 KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-}
+KC_DB_HOST=${KC_DB_HOST:-keycloak-db}
+KC_DB_USERNAME=${KC_DB_USERNAME:-keycloak}
+KC_DB_PASSWORD=${KC_DB_PASSWORD:-}
 # Who/what asked for this run: "scheduled" (nightly loop, default), "manual"
 # (admin UI trigger), or "pre_restore_safety" (auto-snapshot before a restore).
 BACKUP_TRIGGER=${BACKUP_TRIGGER:-scheduled}
+
+# Per-service opt-out, set by the admin UI's trigger toggles (via backup-api)
+# or directly in the environment. Default: back up everything. Scheduled runs
+# (the docker-compose command: sleep loop) never set these, so they always
+# get all four — only a manual trigger can narrow the scope.
+INCLUDE_MONGO=${BACKUP_INCLUDE_MONGO:-true}
+INCLUDE_LIGHTRAG=${BACKUP_INCLUDE_LIGHTRAG:-true}
+INCLUDE_NEO4J=${BACKUP_INCLUDE_NEO4J:-true}
+INCLUDE_KEYCLOAK=${BACKUP_INCLUDE_KEYCLOAK:-true}
 
 LOG_FILE="$BACKUP_DIR/backup.log"
 
@@ -31,6 +43,7 @@ MONGO_OK=true
 LIGHTRAG_OK=true
 NEO4J_OK=true
 KEYCLOAK_OK=true
+KEYCLOAK_DB_OK=true
 
 # shellcheck source=./lib.sh
 source "$(dirname "$0")/lib.sh"
@@ -99,112 +112,149 @@ mkdir -p "$BACKUP_DIR/$DATE"
 # NOTE: The --out directory name ("mongo") must stay in sync with the restore path in restore.sh.
 # If you rename this directory, update restore.sh to match.
 log "1/5 Backing up MongoDB..."
-if mongodump \
-  --host=mongo:27017 \
-  --username="${MONGO_USER:-}" \
-  --password="${MONGO_PASSWORD:-}" \
-  --authenticationDatabase=admin \
-  --out="$BACKUP_DIR/$DATE/mongo" \
-  --quiet 2>/dev/null; then
-  log "✓ MongoDB backup completed"
+if [ "$INCLUDE_MONGO" = "true" ]; then
+  if mongodump \
+    --host=mongo:27017 \
+    --username="${MONGO_USER:-}" \
+    --password="${MONGO_PASSWORD:-}" \
+    --authenticationDatabase=admin \
+    --out="$BACKUP_DIR/$DATE/mongo" \
+    --quiet 2>/dev/null; then
+    log "✓ MongoDB backup completed"
+  else
+    MONGO_OK=false
+    log_error "MongoDB" "mongodump failed"
+  fi
 else
-  MONGO_OK=false
-  log_error "MongoDB" "mongodump failed"
+  log "⊘ MongoDB excluded from this backup (per trigger options)"
 fi
 
 # 2. Backup LightRAG index
 log "2/5 Backing up LightRAG index..."
-if [ -d "/lightrag" ] && [ "$(ls -A /lightrag 2>/dev/null)" ]; then
-  if tar -czf "$BACKUP_DIR/$DATE/lightrag-data.tar.gz" -C /lightrag . 2>/dev/null; then
-    log "✓ LightRAG backup completed"
+if [ "$INCLUDE_LIGHTRAG" = "true" ]; then
+  if [ -d "/lightrag" ] && [ "$(ls -A /lightrag 2>/dev/null)" ]; then
+    if tar -czf "$BACKUP_DIR/$DATE/lightrag-data.tar.gz" -C /lightrag . 2>/dev/null; then
+      log "✓ LightRAG backup completed"
+    else
+      LIGHTRAG_OK=false
+      log_error "LightRAG" "tar archive failed"
+    fi
   else
-    LIGHTRAG_OK=false
-    log_error "LightRAG" "tar archive failed"
+    log "⚠ Warning: LightRAG volume is empty or not mounted"
+    touch "$BACKUP_DIR/$DATE/lightrag-data.tar.gz"
   fi
 else
-  log "⚠ Warning: LightRAG volume is empty or not mounted"
-  touch "$BACKUP_DIR/$DATE/lightrag-data.tar.gz"
+  log "⊘ LightRAG excluded from this backup (per trigger options)"
 fi
 
 # 3. Backup Neo4j using native dump
 log "3/5 Backing up Neo4j (using neo4j-admin dump)..."
-log "  Stopping Neo4j for consistent backup..."
-mkdir -p "$BACKUP_DIR/$DATE/neo4j"
+if [ "$INCLUDE_NEO4J" = "true" ]; then
+  log "  Stopping Neo4j for consistent backup..."
+  mkdir -p "$BACKUP_DIR/$DATE/neo4j"
 
-# Stop Neo4j container
-if docker stop hhh-neo4j >/dev/null 2>&1; then
-  sleep 2  # Give it a moment to shut down cleanly
+  # Stop Neo4j container
+  if docker stop hhh-neo4j >/dev/null 2>&1; then
+    sleep 2  # Give it a moment to shut down cleanly
 
-  # Create a temporary volume and set permissions
-  docker volume create neo4j-backup-temp >/dev/null 2>&1
-  docker run --rm -v neo4j-backup-temp:/backup alpine:latest chmod 777 /backup
+    # Create a temporary volume and set permissions
+    docker volume create neo4j-backup-temp >/dev/null 2>&1
+    docker run --rm -v neo4j-backup-temp:/backup alpine:latest chmod 777 /backup
 
-  # Perform the Neo4j dump
-  NEO4J_DUMP_OUTPUT=$(docker run --rm \
-    --volumes-from hhh-neo4j \
-    -v neo4j-backup-temp:/backup \
-    neo4j:5 \
-    neo4j-admin database dump neo4j --to-path=/backup --overwrite-destination=true 2>&1)
+    # Perform the Neo4j dump
+    NEO4J_DUMP_OUTPUT=$(docker run --rm \
+      --volumes-from hhh-neo4j \
+      -v neo4j-backup-temp:/backup \
+      neo4j:5 \
+      neo4j-admin database dump neo4j --to-path=/backup --overwrite-destination=true 2>&1)
 
-  if echo "$NEO4J_DUMP_OUTPUT" | grep -q "Dump completed successfully"; then
+    if echo "$NEO4J_DUMP_OUTPUT" | grep -q "Dump completed successfully"; then
 
-    # Copy the dump into the neo4j/ subdirectory
-    docker run --rm \
-      -v neo4j-backup-temp:/source:ro \
-      alpine:latest \
-      tar -czf - -C /source neo4j.dump | tar -xzf - -C "$BACKUP_DIR/$DATE/neo4j/"
+      # Copy the dump into the neo4j/ subdirectory
+      docker run --rm \
+        -v neo4j-backup-temp:/source:ro \
+        alpine:latest \
+        tar -czf - -C /source neo4j.dump | tar -xzf - -C "$BACKUP_DIR/$DATE/neo4j/"
 
-    # Clean up the temporary volume
-    docker volume rm neo4j-backup-temp >/dev/null 2>&1
+      # Clean up the temporary volume
+      docker volume rm neo4j-backup-temp >/dev/null 2>&1
 
-    log "✓ Neo4j dump completed"
-  else
-    NEO4J_OK=false
-    log_error "Neo4j" "neo4j-admin dump failed"
-    docker volume rm neo4j-backup-temp >/dev/null 2>&1 || true
-  fi
-
-  # Restart Neo4j
-  log "  Restarting Neo4j..."
-  if docker start hhh-neo4j >/dev/null 2>&1; then
-    log "✓ Neo4j restarted"
-  else
-    log_error "Neo4j" "Failed to restart container"
-  fi
-else
-  NEO4J_OK=false
-  log_error "Neo4j" "Failed to stop container for backup"
-fi
-
-# 4. Backup Keycloak realm via admin API
-log "4/5 Backing up Keycloak realm..."
-mkdir -p "$BACKUP_DIR/$DATE/keycloak"
-
-if [ -n "$KEYCLOAK_ADMIN_PASSWORD" ]; then
-  KC_TOKEN=$(curl -sf -X POST \
-    "http://${KEYCLOAK_HOST}:8080/realms/master/protocol/openid-connect/token" \
-    -d "client_id=admin-cli&grant_type=password&username=${KEYCLOAK_ADMIN}&password=${KEYCLOAK_ADMIN_PASSWORD}" \
-    2>/dev/null | jq -r '.access_token // empty' 2>/dev/null || true)
-
-  if [ -n "$KC_TOKEN" ] && [ "$KC_TOKEN" != "null" ]; then
-    if curl -sf \
-      -X POST \
-      "http://${KEYCLOAK_HOST}:8080/admin/realms/hhh/partial-export?exportClients=true&exportGroupsAndRoles=true" \
-      -H "Authorization: Bearer $KC_TOKEN" \
-      -H "Content-Type: application/json" \
-      -o "$BACKUP_DIR/$DATE/keycloak/hhh-realm.json" \
-      2>/dev/null; then
-      log "✓ Keycloak realm export completed"
+      log "✓ Neo4j dump completed"
     else
-      KEYCLOAK_OK=false
-      log_error "Keycloak" "Realm export API call failed"
+      NEO4J_OK=false
+      log_error "Neo4j" "neo4j-admin dump failed"
+      docker volume rm neo4j-backup-temp >/dev/null 2>&1 || true
+    fi
+
+    # Restart Neo4j
+    log "  Restarting Neo4j..."
+    if docker start hhh-neo4j >/dev/null 2>&1; then
+      log "✓ Neo4j restarted"
+    else
+      log_error "Neo4j" "Failed to restart container"
     fi
   else
-    KEYCLOAK_OK=false
-    log_error "Keycloak" "Failed to obtain admin token (check KEYCLOAK_ADMIN_PASSWORD)"
+    NEO4J_OK=false
+    log_error "Neo4j" "Failed to stop container for backup"
   fi
 else
-  log "⚠ Warning: KEYCLOAK_ADMIN_PASSWORD not set, skipping Keycloak backup"
+  log "⊘ Neo4j excluded from this backup (per trigger options)"
+fi
+
+# 4. Backup Keycloak: realm config (via admin API) + the actual Postgres
+# database (via pg_dump). The realm export alone captures clients/roles/groups
+# but NOT user accounts or credentials — those only live in keycloak-db, so
+# losing that volume with only a realm export backed up would mean every
+# admin/researcher account is unrecoverable.
+log "4/5 Backing up Keycloak (realm config + database)..."
+mkdir -p "$BACKUP_DIR/$DATE/keycloak"
+
+if [ "$INCLUDE_KEYCLOAK" = "true" ]; then
+  if [ -n "$KEYCLOAK_ADMIN_PASSWORD" ]; then
+    KC_TOKEN=$(curl -sf -X POST \
+      "http://${KEYCLOAK_HOST}:8080/realms/master/protocol/openid-connect/token" \
+      -d "client_id=admin-cli&grant_type=password&username=${KEYCLOAK_ADMIN}&password=${KEYCLOAK_ADMIN_PASSWORD}" \
+      2>/dev/null | jq -r '.access_token // empty' 2>/dev/null || true)
+
+    if [ -n "$KC_TOKEN" ] && [ "$KC_TOKEN" != "null" ]; then
+      if curl -sf \
+        -X POST \
+        "http://${KEYCLOAK_HOST}:8080/admin/realms/hhh/partial-export?exportClients=true&exportGroupsAndRoles=true" \
+        -H "Authorization: Bearer $KC_TOKEN" \
+        -H "Content-Type: application/json" \
+        -o "$BACKUP_DIR/$DATE/keycloak/hhh-realm.json" \
+        2>/dev/null; then
+        log "✓ Keycloak realm export completed"
+      else
+        KEYCLOAK_OK=false
+        log_error "Keycloak" "Realm export API call failed"
+      fi
+    else
+      KEYCLOAK_OK=false
+      log_error "Keycloak" "Failed to obtain admin token (check KEYCLOAK_ADMIN_PASSWORD)"
+    fi
+  else
+    log "⚠ Warning: KEYCLOAK_ADMIN_PASSWORD not set, skipping Keycloak realm export"
+  fi
+
+  if [ -n "$KC_DB_PASSWORD" ]; then
+    if PGPASSWORD="$KC_DB_PASSWORD" pg_dump \
+      -h "$KC_DB_HOST" \
+      -U "$KC_DB_USERNAME" \
+      -d keycloak \
+      -F c \
+      -f "$BACKUP_DIR/$DATE/keycloak/keycloak-db.dump" 2>/dev/null; then
+      log "✓ Keycloak database dump completed"
+    else
+      KEYCLOAK_DB_OK=false
+      log_error "Keycloak" "pg_dump of keycloak-db failed"
+    fi
+  else
+    KEYCLOAK_DB_OK=false
+    log "⚠ Warning: KC_DB_PASSWORD not set, skipping Keycloak database dump"
+  fi
+else
+  log "⊘ Keycloak excluded from this backup (per trigger options)"
 fi
 
 # 5. Create unified backup archive
@@ -227,13 +277,27 @@ rm -rf "$BACKUP_DIR/$DATE"
 # Generate backup manifest — per-component flags reflect whether that
 # component's own step actually succeeded, independent of unrelated errors
 # (e.g. a Keycloak failure must not make the MongoDB line say "Check logs").
+# A component the admin excluded via trigger options reports "Excluded", not
+# "✗ Check logs" — it was never attempted, not failed.
+component_status() {
+  local included="$1" ok="$2"
+  if [ "$included" != "true" ]; then
+    echo "Excluded"
+  elif [ "$ok" = true ]; then
+    echo "✓"
+  else
+    echo "✗ Check logs"
+  fi
+}
+
 cat > "$BACKUP_DIR/backup_$DATE.manifest" <<EOF
 Backup Date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 Trigger: $BACKUP_TRIGGER
-MongoDB: $([ "$MONGO_OK" = true ] && echo "✓" || echo "✗ Check logs")
-LightRAG: $([ "$LIGHTRAG_OK" = true ] && echo "✓" || echo "✗ Check logs")
-Neo4j: $([ "$NEO4J_OK" = true ] && echo "✓" || echo "✗ Check logs")
-Keycloak: $([ -z "$KEYCLOAK_ADMIN_PASSWORD" ] && echo "Skipped (no credentials)" || ([ "$KEYCLOAK_OK" = true ] && echo "✓" || echo "✗ Check logs"))
+MongoDB: $(component_status "$INCLUDE_MONGO" "$MONGO_OK")
+LightRAG: $(component_status "$INCLUDE_LIGHTRAG" "$LIGHTRAG_OK")
+Neo4j: $(component_status "$INCLUDE_NEO4J" "$NEO4J_OK")
+Keycloak realm: $([ "$INCLUDE_KEYCLOAK" != "true" ] && echo "Excluded" || ([ -z "$KEYCLOAK_ADMIN_PASSWORD" ] && echo "Skipped (no credentials)" || ([ "$KEYCLOAK_OK" = true ] && echo "✓" || echo "✗ Check logs")))
+Keycloak database: $([ "$INCLUDE_KEYCLOAK" != "true" ] && echo "Excluded" || ([ -z "$KC_DB_PASSWORD" ] && echo "Skipped (no credentials)" || ([ "$KEYCLOAK_DB_OK" = true ] && echo "✓" || echo "✗ Check logs")))
 Size: $BACKUP_SIZE
 File: full_backup_$DATE.tar.gz
 Retention: $RETENTION_DAYS days
@@ -242,21 +306,34 @@ EOF
 
 # Structured sidecar manifest — this is what any automation (the backup-api
 # status endpoint) should read; never regex the human-readable log/manifest.
+# keycloakOk/keycloakDbOk are reported separately (realm-config export vs. the
+# actual Postgres dump) since either can fail independently; the admin UI
+# combines them into one "Keycloak" badge. The *Included flags distinguish "the
+# admin excluded this component" from "it ran and failed" — both older
+# manifests (missing these fields) and every "Included" default to true so a
+# component that isn't reported as excluded reads as included, as before this
+# feature existed.
 jq -n \
   --arg date "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
   --arg file "full_backup_$DATE.tar.gz" \
   --arg trigger "$BACKUP_TRIGGER" \
   --argjson sizeBytes "$BACKUP_SIZE_BYTES" \
   --argjson mongoOk "$([ "$MONGO_OK" = true ] && echo true || echo false)" \
+  --argjson mongoIncluded "$([ "$INCLUDE_MONGO" = true ] && echo true || echo false)" \
   --argjson lightragOk "$([ "$LIGHTRAG_OK" = true ] && echo true || echo false)" \
+  --argjson lightragIncluded "$([ "$INCLUDE_LIGHTRAG" = true ] && echo true || echo false)" \
   --argjson neo4jOk "$([ "$NEO4J_OK" = true ] && echo true || echo false)" \
+  --argjson neo4jIncluded "$([ "$INCLUDE_NEO4J" = true ] && echo true || echo false)" \
   --argjson keycloakOk "$([ "$KEYCLOAK_OK" = true ] && echo true || echo false)" \
   --argjson keycloakSkipped "$([ -z "$KEYCLOAK_ADMIN_PASSWORD" ] && echo true || echo false)" \
+  --argjson keycloakDbOk "$([ "$KEYCLOAK_DB_OK" = true ] && echo true || echo false)" \
+  --argjson keycloakDbSkipped "$([ -z "$KC_DB_PASSWORD" ] && echo true || echo false)" \
+  --argjson keycloakIncluded "$([ "$INCLUDE_KEYCLOAK" = true ] && echo true || echo false)" \
   --argjson retentionDays "$RETENTION_DAYS" \
   --argjson errors "$BACKUP_ERRORS" \
   --arg errorLog "$ERROR_LOG" \
   --argjson durationSeconds "$DURATION_SECONDS" \
-  '{date:$date, file:$file, trigger:$trigger, sizeBytes:$sizeBytes, mongoOk:$mongoOk, lightragOk:$lightragOk, neo4jOk:$neo4jOk, keycloakOk:$keycloakOk, keycloakSkipped:$keycloakSkipped, retentionDays:$retentionDays, errors:$errors, errorLog:$errorLog, durationSeconds:$durationSeconds}' \
+  '{date:$date, file:$file, trigger:$trigger, sizeBytes:$sizeBytes, mongoOk:$mongoOk, mongoIncluded:$mongoIncluded, lightragOk:$lightragOk, lightragIncluded:$lightragIncluded, neo4jOk:$neo4jOk, neo4jIncluded:$neo4jIncluded, keycloakOk:$keycloakOk, keycloakSkipped:$keycloakSkipped, keycloakDbOk:$keycloakDbOk, keycloakDbSkipped:$keycloakDbSkipped, keycloakIncluded:$keycloakIncluded, retentionDays:$retentionDays, errors:$errors, errorLog:$errorLog, durationSeconds:$durationSeconds}' \
   > "$BACKUP_DIR/backup_$DATE.manifest.json"
 
 # Report results

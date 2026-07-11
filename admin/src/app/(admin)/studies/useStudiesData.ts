@@ -10,7 +10,6 @@ interface StudyGroup {
     cueCount: "single" | "multi";
     cueSource: "low_quality" | "high_quality" | "self_selected";
     cuePoolId: string | null;
-    behaviorOptions: string[];
     maxHabits: number | null;
   } | null;
   onboardingEnabled?: boolean | null;
@@ -26,6 +25,10 @@ export interface StudySummary {
   recommenderEnabled: boolean;
   onboardingEnabled: boolean;
   selfHabitCreationEnabled: boolean;
+  /** Study-wide — applies to every group. Off (default) = free-text habit entry. */
+  habitEntryMode: "freeText" | "structured";
+  /** Activity-type catalog keys offered when habitEntryMode is 'structured'. */
+  structuredActivityKeys: string[];
   questionnaireReminders?: { enabled: boolean; hour: number };
   endDate?: string | null;
   endOfStudyNotification?: { enabled: boolean; title: string; body: string };

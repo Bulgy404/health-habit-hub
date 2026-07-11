@@ -8,6 +8,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'app.dart';
+import 'config/app_config.dart';
 import 'firebase_options.dart';
 import 'services/fresh_install_guard.dart';
 
@@ -19,6 +20,7 @@ import 'services/fresh_install_guard.dart';
 const _sentryDsn = String.fromEnvironment('SENTRY_DSN');
 
 Future<void> main() async {
+  AppConfig.assertProductionConfig();
   WidgetsFlutterBinding.ensureInitialized();
   // Must run before anything reads onboarding/auth state from secure
   // storage — see fresh_install_guard.dart for why that state can survive

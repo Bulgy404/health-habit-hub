@@ -2,6 +2,7 @@ import express from 'express';
 import neo4j from 'neo4j-driver';
 import { makeGetDb } from '../utils/getDb.js';
 import { config } from '../utils/config.js';
+import { registerNeo4jDriver } from '../utils/neo4jDrivers.js';
 import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../models/habitComment.js';
 import {
   listAllComments,
@@ -64,10 +65,13 @@ export function createAdminRouter({
   let _neo4jDriver = null;
   async function queryNeo4j(cypher, params = {}) {
     if (neo4jRun) return neo4jRun(cypher, params);
-    _neo4jDriver ??= neo4j.driver(
-      config.neo4j.uri,
-      neo4j.auth.basic(config.neo4j.user, config.neo4j.password)
-    );
+    if (!_neo4jDriver) {
+      _neo4jDriver = neo4j.driver(
+        config.neo4j.uri,
+        neo4j.auth.basic(config.neo4j.user, config.neo4j.password)
+      );
+      registerNeo4jDriver(_neo4jDriver);
+    }
     const session = _neo4jDriver.session();
     try {
       const result = await session.run(cypher, params);

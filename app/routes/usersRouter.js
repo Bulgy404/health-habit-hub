@@ -7,6 +7,7 @@ import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../models/habitComment.
 import { deleteEnrollment } from '../services/enrollmentNeo4j.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import { config } from '../utils/config.js';
+import { registerNeo4jDriver } from '../utils/neo4jDrivers.js';
 import {
   recoveryPhraseFromCredentials,
   recoveryPhrasesEnabled,
@@ -34,10 +35,13 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
   let _neo4jDriver = null;
   async function queryNeo4j(cypher, params = {}) {
     if (neo4jRun) return neo4jRun(cypher, params);
-    _neo4jDriver ??= neo4j.driver(
-      config.neo4j.uri,
-      neo4j.auth.basic(config.neo4j.user, config.neo4j.password)
-    );
+    if (!_neo4jDriver) {
+      _neo4jDriver = neo4j.driver(
+        config.neo4j.uri,
+        neo4j.auth.basic(config.neo4j.user, config.neo4j.password)
+      );
+      registerNeo4jDriver(_neo4jDriver);
+    }
     const session = _neo4jDriver.session();
     try {
       const result = await session.run(cypher, params);

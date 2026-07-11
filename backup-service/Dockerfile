@@ -10,16 +10,26 @@ RUN apk add --no-cache \
     docker-cli \
     jq \
     nodejs \
-    npm
+    npm \
+    su-exec \
+    postgresql16-client
+
+RUN addgroup -S backupgroup && adduser -S backupuser -G backupgroup
 
 COPY lib.sh /lib.sh
 COPY backup.sh /backup.sh
 COPY restore.sh /restore.sh
-RUN chmod +x /backup.sh /restore.sh
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /backup.sh /restore.sh /docker-entrypoint.sh
 
 COPY api/package.json /backup-api/package.json
 RUN cd /backup-api && npm install --omit=dev --no-audit --no-fund
 COPY api/ /backup-api/
+RUN chown -R backupuser:backupgroup /backup-api /lib.sh /backup.sh /restore.sh
+
+# Runs as root just long enough to chown the /backups bind mount, then drops
+# to backupuser for the real process — see docker-entrypoint.sh.
+ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # The actual schedule is driven by docker-compose's `command:` (a sleep loop,
 # not real cron — see docs/runbook.md), which also starts the internal
