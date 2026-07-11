@@ -91,7 +91,7 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 |---------|-----------|----------------|
 | `app` | Node.js 22, Express, ES modules | REST API (JWT-protected), WebSocket server for recommendations, notification scheduler, survey/habit/recommendation routes |
 | `mobile` | Flutter (Dart), go_router, Riverpod | iOS/Android/web app; Keycloak PKCE auth; habit donation; recommendation display; onboarding |
-| `admin` | Next.js 14, TypeScript, NextAuth.js | Researcher/admin dashboard; participant management; questionnaire authoring; study configuration |
+| `admin` | Next.js 15, React 18, TypeScript, NextAuth.js, MUI (Material UI) v7 + Emotion, CSS Modules, Recharts | Researcher/admin dashboard; participant management; questionnaire authoring; study configuration |
 | `recommender` (API-service) | Python 3, FastAPI | LLM-based habit classification, BCIO mapping, context extraction, habit recommendation; protected by `API_SERVICE_SECRET` |
 | `keycloak` | Keycloak 26.5.5 | Identity provider; realm `hhh`; clients: `hhh-flutter` (public PKCE), `hhh-backend` (confidential service account), `hhh-admin` (confidential) |
 | `mongo` | MongoDB 8.2 | Survey definitions, questionnaire responses, user preferences, notification state |
@@ -155,7 +155,7 @@ health-habit-hub/
 │   │   └── l10n/                   # Localisation (EN/DE)
 │   └── test/                       # Flutter widget + unit tests
 │
-├── admin/                          # Next.js 14 admin application
+├── admin/                          # Next.js 15 admin application (React 18, MUI + CSS Modules)
 │   ├── src/
 │   │   ├── app/                    # Next.js App Router pages
 │   │   │   ├── (admin)/            # Admin-only page group (auth-gated)
@@ -256,8 +256,11 @@ health-habit-hub/
 
 | Component | Technology |
 |-----------|-----------|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 15 (App Router), React 18 |
 | Language | TypeScript |
+| Component library | MUI (Material UI) v7 + Emotion styling engine |
+| Styling | CSS Modules (`*.module.css`) keyed to `globals.css` custom properties; `[data-theme]` light/dark toggle |
+| Charts | Recharts |
 | Authentication | NextAuth.js with Keycloak provider (confidential client `hhh-admin`) |
 | Testing | Jest + React Testing Library |
 
@@ -497,7 +500,7 @@ Pushing a `mobile-v*` tag (e.g. `mobile-v1.0.1`) triggers `.github/workflows/mob
 
 ## 8. Admin Application
 
-The Next.js 14 admin application (`admin/`) provides a web dashboard for researchers and study administrators.
+The Next.js 15 / React 18 admin application (`admin/`) provides a web dashboard for researchers and study administrators. Its UI is built with MUI (Material UI) v7 + Emotion for shared components and CSS Modules for bespoke styling.
 
 ### Access
 

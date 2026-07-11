@@ -345,6 +345,9 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
   const [occurrences, setOccurrences] = useState(8);
   const [weeksStr, setWeeksStr] = useState("0, 4, 8");
   const [daysStr, setDaysStr] = useState("");
+  // The calendar day the admin last clicked, highlighted in the grid so the
+  // click has visible feedback beyond the pre-filled form field below.
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const addFormRef = useRef<HTMLDivElement | null>(null);
 
   const base = `${API_BASE}/${study.id}/questionnaire-assignments`;
@@ -362,8 +365,18 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
     );
     setMode("interval");
     setStartOffsetDays(diffDays);
+    setSelectedDate(dateStr);
     addFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
+
+  // Resolved calendar date of the first occurrence, derived from the offset so
+  // it stays in sync whether the admin clicked a day or typed a number.
+  const firstDueDate = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + (startOffsetDays || 0));
+    return d.toISOString();
+  })();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -559,6 +572,9 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
                 value={startOffsetDays}
                 onChange={(e) => setStartOffsetDays(parseInt(e.target.value, 10) || 0)}
               />
+              <span className={styles.hint}>
+                {t("scheduleTab.firstDueResolved", { date: fmtDate(firstDueDate) })}
+              </span>
             </div>
             <div className={styles.formGroup}>
               <label className={styles.label}>{t("scheduleTab.everyDaysLabel")}</label>
@@ -623,6 +639,7 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
           entries={calendar}
           endDate={study.endDate ?? null}
           onDayClick={handleDayClick}
+          selectedDate={selectedDate}
         />
       </div>
     </div>
@@ -634,10 +651,12 @@ function ScheduleCalendar({
   entries,
   endDate,
   onDayClick,
+  selectedDate,
 }: {
   entries: CalendarEntry[];
   endDate?: string | null;
   onDayClick?: (dateStr: string) => void;
+  selectedDate?: string | null;
 }) {
   const t = useTranslations("studies");
   const byDate = new Map(entries.map((e) => [e.date, e.items]));
@@ -733,6 +752,7 @@ function ScheduleCalendar({
           const dateStr = `${year}-${pad(month + 1)}-${pad(day)}`;
           const items = byDate.get(dateStr);
           const isToday = dateStr === todayStr;
+          const isSelected = !!selectedDate && dateStr === selectedDate;
           const isEndDate = endDateStr !== null && dateStr === endDateStr;
           const isPastEnd = endDateStr !== null && dateStr > endDateStr;
           const isPast = dateStr < todayStr;
@@ -761,12 +781,18 @@ function ScheduleCalendar({
                 borderStyle: allProjected ? "dashed" : "solid",
                 borderRadius: 6,
                 padding: "2px 4px",
-                background: isPastEnd
-                  ? "var(--color-surface-muted, #f3f4f6)"
-                  : items
-                    ? "#eef2ff"
-                    : "transparent",
-                outline: isToday ? "2px solid var(--color-primary)" : "none",
+                background: isSelected
+                  ? "var(--color-primary)"
+                  : isPastEnd
+                    ? "var(--color-surface-muted, #f3f4f6)"
+                    : items
+                      ? "#eef2ff"
+                      : "transparent",
+                outline: isSelected
+                  ? "2px solid var(--color-primary)"
+                  : isToday
+                    ? "2px solid var(--color-primary)"
+                    : "none",
                 opacity: isPastEnd ? 0.5 : 1,
                 cursor: clickable ? "pointer" : "default",
               }}
@@ -774,8 +800,8 @@ function ScheduleCalendar({
               <div
                 style={{
                   fontSize: "0.72rem",
-                  color: isEndDate ? "#dc2626" : "var(--color-text-muted)",
-                  fontWeight: isEndDate ? 700 : 400,
+                  color: isSelected ? "#fff" : isEndDate ? "#dc2626" : "var(--color-text-muted)",
+                  fontWeight: isSelected || isEndDate ? 700 : 400,
                 }}
               >
                 {day}

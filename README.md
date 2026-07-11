@@ -140,7 +140,7 @@ Highlights: the [habit donation pipeline](docs/diagrams/sequences/UC-03-donate-h
 |---|---|
 | `mobile/` | Flutter app (iOS / Android / Web) — Riverpod, GoRouter, Firebase |
 | `app/` | Node.js/Express backend — REST API `/api/v1/*`, routes → services → models |
-| `admin/` | Next.js 14 admin portal — NextAuth + Keycloak |
+| `admin/` | Next.js 15 admin portal — NextAuth + Keycloak, MUI + CSS Modules UI |
 | `API-service/` | Python FastAPI — LLM classification, BCIO mapping, RAG recommendations |
 | `lightrag/` | LightRAG knowledge base (graph + vector) |
 | `knowledge-mcp/` | MCP server exposing the KB to AI agents (SSE) |
@@ -214,7 +214,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 |---|---|
 | Mobile / Web | Flutter 3, Dart, Riverpod, GoRouter, Firebase |
 | Backend | Node.js 22, Express, ES modules |
-| Admin | Next.js 14, NextAuth.js, TypeScript, Recharts |
+| Admin | Next.js 15, React 18, NextAuth.js, TypeScript, MUI (Material UI) v7 + Emotion, CSS Modules, Recharts |
 | AI service | Python 3.11, FastAPI, OpenAI-compatible LLM API |
 | Knowledge RAG | LightRAG 1.5 (graph + vector), FastMCP |
 | Databases | MongoDB 7, Neo4j 5, PostgreSQL 16 (Keycloak) — *Fuseki/RDF retired, see [docs/migration.md](docs/migration.md)* |

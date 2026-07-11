@@ -248,7 +248,7 @@ flutter run \
 
 ## 7. Run the Admin App Locally
 
-The admin app is a Next.js application that lives in the `admin/` directory. It provides a researcher/admin interface for managing studies, participants, and questionnaires.
+The admin app is a Next.js 15 / React 18 application (TypeScript) that lives in the `admin/` directory. It provides a researcher/admin interface for managing studies, participants, and questionnaires. The UI combines **MUI (Material UI) v7 + Emotion** for shared components with **CSS Modules** for bespoke styling, and **Recharts** for analytics charts — see the "Admin Panel UI Stack" section in [architecture.md](../architecture.md) for how theming works.
 
 ### Install and start
 
