@@ -96,7 +96,14 @@ class BubbleNode {
     (i) => initR * math.sin(2 * math.pi * i / n),
   );
 
-  const iterations = 250;
+  // Each iteration is an O(n^2) pass over every circle pair, so iterations
+  // are scaled down as n grows to keep total work roughly bounded — without
+  // this, a busy dimension (community graphs can accumulate hundreds of
+  // donated habits) made this synchronous main-thread simulation take long
+  // enough to visibly freeze the UI for a frame or more whenever the bubble
+  // list changed (drilling into a dimension, annotating a habit, ...).
+  const workBudget = 2000000;
+  final iterations = (workBudget / (n * n)).round().clamp(30, 250);
   for (int iter = 0; iter < iterations; iter++) {
     final alpha = 1.0 - iter / iterations;
 

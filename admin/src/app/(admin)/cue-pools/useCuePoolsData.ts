@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiUrl } from '@/lib/api';
+import { apiFetch, apiUrl } from '@/lib/api';
 
 /** Per-language text, e.g. `{ en: 'Hello', de: 'Hallo' }`. */
 export type LocaleText = Partial<Record<'en' | 'de' | 'fr' | 'ja' | 'nl', string>>;
@@ -16,22 +16,6 @@ export interface Cue {
 }
 
 const API_BASE = apiUrl('/admin/cue-pools');
-
-async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
-  const res = await fetch(url, {
-    ...opts,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(opts.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
-  }
-  return res.json();
-}
 
 /**
  * Fetches and manages the paginated list of cues for the cue pools page.

@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
-import { apiUrl } from "@/lib/api";
+import { apiFetch, apiUrl } from "@/lib/api";
+
+// How often the studies list polls for changes made by other admins, while
+// the tab is visible. Matches the system page's REFRESH_MS.
+const REFRESH_MS = 30_000;
 
 interface StudyGroup {
   id: string;
@@ -41,20 +45,8 @@ export interface StudySummary {
 const API_BASE = apiUrl("/admin/studies");
 
 async function fetchStudies(token: string): Promise<StudySummary[]> {
-  const res = await fetch(API_BASE, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
-  }
-  const data = await res.json();
-  return Array.isArray(data)
-    ? (data as StudySummary[])
-    : ((data as { studies?: StudySummary[] }).studies ?? []);
+  const data = await apiFetch<StudySummary[] | { studies?: StudySummary[] }>(API_BASE, token);
+  return Array.isArray(data) ? data : (data.studies ?? []);
 }
 
 /**
@@ -69,6 +61,7 @@ export function useStudiesData() {
   const [studies, setStudies] = useState<StudySummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refetch = useCallback(async () => {
     if (!token) return;
@@ -84,9 +77,45 @@ export function useStudiesData() {
     }
   }, [token]);
 
+  // Background refresh: same fetch, but doesn't toggle `loading` so the list
+  // doesn't flash to a loading state every poll — only the initial load and
+  // explicit refetch() calls (e.g. after saving a study) show that.
+  const silentRefetch = useCallback(async () => {
+    if (!token) return;
+    try {
+      const items = await fetchStudies(token);
+      setStudies(items);
+      setError("");
+    } catch {
+      // Background poll failures stay silent — the visible error state is
+      // reserved for the foreground fetch so a transient blip doesn't blank
+      // an already-loaded list with an error banner.
+    }
+  }, [token]);
+
   useEffect(() => {
     refetch();
   }, [refetch]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const tick = () => {
+      if (document.visibilityState === "visible") silentRefetch();
+    };
+    timerRef.current = setInterval(tick, REFRESH_MS);
+
+    // Refresh immediately when the user returns to the tab.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") silentRefetch();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [token, silentRefetch]);
 
   return { studies, loading, error, token, refetch };
 }

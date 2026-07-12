@@ -481,6 +481,9 @@ services:
       - GF_AUTH_GENERIC_OAUTH_NAME_ATTRIBUTE_PATH=name
       - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH=contains(roles[*], 'admin') && 'Admin' || contains(roles[*], 'researcher') && 'Editor' || 'Viewer'
       - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT=false
+      # Used by monitoring/grafana/provisioning/alerting/alerting.yaml to
+      # expand $HHH_ALERT_EMAIL as the critical-alerts contact point address.
+      - HHH_ALERT_EMAIL=${ALERT_EMAIL:-}
     volumes:
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro

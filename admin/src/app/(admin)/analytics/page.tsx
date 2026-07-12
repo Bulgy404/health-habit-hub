@@ -19,7 +19,7 @@ import {
   Cell,
   ReferenceLine,
 } from "recharts";
-import { API_BASE_URL as API } from "@/lib/api";
+import { API_BASE_URL as API, apiFetch } from "@/lib/api";
 import styles from "./page.module.css";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -204,18 +204,6 @@ interface ReminderPlan {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function apiFetch<T>(url: string, token: string): Promise<T> {
-  const res = await fetch(url, {
-    cache: "no-store",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
-  }
-  return res.json() as Promise<T>;
-}
 
 function fmt(date: string | null) {
   if (!date) return "—";
