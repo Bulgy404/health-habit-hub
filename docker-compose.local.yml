@@ -420,6 +420,18 @@ services:
       - redis
       - lightrag
 
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: hhh-blackbox-exporter
+    restart: unless-stopped
+    networks:
+      - hhh-proxy
+      - hhh-app
+    volumes:
+      - ./monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+
   prometheus:
     image: prom/prometheus:v3.4.1
     container_name: hhh-prometheus
@@ -502,9 +514,12 @@ services:
       - BACKUP_EMAIL=${BACKUP_EMAIL:-}
       - MONGO_USER=${MONGO_USER:-admin}
       - MONGO_PASSWORD=${MONGO_PASSWORD:-admin}
-      - MAIL_USER=${MAIL_USER:-}
-      - MAIL_PASS=${MAIL_PASS:-}
-      - MAIL_FROM=${MAIL_FROM:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - SMTP_STARTTLS=${SMTP_STARTTLS:-true}
       # Internal-only HTTP API used by the admin panel's Backups page
       # (status/trigger/restore/upload) — never published to the host, only
       # reachable from other containers on hhh-proxy.

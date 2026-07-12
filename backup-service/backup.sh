@@ -11,8 +11,10 @@ RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
 # waiting on mtime to catch up. Manual/uploaded backups are unaffected.
 SCHEDULED_BACKUP_LIMIT=$RETENTION_DAYS
 ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
-# Backward compatible: older env/docs used ALERT_EMAIL, newer scripts use BACKUP_EMAIL.
-BACKUP_EMAIL=${BACKUP_EMAIL:-${ALERT_EMAIL:-}}
+# ALERT_EMAIL is the canonical critical-alerts recipient (also used by
+# API-service and Grafana alerting — see docs/runbook.md). BACKUP_EMAIL is a
+# deprecated alias, still read as a fallback for anyone who only set that one.
+ALERT_EMAIL=${ALERT_EMAIL:-${BACKUP_EMAIL:-}}
 KEYCLOAK_HOST=${KEYCLOAK_HOST:-keycloak}
 KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
 KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-}
@@ -75,20 +77,13 @@ send_alert() {
       2>/dev/null || log "Warning: Failed to send webhook alert"
   fi
 
-  # Send email alert via Mailjet API (if BACKUP_EMAIL + mail credentials configured)
-  if [ -n "$BACKUP_EMAIL" ] && [ -n "${MAIL_USER:-}" ] && [ -n "${MAIL_PASS:-}" ]; then
-    curl -X POST https://api.mailjet.com/v3.1/send \
-      -u "$MAIL_USER:$MAIL_PASS" \
-      -H "Content-Type: application/json" \
-      -d "{
-        \"Messages\": [{
-          \"From\": {\"Email\": \"${MAIL_FROM:-noreply@example.com}\", \"Name\": \"Health Habit Hub Backup\"},
-          \"To\": [{\"Email\": \"$BACKUP_EMAIL\"}],
-          \"Subject\": \"🚨 Health Habit Hub Backup $status\",
-          \"TextPart\": \"$message\",
-          \"HTMLPart\": \"<h3>Health Habit Hub Backup $status</h3><pre>$message</pre>\"
-        }]
-      }" 2>/dev/null && log "Email alert sent to $BACKUP_EMAIL" || log "Warning: Failed to send email alert"
+  # Send email alert via generic SMTP (if ALERT_EMAIL + SMTP credentials configured)
+  if [ -n "$ALERT_EMAIL" ]; then
+    if send_smtp_mail "$ALERT_EMAIL" "🚨 Health Habit Hub Backup $status" "$message"; then
+      log "Email alert sent to $ALERT_EMAIL"
+    else
+      log "Warning: Failed to send email alert (SMTP not configured or send failed)"
+    fi
   fi
 }
 

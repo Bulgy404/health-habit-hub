@@ -393,10 +393,13 @@ All variables are defined in `stack.env`. In production, override sensitive valu
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MAIL_USER` | — | Mailjet API key |
-| `MAIL_PASS` | — | Mailjet secret key |
-| `MAIL_FROM` | `noreply@wiwi.tu-dresden.de` | Sender address |
-| `MAIL_RECEIVER` | — | Default recipient for system alerts |
+| `SMTP_HOST` | — | Generic SMTP relay/provider host (any provider works) |
+| `SMTP_PORT` | `587` | `587` for STARTTLS, `465` for implicit TLS |
+| `SMTP_USER` | — | SMTP username |
+| `SMTP_PASS` | — | SMTP password |
+| `SMTP_FROM` | `noreply@wiwi.tu-dresden.de` | Sender address |
+| `SMTP_STARTTLS` | `true` | Set `false` only when `SMTP_PORT=465` |
+| `ALERT_EMAIL` | — | Recipient for critical alerts (backup, LLM outages, BullMQ failures, service reachability/5xx — see `docs/runbook.md`) |
 
 ### Backup
 

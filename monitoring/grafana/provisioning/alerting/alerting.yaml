@@ -1,0 +1,135 @@
+# Critical-alert routing for metric-driven signals (BullMQ job failures,
+# service reachability, 5xx spikes). Backup failures and LLM-model-unavailable
+# alerts are sent directly by application code (backup-service/backup.sh,
+# API-service/alerting.py) and do not go through Grafana — see
+# docs/runbook.md for the full picture of what alerts on what and why.
+#
+# Schema and env-var expansion ($HHH_ALERT_EMAIL below) verified against a
+# real Grafana 12.0.1 instance before committing this file — see the
+# alerting.yaml PR/commit description for how.
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: hhh-critical-alerts
+    receivers:
+      - uid: hhh-critical-email
+        type: email
+        settings:
+          # HHH_ALERT_EMAIL is set on the grafana service in docker-compose.yml
+          # from the same ALERT_EMAIL used by backup.sh and alerting.py.
+          addresses: $HHH_ALERT_EMAIL
+          singleEmail: true
+
+policies:
+  - orgId: 1
+    receiver: hhh-critical-alerts
+    group_by: ['alertname']
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+
+groups:
+  - orgId: 1
+    name: hhh-critical-alerts
+    folder: HHH
+    interval: 1m
+    rules:
+      # ── Service reachability ────────────────────────────────────────────
+      # Fires per-target (Grafana creates one alert instance per unique
+      # label set) when blackbox-exporter can't reach a service for 2
+      # consecutive minutes. Covers every long-running container that
+      # doesn't expose its own Prometheus metrics — see
+      # monitoring/blackbox/blackbox.yml and monitoring/prometheus.yml.
+      - uid: hhh-reachability
+        title: Service unreachable
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: probe_success{job=~"blackbox-http|blackbox-tcp"}
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 2m
+        labels:
+          severity: critical
+          alert_type: reachability
+        annotations:
+          summary: "{{ $labels.instance }} is unreachable"
+
+      # ── BullMQ job failures ─────────────────────────────────────────────
+      # bullmq_jobs_failed_total only increments on terminal (retries
+      # exhausted) failures — see app/lib/habitQueue.js's isTerminalFailure()
+      # — so any increase here is already a genuine, non-self-healing
+      # failure; no debounce window needed beyond the 15m lookback itself.
+      - uid: hhh-bullmq-failures
+        title: BullMQ job failures
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: increase(bullmq_jobs_failed_total[15m])
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels:
+          severity: critical
+          alert_type: bullmq
+        annotations:
+          summary: "{{ $labels.queue }} has jobs that exhausted all retry attempts"
+
+      # ── 5xx spike ────────────────────────────────────────────────────────
+      # Threshold (0.1 req/s sustained over 5m) is a starting point, not a
+      # tuned SLO — adjust once real traffic volume is known (see
+      # docs/runbook.md).
+      - uid: hhh-5xx-spike
+        title: Backend 5xx error rate
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              expr: sum(rate(http_request_duration_seconds_count{status_code=~"5.."}[5m]))
+              instant: true
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.1] }
+              refId: B
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: critical
+          alert_type: 5xx-spike
+        annotations:
+          summary: "Backend 5xx rate has been elevated for 5+ minutes"

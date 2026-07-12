@@ -5,5 +5,6 @@ datasources:
     type: prometheus
     access: proxy
     url: http://prometheus:9090
+    uid: prometheus # fixed so alerting.yaml can reference it deterministically
     isDefault: true
     editable: false

@@ -18,8 +18,9 @@ and is annotated with the expected output.
 8. [Rotating Secrets](#rotating-secrets)
 9. [Adding an Admin User](#adding-an-admin-user)
 10. [Checking Service Health](#checking-service-health)
-11. [Queue & Cache Monitoring](#queue--cache-monitoring-local-dev)
-12. [Troubleshooting](#troubleshooting)
+11. [Critical Alerts](#critical-alerts)
+12. [Queue & Cache Monitoring](#queue--cache-monitoring-local-dev)
+13. [Troubleshooting](#troubleshooting)
     - [Keycloak 401 errors](#keycloak-401-errors--jwks-url-misconfigured)
     - [Keycloak DB unavailable — PostgreSQL not ready](#keycloak-db-unavailable--postgresql-not-ready)
     - [Neo4j connection refused — container not ready](#neo4j-connection-refused--container-not-ready)
@@ -705,7 +706,58 @@ echo "ERROR: Services not healthy after 60s" && exit 1
 
 ---
 
-## 11. Queue & Cache Monitoring (local dev)
+## 11. Critical Alerts
+
+All critical-alert emails go to `ALERT_EMAIL` via generic SMTP (`SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`/`SMTP_STARTTLS` — set once in `.env`/Portainer, works with any relay/provider). Two independent delivery paths share these same credentials:
+
+| Alert | Fires when | Sent from | Debounce |
+|---|---|---|---|
+| Backup failure/success | Every scheduled/manual `backup.sh` run | `backup-service/lib.sh`'s `send_smtp_mail()`, called from `backup.sh`'s `send_alert()` | One email per run (not repeated) |
+| LLM model unavailable | Primary model fails (`API-service/llm_client.py`'s circuit breaker) | `API-service/alerting.py` | Once per `LLM_FALLBACK_COOLDOWN_S` (default 300s) per model — see the code comments in `llm_client.py` for why |
+| LLM totally unavailable | Primary **and** `LLM_FALLBACK_MODEL` both fail | Same as above | Once per `LLM_FALLBACK_COOLDOWN_S` per fallback model |
+| BullMQ job failures | A queued job exhausts all retry attempts (`bullmq_jobs_failed_total`, terminal failures only) | Grafana (`monitoring/grafana/provisioning/alerting/alerting.yaml`, rule `hhh-bullmq-failures`) | Grafana's own `group_wait`/`group_interval`/`repeat_interval` (30s/5m/4h) |
+| Service unreachable | `blackbox-exporter` can't reach a service (TCP-connect or HTTP-GET) for 2+ consecutive minutes | Grafana, rule `hhh-reachability` | Same as above |
+| Backend 5xx spike | Sustained 5xx rate > 0.1 req/s for 5+ minutes (tune the threshold in `alerting.yaml` once real traffic volume is known) | Grafana, rule `hhh-5xx-spike` | Same as above |
+
+The backup and LLM alerts fire directly from application code — they don't depend on Prometheus/Grafana being up. The other three are metric-driven and route through Grafana's unified alerting engine.
+
+### Testing each alert path
+
+```bash
+# Backup: trigger a manual backup and check for an email (success or failure)
+docker exec hhh-backup /backup.sh
+
+# LLM-down: temporarily point LLM_API_KEY or LLM_API_BASE at something
+# unreachable, then make any request that calls chat_complete (e.g. POST
+# /api/v1/llm/classify-habit through the app). Restore the real value
+# afterwards — the circuit breaker recovers automatically once calls succeed
+# again, no restart needed.
+
+# BullMQ: check the counter directly
+curl -s http://localhost:9091/metrics | grep bullmq_jobs_failed_total
+
+# Reachability: stop a non-critical service and watch the probe flip
+docker stop hhh-redis
+curl -s 'http://localhost:9090/api/v1/query?query=probe_success{instance="redis:6379"}'
+docker start hhh-redis
+```
+
+### Muting alerts during planned maintenance
+
+Don't edit the provisioned rule files for a temporary silence — they're reprovisioned on every Grafana restart. Instead, in Grafana: **Alerting → Mute timings** → create a timing covering the maintenance window, then add it to the `hhh-critical-alerts` notification policy for the duration. Remove it afterwards.
+
+### Verifying the Grafana alerting config loaded correctly
+
+```bash
+curl -s -u "$GRAFANA_ADMIN_USER:$GRAFANA_ADMIN_PASSWORD" \
+  https://<DOMAIN>/grafana/api/v1/provisioning/alert-rules | python3 -m json.tool
+# Expect 3 rules: hhh-reachability, hhh-bullmq-failures, hhh-5xx-spike,
+# each with "provenance": "file"
+```
+
+---
+
+## 12. Queue & Cache Monitoring (local dev)
 
 Two browser UIs are available in local development to inspect the BullMQ habit-donation queue and the Redis cache.
 
@@ -761,7 +813,7 @@ docker compose -f docker-compose.local.yml stop redis-insight
 
 ---
 
-## 12. Troubleshooting
+## 13. Troubleshooting
 
 ### Keycloak 401 errors — JWKS URL misconfigured
 

@@ -185,10 +185,13 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
   - Site key
   - Secret key
   - Domain `habit.wiwi.tu-dresden.de` added
-- [ ] Mailjet API credentials obtained (<https://app.mailjet.com/account/api_keys>)
-  - API key
-  - Secret key
-  - Sender domain verified
+- [ ] SMTP relay/provider credentials obtained (any provider works — no vendor
+      lock-in). Used for critical-alert emails: backup failures, LLM outages,
+      BullMQ job failures, and service-reachability/5xx alerts. See
+      [docs/runbook.md](docs/runbook.md) for what alerts on what.
+  - Host + port (587 for STARTTLS, or 465 for implicit TLS)
+  - Username + password
+  - Sender address (`SMTP_FROM`) and recipient (`ALERT_EMAIL`)
 
 ### 4. Security — Generate Secure Values
 - [ ] MongoDB password (`MONGO_PASSWORD`)
@@ -250,6 +253,16 @@ KEYCLOAK_ADMIN=admin
 KEYCLOAK_ADMIN_PASSWORD=<your-secure-keycloak-admin-password>
 KC_DB_PASSWORD=<your-secure-keycloak-db-password>
 
+# Keycloak client secrets — keycloak-init pushes each into its matching
+# Keycloak client at startup. Leaving any of these unset silently sets that
+# client's secret to an empty string, breaking the integration (backend
+# auth, admin panel login, Grafana SSO, or account restore respectively).
+# Generate each with: openssl rand -hex 32
+KEYCLOAK_ADMIN_CLIENT_SECRET=<your-hhh-backend-client-secret>
+KEYCLOAK_ADMIN_UI_CLIENT_SECRET=<your-hhh-admin-client-secret>
+GRAFANA_CLIENT_SECRET=<your-grafana-client-secret>
+KEYCLOAK_ROPC_CLIENT_SECRET=<your-hhh-ropc-client-secret>
+
 # API service shared secret — MUST match in both hhh-app and hhh-recommender
 # Generate with: openssl rand -hex 32
 API_SERVICE_SECRET=<your-shared-api-service-secret>
@@ -257,9 +270,14 @@ API_SERVICE_SECRET=<your-shared-api-service-secret>
 # Traefik Dashboard (generate: htpasswd -nb admin your-password)
 TRAEFIK_DASHBOARD_AUTH=<your-htpasswd-hash>
 
-# Mailjet (from Mailjet dashboard)
-MAIL_USER=<mailjet-api-key>
-MAIL_PASS=<mailjet-secret-key>
+# Generic SMTP — used for critical-alert emails (backup, LLM outages, BullMQ
+# failures, service-reachability/5xx alerts). Any provider/relay works.
+SMTP_HOST=<your-smtp-host>
+SMTP_PORT=587
+SMTP_USER=<your-smtp-username>
+SMTP_PASS=<your-smtp-password>
+SMTP_FROM=noreply@habit.wiwi.tu-dresden.de
+ALERT_EMAIL=<address-to-receive-critical-alerts>
 
 # LLM provider (for habit classification, BCIO mapping, translation refinement, recommendations)
 LLM_API_KEY=<your-api-key>
@@ -557,6 +575,15 @@ Prometheus scrapes the Node.js app at `http://app:9091/metrics` (prom-client, st
 
 > **Production:** `docker-compose.yml` also runs Prometheus and Grafana. Prometheus has no published port and no Traefik route — it's reachable only from other containers on `hhh-proxy` (Grafana, and the app's own `/admin/system/overview` proxy), never directly from the internet. Grafana is exposed at `https://${DOMAIN}/grafana`, access-gated by Keycloak SSO (`GF_AUTH_GENERIC_OAUTH_*`, mapping the `admin`/`researcher` realm roles to Grafana's Admin/Editor roles) rather than a separate Traefik auth middleware.
 
+### Critical Alerts
+
+Alert emails go to `ALERT_EMAIL` via the generic `SMTP_*` credentials (no vendor-specific API — set once, works with any relay/provider). Two delivery paths, one set of credentials — see [docs/runbook.md](docs/runbook.md) for the full picture:
+
+- **Backup failures** and **LLM-model-unavailable** fire directly from application code (`backup-service/backup.sh`, `API-service/alerting.py`) — independent of Grafana being up.
+- **BullMQ job failures**, **service reachability**, and **5xx-rate spikes** are metric-driven and route through Grafana's unified alerting (`monitoring/grafana/provisioning/alerting/alerting.yaml`). `blackbox-exporter` (internal-only, no host mounts) probes every long-running service that doesn't expose its own Prometheus metrics.
+
+To silence an alert during planned maintenance, add a Grafana mute timing (**Alerting → Mute timings**) rather than editing the provisioned rule files.
+
 ### Container Logs
 
 View logs in Portainer:
@@ -825,7 +852,8 @@ reporting — a silent no-op unless configured:
 | `GRAFANA_CLIENT_SECRET` (grafana client) | Grafana SSO | regenerate + redeploy keycloak-init + grafana |
 | `API_SERVICE_SECRET` | app ↔ api-service | regenerate + redeploy both |
 | `LIGHTRAG_API_KEY`, `LLM_API_KEY` | lightrag, api-service | provider console |
-| `MAIL_USER` / `MAIL_PASS` (Mailjet) | backup alerts | **rotate now** — previous values circulated in a repo working copy |
+| `SMTP_USER` / `SMTP_PASS` | backup, LLM-outage, BullMQ, and reachability/5xx alert emails (see docs/runbook.md) | provider console or relay config |
+| ~~`MAIL_USER` / `MAIL_PASS` (Mailjet)~~ | removed — replaced by generic SMTP above | **revoke now** in the Mailjet console — previous values circulated in a repo working copy and were never rotated before the integration was removed |
 | ~~`RECAPTCHA_*`~~ | removed 2026-06 | **revoke now** in the Google reCAPTCHA console — keys are unused but were exposed |
 | `SENTRY_DSN` | app, mobile builds | Sentry project settings (low sensitivity — write-only DSN) |
 

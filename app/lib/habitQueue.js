@@ -2,6 +2,7 @@ import { Queue, Worker, Job } from 'bullmq';
 import { shareHabit } from '../services/habitDonationService.js';
 import { translateHabit, translateTerm } from '../utils/translate.js';
 import { logger } from '../utils/logger.js';
+import { bullmqJobsFailedTotal } from '../middleware/metrics.js';
 
 const log = logger.child({ module: 'habitQueue' });
 const QUEUE_NAME = 'habit-donations';
@@ -65,6 +66,19 @@ export async function getJobStatus(jobId, queue = getHabitQueue()) {
 }
 
 /**
+ * Whether a BullMQ 'failed' event represents a terminal (retries-exhausted)
+ * failure rather than an attempt that will still be retried. BullMQ fires
+ * 'failed' on every failed attempt, not just the last one.
+ *
+ * @param {{ attemptsMade?: number, opts?: { attempts?: number } }} job
+ * @returns {boolean}
+ */
+export function isTerminalFailure(job) {
+  const maxAttempts = job?.opts?.attempts ?? 1;
+  return (job?.attemptsMade ?? maxAttempts) >= maxAttempts;
+}
+
+/**
  * Start the BullMQ worker that processes queued habit donations.
  * Call once on app startup. Pass neo4jRun=true to skip (test mode).
  *
@@ -118,6 +132,12 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
       { jobId: job?.data?.uuid, err: err.message },
       'habit donation job failed'
     );
+    // Only count terminal failures toward the alert-facing metric (default:
+    // 3 attempts, see defaultJobOptions above) — a job that fails once then
+    // succeeds on retry must not trigger a critical alert.
+    if (isTerminalFailure(job)) {
+      bullmqJobsFailedTotal.inc({ queue: QUEUE_NAME });
+    }
   });
 
   _worker = worker;
