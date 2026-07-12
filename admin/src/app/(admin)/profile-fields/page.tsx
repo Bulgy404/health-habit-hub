@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAdminGuard } from "@/lib/useAdminGuard";
-import { apiUrl } from "@/lib/api";
+import { apiFetch, apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
 import styles from "./page.module.css";
 
@@ -20,33 +20,6 @@ interface ProfileFieldDefinition {
 }
 
 const API_BASE = apiUrl("/admin/profile-field-definitions");
-
-/**
- * Authenticated JSON fetch helper.
- *
- * @param url - The full URL to fetch.
- * @param token - The NextAuth session access token.
- * @param opts - Additional fetch options.
- * @returns The parsed JSON response body.
- * @throws {Error} If the response status is not 2xx.
- */
-async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
-  const res = await fetch(url, {
-    ...opts,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(opts.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    const err = new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
-    (err as Error & { status?: number }).status = res.status;
-    throw err;
-  }
-  return res.json();
-}
 
 function emptyForm(): ProfileFieldDefinition {
   return { fieldId: "", label: "", type: "text", options: [], required: false, order: 0 };

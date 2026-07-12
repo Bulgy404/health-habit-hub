@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { apiUrl } from "@/lib/api";
+import { apiFetch, apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
 import styles from "./page.module.css";
 import { useCuePoolsData } from "./useCuePoolsData";
@@ -27,31 +27,6 @@ function previewText(map: LocaleText | undefined, lang: Lang = "en"): string {
 }
 
 const API_BASE = apiUrl("/admin/cue-pools");
-
-/**
- * Authenticated JSON fetch helper.
- *
- * @param url - The full URL to fetch.
- * @param token - The NextAuth session access token.
- * @param opts - Additional fetch options.
- * @returns The parsed JSON response body.
- * @throws {Error} If the response status is not 2xx.
- */
-async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
-  const res = await fetch(url, {
-    ...opts,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(opts.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
-  }
-  return res.json();
-}
 
 /**
  * Displays and manages pre-rated contextual cues for study conditions.

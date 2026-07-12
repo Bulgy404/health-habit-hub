@@ -78,7 +78,13 @@ async function fetchWithRefresh(
  * @returns The parsed JSON response body.
  * @throws {Error} If the response status is not 2xx.
  */
-export async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
+// `any` default matches the previous untyped `res.json()` return so existing untyped
+// call sites keep compiling; callers that want type safety opt in with apiFetch<T>(...).
+export async function apiFetch<T = any>(
+  url: string,
+  token: string,
+  opts: RequestInit = {}
+): Promise<T> {
   const res = await fetchWithRefresh(url, token, {
     // Always hit the network so admin metrics refresh on reload rather than
     // serving a stale cached response.
@@ -93,7 +99,7 @@ export async function apiFetch(url: string, token: string, opts: RequestInit = {
     const body = await res.json().catch(() => ({}));
     throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
   }
-  return res.json();
+  return res.json() as Promise<T>;
 }
 
 /**

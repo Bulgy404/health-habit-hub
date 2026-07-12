@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../theme/app_colors.dart';
 
 /// Screen where the user types a health goal and triggers recommendation
 /// generation. Navigates to [RecommendationLoadingScreen] on submit.
@@ -41,16 +42,16 @@ class _GoalInputScreenState extends State<GoalInputScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Pink icon box
+              // Green icon box
               Center(
                 child: Container(
                   width: 72, height: 72,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFCE4F0),
+                    color: context.appColors.greenLight,
                     borderRadius: BorderRadius.circular(22),
-                    boxShadow: const [BoxShadow(color: Color(0x2EE679AB), blurRadius: 20, offset: Offset(0, 6))],
+                    boxShadow: [BoxShadow(color: context.appColors.primary.withAlpha(46), blurRadius: 20, offset: const Offset(0, 6))],
                   ),
-                  child: const Icon(Icons.lightbulb, size: 36, color: Color(0xFFE679AB)),
+                  child: Icon(Icons.lightbulb, size: 36, color: context.appColors.primary),
                 ),
               ),
               const SizedBox(height: 20),

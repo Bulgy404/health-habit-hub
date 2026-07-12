@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
@@ -398,8 +399,6 @@ class UserSettingsScreen extends ConsumerWidget {
     // (and its Theme InheritedWidget) while the closing sheet's own Elements
     // — which read Theme.of(sheetContext) — are still mid-teardown, which
     // trips Flutter's InheritedElement `_dependents.isEmpty` assertion.
-    // Awaiting showModalBottomSheet's future instead only applies the change
-    // once the sheet's route (and its dependents) has fully unmounted.
     final selected = await showModalBottomSheet<ThemeMode>(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -439,6 +438,18 @@ class UserSettingsScreen extends ConsumerWidget {
       ),
     );
     if (selected != null) {
+      // showModalBottomSheet's future resolves as soon as the route is
+      // popped (Route.didComplete fires inside NavigatorState.pop, before
+      // the reverse transition runs) — the sheet's Elements are still very
+      // much mounted and depending on Theme.of(sheetContext) for the ~200ms
+      // exit animation that follows. Applying the theme change immediately
+      // races that teardown and re-trips the same `_dependents.isEmpty`
+      // assertion the comment above describes. Waiting for the scheduler to
+      // go idle (no more frames scheduled) means the exit transition — and
+      // the sheet's element deactivation — has actually finished.
+      while (SchedulerBinding.instance.hasScheduledFrame) {
+        await SchedulerBinding.instance.endOfFrame;
+      }
       await ref.read(themeModeProvider.notifier).setMode(selected);
     }
   }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apiUrl } from '@/lib/api';
+import { apiFetch, apiUrl } from '@/lib/api';
 
 interface KbEntry {
   filename: string;
@@ -27,11 +27,7 @@ export function useKnowledgeBaseData(token: string) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(API_BASE, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as KbEntry[];
+      const data = await apiFetch<KbEntry[]>(API_BASE, token);
       setEntries(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load knowledge base');
