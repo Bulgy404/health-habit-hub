@@ -37,7 +37,8 @@ function makeDb() {
           find(filter = {}) {
             const results = logs.filter(
               (d) =>
-                d.intentionId?.toString() === filter.intentionId?.toString()
+                d.intentionId?.toString() === filter.intentionId?.toString() &&
+                (filter.userId === undefined || d.userId === filter.userId)
             );
             return {
               async toArray() {
@@ -49,7 +50,8 @@ function makeDb() {
             const idx = logs.findIndex(
               (d) =>
                 d.intentionId?.toString() === filter.intentionId?.toString() &&
-                d.date === filter.date
+                d.date === filter.date &&
+                (filter.userId === undefined || d.userId === filter.userId)
             );
             if (idx === -1) return { deletedCount: 0 };
             logs.splice(idx, 1);
@@ -129,10 +131,32 @@ test('getLogs: includes intentionId as a string on each returned log', async () 
     date: '2026-06-01',
     enacted: true,
   });
-  const logs = await getLogs({ db, intentionId: intentionId.toString() });
+  const logs = await getLogs({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+  });
   assert.equal(logs.length, 1);
   assert.equal(logs[0].intentionId, intentionId.toString());
   assert.equal(typeof logs[0].intentionId, 'string');
+});
+
+test('getLogs: does not return entries belonging to a different userId (IDOR)', async () => {
+  const db = makeDb();
+  const intentionId = new ObjectId();
+  await upsertLog({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    date: '2026-06-01',
+    enacted: true,
+  });
+  const logs = await getLogs({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u2',
+  });
+  assert.equal(logs.length, 0);
 });
 
 test('deleteLog: removes the entry for that date, leaving others intact', async () => {
@@ -156,10 +180,41 @@ test('deleteLog: removes the entry for that date, leaving others intact', async 
   await deleteLog({
     db,
     intentionId: intentionId.toString(),
+    userId: 'u1',
     date: '2026-06-01',
   });
 
-  const logs = await getLogs({ db, intentionId: intentionId.toString() });
+  const logs = await getLogs({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+  });
   assert.equal(logs.length, 1);
   assert.equal(logs[0].date, '2026-06-02');
+});
+
+test('deleteLog: does not delete an entry belonging to a different userId (IDOR)', async () => {
+  const db = makeDb();
+  const intentionId = new ObjectId();
+  await upsertLog({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    date: '2026-06-01',
+    enacted: true,
+  });
+
+  await deleteLog({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u2',
+    date: '2026-06-01',
+  });
+
+  const logs = await getLogs({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+  });
+  assert.equal(logs.length, 1, 'entry owned by u1 must survive a u2 delete');
 });

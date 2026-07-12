@@ -16,6 +16,7 @@ import { createProfileRouter } from './profileRouter.js';
 import { createHabitsRouter } from './habitsRouter.js';
 import { createAdminRouter } from './adminRouter.js';
 import { createOnboardRouter } from './onboardRouter.js';
+import { createRestoreRouter } from './restoreRouter.js';
 import { createQuestionnairesRouter } from './questionnairesRouter.js';
 import {
   createQuestionnaireResponsesRouter,
@@ -196,6 +197,10 @@ export function createApiRouter({
 
   // Public: anonymous self-registration (rate limited separately, no JWT required)
   router.use('/onboard', createOnboardRouter({ keycloak, db }));
+
+  // Public: passphrase-based account restore on a new device (rate limited
+  // separately, no JWT required — the caller has no session yet).
+  router.use('/restore', createRestoreRouter({ db }));
 
   // Sanitize request bodies before auth (general protection)
   router.use(sanitizeBody);

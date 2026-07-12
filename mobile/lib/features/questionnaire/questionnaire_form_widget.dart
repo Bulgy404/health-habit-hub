@@ -195,9 +195,11 @@ class _QuestionnaireFormWidgetState
         questionnaireSlug: widget.definition.slug,
         answers: answers,
       );
+      if (!mounted) return;
       notifier.reset();
       widget.onSubmitted();
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _isSubmitting = false;
         _error = l10n.submissionFailed;

@@ -28,24 +28,34 @@ export async function upsertLog({ db, intentionId, userId, date, enacted }) {
  * Delete the daily behavior log entry for a given intention and date,
  * reverting it to "not logged" — distinct from `upsertLog({ enacted: false })`,
  * which records an explicit miss rather than clearing the entry.
- * @param {{ db: object, intentionId: string, date: string }} deps
+ *
+ * `userId` is required and included in the delete filter so that a request
+ * for an `intentionId` owned by a different user matches (and deletes)
+ * nothing — see IDOR fix in intentionsRouter.js.
+ * @param {{ db: object, intentionId: string, userId: string, date: string }} deps
  * @returns {Promise<void>}
  */
-export async function deleteLog({ db, intentionId, date }) {
+export async function deleteLog({ db, intentionId, userId, date }) {
   const oid = new ObjectId(intentionId);
-  await db
-    .collection(COLLECTION)
-    .deleteOne({ intentionId: oid, date: String(date) });
+  await db.collection(COLLECTION).deleteOne({
+    intentionId: oid,
+    userId: String(userId),
+    date: String(date),
+  });
 }
 
 /**
  * Retrieve daily log entries for an intention, optionally filtered by date range.
- * @param {{ db: object, intentionId: string, from?: string, to?: string }} deps
+ *
+ * `userId` is required and included in the query filter so that a request
+ * for an `intentionId` owned by a different user returns no entries — see
+ * IDOR fix in intentionsRouter.js.
+ * @param {{ db: object, intentionId: string, userId: string, from?: string, to?: string }} deps
  * @returns {Promise<Array<{ date: string, enacted: boolean, loggedAt: Date }>>}
  */
-export async function getLogs({ db, intentionId, from, to }) {
+export async function getLogs({ db, intentionId, userId, from, to }) {
   const oid = new ObjectId(intentionId);
-  const filter = { intentionId: oid };
+  const filter = { intentionId: oid, userId: String(userId) };
   if (from || to) {
     filter.date = {};
     if (from) filter.date.$gte = from;

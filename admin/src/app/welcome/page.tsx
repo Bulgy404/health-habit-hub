@@ -10,7 +10,7 @@ import styles from "./page.module.css";
 const STEP_ICONS = [Sparkles, Compass, Rocket];
 
 function markOnboarded() {
-  document.cookie = `${WELCOME_COOKIE}=1; path=/; max-age=${WELCOME_COOKIE_MAX_AGE}; SameSite=Lax`;
+  document.cookie = `${WELCOME_COOKIE}=1; path=/; max-age=${WELCOME_COOKIE_MAX_AGE}; SameSite=Lax; Secure`;
 }
 
 /**

@@ -95,7 +95,10 @@ export function getCurrentBackupJob() {
  *   default behavior).
  */
 export function triggerBackupNow(services) {
-  return call('/trigger', { method: 'POST', body: services ? { services } : undefined });
+  return call('/trigger', {
+    method: 'POST',
+    body: services ? { services } : undefined,
+  });
 }
 
 export function deleteBackup(filename) {

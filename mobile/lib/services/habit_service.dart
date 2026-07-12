@@ -19,13 +19,18 @@ class HabitService {
 
   /// Returns all anonymized habit nodes from the public graph.
   Future<List<HabitNode>> fetchPublicHabits() async {
-    final response = await _dio.get<List<dynamic>>(
-      '$_baseUrl/habits/public',
-    );
-    return (response.data ?? [])
-        .cast<Map<String, dynamic>>()
-        .map(HabitNode.fromJson)
-        .toList();
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '$_baseUrl/habits/public',
+      );
+      return (response.data ?? [])
+          .cast<Map<String, dynamic>>()
+          .map(HabitNode.fromJson)
+          .toList();
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      rethrow;
+    }
   }
 
   /// Returns the authenticated user's donated habits + dimension breakdown,
@@ -45,10 +50,15 @@ class HabitService {
 
   /// Returns aggregated habit statistics (total, byCategory, byDay).
   Future<HabitStats> fetchStats() async {
-    final response = await _dio.get<Map<String, dynamic>>(
-      '$_baseUrl/habits/stats',
-    );
-    return HabitStats.fromJson(response.data ?? {});
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '$_baseUrl/habits/stats',
+      );
+      return HabitStats.fromJson(response.data ?? {});
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      rethrow;
+    }
   }
 
   /// Returns the bubble-graph: dimensions → habits, for the drill-down view.
@@ -131,23 +141,34 @@ class HabitService {
     String type, {
     bool remove = false,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      '$_baseUrl/habits/$id/annotate',
-      data: {'type': type, if (remove) 'remove': true},
-    );
-    return ((response.data?['annotationCounts'] as Map<String, dynamic>?) ?? {})
-        .map((k, v) => MapEntry(k, (v as num).toInt()));
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '$_baseUrl/habits/$id/annotate',
+        data: {'type': type, if (remove) 'remove': true},
+      );
+      return ((response.data?['annotationCounts'] as Map<String, dynamic>?) ??
+              {})
+          .map((k, v) => MapEntry(k, (v as num).toInt()));
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      rethrow;
+    }
   }
 
   /// Fetches anonymous community comments for habit [id], newest first.
   Future<List<HabitComment>> fetchComments(String id) async {
-    final response = await _dio.get<Map<String, dynamic>>(
-      '$_baseUrl/habits/$id/comments',
-    );
-    return (response.data?['comments'] as List<dynamic>? ?? [])
-        .whereType<Map<String, dynamic>>()
-        .map(HabitComment.fromJson)
-        .toList();
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '$_baseUrl/habits/$id/comments',
+      );
+      return (response.data?['comments'] as List<dynamic>? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(HabitComment.fromJson)
+          .toList();
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      rethrow;
+    }
   }
 
   /// Posts an anonymous comment on habit [id]. Returns the created comment.
@@ -157,13 +178,18 @@ class HabitService {
   /// that case (see [_NodeDetailSheetState._postComment]), even locally on
   /// the poster's own device.
   Future<HabitComment> addComment(String id, String text) async {
-    final response = await _dio.post<Map<String, dynamic>>(
-      '$_baseUrl/habits/$id/comments',
-      data: {'text': text},
-    );
-    return HabitComment.fromJson(
-      response.data!['comment'] as Map<String, dynamic>,
-    );
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '$_baseUrl/habits/$id/comments',
+        data: {'text': text},
+      );
+      return HabitComment.fromJson(
+        response.data!['comment'] as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      rethrow;
+    }
   }
 
   /// Reports comment [commentId] on habit [id] as objectionable.
@@ -171,8 +197,13 @@ class HabitService {
   /// Immediately pulls it out of the public listing (server-side) and
   /// re-queues it for admin/researcher review — it stays hidden from
   /// everyone, including the original poster, until re-approved.
-  Future<void> reportComment(String id, String commentId) {
-    return _dio.post<void>('$_baseUrl/habits/$id/comments/$commentId/report');
+  Future<void> reportComment(String id, String commentId) async {
+    try {
+      await _dio.post<void>('$_baseUrl/habits/$id/comments/$commentId/report');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const UnauthorisedException();
+      rethrow;
+    }
   }
 }
 

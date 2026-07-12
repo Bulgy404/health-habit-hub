@@ -1,17 +1,17 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/app_config.dart';
-import 'passphrase_screen.dart';
+import '../../core/dio_provider.dart';
 import 'welcome_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Secure-storage key constants (mirror passphrase_screen.dart)
 // ---------------------------------------------------------------------------
 const _kUsername = 'username';
-const _kPassword = 'password';
 const _kAccessToken = 'access_token';
 const _kRefreshToken = 'refresh_token';
 
@@ -25,15 +25,24 @@ const _kRefreshToken = 'refresh_token';
 /// The screen is reachable from:
 /// * The welcome screen's "Restore existing account" link (first-launch flow).
 /// * The Profile screen's "Restore account" option (settings area).
-class RestoreScreen extends StatefulWidget {
+class RestoreScreen extends ConsumerStatefulWidget {
   /// Creates a [RestoreScreen].
-  const RestoreScreen({super.key});
+  ///
+  /// [storage] overrides where the restored credentials are persisted; tests
+  /// inject a fake to avoid touching the secure-storage platform channel.
+  const RestoreScreen({
+    super.key,
+    this.storage = const FlutterSecureStorage(),
+  });
+
+  /// Secure storage used to persist the restored session credentials.
+  final FlutterSecureStorage storage;
 
   @override
-  State<RestoreScreen> createState() => _RestoreScreenState();
+  ConsumerState<RestoreScreen> createState() => _RestoreScreenState();
 }
 
-class _RestoreScreenState extends State<RestoreScreen> {
+class _RestoreScreenState extends ConsumerState<RestoreScreen> {
   final _controller = TextEditingController();
   bool _loading = false;
   String? _error;
@@ -54,8 +63,7 @@ class _RestoreScreenState extends State<RestoreScreen> {
     final words =
         raw.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
 
-    final credentials = credentialsFromPassphrase(words);
-    if (credentials == null) {
+    if (words.length != 24) {
       setState(() {
         _loading = false;
         _error = 'Invalid passphrase or account not found';
@@ -63,20 +71,18 @@ class _RestoreScreenState extends State<RestoreScreen> {
       return;
     }
 
-    final (username, password) = credentials;
-
     try {
-      final response = await Dio().post<Map<String, dynamic>>(
-        '${AppConfig.keycloakUrl}/realms/hhh/protocol/openid-connect/token',
-        data: {
-          'grant_type': 'password',
-          'client_id': 'hhh-flutter',
-          'username': username,
-          'password': password,
-          'scope': 'openid profile email',
-        },
+      // The phrase is decoded and exchanged for tokens entirely server-side
+      // (POST /restore), via a confidential Keycloak client the backend
+      // holds the secret for. The phone never performs the password grant
+      // directly — hhh-flutter (the public client) has direct access grants
+      // disabled precisely so this capability isn't exposed to anyone who
+      // extracts the public client_id from the app.
+      final response =
+          await ref.read(dioProvider).post<Map<String, dynamic>>(
+        '${AppConfig.apiBaseUrl}/restore',
+        data: {'phrase': words.join(' ')},
         options: Options(
-          contentType: 'application/x-www-form-urlencoded',
           validateStatus: (status) => status != null && status < 600,
         ),
       );
@@ -86,18 +92,22 @@ class _RestoreScreenState extends State<RestoreScreen> {
       final statusCode = response.statusCode ?? 0;
       if (statusCode == 200 && response.data != null) {
         final data = response.data!;
-        const storage = FlutterSecureStorage();
-        await storage.write(key: _kUsername, value: username);
-        await storage.write(key: _kPassword, value: password);
-        await storage.write(
+        await widget.storage.write(
+          key: _kUsername,
+          value: data['username']?.toString() ?? '',
+        );
+        // Note: the raw account password is intentionally never sent to or
+        // stored on this device — the backend decodes the phrase and mints
+        // tokens itself, returning only the token pair below.
+        await widget.storage.write(
           key: _kAccessToken,
           value: data['access_token']?.toString() ?? '',
         );
-        await storage.write(
+        await widget.storage.write(
           key: _kRefreshToken,
           value: data['refresh_token']?.toString() ?? '',
         );
-        await storage.write(key: kOnboardingCompleteKey, value: 'true');
+        await widget.storage.write(key: kOnboardingCompleteKey, value: 'true');
         if (!mounted) return;
         context.go('/share');
       } else {

@@ -1,3 +1,5 @@
+import '../../utils/date_format.dart';
+
 /// Definition of a dynamic profile field returned by the backend.
 class ProfileFieldDefinition {
   /// Unique field identifier (e.g. `'birthday'`, `'gender'`).
@@ -51,10 +53,5 @@ String formatDate(DateTime d) {
 }
 
 /// Formats [d] as an ISO 8601 date string (`'YYYY-MM-DD'`).
-String isoDate(DateTime d) {
-  final y = d.year.toString().padLeft(4, '0');
-  final m = d.month.toString().padLeft(2, '0');
-  final day = d.day.toString().padLeft(2, '0');
-  return '$y-$m-$day';
-}
+String isoDate(DateTime d) => formatDateYmd(d);
 

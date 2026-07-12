@@ -57,7 +57,8 @@
       "backups": "Sauvegardes",
       "auditLog": "Journal d'audit",
       "team": "Équipe et rôles",
-      "help": "Aide"
+      "help": "Aide",
+      "restoreAttempts": "Tentatives de restauration"
     },
     "language": "Langue",
     "toggleTheme": "Changer de thème",
@@ -1083,5 +1084,28 @@
     "back": "Retour",
     "next": "Suivant",
     "getStarted": "Commencer"
+  },
+  "restoreAttempts": {
+    "title": "Tentatives de restauration",
+    "subtitle": "Surveillance de sécurité pour la restauration de compte par phrase de récupération (POST /restore). Les phrases de récupération n'ont pas de secret côté serveur pour ralentir une tentative — cette vue révèle les tentatives répétées que le limiteur de débit seul ne détecte pas.",
+    "flaggedTitle": "IP signalées",
+    "flaggedSubtitle": "IP ayant effectué 3 tentatives de restauration échouées ou plus au cours de la dernière heure.",
+    "outcomeLabel": "Résultat",
+    "filterAll": "Tous",
+    "outcomes": {
+      "success": "Succès",
+      "invalid_phrase": "Phrase invalide",
+      "invalid_credentials": "Identifiants invalides",
+      "rate_limited": "Limite de débit atteinte",
+      "keycloak_unreachable": "Keycloak inaccessible"
+    },
+    "when": "Quand",
+    "ip": "IP",
+    "usernameAttempted": "Nom d'utilisateur tenté",
+    "outcome": "Résultat",
+    "failCount": "Tentatives échouées",
+    "lastAttempt": "Dernière tentative",
+    "totalPageInfo": "{total} au total · page {page} sur {totalPages}",
+    "loadFailed": "Échec du chargement des tentatives de restauration"
   }
 }

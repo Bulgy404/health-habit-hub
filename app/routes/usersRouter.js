@@ -6,6 +6,7 @@ import { deleteHabitComments } from '../db/habitQueries.js';
 import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../models/habitComment.js';
 import { deleteEnrollment } from '../services/enrollmentNeo4j.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
+import { mintTokenForUser } from '../services/keycloakRopcClient.js';
 import { config } from '../utils/config.js';
 import { registerNeo4jDriver } from '../utils/neo4jDrivers.js';
 import {
@@ -31,7 +32,6 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
   const getKeycloak = () => kcAdmin;
   const kcBase = process.env.KEYCLOAK_URL || 'http://keycloak:8080';
   const kcRealm = process.env.KEYCLOAK_REALM || 'hhh';
-  const kcClientId = process.env.KEYCLOAK_CLIENT_ID || 'hhh-flutter';
   let _neo4jDriver = null;
   async function queryNeo4j(cypher, params = {}) {
     if (neo4jRun) return neo4jRun(cypher, params);
@@ -229,26 +229,16 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
       const newPassword = randomBytes(16).toString('hex');
       await kc.resetPassword(userId, newPassword);
 
-      const tokenRes = await fetch(
-        `${kcBase}/realms/${kcRealm}/protocol/openid-connect/token`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            grant_type: 'password',
-            client_id: kcClientId,
-            username,
-            password: newPassword,
-            scope: 'openid profile email',
-          }),
-        }
-      );
-      if (!tokenRes.ok) {
+      const tokenResult = await mintTokenForUser({
+        username,
+        password: newPassword,
+      });
+      if (!tokenResult.ok) {
         return res
           .status(502)
           .json({ error: 'Failed to obtain token after credential rotation.' });
       }
-      const tokenData = await tokenRes.json();
+      const tokenData = tokenResult.data;
 
       try {
         const database = await getDb();

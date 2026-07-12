@@ -9,7 +9,17 @@ const dbConfig = {
   authSource: process.env.MONGO_AUTH_SOURCE || 'admin',
 };
 
-const url = `mongodb://${dbConfig.user}:${dbConfig.password}@${dbConfig.host}:${dbConfig.port}/?authSource=${dbConfig.authSource}`;
+/**
+ * Build the Mongo connection URI from env-derived config. Exported so other
+ * call sites (e.g. utils/healthCheck.js) share this single source of truth
+ * instead of reassembling the URI independently from raw env vars.
+ * @returns {string}
+ */
+export function buildMongoUri() {
+  return `mongodb://${dbConfig.user}:${dbConfig.password}@${dbConfig.host}:${dbConfig.port}/?authSource=${dbConfig.authSource}`;
+}
+
+const url = buildMongoUri();
 let db;
 let client;
 
@@ -76,6 +86,12 @@ export async function ensureIndexes(database) {
     './adminAuditLog.js'
   );
   await ensureAdminAuditIndexes(database);
+
+  // Passphrase-based account restore attempts (security monitoring, admin panel)
+  const { ensureIndexes: ensureRestoreAttemptIndexes } = await import(
+    './restoreAttempt.js'
+  );
+  await ensureRestoreAttemptIndexes(database);
 
   // Short-lived restore confirmation tokens (TTL-expired automatically)
   const { ensureIndexes: ensureRestoreTokenIndexes } = await import(

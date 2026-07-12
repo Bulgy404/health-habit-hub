@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../config/app_config.dart';
+import '../core/dio_provider.dart';
 import 'auth_provider.dart';
 
 const _kLocaleKey = 'preferred_language';
@@ -16,7 +17,6 @@ const _storage = FlutterSecureStorage();
 /// On construction, reads the cached locale from secure storage immediately
 /// after build and refreshes the preference from GET /api/v1/users/me.
 class LocaleNotifier extends Notifier<Locale> {
-  final _dio = Dio();
   bool _initialized = false;
 
   static const _apiBaseUrl = AppConfig.apiBaseUrl;
@@ -44,7 +44,7 @@ class LocaleNotifier extends Notifier<Locale> {
     try {
       final headers = await _authHeaders();
       if (headers.isEmpty) return;
-      final response = await _dio.get<Map<String, dynamic>>(
+      final response = await ref.read(dioProvider).get<Map<String, dynamic>>(
         '$_apiBaseUrl/users/me',
         options: Options(headers: headers),
       );
@@ -87,7 +87,7 @@ class LocaleNotifier extends Notifier<Locale> {
     try {
       final headers = await _authHeaders();
       if (headers.isEmpty) return;
-      await _dio.put<void>(
+      await ref.read(dioProvider).put<void>(
         '$_apiBaseUrl/users/me',
         data: {'preferredLanguage': langCode},
         options: Options(headers: headers),

@@ -57,7 +57,8 @@
       "backups": "Backups",
       "auditLog": "Audit Log",
       "team": "Team & Roles",
-      "help": "Help"
+      "help": "Help",
+      "restoreAttempts": "Restore Attempts"
     },
     "language": "Language",
     "toggleTheme": "Toggle theme",
@@ -1083,5 +1084,28 @@
     "back": "Back",
     "next": "Next",
     "getStarted": "Get started"
+  },
+  "restoreAttempts": {
+    "title": "Restore Attempts",
+    "subtitle": "Security monitoring for passphrase-based account restore (POST /restore). Recovery phrases have no server-side secret slowing down a guess, so this view surfaces repeated attempts the rate limiter alone doesn't.",
+    "flaggedTitle": "Flagged IPs",
+    "flaggedSubtitle": "IPs with 3 or more non-successful restore attempts in the last hour.",
+    "outcomeLabel": "Outcome",
+    "filterAll": "All",
+    "outcomes": {
+      "success": "Success",
+      "invalid_phrase": "Malformed phrase",
+      "invalid_credentials": "Invalid credentials",
+      "rate_limited": "Rate limited",
+      "keycloak_unreachable": "Keycloak unreachable"
+    },
+    "when": "When",
+    "ip": "IP",
+    "usernameAttempted": "Username attempted",
+    "outcome": "Outcome",
+    "failCount": "Failed attempts",
+    "lastAttempt": "Last attempt",
+    "totalPageInfo": "{total} total · page {page} of {totalPages}",
+    "loadFailed": "Failed to load restore attempts"
   }
 }

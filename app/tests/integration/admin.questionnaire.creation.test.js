@@ -225,7 +225,11 @@ for (const lang of SUPPORTED_LANGS) {
       };
       const res = await post('/api/v1/admin/questionnaires', payload, token);
       const created = await res.json();
-      assert.strictEqual(res.status, 201, `expected 201, got ${res.status}: ${JSON.stringify(created)}`);
+      assert.strictEqual(
+        res.status,
+        201,
+        `expected 201, got ${res.status}: ${JSON.stringify(created)}`
+      );
       const { id } = created;
 
       const detailRes = await get(`/api/v1/admin/questionnaires/${id}`, token);
@@ -233,10 +237,16 @@ for (const lang of SUPPORTED_LANGS) {
       const detail = await detailRes.json();
       assert.strictEqual(detail.questions.length, 1);
       assert.strictEqual(detail.questions[0].type, type);
-      assert.strictEqual(detail.questions[0].text[lang], `${type} question (${lang})`);
+      assert.strictEqual(
+        detail.questions[0].text[lang],
+        `${type} question (${lang})`
+      );
       if (HAS_OPTIONS.has(type)) {
         assert.strictEqual(detail.questions[0].options.length, 2);
-        assert.strictEqual(detail.questions[0].options[0].label[lang], `Option A (${lang})`);
+        assert.strictEqual(
+          detail.questions[0].options[0].label[lang],
+          `Option A (${lang})`
+        );
       }
     });
   }
@@ -250,18 +260,27 @@ test('POST /api/v1/admin/questionnaires - creates one questionnaire with every q
     title: localeTextFor(SUPPORTED_LANGS, 'Full-matrix questionnaire'),
     description: localeTextFor(SUPPORTED_LANGS, 'Full-matrix description'),
     languages: [...SUPPORTED_LANGS],
-    questions: QUESTION_TYPES.map((type) => buildQuestion(type, SUPPORTED_LANGS)),
+    questions: QUESTION_TYPES.map((type) =>
+      buildQuestion(type, SUPPORTED_LANGS)
+    ),
   };
   const res = await post('/api/v1/admin/questionnaires', payload, token);
   const created = await res.json();
-  assert.strictEqual(res.status, 201, `expected 201, got ${res.status}: ${JSON.stringify(created)}`);
+  assert.strictEqual(
+    res.status,
+    201,
+    `expected 201, got ${res.status}: ${JSON.stringify(created)}`
+  );
   const { id } = created;
 
   const detailRes = await get(`/api/v1/admin/questionnaires/${id}`, token);
   const detail = await detailRes.json();
   assert.strictEqual(detail.questions.length, QUESTION_TYPES.length);
   for (const lang of SUPPORTED_LANGS) {
-    assert.strictEqual(detail.title[lang], `Full-matrix questionnaire (${lang})`);
+    assert.strictEqual(
+      detail.title[lang],
+      `Full-matrix questionnaire (${lang})`
+    );
   }
 });
 
@@ -285,7 +304,11 @@ test('POST /api/v1/admin/questionnaires - 201 with an explicitly empty descripti
     token
   );
   const created = await res.json();
-  assert.strictEqual(res.status, 201, `expected 201, got ${res.status}: ${JSON.stringify(created)}`);
+  assert.strictEqual(
+    res.status,
+    201,
+    `expected 201, got ${res.status}: ${JSON.stringify(created)}`
+  );
 });
 
 test('POST /api/v1/admin/questionnaires - description can be omitted entirely', async () => {
@@ -307,7 +330,9 @@ test('POST /api/v1/admin/questionnaires - 400 when a question has no text in any
     {
       title: { en: 'Has an empty question' },
       languages: ['en'],
-      questions: [{ id: 'q1', type: 'text', text: {}, required: false, options: [] }],
+      questions: [
+        { id: 'q1', type: 'text', text: {}, required: false, options: [] },
+      ],
     },
     token
   );

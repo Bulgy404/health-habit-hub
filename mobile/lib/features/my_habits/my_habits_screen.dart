@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/date_format.dart';
 import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/day_strip_widget.dart';
 import '../../widgets/empty_state.dart';
@@ -209,8 +210,7 @@ class _HabitCard extends ConsumerWidget {
     );
 
     final today = DateTime.now();
-    final todayStr =
-        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final todayStr = formatDateYmd(today);
     final todayLogged = logsMap.containsKey(todayStr);
     final loggedColor = Theme.of(context).brightness == Brightness.dark
         ? Colors.green.shade900.withAlpha(90)

@@ -122,7 +122,12 @@ async def test_user_profile_fields_formatted_as_readable_text():
     captured_prompt = {}
 
     async def fake_chat_complete(messages, **_):
-        captured_prompt["content"] = messages[0]["content"]
+        # extract_profile now sends a system message ahead of the user
+        # prompt (goal-isolation backstop), so find the user-role message
+        # rather than assuming index 0.
+        captured_prompt["content"] = next(
+            m["content"] for m in messages if m["role"] == "user"
+        )
         return _LLM_REPLY
 
     with (

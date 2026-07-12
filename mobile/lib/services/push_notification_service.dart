@@ -121,7 +121,11 @@ class PushNotificationService {
 
     final token = await messaging.getToken();
     if (token != null) {
-      await _registerToken(token);
+      try {
+        await _registerToken(token);
+      } catch (e) {
+        debugPrint('[PushNotificationService] Initial token registration failed: $e');
+      }
     }
 
     messaging.onTokenRefresh.listen((newToken) async {

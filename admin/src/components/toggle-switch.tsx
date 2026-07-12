@@ -26,6 +26,22 @@ const switchSx = {
   },
 };
 
+/**
+ * Merges the internal brand-styling `sx` with any caller-supplied `sx`,
+ * applying MUI's array form so both sets of rules are honoured instead of
+ * the caller's `sx` silently clobbering the internal one (MUI applies each
+ * array entry in order — later entries win on overlapping keys).
+ */
+function mergeSx(callerSx: SwitchProps["sx"]): SwitchProps["sx"] {
+  if (!callerSx) return switchSx;
+  // MUI's own SxProps union types array literals awkwardly for TS inference
+  // here (see https://github.com/mui/material-ui/issues/29875-style
+  // reports) — the array form is still exactly what MUI expects at runtime,
+  // so the cast just tells TS what we already know structurally holds.
+  const merged = Array.isArray(callerSx) ? [switchSx, ...callerSx] : [switchSx, callerSx];
+  return merged as SwitchProps["sx"];
+}
+
 export type ToggleSwitchProps = Omit<SwitchProps, "color" | "className"> & {
   /** Optional label rendered next to the switch. */
   label?: React.ReactNode;
@@ -66,11 +82,11 @@ export function ToggleSwitch({
   if (!label) {
     return (
       <Switch
-        sx={switchSx}
         className={className}
         style={wrapperStyle}
         slotProps={mergedSlotProps}
         {...switchProps}
+        sx={mergeSx(switchProps.sx)}
       />
     );
   }
@@ -79,7 +95,13 @@ export function ToggleSwitch({
     <FormControlLabel
       className={className}
       style={wrapperStyle}
-      control={<Switch sx={switchSx} slotProps={mergedSlotProps} {...switchProps} />}
+      control={
+        <Switch
+          slotProps={mergedSlotProps}
+          {...switchProps}
+          sx={mergeSx(switchProps.sx)}
+        />
+      }
       label={label}
       labelPlacement={labelPlacement}
     />

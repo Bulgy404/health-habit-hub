@@ -138,7 +138,10 @@ void main() {
 
     expect(find.text('Your new recovery passphrase'), findsOneWidget);
     expect(storage.writes['username'], '11111111-2222-3333-4444-555555555555');
-    expect(storage.writes['password'], 'aabbccddeeff00112233445566778899');
+    // The raw password must never be persisted (it's only used in-memory to
+    // derive the displayed recovery passphrase) — see auth_service.dart's
+    // removed ROPC replay path.
+    expect(storage.writes.containsKey('password'), isFalse);
     expect(storage.writes['access_token'], 'tok');
 
     // Done button stays disabled until the user confirms they saved it.

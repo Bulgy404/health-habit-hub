@@ -37,6 +37,11 @@ function hexToBytes(hex) {
   return bytes;
 }
 
+/** Byte array → lowercase hex string. */
+function bytesToHex(bytes) {
+  return bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 /** Encode [bytes] into exactly [wordCount] words via 11-bit MSB-first chunks. */
 function bytesToWords(bytes, wordCount) {
   const bits = [];
@@ -51,6 +56,25 @@ function bytesToWords(bytes, wordCount) {
     words.push(BIP39_WORDS[idx]);
   }
   return words;
+}
+
+const WORD_INDEX = new Map(BIP39_WORDS.map((w, i) => [w, i]));
+
+/** Decode [words] back into exactly [byteCount] bytes (inverse of bytesToWords). */
+function wordsToBytes(words, byteCount) {
+  const bits = [];
+  for (const word of words) {
+    const idx = WORD_INDEX.get(String(word).toLowerCase());
+    if (idx === undefined) return null;
+    for (let b = 10; b >= 0; b--) bits.push((idx >> b) & 1);
+  }
+  const bytes = [];
+  for (let i = 0; i < byteCount; i++) {
+    let byte = 0;
+    for (let b = 0; b < 8; b++) byte = (byte << 1) | bits[i * 8 + b];
+    bytes.push(byte);
+  }
+  return bytes;
 }
 
 /**
@@ -70,4 +94,40 @@ export function recoveryPhraseFromCredentials(username, password) {
   return [...bytesToWords(uuidBytes, 12), ...bytesToWords(passBytes, 12)].join(
     ' '
   );
+}
+
+/**
+ * Decode a 24-word recovery phrase back into `{ username, password }`,
+ * the inverse of recoveryPhraseFromCredentials, matching the Flutter app's
+ * credentialsFromPassphrase exactly (words 0-11 → username UUID, 12-23 →
+ * password).
+ *
+ * @param {string|string[]} phrase - Either a space-separated 24-word string
+ *   or an already-split array of 24 words.
+ * @returns {{username: string, password: string}|null} null if the input
+ *   isn't exactly 24 words or contains a word outside the wordlist.
+ */
+export function credentialsFromRecoveryPhrase(phrase) {
+  const words = Array.isArray(phrase)
+    ? phrase
+    : String(phrase ?? '')
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+  if (words.length !== 24) return null;
+
+  const uuidBytes = wordsToBytes(words.slice(0, 12), 16);
+  const passBytes = wordsToBytes(words.slice(12), 16);
+  if (!uuidBytes || !passBytes) return null;
+
+  const hex = bytesToHex(uuidBytes);
+  const username = [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20),
+  ].join('-');
+
+  return { username, password: bytesToHex(passBytes) };
 }

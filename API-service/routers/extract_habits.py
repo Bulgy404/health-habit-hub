@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from neo4j import AsyncGraphDatabase  # type: ignore[import]
 from pydantic import BaseModel, Field
@@ -18,6 +18,7 @@ from auth import verify_service_token
 from llm_client import chat_complete
 from routers._cache import _REDIS_TTL, get_redis as _get_redis, make_cache_key
 from routers._embeddings import embed_texts
+from routers._goal_guard import GOAL_ISOLATION_SYSTEM_MSG, GOAL_REJECTED_MSG, _INJECTION_RE
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,21 @@ async def _get_neo4j_driver():
             _NEO4J_URI, auth=(_NEO4J_USER, _NEO4J_PASSWORD)
         )
         return _neo4j_driver
+
+
+async def close_neo4j_driver() -> None:
+    """Close the shared Neo4j driver on app shutdown, if one was ever created.
+
+    Mirrors deps.py's lifespan shutdown handling of Redis/Mongo — this driver
+    is a module-level singleton created lazily on first use (or eagerly during
+    lifespan startup's FastRP warm-up), so it must be closed explicitly rather
+    than left to the OS to reap the connection on process exit.
+    """
+    global _neo4j_driver
+    async with _neo4j_lock:
+        if _neo4j_driver is not None:
+            await _neo4j_driver.close()
+            _neo4j_driver = None
 
 _DIMENSIONS = [
     "TIME",
@@ -440,8 +456,17 @@ async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
         community vector-search results for the caller to display separately.
 
     Raises:
-        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+        HTTPException: 422 if the goal fails the prompt-injection pre-screen;
+            503 if the LLM call fails.
     """
+    if _INJECTION_RE.search(body.goal):
+        logger.warning(
+            "Goal rejected by injection screen for user %s: %r", body.user_id, body.goal
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=GOAL_REJECTED_MSG
+        )
+
     key = _cache_key(body.user_id, body.goal)
 
     # --- cache read ---
@@ -512,10 +537,20 @@ async def extract_habits(body: ExtractHabitsRequest) -> ExtractHabitsResponse:
         indent=2,
     )
     prompt = _PROMPT_TEMPLATE.format(goal=body.goal, habits_json=habits_json)
-    raw = await chat_complete(
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.0,
-    )
+    try:
+        raw = await chat_complete(
+            messages=[
+                {"role": "system", "content": GOAL_ISOLATION_SYSTEM_MSG},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.0,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.error("LLM extract_habits call failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "Habit extractor unavailable", "code": "llm_unavailable"},
+        ) from exc
 
     selected_uuids, habit_summary = _parse_llm_response(raw)
 

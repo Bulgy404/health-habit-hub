@@ -209,6 +209,22 @@ const notificationTask = startNotificationScheduler({
   redisUrl: process.env.REDIS_URL,
 });
 
+const httpServer = createServer(app);
+const verifyToken = createTokenVerifier();
+const { broadcast, close: closeRecommendationWs } =
+  createRecommendationWsServer(httpServer, { verifyToken });
+// Mounted directly on `app` (not on the CSRF-checking `router` below), and
+// before both the catch-all 404 and `router` itself. This is
+// service-to-service traffic from the Python API service (WebSocket push
+// notifications), authenticated by its own shared-secret check
+// (X-Internal-Secret — see internalRouter.js), not browser traffic — so the
+// double-submit CSRF cookie check below doesn't apply and shouldn't be
+// forced onto it. Previously this was registered *after* `router`, the 404
+// catch-all, and the error handler, which made /api/internal/* completely
+// unreachable: every request was intercepted by the CSRF check (403) or the
+// 404 handler (both mounted first).
+app.use('/api/internal', express.json(), createInternalRouter({ broadcast }));
+
 app.use(contextPath, router);
 
 // Catch-all route for unmatched routes
@@ -218,14 +234,6 @@ app.use((req, res) => {
 
 // Central error handler — logs, reports to Sentry (if configured), returns 500.
 app.use(errorReportingMiddleware());
-
-const httpServer = createServer(app);
-const verifyToken = createTokenVerifier();
-const { broadcast, close: closeRecommendationWs } = createRecommendationWsServer(
-  httpServer,
-  { verifyToken }
-);
-app.use('/api/internal', express.json(), createInternalRouter({ broadcast }));
 
 if (!process.env.API_SERVICE_SECRET) {
   log.warn(

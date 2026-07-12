@@ -21,6 +21,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/locale_provider.dart';
 import '../services/offline_queue_service.dart';
 import '../services/survey_service.dart';
+import '../utils/date_format.dart';
 import '../widgets/contribution_graph_widget.dart';
 import 'donate/widgets/donate_form_widget.dart';
 import 'donate/widgets/donate_progress_widget.dart';
@@ -76,9 +77,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
 
   static DateTime _atMidnight(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  static String _dateStr(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
-      '${d.day.toString().padLeft(2, '0')}';
+  static String _dateStr(DateTime d) => formatDateYmd(d);
 
   static String _todayStr() => _dateStr(DateTime.now());
 

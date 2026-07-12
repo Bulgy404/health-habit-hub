@@ -113,11 +113,18 @@ mkdir -p "$BACKUP_DIR/$DATE"
 # If you rename this directory, update restore.sh to match.
 log "1/5 Backing up MongoDB..."
 if [ "$INCLUDE_MONGO" = "true" ]; then
+  # Credentials go in a 0600 temp config file (--config), read via the
+  # documented `uri` field, rather than --username/--password on the command
+  # line — so they never show up in `ps aux` / `/proc/<pid>/cmdline`. jq's
+  # @uri filter percent-encodes user/pass so special characters in either
+  # can't break the connection-string syntax.
+  MONGO_CONF=$(mktemp)
+  chmod 600 "$MONGO_CONF"
+  MONGO_URI=$(jq -rn --arg u "${MONGO_USER:-}" --arg p "${MONGO_PASSWORD:-}" \
+    '"mongodb://\($u|@uri):\($p|@uri)@mongo:27017/?authSource=admin"')
+  jq -n --arg uri "$MONGO_URI" '{uri:$uri}' > "$MONGO_CONF"
   if mongodump \
-    --host=mongo:27017 \
-    --username="${MONGO_USER:-}" \
-    --password="${MONGO_PASSWORD:-}" \
-    --authenticationDatabase=admin \
+    --config="$MONGO_CONF" \
     --out="$BACKUP_DIR/$DATE/mongo" \
     --quiet 2>/dev/null; then
     log "✓ MongoDB backup completed"
@@ -125,6 +132,7 @@ if [ "$INCLUDE_MONGO" = "true" ]; then
     MONGO_OK=false
     log_error "MongoDB" "mongodump failed"
   fi
+  rm -f "$MONGO_CONF"
 else
   log "⊘ MongoDB excluded from this backup (per trigger options)"
 fi
@@ -211,9 +219,12 @@ mkdir -p "$BACKUP_DIR/$DATE/keycloak"
 
 if [ "$INCLUDE_KEYCLOAK" = "true" ]; then
   if [ -n "$KEYCLOAK_ADMIN_PASSWORD" ]; then
-    KC_TOKEN=$(curl -sf -X POST \
+    # Credentials are piped to curl's stdin (--data @-) via a shell-builtin
+    # printf instead of an inline -d argument, so they never appear in
+    # `ps aux` / `/proc/<pid>/cmdline` for the curl subprocess.
+    KC_TOKEN=$(printf 'client_id=admin-cli&grant_type=password&username=%s&password=%s' "$KEYCLOAK_ADMIN" "$KEYCLOAK_ADMIN_PASSWORD" | curl -sf -X POST \
       "http://${KEYCLOAK_HOST}:8080/realms/master/protocol/openid-connect/token" \
-      -d "client_id=admin-cli&grant_type=password&username=${KEYCLOAK_ADMIN}&password=${KEYCLOAK_ADMIN_PASSWORD}" \
+      --data @- \
       2>/dev/null | jq -r '.access_token // empty' 2>/dev/null || true)
 
     if [ -n "$KC_TOKEN" ] && [ "$KC_TOKEN" != "null" ]; then

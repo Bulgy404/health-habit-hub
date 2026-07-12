@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/dio_provider.dart';
 import '../services/auth_service.dart';
 
 /// ChangeNotifier that fires whenever the auth state changes (login or logout).
@@ -22,6 +23,7 @@ final authNotifierProvider = Provider<AuthNotifier>((ref) => AuthNotifier());
 final authServiceProvider = Provider<AuthService>((ref) {
   final notifier = ref.watch(authNotifierProvider);
   return AuthService(
+    dio: ref.watch(authDioProvider),
     onLogout: notifier.notifyLogout,
     onLogin: notifier.notifyLogin,
   );

@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
+import { timingSafeEqual } from 'node:crypto';
 import {
   renameSync,
   unlinkSync,
@@ -49,7 +50,14 @@ app.use(express.json());
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
 app.use((req, res, next) => {
-  if (req.headers['x-service-auth-token'] !== AUTH_TOKEN) {
+  const provided = req.headers['x-service-auth-token'];
+  const secretBuf = Buffer.from(AUTH_TOKEN);
+  const providedBuf = Buffer.from(provided || '');
+  if (
+    !provided ||
+    providedBuf.length !== secretBuf.length ||
+    !timingSafeEqual(providedBuf, secretBuf)
+  ) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
   next();
