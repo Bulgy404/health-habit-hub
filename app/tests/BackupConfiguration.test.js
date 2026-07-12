@@ -76,12 +76,12 @@ test('Backup script uses environment variables correctly', () => {
     'Should use ALERT_WEBHOOK_URL environment variable'
   );
   assert(
-    content.includes('BACKUP_EMAIL'),
-    'Should use BACKUP_EMAIL environment variable'
+    content.includes('ALERT_EMAIL'),
+    'Should use ALERT_EMAIL environment variable'
   );
   assert(
-    content.includes('ALERT_EMAIL'),
-    'Should support ALERT_EMAIL as a backward-compatible alias'
+    content.includes('BACKUP_EMAIL'),
+    'Should support BACKUP_EMAIL as a backward-compatible alias'
   );
 
   // Check default values
@@ -117,14 +117,34 @@ test('Backup script includes alert functionality', () => {
     'Should send webhook alerts'
   );
 
-  // Check for Mailjet email support
+  // Check for generic-SMTP email support (no vendor-specific API)
   assert(
-    content.includes('https://api.mailjet.com/v3.1/send'),
-    'Should support email notifications via Mailjet API'
+    content.includes('send_smtp_mail'),
+    'Should support email notifications via the shared send_smtp_mail() helper'
   );
   assert(
-    content.includes('MAIL_USER') && content.includes('MAIL_PASS'),
-    'Should gate email alerts on Mailjet credentials'
+    !content.includes('mailjet.com'),
+    'Should not reference the removed Mailjet integration'
+  );
+});
+
+test('Backup lib provides a generic SMTP mail helper', () => {
+  const content = readFile(BACKUP_LIB_PATH);
+  assert(content !== null, 'lib.sh should be readable');
+
+  assert(
+    content.includes('send_smtp_mail()'),
+    'Should define send_smtp_mail()'
+  );
+  assert(
+    content.includes('SMTP_HOST') &&
+      content.includes('SMTP_USER') &&
+      content.includes('SMTP_PASS'),
+    'Should gate email alerts on generic SMTP credentials'
+  );
+  assert(
+    content.includes('--mail-from') && content.includes('--mail-rcpt'),
+    "Should send via curl's built-in SMTP support"
   );
 });
 

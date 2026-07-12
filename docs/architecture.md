@@ -4,7 +4,7 @@
 
 ## Overview
 
-Health Habit Hub (HHH) is a research platform for collecting, annotating, and recommending behavioural habits. It consists of eighteen Docker services orchestrated via `docker-compose` (including monitoring — Prometheus/Grafana — and a scoped Docker socket proxy for the backup service), a Flutter mobile/web app, a Next.js admin panel, and a Python-based recommender/enrichment microservice. All HTTP traffic is routed through a Traefik reverse proxy.
+Health Habit Hub (HHH) is a research platform for collecting, annotating, and recommending behavioural habits. It consists of nineteen Docker services orchestrated via `docker-compose` (including monitoring — Prometheus/Grafana/blackbox-exporter — and a scoped Docker socket proxy for the backup service), a Flutter mobile/web app, a Next.js admin panel, and a Python-based recommender/enrichment microservice. All HTTP traffic is routed through a Traefik reverse proxy.
 
 ---
 
@@ -40,7 +40,9 @@ graph TD
 
         Prometheus["Prometheus\n:9090\ninternal-only, no published port in prod"]
 
-        Grafana["Grafana\n:3000\n/grafana · Keycloak SSO"]
+        BlackboxExporter["blackbox-exporter\n:9115\nreachability probes, no host access"]
+
+        Grafana["Grafana\n:3000\n/grafana · Keycloak SSO\nSMTP alerting"]
 
         Backup["Backup Service\n(sleep-loop, every 24h)"]
 
@@ -78,6 +80,12 @@ graph TD
     DockerProxy -->|"scoped container/volume calls"| Neo4j
 
     Prometheus -->|"scrape /metrics"| App
+    Prometheus -->|"scrape /probe"| BlackboxExporter
+    BlackboxExporter -.->|"TCP/HTTP reachability probes"| Mongo
+    BlackboxExporter -.->|"TCP/HTTP reachability probes"| Redis
+    BlackboxExporter -.->|"TCP/HTTP reachability probes"| Neo4j
+    BlackboxExporter -.->|"TCP/HTTP reachability probes"| Keycloak
+    BlackboxExporter -.->|"TCP/HTTP reachability probes"| LibreTranslate
     Grafana -->|"query"| Prometheus
     Grafana -->|"OIDC login"| Keycloak
 
@@ -92,7 +100,7 @@ graph TD
 |---|---|---|---|---|---|
 | **proxy** | Traefik v3.0 | Reverse proxy, TLS termination, routing | 8080 (dashboard) | `proxy.localhost:8888` | `TRAEFIK_HOST_PORT80`, `TRAEFIK_HOST_PORT8080`, `PATH_SUFFIX`, `ACME_EMAIL` (prod) |
 | **app** | Node.js 22 + Express | REST API `/api/v1/*` | 3000 | `app.localhost:3000` | `MONGO_HOST`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_DB`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `KEYCLOAK_JWKS_URL`, `API_SERVICE_URL`, `LIBRE_TRANSLATE_URL`, `ALLOWED_ORIGINS` |
-| **api-service** | Python 3.11 + FastAPI | LLM inference (context classification, BCIO mapping, translation refinement, RAG recommendations); KB CRUD proxied to LightRAG | 8000 | `localhost:8001` | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `REDIS_URL`, `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
+| **api-service** | Python 3.11 + FastAPI | LLM inference (context classification, BCIO mapping, translation refinement, RAG recommendations); KB CRUD proxied to LightRAG. `llm_client.py`'s circuit breaker (`_mark_down`/`_in_cooldown`) sends an `ALERT_EMAIL` alert via `alerting.py` when the primary model — or both primary and `LLM_FALLBACK_MODEL` — become unavailable | 8000 | `localhost:8001` | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `REDIS_URL`, `LIGHTRAG_URL`, `LIGHTRAG_API_KEY`, `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`, `ALERT_EMAIL` |
 | **lightrag** | LightRAG 1.5.0 (Python) | Graph+vector knowledge base; builds entity graph from uploaded documents; exposes REST query API and built-in graph visualization UI | 9621 | `localhost:9622` | `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_API_BASE`, `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `LIGHTRAG_API_KEY` |
 | **knowledge-mcp** | FastMCP (Python) | MCP server wrapping LightRAG; exposes `search_knowledge` and `ingest_document` tools for AI agent use via SSE transport | 8002 | `localhost:8002` | `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
 | **keycloak** | Keycloak 26.5.5 | OIDC/OAuth2 identity provider; manages realms, users, roles | 8080 | `localhost:8080` (local only — prod has no published port, routed at `/auth` via Traefik) | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KC_DB`, `KC_HTTP_RELATIVE_PATH` (prod) |
@@ -102,9 +110,10 @@ graph TD
 | **mongo-express** | Mongo Express | MongoDB admin web UI (production only — not in docker-compose.local.yml) | 8081 | `https://<DOMAIN>/mongo` (prod only) | `ME_CONFIG_MONGODB_URL`, `ME_CONFIG_BASICAUTH_USERNAME`, `ME_CONFIG_BASICAUTH_PASSWORD` |
 | **translate** | LibreTranslate | Self-hosted machine translation API (en/de/ja/fr/nl) | 5000 | `http://translate.localhost` (via Traefik) or `localhost:5001` (direct) | `LT_LOAD_ONLY`, `LT_REQ_LIMIT` |
 | **redis** | Redis | Notification-dedup locks and recommendation response cache; not backed up (short-lived, repopulates automatically) | 6379 | Internal only | — |
-| **prometheus** | Prometheus v3.4.1 | Scrapes `app:9091/metrics`, 30-day retention | 9090 | `prometheus.localhost` (local); internal-only in prod (no published/routed port) | — |
-| **grafana** | Grafana OSS 12.0.1 | Dashboards over Prometheus data; Keycloak SSO (OIDC), realm role → Grafana role mapping | 3000 | `grafana.localhost` (local); `https://<DOMAIN>/grafana` (prod, via Traefik) | `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_CLIENT_SECRET`, `NEXT_PUBLIC_GRAFANA_URL` (admin-panel link) |
-| **backup** | Custom Alpine + sleep-loop | Backs up MongoDB, LightRAG, Neo4j, Keycloak. Starts 2 min after container boot, then repeats every 24h (not a real cron — drifts on container restart). Time-based retention plus a hard cap on scheduled-trigger backups; also runs the internal `backup-api` HTTP server (status/trigger/restore/upload/download) the admin panel's Backups page talks to | — (backup-api on 4100, internal only) | Internal only | `BACKUP_RETENTION_DAYS` (default 14), `BACKUP_SCHEDULED_LIMIT` (default 10, caps scheduled backups regardless of age), `ALERT_WEBHOOK_URL`, `BACKUP_EMAIL`, `MONGO_USER`, `MONGO_PASSWORD` |
+| **prometheus** | Prometheus v3.4.1 | Scrapes `app:9091/metrics` (app HTTP/BullMQ metrics) and `blackbox-exporter:9115/probe` (reachability probes), 30-day retention | 9090 | `prometheus.localhost` (local); internal-only in prod (no published/routed port) | — |
+| **blackbox-exporter** | prom/blackbox-exporter v0.25.0 | TCP-connect/HTTP-GET reachability probes against every long-running service without its own Prometheus metrics (mongo, redis, neo4j, keycloak, translate, lightrag, knowledge-mcp, recommender, prometheus, grafana, backup, proxy); no host mounts/elevated privileges | 9115 (internal only) | Internal only | — |
+| **grafana** | Grafana OSS 12.0.1 | Dashboards over Prometheus data; Keycloak SSO (OIDC), realm role → Grafana role mapping; unified alerting (BullMQ failures, service reachability, 5xx spikes) emails `ALERT_EMAIL` via SMTP | 3000 | `grafana.localhost` (local); `https://<DOMAIN>/grafana` (prod, via Traefik) | `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_CLIENT_SECRET`, `NEXT_PUBLIC_GRAFANA_URL` (admin-panel link), `GF_SMTP_*`/`HHH_ALERT_EMAIL` (from `SMTP_*`/`ALERT_EMAIL`) |
+| **backup** | Custom Alpine + sleep-loop | Backs up MongoDB, LightRAG, Neo4j, Keycloak. Starts 2 min after container boot, then repeats every 24h (not a real cron — drifts on container restart). Time-based retention plus a hard cap on scheduled-trigger backups; also runs the internal `backup-api` HTTP server (status/trigger/restore/upload/download) the admin panel's Backups page talks to; success/failure alerts sent directly via SMTP (`lib.sh`'s `send_smtp_mail()`), independent of Grafana | — (backup-api on 4100, internal only) | Internal only | `BACKUP_RETENTION_DAYS` (default 14), `BACKUP_SCHEDULED_LIMIT` (default 10, caps scheduled backups regardless of age), `ALERT_WEBHOOK_URL`, `ALERT_EMAIL`, `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`, `MONGO_USER`, `MONGO_PASSWORD` |
 | **docker-socket-proxy** | tecnativa/docker-socket-proxy | Scoped Docker API in front of the real `docker.sock`, reachable only by `backup` over the internal `hhh-backup-internal` network; exposes only the container/volume/image calls `backup.sh`/`restore.sh` need (no EXEC, NETWORKS, SECRETS, etc.) instead of a raw socket mount | 2375 (internal only) | Internal only | — |
 
 > **Flutter mobile/web**: Not a separate Docker container. Flutter runs natively on Android/iOS or as a compiled web app. In dev the backend is reached directly; in production the compiled web bundle may be hosted on the `app` service.

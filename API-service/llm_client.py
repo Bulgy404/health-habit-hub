@@ -10,6 +10,8 @@ from typing import Optional
 
 import openai
 
+from alerting import fire_alert_email
+
 logger = logging.getLogger(__name__)
 
 _api_key = os.getenv("LLM_API_KEY", "")
@@ -35,6 +37,13 @@ _max_retries = int(os.getenv("LLM_MAX_RETRIES", "0"))
 # should be treated as down. Process-local (per worker), which is fine here —
 # each worker converges within one cooldown window of an outage starting.
 _model_down_until: dict[str, float] = {}
+
+# Debounces the "total outage" alert (primary AND fallback both down) for
+# LLM_FALLBACK_COOLDOWN_S: unlike the primary model, the fallback has no
+# cooldown-skip of its own (it's retried on every request while the primary
+# is down), so without this a persistent fallback outage would send one
+# alert email per request instead of one per cooldown window.
+_fallback_alerted_until: dict[str, float] = {}
 
 
 def _in_cooldown(model_name: str) -> bool:
@@ -126,13 +135,39 @@ async def chat_complete(
                     "chat_complete failed after %.1fs: model=%s %s: %s",
                     time.monotonic() - start, resolved_model, type(exc).__name__, exc,
                 )
+                # No fallback configured, so _model_down_until/_in_cooldown are
+                # otherwise unused for this model — reuse them purely as an
+                # alert debounce so a persistent outage sends one email per
+                # LLM_FALLBACK_COOLDOWN_S instead of one per failed request.
+                if not _in_cooldown(resolved_model):
+                    _mark_down(resolved_model)
+                    fire_alert_email(
+                        f"🚨 LLM model unavailable: {resolved_model}",
+                        f"chat_complete failed after {time.monotonic() - start:.1f}s "
+                        f"for model={resolved_model} ({type(exc).__name__}: {exc}). "
+                        "No LLM_FALLBACK_MODEL is configured, so this request failed "
+                        "with no retry. This alert won't repeat for "
+                        f"{_fallback_cooldown_s:.0f}s.",
+                    )
                 raise
+            # _mark_down() only fires once per LLM_FALLBACK_COOLDOWN_S window per
+            # model (subsequent calls take the "already in cooldown" branch above
+            # and skip straight to the fallback), so this alert is naturally
+            # debounced — no separate rate-limiting needed here.
             _mark_down(resolved_model)
             logger.warning(
                 "chat_complete: model=%s failed after %.1fs (%s: %s) — marking it down for "
                 "%.0fs, retrying once with LLM_FALLBACK_MODEL=%s",
                 resolved_model, time.monotonic() - start, type(exc).__name__, exc,
                 _fallback_cooldown_s, fallback_model,
+            )
+            fire_alert_email(
+                f"🚨 LLM model unavailable: {resolved_model}",
+                f"chat_complete failed after {time.monotonic() - start:.1f}s "
+                f"for model={resolved_model} ({type(exc).__name__}: {exc}). "
+                f"Falling back to LLM_FALLBACK_MODEL={fallback_model} for the next "
+                f"{_fallback_cooldown_s:.0f}s. This alert won't repeat until the "
+                "cooldown expires and the primary model fails again.",
             )
         except Exception as exc:
             logger.error(
@@ -150,6 +185,16 @@ async def chat_complete(
             "chat_complete fallback failed after %.1fs: model=%s %s: %s",
             time.monotonic() - start, fallback_model, type(exc).__name__, exc,
         )
+        if time.monotonic() >= _fallback_alerted_until.get(fallback_model, 0.0):
+            _fallback_alerted_until[fallback_model] = time.monotonic() + _fallback_cooldown_s
+            fire_alert_email(
+                f"🚨 LLM totally unavailable: {resolved_model} and fallback {fallback_model}",
+                f"Both the primary model ({resolved_model}, already in cooldown) and "
+                f"LLM_FALLBACK_MODEL ({fallback_model}) failed. Last error after "
+                f"{time.monotonic() - start:.1f}s: {type(exc).__name__}: {exc}. "
+                "All LLM-backed features are currently down. This alert won't "
+                "repeat for the same fallback model until the cooldown expires.",
+            )
         raise
     logger.info(
         "chat_complete done in %.1fs: model=%s", time.monotonic() - start, fallback_model

@@ -536,6 +536,33 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Internal-only reachability prober for services with no native Prometheus
+  # metrics — no host mounts, no elevated privileges (unlike e.g. cAdvisor),
+  # just outbound TCP-connect/HTTP-GET probes against the same internal
+  # hostnames every other service already talks to on hhh-proxy. Feeds the
+  # Grafana "service unreachable" alert rule — see docs/runbook.md.
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: hhh-blackbox-exporter
+    restart: always
+    networks:
+      - hhh-proxy
+    volumes:
+      - ./monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9115/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   prometheus:
     image: prom/prometheus:v3.4.1
     container_name: hhh-prometheus
@@ -589,6 +616,22 @@ services:
       - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_STRICT=false
       # Let users click straight through to Keycloak instead of the local login form.
       - GF_AUTH_OAUTH_AUTO_LOGIN=false
+      # ── SMTP (critical-alert emails) ─────────────────────────────────────
+      # Same generic SMTP_* credentials used by backup.sh and API-service's
+      # alerting.py — one transport, one recipient (see .env.example's "Mail
+      # (generic SMTP)" section). Static env vars only, no bootstrap-ordering
+      # dependency: unlike keycloak-init, nothing needs to wait for Grafana to
+      # be healthy first — Grafana reads these at its own startup.
+      - GF_SMTP_ENABLED=true
+      - GF_SMTP_HOST=${SMTP_HOST}:${SMTP_PORT:-587}
+      - GF_SMTP_USER=${SMTP_USER}
+      - GF_SMTP_PASSWORD=${SMTP_PASS}
+      - GF_SMTP_FROM_ADDRESS=${SMTP_FROM:-noreply@example.com}
+      - GF_SMTP_FROM_NAME=Health Habit Hub Alerts
+      - GF_SMTP_STARTTLS_POLICY=${GF_SMTP_STARTTLS_POLICY:-MandatoryStartTLS}
+      # Contact-point recipient for the provisioned alert rules (see
+      # monitoring/grafana/provisioning/alerting/alerting.yaml).
+      - HHH_ALERT_EMAIL=${ALERT_EMAIL:-}
     networks:
       - hhh-proxy
     volumes:
@@ -631,9 +674,12 @@ services:
       - BACKUP_EMAIL=${BACKUP_EMAIL:-}
       - MONGO_USER=${MONGO_USER}
       - MONGO_PASSWORD=${MONGO_PASSWORD}
-      - MAIL_USER=${MAIL_USER:-}
-      - MAIL_PASS=${MAIL_PASS:-}
-      - MAIL_FROM=${MAIL_FROM:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - SMTP_STARTTLS=${SMTP_STARTTLS:-true}
       # Reachable directly over hhh-proxy (pg_dump/psql connect over the network
       # to the running server — unlike Neo4j's offline neo4j-admin dump, no
       # docker-socket-proxy access is needed for the Keycloak DB backup/restore).
