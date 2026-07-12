@@ -2,7 +2,12 @@
 
 Structured catalogue of all use cases. Each use case has a sequence diagram in
 [`../sequences/`](../sequences/) named `UC-XX-<slug>.mmd`. The UML use case
-diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
+diagram is in [`use-case-diagram.puml`](use-case-diagram.puml). There are 39
+use cases in total (UC-01 – UC-39); numbering is not contiguous within each
+table because use cases were added over time and are grouped by actor rather
+than by ID. [`../sequences/UC-recommend-llm-prompt.mmd`](../sequences/UC-recommend-llm-prompt.mmd)
+is a supplementary flowchart (not a numbered use case) detailing the internal
+LLM-call architecture of UC-07's recommendation pipeline.
 
 **Actors**
 
@@ -42,6 +47,8 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 | UC-33 | Receive adaptive habit reminders | Local notifications at a user-picked time; frequency fades as autonomy score (SRHI + adherence + streak) rises, with hysteresis and recovery; weights tunable via admin_settings | `GET /api/v1/habits/intentions/reminder-plans` | MongoDB, device notifications |
 | UC-34 | Comment & like habits | Anonymous likes (counter on Habit node) and comments (Comment nodes); like counts feed the LLM recommendation prompt as community signal; comments are auto-flagged by a local wordlist/regex check (not an LLM call) and held from public view until a researcher approves or deletes them via `GET /admin/comments?status=flagged`, `POST /admin/comments/:id/approve`, `DELETE /admin/comments/:id` | `POST /habits/:id/annotate (like)`, `GET/POST /habits/:id/comments` | Neo4j, MongoDB |
 | UC-38 | Switch or leave a study | After onboarding, move to a different study via a new code, or leave back to the default study; already-donated habits/logs/SRHI answers keep the studyId they were attributed to at the time — nothing is deleted or re-attributed | `GET /api/v1/onboarding/enrollment`, `POST /onboarding/switch-study`, `POST /onboarding/leave-study` | MongoDB, Neo4j |
+| UC-35 | Guided habit creation | On login/app start, resolve the participant's enrollment and route them through either the public (Path A) or study-participant (Path B) guided habit-creation flow | `GET /api/v1/study-config/me` | Backend, MongoDB |
+| UC-39 | Recover account via passphrase | New-device account recovery from a one-time recovery phrase (pure re-encoding of the Keycloak username UUID + password, no server-side secret/KDF); per-IP rate-limited (5/hour); every attempt (success/failure/rate-limited) is logged for admin review | `POST /api/v1/restore` | Backend, Keycloak (ROPC), MongoDB |
 
 ## Researcher / Admin use cases (admin portal)
 
@@ -60,6 +67,7 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 | UC-27 | View dashboard stats & moderate habit feed | researcher, admin | Platform stats, habit feed review & export, session management | `/api/v1/admin/stats`, `/admin/habits/feed*`, `/admin/sessions*` | MongoDB, Neo4j |
 | UC-28 | Configure platform settings | admin only | Key-value platform configuration | `PUT /api/v1/admin/settings/:key` | MongoDB |
 | UC-37 | View, trigger & restore backups | admin only | Last-backup status (per-component), on-demand trigger, and restore from an existing or uploaded archive — typed-filename confirmation, single-use restore token, automatic pre-restore safety backup, audit log; API only reachable internally, never proxied to the browser directly | `/api/v1/admin/backups*` | MongoDB, backup-api (internal, inside `hhh-backup`) |
+| UC-36 | Configure per-group study design | researcher, admin | Configure per-group toggles/config within a study (cue sets, reminder cadence, etc.), distinct from UC-19's study/group/code CRUD | `/api/v1/admin/studies/:id` | MongoDB |
 
 ## System use cases
 
@@ -74,10 +82,11 @@ diagram is in [`use-case-diagram.puml`](use-case-diagram.puml).
 
 | Functional area | Use cases | Code |
 |---|---|---|
-| Auth & identity | UC-01, UC-02, UC-17, UC-31, UC-32 | `app/middleware/auth.js`, `app/routes/onboardRouter.js`, `admin/src/lib/auth.ts`, `keycloak/` |
-| Donation pipeline | UC-03, UC-04, UC-34 | `app/routes/habits/`, `app/services/habitDonationService.js`, `API-service/routers/classify_*.py`, `map_bcio.py` |
+| Auth & identity | UC-01, UC-02, UC-17, UC-31, UC-32, UC-39 | `app/middleware/auth.js`, `app/routes/onboardRouter.js`, `app/routes/restoreRouter.js`, `admin/src/lib/auth.ts`, `keycloak/` |
+| Donation pipeline | UC-03, UC-04, UC-34, UC-35 | `app/routes/habits/`, `app/services/habitDonationService.js`, `app/lib/habitQueue.js`, `API-service/routers/classify_*.py`, `map_bcio.py` |
 | Recommendations | UC-07, UC-08 | `app/routes/recommendRouter.js`, `API-service/routers/recommend.py`, `retrieve.py` |
-| DFG study module | UC-09 – UC-13, UC-19, UC-21 – UC-24, UC-33, UC-38 | `app/services/intentionService.js`, `dailyLogService.js`, `srhiService.js`, `cuePoolService.js`, `exportService.js`, `studyAnalyticsService.js`, `notificationCampaignService.js`, `studyCodeService.js` |
+| DFG study module | UC-09 – UC-13, UC-19, UC-21 – UC-24, UC-33, UC-36, UC-38 | `app/services/intentionService.js`, `dailyLogService.js`, `srhiService.js`, `cuePoolService.js`, `exportService.js`, `studyAnalyticsService.js`, `notificationCampaignService.js`, `studyCodeService.js` |
 | Questionnaires & profiles | UC-05, UC-06, UC-20 | `app/routes/questionnaires*`, `profileFieldDefinitionsRouter.js`, `userProfileRouter.js` |
 | Knowledge base | UC-25, UC-26, UC-30 | `app/routes/kbRouter.js`, `API-service/kb/`, `lightrag/`, `knowledge-mcp/` |
 | Operations | UC-29 | `backup-service/` |
+| Security monitoring | UC-39 | `app/routes/admin/restoreAttemptsRouter.js`, `app/models/restoreAttempt.js`, `admin/src/app/(admin)/restore-attempts/` |

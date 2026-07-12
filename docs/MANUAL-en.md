@@ -176,7 +176,7 @@ After submitting a habit donation, the app presents a visualization that relates
 
 ### Language
 
-The Health Habit Hub app supports **English** and **German**. You can change the display language at any time from the **Settings** screen, which is accessible via the bottom navigation bar (the gear icon).
+The Health Habit Hub app supports **English**, **German**, **French**, **Japanese**, and **Dutch**. You can change the display language at any time from the **Settings** screen, which is accessible via the bottom navigation bar (the gear icon).
 
 **To change the language:**
 

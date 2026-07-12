@@ -2,6 +2,8 @@
 
 This guide walks you through running the full Health Habit Hub stack locally — backend, databases, admin panel, and Flutter iOS Simulator — on a clean Mac.
 
+> **vs. [`developer-onboarding.md`](developer-onboarding.md):** this guide is `Makefile`-driven (`make dev`, `make seed`, `make ios`) and assumes macOS + Xcode for the iOS Simulator. If you're not on a Mac, or want to run the Flutter app in Chrome/Android Emulator instead, use `developer-onboarding.md` — the two guides cover overlapping ground from different angles, pick whichever matches your setup rather than reading both.
+
 ---
 
 ## Table of Contents

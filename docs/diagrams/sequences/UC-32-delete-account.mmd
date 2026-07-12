@@ -4,19 +4,27 @@ sequenceDiagram
     actor P as Participant
     participant F as Flutter App (Settings)
     participant B as Backend (usersRouter)
+    participant N as Neo4j
     participant M as MongoDB
     participant KC as Keycloak (Admin API)
 
+    P->>F: Settings -> "Export my data" (optional, GDPR Art. 20)
+    F->>B: GET /api/v1/users/me/export (Bearer token)
+    B-->>F: JSON export of all participant-linked data
     P->>F: Settings -> "Delete account"
     F-->>P: Confirmation dialog (lists exactly what is deleted)
     P->>F: Confirm "Delete permanently"
     F->>B: DELETE /api/v1/users/me (Bearer token)
+    B->>M: habit_comments.find({userId}) — find own Comment node IDs
+    M-->>B: comment IDs
+    B->>N: delete this user's Comment nodes (best-effort, non-fatal)
+    B->>N: delete ENROLLED_IN relationship (best-effort, non-fatal)
     loop participant-linked collections
         B->>M: deleteMany({userId}) — users, profiles, enrollments, intentions,<br/>daily logs, SRHI, form responses, recommendations, feedback,<br/>device tokens, consents
     end
     B->>KC: DELETE /admin/realms/hhh/users/{sub} (idempotent)
     KC-->>B: 204 (or 404 = already gone)
     B-->>F: 200 {ok, deleted counts}
-    Note over B: Donated habits in Neo4j carry no user identifier (anonymous by design)
+    Note over B: Donated Habit nodes carry no user identifier and are kept; only the Comment nodes and ENROLLED_IN edge above are erased
     F->>F: Wipe secure storage, logout
     F-->>P: Back to onboarding welcome screen

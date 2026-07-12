@@ -132,6 +132,16 @@ After the local stack is healthy:
 3. Save the generated passphrase
 4. Test restore/recovery using that passphrase
 
+Recovery works by decoding the phrase back into the participant's Keycloak
+username/password and minting a token pair via the OAuth password grant
+(ROPC) against the `hhh-ropc` client — this requires
+`KEYCLOAK_ROPC_CLIENT_SECRET` to be set (see the client secrets table
+below); if it's empty, `POST /api/v1/restore` fails closed rather than
+minting a token. The route is rate-limited to 5 attempts/hour per IP, and
+every attempt is logged to MongoDB `restore_attempts` for review in the
+admin panel's **Restore Attempts** page — see
+`docs/architecture.md`'s *Account Recovery via Passphrase* section.
+
 If participant creation fails, check:
 
 ```bash
@@ -809,7 +819,10 @@ reporting — a silent no-op unless configured:
 | `MONGO_PASSWORD` | mongo, app, backup | regenerate + redeploy stack |
 | `NEO4J_PASSWORD` | neo4j, app, api-service | regenerate + redeploy |
 | `KEYCLOAK_ADMIN_PASSWORD` | keycloak, keycloak-init | Keycloak admin console + .env |
-| `KEYCLOAK_SECRET` (hhh-admin client) | admin panel | Keycloak → Clients → hhh-admin → Credentials |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET` (hhh-backend client) | app ↔ Keycloak | regenerate + redeploy keycloak-init + app |
+| `KEYCLOAK_ADMIN_UI_CLIENT_SECRET` (hhh-admin client) | admin panel login | regenerate + redeploy keycloak-init + admin |
+| `KEYCLOAK_ROPC_CLIENT_SECRET` (hhh-ropc client) | onboarding, credential rotation, passphrase-based restore | regenerate + redeploy keycloak-init + app |
+| `GRAFANA_CLIENT_SECRET` (grafana client) | Grafana SSO | regenerate + redeploy keycloak-init + grafana |
 | `API_SERVICE_SECRET` | app ↔ api-service | regenerate + redeploy both |
 | `LIGHTRAG_API_KEY`, `LLM_API_KEY` | lightrag, api-service | provider console |
 | `MAIL_USER` / `MAIL_PASS` (Mailjet) | backup alerts | **rotate now** — previous values circulated in a repo working copy |

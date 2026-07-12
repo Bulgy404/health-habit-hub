@@ -30,11 +30,12 @@ flowchart TB
 
     %% ------- Data layer -------
     subgraph data["Data Stores"]
-        mongo[("MongoDB 7<br/>studies · questionnaires · intentions<br/>logs · SRHI · recommendations")]
+        mongo[("MongoDB 7<br/>studies · questionnaires · intentions<br/>logs · SRHI · recommendations · restore_attempts")]
         neo4j[("Neo4j 5<br/>Habit / Context / BCIOConcept graph<br/>bolt :7687")]
         lightrag[("LightRAG · :9621<br/>graph + vector knowledge base")]
-        redis[("Redis 7<br/>API-service response cache · locks")]
+        redis[("Redis 7<br/>API-service response cache · BullMQ habitQueue")]
         postgres[("PostgreSQL 16<br/>Keycloak persistence")]
+        mongoexpress["mongo-express<br/>admin-only Mongo UI · /mongo/"]
     end
 
     %% ------- External -------
@@ -43,8 +44,15 @@ flowchart TB
         fcm["Firebase Cloud<br/>Messaging (FCM)"]
     end
 
+    %% ------- Monitoring -------
+    subgraph monitoring["Monitoring"]
+        prometheus["Prometheus<br/>metrics · 30d retention"]
+        grafana["Grafana<br/>dashboards · Keycloak SSO"]
+    end
+
     %% ------- Ops -------
-    backup["Backup Service<br/>daily cron · configurable retention (default 14 days)"]
+    dockerproxy["docker-socket-proxy<br/>scoped Docker API (no raw socket mount)"]
+    backup["Backup Service<br/>~24h sleep-loop (not real cron) · configurable retention (default 14 days)"]
 
     %% ------- Edges: actors -------
     participant_actor --> flutter
@@ -85,10 +93,22 @@ flowchart TB
     backup -- "neo4j-admin dump" --> neo4j
     backup -- "tar lightrag-data" --> lightrag
     backup -- "partial-export API" --> keycloak
+    backup -- "docker exec (Keycloak DB dump)" --> dockerproxy
+    researcher_actor -- "/mongo/ (Basic Auth)" --> mongoexpress
+    mongoexpress --> mongo
+
+    %% ------- Edges: monitoring -------
+    prometheus -. "scrape /metrics" .-> backend
+    prometheus -. "scrape /metrics" .-> apiservice
+    researcher_actor -- "dashboards" --> grafana
+    grafana -. "OIDC SSO" .-> keycloak
+    grafana --> prometheus
 
     classDef actor fill:#fff3cd,stroke:#b8860b
     classDef store fill:#e7f1ff,stroke:#2a6fb8
     classDef ext fill:#f3e8ff,stroke:#7c3aed
+    classDef ops fill:#eafbe7,stroke:#2e8c00
     class participant_actor,researcher_actor,agent_actor actor
-    class mongo,neo4j,lightrag,redis,postgres store
+    class mongo,neo4j,lightrag,redis,postgres,mongoexpress store
     class llm,fcm ext
+    class backup,dockerproxy,prometheus,grafana ops

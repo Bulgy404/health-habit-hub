@@ -598,7 +598,8 @@ MongoDB stores operational data: survey definitions, participant records, profil
 | `consents` | Informed-consent acceptances (append-only audit trail, versioned) | No |
 | `habit_comments` | Comment-ownership mapping (author of anonymous Neo4j Comment nodes) | No |
 | `backup_audit_log` | Append-only record of admin backup trigger/restore/upload actions | No |
-| `restore_confirmation_tokens` | Short-lived, single-use tokens gating a restore call (TTL-indexed) | No |
+| `restore_confirmation_tokens` | Short-lived, single-use tokens gating an **admin system-backup** restore call (TTL-indexed) | No |
+| `restore_attempts` | Security log of **participant passphrase-based account-recovery** attempts (unrelated to the collection above despite the similar name — TTL-indexed) | No |
 
 ---
 
@@ -1242,6 +1243,37 @@ restore well after the admin's actual intent.
 | `expiresAt` | Date | 2 minutes after `createdAt`; TTL-indexed, deleted automatically |
 
 Indexes: `{token}` (unique), `{expiresAt}` (TTL, `expireAfterSeconds: 0`)
+
+---
+
+#### `restore_attempts`
+
+> **Not to be confused with `restore_confirmation_tokens` above.** This
+> collection is about **participants** recovering their own account via a
+> recovery phrase (`POST /api/v1/restore`, `app/routes/restoreRouter.js`);
+> `restore_confirmation_tokens` is about **admins** restoring a system
+> backup. The two "restore" flows are unrelated.
+
+Append-only security log of every `POST /api/v1/restore` call. Recovery
+phrases re-encode the Keycloak username/password with no server-side secret
+or KDF, so this collection — combined with the route's per-IP rate limit —
+is the only visibility into enumeration/brute-force attempts. Surfaced to
+admins via `GET /api/v1/admin/restore-attempts`
+(`app/routes/admin/restoreAttemptsRouter.js`, admin panel **Restore
+Attempts** page), which also flags IPs with 3+ non-success attempts in the
+last hour.
+
+| Field | Type | Description |
+|---|---|---|
+| `_id` | ObjectId | |
+| `ip` | String | Rate limiter's key for the request |
+| `usernameAttempted` | String \| null | Decoded UUID, when the phrase was well-formed enough to decode |
+| `outcome` | String | `success` \| `invalid_phrase` \| `invalid_credentials` \| `rate_limited` \| `keycloak_unreachable` |
+| `createdAt` | Date | |
+
+Indexes: `{createdAt: -1}`, `{ip: 1, createdAt: -1}`, `{createdAt: 1}` (TTL, `expireAfterSeconds: 2592000` — 30 days)
+
+Source: `app/models/restoreAttempt.js`.
 
 ---
 
