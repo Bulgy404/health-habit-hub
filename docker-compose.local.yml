@@ -48,6 +48,8 @@ services:
       - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-hhh-flutter}
       - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-hhh-backend}
       - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET:-CHANGE_THIS_KEYCLOAK_BACKEND_SECRET}
+      - KEYCLOAK_ROPC_CLIENT_ID=${KEYCLOAK_ROPC_CLIENT_ID:-hhh-ropc}
+      - KEYCLOAK_ROPC_CLIENT_SECRET=${KEYCLOAK_ROPC_CLIENT_SECRET:-CHANGE_THIS_KEYCLOAK_ROPC_SECRET}
       - API_SERVICE_SECRET=${API_SERVICE_SECRET}
       # Internal-only client for the admin Backups page — see backup-service/api/.
       - BACKUP_API_URL=http://backup:4100
@@ -94,7 +96,7 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-admin}
       - MONGO_INITDB_DATABASE=surveyjs
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - ./mongo/entrypoint:/docker-entrypoint-initdb.d
       - mongo-local-data:/data/db
@@ -117,8 +119,8 @@ services:
       - NEO4J_server_directories_import=/import
       - NEO4J_PLUGINS=["graph-data-science"]
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
     networks:
       - hhh-proxy
       - hhh-app
@@ -153,7 +155,7 @@ services:
       - KC_DB=dev-file
     command: start-dev --import-realm --health-enabled=true
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     networks:
       - hhh-proxy
       - hhh-app
@@ -205,6 +207,8 @@ services:
       /opt/keycloak/bin/kcadm.sh update clients/$$BACKEND_ID -r hhh -s secret="$$KEYCLOAK_ADMIN_CLIENT_SECRET" &&
       ADMIN_UI_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-admin --fields id --format csv --noquotes) &&
       /opt/keycloak/bin/kcadm.sh update clients/$$ADMIN_UI_ID -r hhh -s secret="$$KEYCLOAK_ADMIN_UI_CLIENT_SECRET" &&
+      ROPC_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-ropc --fields id --format csv --noquotes) &&
+      /opt/keycloak/bin/kcadm.sh update clients/$$ROPC_ID -r hhh -s secret="$$KEYCLOAK_ROPC_CLIENT_SECRET" &&
       GRAFANA_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=grafana --fields id --format csv --noquotes) &&
       if [ -n "$$GRAFANA_ID" ]; then
         /opt/keycloak/bin/kcadm.sh update clients/$$GRAFANA_ID -r hhh -s secret="$$GRAFANA_CLIENT_SECRET";
@@ -301,7 +305,7 @@ services:
     container_name: hhh-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis-local-data:/data
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
@@ -313,7 +317,7 @@ services:
     container_name: hhh-redis-insight
     restart: unless-stopped
     ports:
-      - "5540:5540"
+      - "127.0.0.1:5540:5540"
     volumes:
       - redis-insight-data:/data
     networks:
@@ -386,7 +390,7 @@ services:
       - ME_CONFIG_MONGODB_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin}@mongo:27017/
       - ME_CONFIG_BASICAUTH=false
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     networks:
       - hhh-app
     depends_on:
@@ -428,7 +432,7 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     networks:
       - hhh-proxy
       - hhh-app
@@ -470,7 +474,7 @@ services:
       - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     ports:
-      - "3002:3000"
+      - "127.0.0.1:3002:3000"
     networks:
       - hhh-proxy
       - hhh-app

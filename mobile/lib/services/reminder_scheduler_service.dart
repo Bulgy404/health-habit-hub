@@ -68,13 +68,28 @@ class ReminderSchedulerService {
     _tzReady = true;
   }
 
+  /// Cancels only the habit-reminder notifications this method manages
+  /// (ids below [_qNotifBase]), leaving the questionnaire-reminder
+  /// (`_qNotifBase`..+[_qNotifMax]) and end-of-study ([_endOfStudyNotifId])
+  /// ranges untouched. Queries the plugin for the actual pending ids rather
+  /// than assuming a fixed count, since the number of habit reminders
+  /// scheduled varies with how many intentions/offsets were active last time.
+  Future<void> _cancelPendingHabitReminders() async {
+    final pending = await _plugin.pendingNotificationRequests();
+    for (final request in pending) {
+      if (request.id < _qNotifBase) {
+        await _plugin.cancel(id: request.id);
+      }
+    }
+  }
+
   /// Fetches current plans and replaces all pending habit reminders.
   ///
   /// No-ops (and cancels any already-pending habit reminders) when the user
   /// has disabled this channel via [NotificationPrefs.habitRemindersEnabled].
   Future<void> syncReminders() async {
     await _ensureTimezone();
-    await _plugin.cancelAll();
+    await _cancelPendingHabitReminders();
     if (!await NotificationPrefs.habitRemindersEnabled()) return;
 
     final response = await _dio.get<Map<String, dynamic>>(

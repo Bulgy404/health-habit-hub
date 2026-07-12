@@ -18,6 +18,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../utils/date_format.dart';
+
 class ContributionGraphWidget extends StatefulWidget {
   /// Creates a [ContributionGraphWidget].
   const ContributionGraphWidget({
@@ -286,8 +288,7 @@ class _ContributionGraphWidgetState extends State<ContributionGraphWidget> {
                           child: Tooltip(
                             message: day == null
                                 ? ''
-                                : '${day.year}-${day.month.toString().padLeft(2, '0')}-'
-                                    '${day.day.toString().padLeft(2, '0')}: '
+                                : '${formatDateYmd(day)}: '
                                     '${widget.counts[_atMidnight(day)] ?? 0}',
                             child: Container(
                               width: widget.cellSize,

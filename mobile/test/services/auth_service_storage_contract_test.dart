@@ -267,13 +267,17 @@ void main() {
 
     test(
         'returns null and calls logout() when Keycloak rejects refresh (400) '
-        'and no stored credentials', () async {
+        'and the reauthenticate() retry also fails', () async {
       // Expired token + a refresh_token so refreshToken() reaches the HTTP
-      // call, which returns 400. No username/password → reauthenticate() fails
+      // call, which returns 400. reauthenticate() retries the same
+      // refresh-token exchange (second queued response, also 400) → fails
       // → logout() is called.
       storage.seedValue('access_token', _expiredJwt);
       storage.seedValue('refresh_token', 'expired-refresh-token');
-      final dio = _mockDio([const _MockResponse(statusCode: 400)]);
+      final dio = _mockDio([
+        const _MockResponse(statusCode: 400),
+        const _MockResponse(statusCode: 400),
+      ]);
       final service = AuthService(secureStorage: storage, dio: dio);
 
       final result = await service.getAccessToken();
@@ -333,29 +337,34 @@ void main() {
   });
 
   // ─── reauthenticate() ──────────────────────────────────────────────────────
+  //
+  // reauthenticate() no longer replays a stored raw password via Keycloak's
+  // ROPC grant (removed as a security risk — see auth_service.dart). It now
+  // delegates entirely to refreshToken(), i.e. a standard grant_type=
+  // refresh_token exchange using the stored refresh token.
 
   group('reauthenticate()', () {
-    test('returns false when no username/password stored', () async {
+    test('returns false when no refresh token stored', () async {
       final service = AuthService(secureStorage: storage);
       expect(await service.reauthenticate(), isFalse);
     });
 
-    test('reads username and password keys from storage', () async {
-      storage.seedValue('username', 'user-123');
-      storage.seedValue('password', 'pass-abc');
-      // No Dio mock → HTTP will fail → returns false, but storage reads happen.
-      final service = AuthService(secureStorage: storage);
+    test('reads the refresh_token key from storage', () async {
+      storage.seedValue('refresh_token', 'refresh-abc');
+      // Dio has no queued response → HTTP will fail → returns false, but the
+      // storage read still happens inside refreshToken().
+      final dio = _mockDio([]);
+      final service = AuthService(secureStorage: storage, dio: dio);
       await service.reauthenticate();
       final readKeys = storage.calls
           .where((c) => c['method'] == 'read')
           .map((c) => c['key'] as String)
           .toSet();
-      expect(readKeys, containsAll(['username', 'password']));
+      expect(readKeys, contains('refresh_token'));
     });
 
     test('returns true and writes access_token, refresh_token, token_expiry on 200', () async {
-      storage.seedValue('username', 'user-123');
-      storage.seedValue('password', 'pass-abc');
+      storage.seedValue('refresh_token', 'refresh-abc');
       final newToken = _validJwt;
       final dio = _mockDio([
         _MockResponse(data: {
@@ -376,8 +385,7 @@ void main() {
     });
 
     test('returns false and does NOT call delete when HTTP returns 401', () async {
-      storage.seedValue('username', 'user-123');
-      storage.seedValue('password', 'pass-abc');
+      storage.seedValue('refresh_token', 'refresh-abc');
       final dio = _mockDio([const _MockResponse(statusCode: 401)]);
       final service = AuthService(secureStorage: storage, dio: dio);
 
@@ -392,14 +400,14 @@ void main() {
 
   group('getAccessToken() — reauthentication fallback', () {
     test('does NOT call logout and returns new token when refresh 400 but '
-        'reauthentication succeeds', () async {
+        'the reauthenticate() retry succeeds', () async {
       storage.seedValue('access_token', _expiredJwt);
       storage.seedValue('refresh_token', 'expired-refresh');
-      storage.seedValue('username', 'user-123');
-      storage.seedValue('password', 'pass-abc');
       final newToken = _validJwt;
-      // First HTTP call: refresh_token grant → 400.
-      // Second HTTP call: password grant → 200 with new tokens.
+      // First HTTP call: refreshToken()'s refresh_token grant → 400.
+      // Second HTTP call: reauthenticate()'s retry of the same grant → 200
+      // with new tokens (models a concurrent instance having rotated the
+      // refresh token in between).
       final dio = _mockDio([
         const _MockResponse(statusCode: 400),
         _MockResponse(data: {
@@ -416,11 +424,9 @@ void main() {
       expect(storage.calls.where((c) => c['method'] == 'delete'), isEmpty);
     });
 
-    test('calls logout when refresh 401 AND reauthentication also fails', () async {
+    test('calls logout when refresh 401 AND the reauthenticate() retry also fails', () async {
       storage.seedValue('access_token', _expiredJwt);
       storage.seedValue('refresh_token', 'expired-refresh');
-      storage.seedValue('username', 'user-123');
-      storage.seedValue('password', 'pass-abc');
       // Both HTTP calls fail with 401.
       final dio = _mockDio([
         const _MockResponse(statusCode: 401),

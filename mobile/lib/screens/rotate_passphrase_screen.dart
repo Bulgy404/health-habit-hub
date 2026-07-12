@@ -99,7 +99,10 @@ class _RotatePassphraseScreenState
       final expiresIn = data['expires_in'] as int? ?? 300;
 
       await widget.storage.write(key: 'username', value: username);
-      await widget.storage.write(key: 'password', value: password);
+      // Note: the raw account password is intentionally NOT persisted — it's
+      // only used in-memory just below to derive the new recovery
+      // passphrase. Storing it would allow later replay for silent
+      // reauthentication (ROPC), which has been removed as a security risk.
       await widget.storage.write(key: 'access_token', value: accessToken);
       await widget.storage.write(key: 'refresh_token', value: refreshToken);
       final expiry = DateTime.now().add(Duration(seconds: expiresIn));

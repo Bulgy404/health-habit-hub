@@ -26,6 +26,15 @@ router = APIRouter(dependencies=[Depends(verify_service_token)])
 _BCIO_MIN_CONFIDENCE = float(os.getenv("BCIO_MIN_CONFIDENCE", "0.6"))
 _OWL_PATH = Path(__file__).parent.parent / "data" / "bcio.owl"
 
+# Bounds on context_phrases shape — mirrors the list-length caps used
+# elsewhere (e.g. stitch_intention.py's `cues` max_length=5). Without these,
+# nothing stops a caller from submitting an unbounded number of dimension
+# keys or phrases per dimension, each individually under the 2000-char cap
+# but collectively driving an unbounded number of embedding calls and an
+# O(phrases x concepts) similarity loop.
+_MAX_PHRASES_PER_DIMENSION = 20
+_MAX_DIMENSIONS = 20
+
 # ---------------------------------------------------------------------------
 # OWL namespace constants
 # ---------------------------------------------------------------------------
@@ -133,8 +142,24 @@ class MapBcioRequest(BaseModel):
     @field_validator("context_phrases")
     @classmethod
     def limit_phrase_lengths(cls, v: dict[str, list[str]]) -> dict[str, list[str]]:
-        """Validate that no phrase exceeds 2000 characters."""
+        """Validate phrase length and bound the number of dimensions/phrases submitted.
+
+        Per-phrase length was already capped at 2000 characters; this also
+        rejects (rather than silently truncates) requests with too many
+        dimension keys or too many phrases in any one dimension, since both
+        feed directly into unbounded embedding calls and an O(phrases x
+        concepts) similarity loop in the endpoint below.
+        """
+        if len(v) > _MAX_DIMENSIONS:
+            raise ValueError(
+                f"context_phrases has {len(v)} dimension keys, exceeding the max of {_MAX_DIMENSIONS}."
+            )
         for dim, phrases in v.items():
+            if len(phrases) > _MAX_PHRASES_PER_DIMENSION:
+                raise ValueError(
+                    f"Dimension '{dim}' has {len(phrases)} phrases, exceeding the max of "
+                    f"{_MAX_PHRASES_PER_DIMENSION}."
+                )
             for phrase in phrases:
                 if len(phrase) > 2000:
                     raise ValueError(
@@ -174,7 +199,9 @@ async def map_bcio(body: MapBcioRequest) -> MapBcioResponse:
         Returns an empty mapping list if the BCIO index is unavailable or embedding fails.
 
     Raises:
-        HTTPException: 422 if any phrase exceeds 2000 characters (via field_validator).
+        HTTPException: 422 if any phrase exceeds 2000 characters, too many phrases
+            are submitted for a dimension, or too many dimension keys are submitted
+            (all via field_validator).
     """
     index = await _get_index()
     if index is None or not index["concepts"]:

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiUrl } from '@/lib/api';
 
 /** Per-language text, e.g. `{ en: 'Hello', de: 'Hallo' }`. */
@@ -53,10 +53,14 @@ export function useCuePoolsData(
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // Guards against a slower, superseded request (e.g. a stale page/filter
+  // combination) resolving after a newer one and overwriting fresher state.
+  const requestRef = useRef(0);
 
   const refetch = useCallback(
     async (p: number) => {
       if (!token) return;
+      const requestId = ++requestRef.current;
       setLoading(true);
       setError('');
       try {
@@ -67,12 +71,14 @@ export function useCuePoolsData(
         if (filterQuality) params.set('quality', filterQuality);
         if (filterLang) params.set('language', filterLang);
         const data = await apiFetch(`${API_BASE}?${params}`, token);
+        if (requestId !== requestRef.current) return;
         setCues((data as { cues: Cue[] }).cues ?? []);
         setTotal((data as { total: number }).total ?? 0);
       } catch (err) {
+        if (requestId !== requestRef.current) return;
         setError(err instanceof Error ? err.message : 'Failed to load cues');
       } finally {
-        setLoading(false);
+        if (requestId === requestRef.current) setLoading(false);
       }
     },
     [token, filterQuality, filterLang],

@@ -87,6 +87,28 @@ void main() {
         expect(result, isNull);
       },
     );
+
+    test(
+      'visiting /habits when NOT logged in redirects to /onboarding/welcome',
+      () async {
+        final result = await _guard(
+          location: '/habits',
+          isLoggedIn: false,
+        );
+        expect(result, '/onboarding/welcome');
+      },
+    );
+
+    test(
+      'visiting /habits when logged in returns null (no redirect)',
+      () async {
+        final result = await _guard(
+          location: '/habits',
+          isLoggedIn: true,
+        );
+        expect(result, isNull);
+      },
+    );
   });
 
 }

@@ -57,7 +57,8 @@
       "backups": "Back-ups",
       "auditLog": "Auditlogboek",
       "team": "Team & rollen",
-      "help": "Hulp"
+      "help": "Hulp",
+      "restoreAttempts": "Herstelpogingen"
     },
     "language": "Taal",
     "toggleTheme": "Thema wisselen",
@@ -1083,5 +1084,28 @@
     "back": "Terug",
     "next": "Volgende",
     "getStarted": "Aan de slag"
+  },
+  "restoreAttempts": {
+    "title": "Herstelpogingen",
+    "subtitle": "Beveiligingsmonitoring voor accountherstel via herstelzin (POST /restore). Herstelzinnen hebben geen serverzijdig geheim dat gokken vertraagt — deze weergave toont herhaalde pogingen die de snelheidsbeperking alleen niet blootlegt.",
+    "flaggedTitle": "Gemarkeerde IP's",
+    "flaggedSubtitle": "IP's met 3 of meer mislukte herstelpogingen in het afgelopen uur.",
+    "outcomeLabel": "Resultaat",
+    "filterAll": "Alle",
+    "outcomes": {
+      "success": "Succes",
+      "invalid_phrase": "Onjuiste zin",
+      "invalid_credentials": "Ongeldige inloggegevens",
+      "rate_limited": "Snelheidslimiet bereikt",
+      "keycloak_unreachable": "Keycloak onbereikbaar"
+    },
+    "when": "Wanneer",
+    "ip": "IP",
+    "usernameAttempted": "Geprobeerde gebruikersnaam",
+    "outcome": "Resultaat",
+    "failCount": "Mislukte pogingen",
+    "lastAttempt": "Laatste poging",
+    "totalPageInfo": "{total} totaal · pagina {page} van {totalPages}",
+    "loadFailed": "Laden van herstelpogingen mislukt"
   }
 }

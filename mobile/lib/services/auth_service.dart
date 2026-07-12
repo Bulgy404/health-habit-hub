@@ -25,8 +25,13 @@ class AuthService {
   static const _refreshTokenKey = 'refresh_token';
   static const _expiryKey = 'token_expiry';
 
-  // Credentials stored during onboarding for silent re-authentication.
+  // Username persisted alongside tokens by onboarding/restore/rotate flows
+  // (not used for auth by this service; cleared on logout for hygiene).
   static const _usernameKey = 'username';
+  // Legacy key: older app versions stored the raw account password here for
+  // ROPC-based silent re-auth. Nothing writes it anymore (see reauthenticate()
+  // below) — logout() still clears it so it doesn't linger on upgraded
+  // installs.
   static const _passwordKey = 'password';
 
   final FlutterAppAuth _appAuth;
@@ -112,42 +117,25 @@ class AuthService {
     }
   }
 
-  /// Silently re-authenticates using credentials stored during onboarding
-  /// (Keycloak ROPC password grant with the stored username/password).
+  /// Silently re-authenticates by exchanging the stored refresh token.
   ///
-  /// Returns true and writes fresh tokens to storage on success.
-  /// Returns false without modifying storage if no credentials are stored or
-  /// if Keycloak rejects them.
+  /// This previously replayed a persisted raw account password via
+  /// Keycloak's ROPC (`grant_type=password`) grant for silent re-auth. The
+  /// app no longer stores the password after the initial login exchange, so
+  /// that replay path has been removed — silent re-auth is now purely a
+  /// refresh-token exchange, which is exactly what [refreshToken] does. This
+  /// thin wrapper exists so [_performRefresh]'s "try once more, then log out"
+  /// shape (and this method's stable boolean success/failure API used by
+  /// callers/tests) stays unchanged. It also guards against a benign race
+  /// with a concurrent [AuthService] instance that rotates the refresh token
+  /// between this instance's failed attempt and the retry.
+  ///
+  /// Returns true and leaves fresh tokens in storage on success. Returns
+  /// false without modifying storage if no refresh token is stored or if
+  /// Keycloak rejects it.
   Future<bool> reauthenticate() async {
-    final username = await _secureStorage.read(key: _usernameKey);
-    final password = await _secureStorage.read(key: _passwordKey);
-    if (username == null || password == null) return false;
     try {
-      final response = await (_dio ?? Dio()).post<Map<String, dynamic>>(
-        '$_keycloakBaseUrl/realms/$_realm/protocol/openid-connect/token',
-        data: {
-          'grant_type': 'password',
-          'client_id': _clientId,
-          'username': username,
-          'password': password,
-        },
-        options: Options(contentType: 'application/x-www-form-urlencoded'),
-      );
-      final data = response.data!;
-      if (data['access_token'] != null) {
-        await _secureStorage.write(
-            key: _tokenKey, value: data['access_token'] as String);
-      }
-      if (data['refresh_token'] != null) {
-        await _secureStorage.write(
-            key: _refreshTokenKey, value: data['refresh_token'] as String);
-      }
-      if (data['expires_in'] != null) {
-        final expiresIn = data['expires_in'] as int;
-        final expiry = DateTime.now().add(Duration(seconds: expiresIn));
-        await _secureStorage.write(
-            key: _expiryKey, value: expiry.toIso8601String());
-      }
+      await refreshToken();
       return true;
     } catch (_) {
       return false;

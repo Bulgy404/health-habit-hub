@@ -56,6 +56,10 @@ trap release_lock EXIT
 echo ""
 echo "Extracting backup archive..."
 mkdir -p "$RESTORE_DIR"
+# Combine with the lock-release trap set above so a corrupt/truncated archive
+# (or any other failure past this point, under set -euo pipefail) still cleans
+# up the partially-extracted directory instead of leaking it in /tmp.
+trap 'release_lock; rm -rf "$RESTORE_DIR"' EXIT
 tar -xzf "$BACKUP_FILE" -C "$RESTORE_DIR"
 echo "✓ Archive extracted"
 
@@ -73,11 +77,18 @@ log_error() {
 echo ""
 echo "1/3 Restoring MongoDB..."
 if [ -d "$RESTORE_DIR/mongo" ]; then
+  # Credentials go in a 0600 temp config file (--config), read via the
+  # documented `uri` field, rather than --username/--password on the command
+  # line — so they never show up in `ps aux` / `/proc/<pid>/cmdline`. jq's
+  # @uri filter percent-encodes user/pass so special characters in either
+  # can't break the connection-string syntax.
+  MONGO_CONF=$(mktemp)
+  chmod 600 "$MONGO_CONF"
+  MONGO_URI=$(jq -rn --arg u "${MONGO_USER:-}" --arg p "${MONGO_PASSWORD:-}" \
+    '"mongodb://\($u|@uri):\($p|@uri)@mongo:27017/?authSource=admin"')
+  jq -n --arg uri "$MONGO_URI" '{uri:$uri}' > "$MONGO_CONF"
   if mongorestore \
-    --host=mongo:27017 \
-    --username="${MONGO_USER:-}" \
-    --password="${MONGO_PASSWORD:-}" \
-    --authenticationDatabase=admin \
+    --config="$MONGO_CONF" \
     --drop \
     "$RESTORE_DIR/mongo" \
     --quiet 2>/dev/null; then
@@ -85,6 +96,7 @@ if [ -d "$RESTORE_DIR/mongo" ]; then
   else
     log_error "MongoDB" "mongorestore failed"
   fi
+  rm -f "$MONGO_CONF"
 else
   echo "Warning: No MongoDB backup found in archive"
 fi
@@ -186,9 +198,12 @@ elif [ -f "$RESTORE_DIR/keycloak/hhh-realm.json" ]; then
   KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
 
   if [ -n "${KEYCLOAK_ADMIN_PASSWORD:-}" ]; then
-    KC_TOKEN=$(curl -sf -X POST \
+    # Credentials are piped to curl's stdin (--data @-) via a shell-builtin
+    # printf instead of an inline -d argument, so they never appear in
+    # `ps aux` / `/proc/<pid>/cmdline` for the curl subprocess.
+    KC_TOKEN=$(printf 'client_id=admin-cli&grant_type=password&username=%s&password=%s' "$KEYCLOAK_ADMIN" "$KEYCLOAK_ADMIN_PASSWORD" | curl -sf -X POST \
       "http://${KEYCLOAK_HOST}:8080/realms/master/protocol/openid-connect/token" \
-      -d "client_id=admin-cli&grant_type=password&username=${KEYCLOAK_ADMIN}&password=${KEYCLOAK_ADMIN_PASSWORD}" \
+      --data @- \
       2>/dev/null | jq -r '.access_token // empty' || true)
 
     if [ -n "$KC_TOKEN" ] && [ "$KC_TOKEN" != "null" ]; then
@@ -213,8 +228,8 @@ else
 fi
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
-
-rm -rf "$RESTORE_DIR"
+# Handled by the `trap ... EXIT` set above (release_lock; rm -rf "$RESTORE_DIR"),
+# which runs on every exit path, including a failed/corrupt tar extraction.
 
 echo ""
 echo "=========================================="

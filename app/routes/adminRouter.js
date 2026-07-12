@@ -34,6 +34,7 @@ import {
 import { createBackupsRouter } from './admin/backupsRouter.js';
 import { createSystemRouter } from './admin/systemRouter.js';
 import { createAuditLogRouter } from './admin/auditLogRouter.js';
+import { createRestoreAttemptsRouter } from './admin/restoreAttemptsRouter.js';
 import { createTeamRouter } from './admin/teamRouter.js';
 import { createAuditAdminActionsMiddleware } from '../middleware/auditAdminActions.js';
 import { logger } from '../utils/logger.js';
@@ -940,6 +941,8 @@ export function createAdminRouter({
   router.use('/', createSystemRouter());
 
   router.use('/', createAuditLogRouter({ db }));
+
+  router.use('/', createRestoreAttemptsRouter({ db }));
 
   router.use('/', createTeamRouter({ db, keycloak: kcAdmin }));
 

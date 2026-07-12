@@ -1,10 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/app_config.dart';
+import '../../core/dio_provider.dart';
 import '../../utils/bip39_wordlist.dart';
 import '../../widgets/passphrase_word_grid.dart';
 import 'welcome_screen.dart';
@@ -13,7 +15,6 @@ import 'welcome_screen.dart';
 // Secure-storage key constants
 // ---------------------------------------------------------------------------
 const _kUsername = 'username';
-const _kPassword = 'password';
 const _kAccessToken = 'access_token';
 const _kRefreshToken = 'refresh_token';
 const _kExpiryKey = 'token_expiry';
@@ -124,19 +125,18 @@ enum _ScreenState { loading, success, error }
 
 /// Onboarding step 2: auto-creates a Keycloak account, derives a 24-word
 /// BIP39-style recovery passphrase, and stores credentials on confirmation.
-class PassphraseScreen extends StatefulWidget {
+class PassphraseScreen extends ConsumerStatefulWidget {
   /// Creates a [PassphraseScreen].
   const PassphraseScreen({super.key});
 
   @override
-  State<PassphraseScreen> createState() => _PassphraseScreenState();
+  ConsumerState<PassphraseScreen> createState() => _PassphraseScreenState();
 }
 
-class _PassphraseScreenState extends State<PassphraseScreen> {
+class _PassphraseScreenState extends ConsumerState<PassphraseScreen> {
   _ScreenState _state = _ScreenState.loading;
   List<String> _words = [];
   String _username = '';
-  String _password = '';
   String _accessToken = '';
   String _refreshToken = '';
   int _expiresIn = 300;
@@ -176,7 +176,7 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
   Future<void> _fetchCredentials() async {
     setState(() => _state = _ScreenState.loading);
     try {
-      final response = await Dio().post<Map<String, dynamic>>(
+      final response = await ref.read(dioProvider).post<Map<String, dynamic>>(
         '${AppConfig.apiBaseUrl}/onboard',
       );
       if (!mounted) return;
@@ -189,7 +189,6 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
       setState(() {
         _state = _ScreenState.success;
         _username = username;
-        _password = password;
         _accessToken = accessToken;
         _refreshToken = refreshToken;
         _expiresIn = expiresIn;
@@ -210,7 +209,10 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
   Future<void> _onContinue() async {
     const storage = FlutterSecureStorage();
     await storage.write(key: _kUsername, value: _username);
-    await storage.write(key: _kPassword, value: _password);
+    // Note: the raw account password (_password) is intentionally NOT
+    // persisted. It's only used in-memory to derive the recovery passphrase
+    // above; storing it would let it be replayed later for silent
+    // reauthentication (ROPC), which has been removed as a security risk.
     await storage.write(key: _kAccessToken, value: _accessToken);
     await storage.write(key: _kRefreshToken, value: _refreshToken);
     final expiry = DateTime.now().add(Duration(seconds: _expiresIn));
@@ -235,7 +237,7 @@ class _PassphraseScreenState extends State<PassphraseScreen> {
       final consentVersion = await storage.read(key: 'consent_version');
       if (consentVersion == null) return;
       final consentLocale = await storage.read(key: 'consent_locale');
-      await Dio().post<Map<String, dynamic>>(
+      await ref.read(dioProvider).post<Map<String, dynamic>>(
         '${AppConfig.apiBaseUrl}/users/me/consent',
         data: {
           'consentVersion': consentVersion,

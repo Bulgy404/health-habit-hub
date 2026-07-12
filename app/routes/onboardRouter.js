@@ -2,6 +2,7 @@ import express from 'express';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
+import { mintTokenForUser } from '../services/keycloakRopcClient.js';
 import { ROLES } from '../middleware/auth.js';
 import { makeGetDb } from '../utils/getDb.js';
 import {
@@ -31,11 +32,6 @@ export function createOnboardRouter({ keycloak, db } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
-  // Resolve Keycloak config once (from injected client or env)
-  const base = process.env.KEYCLOAK_URL || 'http://keycloak:8080';
-  const realm = process.env.KEYCLOAK_REALM || 'hhh';
-  const clientId = process.env.KEYCLOAK_CLIENT_ID || 'hhh-flutter';
-
   // Use injected keycloak client (must have getAdminToken()) in tests,
   // or the shared admin client in production.
   const kcAdmin =
@@ -61,29 +57,17 @@ export function createOnboardRouter({ keycloak, db } = {}) {
       });
       await kcAdmin.assignRole(keycloakUserId || userId, ROLES.USER);
 
-      // Step 2: direct-grant token exchange
-      const tokenRes = await fetch(
-        `${base}/realms/${realm}/protocol/openid-connect/token`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            grant_type: 'password',
-            client_id: clientId,
-            username,
-            password,
-            scope: 'openid profile email',
-          }),
-        }
-      );
+      // Step 2: mint a token pair server-side (confidential ROPC client —
+      // the mobile app never performs this grant itself).
+      const tokenResult = await mintTokenForUser({ username, password });
 
-      if (!tokenRes.ok) {
+      if (!tokenResult.ok) {
         return res
           .status(502)
           .json({ error: 'Failed to obtain token after account creation.' });
       }
 
-      const tokenData = await tokenRes.json();
+      const tokenData = tokenResult.data;
 
       // Persist a participant record so self-onboarded users appear in the
       // admin portal, along with the derived recovery phrase (the same 24

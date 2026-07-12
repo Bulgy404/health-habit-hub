@@ -285,6 +285,7 @@ export default function ProfileFieldsPage() {
             <ToggleSwitch
               checked={form.required}
               onChange={(e) => setForm({ ...form, required: e.target.checked })}
+              aria-label={t("requiredColumn")}
             />
           </div>
 

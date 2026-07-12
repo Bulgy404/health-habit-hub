@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { useAdminGuard } from "@/lib/useAdminGuard";
@@ -81,22 +81,29 @@ export default function CommentsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, t]);
 
+  // Guards against a slower, superseded page load resolving after a newer
+  // one and overwriting fresher state.
+  const loadRequestRef = useRef(0);
+
   const load = useCallback(async () => {
     if (!token) return;
+    const requestId = ++loadRequestRef.current;
     setLoading(true);
     try {
       const data = await apiFetch(
         apiUrl(`/admin/comments?page=${page}&limit=${PAGE_SIZE}`),
         token
       );
+      if (requestId !== loadRequestRef.current) return;
       const list = (data?.comments ?? []) as unknown[];
       setComments(list.map(normalise));
       setTotal(Number(data?.total ?? 0));
       setError(null);
     } catch (e) {
+      if (requestId !== loadRequestRef.current) return;
       setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, t, page]);

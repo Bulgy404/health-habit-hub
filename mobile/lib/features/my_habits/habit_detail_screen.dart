@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/date_format.dart';
 import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/srhi_sparkline_widget.dart';
 import 'my_habits_provider.dart';
@@ -222,9 +223,6 @@ class _SrhiExplanationCard extends StatefulWidget {
 class _SrhiExplanationCardState extends State<_SrhiExplanationCard> {
   bool _explanationDismissed = false;
 
-  String _formatDate(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -236,7 +234,7 @@ class _SrhiExplanationCardState extends State<_SrhiExplanationCard> {
         ? l10n.srhiNextCheckInNone
         : (!nextDue.isAfter(todayNorm)
             ? l10n.srhiNextCheckInDue
-            : _formatDate(nextDue));
+            : formatDateYmd(nextDue));
 
     return Card(
       child: Padding(

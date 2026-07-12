@@ -5,7 +5,7 @@ import json
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from auth import verify_service_token
@@ -102,7 +102,7 @@ async def classify_context(body: ClassifyContextRequest) -> ClassifyContextRespo
         ClassifyContextResponse with phrase lists for each of the 7 BCIO dimensions.
 
     Raises:
-        HTTPException: 500 if the LLM call fails unexpectedly (propagated from chat_complete).
+        HTTPException: 503 if the LLM call fails.
     """
     key = _cache_key(body.sentence, body.language)
 
@@ -127,10 +127,17 @@ async def classify_context(body: ClassifyContextRequest) -> ClassifyContextRespo
         language=body.language,
         sentence=body.sentence,
     )
-    raw = await chat_complete(
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.0,
-    )
+    try:
+        raw = await chat_complete(
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.0,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.error("LLM classify_context call failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "Context classifier unavailable", "code": "llm_unavailable"},
+        ) from exc
 
     dims = _parse_llm_response(raw)
 

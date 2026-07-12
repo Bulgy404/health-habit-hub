@@ -4,6 +4,8 @@ library;
 // mobile/lib/widgets/day_strip_widget.dart
 import 'package:flutter/material.dart';
 
+import '../utils/date_format.dart';
+
 /// A row of up to 7 day circles showing enacted/missed/pending status.
 ///
 /// [logs] maps 'YYYY-MM-DD' → true (enacted) / false (explicit miss).
@@ -43,8 +45,7 @@ class DayStripWidget extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.start,
       children: List.generate(dayCount, (i) {
         final day = firstDay.add(Duration(days: i));
-        final key =
-            '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+        final key = formatDateYmd(day);
         final enacted = logs[key];
         return Padding(
           padding: const EdgeInsets.only(right: 4),

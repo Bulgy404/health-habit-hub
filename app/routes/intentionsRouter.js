@@ -7,6 +7,7 @@ import {
   createIntention,
   listIntentions,
   updateIntentionStatus,
+  getIntention,
 } from '../services/intentionService.js';
 import { upsertLog, getLogs, deleteLog } from '../services/dailyLogService.js';
 import { generateWindows } from '../services/srhiService.js';
@@ -141,9 +142,22 @@ export function createIntentionsRouter({ db } = {}) {
     try {
       const { from, to } = req.query;
       const database = await getDb();
+      const userId = req.user.sub;
+      // Ownership check: 404 (not 500/leaked data) if this intentionId
+      // doesn't exist or isn't owned by the requesting user — prevents an
+      // IDOR where any authenticated user could read another user's logs
+      // by guessing/observing their intentionId.
+      const intention = await getIntention({
+        db: database,
+        id: req.params.id,
+        userId,
+      });
+      if (!intention)
+        return res.status(404).json({ error: 'Intention not found' });
       const logs = await getLogs({
         db: database,
         intentionId: req.params.id,
+        userId,
         from,
         to,
       });
@@ -162,10 +176,20 @@ export function createIntentionsRouter({ db } = {}) {
           error: 'date (YYYY-MM-DD) and enacted (boolean) are required',
         });
       const database = await getDb();
+      const userId = req.user.sub;
+      // Ownership check: verify the intentionId belongs to this user before
+      // upserting a log against it (IDOR — see dailyLogService.js).
+      const intention = await getIntention({
+        db: database,
+        id: req.params.id,
+        userId,
+      });
+      if (!intention)
+        return res.status(404).json({ error: 'Intention not found' });
       await upsertLog({
         db: database,
         intentionId: req.params.id,
-        userId: req.user.sub,
+        userId,
         date,
         enacted,
       });
@@ -181,9 +205,19 @@ export function createIntentionsRouter({ db } = {}) {
   router.delete('/:id/logs/:date', async (req, res) => {
     try {
       const database = await getDb();
+      const userId = req.user.sub;
+      // Ownership check — same IDOR concern as GET/POST above.
+      const intention = await getIntention({
+        db: database,
+        id: req.params.id,
+        userId,
+      });
+      if (!intention)
+        return res.status(404).json({ error: 'Intention not found' });
       await deleteLog({
         db: database,
         intentionId: req.params.id,
+        userId,
         date: req.params.date,
       });
       res.json({ deleted: true });

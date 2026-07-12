@@ -22,6 +22,7 @@ import {
   DatabaseBackup,
   Globe,
   History,
+  ShieldAlert,
   UserCog,
   HelpCircle,
   Menu,
@@ -76,6 +77,7 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/system", labelKey: "system", Icon: Server, adminOnly: true },
       { href: "/backups", labelKey: "backups", Icon: DatabaseBackup, adminOnly: true },
       { href: "/audit-log", labelKey: "auditLog", Icon: History, adminOnly: true },
+      { href: "/restore-attempts", labelKey: "restoreAttempts", Icon: ShieldAlert, adminOnly: true },
       { href: "/team", labelKey: "team", Icon: UserCog, adminOnly: true },
     ],
   },
@@ -116,7 +118,7 @@ export function Sidebar() {
   function handleLocaleChange(next: string) {
     // A plain preference cookie, not security-sensitive — set client-side and
     // refresh so the server-rendered tree picks it up (see src/i18n/request.ts).
-    document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; SameSite=Lax`;
+    document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; SameSite=Lax; Secure`;
     router.refresh();
   }
 

@@ -753,10 +753,7 @@ test('DELETE /admin/comments/:id removes node and ownership mapping', async () =
 // ── POST /:id/comments/:commentId/report ────────────────────────────────────
 
 test('POST /:id/comments/:commentId/report requires auth', async () => {
-  const res = await post(
-    '/api/v1/habits/habit-1/comments/some-id/report',
-    {}
-  );
+  const res = await post('/api/v1/habits/habit-1/comments/some-id/report', {});
   assert.strictEqual(res.status, 401);
 });
 

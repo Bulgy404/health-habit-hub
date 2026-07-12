@@ -141,24 +141,36 @@ export default function ParticipantsPage() {
     submittedAt: string | null;
   } | null>(null);
 
+  // Guards against a slower, superseded page load (e.g. quickly clicking
+  // "next" then "previous") resolving after a newer one and overwriting
+  // fresher state — same pattern as progressRequestRef below.
+  const loadRequestRef = useRef(0);
+
   const load = useCallback(async () => {
     if (!token) return;
+    const requestId = ++loadRequestRef.current;
     setLoading(true);
     try {
       const data = await apiFetch(
         apiUrl(`/admin/participants?page=${page}&limit=${PAGE_SIZE}`),
         token
       );
+      if (requestId !== loadRequestRef.current) return;
       setParticipants(((data?.participants ?? []) as unknown[]).map(normalise));
       setTotal(Number(data?.total ?? 0));
       setError(null);
       apiFetch(apiUrl("/admin/participants/test-tools"), token)
-        .then((r) => setTestTools(Boolean(r?.enabled)))
-        .catch(() => setTestTools(false));
+        .then((r) => {
+          if (requestId === loadRequestRef.current) setTestTools(Boolean(r?.enabled));
+        })
+        .catch(() => {
+          if (requestId === loadRequestRef.current) setTestTools(false);
+        });
     } catch (e) {
+      if (requestId !== loadRequestRef.current) return;
       setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, t, page]);

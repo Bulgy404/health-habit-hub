@@ -29,6 +29,7 @@ Future<String?> redirectGuard({
     '/recommend',
     '/settings',
     '/questionnaire',
+    '/habits',
   ];
   if (protectedPrefixes.any((p) => location.startsWith(p))) {
     try {

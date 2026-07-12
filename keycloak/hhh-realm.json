@@ -55,7 +55,7 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": true,
+      "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "protocol": "openid-connect",
       "redirectUris": [
@@ -69,6 +69,36 @@
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
+      "defaultClientScopes": [
+        "basic",
+        "openid",
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
+    },
+    {
+      "clientId": "hhh-ropc",
+      "name": "HHH Server-side ROPC",
+      "description": "Confidential client used only by the Express backend to mint token pairs on a participant's behalf (onboarding, credential rotation, passphrase-based account restore) via the OAuth password grant. Never used by the mobile app directly — hhh-flutter has direct access grants disabled precisely so this capability isn't exposed to a public client.",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "CHANGE_THIS_KEYCLOAK_ROPC_SECRET",
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [],
+      "webOrigins": [],
       "defaultClientScopes": [
         "basic",
         "openid",

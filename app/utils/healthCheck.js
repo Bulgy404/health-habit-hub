@@ -1,6 +1,7 @@
 import neo4j from 'neo4j-driver';
 import { MongoClient } from 'mongodb';
 import { config } from './config.js';
+import { buildMongoUri } from '../models/survey.js';
 
 const TIMEOUT_MS = 1500;
 
@@ -32,15 +33,12 @@ async function checkNeo4j() {
 
 async function checkMongo() {
   const start = Date.now();
-  const host = process.env.MONGO_HOST || 'localhost';
-  const port = process.env.MONGO_PORT || 27017;
-  const user = process.env.MONGO_USER || '';
-  const password = process.env.MONGO_PASSWORD || '';
-  const authSource = process.env.MONGO_AUTH_SOURCE || 'admin';
-  const auth = user
-    ? `${encodeURIComponent(user)}:${encodeURIComponent(password)}@`
-    : '';
-  const uri = `mongodb://${auth}${host}:${port}/?authSource=${authSource}`;
+  // Reuse the same URI-building logic as the real app connection
+  // (models/survey.js) instead of reassembling it independently from env
+  // vars — keeps a single source of truth so the health check can't drift
+  // out of sync with (and give a false "ok"/"error" reading against) the
+  // connection string the app actually uses.
+  const uri = buildMongoUri();
   const client = new MongoClient(uri, {
     serverSelectionTimeoutMS: TIMEOUT_MS,
   });

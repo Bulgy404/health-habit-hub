@@ -391,3 +391,64 @@ test('POST /habits/intentions/:id/logs returns 201 with valid payload', async ()
   const body = await res.json();
   assert.strictEqual(body.logged, true);
 });
+
+// ── IDOR: cross-user access to another user's daily logs ────────────────────
+
+test('GET /habits/intentions/:id/logs returns 404 for an intention owned by another user', async () => {
+  const ownerToken = makeToken(['user'], 'idor-owner-1');
+  const attackerToken = makeToken(['user'], 'idor-attacker-1');
+  const createRes = await post(INTENTIONS, validBody, ownerToken);
+  const created = await createRes.json();
+  const id = created._id ?? created.id;
+
+  const res = await get(`${INTENTIONS}/${id}/logs`, attackerToken);
+  assert.strictEqual(res.status, 404);
+});
+
+test('POST /habits/intentions/:id/logs returns 404 for an intention owned by another user', async () => {
+  const ownerToken = makeToken(['user'], 'idor-owner-2');
+  const attackerToken = makeToken(['user'], 'idor-attacker-2');
+  const createRes = await post(INTENTIONS, validBody, ownerToken);
+  const created = await createRes.json();
+  const id = created._id ?? created.id;
+
+  const res = await post(
+    `${INTENTIONS}/${id}/logs`,
+    { date: '2026-06-01', enacted: true },
+    attackerToken
+  );
+  assert.strictEqual(res.status, 404);
+
+  // The owner's own log fetch must not show a log the attacker "created".
+  const ownerLogs = await get(`${INTENTIONS}/${id}/logs`, ownerToken);
+  const ownerLogsBody = await ownerLogs.json();
+  assert.strictEqual(ownerLogsBody.length, 0);
+});
+
+test('DELETE /habits/intentions/:id/logs/:date returns 404 for an intention owned by another user, and does not delete the owner-s log', async () => {
+  const ownerToken = makeToken(['user'], 'idor-owner-3');
+  const attackerToken = makeToken(['user'], 'idor-attacker-3');
+  const createRes = await post(INTENTIONS, validBody, ownerToken);
+  const created = await createRes.json();
+  const id = created._id ?? created.id;
+
+  await post(
+    `${INTENTIONS}/${id}/logs`,
+    { date: '2026-06-01', enacted: true },
+    ownerToken
+  );
+
+  const delRes = await fetch(`${baseUrl}${INTENTIONS}/${id}/logs/2026-06-01`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${attackerToken}` },
+  });
+  assert.strictEqual(delRes.status, 404);
+
+  const ownerLogs = await get(`${INTENTIONS}/${id}/logs`, ownerToken);
+  const ownerLogsBody = await ownerLogs.json();
+  assert.strictEqual(
+    ownerLogsBody.length,
+    1,
+    'owner log must survive the attacker delete attempt'
+  );
+});

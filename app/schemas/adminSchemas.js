@@ -76,7 +76,7 @@ export const updateStudySchema = z
   .object({
     name: shortString.optional(),
     description: longString.optional(),
-    groups: z.array(studyGroupSchema).min(1).max(4).optional(),
+    groups: z.array(studyGroupSchema).min(1).max(8).optional(),
     recommenderEnabled: z.boolean().optional(),
     onboardingEnabled: z.boolean().optional(),
     selfHabitCreationEnabled: z.boolean().optional(),

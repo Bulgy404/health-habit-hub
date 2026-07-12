@@ -57,7 +57,8 @@
       "backups": "Backups",
       "auditLog": "Audit-Log",
       "team": "Team & Rollen",
-      "help": "Hilfe"
+      "help": "Hilfe",
+      "restoreAttempts": "Wiederherstellungsversuche"
     },
     "language": "Sprache",
     "toggleTheme": "Design wechseln",
@@ -1083,5 +1084,28 @@
     "back": "Zurück",
     "next": "Weiter",
     "getStarted": "Loslegen"
+  },
+  "restoreAttempts": {
+    "title": "Wiederherstellungsversuche",
+    "subtitle": "Sicherheitsüberwachung für die passphrasenbasierte Kontowiederherstellung (POST /restore). Wiederherstellungsphrasen haben kein serverseitiges Geheimnis, das ein Erraten verlangsamt — diese Ansicht zeigt wiederholte Versuche, die die Ratenbegrenzung allein nicht aufdeckt.",
+    "flaggedTitle": "Markierte IPs",
+    "flaggedSubtitle": "IPs mit 3 oder mehr nicht erfolgreichen Wiederherstellungsversuchen in der letzten Stunde.",
+    "outcomeLabel": "Ergebnis",
+    "filterAll": "Alle",
+    "outcomes": {
+      "success": "Erfolg",
+      "invalid_phrase": "Fehlerhafte Phrase",
+      "invalid_credentials": "Ungültige Anmeldedaten",
+      "rate_limited": "Ratenbegrenzt",
+      "keycloak_unreachable": "Keycloak nicht erreichbar"
+    },
+    "when": "Wann",
+    "ip": "IP",
+    "usernameAttempted": "Versuchter Benutzername",
+    "outcome": "Ergebnis",
+    "failCount": "Fehlversuche",
+    "lastAttempt": "Letzter Versuch",
+    "totalPageInfo": "{total} insgesamt · Seite {page} von {totalPages}",
+    "loadFailed": "Wiederherstellungsversuche konnten nicht geladen werden"
   }
 }

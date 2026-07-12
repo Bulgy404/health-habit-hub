@@ -5,6 +5,8 @@ import logging
 from pathlib import Path
 from typing import Awaitable, Callable, Optional
 
+from fastapi import HTTPException, status
+
 from llm_client import chat_complete
 
 logger = logging.getLogger(__name__)
@@ -63,12 +65,22 @@ async def call_llm_with_fallback(
 
     Returns:
         The LLM response string, or ``fallback`` if the response was empty.
+
+    Raises:
+        HTTPException: 503 if the LLM call fails.
     """
     fn = llm_func if llm_func is not None else chat_complete
-    raw = await fn(
-        messages=[{"role": "user", "content": prompt}],
-        temperature=temperature,
-    )
+    try:
+        raw = await fn(
+            messages=[{"role": "user", "content": prompt}],
+            temperature=temperature,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.error("LLM call_llm_with_fallback call failed: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"error": "Translation service unavailable", "code": "llm_unavailable"},
+        ) from exc
     result = raw.strip()
     if not result:
         logger.warning("LLM returned empty response — using fallback.")

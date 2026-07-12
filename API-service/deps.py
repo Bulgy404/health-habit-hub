@@ -54,6 +54,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if _mongo is not None:
         _mongo.close()
 
+    from routers.extract_habits import close_neo4j_driver
+    try:
+        await close_neo4j_driver()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to close Neo4j driver during shutdown: %s", exc)
+
 
 def _build_mongo_client() -> None:
     """Construct the shared AsyncIOMotorClient from environment variables and store it globally."""
