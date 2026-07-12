@@ -1,26 +1,49 @@
-%% UC-03 — Donate habit (translation + LLM enrichment + graph persistence)
+%% UC-03 — Donate habit (async BullMQ job: classify → context → BCIO → translate → persist → embed)
+%% Source: app/routes/habits/habitsCrudRouter.js, app/services/habitDonationService.js, app/lib/habitQueue.js
 sequenceDiagram
     autonumber
     actor P as Participant
     participant F as Flutter App
-    participant B as Backend (habitsRouter)
-    participant LT as LibreTranslate
+    participant B as Backend (habitsCrudRouter)
+    participant Q as Redis (BullMQ habitQueue)
+    participant W as Habit donation worker
     participant AI as API-service (FastAPI)
+    participant LT as LibreTranslate
     participant N4 as Neo4j
 
     P->>F: Describe habit sentence
     F->>B: POST /api/v1/habits/donate {sentence, language}
     B->>B: Verify JWT (requireRole: user)
-    alt language != "en*"
-        B->>LT: POST /translate {q, source, target: "en"}
-        LT-->>B: translatedText (raw draft)
-        B->>AI: POST /llm/refine-translation {original, raw_translation}
-        AI-->>B: refined_translation (fallback: raw on 10s timeout)
+    B->>Q: enqueueHabitDonation({uuid, sentence, language, studyId, ...})
+    Q-->>B: jobId
+    B-->>F: 202 {jobId, status: "pending"}
+    F->>F: Poll GET /api/v1/habits/jobs/:jobId
+
+    Note over Q,W: Runs off-request in the worker, not on the HTTP thread
+    Q->>W: dequeue job
+    W->>AI: POST /llm/classify-habit {sentence}
+    AI-->>W: {is_habit, confidence}
+    alt not a habit
+        W->>N4: CREATE (:RejectedHabit {is_habit:false, confidence, userID})
+        W-->>Q: job result: rejected
+    else is a habit
+        W->>AI: POST /llm/classify-context {sentence}
+        AI-->>W: contexts [{text, dimension}]
+        W->>AI: POST /llm/map-bcio {contexts}
+        AI-->>W: mappings [{text, bcio_concept, bcio_uri}]
+        par fan out to every non-source app language (en/de/ja/fr/nl)
+            W->>LT: POST /translate {q, source, target}
+            LT-->>W: translation
+        end
+        W->>N4: CREATE (:Habit {translations, studyId}) MERGE (:Context)-[:HAS_CONTEXT]-<br/>MERGE (:BCIOConcept)-[:MAPS_TO]-
+        N4-->>W: nodes created
+        W->>AI: POST /llm/embed-batch {uuid, sentence, contexts, mappings}
+        AI-->>W: embeddings stored (vector index)
+        W-->>Q: job result: {is_habit: true, uuid}
     end
-    B->>AI: POST /llm/classify-context {sentence: translationEN}
-    AI-->>B: contexts [{text, dimension}]
-    B->>AI: POST /llm/map-bcio {contexts}
-    AI-->>B: mappings [{text, bcio_concept, bcio_uri}]
-    B->>N4: CREATE (:Habit) MERGE (:Context)-[:HAS_CONTEXT]- MERGE (:BCIOConcept)-[:MAPS_TO]-
-    N4-->>B: nodes created
-    B-->>F: 201 "Habit donated"
+
+    F->>B: GET /api/v1/habits/jobs/:jobId
+    B->>Q: getJobStatus(jobId)
+    Q-->>B: {status: "completed", result}
+    B-->>F: 200 {is_habit, uuid?, message}
+    F-->>P: "Habit donated" or "Not recognised as a habit"

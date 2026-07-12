@@ -33,7 +33,7 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 - **Flutter mobile app** — cross-platform (iOS, Android, web), Keycloak PKCE login, habit donation, AI-powered recommendations, guided onboarding
 - **Habit classification pipeline** — LLM-based habit extraction, BCIO ontology mapping, and recommendation generation via the Python FastAPI service
 - **Semantic knowledge base** — Neo4j habit graph with BCIO ontology alignment, plus a LightRAG graph+vector knowledge base *(the former Fuseki/RDF triplestore has been retired — see docs/migration.md)*
-- **Multi-language support** — English and German (LibreTranslate for automatic translation + LLM refinement)
+- **Multi-language support** — English, German, French, Japanese, and Dutch (LibreTranslate for automatic translation + LLM refinement)
 - **Automated notifications** — Redis-coordinated scheduled push notification dispatch
 - **Researcher admin panel** — study management, participant tracking, questionnaire authoring
 
@@ -41,7 +41,7 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 
 ## 2. Architecture
 
-> **Diagrams-as-code:** the maintained diagram suite — system architecture ([Mermaid source](docs/diagrams/architecture/system-architecture.mmd)), UML use case diagram + [use case catalogue](docs/diagrams/use-cases/use-case-overview.md), one sequence diagram per use case (UC-01 … UC-30, [docs/diagrams/sequences/](docs/diagrams/sequences/)), and the [domain class diagram](docs/diagrams/classes/class-diagram.mmd) — lives in [docs/diagrams/](docs/diagrams/README.md) with rendering/export instructions (SVG · PNG · PDF).
+> **Diagrams-as-code:** the maintained diagram suite — system architecture ([Mermaid source](docs/diagrams/architecture/system-architecture.mmd)), UML use case diagram + [use case catalogue](docs/diagrams/use-cases/use-case-overview.md), one sequence diagram per use case (UC-01 … UC-39, [docs/diagrams/sequences/](docs/diagrams/sequences/)), and the [domain class diagram](docs/diagrams/classes/class-diagram.mmd) — lives in [docs/diagrams/](docs/diagrams/README.md) with rendering/export instructions (SVG · PNG · PDF).
 
 ### System Diagram
 
@@ -110,82 +110,79 @@ health-habit-hub/
 ├── app/                            # Node.js/Express backend
 │   ├── main.js                     # Entry point
 │   ├── app.js                      # Express app setup, middleware, route mounting
-│   ├── routes/                     # All API route handlers
-│   │   ├── v1Router.js             # /api/v1 router — mounts all sub-routers
-│   │   ├── adminRouter.js          # /api/v1/admin — admin/researcher role
-│   │   ├── habitsRouter.js         # /api/v1/habits — habit donation + retrieval
+│   ├── routes/                     # All API route handlers (~30 routers under /api/v1)
+│   │   ├── habits/                 # habitsCrudRouter (donate + retrieve, BullMQ-backed),
+│   │   │   │                       # habitsGraphRouter, habitsStatsRouter
+│   │   ├── adminRouter.js          # /api/v1/admin — mounts all admin/ sub-routers
+│   │   ├── admin/                  # auditLogRouter, backupsRouter, notificationsRouter,
+│   │   │   │                       # participantsRouter, restoreAttemptsRouter, studiesRouter,
+│   │   │   │                       # surveysRouter, systemRouter, teamRouter
+│   │   ├── restoreRouter.js        # /api/v1/restore — passphrase-based account recovery
 │   │   ├── recommendationsRouter.js# /api/v1/recommendations — cached recommendations
 │   │   ├── recommendRouter.js      # /api/v1/recommend — live AI recommendation calls
-│   │   ├── surveyRouter.js         # /api/v1/surveys
-│   │   ├── questionnairesRouter.js # /api/v1/questionnaires
-│   │   ├── questionnaireResponsesRouter.js
-│   │   ├── profileRouter.js        # /api/v1/profile
-│   │   ├── participantRouter.js    # /api/v1/participant
-│   │   ├── usersRouter.js          # /api/v1/users
+│   │   ├── questionnairesRouter.js, questionnaireResponsesRouter.js
+│   │   ├── usersRouter.js          # /api/v1/users (profile, consent, delete, rotate-credentials)
 │   │   ├── kbRouter.js             # /api/v1/kb — knowledge base (admin/researcher)
 │   │   ├── onboardRouter.js        # /api/v1/onboard — anonymous self-registration
-│   │   ├── studyEnrollRouter.js    # /api/v1/onboarding — post-auth study enrollment
-│   │   ├── internalRouter.js       # /api/internal — internal WS broadcast
-│   │   └── admin/                  # Admin sub-routes
-│   ├── middleware/                 # Express middleware
-│   │   ├── auth.js                 # JWT verification via Keycloak JWKS
-│   │   ├── requireRole.js          # Role-based access control
-│   │   ├── securityHeaders.js      # Security headers on all responses
-│   │   ├── rateLimiter.js          # Per-user rate limiting
-│   │   ├── inputSanitizer.js       # Request body sanitization
-│   │   └── staticFileMiddleware.js
-│   ├── services/
-│   │   └── notificationService.js  # Scheduled push notification dispatcher
-│   ├── utils/                      # Database clients, config, health check
+│   │   ├── studyEnrollRouter.js, studyConfigRouter.js, srhiRouter.js, intentionsRouter.js,
+│   │   │   cuePoolRouter.js        # DFG study module
+│   │   └── internalRouter.js       # /api/internal — internal WS broadcast
+│   ├── middleware/                 # auth.js (JWT via Keycloak JWKS), requireRole.js,
+│   │   │                           # requireServiceToken.js, rateLimiter.js, inputSanitizer.js,
+│   │   │                           # securityHeaders.js, auditAdminActions.js, maintenanceMode.js
+│   ├── services/                   # ~30 services: habitDonationService, keycloakRopcClient,
+│   │   │                           # commentModerationService, notificationService, backupService,
+│   │   │                           # intentionService, dailyLogService, srhiService, etc.
+│   ├── models/                     # MongoDB collection schemas/validators (incl. restoreAttempt.js)
+│   ├── utils/                      # Database clients, config, health check, recoveryPhrase.js
 │   ├── ws/
 │   │   └── recommendationWs.js     # WebSocket server for live recommendations
 │   ├── swagger.js                  # OpenAPI spec generation (swagger-jsdoc)
-│   └── tests/                      # Jest unit tests
+│   └── tests/                      # Jest unit + integration tests
 │
 ├── mobile/                         # Flutter mobile application
 │   ├── lib/
 │   │   ├── main.dart               # App entry point
 │   │   ├── router/                 # go_router route definitions
-│   │   ├── features/               # Feature modules (questionnaire, recommendation, admin, donate)
-│   │   ├── screens/                # Top-level screens (login, profile, recommend, stats, etc.)
+│   │   ├── features/               # Feature modules (my_habits, questionnaire, recommendation)
+│   │   ├── screens/                # Top-level screens (onboarding/, donate, explore, settings/, stats)
 │   │   ├── providers/              # Riverpod providers (state management)
-│   │   ├── services/               # API clients, auth service
+│   │   ├── services/                # API clients, auth service
 │   │   ├── models/                 # Dart data models
 │   │   ├── widgets/                # Shared UI widgets
-│   │   └── l10n/                   # Localisation (EN/DE)
+│   │   └── l10n/                   # Localisation: en, de, fr, ja, nl (.arb + generated)
 │   └── test/                       # Flutter widget + unit tests
 │
-├── admin/                          # Next.js 15 admin application (React 18, MUI + CSS Modules)
+├── admin/                          # Next.js 15 admin application (React 18, MUI v7 + Emotion, CSS Modules)
 │   ├── src/
 │   │   ├── app/                    # Next.js App Router pages
-│   │   │   ├── (admin)/            # Admin-only page group (auth-gated)
+│   │   │   ├── (admin)/            # Admin-only page group (auth-gated): participants, studies,
+│   │   │   │                       # questionnaires, cue-pools, comments, restore-attempts, backups,
+│   │   │   │                       # audit-log, analytics, insights, knowledge-base, profile-fields,
+│   │   │   │                       # devices, donations, settings, system, team, help
 │   │   │   ├── api/                # API route handlers (NextAuth, etc.)
 │   │   │   ├── access-denied/      # Shown when role check fails
 │   │   │   ├── layout.tsx          # Root layout
 │   │   │   └── page.tsx            # Root redirect
 │   │   ├── components/             # React components
 │   │   ├── lib/                    # API fetch helpers, auth utilities
-│   │   ├── config/                 # Keycloak/NextAuth configuration
+│   │   ├── i18n/                   # next-intl config (en, de, fr, nl)
 │   │   └── middleware.ts           # Next.js edge middleware (auth guard)
 │   └── src/__tests__/             # Jest + React Testing Library tests
 │
 ├── API-service/                    # Python FastAPI service
-│   ├── main.py                     # FastAPI app, router registration
+│   ├── main.py                     # FastAPI app, router registration (all under /api/v1)
 │   ├── deps.py                     # Shared dependencies (lifespan, auth)
-│   ├── routers/                    # Endpoint routers
-│   │   ├── classify_habit.py       # POST /api/v1/classify-habit
-│   │   ├── classify_context.py     # POST /api/v1/classify-context
-│   │   ├── map_bcio.py             # POST /api/v1/map-bcio
-│   │   ├── extract_habits.py       # POST /api/v1/extract-habits
-│   │   ├── extract_profile.py      # POST /api/v1/extract-profile
-│   │   ├── refine_translation.py   # POST /api/v1/refine-translation
-│   │   ├── refine_translation_de.py
-│   │   ├── retrieve.py             # POST /api/v1/retrieve
-│   │   └── recommend.py            # POST /api/v1/recommend
-│   ├── llm_client.py               # OpenAI client wrapper
+│   ├── routers/                    # Endpoint routers — each path also starts with /llm
+│   │   │                           # (e.g. classify_habit.py -> POST /api/v1/llm/classify-habit):
+│   │   │                           # classify_habit, classify_context, embed_habit, map_bcio,
+│   │   │                           # extract_habits, extract_profile, translate_lang,
+│   │   │                           # refine_translation_lang, translate_term, stitch_intention,
+│   │   │                           # retrieve, recommend
+│   ├── llm_client.py               # OpenAI-compatible client wrapper
 │   ├── prompts/                    # LLM prompt templates
 │   ├── kb/                         # Knowledge base data
-│   ├── data/                       # Static data files
+│   ├── data/                       # Static data files (incl. references.json for citations)
 │   └── tests/                      # pytest test suite
 │
 ├── keycloak/
@@ -522,10 +519,13 @@ Users without these roles see the `/access-denied` page. The Next.js edge middle
 
 - **Participant management** — list, create, and manage study participants
 - **Questionnaire authoring** — create and publish questionnaires
-- **Study configuration** — manage study groups and enrollment codes
+- **Study configuration** — manage study groups, per-group cue config, and enrollment codes
 - **Comment moderation** — a local wordlist/regex check (not an LLM call — see `docs/architecture.md`'s *Community Signals* section) auto-flags inappropriate community comments for review; researchers approve or delete flagged comments in a dedicated queue rather than reviewing every comment
+- **Restore-attempts monitoring** — security view over every passphrase-based account-recovery attempt (success/failure/rate-limited), with IPs flagged for repeated non-success attempts
+- **Backups** — last-backup status per component, on-demand trigger, and restore from an existing or uploaded archive
+- **Audit log** — paginated log of admin actions
 - **Knowledge base** — view and manage the habit knowledge base
-- **Data export** — export questionnaire response data
+- **Data export** — export questionnaire response and study analytics data
 
 ### Test Suite
 
@@ -631,20 +631,24 @@ The interactive Swagger UI is served by the running backend at `/api/v1/docs`. T
 
 ### Python API Service Endpoints
 
-All endpoints require the `X-API-Service-Secret` header (value from `API_SERVICE_SECRET`).
+All endpoints require the `X-API-Service-Secret` header (value from `API_SERVICE_SECRET`). Every route below is mounted under `/api/v1`, and each router's own path additionally starts with `/llm` — i.e. the full path for the first row is `POST /api/v1/llm/classify-habit` (`API-service/main.py`, `routers/classify_habit.py`).
 
-| Method | Path | Description |
+| Method | Path (under `/api/v1`) | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Service health check |
-| `POST` | `/api/v1/classify-habit` | Classify a habit text |
-| `POST` | `/api/v1/classify-context` | Classify habit context |
-| `POST` | `/api/v1/map-bcio` | Map habit to BCIO ontology |
-| `POST` | `/api/v1/extract-habits` | Extract habits from free text |
-| `POST` | `/api/v1/extract-profile` | Extract user profile from text |
-| `POST` | `/api/v1/refine-translation` | LLM-refine EN translation |
-| `POST` | `/api/v1/refine-translation-de` | LLM-refine DE translation |
-| `POST` | `/api/v1/retrieve` | Retrieve relevant knowledge base entries |
-| `POST` | `/api/v1/recommend` | Generate habit recommendations — guarded goal input (prompt-injection screen + LLM refusal backstop → `422` with user-facing reason); response items carry `title · body · rationale · suggested_cue · sources` (paper citations with optional DOI links from `API-service/data/references.json`); graph provenance (`selected_habit_uuids`) is logged/stored server-side only |
+| `POST` | `/llm/classify-habit` | Classify whether a sentence is a habit |
+| `POST` | `/llm/classify-context` | Classify habit context dimensions |
+| `POST` | `/llm/map-bcio` | Map habit context to BCIO ontology concepts |
+| `POST` | `/llm/embed-batch` | Batch-embed a habit + its contexts/mappings into the vector index |
+| `POST` | `/llm/extract-habits` | Extract habits from free text |
+| `POST` | `/llm/extract-profile` | Extract user profile from text |
+| `POST` | `/llm/translate-lang` | Machine-translate a sentence to a target app language |
+| `POST` | `/llm/refine-translation-lang` | LLM-refine a raw machine translation |
+| `POST` | `/llm/translate-term` | Translate/localise a single term (e.g. a new BCIO concept label) |
+| `POST` | `/llm/stitch-intention` | Compose an if-then implementation intention from its parts |
+| `POST` | `/llm/retrieve` | Retrieve relevant knowledge base entries |
+| `GET`/`POST` | `/kb` | List / ingest knowledge base entries |
+| `POST` | `/llm/recommend` | Generate habit recommendations — guarded goal input (prompt-injection screen + LLM refusal backstop → `422` with user-facing reason); response items carry `title · body · rationale · suggested_cue · sources` (paper citations with optional DOI links from `API-service/data/references.json`); graph provenance (`selected_habit_uuids`) is logged/stored server-side only |
 
 ---
 

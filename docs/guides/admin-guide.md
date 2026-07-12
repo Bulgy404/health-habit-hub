@@ -36,6 +36,8 @@ Use this checklist when launching a new cohort of participants.
 13. [Sending Researcher Notifications](#13-sending-researcher-notifications)
 14. [Configuring the Public App Experience](#14-configuring-the-public-app-experience)
 15. [Managing Backups](#15-managing-backups)
+16. [Moderating Comments](#16-moderating-comments)
+17. [Monitoring Account-Recovery Attempts](#17-monitoring-account-recovery-attempts)
 
 ---
 
@@ -47,14 +49,17 @@ The admin panel is accessible only to users with the `admin` or `researcher` Key
 
 **Step 2.** On the login screen enter your **admin username** and **password** (not a token card — admin accounts use a regular password set in Keycloak). Tap **Login**.
 
-**Step 3.** After login, the navigation bar will show an extra **Admin** tab (gear icon). Tap it to open the admin panel. The left sidebar is organised into two sections:
+**Step 3.** After login, the navigation bar will show an extra **Admin** tab (gear icon). Tap it to open the admin panel. The left sidebar is organised into five sections:
 
 | Section | Pages |
 |---|---|
 | **Research** | Studies, Analytics |
-| **Configuration** | Cue Pools, Questionnaires, Profile Fields *(admin only)*, Knowledge Base *(admin only)*, Settings *(admin only)* |
+| **Operations** | Participants *(admin only)*, Devices *(admin only)*, Donations *(admin only)*, Comments *(admin only)* |
+| **Configuration** | Cue Pools, Questionnaires, Profile Fields *(admin only)*, Knowledge Base *(admin only)* |
+| **Monitoring** | System *(admin only)*, Backups *(admin only)*, Audit Log *(admin only)*, Restore Attempts *(admin only)*, Team *(admin only)* |
+| **Support** | Help |
 
-`researcher` accounts see only the Configuration items they have access to; admin-only pages are hidden from the sidebar entirely.
+`researcher` accounts see only Studies, Analytics, Cue Pools, and Questionnaires; every `adminOnly` page above is hidden from the sidebar entirely for that role.
 
 | Screenshot | Callout annotations |
 |---|---|
@@ -423,7 +428,7 @@ The token card PDF layout — logo, font size, QR code position, and colour sche
 
 ## 9. Language Settings for Participants
 
-The app supports English and German (Deutsch). Each participant can independently set their preferred display language. The language preference is stored server-side (MongoDB `users` collection) and is applied to all habit display text (`displayText` field), questionnaire labels, and UI strings.
+The app supports English, German (Deutsch), French (Français), Japanese (日本語), and Dutch (Nederlands). Each participant can independently set their preferred display language. The language preference is stored server-side (MongoDB `users` collection) and is applied to all habit display text (`displayText` field), questionnaire labels, and UI strings.
 
 ### How Participants Change Their Language
 
@@ -650,6 +655,34 @@ You can upload a `.tar.gz` backup archive — for example one downloaded from of
 **Step 6.** The page shows live progress (safety backup → restoring → done). While a restore is in progress, the rest of the platform briefly refuses new requests to avoid racing the database being replaced underneath it; this clears automatically once the restore finishes.
 
 Every trigger, upload, and restore — successful or not — is recorded in the **Recent activity** table with who did it and when.
+
+---
+
+## 16. Moderating Comments
+
+**Step 1.** In the Admin panel, tap **Comments** in the sidebar.
+
+Participants can leave anonymous comments on habits in the explore feed. A local wordlist/regex check (not an LLM call) automatically flags comments that look inappropriate; flagged comments are held from public view until a researcher reviews them.
+
+**Step 2.** Filter by status — the **Flagged** queue is the default view and is where moderation happens; you can also browse all comments.
+
+**Step 3.** For each flagged comment, either **Approve** (publishes it) or **Delete** (removes it permanently). Both actions are logged in the audit log.
+
+---
+
+## 17. Monitoring Account-Recovery Attempts
+
+> **Admin only.**
+
+Participants can recover their account on a new device using a one-time recovery phrase shown to them at onboarding (see the participant guide). This is a security-sensitive flow — the phrase itself has no server-side secret slowing down a guess, so per-IP rate limiting (5 attempts/hour) plus this monitoring view are the platform's defenses against someone trying to guess their way into an account.
+
+**Step 1.** In the Admin panel, tap **Restore Attempts** in the sidebar (under Monitoring).
+
+The page shows every `POST /restore` call, newest first, with its outcome (`success`, `invalid_phrase`, `invalid_credentials`, `rate_limited`, or `keycloak_unreachable`), the requesting IP, and — when the phrase decoded successfully — the account it targeted.
+
+**Step 2.** Look for **flagged IPs** — an IP with 3 or more non-success attempts in the last hour is surfaced separately, since that pattern can indicate an enumeration attempt even if it stays under the per-IP rate limit.
+
+**Step 3.** Filter by outcome or IP to investigate a specific pattern. Records are kept for 30 days.
 
 ---
 

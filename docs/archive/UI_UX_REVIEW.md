@@ -1,3 +1,10 @@
+> **Archived 2026-07-12.** This is the source review that
+> [`UI_UX_IMPLEMENTATION_PLAN.md`](../../UI_UX_IMPLEMENTATION_PLAN.md) was
+> derived from; several findings are already implemented (contrast, focus
+> states, responsiveness — see that plan's ticket status). Kept here for
+> historical context; track open UI/UX work in the implementation plan, not
+> here.
+
 # Health Habit Hub — UI/UX Review
 
 _Scan date: 2026-07-09. Covers the two frontends: the Flutter participant app (`mobile/`) and the Next.js researcher admin panel (`admin/`). Recommendations are grounded in WCAG 2.2, current mobile-UX practice, and 2026 data-dashboard guidance (sources at the end)._

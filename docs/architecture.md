@@ -91,7 +91,7 @@ graph TD
 | Service | Technology | Purpose | Internal Port | External URL (dev) | Key Env Vars |
 |---|---|---|---|---|---|
 | **proxy** | Traefik v3.0 | Reverse proxy, TLS termination, routing | 8080 (dashboard) | `proxy.localhost:8888` | `TRAEFIK_HOST_PORT80`, `TRAEFIK_HOST_PORT8080`, `PATH_SUFFIX`, `ACME_EMAIL` (prod) |
-| **app** | Node.js 20 + Express | REST API `/api/v1/*` | 3000 | `app.localhost:3000` | `MONGO_HOST`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_DB`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `KEYCLOAK_JWKS_URL`, `API_SERVICE_URL`, `LIBRE_TRANSLATE_URL`, `ALLOWED_ORIGINS` |
+| **app** | Node.js 22 + Express | REST API `/api/v1/*` | 3000 | `app.localhost:3000` | `MONGO_HOST`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_DB`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `KEYCLOAK_JWKS_URL`, `API_SERVICE_URL`, `LIBRE_TRANSLATE_URL`, `ALLOWED_ORIGINS` |
 | **api-service** | Python 3.11 + FastAPI | LLM inference (context classification, BCIO mapping, translation refinement, RAG recommendations); KB CRUD proxied to LightRAG | 8000 | `localhost:8001` | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `REDIS_URL`, `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
 | **lightrag** | LightRAG 1.5.0 (Python) | Graph+vector knowledge base; builds entity graph from uploaded documents; exposes REST query API and built-in graph visualization UI | 9621 | `localhost:9622` | `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_API_BASE`, `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `LIGHTRAG_API_KEY` |
 | **knowledge-mcp** | FastMCP (Python) | MCP server wrapping LightRAG; exposes `search_knowledge` and `ingest_document` tools for AI agent use via SSE transport | 8002 | `localhost:8002` | `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
@@ -297,11 +297,11 @@ Note that `KEYCLOAK_ISSUER` uses the **browser-facing** hostname even though tok
 
 #### Page-level role guards
 
-Beyond the middleware allow-list, the admin panel enforces fine-grained access control at the page level:
+Beyond the middleware allow-list, the admin panel enforces fine-grained access control at the page level (`admin/src/lib/useAdminGuard.ts`):
 
-- `/knowledge-base` and `/settings` are admin-only — `researcher` users are redirected to `/access-denied`
-- `/analytics`, `/studies`, `/cue-pools`, and `/questionnaires` are accessible to both `admin` and `researcher`
-- The sidebar groups navigation into two labelled sections — **Research** (Studies, Analytics) and **Configuration** (Cue Pools, Questionnaires, Profile Fields, Knowledge Base, Settings) — and hides the admin-only Configuration entries for `researcher` users so the navigation reflects what they can actually open
+- `/studies`, `/analytics`, `/cue-pools`, `/questionnaires`, and `/help` are accessible to both `admin` and `researcher`
+- Every other page is admin-only — `researcher` users are redirected to `/access-denied`: `/participants`, `/devices`, `/donations`, `/comments`, `/profile-fields`, `/knowledge-base`, `/system`, `/backups`, `/audit-log`, `/restore-attempts`, `/team`
+- The sidebar groups navigation into five labelled sections — **Research** (Studies, Analytics), **Operations** (Participants, Devices, Donations, Comments), **Configuration** (Cue Pools, Questionnaires, Profile Fields, Knowledge Base), **Monitoring** (System, Backups, Audit Log, Restore Attempts, Team), and **Support** (Help) — and hides every admin-only entry for `researcher` users so the navigation reflects what they can actually open
 - Flutter admin routes (when the admin Flutter UI is in use) are restricted to `admin` only
 
 #### Analytics page (`/analytics`)
@@ -706,6 +706,35 @@ deletes them. Comments it doesn't flag are approved immediately, so
 researchers only ever have to look at the minority that actually need a
 judgment call. See `docs/diagrams/sequences/UC-34-comment-like-habits.mmd`.
 
+### Account Recovery via Passphrase (UC-39)
+
+At onboarding, `recoveryPhraseFromCredentials()` (`app/utils/recoveryPhrase.js`)
+encodes the participant's Keycloak username (a UUID) and generated password
+(16 random bytes) into a human-writable recovery phrase and shows it to the
+participant once. There is no server-side secret or KDF involved — the phrase
+is a pure re-encoding, so anyone who has it can restore the account, and its
+brute-force resistance depends entirely on rate limiting rather than
+cryptographic slowdown.
+
+To restore access on a new device, `POST /api/v1/restore`
+(`app/routes/restoreRouter.js`) decodes the phrase back into
+`{username, password}` and exchanges them for a token pair via Keycloak's
+Resource Owner Password Credentials grant (`app/services/keycloakRopcClient.js`,
+the `hhh-ropc` confidential client — see `KEYCLOAK_ROPC_CLIENT_SECRET`). The
+route is rate-limited to 5 attempts/hour per IP
+(`express-rate-limit` + `ipKeyGenerator`), and every attempt — success,
+malformed phrase, wrong credentials, rate-limited, or Keycloak unreachable —
+is appended to the MongoDB `restore_attempts` collection
+(`app/models/restoreAttempt.js`, 30-day TTL) regardless of outcome, since the
+phrase's lack of a KDF means this log is the main signal against enumeration.
+Admins review it via `GET /api/v1/admin/restore-attempts`
+(`app/routes/admin/restoreAttemptsRouter.js`, admin panel **Restore
+Attempts** page), which also flags any IP with 3+ non-success attempts in
+the last hour. Rotating credentials (e.g. after a suspected leak) goes
+through `POST /api/v1/users/me/rotate-credentials`, which mints a new
+recovery phrase for the same account. See
+`docs/diagrams/sequences/UC-39-recover-account-passphrase.mmd`.
+
 ### Study Enrollment, Switching & Leaving (UC-09)
 
 A participant is enrolled via `POST /onboarding/redeem-code` (study code) or
@@ -765,6 +794,8 @@ manual seed script was ever run.
 | `notification_campaigns` | Researcher-authored FCM push campaigns with schedule and target group |
 
 ---
+
+*Updated: 2026-07-12 | Documentation cleanup pass: added Account Recovery via Passphrase (UC-39) section, fixed admin page-level role-guard list, corrected Node.js version (22, not 20)*
 
 *Updated: 2026-06-10 | Fuseki removed from architecture docs (service retired from compose stack); backup targets corrected*
 

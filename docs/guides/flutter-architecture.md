@@ -56,9 +56,15 @@ mobile/
 │   ├── l10n/                        # Localisation (ARB files + generated code)
 │   │   ├── app_en.arb               # English strings (source of truth)
 │   │   ├── app_de.arb               # German strings
+│   │   ├── app_fr.arb               # French strings
+│   │   ├── app_ja.arb               # Japanese strings
+│   │   ├── app_nl.arb               # Dutch strings
 │   │   ├── app_localizations.dart   # Generated — do NOT edit manually
 │   │   ├── app_localizations_en.dart
-│   │   └── app_localizations_de.dart
+│   │   ├── app_localizations_de.dart
+│   │   ├── app_localizations_fr.dart
+│   │   ├── app_localizations_ja.dart
+│   │   └── app_localizations_nl.dart
 │   ├── models/                      # Plain Dart data classes (JSON serialisation)
 │   ├── providers/                   # Riverpod providers (auth, locale, theme)
 │   ├── screens/                     # Top-level screens registered in GoRouter
@@ -181,7 +187,7 @@ The app uses **Riverpod** (`flutter_riverpod`). All providers are declared at mo
 
 ## 5. Localisation Pipeline
 
-The app is localised into **English** (default) and **German** using Flutter's built-in `flutter_localizations` + code generation.
+The app is localised into **English** (default), **German**, **French**, **Japanese**, and **Dutch** using Flutter's built-in `flutter_localizations` + code generation.
 
 ### Configuration
 
@@ -196,7 +202,7 @@ output-dir: lib/l10n
 
 ### Workflow
 
-1. **Add or edit a string** — edit `lib/l10n/app_en.arb` (English, the template) and `lib/l10n/app_de.arb` (German).
+1. **Add or edit a string** — edit `lib/l10n/app_en.arb` (English, the template) and the same key in each of `app_de.arb`, `app_fr.arb`, `app_ja.arb`, `app_nl.arb`.
 
    ```json
    // app_en.arb
@@ -212,7 +218,7 @@ output-dir: lib/l10n
    flutter gen-l10n
    ```
 
-   This writes `lib/l10n/app_localizations.dart`, `app_localizations_en.dart`, and `app_localizations_de.dart`. **Never edit these generated files manually.**
+   This writes `lib/l10n/app_localizations.dart` and one `app_localizations_<locale>.dart` per ARB file (en, de, fr, ja, nl). **Never edit these generated files manually.**
 
 3. **Use in code** — import `app_localizations.dart` and call:
 
@@ -224,7 +230,7 @@ output-dir: lib/l10n
 ### Important rules
 
 - **Always run `flutter gen-l10n` before `flutter analyze` or `flutter test`** when ARB files have changed. Skipping this step causes `undefined method` errors.
-- The English ARB file is the source of truth. Every key in `app_de.arb` must also exist in `app_en.arb`.
+- The English ARB file is the source of truth. Every key in `app_de.arb`, `app_fr.arb`, `app_ja.arb`, and `app_nl.arb` must also exist in `app_en.arb`.
 - The `@<key>` metadata entries in ARB files (description, placeholders) are for the generator and do not appear in generated code.
 
 ---

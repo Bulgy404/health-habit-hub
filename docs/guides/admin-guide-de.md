@@ -37,6 +37,8 @@ Verwenden Sie diese Checkliste beim Start einer neuen Teilnehmerkohorte.
 13. [Benachrichtigungen an Teilnehmende senden](#13-benachrichtigungen-an-teilnehmende-senden)
 14. [Das Erlebnis der öffentlichen App konfigurieren](#14-das-erlebnis-der-öffentlichen-app-konfigurieren)
 15. [Backups verwalten](#15-backups-verwalten)
+16. [Kommentare moderieren](#16-kommentare-moderieren)
+17. [Wiederherstellungsversuche überwachen](#17-wiederherstellungsversuche-überwachen)
 
 ---
 
@@ -48,7 +50,17 @@ Das Admin-Panel ist nur für Benutzer mit der Keycloak-Rolle `admin` oder `resea
 
 **Schritt 2.** Geben Sie im Anmeldebildschirm Ihren **Admin-Benutzernamen** und Ihr **Passwort** ein (keine Token-Karte — Admin-Konten verwenden ein reguläres Passwort, das in Keycloak festgelegt wird). Tippen Sie auf **Anmelden**.
 
-**Schritt 3.** Nach der Anmeldung zeigt die Navigationsleiste einen zusätzlichen **Admin**-Tab (Zahnrad-Symbol). Tippen Sie darauf, um das Admin-Panel zu öffnen.
+**Schritt 3.** Nach der Anmeldung zeigt die Navigationsleiste einen zusätzlichen **Admin**-Tab (Zahnrad-Symbol). Tippen Sie darauf, um das Admin-Panel zu öffnen. Die linke Seitenleiste ist in fünf Abschnitte gegliedert:
+
+| Abschnitt | Seiten |
+|---|---|
+| **Research** | Studies, Analytics |
+| **Operations** | Participants *(nur Admin)*, Devices *(nur Admin)*, Donations *(nur Admin)*, Comments *(nur Admin)* |
+| **Configuration** | Cue Pools, Questionnaires, Profile Fields *(nur Admin)*, Knowledge Base *(nur Admin)* |
+| **Monitoring** | System *(nur Admin)*, Backups *(nur Admin)*, Audit Log *(nur Admin)*, Restore Attempts *(nur Admin)*, Team *(nur Admin)* |
+| **Support** | Help |
+
+`researcher`-Konten sehen nur Studies, Analytics, Cue Pools und Questionnaires; alle nur für Admins sichtbaren Seiten sind für diese Rolle in der Seitenleiste vollständig ausgeblendet.
 
 | Screenshot | Beschriftungen |
 |---|---|
@@ -417,7 +429,7 @@ Das Token-Karten-PDF-Layout — Logo, Schriftgröße, QR-Code-Position und Farbs
 
 ## 9. Spracheinstellungen für Teilnehmer
 
-Die App unterstützt Englisch und Deutsch. Jeder Teilnehmer kann seine bevorzugte Anzeigesprache unabhängig einstellen. Die Sprachpräferenz wird serverseitig gespeichert (MongoDB-Collection `users`) und wird auf alle Anzeigetexte von Gewohnheiten (Feld `displayText`), Fragebogen-Bezeichnungen und Benutzeroberflächentexte angewendet.
+Die App unterstützt Englisch, Deutsch, Französisch, Japanisch und Niederländisch. Jeder Teilnehmer kann seine bevorzugte Anzeigesprache unabhängig einstellen. Die Sprachpräferenz wird serverseitig gespeichert (MongoDB-Collection `users`) und wird auf alle Anzeigetexte von Gewohnheiten (Feld `displayText`), Fragebogen-Bezeichnungen und Benutzeroberflächentexte angewendet.
 
 ### Wie Teilnehmer ihre Sprache ändern
 
@@ -644,6 +656,34 @@ Sie können ein `.tar.gz`-Backup-Archiv hochladen — zum Beispiel eines, das au
 **Schritt 6.** Die Seite zeigt den Live-Fortschritt (Sicherheits-Backup → Wiederherstellung → Fertig). Während eine Wiederherstellung läuft, verweigert die übrige Plattform kurzzeitig neue Anfragen, um zu vermeiden, dass die im Hintergrund ausgetauschte Datenbank in einen Wettlaufzustand gerät; dies hebt sich automatisch auf, sobald die Wiederherstellung abgeschlossen ist.
 
 Jeder Auslöse-, Upload- und Wiederherstellungsvorgang — ob erfolgreich oder nicht — wird in der Tabelle **Letzte Aktivitäten** mit Angabe von Person und Zeitpunkt protokolliert.
+
+---
+
+## 16. Kommentare moderieren
+
+**Schritt 1.** Tippen Sie im Admin-Panel in der Seitenleiste auf **Comments**.
+
+Teilnehmer können anonyme Kommentare zu Gewohnheiten im Explore-Feed hinterlassen. Eine lokale Wortlisten-/Regex-Prüfung (kein LLM-Aufruf) markiert automatisch Kommentare, die unangemessen wirken; markierte Kommentare werden von der öffentlichen Ansicht zurückgehalten, bis ein Researcher sie überprüft.
+
+**Schritt 2.** Filtern Sie nach Status — die Ansicht **Flagged** ist die Standardansicht und der Ort, an dem die Moderation stattfindet; Sie können auch alle Kommentare durchsuchen.
+
+**Schritt 3.** Für jeden markierten Kommentar entweder **Approve** (veröffentlicht ihn) oder **Delete** (entfernt ihn dauerhaft) wählen. Beide Aktionen werden im Audit-Log protokolliert.
+
+---
+
+## 17. Wiederherstellungsversuche überwachen
+
+> **Nur Admin.**
+
+Teilnehmer können ihr Konto auf einem neuen Gerät mit einer einmaligen Wiederherstellungsphrase reaktivieren, die ihnen beim Onboarding einmalig angezeigt wurde (siehe Teilnehmerhandbuch). Dies ist ein sicherheitsrelevanter Ablauf — die Phrase selbst hat kein serverseitiges Geheimnis, das ein Erraten verlangsamt, daher sind die IP-basierte Ratenbegrenzung (5 Versuche/Stunde) und diese Überwachungsansicht die wichtigsten Verteidigungen der Plattform gegen Versuche, sich Zugriff auf ein fremdes Konto zu erraten.
+
+**Schritt 1.** Tippen Sie im Admin-Panel in der Seitenleiste auf **Restore Attempts** (unter Monitoring).
+
+Die Seite zeigt jeden `POST /restore`-Aufruf, neueste zuerst, mit Ergebnis (`success`, `invalid_phrase`, `invalid_credentials`, `rate_limited` oder `keycloak_unreachable`), der anfragenden IP und — sofern die Phrase erfolgreich dekodiert wurde — dem betroffenen Konto.
+
+**Schritt 2.** Achten Sie auf **markierte IPs** — eine IP mit 3 oder mehr nicht erfolgreichen Versuchen innerhalb der letzten Stunde wird gesondert hervorgehoben, da dieses Muster auch unterhalb der IP-Ratenbegrenzung auf einen Enumerationsversuch hindeuten kann.
+
+**Schritt 3.** Filtern Sie nach Ergebnis oder IP, um ein bestimmtes Muster zu untersuchen. Einträge werden 30 Tage lang aufbewahrt.
 
 ---
 

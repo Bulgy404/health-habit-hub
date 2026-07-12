@@ -1,3 +1,8 @@
+> **Archived 2026-07-12.** This audit's backlog is resolved (see the
+> "Backlog verification" section of [`BUG_AUDIT.md`](../../BUG_AUDIT.md)) —
+> kept here for historical context only, not a living document. For current,
+> open findings see [`BUG_AUDIT.md`](../../BUG_AUDIT.md).
+
 # Health Habit Hub — Full System Audit
 
 **Date:** 2026-04-10

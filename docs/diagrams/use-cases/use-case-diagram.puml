@@ -31,6 +31,7 @@ rectangle "Mobile App (Flutter)" {
     usecase "UC-05 Manage profile" as UC05
     usecase "UC-14 Manage settings\n& language" as UC14
     usecase "UC-38 Switch or leave\na study" as UC38
+    usecase "UC-39 Recover account\nvia passphrase" as UC39
   }
   package "Habit Donation & Exploration" {
     usecase "UC-03 Donate habit" as UC03
@@ -38,6 +39,7 @@ rectangle "Mobile App (Flutter)" {
     usecase "UC-34 Comment & like habits" as UC34
     usecase "UC-16 Complete survey" as UC16
     usecase "UC-06 Complete questionnaire" as UC06
+    usecase "UC-35 Guided habit\ncreation" as UC35
   }
   package "Recommendations" {
     usecase "UC-07 Request personalised\nrecommendations" as UC07
@@ -67,6 +69,7 @@ rectangle "Admin Portal (Next.js)" {
   usecase "UC-25 Manage knowledge base\n(upload documents)" as UC25
   usecase "UC-26 View knowledge graph" as UC26
   usecase "UC-28 Configure platform\nsettings" as UC28
+  usecase "UC-36 Configure per-group\nstudy design" as UC36
 }
 
 rectangle "System / Integrations" {
@@ -95,7 +98,9 @@ P --> UC15
 P --> UC16
 P --> UC33
 P --> UC34
+P --> UC35
 P --> UC38
+P --> UC39
 
 ' --- Researcher (admin inherits) ---
 R --> UC17
@@ -107,6 +112,7 @@ R --> UC22
 R --> UC23
 R --> UC24
 R --> UC27
+R --> UC36
 
 ' --- Admin only ---
 A --> UC25
@@ -120,6 +126,7 @@ B --> UC29
 ' --- Supporting system relations ---
 UC01 ..> KC : <<authenticates via>>
 UC17 ..> KC : <<authenticates via>>
+UC39 ..> KC : <<ROPC token mint>>
 UC02 ..> KC : <<creates user>>
 UC03 ..> LLM : <<classify + map BCIO>>
 UC07 ..> LLM : <<RAG generation>>

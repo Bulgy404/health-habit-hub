@@ -23,6 +23,13 @@ reasonable disclosure window before sharing details publicly.
 
 - Authentication and authorization are handled by Keycloak (OIDC); role
   enforcement lives in `app/middleware/` and `admin/src/middleware.ts`.
+- Account recovery uses a one-time passphrase (`app/utils/recoveryPhrase.js`)
+  that re-encodes the Keycloak username/password with no server-side secret
+  or KDF, so brute-force resistance relies entirely on the per-IP rate limit
+  in `app/routes/restoreRouter.js` (5/hour) and admin review of flagged IPs
+  in the restore-attempts view. Report any bypass of that rate limit, or any
+  way to enumerate valid recovery phrases, as a vulnerability.
 - Secrets are provided via `.env` (git-ignored) — see `.env.example`.
   Never commit credentials.
-- Past findings and resolutions are tracked in [AUDIT.md](AUDIT.md).
+- Current, open findings are tracked in [BUG_AUDIT.md](BUG_AUDIT.md); past
+  audits (resolved) are archived under [docs/archive/](docs/archive/).

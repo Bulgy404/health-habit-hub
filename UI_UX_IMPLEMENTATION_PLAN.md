@@ -1,6 +1,8 @@
 # Health Habit Hub — UI/UX Implementation Plan
 
-_Derived from `UI_UX_REVIEW.md` (2026-07-09). Organised as discrete tickets grouped into three phases by effort/impact. Each ticket lists the files to touch, the change, and acceptance criteria. Phases are independently shippable._
+_Derived from [`docs/archive/UI_UX_REVIEW.md`](docs/archive/UI_UX_REVIEW.md) (2026-07-09, archived). Organised as discrete tickets grouped into three phases by effort/impact. Each ticket lists the files to touch, the change, and acceptance criteria. Phases are independently shippable._
+
+_Status as of 2026-07-12: Phase 1 (T1–T6) and T14 are done — see ✅ markers below. T7–T13, T15–T16 remain open._
 
 ## Shared foundation: the "action green" token
 
@@ -16,34 +18,34 @@ Several tickets depend on one decision, so make it first.
 
 ## Phase 1 — Quick wins (est. ~1 day total)
 
-### T1. Mobile: darken primary green for buttons + nav
+### T1. ✅ Done — Mobile: darken primary green for buttons + nav
 **Files:** `mobile/lib/app.dart`
 - Add `const _kAction = Color(0xFF2E8C00);` and use it as `backgroundColor` in `elevatedButtonTheme`, `filledButtonTheme`, and as `indicatorColor` + selected icon/label colour in `navigationBarTheme` (both light and dark builders).
 - Leave `_kPrimary`/`_kAccent` as the seed and accent.
 **Acceptance:** every filled/elevated button and the selected nav destination render on `#2E8C00`; contrast of white label ≥ 4.3:1; no visual regression in dark mode.
 
-### T2. Admin: darken primary green for buttons + active nav
+### T2. ✅ Done — Admin: darken primary green for buttons + active nav
 **Files:** `admin/src/app/globals.css`, `admin/src/components/sidebar.module.css`
 - In `:root`, split the token: keep `--color-primary: #45b700` for accents, add `--color-primary-action: #2e8c00` and `--color-primary-action-hover: #256f00`.
 - Point `.addButton`, `.saveBtn`, `.saveButton`, `.defaultBtn` backgrounds and `.navLinkActive` background at `--color-primary-action`.
 **Acceptance:** active sidebar item and primary buttons use the darker green; white text ≥ 4.3:1; accent uses (focus ring, sliders, bar fills) still use `#45b700`.
 
-### T3. Admin: replace `opacity` hover with real colour states
+### T3. ✅ Done — Admin: replace `opacity` hover with real colour states
 **Files:** `admin/src/components/admin-page.module.css`, `admin/src/app/(admin)/studies/page.module.css` (and other page modules sharing the pattern)
 - Replace `:hover { opacity: 0.9 }` on `.addButton`, `.saveBtn`, `.defaultBtn`, etc. with `background: var(--color-primary-action-hover)`.
 **Acceptance:** no interactive element dims via opacity on hover; hover contrast never drops below the resting state.
 
-### T4. Admin: global `:focus-visible` ring
+### T4. ✅ Done — Admin: global `:focus-visible` ring
 **Files:** `admin/src/app/globals.css`
 - Add a global rule: `:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 4px; }` and remove any `outline: none` that isn't paired with a replacement.
 **Acceptance:** keyboard Tab through sidebar links, buttons, table action buttons, and the language `<select>` shows a visible ring on each.
 
-### T5. Admin: remove the hard desktop lock
+### T5. ✅ Done — Admin: remove the hard desktop lock
 **Files:** `admin/src/app/(admin)/layout.module.css`
 - Remove `min-width: 1280px` from `.shell`; add a breakpoint (e.g. `@media (max-width: 1024px)`) that reduces `.main` padding and prepares for the collapsible sidebar in T12.
 **Acceptance:** at 1024px width there is no horizontal scroll of the whole app; content reflows.
 
-### T6. Mobile: reconcile theme divergences
+### T6. ✅ Done — Mobile: reconcile theme divergences
 **Files:** `mobile/lib/app.dart`, `mobile/lib/features/my_habits/my_habits_screen.dart`
 - Unify card radius to 20 (fix the SRHI card's hardcoded `12`).
 - Make dark-theme button radius the same 100px pill as light.
@@ -95,9 +97,10 @@ Several tickets depend on one decision, so make it first.
 - Add dark values for every `--color-*` token; wire a toggle + `prefers-color-scheme` default. Use `#0f172a`-style surfaces, not pure black.
 **Acceptance:** every admin page is legible in dark mode; toggle persists across reloads; charts remain readable.
 
-### T14. Admin: consolidate onto recharts
-**Files:** `admin/src/components/studies-analytics-tab.tsx`, `admin/src/app/(admin)/analytics/page.tsx`, `InsightsView.tsx`
+### T14. ✅ Done (via a different path than originally scoped) — Admin: consolidate onto recharts
+**Files:** ~~`admin/src/components/studies-analytics-tab.tsx`~~ (deleted — dead code, not migrated), `admin/src/app/(admin)/analytics/page.tsx`, `InsightsView.tsx`
 - Replace hand-rolled SVG bar/line charts with themed recharts components sharing one colour/tooltip/font config.
+- `studies-analytics-tab.tsx` turned out to be unreachable dead code (not wired into any route, found via static grep rather than actual usage), so the fix here was deletion rather than migration — the remaining live chart surfaces (`analytics/page.tsx`, `InsightsView.tsx`) already use recharts.
 **Acceptance:** all admin charts use recharts; a single theme object controls their styling; keyboard/screen-reader accessible.
 
 ### T15. Admin: responsive sidebar collapse

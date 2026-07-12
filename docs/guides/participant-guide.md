@@ -54,7 +54,7 @@ The **Explore** screen shows the habits that have been donated by participants.
 
 Tap the **Settings** icon (usually in the top corner of the screen) to access the following options:
 
-- **Language** — switch the app between English and Deutsch.
+- **Language** — switch the app's display language (English, German, French, Japanese, Dutch).
 - **Legal** — tap **Settings → Legal** to read the terms of use, privacy policy, and imprint.
 
 ---

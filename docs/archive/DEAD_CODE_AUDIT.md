@@ -1,3 +1,9 @@
+> **Archived 2026-07-12.** Headline findings here are resolved (dead admin
+> screens, dead test file, unused dependencies all removed — see git
+> history). Remaining minor items and any new dead code are tracked in
+> [`BUG_AUDIT.md`](../../BUG_AUDIT.md) instead. Kept here for historical
+> context only.
+
 # Dead Code & Improvement Audit
 
 _Written 2026-07-10. Scope: `admin/`, `app/`, `mobile/`, `API-service/`, `backup-service/`, `knowledge-mcp/`, `scripts/`. Method: ESLint/`tsc`/`dart analyze`/`pyflakes` where available, plus manual import-graph analysis (grep every file's basename against every other file's import statements) and git-history checks for anything ambiguous. Every finding below was individually verified — grepped for actual usage, not just flagged by a heuristic and left there._

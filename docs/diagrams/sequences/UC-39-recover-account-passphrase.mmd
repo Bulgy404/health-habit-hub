@@ -1,0 +1,51 @@
+%% UC-39 — Recover account via passphrase, with admin-side attempt monitoring
+%% Source: app/routes/restoreRouter.js, app/utils/recoveryPhrase.js,
+%% app/services/keycloakRopcClient.js, app/models/restoreAttempt.js,
+%% app/routes/admin/restoreAttemptsRouter.js,
+%% mobile/lib/screens/onboarding/{passphrase,restore}_screen.dart
+sequenceDiagram
+    autonumber
+    actor P as Participant (new device)
+    participant F as Flutter App (Restore screen)
+    participant B as Backend (restoreRouter)
+    participant KC as Keycloak (ROPC, hhh-ropc client)
+    participant M as MongoDB (restore_attempts)
+    actor A as Admin
+
+    Note over P,F: Recovery phrase was shown once at onboarding<br/>(recoveryPhraseFromCredentials — pure re-encoding of<br/>username UUID + 16-byte password, no server secret)
+
+    P->>F: Enter recovery phrase
+    F->>B: POST /api/v1/restore {phrase}
+    B->>B: Per-IP rate limit (5/hour) via express-rate-limit
+    alt rate limited
+        B->>M: insertOne(restore_attempts, {ip, outcome: "rate_limited"})
+        B-->>F: 429 Too many requests
+    else within limit
+        B->>B: credentialsFromRecoveryPhrase(phrase) -> {username, password} | null
+        alt malformed phrase
+            B->>M: insertOne(restore_attempts, {ip, outcome: "invalid_phrase"})
+            B-->>F: 400 Invalid passphrase or account not found
+        else well-formed phrase
+            B->>KC: ROPC token request (username, password)
+            alt Keycloak unreachable
+                B->>M: insertOne(restore_attempts, {ip, username, outcome: "keycloak_unreachable"})
+                B-->>F: 502 Keycloak is unreachable
+            else invalid_grant (401)
+                B->>M: insertOne(restore_attempts, {ip, username, outcome: "invalid_credentials"})
+                B-->>F: 401 Invalid passphrase or account not found
+            else success
+                KC-->>B: {access_token, refresh_token, expires_in}
+                B->>M: insertOne(restore_attempts, {ip, username, outcome: "success"})
+                B-->>F: 200 {username, access_token, refresh_token, expires_in}
+                F->>F: Store tokens in secure storage
+                F-->>P: Account restored on this device
+            end
+        end
+    end
+
+    Note over M: restore_attempts is append-only, TTL 30 days<br/>(security signal, not a permanent record)
+
+    A->>B: GET /api/v1/admin/restore-attempts?page&limit&outcome&ip (admin role)
+    B->>M: paginated find(), newest first + flagged-IP aggregation<br/>(>=3 non-success attempts per IP in the last hour)
+    M-->>B: attempts page + flagged IPs
+    B-->>A: 200 {attempts, flaggedIps}

@@ -177,7 +177,7 @@ Nach dem Absenden einer Gewohnheitsspende präsentiert die App eine Visualisieru
 
 ### Sprache
 
-Die Health Habit Hub App unterstützt **Englisch** und **Deutsch**. Die Anzeigesprache kann jederzeit über den Bildschirm **Einstellungen** geändert werden, der über die untere Navigationsleiste (Zahnrad-Symbol) erreichbar ist.
+Die Health Habit Hub App unterstützt **Englisch**, **Deutsch**, **Französisch**, **Japanisch** und **Niederländisch**. Die Anzeigesprache kann jederzeit über den Bildschirm **Einstellungen** geändert werden, der über die untere Navigationsleiste (Zahnrad-Symbol) erreichbar ist.
 
 **So änderst du die Sprache:**
 
