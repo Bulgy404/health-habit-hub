@@ -107,14 +107,14 @@ export function createKeycloakAdminClient({
     async assignRole(userId, roleName) {
       const token = await getAdminToken();
       const rolesRes = await fetch(
-        `${_base}/admin/realms/${_realm}/roles/${roleName}`,
+        `${_base}/admin/realms/${_realm}/roles/${encodeURIComponent(roleName)}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       if (!rolesRes.ok)
         throw new Error(`Keycloak role lookup failed: ${rolesRes.status}`);
       const role = await rolesRes.json();
       const assignRes = await fetch(
-        `${_base}/admin/realms/${_realm}/users/${userId}/role-mappings/realm`,
+        `${_base}/admin/realms/${_realm}/users/${encodeURIComponent(userId)}/role-mappings/realm`,
         {
           method: 'POST',
           headers: {
@@ -242,14 +242,17 @@ export function createKeycloakAdminClient({
 
     async updateUserAttribute(userId, key, value) {
       const token = await getAdminToken();
-      await fetch(`${_base}/admin/realms/${_realm}/users/${userId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ attributes: { [key]: [value] } }),
-      });
+      await fetch(
+        `${_base}/admin/realms/${_realm}/users/${encodeURIComponent(userId)}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ attributes: { [key]: [value] } }),
+        }
+      );
     },
 
     /**
