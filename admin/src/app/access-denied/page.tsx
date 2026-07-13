@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { ShieldOff } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { AccessDeniedSignOutButton } from "./sign-out-button";
 import styles from "./page.module.css";
 
 export default async function AccessDenied() {
@@ -15,9 +15,7 @@ export default async function AccessDenied() {
         <p className={styles.message}>
           {t.rich("message", { strong: (chunks) => <strong>{chunks}</strong> })}
         </p>
-        <Link href="/api/auth/signout" className={styles.button}>
-          {t("signOut")}
-        </Link>
+        <AccessDeniedSignOutButton label={t("signOut")} />
       </div>
     </div>
   );

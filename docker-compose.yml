@@ -490,14 +490,29 @@ services:
   admin:
     image: hhh/admin
     container_name: hhh-admin
-    build: ./admin
+    build:
+      context: ./admin
+      # NEXT_PUBLIC_* vars are inlined into the client bundle at `next build`
+      # time — they must be passed as build args, not just runtime
+      # `environment:` (which has no effect on an already-built image). Kept
+      # in sync with the values below.
+      args:
+        NEXT_PUBLIC_NEXTAUTH_URL: https://${DOMAIN}/admin
+        NEXT_PUBLIC_KEYCLOAK_BROWSER_URL: https://${DOMAIN}/auth
+        NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
+        NEXT_PUBLIC_API_DOCS_URL: https://${DOMAIN}/api-docs
+        NEXT_PUBLIC_GRAFANA_URL: ${NEXT_PUBLIC_GRAFANA_URL:-https://${DOMAIN}/grafana}
+        NEXT_PUBLIC_MONGO_EXPRESS_URL: https://${DOMAIN}/mongo
     restart: always
     env_file: .env
     environment:
       - NEXTAUTH_URL=https://${DOMAIN}/admin
       - NEXT_PUBLIC_NEXTAUTH_URL=https://${DOMAIN}/admin
       - NEXT_PUBLIC_KEYCLOAK_BROWSER_URL=https://${DOMAIN}/auth
+      - NEXT_PUBLIC_API_URL=https://${DOMAIN}/api/v1
+      - NEXT_PUBLIC_API_DOCS_URL=https://${DOMAIN}/api-docs
       - NEXT_PUBLIC_GRAFANA_URL=${NEXT_PUBLIC_GRAFANA_URL:-https://${DOMAIN}/grafana}
+      - NEXT_PUBLIC_MONGO_EXPRESS_URL=https://${DOMAIN}/mongo
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - KEYCLOAK_CLIENT_ID=hhh-admin
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET}

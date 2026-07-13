@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   FlaskConical,
@@ -30,6 +30,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { locales, LOCALE_COOKIE, type Locale } from "@/lib/locale";
+import { signOutOfKeycloak } from "@/lib/keycloakSignOut";
 import { ThemeToggle } from "./theme-toggle";
 import styles from "./sidebar.module.css";
 
@@ -77,7 +78,12 @@ const NAV_SECTIONS: NavSection[] = [
       { href: "/system", labelKey: "system", Icon: Server, adminOnly: true },
       { href: "/backups", labelKey: "backups", Icon: DatabaseBackup, adminOnly: true },
       { href: "/audit-log", labelKey: "auditLog", Icon: History, adminOnly: true },
-      { href: "/restore-attempts", labelKey: "restoreAttempts", Icon: ShieldAlert, adminOnly: true },
+      {
+        href: "/restore-attempts",
+        labelKey: "restoreAttempts",
+        Icon: ShieldAlert,
+        adminOnly: true,
+      },
       { href: "/team", labelKey: "team", Icon: UserCog, adminOnly: true },
     ],
   },
@@ -134,11 +140,7 @@ export function Sidebar() {
         {mobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
       {mobileOpen && (
-        <div
-          className={styles.backdrop}
-          onClick={() => setMobileOpen(false)}
-          aria-hidden
-        />
+        <div className={styles.backdrop} onClick={() => setMobileOpen(false)} aria-hidden />
       )}
       <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.brand}>
@@ -146,67 +148,54 @@ export function Sidebar() {
           <span className={styles.brandName}>{t("brand")}</span>
         </div>
 
-      <nav className={styles.nav}>
-        {NAV_SECTIONS.map((section) => {
-          const visible = section.items.filter((item) => !item.adminOnly || isAdmin);
-          if (visible.length === 0) return null;
-          return (
-            <div key={section.titleKey} className={styles.navSection}>
-              <div className={styles.navSectionTitle}>{t(`sections.${section.titleKey}`)}</div>
-              <ul className={styles.navList}>
-                {visible.map((item) => (
-                  <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className={`${styles.navLink} ${pathname.startsWith(item.href) ? styles.navLinkActive : ""}`}
-                    >
-                      <item.Icon size={16} strokeWidth={1.75} />
-                      {t(`nav.${item.labelKey}`)}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
-      </nav>
+        <nav className={styles.nav}>
+          {NAV_SECTIONS.map((section) => {
+            const visible = section.items.filter((item) => !item.adminOnly || isAdmin);
+            if (visible.length === 0) return null;
+            return (
+              <div key={section.titleKey} className={styles.navSection}>
+                <div className={styles.navSectionTitle}>{t(`sections.${section.titleKey}`)}</div>
+                <ul className={styles.navList}>
+                  {visible.map((item) => (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={`${styles.navLink} ${pathname.startsWith(item.href) ? styles.navLinkActive : ""}`}
+                      >
+                        <item.Icon size={16} strokeWidth={1.75} />
+                        {t(`nav.${item.labelKey}`)}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </nav>
 
-      <div className={styles.footer}>
-        {session?.user?.email && <div className={styles.userEmail}>{session.user.email}</div>}
-        <div className={styles.langSwitcher}>
-          <Globe size={14} strokeWidth={1.75} />
-          <select
-            aria-label={t("language")}
-            value={locale}
-            onChange={(e) => handleLocaleChange(e.target.value)}
-            className={styles.langSelect}
-          >
-            {locales.map((l) => (
-              <option key={l} value={l}>
-                {LOCALE_LABELS[l]}
-              </option>
-            ))}
-          </select>
+        <div className={styles.footer}>
+          {session?.user?.email && <div className={styles.userEmail}>{session.user.email}</div>}
+          <div className={styles.langSwitcher}>
+            <Globe size={14} strokeWidth={1.75} />
+            <select
+              aria-label={t("language")}
+              value={locale}
+              onChange={(e) => handleLocaleChange(e.target.value)}
+              className={styles.langSelect}
+            >
+              {locales.map((l) => (
+                <option key={l} value={l}>
+                  {LOCALE_LABELS[l]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <ThemeToggle label={t("toggleTheme")} />
+          <button onClick={signOutOfKeycloak} className={styles.signOutButton}>
+            <LogOut size={14} strokeWidth={1.75} />
+            {t("signOut")}
+          </button>
         </div>
-        <ThemeToggle label={t("toggleTheme")} />
-        <button
-          onClick={async () => {
-            // next-auth's default redirect callback only allows callbackUrls
-            // on the same origin as NEXTAUTH_URL, so passing the Keycloak
-            // logout URL as callbackUrl gets silently discarded — it clears
-            // the local session but leaves the Keycloak SSO session alive,
-            // so the very next auth check logs the user straight back in.
-            // Clear the local session first, then navigate to Keycloak's
-            // end-session endpoint directly to end the SSO session too.
-            await signOut({ redirect: false });
-            window.location.href = `${process.env.NEXT_PUBLIC_KEYCLOAK_BROWSER_URL}/realms/hhh/protocol/openid-connect/logout?post_logout_redirect_uri=${encodeURIComponent(process.env.NEXT_PUBLIC_NEXTAUTH_URL ?? "")}&client_id=hhh-admin`;
-          }}
-          className={styles.signOutButton}
-        >
-          <LogOut size={14} strokeWidth={1.75} />
-          {t("signOut")}
-        </button>
-      </div>
       </aside>
     </>
   );

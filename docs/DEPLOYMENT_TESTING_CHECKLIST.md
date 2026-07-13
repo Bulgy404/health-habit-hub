@@ -25,18 +25,18 @@ notes / bug tracker before shipping.
 
 ### 1.1 Sign-in & Access Control
 - [x] Sign in via Keycloak (`/api/auth/signin`) with an admin account
-- [ ] Sign in with a researcher account — confirm reduced access where applicable (e.g.
+- [x] Sign in with a researcher account — confirm reduced access where applicable (e.g.
       Insights tab hidden on Analytics page)
-- [ ] Sign in with an account that has neither role — redirected to `/access-denied`
-- [ ] `/access-denied` page: "Sign out" link works
-- [ ] Leave the tab open and idle past token expiry, then navigate — confirm it silently
+- [x] Sign in with an account that has neither role — redirected to `/access-denied`
+- [x] `/access-denied` page: "Sign out" link works
+- [x] Leave the tab open and idle past token expiry, then navigate — confirm it silently
       recovers (no stuck 401) instead of requiring a manual page reload
-- [ ] Session persists across a page reload; sign-out clears the session
+- [x] Session persists across a page reload; sign-out clears the session
 
 ### 1.2 First-Run Welcome
-- [ ] `/welcome` onboarding walkthrough displays correctly (no stray border on Skip)
-- [ ] "Skip" and "Finish" both land you on the studies list
-- [ ] Welcome doesn't reappear on next login once dismissed
+- [x] `/welcome` onboarding walkthrough displays correctly (no stray border on Skip)
+- [x] "Skip" and "Finish" both land you on the studies list
+- [x] Welcome doesn't reappear on next login once dismissed
 
 ### 1.3 Studies — the core configuration hub
 This is the biggest page in the admin panel; budget the most test time here.
