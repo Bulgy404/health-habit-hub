@@ -36,7 +36,15 @@ function makeFakeKeycloak() {
   };
 }
 
-let app, server, baseUrl, db, kc, fetchCalls, tokenGrantFails, userLookupFails;
+let app,
+  server,
+  baseUrl,
+  db,
+  kc,
+  fetchCalls,
+  tokenGrantFails,
+  userLookupFails,
+  realFetch;
 
 const KC_BASE = 'http://keycloak:8080';
 const KC_REALM = 'hhh';
@@ -46,7 +54,7 @@ before(async () => {
   process.env.KEYCLOAK_REALM = KC_REALM;
   process.env.KEYCLOAK_CLIENT_ID = 'hhh-flutter';
 
-  const realFetch = global.fetch;
+  realFetch = global.fetch;
   global.fetch = async (url, opts) => {
     // Only intercept calls to the (fake) Keycloak base — let the test's own
     // requests to its local HTTP server pass through untouched.
@@ -89,7 +97,14 @@ before(async () => {
   baseUrl = `http://127.0.0.1:${server.address().port}`;
 });
 
-after(() => server.close());
+after(() => {
+  global.fetch = realFetch;
+  // closeAllConnections destroys any lingering keep-alive sockets first —
+  // without it, close()'s callback (and thus process exit) waits forever
+  // for connections that fetch()'s undici agent doesn't proactively close.
+  server.closeAllConnections();
+  server.close();
+});
 
 beforeEach(() => {
   fetchCalls = [];

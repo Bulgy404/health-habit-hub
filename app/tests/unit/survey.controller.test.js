@@ -113,6 +113,10 @@ before(async () => {
 });
 
 after(async () => {
+  // closeAllConnections destroys any lingering keep-alive sockets first —
+  // otherwise close()'s callback (and this await) waits forever for
+  // connections that fetch()'s undici agent doesn't proactively close.
+  server.closeAllConnections();
   await new Promise((resolve) => server.close(resolve));
 });
 

@@ -9,6 +9,7 @@ import { createOnboardRouter } from '../../routes/onboardRouter.js';
 let server;
 let baseUrl;
 let mockFetchCalls;
+let originalFetch;
 
 before(async () => {
   // Provide mocked env vars so the router resolves correctly
@@ -20,7 +21,7 @@ before(async () => {
   testApp.use(express.json());
 
   // Save original fetch so test HTTP calls still reach the local server
-  const originalFetch = global.fetch;
+  originalFetch = global.fetch;
 
   // Mock global fetch — only intercept Keycloak-destined calls
   mockFetchCalls = [];
@@ -92,6 +93,11 @@ before(async () => {
 });
 
 after(() => {
+  global.fetch = originalFetch;
+  // closeAllConnections destroys any lingering keep-alive sockets first —
+  // without it, close()'s callback (and thus process exit) waits forever
+  // for connections that fetch()'s undici agent doesn't proactively close.
+  server.closeAllConnections();
   server.close();
 });
 

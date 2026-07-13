@@ -64,8 +64,15 @@ format: ## Auto-format backend code with Prettier
 	cd app && npx prettier --write .
 
 test-backend: format ## Backend: lint + unit tests + security audit
+	# --test-force-exit: at this file count, node --test's default child-process
+	# reaping intermittently never detects the last file(s) in the (internally
+	# re-sorted, alphabetical) queue as complete, hanging the whole run even
+	# though every test already passed — reproduced on Node 26.0.0 independent
+	# of --test-concurrency (1, 4, and the CPU-count default all hang some of
+	# the time). force-exit sidesteps it by exiting once all tests + hooks have
+	# reported, instead of waiting for the event loop to drain naturally.
 	cd app && npx prettier --check . && npx eslint . && \
-	node --test "tests/unit/**/*.test.js" && \
+	node --test --test-force-exit "tests/unit/**/*.test.js" && \
 	npm audit --audit-level=critical
 
 test-flutter: ## Flutter: analyze + widget/unit tests

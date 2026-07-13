@@ -1,4 +1,4 @@
-import { test, before } from 'node:test';
+import { test, before, after } from 'node:test';
 import assert from 'node:assert';
 import { generateKeyPairSync, createSign } from 'node:crypto';
 import { createTokenVerifier } from '../../middleware/auth.js';
@@ -31,10 +31,16 @@ function createJwt(payload, key = privateKey, kid = 'verifier-key-1') {
 }
 
 let verifyToken;
+let realFetch;
 
 before(async () => {
+  realFetch = global.fetch;
   global.fetch = async () => ({ ok: true, json: async () => mockJwks });
   verifyToken = createTokenVerifier({ jwksUrl: 'http://localhost/jwks' });
+});
+
+after(() => {
+  global.fetch = realFetch;
 });
 
 test('valid JWT returns decoded payload', async () => {

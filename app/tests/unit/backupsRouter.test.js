@@ -84,7 +84,17 @@ function startFakeBackupApi() {
     let body = '';
     req.on('data', (c) => (body += c));
     req.on('end', () => {
-      fakeBackupApiRequests.push({ method: req.method, url: req.url });
+      let parsedBody;
+      try {
+        parsedBody = body ? JSON.parse(body) : undefined;
+      } catch {
+        parsedBody = undefined;
+      }
+      fakeBackupApiRequests.push({
+        method: req.method,
+        url: req.url,
+        body: parsedBody,
+      });
       res.setHeader('Content-Type', 'application/json');
       if (req.url === '/status') {
         return res.end(
@@ -148,7 +158,12 @@ before(async () => {
 });
 
 after(() => {
+  // closeAllConnections destroys any lingering keep-alive sockets first —
+  // without it, close()'s callback (and thus process exit) waits forever
+  // for connections that fetch()'s undici agent doesn't proactively close.
+  server.closeAllConnections();
   server.close();
+  fakeBackupApi.closeAllConnections();
   fakeBackupApi.close();
 });
 
@@ -184,6 +199,30 @@ test('POST /backups/trigger records a requested + succeeded audit entry', async 
   assert.strictEqual(entries[0].action, 'trigger');
   assert.strictEqual(entries[0].result, 'requested');
   assert.strictEqual(entries[1].result, 'succeeded');
+});
+
+test('POST /backups/trigger forwards the chosen services to backup-api', async () => {
+  const res = await fetch(`${baseUrl}/api/v1/admin/backups/trigger`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ services: { mongo: true, neo4j: false } }),
+  });
+  assert.strictEqual(res.status, 202);
+  const triggerRequest = fakeBackupApiRequests.findLast(
+    (r) => r.url === '/trigger'
+  );
+  assert.deepStrictEqual(triggerRequest.body, {
+    services: { mongo: true, neo4j: false },
+  });
+});
+
+test('POST /backups/trigger rejects an unknown services key', async () => {
+  const res = await fetch(`${baseUrl}/api/v1/admin/backups/trigger`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ services: { bogus: true } }),
+  });
+  assert.strictEqual(res.status, 400);
 });
 
 test('DELETE /backups/:filename proxies to backup-api and records a requested + succeeded audit entry', async () => {

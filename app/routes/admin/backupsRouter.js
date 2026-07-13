@@ -205,27 +205,35 @@ export function createBackupsRouter({ db } = {}) {
     }
   });
 
-  router.post('/backups/trigger', async (req, res) => {
-    const database = await getDb();
-    await writeAudit(database, { req, action: 'trigger', result: 'requested' });
-    try {
-      const result = await triggerBackupNow();
+  router.post(
+    '/backups/trigger',
+    validate(triggerBackupSchema),
+    async (req, res) => {
+      const database = await getDb();
       await writeAudit(database, {
         req,
         action: 'trigger',
-        result: 'succeeded',
+        result: 'requested',
       });
-      res.status(202).json(result);
-    } catch (err) {
-      await writeAudit(database, {
-        req,
-        action: 'trigger',
-        result: 'failed',
-        detail: err.message,
-      });
-      res.status(err.status ?? 502).json({ error: err.message });
+      try {
+        const result = await triggerBackupNow(req.body?.services);
+        await writeAudit(database, {
+          req,
+          action: 'trigger',
+          result: 'succeeded',
+        });
+        res.status(202).json(result);
+      } catch (err) {
+        await writeAudit(database, {
+          req,
+          action: 'trigger',
+          result: 'failed',
+          detail: err.message,
+        });
+        res.status(err.status ?? 502).json({ error: err.message });
+      }
     }
-  });
+  );
 
   router.post('/backups/upload', upload.single('file'), async (req, res) => {
     const database = await getDb();
