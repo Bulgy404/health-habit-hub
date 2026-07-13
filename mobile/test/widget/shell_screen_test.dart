@@ -81,6 +81,7 @@ Widget _buildSubject(
   GoRouter router,
   List<String> roles, {
   bool recommenderEnabled = true,
+  bool habitCreationEnabled = true,
 }) {
   return ProviderScope(
     overrides: [
@@ -89,6 +90,7 @@ Widget _buildSubject(
       habitReminderSyncProvider.overrideWithValue(() async {}),
       dueQuestionnaireProvider.overrideWithValue(() async => null),
       recommenderEnabledProvider.overrideWithValue(recommenderEnabled),
+      habitCreationEnabledProvider.overrideWithValue(habitCreationEnabled),
     ],
     child: MaterialApp.router(
       routerConfig: router,
@@ -150,6 +152,38 @@ void main() {
     expect(find.text('Account'), findsOneWidget);
   });
 
+  testWidgets('shows My Habits tab when habit creation enabled', (
+    tester,
+  ) async {
+    final router = _buildTestRouter();
+    await tester.pumpWidget(
+      _buildSubject(router, const [], habitCreationEnabled: true),
+    );
+    await tester.pump();
+
+    expect(find.text('My Habits'), findsOneWidget);
+  });
+
+  testWidgets(
+      'hides My Habits tab when the study disables habit creation entirely',
+      (tester) async {
+    // Regression test: previously only the "add habit" button inside the My
+    // Habits screen was hidden, leaving a permanently-empty screen reachable
+    // via the tab — there's no other way for such a participant to ever get
+    // a habit. The whole tab should be hidden instead.
+    final router = _buildTestRouter();
+    await tester.pumpWidget(
+      _buildSubject(router, const [], habitCreationEnabled: false),
+    );
+    await tester.pump();
+
+    expect(find.text('My Habits'), findsNothing);
+    // Other tabs remain.
+    expect(find.text('Share'), findsOneWidget);
+    expect(find.text('Explore'), findsOneWidget);
+    expect(find.text('Account'), findsOneWidget);
+  });
+
   testWidgets('shows loading state (NavigationBar still visible)', (
     tester,
   ) async {
@@ -166,6 +200,7 @@ void main() {
           habitReminderSyncProvider.overrideWithValue(() async {}),
           dueQuestionnaireProvider.overrideWithValue(() async => null),
           recommenderEnabledProvider.overrideWithValue(true),
+          habitCreationEnabledProvider.overrideWithValue(true),
         ],
         child: MaterialApp.router(
           routerConfig: router,

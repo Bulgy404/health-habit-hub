@@ -19,6 +19,18 @@ final recommenderEnabledProvider = Provider<bool>((ref) {
       .maybeWhen(data: (c) => c.recommenderEnabled, orElse: () => true);
 });
 
+/// Whether habit creation is enabled for the current participant's study.
+/// When `false`, the participant has no way to ever get a habit (no catalog
+/// fallback exists), so the My Habits tab is hidden entirely rather than
+/// showing a screen that can never contain anything. Defaults to `true`
+/// while the config is loading or on error, matching
+/// [recommenderEnabledProvider]'s fail-open behaviour.
+final habitCreationEnabledProvider = Provider<bool>((ref) {
+  return ref
+      .watch(habitConfigProvider)
+      .maybeWhen(data: (c) => c.selfHabitCreationEnabled, orElse: () => true);
+});
+
 /// All active implementation intentions for the current user.
 final intentionsProvider = FutureProvider<List<Intention>>((ref) {
   return ref.watch(myHabitsServiceProvider).listIntentions();

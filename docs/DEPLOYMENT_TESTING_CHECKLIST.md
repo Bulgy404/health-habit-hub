@@ -42,12 +42,12 @@ notes / bug tracker before shipping.
 This is the biggest page in the admin panel; budget the most test time here.
 
 **List & lifecycle**
-- [ ] Studies list loads and auto-refreshes periodically while the tab stays open
-- [ ] Create a new study (name + description)
-- [ ] Set a study as default; confirm the "Default" badge moves
-- [ ] Deactivate a study; confirm it's blocked while it's the only/default study
-- [ ] Delete a study (confirm-by-typing-name flow)
-- [ ] Download a study's full data export (zip)
+- [x] Studies list loads and auto-refreshes periodically while the tab stays open
+- [x] Create a new study (name + description)
+- [x] Set a study as default; confirm the "Default" badge moves
+- [x] Deactivate a study; confirm it's blocked while it's the only/default study
+- [x] Delete a study (confirm-by-typing-name flow)
+- [x] Download a study's full data export (zip)
 
 **Details tab**
 - [ ] Edit name/description
@@ -247,20 +247,20 @@ Run through this as a fresh participant account, then again as a returning/resto
 participant.
 
 ### 2.1 Onboarding
-- [ ] Welcome walkthrough (3 steps) — page indicator, "Skip", "Get Started"
-- [ ] Consent screen loads the localized document in-app; Accept vs Decline (Decline
+- [x] Welcome walkthrough (3 steps) — page indicator, "Skip", "Get Started"
+- [x] Consent screen loads the localized document in-app; Accept vs Decline (Decline
       returns to welcome)
-- [ ] Passphrase creation: 24-word BIP39 phrase shown, copy-to-clipboard, "I've written it
+- [x] Passphrase creation: 24-word BIP39 phrase shown, copy-to-clipboard, "I've written it
       down" gates Continue
-- [ ] "Restore existing account" with a valid 24-word phrase succeeds
+- [x] "Restore existing account" with a valid 24-word phrase succeeds
 - [ ] Restore with an invalid phrase / wrong word count shows a clear error
 - [ ] Profile setup: dynamic fields from admin's Profile Fields config render (text/number/
       date/select); required fields block Continue; Skip works where allowed
 - [ ] Redeem a valid study code (`HHH-XXXXX` format)
 - [ ] Invalid/expired/already-used code shows the right error (404/410/409 mapped
       correctly)
-- [ ] Skip study code → enrolls in the default study
-- [ ] Re-launching an already-enrolled account skips onboarding correctly
+- [x] Skip study code → enrolls in the default study
+- [x] Re-launching an already-enrolled account skips onboarding correctly
 - [ ] Consent-version bump on the backend forces existing users through `/consent-update`
       on next launch
 
@@ -369,7 +369,7 @@ participant.
 - [ ] Submission failure shows a retryable error, not a silent loss of answers
 
 ### 2.8 Cross-cutting
-- [ ] Push notification permission prompt appears on first launch (or is skipped
+- [x] Push notification permission prompt appears on first launch (or is skipped
       gracefully if Firebase isn't configured for this build)
 - [ ] Tapping a push notification from a terminated app state routes to the right screen
 - [ ] Tapping a push notification while backgrounded routes to the right screen

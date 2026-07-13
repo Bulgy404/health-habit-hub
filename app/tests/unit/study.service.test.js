@@ -176,6 +176,36 @@ test('listStudies includes participantCount', async () => {
   assert.equal(result.studies[0].participantCount, 2);
 });
 
+test('listStudies includes onboardingEnabled and selfHabitCreationEnabled', async () => {
+  // Regression test: the admin edit modal is seeded from this list response
+  // (not a fresh per-study fetch), so if these flags are dropped here, a
+  // disabled toggle silently reverts to "on" the next time an admin reopens
+  // the edit form — even though the saved value and its enforcement
+  // elsewhere (habitConfigService) are both correct.
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const db = makeDb({
+    studies: [
+      {
+        _id: studyId,
+        name: 'Study A',
+        description: null,
+        isDefault: true,
+        isActive: true,
+        onboardingEnabled: false,
+        selfHabitCreationEnabled: false,
+        groups: [],
+        questionnaires: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
+  });
+  const result = await listStudies({ db });
+  assert.equal(result.studies[0].onboardingEnabled, false);
+  assert.equal(result.studies[0].selfHabitCreationEnabled, false);
+});
+
 // ── createStudy ───────────────────────────────────────────────────────────────
 
 test('createStudy inserts a study with correct defaults', async () => {

@@ -285,11 +285,17 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     // Study-level feature flag: hide the recommender tab when the participant's
     // study disables it. Defaults to enabled while the config loads / on error.
     final recommenderEnabled = ref.watch(recommenderEnabledProvider);
+    // Study-level feature flag: hide the My Habits tab when the participant's
+    // study disables habit creation entirely — there's no other way for such
+    // a participant to ever have a habit, so the tab would only ever show a
+    // permanently-empty screen.
+    final habitCreationEnabled = ref.watch(habitCreationEnabledProvider);
 
     // Filter tabs by capability. `branch` carries the real router branch index,
     // so visible-index → branch mapping works regardless of which tabs are hidden.
     final visibleTabs = _allTabs(l10n).where((t) {
       if (t.path == '/recommend') return recommenderEnabled;
+      if (t.path == '/habits') return habitCreationEnabled;
       return true;
     }).toList();
 

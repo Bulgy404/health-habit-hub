@@ -15,7 +15,7 @@ import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'intentionsRouter' });
 
-export function createIntentionsRouter({ db } = {}) {
+export function createIntentionsRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -83,7 +83,24 @@ export function createIntentionsRouter({ db } = {}) {
       }
       const database = await getDb();
       const userId = req.user.sub;
-      const cueConfig = await resolveHabitConfig({ db: database, userId });
+      // neo4jRun is required here so an enrolled participant's real study/
+      // group config (maxHabits cap, cueConfig restrictions,
+      // selfHabitCreationEnabled) is resolved instead of silently falling
+      // back to the unrestricted public defaults.
+      const cueConfig = await resolveHabitConfig({
+        db: database,
+        userId,
+        neo4jRun,
+      });
+      // The Flutter app hides the "add habit" entry point when the
+      // participant's study/group disables self habit creation, but that's
+      // only a UI convenience — enforce it here too so a direct API call
+      // can't bypass the study's protocol.
+      if (!cueConfig.selfHabitCreationEnabled) {
+        return res
+          .status(403)
+          .json({ error: 'Habit creation is disabled for your study condition' });
+      }
       const result = await createIntention({
         db: database,
         userId,

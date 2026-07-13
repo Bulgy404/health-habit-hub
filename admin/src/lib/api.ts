@@ -36,6 +36,16 @@ export function apiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
+// Shared by every concurrent 401 across the app so a burst of simultaneous
+// requests (e.g. a page that fires several apiFetch calls on load) triggers
+// exactly one refresh instead of one per request. Without this, each 401
+// independently calls getSession() at the same moment; Keycloak's refresh
+// tokens are single-use (rotation), so only the first of those concurrent
+// refresh attempts succeeds — every other one tries to redeem the same
+// already-consumed refresh token, gets RefreshAccessTokenError, and gives up,
+// surfacing the original 401 to the page instead of retrying successfully.
+let inFlightRefresh: Promise<string | null> | null = null;
+
 /**
  * Force NextAuth to refresh the session and return the current access token.
  *
@@ -45,18 +55,32 @@ export function apiUrl(path: string): string {
  * recover from a 401 caused by an access token that lapsed while the tab
  * stayed open, without forcing the user to reload the page.
  *
+ * Concurrent callers share one in-flight refresh (see {@link inFlightRefresh})
+ * rather than each triggering their own.
+ *
  * @returns The refreshed access token, or `null` if refresh is impossible
  *   (no browser, no session, or the refresh token itself has expired — in
  *   which case `SessionGuard` redirects the user to sign in).
  */
-async function refreshSessionToken(): Promise<string | null> {
-  if (typeof window === "undefined") return null;
-  // Imported lazily so this module stays free of a static next-auth/react
-  // dependency (it also exports the SSR-safe apiUrl/API_BASE_URL helpers).
-  const { getSession } = await import("next-auth/react");
-  const session = await getSession();
-  if (!session || (session as { error?: string }).error) return null;
-  return (session as { accessToken?: string }).accessToken ?? null;
+function refreshSessionToken(): Promise<string | null> {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  if (inFlightRefresh) return inFlightRefresh;
+
+  inFlightRefresh = (async () => {
+    try {
+      // Imported lazily so this module stays free of a static
+      // next-auth/react dependency (it also exports the SSR-safe
+      // apiUrl/API_BASE_URL helpers).
+      const { getSession } = await import("next-auth/react");
+      const session = await getSession();
+      if (!session || (session as { error?: string }).error) return null;
+      return (session as { accessToken?: string }).accessToken ?? null;
+    } finally {
+      inFlightRefresh = null;
+    }
+  })();
+
+  return inFlightRefresh;
 }
 
 /**

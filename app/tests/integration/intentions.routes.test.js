@@ -41,6 +41,15 @@ function makeToken(roles = ['user'], sub = 'test-user') {
 
 // ── In-memory mock DB ─────────────────────────────────────────────────────────
 
+// Mutable per-test hook for simulating a Neo4j study enrollment (read by the
+// `neo4jRun` passed to createApiRouter below) and the matching Mongo study
+// document `resolveHabitConfig` looks up once it has a studyId. Tests that
+// need an enrolled participant set these before their request and reset them
+// in a `finally` block — safe because node:test runs tests in this file
+// sequentially, not in parallel.
+let neo4jEnrollment = null;
+let studyDocs = [];
+
 function createMockDb() {
   const intentions = [];
   const logs = [];
@@ -207,6 +216,13 @@ function createMockDb() {
           find: () => ({ toArray: async () => adminSettings }),
         };
       }
+      if (name === 'studies') {
+        return {
+          findOne: async (q) =>
+            studyDocs.find((s) => s._id.toString() === q._id?.toString()) ??
+            null,
+        };
+      }
       // fallback for any other collections (e.g. habit_annotations, cue_pools)
       return {
         insertOne: async () => ({}),
@@ -245,7 +261,8 @@ before(async () => {
     expectedAudience: null,
     serviceChecks: { neo4jCheck: okCheck, mongoCheck: okCheck },
     db: mockDb,
-    neo4jRun: async () => [],
+    neo4jRun: async (query) =>
+      query.includes('ENROLLED_IN') && neo4jEnrollment ? [neo4jEnrollment] : [],
   });
   testApp.use('/api/v1', apiRouter);
   server = createServer(testApp);
@@ -339,6 +356,33 @@ test('POST /habits/intentions creates intention and returns 201', async () => {
   assert.ok(body._id || body.id);
   assert.strictEqual(body.behaviorKey, 'walking');
   assert.strictEqual(body.status, 'active');
+});
+
+test('POST /habits/intentions returns 403 when the participant-s study disables self habit creation', async () => {
+  // Regression test: the Flutter app hides the "add habit" entry point when
+  // selfHabitCreationEnabled is false, but that's only a UI convenience —
+  // the route must enforce it too, otherwise a direct API call bypasses the
+  // study's protocol entirely.
+  const studyId = new ObjectId();
+  studyDocs = [
+    {
+      _id: studyId,
+      selfHabitCreationEnabled: false,
+      groups: [],
+    },
+  ];
+  neo4jEnrollment = { studyId: studyId.toString(), groupId: null };
+  try {
+    const res = await post(
+      INTENTIONS,
+      validBody,
+      makeToken(['user'], 'restricted-user')
+    );
+    assert.strictEqual(res.status, 403);
+  } finally {
+    neo4jEnrollment = null;
+    studyDocs = [];
+  }
 });
 
 test('POST /habits/intentions returns created intention in subsequent GET', async () => {

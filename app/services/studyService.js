@@ -141,6 +141,8 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
       isDefault: s.isDefault,
       isActive: s.isActive,
       recommenderEnabled: s.recommenderEnabled !== false,
+      onboardingEnabled: s.onboardingEnabled !== false,
+      selfHabitCreationEnabled: s.selfHabitCreationEnabled !== false,
       habitEntryMode:
         s.habitEntryMode === 'structured' ? 'structured' : 'freeText',
       structuredActivityKeys: s.structuredActivityKeys ?? [],
