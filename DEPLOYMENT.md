@@ -859,3 +859,55 @@ reporting — a silent no-op unless configured:
 
 After any rotation: `docker compose up -d` (affected services) and run
 `node scripts/smoke-e2e.mjs` against the deployment.
+
+---
+
+## Mobile Release Signing & Firebase API Keys
+
+### Android release keystore
+
+- The production signing keystore is **not** in the repo (git-ignored, per
+  `mobile/android/.gitignore`). It lives only on the machine(s) that produce
+  release builds, currently `~/health-habit-hub-release.jks` (Felix), alias
+  `health-habit-hub`.
+- `mobile/android/key.properties` (also git-ignored — see
+  `key.properties.example` for the template) must point `storeFile` at that
+  `.jks` and carry the store/key passwords for `flutter build` to produce a
+  properly signed release APK/AAB. Without it, release builds silently fall
+  back to debug signing (see comment in
+  `mobile/android/app/build.gradle.kts`) and are not installable via Play
+  Store updates.
+- Release certificate SHA-1 (safe to publish — it's a public fingerprint, not
+  a secret): `35:4E:B7:95:01:19:81:09:7C:CC:79:1B:7E:AC:D2:EA:CD:3B:F2:CE`.
+  Re-derive with `keytool -list -v -keystore <path> -alias health-habit-hub`.
+- **There is only one copy.** Losing this keystore means the app can never be
+  updated under its current Play Store listing/signature again. Back it up
+  (password manager attachment or encrypted storage) outside this machine.
+- If this app is ever uploaded to Play Console for the first time, Google
+  Play App Signing will take over as the actual upload/distribution key —
+  check Play Console's signing key details before generating a second
+  keystore for an app that's already been published once.
+
+### Firebase API key restrictions (Google Cloud Console)
+
+Firebase auto-creates unrestricted API keys per platform on project
+`health-habit-hub-v2`. As of 2026-07-13 these were locked down under
+**APIs & Services → Credentials**:
+
+| Key | Restriction | Value |
+|---|---|---|
+| Android key (`AIzaSyDpxvK…`) | Application restrictions → Android apps | package `de.felixreinsch.healthhabithub` + release SHA-1 above |
+| iOS key (`AIzaSyDKPS…`) | Application restrictions → iOS apps | bundle ID `de.felixreinsch.healthhabithub` |
+| Browser key (auto created by Firebase) | — | **deleted** — no client-side Firebase JS SDK usage anywhere in the repo (the app uses `firebase-admin` server-side via `app/services/notificationService.js`, authenticated by service account, not this key) |
+
+**Why:** an unrestricted key extracted from the shipped app binary could be
+used outside the signed app to hit any of the ~25 Firebase APIs enabled on
+the project (quota abuse at minimum; more relevant if Firestore/Auth are ever
+added to this project). Restricting to the app's package/bundle ID renders an
+extracted key useless outside the signed release build.
+
+**If you add a debug/dev-signed build that also needs Firebase working**, add
+a second Android-apps entry to the Android key with the debug keystore's
+SHA-1 (`keytool -list -v -keystore ~/.android/debug.keystore -alias
+androiddebugkey -storepass android`) — otherwise only release builds signed
+with the keystore above will be able to initialize Firebase.

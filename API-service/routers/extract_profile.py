@@ -199,7 +199,7 @@ async def extract_profile(body: ExtractProfileRequest) -> ExtractProfileResponse
             "Goal rejected by injection screen for user %s: %r", body.user_id, body.goal
         )
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=GOAL_REJECTED_MSG
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=GOAL_REJECTED_MSG
         )
 
     key = _cache_key(body.user_id, body.goal)
