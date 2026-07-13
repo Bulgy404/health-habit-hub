@@ -12,19 +12,19 @@ notes / bug tracker before shipping.
 
 ## 0. Pre-Flight (Infrastructure)
 
-- [ ] `docker compose ps` — all services `Up`/`healthy` (Traefik, Keycloak, keycloak-db, app,
+- [x] `docker compose ps` — all services `Up`/`healthy` (Traefik, Keycloak, keycloak-db, app,
       admin, recommender, mongo, neo4j, redis, lightrag, translate, grafana, prometheus)
 - [ ] HTTPS cert valid on the public domain (or accepted self-signed in local/staging)
-- [ ] Admin panel loads at `/admin` and redirects to Keycloak login when signed out
-- [ ] Mobile app can reach the API base URL configured for this environment
-- [ ] Grafana dashboards load and Prometheus targets are all "up"
+- [x] Admin panel loads at `/admin` and redirects to Keycloak login when signed out
+- [x] Mobile app can reach the API base URL configured for this environment
+- [x] Grafana dashboards load and Prometheus targets are all "up"
 
 ---
 
 ## Part 1 — Admin Panel
 
 ### 1.1 Sign-in & Access Control
-- [ ] Sign in via Keycloak (`/api/auth/signin`) with an admin account
+- [x] Sign in via Keycloak (`/api/auth/signin`) with an admin account
 - [ ] Sign in with a researcher account — confirm reduced access where applicable (e.g.
       Insights tab hidden on Analytics page)
 - [ ] Sign in with an account that has neither role — redirected to `/access-denied`

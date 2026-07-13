@@ -70,7 +70,14 @@ before(async () => {
   baseUrl = `http://127.0.0.1:${server.address().port}`;
 });
 
-after(() => server.close());
+after(() => {
+  // closeAllConnections destroys any lingering keep-alive sockets first —
+  // without it, close()'s callback (and thus process exit / progression to
+  // the next test file) waits forever for connections that fetch()'s
+  // undici agent doesn't proactively close.
+  server.closeAllConnections();
+  server.close();
+});
 
 beforeEach(() => {
   db.store.length = 0;

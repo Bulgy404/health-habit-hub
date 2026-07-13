@@ -67,6 +67,7 @@ jobs:
   backend-unit:
     name: Backend – unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       actions: write
@@ -79,6 +80,8 @@ jobs:
         # tests/roles.test.js and tests/BackupConfiguration.test.js sit
         # directly in tests/ (not tests/unit/) but need no external services,
         # so they belong here rather than in the integration job.
+        # --test-force-exit: defense in depth against node --test hanging at
+        # exit despite every test passing — see the integration job's note.
         run: >
           npx c8
           --include='middleware/**'
@@ -87,7 +90,7 @@ jobs:
           --include='services/**'
           --reporter=text
           --reporter=lcov
-          node --test "tests/unit/**/*.test.js" tests/roles.test.js tests/BackupConfiguration.test.js
+          node --test --test-force-exit "tests/unit/**/*.test.js" tests/roles.test.js tests/BackupConfiguration.test.js
 
       - name: Upload coverage
         uses: actions/upload-artifact@v5
@@ -101,6 +104,11 @@ jobs:
   backend-integration:
     name: Backend – integration tests
     runs-on: ubuntu-latest
+    # Without this, a hung run (e.g. a test file's server.close() never
+    # completing because a lingering keep-alive connection was left open)
+    # burns CI minutes for up to GitHub's 6-hour default instead of failing
+    # fast — this happened for real, see the --test-force-exit note below.
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -152,7 +160,14 @@ jobs:
         # tests/Mongo.test.js sits directly in tests/ (not tests/integration/)
         # but needs the mongodb service above, so it belongs here. It skips
         # itself gracefully if Mongo is unreachable.
-        run: node --test "tests/integration/**/*.test.js" tests/Mongo.test.js
+        #
+        # --test-force-exit: a real CI run hung for 20+ minutes after the
+        # last test in habits.routes.test.js (root cause: that file's
+        # server.close() never completed because a lingering keep-alive
+        # connection was still open — fixed via server.closeAllConnections()
+        # across every integration test file). This flag is defense in
+        # depth against the same class of issue recurring elsewhere.
+        run: node --test --test-force-exit "tests/integration/**/*.test.js" tests/Mongo.test.js
 
   # ─────────────────────────────────────────────────────────────────────────────
   # 4. BACKEND – security audit
