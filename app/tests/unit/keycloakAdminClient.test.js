@@ -1,7 +1,12 @@
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert';
 
 import { createKeycloakAdminClient } from '../../services/keycloakAdminClient.js';
+
+const realFetch = global.fetch;
+after(() => {
+  global.fetch = realFetch;
+});
 
 function makeClient(fetchMock) {
   global.fetch = fetchMock;

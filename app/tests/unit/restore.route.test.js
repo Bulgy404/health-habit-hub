@@ -18,6 +18,7 @@ const KNOWN_PHRASE = recoveryPhraseFromCredentials(
 
 let server;
 let baseUrl;
+let originalFetch;
 
 before(async () => {
   process.env.KEYCLOAK_URL = 'http://keycloak-mock:8080';
@@ -28,7 +29,7 @@ before(async () => {
   const testApp = express();
   testApp.use(express.json());
 
-  const originalFetch = global.fetch;
+  originalFetch = global.fetch;
   global.fetch = async (url, opts) => {
     const urlStr = String(url);
     if (urlStr.startsWith('http://127.0.0.1')) {
@@ -76,6 +77,11 @@ before(async () => {
 });
 
 after(() => {
+  global.fetch = originalFetch;
+  // closeAllConnections destroys any lingering keep-alive sockets first —
+  // without it, close()'s callback (and thus process exit) waits forever
+  // for connections that fetch()'s undici agent doesn't proactively close.
+  server.closeAllConnections();
   server.close();
 });
 

@@ -114,14 +114,12 @@ void main() {
     expect(find.text('Continue with code'), findsOneWidget);
   });
 
-  testWidgets('shows Skip link in AppBar actions and below text field',
+  testWidgets('shows a Join without study code button below the text field',
       (tester) async {
     await tester.pumpWidget(_buildSubject(dio));
     await tester.pump();
 
-    // AppBar action says 'Skip'; TextButton below field says longer text.
-    expect(find.text('Skip'), findsOneWidget);
-    expect(find.text('Skip: join without a study code'), findsOneWidget);
+    expect(find.text('Join without study code'), findsOneWidget);
   });
 
   testWidgets('code input forces uppercase', (tester) async {
@@ -207,7 +205,7 @@ void main() {
     await tester.pumpWidget(_buildSubject(dio));
     await tester.pump();
 
-    await tester.tap(find.text('Skip: join without a study code'));
+    await tester.tap(find.text('Join without study code'));
     await tester.pumpAndSettle();
 
     expect(find.text('Share'), findsOneWidget);
@@ -224,7 +222,7 @@ void main() {
     await tester.pumpWidget(_buildSubject(dio));
     await tester.pump();
 
-    await tester.tap(find.text('Skip: join without a study code'));
+    await tester.tap(find.text('Join without study code'));
     await tester.pumpAndSettle();
 
     // Must not have silently proceeded into an unenrolled state.

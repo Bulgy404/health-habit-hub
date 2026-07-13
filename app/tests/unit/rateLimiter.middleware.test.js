@@ -38,6 +38,7 @@ test('rate limiter: allows requests under the limit', async () => {
   const res = await fetch(`http://127.0.0.1:${port}/ping`);
   assert.strictEqual(res.status, 200);
 
+  server.closeAllConnections();
   server.close();
 });
 
@@ -57,6 +58,7 @@ test('rate limiter: returns 429 after limit exceeded', async () => {
   const body = await res.json();
   assert.ok(body.error, 'response should have error field');
 
+  server.closeAllConnections();
   server.close();
 });
 
@@ -71,5 +73,6 @@ test('rate limiter: 429 response has JSON content-type', async () => {
   assert.strictEqual(res.status, 429);
   assert.ok(res.headers.get('content-type')?.includes('application/json'));
 
+  server.closeAllConnections();
   server.close();
 });

@@ -1,4 +1,4 @@
-import { test, before } from 'node:test';
+import { test, before, after } from 'node:test';
 import assert from 'node:assert';
 import { generateKeyPairSync, createSign } from 'node:crypto';
 import { createAuthMiddleware } from '../../middleware/auth.js';
@@ -49,11 +49,17 @@ function makeRes() {
 }
 
 let middleware;
+let realFetch;
 
 before(async () => {
+  realFetch = global.fetch;
   global.fetch = makeFetchMock(mockJwks);
   middleware = createAuthMiddleware({ jwksUrl: 'http://localhost/jwks' });
   await middleware.ready;
+});
+
+after(() => {
+  global.fetch = realFetch;
 });
 
 test('valid JWT attaches decoded payload to req.user', async () => {
