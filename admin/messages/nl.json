@@ -715,8 +715,8 @@
     "unlimitedPublic": "Onbeperkt (publiek)",
     "oneStudyParticipant": "1 (studiedeelnemer)",
     "maxHabitsHint": "Beperkt hoeveel gewoontes een deelnemer kan aanmaken. Gebruik \"1\" voor studieontwerpen met één gewoonte.",
-    "habitEntryMode": "Invoer van gewoonte",
-    "habitEntryModeHint": "Vrije tekst: deelnemers beschrijven hun eigen gewoonte zelf. Gestructureerde activiteiten: deelnemers kiezen uit een catalogus die jij samenstelt.",
+    "habitEntryMode": "Gestructureerde invoer van gewoonte",
+    "habitEntryModeHint": "Uit (vrije tekst): deelnemers beschrijven hun eigen gewoonte zelf. Aan (gestructureerd): deelnemers kiezen in plaats daarvan uit een catalogus die jij samenstelt.",
     "allowedBehaviorsHint": "Uit welke activiteitstypen deelnemers kunnen kiezen. Beheer de catalogus hieronder.",
     "emptySelectionWarning": "Geen activiteiten geselecteerd — deelnemers zien vrije tekstinvoer totdat je er minstens één kiest.",
     "noActivityTypes": "Nog geen activiteitstypen in de catalogus — voeg er hieronder toe.",
@@ -806,8 +806,8 @@
         "recommenderHint": "Indien uitgeschakeld, zien deelnemers van deze studie het aanbevelingsscherm niet in de app.",
         "onboardingLabel": "Onboarding voor het aanmaken van gewoontes tonen voor deze studie",
         "onboardingHint": "Indien uitgeschakeld, slaan deelnemers de introductieschermen (wat een gewoonte is, wat cues zijn) over bij het aanmaken van een gewoonte. Kan hieronder per groep worden overschreven.",
-        "selfHabitLabel": "Deelnemers toestaan hun eigen gewoontes aan te maken",
-        "selfHabitHint": "Indien uitgeschakeld, kunnen deelnemers van deze studie zelf geen nieuwe gewoontes aanmaken. Kan hieronder per groep worden overschreven.",
+        "selfHabitLabel": "Aanmaken van gewoontes inschakelen",
+        "selfHabitHint": "Indien uitgeschakeld, kunnen deelnemers van deze studie geen enkele gewoonte aanmaken — het scherm \"Mijn gewoontes\" wordt volledig verborgen in de app. Kan hieronder per groep worden overschreven.",
         "remindersLabel": "Herinneringen voor vragenlijsten verzenden",
         "remindersHint": "Indien ingeschakeld, ontvangen deelnemers op de dag dat elke vragenlijst verschuldigd is een herinneringsmelding. Schakel dit uit om herinneringen voor deze studie te annuleren (wordt toegepast wanneer de deelnemer de app de volgende keer opent).",
         "reminderTimeLabel": "Herinneringstijd",
@@ -985,6 +985,9 @@
       "send": "Verzenden",
       "sendingEllipsis": "Bezig met verzenden…",
       "sentToCount": "Verzonden naar {count} deelnemer(s)",
+      "reachedNoneNoEnrollment": "0 deelnemers bereikt — er is nog niemand ingeschreven in de geselecteerde studie/groep.",
+      "reachedNoneNoDevices": "0 deelnemers bereikt — {count} ingeschreven, maar niemand heeft nog een geregistreerd apparaat. Ze hebben de app mogelijk nog niet geopend of meldingen niet toegestaan.",
+      "reachedNoneAllFailed": "0 deelnemers bereikt — {count} apparaat/apparaten gericht, maar alle bezorgingen zijn mislukt. Controleer de Firebase-inloggegevens van de server.",
       "scheduledForDate": "Gepland voor {date}",
       "scheduledSectionTitle": "Gepland",
       "noScheduled": "Geen openstaande geplande meldingen.",
@@ -1010,8 +1013,8 @@
       "onOption": "Aan",
       "offOption": "Uit",
       "onboardingHint": "Overschrijft de studiebrede onboarding-instelling alleen voor deze groep.",
-      "selfHabitLabel": "Eigen gewoontes aanmaken (deze groep)",
-      "selfHabitHint": "Indien uit, kan deze groep geen eigen gewoontes aanmaken."
+      "selfHabitLabel": "Gewoontes aanmaken (deze groep)",
+      "selfHabitHint": "Indien uit, kan deze groep geen gewoontes aanmaken — het scherm \"Mijn gewoontes\" wordt verborgen voor deze groep."
     },
     "analyticsTab": {
       "columns": {

@@ -715,8 +715,8 @@
     "unlimitedPublic": "Illimité (public)",
     "oneStudyParticipant": "1 (participant à l'étude)",
     "maxHabitsHint": "Limite le nombre d'habitudes qu'un participant peut créer. Utilisez « 1 » pour les études conçues autour d'une seule habitude.",
-    "habitEntryMode": "Saisie de l'habitude",
-    "habitEntryModeHint": "Texte libre : les participants décrivent eux-mêmes leur habitude. Activités structurées : les participants choisissent dans un catalogue que vous définissez.",
+    "habitEntryMode": "Saisie structurée de l'habitude",
+    "habitEntryModeHint": "Désactivé (texte libre) : les participants décrivent eux-mêmes leur habitude. Activé (structuré) : les participants choisissent plutôt dans un catalogue que vous définissez.",
     "allowedBehaviorsHint": "Les types d'activité parmi lesquels les participants peuvent choisir. Gérez le catalogue ci-dessous.",
     "emptySelectionWarning": "Aucune activité sélectionnée — les participants verront la saisie libre tant que vous n'en choisissez pas au moins une.",
     "noActivityTypes": "Aucun type d'activité dans le catalogue pour l'instant — ajoutez-en ci-dessous.",
@@ -806,8 +806,8 @@
         "recommenderHint": "Lorsque cette option est désactivée, les participants de cette étude ne voient pas l'écran de recommandation dans l'application.",
         "onboardingLabel": "Afficher l'intégration à la création d'habitude pour cette étude",
         "onboardingHint": "Lorsque cette option est désactivée, les participants passent les écrans explicatifs de première utilisation (qu'est-ce qu'une habitude, que sont les repères) lors de la création d'une habitude. Peut être remplacée par groupe ci-dessous.",
-        "selfHabitLabel": "Autoriser les participants à créer leurs propres habitudes",
-        "selfHabitHint": "Lorsque cette option est désactivée, les participants de cette étude ne peuvent pas créer eux-mêmes de nouvelles habitudes. Peut être remplacée par groupe ci-dessous.",
+        "selfHabitLabel": "Activer la création d'habitudes",
+        "selfHabitHint": "Lorsque cette option est désactivée, les participants de cette étude ne peuvent créer aucune habitude — l'écran « Mes habitudes » est entièrement masqué dans l'application. Peut être remplacée par groupe ci-dessous.",
         "remindersLabel": "Envoyer des rappels de questionnaire",
         "remindersHint": "Lorsque cette option est activée, les participants reçoivent une notification de rappel le jour où chaque questionnaire est dû. Désactivez-la pour annuler les rappels de cette étude (appliqué à la prochaine ouverture de l'application par le participant).",
         "reminderTimeLabel": "Heure du rappel",
@@ -985,6 +985,9 @@
       "send": "Envoyer",
       "sendingEllipsis": "Envoi…",
       "sentToCount": "Envoyé à {count} participant(s)",
+      "reachedNoneNoEnrollment": "0 participant atteint — personne n'est encore inscrit dans l'étude/le groupe sélectionné.",
+      "reachedNoneNoDevices": "0 participant atteint — {count} inscrit(s), mais aucun n'a encore d'appareil enregistré. Ils n'ont peut-être pas ouvert l'application ou autorisé les notifications.",
+      "reachedNoneAllFailed": "0 participant atteint — {count} appareil(s) ciblé(s) mais tous les envois ont échoué. Vérifiez les identifiants Firebase du serveur.",
       "scheduledForDate": "Planifié pour {date}",
       "scheduledSectionTitle": "Planifiées",
       "noScheduled": "Aucune notification planifiée en attente.",
@@ -1010,8 +1013,8 @@
       "onOption": "Activé",
       "offOption": "Désactivé",
       "onboardingHint": "Remplace le paramètre d'intégration au niveau de l'étude pour ce groupe uniquement.",
-      "selfHabitLabel": "Création d'habitude autonome (ce groupe)",
-      "selfHabitHint": "Lorsque désactivé, ce groupe ne peut pas créer ses propres habitudes."
+      "selfHabitLabel": "Création d'habitudes (ce groupe)",
+      "selfHabitHint": "Lorsque désactivé, ce groupe ne peut créer aucune habitude — l'écran « Mes habitudes » est masqué pour ce groupe."
     },
     "analyticsTab": {
       "columns": {

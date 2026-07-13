@@ -1644,8 +1644,31 @@ function NotificationsTab({ study, token }: { study: StudySummary; token: string
       });
 
       if (sendMode === "now") {
-        const r = result as { recipientCount?: number };
-        showToast(t("notificationsTab.sentToCount", { count: r.recipientCount ?? 0 }));
+        const r = result as {
+          recipientCount?: number;
+          resolvedUserCount?: number;
+          tokenCount?: number;
+        };
+        const count = r.recipientCount ?? 0;
+        if (count > 0) {
+          showToast(t("notificationsTab.sentToCount", { count }));
+        } else if ((r.resolvedUserCount ?? 0) === 0) {
+          // Reached nobody — explain why so the researcher can act, instead of
+          // a bare "Sent to 0".
+          showToast(t("notificationsTab.reachedNoneNoEnrollment"));
+        } else if ((r.tokenCount ?? 0) === 0) {
+          showToast(
+            t("notificationsTab.reachedNoneNoDevices", {
+              count: r.resolvedUserCount ?? 0,
+            })
+          );
+        } else {
+          showToast(
+            t("notificationsTab.reachedNoneAllFailed", {
+              count: r.tokenCount ?? 0,
+            })
+          );
+        }
       } else {
         showToast(
           t("notificationsTab.scheduledForDate", {

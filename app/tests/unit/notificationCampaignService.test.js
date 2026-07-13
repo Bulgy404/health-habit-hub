@@ -4,6 +4,7 @@ import { ObjectId } from 'mongodb';
 import {
   createCampaign,
   sendCampaign,
+  dispatchDueCampaigns,
 } from '../../services/notificationCampaignService.js';
 
 function makeDb(campaigns = [], deviceTokens = []) {
@@ -29,6 +30,18 @@ function makeDb(campaigns = [], deviceTokens = []) {
           findOne: async (filter) =>
             cStore.find((d) => d._id?.toString() === filter._id?.toString()) ??
             null,
+          find: (filter = {}) => ({
+            toArray: async () =>
+              cStore.filter((d) => {
+                if (filter.status && d.status !== filter.status) return false;
+                if (
+                  filter.scheduledFor?.$lte &&
+                  !(d.scheduledFor <= filter.scheduledFor.$lte)
+                )
+                  return false;
+                return true;
+              }),
+          }),
         };
       if (name === 'deviceTokens')
         return {
@@ -116,4 +129,128 @@ test('sendCampaign: dispatches to provided mock sender', async () => {
   assert.equal(result.recipientCount, 1);
   assert.ok(sent);
   assert.deepEqual(sent.tokens, ['tok-abc']);
+});
+
+test('sendCampaign: reports resolvedUserCount and tokenCount for diagnostics', async () => {
+  const id = new ObjectId();
+  const db = makeDb(
+    [
+      {
+        _id: id,
+        title: 'Hi',
+        body: 'Hello',
+        targetType: 'individual',
+        targetIds: ['u1', 'u2'], // two targeted
+        status: 'draft',
+        scheduledFor: null,
+        sentAt: null,
+        recipientCount: null,
+      },
+    ],
+    [{ userId: 'u1', token: 'tok-abc' }] // only one has a registered device
+  );
+
+  const result = await sendCampaign({
+    db,
+    id: id.toString(),
+    send: async (tokens) => tokens.length,
+  });
+  assert.equal(result.resolvedUserCount, 2);
+  assert.equal(result.tokenCount, 1);
+  assert.equal(result.recipientCount, 1);
+});
+
+test('sendCampaign: reaches nobody and never calls send when no devices are registered', async () => {
+  const id = new ObjectId();
+  const db = makeDb(
+    [
+      {
+        _id: id,
+        title: 'Hi',
+        body: 'Hello',
+        targetType: 'individual',
+        targetIds: ['ghost'],
+        status: 'draft',
+        scheduledFor: null,
+        sentAt: null,
+        recipientCount: null,
+      },
+    ],
+    [] // no device tokens at all
+  );
+
+  let called = false;
+  const result = await sendCampaign({
+    db,
+    id: id.toString(),
+    send: async () => {
+      called = true;
+      return 9;
+    },
+  });
+  assert.equal(called, false);
+  assert.equal(result.resolvedUserCount, 1);
+  assert.equal(result.tokenCount, 0);
+  assert.equal(result.recipientCount, 0);
+});
+
+test('dispatchDueCampaigns: sends only past-due scheduled campaigns and marks them sent', async () => {
+  const dueId = new ObjectId();
+  const futureId = new ObjectId();
+  const cancelledId = new ObjectId();
+  const db = makeDb(
+    [
+      {
+        _id: dueId,
+        title: 'Due',
+        body: 'now',
+        targetType: 'individual',
+        targetIds: ['u1'],
+        status: 'scheduled',
+        scheduledFor: new Date(Date.now() - 60_000),
+        sentAt: null,
+        recipientCount: null,
+      },
+      {
+        _id: futureId,
+        title: 'Later',
+        body: 'later',
+        targetType: 'individual',
+        targetIds: ['u1'],
+        status: 'scheduled',
+        scheduledFor: new Date(Date.now() + 3_600_000),
+        sentAt: null,
+        recipientCount: null,
+      },
+      {
+        _id: cancelledId,
+        title: 'Cancelled',
+        body: 'x',
+        targetType: 'individual',
+        targetIds: ['u1'],
+        status: 'cancelled',
+        scheduledFor: new Date(Date.now() - 60_000),
+        sentAt: null,
+        recipientCount: null,
+      },
+    ],
+    [{ userId: 'u1', token: 'tok-1' }]
+  );
+
+  const dispatched = await dispatchDueCampaigns({
+    db,
+    send: async (tokens) => tokens.length,
+  });
+
+  assert.equal(dispatched.length, 1);
+  assert.equal(dispatched[0].id, dueId.toString());
+  assert.equal(dispatched[0].recipientCount, 1);
+
+  // Only the past-due one flips to 'sent'; the others are left alone.
+  const state = async (oid) =>
+    (await db.collection('notification_campaigns').findOne({ _id: oid }))
+      .status;
+  assert.equal(await state(dueId), 'sent');
+  assert.equal(await state(futureId), 'scheduled');
+  assert.equal(await state(cancelledId), 'cancelled');
 });
