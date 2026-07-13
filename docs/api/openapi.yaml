@@ -1513,6 +1513,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /admin/restore-attempts:
+    get:
+      summary: List passphrase-based account-restore attempts
+      description: >
+        Paginated, newest first. Security-monitoring view over every POST /restore call (success and failure), plus a
+        list of IPs currently flagged for repeated non-success attempts in the last hour — a signal the per-IP rate
+        limiter alone doesn't surface.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - in: query
+          name: outcome
+          schema:
+            type: string
+        - in: query
+          name: ip
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated restore attempts, plus currently flagged IPs
+        '403':
+          description: Caller does not have admin role
   /admin/studies/{id}/export:
     get:
       summary: Download all data for a study

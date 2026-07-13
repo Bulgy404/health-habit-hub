@@ -53,9 +53,10 @@ export function createAuditLogRouter({ db } = {}) {
         Math.max(1, parseInt(req.query.limit, 10) || 50)
       );
       const query = {};
-      if (req.query.resourceType) query.resourceType = req.query.resourceType;
-      if (req.query.byUserId) query.byUserId = req.query.byUserId;
-      if (req.query.action) query.action = req.query.action;
+      if (req.query.resourceType)
+        query.resourceType = String(req.query.resourceType);
+      if (req.query.byUserId) query.byUserId = String(req.query.byUserId);
+      if (req.query.action) query.action = String(req.query.action);
 
       const entries = await database
         .collection(COLLECTION)

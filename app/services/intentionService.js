@@ -72,7 +72,9 @@ export async function getIntention({ db, id, userId }) {
   } catch {
     return null;
   }
-  const doc = await db.collection(COLLECTION).findOne({ _id: oid, userId });
+  const doc = await db
+    .collection(COLLECTION)
+    .findOne({ _id: oid, userId: String(userId) });
   return doc ? serialize(doc) : null;
 }
 

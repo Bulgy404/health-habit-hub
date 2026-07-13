@@ -67,8 +67,8 @@ export function createRestoreAttemptsRouter({ db } = {}) {
           Math.max(1, parseInt(req.query.limit, 10) || 50)
         );
         const query = {};
-        if (req.query.outcome) query.outcome = req.query.outcome;
-        if (req.query.ip) query.ip = req.query.ip;
+        if (req.query.outcome) query.outcome = String(req.query.outcome);
+        if (req.query.ip) query.ip = String(req.query.ip);
 
         const [entries, total, flaggedIps] = await Promise.all([
           col

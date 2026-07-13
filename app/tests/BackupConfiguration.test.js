@@ -123,7 +123,7 @@ test('Backup script includes alert functionality', () => {
     'Should support email notifications via the shared send_smtp_mail() helper'
   );
   assert(
-    !content.includes('mailjet.com'),
+    !content.toLowerCase().includes('mailjet'),
     'Should not reference the removed Mailjet integration'
   );
 });
