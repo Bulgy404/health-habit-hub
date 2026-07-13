@@ -132,9 +132,12 @@ before(async () => {
       return { ok: true, json: async () => mockJwks };
     return realFetch(u, opts);
   };
-
-  // Warm up JWKS cache
-  await fetch(`${baseUrl}/api/v1/health`);
+  // No JWKS warm-up call here on purpose: the router fetches JWKS lazily on the
+  // first authenticated request (served instantly by the mock above). Hitting
+  // /health instead would trigger checkAllServices() — real neo4j/mongo/HTTP
+  // probes to unreachable hosts that share the global undici dispatcher and can
+  // starve its connection pool under concurrent test files, hanging the very
+  // first loopback request until undici's 300s headers timeout.
 });
 
 after(() => {
