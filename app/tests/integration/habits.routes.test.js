@@ -50,8 +50,16 @@ function makeToken(roles = ['user']) {
 function createMockDb() {
   const annotations = [];
   const commentOwnership = [];
+  const adminAuditLog = [];
   return {
     collection(name) {
+      if (name === 'admin_audit_log') {
+        return {
+          async insertOne(doc) {
+            adminAuditLog.push({ ...doc });
+          },
+        };
+      }
       if (name === 'habit_comments') {
         return {
           async insertOne(doc) {
@@ -342,6 +350,11 @@ before(async () => {
 });
 
 after(() => {
+  // closeAllConnections destroys any lingering keep-alive sockets first —
+  // without it, close()'s callback (and thus process exit / progression to
+  // the next test file) waits forever for connections that fetch()'s
+  // undici agent doesn't proactively close.
+  server.closeAllConnections();
   server.close();
 });
 
