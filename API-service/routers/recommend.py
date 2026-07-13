@@ -390,7 +390,7 @@ async def recommend(
             "Goal rejected by injection screen for user %s: %r", body.user_id, body.goal
         )
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=_GOAL_REJECTED_MSG
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=_GOAL_REJECTED_MSG
         )
 
     if redis_client is None:
@@ -530,7 +530,7 @@ async def recommend(
             body.user_id, body.goal, refusal,
         )
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=refusal
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=refusal
         )
 
     recs = _parse_llm_response(raw, retrieve_resp.sources, knowledge_context)
