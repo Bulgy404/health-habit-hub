@@ -16,7 +16,15 @@ const dbConfig = {
  * @returns {string}
  */
 export function buildMongoUri() {
-  return `mongodb://${dbConfig.user}:${dbConfig.password}@${dbConfig.host}:${dbConfig.port}/?authSource=${dbConfig.authSource}`;
+  const { host, port, user, password, authSource } = dbConfig;
+  // Omit the credentials segment entirely when unset — an explicit (even
+  // empty) username in the URI makes the driver attempt authentication,
+  // which fails against a mongod started with no auth backend (e.g. CI's
+  // unauthenticated mongo:7 service container).
+  if (!user && !password) {
+    return `mongodb://${host}:${port}/`;
+  }
+  return `mongodb://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/?authSource=${authSource}`;
 }
 
 const url = buildMongoUri();
