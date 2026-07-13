@@ -136,17 +136,64 @@ export async function sendCampaign({ db, id, send, neo4jRun }) {
     .toArray();
   const tokens = tokenDocs.map((t) => t.token).filter(Boolean);
 
+  // Diagnostics so callers (and the admin UI) can tell *why* a send reached
+  // nobody: no enrolled users vs. enrolled users with no registered device vs.
+  // devices present but every push failed. Persisted on the campaign doc too.
+  const resolvedUserCount = userIds.length;
+  const tokenCount = tokens.length;
+
   const recipientCount =
-    tokens.length > 0 ? await send(tokens, campaign.title, campaign.body) : 0;
+    tokenCount > 0 ? await send(tokens, campaign.title, campaign.body) : 0;
   const now = new Date();
-  await db
+  await db.collection(COLLECTION).findOneAndUpdate(
+    { _id: oid },
+    {
+      $set: {
+        sentAt: now,
+        recipientCount,
+        resolvedUserCount,
+        tokenCount,
+        status: 'sent',
+      },
+    },
+    { returnDocument: 'after' }
+  );
+  return { recipientCount, resolvedUserCount, tokenCount, sentAt: now };
+}
+
+/**
+ * Dispatch every campaign whose scheduled time has arrived. Called on a timer
+ * by the notification scheduler. Each due campaign is resolved and sent exactly
+ * like an immediate send (`sendCampaign` flips its status to 'sent', so it is
+ * never picked up twice). Cancelled campaigns are excluded by the status
+ * filter.
+ * @param {{ db: object, send: function(string[], string, string): Promise<number>, neo4jRun?: Function, now?: Date }} deps
+ * @returns {Promise<Array<{ id: string, recipientCount: number, resolvedUserCount: number, tokenCount: number }>>}
+ */
+export async function dispatchDueCampaigns({
+  db,
+  send,
+  neo4jRun,
+  now = new Date(),
+}) {
+  const due = await db
     .collection(COLLECTION)
-    .findOneAndUpdate(
-      { _id: oid },
-      { $set: { sentAt: now, recipientCount, status: 'sent' } },
-      { returnDocument: 'after' }
-    );
-  return { recipientCount, sentAt: now };
+    .find({ status: 'scheduled', scheduledFor: { $lte: now } })
+    .toArray();
+
+  const results = [];
+  for (const campaign of due) {
+    const result = await sendCampaign({
+      db,
+      id: campaign._id.toString(),
+      send,
+      neo4jRun,
+    });
+    if (!result.notFound) {
+      results.push({ id: campaign._id.toString(), ...result });
+    }
+  }
+  return results;
 }
 
 function serialize(doc) {
@@ -161,6 +208,8 @@ function serialize(doc) {
     scheduledFor: doc.scheduledFor,
     sentAt: doc.sentAt,
     recipientCount: doc.recipientCount,
+    resolvedUserCount: doc.resolvedUserCount ?? null,
+    tokenCount: doc.tokenCount ?? null,
     status: doc.status,
     createdAt: doc.createdAt,
   };

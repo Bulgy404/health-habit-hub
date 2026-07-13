@@ -715,8 +715,8 @@
     "unlimitedPublic": "Unlimited (public)",
     "oneStudyParticipant": "1 (study participant)",
     "maxHabitsHint": "Caps how many habits a participant can create. Use \"1\" for single-habit study designs.",
-    "habitEntryMode": "Habit entry",
-    "habitEntryModeHint": "Free text: participants type and describe their own habit. Structured activities: participants pick from a fixed catalog you define.",
+    "habitEntryMode": "Structured habit entry",
+    "habitEntryModeHint": "Off (free text): participants type and describe their own habit. On (structured): participants pick from a fixed catalog you define instead.",
     "allowedBehaviorsHint": "Which activity types participants can choose from. Manage the catalog below.",
     "emptySelectionWarning": "No activities selected — participants will see free-text entry until you pick at least one.",
     "noActivityTypes": "No activity types in the catalog yet — add some below.",
@@ -806,8 +806,8 @@
         "recommenderHint": "When disabled, participants in this study do not see the recommender screen in the app.",
         "onboardingLabel": "Show habit-creation onboarding for this study",
         "onboardingHint": "When disabled, participants skip the first-time explainer screens (what a habit is, what cues are) when creating a habit. Can be overridden per group below.",
-        "selfHabitLabel": "Allow participants to create their own habits",
-        "selfHabitHint": "When disabled, participants in this study cannot create new habits themselves. Can be overridden per group below.",
+        "selfHabitLabel": "Enable habit creation",
+        "selfHabitHint": "When disabled, participants in this study cannot create any habits — the My Habits screen is hidden from the app entirely. Can be overridden per group below.",
         "remindersLabel": "Send questionnaire reminders",
         "remindersHint": "When enabled, participants get a reminder notification on the day each questionnaire is due. Turn off to cancel reminders for this study (applied on the participant's next app open).",
         "reminderTimeLabel": "Reminder time",
@@ -1036,6 +1036,9 @@
       "send": "Send",
       "sendingEllipsis": "Sending…",
       "sentToCount": "Sent to {count} participant(s)",
+      "reachedNoneNoEnrollment": "Reached 0 participants — nobody is enrolled in the selected study/group yet.",
+      "reachedNoneNoDevices": "Reached 0 participants — {count} enrolled, but none have a registered device yet. They may not have opened the app or allowed notifications.",
+      "reachedNoneAllFailed": "Reached 0 participants — {count} device(s) targeted but every delivery failed. Check the server's Firebase credentials.",
       "scheduledForDate": "Scheduled for {date}",
       "scheduledSectionTitle": "Scheduled",
       "noScheduled": "No pending scheduled notifications.",
@@ -1061,8 +1064,8 @@
       "onOption": "On",
       "offOption": "Off",
       "onboardingHint": "Overrides the study-level onboarding setting for this group only.",
-      "selfHabitLabel": "Self habit creation (this group)",
-      "selfHabitHint": "When off, this group cannot create their own habits."
+      "selfHabitLabel": "Habit creation (this group)",
+      "selfHabitHint": "When off, this group cannot create any habits — the My Habits screen is hidden from the app for this group."
     }
   },
   "welcome": {

@@ -13,6 +13,7 @@
 import { ObjectId } from 'mongodb';
 import cron from 'node-cron';
 import { logger } from '../utils/logger.js';
+import { dispatchDueCampaigns } from './notificationCampaignService.js';
 
 const log = logger.child({ module: 'notificationService' });
 
@@ -90,6 +91,34 @@ export async function sendToTokens({ messaging, tokens, title, body, data }) {
   });
 
   return { sent, failed, invalidTokens };
+}
+
+/**
+ * Send a push to an explicit list of FCM tokens and prune any that Firebase
+ * reports as permanently invalid. Returns the number of *successful* deliveries.
+ *
+ * Gracefully degrades when Firebase is not configured
+ * (FIREBASE_SERVICE_ACCOUNT_JSON unset): logs a clear warning and returns 0
+ * rather than throwing, so an unconfigured backend surfaces as "reached 0"
+ * with an explanatory log instead of an opaque 500.
+ *
+ * Shared by the immediate campaign-send path (notificationCampaignRouter) and
+ * the scheduled dispatcher so both behave identically.
+ * @param {{ db: object, tokens: string[], title: string, body: string, data?: object }} params
+ * @returns {Promise<number>} Count of successful deliveries.
+ */
+export async function fcmSendMulticast({ db, tokens, title, body, data }) {
+  if (!tokens || tokens.length === 0) return 0;
+  const messaging = await getFirebaseMessaging();
+  if (!messaging) {
+    log.error(
+      'FIREBASE_SERVICE_ACCOUNT_JSON is not set — push notification not sent (backend Firebase unconfigured)'
+    );
+    return 0;
+  }
+  const result = await sendToTokens({ messaging, tokens, title, body, data });
+  await removeInvalidTokens({ db, invalidTokens: result.invalidTokens });
+  return result.sent;
 }
 
 /**
@@ -267,10 +296,17 @@ async function _releaseSchedulerLock(redis, lockToken) {
  * Start the node-cron scheduler that dispatches due notifications every 60 s.
  * Returns the cron task (call task.stop() to halt it).
  *
- * @param {{ getDb: function }} params
+ * Dispatches two independent stores on each tick:
+ *  - legacy `scheduledNotifications` (via `dispatchDueNotifications`), and
+ *  - admin-created `notification_campaigns` with a `scheduledFor` in the past
+ *    (via `dispatchDueCampaigns`). Campaign recipients live in Neo4j, so a
+ *    `neo4jRun` runner must be supplied for scheduled campaigns to resolve
+ *    anyone; without it, this half no-ops.
+ *
+ * @param {{ getDb: function, redisUrl?: string, neo4jRun?: Function }} params
  * @returns {object} cron task
  */
-export function startNotificationScheduler({ getDb, redisUrl } = {}) {
+export function startNotificationScheduler({ getDb, redisUrl, neo4jRun } = {}) {
   const task = cron.schedule('* * * * *', async () => {
     const lockToken = Math.random().toString(36).slice(2);
     const { redis, lockAcquired } = await _acquireSchedulerLock(
@@ -286,6 +322,28 @@ export function startNotificationScheduler({ getDb, redisUrl } = {}) {
     try {
       const db = await getDb();
       await dispatchDueNotifications({ db });
+
+      // Scheduled admin campaigns (separate collection + Neo4j-resolved
+      // recipients). Only runs when a Neo4j runner is available.
+      if (neo4jRun) {
+        const dispatched = await dispatchDueCampaigns({
+          db,
+          neo4jRun,
+          send: (tokens, title, body) =>
+            fcmSendMulticast({ db, tokens, title, body }),
+        });
+        for (const c of dispatched) {
+          log.info(
+            {
+              campaignId: c.id,
+              recipientCount: c.recipientCount,
+              resolvedUserCount: c.resolvedUserCount,
+              tokenCount: c.tokenCount,
+            },
+            '[notification] dispatched scheduled campaign'
+          );
+        }
+      }
     } catch (err) {
       log.error({ err: err }, '[notification] error');
     } finally {

@@ -22,16 +22,29 @@ export function createNotificationCampaignRouter({
   const send =
     fcmSend ??
     (async (tokens, title, body) => {
-      const { getFirebaseMessaging } = await import(
+      const { fcmSendMulticast } = await import(
         '../services/notificationService.js'
       );
-      const messaging = await getFirebaseMessaging();
-      const result = await messaging.sendEachForMulticast({
-        tokens,
-        notification: { title, body },
-      });
-      return result.successCount;
+      const database = await getDb();
+      // Handles unconfigured Firebase (returns 0 + logs) and prunes tokens
+      // Firebase reports as permanently invalid.
+      return fcmSendMulticast({ db: database, tokens, title, body });
     });
+
+  // Builds a human-readable explanation when a send reaches nobody, so the
+  // admin sees *why* instead of a bare "Sent to 0 participants".
+  function deliveryWarningFor({
+    recipientCount,
+    resolvedUserCount,
+    tokenCount,
+  }) {
+    if (recipientCount > 0) return null;
+    if (resolvedUserCount === 0)
+      return 'No participants are enrolled in the selected study/group yet.';
+    if (tokenCount === 0)
+      return `${resolvedUserCount} participant(s) enrolled, but none have a registered device — they may not have opened the app or granted notification permission.`;
+    return `${tokenCount} device(s) targeted but every push failed — check the backend Firebase credentials (FIREBASE_SERVICE_ACCOUNT_JSON).`;
+  }
 
   router.get('/', async (req, res) => {
     try {
@@ -75,12 +88,36 @@ export function createNotificationCampaignRouter({
         scheduledFor: scheduledFor ?? null,
       });
       if (!scheduledFor) {
-        await sendCampaign({
+        // Merge the real send result back onto the response — createCampaign's
+        // doc is a pre-send snapshot with recipientCount: null, so without
+        // this the admin UI always reports "sent to 0 participants"
+        // regardless of how many were actually reached.
+        const sendResult = await sendCampaign({
           db: database,
           id: campaign.id,
           send: send,
           neo4jRun,
         });
+        if (!sendResult.notFound) {
+          campaign.recipientCount = sendResult.recipientCount;
+          campaign.resolvedUserCount = sendResult.resolvedUserCount;
+          campaign.tokenCount = sendResult.tokenCount;
+          campaign.sentAt = sendResult.sentAt;
+          campaign.status = 'sent';
+          campaign.deliveryWarning = deliveryWarningFor(sendResult);
+          log.info(
+            {
+              campaignId: campaign.id,
+              targetType,
+              recipientCount: sendResult.recipientCount,
+              resolvedUserCount: sendResult.resolvedUserCount,
+              tokenCount: sendResult.tokenCount,
+            },
+            campaign.deliveryWarning
+              ? `[notifications] campaign reached nobody: ${campaign.deliveryWarning}`
+              : '[notifications] campaign sent'
+          );
+        }
       }
       res.status(201).json(campaign);
     } catch (err) {

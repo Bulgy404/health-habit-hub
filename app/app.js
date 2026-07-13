@@ -161,7 +161,7 @@ import {
   ensureIndexes,
 } from './models/survey.js';
 import { closeHabitQueue } from './lib/habitQueue.js';
-import { closeAllNeo4jDrivers } from './utils/neo4jDrivers.js';
+import { closeAllNeo4jDrivers, runNeo4j } from './utils/neo4jDrivers.js';
 import { runSeedDefaultProfileFields } from './db/seedProfileFields.js';
 import { ensureNeo4jSchema } from './utils/neo4jSchema.js';
 import {
@@ -207,6 +207,9 @@ runSeedDefaultProfileFields();
 const notificationTask = startNotificationScheduler({
   getDb: makeGetDb(),
   redisUrl: process.env.REDIS_URL,
+  // Enables dispatch of scheduled admin campaigns, whose recipients are
+  // resolved from Neo4j enrollments.
+  neo4jRun: runNeo4j,
 });
 
 const httpServer = createServer(app);

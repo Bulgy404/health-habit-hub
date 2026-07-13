@@ -715,8 +715,8 @@
     "unlimitedPublic": "Unbegrenzt (öffentlich)",
     "oneStudyParticipant": "1 (Studienteilnahme)",
     "maxHabitsHint": "Begrenzt, wie viele Gewohnheiten eine teilnehmende Person erstellen kann. Verwende „1“ für Studiendesigns mit nur einer Gewohnheit.",
-    "habitEntryMode": "Gewohnheitseingabe",
-    "habitEntryModeHint": "Freitext: Teilnehmende beschreiben ihre eigene Gewohnheit selbst. Strukturierte Aktivitäten: Teilnehmende wählen aus einem von dir festgelegten Katalog.",
+    "habitEntryMode": "Strukturierte Gewohnheitseingabe",
+    "habitEntryModeHint": "Aus (Freitext): Teilnehmende beschreiben ihre eigene Gewohnheit selbst. An (strukturiert): Teilnehmende wählen stattdessen aus einem von dir festgelegten Katalog.",
     "allowedBehaviorsHint": "Aus welchen Aktivitätstypen Teilnehmende wählen können. Verwalte den Katalog weiter unten.",
     "emptySelectionWarning": "Keine Aktivitäten ausgewählt — Teilnehmende sehen weiterhin die Freitext-Eingabe, bis du mindestens eine auswählst.",
     "noActivityTypes": "Noch keine Aktivitätstypen im Katalog — füge unten welche hinzu.",
@@ -806,8 +806,8 @@
         "recommenderHint": "Wenn deaktiviert, sehen Teilnehmende dieser Studie den Empfehlungsbildschirm in der App nicht.",
         "onboardingLabel": "Onboarding zur Gewohnheitserstellung für diese Studie anzeigen",
         "onboardingHint": "Wenn deaktiviert, überspringen Teilnehmende die einmaligen Erklärbildschirme (was eine Gewohnheit ist, was Cues sind) beim Erstellen einer Gewohnheit. Kann unten pro Gruppe überschrieben werden.",
-        "selfHabitLabel": "Teilnehmenden erlauben, eigene Gewohnheiten zu erstellen",
-        "selfHabitHint": "Wenn deaktiviert, können Teilnehmende dieser Studie keine eigenen Gewohnheiten erstellen. Kann unten pro Gruppe überschrieben werden.",
+        "selfHabitLabel": "Gewohnheitserstellung aktivieren",
+        "selfHabitHint": "Wenn deaktiviert, können Teilnehmende dieser Studie keine Gewohnheiten erstellen — der Bildschirm „Meine Gewohnheiten“ wird in der App vollständig ausgeblendet. Kann unten pro Gruppe überschrieben werden.",
         "remindersLabel": "Fragebogen-Erinnerungen senden",
         "remindersHint": "Wenn aktiviert, erhalten Teilnehmende am Fälligkeitstag jedes Fragebogens eine Erinnerungsbenachrichtigung. Deaktivieren, um Erinnerungen für diese Studie abzubrechen (wird beim nächsten App-Öffnen der teilnehmenden Person angewendet).",
         "reminderTimeLabel": "Erinnerungszeit",
@@ -1036,6 +1036,9 @@
       "send": "Senden",
       "sendingEllipsis": "Wird gesendet…",
       "sentToCount": "Gesendet an {count} teilnehmende Person(en)",
+      "reachedNoneNoEnrollment": "0 Teilnehmende erreicht — es ist noch niemand in der ausgewählten Studie/Gruppe eingeschrieben.",
+      "reachedNoneNoDevices": "0 Teilnehmende erreicht — {count} eingeschrieben, aber keine hat bisher ein registriertes Gerät. Sie haben die App möglicherweise noch nicht geöffnet oder Benachrichtigungen nicht erlaubt.",
+      "reachedNoneAllFailed": "0 Teilnehmende erreicht — {count} Gerät(e) adressiert, aber alle Zustellungen sind fehlgeschlagen. Bitte die Firebase-Zugangsdaten des Servers prüfen.",
       "scheduledForDate": "Geplant für {date}",
       "scheduledSectionTitle": "Geplant",
       "noScheduled": "Keine ausstehenden geplanten Benachrichtigungen.",
@@ -1061,8 +1064,8 @@
       "onOption": "An",
       "offOption": "Aus",
       "onboardingHint": "Überschreibt die studienweite Onboarding-Einstellung nur für diese Gruppe.",
-      "selfHabitLabel": "Eigene Gewohnheitserstellung (diese Gruppe)",
-      "selfHabitHint": "Wenn aus, kann diese Gruppe keine eigenen Gewohnheiten erstellen."
+      "selfHabitLabel": "Gewohnheitserstellung (diese Gruppe)",
+      "selfHabitHint": "Wenn aus, kann diese Gruppe keine Gewohnheiten erstellen — der Bildschirm „Meine Gewohnheiten“ wird für diese Gruppe ausgeblendet."
     }
   },
   "welcome": {
