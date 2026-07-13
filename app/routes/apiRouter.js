@@ -261,7 +261,7 @@ export function createApiRouter({
   router.use(
     '/habits/intentions',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createIntentionsRouter({ db })
+    createIntentionsRouter({ db, neo4jRun: runNeo4j })
   );
 
   // SRHI measurement (user + admin + researcher)

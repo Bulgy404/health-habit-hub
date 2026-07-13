@@ -81,6 +81,7 @@ const _emptyResponse = RecommendationResponse(
 Widget _buildSubject({
   required RecommendationResultsScreen Function() resultsScreenBuilder,
   _FakeRecommendationService? service,
+  HabitConfig? habitConfig,
 }) {
   final router = GoRouter(
     initialLocation: '/start',
@@ -111,12 +112,18 @@ Widget _buildSubject({
           );
         },
       ),
+      GoRoute(
+        path: '/habits/new/behavior',
+        builder: (context, state) => const Scaffold(body: Text('behavior-picker')),
+      ),
     ],
   );
 
   return ProviderScope(
     overrides: [
-      habitConfigProvider.overrideWith((_) async => _fakeHabitConfig),
+      habitConfigProvider.overrideWith(
+        (_) async => habitConfig ?? _fakeHabitConfig,
+      ),
       if (service != null)
         recommendationFeatureServiceProvider.overrideWithValue(service),
     ],
@@ -217,12 +224,14 @@ void main() {
   });
 
   group('populated results', () {
-    Widget subject({_FakeRecommendationService? service}) => _buildSubject(
+    Widget subject({_FakeRecommendationService? service, HabitConfig? habitConfig}) =>
+        _buildSubject(
           resultsScreenBuilder: () => const RecommendationResultsScreen(
             goal: 'Sleep better',
             response: _populatedResponse,
           ),
           service: service,
+          habitConfig: habitConfig,
         );
 
     testWidgets(
@@ -274,6 +283,30 @@ void main() {
         find.text('cue:drink_more_water|Drink more water|After I wake up'),
         findsOneWidget,
       );
+    });
+
+    testWidgets(
+        'tapping "Add to my habits" routes to the catalog picker instead of '
+        'free-texting the title when the study restricts habit entry to a '
+        'fixed activity catalog',
+        (tester) async {
+      // Regression test: a study configured for structured habit entry must
+      // not let a recommendation's arbitrary free-text title become an
+      // uncatalogued behaviorKey — that would silently bypass the admin's
+      // activity-type restriction (see results_screen.dart _addToHabits).
+      const restrictedConfig = HabitConfig(
+        cueCount: 'single',
+        cueSource: 'self_selected',
+        behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
+        srhiItems: [],
+      );
+      await _openResults(tester, subject(habitConfig: restrictedConfig));
+
+      await tester.tap(find.text('Add to my habits'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('behavior-picker'), findsOneWidget);
+      expect(find.textContaining('cue:'), findsNothing);
     });
 
     testWidgets('submitting feedback replaces the field with a submitted-state indicator',

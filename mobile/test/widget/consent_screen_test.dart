@@ -160,7 +160,7 @@ Widget _buildSubject(Dio dio, {bool isUpdate = false}) {
         builder: (context, state) => const Scaffold(body: Text('Welcome')),
       ),
       GoRoute(
-        path: '/',
+        path: '/share',
         builder: (context, state) => const Scaffold(body: Text('Home')),
       ),
     ],

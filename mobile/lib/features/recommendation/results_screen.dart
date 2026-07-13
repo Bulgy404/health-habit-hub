@@ -173,6 +173,15 @@ class _RecommendationCardState extends ConsumerState<_RecommendationCard> {
     try {
       final config = await ref.read(habitConfigProvider.future);
       if (!mounted) return;
+      // Studies restricted to a fixed activity catalog (structured habit
+      // entry) must not let a recommendation's free-form title become an
+      // arbitrary, uncatalogued behaviorKey — that would silently bypass the
+      // admin's activity-type restriction. Route through the same catalog
+      // picker the "+ New Habit" flow uses instead.
+      if (config.behaviorOptions.isNotEmpty) {
+        context.push('/habits/new/behavior');
+        return;
+      }
       context.push(
         '/habits/new/cue',
         extra: {

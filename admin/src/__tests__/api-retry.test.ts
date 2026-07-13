@@ -97,4 +97,32 @@ describe("apiFetch 401 refresh-and-retry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(mockGetSession).not.toHaveBeenCalled();
   });
+
+  it("shares one session refresh across concurrent 401s (no refresh-token-rotation race)", async () => {
+    // Regression test: a page that fires several apiFetch calls at once (e.g.
+    // Studies loading studies + participants + sessions + comments together)
+    // used to have each 401 independently call getSession(). Keycloak refresh
+    // tokens are single-use, so only the first of those concurrent refreshes
+    // succeeded server-side — the others redeemed an already-consumed refresh
+    // token and errored, surfacing a 401 that only a manual reload cleared.
+    const fetchMock = jest.fn().mockImplementation((_url: string, opts: RequestInit) => {
+      const auth = (opts.headers as Record<string, string>).Authorization;
+      return Promise.resolve(
+        auth === "Bearer fresh-token" ? response(200, { ok: true }) : response(401, { error: "Unauthorized" }),
+      );
+    });
+    global.fetch = fetchMock as unknown as typeof fetch;
+    mockGetSession.mockResolvedValue({ accessToken: "fresh-token" });
+
+    const results = await Promise.all([
+      apiFetch("http://api/studies", "stale-token"),
+      apiFetch("http://api/participants", "stale-token"),
+      apiFetch("http://api/sessions", "stale-token"),
+      apiFetch("http://api/comments", "stale-token"),
+    ]);
+
+    expect(results).toEqual([{ ok: true }, { ok: true }, { ok: true }, { ok: true }]);
+    // One shared refresh, not one per request.
+    expect(mockGetSession).toHaveBeenCalledTimes(1);
+  });
 });

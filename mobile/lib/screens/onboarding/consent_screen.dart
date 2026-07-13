@@ -125,7 +125,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
         // Recorded locally; retried on next app start via the version check.
       }
       if (!mounted) return;
-      context.go('/');
+      context.go('/share');
       return;
     }
     context.go('/onboarding/passphrase');
