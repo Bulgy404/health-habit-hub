@@ -9,6 +9,24 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1";
 
 /**
+ * Resolves a `NEXT_PUBLIC_*` value with a fallback, guarding against the var
+ * being unset (or blank) at build time — NEXT_PUBLIC_* vars are inlined into
+ * the client bundle by `next build`; if the Docker image was built without
+ * them passed as build args, they're `undefined` in the browser forever,
+ * regardless of what's set in the container's runtime environment. Without
+ * this guard, string-interpolating an unset var produces a literal
+ * "undefined" segment in the resulting URL instead of failing loudly or
+ * falling back sensibly.
+ *
+ * @param value - The `process.env.NEXT_PUBLIC_*` value to resolve.
+ * @param fallback - Used when `value` is unset or blank.
+ * @returns The trimmed value, or `fallback`.
+ */
+export function env(value: string | undefined, fallback: string): string {
+  return value && value.trim() ? value.trim() : fallback;
+}
+
+/**
  * Build a full API URL from a path relative to the API base.
  *
  * @param path - Path starting with a slash, e.g. `/admin/settings`.
@@ -47,11 +65,7 @@ async function refreshSessionToken(): Promise<string | null> {
  * fresh token. The `Authorization` header is applied here (not by callers) so
  * the retry can swap in the new bearer.
  */
-async function fetchWithRefresh(
-  url: string,
-  token: string,
-  opts: RequestInit,
-): Promise<Response> {
+async function fetchWithRefresh(url: string, token: string, opts: RequestInit): Promise<Response> {
   const send = (bearer: string) =>
     fetch(url, {
       ...opts,

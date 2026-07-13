@@ -41,9 +41,11 @@
   background-color: var(--color-primary-action);
   color: #ffffff;
   padding: 0.625rem 1.5rem;
+  border: none;
   border-radius: 8px;
   font-weight: 600;
   font-size: 0.9rem;
+  cursor: pointer;
   transition: background-color 0.2s;
 }
 

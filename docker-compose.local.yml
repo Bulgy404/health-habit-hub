@@ -235,7 +235,18 @@ services:
   admin:
     image: hhh/admin
     container_name: hhh-admin
-    build: ./admin
+    build:
+      context: ./admin
+      # NEXT_PUBLIC_* vars are inlined into the client bundle at `next build`
+      # time — they must be passed as build args, not just runtime
+      # `environment:` (which has no effect on an already-built image). Kept
+      # in sync with the values below.
+      args:
+        NEXT_PUBLIC_NEXTAUTH_URL: http://admin.${PATH_SUFFIX:-localhost}
+        NEXT_PUBLIC_KEYCLOAK_BROWSER_URL: http://localhost:8080
+        NEXT_PUBLIC_API_URL: http://localhost:${APP_LOCAL_PORT:-3000}/api/v1
+        NEXT_PUBLIC_MONGO_EXPRESS_URL: http://localhost:8081
+        NEXT_PUBLIC_GRAFANA_URL: ${NEXT_PUBLIC_GRAFANA_URL:-http://grafana.${PATH_SUFFIX:-localhost}}
     restart: on-failure:3
     env_file:
       - .env
@@ -243,6 +254,8 @@ services:
       - NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}
       - NEXT_PUBLIC_NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}
       - NEXT_PUBLIC_KEYCLOAK_BROWSER_URL=http://localhost:8080
+      - NEXT_PUBLIC_API_URL=http://localhost:${APP_LOCAL_PORT:-3000}/api/v1
+      - NEXT_PUBLIC_MONGO_EXPRESS_URL=http://localhost:8081
       # Must match Grafana's own GF_SERVER_ROOT_URL below — visiting Grafana
       # at a different host/port than its configured root_url breaks its
       # OAuth callback and asset URLs.
