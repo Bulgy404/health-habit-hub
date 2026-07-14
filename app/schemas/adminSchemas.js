@@ -81,7 +81,10 @@ function reminderModeSchema({ allowedModes = ['off', 'admin_fixed'] } = {}) {
       message: 'time is required for admin_fixed mode',
     })
     .refine(
-      (v) => (v.mode === 'off' || v.mode === 'participant_choice' ? v.time == null : true),
+      (v) =>
+        v.mode === 'off' || v.mode === 'participant_choice'
+          ? v.time == null
+          : true,
       { message: 'time must be omitted for off and participant_choice modes' }
     );
 }

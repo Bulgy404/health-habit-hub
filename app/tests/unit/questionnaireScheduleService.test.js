@@ -82,7 +82,10 @@ test('getDueQuestionnaires: endOfStudyNotification merges effective mode/time wi
     study: {
       _id: studyId,
       endDate,
-      endOfStudyNotification: { title: 'All done', body: 'Thanks for participating!' },
+      endOfStudyNotification: {
+        title: 'All done',
+        body: 'Thanks for participating!',
+      },
       reminders: { endOfStudy: { mode: 'admin_fixed', time: '18:00' } },
       groups: [{ id: groupId, label: 'G1', index: 1, reminders: null }],
     },
@@ -92,12 +95,18 @@ test('getDueQuestionnaires: endOfStudyNotification merges effective mode/time wi
   assert.strictEqual(result.endOfStudyNotification.mode, 'admin_fixed');
   assert.strictEqual(result.endOfStudyNotification.time, '18:00');
   assert.strictEqual(result.endOfStudyNotification.title, 'All done');
-  assert.strictEqual(result.endOfStudyNotification.body, 'Thanks for participating!');
+  assert.strictEqual(
+    result.endOfStudyNotification.body,
+    'Thanks for participating!'
+  );
 });
 
 test('getDueQuestionnaires: returns defaults when the study no longer exists', async () => {
   const studyId = new ObjectId();
-  const db = makeDb({ enrollment: { studyId, groupId: new ObjectId() }, study: null });
+  const db = makeDb({
+    enrollment: { studyId, groupId: new ObjectId() },
+    study: null,
+  });
   const result = await getDueQuestionnaires({ db, userId: 'u1' });
   assert.deepEqual(result.reminders, { mode: 'admin_fixed', time: '09:00' });
 });

@@ -14,7 +14,10 @@ test('defaultReminders: preserves pre-feature behavior for each type', () => {
   // Habit reminders used to be fully participant-chosen.
   assert.deepStrictEqual(d.habit, { mode: 'participant_choice', time: null });
   // Questionnaire/end-of-study reminders always fired at a fixed 9am.
-  assert.deepStrictEqual(d.questionnaire, { mode: 'admin_fixed', time: '09:00' });
+  assert.deepStrictEqual(d.questionnaire, {
+    mode: 'admin_fixed',
+    time: '09:00',
+  });
   assert.deepStrictEqual(d.endOfStudy, { mode: 'admin_fixed', time: '09:00' });
   // Study-update reminders didn't exist.
   assert.deepStrictEqual(d.studyUpdate, { mode: 'off', time: null });
@@ -41,7 +44,10 @@ test('normalizeReminders: stored values override defaults per type', () => {
   const result = normalizeReminders(study);
   assert.deepStrictEqual(result.habit, { mode: 'admin_fixed', time: '08:00' });
   // Untouched types still fall back to defaults.
-  assert.deepStrictEqual(result.questionnaire, defaultReminders().questionnaire);
+  assert.deepStrictEqual(
+    result.questionnaire,
+    defaultReminders().questionnaire
+  );
   assert.deepStrictEqual(result.endOfStudy, defaultReminders().endOfStudy);
   assert.deepStrictEqual(result.studyUpdate, defaultReminders().studyUpdate);
 });
@@ -61,13 +67,17 @@ test('normalizeReminders: all 4 types can be fully overridden', () => {
 // ── resolveEffectiveReminders ────────────────────────────────────────────────
 
 test('resolveEffectiveReminders: falls back to study-level when group has no reminders', () => {
-  const study = { reminders: { habit: { mode: 'admin_fixed', time: '07:00' } } };
+  const study = {
+    reminders: { habit: { mode: 'admin_fixed', time: '07:00' } },
+  };
   const result = resolveEffectiveReminders({ study, group: null });
   assert.deepStrictEqual(result.habit, { mode: 'admin_fixed', time: '07:00' });
 });
 
 test('resolveEffectiveReminders: falls back to study-level when group.reminders is undefined', () => {
-  const study = { reminders: { habit: { mode: 'admin_fixed', time: '07:00' } } };
+  const study = {
+    reminders: { habit: { mode: 'admin_fixed', time: '07:00' } },
+  };
   const result = resolveEffectiveReminders({ study, group: {} });
   assert.deepStrictEqual(result.habit, { mode: 'admin_fixed', time: '07:00' });
 });
@@ -87,9 +97,15 @@ test('resolveEffectiveReminders: group override wins over study-level, per type 
     },
   };
   const result = resolveEffectiveReminders({ study, group });
-  assert.deepStrictEqual(result.habit, { mode: 'participant_choice', time: null });
+  assert.deepStrictEqual(result.habit, {
+    mode: 'participant_choice',
+    time: null,
+  });
   // Inherited from study-level since the group's questionnaire override is null.
-  assert.deepStrictEqual(result.questionnaire, { mode: 'admin_fixed', time: '09:00' });
+  assert.deepStrictEqual(result.questionnaire, {
+    mode: 'admin_fixed',
+    time: '09:00',
+  });
 });
 
 test('resolveEffectiveReminders: group can override all 4 types simultaneously', () => {
@@ -102,7 +118,10 @@ test('resolveEffectiveReminders: group can override all 4 types simultaneously',
       studyUpdate: { mode: 'admin_fixed', time: '11:00' },
     },
   };
-  assert.deepStrictEqual(resolveEffectiveReminders({ study, group }), group.reminders);
+  assert.deepStrictEqual(
+    resolveEffectiveReminders({ study, group }),
+    group.reminders
+  );
 });
 
 test('resolveEffectiveReminders: no group and no study reminders returns full defaults', () => {

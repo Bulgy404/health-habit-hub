@@ -284,7 +284,9 @@ test('updateGroupConfig — merging reminders preserves other reminder types (pa
     db,
     studyId: studyId.toString(),
     groupId: groupId.toString(),
-    config: { reminders: { habit: { mode: 'participant_choice', time: null } } },
+    config: {
+      reminders: { habit: { mode: 'participant_choice', time: null } },
+    },
   });
 
   const study = await db.collection(STUDIES).findOne({ _id: studyId });
@@ -367,9 +369,7 @@ before(async () => {
       db,
       neo4jRun: async (query) => {
         if (!query.includes('ENROLLED_IN')) return [];
-        return [
-          { studyId: studyId.toString(), groupId: groupId.toString() },
-        ];
+        return [{ studyId: studyId.toString(), groupId: groupId.toString() }];
       },
     })
   );
