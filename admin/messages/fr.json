@@ -266,7 +266,9 @@
   "team": {
     "title": "Équipe et rôles",
     "subtitle": "Gérez qui a un accès admin ou chercheur. Les changements de rôle prennent effet immédiatement.",
-    "addMember": "Ajouter un membre",
+    "manageRoles": "Gérer les rôles",
+    "assignRole": "Attribuer un rôle",
+    "assignRoleSubtitle": "Recherchez un compte existant et accordez ou modifiez son rôle admin ou chercheur.",
     "searchPlaceholder": "Rechercher par nom d'utilisateur ou e-mail",
     "searchButton": "Rechercher",
     "noSearchResults": "Aucun compte correspondant trouvé.",
@@ -794,6 +796,7 @@
         "codes": "Codes",
         "participants": "Participants",
         "cueConfig": "Configuration des repères",
+        "habitCreation": "Création d'habitudes",
         "reminders": "Rappels"
       },
       "fields": {
@@ -811,6 +814,7 @@
         "endDateLabel": "Date de fin de l'étude",
         "endDateHint": "Facultatif. Si elle est définie, le calendrier cesse de projeter des occurrences après cette date.",
         "remindersMovedHint": "La programmation des rappels d'habitude, de questionnaire, de fin d'étude et de mise à jour d'étude se configure dans l'onglet Rappels.",
+        "habitCreationMovedHint": "Le système de recommandation, l'intégration et la création d'habitudes (y compris la saisie structurée ou libre) se configurent dans l'onglet Création d'habitudes.",
         "notificationTitleLabel": "Titre de la notification",
         "notificationBodyLabel": "Corps de la notification",
         "groupCountLabel": "Nombre de groupes",
@@ -1011,6 +1015,26 @@
       "onboardingHint": "Remplace le paramètre d'intégration au niveau de l'étude pour ce groupe uniquement.",
       "selfHabitLabel": "Création d'habitudes (ce groupe)",
       "selfHabitHint": "Lorsque désactivé, ce groupe ne peut créer aucune habitude — l'écran « Mes habitudes » est masqué pour ce groupe."
+    },
+    "habitCreationTab": {
+      "recommenderLabel": "Système de recommandation",
+      "recommenderHint": "Lorsque cette option est désactivée, les participants de cette étude ne voient pas l'écran de recommandation dans l'application.",
+      "recommenderEnabledLabel": "Système de recommandation activé",
+      "onboardingLabel": "Intégration",
+      "onboardingHint": "Lorsque cette option est désactivée, les participants passent les écrans explicatifs de première utilisation (qu'est-ce qu'une habitude, que sont les repères) lors de la création d'une habitude.",
+      "onboardingEnabledLabel": "Intégration activée",
+      "habitCreationLabel": "Création d'habitudes",
+      "habitCreationHint": "Lorsque cette option est désactivée, les participants de cette étude ne peuvent créer aucune habitude — l'écran « Mes habitudes » est entièrement masqué dans l'application.",
+      "habitCreationEnabledLabel": "Activer la création d'habitudes",
+      "entryModeLabel": "Mode de saisie",
+      "perGroupLabel": "Configurer par groupe",
+      "summaryOn": "Activé",
+      "summaryOff": "Désactivé",
+      "summaryPerGroup": "Par groupe ({on}/{total} activés)",
+      "entryModeStructuredLabel": "Structurée ({count})",
+      "entryModeFreeTextLabel": "Texte libre",
+      "entryModeNaLabel": "N/A (création désactivée)",
+      "entryModeSummaryPerGroup": "Par groupe ({on}/{total} structurés)"
     },
     "remindersTab": {
       "habitLabel": "Rappel d'habitude",

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
+import '../../providers/auth_provider.dart';
 import 'welcome_screen.dart';
 
 // ---------------------------------------------------------------------------
@@ -108,6 +109,13 @@ class _RestoreScreenState extends ConsumerState<RestoreScreen> {
           value: data['refresh_token']?.toString() ?? '',
         );
         await widget.storage.write(key: kOnboardingCompleteKey, value: 'true');
+        // Tokens are written directly above rather than via AuthService, so
+        // onLogin never fires — invalidate the user-scoped providers
+        // explicitly. Otherwise the restored account could briefly show
+        // whatever data (e.g. a different account's habits) was last loaded
+        // in this app process, exactly the stale-heatmap bug this restore
+        // flow exists to recover from.
+        invalidateUserScopedProvidersFromWidget(ref);
         if (!mounted) return;
         context.go('/share');
       } else {

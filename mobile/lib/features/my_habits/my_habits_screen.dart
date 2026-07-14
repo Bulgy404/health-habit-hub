@@ -13,7 +13,6 @@ import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_format.dart';
 import '../../widgets/contribution_graph_widget.dart';
-import '../../widgets/day_strip_widget.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/skeleton.dart';
 import '../../widgets/srhi_sparkline_widget.dart';
@@ -244,8 +243,6 @@ class _HabitCard extends ConsumerWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 12),
-              DayStripWidget(logs: logsMap, startDate: intention.createdAt),
               trajectoryAsync.when(
                 data: (trajectory) {
                   final submitted = trajectory
@@ -298,7 +295,7 @@ class _HabitCard extends ConsumerWidget {
                 loading: () => const SizedBox.shrink(),
                 error: (_, _) => const SizedBox.shrink(),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Align(
                 alignment: Alignment.center,
                 child: FilledButton(

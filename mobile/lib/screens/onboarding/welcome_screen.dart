@@ -216,7 +216,10 @@ class _WelcomePage extends StatelessWidget {
             child: Text(l10n.onboardingGetStarted),
           ),
           const SizedBox(height: 12),
-          TextButton(
+          // Equal visual weight to "Get Started" — a user landing here after
+          // an unexpected logout should read both options as equally valid,
+          // not "primary action" vs. "fine print you can skip past."
+          OutlinedButton(
             onPressed: onRestore,
             child: Text(l10n.onboardingRestoreAccount),
           ),

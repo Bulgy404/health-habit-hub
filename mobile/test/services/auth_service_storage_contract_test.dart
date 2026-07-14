@@ -266,12 +266,14 @@ void main() {
     });
 
     test(
-        'returns null and calls logout() when Keycloak rejects refresh (400) '
-        'and the reauthenticate() retry also fails', () async {
+        'returns null but does NOT call logout() when Keycloak rejects '
+        'refresh (400) and the reauthenticate() retry also fails', () async {
       // Expired token + a refresh_token so refreshToken() reaches the HTTP
       // call, which returns 400. reauthenticate() retries the same
-      // refresh-token exchange (second queued response, also 400) → fails
-      // → logout() is called.
+      // refresh-token exchange (second queued response, also 400) → fails.
+      // This must NOT clear the session — only an explicit user action
+      // (Settings -> Sign out / Delete account) may do that. Storage is left
+      // untouched so the next call retries the refresh.
       storage.seedValue('access_token', _expiredJwt);
       storage.seedValue('refresh_token', 'expired-refresh-token');
       final dio = _mockDio([
@@ -283,9 +285,7 @@ void main() {
       final result = await service.getAccessToken();
 
       expect(result, isNull);
-      final deletedKeys =
-          storage.calls.where((c) => c['method'] == 'delete').map((c) => c['key'] as String).toSet();
-      expect(deletedKeys, containsAll(['access_token', 'refresh_token', 'token_expiry']));
+      expect(storage.calls.where((c) => c['method'] == 'delete'), isEmpty);
     });
   });
 
@@ -424,10 +424,13 @@ void main() {
       expect(storage.calls.where((c) => c['method'] == 'delete'), isEmpty);
     });
 
-    test('calls logout when refresh 401 AND the reauthenticate() retry also fails', () async {
+    test(
+        'does NOT call logout when refresh 401 AND the reauthenticate() '
+        'retry also fails', () async {
       storage.seedValue('access_token', _expiredJwt);
       storage.seedValue('refresh_token', 'expired-refresh');
-      // Both HTTP calls fail with 401.
+      // Both HTTP calls fail with 401. The session must survive this —
+      // only Settings -> Sign out / Delete account may clear it.
       final dio = _mockDio([
         const _MockResponse(statusCode: 401),
         const _MockResponse(statusCode: 401),
@@ -437,11 +440,7 @@ void main() {
       final token = await service.getAccessToken();
 
       expect(token, isNull);
-      final deletedKeys = storage.calls
-          .where((c) => c['method'] == 'delete')
-          .map((c) => c['key'] as String)
-          .toSet();
-      expect(deletedKeys, containsAll(['access_token', 'refresh_token', 'token_expiry']));
+      expect(storage.calls.where((c) => c['method'] == 'delete'), isEmpty);
     });
   });
 

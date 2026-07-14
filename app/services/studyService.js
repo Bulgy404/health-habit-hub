@@ -682,6 +682,12 @@ export async function updateGroupConfig({ db, studyId, groupId, config }) {
     updated.onboardingEnabled = config.onboardingEnabled;
   if (config.selfHabitCreationEnabled !== undefined)
     updated.selfHabitCreationEnabled = config.selfHabitCreationEnabled;
+  if (config.recommenderEnabled !== undefined)
+    updated.recommenderEnabled = config.recommenderEnabled;
+  if (config.habitEntryMode !== undefined)
+    updated.habitEntryMode = config.habitEntryMode;
+  if (config.structuredActivityKeys !== undefined)
+    updated.structuredActivityKeys = config.structuredActivityKeys;
 
   groups[groupIndex] = updated;
 

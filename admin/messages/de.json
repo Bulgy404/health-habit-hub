@@ -266,7 +266,9 @@
   "team": {
     "title": "Team & Rollen",
     "subtitle": "Verwalten Sie, wer Admin- oder Forschungszugriff hat. Rollenänderungen wirken sofort.",
-    "addMember": "Teammitglied hinzufügen",
+    "manageRoles": "Rollen verwalten",
+    "assignRole": "Rolle zuweisen",
+    "assignRoleSubtitle": "Suchen Sie ein bestehendes Konto und gewähren oder ändern Sie dessen Admin- oder Forschungsrolle.",
     "searchPlaceholder": "Nach Benutzername oder E-Mail suchen",
     "searchButton": "Suchen",
     "noSearchResults": "Keine passenden Konten gefunden.",
@@ -794,6 +796,7 @@
         "codes": "Codes",
         "participants": "Teilnehmende",
         "cueConfig": "Cue-Konfiguration",
+        "habitCreation": "Gewohnheitserstellung",
         "reminders": "Erinnerungen"
       },
       "fields": {
@@ -811,6 +814,7 @@
         "endDateLabel": "Studienenddatum",
         "endDateHint": "Optional. Wenn gesetzt, projiziert der Zeitplankalender keine Termine mehr nach diesem Datum.",
         "remindersMovedHint": "Die zeitliche Steuerung von Gewohnheits-, Fragebogen-, Studienende- und Studien-Update-Erinnerungen erfolgt im Tab „Erinnerungen“.",
+        "habitCreationMovedHint": "Empfehlungssystem, Onboarding und Gewohnheitserstellung (inkl. strukturierter vs. Freitext-Eingabe) werden im Tab „Gewohnheitserstellung“ konfiguriert.",
         "notificationTitleLabel": "Benachrichtigungstitel",
         "notificationBodyLabel": "Benachrichtigungstext",
         "groupCountLabel": "Anzahl der Gruppen",
@@ -1062,6 +1066,26 @@
       "onboardingHint": "Überschreibt die studienweite Onboarding-Einstellung nur für diese Gruppe.",
       "selfHabitLabel": "Gewohnheitserstellung (diese Gruppe)",
       "selfHabitHint": "Wenn aus, kann diese Gruppe keine Gewohnheiten erstellen — der Bildschirm „Meine Gewohnheiten“ wird für diese Gruppe ausgeblendet."
+    },
+    "habitCreationTab": {
+      "recommenderLabel": "Empfehlungssystem",
+      "recommenderHint": "Wenn deaktiviert, sehen Teilnehmende dieser Studie den Empfehlungsbildschirm in der App nicht.",
+      "recommenderEnabledLabel": "Empfehlungssystem aktiviert",
+      "onboardingLabel": "Onboarding",
+      "onboardingHint": "Wenn deaktiviert, überspringen Teilnehmende die einmaligen Erklärbildschirme (was eine Gewohnheit ist, was Cues sind) beim Erstellen einer Gewohnheit.",
+      "onboardingEnabledLabel": "Onboarding aktiviert",
+      "habitCreationLabel": "Gewohnheitserstellung",
+      "habitCreationHint": "Wenn deaktiviert, können Teilnehmende dieser Studie keine Gewohnheiten erstellen — der Bildschirm „Meine Gewohnheiten“ wird in der App vollständig ausgeblendet.",
+      "habitCreationEnabledLabel": "Gewohnheitserstellung aktivieren",
+      "entryModeLabel": "Eingabemodus",
+      "perGroupLabel": "Pro Gruppe konfigurieren",
+      "summaryOn": "An",
+      "summaryOff": "Aus",
+      "summaryPerGroup": "Pro Gruppe ({on}/{total} an)",
+      "entryModeStructuredLabel": "Strukturiert ({count})",
+      "entryModeFreeTextLabel": "Freitext",
+      "entryModeNaLabel": "Nicht zutreffend (Erstellung aus)",
+      "entryModeSummaryPerGroup": "Pro Gruppe ({on}/{total} strukturiert)"
     },
     "remindersTab": {
       "habitLabel": "Gewohnheits-Erinnerung",
