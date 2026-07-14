@@ -109,16 +109,14 @@ async function ensureIndexes(db) {
   console.log('\n[mongo] Ensuring indexes...');
 
   // studies: partial unique index — at most one document may have isDefault: true
-  await db
-    .collection('studies')
-    .createIndex(
-      { isDefault: 1 },
-      {
-        unique: true,
-        partialFilterExpression: { isDefault: true },
-        name: 'studies_isDefault_unique',
-      }
-    );
+  await db.collection('studies').createIndex(
+    { isDefault: 1 },
+    {
+      unique: true,
+      partialFilterExpression: { isDefault: true },
+      name: 'studies_isDefault_unique',
+    }
+  );
   console.log('  ✓ studies.isDefault (partial unique)');
 
   // studyCodes: unique on code
@@ -156,7 +154,14 @@ async function seedDefaultStudy(db) {
 
   const now = new Date();
   const groups = DEFAULT_GROUPS.map(
-    ({ index, label, cueConfig, activityTypeConfig, reminderConfig, autoDonate }) => ({
+    ({
+      index,
+      label,
+      cueConfig,
+      activityTypeConfig,
+      reminderConfig,
+      autoDonate,
+    }) => ({
       id: new ObjectId(),
       label,
       index,

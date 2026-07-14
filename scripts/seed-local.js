@@ -171,7 +171,9 @@ async function seedMongo() {
       { $set: { isLibrary: true } }
     );
     if (backfill.modifiedCount > 0) {
-      console.log(`[mongo]   backfilled isLibrary on ${backfill.modifiedCount} questionnaire(s)`);
+      console.log(
+        `[mongo]   backfilled isLibrary on ${backfill.modifiedCount} questionnaire(s)`
+      );
     }
     console.log('[mongo] Done.');
   } finally {
@@ -240,10 +242,16 @@ async function seedSurveys() {
                 {
                   type: 'radiogroup',
                   name: 'age_group',
-                  title: { en: 'What is your age group?', de: 'Welche Altersgruppe trifft auf dich zu?' },
+                  title: {
+                    en: 'What is your age group?',
+                    de: 'Welche Altersgruppe trifft auf dich zu?',
+                  },
                   isRequired: true,
                   choices: [
-                    { value: 'under_18', text: { en: 'Under 18', de: 'Unter 18' } },
+                    {
+                      value: 'under_18',
+                      text: { en: 'Under 18', de: 'Unter 18' },
+                    },
                     { value: '18_24', text: { en: '18–24', de: '18–24' } },
                     { value: '25_34', text: { en: '25–34', de: '25–34' } },
                     { value: '35_44', text: { en: '35–44', de: '35–44' } },
@@ -259,11 +267,29 @@ async function seedSurveys() {
                     de: 'Was sind deine Gesundheitsziele? (alle zutreffenden auswählen)',
                   },
                   choices: [
-                    { value: 'sleep', text: { en: 'Better sleep', de: 'Besserer Schlaf' } },
-                    { value: 'exercise', text: { en: 'More exercise', de: 'Mehr Bewegung' } },
-                    { value: 'nutrition', text: { en: 'Healthier eating', de: 'Gesündere Ernährung' } },
-                    { value: 'stress', text: { en: 'Stress reduction', de: 'Stressabbau' } },
-                    { value: 'mindfulness', text: { en: 'Mindfulness', de: 'Achtsamkeit' } },
+                    {
+                      value: 'sleep',
+                      text: { en: 'Better sleep', de: 'Besserer Schlaf' },
+                    },
+                    {
+                      value: 'exercise',
+                      text: { en: 'More exercise', de: 'Mehr Bewegung' },
+                    },
+                    {
+                      value: 'nutrition',
+                      text: {
+                        en: 'Healthier eating',
+                        de: 'Gesündere Ernährung',
+                      },
+                    },
+                    {
+                      value: 'stress',
+                      text: { en: 'Stress reduction', de: 'Stressabbau' },
+                    },
+                    {
+                      value: 'mindfulness',
+                      text: { en: 'Mindfulness', de: 'Achtsamkeit' },
+                    },
                   ],
                 },
                 {
@@ -276,7 +302,10 @@ async function seedSurveys() {
                   rateMin: 1,
                   rateMax: 5,
                   minRateDescription: { en: 'Not at all', de: 'Gar nicht' },
-                  maxRateDescription: { en: 'Very confident', de: 'Sehr zuversichtlich' },
+                  maxRateDescription: {
+                    en: 'Very confident',
+                    de: 'Sehr zuversichtlich',
+                  },
                   isRequired: true,
                 },
               ],
@@ -313,7 +342,9 @@ async function seedDefaultStudy() {
     // Check if a default study already exists
     const existing = await studies.findOne({ isDefault: true });
     if (existing) {
-      console.log(`[mongo]   default study already exists ("${existing.name}"), skipping.`);
+      console.log(
+        `[mongo]   default study already exists ("${existing.name}"), skipping.`
+      );
       return;
     }
 
@@ -326,13 +357,22 @@ async function seedDefaultStudy() {
     const now = new Date();
     const doc = {
       name: 'Default Study',
-      description: 'Pre-configured default study. Participants without a study code are enrolled here.',
+      description:
+        'Pre-configured default study. Participants without a study code are enrolled here.',
       isDefault: true,
       isActive: true,
       // Organic app-store signups (no study code) all land in this one group —
       // the default study has no experimental arms to randomize into.
       groups: [
-        { id: new ObjectId(), label: 'Group 1', index: 1, cueConfig: null, activityTypeConfig: null, reminderConfig: { enabled: true, fixedTime: null }, autoDonate: false },
+        {
+          id: new ObjectId(),
+          label: 'Group 1',
+          index: 1,
+          cueConfig: null,
+          activityTypeConfig: null,
+          reminderConfig: { enabled: true, fixedTime: null },
+          autoDonate: false,
+        },
       ],
       questionnaires: qIds,
       createdAt: now,
@@ -340,7 +380,9 @@ async function seedDefaultStudy() {
     };
 
     await studies.insertOne(doc);
-    console.log(`[mongo]   default study "Default Study" created (questionnaires: ${qIds.length})`);
+    console.log(
+      `[mongo]   default study "Default Study" created (questionnaires: ${qIds.length})`
+    );
   } finally {
     await client.close();
   }

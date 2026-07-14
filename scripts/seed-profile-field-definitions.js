@@ -75,9 +75,14 @@ const isDryRun = process.argv.includes('--dry-run');
  */
 async function seedProfileFieldDefinitions() {
   if (isDryRun) {
-    console.log('[dry-run] Would upsert the following profile field definitions:');
+    console.log(
+      '[dry-run] Would upsert the following profile field definitions:'
+    );
     for (const def of FIELD_DEFINITIONS) {
-      console.log(`[dry-run]   fieldId="${def.fieldId}"`, JSON.stringify(def, null, 2));
+      console.log(
+        `[dry-run]   fieldId="${def.fieldId}"`,
+        JSON.stringify(def, null, 2)
+      );
     }
     console.log('[dry-run] No changes made to the database.');
     return;
@@ -117,10 +122,15 @@ async function seedProfileFieldDefinitions() {
       if (result.upsertedCount > 0) {
         console.log(`[mongo] inserted  profile field "${fieldId}"`);
       } else if (result.matchedCount > 0) {
-        console.log(`[mongo] already existed — updated  profile field "${fieldId}"`);
+        console.log(
+          `[mongo] already existed — updated  profile field "${fieldId}"`
+        );
       } else {
         // Should not happen with upsert, but guard anyway
-        console.warn(`[mongo] unexpected result for fieldId="${fieldId}":`, result);
+        console.warn(
+          `[mongo] unexpected result for fieldId="${fieldId}":`,
+          result
+        );
       }
     }
 

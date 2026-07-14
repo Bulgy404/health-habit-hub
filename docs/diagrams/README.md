@@ -3,13 +3,13 @@
 All diagrams are **diagrams-as-code**: plain-text sources under version control,
 reviewable in pull requests, and reproducibly exportable to SVG/PNG/PDF.
 
-| Diagram | Format | Source |
-|---|---|---|
-| System architecture | Mermaid | [`architecture/system-architecture.mmd`](architecture/system-architecture.mmd) |
-| Use case diagram | PlantUML | [`use-cases/use-case-diagram.puml`](use-cases/use-case-diagram.puml) |
-| Use case catalogue (structured overview) | Markdown | [`use-cases/use-case-overview.md`](use-cases/use-case-overview.md) |
-| Sequence diagrams (UC-01 … UC-39, one per use case, plus a supplementary LLM-pipeline flowchart) | Mermaid | [`sequences/`](sequences/) |
-| Domain class diagram | Mermaid | [`classes/class-diagram.mmd`](classes/class-diagram.mmd) |
+| Diagram                                                                                          | Format   | Source                                                                         |
+| ------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------------------------------------------ |
+| System architecture                                                                              | Mermaid  | [`architecture/system-architecture.mmd`](architecture/system-architecture.mmd) |
+| Use case diagram                                                                                 | PlantUML | [`use-cases/use-case-diagram.puml`](use-cases/use-case-diagram.puml)           |
+| Use case catalogue (structured overview)                                                         | Markdown | [`use-cases/use-case-overview.md`](use-cases/use-case-overview.md)             |
+| Sequence diagrams (UC-01 … UC-39, one per use case, plus a supplementary LLM-pipeline flowchart) | Mermaid  | [`sequences/`](sequences/)                                                     |
+| Domain class diagram                                                                             | Mermaid  | [`classes/class-diagram.mmd`](classes/class-diagram.mmd)                       |
 
 Mermaid was chosen because the repo's existing docs already use it and GitHub
 renders it natively; PlantUML is used for the use case diagram because Mermaid
@@ -20,7 +20,7 @@ has no native UML use-case type.
 - **GitHub** renders Mermaid blocks natively. For `.mmd` files use the
   [Mermaid Live Editor](https://mermaid.live) (paste the file content).
 - **PlantUML**: use the [PlantUML web server](https://www.plantuml.com/plantuml),
-  or the VS Code extensions *Mermaid Preview* / *PlantUML*.
+  or the VS Code extensions _Mermaid Preview_ / _PlantUML_.
 
 ## Rendering / exporting (reproducible)
 

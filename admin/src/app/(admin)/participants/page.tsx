@@ -481,7 +481,10 @@ export default function ParticipantsPage() {
                 <tr key={i} className={styles.skeletonRow}>
                   {Array.from({ length: 8 }).map((__, j) => (
                     <td key={j}>
-                      <span className={styles.skeletonBar} style={{ width: j === 0 ? "16px" : "80%" }} />
+                      <span
+                        className={styles.skeletonBar}
+                        style={{ width: j === 0 ? "16px" : "80%" }}
+                      />
                     </td>
                   ))}
                 </tr>
@@ -497,8 +500,7 @@ export default function ParticipantsPage() {
                 <th>
                   <ToggleSwitch
                     checked={
-                      participants.length > 0 &&
-                      participants.every((p) => selectedIds.has(p.id))
+                      participants.length > 0 && participants.every((p) => selectedIds.has(p.id))
                     }
                     onChange={toggleSelectAllOnPage}
                     aria-label={t("selectAllOnPage")}

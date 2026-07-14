@@ -1,6 +1,6 @@
 name: Bug report
 description: Something is broken or behaving unexpectedly
-labels: ["bug", "triage"]
+labels: ['bug', 'triage']
 body:
   - type: markdown
     attributes:
@@ -59,7 +59,7 @@ body:
     attributes:
       label: Environment
       description: Branch/commit, OS, Node/Flutter/Python versions, Docker version
-      placeholder: "main@a1b2c3d, macOS 15.4, Node 22, Flutter 3.29"
+      placeholder: 'main@a1b2c3d, macOS 15.4, Node 22, Flutter 3.29'
     validations:
       required: true
 

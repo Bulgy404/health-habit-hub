@@ -49,9 +49,7 @@ export function HabitEntryModeForm({
       <ToggleSwitch
         className={styles.checkboxLabel}
         checked={structured}
-        onChange={(e) =>
-          onChange({ habitEntryMode: e.target.checked ? "structured" : "freeText" })
-        }
+        onChange={(e) => onChange({ habitEntryMode: e.target.checked ? "structured" : "freeText" })}
         label={t("habitEntryMode")}
       />
       <span className={styles.hint}>{t("habitEntryModeHint")}</span>

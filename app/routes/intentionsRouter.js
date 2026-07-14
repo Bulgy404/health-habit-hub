@@ -97,11 +97,9 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
       // only a UI convenience — enforce it here too so a direct API call
       // can't bypass the study's protocol.
       if (!cueConfig.selfHabitCreationEnabled) {
-        return res
-          .status(403)
-          .json({
-            error: 'Habit creation is disabled for your study condition',
-          });
+        return res.status(403).json({
+          error: 'Habit creation is disabled for your study condition',
+        });
       }
 
       // Enforce the resolved habit-reminder mode server-side too — the

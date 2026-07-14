@@ -15,14 +15,18 @@ let changelog;
 try {
   changelog = readFileSync(changelogPath, 'utf8');
 } catch {
-  console.error('WARNING: CHANGELOG.md not found — skipping version bump check.');
+  console.error(
+    'WARNING: CHANGELOG.md not found — skipping version bump check.'
+  );
   process.exit(0);
 }
 
 // Extract first semver from CHANGELOG.md (e.g. ## [1.2.3] - date  or  ## 1.2.3)
 const match = changelog.match(/\[?(\d+\.\d+\.\d+)\]?/);
 if (!match) {
-  console.error('WARNING: Could not parse version from CHANGELOG.md — skipping version bump check.');
+  console.error(
+    'WARNING: Could not parse version from CHANGELOG.md — skipping version bump check.'
+  );
   process.exit(0);
 }
 
@@ -32,7 +36,9 @@ const version = match[1];
 let tagExists = false;
 for (const candidate of [`v${version}`, version]) {
   try {
-    const result = execSync(`git -C "${repoRoot}" tag --list "${candidate}"`, { encoding: 'utf8' }).trim();
+    const result = execSync(`git -C "${repoRoot}" tag --list "${candidate}"`, {
+      encoding: 'utf8',
+    }).trim();
     if (result) {
       tagExists = true;
       break;
@@ -43,7 +49,9 @@ for (const candidate of [`v${version}`, version]) {
 }
 
 if (!tagExists) {
-  console.error(`WARNING: Version not bumped since last deploy (CHANGELOG.md v${version} has no matching git tag)`);
+  console.error(
+    `WARNING: Version not bumped since last deploy (CHANGELOG.md v${version} has no matching git tag)`
+  );
   process.exit(1);
 }
 

@@ -142,7 +142,10 @@ app.post('/trigger', writeLimiter, (req, res) => {
     // services: optional { mongo?, neo4j?, lightrag?, keycloak? } booleans —
     // any omitted key defaults to included (true). See jobs.js's
     // includeEnvFromServices() for how this maps to backup.sh's env vars.
-    const jobId = triggerBackup({ reason: 'manual', services: req.body?.services });
+    const jobId = triggerBackup({
+      reason: 'manual',
+      services: req.body?.services,
+    });
     res.status(202).json({ jobId });
   } catch (err) {
     res.status(err.status ?? 500).json({ error: err.message });

@@ -48,9 +48,7 @@ afterEach(() => {
 describe("RestoreAttemptsPage", () => {
   it("renders the page title", async () => {
     render(<RestoreAttemptsPage />);
-    expect(
-      screen.getByRole("heading", { name: /restore attempts/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /restore attempts/i })).toBeInTheDocument();
   });
 
   it("shows a fetched attempt's ip and outcome", async () => {
@@ -59,9 +57,7 @@ describe("RestoreAttemptsPage", () => {
     // "Invalid credentials" also appears as a filter <option>, so there
     // are two matches — the outcome filter and the table badge.
     expect(screen.getAllByText("Invalid credentials").length).toBeGreaterThanOrEqual(2);
-    expect(
-      screen.getByText("11111111-2222-3333-4444-555555555555")
-    ).toBeInTheDocument();
+    expect(screen.getByText("11111111-2222-3333-4444-555555555555")).toBeInTheDocument();
   });
 
   it("shows the empty state when there are no entries", async () => {

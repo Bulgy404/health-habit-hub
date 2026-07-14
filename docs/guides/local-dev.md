@@ -23,13 +23,13 @@ This guide walks you through running the full Health Habit Hub stack locally —
 
 Install the following tools before proceeding.
 
-| Tool | Minimum Version | Install |
-|---|---|---|
-| **Xcode** | 15.0 | Mac App Store |
-| **Docker Desktop** | 4.25.0 | https://docs.docker.com/desktop/install/mac/ |
-| **Flutter SDK** | 3.22.0 | https://docs.flutter.dev/get-started/install/macos |
-| **Node.js** | 22.0.0 | https://nodejs.org/en/download/ |
-| **Git** | 2.40.0 | `xcode-select --install` |
+| Tool               | Minimum Version | Install                                            |
+| ------------------ | --------------- | -------------------------------------------------- |
+| **Xcode**          | 15.0            | Mac App Store                                      |
+| **Docker Desktop** | 4.25.0          | https://docs.docker.com/desktop/install/mac/       |
+| **Flutter SDK**    | 3.22.0          | https://docs.flutter.dev/get-started/install/macos |
+| **Node.js**        | 22.0.0          | https://nodejs.org/en/download/                    |
+| **Git**            | 2.40.0          | `xcode-select --install`                           |
 
 ### Verify your environment
 
@@ -88,23 +88,23 @@ make dev
 
 This runs `docker compose -f docker-compose.local.yml up -d`, starting:
 
-| Service | Description | Local address |
-|---|---|---|
-| **proxy** | Traefik reverse proxy | `http://proxy.localhost` / port `8888` (dashboard) |
-| **app** | Node.js/Express backend | `localhost:3000` |
-| **admin** | Next.js admin panel | `http://admin.localhost` / `localhost:3001` |
-| **mongo** | MongoDB | `localhost:27017` |
-| **neo4j** | Neo4j graph database | `localhost:7474` (browser) / `7687` (bolt) |
-| **keycloak** | Identity provider (Keycloak) | `localhost:8080` |
-| **redis** | Redis cache | `localhost:6379` |
-| **recommender** | Python FastAPI recommender | `localhost:8001` |
-| **lightrag** | LightRAG knowledge base (REST API + graph UI) | `localhost:9622` |
-| **knowledge-mcp** | MCP server wrapping LightRAG | `localhost:8002` |
-| **translate** | LibreTranslate | `localhost:5001` |
-| **backup** | Backup service (scheduled backups + internal API for the admin panel's Backups page) | internal only (backup-api on port `4100`) |
-| **docker-socket-proxy** | Scoped Docker API used only by `backup` (no direct `docker.sock` mount) | internal only |
-| **prometheus** | Metrics collection, scrapes `app` | `http://prometheus.localhost` / `localhost:9090` |
-| **grafana** | Dashboards over Prometheus data, Keycloak SSO login | `http://grafana.localhost` / `localhost:3002` |
+| Service                 | Description                                                                          | Local address                                      |
+| ----------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| **proxy**               | Traefik reverse proxy                                                                | `http://proxy.localhost` / port `8888` (dashboard) |
+| **app**                 | Node.js/Express backend                                                              | `localhost:3000`                                   |
+| **admin**               | Next.js admin panel                                                                  | `http://admin.localhost` / `localhost:3001`        |
+| **mongo**               | MongoDB                                                                              | `localhost:27017`                                  |
+| **neo4j**               | Neo4j graph database                                                                 | `localhost:7474` (browser) / `7687` (bolt)         |
+| **keycloak**            | Identity provider (Keycloak)                                                         | `localhost:8080`                                   |
+| **redis**               | Redis cache                                                                          | `localhost:6379`                                   |
+| **recommender**         | Python FastAPI recommender                                                           | `localhost:8001`                                   |
+| **lightrag**            | LightRAG knowledge base (REST API + graph UI)                                        | `localhost:9622`                                   |
+| **knowledge-mcp**       | MCP server wrapping LightRAG                                                         | `localhost:8002`                                   |
+| **translate**           | LibreTranslate                                                                       | `localhost:5001`                                   |
+| **backup**              | Backup service (scheduled backups + internal API for the admin panel's Backups page) | internal only (backup-api on port `4100`)          |
+| **docker-socket-proxy** | Scoped Docker API used only by `backup` (no direct `docker.sock` mount)              | internal only                                      |
+| **prometheus**          | Metrics collection, scrapes `app`                                                    | `http://prometheus.localhost` / `localhost:9090`   |
+| **grafana**             | Dashboards over Prometheus data, Keycloak SSO login                                  | `http://grafana.localhost` / `localhost:3002`      |
 
 > The Apache Jena **Fuseki** triple store has been retired and is no longer part of the compose stack — see [`../migration.md`](../migration.md). BCIO mapping now runs on in-process embeddings in the recommender service.
 
@@ -119,7 +119,7 @@ curl localhost:3000/api/v1/health
 Expected response:
 
 ```json
-{"status":"ok"}
+{ "status": "ok" }
 ```
 
 ### Step 5 — Seed the database
@@ -210,9 +210,9 @@ The `testuser` seeded by `make seed` is a regular `user` (study participant) —
 
 **This is now done automatically.** When you run `make dev`, the `keycloak-init` container creates an admin user in the `hhh` realm using values from your `.env`:
 
-| `.env` variable | Used as | Default |
-|---|---|---|
-| `HHH_ADMIN_USER` | Admin panel username | `admin` |
+| `.env` variable           | Used as              | Default |
+| ------------------------- | -------------------- | ------- |
+| `HHH_ADMIN_USER`          | Admin panel username | `admin` |
 | `KEYCLOAK_ADMIN_PASSWORD` | Admin panel password | `admin` |
 
 The created user is automatically assigned both `admin` and `researcher` roles, so it has full access to all admin panel features.
@@ -249,11 +249,11 @@ The backend and Keycloak containers must still be running (`make dev` with the `
 
 After running `make seed`, these credentials work in both the app and the Keycloak admin UI:
 
-| Account | Username | Password | Role | Where to log in |
-|---|---|---|---|---|
-| Test user (study participant) | `testuser` | `testpass123` | `user` (hhh realm) | Flutter app |
-| Admin panel user | value of `HHH_ADMIN_USER` (default: `admin`) | value of `KEYCLOAK_ADMIN_PASSWORD` in `.env` | `admin` + `researcher` (hhh realm) | `http://admin.localhost` |
-| Keycloak master admin | `admin` | value of `KEYCLOAK_ADMIN_PASSWORD` in `.env` | master realm admin | `http://localhost:8080/admin` |
+| Account                       | Username                                     | Password                                     | Role                               | Where to log in               |
+| ----------------------------- | -------------------------------------------- | -------------------------------------------- | ---------------------------------- | ----------------------------- |
+| Test user (study participant) | `testuser`                                   | `testpass123`                                | `user` (hhh realm)                 | Flutter app                   |
+| Admin panel user              | value of `HHH_ADMIN_USER` (default: `admin`) | value of `KEYCLOAK_ADMIN_PASSWORD` in `.env` | `admin` + `researcher` (hhh realm) | `http://admin.localhost`      |
+| Keycloak master admin         | `admin`                                      | value of `KEYCLOAK_ADMIN_PASSWORD` in `.env` | master realm admin                 | `http://localhost:8080/admin` |
 
 > **Note:** The admin panel user and the Keycloak master admin happen to share the same username (`admin`) by default, but they live in different realms. The admin panel user is created in the `hhh` realm by `keycloak-init`. The master admin lives in the `master` realm and only manages Keycloak itself.
 
@@ -265,11 +265,11 @@ Keycloak admin UI: `http://localhost:8080/admin`
 
 Flutter hot reload is available while the app is running in the simulator.
 
-| Action | Key |
-|---|---|
+| Action                                 | Key                                                |
+| -------------------------------------- | -------------------------------------------------- |
 | Hot reload (update UI without restart) | `r` in the terminal where `flutter run` is running |
-| Hot restart (restart app, reset state) | `R` |
-| Quit | `q` |
+| Hot restart (restart app, reset state) | `R`                                                |
+| Quit                                   | `q`                                                |
 
 Backend hot reload (Node.js with `--watch`):
 
@@ -360,11 +360,11 @@ make reset
 
 The admin panel uses NextAuth + Keycloak with three Docker-specific environment variables. Most authentication problems trace to one of these:
 
-| Env var | Where it points | Why it matters |
-|---|---|---|
-| `KEYCLOAK_BROWSER_URL` | `http://localhost:8080` | Used by NextAuth as the **authorization** endpoint host — the browser must be able to reach it |
-| `KEYCLOAK_INTERNAL_URL` | `http://keycloak:8080` | Used by NextAuth for **token**, **userinfo**, and **JWKS** endpoints — server-to-server inside Docker |
-| `KEYCLOAK_ISSUER` | `http://localhost:8080/realms/hhh` | Must match the `iss` claim in the issued tokens. In `start-dev` mode, Keycloak stamps `iss` from the browser-side Host header, which is `localhost:8080` |
+| Env var                 | Where it points                    | Why it matters                                                                                                                                           |
+| ----------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `KEYCLOAK_BROWSER_URL`  | `http://localhost:8080`            | Used by NextAuth as the **authorization** endpoint host — the browser must be able to reach it                                                           |
+| `KEYCLOAK_INTERNAL_URL` | `http://keycloak:8080`             | Used by NextAuth for **token**, **userinfo**, and **JWKS** endpoints — server-to-server inside Docker                                                    |
+| `KEYCLOAK_ISSUER`       | `http://localhost:8080/realms/hhh` | Must match the `iss` claim in the issued tokens. In `start-dev` mode, Keycloak stamps `iss` from the browser-side Host header, which is `localhost:8080` |
 
 **Fix 1:** Confirm the `keycloak-init` container completed successfully. The `admin` container depends on it:
 
@@ -389,6 +389,7 @@ docker logs hhh-admin
 ```
 
 Common causes:
+
 - **`iss` mismatch**: NextAuth rejects the token because `KEYCLOAK_ISSUER` does not match the `iss` claim. In `start-dev` mode the `iss` claim is `http://localhost:8080/realms/hhh`, so `KEYCLOAK_ISSUER` must use `localhost:8080` (not `keycloak:8080`).
 - **Empty `realm_access` roles**: `realm_access` lives only in the access token, not in the ID token. The JWT callback in `admin/src/lib/auth.ts` decodes roles from `account.access_token` directly. If you have customised this and read from `profile`, roles will always be empty.
 - **User has no `admin` or `researcher` role**: confirm the `keycloak-init` step ran (see Fix 1) and assigned both roles to the admin user.

@@ -46,10 +46,7 @@ export default function AuditLogPage() {
     try {
       const params = new URLSearchParams({ limit: String(limit) });
       if (resourceType) params.set("resourceType", resourceType);
-      const data = await apiFetch(
-        apiUrl(`/admin/audit-log?${params.toString()}`),
-        token
-      );
+      const data = await apiFetch(apiUrl(`/admin/audit-log?${params.toString()}`), token);
       setEntries((data?.entries ?? []) as AuditEntry[]);
       setError(null);
     } catch (e) {
@@ -131,8 +128,7 @@ export default function AuditLogPage() {
                   <td>
                     {e.resourceType ? (
                       <>
-                        <span className={styles.badge}>{e.resourceType}</span>{" "}
-                        {e.resourceId ?? ""}
+                        <span className={styles.badge}>{e.resourceType}</span> {e.resourceId ?? ""}
                       </>
                     ) : (
                       "—"

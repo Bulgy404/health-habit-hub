@@ -48,17 +48,17 @@ All branches **must** follow this pattern:
 <type>/<short-description>
 ```
 
-| Type | When to use |
-|------|-------------|
-| `feature/` | New user-facing functionality |
-| `fix/` | Bug fix (production or test) |
-| `chore/` | Dependency updates, config changes, tooling |
-| `docs/` | Documentation only — no code changes |
+| Type        | When to use                                 |
+| ----------- | ------------------------------------------- |
+| `feature/`  | New user-facing functionality               |
+| `fix/`      | Bug fix (production or test)                |
+| `chore/`    | Dependency updates, config changes, tooling |
+| `docs/`     | Documentation only — no code changes        |
 | `refactor/` | Internal restructuring, no behaviour change |
-| `perf/` | Performance improvements |
-| `test/` | Adding or fixing tests only |
-| `ci/` | CI/CD pipeline changes |
-| `release/` | Version bump PRs (created by maintainers) |
+| `perf/`     | Performance improvements                    |
+| `test/`     | Adding or fixing tests only                 |
+| `ci/`       | CI/CD pipeline changes                      |
+| `release/`  | Version bump PRs (created by maintainers)   |
 
 **Examples**
 
@@ -72,6 +72,7 @@ ci/add-python-lint-job
 ```
 
 Rules:
+
 - Use **kebab-case**, all lowercase
 - Keep descriptions concise (3–5 words)
 - No ticket numbers in branch names — link the issue in the PR body instead
@@ -92,18 +93,18 @@ This project follows **[Conventional Commits](https://www.conventionalcommits.or
 
 ### Types
 
-| Type | Use for |
-|------|---------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation changes |
-| `style` | Formatting, missing semicolons — no logic change |
-| `refactor` | Code restructuring |
-| `perf` | Performance improvement |
-| `test` | Adding/fixing tests |
-| `chore` | Build process, dependency updates, tooling |
-| `ci` | CI pipeline changes |
-| `revert` | Reverts a previous commit |
+| Type       | Use for                                          |
+| ---------- | ------------------------------------------------ |
+| `feat`     | New feature                                      |
+| `fix`      | Bug fix                                          |
+| `docs`     | Documentation changes                            |
+| `style`    | Formatting, missing semicolons — no logic change |
+| `refactor` | Code restructuring                               |
+| `perf`     | Performance improvement                          |
+| `test`     | Adding/fixing tests                              |
+| `chore`    | Build process, dependency updates, tooling       |
+| `ci`       | CI pipeline changes                              |
+| `revert`   | Reverts a previous commit                        |
 
 ### Scopes (optional but encouraged)
 
@@ -165,11 +166,11 @@ fix(ci): repair ontology constraint parser semicolon split
 
 Releases follow **[Semantic Versioning](https://semver.org/)** (`vMAJOR.MINOR.PATCH`).
 
-| Increment | When |
-|-----------|------|
-| `MAJOR` | Breaking change for study participants or API consumers |
-| `MINOR` | New backward-compatible feature |
-| `PATCH` | Bug fix, docs, chore — no new behaviour |
+| Increment | When                                                    |
+| --------- | ------------------------------------------------------- |
+| `MAJOR`   | Breaking change for study participants or API consumers |
+| `MINOR`   | New backward-compatible feature                         |
+| `PATCH`   | Bug fix, docs, chore — no new behaviour                 |
 
 **To cut a release:**
 
@@ -226,14 +227,14 @@ These create a pre-release on GitHub and do **not** update the `latest` release 
 
 ## Testing requirements
 
-| Layer | Command | Required? |
-|-------|---------|-----------|
-| Backend unit | `make test-backend` | Yes |
-| Backend integration | CI only (needs MongoDB + Neo4j) | Yes in CI |
-| Python API-service | `make test-python` | Yes |
-| Flutter | `make test-flutter` | Yes |
-| Admin typecheck | `make test-admin` | Yes |
-| E2E smoke | Nightly CI | Yes on `main` |
+| Layer               | Command                         | Required?     |
+| ------------------- | ------------------------------- | ------------- |
+| Backend unit        | `make test-backend`             | Yes           |
+| Backend integration | CI only (needs MongoDB + Neo4j) | Yes in CI     |
+| Python API-service  | `make test-python`              | Yes           |
+| Flutter             | `make test-flutter`             | Yes           |
+| Admin typecheck     | `make test-admin`               | Yes           |
+| E2E smoke           | Nightly CI                      | Yes on `main` |
 
 New features must include tests. Bug fixes must include a regression test that would have caught the bug.
 

@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Participant notification toggles removed.** The app's *Settings → Notifications* section (per-channel switches for habit reminders, questionnaire reminders, and study updates) is gone — study reminders are part of the protocol and are always scheduled. Participants who don't want them can still mute the app at the OS level. Deleted the device-local `NotificationPrefs` store and its Riverpod provider; `ReminderSchedulerService` no longer consults per-user toggles (researcher/study-level controls — reminder hour, end-of-study notification — are unchanged). FAQ copy updated across en/de/fr/ja.
+- **Participant notification toggles removed.** The app's _Settings → Notifications_ section (per-channel switches for habit reminders, questionnaire reminders, and study updates) is gone — study reminders are part of the protocol and are always scheduled. Participants who don't want them can still mute the app at the OS level. Deleted the device-local `NotificationPrefs` store and its Riverpod provider; `ReminderSchedulerService` no longer consults per-user toggles (researcher/study-level controls — reminder hour, end-of-study notification — are unchanged). FAQ copy updated across en/de/fr/ja.
 
 - **Removed the Mailjet integration.** `MAIL_USER`/`MAIL_PASS`/`MAIL_FROM` are gone; replaced by generic `SMTP_*` vars (see above). `ALERT_EMAIL`/`BACKUP_EMAIL` precedence is flipped — `ALERT_EMAIL` is now canonical and `BACKUP_EMAIL` is the deprecated fallback (previously the reverse) — since alerting now covers more than just backups. **Breaking** if you currently set both to different values: `ALERT_EMAIL` now wins.
 
@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Study onboarding/self-habit-creation toggles reverted to "on" after saving**: `listStudies()` (the query backing the studies table and the edit modal) omitted `onboardingEnabled`/`selfHabitCreationEnabled` from its response, so reopening the edit modal always fell back to the default regardless of what was actually saved.
 - **"Allow participants to create their own habits" reframed as "Enable habit creation"**: since there's no other way for a participant to get a habit, disabling it now hides the entire My Habits tab in the app (not just the add-habit button) and is enforced server-side on `POST /habits/intentions` (previously UI-only). Also closed a bypass: the Recommender's "Add to habits" button skipped the structured-catalog restriction entirely, letting a participant create an off-catalog habit even when the study required picking from a fixed activity list.
-- **Notification campaigns always reported "Sent to 0 participants"**: the send route returned the pre-send campaign snapshot (`recipientCount: null`) instead of the actual send result. Now also surfaces *why* a send reached nobody (no participants enrolled vs. no registered devices vs. every push failed) instead of a bare zero.
+- **Notification campaigns always reported "Sent to 0 participants"**: the send route returned the pre-send campaign snapshot (`recipientCount: null`) instead of the actual send result. Now also surfaces _why_ a send reached nobody (no participants enrolled vs. no registered devices vs. every push failed) instead of a bare zero.
 - Recommender container connected to `localhost:27017` instead of the `mongo` service (env override in `docker-compose.local.yml`), causing Mongo fetch failures and gateway 504s during recommendation generation.
 - Flutter loading screen surfaced raw `DioException` text; it now shows the server's error message (e.g. the goal-guard refusal reason) or a friendly timeout message.
 - **Account restore was broken**: onboarding minted a 32-byte password but the 24-word recovery phrase only encodes 16 bytes, truncating the restored password so login failed. Passwords are now 16 bytes and round-trip exactly.
@@ -67,11 +67,13 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - **Repository conventions**: CONTRIBUTING.md, CODE_OF_CONDUCT.md, PR template, issue templates, CODEOWNERS, release workflow with CI gate
 
 ### Added — Standalone analytics page, monitoring (2026-06-15)
+
 - **Dedicated `/analytics` sidebar page (Recharts):** analytics moved out of the study-edit modal into its own first-class sidebar route accessible to both `admin` and `researcher` roles; the page has a study dropdown (defaults to the first active study), five KPI summary cards (total enrolled, active last 7 days, dropouts with colour-coded rate, avg SRHI at latest week, avg questionnaire completion), and four Recharts charts — vertical BarChart for weekly active rate per condition (reference line at 50%), LineChart for SRHI trajectory with a dashed habit-threshold line at 4, step-after LineChart for cumulative dropout, and a horizontal BarChart for questionnaire completion (reference line at 80%); a participant table at the bottom lists all enrolled members with group, enrolled date, last-active date, mini survey-completion bar, and status badge; `recharts` added to `admin/package.json`
 - **Analytics tab removed from study edit modal:** the "Analytics" tab button, `ModalTab` union type entry, render branch, and `AnalyticsTab` import are all removed from `studies/page.tsx`; the `studies-analytics-tab.tsx` component is retained as a standalone module for potential reuse
 - **Prometheus + Grafana (local):** `docker-compose.local.yml` now includes `prometheus` (port 9090, `prometheus.localhost`) and `grafana` (port 3002, `grafana.localhost`); Prometheus scrapes the existing Node.js `/metrics` endpoint at `app:9091`; Grafana auto-provisions the Prometheus datasource and the pre-built HHH App Metrics dashboard (`monitoring/grafana/dashboards/hhh-app.json`) with HTTP rate, latency percentiles, memory, and event loop panels; Makefile gains `monitoring`, `monitoring-stop`, `logs-prometheus`, `logs-grafana` targets
 
 ### Fixed — Admin portal (2026-06-15)
+
 - **Keycloak issuer mismatch (OAuthCallbackError):** `KEYCLOAK_ISSUER` in `docker-compose.local.yml` corrected from `http://keycloak:8080/realms/hhh` to `http://localhost:8080/realms/hhh`; Keycloak `start-dev` stamps `iss` with the public-facing hostname, not the Docker-internal one; NextAuth v4 `idToken` auto-detects `true` when scope includes `openid` and then validates `iss` strictly via `client.callback()` — the internal URL caused every login to fail with "try sign in with a different account"
 - **Knowledge Base HTTP 422:** all four `kbRouter.js` proxy calls were missing `X-Service-Auth-Token`; FastAPI returns 422 (not 401) for a missing required `Header(...)` parameter; added `serviceHeaders()` helper that injects `API_SERVICE_SECRET` into every upstream fetch
 - **Questionnaires crash (React error #31):** MongoDB stores SurveyJS question options as `{value, label}` objects; the preview modal and edit handler rendered them directly as React children; options are now normalised to plain strings at load time in both places
@@ -79,22 +81,26 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - **LLM model:** changed from `alias-ha` → `alias-huge` in `.env` and `docker-compose.local.yml`
 
 ### Fixed — CI pipeline repairs (2026-06-10)
+
 - **`npm ci` "Invalid Version:" repaired (2026-06-12):** the regenerated `app/package-lock.json` contained a corrupt entry — `node_modules/google-gax/node_modules/@grpc/grpc-js` had no `version`/`resolved`/`integrity` fields (just `{"optional": true}`), making npm's arborist throw `Invalid Version:` during every `npm ci` (all setup-node-app CI jobs + the app Docker build). Note: `npm ci --dry-run` does **not** catch this — verification now uses a real clean-room `npm ci` (612 packages, passes); `admin/package-lock.json` audited clean; full backend suite re-run (538/538)
-- **Ontology constraint parser fixed:** the CI step split `constraints.cypher` on `;` *before* removing comments — a semicolon inside a header comment produced a bogus statement (Cypher syntax error), and `//`-prefixed chunks bundled with real statements would have been silently dropped; the parser now strips comment lines first, and the header comment no longer contains a semicolon (10 clean statements verified)
+- **Ontology constraint parser fixed:** the CI step split `constraints.cypher` on `;` _before_ removing comments — a semicolon inside a header comment produced a bogus statement (Cypher syntax error), and `//`-prefixed chunks bundled with real statements would have been silently dropped; the parser now strips comment lines first, and the header comment no longer contains a semicolon (10 clean statements verified)
 - **Ontology – graph integrity job rewritten for the current schema:** it still seeded and asserted the retired `hhh__` legacy graph; now seeds a Habit→Context→BCIOConcept(+Comment) fixture and asserts constraint presence (`habit_uuid`, `bcio_uri_unique`, `comment_id_unique`), pipeline-shape retrievability, and integrity invariants (no duplicate uuids, no orphaned Context/Comment nodes)
 - **Flutter – dependency audit:** `flutter_timezone` bumped `^4.1.1` → `^5.0.2` (latest major is 5.x; the audit gate flags lagging majors) and the scheduler adapted to the v5 `TimezoneInfo.identifier` API
 - **Nightly E2E:** corrected service list for `docker-compose.local.yml` (no `keycloak-db` locally; added `keycloak-init`; removed the full-stack fallback that pulled LLM-dependent services); seeding now runs via `npm run seed` from `app/`
 - **Deprecation warnings:** `actions/checkout@v5`, `actions/setup-python@v6`, `actions/upload-artifact@v5` across all workflows and composite actions (Node 24 runners)
 
 ### Added — Comment moderation, full localization, CI fixes (2026-06-10)
+
 - **Comment moderation (UC-34/UC-27):** `GET /api/v1/admin/comments` (all participant comments newest-first with habit context, limit-capped) and `DELETE /api/v1/admin/comments/:commentId` (removes the anonymous Neo4j node + Mongo ownership mapping); new Flutter admin screen (list, refresh, confirm-and-delete) reachable from the habit monitor app bar; adminRouter gains the lazy production Neo4j fallback; 3 new integration tests (role enforcement, listing with context, delete-and-verify)
 - **Localization completed:** 36 new l10n keys (consent flow, account deletion, data export, AI disclaimer, reminder picker, habit-strength chip, comments UI, moderation UI) translated to EN/DE/JA across the three arb files and the generated localization classes; all hardcoded English strings from the recent feature work replaced — JA strings pending native-speaker review like the consent translation
 - **CI fixes:** committed `docs/api/openapi.yaml` regenerated (had re-staled after the moderation endpoints — the new drift gate would have caught it); Prettier formatting applied to 5 backend files; Dart import blocks normalized (dart:/package:/relative, each sorted) in all 20 session-touched files to satisfy `directives_ordering` in `flutter analyze`; `timezone` constraint fixed to `^0.11.0` for `flutter_local_notifications` 22 pub resolution; lockfile verified in sync with `npm ci --dry-run`
 
 ### Fixed — Account deletion was incomplete in production (2026-06-10)
+
 - `usersRouter` lacked the production fallbacks the other routers have: with `createV1Router()` called without injected clients (the production path in `app.js`), `DELETE /users/me` wiped MongoDB but **silently skipped the Keycloak identity and the user's Comment nodes**. Now mirrors `adminRouter`/`habitsRouter`: lazily creates a real Keycloak admin client and Neo4j runner when none are injected; the nightly E2E smoke test exercises this path against real containers
 
 ### Added — Engineering robustness (2026-06-10)
+
 - **Crash/error reporting (opt-in):** backend Sentry integration behind `SENTRY_DSN` (`app/utils/errorReporting.js` — central Express error handler, request bodies/cookies stripped, no-op without DSN); Flutter `sentry_flutter` behind `--dart-define=SENTRY_DSN` with PII/screenshots/view-hierarchy disabled; DEPLOYMENT.md documents the self-hosted-instance requirement
 - **Nightly E2E smoke test:** `scripts/smoke-e2e.mjs` walks the real participant journey (health → legal docs → onboard → consent → enroll → habit-config → intention → log → reminder plan → export → deletion incl. erasure verification) against live containers; `.github/workflows/nightly-e2e.yml` boots the compose stack nightly and runs it — catches integration drift 535 mocked tests cannot
 - **OpenAPI drift gate:** fixed `scripts/generate-spec.js` (js-yaml resolution from `app/node_modules`; the script was broken and the committed spec was **1119 lines stale**); spec regenerated; CI now regenerates and `git diff --exit-code`s `docs/api/openapi.yaml`; `npm run generate-spec` / `check:openapi` added
@@ -102,6 +108,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - **Secrets:** DEPLOYMENT.md gains a secrets-handling section (Portainer secrets over flat `.env`, `chmod 600`) and a rotation checklist — flagging the circulated Mailjet credentials for immediate rotation and the removed reCAPTCHA keys for revocation
 
 ### Added — Study features: re-consent, data export, adaptive reminders, habit social signals (2026-06-10)
+
 - **Re-consent on version bump (UC-31):** app start compares the recorded consent version against the served document; a bump routes to a mandatory re-consent screen (accept → recorded server-side; decline → sign-out). Fails open on network errors
 - **Participant data export (UC-32 / GDPR Art. 20):** `GET /api/v1/users/me/export` returns all 12 participant collections as a JSON download; Settings → "Export my data" shares the file via the system share sheet
 - **Adaptive habit reminders (UC-33):** participants pick a reminder time (Cupertino wheel) at intention creation (`reminderTime` HH:mm on the intention); `reminderPlanService` computes a transparent autonomy score (0.5·SRHI + 0.35·adherence14d + 0.15·streak) mapped to fading tiers daily→every-2-days→twice-weekly→weekly→off, with two-week hysteresis before fading and immediate snap-back to daily when 7-day adherence drops below 0.5; weights tunable via `admin_settings` (`reminder_*` keys, per-study experimentation); `GET /habits/intentions/reminder-plans` + Flutter scheduler (`flutter_local_notifications` zonedSchedule, new `timezone`/`flutter_timezone` deps) resyncs on app start, intention creation, and SRHI submission; 12 algorithm unit tests
@@ -110,16 +117,19 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Backend suite: 535 tests (21 new for likes/comments, 12 for the reminder algorithm, 2 for export); diagrams + catalogue extended (UC-33, UC-34), class diagram updated (Comment, ownership mapping, reminderTime, like counters)
 
 ### Changed — Neo4j legacy schema retired, Japanese added, consents hardened (2026-06-10)
+
 - **n10s plugin dropped:** `NEO4J_PLUGINS=["n10s"]`, the n10s procedure allowlists, and the `EXTENSION_SCRIPT` workaround (`neo4j/extension.sh`, deleted) removed from both compose files — nothing has called n10s since the legacy donate flow was removed; requires a Neo4j container recreate on next deploy; also deleted the vendored 13 MB `neo4j/plugins/n10s.jar` (was git-tracked but not mounted by any compose file)
 - **Neo4j legacy schema retired (no data migration needed — no legacy data exists):** the last legacy writer (`assignGroupLabel` on `hhh__Donor`) removed — group membership lives in MongoDB + Keycloak only; `seed-local.js` no longer seeds legacy Group/Donor nodes; `neo4j/init/constraints.cypher` rewritten for the current schema; US-133 constraints/indexes (`habit_uuid_unique`, `context_text_dimension`, `bcio_uri_unique`) now applied automatically at startup via `app/utils/neo4jSchema.js`; `docs/migration.md` documents the one-statement conversion should a legacy environment ever resurface
 - **Japanese (ja) is now a full app language:** `app_ja.arb` + generated `AppLocalizationsJa` (188 strings), registered in `supportedLocales`, locale provider, and the settings picker (日本語); backend `preferredLanguage` and cue-pool `language` accept `ja` (legal documents and backend messages already existed in JA)
 - **consents collection hardened:** `app/models/consent.js` with JSON-schema validator (semver `consentVersion`, locale enum) and `{userId, consentedAt}` compound index, applied at startup and via `scripts/add-mongo-validators.js`; 4 new model unit tests
 
 ### Fixed — Pre-submission audit (2026-06-10)
+
 - Regenerated `app/package-lock.json` after the legacy-dependency removal — `npm ci` (used in CI) would have failed on the lockfile/manifest mismatch
 - Added `ios/Runner/Runner.entitlements` (`aps-environment`) wired into all three Runner build configurations, plus `UIBackgroundModes: remote-notification` in `Info.plist` — without these, APNs registration and therefore the entire FCM push flow (UC-15/UC-24) silently fails on devices
 
 ### Added — App Store compliance (2026-06-10)
+
 - **Informed consent (Guideline 5.1.3):** ethics-reviewed HabConnect consent document (v1.0.0, DE authoritative + EN/JA convenience translations) served at `/:lng/consent` through the versioned legal-doc pipeline; mandatory `ConsentScreen` before account creation in the Flutter onboarding; acceptance recorded locally and via `POST /api/v1/users/me/consent` (append-only `consents` collection); re-readable under Settings → Legal → Study consent
 - **Account deletion (Guideline 5.1.1(v)):** `DELETE /api/v1/users/me` removes all participant-linked MongoDB documents (11 collections) and the Keycloak identity (new `deleteUser` admin-client method, idempotent); Settings → Delete account with explicit confirmation, local wipe, and logout
 - **Privacy manifest:** `ios/Runner/PrivacyInfo.xcprivacy` (no tracking; Health/UserID/UsageData collection declared; required-reason APIs CA92.1, C617.1, 35F9.1) registered in the Runner Xcode target
@@ -128,6 +138,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - 8 new integration tests (consent recording, deletion incl. idempotency); diagrams + use case catalogue extended (UC-31, UC-32)
 
 ### Added — Use-case test coverage completed (2026-06-10)
+
 - UC-10: integration tests for `GET /me/habit-config` (enrollment cue config, cue sampling, SRHI items, admin-settings fallback, auth)
 - UC-15: integration tests for `POST /participant/register-token` (auth, validation, upsert semantics)
 - UC-25: integration tests for the Node `kbRouter` proxy against a mocked API-service (admin-only role enforcement, list/upload/delete/reindex pass-through, 502 on upstream outage) — the API-service side was already covered by `test_retrieve.py`
@@ -135,12 +146,14 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - All 30 use cases now have automated coverage (UC-26 is a UI link; UC-29 covered by static backup-script checks)
 
 ### Added — Legal-document versioning (2026-06-10)
+
 - YAML front matter (`version`, `effectiveDate`, `bindingLanguage`) on all 9 legal documents (`app/language/{en,de,ja}/{privacy,imprint,accessibility}.md`); legal wording unchanged
 - `parseFrontMatter` in `app/utils/markdown.js` (no new dependency); legal-page API responses now include a `document` metadata field
-- Flutter legal screen renders a localized footer (version · effective date) and, on non-German locales, an authoritative-version note — *wording of that note pending DPO confirmation*
+- Flutter legal screen renders a localized footer (version · effective date) and, on non-German locales, an authoritative-version note — _wording of that note pending DPO confirmation_
 - CI gate `app/scripts/checkLegalDocs.mjs` (`npm run check:legal`): fails the build when locales of a document carry different `version`/`effectiveDate`, preventing silent translation drift; 5 new unit tests for the front matter parser
 
 ### Removed — Legacy web experiment app (2026-06-10)
+
 - Deleted the unauthenticated server-rendered experiment site: `donate`, `thanks`, `demo`, `about`, `reward`, and `contact` routes + controllers, their public JS assets, and the root redirect to `/:lng/donate`. Habit donation happens exclusively via `POST /api/v1/habits/donate`
 - Deleted the old n10s/RDF Neo4j writer (`app/utils/Neo4jDatabase.js`) and its models (`donation.js`, `experimentGroup.js`, `contexts.js`), integration test, and script; existing legacy graph data is untouched (see `docs/migration.md`)
 - Dropped now-unused dependencies (`express-recaptcha`, `nodemailer`), `RECAPTCHA_*` env vars (compose + `.env.example`), and `recaptcha`/`mail` config blocks; removed `test:neo4j` script
@@ -149,14 +162,17 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Verified: ESLint clean, 480/480 backend tests pass, compose files validate
 
 ### Fixed — Legacy donate flow crash (2026-06-10)
+
 - `app/controllers/donateController.js`: `saveDonateData` dynamically imported `Neo4jSparqlDbClient`, a class renamed to `Neo4jDbClient` in the US-170 dead-code pass. The dynamic import evaded static analysis and resolved to `undefined`, so every submission of the legacy web donate form (`POST /:lng/donate`) crashed with `TypeError: Neo4jSparqlDbClient is not a constructor` (HTTP 500). Import corrected; verified against the exported class and full test suite (480/480 pass)
 
 ### Fixed — Architecture docs vs. actual stack (2026-06-10)
-- Removed Fuseki from all current architecture diagrams and service tables — the service is no longer in `docker-compose.yml`; ontology/RDF sections in `docs/architecture.md`, `docs/data-model.md`, and `DOCUMENTATION.md` are now marked *retired/legacy*
+
+- Removed Fuseki from all current architecture diagrams and service tables — the service is no longer in `docker-compose.yml`; ontology/RDF sections in `docs/architecture.md`, `docs/data-model.md`, and `DOCUMENTATION.md` are now marked _retired/legacy_
 - Corrected backup documentation: targets are MongoDB, LightRAG, Neo4j, Keycloak (not Fuseki); retention is configurable via `BACKUP_RETENTION_DAYS` (default 14 days, not 30)
-- Clarified Redis's role in diagrams: API-service response cache consulted *before* the LightRAG retrieval + LLM generation pipeline
+- Clarified Redis's role in diagrams: API-service response cache consulted _before_ the LightRAG retrieval + LLM generation pipeline
 
 ### Added — Documentation & Diagrams (2026-06-10)
+
 - New diagrams-as-code suite under `docs/diagrams/`: system architecture (Mermaid), UML use case diagram (PlantUML), structured use case catalogue with code traceability (30 use cases, 5 actors), one Mermaid sequence diagram per use case (`UC-01` … `UC-30`), and a domain class diagram covering MongoDB collections, Neo4j nodes, and backend domain classes
 - `docs/diagrams/Makefile` + README for reproducible export to SVG/PNG/PDF via `mermaid-cli` and PlantUML; all Mermaid sources validated with `mermaid.parse()`
 - Rewrote `README.md`: condensed Mermaid architecture overview, repository layout, use case section, full documentation index, contributing conventions (logo and badges retained)
@@ -164,11 +180,13 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Cross-linked `docs/architecture.md`, `docs/data-model.md`, and `DOCUMENTATION.md` to the new diagram suite
 
 ### Changed
+
 - LightRAG upgraded from 1.3.9 to 1.5.0 (`lightrag/Dockerfile`)
 
 ### Changed — Full-Repo Clean Sweep (2026-06-03/04)
 
 **Stack 1 — `app/` (Node.js/Express)**
+
 - Renamed `token_card_service.js` → `tokenCardService.js` (camelCase convention); updated all import paths
 - Deleted `app/controllers/defaultController.js` — confirmed unused (no active consumers)
 - Split `habitsRouter.js` (888 lines) into three focused modules: `habits/habitsCrudRouter.js`, `habits/habitsStatsRouter.js`, `habits/habitsGraphRouter.js`; orchestrator reduced to 68 lines
@@ -177,6 +195,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Extracted single-responsibility helpers from long service functions in `habitDonationService.js`, `studyService.js`, `studyCodeService.js`, `notificationService.js`; private helpers prefixed `_camelCase`
 
 **Stack 2 — `API-service/` (Python/FastAPI)**
+
 - Extracted shared Redis lazy-initialisation pattern into `routers/_cache.py` (`get_redis`, `make_cache_key`, `_REDIS_TTL`); removed duplication from `extract_habits.py` and `extract_profile.py`
 - Extracted shared LLM invocation helpers into `routers/_llm_helpers.py` (`load_prompt_template`, `call_llm_with_fallback`); simplified `refine_translation.py` and `refine_translation_de.py`
 - Replaced all `Any` type hints with concrete types across all routers (`AsyncIOMotorDatabase`, `aioredis.Redis`, `list[str]`, `dict[str, object]`, etc.); used `cast` where JSON shapes are known at runtime
@@ -184,6 +203,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Added Google-style docstrings (module-level + `Args`/`Returns`/`Raises` blocks) to all router functions, helper functions, and Pydantic models across all 12 Python files
 
 **Stack 3 — `admin/` (Next.js 14)**
+
 - Removed unused `useRef` import and dead CSS classes (`.categoryCell`, orphaned `.select` in knowledge-base module)
 - Moved `analytics-tab.tsx` from `app/(admin)/studies/` into `components/studies-analytics-tab.tsx`; updated all import paths
 - Replaced all remaining `any` TypeScript types with proper interfaces; exported `StudySummaryForAnalytics` type
@@ -191,6 +211,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Extracted data-fetching hooks into same-directory files: `useStudiesData.ts`, `useQuestionnairesData.ts`, `useCuePoolsData.ts`, `useKnowledgeBaseData.ts`; page components reduced to thin rendering shells
 
 **Stack 4 — `mobile/` (Flutter)**
+
 - Split `main.dart` (592 lines) into `app.dart` (HhhApp widget) and `router/app_router.dart` (GoRouter config + all routes); `main.dart` reduced to ~30-line entry point
 - Split `bubble_graph_widget.dart` (529 lines) into `bubble_graph/bubble_graph_data.dart`, `bubble_graph/bubble_graph_painter.dart`, `bubble_graph/bubble_graph_gesture_handler.dart`
 - Extracted reusable `AdminDataTable<T>` widget to `screens/admin/widgets/admin_data_table.dart`; refactored `admin_questionnaires_screen.dart` and `admin_surveys_screen.dart` to use it
@@ -200,6 +221,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 ## [1.3.0] - 2026-04-16
 
 ### Security
+
 - Participant passwords now stored as bcrypt hashes (was plaintext) — `adminParticipantService.js`
 - Timing-safe secret comparison for shared-secret endpoints; security headers middleware added to all responses
 - Shared-secret authentication added between Node.js backend and Python API service — new env var `API_SERVICE_SECRET`, new file `API-service/auth.py`
@@ -213,6 +235,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - WebView navigation restricted to app origin in donate and profile screens
 
 ### Added
+
 - Redis distributed lock on notification cron job — prevents duplicate dispatch across multiple instances
 - Jest + React Testing Library test suite for Next.js admin app (`admin/src/__tests__/`)
 - IDOR regression tests for recommendations feedback endpoint
@@ -220,12 +243,14 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - `API-service/auth.py` — shared-secret middleware for all Python API routes
 
 ### Changed
+
 - `adminRouter.js` refactored into domain sub-routers: `app/routes/admin/participantsRouter.js`, `studiesRouter.js`, `surveysRouter.js`, `notificationsRouter.js`
 - Token card PDF generated at participant creation time (previously generated lazily on first download)
 - Python API singletons consolidated into shared `API-service/deps.py` using FastAPI lifespan management
 - Redis compare-and-delete now uses unique per-lock token to prevent accidental lock release
 
 ### Removed
+
 - Age-consent middleware removed from Node.js backend
 - Disclaimer routes removed from Node.js backend
 - Legal document screen added to Flutter app to replace the removed middleware/routes
@@ -235,6 +260,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 ### Changed — Clean Code Refactor Cycle (US-162 to US-170)
 
 **Flutter app (`mobile/`)**
+
 - Extracted shared `AuthInterceptor` + `DioProvider` (`lib/core/auth_interceptor.dart`, `lib/core/dio_provider.dart`) — removed duplicated `_authHeaders()` from 6 service files
 - Extracted shared `OfflineBanner` widget to `lib/widgets/offline_banner.dart` — removed duplication between `DonateScreen` and `ProfileScreen`
 - Decomposed `AdminParticipantsScreen` into `_FilterBar`, `_ParticipantsTable`, `_PaginationBar`, `_ErrorView`, `_CreateParticipantDialog` sub-widgets
@@ -247,6 +273,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - `ProfileScreen` now uses `AppConfig.apiBaseUrl` (removed hardcoded production URL)
 
 **Node.js backend (`app/`)**
+
 - Extracted `app/utils/getDb.js` — removed 8 copy-pasted `getDb()` functions from route files
 - Extracted `app/services/habitDonationService.js` — `POST /habits/donate` handler reduced from 143 to ~20 lines
 - Split `translate()` into `fetchLibreTranslation()` + `refineLLMTranslation()` in `app/utils/translate.js`
@@ -257,6 +284,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Replaced `uuid` npm package with `node:crypto.randomUUID` in `donateRouter.js` and `surveyRouter.js`
 
 **Neo4j / data layer (`app/`)**
+
 - Extracted `app/db/habitQueries.js` and `app/db/adminQueries.js` — moved all inline Cypher strings from routers and services
 - Extracted `app/models/donation.js` — `Donor`, `Label`, `Donation`, `ExperimentalSetting` domain model classes (previously duplicated between `Neo4jDatabase.js` and `SparqlDatabase.js`)
 - Extracted `app/utils/constants.js` — shared constants (RDF namespaces, group labels, etc.)
@@ -264,6 +292,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Fixed deprecated `exists()` call in `scripts/migrate-group-labels.cypher` (Step 2)
 
 **CI / Scripts**
+
 - Added reusable GitHub Actions composite actions: `.github/actions/setup-node-app/action.yml`, `.github/actions/setup-flutter/action.yml` — eliminated ~60 lines of duplicated setup steps across CI jobs
 - `scripts/deploy-*.sh`: updated `docker-compose` → `docker compose` (Docker Compose v2 plugin CLI)
 - `scripts/deploy-keycloak.sh`: replaced brittle `grep | cut` token extraction with `jq -r '.access_token'`
@@ -273,6 +302,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - `.github/workflows/deploy.yml`: updated `actions/checkout@v6` → `@v4`
 
 **Tests**
+
 - Backend: 265 passing tests (up from 247 in v1.1.0)
 - Flutter: `flutter analyze` zero issues; `flutter test` 49/49 passed
 
@@ -281,15 +311,18 @@ Initial release of Health Habit Hub — a research platform for studying health 
 ### Added
 
 **Habit donation pipeline (M1)**
+
 - `POST /api/v1/habits/donate` — end-to-end habit donation: creates `Habit` node in Neo4j with BCIO context enrichment via API-service (`classify-context` + `map-bcio`); non-habits stored in MongoDB `habits` collection
 - `GET /api/v1/habits` — returns all donated `Habit` nodes with `uuid`, `original`, `language`, `translationEN`, `translationDE`; `?lang=en|de` query parameter adds `displayText` convenience field
 
 **Translation pipeline**
+
 - Automatic English habit refinement: LibreTranslate EN draft → LLM tone refinement via `POST /api/v1/llm/refine-translation`; stored as `translationEN` on Habit node
 - Automatic German habit refinement: LibreTranslate DE draft → LLM tone refinement via `POST /api/v1/llm/refine-translation-de`; stored as `translationDE` on Habit node
 - `scripts/backfill-de-translations.js` — migration script to back-fill `translationDE` for all existing English Habit nodes (supports `--dry-run`)
 
 **Python API-service (recommender)**
+
 - `POST /api/v1/llm/classify-habit` — classifies a sentence as a habit or non-habit with confidence score
 - `POST /api/v1/llm/classify-context` — extracts 7 BCIO context dimensions from a habit sentence
 - `POST /api/v1/llm/map-bcio` — maps extracted context phrases to BCIO concepts via embedding similarity
@@ -299,38 +332,45 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - `API-service/data/bcio.owl` — 32-concept BCIO stub OWL file for embedding-based concept mapping
 
 **Questionnaire system**
+
 - `GET /api/v1/questionnaires` and `GET /api/v1/questionnaires/:slug` — serve questionnaire definitions from MongoDB
 - `POST /api/v1/questionnaire-responses` — store questionnaire answers (indexed on userId + slug + submitted_at)
 - `GET /api/v1/questionnaire-responses/me` and `GET /api/v1/questionnaire-responses/me/:slug` — retrieve own responses
 - Flutter `questionnaire_screen.dart` — step-by-step form for SLIQ, RAND-36 and custom questionnaires; all 4 question types (singleChoice, multiChoice, scale, text)
 
 **User preferences**
+
 - `GET /api/v1/users/me` and `PUT /api/v1/users/me` — read/write `preferredLanguage` ('en' or 'de') per user; stored in MongoDB `users` collection
 - Flutter `user_settings_screen.dart` — Settings tab with Language dropdown; persists preference server-side
 - Flutter `locale_provider.dart` — `StateNotifierProvider` driving `MaterialApp.router locale`; calls `PUT /api/v1/users/me` on change
 
 **Recommendations**
+
 - `GET /api/v1/recommendations/me` — retrieve personalised habit recommendations for the authenticated user
 - `POST /api/v1/recommendations/:recommendation_id/feedback` — accept or dismiss a recommendation
 - Flutter recommendation screen with rationale, citations, accept/dismiss actions, and local history cache
 
 **Onboarding**
+
 - `POST /api/v1/onboard` — unauthenticated endpoint; creates Keycloak user with random UUID username and 32-byte hex password; returns JWT pair (rate-limited to 5 req/hour per IP)
 - Flutter passphrase screen — BIP39-style 36-word mnemonic encoding credentials; copy-to-clipboard and checkbox gate before Continue
 - Flutter restore screen — enter passphrase to recover credentials on a new device
 
 **Admin panel (Next.js)**
+
 - `admin/` — Next.js 14 App Router admin panel at `/admin`
 - Keycloak OIDC login (NextAuth v4, `hhh-admin` confidential client); middleware blocks non-admin/researcher users with `/access-denied` redirect
 - Sidebar layout with Questionnaires and Settings pages
 - `admin` service added to `docker-compose.yml` as `h3-admin` on port 3001
 
 **Knowledge base**
+
 - `GET|POST /api/v1/kb` — list and upload documents to the knowledge base (proxied to API-service); restricted to admin/researcher roles
 - `POST /api/v1/kb/reindex` — trigger KB reindex
 - `DELETE /api/v1/kb/:filename` — remove a KB document
 
 **Security improvements**
+
 - JWT audience (`KEYCLOAK_JWT_AUDIENCE`) and issuer (`KEYCLOAK_JWT_ISSUER`) validation added to `app/middleware/auth.js`
 - IDOR fix on `GET /api/v1/recommend/:userId` — participants can now only access their own recommendations
 - `internalRouter.js` routes now protected by `INTERNAL_API_SECRET` secret header check
@@ -340,10 +380,12 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Consistent `console.error('[route] Error:', err)` logging in all catch blocks
 
 **Tests**
+
 - Backend: 247 passing tests (up from 186 in v1.0.0)
 - Flutter: `flutter analyze` zero issues; `flutter test` passes (23 pre-existing `MaterialApp` widget-test failures from missing l10n delegates fixed progressively)
 
 **Documentation**
+
 - `docs/api/openapi.yaml` — 14 new paths documented (onboard, habits, questionnaires, questionnaire-responses, recommendations, users, KB)
 - `docs/api/hhh-postman-collection.json` — 7 new request folders for all new endpoints
 - `docs/data-model.md` — Neo4j schema for new `Habit`/`Context`/`BCIOConcept` labels; 6 new MongoDB collections documented
@@ -369,27 +411,32 @@ Initial release of Health Habit Hub — a research platform for studying health 
 ### Added
 
 **Phase 0 – Branch consolidation**
+
 - Merged all infrastructure branches (`feature/traeffic`, `feature/h3-proxy`, `feature/server`, `docker-env`, `max-base-path`, `max-deployment-optionen`) into a unified `rapid_dev` base
 - Merged all feature branches (`feature/neo4j`, `feature/backup`, `feature/colorLaMarcel`, `contact-reward-language`, `feature/adminpanel`, `ralph/flutter-mobile-app`, `feature/hjt-diplomarbeit-habit-recommendation-system`, `feature/hjt-context-classifier`) into a single history
 
 **Phase 1 – Keycloak identity provider**
+
 - Self-hosted Keycloak 24 service in Docker Compose (dev and prod)
 - `keycloak/hhh-realm.json` — reproducible realm definition with public PKCE client (`hhh-flutter`), confidential service-account client (`hhh-backend`), and roles `participant`, `admin`, `researcher`
 - `app/middleware/auth.js` — JWKS-cached JWT verification middleware; attaches decoded token to `req.user`
 - `app/middleware/requireRole.js` — role-gate middleware; returns 403 when required role is absent
 
 **Phase 2 – Versioned API and recommender proxy**
+
 - All routes namespaced under `/api/v1/` with auth and role guards applied uniformly
 - `GET /api/v1/health` — unauthenticated health endpoint; parallel downstream checks (Neo4j, MongoDB, Fuseki, Keycloak, recommender) with 1 500 ms timeout and 503 on critical failure
 - Python recommender service (`API-service/`) added to Docker Compose; proxied via Node.js routes `GET /api/v1/recommend/:userId`, `GET /api/v1/recommend/:userId/history`, `POST /api/v1/recommend/classify`
 
 **Phase 3 – Ontology and Neo4j integrity**
+
 - Fixed G3/G4 group indistinguishability: `hhh:Group3` ("Full+Free-text") and `hhh:Group4` ("Minimal+Free-text") given distinct URIs and labels in `fuseki/init/Ontology.ttl`
 - Migration script `scripts/migrate-group-labels.cypher` for existing Neo4j data
 - BCIO human-behavior ontology (119 classes from BCT Taxonomy v1) merged inline into `fuseki/init/Ontology.ttl`; uncertain HHH↔BCIO mappings annotated `rdfs:comment "TODO: domain-review"`
 - APOC uniqueness constraints and automated ontology test suite (`scripts/test-ontology.sh`)
 
 **Phase 4 – Flutter mobile/web application**
+
 - Flutter 3.22 app (`mobile/`) targeting Android, iOS, and Chrome
 - Keycloak PKCE login screen with QR-code token-card fallback
 - Profile screen (POST `/api/v1/profile`)
@@ -397,6 +444,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Recommendation screen with rationale, citation, accept/dismiss actions and local history cache
 
 **Phase 5 – Study admin panel**
+
 - Full-featured admin panel (Flutter + Node.js admin routes)
 - Participant CRUD, group assignment (G1–G4), token-card PDF download
 - Survey builder: create, publish, archive, assign to groups; response export (CSV)
@@ -405,6 +453,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Admin settings: configurable token-card format (QR size, include study-ID flag)
 
 **Phase 6 – Test suite**
+
 - 186 unit and integration tests (`app/tests/`)
 - Flutter widget and golden tests (`mobile/test/`, 42 tests)
 - End-to-end smoke tests (`scripts/e2e-smoke.sh`)
@@ -412,6 +461,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Coverage reporting via `c8` (`npm run test:coverage`)
 
 **Phase 7 – Deployment scripts**
+
 - `scripts/deploy-backend.sh` — pull, `npm ci`, restart Node.js container, health-poll
 - `scripts/deploy-flutter-web.sh` — `flutter build web`, copy to `app/public/flutter/`, restart
 - `scripts/deploy-keycloak.sh` — rolling restart with realm re-import guard
@@ -419,6 +469,7 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - `scripts/deploy-full.sh` — orchestrates all four scripts with health checks between steps; `--dry-run` mode; version-bump guard (this file)
 
 **Phase 8 – Security, backup, and hardening**
+
 - `backup-service/` extended: MongoDB (`mongodump`), Fuseki (tar), Neo4j (`neo4j-admin dump`), Keycloak realm export via admin API; cron daemon (02:00 UTC daily); 30-day retention; structured log
 - `scripts/restore.sh` — interactive restore with confirmation prompt; restores all three databases and Keycloak realm
 - `app/middleware/rateLimiter.js` — 100 req / 15 min per user; 429 JSON response
@@ -427,14 +478,17 @@ Initial release of Health Habit Hub — a research platform for studying health 
 - Soft-delete pattern enforced across all DELETE routes (`deletedAt` timestamp)
 
 **Phase 9 – End-user documentation**
+
 - `docs/guides/participant-guide.md` + PDF — 7-section guide (access, login, profile, habit donation, graph annotation, recommendations, update profile); Android/iOS/Chrome screenshot tables; German translation `participant-guide-de.md` + PDF
 - `docs/guides/admin-guide.md` + PDF — 8-section guide (login, create participant, group assignment, survey config, habit monitoring, progress tracking, session revocation, settings); German translation `admin-guide-de.md` + PDF
 
 **Phase 10 – Technical documentation**
+
 - `docs/architecture.md` — system overview Mermaid diagram; per-service reference table; sequence diagrams for PKCE login, habit donation, recommendation request; ontology section with Cypher and SPARQL examples
 - `docs/data-model.md` — Neo4j node/relationship reference with 10 annotated Cypher queries; Fuseki/SPARQL namespace table with 10 annotated queries; MongoDB collection schemas; G1–G4 encoding reference; anonymisation model
 
 **Phase 11 – API reference and developer experience**
+
 - `docs/api/openapi.yaml` — OpenAPI 3.1 spec (28 paths) generated from JSDoc annotations; Swagger UI at `GET /api/v1/docs`
 - `docs/api/hhh-postman-collection.json` — Postman v2.1 collection with 28 requests, `{{baseUrl}}` / `{{token}}` variables
 - `docs/runbook.md` — 11-section operations runbook (first-time setup, per-service updates, full-stack deploy, rollback, backup verification, restore, secret rotation, adding admin users, health checking, troubleshooting)

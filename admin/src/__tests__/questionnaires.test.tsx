@@ -1,22 +1,22 @@
-import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import QuestionnairesPage from '../app/(admin)/questionnaires/page';
+import React from "react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import QuestionnairesPage from "../app/(admin)/questionnaires/page";
 
-jest.mock('next-auth/react', () => ({
+jest.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { accessToken: 'test-token' },
-    status: 'authenticated',
+    data: { accessToken: "test-token" },
+    status: "authenticated",
   }),
 }));
 
-jest.mock('next/navigation', () => ({
+jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn() }),
   useSearchParams: () => new URLSearchParams(),
-  usePathname: () => '/',
+  usePathname: () => "/",
 }));
 
-describe('QuestionnairesPage', () => {
+describe("QuestionnairesPage", () => {
   // Mock fetch so the page doesn't error on mount
   beforeEach(() => {
     global.fetch = jest.fn().mockResolvedValue({
@@ -29,19 +29,19 @@ describe('QuestionnairesPage', () => {
     jest.resetAllMocks();
   });
 
-  it('renders without crashing', () => {
+  it("renders without crashing", () => {
     render(<QuestionnairesPage />);
   });
 
-  it('renders the page title', () => {
+  it("renders the page title", () => {
     render(<QuestionnairesPage />);
-    expect(screen.getByRole('heading', { name: /questionnaires/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /questionnaires/i })).toBeInTheDocument();
   });
 
-  it('renders Library and Custom tabs', () => {
+  it("renders Library and Custom tabs", () => {
     render(<QuestionnairesPage />);
-    expect(screen.getByRole('button', { name: /library/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /custom/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /library/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /custom/i })).toBeInTheDocument();
   });
 
   it('"Add Questionnaire" button is absent on Library tab and present on Custom tab', async () => {
@@ -49,12 +49,12 @@ describe('QuestionnairesPage', () => {
     render(<QuestionnairesPage />);
 
     // Default tab is Library — button should not be visible
-    expect(screen.queryByRole('button', { name: /add questionnaire/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add questionnaire/i })).not.toBeInTheDocument();
 
     // Switch to Custom tab
-    await user.click(screen.getByRole('button', { name: /^custom$/i }));
+    await user.click(screen.getByRole("button", { name: /^custom$/i }));
 
-    expect(screen.getByRole('button', { name: /add questionnaire/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /add questionnaire/i })).toBeInTheDocument();
   });
 
   it('opens create modal when "Add Questionnaire" is clicked on Custom tab', async () => {
@@ -62,62 +62,60 @@ describe('QuestionnairesPage', () => {
     render(<QuestionnairesPage />);
 
     // Switch to Custom tab
-    await user.click(screen.getByRole('button', { name: /^custom$/i }));
+    await user.click(screen.getByRole("button", { name: /^custom$/i }));
 
     // Click "Add Questionnaire"
-    await user.click(screen.getByRole('button', { name: /add questionnaire/i }));
+    await user.click(screen.getByRole("button", { name: /add questionnaire/i }));
 
     // Modal title should appear
-    expect(screen.getByText('Add Questionnaire', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText("Add Questionnaire", { selector: "span" })).toBeInTheDocument();
   });
 
-  it('entering a title per language and saving sends a locale-map payload', async () => {
+  it("entering a title per language and saving sends a locale-map payload", async () => {
     const user = userEvent.setup();
     render(<QuestionnairesPage />);
 
-    await user.click(screen.getByRole('button', { name: /^custom$/i }));
-    await user.click(screen.getByRole('button', { name: /add questionnaire/i }));
+    await user.click(screen.getByRole("button", { name: /^custom$/i }));
+    await user.click(screen.getByRole("button", { name: /add questionnaire/i }));
 
     // English title (default active language)
     const titleInput = screen.getByPlaceholderText(/sleep quality index/i);
-    await user.type(titleInput, 'Baseline Survey');
+    await user.type(titleInput, "Baseline Survey");
 
     // Enable German and switch to it
-    await user.click(screen.getByRole('switch', { name: /deutsch/i }));
-    await user.click(screen.getByRole('button', { name: /editing: deutsch/i }));
-    await user.type(titleInput, 'Basisumfrage');
+    await user.click(screen.getByRole("switch", { name: /deutsch/i }));
+    await user.click(screen.getByRole("button", { name: /editing: deutsch/i }));
+    await user.type(titleInput, "Basisumfrage");
 
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: jest.fn().mockResolvedValue({ ok: true, id: 'new-id' }),
+      json: jest.fn().mockResolvedValue({ ok: true, id: "new-id" }),
     } as unknown as Response);
 
-    await user.click(screen.getByRole('button', { name: /^create$/i }));
+    await user.click(screen.getByRole("button", { name: /^create$/i }));
 
     await waitFor(() => {
-      const postCall = (global.fetch as jest.Mock).mock.calls.find(
-        (c) => c[1]?.method === 'POST'
-      );
+      const postCall = (global.fetch as jest.Mock).mock.calls.find((c) => c[1]?.method === "POST");
       expect(postCall).toBeDefined();
       const body = JSON.parse(postCall![1].body);
-      expect(body.title).toEqual({ en: 'Baseline Survey', de: 'Basisumfrage' });
-      expect(body.languages.sort()).toEqual(['de', 'en']);
+      expect(body.title).toEqual({ en: "Baseline Survey", de: "Basisumfrage" });
+      expect(body.languages.sort()).toEqual(["de", "en"]);
     });
   });
 
-  it('shows delete confirm dialog when Delete is clicked on a custom questionnaire', async () => {
+  it("shows delete confirm dialog when Delete is clicked on a custom questionnaire", async () => {
     const user = userEvent.setup();
 
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: jest.fn().mockResolvedValue([
         {
-          id: '1',
-          slug: 'my-q',
-          title: { en: 'My Q' },
+          id: "1",
+          slug: "my-q",
+          title: { en: "My Q" },
           description: {},
-          version: '1',
-          languages: ['en'],
+          version: "1",
+          languages: ["en"],
           active: true,
           isLibrary: false,
           questionCount: 0,
@@ -129,13 +127,13 @@ describe('QuestionnairesPage', () => {
     render(<QuestionnairesPage />);
 
     // Switch to Custom tab first (custom questionnaires only appear there)
-    await user.click(screen.getByRole('button', { name: /^custom$/i }));
+    await user.click(screen.getByRole("button", { name: /^custom$/i }));
 
     // Wait for the questionnaire to appear in the custom tab
-    await screen.findByText('My Q');
+    await screen.findByText("My Q");
 
     // Click the Delete button for the questionnaire
-    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
 
     // Confirm dialog should appear
     expect(screen.getByText(/delete questionnaire\?/i)).toBeInTheDocument();
@@ -150,12 +148,12 @@ describe('QuestionnairesPage', () => {
         ok: true,
         json: jest.fn().mockResolvedValue([
           {
-            id: '1',
-            slug: 'my-q',
-            title: { en: 'My Q' },
+            id: "1",
+            slug: "my-q",
+            title: { en: "My Q" },
             description: {},
-            version: '1',
-            languages: ['en'],
+            version: "1",
+            languages: ["en"],
             active: true,
             isLibrary: false,
             questionCount: 0,
@@ -167,23 +165,23 @@ describe('QuestionnairesPage', () => {
       .mockResolvedValueOnce({
         ok: false,
         status: 409,
-        json: jest.fn().mockResolvedValue({ error: 'Conflict' }),
+        json: jest.fn().mockResolvedValue({ error: "Conflict" }),
       } as unknown as Response);
 
     render(<QuestionnairesPage />);
 
     // Switch to Custom tab first (custom questionnaires only appear there)
-    await user.click(screen.getByRole('button', { name: /^custom$/i }));
+    await user.click(screen.getByRole("button", { name: /^custom$/i }));
 
     // Wait for questionnaire to load in the custom tab
-    await screen.findByText('My Q');
+    await screen.findByText("My Q");
 
     // Click Delete to open the confirm dialog
-    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
 
     // Confirm dialog should appear — click Delete inside it (there may be multiple Delete buttons)
     await screen.findByText(/delete questionnaire\?/i);
-    const allDeleteBtns = screen.getAllByRole('button', { name: /^delete$/i });
+    const allDeleteBtns = screen.getAllByRole("button", { name: /^delete$/i });
     // The confirm dialog's Delete button is the last one rendered
     await user.click(allDeleteBtns[allDeleteBtns.length - 1]);
 

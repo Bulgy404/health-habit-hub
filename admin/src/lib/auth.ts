@@ -35,9 +35,9 @@ const TOKEN_URL = `${KEYCLOAK_INTERNAL}/realms/hhh/protocol/openid-connect/token
 function decodeRoles(accessToken?: string): string[] {
   if (!accessToken) return [];
   try {
-    const payload = JSON.parse(
-      Buffer.from(accessToken.split(".")[1], "base64url").toString()
-    ) as { realm_access?: { roles?: string[] } };
+    const payload = JSON.parse(Buffer.from(accessToken.split(".")[1], "base64url").toString()) as {
+      realm_access?: { roles?: string[] };
+    };
     return payload?.realm_access?.roles ?? [];
   } catch {
     return [];
@@ -64,7 +64,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 
     if (!res.ok) throw new Error(`Token refresh failed: ${res.status}`);
 
-    const refreshed = await res.json() as {
+    const refreshed = (await res.json()) as {
       access_token: string;
       expires_in: number;
       refresh_token?: string;

@@ -9,7 +9,8 @@
   margin-bottom: 2rem;
 }
 
-.headerText {}
+.headerText {
+}
 
 .title {
   font-size: var(--fs-xl);
@@ -38,7 +39,9 @@
   white-space: nowrap;
 }
 
-.addButton:hover { background: var(--color-primary-action-hover); }
+.addButton:hover {
+  background: var(--color-primary-action-hover);
+}
 
 .error {
   color: var(--color-error);
@@ -78,7 +81,9 @@
   vertical-align: middle;
 }
 
-.table tr:last-child td { border-bottom: none; }
+.table tr:last-child td {
+  border-bottom: none;
+}
 
 .actionBtn {
   padding: 0.25rem 0.75rem;
@@ -91,8 +96,12 @@
   margin-right: 0.5rem;
 }
 
-.editBtn { color: var(--color-primary); }
-.deleteBtn { color: var(--color-error); }
+.editBtn {
+  color: var(--color-primary);
+}
+.deleteBtn {
+  color: var(--color-error);
+}
 
 .formSection {
   background: var(--color-surface);

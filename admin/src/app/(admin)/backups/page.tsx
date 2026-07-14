@@ -321,10 +321,7 @@ export default function BackupsPage() {
                   }}
                 />
               </div>
-              <div
-                className={styles.muted}
-                style={{ marginTop: "0.35rem", fontSize: "0.8rem" }}
-              >
+              <div className={styles.muted} style={{ marginTop: "0.35rem", fontSize: "0.8rem" }}>
                 {t("stepProgress", {
                   step: job.step,
                   totalSteps: job.totalSteps,
@@ -430,9 +427,7 @@ export default function BackupsPage() {
                         onClick={() => handleDownload(m)}
                         disabled={downloadingFile === m.file}
                       >
-                        {downloadingFile === m.file
-                          ? t("downloadingEllipsis")
-                          : t("download")}
+                        {downloadingFile === m.file ? t("downloadingEllipsis") : t("download")}
                       </button>
                       <button
                         className={`${styles.actionBtn} ${styles.primaryBtn}`}
@@ -938,7 +933,9 @@ function TriggerModal({
           {t("triggerOptionsSubtitle")}
         </p>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1rem" }}>
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "1rem" }}
+        >
           <ToggleSwitch
             checked={mongo}
             onChange={(e) => setMongo(e.target.checked)}
@@ -960,10 +957,7 @@ function TriggerModal({
               onChange={(e) => setKeycloak(e.target.checked)}
               label="Keycloak"
             />
-            <p
-              className={styles.muted}
-              style={{ fontSize: "0.75rem", margin: "0.15rem 0 0 3rem" }}
-            >
+            <p className={styles.muted} style={{ fontSize: "0.75rem", margin: "0.15rem 0 0 3rem" }}>
               {t("keycloakToggleHint")}
             </p>
           </div>

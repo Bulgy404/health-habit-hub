@@ -138,7 +138,9 @@ describe("DonationsPage", () => {
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/admin/habits/feed/export"),
-        expect.objectContaining({ headers: expect.objectContaining({ Authorization: "Bearer test-token" }) })
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: "Bearer test-token" }),
+        })
       );
     });
     expect(global.URL.createObjectURL).toHaveBeenCalled();

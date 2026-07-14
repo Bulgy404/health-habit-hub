@@ -1,6 +1,7 @@
 > **⚠️ Veraltetes Dokument.** Dieses Handbuch beschreibt die eingestellte browserbasierte Experiment-Website (G1–G4-Webseiten, reCAPTCHA), die im Juni 2026 entfernt wurde. Aktuelle Teilnehmende nutzen die Flutter-App — siehe [guides/participant-guide-de.md](guides/participant-guide-de.md). Zu historischen Referenzzwecken des ursprünglichen Studiendesigns aufbewahrt.
 
 <!-- MASCHINELL ÜBERSETZT aus der englischen Quelle — vor Veröffentlichung bitte durch Muttersprachler prüfen -->
+
 # Benutzerhandbuch
 
 ## Einführung

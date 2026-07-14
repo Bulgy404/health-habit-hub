@@ -6,14 +6,7 @@ import styles from "@/components/admin-page.module.css";
 const SUPPORT_EMAIL = "felix.reinsch@tu-dresden.de";
 const GITHUB_URL = "https://github.com/Bulgy404/health-habit-hub";
 
-const SECTIONS = [
-  "studies",
-  "participants",
-  "questionnaires",
-  "cuePools",
-  "analytics",
-  "backups",
-];
+const SECTIONS = ["studies", "participants", "questionnaires", "cuePools", "analytics", "backups"];
 
 /**
  * Curated quick-tips per admin module — not a full manual, just enough to

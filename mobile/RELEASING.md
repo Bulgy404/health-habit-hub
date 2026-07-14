@@ -23,7 +23,7 @@ and [App Store Connect](https://appstoreconnect.apple.com).
 
 ### 1. Create the app record in App Store Connect
 
-fastlane can build and upload builds, but the *app itself* (bundle ID
+fastlane can build and upload builds, but the _app itself_ (bundle ID
 `de.felixreinsch.healthhabithub`) needs to exist as an app record in App
 Store Connect before the first upload — create it manually once
 (My Apps → **+** → New App) if it isn't there already.
@@ -80,21 +80,21 @@ ones; regular CI runs stub them.)
 ### 6. Add GitHub repository secrets
 
 Repo → **Settings** → **Secrets and variables** → **Actions** → **New
-repository secret**. Add each `.b64` file's *contents* (open it in a text
+repository secret**. Add each `.b64` file's _contents_ (open it in a text
 editor and paste the whole base64 blob) under these names, plus the two
 plain-text values from step 2:
 
-| Secret | Value |
-|---|---|
-| `IOS_DIST_CERTIFICATE_BASE64` | contents of `dist_certificate.p12.b64` |
-| `IOS_DIST_CERTIFICATE_PASSWORD` | the `.p12` export password from step 3 |
-| `IOS_PROVISIONING_PROFILE_BASE64` | contents of `profile.mobileprovision.b64` |
-| `IOS_PROVISIONING_PROFILE_NAME` | the exact profile name from step 4 (e.g. `HHH App Store`) |
-| `APP_STORE_CONNECT_API_KEY_ID` | Key ID from step 2 |
-| `APP_STORE_CONNECT_API_ISSUER_ID` | Issuer ID from step 2 |
-| `APP_STORE_CONNECT_API_KEY_CONTENT` | contents of `AuthKey.p8.b64` |
-| `IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64` | contents of `GoogleService-Info.plist.b64` |
-| `FIREBASE_OPTIONS_DART_BASE64` | contents of `firebase_options.dart.b64` |
+| Secret                                 | Value                                                     |
+| -------------------------------------- | --------------------------------------------------------- |
+| `IOS_DIST_CERTIFICATE_BASE64`          | contents of `dist_certificate.p12.b64`                    |
+| `IOS_DIST_CERTIFICATE_PASSWORD`        | the `.p12` export password from step 3                    |
+| `IOS_PROVISIONING_PROFILE_BASE64`      | contents of `profile.mobileprovision.b64`                 |
+| `IOS_PROVISIONING_PROFILE_NAME`        | the exact profile name from step 4 (e.g. `HHH App Store`) |
+| `APP_STORE_CONNECT_API_KEY_ID`         | Key ID from step 2                                        |
+| `APP_STORE_CONNECT_API_ISSUER_ID`      | Issuer ID from step 2                                     |
+| `APP_STORE_CONNECT_API_KEY_CONTENT`    | contents of `AuthKey.p8.b64`                              |
+| `IOS_GOOGLE_SERVICE_INFO_PLIST_BASE64` | contents of `GoogleService-Info.plist.b64`                |
+| `FIREBASE_OPTIONS_DART_BASE64`         | contents of `firebase_options.dart.b64`                   |
 
 Delete the local `.p8`/`.p12`/`.mobileprovision`/`.b64` files once they're in
 GitHub secrets — you don't need them lying around afterwards, and the `.p8`

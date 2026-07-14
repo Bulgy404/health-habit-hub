@@ -1,7 +1,7 @@
 # Health Habit Hub — Operations Runbook
 
 This runbook covers every day-two operation: first-time setup, routine updates, rollback,
-backup/restore, secret rotation, and troubleshooting.  Every command block is copy-pasteable
+backup/restore, secret rotation, and troubleshooting. Every command block is copy-pasteable
 and is annotated with the expected output.
 
 ---
@@ -35,11 +35,11 @@ and is annotated with the expected output.
 
 ### Server Specification (minimum)
 
-| Resource | Minimum | Recommended |
-|----------|---------|-------------|
-| CPU      | 4 vCPU  | 8 vCPU      |
-| RAM      | 8 GB    | 16 GB       |
-| Disk     | 40 GB SSD | 100 GB SSD |
+| Resource | Minimum          | Recommended      |
+| -------- | ---------------- | ---------------- |
+| CPU      | 4 vCPU           | 8 vCPU           |
+| RAM      | 8 GB             | 16 GB            |
+| Disk     | 40 GB SSD        | 100 GB SSD       |
 | OS       | Ubuntu 22.04 LTS | Ubuntu 22.04 LTS |
 
 ### Required Software
@@ -59,10 +59,10 @@ git --version
 
 ### Open Ports
 
-| Port | Protocol | Purpose |
-|------|----------|---------|
-| 80   | TCP      | HTTP (redirected to HTTPS by Traefik) |
-| 443  | TCP      | HTTPS (Traefik TLS termination) |
+| Port | Protocol | Purpose                                                   |
+| ---- | -------- | --------------------------------------------------------- |
+| 80   | TCP      | HTTP (redirected to HTTPS by Traefik)                     |
+| 443  | TCP      | HTTPS (Traefik TLS termination)                           |
 | 8080 | TCP      | Keycloak admin UI (restrict to trusted IPs in production) |
 
 > **Security note:** Port 8080 should be firewalled to admin IP ranges only.
@@ -80,6 +80,7 @@ cd health-habit-hub
 ```
 
 Expected output:
+
 ```
 Cloning into 'health-habit-hub'...
 remote: Enumerating objects: ...
@@ -106,6 +107,7 @@ LIGHTRAG_API_KEY=<hex-secret>         # bearer token protecting LightRAG REST AP
 ```
 
 Generate a strong value for `API_SERVICE_SECRET`:
+
 ```bash
 openssl rand -hex 32
 ```
@@ -120,6 +122,7 @@ docker compose up -d
 ```
 
 Expected output (services pulling/building, then starting):
+
 ```
 [+] Running 12/12
  ✔ Container hhh-proxy        Started
@@ -149,15 +152,16 @@ curl -s http://localhost:3000/api/v1/health | python3 -m json.tool
 ```
 
 Expected output (all services reachable):
+
 ```json
 {
-    "status": "ok",
-    "services": {
-        "neo4j":      { "status": "ok", "latencyMs": 12 },
-        "mongo":      { "status": "ok", "latencyMs":  5 },
-        "keycloak":   { "status": "ok", "latencyMs": 30 },
-        "recommender":{ "status": "ok", "latencyMs":  8 }
-    }
+  "status": "ok",
+  "services": {
+    "neo4j": { "status": "ok", "latencyMs": 12 },
+    "mongo": { "status": "ok", "latencyMs": 5 },
+    "keycloak": { "status": "ok", "latencyMs": 30 },
+    "recommender": { "status": "ok", "latencyMs": 8 }
+  }
 }
 ```
 
@@ -190,6 +194,7 @@ bash scripts/deploy-backend.sh
 ```
 
 Expected output:
+
 ```
 [2026-03-15T10:00:00Z] Building hhh-app...
 [2026-03-15T10:00:30Z] Starting hhh-app...
@@ -205,6 +210,7 @@ bash scripts/deploy-flutter-web.sh
 ```
 
 Expected output:
+
 ```
 [2026-03-15T10:01:00Z] Building Flutter web...
 [2026-03-15T10:02:00Z] Copying build/web to app/public/flutter/...
@@ -218,6 +224,7 @@ bash scripts/deploy-recommender.sh
 ```
 
 Expected output:
+
 ```
 [2026-03-15T10:03:00Z] Building recommender...
 [2026-03-15T10:03:20Z] Starting recommender...
@@ -231,6 +238,7 @@ bash scripts/deploy-keycloak.sh
 ```
 
 Expected output:
+
 ```
 [2026-03-15T10:04:00Z] Importing Keycloak realm hhh...
 [2026-03-15T10:04:05Z] Realm imported. Restarting keycloak...
@@ -249,6 +257,7 @@ bash scripts/deploy-full.sh
 ```
 
 Expected output (abridged):
+
 ```
 [2026-03-15T10:00:00Z] Starting full-stack deployment...
 [2026-03-15T10:00:00Z] Version 1.0.0 is tagged — OK.
@@ -329,6 +338,7 @@ docker exec hhh-backup ls /backups/
 ```
 
 Expected output:
+
 ```
 full_backup_20260315_020000.tar.gz
 backup_20260315_020000.manifest
@@ -352,6 +362,7 @@ docker exec hhh-backup tail -50 /backups/backup.log
 ```
 
 Expected output (successful run):
+
 ```
 [2026-03-15 02:00:01] Starting backup...
 [2026-03-15 02:00:02] 1/5 Backing up MongoDB...
@@ -383,7 +394,7 @@ directory doesn't grow unbounded:
 - **`BACKUP_RETENTION_DAYS`** (default `14`) — deletes backups (archive +
   manifest + manifest.json) older than this many days, regardless of trigger.
 - **`BACKUP_SCHEDULED_LIMIT`** (default `10`) — additionally caps the number
-  of *scheduled* (automatic, `trigger: scheduled` in the manifest) backups
+  of _scheduled_ (automatic, `trigger: scheduled` in the manifest) backups
   kept, deleting the oldest excess ones even if they're within the retention
   window. This exists so the admin panel's Backups list doesn't pile up with
   a backup for every single day indefinitely. Manual/uploaded backups
@@ -434,6 +445,7 @@ docker exec -it hhh-backup /restore.sh /backups/full_backup_20260314_020000.tar.
 ```
 
 Expected interaction:
+
 ```
 ==========================================
 WARNING: FULL SYSTEM RESTORE
@@ -498,6 +510,7 @@ docker compose up -d keycloak
 ```
 
 Verify the new password works:
+
 ```bash
 curl -s -o /dev/null -w "%{http_code}" \
   -X POST http://localhost:8080/realms/master/protocol/openid-connect/token \
@@ -532,7 +545,7 @@ bash scripts/deploy-backend.sh
 ### 8.4 Rotate `API_SERVICE_SECRET`
 
 `API_SERVICE_SECRET` is a shared secret used to authenticate requests between the Node.js
-backend (`hhh-app`) and the Python recommender (`hhh-recommender`).  Both services must be
+backend (`hhh-app`) and the Python recommender (`hhh-recommender`). Both services must be
 restarted together after rotation.
 
 ```bash
@@ -549,6 +562,7 @@ docker compose up -d hhh-app hhh-recommender
 ```
 
 Expected output:
+
 ```
 [+] Running 2/2
  ✔ Container hhh-app         Started
@@ -556,6 +570,7 @@ Expected output:
 ```
 
 Verify both services are back up:
+
 ```bash
 curl -s http://localhost:3000/api/v1/health | python3 -m json.tool
 # Expected: {"status":"ok", "services": {..., "recommender": {"status":"ok", ...}}}
@@ -565,7 +580,7 @@ curl -s http://localhost:8000/health
 ```
 
 > **Note:** There is a brief period during container restart where the recommender is
-> unavailable.  Schedule rotations during low-traffic windows.
+> unavailable. Schedule rotations during low-traffic windows.
 
 ### 8.5 Rotate `LIGHTRAG_API_KEY`
 
@@ -585,6 +600,7 @@ docker compose up -d hhh-lightrag hhh-knowledge-mcp hhh-recommender
 ```
 
 Verify LightRAG is back up:
+
 ```bash
 curl -s http://localhost:9621/health
 # Expected: {"status":"ok"}
@@ -621,12 +637,13 @@ curl -s -X POST http://localhost:3000/api/v1/admin/participants \
 ```
 
 Expected output:
+
 ```json
 {
-    "userId": "p-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-    "username": "p-xxxxxxxx",
-    "password": "auto-generated-password",
-    "tokenCardUrl": "/api/v1/admin/participants/p-xxxx.../token-card"
+  "userId": "p-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "username": "p-xxxxxxxx",
+  "password": "auto-generated-password",
+  "tokenCardUrl": "/api/v1/admin/participants/p-xxxx.../token-card"
 }
 ```
 
@@ -641,15 +658,16 @@ curl -s http://localhost:3000/api/v1/health | python3 -m json.tool
 ```
 
 Expected output:
+
 ```json
 {
-    "status": "ok",
-    "services": {
-        "neo4j":      { "status": "ok", "latencyMs": 12 },
-        "mongo":      { "status": "ok", "latencyMs":  5 },
-        "keycloak":   { "status": "ok", "latencyMs": 30 },
-        "recommender":{ "status": "ok", "latencyMs":  8 }
-    }
+  "status": "ok",
+  "services": {
+    "neo4j": { "status": "ok", "latencyMs": 12 },
+    "mongo": { "status": "ok", "latencyMs": 5 },
+    "keycloak": { "status": "ok", "latencyMs": 30 },
+    "recommender": { "status": "ok", "latencyMs": 8 }
+  }
 }
 ```
 
@@ -710,14 +728,14 @@ echo "ERROR: Services not healthy after 60s" && exit 1
 
 All critical-alert emails go to `ALERT_EMAIL` via generic SMTP (`SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`/`SMTP_STARTTLS` — set once in `.env`/Portainer, works with any relay/provider). Two independent delivery paths share these same credentials:
 
-| Alert | Fires when | Sent from | Debounce |
-|---|---|---|---|
-| Backup failure/success | Every scheduled/manual `backup.sh` run | `backup-service/lib.sh`'s `send_smtp_mail()`, called from `backup.sh`'s `send_alert()` | One email per run (not repeated) |
-| LLM model unavailable | Primary model fails (`API-service/llm_client.py`'s circuit breaker) | `API-service/alerting.py` | Once per `LLM_FALLBACK_COOLDOWN_S` (default 300s) per model — see the code comments in `llm_client.py` for why |
-| LLM totally unavailable | Primary **and** `LLM_FALLBACK_MODEL` both fail | Same as above | Once per `LLM_FALLBACK_COOLDOWN_S` per fallback model |
-| BullMQ job failures | A queued job exhausts all retry attempts (`bullmq_jobs_failed_total`, terminal failures only) | Grafana (`monitoring/grafana/provisioning/alerting/alerting.yaml`, rule `hhh-bullmq-failures`) | Grafana's own `group_wait`/`group_interval`/`repeat_interval` (30s/5m/4h) |
-| Service unreachable | `blackbox-exporter` can't reach a service (TCP-connect or HTTP-GET) for 2+ consecutive minutes | Grafana, rule `hhh-reachability` | Same as above |
-| Backend 5xx spike | Sustained 5xx rate > 0.1 req/s for 5+ minutes (tune the threshold in `alerting.yaml` once real traffic volume is known) | Grafana, rule `hhh-5xx-spike` | Same as above |
+| Alert                   | Fires when                                                                                                              | Sent from                                                                                      | Debounce                                                                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Backup failure/success  | Every scheduled/manual `backup.sh` run                                                                                  | `backup-service/lib.sh`'s `send_smtp_mail()`, called from `backup.sh`'s `send_alert()`         | One email per run (not repeated)                                                                               |
+| LLM model unavailable   | Primary model fails (`API-service/llm_client.py`'s circuit breaker)                                                     | `API-service/alerting.py`                                                                      | Once per `LLM_FALLBACK_COOLDOWN_S` (default 300s) per model — see the code comments in `llm_client.py` for why |
+| LLM totally unavailable | Primary **and** `LLM_FALLBACK_MODEL` both fail                                                                          | Same as above                                                                                  | Once per `LLM_FALLBACK_COOLDOWN_S` per fallback model                                                          |
+| BullMQ job failures     | A queued job exhausts all retry attempts (`bullmq_jobs_failed_total`, terminal failures only)                           | Grafana (`monitoring/grafana/provisioning/alerting/alerting.yaml`, rule `hhh-bullmq-failures`) | Grafana's own `group_wait`/`group_interval`/`repeat_interval` (30s/5m/4h)                                      |
+| Service unreachable     | `blackbox-exporter` can't reach a service (TCP-connect or HTTP-GET) for 2+ consecutive minutes                          | Grafana, rule `hhh-reachability`                                                               | Same as above                                                                                                  |
+| Backend 5xx spike       | Sustained 5xx rate > 0.1 req/s for 5+ minutes (tune the threshold in `alerting.yaml` once real traffic volume is known) | Grafana, rule `hhh-5xx-spike`                                                                  | Same as above                                                                                                  |
 
 The backup and LLM alerts fire directly from application code — they don't depend on Prometheus/Grafana being up. The other three are metric-driven and route through Grafana's unified alerting engine.
 
@@ -770,12 +788,14 @@ Bull Board is mounted inside the app server and exposes a live view of the `habi
 Only available when `NODE_ENV !== production`. No extra login required in local dev — the app container is only reachable from localhost.
 
 What you can do:
+
 - See job counts by state: waiting, active, completed, failed
 - Inspect individual job payloads (habit sentence, userID, confidence)
 - Retry failed jobs manually
 - Pause / resume the queue
 
 **Typical workflow after `make seed`:**
+
 1. Open http://app.localhost/admin/queues
 2. Watch jobs move from **Waiting** → **Active** → **Completed** in real time
 3. If a job lands in **Failed**, click it to read the error and retry
@@ -788,6 +808,7 @@ RedisInsight is a separate Docker service that provides a GUI for browsing all R
 **Direct port:** http://localhost:5540
 
 First-time setup (one-off):
+
 1. Open http://redis-insight.localhost
 2. Click **Add Redis Database**
 3. Fill in:
@@ -797,12 +818,14 @@ First-time setup (one-off):
 4. Click **Add Redis Database**
 
 What you can see:
+
 - `bull:habit-donations:*` — BullMQ job hashes, sorted sets for each state
 - `bull:habit-donations:completed` — completed job IDs (kept 24 h)
 - `bull:habit-donations:failed` — failed job IDs (kept 24 h)
 - All other Redis keys used by the app (recommendation cache, notification locks)
 
 **Start/stop RedisInsight:**
+
 ```bash
 # Start (it starts automatically with make dev)
 docker compose -f docker-compose.local.yml up -d redis-insight
@@ -820,6 +843,7 @@ docker compose -f docker-compose.local.yml stop redis-insight
 **Symptom:** All API calls return `{"error":"Unauthorized"}` even with a valid token.
 
 **Diagnosis:**
+
 ```bash
 # Check the JWKS URL the app is using
 docker compose exec hhh-app env | grep KEYCLOAK_JWKS_URL
@@ -832,6 +856,7 @@ docker compose exec hhh-app \
 ```
 
 **Fix:**
+
 ```bash
 # Update .env with the correct internal URL (container hostname)
 KEYCLOAK_JWKS_URL=http://keycloak:8080/realms/hhh/protocol/openid-connect/certs
@@ -847,6 +872,7 @@ bash scripts/deploy-backend.sh
 `Unable to connect to datasource` or `Connection refused` pointing to `keycloak-db:5432`.
 
 **Diagnosis:**
+
 ```bash
 # Check whether the keycloak-db container is running and healthy
 docker compose ps hhh-keycloak-db
@@ -873,6 +899,7 @@ docker compose exec hhh-keycloak \
 ```
 
 **Fix — keycloak-db not started or unhealthy:**
+
 ```bash
 # Start the database first
 docker compose up -d hhh-keycloak-db
@@ -889,6 +916,7 @@ docker compose up -d hhh-keycloak
 ```
 
 **Fix — password mismatch between keycloak-db and Keycloak:**
+
 ```bash
 # Stop both services
 docker compose stop hhh-keycloak hhh-keycloak-db
@@ -907,7 +935,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 ```
 
 > **Note:** Removing `hhh-keycloak-db-data` destroys all Keycloak data (users, sessions,
-> client secrets).  Re-create any manually provisioned users and rotate client secrets
+> client secrets). Re-create any manually provisioned users and rotate client secrets
 > after volume re-initialisation.
 
 ---
@@ -918,12 +946,14 @@ curl -s -o /dev/null -w "%{http_code}" \
 `ServiceUnavailable: WebSocket connection failure`.
 
 **Diagnosis:**
+
 ```bash
 docker compose logs --tail=30 hhh-neo4j | grep -E "Started|ERROR|WARN"
 # If Neo4j is still initializing you will see: "Bolt enabled on 0.0.0.0:7687."  not yet present
 ```
 
 **Fix:**
+
 ```bash
 # Wait for Neo4j to finish initial startup (can take 30–60 s on first boot)
 docker compose exec hhh-neo4j \
@@ -942,6 +972,7 @@ docker compose restart hhh-neo4j
 `ERROR Failed to start Neo4j: Store unavailable` or `java.io.IOException: Permission denied`.
 
 **Diagnosis:**
+
 ```bash
 docker compose logs --tail=30 hhh-neo4j | grep -i "error\|permission"
 # Look for: "Permission denied" or "Cannot open file"
@@ -952,6 +983,7 @@ ls -la /mnt/data/appdata/hhh/neo4j/
 ```
 
 **Fix:**
+
 ```bash
 # Stop the container
 docker compose stop hhh-neo4j
@@ -968,6 +1000,7 @@ docker compose logs -f hhh-neo4j | grep -E "Started|Bolt enabled|ERROR"
 ```
 
 If Neo4j still fails to start after fixing permissions, check disk space:
+
 ```bash
 df -h /mnt/data/
 # Neo4j needs at least 1 GB free for a fresh start
@@ -981,6 +1014,7 @@ df -h /mnt/data/
 `Access-Control-Allow-Origin` errors.
 
 **Diagnosis:**
+
 ```bash
 curl -s -I -X OPTIONS http://localhost:3000/api/v1/health \
   -H "Origin: http://localhost:5000" | grep -i access-control
@@ -988,6 +1022,7 @@ curl -s -I -X OPTIONS http://localhost:3000/api/v1/health \
 ```
 
 **Fix:**
+
 ```bash
 # Check CORS config in app/routes/apiRouter.js — ensure the CORS middleware allows your Flutter web origin
 docker compose exec hhh-app env | grep ALLOWED_ORIGINS
@@ -1004,6 +1039,7 @@ bash scripts/deploy-backend.sh
 **Symptom:** Habit recommendations return empty sources; admin portal Knowledge Base page shows errors; `POST /api/v1/llm/retrieve` returns 502.
 
 **Diagnosis:**
+
 ```bash
 # Check LightRAG container status
 docker compose ps hhh-lightrag
@@ -1020,6 +1056,7 @@ docker compose exec hhh-recommender env | grep LIGHTRAG
 ```
 
 **Fix:**
+
 ```bash
 # Restart LightRAG and knowledge-mcp (recommender will follow via depends_on)
 docker compose up -d hhh-lightrag hhh-knowledge-mcp hhh-recommender
@@ -1029,6 +1066,7 @@ docker compose up -d hhh-lightrag hhh-knowledge-mcp hhh-recommender
 
 **Graph visualization:**
 The LightRAG graph UI is at `http://localhost:9621` inside Docker. Access it from the server via SSH tunnel:
+
 ```bash
 ssh -L 9622:localhost:9621 your-server
 # Then open http://localhost:9622 in your browser
@@ -1042,6 +1080,7 @@ ssh -L 9622:localhost:9621 your-server
 `connect ECONNREFUSED` or `getaddrinfo ENOTFOUND recommender`.
 
 **Diagnosis:**
+
 ```bash
 # Verify the recommender container is running
 docker compose ps hhh-recommender
@@ -1062,6 +1101,7 @@ curl -s http://localhost:8000/health
 ```
 
 **Fix:**
+
 ```bash
 # If the recommender is stopped, restart it
 bash scripts/deploy-recommender.sh
@@ -1075,13 +1115,14 @@ Docker network (check `docker-compose.yml` `networks:` section for `hhh-app` and
 ### LibreTranslate down or returning empty translations
 
 **Symptom 1:** Habit donation succeeds but `translationEN` or `translationDE` is `null`
-even for non-English or English habits respectively.  App logs show
+even for non-English or English habits respectively. App logs show
 `WARN [habitsRouter] translateAndRefine failed, falling back to raw translation` or
 `WARN [habitsRouter] translateToGerman failed`.
 
 **Symptom 2:** `hhh-translate` is in a restart loop or shows `unhealthy`.
 
 **Diagnosis:**
+
 ```bash
 # Check container status
 docker compose ps hhh-translate
@@ -1102,6 +1143,7 @@ docker compose exec hhh-app \
 ```
 
 **Fix — UID 1032 volume permission issue:**
+
 ```bash
 # Stop LibreTranslate
 docker compose stop hhh-translate
@@ -1134,14 +1176,15 @@ docker compose exec hhh-recommender env | grep LLM_API_KEY
 ```
 
 Update `.env` with a valid key and redeploy the recommender:
+
 ```bash
 bash scripts/deploy-recommender.sh
 ```
 
 ---
 
-*End of Runbook — see also [Architecture](architecture.md), [Data Model](data-model.md),
-[API Reference](api/openapi.yaml), and [Admin Guide](guides/admin-guide.md).*
+_End of Runbook — see also [Architecture](architecture.md), [Data Model](data-model.md),
+[API Reference](api/openapi.yaml), and [Admin Guide](guides/admin-guide.md)._
 
 ---
 

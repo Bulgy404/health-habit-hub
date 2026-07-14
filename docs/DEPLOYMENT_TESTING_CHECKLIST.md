@@ -24,6 +24,7 @@ notes / bug tracker before shipping.
 ## Part 1 — Admin Panel
 
 ### 1.1 Sign-in & Access Control
+
 - [x] Sign in via Keycloak (`/api/auth/signin`) with an admin account
 - [x] Sign in with a researcher account — confirm reduced access where applicable (e.g.
       Insights tab hidden on Analytics page)
@@ -34,14 +35,17 @@ notes / bug tracker before shipping.
 - [x] Session persists across a page reload; sign-out clears the session
 
 ### 1.2 First-Run Welcome
+
 - [x] `/welcome` onboarding walkthrough displays correctly (no stray border on Skip)
 - [x] "Skip" and "Finish" both land you on the studies list
 - [x] Welcome doesn't reappear on next login once dismissed
 
 ### 1.3 Studies — the core configuration hub
+
 This is the biggest page in the admin panel; budget the most test time here.
 
 **List & lifecycle**
+
 - [x] Studies list loads and auto-refreshes periodically while the tab stays open
 - [x] Create a new study (name + description)
 - [x] Set a study as default; confirm the "Default" badge moves
@@ -50,6 +54,7 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [x] Download a study's full data export (zip)
 
 **Details tab**
+
 - [ ] Edit name/description
 - [ ] Toggle recommender on/off for the study
 - [ ] Toggle onboarding on/off
@@ -61,6 +66,7 @@ This is the biggest page in the admin panel; budget the most test time here.
       removal-warning appears when shrinking group count
 
 **Cue Config tab**
+
 - [ ] Per-group: set cue count (single/multi)
 - [ ] Per-group: set cue source (low-quality / high-quality / self-selected)
 - [ ] Per-group: assign a cue pool and max-habits cap
@@ -68,6 +74,7 @@ This is the biggest page in the admin panel; budget the most test time here.
       study-level onboarding/self-habit-creation defaults
 
 **Reminders tab** (also hosts what used to be the separate Notifications tab)
+
 - [ ] Habit reminder: toggle "Reminder enabled", then "Admin fixes the time" — confirm a
       time field only appears once both are on; off leaves it as participant-choice
 - [ ] Questionnaire / end-of-study / study-update reminders: toggle "Set a time" — confirm
@@ -92,12 +99,14 @@ This is the biggest page in the admin panel; budget the most test time here.
       shows an editable picker, Admin-fixed shows read-only text with the locked time
 
 **Questionnaires tab**
+
 - [ ] Assign library questionnaires to the study
 - [ ] Assign custom questionnaires to the study
 - [ ] Inactive questionnaires show their "inactive" badge
 - [ ] Save persists the selection
 
 **Schedule tab**
+
 - [ ] Add a questionnaire assignment scoped to the whole study
 - [ ] Add a questionnaire assignment scoped to a single group
 - [ ] Add an interval-cadence assignment (start offset, every-N-days, occurrence count)
@@ -107,6 +116,7 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [ ] Completion counts and the due-date calendar render correctly
 
 **Codes tab**
+
 - [ ] Adjust per-group allocation weight sliders; "Equalize" resets them; save persists
 - [ ] Generate study-level codes (count, optional max redemptions, optional expiry); copy
       all to clipboard
@@ -115,12 +125,14 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [ ] Paginate the existing-codes table
 
 **Participants tab (per-study)**
+
 - [ ] Enrollment summary (total + per-group counts) is correct
 - [ ] Paginated enrollment table loads
 - [ ] Download participants CSV
 - [ ] Download research export ZIP
 
 ### 1.4 Participants (global)
+
 - [ ] Create a single participant (choose group, token-card format)
 - [ ] Bulk-create participants (1–50) and view the generated credentials
 - [ ] Open a token card (QR/print/both) for a participant
@@ -136,6 +148,7 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [ ] Paginate the participant list
 
 ### 1.5 Questionnaires (library/custom)
+
 - [ ] Preview a library questionnaire (switch language if multi-lingual)
 - [ ] Create a custom questionnaire: multiple languages, title/description/version per
       language, slug auto-generates (and can be overridden)
@@ -148,6 +161,7 @@ This is the biggest page in the admin panel; budget the most test time here.
       with the "assigned" error instead of silently failing
 
 ### 1.6 Cue Pools
+
 - [ ] Filter by quality (high/low) and by language
 - [ ] Add a cue: multiple languages, quality, domain, and the three dimension sliders
       (stability/salience/specificity)
@@ -156,6 +170,7 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [ ] Paginate the cue list
 
 ### 1.7 Profile Fields
+
 - [ ] Add a field of each type: text, number, date, select (with option values)
 - [ ] Edit an existing field (fieldId stays locked)
 - [ ] Reorder / set display order
@@ -164,23 +179,27 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [ ] Confirm changes are reflected in the mobile app's profile-setup screen
 
 ### 1.8 Knowledge Base
+
 - [ ] Upload a document (PDF/TXT/MD) with a category
 - [ ] Confirm it appears with the correct ready/pending indexing status
 - [ ] Delete a document (confirm dialog)
 - [ ] Open the LightRAG graph visualizer link
 
 ### 1.9 Comments Moderation
+
 - [ ] Flagged-comments queue shows reported comments separately from the main list
 - [ ] Approve a flagged comment — confirm it becomes visible again
 - [ ] Delete a comment from either the flagged queue or the main list
 - [ ] Paginate the main comments list
 
 ### 1.10 Donations (habit feed)
+
 - [ ] Filter by group, category, and date range
 - [ ] Export the current filtered view to CSV
 - [ ] Paginate results
 
 ### 1.11 Analytics
+
 - [ ] Select a study and confirm all 8 KPI cards populate
 - [ ] All 7 charts render (weekly active rate, SRHI trajectory, cumulative dropout,
       questionnaire completion, enrollment over time, daily active participants, habits
@@ -191,29 +210,34 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [ ] Empty state when no study selected; loading states don't hang
 
 ### 1.12 Insights
+
 - [ ] Insight cards render as stat tiles or tables as appropriate
 - [ ] Per-card "Refresh" bypasses cache and updates the computed timestamp
 - [ ] "Reload all" refreshes every card
 - [ ] Only visible to admin, not researcher
 
 ### 1.13 Devices
+
 - [ ] Active sessions table shows participant, device type, app version, last seen
 - [ ] Revoke a session (confirm dialog) — confirm the mobile app is signed out
 - [ ] Paginate sessions
 
 ### 1.14 Restore Attempts
+
 - [ ] Flagged-IPs panel appears when there are repeated failed attempts
 - [ ] Filter by outcome (success / invalid_phrase / invalid_credentials / rate_limited /
       keycloak_unreachable)
 - [ ] Table shows timestamp, IP, attempted username, outcome
 
 ### 1.15 Audit Log
+
 - [ ] Filter by resource type (study/participant/questionnaire/team_member)
 - [ ] Change page size (25/50/100/200)
 - [ ] Entries show who/what/when/result accurately for actions performed earlier in this
       checklist (e.g. the study you created, the participant you deleted)
 
 ### 1.16 Backups — **be careful, exercise on a non-production environment first**
+
 - [ ] Trigger a manual backup with all components selected; watch live progress
 - [ ] Trigger a backup with some components excluded
 - [ ] "Last backup" summary shows correct per-component status
@@ -228,6 +252,7 @@ This is the biggest page in the admin panel; budget the most test time here.
       correct for this environment
 
 ### 1.17 System / Monitoring
+
 - [ ] Status banner reflects real state (all operational / N services down / elevated
       error rate)
 - [ ] Downstream services grid (Mongo/Neo4j/Keycloak/Recommender) shows correct
@@ -240,16 +265,19 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [ ] Auto-refreshes every 30s; manual refresh button works
 
 ### 1.18 Team
+
 - [ ] Members table shows username/email/roles
 - [ ] Add a member: search by username/email, grant admin or researcher role
 - [ ] Revoke a role (confirm dialog)
 - [ ] Confirm a newly granted admin/researcher can actually sign in with those permissions
 
 ### 1.19 Help
+
 - [ ] Static reference content renders
 - [ ] "Email support" (mailto) and GitHub repo link both work
 
 ### 1.20 Alerting (cross-cutting with System/Backups)
+
 - [ ] Force a backup failure (or check `docs/runbook.md`'s test procedure) and confirm a
       critical-alert email arrives at `ALERT_EMAIL` via the configured SMTP relay
 - [ ] Confirm Grafana alert rules (service unreachable, BullMQ failures, 5xx spike) have a
@@ -263,6 +291,7 @@ Run through this as a fresh participant account, then again as a returning/resto
 participant.
 
 ### 2.1 Onboarding
+
 - [x] Welcome walkthrough (3 steps) — page indicator, "Skip", "Get Started"
 - [x] Consent screen loads the localized document in-app; Accept vs Decline (Decline
       returns to welcome)
@@ -281,6 +310,7 @@ participant.
       on next launch
 
 ### 2.2 Share Tab
+
 - [ ] Share-activity heatmap renders (adaptive color intensity, not pinned)
 - [ ] "Today's tasks" card and any due-questionnaire task cards appear correctly
 - [ ] Submit a habit donation via the survey form
@@ -289,6 +319,7 @@ participant.
 - [ ] "Shared today" state updates immediately after a successful share
 
 ### 2.3 Explore Tab
+
 - [ ] Bubble graph (dimension-level) loads without a noticeable freeze, even for a
       dimension with many habits
 - [ ] Drilling into a dimension shows its habit bubbles; back button returns to overview
@@ -307,11 +338,13 @@ participant.
 ### 2.4 My Habits Tab
 
 **List**
+
 - [ ] Aggregate activity heatmap renders (adaptive scaling)
 - [ ] SRHI check-in prompt appears when a window is due
 - [ ] "New Habit" button hidden once the study's max-habits limit is reached
 
 **New habit creation**
+
 - [ ] Behavior step: catalog picker (study participants) or free-text entry (public,
       min length validated)
 - [ ] Cue step: pre-rated assigned cues vs self-selected cues (add/remove up to 7)
@@ -322,6 +355,7 @@ participant.
 - [ ] Habit-limit-reached error surfaces correctly instead of a generic failure
 
 **Habit detail + SRHI**
+
 - [ ] Per-habit contribution graph renders; "no logs yet" empty state when unused
 - [ ] SRHI trajectory sparkline + latest score + next-check-in date
 - [ ] Abandon habit (confirm dialog) — only available while active
@@ -329,6 +363,7 @@ participant.
       updates the trajectory
 
 ### 2.5 Recommend Tab
+
 - [ ] Tab is hidden when the study's `recommenderEnabled` flag is off — confirm both
       directions (on → visible, off → hidden) without requiring app restart
 - [ ] Enter a goal and submit; loading animation plays through its phases
@@ -340,6 +375,7 @@ participant.
       Again"
 
 ### 2.6 Settings Tab
+
 - [ ] Language picker: switch through en/de/ja/fr/nl — verify UI text actually changes
       (spot-check the intention-stitch screen and Project Info screen, which only have
       en/de/ja copy and fall back to English for fr/nl)
@@ -353,30 +389,36 @@ participant.
 - [ ] Delete account (confirm dialog) — wipes local storage and returns to onboarding
 
 **Profile**
+
 - [ ] View vs edit mode toggle; dynamic fields save correctly; Cancel discards changes
 - [ ] Offline banner + retry when the fetch fails
 
 **Legal documents**
+
 - [ ] Privacy, accessibility, imprint, consent each load their localized document with
       version/effective-date footer
 - [ ] Offline banner + retry
 
 **Study membership**
+
 - [ ] Join another study by code (same validation as onboarding)
 - [ ] Leave a study (confirm dialog)
 - [ ] "Restore account on device" link works
 
 **Rotate passphrase**
+
 - [ ] Warning banner shown before proceeding
 - [ ] New 24-word phrase generated, copy-to-clipboard, "saved" checkbox gates Done
 - [ ] Old phrase no longer works to restore; new one does
 
 **Help & Support**
+
 - [ ] "Send email" opens mail client (mailto) with a graceful failure snackbar if none
       configured
 - [ ] FAQ items expand/collapse
 
 ### 2.7 Questionnaire Flow (in-app)
+
 - [ ] Triggered from a due-questionnaire snackbar and from the Share tab task card
 - [ ] Question types render correctly: single choice, multi choice, scale, free text
 - [ ] Required-question validation blocks "Save & Continue"
@@ -386,6 +428,7 @@ participant.
 - [ ] Submission failure shows a retryable error, not a silent loss of answers
 
 ### 2.8 Cross-cutting
+
 - [x] Push notification permission prompt appears on first launch (or is skipped
       gracefully if Firebase isn't configured for this build)
 - [ ] Tapping a push notification from a terminated app state routes to the right screen

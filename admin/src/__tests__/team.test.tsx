@@ -15,7 +15,12 @@ jest.mock("next/navigation", () => ({
   usePathname: () => "/team",
 }));
 
-const alice = { id: "u1", username: "alice", email: "alice@x.test", roles: ["admin", "researcher"] };
+const alice = {
+  id: "u1",
+  username: "alice",
+  email: "alice@x.test",
+  roles: ["admin", "researcher"],
+};
 const bob = { id: "u2", username: "bob", email: "bob@x.test", roles: ["researcher"] };
 
 function mockFetchImplementation() {

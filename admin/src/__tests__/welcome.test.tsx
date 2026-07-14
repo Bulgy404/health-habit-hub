@@ -68,9 +68,7 @@ describe("WelcomePage", () => {
     const { container } = render(<WelcomePage />);
 
     expect(screen.getByRole("heading", { name: "Welcome to the HHH Portal" })).toBeInTheDocument();
-    expect(
-      screen.getByText(/this is where you manage studies, participants/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/this is where you manage studies, participants/i)).toBeInTheDocument();
 
     const dots = Array.from(container.querySelectorAll("span")).filter(
       (el) => el.textContent === "" && el.children.length === 0

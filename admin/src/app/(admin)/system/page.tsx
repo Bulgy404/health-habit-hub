@@ -254,7 +254,8 @@ export default function SystemPage() {
     warn: styles.bannerWarn,
     err: styles.bannerErr,
   }[bannerTone];
-  const BannerIcon = bannerTone === "ok" ? CheckCircle2 : bannerTone === "warn" ? AlertTriangle : XCircle;
+  const BannerIcon =
+    bannerTone === "ok" ? CheckCircle2 : bannerTone === "warn" ? AlertTriangle : XCircle;
 
   return (
     <div className={styles.page}>
@@ -348,14 +349,22 @@ export default function SystemPage() {
                         value={appUp ? t("up") : t("down")}
                         tone={appUp ? "ok" : "err"}
                       />
-                      <Stat Icon={Gauge} label={t("stats.requestsPerSec")} value={fmt(v.requestsPerSec, 2)} />
+                      <Stat
+                        Icon={Gauge}
+                        label={t("stats.requestsPerSec")}
+                        value={fmt(v.requestsPerSec, 2)}
+                      />
                       <Stat
                         Icon={AlertTriangle}
                         label={t("stats.errorRate")}
                         value={fmt(v.errorRatePct, 2, "%")}
                         tone={errorRate > 5 ? "err" : undefined}
                       />
-                      <Stat Icon={Timer} label={t("stats.p95Latency")} value={fmt(v.p95LatencyMs, 0, " ms")} />
+                      <Stat
+                        Icon={Timer}
+                        label={t("stats.p95Latency")}
+                        value={fmt(v.p95LatencyMs, 0, " ms")}
+                      />
                       <Stat Icon={Cpu} label={t("stats.cpu")} value={fmt(v.cpuPercent, 1, "%")} />
                       <Stat
                         Icon={Database}
@@ -367,7 +376,11 @@ export default function SystemPage() {
                         label={t("stats.eventLoopLag")}
                         value={fmt(v.eventLoopLagMs, 1, " ms")}
                       />
-                      <Stat Icon={Database} label={t("stats.heapUsed")} value={fmt(v.heapUsedMB, 0, " MB")} />
+                      <Stat
+                        Icon={Database}
+                        label={t("stats.heapUsed")}
+                        value={fmt(v.heapUsedMB, 0, " MB")}
+                      />
                     </div>
                   )}
                 </div>
@@ -399,7 +412,11 @@ export default function SystemPage() {
                             redis?.hitRatePct != null && redis.hitRatePct < 50 ? "err" : undefined
                           }
                         />
-                        <Stat Icon={Database} label={t("stats.cachedKeys")} value={fmt(redis?.totalKeys, 0)} />
+                        <Stat
+                          Icon={Database}
+                          label={t("stats.cachedKeys")}
+                          value={fmt(redis?.totalKeys, 0)}
+                        />
                         <Stat
                           Icon={Database}
                           label={t("stats.redisMemory")}
@@ -441,7 +458,9 @@ export default function SystemPage() {
                 <span className={styles.toolName}>{tool.name}</span>
                 <ExternalLink size={14} className={styles.toolExternal} />
               </div>
-              <div className={styles.toolDescription}>{t(`descriptions.${tool.descriptionKey}`)}</div>
+              <div className={styles.toolDescription}>
+                {t(`descriptions.${tool.descriptionKey}`)}
+              </div>
               <div className={styles.toolUrl}>{tool.url}</div>
             </a>
           ))}
@@ -464,8 +483,7 @@ function Stat({
   value: string;
   tone?: "ok" | "err";
 }) {
-  const valueClass =
-    tone === "ok" ? styles.statValueOk : tone === "err" ? styles.statValueErr : "";
+  const valueClass = tone === "ok" ? styles.statValueOk : tone === "err" ? styles.statValueErr : "";
   return (
     <div className={styles.stat}>
       <span className={styles.statLabel}>
@@ -505,7 +523,9 @@ function QueuePipeline({ name, counts }: { name: string; counts: QueueCounts }) 
               >
                 <div
                   className={styles.pipelineCount}
-                  style={{ color: tone === "err" && count > 0 ? "var(--color-error)" : "var(--color-text)" }}
+                  style={{
+                    color: tone === "err" && count > 0 ? "var(--color-error)" : "var(--color-text)",
+                  }}
                 >
                   {count}
                 </div>

@@ -72,39 +72,33 @@ export async function ensureIndexes(database) {
   await ensureConsentIndexes(database);
 
   // Comment ownership mapping (rate limiting + GDPR erasure)
-  const { ensureIndexes: ensureCommentIndexes } = await import(
-    './habitComment.js'
-  );
+  const { ensureIndexes: ensureCommentIndexes } =
+    await import('./habitComment.js');
   await ensureCommentIndexes(database);
 
   // Questionnaire scheduling (assignments + per-participant windows)
-  const { ensureIndexes: ensureScheduleIndexes } = await import(
-    './questionnaireSchedule.js'
-  );
+  const { ensureIndexes: ensureScheduleIndexes } =
+    await import('./questionnaireSchedule.js');
   await ensureScheduleIndexes(database);
 
   // Backup audit trail (admin Backups page)
-  const { ensureIndexes: ensureBackupAuditIndexes } = await import(
-    './backupAuditLog.js'
-  );
+  const { ensureIndexes: ensureBackupAuditIndexes } =
+    await import('./backupAuditLog.js');
   await ensureBackupAuditIndexes(database);
 
   // General admin action audit trail (all other admin mutations)
-  const { ensureIndexes: ensureAdminAuditIndexes } = await import(
-    './adminAuditLog.js'
-  );
+  const { ensureIndexes: ensureAdminAuditIndexes } =
+    await import('./adminAuditLog.js');
   await ensureAdminAuditIndexes(database);
 
   // Passphrase-based account restore attempts (security monitoring, admin panel)
-  const { ensureIndexes: ensureRestoreAttemptIndexes } = await import(
-    './restoreAttempt.js'
-  );
+  const { ensureIndexes: ensureRestoreAttemptIndexes } =
+    await import('./restoreAttempt.js');
   await ensureRestoreAttemptIndexes(database);
 
   // Short-lived restore confirmation tokens (TTL-expired automatically)
-  const { ensureIndexes: ensureRestoreTokenIndexes } = await import(
-    './restoreConfirmationToken.js'
-  );
+  const { ensureIndexes: ensureRestoreTokenIndexes } =
+    await import('./restoreConfirmationToken.js');
   await ensureRestoreTokenIndexes(database);
 }
 

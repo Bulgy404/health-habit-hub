@@ -1,5 +1,10 @@
 import { spawn } from 'node:child_process';
-import { readFileSync, writeFileSync, existsSync, createWriteStream } from 'node:fs';
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  createWriteStream,
+} from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { BACKUP_DIR } from './manifests.js';
@@ -272,8 +277,14 @@ export function triggerRestore({ absPath, filename, restoreKeycloak }) {
     delete latest.stepLabel;
     writeJobState(latest);
 
-    const restoreArgs = restoreKeycloak === false ? [absPath, '--skip-keycloak'] : [absPath];
-    const restore = runScript('/restore.sh', restoreArgs, {}, { stdinPayload: 'YES\n' });
+    const restoreArgs =
+      restoreKeycloak === false ? [absPath, '--skip-keycloak'] : [absPath];
+    const restore = runScript(
+      '/restore.sh',
+      restoreArgs,
+      {},
+      { stdinPayload: 'YES\n' }
+    );
     latest = readJobState();
     if (!latest || latest.jobId !== jobId) return;
     latest.pid = restore.pid;

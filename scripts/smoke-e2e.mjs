@@ -88,7 +88,11 @@ await step('1. Health & legal documents', async () => {
 
 await step('2. Onboard — anonymous account via Keycloak', async () => {
   const res = await jsonFetch(`${API}/onboard`, { method: 'POST', body: {} });
-  ok('POST /onboard creates account', res.status === 200 || res.status === 201, `(${res.status})`);
+  ok(
+    'POST /onboard creates account',
+    res.status === 200 || res.status === 201,
+    `(${res.status})`
+  );
   accessToken = res.data?.access_token ?? null;
   ok('access_token issued', Boolean(accessToken));
 });
@@ -126,7 +130,11 @@ await step('4. Enroll (skip code) & habit config', async () => {
   const config = await jsonFetch(`${API}/me/habit-config`, {
     token: accessToken,
   });
-  ok('GET /me/habit-config resolves', config.status === 200, `(${config.status})`);
+  ok(
+    'GET /me/habit-config resolves',
+    config.status === 200,
+    `(${config.status})`
+  );
   ok(
     'habit config includes 12 SRHI items',
     config.data?.srhiItems?.length === 12,
@@ -148,16 +156,23 @@ await step('5. Create intention, log today, reminder plan', async () => {
       reminderTime: '19:30',
     },
   });
-  ok('POST /habits/intentions creates', create.status === 201, `(${create.status})`);
+  ok(
+    'POST /habits/intentions creates',
+    create.status === 201,
+    `(${create.status})`
+  );
   intentionId = create.data?.id ?? null;
   ok('intention id returned', Boolean(intentionId));
 
   const today = new Date().toISOString().slice(0, 10);
-  const logRes = await jsonFetch(`${API}/habits/intentions/${intentionId}/logs`, {
-    token: accessToken,
-    method: 'POST',
-    body: { date: today, enacted: true },
-  });
+  const logRes = await jsonFetch(
+    `${API}/habits/intentions/${intentionId}/logs`,
+    {
+      token: accessToken,
+      method: 'POST',
+      body: { date: today, enacted: true },
+    }
+  );
   ok(
     'POST daily log (idempotent upsert)',
     logRes.status === 200 || logRes.status === 201,

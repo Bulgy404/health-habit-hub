@@ -67,7 +67,7 @@ groups:
           severity: critical
           alert_type: reachability
         annotations:
-          summary: "{{ $labels.instance }} is unreachable"
+          summary: '{{ $labels.instance }} is unreachable'
 
       # ── BullMQ job failures ─────────────────────────────────────────────
       # bullmq_jobs_failed_total only increments on terminal (retries
@@ -100,7 +100,7 @@ groups:
           severity: critical
           alert_type: bullmq
         annotations:
-          summary: "{{ $labels.queue }} has jobs that exhausted all retry attempts"
+          summary: '{{ $labels.queue }} has jobs that exhausted all retry attempts'
 
       # ── 5xx spike ────────────────────────────────────────────────────────
       # Threshold (0.1 req/s sustained over 5m) is a starting point, not a
@@ -132,4 +132,4 @@ groups:
           severity: critical
           alert_type: 5xx-spike
         annotations:
-          summary: "Backend 5xx rate has been elevated for 5+ minutes"
+          summary: 'Backend 5xx rate has been elevated for 5+ minutes'

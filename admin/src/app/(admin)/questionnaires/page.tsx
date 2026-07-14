@@ -449,7 +449,11 @@ function QuestionnaireModal({
                   type="button"
                   className={styles.actionBtn}
                   onClick={() => setActiveLang(lang)}
-                  style={activeLang === lang ? { fontWeight: 700, textDecoration: "underline" } : undefined}
+                  style={
+                    activeLang === lang
+                      ? { fontWeight: 700, textDecoration: "underline" }
+                      : undefined
+                  }
                 >
                   {t("editingLanguage", { language: LANG_LABELS[lang] })}
                 </button>
@@ -482,7 +486,9 @@ function QuestionnaireModal({
               <textarea
                 className={styles.textarea}
                 value={description[activeLang] ?? ""}
-                onChange={(e) => setDescription((prev) => ({ ...prev, [activeLang]: e.target.value }))}
+                onChange={(e) =>
+                  setDescription((prev) => ({ ...prev, [activeLang]: e.target.value }))
+                }
                 placeholder={t("descriptionPlaceholder")}
               />
             </div>
@@ -611,7 +617,11 @@ function QuestionnairePreviewModal({
                   type="button"
                   className={styles.actionBtn}
                   onClick={() => setPreviewLang(lang)}
-                  style={previewLang === lang ? { fontWeight: 700, textDecoration: "underline" } : undefined}
+                  style={
+                    previewLang === lang
+                      ? { fontWeight: 700, textDecoration: "underline" }
+                      : undefined
+                  }
                 >
                   {LANG_LABELS[lang]}
                 </button>
@@ -746,7 +756,7 @@ export default function QuestionnairesPage() {
           (qq: Partial<Question> & { id?: string; text?: unknown; options?: unknown[] }) => ({
             id: qq.id ?? crypto.randomUUID(),
             type: (qq.type ?? "text") as QuestionType,
-            text: typeof qq.text === "string" ? { en: qq.text } : (qq.text as LocaleText) ?? {},
+            text: typeof qq.text === "string" ? { en: qq.text } : ((qq.text as LocaleText) ?? {}),
             required: qq.required ?? false,
             options: Array.isArray(qq.options)
               ? qq.options.map((o: unknown, oi: number) =>

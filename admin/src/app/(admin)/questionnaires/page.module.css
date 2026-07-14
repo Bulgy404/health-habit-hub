@@ -9,7 +9,8 @@
   margin-bottom: 2rem;
 }
 
-.headerText {}
+.headerText {
+}
 
 .title {
   font-size: var(--fs-xl);
