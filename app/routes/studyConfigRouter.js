@@ -12,7 +12,7 @@ const log = logger.child({ module: 'studyConfigRouter' });
  * Used by the Flutter app at login to determine which UI features to enable.
  * Returns null body (204) when the user is not enrolled in any study.
  */
-export function createStudyConfigRouter({ db } = {}) {
+export function createStudyConfigRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -22,7 +22,11 @@ export function createStudyConfigRouter({ db } = {}) {
       if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
       const database = await getDb();
-      const config = await getParticipantGroupConfig({ db: database, userId });
+      const config = await getParticipantGroupConfig({
+        db: database,
+        userId,
+        neo4jRun,
+      });
 
       if (!config) return res.status(200).json(null);
       res.json(config);

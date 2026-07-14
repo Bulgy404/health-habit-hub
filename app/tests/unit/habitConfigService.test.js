@@ -344,3 +344,85 @@ test('resolveHabitConfig: public user gets empty assignedCues', async () => {
   const config = await resolveHabitConfig({ db, userId: 'u3' });
   assert.deepEqual(config.assignedCues, []);
 });
+
+// ── habitReminder resolution ─────────────────────────────────────────────────
+
+test('resolveHabitConfig: public/unenrolled user gets fully participant-chosen habitReminder', async () => {
+  const db = makeDb({ enrollment: null });
+  const config = await resolveHabitConfig({ db, userId: 'public-user' });
+  assert.deepEqual(config.habitReminder, {
+    mode: 'participant_choice',
+    time: null,
+  });
+});
+
+test('resolveHabitConfig: study-level habitReminder mode applies when the group has no override', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      reminders: { habit: { mode: 'admin_fixed', time: '07:30' } },
+      groups: [{ id: groupId, label: 'G1', index: 1, reminders: null }],
+    },
+  });
+  const neo4jRun = async () => [
+    { studyId: studyId.toString(), groupId: groupId.toString() },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.deepEqual(config.habitReminder, { mode: 'admin_fixed', time: '07:30' });
+});
+
+test('resolveHabitConfig: group-level habitReminder override wins over the study-level setting', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      reminders: { habit: { mode: 'admin_fixed', time: '07:30' } },
+      groups: [
+        {
+          id: groupId,
+          label: 'G1',
+          index: 1,
+          reminders: { habit: { mode: 'off', time: null } },
+        },
+      ],
+    },
+  });
+  const neo4jRun = async () => [
+    { studyId: studyId.toString(), groupId: groupId.toString() },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.deepEqual(config.habitReminder, { mode: 'off', time: null });
+});
+
+test('resolveHabitConfig: habitReminder supports all 3 modes', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const modes = [
+    { mode: 'off', time: null },
+    { mode: 'participant_choice', time: null },
+    { mode: 'admin_fixed', time: '20:00' },
+  ];
+  for (const habit of modes) {
+    const studyId = new ObjectId();
+    const groupId = new ObjectId();
+    const db = makeDb({
+      study: {
+        _id: studyId,
+        recommenderEnabled: true,
+        reminders: { habit },
+        groups: [{ id: groupId, label: 'G1', index: 1, reminders: null }],
+      },
+    });
+    const neo4jRun = async () => [
+      { studyId: studyId.toString(), groupId: groupId.toString() },
+    ];
+    const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+    assert.deepEqual(config.habitReminder, habit);
+  }
+});

@@ -681,10 +681,6 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get confirmPlanRemindersEnabledByStudy =>
-      'Herinneringen ingeschakeld (ingesteld door de studie)';
-
-  @override
   String get confirmPlanNoRemindersByStudy =>
       'Geen herinneringen (ingesteld door de studie)';
 
@@ -1532,12 +1528,11 @@ class AppLocalizationsNl extends AppLocalizations {
       'Gewoonte-registraties die je offline verstuurt, worden op je apparaat bewaard en automatisch verzonden zodra je weer online bent.';
 
   @override
-  String get faqNotificationsQuestion =>
-      'Kan ik bepaalde herinneringen uitzetten?';
+  String get faqNotificationsQuestion => 'Kan ik herinneringen uitzetten?';
 
   @override
   String get faqNotificationsAnswer =>
-      'Ja. Ga naar Instellingen → Meldingen om herinneringen voor gewoontes, vragenlijsten of studie-updates afzonderlijk aan of uit te zetten.';
+      'Herinneringen horen bij de studie en kunnen niet in de app worden uitgezet. Indien nodig kunt u meldingen voor deze app beheren in de systeeminstellingen van uw telefoon.';
 
   @override
   String get faqConsentQuestion => 'Kan ik mijn toestemming intrekken?';
@@ -1545,18 +1540,6 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get faqConsentAnswer =>
       'Ja, op elk moment. Ga naar Instellingen → Studietoestemming om te bekijken waarmee je hebt ingestemd, of Instellingen → Account verwijderen om in te trekken en je gegevens te wissen.';
-
-  @override
-  String get notificationsSection => 'Meldingen';
-
-  @override
-  String get habitReminders => 'Gewoonte-herinneringen';
-
-  @override
-  String get questionnaireReminders => 'Vragenlijst-herinneringen';
-
-  @override
-  String get studyUpdateNotifications => 'Studie-updates';
 
   @override
   String get changeRecoveryPassphrase => 'Herstelzin wijzigen';

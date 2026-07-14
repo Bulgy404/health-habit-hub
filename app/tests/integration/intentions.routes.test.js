@@ -385,6 +385,105 @@ test('POST /habits/intentions returns 403 when the participant-s study disables 
   }
 });
 
+test('POST /habits/intentions rejects a client-supplied reminderTime when the study disables reminders', async () => {
+  const studyId = new ObjectId();
+  studyDocs = [
+    {
+      _id: studyId,
+      reminders: { habit: { mode: 'off', time: null } },
+      groups: [],
+    },
+  ];
+  neo4jEnrollment = { studyId: studyId.toString(), groupId: null };
+  try {
+    const res = await post(
+      INTENTIONS,
+      { ...validBody, reminderTime: '19:00' },
+      makeToken(['user'], 'no-reminders-user')
+    );
+    assert.strictEqual(res.status, 400);
+  } finally {
+    neo4jEnrollment = null;
+    studyDocs = [];
+  }
+});
+
+test('POST /habits/intentions silently drops reminderTime (no error) when the study disables reminders and the client sends none', async () => {
+  const studyId = new ObjectId();
+  studyDocs = [
+    {
+      _id: studyId,
+      reminders: { habit: { mode: 'off', time: null } },
+      groups: [],
+    },
+  ];
+  neo4jEnrollment = { studyId: studyId.toString(), groupId: null };
+  try {
+    const res = await post(
+      INTENTIONS,
+      validBody,
+      makeToken(['user'], 'no-reminders-user-2')
+    );
+    assert.strictEqual(res.status, 201);
+    const body = await res.json();
+    assert.strictEqual(body.reminderTime, null);
+  } finally {
+    neo4jEnrollment = null;
+    studyDocs = [];
+  }
+});
+
+test('POST /habits/intentions coerces reminderTime to the admin-fixed value regardless of what the client sends', async () => {
+  const studyId = new ObjectId();
+  studyDocs = [
+    {
+      _id: studyId,
+      reminders: { habit: { mode: 'admin_fixed', time: '06:00' } },
+      groups: [],
+    },
+  ];
+  neo4jEnrollment = { studyId: studyId.toString(), groupId: null };
+  try {
+    // Client tries to spoof a different time than the study's fixed one.
+    const res = await post(
+      INTENTIONS,
+      { ...validBody, reminderTime: '23:45' },
+      makeToken(['user'], 'fixed-reminder-user')
+    );
+    assert.strictEqual(res.status, 201);
+    const body = await res.json();
+    assert.strictEqual(body.reminderTime, '06:00');
+  } finally {
+    neo4jEnrollment = null;
+    studyDocs = [];
+  }
+});
+
+test('POST /habits/intentions honors the client-supplied reminderTime for participant_choice mode', async () => {
+  const studyId = new ObjectId();
+  studyDocs = [
+    {
+      _id: studyId,
+      reminders: { habit: { mode: 'participant_choice', time: null } },
+      groups: [],
+    },
+  ];
+  neo4jEnrollment = { studyId: studyId.toString(), groupId: null };
+  try {
+    const res = await post(
+      INTENTIONS,
+      { ...validBody, reminderTime: '21:15' },
+      makeToken(['user'], 'participant-choice-user')
+    );
+    assert.strictEqual(res.status, 201);
+    const body = await res.json();
+    assert.strictEqual(body.reminderTime, '21:15');
+  } finally {
+    neo4jEnrollment = null;
+    studyDocs = [];
+  }
+});
+
 test('POST /habits/intentions returns created intention in subsequent GET', async () => {
   const token = makeToken(['user'], 'list-check-user');
   await post(INTENTIONS, validBody, token);

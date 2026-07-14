@@ -279,15 +279,30 @@ The **Questionnaires** tab (above) makes a questionnaire available to a study; t
 
 #### Setting a Study End Date & End-of-Study Notification
 
-In the study's **Details** tab:
+**Step 1.** In the study's **Details** tab, set the **Study end date**. The Schedule calendar stops projecting occurrences past this date once set.
 
-**Step 1.** Set the **Study end date**. The Schedule calendar stops projecting occurrences past this date once set.
+**Step 2.** Open the study's **Reminders** tab (see "Configuring Reminders" below), find the **End-of-study reminder** section, and turn on **Set a time**, choosing when it fires. Enter a notification title and body once the field appears.
 
-**Step 2.** Check **Send end-of-study notification** and fill in the notification title and body.
+**Step 3.** Click that section's **Save** button.
 
-**Step 3.** Click **Save**.
+The notification is scheduled locally on each participant's device (not a server push) the next time their app opens after the end date or notification text/time changes, and fires automatically at the configured time on the end date — including if the participant is offline that day. Turning the reminder back off or clearing the end date cancels the pending notification on the participant's next app open.
 
-The notification is scheduled locally on each participant's device (not a server push) the next time their app opens after the end date or notification text changes, and fires automatically on the end date — including if the participant is offline that day. Unchecking the setting or clearing the end date cancels the pending notification on the participant's next app open.
+#### Configuring Reminders
+
+The study's **Reminders** tab covers four reminder types, each with its own section and its own **Save** button. An overview strip at the top of the tab summarizes every type's current state at a glance. This tab also hosts what used to be a separate Notifications tab — one-off manual sends and campaign history now live inside the study-update section.
+
+| Type | What it controls |
+|---|---|
+| **Habit reminder** | The daily reminder time offered when a participant creates a habit |
+| **Questionnaire reminder** | The daily clock time a due-questionnaire notification fires |
+| **End-of-study reminder** | Whether/when a notification is sent on the study's end date (title/body entered alongside it) |
+| **Study update reminder** | A recurring broadcast push reminding participants to check the app, plus one-off manual messages |
+
+Each section's **first** control is a scope switch, **"Configure per group"**:
+- **Off** (default): one study-wide editor applies to every participant.
+- **On**: one editor per group, each set independently — there's no "inherit" option in this mode, every group must have its own explicit setting. Switching back to study-wide clears all group overrides for that type.
+
+Below the scope switch, habit reminders use two switches — **"Reminder enabled"**, then (once on) **"Admin fixes the time"** — off leaves it as the participant's own choice, on locks it to the time you set. The other three types use a single **"Set a time"** switch: off means no reminder at all, on reveals a time field. **Study update reminder** additionally reveals a repeat interval (in days) plus a title/body once its switch is on — saving creates one recurring push notification per active scope (one study-wide, or one per group) that fires on that schedule until turned back off; switching it off cancels the recurring send(s).
 
 ---
 
@@ -555,11 +570,11 @@ The table below the charts lists all enrolled participants with username, group,
 
 ## 13. Sending Researcher Notifications
 
-Push notifications can be sent to study participants from the **Notifications** tab inside a study's edit modal. This is available to `admin` and `researcher` roles.
+Push notifications can be sent to study participants from the **Reminders** tab inside a study's edit modal — specifically the **Study update reminder** section's "Send a one-off message" composer (this used to be a separate Notifications tab; it's now merged in, alongside the recurring study-update reminder covered in Section 4). This is available to `admin` and `researcher` roles.
 
 ### Composing and Sending a Notification
 
-**Step 1.** Navigate to **Studies**, open a study, and click the **Notifications** tab.
+**Step 1.** Navigate to **Studies**, open a study, click the **Reminders** tab, and scroll to the **Study update reminder** section's "Send a one-off message" area.
 
 **Step 2.** Enter a **Title** and **Body** for the push notification.
 
@@ -577,7 +592,7 @@ Push notifications can be sent to study participants from the **Notifications** 
 
 ### Managing Scheduled Campaigns
 
-Pending campaigns are listed in the lower section of the Notifications tab. Each row shows the scheduled date/time, target, and status. To cancel a pending campaign, tap **Cancel** on its row.
+Pending campaigns (both one-off scheduled sends and the recurring study-update reminder, if enabled) are listed below the composer. Each row shows the scheduled date/time, target, and status. To cancel a pending campaign, tap **Cancel** on its row.
 
 ---
 

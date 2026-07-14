@@ -793,8 +793,8 @@
         "schedule": "Calendrier",
         "codes": "Codes",
         "participants": "Participants",
-        "notifications": "Notifications",
-        "cueConfig": "Configuration des repères"
+        "cueConfig": "Configuration des repères",
+        "reminders": "Rappels"
       },
       "fields": {
         "nameLabel": "Nom *",
@@ -808,14 +808,9 @@
         "onboardingHint": "Lorsque cette option est désactivée, les participants passent les écrans explicatifs de première utilisation (qu'est-ce qu'une habitude, que sont les repères) lors de la création d'une habitude. Peut être remplacée par groupe ci-dessous.",
         "selfHabitLabel": "Activer la création d'habitudes",
         "selfHabitHint": "Lorsque cette option est désactivée, les participants de cette étude ne peuvent créer aucune habitude — l'écran « Mes habitudes » est entièrement masqué dans l'application. Peut être remplacée par groupe ci-dessous.",
-        "remindersLabel": "Envoyer des rappels de questionnaire",
-        "remindersHint": "Lorsque cette option est activée, les participants reçoivent une notification de rappel le jour où chaque questionnaire est dû. Désactivez-la pour annuler les rappels de cette étude (appliqué à la prochaine ouverture de l'application par le participant).",
-        "reminderTimeLabel": "Heure du rappel",
         "endDateLabel": "Date de fin de l'étude",
         "endDateHint": "Facultatif. Si elle est définie, le calendrier cesse de projeter des occurrences après cette date.",
-        "endOfStudyLabel": "Envoyer une notification de fin d'étude",
-        "endOfStudyHintEnabled": "Délivrée localement sur l'appareil du participant à la date de fin ci-dessus.",
-        "endOfStudyHintDisabled": "Définissez une date de fin d'étude ci-dessus pour activer cette option.",
+        "remindersMovedHint": "La programmation des rappels d'habitude, de questionnaire, de fin d'étude et de mise à jour d'étude se configure dans l'onglet Rappels.",
         "notificationTitleLabel": "Titre de la notification",
         "notificationBodyLabel": "Corps de la notification",
         "groupCountLabel": "Nombre de groupes",
@@ -968,6 +963,7 @@
       }
     },
     "notificationsTab": {
+      "manualSendTitle": "Envoyer un message ponctuel",
       "composeTitle": "Rédiger une notification",
       "titleLabel": "Titre",
       "titlePlaceholder": "Titre de la notification",
@@ -1015,6 +1011,25 @@
       "onboardingHint": "Remplace le paramètre d'intégration au niveau de l'étude pour ce groupe uniquement.",
       "selfHabitLabel": "Création d'habitudes (ce groupe)",
       "selfHabitHint": "Lorsque désactivé, ce groupe ne peut créer aucune habitude — l'écran « Mes habitudes » est masqué pour ce groupe."
+    },
+    "remindersTab": {
+      "habitLabel": "Rappel d'habitude",
+      "habitHint": "Lors de la création d'une habitude : si le participant peut définir une heure de rappel.",
+      "questionnaireLabel": "Rappel de questionnaire",
+      "questionnaireHint": "L'heure quotidienne à laquelle une notification de questionnaire dû est déclenchée.",
+      "endOfStudyLabel": "Rappel de fin d'étude",
+      "endOfStudyHint": "Si et quand une notification est envoyée à la date de fin de l'étude.",
+      "studyUpdateLabel": "Rappel de mise à jour de l'étude",
+      "studyUpdateHint": "Une diffusion récurrente rappelant aux participants de consulter l'application, ainsi que des messages manuels ponctuels.",
+      "intervalDaysLabel": "Répéter tous les (jours)",
+      "perGroupLabel": "Configurer par groupe",
+      "enabledLabel": "Rappel activé",
+      "adminFixesTimeLabel": "L'administrateur fixe l'heure",
+      "setTimeLabel": "Définir une heure",
+      "summaryOff": "Désactivé",
+      "summaryParticipantChoice": "Le participant choisit l'heure",
+      "summaryFixed": "Fixé à {time}",
+      "summaryPerGroup": "Par groupe ({on}/{total} activés)"
     },
     "analyticsTab": {
       "columns": {

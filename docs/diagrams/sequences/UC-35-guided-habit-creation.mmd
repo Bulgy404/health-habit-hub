@@ -16,7 +16,7 @@ sequenceDiagram
     alt enrolled
         B->>M: studies.findOne({_id: studyId})
         M-->>B: study + group config
-        B-->>F: {studyId, groupId, cueConfig, activityTypeConfig,<br/>reminderConfig, autoDonate, recommenderEnabled}
+        B-->>F: {studyId, groupId, cueConfig, activityTypeConfig,<br/>reminders (habit/questionnaire/endOfStudy/studyUpdate mode+time), autoDonate, recommenderEnabled}
     else not enrolled (public user)
         B-->>F: null
     end
@@ -40,7 +40,7 @@ sequenceDiagram
     B-->>F: {sentence}
 
     F->>U: Screen 3 — Confirm (editable sentence, duration, reminder)
-    Note over F: reminderConfig.fixedTime → show read-only if set by study<br/>autoDonate → skip share toggle if true
+    Note over F: reminders.habit.mode: off → no picker/switch; participant_choice → editable<br/>picker; admin_fixed → read-only, locked to the admin's time<br/>autoDonate → skip share toggle if true
     U->>F: Tap "Create"
 
     F->>B: POST /api/v1/habits/intentions {behaviorKey, cues, intentionStatement, reminderTime}

@@ -363,7 +363,7 @@ export function createApiRouter({
   router.use(
     '/study-config',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
-    createStudyConfigRouter({ db })
+    createStudyConfigRouter({ db, neo4jRun: runNeo4j })
   );
 
   // Participant-specific routes: require user, admin, or researcher role

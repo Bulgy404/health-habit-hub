@@ -5,8 +5,11 @@ import { getUsersForStudy } from './enrollmentNeo4j.js';
 const DEVICE_TOKENS = 'deviceTokens';
 
 /**
- * Create a new notification campaign document.
- * @param {{ db: object, createdBy: string, studyId?: string, title: string, body: string, targetType: string, targetIds?: Array, scheduledFor?: string|null }} deps
+ * Create a new notification campaign document. When `recurrence` is set, this
+ * is a "study update reminder": after each send, `sendCampaign` reschedules
+ * it (status back to 'scheduled', `intervalDays` later) instead of leaving it
+ * permanently 'sent'.
+ * @param {{ db: object, createdBy: string, studyId?: string, title: string, body: string, targetType: string, targetIds?: Array, scheduledFor?: string|null, recurrence?: { intervalDays: number, until?: string|null } | null }} deps
  * @returns {Promise<object>} The created campaign document with its generated id.
  */
 export async function createCampaign({
@@ -18,6 +21,7 @@ export async function createCampaign({
   targetType,
   targetIds = [],
   scheduledFor = null,
+  recurrence = null,
 }) {
   const now = new Date();
   const doc = {
@@ -30,6 +34,13 @@ export async function createCampaign({
     scheduledFor: scheduledFor ? new Date(scheduledFor) : null,
     sentAt: null,
     recipientCount: null,
+    recurrence: recurrence
+      ? {
+          intervalDays: recurrence.intervalDays,
+          until: recurrence.until ? new Date(recurrence.until) : null,
+        }
+      : null,
+    sendCount: 0,
     status: scheduledFor ? 'scheduled' : 'draft',
     createdAt: now,
   };
@@ -62,7 +73,10 @@ export async function listCampaigns({
 }
 
 /**
- * Cancel an unsent notification campaign by id.
+ * Cancel a notification campaign by id. Allowed while it's still unsent
+ * ('draft'/'scheduled') — including a recurring campaign between sends,
+ * since `sendCampaign` puts it back to 'scheduled' after each send rather
+ * than leaving it terminally 'sent'.
  * @param {{ db: object, id: string }} deps
  * @returns {Promise<{ cancelled: boolean }|{ notFound: boolean }>}
  */
@@ -76,7 +90,7 @@ export async function cancelCampaign({ db, id }) {
   const result = await db
     .collection(COLLECTION)
     .findOneAndUpdate(
-      { _id: oid, sentAt: null },
+      { _id: oid, status: { $in: ['draft', 'scheduled'] } },
       { $set: { status: 'cancelled' } },
       { returnDocument: 'after' }
     );
@@ -145,6 +159,19 @@ export async function sendCampaign({ db, id, send, neo4jRun }) {
   const recipientCount =
     tokenCount > 0 ? await send(tokens, campaign.title, campaign.body) : 0;
   const now = new Date();
+  const sendCount = (campaign.sendCount ?? 0) + 1;
+
+  // A recurring campaign (study-update reminder) reschedules itself instead
+  // of terminating, as long as `recurrence.until` (if set) hasn't passed —
+  // dispatchDueCampaigns' `status: 'scheduled'` query then picks it up again
+  // on its next due tick.
+  const recurrence = campaign.recurrence;
+  const stillRecurring =
+    recurrence && (!recurrence.until || recurrence.until > now);
+  const nextScheduledFor = stillRecurring
+    ? new Date(now.getTime() + recurrence.intervalDays * 24 * 60 * 60 * 1000)
+    : null;
+
   await db.collection(COLLECTION).findOneAndUpdate(
     { _id: oid },
     {
@@ -153,7 +180,9 @@ export async function sendCampaign({ db, id, send, neo4jRun }) {
         recipientCount,
         resolvedUserCount,
         tokenCount,
-        status: 'sent',
+        sendCount,
+        status: stillRecurring ? 'scheduled' : 'sent',
+        scheduledFor: stillRecurring ? nextScheduledFor : campaign.scheduledFor,
       },
     },
     { returnDocument: 'after' }
@@ -210,6 +239,8 @@ function serialize(doc) {
     recipientCount: doc.recipientCount,
     resolvedUserCount: doc.resolvedUserCount ?? null,
     tokenCount: doc.tokenCount ?? null,
+    recurrence: doc.recurrence ?? null,
+    sendCount: doc.sendCount ?? 0,
     status: doc.status,
     createdAt: doc.createdAt,
   };

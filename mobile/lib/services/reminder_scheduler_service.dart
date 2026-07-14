@@ -5,7 +5,6 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../config/app_config.dart';
-import 'notification_prefs.dart';
 
 const _channelId = 'hhh_habit_reminders';
 const _channelName = 'Habit reminders';
@@ -85,12 +84,11 @@ class ReminderSchedulerService {
 
   /// Fetches current plans and replaces all pending habit reminders.
   ///
-  /// No-ops (and cancels any already-pending habit reminders) when the user
-  /// has disabled this channel via [NotificationPrefs.habitRemindersEnabled].
+  /// Habit reminders are part of the study protocol and always scheduled;
+  /// participants cannot mute them in-app (only via OS notification settings).
   Future<void> syncReminders() async {
     await _ensureTimezone();
     await _cancelPendingHabitReminders();
-    if (!await NotificationPrefs.habitRemindersEnabled()) return;
 
     final response = await _dio.get<Map<String, dynamic>>(
       '${AppConfig.apiBaseUrl}/habits/intentions/reminder-plans',
@@ -149,25 +147,27 @@ class ReminderSchedulerService {
   Future<void> syncQuestionnaireReminders() async {
     await _ensureTimezone();
 
-    // Always clear the existing questionnaire reminders first, so toggling the
-    // study setting off (or changing the hour) cancels/replaces them.
+    // Always clear the existing questionnaire reminders first, so a changed
+    // reminder hour (or the study disabling them) cancels/replaces them.
     for (var i = 0; i < _qNotifMax; i++) {
       await _plugin.cancel(id: _qNotifBase + i);
     }
-
-    // User-controlled: skip the fetch entirely when the user has muted this
-    // channel in Settings → Notifications.
-    if (!await NotificationPrefs.questionnaireRemindersEnabled()) return;
 
     final response = await _dio.get<Map<String, dynamic>>(
       '${AppConfig.apiBaseUrl}/questionnaires/due',
     );
     final data = response.data ?? const {};
 
-    // Study-controlled: skip entirely when reminders are disabled.
+    // Study-controlled: skip entirely when reminders are disabled. Modes
+    // other than "off" all resolve to a concrete time server-side (no
+    // participant-facing picker exists for this reminder type yet), so the
+    // client just uses whatever time is resolved.
     final reminders = (data['reminders'] as Map<String, dynamic>?) ?? const {};
-    if (reminders['enabled'] == false) return;
-    final hour = (reminders['hour'] as num?)?.toInt() ?? 9;
+    if (reminders['mode'] == 'off') return;
+    final timeStr = reminders['time']?.toString() ?? '09:00';
+    final timeParts = timeStr.split(':');
+    final hour = int.tryParse(timeParts[0]) ?? 9;
+    final minute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
 
     final items = (data['questionnaires'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>();
@@ -179,7 +179,7 @@ class ReminderSchedulerService {
       if (scheduledStr == null) continue;
       final parsed = DateTime.tryParse(scheduledStr);
       if (parsed == null) continue;
-      // Fire on the due date at the study's configured local hour.
+      // Fire on the due date at the study's configured local time.
       final localDue = tz.TZDateTime.from(parsed, tz.local);
       final fireAt = tz.TZDateTime(
         tz.local,
@@ -187,6 +187,7 @@ class ReminderSchedulerService {
         localDue.month,
         localDue.day,
         hour,
+        minute,
       );
       if (!fireAt.isAfter(now)) continue; // already passed → shown as a card
       final title = it['questionnaireTitle']?.toString() ?? 'Questionnaire';
@@ -219,10 +220,6 @@ class ReminderSchedulerService {
     await _ensureTimezone();
     await _plugin.cancel(id: _endOfStudyNotifId);
 
-    // User-controlled: skip the fetch entirely when the user has muted this
-    // channel in Settings → Notifications.
-    if (!await NotificationPrefs.studyUpdatesEnabled()) return;
-
     final response = await _dio.get<Map<String, dynamic>>(
       '${AppConfig.apiBaseUrl}/questionnaires/due',
     );
@@ -230,12 +227,19 @@ class ReminderSchedulerService {
 
     final config =
         (data['endOfStudyNotification'] as Map<String, dynamic>?) ?? const {};
-    if (config['enabled'] != true) return;
+    if (config['mode'] == 'off') return;
 
     final endDateStr = data['studyEndDate']?.toString();
     if (endDateStr == null) return;
     final endDate = DateTime.tryParse(endDateStr);
     if (endDate == null) return;
+
+    // Resolved server-side ("HH:MM"); no participant-facing picker exists
+    // for this reminder type yet, so any non-off mode just uses this time.
+    final timeStr = config['time']?.toString() ?? '09:00';
+    final timeParts = timeStr.split(':');
+    final hour = int.tryParse(timeParts[0]) ?? 9;
+    final minute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
 
     final localEnd = tz.TZDateTime.from(endDate, tz.local);
     final fireAt = tz.TZDateTime(
@@ -243,7 +247,8 @@ class ReminderSchedulerService {
       localEnd.year,
       localEnd.month,
       localEnd.day,
-      9,
+      hour,
+      minute,
     );
     final now = tz.TZDateTime.now(tz.local);
     if (!fireAt.isAfter(now)) return;

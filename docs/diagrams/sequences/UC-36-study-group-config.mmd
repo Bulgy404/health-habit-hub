@@ -13,10 +13,10 @@ sequenceDiagram
     B-->>A: study detail
 
     R->>A: Configure per-group toggles:
-    Note over R,A: • Restrict activity types → select allowed types<br/>• Restrict cue selection → link to cue pool<br/>• Reminder: enable toggle + optional fixed time (HH:MM)<br/>• Auto-donate habits to community
+    Note over R,A: • Restrict activity types → select allowed types<br/>• Restrict cue selection → link to cue pool<br/>• Reminders: scope switch (study-wide or per-group) per type<br/>(habit/questionnaire/endOfStudy/studyUpdate); habit is off/participant_choice/admin_fixed,<br/>the other 3 are off/admin_fixed (+ time)<br/>• Auto-donate habits to community
     R->>A: Save
 
-    A->>B: PATCH /api/v1/admin/studies/:id/groups/:groupId/config<br/>{cueConfig?, activityTypeConfig?, reminderConfig?, autoDonate?}
+    A->>B: PATCH /api/v1/admin/studies/:id/groups/:groupId/config<br/>{cueConfig?, activityTypeConfig?, reminders?, autoDonate?}
     B->>M: studies.updateOne({_id}, {$set: {groups: [...]}})
     M-->>B: {matchedCount:1}
     B-->>A: 200 {updated: true}

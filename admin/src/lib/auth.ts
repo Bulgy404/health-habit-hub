@@ -6,6 +6,7 @@ declare module "next-auth" {
   interface Session {
     roles: string[];
     accessToken: string;
+    idToken?: string;
     error?: "RefreshAccessTokenError";
   }
 }
@@ -16,6 +17,7 @@ declare module "next-auth/jwt" {
     accessToken?: string;
     accessTokenExpires?: number;
     refreshToken?: string;
+    idToken?: string;
     error?: "RefreshAccessTokenError";
   }
 }
@@ -66,6 +68,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       access_token: string;
       expires_in: number;
       refresh_token?: string;
+      id_token?: string;
     };
 
     return {
@@ -74,6 +77,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       // expires_in is relative seconds; store as absolute Unix timestamp
       accessTokenExpires: Math.floor(Date.now() / 1000) + refreshed.expires_in,
       refreshToken: refreshed.refresh_token ?? token.refreshToken,
+      idToken: refreshed.id_token ?? token.idToken,
       // Re-decode roles from the new access token so revocations take effect.
       // realm_access is in the JWT payload, not the HTTP response body.
       roles: decodeRoles(refreshed.access_token),
@@ -134,6 +138,7 @@ export const authOptions: AuthOptions = {
           accessToken: account.access_token,
           accessTokenExpires: account.expires_at,
           refreshToken: account.refresh_token,
+          idToken: account.id_token,
         };
       }
 
@@ -149,6 +154,7 @@ export const authOptions: AuthOptions = {
     async session({ session, token }) {
       session.roles = token.roles ?? [];
       session.accessToken = token.accessToken ?? "";
+      session.idToken = token.idToken;
       if (token.error) session.error = token.error;
       return session;
     },

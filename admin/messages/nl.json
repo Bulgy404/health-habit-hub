@@ -793,8 +793,8 @@
         "schedule": "Planning",
         "codes": "Codes",
         "participants": "Deelnemers",
-        "notifications": "Meldingen",
-        "cueConfig": "Cue-configuratie"
+        "cueConfig": "Cue-configuratie",
+        "reminders": "Herinneringen"
       },
       "fields": {
         "nameLabel": "Naam *",
@@ -808,14 +808,9 @@
         "onboardingHint": "Indien uitgeschakeld, slaan deelnemers de introductieschermen (wat een gewoonte is, wat cues zijn) over bij het aanmaken van een gewoonte. Kan hieronder per groep worden overschreven.",
         "selfHabitLabel": "Aanmaken van gewoontes inschakelen",
         "selfHabitHint": "Indien uitgeschakeld, kunnen deelnemers van deze studie geen enkele gewoonte aanmaken — het scherm \"Mijn gewoontes\" wordt volledig verborgen in de app. Kan hieronder per groep worden overschreven.",
-        "remindersLabel": "Herinneringen voor vragenlijsten verzenden",
-        "remindersHint": "Indien ingeschakeld, ontvangen deelnemers op de dag dat elke vragenlijst verschuldigd is een herinneringsmelding. Schakel dit uit om herinneringen voor deze studie te annuleren (wordt toegepast wanneer de deelnemer de app de volgende keer opent).",
-        "reminderTimeLabel": "Herinneringstijd",
         "endDateLabel": "Einddatum studie",
         "endDateHint": "Optioneel. Indien ingesteld, projecteert de planningskalender geen gebeurtenissen meer na deze datum.",
-        "endOfStudyLabel": "Melding voor einde studie verzenden",
-        "endOfStudyHintEnabled": "Wordt lokaal op het apparaat van de deelnemer afgeleverd op de bovenstaande einddatum.",
-        "endOfStudyHintDisabled": "Stel hierboven een einddatum voor de studie in om dit in te schakelen.",
+        "remindersMovedHint": "De timing van gewoonte-, vragenlijst-, einde-studie- en studie-update-herinneringen wordt geconfigureerd in het tabblad Herinneringen.",
         "notificationTitleLabel": "Titel van melding",
         "notificationBodyLabel": "Inhoud van melding",
         "groupCountLabel": "Aantal groepen",
@@ -968,6 +963,7 @@
       }
     },
     "notificationsTab": {
+      "manualSendTitle": "Eenmalig bericht verzenden",
       "composeTitle": "Melding opstellen",
       "titleLabel": "Titel",
       "titlePlaceholder": "Titel van melding",
@@ -1015,6 +1011,25 @@
       "onboardingHint": "Overschrijft de studiebrede onboarding-instelling alleen voor deze groep.",
       "selfHabitLabel": "Gewoontes aanmaken (deze groep)",
       "selfHabitHint": "Indien uit, kan deze groep geen gewoontes aanmaken — het scherm \"Mijn gewoontes\" wordt verborgen voor deze groep."
+    },
+    "remindersTab": {
+      "habitLabel": "Gewoonteherinnering",
+      "habitHint": "Bij het aanmaken van een gewoonte: of de deelnemer een herinneringstijd kan instellen.",
+      "questionnaireLabel": "Vragenlijstherinnering",
+      "questionnaireHint": "Het dagelijkse tijdstip waarop een melding voor een verschuldigde vragenlijst afgaat.",
+      "endOfStudyLabel": "Einde-studieherinnering",
+      "endOfStudyHint": "Of en wanneer er een melding wordt verzonden op de einddatum van de studie.",
+      "studyUpdateLabel": "Studie-updateherinnering",
+      "studyUpdateHint": "Een terugkerende mededeling die deelnemers eraan herinnert de app te openen, plus eenmalige handmatige berichten.",
+      "intervalDaysLabel": "Herhalen elke (dagen)",
+      "perGroupLabel": "Per groep configureren",
+      "enabledLabel": "Herinnering ingeschakeld",
+      "adminFixesTimeLabel": "Admin legt de tijd vast",
+      "setTimeLabel": "Tijd instellen",
+      "summaryOff": "Uit",
+      "summaryParticipantChoice": "Deelnemer kiest de tijd",
+      "summaryFixed": "Vast om {time}",
+      "summaryPerGroup": "Per groep ({on}/{total} aan)"
     },
     "analyticsTab": {
       "columns": {

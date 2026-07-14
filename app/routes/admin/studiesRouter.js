@@ -94,6 +94,7 @@ export function createStudiesRouter({
         structuredActivityKeys,
         endDate,
         endOfStudyNotification,
+        reminders,
       } = req.body;
       const database = await getDb();
       const study = await createStudy({
@@ -109,6 +110,7 @@ export function createStudiesRouter({
         structuredActivityKeys,
         endDate,
         endOfStudyNotification,
+        reminders,
         neo4jRun,
       });
       res.locals.auditAction = 'create_study';
@@ -127,6 +129,7 @@ export function createStudiesRouter({
         structuredActivityKeys: study.structuredActivityKeys,
         endDate: study.endDate ?? null,
         endOfStudyNotification: study.endOfStudyNotification,
+        reminders: study.reminders,
         groups: study.groups,
         questionnaires: (study.questionnaires || []).map((id) => id.toString()),
         createdAt: study.createdAt,

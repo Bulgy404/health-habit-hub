@@ -13,7 +13,6 @@ import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/comments_enabled_provider.dart';
 import '../providers/locale_provider.dart';
-import '../providers/notification_prefs_provider.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/settings_card.dart';
 
@@ -31,7 +30,6 @@ class UserSettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final currentLocale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final notificationPrefs = ref.watch(notificationPrefsProvider);
     final commentsEnabled = ref.watch(commentsEnabledProvider);
 
     return Scaffold(
@@ -183,56 +181,6 @@ class UserSettingsScreen extends ConsumerWidget {
                 onTap: () => ref
                     .read(commentsEnabledProvider.notifier)
                     .setEnabled(!commentsEnabled),
-              ),
-            ],
-          ),
-
-          // ── Notifications ────────────────────────────────────────────
-          SectionLabel(l10n.notificationsSection),
-          SettingsCard(
-            children: [
-              SettingsRow(
-                icon: Icons.fitness_center,
-                title: l10n.habitReminders,
-                trailing: Switch(
-                  value: notificationPrefs.habitReminders,
-                  onChanged: (value) => ref
-                      .read(notificationPrefsProvider.notifier)
-                      .setHabitReminders(value),
-                ),
-                onTap: () => ref
-                    .read(notificationPrefsProvider.notifier)
-                    .setHabitReminders(!notificationPrefs.habitReminders),
-              ),
-              const Divider(height: 1, indent: 52),
-              SettingsRow(
-                icon: Icons.fact_check_outlined,
-                title: l10n.questionnaireReminders,
-                trailing: Switch(
-                  value: notificationPrefs.questionnaireReminders,
-                  onChanged: (value) => ref
-                      .read(notificationPrefsProvider.notifier)
-                      .setQuestionnaireReminders(value),
-                ),
-                onTap: () => ref
-                    .read(notificationPrefsProvider.notifier)
-                    .setQuestionnaireReminders(
-                      !notificationPrefs.questionnaireReminders,
-                    ),
-              ),
-              const Divider(height: 1, indent: 52),
-              SettingsRow(
-                icon: Icons.campaign_outlined,
-                title: l10n.studyUpdateNotifications,
-                trailing: Switch(
-                  value: notificationPrefs.studyUpdates,
-                  onChanged: (value) => ref
-                      .read(notificationPrefsProvider.notifier)
-                      .setStudyUpdates(value),
-                ),
-                onTap: () => ref
-                    .read(notificationPrefsProvider.notifier)
-                    .setStudyUpdates(!notificationPrefs.studyUpdates),
               ),
             ],
           ),

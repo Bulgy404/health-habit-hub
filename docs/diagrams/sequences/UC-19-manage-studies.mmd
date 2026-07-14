@@ -11,9 +11,13 @@ sequenceDiagram
     AP->>B: GET /api/v1/admin/studies
     B->>M: find(studies, {isActive: true})
     B-->>AP: studies with G1-G4 groups
-    R->>AP: Create study / edit groups / set per-group cueConfig / set end date & end-of-study notification
-    AP->>B: POST or PUT /api/v1/admin/studies/:id (groups[].cueConfig, endDate, endOfStudyNotification)
+    R->>AP: Create study / edit groups / set per-group cueConfig / set end date & end-of-study notification content
+    AP->>B: POST or PUT /api/v1/admin/studies/:id (groups[].cueConfig, endDate, endOfStudyNotification {title, body})
     B->>M: upsert(studies) - validator enforces group index 1..4
+    B-->>AP: 200
+    R->>AP: Open Reminders tab; set habit/questionnaire/endOfStudy/studyUpdate mode + time, study-wide and per group
+    AP->>B: PUT /api/v1/admin/studies/:id {reminders} and PATCH .../groups/:groupId/config {reminders}
+    B->>M: upsert(studies) - reminders resolved per-group-then-study via reminderConfigService
     B-->>AP: 200
     R->>AP: Generate study codes for a group
     AP->>B: POST /api/v1/admin/studies/:id/codes {groupId, maxRedemptions, expiresAt}
@@ -25,6 +29,6 @@ sequenceDiagram
     B-->>AP: 200 - calendar shows real windows + dashed "projected" preview for not-yet-enrolled scopes
     Note over F,B: On next app open:
     F->>B: GET /api/v1/questionnaires/due
-    B-->>F: {questionnaires, studyEndDate, endOfStudyNotification}
+    B-->>F: {reminders (questionnaire mode/time), questionnaires, studyEndDate, endOfStudyNotification (mode/time + title/body)}
     F->>F: Cancel + reschedule local notification for studyEndDate (flutter_local_notifications)
-    Note over F: Fires on-device at the study's end date, even offline
+    Note over F: Fires on-device at the resolved mode/time, even offline (skipped entirely if mode is off)

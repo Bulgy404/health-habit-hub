@@ -113,6 +113,7 @@ function serialize(doc) {
     durationMinutes: doc.durationMinutes,
     cues: doc.cues,
     intentionStatement: doc.intentionStatement,
+    reminderTime: doc.reminderTime ?? null,
     status: doc.status,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,

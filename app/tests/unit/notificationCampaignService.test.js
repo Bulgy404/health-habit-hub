@@ -5,6 +5,7 @@ import {
   createCampaign,
   sendCampaign,
   dispatchDueCampaigns,
+  cancelCampaign,
 } from '../../services/notificationCampaignService.js';
 
 function makeDb(campaigns = [], deviceTokens = []) {
@@ -20,9 +21,18 @@ function makeDb(campaigns = [], deviceTokens = []) {
             return { insertedId: saved._id };
           },
           async findOneAndUpdate(filter, update, _opts) {
-            const idx = cStore.findIndex(
-              (d) => d._id?.toString() === filter._id?.toString()
-            );
+            const idx = cStore.findIndex((d) => {
+              if (d._id?.toString() !== filter._id?.toString()) return false;
+              if (filter.status?.$in && !filter.status.$in.includes(d.status))
+                return false;
+              if (
+                filter.sentAt === null &&
+                d.sentAt !== null &&
+                d.sentAt !== undefined
+              )
+                return false;
+              return true;
+            });
             if (idx === -1) return null;
             Object.assign(cStore[idx], update.$set);
             return { ...cStore[idx] };
@@ -253,4 +263,179 @@ test('dispatchDueCampaigns: sends only past-due scheduled campaigns and marks th
   assert.equal(await state(dueId), 'sent');
   assert.equal(await state(futureId), 'scheduled');
   assert.equal(await state(cancelledId), 'cancelled');
+});
+
+// ── Recurrence (study-update reminder) ───────────────────────────────────────
+
+test('createCampaign: stores recurrence and starts sendCount at 0', async () => {
+  const db = makeDb();
+  const result = await createCampaign({
+    db,
+    createdBy: 'r1',
+    studyId: null,
+    title: 'Weekly update',
+    body: 'Check the app for news.',
+    targetType: 'all_enrolled',
+    recurrence: { intervalDays: 7 },
+  });
+  assert.deepEqual(result.recurrence, { intervalDays: 7, until: null });
+  assert.equal(result.sendCount, 0);
+});
+
+test('sendCampaign: a recurring campaign reschedules instead of terminating', async () => {
+  const id = new ObjectId();
+  const db = makeDb(
+    [
+      {
+        _id: id,
+        title: 'Weekly update',
+        body: 'Check the app for news.',
+        targetType: 'individual',
+        targetIds: ['u1'],
+        status: 'scheduled',
+        scheduledFor: new Date(Date.now() - 60_000),
+        sentAt: null,
+        recipientCount: null,
+        recurrence: { intervalDays: 7, until: null },
+        sendCount: 0,
+      },
+    ],
+    [{ userId: 'u1', token: 'tok-1' }]
+  );
+
+  await sendCampaign({ db, id: id.toString(), send: async (t) => t.length });
+
+  const saved = await db
+    .collection('notification_campaigns')
+    .findOne({ _id: id });
+  // Not terminally 'sent' — rescheduled ~7 days out so dispatchDueCampaigns
+  // picks it up again on its next due tick.
+  assert.equal(saved.status, 'scheduled');
+  assert.equal(saved.sendCount, 1);
+  const daysUntilNext =
+    (saved.scheduledFor.getTime() - Date.now()) / (24 * 60 * 60 * 1000);
+  assert.ok(daysUntilNext > 6.9 && daysUntilNext < 7.1);
+});
+
+test('sendCampaign: a recurring campaign past its `until` date terminates instead of rescheduling', async () => {
+  const id = new ObjectId();
+  const db = makeDb(
+    [
+      {
+        _id: id,
+        title: 'Weekly update',
+        body: 'Check the app for news.',
+        targetType: 'individual',
+        targetIds: ['u1'],
+        status: 'scheduled',
+        scheduledFor: new Date(Date.now() - 60_000),
+        sentAt: null,
+        recipientCount: null,
+        recurrence: { intervalDays: 7, until: new Date(Date.now() - 1000) },
+        sendCount: 3,
+      },
+    ],
+    [{ userId: 'u1', token: 'tok-1' }]
+  );
+
+  await sendCampaign({ db, id: id.toString(), send: async (t) => t.length });
+
+  const saved = await db
+    .collection('notification_campaigns')
+    .findOne({ _id: id });
+  assert.equal(saved.status, 'sent');
+  assert.equal(saved.sendCount, 4);
+});
+
+test('dispatchDueCampaigns: a recurring campaign is picked up again after rescheduling', async () => {
+  const id = new ObjectId();
+  const db = makeDb(
+    [
+      {
+        _id: id,
+        title: 'Weekly update',
+        body: 'Check the app for news.',
+        targetType: 'individual',
+        targetIds: ['u1'],
+        status: 'scheduled',
+        scheduledFor: new Date(Date.now() - 60_000),
+        sentAt: null,
+        recipientCount: null,
+        recurrence: { intervalDays: 7, until: null },
+        sendCount: 0,
+      },
+    ],
+    [{ userId: 'u1', token: 'tok-1' }]
+  );
+
+  const firstPass = await dispatchDueCampaigns({
+    db,
+    send: async (t) => t.length,
+  });
+  assert.equal(firstPass.length, 1);
+
+  // Immediately after the first send it's rescheduled ~7 days out, so it's
+  // not due yet — a second dispatch tick right now should not pick it up.
+  const secondPass = await dispatchDueCampaigns({
+    db,
+    send: async (t) => t.length,
+  });
+  assert.equal(secondPass.length, 0);
+
+  // But once its rescheduled time has actually arrived, it fires again.
+  const thirdPass = await dispatchDueCampaigns({
+    db,
+    send: async (t) => t.length,
+    now: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
+  });
+  assert.equal(thirdPass.length, 1);
+  assert.equal(thirdPass[0].id, id.toString());
+});
+
+test('cancelCampaign: cancels a recurring campaign between sends (status scheduled, not unsent sentAt: null)', async () => {
+  const id = new ObjectId();
+  const db = makeDb([
+    {
+      _id: id,
+      title: 'Weekly update',
+      body: 'x',
+      targetType: 'individual',
+      targetIds: ['u1'],
+      status: 'scheduled',
+      // sentAt is already set from a prior send — the old cancelCampaign
+      // guard (`sentAt: null`) would have wrongly refused to cancel this.
+      sentAt: new Date(Date.now() - 60_000),
+      recipientCount: 1,
+      recurrence: { intervalDays: 7, until: null },
+      sendCount: 2,
+    },
+  ]);
+
+  const result = await cancelCampaign({ db, id: id.toString() });
+  assert.equal(result.cancelled, true);
+
+  const saved = await db
+    .collection('notification_campaigns')
+    .findOne({ _id: id });
+  assert.equal(saved.status, 'cancelled');
+});
+
+test('cancelCampaign: refuses to cancel an already-terminated (non-recurring) campaign', async () => {
+  const id = new ObjectId();
+  const db = makeDb([
+    {
+      _id: id,
+      title: 'One-off',
+      body: 'x',
+      targetType: 'individual',
+      targetIds: ['u1'],
+      status: 'sent',
+      sentAt: new Date(),
+      recipientCount: 1,
+      recurrence: null,
+    },
+  ]);
+
+  const result = await cancelCampaign({ db, id: id.toString() });
+  assert.equal(result.notFound, true);
 });

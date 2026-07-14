@@ -677,10 +677,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get confirmPlanRemindersEnabledByStudy =>
-      'Reminders enabled (set by study)';
-
-  @override
   String get confirmPlanNoRemindersByStudy => 'No reminders (set by study)';
 
   @override
@@ -1520,11 +1516,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Habit check-ins you submit while offline are saved on your device and sent automatically once you\'re back online.';
 
   @override
-  String get faqNotificationsQuestion => 'Can I turn off certain reminders?';
+  String get faqNotificationsQuestion => 'Can I turn off reminders?';
 
   @override
   String get faqNotificationsAnswer =>
-      'Yes. Go to Settings → Notifications to turn habit, questionnaire, or study-update reminders on or off individually.';
+      'Reminders are part of the study, so they can\'t be turned off inside the app. If you need to, you can manage notifications for this app in your phone\'s system settings.';
 
   @override
   String get faqConsentQuestion => 'Can I withdraw my consent?';
@@ -1532,18 +1528,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get faqConsentAnswer =>
       'Yes, at any time. Go to Settings → Study consent to review what you agreed to, or Settings → Delete account to withdraw and erase your data.';
-
-  @override
-  String get notificationsSection => 'Notifications';
-
-  @override
-  String get habitReminders => 'Habit reminders';
-
-  @override
-  String get questionnaireReminders => 'Questionnaire reminders';
-
-  @override
-  String get studyUpdateNotifications => 'Study updates';
 
   @override
   String get changeRecoveryPassphrase => 'Change recovery passphrase';

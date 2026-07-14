@@ -11,6 +11,10 @@ import {
   getEnrollment,
   syncStudy,
 } from './enrollmentNeo4j.js';
+import {
+  normalizeReminders,
+  resolveEffectiveReminders,
+} from './reminderConfigService.js';
 
 /**
  * When a study's groups shrink, every reference to a removed group
@@ -146,9 +150,9 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
       habitEntryMode:
         s.habitEntryMode === 'structured' ? 'structured' : 'freeText',
       structuredActivityKeys: s.structuredActivityKeys ?? [],
-      questionnaireReminders: normalizeReminders(s),
+      reminders: normalizeReminders(s),
       endDate: s.endDate ?? null,
-      endOfStudyNotification: normalizeEndOfStudyNotification(s),
+      endOfStudyNotification: normalizeEndOfStudyContent(s),
       groups: s.groups,
       questionnaires: (s.questionnaires || []).map((id) => id.toString()),
       participantCount: countMap[s._id.toString()] ?? 0,
@@ -176,6 +180,7 @@ export async function createStudy({
   structuredActivityKeys = [],
   endDate = null,
   endOfStudyNotification,
+  reminders,
   neo4jRun,
 }) {
   const now = new Date();
@@ -185,7 +190,7 @@ export async function createStudy({
     index: i + 1,
     cueConfig: g.cueConfig ?? null,
     activityTypeConfig: g.activityTypeConfig ?? null,
-    reminderConfig: g.reminderConfig ?? null,
+    reminders: g.reminders ?? null,
     autoDonate: g.autoDonate ?? false,
     // null = inherit the study-level flag; a boolean overrides it.
     onboardingEnabled: g.onboardingEnabled ?? null,
@@ -205,10 +210,9 @@ export async function createStudy({
     structuredActivityKeys: Array.isArray(structuredActivityKeys)
       ? structuredActivityKeys
       : [],
-    // Local questionnaire due-date reminders (enabled, fired at `hour` local).
-    questionnaireReminders: { enabled: true, hour: 9 },
+    reminders: reminders ?? {},
     endDate: endDate ? new Date(endDate) : null,
-    endOfStudyNotification: normalizeEndOfStudyNotification({
+    endOfStudyNotification: normalizeEndOfStudyContent({
       endOfStudyNotification,
     }),
     groups: studyGroups,
@@ -275,9 +279,9 @@ export async function getStudy({ db, id }) {
     habitEntryMode:
       study.habitEntryMode === 'structured' ? 'structured' : 'freeText',
     structuredActivityKeys: study.structuredActivityKeys ?? [],
-    questionnaireReminders: normalizeReminders(study),
+    reminders: normalizeReminders(study),
     endDate: study.endDate ?? null,
-    endOfStudyNotification: normalizeEndOfStudyNotification(study),
+    endOfStudyNotification: normalizeEndOfStudyContent(study),
     groups: study.groups,
     questionnaires: (study.questionnaires || []).map((id) => id.toString()),
     createdAt: study.createdAt,
@@ -285,20 +289,10 @@ export async function getStudy({ db, id }) {
   };
 }
 
-/** Normalise a study's questionnaire-reminder config (defaults: on, 9am). */
-function normalizeReminders(study) {
-  const r = study?.questionnaireReminders;
-  return {
-    enabled: r ? r.enabled !== false : true,
-    hour: Number.isInteger(r?.hour) ? r.hour : 9,
-  };
-}
-
-/** Normalise a study's end-of-study notification config (default: off). */
-function normalizeEndOfStudyNotification(study) {
+/** Normalise a study's end-of-study notification content (default title/body). */
+function normalizeEndOfStudyContent(study) {
   const n = study?.endOfStudyNotification;
   return {
-    enabled: n?.enabled === true,
     title: typeof n?.title === 'string' && n.title ? n.title : 'Study complete',
     body:
       typeof n?.body === 'string' && n.body
@@ -344,17 +338,12 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
     $set.structuredActivityKeys = Array.isArray(updates.structuredActivityKeys)
       ? updates.structuredActivityKeys
       : [];
-  if (updates.questionnaireReminders !== undefined)
-    $set.questionnaireReminders = {
-      enabled: updates.questionnaireReminders.enabled !== false,
-      hour: Number.isInteger(updates.questionnaireReminders.hour)
-        ? updates.questionnaireReminders.hour
-        : 9,
-    };
+  if (updates.reminders !== undefined)
+    $set.reminders = { ...(existing.reminders ?? {}), ...updates.reminders };
   if (updates.endDate !== undefined)
     $set.endDate = updates.endDate ? new Date(updates.endDate) : null;
   if (updates.endOfStudyNotification !== undefined)
-    $set.endOfStudyNotification = normalizeEndOfStudyNotification({
+    $set.endOfStudyNotification = normalizeEndOfStudyContent({
       endOfStudyNotification: updates.endOfStudyNotification,
     });
 
@@ -376,7 +365,7 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
         index: i + 1,
         cueConfig: null,
         activityTypeConfig: null,
-        reminderConfig: null,
+        reminders: null,
         autoDonate: false,
         onboardingEnabled: null,
         selfHabitCreationEnabled: null,
@@ -654,7 +643,7 @@ export async function updateGroupCueConfig({
 }
 
 /**
- * Update the full per-group config (cueConfig, activityTypeConfig, reminderConfig, autoDonate).
+ * Update the full per-group config (cueConfig, activityTypeConfig, reminders, autoDonate).
  * Only supplied fields are written; others are left unchanged.
  * @param {{ db: object, studyId: string, groupId: string, config: object }} deps
  * @returns {Promise<{ updated: boolean }|{ notFound: boolean }>}
@@ -683,8 +672,11 @@ export async function updateGroupConfig({ db, studyId, groupId, config }) {
   if (config.cueConfig !== undefined) updated.cueConfig = config.cueConfig;
   if (config.activityTypeConfig !== undefined)
     updated.activityTypeConfig = config.activityTypeConfig;
-  if (config.reminderConfig !== undefined)
-    updated.reminderConfig = config.reminderConfig;
+  if (config.reminders !== undefined)
+    updated.reminders =
+      config.reminders === null
+        ? null
+        : { ...(existing.reminders ?? {}), ...config.reminders };
   if (config.autoDonate !== undefined) updated.autoDonate = config.autoDonate;
   if (config.onboardingEnabled !== undefined)
     updated.onboardingEnabled = config.onboardingEnabled;
@@ -736,7 +728,7 @@ export async function getParticipantGroupConfig({ db, userId, neo4jRun }) {
     recommenderEnabled: study.recommenderEnabled !== false,
     cueConfig: group?.cueConfig ?? null,
     activityTypeConfig: group?.activityTypeConfig ?? null,
-    reminderConfig: group?.reminderConfig ?? null,
+    reminders: resolveEffectiveReminders({ study, group }),
     autoDonate: group?.autoDonate ?? false,
   };
 }

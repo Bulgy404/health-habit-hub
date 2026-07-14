@@ -2,6 +2,8 @@
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
 import { logger } from '../utils/logger.js';
+import { validate } from '../middleware/validate.js';
+import { createNotificationCampaignSchema } from '../schemas/adminSchemas.js';
 import {
   createCampaign,
   listCampaigns,
@@ -64,18 +66,10 @@ export function createNotificationCampaignRouter({
     }
   });
 
-  router.post('/', async (req, res) => {
+  router.post('/', validate(createNotificationCampaignSchema), async (req, res) => {
     try {
-      const { studyId, title, body, targetType, targetIds, scheduledFor } =
+      const { studyId, title, body, targetType, targetIds, scheduledFor, recurrence } =
         req.body;
-      if (!title || !body || !targetType)
-        return res
-          .status(400)
-          .json({ error: 'title, body, targetType required' });
-      if (title.length > 65)
-        return res.status(400).json({ error: 'title max 65 chars' });
-      if (body.length > 240)
-        return res.status(400).json({ error: 'body max 240 chars' });
       const database = await getDb();
       const campaign = await createCampaign({
         db: database,
@@ -86,6 +80,7 @@ export function createNotificationCampaignRouter({
         targetType,
         targetIds: targetIds ?? [],
         scheduledFor: scheduledFor ?? null,
+        recurrence: recurrence ?? null,
       });
       if (!scheduledFor) {
         // Merge the real send result back onto the response — createCampaign's

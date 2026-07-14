@@ -10,9 +10,15 @@
  *   targetType     string     Required. 'individual' | 'group' | 'all_enrolled'
  *   targetIds      Array<string>  Array of target user/group IDs.
  *   scheduledFor   Date       Optional. When to send the notification.
- *   sentAt         Date       Optional. When the notification was sent.
- *   recipientCount int        Optional. Number of recipients.
- *   status         string     Required. 'draft' | 'scheduled' | 'sent' | 'failed'
+ *   sentAt         Date       Optional. When the notification was last sent.
+ *   recipientCount int        Optional. Number of recipients from the most recent send.
+ *   recurrence     { intervalDays: int, until: Date|null } | null
+ *                              Optional. When set, this is a recurring "study update reminder":
+ *                              after each send, sendCampaign reschedules it (status back to
+ *                              'scheduled', scheduledFor advanced by intervalDays) instead of
+ *                              leaving it 'sent' — until `until` (if set) has passed.
+ *   sendCount      int        Optional. Number of times a recurring campaign has been sent.
+ *   status         string     Required. 'draft' | 'scheduled' | 'sent' | 'failed' | 'cancelled'
  *   createdAt      Date       Required.
  */
 
@@ -44,6 +50,14 @@ export const VALIDATOR = {
       scheduledFor: { bsonType: ['date', 'null'] },
       sentAt: { bsonType: ['date', 'null'] },
       recipientCount: { bsonType: ['int', 'null'] },
+      recurrence: {
+        bsonType: ['object', 'null'],
+        properties: {
+          intervalDays: { bsonType: 'int', minimum: 1, maximum: 365 },
+          until: { bsonType: ['date', 'null'] },
+        },
+      },
+      sendCount: { bsonType: ['int', 'null'] },
       status: {
         bsonType: 'string',
         enum: ['draft', 'scheduled', 'sent', 'failed', 'cancelled'],

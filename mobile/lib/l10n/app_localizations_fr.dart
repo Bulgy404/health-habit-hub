@@ -696,10 +696,6 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get confirmPlanRemindersEnabledByStudy =>
-      'Rappels activés (défini par l\'étude)';
-
-  @override
   String get confirmPlanNoRemindersByStudy =>
       'Aucun rappel (défini par l\'étude)';
 
@@ -1557,12 +1553,11 @@ class AppLocalizationsFr extends AppLocalizations {
       'Les enregistrements d\'habitudes soumis hors ligne sont conservés sur votre appareil et envoyés automatiquement dès que vous êtes de nouveau en ligne.';
 
   @override
-  String get faqNotificationsQuestion =>
-      'Puis-je désactiver certains rappels ?';
+  String get faqNotificationsQuestion => 'Puis-je désactiver les rappels ?';
 
   @override
   String get faqNotificationsAnswer =>
-      'Oui. Allez dans Paramètres → Notifications pour activer ou désactiver individuellement les rappels d\'habitudes, de questionnaires ou de mises à jour de l\'étude.';
+      'Les rappels font partie de l\'étude et ne peuvent pas être désactivés dans l\'application. Si nécessaire, vous pouvez gérer les notifications de cette application dans les paramètres système de votre téléphone.';
 
   @override
   String get faqConsentQuestion => 'Puis-je retirer mon consentement ?';
@@ -1570,18 +1565,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get faqConsentAnswer =>
       'Oui, à tout moment. Allez dans Paramètres → Consentement à l\'étude pour revoir ce que vous avez accepté, ou Paramètres → Supprimer le compte pour retirer votre consentement et effacer vos données.';
-
-  @override
-  String get notificationsSection => 'Notifications';
-
-  @override
-  String get habitReminders => 'Rappels d\'habitudes';
-
-  @override
-  String get questionnaireReminders => 'Rappels de questionnaires';
-
-  @override
-  String get studyUpdateNotifications => 'Mises à jour de l\'étude';
 
   @override
   String get changeRecoveryPassphrase => 'Changer la phrase de récupération';
