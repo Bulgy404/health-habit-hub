@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { ObjectId } from 'mongodb';
-import { getDueQuestionnaires } from '../../services/questionnaireScheduleService.js';
+import {
+  getDueQuestionnaires,
+  srhiDeliversOnHabitCreation,
+  generateHabitCreationWindows,
+} from '../../services/questionnaireScheduleService.js';
 
 // ── Minimal in-memory DB ──────────────────────────────────────────────────────
 
@@ -109,4 +113,134 @@ test('getDueQuestionnaires: returns defaults when the study no longer exists', a
   });
   const result = await getDueQuestionnaires({ db, userId: 'u1' });
   assert.deepEqual(result.reminders, { mode: 'admin_fixed', time: '09:00' });
+});
+
+// ── deliverOnHabitCreation ────────────────────────────────────────────────────
+
+// Mock supporting resolveEffectiveAssignments (assignments.find(query).toArray)
+// and generateHabitCreationWindows (windows.bulkWrite).
+function makeAssignmentDb({ assignments = [] } = {}) {
+  const bulk = [];
+  return {
+    _bulk: bulk,
+    collection(name) {
+      if (name === 'questionnaire_assignments') {
+        return { find: () => ({ toArray: async () => assignments }) };
+      }
+      if (name === 'questionnaire_windows') {
+        return {
+          bulkWrite: async (ops) => {
+            bulk.push(...ops);
+          },
+        };
+      }
+      throw new Error(`unexpected collection: ${name}`);
+    },
+  };
+}
+
+test('srhiDeliversOnHabitCreation: true only when an active flagged SRHI assignment exists', async () => {
+  const studyId = new ObjectId();
+  const on = makeAssignmentDb({
+    assignments: [
+      {
+        questionnaireId: new ObjectId(),
+        questionnaireSlug: 'srhi',
+        deliverOnHabitCreation: true,
+        groupId: null,
+      },
+    ],
+  });
+  assert.strictEqual(
+    await srhiDeliversOnHabitCreation({ db: on, studyId, groupId: null }),
+    true
+  );
+
+  const off = makeAssignmentDb({
+    assignments: [
+      {
+        questionnaireId: new ObjectId(),
+        questionnaireSlug: 'srhi',
+        deliverOnHabitCreation: false,
+        groupId: null,
+      },
+      {
+        questionnaireId: new ObjectId(),
+        questionnaireSlug: 'sliq',
+        deliverOnHabitCreation: true,
+        groupId: null,
+      },
+    ],
+  });
+  assert.strictEqual(
+    await srhiDeliversOnHabitCreation({ db: off, studyId, groupId: null }),
+    false
+  );
+});
+
+test('generateHabitCreationWindows: creates a per-habit week-1 window for flagged non-SRHI questionnaires', async () => {
+  const studyId = new ObjectId();
+  const intentionId = new ObjectId();
+  const createdAt = new Date('2026-07-14T10:00:00.000Z');
+  const db = makeAssignmentDb({
+    assignments: [
+      {
+        _id: new ObjectId(),
+        questionnaireId: new ObjectId(),
+        questionnaireSlug: 'sliq',
+        questionnaireTitle: 'SLIQ',
+        deliverOnHabitCreation: true,
+        groupId: null,
+      },
+      // SRHI is excluded here (handled by its own pipeline).
+      {
+        _id: new ObjectId(),
+        questionnaireId: new ObjectId(),
+        questionnaireSlug: 'srhi',
+        deliverOnHabitCreation: true,
+        groupId: null,
+      },
+    ],
+  });
+  const created = await generateHabitCreationWindows({
+    db,
+    userId: 'u1',
+    studyId,
+    groupId: null,
+    intentionId,
+    createdAt,
+  });
+  assert.deepStrictEqual(
+    created.map((c) => c.questionnaireSlug),
+    ['sliq']
+  );
+  assert.strictEqual(db._bulk.length, 1);
+  const op = db._bulk[0].updateOne;
+  assert.strictEqual(op.filter.userId, 'u1');
+  assert.strictEqual(op.update.$setOnInsert.occurrence, 1);
+  assert.deepStrictEqual(op.update.$setOnInsert.scheduledFor, createdAt);
+});
+
+test('generateHabitCreationWindows: no-op when no flagged assignments', async () => {
+  const db = makeAssignmentDb({
+    assignments: [
+      {
+        _id: new ObjectId(),
+        questionnaireId: new ObjectId(),
+        questionnaireSlug: 'sliq',
+        deliverOnHabitCreation: false,
+        groupId: null,
+      },
+    ],
+  });
+  const created = await generateHabitCreationWindows({
+    db,
+    userId: 'u1',
+    studyId: new ObjectId(),
+    groupId: null,
+    intentionId: new ObjectId(),
+    createdAt: new Date(),
+  });
+  assert.deepStrictEqual(created, []);
+  assert.strictEqual(db._bulk.length, 0);
 });

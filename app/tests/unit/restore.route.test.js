@@ -48,6 +48,11 @@ before(async () => {
         'mock-ropc-secret',
         'restore must authenticate the ROPC client with its secret'
       );
+      assert.strictEqual(
+        body.get('scope'),
+        'openid profile email offline_access',
+        'restore must request offline_access so refresh tokens survive normal usage gaps'
+      );
 
       if (
         body.get('username') === KNOWN_USERNAME &&

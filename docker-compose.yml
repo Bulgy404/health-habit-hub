@@ -321,6 +321,7 @@ services:
       --user "$$KEYCLOAK_ADMIN"
       --password "$$KEYCLOAK_ADMIN_PASSWORD";
       do sleep 2; done &&
+      /opt/keycloak/bin/kcadm.sh update realms/hhh -s offlineSessionIdleTimeout=15552000 -s offlineSessionMaxLifespanEnabled=false &&
       /opt/keycloak/bin/kcadm.sh update users/profile -r hhh -f /opt/keycloak/bootstrap/hhh-user-profile.json &&
       BACKEND_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=hhh-backend --fields id --format csv --noquotes) &&
       /opt/keycloak/bin/kcadm.sh update clients/$$BACKEND_ID -r hhh -s secret="$$KEYCLOAK_ADMIN_CLIENT_SECRET" &&

@@ -34,6 +34,7 @@ import '../screens/profile_screen.dart';
 import '../screens/project_info_screen.dart';
 import '../screens/rotate_passphrase_screen.dart';
 import '../screens/shell_screen.dart';
+import '../screens/signing_out_screen.dart';
 import '../screens/user_settings_screen.dart';
 import 'redirect.dart';
 
@@ -56,6 +57,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/onboarding/welcome',
         builder: (context, state) => const WelcomeScreen(),
+      ),
+      GoRoute(
+        path: '/signing-out',
+        builder: (context, state) => SigningOutScreen(
+          nextRoute: (state.extra as String?) ?? '/onboarding/welcome',
+        ),
       ),
       GoRoute(
         path: '/onboarding/consent',

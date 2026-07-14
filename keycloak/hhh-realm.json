@@ -20,6 +20,8 @@
   "eventsExpiration": 7776000,
   "adminEventsEnabled": true,
   "adminEventsDetailsEnabled": true,
+  "offlineSessionIdleTimeout": 15552000,
+  "offlineSessionMaxLifespanEnabled": false,
   "roles": {
     "realm": [
       {

@@ -1634,6 +1634,24 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to sign out?'**
   String get signOutConfirm;
 
+  /// Shown on the full-screen progress indicator while sign-out is in progress
+  ///
+  /// In en, this message translates to:
+  /// **'Signing out…'**
+  String get signingOut;
+
+  /// Shown when the backend rejects a request because the session could not be renewed
+  ///
+  /// In en, this message translates to:
+  /// **'Your session expired. Please sign in again to continue.'**
+  String get sessionExpiredMessage;
+
+  /// Button label to re-authenticate after a session expired
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get signInAction;
+
   /// AI provenance and medical disclaimer on the recommendations screen
   ///
   /// In en, this message translates to:

@@ -150,6 +150,11 @@ test('performs a password-grant login with the new credentials', async () => {
     params.get('username'),
     '11111111-2222-3333-4444-555555555555'
   );
+  assert.strictEqual(
+    params.get('scope'),
+    'openid profile email offline_access',
+    'rotation must request offline_access so the new refresh token survives normal usage gaps'
+  );
 });
 
 test('returns 502 when the user lookup fails', async () => {

@@ -677,11 +677,32 @@ Rules:
 
 ### Authentication Model
 
-- **Flutter app ↔ Keycloak:** PKCE authorization code flow using the public client `hhh-flutter`. No client secret is required or stored on the device.
+- **Flutter app ↔ Keycloak:** the app never talks to Keycloak directly. It authenticates via a 24-word recovery passphrase against the Node.js backend (`/onboard` for new accounts, `/restore` for an existing account on a new device, `/users/me/rotate-credentials` to rotate the passphrase), which exchanges it for a Keycloak token pair server-side — see **Session & Token Lifetime** below. A PKCE authorization code flow via the public client `hhh-flutter` also exists in the mobile codebase (`AuthService.login()`, no client secret required or stored on device) but has no current call site.
 - **Flutter app ↔ Node.js backend:** Bearer JWT in the `Authorization` header. The backend validates JWTs against Keycloak's JWKS endpoint.
 - **Node.js backend ↔ Keycloak (admin operations):** Confidential service-account client `hhh-backend` with client credentials grant.
+- **Node.js backend ↔ Keycloak (passphrase auth):** Confidential client `hhh-ropc` with the resource-owner-password-credentials (ROPC) grant, kept behind a server-held secret so the ROPC capability isn't available to anyone who extracts the public `hhh-flutter` client ID from the app (`hhh-flutter` has `directAccessGrantsEnabled: false` for exactly this reason).
 - **Next.js admin ↔ Keycloak:** Confidential client `hhh-admin` via NextAuth.js. Session is maintained server-side; access tokens are not exposed to the browser.
 - **Node.js backend ↔ Python API service:** Shared secret (`API_SERVICE_SECRET`) sent as an HTTP header. The Python service refuses all requests without a valid secret.
+
+### Session & Token Lifetime
+
+All Keycloak token-minting call sites for the mobile app (`app/services/keycloakRopcClient.js`, used by `/onboard`, `/restore`, and `/users/me/rotate-credentials`; and the currently-unused PKCE `AuthService.login()` in `mobile/lib/services/auth_service.dart`) request the `offline_access` OAuth scope, which changes which Keycloak session settings govern the resulting refresh token:
+
+| Setting | Keycloak default | This realm (`keycloak/hhh-realm.json`) |
+| --- | --- | --- |
+| SSO session idle / max (regular tokens, no `offline_access`) | 30 min / 10 h | unchanged (not used by the mobile app) |
+| `offlineSessionIdleTimeout` | 30 days | **180 days** |
+| `offlineSessionMaxLifespanEnabled` | `false` (no cap) | `false` (no cap) |
+
+Without `offline_access`, refresh tokens are bound to the regular SSO session — a 30-minute idle default was logging participants out after every ordinary gap between app opens, since this is a habit tracker checked a few times a day rather than continuously.
+
+**This is a rolling window, not a fixed expiry.** Every successful token refresh (automatic whenever the app is opened and the short-lived access token needs renewing) resets the 180-day idle clock, and there is no maximum session age at all (`offlineSessionMaxLifespanEnabled: false`). A participant only needs to open the app once every 180 days to stay signed in indefinitely — this is the same mechanism ("always signed in") apps like WhatsApp rely on: a long-lived, revocable, silently-renewed token, not a short-lived one requiring manual re-entry.
+
+Explicit sign-out (Settings → Sign out, or account deletion) still fully revokes the session via Keycloak's `/protocol/openid-connect/revoke` endpoint (RFC 7009) regardless of token type — offline tokens are not exempt from revocation.
+
+**Deliberately not implemented:** caching the recovery passphrase on-device to silently re-authenticate after a token dies. The passphrase is the account's root credential — it alone can mint a fresh token pair from scratch via `/restore`. A stored refresh token has a bounded lifetime and can be revoked individually; a cached master credential replayed automatically has no natural expiry and turns a lost/stolen device into a permanent skeleton key. `AuthService`'s `_passwordKey` constant documents that an earlier version of the app did exactly this (ROPC replay of a stored raw password) and it was removed.
+
+If the study protocol needs a hard cap on session age (e.g. for consent-renewal or data-minimization reasons) rather than "stays signed in as long as it's used within 180 days," set `offlineSessionMaxLifespanEnabled: true` and `offlineSessionMaxLifespan` (seconds) in `keycloak/hhh-realm.json` and the `keycloak-init` bootstrap step in both compose files.
 
 ### Roles
 

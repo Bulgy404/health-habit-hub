@@ -850,6 +850,16 @@ class AppLocalizationsNl extends AppLocalizations {
   String get signOutConfirm => 'Weet je zeker dat je je wilt afmelden?';
 
   @override
+  String get signingOut => 'Bezig met afmelden…';
+
+  @override
+  String get sessionExpiredMessage =>
+      'Je sessie is verlopen. Meld je opnieuw aan om door te gaan.';
+
+  @override
+  String get signInAction => 'Aanmelden';
+
+  @override
   String get aiDisclaimer =>
       'Door AI gegenereerde suggesties op basis van je studiegegevens. Dit is geen medisch advies; raadpleeg bij gezondheidsklachten een arts.';
 

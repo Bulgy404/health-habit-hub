@@ -845,6 +845,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signOutConfirm => 'Are you sure you want to sign out?';
 
   @override
+  String get signingOut => 'Signing out…';
+
+  @override
+  String get sessionExpiredMessage =>
+      'Your session expired. Please sign in again to continue.';
+
+  @override
+  String get signInAction => 'Sign in';
+
+  @override
   String get aiDisclaimer =>
       'AI-generated suggestions based on your study data. This is not medical advice; consult a doctor for health concerns.';
 

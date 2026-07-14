@@ -309,6 +309,18 @@
     "description": "Settings entry to sign out"
   },
   "signOutConfirm": "Möchtest du dich wirklich abmelden?",
+  "signingOut": "Abmelden…",
+  "@signingOut": {
+    "description": "Shown on the full-screen progress indicator while sign-out is in progress"
+  },
+  "sessionExpiredMessage": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an, um fortzufahren.",
+  "@sessionExpiredMessage": {
+    "description": "Shown when the backend rejects a request because the session could not be renewed"
+  },
+  "signInAction": "Anmelden",
+  "@signInAction": {
+    "description": "Button label to re-authenticate after a session expired"
+  },
   "@signOutConfirm": {
     "description": "Body of the sign-out confirmation dialog"
   },

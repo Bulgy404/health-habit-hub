@@ -106,8 +106,15 @@ class DonateFormWidgetState extends State<DonateFormWidget> {
             maxLines: 3,
             maxLength: 500,
             enabled: !widget.submitting,
+            // This form's cards are intentionally light-themed regardless of
+            // app theme (fillColor is hardcoded white), so the text and hint
+            // colors must be pinned dark too — otherwise dark mode's default
+            // light text color renders white-on-white and is unreadable.
+            style: const TextStyle(color: Color(0xFF111827)),
+            cursorColor: const Color(0xFF45B700),
             decoration: InputDecoration(
               hintText: l10n.donateFormHabitHint,
+              hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(

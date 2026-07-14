@@ -812,6 +812,15 @@ class AppLocalizationsJa extends AppLocalizations {
   String get signOutConfirm => '本当にサインアウトしますか？';
 
   @override
+  String get signingOut => 'サインアウトしています…';
+
+  @override
+  String get sessionExpiredMessage => 'セッションの有効期限が切れました。続けるには再度サインインしてください。';
+
+  @override
+  String get signInAction => 'サインイン';
+
+  @override
   String get aiDisclaimer =>
       'あなたの研究データに基づくAI生成の提案です。これは医学的助言ではありません。健康上の懸念がある場合は医師にご相談ください。';
 
