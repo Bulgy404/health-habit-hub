@@ -124,9 +124,6 @@ export async function resolveHabitConfig({
         recommenderEnabled = study.recommenderEnabled !== false;
         onboardingEnabled = study.onboardingEnabled !== false;
         selfHabitCreationEnabled = study.selfHabitCreationEnabled !== false;
-        if (study.habitEntryMode === 'structured') {
-          behaviorKeys = study.structuredActivityKeys ?? [];
-        }
 
         // Resolve cueConfig and per-group flag overrides live from the group.
         if (enrollment.groupId) {
@@ -140,6 +137,18 @@ export async function resolveHabitConfig({
           if (group?.selfHabitCreationEnabled != null) {
             selfHabitCreationEnabled = group.selfHabitCreationEnabled;
           }
+          if (group?.recommenderEnabled != null) {
+            recommenderEnabled = group.recommenderEnabled;
+          }
+        }
+
+        // A non-null group override wins over the study-level entry mode,
+        // same as the flags above.
+        const effectiveHabitEntryMode = group?.habitEntryMode ?? study.habitEntryMode;
+        const effectiveStructuredActivityKeys =
+          group?.structuredActivityKeys ?? study.structuredActivityKeys;
+        if (effectiveHabitEntryMode === 'structured') {
+          behaviorKeys = effectiveStructuredActivityKeys ?? [];
         }
       }
     }

@@ -30,6 +30,10 @@ interface StudyGroup {
   } | null;
   onboardingEnabled?: boolean | null;
   selfHabitCreationEnabled?: boolean | null;
+  recommenderEnabled?: boolean | null;
+  /** null = inherit the study-level habit-entry-mode setting for this group. */
+  habitEntryMode?: "freeText" | "structured" | null;
+  structuredActivityKeys?: string[] | null;
   reminders?: {
     habit: ReminderModeValue | null;
     questionnaire: ReminderModeValue | null;

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../utils/bip39_wordlist.dart';
 import '../../widgets/passphrase_word_grid.dart';
 import 'welcome_screen.dart';
@@ -225,6 +226,11 @@ class _PassphraseScreenState extends ConsumerState<PassphraseScreen> {
     // before account creation) against the new account. Best-effort: the
     // local record in secure storage remains the fallback audit anchor.
     await _syncConsentRecord(storage);
+    // This screen writes tokens directly to secure storage rather than going
+    // through AuthService.login(), so onLogin never fires — invalidate the
+    // user-scoped providers explicitly, otherwise the new account would
+    // start out showing whatever data was last loaded for a previous one.
+    invalidateUserScopedProvidersFromWidget(ref);
     if (!mounted) return;
     context.go('/onboarding/profile-setup');
   }
@@ -297,6 +303,17 @@ class _PassphraseScreenState extends ConsumerState<PassphraseScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Give a user who landed here without meaning to (e.g. after an
+          // unexpected logout, without noticing "Restore account" on the
+          // welcome screen) one more chance to recover their existing
+          // account instead of settling for this freshly created one.
+          Center(
+            child: TextButton(
+              onPressed: () => context.push('/onboarding/restore'),
+              child: const Text('Already have an account? Restore it instead'),
+            ),
+          ),
+          const SizedBox(height: 4),
           // Warning banner
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

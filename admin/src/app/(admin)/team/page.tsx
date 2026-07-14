@@ -122,7 +122,7 @@ export default function TeamPage() {
           <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
         <button className={styles.addButton} onClick={() => setShowAdd(true)}>
-          {t("addMember")}
+          {t("manageRoles")}
         </button>
       </div>
 
@@ -187,7 +187,8 @@ export default function TeamPage() {
 
       {showAdd && (
         <Modal onClose={() => setShowAdd(false)}>
-          <h2 className={styles.modalTitle}>{t("addMember")}</h2>
+          <h2 className={styles.modalTitle}>{t("assignRole")}</h2>
+          <p className={styles.muted}>{t("assignRoleSubtitle")}</p>
           <div className={styles.formRow}>
             <input
               className={styles.input}

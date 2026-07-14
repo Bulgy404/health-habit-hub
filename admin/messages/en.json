@@ -266,7 +266,9 @@
   "team": {
     "title": "Team & Roles",
     "subtitle": "Manage who has admin or researcher access. Role changes take effect immediately.",
-    "addMember": "Add team member",
+    "manageRoles": "Manage roles",
+    "assignRole": "Assign a role",
+    "assignRoleSubtitle": "Search for an existing account and grant or change its admin or researcher role.",
     "searchPlaceholder": "Search by username or email",
     "searchButton": "Search",
     "noSearchResults": "No matching accounts found.",
@@ -794,6 +796,7 @@
         "codes": "Codes",
         "participants": "Participants",
         "cueConfig": "Cue Config",
+        "habitCreation": "Habit Creation",
         "reminders": "Reminders"
       },
       "fields": {
@@ -811,6 +814,7 @@
         "endDateLabel": "Study end date",
         "endDateHint": "Optional. When set, the schedule calendar stops projecting occurrences past this date.",
         "remindersMovedHint": "Habit, questionnaire, end-of-study, and study-update reminder timing are configured in the Reminders tab.",
+        "habitCreationMovedHint": "Recommender, onboarding, and habit-creation settings (including structured vs. free-text entry) are configured in the Habit Creation tab.",
         "notificationTitleLabel": "Notification title",
         "notificationBodyLabel": "Notification body",
         "groupCountLabel": "Number of groups",
@@ -1062,6 +1066,26 @@
       "onboardingHint": "Overrides the study-level onboarding setting for this group only.",
       "selfHabitLabel": "Habit creation (this group)",
       "selfHabitHint": "When off, this group cannot create any habits — the My Habits screen is hidden from the app for this group."
+    },
+    "habitCreationTab": {
+      "recommenderLabel": "Recommender",
+      "recommenderHint": "When off, participants in this study do not see the recommender screen in the app.",
+      "recommenderEnabledLabel": "Recommender enabled",
+      "onboardingLabel": "Onboarding",
+      "onboardingHint": "When off, participants skip the first-time explainer screens (what a habit is, what cues are) when creating a habit.",
+      "onboardingEnabledLabel": "Onboarding enabled",
+      "habitCreationLabel": "Habit Creation",
+      "habitCreationHint": "When off, participants in this study cannot create any habits — the My Habits screen is hidden from the app entirely.",
+      "habitCreationEnabledLabel": "Enable habit creation",
+      "entryModeLabel": "Entry Mode",
+      "perGroupLabel": "Configure per group",
+      "summaryOn": "On",
+      "summaryOff": "Off",
+      "summaryPerGroup": "Per group ({on}/{total} on)",
+      "entryModeStructuredLabel": "Structured ({count})",
+      "entryModeFreeTextLabel": "Free text",
+      "entryModeNaLabel": "N/A (creation off)",
+      "entryModeSummaryPerGroup": "Per group ({on}/{total} structured)"
     },
     "remindersTab": {
       "habitLabel": "Habit reminder",

@@ -190,6 +190,10 @@ export const updateGroupConfigSchema = z
     // null = inherit the study-level flag; a boolean overrides it per group.
     onboardingEnabled: z.boolean().optional().nullable(),
     selfHabitCreationEnabled: z.boolean().optional().nullable(),
+    recommenderEnabled: z.boolean().optional().nullable(),
+    // null = inherit the study-level habit-entry-mode setting for this group.
+    habitEntryMode: z.enum(['freeText', 'structured']).optional().nullable(),
+    structuredActivityKeys: z.array(z.string().max(200)).max(20).optional().nullable(),
   })
   .strict();
 

@@ -177,8 +177,6 @@ class _CommunitySection extends StatelessWidget {
       loading: () => const _SkeletonBox(width: double.infinity, height: 88),
       error: (_, _) => const SizedBox.shrink(),
       data: (stats) {
-        final topCategories = [...stats.byCategory]
-          ..sort((a, b) => b.count.compareTo(a.count));
         final cs = Theme.of(context).colorScheme;
         final tt = Theme.of(context).textTheme;
 
@@ -211,19 +209,6 @@ class _CommunitySection extends StatelessWidget {
                 ),
               ),
             ),
-            if (topCategories.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: topCategories.take(5).map((c) {
-                  return Chip(
-                    avatar: const Icon(Icons.category_outlined, size: 16),
-                    label: Text('${c.category} · ${c.count}'),
-                  );
-                }).toList(),
-              ),
-            ],
             if (stats.byDay.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text('Last 30 days', style: tt.labelLarge),

@@ -44,6 +44,10 @@ interface StudyGroup {
   // null = inherit the study-level flag; boolean overrides per group.
   onboardingEnabled?: boolean | null;
   selfHabitCreationEnabled?: boolean | null;
+  recommenderEnabled?: boolean | null;
+  // null = inherit the study-level habit-entry-mode setting for this group.
+  habitEntryMode?: "freeText" | "structured" | null;
+  structuredActivityKeys?: string[] | null;
   reminders?: GroupRemindersConfig;
 }
 
@@ -1566,19 +1570,6 @@ function ParticipantsTab({ study, token }: { study: StudySummary; token: string 
 
 // ── Cue config tab ────────────────────────────────────────────────────────────
 
-/** Maps a nullable boolean override to the tri-state <select> value. */
-function triStateValue(v: boolean | null): "inherit" | "on" | "off" {
-  if (v === null || v === undefined) return "inherit";
-  return v ? "on" : "off";
-}
-
-/** Parses a tri-state <select> value back to a nullable boolean override. */
-function triStateParse(v: string): boolean | null {
-  if (v === "on") return true;
-  if (v === "off") return false;
-  return null;
-}
-
 function CueConfigTab({ study, token }: { study: StudySummary; token: string }) {
   const t = useTranslations("studies");
   const tc = useTranslations("common");
@@ -1587,8 +1578,6 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
     Record<
       string,
       CueConfig & {
-        onboardingEnabled: boolean | null;
-        selfHabitCreationEnabled: boolean | null;
         saving: boolean;
         saved: boolean;
         error: string;
@@ -1603,9 +1592,6 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
           cueSource: g.cueConfig?.cueSource ?? "high_quality",
           cuePoolId: g.cueConfig?.cuePoolId ?? null,
           maxHabits: g.cueConfig?.maxHabits ?? null,
-          // null = inherit study-level flag
-          onboardingEnabled: g.onboardingEnabled ?? null,
-          selfHabitCreationEnabled: g.selfHabitCreationEnabled ?? null,
           saving: false,
           saved: false,
           error: "",
@@ -1632,14 +1618,6 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
           cueSource: s.cueSource,
           cuePoolId: s.cuePoolId,
           maxHabits: s.maxHabits,
-        }),
-      });
-      // Persist the per-group onboarding / self-creation overrides.
-      await apiFetch(`${API_BASE}/${study.id}/groups/${groupId}/config`, token, {
-        method: "PATCH",
-        body: JSON.stringify({
-          onboardingEnabled: s.onboardingEnabled,
-          selfHabitCreationEnabled: s.selfHabitCreationEnabled,
         }),
       });
       update(groupId, { saving: false, saved: true });
@@ -1675,42 +1653,6 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
               onChange={(patch) => update(g.id, patch)}
               showMaxHabits
             />
-            <div className={styles.formGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>{t("cueConfigTab.onboardingLabel")}</label>
-                <select
-                  className={styles.select}
-                  value={triStateValue(s.onboardingEnabled)}
-                  onChange={(e) =>
-                    update(g.id, {
-                      onboardingEnabled: triStateParse(e.target.value),
-                    })
-                  }
-                >
-                  <option value="inherit">{t("cueConfigTab.inheritOption")}</option>
-                  <option value="on">{t("cueConfigTab.onOption")}</option>
-                  <option value="off">{t("cueConfigTab.offOption")}</option>
-                </select>
-                <span className={styles.hint}>{t("cueConfigTab.onboardingHint")}</span>
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>{t("cueConfigTab.selfHabitLabel")}</label>
-                <select
-                  className={styles.select}
-                  value={triStateValue(s.selfHabitCreationEnabled)}
-                  onChange={(e) =>
-                    update(g.id, {
-                      selfHabitCreationEnabled: triStateParse(e.target.value),
-                    })
-                  }
-                >
-                  <option value="inherit">{t("cueConfigTab.inheritOption")}</option>
-                  <option value="on">{t("cueConfigTab.onOption")}</option>
-                  <option value="off">{t("cueConfigTab.offOption")}</option>
-                </select>
-                <span className={styles.hint}>{t("cueConfigTab.selfHabitHint")}</span>
-              </div>
-            </div>
             <div className={styles.cueConfigFooter}>
               {s.saved && <span className={styles.savedMsg}>{t("saved")}</span>}
               <button
@@ -1724,6 +1666,552 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// ── Habit creation tab ──────────────────────────────────────────────────────────
+
+type HabitCreationValue = {
+  enabled: boolean;
+  entryMode: "freeText" | "structured";
+  structuredActivityKeys: string[];
+};
+
+type HabitCreationSection = "recommender" | "onboarding" | "habitCreation";
+
+function isBoolEnabled(
+  scope: "study" | "group",
+  studyValue: boolean,
+  groupValues: Record<string, boolean>,
+  groups: StudySummary["groups"]
+): boolean {
+  return scope === "study" ? studyValue : groups.some((g) => groupValues[g.id]);
+}
+
+function summarizeBool(
+  t: ReturnType<typeof useTranslations>,
+  scope: "study" | "group",
+  studyValue: boolean,
+  groupValues: Record<string, boolean>,
+  groups: StudySummary["groups"]
+): string {
+  if (scope === "study")
+    return studyValue ? t("habitCreationTab.summaryOn") : t("habitCreationTab.summaryOff");
+  const on = groups.filter((g) => groupValues[g.id]).length;
+  return t("habitCreationTab.summaryPerGroup", { on, total: groups.length });
+}
+
+function isHabitCreationActive(
+  scope: "study" | "group",
+  studyValue: HabitCreationValue,
+  groupValues: Record<string, HabitCreationValue>,
+  groups: StudySummary["groups"]
+): boolean {
+  return scope === "study" ? studyValue.enabled : groups.some((g) => groupValues[g.id]?.enabled);
+}
+
+function summarizeHabitCreationEnabled(
+  t: ReturnType<typeof useTranslations>,
+  scope: "study" | "group",
+  studyValue: HabitCreationValue,
+  groupValues: Record<string, HabitCreationValue>,
+  groups: StudySummary["groups"]
+): string {
+  if (scope === "study")
+    return studyValue.enabled ? t("habitCreationTab.summaryOn") : t("habitCreationTab.summaryOff");
+  const on = groups.filter((g) => groupValues[g.id]?.enabled).length;
+  return t("habitCreationTab.summaryPerGroup", { on, total: groups.length });
+}
+
+/**
+ * The entry-mode overview card only reflects instances where habit creation
+ * is actually enabled — a group/study with creation off has no meaningful
+ * entry mode, regardless of what's stored.
+ */
+function isEntryModeStructuredActive(
+  scope: "study" | "group",
+  studyValue: HabitCreationValue,
+  groupValues: Record<string, HabitCreationValue>,
+  groups: StudySummary["groups"]
+): boolean {
+  return scope === "study"
+    ? studyValue.enabled && studyValue.entryMode === "structured"
+    : groups.some((g) => groupValues[g.id]?.enabled && groupValues[g.id]?.entryMode === "structured");
+}
+
+function summarizeEntryMode(
+  t: ReturnType<typeof useTranslations>,
+  scope: "study" | "group",
+  studyValue: HabitCreationValue,
+  groupValues: Record<string, HabitCreationValue>,
+  groups: StudySummary["groups"]
+): string {
+  if (scope === "study") {
+    if (!studyValue.enabled) return t("habitCreationTab.entryModeNaLabel");
+    return studyValue.entryMode === "structured"
+      ? t("habitCreationTab.entryModeStructuredLabel", {
+          count: studyValue.structuredActivityKeys.length,
+        })
+      : t("habitCreationTab.entryModeFreeTextLabel");
+  }
+  const enabledGroups = groups.filter((g) => groupValues[g.id]?.enabled);
+  if (enabledGroups.length === 0) return t("habitCreationTab.entryModeNaLabel");
+  const structured = enabledGroups.filter((g) => groupValues[g.id]?.entryMode === "structured").length;
+  return t("habitCreationTab.entryModeSummaryPerGroup", {
+    on: structured,
+    total: enabledGroups.length,
+  });
+}
+
+/**
+ * Recommender, onboarding, and habit-creation (+ nested entry mode) — each
+ * independently switchable between study-wide and per-group, same shape as
+ * RemindersTab below. Entry mode is nested inside the habit-creation section
+ * (rather than being its own scoped section) so a group/study instance can
+ * never show "structured" while creation is off for that same instance; it
+ * still gets its own overview card for at-a-glance visibility.
+ */
+function HabitCreationTab({ study, token }: { study: StudySummary; token: string }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
+  const { activityTypes } = useActivityTypes(token);
+
+  const [recommenderScope, setRecommenderScope] = useState<"study" | "group">(() =>
+    study.groups.some((g) => g.recommenderEnabled != null) ? "group" : "study"
+  );
+  const [onboardingScope, setOnboardingScope] = useState<"study" | "group">(() =>
+    study.groups.some((g) => g.onboardingEnabled != null) ? "group" : "study"
+  );
+  const [habitCreationScope, setHabitCreationScope] = useState<"study" | "group">(() =>
+    study.groups.some((g) => g.selfHabitCreationEnabled != null || g.habitEntryMode != null)
+      ? "group"
+      : "study"
+  );
+
+  const [studyRecommenderEnabled, setStudyRecommenderEnabled] = useState(study.recommenderEnabled);
+  const [studyOnboardingEnabled, setStudyOnboardingEnabled] = useState(study.onboardingEnabled);
+  const [studyHabitCreation, setStudyHabitCreation] = useState<HabitCreationValue>({
+    enabled: study.selfHabitCreationEnabled,
+    entryMode: study.habitEntryMode,
+    structuredActivityKeys: study.structuredActivityKeys,
+  });
+
+  const [groupRecommenderEnabled, setGroupRecommenderEnabled] = useState<Record<string, boolean>>(
+    () =>
+      Object.fromEntries(
+        study.groups.map((g) => [g.id, g.recommenderEnabled ?? study.recommenderEnabled])
+      )
+  );
+  const [groupOnboardingEnabled, setGroupOnboardingEnabled] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(study.groups.map((g) => [g.id, g.onboardingEnabled ?? study.onboardingEnabled]))
+  );
+  const [groupHabitCreation, setGroupHabitCreation] = useState<Record<string, HabitCreationValue>>(
+    () =>
+      Object.fromEntries(
+        study.groups.map((g) => [
+          g.id,
+          {
+            enabled: g.selfHabitCreationEnabled ?? study.selfHabitCreationEnabled,
+            entryMode: g.habitEntryMode ?? study.habitEntryMode,
+            structuredActivityKeys: g.structuredActivityKeys ?? study.structuredActivityKeys,
+          },
+        ])
+      )
+  );
+
+  const [saving, setSaving] = useState<Record<HabitCreationSection, boolean>>({
+    recommender: false,
+    onboarding: false,
+    habitCreation: false,
+  });
+  const [saved, setSaved] = useState<Record<HabitCreationSection, boolean>>({
+    recommender: false,
+    onboarding: false,
+    habitCreation: false,
+  });
+  const [errors, setErrors] = useState<Record<HabitCreationSection, string>>({
+    recommender: "",
+    onboarding: "",
+    habitCreation: "",
+  });
+
+  async function handleSaveRecommender() {
+    setSaving((p) => ({ ...p, recommender: true }));
+    setErrors((p) => ({ ...p, recommender: "" }));
+    try {
+      if (recommenderScope === "study") {
+        await apiFetch(`${API_BASE}/${study.id}`, token, {
+          method: "PUT",
+          body: JSON.stringify({ recommenderEnabled: studyRecommenderEnabled }),
+        });
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ recommenderEnabled: null }),
+            }).catch(() => {})
+          )
+        );
+      } else {
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ recommenderEnabled: groupRecommenderEnabled[g.id] }),
+            })
+          )
+        );
+      }
+      setSaved((p) => ({ ...p, recommender: true }));
+    } catch (err) {
+      setErrors((p) => ({
+        ...p,
+        recommender: err instanceof Error ? err.message : t("saveFailedGeneric"),
+      }));
+    } finally {
+      setSaving((p) => ({ ...p, recommender: false }));
+    }
+  }
+
+  async function handleSaveOnboarding() {
+    setSaving((p) => ({ ...p, onboarding: true }));
+    setErrors((p) => ({ ...p, onboarding: "" }));
+    try {
+      if (onboardingScope === "study") {
+        await apiFetch(`${API_BASE}/${study.id}`, token, {
+          method: "PUT",
+          body: JSON.stringify({ onboardingEnabled: studyOnboardingEnabled }),
+        });
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ onboardingEnabled: null }),
+            }).catch(() => {})
+          )
+        );
+      } else {
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ onboardingEnabled: groupOnboardingEnabled[g.id] }),
+            })
+          )
+        );
+      }
+      setSaved((p) => ({ ...p, onboarding: true }));
+    } catch (err) {
+      setErrors((p) => ({
+        ...p,
+        onboarding: err instanceof Error ? err.message : t("saveFailedGeneric"),
+      }));
+    } finally {
+      setSaving((p) => ({ ...p, onboarding: false }));
+    }
+  }
+
+  async function handleSaveHabitCreation() {
+    setSaving((p) => ({ ...p, habitCreation: true }));
+    setErrors((p) => ({ ...p, habitCreation: "" }));
+    try {
+      if (habitCreationScope === "study") {
+        await apiFetch(`${API_BASE}/${study.id}`, token, {
+          method: "PUT",
+          body: JSON.stringify({
+            selfHabitCreationEnabled: studyHabitCreation.enabled,
+            habitEntryMode: studyHabitCreation.entryMode,
+            structuredActivityKeys: studyHabitCreation.structuredActivityKeys,
+          }),
+        });
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({
+                selfHabitCreationEnabled: null,
+                habitEntryMode: null,
+                structuredActivityKeys: null,
+              }),
+            }).catch(() => {})
+          )
+        );
+      } else {
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({
+                selfHabitCreationEnabled: groupHabitCreation[g.id].enabled,
+                habitEntryMode: groupHabitCreation[g.id].entryMode,
+                structuredActivityKeys: groupHabitCreation[g.id].structuredActivityKeys,
+              }),
+            })
+          )
+        );
+      }
+      setSaved((p) => ({ ...p, habitCreation: true }));
+    } catch (err) {
+      setErrors((p) => ({
+        ...p,
+        habitCreation: err instanceof Error ? err.message : t("saveFailedGeneric"),
+      }));
+    } finally {
+      setSaving((p) => ({ ...p, habitCreation: false }));
+    }
+  }
+
+  const showActivityTypesManager =
+    habitCreationScope === "study"
+      ? studyHabitCreation.enabled && studyHabitCreation.entryMode === "structured"
+      : study.groups.some(
+          (g) => groupHabitCreation[g.id]?.enabled && groupHabitCreation[g.id]?.entryMode === "structured"
+        );
+
+  const overviewCards = [
+    {
+      key: "recommender",
+      title: t("habitCreationTab.recommenderLabel"),
+      enabled: isBoolEnabled(recommenderScope, studyRecommenderEnabled, groupRecommenderEnabled, study.groups),
+      status: summarizeBool(t, recommenderScope, studyRecommenderEnabled, groupRecommenderEnabled, study.groups),
+    },
+    {
+      key: "onboarding",
+      title: t("habitCreationTab.onboardingLabel"),
+      enabled: isBoolEnabled(onboardingScope, studyOnboardingEnabled, groupOnboardingEnabled, study.groups),
+      status: summarizeBool(t, onboardingScope, studyOnboardingEnabled, groupOnboardingEnabled, study.groups),
+    },
+    {
+      key: "habitCreation",
+      title: t("habitCreationTab.habitCreationLabel"),
+      enabled: isHabitCreationActive(habitCreationScope, studyHabitCreation, groupHabitCreation, study.groups),
+      status: summarizeHabitCreationEnabled(
+        t,
+        habitCreationScope,
+        studyHabitCreation,
+        groupHabitCreation,
+        study.groups
+      ),
+    },
+    {
+      key: "entryMode",
+      title: t("habitCreationTab.entryModeLabel"),
+      enabled: isEntryModeStructuredActive(habitCreationScope, studyHabitCreation, groupHabitCreation, study.groups),
+      status: summarizeEntryMode(t, habitCreationScope, studyHabitCreation, groupHabitCreation, study.groups),
+    },
+  ];
+
+  return (
+    <div>
+      <div className={styles.reminderOverview}>
+        {overviewCards.map((card) => (
+          <div
+            key={card.key}
+            className={`${styles.reminderOverviewCard} ${card.enabled ? styles.reminderOverviewCardEnabled : ""}`}
+          >
+            <span className={styles.reminderOverviewTitle}>{card.title}</span>
+            <span className={styles.reminderOverviewStatus}>{card.status}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className={styles.reminderTypeSection} data-testid="habit-creation-section-recommender">
+        <p className={styles.cueConfigGroupLabel}>{t("habitCreationTab.recommenderLabel")}</p>
+        <span className={styles.hint}>{t("habitCreationTab.recommenderHint")}</span>
+        {errors.recommender && <div className={styles.errorMsg}>{errors.recommender}</div>}
+
+        {recommenderScope === "study" ? (
+          <ToggleSwitch
+            className={styles.checkboxLabel}
+            checked={studyRecommenderEnabled}
+            onChange={(e) => setStudyRecommenderEnabled(e.target.checked)}
+            label={t("habitCreationTab.recommenderEnabledLabel")}
+          />
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {study.groups.map((g) => (
+              <div key={g.id} className={styles.reminderGroupRow}>
+                <p className={styles.cueConfigGroupLabel}>
+                  {g.label || t("groupFallbackLabel", { index: g.index })}
+                </p>
+                <ToggleSwitch
+                  className={styles.checkboxLabel}
+                  checked={groupRecommenderEnabled[g.id]}
+                  onChange={(e) =>
+                    setGroupRecommenderEnabled((p) => ({ ...p, [g.id]: e.target.checked }))
+                  }
+                  label={t("habitCreationTab.recommenderEnabledLabel")}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <ToggleSwitch
+          className={styles.checkboxLabel}
+          checked={recommenderScope === "group"}
+          disabled={study.groups.length === 0}
+          onChange={(e) => setRecommenderScope(e.target.checked ? "group" : "study")}
+          label={t("habitCreationTab.perGroupLabel")}
+        />
+        {study.groups.length === 0 && <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>}
+
+        <div className={styles.cueConfigFooter}>
+          {saved.recommender && <span className={styles.savedMsg}>{t("saved")}</span>}
+          <button className={styles.saveBtn} onClick={handleSaveRecommender} disabled={saving.recommender}>
+            {saving.recommender ? tc("saving") : tc("save")}
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.reminderTypeSection} data-testid="habit-creation-section-onboarding">
+        <p className={styles.cueConfigGroupLabel}>{t("habitCreationTab.onboardingLabel")}</p>
+        <span className={styles.hint}>{t("habitCreationTab.onboardingHint")}</span>
+        {errors.onboarding && <div className={styles.errorMsg}>{errors.onboarding}</div>}
+
+        {onboardingScope === "study" ? (
+          <ToggleSwitch
+            className={styles.checkboxLabel}
+            checked={studyOnboardingEnabled}
+            onChange={(e) => setStudyOnboardingEnabled(e.target.checked)}
+            label={t("habitCreationTab.onboardingEnabledLabel")}
+          />
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {study.groups.map((g) => (
+              <div key={g.id} className={styles.reminderGroupRow}>
+                <p className={styles.cueConfigGroupLabel}>
+                  {g.label || t("groupFallbackLabel", { index: g.index })}
+                </p>
+                <ToggleSwitch
+                  className={styles.checkboxLabel}
+                  checked={groupOnboardingEnabled[g.id]}
+                  onChange={(e) =>
+                    setGroupOnboardingEnabled((p) => ({ ...p, [g.id]: e.target.checked }))
+                  }
+                  label={t("habitCreationTab.onboardingEnabledLabel")}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <ToggleSwitch
+          className={styles.checkboxLabel}
+          checked={onboardingScope === "group"}
+          disabled={study.groups.length === 0}
+          onChange={(e) => setOnboardingScope(e.target.checked ? "group" : "study")}
+          label={t("habitCreationTab.perGroupLabel")}
+        />
+        {study.groups.length === 0 && <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>}
+
+        <div className={styles.cueConfigFooter}>
+          {saved.onboarding && <span className={styles.savedMsg}>{t("saved")}</span>}
+          <button className={styles.saveBtn} onClick={handleSaveOnboarding} disabled={saving.onboarding}>
+            {saving.onboarding ? tc("saving") : tc("save")}
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.reminderTypeSection} data-testid="habit-creation-section-habitCreation">
+        <p className={styles.cueConfigGroupLabel}>{t("habitCreationTab.habitCreationLabel")}</p>
+        <span className={styles.hint}>{t("habitCreationTab.habitCreationHint")}</span>
+        {errors.habitCreation && <div className={styles.errorMsg}>{errors.habitCreation}</div>}
+
+        {habitCreationScope === "study" ? (
+          <div className={styles.reminderSwitchGroup}>
+            <ToggleSwitch
+              className={styles.checkboxLabel}
+              checked={studyHabitCreation.enabled}
+              onChange={(e) => setStudyHabitCreation((v) => ({ ...v, enabled: e.target.checked }))}
+              label={t("habitCreationTab.habitCreationEnabledLabel")}
+            />
+            {studyHabitCreation.enabled && (
+              <HabitEntryModeForm
+                value={{
+                  habitEntryMode: studyHabitCreation.entryMode,
+                  structuredActivityKeys: studyHabitCreation.structuredActivityKeys,
+                }}
+                onChange={(patch) =>
+                  setStudyHabitCreation((v) => ({
+                    ...v,
+                    entryMode: patch.habitEntryMode ?? v.entryMode,
+                    structuredActivityKeys: patch.structuredActivityKeys ?? v.structuredActivityKeys,
+                  }))
+                }
+                activityTypes={activityTypes}
+              />
+            )}
+          </div>
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {study.groups.map((g) => {
+              const v = groupHabitCreation[g.id];
+              if (!v) return null;
+              return (
+                <div key={g.id} className={styles.reminderGroupRow}>
+                  <p className={styles.cueConfigGroupLabel}>
+                    {g.label || t("groupFallbackLabel", { index: g.index })}
+                  </p>
+                  <div className={styles.reminderSwitchGroup}>
+                    <ToggleSwitch
+                      className={styles.checkboxLabel}
+                      checked={v.enabled}
+                      onChange={(e) =>
+                        setGroupHabitCreation((p) => ({
+                          ...p,
+                          [g.id]: { ...p[g.id], enabled: e.target.checked },
+                        }))
+                      }
+                      label={t("habitCreationTab.habitCreationEnabledLabel")}
+                    />
+                    {v.enabled && (
+                      <HabitEntryModeForm
+                        value={{
+                          habitEntryMode: v.entryMode,
+                          structuredActivityKeys: v.structuredActivityKeys,
+                        }}
+                        onChange={(patch) =>
+                          setGroupHabitCreation((p) => ({
+                            ...p,
+                            [g.id]: {
+                              ...p[g.id],
+                              entryMode: patch.habitEntryMode ?? p[g.id].entryMode,
+                              structuredActivityKeys:
+                                patch.structuredActivityKeys ?? p[g.id].structuredActivityKeys,
+                            },
+                          }))
+                        }
+                        activityTypes={activityTypes}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <ToggleSwitch
+          className={styles.checkboxLabel}
+          checked={habitCreationScope === "group"}
+          disabled={study.groups.length === 0}
+          onChange={(e) => setHabitCreationScope(e.target.checked ? "group" : "study")}
+          label={t("habitCreationTab.perGroupLabel")}
+        />
+        {study.groups.length === 0 && <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>}
+
+        {showActivityTypesManager && <ActivityTypesManager token={token} />}
+
+        <div className={styles.cueConfigFooter}>
+          {saved.habitCreation && <span className={styles.savedMsg}>{t("saved")}</span>}
+          <button
+            className={styles.saveBtn}
+            onClick={handleSaveHabitCreation}
+            disabled={saving.habitCreation}
+          >
+            {saving.habitCreation ? tc("saving") : tc("save")}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2676,7 +3164,14 @@ function StudyUpdateManualSend({ study, token }: { study: StudySummary; token: s
 // ── Study form modal ──────────────────────────────────────────────────────────
 
 type ModalTab =
-  "details" | "questionnaires" | "schedule" | "codes" | "participants" | "cue-config" | "reminders";
+  | "details"
+  | "questionnaires"
+  | "schedule"
+  | "codes"
+  | "participants"
+  | "cue-config"
+  | "habit-creation"
+  | "reminders";
 
 function StudyModal({
   initial,
@@ -2701,18 +3196,6 @@ function StudyModal({
   const [activeTab, setActiveTab] = useState<ModalTab>("details");
   const [name, setName] = useState(initial?.name ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
-  const [recommenderEnabled, setRecommenderEnabled] = useState(initial?.recommenderEnabled ?? true);
-  const [onboardingEnabled, setOnboardingEnabled] = useState(initial?.onboardingEnabled ?? true);
-  const [selfHabitCreationEnabled, setSelfHabitCreationEnabled] = useState(
-    initial?.selfHabitCreationEnabled ?? true
-  );
-  const [habitEntryMode, setHabitEntryMode] = useState<"freeText" | "structured">(
-    initial?.habitEntryMode ?? "freeText"
-  );
-  const [structuredActivityKeys, setStructuredActivityKeys] = useState<string[]>(
-    initial?.structuredActivityKeys ?? []
-  );
-  const { activityTypes } = useActivityTypes(token);
   const [endDate, setEndDate] = useState(initial?.endDate ? initial.endDate.slice(0, 10) : "");
   const [groupCount, setGroupCount] = useState(initial?.groups.length ?? 1);
   const [groupLabels, setGroupLabels] = useState<string[]>(() => {
@@ -2775,13 +3258,6 @@ function StudyModal({
             name: name.trim(),
             description: description.trim(),
             groups,
-            recommenderEnabled,
-            onboardingEnabled,
-            selfHabitCreationEnabled,
-            habitEntryMode,
-            // Explicit: [] means free text, never silently substituted with
-            // the platform defaults.
-            structuredActivityKeys,
             endDate: endDate ? new Date(`${endDate}T00:00:00Z`).toISOString() : null,
           }),
         });
@@ -2796,11 +3272,6 @@ function StudyModal({
           body: JSON.stringify({
             name: name.trim(),
             description: description.trim(),
-            recommenderEnabled,
-            onboardingEnabled,
-            selfHabitCreationEnabled,
-            habitEntryMode,
-            structuredActivityKeys,
             groups,
             endDate: endDate ? new Date(`${endDate}T00:00:00Z`).toISOString() : null,
           }),
@@ -2950,6 +3421,12 @@ function StudyModal({
               {t("modal.tabs.cueConfig")}
             </button>
             <button
+              className={`${styles.tab} ${activeTab === "habit-creation" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("habit-creation")}
+            >
+              {t("modal.tabs.habitCreation")}
+            </button>
+            <button
               className={`${styles.tab} ${activeTab === "reminders" ? styles.tabActive : ""}`}
               onClick={() => setActiveTab("reminders")}
             >
@@ -2993,50 +3470,6 @@ function StudyModal({
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <ToggleSwitch
-                    className={styles.checkboxLabel}
-                    checked={recommenderEnabled}
-                    onChange={(e) => setRecommenderEnabled(e.target.checked)}
-                    label={t("modal.fields.recommenderLabel")}
-                  />
-                  <span className={styles.hint}>{t("modal.fields.recommenderHint")}</span>
-                </div>
-
-                <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <ToggleSwitch
-                    className={styles.checkboxLabel}
-                    checked={onboardingEnabled}
-                    onChange={(e) => setOnboardingEnabled(e.target.checked)}
-                    label={t("modal.fields.onboardingLabel")}
-                  />
-                  <span className={styles.hint}>{t("modal.fields.onboardingHint")}</span>
-                </div>
-
-                <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <ToggleSwitch
-                    className={styles.checkboxLabel}
-                    checked={selfHabitCreationEnabled}
-                    onChange={(e) => setSelfHabitCreationEnabled(e.target.checked)}
-                    label={t("modal.fields.selfHabitLabel")}
-                  />
-                  <span className={styles.hint}>{t("modal.fields.selfHabitHint")}</span>
-                </div>
-
-                <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <HabitEntryModeForm
-                    value={{ habitEntryMode, structuredActivityKeys }}
-                    onChange={(patch) => {
-                      if (patch.habitEntryMode !== undefined)
-                        setHabitEntryMode(patch.habitEntryMode);
-                      if (patch.structuredActivityKeys !== undefined)
-                        setStructuredActivityKeys(patch.structuredActivityKeys);
-                    }}
-                    activityTypes={activityTypes}
-                  />
-                  {habitEntryMode === "structured" && <ActivityTypesManager token={token} />}
-                </div>
-
-                <div className={`${styles.formGroup} ${styles.formFull}`}>
                   <label className={styles.label}>{t("modal.fields.endDateLabel")}</label>
                   <input
                     type="date"
@@ -3046,6 +3479,7 @@ function StudyModal({
                   />
                   <span className={styles.hint}>{t("modal.fields.endDateHint")}</span>
                   <span className={styles.hint}>{t("modal.fields.remindersMovedHint")}</span>
+                  <span className={styles.hint}>{t("modal.fields.habitCreationMovedHint")}</span>
                 </div>
 
                 <div className={styles.formGroup}>
@@ -3098,6 +3532,8 @@ function StudyModal({
             initial && <ParticipantsTab study={initial} token={token} />
           ) : activeTab === "cue-config" ? (
             initial && <CueConfigTab study={initial} token={token} />
+          ) : activeTab === "habit-creation" ? (
+            initial && <HabitCreationTab study={initial} token={token} />
           ) : (
             initial && <RemindersTab study={initial} token={token} />
           )}

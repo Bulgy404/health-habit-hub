@@ -124,11 +124,11 @@ class AuthService {
   /// app no longer stores the password after the initial login exchange, so
   /// that replay path has been removed — silent re-auth is now purely a
   /// refresh-token exchange, which is exactly what [refreshToken] does. This
-  /// thin wrapper exists so [_performRefresh]'s "try once more, then log out"
-  /// shape (and this method's stable boolean success/failure API used by
-  /// callers/tests) stays unchanged. It also guards against a benign race
-  /// with a concurrent [AuthService] instance that rotates the refresh token
-  /// between this instance's failed attempt and the retry.
+  /// thin wrapper exists so [_performRefresh]'s single-retry shape (and this
+  /// method's stable boolean success/failure API used by callers/tests)
+  /// stays unchanged. It also guards against a benign race with a concurrent
+  /// [AuthService] instance that rotates the refresh token between this
+  /// instance's failed attempt and the retry.
   ///
   /// Returns true and leaves fresh tokens in storage on success. Returns
   /// false without modifying storage if no refresh token is stored or if
@@ -148,12 +148,13 @@ class AuthService {
   /// by decoding the JWT `exp` claim directly. This handles tokens stored by
   /// the onboarding and restore flows which do not write [_expiryKey].
   ///
-  /// Returns null if not logged in or if the refresh token is invalid.
+  /// Returns null if not logged in or if this refresh attempt fails.
   ///
-  /// When Keycloak explicitly rejects the refresh token (HTTP 400/401), first
-  /// attempts silent re-authentication via [reauthenticate()]. Only calls
-  /// [logout()] if reauthentication also fails. Network errors leave tokens
-  /// intact so the user is not logged out when the server is unreachable.
+  /// When Keycloak explicitly rejects the refresh token (HTTP 400/401),
+  /// attempts one silent re-authentication via [reauthenticate()]. Never
+  /// calls [logout()] itself — see [_performRefresh] for why. Network errors
+  /// leave tokens intact so the user is not logged out when the server is
+  /// unreachable.
   Future<String?> getAccessToken() async {
     if (await _tokenNeedsRefresh()) {
       // Coalesce concurrent refreshes: the first caller starts the refresh, and
@@ -166,9 +167,20 @@ class AuthService {
     return _secureStorage.read(key: _tokenKey);
   }
 
-  /// Performs a single token refresh, recovering via silent re-authentication
-  /// and only logging out if that also fails. Returns true when a usable token
-  /// is available afterwards, false when the session was ended.
+  /// Performs a single token refresh, recovering via silent re-authentication.
+  /// Returns true when a usable token is available afterwards, false when
+  /// this refresh attempt could not produce one.
+  ///
+  /// Deliberately never calls [logout()] — a rejected refresh may be a
+  /// transient server hiccup rather than proof the session is truly dead
+  /// (see the class doc and [reauthenticate]'s doc for why a single 400/401
+  /// isn't conclusive here). Returning false just means *this* caller's
+  /// [getAccessToken] resolves to null for now: the in-flight request
+  /// proceeds unauthenticated and the backend answers with its own 401,
+  /// which every screen already treats as an ordinary transient error. Local
+  /// tokens are left intact and the next call retries the refresh — the
+  /// session can only be cleared by an explicit user action (Settings ->
+  /// Sign out / Delete account).
   Future<bool> _performRefresh() async {
     try {
       await refreshToken();
@@ -178,10 +190,7 @@ class AuthService {
           e.response != null &&
           (e.response!.statusCode == 400 || e.response!.statusCode == 401);
       if (isTokenRejected) {
-        final reauthed = await reauthenticate();
-        if (reauthed) return true;
-        await logout();
-        return false;
+        return reauthenticate();
       }
       // Network / server error — keep the stored token and let the caller's API
       // request fail with 401 if the token is truly expired.

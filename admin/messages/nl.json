@@ -266,7 +266,9 @@
   "team": {
     "title": "Team & rollen",
     "subtitle": "Beheer wie admin- of onderzoekerstoegang heeft. Rolwijzigingen gaan direct in.",
-    "addMember": "Teamlid toevoegen",
+    "manageRoles": "Rollen beheren",
+    "assignRole": "Rol toewijzen",
+    "assignRoleSubtitle": "Zoek een bestaand account en ken de admin- of onderzoekersrol toe of wijzig deze.",
     "searchPlaceholder": "Zoeken op gebruikersnaam of e-mail",
     "searchButton": "Zoeken",
     "noSearchResults": "Geen bijpassende accounts gevonden.",
@@ -794,6 +796,7 @@
         "codes": "Codes",
         "participants": "Deelnemers",
         "cueConfig": "Cue-configuratie",
+        "habitCreation": "Gewoonte aanmaken",
         "reminders": "Herinneringen"
       },
       "fields": {
@@ -811,6 +814,7 @@
         "endDateLabel": "Einddatum studie",
         "endDateHint": "Optioneel. Indien ingesteld, projecteert de planningskalender geen gebeurtenissen meer na deze datum.",
         "remindersMovedHint": "De timing van gewoonte-, vragenlijst-, einde-studie- en studie-update-herinneringen wordt geconfigureerd in het tabblad Herinneringen.",
+        "habitCreationMovedHint": "Aanbevelingssysteem, onboarding en het aanmaken van gewoontes (incl. gestructureerde vs. vrije tekstinvoer) worden geconfigureerd in het tabblad Gewoonte aanmaken.",
         "notificationTitleLabel": "Titel van melding",
         "notificationBodyLabel": "Inhoud van melding",
         "groupCountLabel": "Aantal groepen",
@@ -1011,6 +1015,26 @@
       "onboardingHint": "Overschrijft de studiebrede onboarding-instelling alleen voor deze groep.",
       "selfHabitLabel": "Gewoontes aanmaken (deze groep)",
       "selfHabitHint": "Indien uit, kan deze groep geen gewoontes aanmaken — het scherm \"Mijn gewoontes\" wordt verborgen voor deze groep."
+    },
+    "habitCreationTab": {
+      "recommenderLabel": "Aanbevelingssysteem",
+      "recommenderHint": "Indien uitgeschakeld, zien deelnemers van deze studie het aanbevelingsscherm niet in de app.",
+      "recommenderEnabledLabel": "Aanbevelingssysteem ingeschakeld",
+      "onboardingLabel": "Onboarding",
+      "onboardingHint": "Indien uitgeschakeld, slaan deelnemers de introductieschermen (wat een gewoonte is, wat cues zijn) over bij het aanmaken van een gewoonte.",
+      "onboardingEnabledLabel": "Onboarding ingeschakeld",
+      "habitCreationLabel": "Gewoonte aanmaken",
+      "habitCreationHint": "Indien uitgeschakeld, kunnen deelnemers van deze studie geen enkele gewoonte aanmaken — het scherm \"Mijn gewoontes\" wordt volledig verborgen in de app.",
+      "habitCreationEnabledLabel": "Aanmaken van gewoontes inschakelen",
+      "entryModeLabel": "Invoermodus",
+      "perGroupLabel": "Per groep configureren",
+      "summaryOn": "Aan",
+      "summaryOff": "Uit",
+      "summaryPerGroup": "Per groep ({on}/{total} aan)",
+      "entryModeStructuredLabel": "Gestructureerd ({count})",
+      "entryModeFreeTextLabel": "Vrije tekst",
+      "entryModeNaLabel": "N.v.t. (aanmaken uit)",
+      "entryModeSummaryPerGroup": "Per groep ({on}/{total} gestructureerd)"
     },
     "remindersTab": {
       "habitLabel": "Gewoonteherinnering",

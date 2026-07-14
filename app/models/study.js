@@ -9,14 +9,18 @@
  *   isActive     boolean    Soft-delete flag.
  *   recommenderEnabled boolean  Optional. When false, participants in this study do not see
  *                              the recommender screen in the app. Defaults to true (treated as
- *                              enabled when absent, for backward compatibility).
- *   habitEntryMode  string     Optional. 'freeText' (default) or 'structured'. Study-wide —
- *                              applies to every group. When 'structured', the new-habit screen
- *                              shows a picker over structuredActivityKeys instead of a free-text
- *                              field. Defaults to 'freeText' when absent.
+ *                              enabled when absent, for backward compatibility). A group's
+ *                              `recommenderEnabled` (below), when non-null, overrides this.
+ *   habitEntryMode  string     Optional. 'freeText' (default) or 'structured'. Study-wide
+ *                              default — a group's `habitEntryMode` (below), when non-null,
+ *                              overrides this per group. When 'structured', the new-habit
+ *                              screen shows a picker over structuredActivityKeys instead of a
+ *                              free-text field. Defaults to 'freeText' when absent.
  *   structuredActivityKeys  Array<string>  Optional. Activity-type catalog keys (see
  *                              activity_types collection) offered when habitEntryMode is
- *                              'structured'. Ignored (and should be empty) otherwise.
+ *                              'structured'. Ignored (and should be empty) otherwise. Study-wide
+ *                              default — a group's `structuredActivityKeys` (below), when
+ *                              non-null, overrides this per group.
  *   groups       Array<{    Experiment groups for this study.
  *     id:               ObjectId
  *     label:            string
@@ -28,6 +32,14 @@
  *                          study-level `reminders` below; each type independently null means
  *                          "inherit the study-level setting for that type".
  *     autoDonate:       boolean — when true habits are auto-donated to the community on creation
+ *     onboardingEnabled: boolean | null — null means "inherit the study-level setting".
+ *     selfHabitCreationEnabled: boolean | null — null means "inherit the study-level setting".
+ *     recommenderEnabled: boolean | null — null means "inherit the study-level setting".
+ *     habitEntryMode:   'freeText' | 'structured' | null — null means "inherit the study-level
+ *                          setting"; a non-null value overrides it for this group only.
+ *     structuredActivityKeys: Array<string> | null — null means "inherit the study-level
+ *                          setting"; only consulted when this group's effective habitEntryMode
+ *                          (own override or inherited) is 'structured'.
  *   }>
  *   questionnaires  Array<ObjectId>  Refs to questionnaires collection.
  *   endDate      Date|null  Optional. When set, the study concludes on this date.

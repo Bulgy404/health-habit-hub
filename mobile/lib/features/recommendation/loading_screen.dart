@@ -78,9 +78,14 @@ class _RecommendationLoadingScreenState
     try {
       final userId = await ref.read(userIdProvider.future);
       if (userId == null) {
-        // No valid token — logout clears credentials; GoRouter will redirect
-        // to the welcome screen automatically via the auth state listener.
-        if (mounted) await ref.read(authServiceProvider).logout();
+        // No token available right now — surface this like any other
+        // failure rather than clearing the session. The session is only
+        // ever cleared by an explicit user action (Settings -> Sign out).
+        if (mounted) {
+          setState(
+            () => _error = AppLocalizations.of(context)!.recommendationLoadingGenericError,
+          );
+        }
         return;
       }
       final service = ref.read(recommendationFeatureServiceProvider);
@@ -91,9 +96,6 @@ class _RecommendationLoadingScreenState
       );
       if (mounted) setState(() => _response = response);
     } catch (e) {
-      // 401/403 errors: the AuthInterceptor called getAccessToken() which
-      // attempted reauthentication. If that failed, logout() was already
-      // called and GoRouter redirects automatically.
       if (mounted) setState(() => _error = _friendlyErrorMessage(e));
     } finally {
       if (mounted) setState(() => _apiDone = true);

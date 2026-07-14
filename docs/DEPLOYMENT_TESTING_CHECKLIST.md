@@ -55,9 +55,9 @@ This is the biggest page in the admin panel; budget the most test time here.
 
 **Details tab**
 
-- [ ] Edit name/description
-- [ ] Toggle recommender on/off for the study
-- [ ] Toggle onboarding on/off
+- [x] Edit name/description
+- [x] Toggle recommender on/off for the study
+- [x] Toggle onboarding on/off
 - [ ] Toggle self-service habit creation on/off
 - [ ] Switch habit entry mode between free-text and structured; when structured, manage the
       activity-type catalog (`ActivityTypesManager`)
@@ -266,15 +266,15 @@ This is the biggest page in the admin panel; budget the most test time here.
 
 ### 1.18 Team
 
-- [ ] Members table shows username/email/roles
-- [ ] Add a member: search by username/email, grant admin or researcher role
-- [ ] Revoke a role (confirm dialog)
-- [ ] Confirm a newly granted admin/researcher can actually sign in with those permissions
+- [x] Members table shows username/email/roles
+- [x] Add a member: search by username/email, grant admin or researcher role
+- [x] Revoke a role (confirm dialog)
+- [x] Confirm a newly granted admin/researcher can actually sign in with those permissions
 
 ### 1.19 Help
 
-- [ ] Static reference content renders
-- [ ] "Email support" (mailto) and GitHub repo link both work
+- [x] Static reference content renders
+- [x] "Email support" (mailto) and GitHub repo link both work
 
 ### 1.20 Alerting (cross-cutting with System/Backups)
 
@@ -450,7 +450,7 @@ participant.
       complete onboarding on mobile
 - [ ] Backup → restore round-trip: restore a backup into a scratch environment and spot-
       check that studies/participants/habits came back intact
-- [ ] Translations: spot-check a couple of screens on both admin and mobile in German and
+- [x] Translations: spot-check a couple of screens on both admin and mobile in German and
       Japanese for obviously broken/untranslated strings
 - [ ] Time zone handling: an SRHI/questionnaire scheduled for "due today" behaves
       consistently between the admin's server time and the participant's local time

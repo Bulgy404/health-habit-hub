@@ -135,7 +135,18 @@ export async function apiFetch<T = any>(
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`);
+    const { error, details } = body as {
+      error?: string;
+      details?: { path: string; message: string }[];
+    };
+    // The validate() middleware returns a generic "Validation failed" error
+    // plus a details array with the actual per-field reason — surface that,
+    // otherwise every schema-validation failure looks identical to the admin.
+    const detailText = details?.length
+      ? details.map((d) => (d.path ? `${d.path}: ${d.message}` : d.message)).join("; ")
+      : undefined;
+    const message = [error ?? `HTTP ${res.status}`, detailText].filter(Boolean).join(" — ");
+    throw new Error(message);
   }
   return res.json() as Promise<T>;
 }
