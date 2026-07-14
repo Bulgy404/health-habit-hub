@@ -95,13 +95,7 @@ export function ToggleSwitch({
     <FormControlLabel
       className={className}
       style={wrapperStyle}
-      control={
-        <Switch
-          slotProps={mergedSlotProps}
-          {...switchProps}
-          sx={mergeSx(switchProps.sx)}
-        />
-      }
+      control={<Switch slotProps={mergedSlotProps} {...switchProps} sx={mergeSx(switchProps.sx)} />}
       label={label}
       labelPlacement={labelPlacement}
     />

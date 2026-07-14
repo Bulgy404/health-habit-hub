@@ -52,10 +52,7 @@ export default function DevicesPage() {
     if (!token) return;
     setLoading(true);
     try {
-      const data = await apiFetch(
-        apiUrl(`/admin/sessions?page=${page}&limit=${PAGE_SIZE}`),
-        token
-      );
+      const data = await apiFetch(apiUrl(`/admin/sessions?page=${page}&limit=${PAGE_SIZE}`), token);
       const list = (data?.sessions ?? []) as unknown[];
       setSessions(list.map(normalise));
       setTotal(Number(data?.total ?? 0));

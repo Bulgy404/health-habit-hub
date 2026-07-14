@@ -35,6 +35,7 @@ After US-100 was implemented, newly donated habits are automatically enriched wi
 ### When to run
 
 Run this script:
+
 - After deploying US-100/US-099 for the first time on an environment with existing data.
 - Whenever the BCIO ontology (`API-service/data/bcio.owl`) is updated and you want to re-map existing habits (the script skips already-migrated nodes; set `migrated_to_bcio` to `false` or remove the property to force re-migration).
 
@@ -47,12 +48,12 @@ Run this script:
 
 ### Environment variables
 
-| Variable | Default | Description |
-|---|---|---|
-| `NEO4J_URI` | `bolt://neo4j:7687` | Neo4j bolt connection URI |
-| `NEO4J_USER` | `neo4j` | Neo4j username |
-| `NEO4J_PASSWORD` | `password` | Neo4j password |
-| `API_SERVICE_URL` | `http://recommender:8000` | API-service base URL |
+| Variable          | Default                   | Description               |
+| ----------------- | ------------------------- | ------------------------- |
+| `NEO4J_URI`       | `bolt://neo4j:7687`       | Neo4j bolt connection URI |
+| `NEO4J_USER`      | `neo4j`                   | Neo4j username            |
+| `NEO4J_PASSWORD`  | `password`                | Neo4j password            |
+| `API_SERVICE_URL` | `http://recommender:8000` | API-service base URL      |
 
 ### Usage
 
@@ -109,6 +110,7 @@ This section documents all database schema changes introduced in the `ralph/hhh-
 **Introduced in:** US-114, US-116
 
 **What changed:**
+
 - `POST /api/v1/habits/donate` now calls LibreTranslate + the LLM refinement pipeline before persisting a `Habit` node.
 - The `Habit` node CREATE statement now includes `translationEN` (refined English translation) and `translationDE` (reserved for future German translation pipeline).
 - `GET /api/v1/habits?lang=en|de` returns a `displayText` convenience field derived from these properties.
@@ -138,6 +140,7 @@ node scripts/migrate-habits-bcio.js --dry-run
 Remove `--dry-run` to apply. The script is idempotent — already-migrated nodes are skipped.
 
 **Impact on existing queries:**
+
 - `GET /api/v1/habits` previously returned `{ ok: true }`. It now returns an array of `DonatedHabit` objects. Any client code relying on the old response shape must be updated.
 - The `displayText` field is only present when `?lang=en` or `?lang=de` is supplied.
 
@@ -148,6 +151,7 @@ Remove `--dry-run` to apply. The script is idempotent — already-migrated nodes
 **Introduced in:** US-078 (users router), US-137 (Flutter integration)
 
 **What changed:**
+
 - `PUT /api/v1/users/me` upserts a document in the `users` collection keyed by Keycloak `sub`.
 - `GET /api/v1/users/me` returns `{ preferredLanguage: "en" }` as a synthetic default when no document exists (no write on GET).
 

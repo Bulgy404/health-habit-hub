@@ -13,10 +13,7 @@ export async function middleware(req: NextRequest) {
     // path/query are still correct from req.url; only the origin needs to
     // come from the known-correct configured URL instead.
     const publicOrigin = process.env.NEXTAUTH_URL ?? req.nextUrl.origin;
-    const callbackUrl = new URL(
-      req.nextUrl.pathname + req.nextUrl.search,
-      publicOrigin
-    );
+    const callbackUrl = new URL(req.nextUrl.pathname + req.nextUrl.search, publicOrigin);
     signInUrl.searchParams.set("callbackUrl", callbackUrl.toString());
     return NextResponse.redirect(signInUrl);
   }
@@ -30,7 +27,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!api/auth|access-denied|_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!api/auth|access-denied|_next/static|_next/image|favicon.ico).*)"],
 };

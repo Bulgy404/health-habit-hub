@@ -17,8 +17,8 @@ services:
       - --entrypoints.web.address=:80
     restart: always
     ports:
-      - "${TRAEFIK_HOST_PORT80:-80}:80"
-      - "${TRAEFIK_HOST_PORT8080:-8888}:8080"
+      - '${TRAEFIK_HOST_PORT80:-80}:80'
+      - '${TRAEFIK_HOST_PORT8080:-8888}:8080'
     networks:
       - hhh-proxy
     volumes:
@@ -56,7 +56,7 @@ services:
       - BACKUP_API_SECRET=${BACKUP_API_SECRET:-CHANGE_THIS_BACKUP_API_SECRET}
       - BACKUP_UPLOAD_MAX_MB=${BACKUP_UPLOAD_MAX_MB:-2048}
     ports:
-      - "3000:3000"
+      - '3000:3000'
     networks:
       - hhh-proxy
       - hhh-app
@@ -73,7 +73,7 @@ services:
       backup:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/v1/health']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -96,12 +96,12 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-admin}
       - MONGO_INITDB_DATABASE=surveyjs
     ports:
-      - "127.0.0.1:27017:27017"
+      - '127.0.0.1:27017:27017'
     volumes:
       - ./mongo/entrypoint:/docker-entrypoint-initdb.d
       - mongo-local-data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand({ping:1})"]
+      test: ['CMD', 'mongosh', '--eval', 'db.runCommand({ping:1})']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -119,8 +119,8 @@ services:
       - NEO4J_server_directories_import=/import
       - NEO4J_PLUGINS=["graph-data-science"]
     ports:
-      - "127.0.0.1:7474:7474"
-      - "127.0.0.1:7687:7687"
+      - '127.0.0.1:7474:7474'
+      - '127.0.0.1:7687:7687'
     networks:
       - hhh-proxy
       - hhh-app
@@ -129,7 +129,7 @@ services:
       - neo4j-local-logs:/logs
       - ./neo4j/import:/import:ro
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7474"]
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:7474']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -155,7 +155,7 @@ services:
       - KC_DB=dev-file
     command: start-dev --import-realm --health-enabled=true
     ports:
-      - "127.0.0.1:8080:8080"
+      - '127.0.0.1:8080:8080'
     networks:
       - hhh-proxy
       - hhh-app
@@ -164,7 +164,11 @@ services:
       - ./keycloak/hhh-realm.json:/opt/keycloak/data/import/hhh-realm.json:ro
       - ./keycloak/hhh-user-profile.json:/opt/keycloak/bootstrap/hhh-user-profile.json:ro
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/9000 && printf \"GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && cat <&3 | grep -q UP'"]
+      test:
+        [
+          'CMD-SHELL',
+          "bash -c 'exec 3<>/dev/tcp/localhost/9000 && printf \"GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && cat <&3 | grep -q UP'",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -181,7 +185,7 @@ services:
   keycloak-init:
     image: quay.io/keycloak/keycloak:26.5.5
     container_name: hhh-keycloak-init
-    restart: "no"
+    restart: 'no'
     env_file:
       - .env
     volumes:
@@ -192,7 +196,7 @@ services:
     depends_on:
       keycloak:
         condition: service_healthy
-    entrypoint: ["/bin/sh", "-lc"]
+    entrypoint: ['/bin/sh', '-lc']
     command: >
       'until /opt/keycloak/bin/kcadm.sh config credentials
       --server http://keycloak:8080
@@ -272,7 +276,7 @@ services:
       - KEYCLOAK_BROWSER_URL=http://localhost:8080
       - KEYCLOAK_INTERNAL_URL=http://keycloak:8080
     ports:
-      - "3001:3001"
+      - '3001:3001'
     networks:
       - hhh-proxy
       - hhh-app
@@ -297,7 +301,7 @@ services:
     env_file:
       - .env
     ports:
-      - "5001:5000"
+      - '5001:5000'
     networks:
       - hhh-proxy
       - hhh-app
@@ -318,7 +322,7 @@ services:
     container_name: hhh-redis
     restart: unless-stopped
     ports:
-      - "127.0.0.1:6379:6379"
+      - '127.0.0.1:6379:6379'
     volumes:
       - redis-local-data:/data
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
@@ -330,7 +334,7 @@ services:
     container_name: hhh-redis-insight
     restart: unless-stopped
     ports:
-      - "127.0.0.1:5540:5540"
+      - '127.0.0.1:5540:5540'
     volumes:
       - redis-insight-data:/data
     networks:
@@ -361,7 +365,7 @@ services:
       - EMBEDDING_MODEL=${EMBEDDING_MODEL}
       - LLM_TIMEOUT=${LLM_TIMEOUT:-600}
     ports:
-      - "${LIGHTRAG_HOST_PORT:-9622}:9621"
+      - '${LIGHTRAG_HOST_PORT:-9622}:9621'
     volumes:
       - lightrag-data:/app/data
     networks:
@@ -370,8 +374,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   knowledge-mcp:
     image: hhh/knowledge-mcp
@@ -382,7 +386,7 @@ services:
       - LIGHTRAG_URL=${LIGHTRAG_URL:-http://lightrag:9621}
       - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY:-dev-lightrag-secret}
     ports:
-      - "8002:8002"
+      - '8002:8002'
     networks:
       - hhh-app
     depends_on:
@@ -390,8 +394,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   mongo-express:
     image: mongo-express:1.0
@@ -403,7 +407,7 @@ services:
       - ME_CONFIG_MONGODB_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-admin}@mongo:27017/
       - ME_CONFIG_BASICAUTH=false
     ports:
-      - "127.0.0.1:8081:8081"
+      - '127.0.0.1:8081:8081'
     networks:
       - hhh-app
     depends_on:
@@ -425,7 +429,7 @@ services:
       - LIGHTRAG_URL=${LIGHTRAG_URL:-http://lightrag:9621}
       - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY:-dev-lightrag-secret}
     ports:
-      - "8001:8000"
+      - '8001:8000'
     networks:
       - hhh-proxy
       - hhh-app
@@ -457,7 +461,7 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     ports:
-      - "127.0.0.1:9090:9090"
+      - '127.0.0.1:9090:9090'
     networks:
       - hhh-proxy
       - hhh-app
@@ -502,7 +506,7 @@ services:
       - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
       - grafana-data:/var/lib/grafana
     ports:
-      - "127.0.0.1:3002:3000"
+      - '127.0.0.1:3002:3000'
     networks:
       - hhh-proxy
       - hhh-app

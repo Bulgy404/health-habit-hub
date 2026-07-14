@@ -292,7 +292,9 @@ describe("BackupsPage", () => {
     ).toBe(true);
 
     await waitFor(() => {
-      expect(screen.queryByRole("heading", { name: /restore from backup/i })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { name: /restore from backup/i })
+      ).not.toBeInTheDocument();
     });
   });
 

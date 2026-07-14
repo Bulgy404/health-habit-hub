@@ -30,10 +30,7 @@ import { env } from "./api";
  *   the bug) entirely.
  * @returns The absolute Keycloak logout URL.
  */
-export function buildKeycloakLogoutUrl(
-  currentOrigin: string,
-  idTokenHint?: string
-): string {
+export function buildKeycloakLogoutUrl(currentOrigin: string, idTokenHint?: string): string {
   const keycloakBrowserUrl = env(
     process.env.NEXT_PUBLIC_KEYCLOAK_BROWSER_URL,
     "http://localhost:8080"

@@ -33,7 +33,10 @@ const validators = {
         _id: { bsonType: 'objectId' },
         userId: { bsonType: 'string' },
         consentVersion: { bsonType: 'string', pattern: '^\\d+\\.\\d+\\.\\d+$' },
-        locale: { bsonType: ['string', 'null'], enum: ['en', 'de', 'ja', null] },
+        locale: {
+          bsonType: ['string', 'null'],
+          enum: ['en', 'de', 'ja', null],
+        },
         consentedAt: { bsonType: 'date' },
       },
     },

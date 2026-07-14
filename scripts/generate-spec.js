@@ -13,7 +13,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.join(__dirname, '..');
 
 try {
-  const { swaggerSpec } = await import(path.join(repoRoot, 'app', 'swagger.js'));
+  const { swaggerSpec } = await import(
+    path.join(repoRoot, 'app', 'swagger.js')
+  );
 
   // Resolve js-yaml from app/node_modules — this script lives at the repo
   // root, which has no node_modules of its own.

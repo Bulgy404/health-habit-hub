@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
-import { apiFetch, apiUrl } from '@/lib/api';
+import { useCallback, useEffect, useState } from "react";
+import { apiFetch, apiUrl } from "@/lib/api";
 
 /** Per-language text, e.g. `{ en: 'Hello', de: 'Hallo' }`. */
-export type LocaleText = Partial<Record<'en' | 'de' | 'fr' | 'ja' | 'nl', string>>;
+export type LocaleText = Partial<Record<"en" | "de" | "fr" | "ja" | "nl", string>>;
 export type Lang = keyof Required<LocaleText>;
 
 export interface QuestionnaireSummary {
@@ -18,7 +18,7 @@ export interface QuestionnaireSummary {
   updatedAt: string | null;
 }
 
-const API_BASE = apiUrl('/admin/questionnaires');
+const API_BASE = apiUrl("/admin/questionnaires");
 
 /**
  * Fetches and manages the list of questionnaires for the questionnaires page.
@@ -29,17 +29,17 @@ const API_BASE = apiUrl('/admin/questionnaires');
 export function useQuestionnairesData(token: string) {
   const [questionnaires, setQuestionnaires] = useState<QuestionnaireSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const refetch = useCallback(async () => {
     if (!token) return;
     setLoading(true);
-    setError('');
+    setError("");
     try {
       const data = await apiFetch(API_BASE, token);
       setQuestionnaires(data as QuestionnaireSummary[]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load questionnaires');
+      setError(err instanceof Error ? err.message : "Failed to load questionnaires");
     } finally {
       setLoading(false);
     }

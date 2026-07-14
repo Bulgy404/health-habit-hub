@@ -21,11 +21,11 @@ The single most important finding affects both apps: **white text on the brand g
 
 Measured contrast ratios (white foreground):
 
-| Colour | Used for | Ratio | WCAG AA |
-| --- | --- | --- | --- |
-| `#45B700` (primary) | Primary buttons, active nav, FilledButtons | **2.62:1** | ❌ Fail |
-| `#2E8C00` (primaryDark) | SRHI card title, some accents | 4.31:1 | ⚠️ Large text only |
-| `#15803D` (green 700) | "Copy all" button in admin | 5.02:1 | ✅ Pass |
+| Colour                  | Used for                                   | Ratio      | WCAG AA            |
+| ----------------------- | ------------------------------------------ | ---------- | ------------------ |
+| `#45B700` (primary)     | Primary buttons, active nav, FilledButtons | **2.62:1** | ❌ Fail            |
+| `#2E8C00` (primaryDark) | SRHI card title, some accents              | 4.31:1     | ⚠️ Large text only |
+| `#15803D` (green 700)   | "Copy all" button in admin                 | 5.02:1     | ✅ Pass            |
 
 The bright green is beautiful as an **accent** (graphs, indicators, icons, focus rings) but should not carry white label text. Recommendation: introduce a darker "action green" around `#2E8C00`–`#15803D` for filled buttons and the active nav item, and keep `#45B700` for accents and data visualisation. This is a token change, not a visual overhaul — the brand still reads as green.
 
@@ -34,6 +34,7 @@ The bright green is beautiful as an **accent** (graphs, indicators, icons, focus
 ## Perspective 1 — The participant (mobile Flutter app)
 
 ### What's already strong
+
 Material 3 with `ColorScheme.fromSeed`, a consistent Figtree type family via `google_fonts`, pill-shaped primary buttons with a generous 52px min height (meets the 44px touch-target minimum), rounded 20px cards, pull-to-refresh, an onboarding walkthrough with animated page dots, and offline-queue handling. This is a solid baseline.
 
 ### Improvements, highest impact first
@@ -43,9 +44,10 @@ Material 3 with `ColorScheme.fromSeed`, a consistent Figtree type family via `go
 **2. Stop hardcoding hex colours in screens; use the theme.** Screens re-declare brand colours inline — `Color(0xFF45B700)`, `Color(0xFF111827)`, `Color(0xFF6B7280)` appear in `welcome_screen.dart`, `my_habits_screen.dart`, and others rather than reading `Theme.of(context).colorScheme`. This is why the dark theme is at risk: any inline `Color(0xFF111827)` text stays near-black on a dark card. Centralise brand tokens (a `ThemeExtension` or a `colors.dart`) and reference `colorScheme.primary` / `onSurface` everywhere.
 
 **3. Reconcile the two themes — they diverge in ways that read as inconsistency.**
-   - Card radius: light theme uses 20, but the SRHI prompt card hardcodes 12.
-   - Button radius: light theme is a 100px pill; dark theme drops to 20px — the same button changes shape by mode.
-   - Dark cards carry a **2px solid green border** and elevation 4, which looks heavier and more dated than the borderless light cards. Prefer a subtle surface elevation (`#2A2A2A` on `#1A1A1A`) over a coloured outline.
+
+- Card radius: light theme uses 20, but the SRHI prompt card hardcodes 12.
+- Button radius: light theme is a 100px pill; dark theme drops to 20px — the same button changes shape by mode.
+- Dark cards carry a **2px solid green border** and elevation 4, which looks heavier and more dated than the borderless light cards. Prefer a subtle surface elevation (`#2A2A2A` on `#1A1A1A`) over a coloured outline.
 
 **4. Upgrade empty and loading states.** `MyHabitsScreen`'s empty state is a single centered grey sentence (`noHabitsYet`); loading is a bare `CircularProgressIndicator`. Current practice: skeleton screens (they read as faster than spinners) and empty states that include an illustration/icon plus a primary CTA ("Create your first habit"). You already have the icon-in-rounded-tile motif from onboarding — reuse it.
 
@@ -60,6 +62,7 @@ Material 3 with `ColorScheme.fromSeed`, a consistent Figtree type family via `go
 ## Perspective 2 — The researcher (Next.js admin panel)
 
 ### What's already strong
+
 Clean CSS-variable token base, logically sectioned sidebar (Research / Operations / Configuration / Monitoring), consistent table and modal patterns, role-gated nav items, locale switching, and a proper input focus ring (`box-shadow: 0 0 0 3px rgba(69,183,0,.1)`). It's a competent, information-first admin.
 
 ### Improvements, highest impact first

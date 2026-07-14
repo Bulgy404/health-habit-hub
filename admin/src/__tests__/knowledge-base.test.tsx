@@ -1,22 +1,22 @@
-import React from 'react';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import KnowledgeBasePage from '../app/(admin)/knowledge-base/page';
+import React from "react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import KnowledgeBasePage from "../app/(admin)/knowledge-base/page";
 
-jest.mock('next-auth/react', () => ({
+jest.mock("next-auth/react", () => ({
   useSession: () => ({
-    data: { accessToken: 'test-token', roles: ['admin'] },
-    status: 'authenticated',
+    data: { accessToken: "test-token", roles: ["admin"] },
+    status: "authenticated",
   }),
 }));
 
-jest.mock('next/navigation', () => ({
+jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
   useSearchParams: () => new URLSearchParams(),
-  usePathname: () => '/',
+  usePathname: () => "/",
 }));
 
-describe('KnowledgeBasePage', () => {
+describe("KnowledgeBasePage", () => {
   // Mock fetch so the page doesn't error on mount
   beforeEach(() => {
     global.fetch = jest.fn().mockResolvedValue({
@@ -29,47 +29,47 @@ describe('KnowledgeBasePage', () => {
     jest.resetAllMocks();
   });
 
-  it('renders without crashing', () => {
+  it("renders without crashing", () => {
     render(<KnowledgeBasePage />);
   });
 
-  it('renders the page title', () => {
+  it("renders the page title", () => {
     render(<KnowledgeBasePage />);
-    expect(screen.getByRole('heading', { name: /knowledge base/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /knowledge base/i })).toBeInTheDocument();
   });
 
-  it('renders Upload Document button', () => {
+  it("renders Upload Document button", () => {
     render(<KnowledgeBasePage />);
-    expect(screen.getByRole('button', { name: /upload document/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /upload document/i })).toBeInTheDocument();
   });
 
-  it('renders View Graph link', () => {
+  it("renders View Graph link", () => {
     render(<KnowledgeBasePage />);
-    expect(screen.getByRole('link', { name: /view graph/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /view graph/i })).toBeInTheDocument();
   });
 
   it('opens upload modal when "Upload Document" button is clicked', async () => {
     const user = userEvent.setup();
     render(<KnowledgeBasePage />);
 
-    await user.click(screen.getByRole('button', { name: /upload document/i }));
+    await user.click(screen.getByRole("button", { name: /upload document/i }));
 
     // Modal title should appear
-    expect(screen.getByText('Upload PDF', { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText("Upload PDF", { selector: "span" })).toBeInTheDocument();
   });
 
-  it('shows delete confirmation dialog when Delete is clicked on a file', async () => {
+  it("shows delete confirmation dialog when Delete is clicked on a file", async () => {
     const user = userEvent.setup();
 
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: jest.fn().mockResolvedValue([
         {
-          filename: 'test-paper.pdf',
-          category: 'general',
+          filename: "test-paper.pdf",
+          category: "general",
           file_size: 12345,
           has_summary: false,
-          upload_date: '2024-01-01T00:00:00Z',
+          upload_date: "2024-01-01T00:00:00Z",
         },
       ]),
     } as unknown as Response);
@@ -77,36 +77,42 @@ describe('KnowledgeBasePage', () => {
     render(<KnowledgeBasePage />);
 
     // Wait for the file entry to appear
-    await screen.findByText('test-paper.pdf');
+    await screen.findByText("test-paper.pdf");
 
     // Click Delete
-    await user.click(screen.getByRole('button', { name: /^delete$/i }));
+    await user.click(screen.getByRole("button", { name: /^delete$/i }));
 
     // Confirm dialog should appear
     expect(screen.getByText(/delete file\?/i)).toBeInTheDocument();
   });
 
-  it('rejects non-PDF files with an error message', async () => {
+  it("rejects non-PDF files with an error message", async () => {
     const user = userEvent.setup();
     const { container } = render(<KnowledgeBasePage />);
 
     // Open the upload modal
-    await user.click(screen.getByRole('button', { name: /upload document/i }));
+    await user.click(screen.getByRole("button", { name: /upload document/i }));
 
     // jsdom's file input is read-only; override `files` on the DOM element via Object.defineProperty
     const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(['content'], 'test.xlsx', { type: 'application/vnd.ms-excel' });
+    const file = new File(["content"], "test.xlsx", { type: "application/vnd.ms-excel" });
     const fileList = {
       0: file,
       length: 1,
       item: (i: number) => (i === 0 ? file : null),
-      [Symbol.iterator]: function* () { yield file; },
+      [Symbol.iterator]: function* () {
+        yield file;
+      },
     };
-    Object.defineProperty(fileInput, 'files', { value: fileList, writable: false, configurable: true });
+    Object.defineProperty(fileInput, "files", {
+      value: fileList,
+      writable: false,
+      configurable: true,
+    });
     fireEvent.change(fileInput);
 
     // Click the Upload button inside the modal
-    await user.click(screen.getByRole('button', { name: /^upload$/i }));
+    await user.click(screen.getByRole("button", { name: /^upload$/i }));
 
     // Error should appear
     await waitFor(() => {

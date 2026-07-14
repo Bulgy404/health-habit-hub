@@ -1,4 +1,5 @@
 <!-- MASCHINELL ÜBERSETZT aus der englischen Quelle — vor Veröffentlichung bitte durch Muttersprachler prüfen -->
+
 # Health Habit Hub — Administrationshandbuch
 
 Dieses Handbuch führt Forschende und Administrierende durch alle alltäglichen Aufgaben in der Health Habit Hub Plattform. Für die hier beschriebenen Vorgänge ist keine Entwicklerunterstützung erforderlich.
@@ -10,7 +11,7 @@ Dieses Handbuch führt Forschende und Administrierende durch alle alltäglichen 
 Verwenden Sie diese Checkliste beim Start einer neuen Teilnehmerkohorte.
 
 1. **Als Admin anmelden** — öffnen Sie `https://hhh.tu-dresden.de/admin` und authentifizieren Sie sich mit Ihren Admin-Zugangsdaten (Abschnitt 1).
-2. **Teilnehmerkonten erstellen** — erstellen Sie für jeden Teilnehmer ein Konto über *Teilnehmer → Neuer Teilnehmer*; das System generiert sofort sowohl die Zugangsdaten als auch die Token-Karten-PDF (Abschnitt 2).
+2. **Teilnehmerkonten erstellen** — erstellen Sie für jeden Teilnehmer ein Konto über _Teilnehmer → Neuer Teilnehmer_; das System generiert sofort sowohl die Zugangsdaten als auch die Token-Karten-PDF (Abschnitt 2).
 3. **Token-Karten herunterladen und verteilen** — tippen Sie auf „Token-Karte herunterladen" in der Detailansicht jedes Teilnehmers, um die fertige PDF abzurufen; drucken Sie diese aus und übergeben Sie sie persönlich oder per Post (Abschnitt 2).
 4. **Studiengruppen zuweisen** — weisen Sie jedem Teilnehmer eine der vier Studiengruppen (G1–G4) in der Detailansicht zu (Abschnitt 3).
 5. **Fragebögen erstellen oder veröffentlichen** — richten Sie den Basisprofil-Survey und alle Folgefragebögen ein; weisen Sie sie den richtigen Gruppen zu (Abschnitt 4).
@@ -52,21 +53,21 @@ Das Admin-Panel ist nur für Benutzer mit der Keycloak-Rolle `admin` oder `resea
 
 **Schritt 3.** Nach der Anmeldung zeigt die Navigationsleiste einen zusätzlichen **Admin**-Tab (Zahnrad-Symbol). Tippen Sie darauf, um das Admin-Panel zu öffnen. Die linke Seitenleiste ist in fünf Abschnitte gegliedert:
 
-| Abschnitt | Seiten |
-|---|---|
-| **Research** | Studies, Analytics |
-| **Operations** | Participants *(nur Admin)*, Devices *(nur Admin)*, Donations *(nur Admin)*, Comments *(nur Admin)* |
-| **Configuration** | Cue Pools, Questionnaires, Profile Fields *(nur Admin)*, Knowledge Base *(nur Admin)* |
-| **Monitoring** | System *(nur Admin)*, Backups *(nur Admin)*, Audit Log *(nur Admin)*, Restore Attempts *(nur Admin)*, Team *(nur Admin)* |
-| **Support** | Help |
+| Abschnitt         | Seiten                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Research**      | Studies, Analytics                                                                                                       |
+| **Operations**    | Participants _(nur Admin)_, Devices _(nur Admin)_, Donations _(nur Admin)_, Comments _(nur Admin)_                       |
+| **Configuration** | Cue Pools, Questionnaires, Profile Fields _(nur Admin)_, Knowledge Base _(nur Admin)_                                    |
+| **Monitoring**    | System _(nur Admin)_, Backups _(nur Admin)_, Audit Log _(nur Admin)_, Restore Attempts _(nur Admin)_, Team _(nur Admin)_ |
+| **Support**       | Help                                                                                                                     |
 
 `researcher`-Konten sehen nur Studies, Analytics, Cue Pools und Questionnaires; alle nur für Admins sichtbaren Seiten sind für diese Rolle in der Seitenleiste vollständig ausgeblendet.
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                                 | Beschriftungen                                                                                                                                                                                                                                                                |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Admin-Anmeldebildschirm](../assets/screenshots/admin/01-admin-login.png) | **(1)** Benutzernamenfeld — geben Sie Ihren Admin-Kontonamen ein. **(2)** Passwortfeld — geben Sie Ihr Admin-Passwort ein (kein Token-Karten-Code). **(3)** Anmelden-Button — tippen Sie zum Authentifizieren. **(4)** HHH-Logo und Versionsnummer oben auf der Anmeldekarte. |
 
-*Abbildung 1: Admin-Anmeldebildschirm. Die Beschriftungsnummern entsprechen der obigen Tabelle.*
+_Abbildung 1: Admin-Anmeldebildschirm. Die Beschriftungsnummern entsprechen der obigen Tabelle._
 
 > **Tipp:** Wenn Sie „Ungültige Zugangsdaten" sehen, prüfen Sie, ob Sie ein Admin-Konto verwenden (kein Teilnehmer-Token). Teilnehmer-Token sind Einmal-Token und können nicht für Admin-Anmeldungen verwendet werden.
 
@@ -83,30 +84,32 @@ Jeder Studienteilnehmer benötigt ein Konto und eine druckbare Token-Karte mit Q
 **Schritt 3.** Geben Sie den **Anzeigenamen** ein (optional, nur für Ihre Referenz — Teilnehmer sind pseudonymisiert) und wählen Sie die **Studiengruppe** aus (diese kann später geändert werden; siehe Abschnitt 3).
 
 **Schritt 4.** Tippen Sie auf **Erstellen**. Das System führt sofort folgende Schritte aus:
+
 - Es generiert einen pseudonymen Benutzernamen (z. B. `p-2024-0042`) und ein zufälliges Zugriffspasswort
 - Es erstellt das Keycloak-Konto des Teilnehmers
 - Es generiert die Token-Karten-PDF und speichert sie — vor dem Herunterladen ist keine weitere Aktion erforderlich
 
 > **Hinweis:** Teilnehmerpasswörter werden intern als bcrypt-Hash gespeichert. Weder Sie noch ein anderer Admin können das Klartextpasswort abrufen — es existiert nur in lesbarer Form auf der gedruckten Token-Karte. Dies ist beabsichtigt und erfordert keine Admin-Aktion.
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                                              | Beschriftungen                                                                                                                                                                                                                                                                                        |
+| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Teilnehmer erstellen Formular](../assets/screenshots/admin/02-create-participant.png) | **(1)** Anzeigenamen-Feld — nur für Forschende sichtbar; wird dem Teilnehmer nicht angezeigt. **(2)** Studiengruppen-Dropdown — Standardwert G1; kann später geändert werden. **(3)** Erstellen-Button — generiert Zugangsdaten, erstellt das Keycloak-Konto und erzeugt sofort die Token-Karten-PDF. |
 
-*Abbildung 2a: Formular zum Erstellen eines neuen Teilnehmers.*
+_Abbildung 2a: Formular zum Erstellen eines neuen Teilnehmers._
 
 **Schritt 5.** Nach der Erstellung öffnet sich automatisch die Detailansicht des Teilnehmers. Tippen Sie auf **Token-Karte herunterladen**, um die vorab generierte PDF abzurufen. Der Download erfolgt sofort — die PDF wurde in dem Moment erstellt, als Sie auf „Erstellen" getippt haben.
 
 **Schritt 6.** Drucken Sie die Token-Karte und übergeben Sie sie dem Teilnehmer. Die Karte enthält:
+
 - Das Studienlogo und das Teilnehmer-Pseudonym
 - Einen QR-Code, der `hhh://login?user=<username>&token=<password>` kodiert
 - Den Benutzernamen und das Passwort im Klartext (für die manuelle Eingabe)
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                                                  | Beschriftungen                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Token-Karte herunterladen Button](../assets/screenshots/admin/02-download-token-card.png) | **(1)** Teilnehmer-Pseudonym und interne ID. **(2)** Token-Karte herunterladen-Button — ruft die vorab generierte PDF sofort ab. **(3)** Zugangsdaten kopieren-Button — kopiert Benutzername:Passwort in die Zwischenablage für die digitale Verteilung. **(4)** QR-Code-Vorschau des kodierten Deep Links. |
 
-*Abbildung 2b: Detailansicht des Teilnehmers nach der Erstellung mit dem Token-Karte-Download-Button.*
+_Abbildung 2b: Detailansicht des Teilnehmers nach der Erstellung mit dem Token-Karte-Download-Button._
 
 > **Tipp:** Die Token-Karten-PDF kann jederzeit erneut aus der Detailansicht des Teilnehmers heruntergeladen werden. Token laufen nicht ab, sofern Sie diese nicht manuell widerrufen.
 
@@ -116,12 +119,12 @@ Jeder Studienteilnehmer benötigt ein Konto und eine druckbare Token-Karte mit Q
 
 Jeder Teilnehmer muss genau einer Studiengruppe (G1–G4) zugewiesen werden. Die Gruppe bestimmt, welche Fragebogenelemente angezeigt werden und wie Gewohnheiten klassifiziert werden.
 
-| Gruppe | Beschreibung |
-|---|---|
-| G1 | Volle Intervention — strukturierte Gewohnheitsspende |
-| G2 | Teilintervention — strukturierte Spende ohne Empfehlungen |
-| G3 | Volle Intervention + Freitext-Annotation |
-| G4 | Minimale Intervention + Freitext-Annotation |
+| Gruppe | Beschreibung                                              |
+| ------ | --------------------------------------------------------- |
+| G1     | Volle Intervention — strukturierte Gewohnheitsspende      |
+| G2     | Teilintervention — strukturierte Spende ohne Empfehlungen |
+| G3     | Volle Intervention + Freitext-Annotation                  |
+| G4     | Minimale Intervention + Freitext-Annotation               |
 
 **Schritt 1.** Tippen Sie im Admin-Panel auf **Teilnehmer** und öffnen Sie den Teilnehmer, dem Sie eine Gruppe zuweisen möchten.
 
@@ -129,11 +132,11 @@ Jeder Teilnehmer muss genau einer Studiengruppe (G1–G4) zugewiesen werden. Die
 
 **Schritt 3.** Wählen Sie die neue Gruppe aus und tippen Sie auf **Speichern**.
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                                 | Beschriftungen                                                                                                                                                                                                                                                                          |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Studiengruppe zuweisen](../assets/screenshots/admin/03-assign-group.png) | **(1)** Teilnehmer-Pseudonym und aktuelles Gruppen-Badge. **(2)** Studiengruppen-Dropdown — G1, G2, G3 oder G4 auswählen. **(3)** Speichern-Button — aktualisiert die Gruppe sofort in Keycloak und Neo4j. **(4)** Gruppenänderungsprotokoll mit früheren Zuweisungen und Zeitstempeln. |
 
-*Abbildung 3: Zuweisung einer Studiengruppe an einen Teilnehmer.*
+_Abbildung 3: Zuweisung einer Studiengruppe an einen Teilnehmer._
 
 > **Warnung:** Das Ändern der Gruppe eines Teilnehmers während der Studie kann die Empfehlungsqualität und Datenintegrität beeinträchtigen. Ändern Sie die Gruppe nur vor dem ersten Login des Teilnehmers, es sei denn, die Studienleitung hat dies angewiesen.
 
@@ -143,10 +146,10 @@ Jeder Teilnehmer muss genau einer Studiengruppe (G1–G4) zugewiesen werden. Die
 
 Die Plattform verfügt über zwei Fragebogensysteme für unterschiedliche Zwecke.
 
-| System | Konfigurationsort | Darstellung | Verwendungszweck |
-|--------|------------------|-------------|------------------|
-| **SurveyJS-Formulare** | Admin-Panel → Surveys | WebView (SurveyJS) | Spenden-Prompts, Profilformulare — frei gestaltbar mit JSON-Schema-Editor |
-| **Studien-Fragebögen** | Admin-Panel → Questionnaires / Web-Portal → Studies | Native Flutter-UI | Validierte Messinstrumente (SLIQ, RAND-36, SRHI) und benutzerdefinierte Fragebögen für Studien |
+| System                 | Konfigurationsort                                   | Darstellung        | Verwendungszweck                                                                               |
+| ---------------------- | --------------------------------------------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
+| **SurveyJS-Formulare** | Admin-Panel → Surveys                               | WebView (SurveyJS) | Spenden-Prompts, Profilformulare — frei gestaltbar mit JSON-Schema-Editor                      |
+| **Studien-Fragebögen** | Admin-Panel → Questionnaires / Web-Portal → Studies | Native Flutter-UI  | Validierte Messinstrumente (SLIQ, RAND-36, SRHI) und benutzerdefinierte Fragebögen für Studien |
 
 ---
 
@@ -179,17 +182,17 @@ Die Verfügbarkeit von Umfragen folgt nun vier Regeln:
 
 **Schritt 5.** Tippen Sie auf **Als Entwurf speichern**. Der Fragebogen ist noch nicht für Teilnehmer sichtbar.
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                                | Beschriftungen                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Fragebogenliste](../assets/screenshots/admin/04-questionnaire-list.png) | **(1)** Liste aller Fragebögen mit Status-Badges (Entwurf / Veröffentlicht / Archiviert). **(2)** + Neuer Fragebogen-Button. **(3)** Filterleiste zur Suche nach Titel oder Typ. **(4)** Zeilenaktions-Buttons: Bearbeiten, Veröffentlichen/Archivieren, Gruppen zuweisen, Löschen. |
 
-*Abbildung 4a: Fragebogen-Listenansicht.*
+_Abbildung 4a: Fragebogen-Listenansicht._
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                                                | Beschriftungen                                                                                                                                                                                                                       |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | ![Fragebogen erstellen Formular](../assets/screenshots/admin/04-questionnaire-create.png) | **(1)** Titelfeld. **(2)** Typauswahl (profile / habit). **(3)** JSON Schema-Editor mit Syntaxhervorhebung. **(4)** Vorschau-Button — rendert das Formular so, wie Teilnehmer es sehen werden. **(5)** Als Entwurf speichern-Button. |
 
-*Abbildung 4b: Erstellungsformular für einen neuen Fragebogen.*
+_Abbildung 4b: Erstellungsformular für einen neuen Fragebogen._
 
 ### Veröffentlichen und Archivieren
 
@@ -206,11 +209,11 @@ Die Verfügbarkeit von Umfragen folgt nun vier Regeln:
 
 Wenn ein Fragebogen für Teilnehmer ohne Studiengruppe sichtbar sein soll, setzen Sie **Verfügbarkeit** auf **Nur Standard** und lassen Sie die Gruppenliste leer.
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                                                     | Beschriftungen                                                                                                                                                                       |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | ![Fragebogen Gruppen zuweisen](../assets/screenshots/admin/04-questionnaire-assign-groups.png) | **(1)** Fragebogenname oben angezeigt. **(2)** Gruppen-Toggle-Checkboxen (G1–G4). **(3)** Aktuell zugewiesene Gruppen sind türkis hervorgehoben. **(4)** Zuweisung speichern-Button. |
 
-*Abbildung 4c: Zuweisung eines Fragebogens an bestimmte Studiengruppen.*
+_Abbildung 4c: Zuweisung eines Fragebogens an bestimmte Studiengruppen._
 
 ---
 
@@ -260,7 +263,7 @@ Fragebögen werden Teilnehmenden über Studien zugänglich gemacht. Teilnehmende
 
 ### 4c. Fragebögen nach Zeitplan einplanen
 
-Der Tab **Questionnaires** (oben) macht einen Fragebogen für eine Studie verfügbar; der Tab **Schedule** legt fest, *wann* er für jede teilnehmende Person fällig wird — als wiederkehrendes Intervall (z. B. alle 7 Tage) oder als feste Studienwochen/-tage (z. B. Baseline, Woche 4, Woche 8).
+Der Tab **Questionnaires** (oben) macht einen Fragebogen für eine Studie verfügbar; der Tab **Schedule** legt fest, _wann_ er für jede teilnehmende Person fällig wird — als wiederkehrendes Intervall (z. B. alle 7 Tage) oder als feste Studienwochen/-tage (z. B. Baseline, Woche 4, Woche 8).
 
 **Schritt 1.** Zu **Studies** navigieren, eine Studie öffnen und den Tab **Schedule** anklicken.
 
@@ -268,13 +271,13 @@ Der Tab **Questionnaires** (oben) macht einen Fragebogen für eine Studie verfü
 
 **Schritt 3.** Mit dem **Schedule calendar** unterhalb des Formulars prüfen, was Teilnehmende sehen werden:
 
-| Element | Verhalten |
-|---|---|
-| **Today**-Schaltfläche | Springt im Kalender zurück zum aktuellen Monat, unabhängig davon, wie weit navigiert wurde. |
-| Klick auf einen Tag | Füllt das Formular zum Hinzufügen einer Zuweisung mit einem wiederkehrenden Turnus vor, der an diesem Tag beginnt, und scrollt dorthin — praktisch, um einen Zeitplan visuell zu skizzieren, statt Tagesabstände manuell zu berechnen. |
-| Durchgezogene Einträge | Reale Termine, die bereits für eingeschriebene Teilnehmende generiert wurden. |
+| Element                        | Verhalten                                                                                                                                                                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Today**-Schaltfläche         | Springt im Kalender zurück zum aktuellen Monat, unabhängig davon, wie weit navigiert wurde.                                                                                                                                                            |
+| Klick auf einen Tag            | Füllt das Formular zum Hinzufügen einer Zuweisung mit einem wiederkehrenden Turnus vor, der an diesem Tag beginnt, und scrollt dorthin — praktisch, um einen Zeitplan visuell zu skizzieren, statt Tagesabstände manuell zu berechnen.                 |
+| Durchgezogene Einträge         | Reale Termine, die bereits für eingeschriebene Teilnehmende generiert wurden.                                                                                                                                                                          |
 | Gestrichelte, kursive Einträge | Eine **Vorschau**, wie der Zeitplan für eine Person aussähe, die sich heute einschreibt — wird für Zuweisungen angezeigt, die noch keine eingeschriebenen Teilnehmenden haben, damit neu erstellte Zuweisungen im Kalender nicht wie "fehlend" wirken. |
-| Ausgegraute Tage | Liegen nach dem Studienenddatum (siehe unten), falls eines gesetzt ist. |
+| Ausgegraute Tage               | Liegen nach dem Studienenddatum (siehe unten), falls eines gesetzt ist.                                                                                                                                                                                |
 
 > **Warum Zeitpläne relativ und nicht als Kalenderdatum angegeben sind.** Jeder Zeitplan wird als Versatz zum individuellen Einschreibedatum jeder teilnehmenden Person ausgedrückt, da Teilnehmende an unterschiedlichen Tagen einer Studie beitreten. Ein Klick auf einen Kalendertag berechnet den entsprechenden Versatz unter der Annahme, dass die Einschreibung heute erfolgt — das tatsächliche Fälligkeitsdatum für jede Person bleibt relativ zu ihrem eigenen Einschreibedatum.
 
@@ -300,26 +303,27 @@ Das Gewohnheits-Dashboard zeigt alle gespendeten Gewohnheiten aller Teilnehmer m
 
 **Schritt 2.** Die Liste zeigt alle Gewohnheitsspenden sortiert nach Einreichungsdatum (neueste zuerst). Jede Zeile zeigt: Pseudonym, Gewohnheitstext, Studiengruppe, BCIO-Kategorie und Einreichungszeitstempel.
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                          | Beschriftungen                                                                                                                                                                                                                                   |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | ![Gewohnheitsliste](../assets/screenshots/admin/05-habits-list.png) | **(1)** Gesamtanzahl der Spenden. **(2)** Liste der Gewohnheitsspenden mit Gruppen- und BCIO-Kategoriespalten. **(3)** Sortiersteuerelemente (nach Datum, Gruppe oder Kategorie). **(4)** Filterleiste (siehe unten). **(5)** CSV-Export-Button. |
 
-*Abbildung 5a: Gewohnheits-Überwachungsliste.*
+_Abbildung 5a: Gewohnheits-Überwachungsliste._
 
 ### Gewohnheiten filtern
 
 **Schritt 1.** Verwenden Sie die Filterleiste oberhalb der Liste, um Ergebnisse einzugrenzen:
+
 - **Gruppenfilter:** G1, G2, G3, G4 oder Alle auswählen.
 - **BCIO-Kategoriefilter:** Eine BCT-Taxonomiekategorie oder Alle auswählen.
 - **Datumsbereich:** Start- und Enddatum festlegen, um nach Spendendatum zu filtern.
 
 **Schritt 2.** Die Liste aktualisiert sich in Echtzeit, wenn Sie die Filter ändern.
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                                    | Beschriftungen                                                                                                                                             |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Gewohnheits-Filterleiste](../assets/screenshots/admin/05-habits-filter.png) | **(1)** Gruppenfilter-Dropdown. **(2)** BCIO-Kategorie-Dropdown. **(3)** Startdatum-Auswahl. **(4)** Enddatum-Auswahl. **(5)** Filter zurücksetzen-Button. |
 
-*Abbildung 5b: Filtersteuerelemente im Gewohnheits-Dashboard.*
+_Abbildung 5b: Filtersteuerelemente im Gewohnheits-Dashboard._
 
 ### Als CSV exportieren
 
@@ -329,11 +333,11 @@ Das Gewohnheits-Dashboard zeigt alle gespendeten Gewohnheiten aller Teilnehmer m
 
 Die CSV-Datei enthält folgende Spalten: `participant_pseudonym`, `study_group`, `habit_text`, `bcio_category`, `submitted_at`, `annotation_text` (nur G3/G4).
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                                  | Beschriftungen                                                                                                                              |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![CSV-Export Bestätigung](../assets/screenshots/admin/05-habits-export.png) | **(1)** CSV exportieren-Button. **(2)** Zeilenanzahl vor dem Export angezeigt (bestätigt den Umfang). **(3)** Download-Fortschrittsanzeige. |
 
-*Abbildung 5c: Auslösen eines CSV-Exports.*
+_Abbildung 5c: Auslösen eines CSV-Exports._
 
 ---
 
@@ -349,24 +353,24 @@ Das Teilnehmer-Detail-Panel auf der Seite **Analytik** zeigt eine vollständige 
 
 Das Panel enthält vier Abschnitte:
 
-| Abschnitt | Was angezeigt wird |
-|---|---|
-| **Zusammenfassung** | Erstellte Gewohnheiten, abgeschlossene Fragebögen, angenommene/abgelehnte Empfehlungen, Profilabschluss, Datum der letzten Aktivität |
-| **Erinnerungen** | Aktuelle Erinnerungshäufigkeit, Autonomie-Score mit Score-Balken sowie die Aufschlüsselung nach einzelnen Signalen (siehe unten) |
-| **Abgeschlossene Fragebögen** | Liste der von der teilnehmenden Person eingereichten Fragebögen mit Abschlussdatum |
-| **Aktivitätsverlauf** | Chronologisches Protokoll aller erfassten Ereignisse (Einschreibung, Anmeldungen, Gewohnheitserstellung, Fragebogen-Einreichungen usw.) |
+| Abschnitt                     | Was angezeigt wird                                                                                                                      |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Zusammenfassung**           | Erstellte Gewohnheiten, abgeschlossene Fragebögen, angenommene/abgelehnte Empfehlungen, Profilabschluss, Datum der letzten Aktivität    |
+| **Erinnerungen**              | Aktuelle Erinnerungshäufigkeit, Autonomie-Score mit Score-Balken sowie die Aufschlüsselung nach einzelnen Signalen (siehe unten)        |
+| **Abgeschlossene Fragebögen** | Liste der von der teilnehmenden Person eingereichten Fragebögen mit Abschlussdatum                                                      |
+| **Aktivitätsverlauf**         | Chronologisches Protokoll aller erfassten Ereignisse (Einschreibung, Anmeldungen, Gewohnheitserstellung, Fragebogen-Einreichungen usw.) |
 
 ### Aufschlüsselung des Erinnerungsplans
 
 Der Abschnitt **Erinnerungen** zeigt, wie der adaptive Ausblend-Algorithmus die Gewohnheitsautomatisierung der teilnehmenden Person für jeden aktiven Vorsatz eingeschätzt hat:
 
-| Feld | Bedeutung |
-|---|---|
+| Feld                  | Bedeutung                                                                                                                                    |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Häufigkeits-Badge** | Aktuelle Erinnerungsfrequenz — `Täglich` (rot) → `Alle 2 Tage` (orange) → `Zweimal wöchentlich` (gelb) → `Wöchentlich` (grün) → `Aus` (grau) |
-| **Score-Balken** | Autonomie-Score 0–1; höher = automatischer, weniger Erinnerungen nötig |
-| **SRHI** | Beitrag aus dem letzten wöchentlichen Selbstbericht zur Gewohnheitsstärke der teilnehmenden Person (Gewichtung 50 %) |
-| **Adhärenz 14 Tage** | Beitrag aus dem Anteil der letzten 14 Tage mit protokollierter Ausführung (Gewichtung 35 %) |
-| **Serie** | Beitrag aus der aktuellen zusammenhängenden Tagesserie, begrenzt auf 14 Tage (Gewichtung 15 %) |
+| **Score-Balken**      | Autonomie-Score 0–1; höher = automatischer, weniger Erinnerungen nötig                                                                       |
+| **SRHI**              | Beitrag aus dem letzten wöchentlichen Selbstbericht zur Gewohnheitsstärke der teilnehmenden Person (Gewichtung 50 %)                         |
+| **Adhärenz 14 Tage**  | Beitrag aus dem Anteil der letzten 14 Tage mit protokollierter Ausführung (Gewichtung 35 %)                                                  |
+| **Serie**             | Beitrag aus der aktuellen zusammenhängenden Tagesserie, begrenzt auf 14 Tage (Gewichtung 15 %)                                               |
 
 Hat die teilnehmende Person keine aktiven Vorsätze, zeigt der Abschnitt „Keine aktiven Vorsätze".
 
@@ -380,17 +384,17 @@ Wenn ein Teilnehmer seine Token-Karte verliert oder ein Gerät kompromittiert wi
 
 **Schritt 1.** Öffnen Sie die Detailansicht des Teilnehmers (Admin-Panel → Teilnehmer → Teilnehmer auswählen).
 
-**Schritt 2.** Tippen Sie auf **Alle Sitzungen widerrufen**. Ein Bestätigungsdialog erscheint: *„Dadurch wird der Teilnehmer sofort von allen Geräten abgemeldet. Fortfahren?"*
+**Schritt 2.** Tippen Sie auf **Alle Sitzungen widerrufen**. Ein Bestätigungsdialog erscheint: _„Dadurch wird der Teilnehmer sofort von allen Geräten abgemeldet. Fortfahren?"_
 
 **Schritt 3.** Tippen Sie auf **Bestätigen**. Die Keycloak-Sitzungen des Teilnehmers werden beendet. Er erhält beim nächsten App-Aufruf die Meldung „Ungültige Sitzung".
 
 **Schritt 4.** Wenn der Teilnehmer eine neue Token-Karte benötigt (z. B. Karte verloren), tippen Sie auf **Token erneuern**, um ein neues zufälliges Passwort auszustellen, und laden Sie dann die aktualisierte Token-Karte herunter (Abschnitt 2).
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                                         | Beschriftungen                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Sitzungen widerrufen Bereich](../assets/screenshots/admin/07-revoke-session.png) | **(1)** Anzahl aktiver Sitzungen — zeigt, wie viele Geräte aktuell authentifiziert sind. **(2)** Alle Sitzungen widerrufen-Button (rot, destruktive Aktion). **(3)** Bestätigungsdialog mit Teilnehmer-Pseudonym. **(4)** Token erneuern-Button — gibt ein neues Passwort aus, ohne bestehende Sitzungen zu widerrufen. |
 
-*Abbildung 7: Widerruf der aktiven Gerätesitzungen eines Teilnehmers.*
+_Abbildung 7: Widerruf der aktiven Gerätesitzungen eines Teilnehmers._
 
 > **Warnung:** Das Widerrufen von Sitzungen ist sofort und unwiderruflich. Der Teilnehmer benötigt seine neue Token-Karte, um sich wieder anzumelden.
 
@@ -406,24 +410,24 @@ Das Token-Karten-PDF-Layout — Logo, Schriftgröße, QR-Code-Position und Farbs
 
 **Schritt 2.** Unter **Token-Karten-Format** können Sie Folgendes konfigurieren:
 
-| Einstellung | Beschreibung | Standard |
-|---|---|---|
-| Logo-URL | URL oder Base64 des oben auf der Karte angezeigten Logo-Bilds | HHH-Schild-Logo |
-| Primärfarbe | Hex-Farbe für Kopfzeile und QR-Code-Rahmen | `#1A73E8` |
-| Schriftgröße | Textkörper-Schriftgröße in pt | `11` |
-| QR-Code-Größe | QR-Block-Pixelgröße (80–200) | `120` |
-| Fußzeilen-Text | Benutzerdefinierter Text unten auf der Karte (z. B. Studienkontakt) | `"Contact: study@tu-dresden.de"` |
-| Klartext-Zugangsdaten anzeigen | Benutzername/Passwort unterhalb des QR-Codes anzeigen | `true` |
+| Einstellung                    | Beschreibung                                                        | Standard                         |
+| ------------------------------ | ------------------------------------------------------------------- | -------------------------------- |
+| Logo-URL                       | URL oder Base64 des oben auf der Karte angezeigten Logo-Bilds       | HHH-Schild-Logo                  |
+| Primärfarbe                    | Hex-Farbe für Kopfzeile und QR-Code-Rahmen                          | `#1A73E8`                        |
+| Schriftgröße                   | Textkörper-Schriftgröße in pt                                       | `11`                             |
+| QR-Code-Größe                  | QR-Block-Pixelgröße (80–200)                                        | `120`                            |
+| Fußzeilen-Text                 | Benutzerdefinierter Text unten auf der Karte (z. B. Studienkontakt) | `"Contact: study@tu-dresden.de"` |
+| Klartext-Zugangsdaten anzeigen | Benutzername/Passwort unterhalb des QR-Codes anzeigen               | `true`                           |
 
 **Schritt 3.** Tippen Sie auf **Token-Karte vorschau**, um eine Live-Vorschau-PDF mit den aktuellen Einstellungen für einen Beispiel-Teilnehmer zu sehen.
 
 **Schritt 4.** Tippen Sie auf **Einstellungen speichern**. Alle danach erstellten Teilnehmer erhalten Token-Karten im neuen Format.
 
-| Screenshot | Beschriftungen |
-|---|---|
+| Screenshot                                                                            | Beschriftungen                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Token-Karten-Einstellungen](../assets/screenshots/admin/08-token-card-settings.png) | **(1)** Logo-URL-Eingabe mit Inline-Bildvorschau. **(2)** Primärfarbe-Farbauswahl. **(3)** QR-Code-Größen-Schieberegler. **(4)** Fußzeilen-Text-Eingabe. **(5)** Klartext-Zugangsdaten anzeigen-Toggle. **(6)** Token-Karte vorschau-Button — öffnet die PDF-Vorschau in einem neuen Tab. **(7)** Einstellungen speichern-Button. |
 
-*Abbildung 8: Token-Karten-Format-Einstellungen.*
+_Abbildung 8: Token-Karten-Format-Einstellungen._
 
 ---
 
@@ -441,10 +445,10 @@ Die App unterstützt Englisch, Deutsch, Französisch, Japanisch und Niederländi
 
 **Schritt 4.** Die App-Oberfläche und alle Gewohnheits-Übersetzungen wechseln zur ausgewählten Sprache, ohne dass ein Neustart erforderlich ist.
 
-| Einstellung | Beschreibung |
-|---|---|
-| English | Alle Texte und Gewohnheits-Anzeigetexte auf Englisch. Gespendete Gewohnheiten werden mit englischer Übersetzung (`translationEN`) angezeigt, falls vorhanden, sonst Originaltext. |
-| Deutsch | Alle Texte und Gewohnheits-Anzeigetexte auf Deutsch. Gespendete Gewohnheiten werden mit deutscher Übersetzung (`translationDE`) angezeigt, falls vorhanden, sonst Originaltext. |
+| Einstellung | Beschreibung                                                                                                                                                                      |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| English     | Alle Texte und Gewohnheits-Anzeigetexte auf Englisch. Gespendete Gewohnheiten werden mit englischer Übersetzung (`translationEN`) angezeigt, falls vorhanden, sonst Originaltext. |
+| Deutsch     | Alle Texte und Gewohnheits-Anzeigetexte auf Deutsch. Gespendete Gewohnheiten werden mit deutscher Übersetzung (`translationDE`) angezeigt, falls vorhanden, sonst Originaltext.   |
 
 > **Hinweis für Admins:** Die Sprachpräferenz eines Teilnehmers kann nicht aus dem Admin-Panel heraus gesetzt werden. Sprache ist eine persönliche Einstellung, die jeder Teilnehmer in seinem eigenen Einstellungsbildschirm konfiguriert. Falls ein Teilnehmer meldet, dass Inhalte in der falschen Sprache angezeigt werden, bitten Sie ihn, die Einstellungen zu öffnen und die bevorzugte Sprache erneut auszuwählen.
 
@@ -466,15 +470,15 @@ Die Liste zeigt für jeden Cue den Text, ein Qualitäts-Badge (hoch / niedrig), 
 
 **Schritt 2.** Füllen Sie das Formular aus:
 
-| Feld | Gültige Werte |
-|---|---|
-| Text | Freitext — der Cue-Satz |
-| Qualität | `low` oder `high` |
-| Domäne | z. B. `health`, `fitness`, `nutrition` |
-| Sprache | z. B. `en`, `de` |
-| Stabilität | Ganzzahl 1–5 |
-| Auffälligkeit | Ganzzahl 1–5 |
-| Spezifität | Ganzzahl 1–5 |
+| Feld          | Gültige Werte                          |
+| ------------- | -------------------------------------- |
+| Text          | Freitext — der Cue-Satz                |
+| Qualität      | `low` oder `high`                      |
+| Domäne        | z. B. `health`, `fitness`, `nutrition` |
+| Sprache       | z. B. `en`, `de`                       |
+| Stabilität    | Ganzzahl 1–5                           |
+| Auffälligkeit | Ganzzahl 1–5                           |
+| Spezifität    | Ganzzahl 1–5                           |
 
 **Schritt 3.** Tippen Sie auf **Erstellen**. Der Cue erscheint sofort in der Liste.
 
@@ -500,7 +504,7 @@ Tippen Sie in einer Cue-Zeile auf das **Löschen**-Symbol (Papierkorb) und best�
 
 ## 11. Studienbedingungen konfigurieren (Cue-Konfiguration)
 
-> **Empfehlungssystem-Schalter (auf Studienebene).** Der Tab **Details** der Studie enthält die Checkbox *„Empfehlungssystem für diese Studie aktivieren"*. Ist sie deaktiviert, sehen die in dieser Studie eingeschriebenen Teilnehmenden den Empfehlungsbildschirm (den Tab „Empfehlungen") in der App nicht mehr. Die Einstellung gilt für die gesamte Studie (alle Gruppen) und ist standardmäßig aktiviert; die Änderung wird wirksam, sobald die App der teilnehmenden Person das nächste Mal ihre Konfiguration aktualisiert.
+> **Empfehlungssystem-Schalter (auf Studienebene).** Der Tab **Details** der Studie enthält die Checkbox _„Empfehlungssystem für diese Studie aktivieren"_. Ist sie deaktiviert, sehen die in dieser Studie eingeschriebenen Teilnehmenden den Empfehlungsbildschirm (den Tab „Empfehlungen") in der App nicht mehr. Die Einstellung gilt für die gesamte Studie (alle Gruppen) und ist standardmäßig aktiviert; die Änderung wird wirksam, sobald die App der teilnehmenden Person das nächste Mal ihre Konfiguration aktualisiert.
 
 Jede Studiengruppe kann eigene Einstellungen zur Cue-Zustellung haben. Diese werden im Tab **Cue-Konfiguration** innerhalb des Bearbeitungsdialogs einer Studie verwaltet.
 
@@ -510,12 +514,12 @@ Jede Studiengruppe kann eigene Einstellungen zur Cue-Zustellung haben. Diese wer
 
 **Schritt 3.** Konfigurieren Sie für jede aufgeführte Gruppe die folgenden Einstellungen:
 
-| Einstellung | Optionen | Beschreibung |
-|---|---|---|
-| Cue-Anzahl | Einzeln / Multi | Ob Teilnehmende pro Sitzung einen oder mehrere Cues sehen |
-| Cue-Quelle | `low_quality` / `high_quality` / `self_selected` | Pool, aus dem die Cues stammen |
-| Erlaubte Verhaltensweisen | Checkliste | Verhaltenstypen, die Teilnehmende für diese Gruppe protokollieren dürfen |
-| Max. Gewohnheiten | 1 / Unbegrenzt | `1` beschränkt Teilnehmende auf die Studienbedingungen; Unbegrenzt entspricht dem öffentlichen App-Erlebnis |
+| Einstellung               | Optionen                                         | Beschreibung                                                                                                |
+| ------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Cue-Anzahl                | Einzeln / Multi                                  | Ob Teilnehmende pro Sitzung einen oder mehrere Cues sehen                                                   |
+| Cue-Quelle                | `low_quality` / `high_quality` / `self_selected` | Pool, aus dem die Cues stammen                                                                              |
+| Erlaubte Verhaltensweisen | Checkliste                                       | Verhaltenstypen, die Teilnehmende für diese Gruppe protokollieren dürfen                                    |
+| Max. Gewohnheiten         | 1 / Unbegrenzt                                   | `1` beschränkt Teilnehmende auf die Studienbedingungen; Unbegrenzt entspricht dem öffentlichen App-Erlebnis |
 
 **Schritt 4.** Tippen Sie für jede Gruppe einzeln auf den **Speichern**-Button. Die Einstellungen anderer Gruppen bleiben davon unberührt.
 
@@ -531,22 +535,22 @@ Die eigenständige **Analytik**-Seite (`/analytics`) ist das primäre Dashboard 
 
 ### KPI-Kacheln
 
-| Kachel | Was sie zeigt |
-|---|---|
-| Eingeschrieben insgesamt | Alle Teilnehmenden, die aktuell in der Studie aktiv sind |
-| Aktiv (letzte 7 Tage) | Prozentsatz, der in der vergangenen Woche mindestens ein Verhalten protokolliert hat (gelb ab 10 % Inaktivität, rot ab 20 %) |
-| Anzahl / Rate der Studienabbrüche | Kumulierte Abbruchzahlen; die Rate ist farbcodiert |
-| Ø SRHI (letzte Woche) | Durchschnittlicher Selbstbericht-Score zur Gewohnheitsstärke über alle Gruppen zum jüngsten wöchentlichen Messzeitpunkt |
-| Fragebogen-Rücklaufquote | Durchschnittliche Rücklaufquote über alle zugewiesenen Fragebögen |
+| Kachel                            | Was sie zeigt                                                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Eingeschrieben insgesamt          | Alle Teilnehmenden, die aktuell in der Studie aktiv sind                                                                     |
+| Aktiv (letzte 7 Tage)             | Prozentsatz, der in der vergangenen Woche mindestens ein Verhalten protokolliert hat (gelb ab 10 % Inaktivität, rot ab 20 %) |
+| Anzahl / Rate der Studienabbrüche | Kumulierte Abbruchzahlen; die Rate ist farbcodiert                                                                           |
+| Ø SRHI (letzte Woche)             | Durchschnittlicher Selbstbericht-Score zur Gewohnheitsstärke über alle Gruppen zum jüngsten wöchentlichen Messzeitpunkt      |
+| Fragebogen-Rücklaufquote          | Durchschnittliche Rücklaufquote über alle zugewiesenen Fragebögen                                                            |
 
 ### Diagramme
 
-| Diagramm | Was es zeigt |
-|---|---|
-| Wöchentliche Aktivrate | Balkendiagramm — Prozentsatz der eingeschriebenen Teilnehmenden pro Gruppe, die in den letzten 7 Tagen aktiv waren |
-| SRHI-Verlauf | Liniendiagramm — mittlerer SRHI-Score pro Gruppe und Woche; gestrichelte Referenzlinie bei Score 4 (Gewohnheitsschwelle) |
-| Kumulierte Studienabbrüche | Stufendiagramm — laufende Abbruchzahl pro Gruppe im Zeitverlauf |
-| Fragebogen-Rücklaufquote | Horizontales Balkendiagramm — Rücklaufquote pro Fragebogen |
+| Diagramm                   | Was es zeigt                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Wöchentliche Aktivrate     | Balkendiagramm — Prozentsatz der eingeschriebenen Teilnehmenden pro Gruppe, die in den letzten 7 Tagen aktiv waren       |
+| SRHI-Verlauf               | Liniendiagramm — mittlerer SRHI-Score pro Gruppe und Woche; gestrichelte Referenzlinie bei Score 4 (Gewohnheitsschwelle) |
+| Kumulierte Studienabbrüche | Stufendiagramm — laufende Abbruchzahl pro Gruppe im Zeitverlauf                                                          |
+| Fragebogen-Rücklaufquote   | Horizontales Balkendiagramm — Rücklaufquote pro Fragebogen                                                               |
 
 ### Teilnehmertabelle und Detail-Panel
 
@@ -566,13 +570,14 @@ Push-Benachrichtigungen können über den Tab **Benachrichtigungen** im Bearbeit
 
 **Schritt 3.** Wählen Sie die Zielgruppe:
 
-| Zieloption | Wer sie erhält |
-|---|---|
-| Alle Teilnehmenden | Jede Person, die aktuell in der Studie eingeschrieben ist |
-| Bestimmte Gruppe | Nur Teilnehmende der ausgewählten Gruppe (z. B. G1) |
+| Zieloption                          | Wer sie erhält                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Alle Teilnehmenden                  | Jede Person, die aktuell in der Studie eingeschrieben ist                                         |
+| Bestimmte Gruppe                    | Nur Teilnehmende der ausgewählten Gruppe (z. B. G1)                                               |
 | Alle in der Studie Eingeschriebenen | Synonym zu „Alle Teilnehmenden" — zur Klarheit bei Konfigurationen mit mehreren Studien enthalten |
 
 **Schritt 4.** Wählen Sie den Sendezeitpunkt:
+
 - **Sofort senden** — wählen Sie bei **Sendezeitpunkt** die Option **Jetzt** und tippen Sie auf **Senden**; der Versand beginnt innerhalb weniger Sekunden.
 - **Planen** — aktivieren Sie die Datums-/Uhrzeitauswahl, indem Sie die Option **Planen** wählen, legen Sie das gewünschte Datum und die Uhrzeit fest und tippen Sie dann auf **Senden**.
 
@@ -590,10 +595,10 @@ Die Seite **App-Einstellungen** (Bereich „Öffentliche App" in der Seitenleist
 
 **Schritt 2.** Aktivieren oder deaktivieren Sie im Abschnitt **Funktionen** die folgenden Optionen:
 
-| Einstellung | Beschreibung |
-|---|---|
-| Geführter Assistent für Vorsatzbildung | Wenn aktiviert, werden öffentliche Nutzer durch einen schrittweisen Assistenten geführt (Gewohnheit → Auslöser → KI-Verknüpfung → Bestätigung → Erinnerung). Gewohnheit und Auslöser sind für öffentliche Nutzer immer Freitext; das Deaktivieren überspringt nur den KI-Verknüpfungsschritt. |
-| Community-Teilen-Option standardmäßig angezeigt | Wenn aktiviert, erscheint der Community-Teilen-Schalter am Ende der Gewohnheitserstellung und ist bereits vorausgewählt. |
+| Einstellung                                     | Beschreibung                                                                                                                                                                                                                                                                                  |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Geführter Assistent für Vorsatzbildung          | Wenn aktiviert, werden öffentliche Nutzer durch einen schrittweisen Assistenten geführt (Gewohnheit → Auslöser → KI-Verknüpfung → Bestätigung → Erinnerung). Gewohnheit und Auslöser sind für öffentliche Nutzer immer Freitext; das Deaktivieren überspringt nur den KI-Verknüpfungsschritt. |
+| Community-Teilen-Option standardmäßig angezeigt | Wenn aktiviert, erscheint der Community-Teilen-Schalter am Ende der Gewohnheitserstellung und ist bereits vorausgewählt.                                                                                                                                                                      |
 
 Tippen Sie auf **Änderungen speichern**, um die Einstellungen zu übernehmen.
 
@@ -611,11 +616,11 @@ Tippen Sie auf **Änderungen speichern**, um die Einstellungen zu übernehmen. �
 
 Die Seite zeigt:
 
-| Bereich | Inhalt |
-|---|---|
-| Letztes Backup | Datum, Alter, Größe, Auslöser, Status pro Komponente (Mongo / LightRAG / Neo4j / Keycloak) sowie einen **Herunterladen**-Button |
-| Alle Backups | Jedes Backup, das sich noch innerhalb des Aufbewahrungsfensters befindet, einschließlich selbst hochgeladener Backups, jeweils mit eigenem **Herunterladen**-Button |
-| Letzte Aktivitäten | Wer was ausgelöst, wiederhergestellt, hochgeladen oder heruntergeladen hat und ob es erfolgreich war |
+| Bereich            | Inhalt                                                                                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Letztes Backup     | Datum, Alter, Größe, Auslöser, Status pro Komponente (Mongo / LightRAG / Neo4j / Keycloak) sowie einen **Herunterladen**-Button                                     |
+| Alle Backups       | Jedes Backup, das sich noch innerhalb des Aufbewahrungsfensters befindet, einschließlich selbst hochgeladener Backups, jeweils mit eigenem **Herunterladen**-Button |
+| Letzte Aktivitäten | Wer was ausgelöst, wiederhergestellt, hochgeladen oder heruntergeladen hat und ob es erfolgreich war                                                                |
 
 > **Aufbewahrung.** Automatische (geplante) Backups, die älter als das Aufbewahrungsfenster sind, werden automatisch gelöscht, und — unabhängig davon — werden stets nur die 10 neuesten geplanten Backups aufbewahrt, unabhängig von ihrem Alter, damit die Liste nicht unbegrenzt wächst. Manuelle und hochgeladene Backups unterliegen dieser Anzahlbegrenzung nicht.
 
@@ -645,7 +650,7 @@ Sie können ein `.tar.gz`-Backup-Archiv hochladen — zum Beispiel eines, das au
 
 **Schritt 1.** Suchen Sie das Backup in der Liste und tippen Sie auf **Wiederherstellen**.
 
-**Schritt 2.** Zunächst wird immer automatisch ein Sicherheits-Backup des *aktuellen* Zustands erstellt — die Wiederherstellung wird nur fortgesetzt, wenn dieses Sicherheits-Backup erfolgreich ist, sodass eine missglückte Wiederherstellung stets rückgängig gemacht werden kann. Dies verlängert die Zeit, bevor die eigentliche Wiederherstellung beginnt.
+**Schritt 2.** Zunächst wird immer automatisch ein Sicherheits-Backup des _aktuellen_ Zustands erstellt — die Wiederherstellung wird nur fortgesetzt, wenn dieses Sicherheits-Backup erfolgreich ist, sodass eine missglückte Wiederherstellung stets rückgängig gemacht werden kann. Dies verlängert die Zeit, bevor die eigentliche Wiederherstellung beginnt.
 
 **Schritt 3.** Wenn das Backup, das Sie wiederherstellen, eine bekannt fehlgeschlagene Komponente enthält (z. B. ist Neo4j bei der ursprünglichen Erstellung fehlgeschlagen), zeigt der Dialog eine Warnung an, und Sie müssen explizit **Trotzdem wiederherstellen** aktivieren, um fortzufahren.
 
@@ -687,4 +692,4 @@ Die Seite zeigt jeden `POST /restore`-Aufruf, neueste zuerst, mit Ergebnis (`suc
 
 ---
 
-*Health Habit Hub — Admin-Handbuch v1.2 · TU Dresden · 2026*
+_Health Habit Hub — Admin-Handbuch v1.2 · TU Dresden · 2026_

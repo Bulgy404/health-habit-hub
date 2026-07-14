@@ -12,11 +12,11 @@ name: Mobile Release
 on:
   push:
     tags:
-      - "mobile-v*"
+      - 'mobile-v*'
   workflow_dispatch:
     inputs:
       lane:
-        description: "Fastlane lane to run"
+        description: 'Fastlane lane to run'
         type: choice
         options:
           - beta
@@ -57,7 +57,7 @@ jobs:
 
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.3"
+          ruby-version: '3.3'
           bundler-cache: true
           working-directory: mobile
 

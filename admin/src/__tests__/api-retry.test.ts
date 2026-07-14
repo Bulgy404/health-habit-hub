@@ -52,9 +52,7 @@ describe("apiFetch 401 refresh-and-retry", () => {
   });
 
   it("does not retry when the refreshed token is unchanged (genuine 403-style 401)", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValueOnce(response(401, { error: "Forbidden" }));
+    const fetchMock = jest.fn().mockResolvedValueOnce(response(401, { error: "Forbidden" }));
     global.fetch = fetchMock as unknown as typeof fetch;
     mockGetSession.mockResolvedValue({ accessToken: "same-token" });
 
@@ -63,9 +61,7 @@ describe("apiFetch 401 refresh-and-retry", () => {
   });
 
   it("does not retry when the session refresh fails (refresh token expired)", async () => {
-    const fetchMock = jest
-      .fn()
-      .mockResolvedValueOnce(response(401, { error: "Unauthorized" }));
+    const fetchMock = jest.fn().mockResolvedValueOnce(response(401, { error: "Unauthorized" }));
     global.fetch = fetchMock as unknown as typeof fetch;
     mockGetSession.mockResolvedValue({ error: "RefreshAccessTokenError" });
 
@@ -81,9 +77,7 @@ describe("apiFetch 401 refresh-and-retry", () => {
     global.fetch = fetchMock as unknown as typeof fetch;
     mockGetSession.mockResolvedValue({ accessToken: "fresh-token" });
 
-    await expect(apiFetch("http://api/x", "stale-token")).rejects.toThrow(
-      "Still unauthorized",
-    );
+    await expect(apiFetch("http://api/x", "stale-token")).rejects.toThrow("Still unauthorized");
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(mockGetSession).toHaveBeenCalledTimes(1);
   });
@@ -108,7 +102,9 @@ describe("apiFetch 401 refresh-and-retry", () => {
     const fetchMock = jest.fn().mockImplementation((_url: string, opts: RequestInit) => {
       const auth = (opts.headers as Record<string, string>).Authorization;
       return Promise.resolve(
-        auth === "Bearer fresh-token" ? response(200, { ok: true }) : response(401, { error: "Unauthorized" }),
+        auth === "Bearer fresh-token"
+          ? response(200, { ok: true })
+          : response(401, { error: "Unauthorized" })
       );
     });
     global.fetch = fetchMock as unknown as typeof fetch;

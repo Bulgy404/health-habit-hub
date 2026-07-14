@@ -11,11 +11,7 @@ interface RestoreAttempt {
   ip: string;
   usernameAttempted: string | null;
   outcome:
-    | "success"
-    | "invalid_phrase"
-    | "invalid_credentials"
-    | "rate_limited"
-    | "keycloak_unreachable";
+    "success" | "invalid_phrase" | "invalid_credentials" | "rate_limited" | "keycloak_unreachable";
   createdAt: string;
 }
 
@@ -83,10 +79,7 @@ export default function RestoreAttemptsPage() {
         limit: String(PAGE_SIZE),
       });
       if (outcome) params.set("outcome", outcome);
-      const data = await apiFetch(
-        apiUrl(`/admin/restore-attempts?${params.toString()}`),
-        token
-      );
+      const data = await apiFetch(apiUrl(`/admin/restore-attempts?${params.toString()}`), token);
       if (requestId !== loadRequestRef.current) return;
       setEntries((data?.entries ?? []) as RestoreAttempt[]);
       setTotal(Number(data?.total ?? 0));
@@ -207,9 +200,7 @@ export default function RestoreAttemptsPage() {
                   </td>
                   <td>
                     {e.usernameAttempted ? (
-                      <span className={styles.code}>
-                        {e.usernameAttempted}
-                      </span>
+                      <span className={styles.code}>{e.usernameAttempted}</span>
                     ) : (
                       "—"
                     )}
@@ -242,9 +233,7 @@ export default function RestoreAttemptsPage() {
           </table>
 
           <div className={styles.pagination}>
-            <span className={styles.muted}>
-              {t("totalPageInfo", { total, page, totalPages })}
-            </span>
+            <span className={styles.muted}>{t("totalPageInfo", { total, page, totalPages })}</span>
             <button
               className={styles.pageBtn}
               onClick={() => setPage((p) => Math.max(1, p - 1))}

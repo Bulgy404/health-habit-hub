@@ -28,7 +28,7 @@ Welcome to Health Habit Hub. This guide walks you through everything you need to
 
 ## 2. Donating a Habit
 
-Donating a habit means sharing one of your everyday routines with the research project — for example: *"I drink a glass of water right after I wake up every morning."* All donations are anonymous.
+Donating a habit means sharing one of your everyday routines with the research project — for example: _"I drink a glass of water right after I wake up every morning."_ All donations are anonymous.
 
 **Step 1.** Tap the **Donate** tab at the bottom of the screen.
 
@@ -61,12 +61,12 @@ Tap the **Settings** icon (usually in the top corner of the screen) to access th
 
 ## 5. If Something Goes Wrong
 
-| Problem | What to do |
-|---|---|
-| Cannot scan the QR code | Enter the username and password from your token card manually |
-| App says "Invalid credentials" | Double-check you typed the username and password exactly as printed (they are case-sensitive) |
-| App will not connect | Check your Wi-Fi or mobile data connection and try again |
-| Not sure which account is yours | Ask your study coordinator — they can look it up for you |
+| Problem                         | What to do                                                                                    |
+| ------------------------------- | --------------------------------------------------------------------------------------------- |
+| Cannot scan the QR code         | Enter the username and password from your token card manually                                 |
+| App says "Invalid credentials"  | Double-check you typed the username and password exactly as printed (they are case-sensitive) |
+| App will not connect            | Check your Wi-Fi or mobile data connection and try again                                      |
+| Not sure which account is yours | Ask your study coordinator — they can look it up for you                                      |
 
 ---
 

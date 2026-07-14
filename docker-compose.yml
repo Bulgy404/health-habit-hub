@@ -18,8 +18,8 @@ services:
       - --certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json
     restart: always
     ports:
-      - "${TRAEFIK_HTTP_PORT:-80}:80"
-      - "${TRAEFIK_HTTPS_PORT:-443}:443"
+      - '${TRAEFIK_HTTP_PORT:-80}:80'
+      - '${TRAEFIK_HTTPS_PORT:-443}:443'
     networks:
       - hhh-proxy
     volumes:
@@ -36,8 +36,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   app:
     image: hhh/app
@@ -74,7 +74,7 @@ services:
       backup:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/v1/health']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -89,8 +89,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   mongo:
     image: mongo:7.0
@@ -107,7 +107,7 @@ services:
       - mongo-data:/data/db
       - mongo-config:/data/configdb
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand({ping:1})"]
+      test: ['CMD', 'mongosh', '--eval', 'db.runCommand({ping:1})']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -115,8 +115,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   mongo-express:
     image: mongo-express:1.0
@@ -136,9 +136,9 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "node",
-          "-e",
+          'CMD',
+          'node',
+          '-e',
           "require('http').get('http://localhost:8081/mongo/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))",
         ]
       interval: 30s
@@ -160,14 +160,14 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   translate:
     image: libretranslate/libretranslate:v1.9.5
     container_name: hhh-translate
     restart: always
-    user: "1032:1032"
+    user: '1032:1032'
     env_file: .env
     environment:
       - LT_LOAD_ONLY=${LT_LOAD_ONLY:-de,en,ja,fr,nl}
@@ -181,9 +181,9 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "python3",
-          "-c",
+          'CMD',
+          'python3',
+          '-c',
           "import urllib.request; urllib.request.urlopen('http://localhost:5000/languages', timeout=5)",
         ]
       interval: 30s
@@ -202,8 +202,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   neo4j:
     image: neo4j:5
@@ -224,7 +224,7 @@ services:
       - neo4j-logs:/logs
       - ./neo4j/import:/import:ro
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7474"]
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:7474']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -232,8 +232,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   keycloak-db:
     image: postgres:16-alpine
@@ -248,7 +248,7 @@ services:
     volumes:
       - keycloak-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USERNAME} -d keycloak"]
+      test: ['CMD-SHELL', 'pg_isready -U ${KC_DB_USERNAME} -d keycloak']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -256,8 +256,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.5.5
@@ -283,7 +283,7 @@ services:
       keycloak-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/health/ready']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -298,13 +298,13 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   keycloak-init:
     image: quay.io/keycloak/keycloak:26.5.5
     container_name: hhh-keycloak-init
-    restart: "no"
+    restart: 'no'
     env_file: .env
     volumes:
       - ./keycloak/hhh-user-profile.json:/opt/keycloak/bootstrap/hhh-user-profile.json:ro
@@ -313,7 +313,7 @@ services:
     depends_on:
       keycloak:
         condition: service_healthy
-    entrypoint: ["/bin/sh", "-lc"]
+    entrypoint: ['/bin/sh', '-lc']
     command: >
       'until /opt/keycloak/bin/kcadm.sh config credentials
       --server http://keycloak:8080/auth
@@ -353,8 +353,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   redis:
     image: redis:7-alpine
@@ -369,7 +369,11 @@ services:
       # Password is interpolated by docker-compose at parse time, same as
       # in `command:` above — visible via `docker inspect`, no worse than
       # the existing exposure there.
-      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} --no-auth-warning ping | grep -q PONG"]
+      test:
+        [
+          'CMD-SHELL',
+          'redis-cli -a ${REDIS_PASSWORD} --no-auth-warning ping | grep -q PONG',
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -377,8 +381,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   lightrag:
     image: hhh/lightrag
@@ -400,12 +404,12 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "curl",
-          "-sf",
-          "-H",
-          "X-API-Key: ${LIGHTRAG_API_KEY}",
-          "http://localhost:9621/documents",
+          'CMD',
+          'curl',
+          '-sf',
+          '-H',
+          'X-API-Key: ${LIGHTRAG_API_KEY}',
+          'http://localhost:9621/documents',
         ]
       interval: 30s
       timeout: 10s
@@ -414,8 +418,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   knowledge-mcp:
     image: hhh/knowledge-mcp
@@ -432,7 +436,13 @@ services:
     healthcheck:
       # FastMCP serves SSE, not a plain REST endpoint — a TCP-connect check
       # is a safer liveness probe than GETing the SSE stream path.
-      test: ["CMD", "python3", "-c", "import socket; socket.create_connection(('localhost', 8002), timeout=5)"]
+      test:
+        [
+          'CMD',
+          'python3',
+          '-c',
+          "import socket; socket.create_connection(('localhost', 8002), timeout=5)",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -440,8 +450,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   recommender:
     image: hhh/recommender
@@ -472,9 +482,9 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "python3",
-          "-c",
+          'CMD',
+          'python3',
+          '-c',
           "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)",
         ]
       interval: 30s
@@ -484,8 +494,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   admin:
     image: hhh/admin
@@ -529,9 +539,9 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "node",
-          "-e",
+          'CMD',
+          'node',
+          '-e',
           "require('http').get('http://localhost:3001/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))",
         ]
       interval: 30s
@@ -548,8 +558,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   # Internal-only reachability prober for services with no native Prometheus
   # metrics — no host mounts, no elevated privileges (unlike e.g. cAdvisor),
@@ -567,7 +577,15 @@ services:
     command:
       - --config.file=/etc/blackbox_exporter/config.yml
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9115/-/healthy"]
+      test:
+        [
+          'CMD',
+          'wget',
+          '--no-verbose',
+          '--tries=1',
+          '--spider',
+          'http://localhost:9115/-/healthy',
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -575,8 +593,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   prometheus:
     image: prom/prometheus:v3.4.1
@@ -591,7 +609,15 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=30d
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      test:
+        [
+          'CMD',
+          'wget',
+          '--no-verbose',
+          '--tries=1',
+          '--spider',
+          'http://localhost:9090/-/healthy',
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -599,8 +625,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   grafana:
     image: grafana/grafana-oss:12.0.1
@@ -657,7 +683,15 @@ services:
     healthcheck:
       # GF_SERVER_SERVE_FROM_SUB_PATH=true means the API is mounted under
       # /grafana internally too, not just at the public router path.
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/grafana/api/health"]
+      test:
+        [
+          'CMD',
+          'wget',
+          '--no-verbose',
+          '--tries=1',
+          '--spider',
+          'http://localhost:3000/grafana/api/health',
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -672,8 +706,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   backup:
     image: hhh/backup
@@ -738,7 +772,7 @@ services:
     # minutes on every restart of this container.
     command: /bin/bash -c "node /backup-api/server.js & echo 'Waiting 2 minutes for services to stabilize...'; sleep 120; while true; do BACKUP_TRIGGER=scheduled /backup.sh; sleep 86400; done"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4100/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:4100/health']
       interval: 30s
       timeout: 10s
       retries: 5
@@ -746,8 +780,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
   # Scoped proxy in front of the real docker.sock — only the backup
   # container can reach it (hhh-backup-internal is not joined by anything
@@ -797,8 +831,8 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
 
 networks:
   hhh-proxy:

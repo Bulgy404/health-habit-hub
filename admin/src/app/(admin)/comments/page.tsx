@@ -90,10 +90,7 @@ export default function CommentsPage() {
     const requestId = ++loadRequestRef.current;
     setLoading(true);
     try {
-      const data = await apiFetch(
-        apiUrl(`/admin/comments?page=${page}&limit=${PAGE_SIZE}`),
-        token
-      );
+      const data = await apiFetch(apiUrl(`/admin/comments?page=${page}&limit=${PAGE_SIZE}`), token);
       if (requestId !== loadRequestRef.current) return;
       const list = (data?.comments ?? []) as unknown[];
       setComments(list.map(normalise));

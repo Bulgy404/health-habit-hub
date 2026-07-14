@@ -96,25 +96,25 @@ graph TD
 
 ## Per-Service Reference Table
 
-| Service | Technology | Purpose | Internal Port | External URL (dev) | Key Env Vars |
-|---|---|---|---|---|---|
-| **proxy** | Traefik v3.0 | Reverse proxy, TLS termination, routing | 8080 (dashboard) | `proxy.localhost:8888` | `TRAEFIK_HOST_PORT80`, `TRAEFIK_HOST_PORT8080`, `PATH_SUFFIX`, `ACME_EMAIL` (prod) |
-| **app** | Node.js 22 + Express | REST API `/api/v1/*` | 3000 | `app.localhost:3000` | `MONGO_HOST`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_DB`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `KEYCLOAK_JWKS_URL`, `API_SERVICE_URL`, `LIBRE_TRANSLATE_URL`, `ALLOWED_ORIGINS` |
-| **api-service** | Python 3.11 + FastAPI | LLM inference (context classification, BCIO mapping, translation refinement, RAG recommendations); KB CRUD proxied to LightRAG. `llm_client.py`'s circuit breaker (`_mark_down`/`_in_cooldown`) sends an `ALERT_EMAIL` alert via `alerting.py` when the primary model — or both primary and `LLM_FALLBACK_MODEL` — become unavailable | 8000 | `localhost:8001` | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `REDIS_URL`, `LIGHTRAG_URL`, `LIGHTRAG_API_KEY`, `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`, `ALERT_EMAIL` |
-| **lightrag** | LightRAG 1.5.0 (Python) | Graph+vector knowledge base; builds entity graph from uploaded documents; exposes REST query API and built-in graph visualization UI | 9621 | `localhost:9622` | `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_API_BASE`, `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `LIGHTRAG_API_KEY` |
-| **knowledge-mcp** | FastMCP (Python) | MCP server wrapping LightRAG; exposes `search_knowledge` and `ingest_document` tools for AI agent use via SSE transport | 8002 | `localhost:8002` | `LIGHTRAG_URL`, `LIGHTRAG_API_KEY` |
-| **keycloak** | Keycloak 26.5.5 | OIDC/OAuth2 identity provider; manages realms, users, roles | 8080 | `localhost:8080` (local only — prod has no published port, routed at `/auth` via Traefik) | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KC_DB`, `KC_HTTP_RELATIVE_PATH` (prod) |
-| **admin** | Next.js 15 (App Router), React 18, MUI (Material UI) v7 + Emotion, CSS Modules, Recharts | Researcher/admin web panel: study management, merged Analytics/Insights dashboard with tab navigation (Recharts, study filter, KPI cards, SRHI/active-rate/dropout/questionnaire charts, participant table), questionnaire management, cue pools, knowledge base, notification campaigns, backups (progress bar + download), System health / Tools pages, settings | 3001 | `admin.localhost:3001` | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER`, `NEXT_PUBLIC_GRAFANA_URL` |
-| **neo4j** | Neo4j 5 | Graph database; stores habit graph with BCIO alignment | 7474 (HTTP), 7687 (Bolt) | `neo4j.localhost:7474` (local only — **internal-only in prod, no published port**; use `docker exec -it hhh-neo4j cypher-shell`, see [`DEPLOYMENT.md`](../DEPLOYMENT.md)) | `NEO4J_AUTH` (`user/password`) |
-| **mongo** | MongoDB (latest) | Document store; holds questionnaires, form responses, recommendations, user preferences | 27017 | Internal only | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`, `MONGO_INITDB_DATABASE` |
-| **mongo-express** | Mongo Express | MongoDB admin web UI (production only — not in docker-compose.local.yml) | 8081 | `https://<DOMAIN>/mongo` (prod only) | `ME_CONFIG_MONGODB_URL`, `ME_CONFIG_BASICAUTH_USERNAME`, `ME_CONFIG_BASICAUTH_PASSWORD` |
-| **translate** | LibreTranslate | Self-hosted machine translation API (en/de/ja/fr/nl) | 5000 | `http://translate.localhost` (via Traefik) or `localhost:5001` (direct) | `LT_LOAD_ONLY`, `LT_REQ_LIMIT` |
-| **redis** | Redis | Notification-dedup locks and recommendation response cache; not backed up (short-lived, repopulates automatically) | 6379 | Internal only | — |
-| **prometheus** | Prometheus v3.4.1 | Scrapes `app:9091/metrics` (app HTTP/BullMQ metrics) and `blackbox-exporter:9115/probe` (reachability probes), 30-day retention | 9090 | `prometheus.localhost` (local); internal-only in prod (no published/routed port) | — |
-| **blackbox-exporter** | prom/blackbox-exporter v0.25.0 | TCP-connect/HTTP-GET reachability probes against every long-running service without its own Prometheus metrics (mongo, redis, neo4j, keycloak, translate, lightrag, knowledge-mcp, recommender, prometheus, grafana, backup, proxy); no host mounts/elevated privileges | 9115 (internal only) | Internal only | — |
-| **grafana** | Grafana OSS 12.0.1 | Dashboards over Prometheus data; Keycloak SSO (OIDC), realm role → Grafana role mapping; unified alerting (BullMQ failures, service reachability, 5xx spikes) emails `ALERT_EMAIL` via SMTP | 3000 | `grafana.localhost` (local); `https://<DOMAIN>/grafana` (prod, via Traefik) | `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_CLIENT_SECRET`, `NEXT_PUBLIC_GRAFANA_URL` (admin-panel link), `GF_SMTP_*`/`HHH_ALERT_EMAIL` (from `SMTP_*`/`ALERT_EMAIL`) |
-| **backup** | Custom Alpine + sleep-loop | Backs up MongoDB, LightRAG, Neo4j, Keycloak. Starts 2 min after container boot, then repeats every 24h (not a real cron — drifts on container restart). Time-based retention plus a hard cap on scheduled-trigger backups; also runs the internal `backup-api` HTTP server (status/trigger/restore/upload/download) the admin panel's Backups page talks to; success/failure alerts sent directly via SMTP (`lib.sh`'s `send_smtp_mail()`), independent of Grafana | — (backup-api on 4100, internal only) | Internal only | `BACKUP_RETENTION_DAYS` (default 14), `BACKUP_SCHEDULED_LIMIT` (default 10, caps scheduled backups regardless of age), `ALERT_WEBHOOK_URL`, `ALERT_EMAIL`, `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`, `MONGO_USER`, `MONGO_PASSWORD` |
-| **docker-socket-proxy** | tecnativa/docker-socket-proxy | Scoped Docker API in front of the real `docker.sock`, reachable only by `backup` over the internal `hhh-backup-internal` network; exposes only the container/volume/image calls `backup.sh`/`restore.sh` need (no EXEC, NETWORKS, SECRETS, etc.) instead of a raw socket mount | 2375 (internal only) | Internal only | — |
+| Service                 | Technology                                                                               | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Internal Port                         | External URL (dev)                                                                                                                                                        | Key Env Vars                                                                                                                                                                                                                               |
+| ----------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **proxy**               | Traefik v3.0                                                                             | Reverse proxy, TLS termination, routing                                                                                                                                                                                                                                                                                                                                                                                                                            | 8080 (dashboard)                      | `proxy.localhost:8888`                                                                                                                                                    | `TRAEFIK_HOST_PORT80`, `TRAEFIK_HOST_PORT8080`, `PATH_SUFFIX`, `ACME_EMAIL` (prod)                                                                                                                                                         |
+| **app**                 | Node.js 22 + Express                                                                     | REST API `/api/v1/*`                                                                                                                                                                                                                                                                                                                                                                                                                                               | 3000                                  | `app.localhost:3000`                                                                                                                                                      | `MONGO_HOST`, `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_DB`, `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `KEYCLOAK_JWKS_URL`, `API_SERVICE_URL`, `LIBRE_TRANSLATE_URL`, `ALLOWED_ORIGINS`                                                    |
+| **api-service**         | Python 3.11 + FastAPI                                                                    | LLM inference (context classification, BCIO mapping, translation refinement, RAG recommendations); KB CRUD proxied to LightRAG. `llm_client.py`'s circuit breaker (`_mark_down`/`_in_cooldown`) sends an `ALERT_EMAIL` alert via `alerting.py` when the primary model — or both primary and `LLM_FALLBACK_MODEL` — become unavailable                                                                                                                              | 8000                                  | `localhost:8001`                                                                                                                                                          | `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD`, `REDIS_URL`, `LIGHTRAG_URL`, `LIGHTRAG_API_KEY`, `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`, `ALERT_EMAIL`                                                                               |
+| **lightrag**            | LightRAG 1.5.0 (Python)                                                                  | Graph+vector knowledge base; builds entity graph from uploaded documents; exposes REST query API and built-in graph visualization UI                                                                                                                                                                                                                                                                                                                               | 9621                                  | `localhost:9622`                                                                                                                                                          | `LLM_API_BASE`, `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_API_BASE`, `EMBEDDING_API_KEY`, `EMBEDDING_MODEL`, `LIGHTRAG_API_KEY`                                                                                                               |
+| **knowledge-mcp**       | FastMCP (Python)                                                                         | MCP server wrapping LightRAG; exposes `search_knowledge` and `ingest_document` tools for AI agent use via SSE transport                                                                                                                                                                                                                                                                                                                                            | 8002                                  | `localhost:8002`                                                                                                                                                          | `LIGHTRAG_URL`, `LIGHTRAG_API_KEY`                                                                                                                                                                                                         |
+| **keycloak**            | Keycloak 26.5.5                                                                          | OIDC/OAuth2 identity provider; manages realms, users, roles                                                                                                                                                                                                                                                                                                                                                                                                        | 8080                                  | `localhost:8080` (local only — prod has no published port, routed at `/auth` via Traefik)                                                                                 | `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`, `KC_DB`, `KC_HTTP_RELATIVE_PATH` (prod)                                                                                                                                                       |
+| **admin**               | Next.js 15 (App Router), React 18, MUI (Material UI) v7 + Emotion, CSS Modules, Recharts | Researcher/admin web panel: study management, merged Analytics/Insights dashboard with tab navigation (Recharts, study filter, KPI cards, SRHI/active-rate/dropout/questionnaire charts, participant table), questionnaire management, cue pools, knowledge base, notification campaigns, backups (progress bar + download), System health / Tools pages, settings                                                                                                 | 3001                                  | `admin.localhost:3001`                                                                                                                                                    | `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `KEYCLOAK_ID`, `KEYCLOAK_SECRET`, `KEYCLOAK_ISSUER`, `KEYCLOAK_BROWSER_URL`, `KEYCLOAK_INTERNAL_URL`, `HHH_ADMIN_USER`, `NEXT_PUBLIC_GRAFANA_URL`                                                       |
+| **neo4j**               | Neo4j 5                                                                                  | Graph database; stores habit graph with BCIO alignment                                                                                                                                                                                                                                                                                                                                                                                                             | 7474 (HTTP), 7687 (Bolt)              | `neo4j.localhost:7474` (local only — **internal-only in prod, no published port**; use `docker exec -it hhh-neo4j cypher-shell`, see [`DEPLOYMENT.md`](../DEPLOYMENT.md)) | `NEO4J_AUTH` (`user/password`)                                                                                                                                                                                                             |
+| **mongo**               | MongoDB (latest)                                                                         | Document store; holds questionnaires, form responses, recommendations, user preferences                                                                                                                                                                                                                                                                                                                                                                            | 27017                                 | Internal only                                                                                                                                                             | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD`, `MONGO_INITDB_DATABASE`                                                                                                                                                        |
+| **mongo-express**       | Mongo Express                                                                            | MongoDB admin web UI (production only — not in docker-compose.local.yml)                                                                                                                                                                                                                                                                                                                                                                                           | 8081                                  | `https://<DOMAIN>/mongo` (prod only)                                                                                                                                      | `ME_CONFIG_MONGODB_URL`, `ME_CONFIG_BASICAUTH_USERNAME`, `ME_CONFIG_BASICAUTH_PASSWORD`                                                                                                                                                    |
+| **translate**           | LibreTranslate                                                                           | Self-hosted machine translation API (en/de/ja/fr/nl)                                                                                                                                                                                                                                                                                                                                                                                                               | 5000                                  | `http://translate.localhost` (via Traefik) or `localhost:5001` (direct)                                                                                                   | `LT_LOAD_ONLY`, `LT_REQ_LIMIT`                                                                                                                                                                                                             |
+| **redis**               | Redis                                                                                    | Notification-dedup locks and recommendation response cache; not backed up (short-lived, repopulates automatically)                                                                                                                                                                                                                                                                                                                                                 | 6379                                  | Internal only                                                                                                                                                             | —                                                                                                                                                                                                                                          |
+| **prometheus**          | Prometheus v3.4.1                                                                        | Scrapes `app:9091/metrics` (app HTTP/BullMQ metrics) and `blackbox-exporter:9115/probe` (reachability probes), 30-day retention                                                                                                                                                                                                                                                                                                                                    | 9090                                  | `prometheus.localhost` (local); internal-only in prod (no published/routed port)                                                                                          | —                                                                                                                                                                                                                                          |
+| **blackbox-exporter**   | prom/blackbox-exporter v0.25.0                                                           | TCP-connect/HTTP-GET reachability probes against every long-running service without its own Prometheus metrics (mongo, redis, neo4j, keycloak, translate, lightrag, knowledge-mcp, recommender, prometheus, grafana, backup, proxy); no host mounts/elevated privileges                                                                                                                                                                                            | 9115 (internal only)                  | Internal only                                                                                                                                                             | —                                                                                                                                                                                                                                          |
+| **grafana**             | Grafana OSS 12.0.1                                                                       | Dashboards over Prometheus data; Keycloak SSO (OIDC), realm role → Grafana role mapping; unified alerting (BullMQ failures, service reachability, 5xx spikes) emails `ALERT_EMAIL` via SMTP                                                                                                                                                                                                                                                                        | 3000                                  | `grafana.localhost` (local); `https://<DOMAIN>/grafana` (prod, via Traefik)                                                                                               | `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_CLIENT_SECRET`, `NEXT_PUBLIC_GRAFANA_URL` (admin-panel link), `GF_SMTP_*`/`HHH_ALERT_EMAIL` (from `SMTP_*`/`ALERT_EMAIL`)                                                         |
+| **backup**              | Custom Alpine + sleep-loop                                                               | Backs up MongoDB, LightRAG, Neo4j, Keycloak. Starts 2 min after container boot, then repeats every 24h (not a real cron — drifts on container restart). Time-based retention plus a hard cap on scheduled-trigger backups; also runs the internal `backup-api` HTTP server (status/trigger/restore/upload/download) the admin panel's Backups page talks to; success/failure alerts sent directly via SMTP (`lib.sh`'s `send_smtp_mail()`), independent of Grafana | — (backup-api on 4100, internal only) | Internal only                                                                                                                                                             | `BACKUP_RETENTION_DAYS` (default 14), `BACKUP_SCHEDULED_LIMIT` (default 10, caps scheduled backups regardless of age), `ALERT_WEBHOOK_URL`, `ALERT_EMAIL`, `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`/`SMTP_FROM`, `MONGO_USER`, `MONGO_PASSWORD` |
+| **docker-socket-proxy** | tecnativa/docker-socket-proxy                                                            | Scoped Docker API in front of the real `docker.sock`, reachable only by `backup` over the internal `hhh-backup-internal` network; exposes only the container/volume/image calls `backup.sh`/`restore.sh` need (no EXEC, NETWORKS, SECRETS, etc.) instead of a raw socket mount                                                                                                                                                                                     | 2375 (internal only)                  | Internal only                                                                                                                                                             | —                                                                                                                                                                                                                                          |
 
 > **Flutter mobile/web**: Not a separate Docker container. Flutter runs natively on Android/iOS or as a compiled web app. In dev the backend is reached directly; in production the compiled web bundle may be hosted on the `app` service.
 >
@@ -126,14 +126,14 @@ graph TD
 
 The `app/` service is internally organized into the following layers (as of the v1.2.0 clean-code refactor):
 
-| Directory | Purpose |
-|---|---|
-| `app/routes/` | Thin Express routers — parameter extraction, auth middleware, delegating to services |
-| `app/services/` | Business logic: `habitDonationService.js`, `adminParticipantService.js`, `adminHabitService.js`, `adminStatsService.js`, `keycloakAdminClient.js`; DFG study services: `habitConfigService.js`, `intentionService.js`, `dailyLogService.js`, `srhiService.js`, `cuePoolService.js`, `exportService.js`, `notificationCampaignService.js`, `studyAnalyticsService.js` |
-| `app/db/` | Named Cypher query modules: `habitQueries.js`, `adminQueries.js` |
-| `app/models/` | MongoDB collection validators and domain models (`study.js`, `enrollment.js`, `implementationIntention.js`, …) |
-| `app/middleware/` | Express middleware: `auth.js` (JWT/JWKS), `roles.js` (ROLES constants, isPrivileged) |
-| `app/utils/` | Infrastructure helpers: `getDb.js`, `healthCheck.js`, `translate.js`, `localization.js`, `constants.js` |
+| Directory         | Purpose                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/routes/`     | Thin Express routers — parameter extraction, auth middleware, delegating to services                                                                                                                                                                                                                                                                                 |
+| `app/services/`   | Business logic: `habitDonationService.js`, `adminParticipantService.js`, `adminHabitService.js`, `adminStatsService.js`, `keycloakAdminClient.js`; DFG study services: `habitConfigService.js`, `intentionService.js`, `dailyLogService.js`, `srhiService.js`, `cuePoolService.js`, `exportService.js`, `notificationCampaignService.js`, `studyAnalyticsService.js` |
+| `app/db/`         | Named Cypher query modules: `habitQueries.js`, `adminQueries.js`                                                                                                                                                                                                                                                                                                     |
+| `app/models/`     | MongoDB collection validators and domain models (`study.js`, `enrollment.js`, `implementationIntention.js`, …)                                                                                                                                                                                                                                                       |
+| `app/middleware/` | Express middleware: `auth.js` (JWT/JWKS), `roles.js` (ROLES constants, isPrivileged)                                                                                                                                                                                                                                                                                 |
+| `app/utils/`      | Infrastructure helpers: `getDb.js`, `healthCheck.js`, `translate.js`, `localization.js`, `constants.js`                                                                                                                                                                                                                                                              |
 
 ---
 
@@ -188,15 +188,15 @@ stages inline instead of enqueuing them; the classify step and the fork on
 
 ### Pipeline Stages
 
-| Stage | Service | Input | Output | Notes |
-|---|---|---|---|---|
-| Auth | Node.js Backend | JWT Bearer token | `req.user` with roles | JWKS fetched from Keycloak |
-| Habit Classification | API-service LLM | `sentence`, `language` | `{ is_habit, confidence }` | Uses `classify_habit` prompt. **The prompt explicitly accepts cue-based "when/after X, I will Y" implementation-intention phrasing as a valid recurring habit** (not just free-text descriptions) — this covers both the guided habit-creation flow and habits shared from a recommendation, which submit sentences in exactly that shape. Rejected sentences (`is_habit:false`) stop here with a bare `Habit` node and skip every stage below. |
-| Translation | LibreTranslate | `sentence` (non-English) | Raw English draft | Only runs when `language` does not start with `en` |
-| Context Classification | API-service LLM | `translationEN` | `[{ text, dimension }]` | Uses `classify-context` prompt |
-| BCIO Mapping | API-service LLM | Context phrases | `[{ bcio_concept, bcio_uri }]` | Uses `map-bcio` prompt + RAG over `bcio.owl` |
-| Embedding | API-service LLM | Sentence + contexts + BCIO concepts | Vector embeddings | Powers the community habit vector search used by the recommender (M3 pipeline below) |
-| Graph Persistence | Neo4j | Enriched habit data | `Habit`, `Context`, `BCIOConcept` nodes, `DONATED_IN` edge (study-enrolled donors only) | MERGE ensures idempotency; `studyId` is stamped on the `Habit` node from the donor's enrollment **at donation time** and is never rewritten afterwards — see *Study Enrollment, Switching & Leaving* below |
+| Stage                  | Service         | Input                               | Output                                                                                  | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------- | --------------- | ----------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth                   | Node.js Backend | JWT Bearer token                    | `req.user` with roles                                                                   | JWKS fetched from Keycloak                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Habit Classification   | API-service LLM | `sentence`, `language`              | `{ is_habit, confidence }`                                                              | Uses `classify_habit` prompt. **The prompt explicitly accepts cue-based "when/after X, I will Y" implementation-intention phrasing as a valid recurring habit** (not just free-text descriptions) — this covers both the guided habit-creation flow and habits shared from a recommendation, which submit sentences in exactly that shape. Rejected sentences (`is_habit:false`) stop here with a bare `Habit` node and skip every stage below. |
+| Translation            | LibreTranslate  | `sentence` (non-English)            | Raw English draft                                                                       | Only runs when `language` does not start with `en`                                                                                                                                                                                                                                                                                                                                                                                              |
+| Context Classification | API-service LLM | `translationEN`                     | `[{ text, dimension }]`                                                                 | Uses `classify-context` prompt                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| BCIO Mapping           | API-service LLM | Context phrases                     | `[{ bcio_concept, bcio_uri }]`                                                          | Uses `map-bcio` prompt + RAG over `bcio.owl`                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Embedding              | API-service LLM | Sentence + contexts + BCIO concepts | Vector embeddings                                                                       | Powers the community habit vector search used by the recommender (M3 pipeline below)                                                                                                                                                                                                                                                                                                                                                            |
+| Graph Persistence      | Neo4j           | Enriched habit data                 | `Habit`, `Context`, `BCIOConcept` nodes, `DONATED_IN` edge (study-enrolled donors only) | MERGE ensures idempotency; `studyId` is stamped on the `Habit` node from the donor's enrollment **at donation time** and is never rewritten afterwards — see _Study Enrollment, Switching & Leaving_ below                                                                                                                                                                                                                                      |
 
 ---
 
@@ -225,15 +225,15 @@ sequenceDiagram
 
 ### Language Conventions
 
-| Concern | Convention |
-|---|---|
-| Locale codes | ISO 639-1 two-letter: `"en"`, `"de"` (consistent across Flutter, backend, MongoDB) |
-| `preferredLanguage` field | Stored in MongoDB `users` collection, keyed by Keycloak `sub` |
-| `?lang=` query parameter | Supported on `GET /api/v1/habits`; triggers `displayText` field in response |
+| Concern                     | Convention                                                                                  |
+| --------------------------- | ------------------------------------------------------------------------------------------- |
+| Locale codes                | ISO 639-1 two-letter: `"en"`, `"de"` (consistent across Flutter, backend, MongoDB)          |
+| `preferredLanguage` field   | Stored in MongoDB `users` collection, keyed by Keycloak `sub`                               |
+| `?lang=` query parameter    | Supported on `GET /api/v1/habits`; triggers `displayText` field in response                 |
 | Donation language detection | Flutter sends `language` field in POST body; backend uses it to decide whether to translate |
-| `translationEN` | Stored on all non-English `Habit` nodes; `null` for English habits |
-| `translationDE` | Stored on `Habit` nodes when German translation is available |
-| Fallback | `displayText = translationXX || original` — `||` handles both `null` and `undefined` |
+| `translationEN`             | Stored on all non-English `Habit` nodes; `null` for English habits                          |
+| `translationDE`             | Stored on `Habit` nodes when German translation is available                                |
+| Fallback                    | `displayText = translationXX                                                                |     | original`—` |     | `handles both`null`and`undefined` |
 
 ---
 
@@ -264,11 +264,11 @@ sequenceDiagram
 
 ### Realm Roles
 
-| Role | Granted to | Permissions |
-|---|---|---|
-| `user` | Study participants (end users of the Flutter app) | Donate habits, view recommendations, submit questionnaires |
-| `researcher` | Research staff | All `user` permissions + admin panel access (excluding KB and Settings), questionnaire and study management |
-| `admin` | Platform administrators | All `researcher` permissions + full admin panel access including Knowledge Base and Settings |
+| Role         | Granted to                                        | Permissions                                                                                                 |
+| ------------ | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `user`       | Study participants (end users of the Flutter app) | Donate habits, view recommendations, submit questionnaires                                                  |
+| `researcher` | Research staff                                    | All `user` permissions + admin panel access (excluding KB and Settings), questionnaire and study management |
+| `admin`      | Platform administrators                           | All `researcher` permissions + full admin panel access including Knowledge Base and Settings                |
 
 > **Note:** The `user` role was previously named `participant`. It was renamed across `app/middleware/roles.js`, `keycloak/hhh-realm.json`, and `scripts/seed-local.js` to align with Keycloak terminology and to avoid clashing with the domain term "participant" used in study admin contexts.
 
@@ -280,7 +280,7 @@ The admin panel is a **Next.js 15** (App Router) / **React 18** application writ
 - **CSS Modules** (`*.module.css`) — the primary styling mechanism for bespoke layout and components (e.g. `cue-config-form.module.css`), driven by CSS custom properties in `globals.css`.
 - **Recharts** — analytics/insights charts (see the Analytics page section below).
 
-**Theming note:** the app's light/dark toggle flips a `[data-theme]` attribute on `<html>` (stamped pre-hydration by an inline bootstrap script — hence `suppressHydrationWarning` on the `<html>` element in `layout.tsx`), *not* a React `palette.mode`. Because `createTheme()` derives shades and contrast text at import time and cannot parse `var(...)` strings (MUI error #9), `mui-theme.ts` uses static light-theme hex values for the palette, and defers anything that must follow the runtime toggle to `var(...)` in CSS-output positions (`styleOverrides` and component `sx` props). See `admin/src/__tests__/mui-theme.test.tsx` for the guard against reintroducing `var(...)` palette values.
+**Theming note:** the app's light/dark toggle flips a `[data-theme]` attribute on `<html>` (stamped pre-hydration by an inline bootstrap script — hence `suppressHydrationWarning` on the `<html>` element in `layout.tsx`), _not_ a React `palette.mode`. Because `createTheme()` derives shades and contrast text at import time and cannot parse `var(...)` strings (MUI error #9), `mui-theme.ts` uses static light-theme hex values for the palette, and defers anything that must follow the runtime toggle to `var(...)` in CSS-output positions (`styleOverrides` and component `sx` props). See `admin/src/__tests__/mui-theme.test.tsx` for the guard against reintroducing `var(...)` palette values.
 
 ### Admin Panel Auth
 
@@ -294,13 +294,13 @@ The Next.js admin panel uses NextAuth v4 with the Keycloak provider. On each req
 
 Because Keycloak runs inside Docker but the browser runs on the host, the admin panel cannot rely on OIDC discovery (`wellKnown`) — the discovery document returns the internal Docker hostname (`http://keycloak:8080/...`) for the authorization endpoint, which browsers cannot resolve. The NextAuth provider instead sets endpoints explicitly:
 
-| Endpoint | Resolves to | Env var |
-|---|---|---|
-| `authorization.url` | `http://localhost:8080` | `KEYCLOAK_BROWSER_URL` |
-| `token` | `http://keycloak:8080` (internal) | `KEYCLOAK_INTERNAL_URL` |
-| `userinfo` | `http://keycloak:8080` (internal) | `KEYCLOAK_INTERNAL_URL` |
-| `jwks_endpoint` | `http://keycloak:8080` (internal) | `KEYCLOAK_INTERNAL_URL` |
-| Issuer (`iss` validator) | `http://localhost:8080/realms/hhh` | `KEYCLOAK_ISSUER` |
+| Endpoint                 | Resolves to                        | Env var                 |
+| ------------------------ | ---------------------------------- | ----------------------- |
+| `authorization.url`      | `http://localhost:8080`            | `KEYCLOAK_BROWSER_URL`  |
+| `token`                  | `http://keycloak:8080` (internal)  | `KEYCLOAK_INTERNAL_URL` |
+| `userinfo`               | `http://keycloak:8080` (internal)  | `KEYCLOAK_INTERNAL_URL` |
+| `jwks_endpoint`          | `http://keycloak:8080` (internal)  | `KEYCLOAK_INTERNAL_URL` |
+| Issuer (`iss` validator) | `http://localhost:8080/realms/hhh` | `KEYCLOAK_ISSUER`       |
 
 Note that `KEYCLOAK_ISSUER` uses the **browser-facing** hostname even though token/JWKS calls go to the internal hostname. This is because Keycloak in `start-dev` mode stamps the `iss` claim on issued tokens from the browser-side Host header.
 
@@ -352,21 +352,21 @@ Redis `GET recommend:{sha256(user_id‖goal)}`. On a hit the cached `RecommendRe
 
 **Stage 1 — 7-way parallel data fetch** (`asyncio.gather`, zero LLM calls)
 
-| Fetch | Source | What happens |
-|---|---|---|
-| Personal habits | Neo4j (1 session, ≤200 rows) | `MATCH (h:Habit {userID, is_habit:true})` with stored embeddings; cosine-ranked in Python vs the goal embedding; top `USER_HABITS_LIMIT` kept |
-| Community habits | Neo4j (3 parallel sessions) | 3-index fan-out — `habit_embedding_idx` (sentence), `context_embedding_idx` (situational), `bcio_embedding_idx` (behaviour-change concept); merged by max score → top `COMMUNITY_HABITS_LIMIT` |
-| Questionnaire responses | Node.js service endpoint | `GET /questionnaire-responses/service/{userId}` — enrollment → study → questionnaire slugs → latest responses (adapts to any study config) |
-| User profile | Node.js service endpoint | `GET /user-profile/service/{userId}` |
-| Annotated habits | MongoDB + Neo4j | `habit_annotations.find({userId, type:{$in:['helpful','iDoThis','like']}})` → matching Habit nodes fetched from Neo4j with context |
-| Prior feedback | MongoDB | Last 10 `recommendation_feedback` comments for this user + goal |
-| Previous titles | MongoDB | Titles from the user's last 5 recommendation sets (≤15 titles, deduplicated) — fed back so consecutive generations do not repeat themselves |
+| Fetch                   | Source                       | What happens                                                                                                                                                                                   |
+| ----------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Personal habits         | Neo4j (1 session, ≤200 rows) | `MATCH (h:Habit {userID, is_habit:true})` with stored embeddings; cosine-ranked in Python vs the goal embedding; top `USER_HABITS_LIMIT` kept                                                  |
+| Community habits        | Neo4j (3 parallel sessions)  | 3-index fan-out — `habit_embedding_idx` (sentence), `context_embedding_idx` (situational), `bcio_embedding_idx` (behaviour-change concept); merged by max score → top `COMMUNITY_HABITS_LIMIT` |
+| Questionnaire responses | Node.js service endpoint     | `GET /questionnaire-responses/service/{userId}` — enrollment → study → questionnaire slugs → latest responses (adapts to any study config)                                                     |
+| User profile            | Node.js service endpoint     | `GET /user-profile/service/{userId}`                                                                                                                                                           |
+| Annotated habits        | MongoDB + Neo4j              | `habit_annotations.find({userId, type:{$in:['helpful','iDoThis','like']}})` → matching Habit nodes fetched from Neo4j with context                                                             |
+| Prior feedback          | MongoDB                      | Last 10 `recommendation_feedback` comments for this user + goal                                                                                                                                |
+| Previous titles         | MongoDB                      | Titles from the user's last 5 recommendation sets (≤15 titles, deduplicated) — fed back so consecutive generations do not repeat themselves                                                    |
 
 **Stage 2 — deterministic processing** (zero LLM calls)
-`build_profile()` template-assembles `profile_summary`, `profile_detailed`, and `rag_query` from questionnaire responses + demographics *(replaces the former LLM-2 call)*. GDS FastRP re-ranking scores each community habit `0.5 × semantic + 0.3 × graph-topology (cosine vs user centroid) + 0.2 × log-normalised likes` *(replaces the former LLM-1 selection call)*.
+`build_profile()` template-assembles `profile_summary`, `profile_detailed`, and `rag_query` from questionnaire responses + demographics _(replaces the former LLM-2 call)_. GDS FastRP re-ranking scores each community habit `0.5 × semantic + 0.3 × graph-topology (cosine vs user centroid) + 0.2 × log-normalised likes` _(replaces the former LLM-1 selection call)_.
 
 **Stage 3 — parallel enrichment** (2-way `asyncio.gather`)
-BCIO concepts per candidate habit (Neo4j `MAPS_TO` traversal) and LightRAG hybrid retrieval (`POST /query`, `mode=hybrid`, `only_need_context=true`, 90 s timeout). The retrieval step also extracts **per-document provenance**: the distinct source-document filenames found in the LightRAG context identify which academic papers ground this response (see *Paper citations* below).
+BCIO concepts per candidate habit (Neo4j `MAPS_TO` traversal) and LightRAG hybrid retrieval (`POST /query`, `mode=hybrid`, `only_need_context=true`, 90 s timeout). The retrieval step also extracts **per-document provenance**: the distinct source-document filenames found in the LightRAG context identify which academic papers ground this response (see _Paper citations_ below).
 
 **Stage 4 — single LLM call** (`recommend.txt`)
 Model `LLM_RECOMMEND_MODEL` (falls back to `LLM_MODEL`), temperature 0.2, optional completion cap `LLM_RECOMMEND_MAX_TOKENS`. The LightRAG context pasted into the prompt is capped at `RECOMMEND_MAX_CONTEXT_CHARS`. The prompt instructs the model to:
@@ -403,41 +403,41 @@ If the LLM cites a hallucinated filename (or none), the response falls back to a
 
 Every data source queried during a single recommendation run:
 
-| Stage | Source | Query / call |
-|---|---|---|
-| **Entry point** | Node.js backend proxy | `POST /api/v1/llm/recommend {user_id, goal, session_id}` with `X-Service-Auth-Token` header |
-| **Goal guard** | in-process regex + LLM system message | Injection/off-topic goals → HTTP 422 with user-facing reason |
-| **Cache check** | Redis | `GET recommend:{sha256(user_id‖goal)}` — hit returns cached response; miss continues pipeline |
-| **Personal habits** | Neo4j (1 session, ≤200 rows) | `MATCH (h:Habit {userID: $user_id, is_habit: true}) OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context) RETURN h.uuid, coalesce(h.translationEN, h.sentence), collect({dimension: c.dimension, text: c.text}), h.embedding` — cosine-ranked in Python, top `USER_HABITS_LIMIT` kept |
-| **Community — sentence** | Neo4j `habit_embedding_idx` | `CALL db.index.vector.queryNodes('habit_embedding_idx', $limit, $embedding)` … excluding the requesting user |
-| **Community — context** | Neo4j `context_embedding_idx` | `CALL db.index.vector.queryNodes('context_embedding_idx', $limit, $embedding)` … situational / `INTERNAL_STATE` match |
-| **Community — BCIO** | Neo4j `bcio_embedding_idx` | `CALL db.index.vector.queryNodes('bcio_embedding_idx', $limit, $embedding)` … behaviour-change concept match |
-| **Annotated habits** | MongoDB `habit_annotations` + Neo4j | `db.habit_annotations.find({userId, type: {$in: ["helpful","iDoThis","like"]}}, {habitId:1, _id:0})` → fetch matching Habit nodes from Neo4j with context |
-| **Questionnaire responses** | Node.js service endpoint | `GET /api/v1/questionnaire-responses/service/{userId}` with `X-Service-Auth-Token` (all slugs of the user's enrolled study) |
-| **User profile** | Node.js service endpoint | `GET /api/v1/user-profile/service/{userId}` with `X-Service-Auth-Token` |
-| **Profile build** | deterministic (`_profile_builder.py`) | `build_profile()` → `profile_summary`, `profile_detailed`, `rag_query` — no LLM call |
-| **GDS re-ranking** | Neo4j GDS FastRP | user centroid from `fastrp_embedding` vectors → hybrid score per community habit — no LLM call |
-| **BCIO concepts** | Neo4j | `MATCH (h)-[:HAS_CONTEXT]->(c)-[:MAPS_TO]->(b:BCIOConcept) WHERE h.uuid IN $uuids RETURN h.uuid, collect(DISTINCT b.label)` |
-| **RAG retrieval** | LightRAG (timeout 90 s) | `POST /query {query: rag_query, mode: "hybrid", only_need_context: true}` — context capped at `RECOMMEND_MAX_CONTEXT_CHARS`; distinct document filenames extracted for citations |
-| **Prior feedback** | MongoDB `recommendation_feedback` | `db.recommendation_feedback.find({userId, goal}, {comment: 1, _id: 0}).sort({created_at: -1}).limit(10)` |
-| **Previous titles** | MongoDB `recommendations` | Titles of the user's last 5 recommendation sets (≤15, deduplicated) — anti-repetition context |
-| **Cache write** | Redis | `SETEX recommend:{sha256} 86400 <serialised RecommendResponse>` |
-| **Persist result** | MongoDB `recommendations` | `db.recommendations.insertOne({recommendation_id, userId, goal, session_id, recommendations, generated_at})` — includes `selected_habit_uuids` for debugging |
+| Stage                       | Source                                | Query / call                                                                                                                                                                                                                                                                   |
+| --------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Entry point**             | Node.js backend proxy                 | `POST /api/v1/llm/recommend {user_id, goal, session_id}` with `X-Service-Auth-Token` header                                                                                                                                                                                    |
+| **Goal guard**              | in-process regex + LLM system message | Injection/off-topic goals → HTTP 422 with user-facing reason                                                                                                                                                                                                                   |
+| **Cache check**             | Redis                                 | `GET recommend:{sha256(user_id‖goal)}` — hit returns cached response; miss continues pipeline                                                                                                                                                                                  |
+| **Personal habits**         | Neo4j (1 session, ≤200 rows)          | `MATCH (h:Habit {userID: $user_id, is_habit: true}) OPTIONAL MATCH (h)-[:HAS_CONTEXT]->(c:Context) RETURN h.uuid, coalesce(h.translationEN, h.sentence), collect({dimension: c.dimension, text: c.text}), h.embedding` — cosine-ranked in Python, top `USER_HABITS_LIMIT` kept |
+| **Community — sentence**    | Neo4j `habit_embedding_idx`           | `CALL db.index.vector.queryNodes('habit_embedding_idx', $limit, $embedding)` … excluding the requesting user                                                                                                                                                                   |
+| **Community — context**     | Neo4j `context_embedding_idx`         | `CALL db.index.vector.queryNodes('context_embedding_idx', $limit, $embedding)` … situational / `INTERNAL_STATE` match                                                                                                                                                          |
+| **Community — BCIO**        | Neo4j `bcio_embedding_idx`            | `CALL db.index.vector.queryNodes('bcio_embedding_idx', $limit, $embedding)` … behaviour-change concept match                                                                                                                                                                   |
+| **Annotated habits**        | MongoDB `habit_annotations` + Neo4j   | `db.habit_annotations.find({userId, type: {$in: ["helpful","iDoThis","like"]}}, {habitId:1, _id:0})` → fetch matching Habit nodes from Neo4j with context                                                                                                                      |
+| **Questionnaire responses** | Node.js service endpoint              | `GET /api/v1/questionnaire-responses/service/{userId}` with `X-Service-Auth-Token` (all slugs of the user's enrolled study)                                                                                                                                                    |
+| **User profile**            | Node.js service endpoint              | `GET /api/v1/user-profile/service/{userId}` with `X-Service-Auth-Token`                                                                                                                                                                                                        |
+| **Profile build**           | deterministic (`_profile_builder.py`) | `build_profile()` → `profile_summary`, `profile_detailed`, `rag_query` — no LLM call                                                                                                                                                                                           |
+| **GDS re-ranking**          | Neo4j GDS FastRP                      | user centroid from `fastrp_embedding` vectors → hybrid score per community habit — no LLM call                                                                                                                                                                                 |
+| **BCIO concepts**           | Neo4j                                 | `MATCH (h)-[:HAS_CONTEXT]->(c)-[:MAPS_TO]->(b:BCIOConcept) WHERE h.uuid IN $uuids RETURN h.uuid, collect(DISTINCT b.label)`                                                                                                                                                    |
+| **RAG retrieval**           | LightRAG (timeout 90 s)               | `POST /query {query: rag_query, mode: "hybrid", only_need_context: true}` — context capped at `RECOMMEND_MAX_CONTEXT_CHARS`; distinct document filenames extracted for citations                                                                                               |
+| **Prior feedback**          | MongoDB `recommendation_feedback`     | `db.recommendation_feedback.find({userId, goal}, {comment: 1, _id: 0}).sort({created_at: -1}).limit(10)`                                                                                                                                                                       |
+| **Previous titles**         | MongoDB `recommendations`             | Titles of the user's last 5 recommendation sets (≤15, deduplicated) — anti-repetition context                                                                                                                                                                                  |
+| **Cache write**             | Redis                                 | `SETEX recommend:{sha256} 86400 <serialised RecommendResponse>`                                                                                                                                                                                                                |
+| **Persist result**          | MongoDB `recommendations`             | `db.recommendations.insertOne({recommendation_id, userId, goal, session_id, recommendations, generated_at})` — includes `selected_habit_uuids` for debugging                                                                                                                   |
 
 **Final LLM prompt** (`recommend.txt`, temperature 0.2, model `LLM_RECOMMEND_MODEL`) receives these variables:
 
-| Variable | Populated from |
-|---|---|
-| `{goal}` | Entry point request body — delimited `<<<…>>>` and marked untrusted |
-| `{profile_summary}` | `build_profile()` (deterministic) |
-| `{profile_detailed}` | `build_profile()` (deterministic) |
-| `{personal_habits_json}` | Cosine-ranked personal habits — `[{uuid, sentence, context, bcio_concepts, likes}]` (compact JSON) |
-| `{annotated_habits_json}` | Habits the user liked/saved — MongoDB `habit_annotations` → Neo4j |
-| `{community_habits_json}` | GDS FastRP re-ranked community habits |
-| `{sources_json}` | LightRAG hybrid context (capped at `RECOMMEND_MAX_CONTEXT_CHARS`) |
-| `{source_documents_json}` | `[{filename, citation}]` — papers the model may cite in `sources` |
-| `{prior_feedback}` | MongoDB `recommendation_feedback` comments, one per line (or `"None"`) |
-| `{previous_titles}` | Titles previously recommended to this user (or `"None"`) |
+| Variable                  | Populated from                                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------------- |
+| `{goal}`                  | Entry point request body — delimited `<<<…>>>` and marked untrusted                                |
+| `{profile_summary}`       | `build_profile()` (deterministic)                                                                  |
+| `{profile_detailed}`      | `build_profile()` (deterministic)                                                                  |
+| `{personal_habits_json}`  | Cosine-ranked personal habits — `[{uuid, sentence, context, bcio_concepts, likes}]` (compact JSON) |
+| `{annotated_habits_json}` | Habits the user liked/saved — MongoDB `habit_annotations` → Neo4j                                  |
+| `{community_habits_json}` | GDS FastRP re-ranked community habits                                                              |
+| `{sources_json}`          | LightRAG hybrid context (capped at `RECOMMEND_MAX_CONTEXT_CHARS`)                                  |
+| `{source_documents_json}` | `[{filename, citation}]` — papers the model may cite in `sources`                                  |
+| `{prior_feedback}`        | MongoDB `recommendation_feedback` comments, one per line (or `"None"`)                             |
+| `{previous_titles}`       | Titles previously recommended to this user (or `"None"`)                                           |
 
 The LLM returns `{recommendations: [{title, body, rationale, suggested_cue, selected_habit_uuids, sources: [{filename, quote}]}]}` — or `{"refused": true, "reason": …}` when the goal guard triggers. The client response exposes `title · body · rationale · suggested_cue · sources` (citations with optional links and an optional verbatim `quote`); `selected_habit_uuids` stays server-side.
 
@@ -445,19 +445,19 @@ The detailed data-flow with all queries is rendered in [`docs/diagrams/architect
 
 ### Configurable limits
 
-| Env var | Default | Effect |
-|---|---|---|
-| `USER_HABITS_LIMIT` | `10` | Max personal habits passed to LLM |
-| `COMMUNITY_HABITS_LIMIT` | `10` | Max community habits from vector search |
-| `REDIS_TTL_SECONDS` | `86400` | Cache TTL in seconds |
-| `RECOMMENDER_TIMEOUT_MS` | `180000` | Proxy timeout on Node.js side |
-| `LLM_RECOMMEND_MODEL` | *(unset → `LLM_MODEL`)* | Model used only for the final recommendation-writing call (e.g. a fast non-thinking model) |
-| `RECOMMEND_MAX_CONTEXT_CHARS` | `0` (unlimited; `.env` sets `30000`) | Cap on the LightRAG context pasted into the prompt — main latency lever |
-| `LLM_RECOMMEND_MAX_TOKENS` | `0` (model default; `.env` sets `2000`) | Hard cap on the completion length |
-| `LLM_TIMEOUT_S` | `120` | Per-attempt timeout for all API-service LLM calls |
-| `LLM_MAX_RETRIES` | `0` | OpenAI-client retries; kept at 0 so a slow LLM fails fast instead of 504ing through the proxy |
-| `MONGO_SERVER_SELECTION_TIMEOUT_MS` | `5000` | MongoDB server-selection/connect timeout — failed Mongo fetches degrade gracefully instead of blocking 30 s |
-| `MONGO_SOCKET_TIMEOUT_MS` | `5000` | MongoDB socket timeout |
+| Env var                             | Default                                 | Effect                                                                                                      |
+| ----------------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `USER_HABITS_LIMIT`                 | `10`                                    | Max personal habits passed to LLM                                                                           |
+| `COMMUNITY_HABITS_LIMIT`            | `10`                                    | Max community habits from vector search                                                                     |
+| `REDIS_TTL_SECONDS`                 | `86400`                                 | Cache TTL in seconds                                                                                        |
+| `RECOMMENDER_TIMEOUT_MS`            | `180000`                                | Proxy timeout on Node.js side                                                                               |
+| `LLM_RECOMMEND_MODEL`               | _(unset → `LLM_MODEL`)_                 | Model used only for the final recommendation-writing call (e.g. a fast non-thinking model)                  |
+| `RECOMMEND_MAX_CONTEXT_CHARS`       | `0` (unlimited; `.env` sets `30000`)    | Cap on the LightRAG context pasted into the prompt — main latency lever                                     |
+| `LLM_RECOMMEND_MAX_TOKENS`          | `0` (model default; `.env` sets `2000`) | Hard cap on the completion length                                                                           |
+| `LLM_TIMEOUT_S`                     | `120`                                   | Per-attempt timeout for all API-service LLM calls                                                           |
+| `LLM_MAX_RETRIES`                   | `0`                                     | OpenAI-client retries; kept at 0 so a slow LLM fails fast instead of 504ing through the proxy               |
+| `MONGO_SERVER_SELECTION_TIMEOUT_MS` | `5000`                                  | MongoDB server-selection/connect timeout — failed Mongo fetches degrade gracefully instead of blocking 30 s |
+| `MONGO_SOCKET_TIMEOUT_MS`           | `5000`                                  | MongoDB socket timeout                                                                                      |
 
 ### Seeding test data
 
@@ -505,13 +505,13 @@ LightRAG's built-in web UI is served at `http://localhost:9622` (local) and can 
 
 ## Data Storage Rationale
 
-| Store | Technology | What is stored | Why |
-|---|---|---|---|
-| **Graph DB** | Neo4j 5 | `Habit`, `Context`, `BCIOConcept` nodes and `HAS_CONTEXT`, `MAPS_TO` relationships | Graph traversal for habit similarity, BCIO alignment queries, and recommender reads |
-| **Document DB** | MongoDB | `users` (preferences), `questionnaires`, `form_responses`, `recommendations`, `recommendation_feedback`; DFG collections: `implementation_intentions`, `daily_behavior_logs`, `srhi_responses`, `cue_pools`, `notification_campaigns` | Flexible schema for survey/form data; no strong relational joins required |
-| **Triplestore** *(retired)* | Apache Jena Fuseki | BCIO ontology (`Ontology.ttl`, `schema.ttl`, `data.ttl`) | **Removed from the compose stack** — BCIO mapping now uses in-process embeddings in the API-service; ontology sections below are kept for historical reference (see `docs/migration.md`) |
-| **Vector search** | Neo4j vector indexes (`habit_embedding_idx`, `context_embedding_idx`, `bcio_embedding_idx`) + in-process cosine (API-service) | Habit sentence embeddings, context phrase embeddings, BCIO concept embeddings | Three-index fan-out for community habit retrieval in M3.1; in-process cosine for ranking a user's own habits against the goal |
-| **Graph+vector KB** | LightRAG (file-based) | Knowledge graph of concepts/relationships extracted from uploaded documents + vector embeddings | Hybrid retrieval for habit recommendations; graph captures semantic relationships, vector handles dense similarity |
+| Store                       | Technology                                                                                                                    | What is stored                                                                                                                                                                                                                        | Why                                                                                                                                                                                      |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Graph DB**                | Neo4j 5                                                                                                                       | `Habit`, `Context`, `BCIOConcept` nodes and `HAS_CONTEXT`, `MAPS_TO` relationships                                                                                                                                                    | Graph traversal for habit similarity, BCIO alignment queries, and recommender reads                                                                                                      |
+| **Document DB**             | MongoDB                                                                                                                       | `users` (preferences), `questionnaires`, `form_responses`, `recommendations`, `recommendation_feedback`; DFG collections: `implementation_intentions`, `daily_behavior_logs`, `srhi_responses`, `cue_pools`, `notification_campaigns` | Flexible schema for survey/form data; no strong relational joins required                                                                                                                |
+| **Triplestore** _(retired)_ | Apache Jena Fuseki                                                                                                            | BCIO ontology (`Ontology.ttl`, `schema.ttl`, `data.ttl`)                                                                                                                                                                              | **Removed from the compose stack** — BCIO mapping now uses in-process embeddings in the API-service; ontology sections below are kept for historical reference (see `docs/migration.md`) |
+| **Vector search**           | Neo4j vector indexes (`habit_embedding_idx`, `context_embedding_idx`, `bcio_embedding_idx`) + in-process cosine (API-service) | Habit sentence embeddings, context phrase embeddings, BCIO concept embeddings                                                                                                                                                         | Three-index fan-out for community habit retrieval in M3.1; in-process cosine for ranking a user's own habits against the goal                                                            |
+| **Graph+vector KB**         | LightRAG (file-based)                                                                                                         | Knowledge graph of concepts/relationships extracted from uploaded documents + vector embeddings                                                                                                                                       | Hybrid retrieval for habit recommendations; graph captures semantic relationships, vector handles dense similarity                                                                       |
 
 ### Neo4j Schema (Current)
 
@@ -536,11 +536,11 @@ LightRAG's built-in web UI is served at `http://localhost:9622` (local) and can 
 
 **Vector indexes** (created at startup via `neo4j/init/constraints.cypher`):
 
-| Index | Node property | Used by |
-|---|---|---|
-| `habit_embedding_idx` | `Habit.embedding` | Community sentence search in M3.1 |
-| `context_embedding_idx` | `Context.embedding` | Community situational search in M3.1 |
-| `bcio_embedding_idx` | `BCIOConcept.embedding` | Community behaviour-technique search in M3.1 |
+| Index                   | Node property           | Used by                                      |
+| ----------------------- | ----------------------- | -------------------------------------------- |
+| `habit_embedding_idx`   | `Habit.embedding`       | Community sentence search in M3.1            |
+| `context_embedding_idx` | `Context.embedding`     | Community situational search in M3.1         |
+| `bcio_embedding_idx`    | `BCIOConcept.embedding` | Community behaviour-technique search in M3.1 |
 
 All three indexes use cosine similarity with 2560 dimensions (configurable via `EMBEDDING_DIMENSIONS`).
 
@@ -554,29 +554,29 @@ All three indexes use cosine similarity with 2560 dimensions (configurable via `
 
 ### Namespaces
 
-| Prefix | URI | Description |
-|---|---|---|
-| `hhh:` | `http://example.com/hhh#` | HHH domain ontology (habits, donors, groups) |
-| `bcio:` | `http://humanbehaviourchange.org/ontology/BCIO#` | Behaviour Change Intervention Ontology |
-| `owl:` | `http://www.w3.org/2002/07/owl#` | OWL 2 Web Ontology Language |
-| `rdfs:` | `http://www.w3.org/2000/01/rdf-schema#` | RDF Schema |
-| `xsd:` | `http://www.w3.org/2001/XMLSchema#` | XML Schema Datatypes |
+| Prefix  | URI                                              | Description                                  |
+| ------- | ------------------------------------------------ | -------------------------------------------- |
+| `hhh:`  | `http://example.com/hhh#`                        | HHH domain ontology (habits, donors, groups) |
+| `bcio:` | `http://humanbehaviourchange.org/ontology/BCIO#` | Behaviour Change Intervention Ontology       |
+| `owl:`  | `http://www.w3.org/2002/07/owl#`                 | OWL 2 Web Ontology Language                  |
+| `rdfs:` | `http://www.w3.org/2000/01/rdf-schema#`          | RDF Schema                                   |
+| `xsd:`  | `http://www.w3.org/2001/XMLSchema#`              | XML Schema Datatypes                         |
 
 ### HHH Core Classes
 
-| Class | URI | Description |
-|---|---|---|
-| `hhh:Donor` | `hhh:Donor` | A study participant who donates habits |
-| `hhh:Habit` | `hhh:Habit` | A donated habit instance |
-| `hhh:Behavior` | `hhh:Behavior` | The action component of a habit |
-| `hhh:Context` | `hhh:Context` | The situational trigger for a habit |
-| `hhh:InternalState` | subclass of `Context` | Self-reported psychological state |
-| `hhh:PhysicalSetting` | subclass of `Context` | Physical environment where habit occurs |
-| `hhh:TimeReference` | subclass of `Context` | Time-based trigger |
-| `hhh:People` | subclass of `Context` | Social context |
-| `hhh:PriorBehavior` | subclass of `Context` | Preceding behaviour trigger |
-| `hhh:Reasoning` | subclass of `Context` | Cognitive reasoning trigger |
-| `hhh:ExperimentalSetting` | `hhh:ExperimentalSetting` | Study arm superclass (G1–G4) |
+| Class                     | URI                       | Description                             |
+| ------------------------- | ------------------------- | --------------------------------------- |
+| `hhh:Donor`               | `hhh:Donor`               | A study participant who donates habits  |
+| `hhh:Habit`               | `hhh:Habit`               | A donated habit instance                |
+| `hhh:Behavior`            | `hhh:Behavior`            | The action component of a habit         |
+| `hhh:Context`             | `hhh:Context`             | The situational trigger for a habit     |
+| `hhh:InternalState`       | subclass of `Context`     | Self-reported psychological state       |
+| `hhh:PhysicalSetting`     | subclass of `Context`     | Physical environment where habit occurs |
+| `hhh:TimeReference`       | subclass of `Context`     | Time-based trigger                      |
+| `hhh:People`              | subclass of `Context`     | Social context                          |
+| `hhh:PriorBehavior`       | subclass of `Context`     | Preceding behaviour trigger             |
+| `hhh:Reasoning`           | subclass of `Context`     | Cognitive reasoning trigger             |
+| `hhh:ExperimentalSetting` | `hhh:ExperimentalSetting` | Study arm superclass (G1–G4)            |
 
 ### BCIO Integration Point
 
@@ -590,12 +590,12 @@ All alignments are marked `TODO: domain-review` in the ontology and should be va
 
 ### G1–G4 Experimental Group Encoding
 
-| Class | rdfs:comment | Description |
-|---|---|---|
-| `hhh:Group1` | Closed-Ended | Both task + general sections are closed-ended |
+| Class        | rdfs:comment                            | Description                                        |
+| ------------ | --------------------------------------- | -------------------------------------------------- |
+| `hhh:Group1` | Closed-Ended                            | Both task + general sections are closed-ended      |
 | `hhh:Group2` | Closed-Ended Task, Opened-Ended General | Structured task section; free-text general section |
 | `hhh:Group3` | Opened-Ended Task, Closed-Ended General | Free-text task section; structured general section |
-| `hhh:Group4` | Opened-Ended | Both sections are free-text |
+| `hhh:Group4` | Opened-Ended                            | Both sections are free-text                        |
 
 ---
 
@@ -618,17 +618,17 @@ Data flow:
 
 ### API Route Groups
 
-| Route prefix | Description |
-|---|---|
-| `GET /me/habit-config` | Resolved cue config + assigned cues + SRHI items for the authenticated user |
-| `/habits/intentions` | Implementation intention CRUD and status updates |
-| `/habits/intentions/:id/logs` | Daily behaviour log creation and history |
-| `/srhi/*` | SRHI due-window query, weekly submission, and trajectory history |
-| `/admin/cue-pools` | Cue pool CRUD and bulk CSV import |
-| `/admin/studies/:id/analytics` | Per-group weekly active rate, SRHI trajectory, dropout curve, questionnaire completion rates |
-| `/admin/studies/:id/export` | Research data ZIP download (3 CSVs) |
-| `/admin/notifications` | Researcher FCM notification campaign management |
-| `/admin/studies/:id/groups/:groupId/cue-config` | Per-group cue source, count, and behaviour config |
+| Route prefix                                    | Description                                                                                  |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `GET /me/habit-config`                          | Resolved cue config + assigned cues + SRHI items for the authenticated user                  |
+| `/habits/intentions`                            | Implementation intention CRUD and status updates                                             |
+| `/habits/intentions/:id/logs`                   | Daily behaviour log creation and history                                                     |
+| `/srhi/*`                                       | SRHI due-window query, weekly submission, and trajectory history                             |
+| `/admin/cue-pools`                              | Cue pool CRUD and bulk CSV import                                                            |
+| `/admin/studies/:id/analytics`                  | Per-group weekly active rate, SRHI trajectory, dropout curve, questionnaire completion rates |
+| `/admin/studies/:id/export`                     | Research data ZIP download (3 CSVs)                                                          |
+| `/admin/notifications`                          | Researcher FCM notification campaign management                                              |
+| `/admin/studies/:id/groups/:groupId/cue-config` | Per-group cue source, count, and behaviour config                                            |
 
 ### Study-Configurable Reminders (habit / questionnaire / end-of-study / study-update)
 
@@ -636,11 +636,11 @@ Four reminder types share one mode model, configurable per study and
 per-group, from a single admin Studies → **Reminders** tab (the former
 separate Notifications tab is merged into it — see below):
 
-| Mode | Meaning |
-|---|---|
-| `off` | No reminder; the participant has no input at all |
+| Mode                 | Meaning                                                                                                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `off`                | No reminder; the participant has no input at all                                                                                                                            |
 | `participant_choice` | The participant picks their own time. **Habit reminders only** — no participant-facing picker exists for the other 3 types, so their schema only allows `off`/`admin_fixed` |
-| `admin_fixed` | The admin locks the time; the participant has no input |
+| `admin_fixed`        | The admin locks the time; the participant has no input                                                                                                                      |
 
 The admin UI renders this as switches, not a mode dropdown: habit reminders
 get two cascading `ToggleSwitch`es ("Reminder enabled", then "Admin fixes the
@@ -714,7 +714,7 @@ streakNorm   = min(current streak, 14) / 14
 Two stabilisers:
 
 - **Hysteresis (fading is slow):** tiers beyond `every_2_days` additionally
-  require the *previous* week's SRHI to support the same tier — one good week
+  require the _previous_ week's SRHI to support the same tier — one good week
   is not yet automaticity.
 - **Recovery (escalation is fast):** if 7-day adherence drops below 0.5, the
   plan snaps back to `daily` immediately, regardless of SRHI.
@@ -830,7 +830,7 @@ still see it) and creates a fresh relationship to the new study. Reads
 (`getEnrollment()`) always select the relationship with `droppedOutAt IS
 NULL` — there is exactly one at a time by construction.
 
-**MongoDB `enrollments`** mirrors the *current* enrollment only (one document
+**MongoDB `enrollments`** mirrors the _current_ enrollment only (one document
 per user, upserted on every enroll/switch/leave via
 `_upsertMongoEnrollment()`), used by dropout CSV export, admin stats,
 notification targeting, and questionnaire-window scheduling. This mirror was
@@ -851,24 +851,24 @@ manual seed script was ever run.
 
 ### New MongoDB Collections
 
-| Collection | Purpose |
-|---|---|
-| `implementation_intentions` | Participant intentions (behaviour, cue, time, status) |
-| `daily_behavior_logs` | Idempotent daily done/not-done logs keyed on intention + date |
-| `srhi_responses` | Weekly SRHI submissions with computed composite score |
-| `cue_pools` | Named pools of pre-rated contextual cues; supports per-group assignment |
-| `notification_campaigns` | Researcher-authored FCM push campaigns with schedule and target group |
+| Collection                  | Purpose                                                                 |
+| --------------------------- | ----------------------------------------------------------------------- |
+| `implementation_intentions` | Participant intentions (behaviour, cue, time, status)                   |
+| `daily_behavior_logs`       | Idempotent daily done/not-done logs keyed on intention + date           |
+| `srhi_responses`            | Weekly SRHI submissions with computed composite score                   |
+| `cue_pools`                 | Named pools of pre-rated contextual cues; supports per-group assignment |
+| `notification_campaigns`    | Researcher-authored FCM push campaigns with schedule and target group   |
 
 ---
 
-*Updated: 2026-07-12 | Documentation cleanup pass: added Account Recovery via Passphrase (UC-39) section, fixed admin page-level role-guard list, corrected Node.js version (22, not 20)*
+_Updated: 2026-07-12 | Documentation cleanup pass: added Account Recovery via Passphrase (UC-39) section, fixed admin page-level role-guard list, corrected Node.js version (22, not 20)_
 
-*Updated: 2026-06-10 | Fuseki removed from architecture docs (service retired from compose stack); backup targets corrected*
+_Updated: 2026-06-10 | Fuseki removed from architecture docs (service retired from compose stack); backup targets corrected_
 
-*Updated: 2026-06-10 | Diagram suite added under `docs/diagrams/` (architecture, use cases, 39 sequence diagrams, class diagram)*
+_Updated: 2026-06-10 | Diagram suite added under `docs/diagrams/` (architecture, use cases, 39 sequence diagrams, class diagram)_
 
-*Updated: 2026-06-03 | LightRAG upgraded to 1.5.0*
+_Updated: 2026-06-03 | LightRAG upgraded to 1.5.0_
 
-*Updated: 2026-06-02 | DFG study module added*
+_Updated: 2026-06-02 | DFG study module added_
 
-*Updated: 2026-05-09 | Branch: platform_unified — LightRAG knowledge base added*
+_Updated: 2026-05-09 | Branch: platform_unified — LightRAG knowledge base added_

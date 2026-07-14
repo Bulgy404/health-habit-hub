@@ -1,6 +1,6 @@
 name: Feature request
 description: Propose a new feature or improvement
-labels: ["enhancement", "triage"]
+labels: ['enhancement', 'triage']
 body:
   - type: markdown
     attributes:
@@ -30,7 +30,7 @@ body:
     attributes:
       label: Problem or motivation
       description: What problem does this solve? Who is affected and how often?
-      placeholder: "As a study participant, I often find it hard to ... because ..."
+      placeholder: 'As a study participant, I often find it hard to ... because ...'
     validations:
       required: true
 

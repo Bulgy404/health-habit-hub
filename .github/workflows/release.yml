@@ -3,11 +3,11 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 permissions:
-  contents: write   # needed to create GitHub Releases
-  checks: read      # needed to read CI check-run results
+  contents: write # needed to create GitHub Releases
+  checks: read # needed to read CI check-run results
 
 jobs:
   release:
@@ -50,7 +50,7 @@ jobs:
 
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0   # full history so we can read CHANGELOG.md
+          fetch-depth: 0 # full history so we can read CHANGELOG.md
 
       - name: Extract version from tag
         id: version

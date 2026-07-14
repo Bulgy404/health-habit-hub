@@ -17,7 +17,10 @@ jest.mock("next/navigation", () => ({
 
 type Overview = {
   generatedAt: string;
-  health: { status: "ok" | "error"; services: Record<string, { status: "ok" | "error"; latencyMs: number }> };
+  health: {
+    status: "ok" | "error";
+    services: Record<string, { status: "ok" | "error"; latencyMs: number }>;
+  };
   prometheus: { reachable: boolean; values: Record<string, number | null> };
 };
 
@@ -240,7 +243,9 @@ describe("SystemPage", () => {
     const { container } = render(<SystemPage />);
     await screen.findByText("Tools");
 
-    const links = Array.from(container.querySelectorAll('a[target="_blank"]')) as HTMLAnchorElement[];
+    const links = Array.from(
+      container.querySelectorAll('a[target="_blank"]')
+    ) as HTMLAnchorElement[];
     expect(links).toHaveLength(8);
 
     const hrefs = links.map((a) => a.getAttribute("href"));

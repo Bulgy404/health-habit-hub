@@ -115,7 +115,9 @@
   color: var(--color-sidebar-text);
   font-size: 0.9rem;
   font-weight: 500;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 
 .navLink:hover {

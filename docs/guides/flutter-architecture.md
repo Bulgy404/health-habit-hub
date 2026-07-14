@@ -107,29 +107,29 @@ Navigation uses **GoRouter** configured in `main.dart` via a `RouterNotifier`/`r
 
 ### Route map
 
-| Path | Screen | Notes |
-|------|--------|-------|
-| `/login` | `LoginScreen` | Keycloak login entry point |
-| `/onboarding/welcome` | `WelcomeScreen` | First-run onboarding |
-| `/onboarding/passphrase` | `PassphraseScreen` | BIP-39 backup passphrase |
-| `/onboarding/restore` | `RestoreScreen` | Restore account from passphrase |
-| `/share` | `ShareHabitScreen` | Tab root: landing hero + why-share card ("Read more" → `/about-project`) when idle, native habit-share form (posts to `/api/v1/habits/share`) once started. Shared-today state shows a prominent "Share another habit" CTA rather than blocking further sharing |
-| `/donate` | — | Redirects to `/share` (legacy alias) |
-| `/about-project` | `ProjectInfoScreen` | "About HabConnect" info page: how shared habits are used, what cues are, the recommender pipeline (with a small step-diagram), adaptive reminders, SRHI — links out to the project's GitHub repo |
-| `/explore` | `ExploreScreen` | Browse donated habits |
-| `/recommend` | `GoalInputScreen` | Enter a health goal |
-| `/recommend/loading` | `LoadingScreen` | Waits for recommendation result |
-| `/settings` | `UserSettingsScreen` | Language selector |
-| `/settings/profile` | `ProfileScreen` | Profile fields, health questionnaires links, and the **Study membership** section (current study/group, "Join a different study" code dialog, "Leave study" — both round-trip through `/onboarding/switch-study` / `/onboarding/leave-study` without touching already-donated data) |
-| `/questionnaire/:slug` | `QuestionnaireScreen` | Generic questionnaire by slug |
-| `/questionnaire/:slug/confirmation` | `QuestionnaireConfirmationScreen` | Post-submit confirmation |
-| `/admin/*` | `AdminShellScreen` + sub-routes | Admin panel (role-guarded) |
-| `/habits` | `MyHabitsScreen` | Tab root: GitHub-style `ContributionGraphWidget` (aggregate across all habits, shown even with none) + SRHI prompt card + habit card list |
-| `/habits/new/behavior` | `NewHabitScreen1Behavior` | Pick behavior from `habitConfig.behaviorOptions` |
-| `/habits/new/cue` | `NewHabitScreen2Cue` | Select pre-rated or free-text cue |
-| `/habits/new/confirm` | `NewHabitScreen3Confirm` | Confirm if-then statement, pick duration, submit |
-| `/habits/:intentionId` | `HabitDetailScreen` | Per-habit `ContributionGraphWidget` activity log + SRHI score/next-due-date card with a dismissible "What's SRHI?" explanation + SRHI trajectory sparkline + abandon action |
-| `/habits/:intentionId/srhi/:weekNumber` | `SrhiFormScreen` | 12-item 1–7 slider SRHI check-in form |
+| Path                                    | Screen                            | Notes                                                                                                                                                                                                                                                                               |
+| --------------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/login`                                | `LoginScreen`                     | Keycloak login entry point                                                                                                                                                                                                                                                          |
+| `/onboarding/welcome`                   | `WelcomeScreen`                   | First-run onboarding                                                                                                                                                                                                                                                                |
+| `/onboarding/passphrase`                | `PassphraseScreen`                | BIP-39 backup passphrase                                                                                                                                                                                                                                                            |
+| `/onboarding/restore`                   | `RestoreScreen`                   | Restore account from passphrase                                                                                                                                                                                                                                                     |
+| `/share`                                | `ShareHabitScreen`                | Tab root: landing hero + why-share card ("Read more" → `/about-project`) when idle, native habit-share form (posts to `/api/v1/habits/share`) once started. Shared-today state shows a prominent "Share another habit" CTA rather than blocking further sharing                     |
+| `/donate`                               | —                                 | Redirects to `/share` (legacy alias)                                                                                                                                                                                                                                                |
+| `/about-project`                        | `ProjectInfoScreen`               | "About HabConnect" info page: how shared habits are used, what cues are, the recommender pipeline (with a small step-diagram), adaptive reminders, SRHI — links out to the project's GitHub repo                                                                                    |
+| `/explore`                              | `ExploreScreen`                   | Browse donated habits                                                                                                                                                                                                                                                               |
+| `/recommend`                            | `GoalInputScreen`                 | Enter a health goal                                                                                                                                                                                                                                                                 |
+| `/recommend/loading`                    | `LoadingScreen`                   | Waits for recommendation result                                                                                                                                                                                                                                                     |
+| `/settings`                             | `UserSettingsScreen`              | Language selector                                                                                                                                                                                                                                                                   |
+| `/settings/profile`                     | `ProfileScreen`                   | Profile fields, health questionnaires links, and the **Study membership** section (current study/group, "Join a different study" code dialog, "Leave study" — both round-trip through `/onboarding/switch-study` / `/onboarding/leave-study` without touching already-donated data) |
+| `/questionnaire/:slug`                  | `QuestionnaireScreen`             | Generic questionnaire by slug                                                                                                                                                                                                                                                       |
+| `/questionnaire/:slug/confirmation`     | `QuestionnaireConfirmationScreen` | Post-submit confirmation                                                                                                                                                                                                                                                            |
+| `/admin/*`                              | `AdminShellScreen` + sub-routes   | Admin panel (role-guarded)                                                                                                                                                                                                                                                          |
+| `/habits`                               | `MyHabitsScreen`                  | Tab root: GitHub-style `ContributionGraphWidget` (aggregate across all habits, shown even with none) + SRHI prompt card + habit card list                                                                                                                                           |
+| `/habits/new/behavior`                  | `NewHabitScreen1Behavior`         | Pick behavior from `habitConfig.behaviorOptions`                                                                                                                                                                                                                                    |
+| `/habits/new/cue`                       | `NewHabitScreen2Cue`              | Select pre-rated or free-text cue                                                                                                                                                                                                                                                   |
+| `/habits/new/confirm`                   | `NewHabitScreen3Confirm`          | Confirm if-then statement, pick duration, submit                                                                                                                                                                                                                                    |
+| `/habits/:intentionId`                  | `HabitDetailScreen`               | Per-habit `ContributionGraphWidget` activity log + SRHI score/next-due-date card with a dismissible "What's SRHI?" explanation + SRHI trajectory sparkline + abandon action                                                                                                         |
+| `/habits/:intentionId/srhi/:weekNumber` | `SrhiFormScreen`                  | 12-item 1–7 slider SRHI check-in form                                                                                                                                                                                                                                               |
 
 ### Auth guard
 
@@ -149,31 +149,31 @@ The app uses **Riverpod** (`flutter_riverpod`). All providers are declared at mo
 
 ### Provider types in use
 
-| Riverpod type | Used for |
-|---------------|---------|
-| `Provider` | Singleton services (e.g. `surveyServiceProvider`) |
-| `FutureProvider` | One-shot async reads (e.g. `isLoggedInProvider`) |
-| `FutureProvider.family` | Parameterised async reads (e.g. `questionnaireProvider(slug)`) |
-| `NotifierProvider` | Mutable local state (e.g. `localeProvider`, `themeModeProvider`) |
-| `NotifierProvider.family` | Per-slug questionnaire answer state |
+| Riverpod type             | Used for                                                         |
+| ------------------------- | ---------------------------------------------------------------- |
+| `Provider`                | Singleton services (e.g. `surveyServiceProvider`)                |
+| `FutureProvider`          | One-shot async reads (e.g. `isLoggedInProvider`)                 |
+| `FutureProvider.family`   | Parameterised async reads (e.g. `questionnaireProvider(slug)`)   |
+| `NotifierProvider`        | Mutable local state (e.g. `localeProvider`, `themeModeProvider`) |
+| `NotifierProvider.family` | Per-slug questionnaire answer state                              |
 
 ### Key providers
 
-| Provider | File | Description |
-|----------|------|-------------|
-| `authServiceProvider` | `providers/auth_provider.dart` | Exposes `AuthService` singleton |
-| `isLoggedInProvider` | `providers/auth_provider.dart` | `FutureProvider<bool>` — used by router |
-| `localeProvider` | `providers/locale_provider.dart` | Current app locale; persists via PUT /users/me |
-| `themeModeProvider` | `providers/theme_provider.dart` | Light/dark theme toggle |
-| `surveyServiceProvider` | `services/survey_service.dart` | Survey fetch + submit |
-| `questionnaireFormProvider(slug)` | `features/questionnaire/questionnaire_provider.dart` | Per-slug form state (current page, answers) |
-| `habitConfigProvider` | `features/my_habits/my_habits_provider.dart` | `FutureProvider<HabitConfig>` — assigned cues, SRHI items, behavior options, maxHabits |
-| `intentionsProvider` | `features/my_habits/my_habits_provider.dart` | `FutureProvider<List<Intention>>` — user's active intentions |
-| `dueSrhiProvider` | `features/my_habits/my_habits_provider.dart` | `FutureProvider<List<SrhiWindow>>` — pending SRHI check-in windows |
-| `intentionLogsProvider(id)` | `features/my_habits/my_habits_provider.dart` | `FutureProvider.family` — daily logs for a given intention |
-| `srhiTrajectoryProvider(id)` | `features/my_habits/my_habits_provider.dart` | `FutureProvider.family` — SRHI score history for a given intention (each point now also carries `scheduledFor`, used to compute the next-due date shown on the habit detail screen) |
-| `allHabitsActivityProvider` | `features/my_habits/my_habits_provider.dart` | `FutureProvider<Map<DateTime, int>>` — enactment counts across every active intention, feeding the aggregate `ContributionGraphWidget` on `/habits` |
-| `dueQuestionnaireProvider` | `screens/shell_screen.dart` | `Provider<Future<String? > Function()>` — fetches the slug of a currently-due questionnaire (or `null`) for the post-startup in-app reminder snackbar; a plain function-returning provider (not `FutureProvider`) so `ShellScreen` can call it on demand from `initState` and so tests can override it with a stub instead of making a real network call |
+| Provider                          | File                                                 | Description                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `authServiceProvider`             | `providers/auth_provider.dart`                       | Exposes `AuthService` singleton                                                                                                                                                                                                                                                                                                                          |
+| `isLoggedInProvider`              | `providers/auth_provider.dart`                       | `FutureProvider<bool>` — used by router                                                                                                                                                                                                                                                                                                                  |
+| `localeProvider`                  | `providers/locale_provider.dart`                     | Current app locale; persists via PUT /users/me                                                                                                                                                                                                                                                                                                           |
+| `themeModeProvider`               | `providers/theme_provider.dart`                      | Light/dark theme toggle                                                                                                                                                                                                                                                                                                                                  |
+| `surveyServiceProvider`           | `services/survey_service.dart`                       | Survey fetch + submit                                                                                                                                                                                                                                                                                                                                    |
+| `questionnaireFormProvider(slug)` | `features/questionnaire/questionnaire_provider.dart` | Per-slug form state (current page, answers)                                                                                                                                                                                                                                                                                                              |
+| `habitConfigProvider`             | `features/my_habits/my_habits_provider.dart`         | `FutureProvider<HabitConfig>` — assigned cues, SRHI items, behavior options, maxHabits                                                                                                                                                                                                                                                                   |
+| `intentionsProvider`              | `features/my_habits/my_habits_provider.dart`         | `FutureProvider<List<Intention>>` — user's active intentions                                                                                                                                                                                                                                                                                             |
+| `dueSrhiProvider`                 | `features/my_habits/my_habits_provider.dart`         | `FutureProvider<List<SrhiWindow>>` — pending SRHI check-in windows                                                                                                                                                                                                                                                                                       |
+| `intentionLogsProvider(id)`       | `features/my_habits/my_habits_provider.dart`         | `FutureProvider.family` — daily logs for a given intention                                                                                                                                                                                                                                                                                               |
+| `srhiTrajectoryProvider(id)`      | `features/my_habits/my_habits_provider.dart`         | `FutureProvider.family` — SRHI score history for a given intention (each point now also carries `scheduledFor`, used to compute the next-due date shown on the habit detail screen)                                                                                                                                                                      |
+| `allHabitsActivityProvider`       | `features/my_habits/my_habits_provider.dart`         | `FutureProvider<Map<DateTime, int>>` — enactment counts across every active intention, feeding the aggregate `ContributionGraphWidget` on `/habits`                                                                                                                                                                                                      |
+| `dueQuestionnaireProvider`        | `screens/shell_screen.dart`                          | `Provider<Future<String? > Function()>` — fetches the slug of a currently-due questionnaire (or `null`) for the post-startup in-app reminder snackbar; a plain function-returning provider (not `FutureProvider`) so `ShellScreen` can call it on demand from `initState` and so tests can override it with a stub instead of making a real network call |
 
 ### Locale provider
 
@@ -208,7 +208,9 @@ output-dir: lib/l10n
    // app_en.arb
    {
      "settingsSaved": "Settings saved",
-     "@settingsSaved": { "description": "Snackbar shown after settings are saved" }
+     "@settingsSaved": {
+       "description": "Snackbar shown after settings are saved"
+     }
    }
    ```
 
@@ -259,6 +261,7 @@ final _tokenEndpoint = '${AppConfig.keycloakUrl}/realms/hhh/protocol/openid-conn
 ### Token refresh
 
 `AuthService.getAccessToken()`:
+
 - Checks if the stored access token is still valid (with a 60-second buffer).
 - If expired, calls `appAuth.token(...)` with the refresh token to silently obtain a new access token.
 - Returns the valid access token string; throws `UnauthorisedException` if refresh fails.
@@ -305,11 +308,11 @@ abstract final class AppConfig {
 }
 ```
 
-| `--dart-define` key | Default | Description |
-|---------------------|---------|-------------|
-| `API_BASE_URL` | `http://localhost:3000/api/v1` | REST API base URL |
-| `KEYCLOAK_URL` | `http://localhost:8080` | Keycloak base URL (no realm path) |
-| `WS_BASE_URL` | `ws://localhost:3000/ws` | WebSocket base URL for recommendations |
+| `--dart-define` key | Default                        | Description                            |
+| ------------------- | ------------------------------ | -------------------------------------- |
+| `API_BASE_URL`      | `http://localhost:3000/api/v1` | REST API base URL                      |
+| `KEYCLOAK_URL`      | `http://localhost:8080`        | Keycloak base URL (no realm path)      |
+| `WS_BASE_URL`       | `ws://localhost:3000/ws`       | WebSocket base URL for recommendations |
 
 **Do not use hardcoded URLs in service files.** Always reference `AppConfig` constants.
 
@@ -319,15 +322,15 @@ abstract final class AppConfig {
 
 Service classes in `mobile/lib/services/` are thin wrappers around **Dio** HTTP calls. Each service is exposed as a Riverpod `Provider` so it can be overridden in tests.
 
-| Service | Provider | Responsibility |
-|---------|----------|---------------|
-| `AuthService` | `authServiceProvider` | Keycloak PKCE login/logout/token refresh |
-| `HabitService` | `habitServiceProvider` | `GET /habits` — browse donated habits |
-| `SurveyService` | `surveyServiceProvider` | Fetch survey definition; submit responses |
-| `AdminService` | `adminServiceProvider` | Admin CRUD for participants, habits, surveys |
-| `RecommendationService` | `recommendationServiceProvider` | REST-based recommendation fetch |
-| `RecommendationWsService` | `recommendationWsServiceProvider` | WebSocket-based real-time recommendation stream |
-| `MyHabitsService` | `myHabitsServiceProvider` | Habit config, intentions CRUD, daily logs, SRHI submit/trajectory |
+| Service                   | Provider                          | Responsibility                                                    |
+| ------------------------- | --------------------------------- | ----------------------------------------------------------------- |
+| `AuthService`             | `authServiceProvider`             | Keycloak PKCE login/logout/token refresh                          |
+| `HabitService`            | `habitServiceProvider`            | `GET /habits` — browse donated habits                             |
+| `SurveyService`           | `surveyServiceProvider`           | Fetch survey definition; submit responses                         |
+| `AdminService`            | `adminServiceProvider`            | Admin CRUD for participants, habits, surveys                      |
+| `RecommendationService`   | `recommendationServiceProvider`   | REST-based recommendation fetch                                   |
+| `RecommendationWsService` | `recommendationWsServiceProvider` | WebSocket-based real-time recommendation stream                   |
+| `MyHabitsService`         | `myHabitsServiceProvider`         | Habit config, intentions CRUD, daily logs, SRHI submit/trajectory |
 
 ### Error handling
 
@@ -386,25 +389,25 @@ On `HabitDetailScreen`, the "Habit strength" section shows the latest submitted 
 
 Colours derive from `Theme.of(context).colorScheme` (empty cells: `surfaceContainerHighest`; filled cells: a green scale), so the graph reads correctly in both light and dark mode rather than assuming a light background.
 
-**Backend contract note:** `GET /habits/intentions/:id/logs` returns each log's `intentionId` alongside `date`/`enacted`/`loggedAt` — this was previously omitted, which made the Flutter model's non-nullable `intentionId` field always fail to parse, silently breaking *every* consumer of daily logs (the day-strip on `MyHabitsScreen`, the heatmap, and this widget). The Flutter model now also falls back to an empty string instead of throwing if a future regression reintroduces the gap.
+**Backend contract note:** `GET /habits/intentions/:id/logs` returns each log's `intentionId` alongside `date`/`enacted`/`loggedAt` — this was previously omitted, which made the Flutter model's non-nullable `intentionId` field always fail to parse, silently breaking _every_ consumer of daily logs (the day-strip on `MyHabitsScreen`, the heatmap, and this widget). The Flutter model now also falls back to an empty string instead of throwing if a future regression reintroduces the gap.
 
 ### API endpoints
 
-| Endpoint | Direction | Purpose |
-|----------|-----------|---------|
-| `GET /api/v1/me/habit-config` | read | Load `HabitConfig` (cues, items, options, maxHabits) |
-| `GET /api/v1/habits/intentions` | read | List user intentions |
-| `POST /api/v1/habits/intentions` | write | Create new intention |
-| `PATCH /api/v1/habits/intentions/:id/status` | write | Abandon / pause intention |
-| `GET /api/v1/habits/intentions/:id/logs` | read | Daily log history (each entry includes `intentionId`) |
-| `POST /api/v1/habits/intentions/:id/logs` | write | Record daily enactment |
-| `GET /api/v1/srhi/due` | read | Pending SRHI windows |
-| `POST /api/v1/srhi/:id/week/:n` | write | Submit SRHI check-in |
-| `GET /api/v1/srhi/:id/trajectory` | read | SRHI score history (each point includes `scheduledFor`, used for the next-due-date display) |
-| `GET /api/v1/onboarding/enrollment` | read | Current study/group — powers the Study membership section on `/settings/profile` |
-| `POST /api/v1/onboarding/switch-study` | write | Move to a different study via code — see `docs/architecture.md`'s *Study Enrollment, Switching & Leaving* |
-| `POST /api/v1/onboarding/leave-study` | write | Move back to the default study |
-| `GET /api/v1/questionnaires/due` | read | Also drives the post-startup in-app reminder snackbar (`dueQuestionnaireProvider`, `ShellScreen`) in addition to the existing local push-notification scheduling |
+| Endpoint                                     | Direction | Purpose                                                                                                                                                          |
+| -------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/v1/me/habit-config`                | read      | Load `HabitConfig` (cues, items, options, maxHabits)                                                                                                             |
+| `GET /api/v1/habits/intentions`              | read      | List user intentions                                                                                                                                             |
+| `POST /api/v1/habits/intentions`             | write     | Create new intention                                                                                                                                             |
+| `PATCH /api/v1/habits/intentions/:id/status` | write     | Abandon / pause intention                                                                                                                                        |
+| `GET /api/v1/habits/intentions/:id/logs`     | read      | Daily log history (each entry includes `intentionId`)                                                                                                            |
+| `POST /api/v1/habits/intentions/:id/logs`    | write     | Record daily enactment                                                                                                                                           |
+| `GET /api/v1/srhi/due`                       | read      | Pending SRHI windows                                                                                                                                             |
+| `POST /api/v1/srhi/:id/week/:n`              | write     | Submit SRHI check-in                                                                                                                                             |
+| `GET /api/v1/srhi/:id/trajectory`            | read      | SRHI score history (each point includes `scheduledFor`, used for the next-due-date display)                                                                      |
+| `GET /api/v1/onboarding/enrollment`          | read      | Current study/group — powers the Study membership section on `/settings/profile`                                                                                 |
+| `POST /api/v1/onboarding/switch-study`       | write     | Move to a different study via code — see `docs/architecture.md`'s _Study Enrollment, Switching & Leaving_                                                        |
+| `POST /api/v1/onboarding/leave-study`        | write     | Move back to the default study                                                                                                                                   |
+| `GET /api/v1/questionnaires/due`             | read      | Also drives the post-startup in-app reminder snackbar (`dueQuestionnaireProvider`, `ShellScreen`) in addition to the existing local push-notification scheduling |
 
 ---
 

@@ -96,8 +96,7 @@ export default function TeamPage() {
 
   async function handleRevoke(userId: string, username: string, role: string) {
     if (!token) return;
-    if (!window.confirm(t("revokeConfirm", { role: t(`role${cap(role)}`), username })))
-      return;
+    if (!window.confirm(t("revokeConfirm", { role: t(`role${cap(role)}`), username }))) return;
     setBusyUserId(userId);
     try {
       await apiFetch(apiUrl(`/admin/team/${userId}/roles/${role}`), token, {
@@ -188,61 +187,61 @@ export default function TeamPage() {
 
       {showAdd && (
         <Modal onClose={() => setShowAdd(false)}>
-            <h2 className={styles.modalTitle}>{t("addMember")}</h2>
-            <div className={styles.formRow}>
-              <input
-                className={styles.input}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("searchPlaceholder")}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              />
-              <button className={styles.actionBtn} onClick={handleSearch} disabled={searching}>
-                {t("searchButton")}
-              </button>
-            </div>
+          <h2 className={styles.modalTitle}>{t("addMember")}</h2>
+          <div className={styles.formRow}>
+            <input
+              className={styles.input}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("searchPlaceholder")}
+              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            />
+            <button className={styles.actionBtn} onClick={handleSearch} disabled={searching}>
+              {t("searchButton")}
+            </button>
+          </div>
 
-            <ul style={{ listStyle: "none", padding: 0, margin: "12px 0" }}>
-              {results.map((u) => (
-                <li
-                  key={u.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "8px 0",
-                    borderBottom: "1px solid #e5e7eb",
-                  }}
-                >
-                  <span>
-                    {u.username}
-                    {u.email && <span className={styles.muted}> ({u.email})</span>}
-                  </span>
-                  <span>
-                    {MANAGEABLE_ROLES.map((role) => (
-                      <button
-                        key={role}
-                        className={styles.actionBtn}
-                        disabled={busyUserId === u.id}
-                        onClick={() => handleGrant(u.id, role)}
-                        style={{ marginLeft: 6 }}
-                      >
-                        {t(`grant${cap(role)}`)}
-                      </button>
-                    ))}
-                  </span>
-                </li>
-              ))}
-              {results.length === 0 && !searching && query && (
-                <li className={styles.muted}>{t("noSearchResults")}</li>
-              )}
-            </ul>
+          <ul style={{ listStyle: "none", padding: 0, margin: "12px 0" }}>
+            {results.map((u) => (
+              <li
+                key={u.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "8px 0",
+                  borderBottom: "1px solid #e5e7eb",
+                }}
+              >
+                <span>
+                  {u.username}
+                  {u.email && <span className={styles.muted}> ({u.email})</span>}
+                </span>
+                <span>
+                  {MANAGEABLE_ROLES.map((role) => (
+                    <button
+                      key={role}
+                      className={styles.actionBtn}
+                      disabled={busyUserId === u.id}
+                      onClick={() => handleGrant(u.id, role)}
+                      style={{ marginLeft: 6 }}
+                    >
+                      {t(`grant${cap(role)}`)}
+                    </button>
+                  ))}
+                </span>
+              </li>
+            ))}
+            {results.length === 0 && !searching && query && (
+              <li className={styles.muted}>{t("noSearchResults")}</li>
+            )}
+          </ul>
 
-            <div className={styles.formActions}>
-              <button className={styles.secondaryButton} onClick={() => setShowAdd(false)}>
-                {tc("cancel")}
-              </button>
-            </div>
+          <div className={styles.formActions}>
+            <button className={styles.secondaryButton} onClick={() => setShowAdd(false)}>
+              {tc("cancel")}
+            </button>
+          </div>
         </Modal>
       )}
     </div>

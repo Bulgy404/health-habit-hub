@@ -18,7 +18,11 @@
           "datasource": "Prometheus"
         }
       ],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "colorMode": "background" }
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "colorMode": "background"
+      }
     },
     {
       "id": 2,
@@ -32,12 +36,17 @@
           "datasource": "Prometheus"
         }
       ],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "unit": "percentunit", "colorMode": "background",
-        "thresholds": { "steps": [
-          { "value": null, "color": "green" },
-          { "value": 0.01, "color": "yellow" },
-          { "value": 0.05, "color": "red" }
-        ]}
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "unit": "percentunit",
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            { "value": null, "color": "green" },
+            { "value": 0.01, "color": "yellow" },
+            { "value": 0.05, "color": "red" }
+          ]
+        }
       }
     },
     {
@@ -52,7 +61,11 @@
           "datasource": "Prometheus"
         }
       ],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "unit": "bytes", "colorMode": "background" }
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "unit": "bytes",
+        "colorMode": "background"
+      }
     },
     {
       "id": 4,
@@ -66,12 +79,17 @@
           "datasource": "Prometheus"
         }
       ],
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "unit": "s", "colorMode": "background",
-        "thresholds": { "steps": [
-          { "value": null, "color": "green" },
-          { "value": 0.1, "color": "yellow" },
-          { "value": 0.5, "color": "red" }
-        ]}
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "unit": "s",
+        "colorMode": "background",
+        "thresholds": {
+          "steps": [
+            { "value": null, "color": "green" },
+            { "value": 0.1, "color": "yellow" },
+            { "value": 0.5, "color": "red" }
+          ]
+        }
       }
     },
     {

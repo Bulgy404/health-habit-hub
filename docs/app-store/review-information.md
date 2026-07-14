@@ -59,12 +59,12 @@ into Connect.
 
 ## Demo access for review
 
-| Field | Value |
-|---|---|
-| Demo flow | Launch app → "Get Started" → consent screen → auto-generated anonymous account (no credentials needed) |
-| Study code (for the enrollment step) | `HHH-REVW1` *(create before submission: Admin portal → Studies → Codes; set no expiry, generous redemption limit)* |
-| Alternative | Tap "Skip" on the study-code screen to join the default study |
-| Restore flow test | The 24-word passphrase shown during onboarding restores the account via "Restore existing account" |
+| Field                                | Value                                                                                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Demo flow                            | Launch app → "Get Started" → consent screen → auto-generated anonymous account (no credentials needed)             |
+| Study code (for the enrollment step) | `HHH-REVW1` _(create before submission: Admin portal → Studies → Codes; set no expiry, generous redemption limit)_ |
+| Alternative                          | Tap "Skip" on the study-code screen to join the default study                                                      |
+| Restore flow test                    | The 24-word passphrase shown during onboarding restores the account via "Restore existing account"                 |
 
 **Before each submission:** verify `HHH-REVW1` (or the current review code) is
 active: `POST /api/v1/enroll/redeem-code` must accept it. Generate via the
@@ -87,27 +87,27 @@ admin portal or `scripts/` seeding.
 
 ## App Privacy (nutrition labels) — declare in App Store Connect
 
-| Data type | Collected? | Linked to user? | Tracking? | Purpose |
-|---|---|---|---|---|
-| Health & Fitness → Health | Yes | Yes (pseudonymous study ID) | No | App functionality, research |
-| User Content → Other (habit texts, questionnaire answers) | Yes | Yes | No | App functionality, research |
-| Identifiers → User ID (pseudonymous Keycloak sub) | Yes | Yes | No | App functionality |
-| Usage Data → Product interaction (daily logs, SRHI) | Yes | Yes | No | App functionality, research |
-| Contact info / location / financial / browsing | No | — | — | — |
+| Data type                                                 | Collected? | Linked to user?             | Tracking? | Purpose                     |
+| --------------------------------------------------------- | ---------- | --------------------------- | --------- | --------------------------- |
+| Health & Fitness → Health                                 | Yes        | Yes (pseudonymous study ID) | No        | App functionality, research |
+| User Content → Other (habit texts, questionnaire answers) | Yes        | Yes                         | No        | App functionality, research |
+| Identifiers → User ID (pseudonymous Keycloak sub)         | Yes        | Yes                         | No        | App functionality           |
+| Usage Data → Product interaction (daily logs, SRHI)       | Yes        | Yes                         | No        | App functionality, research |
+| Contact info / location / financial / browsing            | No         | —                           | —         | —                           |
 
 Matches `ios/Runner/PrivacyInfo.xcprivacy` (which must stay in sync).
 
 ## Guideline-by-guideline status
 
-| Guideline | Status | Where |
-|---|---|---|
-| 5.1.1(v) account deletion | ✅ | Settings → Delete account → `DELETE /api/v1/users/me` |
-| 5.1.3 health research consent | ✅ | Mandatory consent screen; versioned record in `consents` collection; ethics + DPO references above |
-| 5.1.1 accurate privacy disclosures | ✅ | Versioned legal docs served from backend; privacy manifest; labels table above |
-| Privacy manifest (ITMS-91053) | ✅ | `ios/Runner/PrivacyInfo.xcprivacy`, registered in the Runner target |
-| 2.1 information needed | ✅ | This document (demo flow + study code) |
-| 1.4.1 medical disclaimer | ✅ | Recommendations screen banner |
-| 4.5.4 push optional | ✅ | Requested post-onboarding; app fully functional when denied |
-| 4.8 Sign in with Apple | n/a | First-party auth only |
-| 1.2 user-generated content | ✅ | Server-side auto-moderation; report button re-queues for admin review and hides immediately from everyone incl. reporter; Settings → Community comments toggle to disable the feature entirely |
-| Export compliance (`ITSAppUsesNonExemptEncryption`) | ✅ | Set to `false` in `ios/Runner/Info.plist` — standard/exempt encryption only (TLS, OS keychain, local passphrase encoding) |
+| Guideline                                           | Status | Where                                                                                                                                                                                          |
+| --------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5.1.1(v) account deletion                           | ✅     | Settings → Delete account → `DELETE /api/v1/users/me`                                                                                                                                          |
+| 5.1.3 health research consent                       | ✅     | Mandatory consent screen; versioned record in `consents` collection; ethics + DPO references above                                                                                             |
+| 5.1.1 accurate privacy disclosures                  | ✅     | Versioned legal docs served from backend; privacy manifest; labels table above                                                                                                                 |
+| Privacy manifest (ITMS-91053)                       | ✅     | `ios/Runner/PrivacyInfo.xcprivacy`, registered in the Runner target                                                                                                                            |
+| 2.1 information needed                              | ✅     | This document (demo flow + study code)                                                                                                                                                         |
+| 1.4.1 medical disclaimer                            | ✅     | Recommendations screen banner                                                                                                                                                                  |
+| 4.5.4 push optional                                 | ✅     | Requested post-onboarding; app fully functional when denied                                                                                                                                    |
+| 4.8 Sign in with Apple                              | n/a    | First-party auth only                                                                                                                                                                          |
+| 1.2 user-generated content                          | ✅     | Server-side auto-moderation; report button re-queues for admin review and hides immediately from everyone incl. reporter; Settings → Community comments toggle to disable the feature entirely |
+| Export compliance (`ITSAppUsesNonExemptEncryption`) | ✅     | Set to `false` in `ios/Runner/Info.plist` — standard/exempt encryption only (TLS, OS keychain, local passphrase encoding)                                                                      |

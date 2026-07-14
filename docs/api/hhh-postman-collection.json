@@ -64,7 +64,9 @@
               "name": "200 – All services healthy",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"status\":\"ok\",\"services\":{\"neo4j\":{\"status\":\"ok\",\"latencyMs\":8},\"mongo\":{\"status\":\"ok\",\"latencyMs\":5},\"fuseki\":{\"status\":\"ok\",\"latencyMs\":22},\"keycloak\":{\"status\":\"ok\",\"latencyMs\":30},\"recommender\":{\"status\":\"ok\",\"latencyMs\":15}}}"
             }
           ]
@@ -130,21 +132,27 @@
               "name": "200 – Profile found",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"userId\":\"a1b2c3d4-1234-5678-abcd-ef0123456789\",\"answers\":{\"age\":30,\"goal\":\"exercise more\"},\"completedAt\":\"2026-03-15T10:00:00.000Z\",\"updatedAt\":\"2026-03-15T10:00:00.000Z\"}"
             },
             {
               "name": "401 – Unauthorized",
               "status": "Unauthorized",
               "code": 401,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"error\":\"Unauthorized\"}"
             },
             {
               "name": "404 – Profile not found",
               "status": "Not Found",
               "code": 404,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"error\":\"Profile not found\"}"
             }
           ]
@@ -168,7 +176,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"answers\":{\"age\":30,\"goal\":\"exercise more\"},\"completedAt\":\"2026-03-15T10:00:00.000Z\"}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/profile",
@@ -182,7 +190,9 @@
               "name": "200 – Profile upserted",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"userId\":\"a1b2c3d4-1234-5678-abcd-ef0123456789\",\"answers\":{\"age\":30,\"goal\":\"exercise more\"},\"completedAt\":\"2026-03-15T10:00:00.000Z\",\"updatedAt\":\"2026-03-15T10:00:00.000Z\"}"
             }
           ]
@@ -215,7 +225,9 @@
               "name": "200 – Surveys list",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "[{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G2\"]}]"
             }
           ]
@@ -243,14 +255,18 @@
               "name": "200 – Survey detail",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G2\"],\"jsonSchema\":{\"pages\":[]}}"
             },
             {
               "name": "404 – Survey not found",
               "status": "Not Found",
               "code": 404,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"error\":\"Survey not found\"}"
             }
           ]
@@ -274,7 +290,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"answers\":{\"q1\":\"yes\",\"q2\":42}}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/surveys/{{surveyId}}/results",
@@ -288,7 +304,9 @@
               "name": "201 – Survey response recorded",
               "status": "Created",
               "code": 201,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"ok\":true,\"surveyId\":\"survey-uuid-001\",\"completedAt\":\"2026-03-15T10:00:00.000Z\"}"
             }
           ]
@@ -321,7 +339,9 @@
               "name": "200 – Habits list",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "[{\"id\":\"habit-001\",\"name\":\"Go for a 30-min walk daily\",\"category\":\"Group1\",\"bcioClass\":null,\"annotationCounts\":{\"helpful\":5,\"iDoThis\":3}}]"
             }
           ]
@@ -349,7 +369,9 @@
               "name": "200 – Stats",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"total\":142,\"byCategory\":[{\"category\":\"Group1\",\"count\":42}],\"byDay\":[{\"date\":\"2026-03-15\",\"count\":12}]}"
             }
           ]
@@ -373,7 +395,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"type\":\"helpful\"}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/habits/{{habitId}}/annotate",
@@ -387,14 +409,18 @@
               "name": "200 – Annotation stored",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"habitId\":\"habit-001\",\"annotationCounts\":{\"helpful\":6,\"iDoThis\":3}}"
             },
             {
               "name": "400 – Invalid type",
               "status": "Bad Request",
               "code": 400,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"error\":\"type must be \\\"helpful\\\" or \\\"iDoThis\\\"\"}"
             }
           ]
@@ -427,7 +453,9 @@
               "name": "200 – Recommendations",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "[{\"recommendationId\":\"rec-001\",\"habitName\":\"Walk 30 minutes daily\",\"rationale\":\"Based on your goal to exercise more\",\"citation\":\"BCIO:0000042\"}]"
             }
           ]
@@ -455,7 +483,9 @@
               "name": "200 – History",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "[{\"recommendationId\":\"rec-001\",\"type\":\"accepted\",\"timestamp\":\"2026-03-15T08:00:00.000Z\"}]"
             }
           ]
@@ -479,7 +509,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"text\":\"I go for a 30-minute walk every morning\"}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/recommend/classify",
@@ -493,7 +523,9 @@
               "name": "200 – Classification",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"class\":\"Physical activity\",\"confidence\":0.92,\"bcioUri\":\"http://humanbehaviourchange.org/ontology/BCIO_000042\"}"
             }
           ]
@@ -527,14 +559,18 @@
               "name": "200 – Participants list",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "[{\"userId\":\"a1b2c3d4-1234-5678-abcd-ef0123456789\",\"username\":\"p-a1b2c3d4\",\"group\":\"G2\",\"enrolledAt\":\"2026-03-01T09:00:00.000Z\",\"lastActive\":\"2026-03-15T14:00:00.000Z\",\"surveyCompletionPct\":0.5}]"
             },
             {
               "name": "403 – Forbidden",
               "status": "Forbidden",
               "code": 403,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"error\":\"Forbidden\"}"
             }
           ]
@@ -562,7 +598,9 @@
               "name": "200 – Participant created",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"userId\":\"a1b2c3d4-1234-5678-abcd-ef0123456789\",\"username\":\"p-a1b2c3d4\",\"password\":\"Xk9mP2rNv7wQ\",\"tokenCardUrl\":\"/api/v1/admin/participants/a1b2c3d4.../token-card\"}"
             }
           ]
@@ -586,7 +624,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"group\":\"G2\"}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/admin/participants/{{participantId}}/group",
@@ -600,7 +638,9 @@
               "name": "200 – Group updated",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"ok\":true,\"userId\":\"a1b2c3d4-1234-5678-abcd-ef0123456789\",\"group\":\"G2\"}"
             }
           ]
@@ -619,8 +659,13 @@
             "url": {
               "raw": "{{baseUrl}}/admin/participants/{{participantId}}/token-card?format=both",
               "host": ["{{baseUrl}}"],
-              "path": ["admin", "participants", "{{participantId}}", "token-card"],
-              "query": [{"key": "format", "value": "both"}]
+              "path": [
+                "admin",
+                "participants",
+                "{{participantId}}",
+                "token-card"
+              ],
+              "query": [{ "key": "format", "value": "both" }]
             },
             "description": "Download participant token card as PDF. format=qr|print|both (default: both)."
           },
@@ -629,7 +674,7 @@
               "name": "200 – PDF token card",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/pdf"}],
+              "header": [{ "key": "Content-Type", "value": "application/pdf" }],
               "body": "<binary PDF>"
             }
           ]
@@ -657,7 +702,9 @@
               "name": "200 – Progress summary",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"profile\":{\"completed\":true,\"completedAt\":\"2026-03-02T10:00:00.000Z\"},\"surveys\":[{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"completedAt\":\"2026-03-03T11:00:00.000Z\"}],\"habitsCount\":7,\"recommendations\":{\"accepted\":3,\"dismissed\":1},\"timeline\":[{\"type\":\"enrolled\",\"timestamp\":\"2026-03-01T09:00:00.000Z\",\"detail\":\"Participant enrolled\"}]}"
             }
           ]
@@ -685,7 +732,9 @@
               "name": "200 – Participant deleted",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"ok\":true}"
             }
           ]
@@ -718,7 +767,9 @@
               "name": "200 – All surveys",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "[{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"published\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G2\"]}]"
             }
           ]
@@ -742,7 +793,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"targetMode\":\"group_assigned\",\"jsonSchema\":{\"pages\":[]},\"assignedGroups\":[\"G1\",\"G2\"]}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/admin/surveys",
@@ -756,7 +807,9 @@
               "name": "201 – Survey created",
               "status": "Created",
               "code": 201,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"id\":\"survey-uuid-001\",\"title\":\"Baseline Questionnaire\",\"type\":\"questionnaire\",\"status\":\"draft\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G2\"]}"
             }
           ]
@@ -780,7 +833,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"title\":\"Updated Questionnaire\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G2\",\"G3\"]}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/admin/surveys/{{surveyId}}",
@@ -794,7 +847,9 @@
               "name": "200 – Updated",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"ok\":true,\"id\":\"survey-uuid-001\"}"
             }
           ]
@@ -818,7 +873,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"status\":\"published\"}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/admin/surveys/{{surveyId}}/status",
@@ -832,7 +887,9 @@
               "name": "200 – Status updated",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"ok\":true,\"id\":\"survey-uuid-001\",\"status\":\"published\"}"
             }
           ]
@@ -856,7 +913,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"groups\":[\"G1\",\"G3\"]}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/admin/surveys/{{surveyId}}/groups",
@@ -870,7 +927,9 @@
               "name": "200 – Groups updated",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"ok\":true,\"id\":\"survey-uuid-001\",\"targetMode\":\"group_assigned\",\"assignedGroups\":[\"G1\",\"G3\"]}"
             }
           ]
@@ -896,12 +955,12 @@
               "host": ["{{baseUrl}}"],
               "path": ["admin", "habits", "feed"],
               "query": [
-                {"key": "page", "value": "1"},
-                {"key": "limit", "value": "20"},
-                {"key": "group", "value": "G1", "disabled": true},
-                {"key": "category", "value": "", "disabled": true},
-                {"key": "from", "value": "2026-03-01", "disabled": true},
-                {"key": "to", "value": "2026-03-31", "disabled": true}
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "group", "value": "G1", "disabled": true },
+                { "key": "category", "value": "", "disabled": true },
+                { "key": "from", "value": "2026-03-01", "disabled": true },
+                { "key": "to", "value": "2026-03-31", "disabled": true }
               ]
             },
             "description": "Paginated donated habits feed with optional filters."
@@ -911,7 +970,9 @@
               "name": "200 – Feed page",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"total\":142,\"page\":1,\"limit\":20,\"results\":[{\"participantId\":\"anon-001\",\"habitName\":\"Walk daily\",\"category\":\"G1\",\"donatedAt\":\"2026-03-15T08:00:00.000Z\"}]}"
             }
           ]
@@ -932,10 +993,10 @@
               "host": ["{{baseUrl}}"],
               "path": ["admin", "habits", "feed", "export"],
               "query": [
-                {"key": "format", "value": "csv"},
-                {"key": "group", "value": "G1", "disabled": true},
-                {"key": "from", "value": "2026-03-01", "disabled": true},
-                {"key": "to", "value": "2026-03-31", "disabled": true}
+                { "key": "format", "value": "csv" },
+                { "key": "group", "value": "G1", "disabled": true },
+                { "key": "from", "value": "2026-03-01", "disabled": true },
+                { "key": "to", "value": "2026-03-31", "disabled": true }
               ]
             },
             "description": "Export donated habits as CSV file."
@@ -945,7 +1006,7 @@
               "name": "200 – CSV download",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "text/csv"}],
+              "header": [{ "key": "Content-Type", "value": "text/csv" }],
               "body": "participantId,habitName,category,donatedAt\nanon-001,Walk daily,G1,2026-03-15T08:00:00.000Z"
             }
           ]
@@ -978,7 +1039,9 @@
               "name": "200 – Sessions",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "[{\"id\":\"session-abc123\",\"userId\":\"a1b2c3d4-...\",\"username\":\"p-a1b2c3d4\",\"start\":1742000000000,\"lastAccess\":1742040000000}]"
             }
           ]
@@ -1006,7 +1069,9 @@
               "name": "200 – Session revoked",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"ok\":true}"
             }
           ]
@@ -1039,7 +1104,9 @@
               "name": "200 – Settings",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"token_card_format\":\"both\"}"
             }
           ]
@@ -1063,7 +1130,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"value\":\"qr\"}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/admin/settings/token_card_format",
@@ -1077,7 +1144,9 @@
               "name": "200 – Setting updated",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"ok\":true,\"key\":\"token_card_format\",\"value\":\"qr\"}"
             }
           ]
@@ -1104,7 +1173,9 @@
               "name": "201 – Account created",
               "status": "Created",
               "code": 201,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"access_token\":\"eyJ...\",\"refresh_token\":\"eyJ...\",\"expires_in\":300,\"username\":\"3fa85f64-...\",\"password\":\"5f2d8e...\"}"
             }
           ]
@@ -1144,7 +1215,9 @@
               "name": "200 – Habit list",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "[{\"uuid\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"original\":\"Ich gehe täglich 30 Minuten spazieren\",\"language\":\"de\",\"translationEN\":\"I walk for 30 minutes every day\",\"translationDE\":null,\"displayText\":\"I walk for 30 minutes every day\"}]"
             }
           ]
@@ -1168,7 +1241,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"sentence\":\"I go for a 30-minute walk every morning before breakfast\",\"language\":\"en\"}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/habits/donate",
@@ -1182,14 +1255,18 @@
               "name": "201 – Habit donated",
               "status": "Created",
               "code": 201,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"is_habit\":true,\"uuid\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"message\":\"Thank you! Your habit has been successfully donated.\"}"
             },
             {
               "name": "200 – Not a habit",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"is_habit\":false,\"message\":\"Thank you for your contribution. This sentence was not identified as a habit and has been noted for review.\"}"
             }
           ]
@@ -1222,7 +1299,9 @@
               "name": "200 – Questionnaire list",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "[{\"slug\":\"sliq\",\"title\":\"Short Lifestyle Indicator Questions\",\"version\":\"1.0\",\"questionCount\":12}]"
             }
           ]
@@ -1250,7 +1329,9 @@
               "name": "200 – Questionnaire",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"slug\":\"sliq\",\"title\":\"Short Lifestyle Indicator Questions\",\"version\":\"1.0\",\"questions\":[{\"id\":\"sliq_diet\",\"text\":\"How would you rate your diet?\",\"type\":\"singleChoice\"}]}"
             }
           ]
@@ -1274,7 +1355,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"questionnaireSlug\":\"sliq\",\"answers\":{\"sliq_diet\":\"2\",\"sliq_activity\":\"3\"}}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/questionnaire-responses",
@@ -1288,7 +1369,9 @@
               "name": "201 – Response saved",
               "status": "Created",
               "code": 201,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"id\":\"65a1b2c3d4e5f6a7b8c9d0f2\"}"
             }
           ]
@@ -1316,7 +1399,9 @@
               "name": "200 – All responses",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "[{\"userId\":\"3fa85f64-...\",\"questionnaireSlug\":\"sliq\",\"answers\":{\"sliq_diet\":\"2\"},\"submitted_at\":\"2026-03-20T10:00:00.000Z\"}]"
             }
           ]
@@ -1344,7 +1429,9 @@
               "name": "200 – Most recent response",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"userId\":\"3fa85f64-...\",\"questionnaireSlug\":\"sliq\",\"answers\":{\"sliq_diet\":\"2\"},\"submitted_at\":\"2026-03-20T10:00:00.000Z\"}"
             }
           ]
@@ -1377,7 +1464,9 @@
               "name": "200 – Recommendations",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "[{\"recommendation_id\":\"rec-morning-walk-001\",\"userId\":\"3fa85f64-...\",\"goal\":\"exercise more\",\"generated_at\":\"2026-03-20T09:00:00.000Z\",\"feedback\":[{\"comment\":\"Very helpful!\",\"created_at\":\"2026-03-20T10:00:00.000Z\"}]}]"
             }
           ]
@@ -1401,7 +1490,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"comment\":\"This recommendation was very helpful for my morning routine\"}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/recommendations/rec-morning-walk-001/feedback",
@@ -1415,7 +1504,9 @@
               "name": "201 – Feedback saved",
               "status": "Created",
               "code": 201,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"ok\":true}"
             }
           ]
@@ -1448,7 +1539,9 @@
               "name": "200 – User preferences",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"userId\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"preferredLanguage\":\"de\"}"
             }
           ]
@@ -1472,7 +1565,7 @@
             "body": {
               "mode": "raw",
               "raw": "{\"preferredLanguage\":\"de\"}",
-              "options": {"raw": {"language": "json"}}
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
               "raw": "{{baseUrl}}/users/me",
@@ -1486,7 +1579,9 @@
               "name": "200 – Updated preferences",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"userId\":\"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\"preferredLanguage\":\"de\"}"
             }
           ]
@@ -1519,7 +1614,9 @@
               "name": "200 – KB files",
               "status": "OK",
               "code": 200,
-              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "body": "{\"files\":[\"bcio-taxonomy.pdf\",\"intervention-guidelines.pdf\"]}"
             }
           ]

@@ -1,10 +1,9 @@
 /* Global Theme Variables */
 :root {
   --theme-color: #45b700;
-  --theme-color-light: #7EFF2D;
+  --theme-color-light: #7eff2d;
   --theme-color-dark: #237c00;
 }
-
 
 html {
   height: 100%;
@@ -269,7 +268,7 @@ button {
   height: 70%;
   margin-top: 30px;
 
-  border: 2px solid var(--primary-color); 
+  border: 2px solid var(--primary-color);
   text-align: center;
   box-sizing: border-box;
   border: 0;
@@ -300,7 +299,6 @@ button .arrow::before {
 }
 
 .button:hover {
-
   background-color: white;
   color: var(--primary-color);
   border: 2px solid var(--primary-color);
@@ -330,7 +328,6 @@ button .arrow::before {
   color: white;
   border-color: transparent;
   box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
-  
 }
 
 .button-container {
@@ -610,14 +607,14 @@ a:focus {
 }
 
 /* target every Bootstrap radio and give it a green check */
-input.form-check-input[type="radio"] {
+input.form-check-input[type='radio'] {
   accent-color: var(--theme-color);
 }
 
 .custom-radio .form-check-input:checked {
   background-color: var(--theme-color);
   border-color: var(--theme-color);
-  box-shadow: 0 0 0 .25rem rgba(0, 0, 0, 0.25);
+  box-shadow: 0 0 0 0.25rem rgba(0, 0, 0, 0.25);
 }
 
 .text-justify {
@@ -630,7 +627,7 @@ input.form-check-input[type="radio"] {
   padding: 0px;
   width: 100%;
   background: #dadada;
-  box-shadow: 0 4px 4px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
   border-radius: 20px;
   border: 2px solid var(--theme-color);
 }
@@ -640,7 +637,8 @@ input.form-check-input[type="radio"] {
   justify-content: space-between;
   width: 100%;
 }
-#left-label, #right-label {
+#left-label,
+#right-label {
   flex: 0 0 auto;
   font-size: 0.9em;
   white-space: nowrap;
@@ -756,7 +754,7 @@ select:focus {
 .sd-rating__min-text,
 .sv-rating__min-text {
   flex: 0 0 auto !important;
-  min-width: 200px !important;   /* oder eine andere Wunsch-Basis */
+  min-width: 200px !important; /* oder eine andere Wunsch-Basis */
   text-align: right !important;
   padding-right: 0.5em !important;
 }
@@ -791,7 +789,8 @@ select:focus {
   justify-content: center;
   text-align: center;
   box-sizing: border-box;
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
 }
-
- 

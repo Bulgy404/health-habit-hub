@@ -31,7 +31,10 @@ const participantB = {
 function mockFetchImplementation() {
   return jest.fn().mockImplementation((url: string, opts?: RequestInit) => {
     if (url.includes("/test-tools")) {
-      return Promise.resolve({ ok: true, json: async () => ({ enabled: false }) } as unknown as Response);
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ enabled: false }),
+      } as unknown as Response);
     }
     if (opts?.method === "POST" && url.includes("/admin/participants")) {
       const body = JSON.parse(String(opts.body));

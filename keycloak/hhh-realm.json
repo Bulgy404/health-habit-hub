@@ -63,9 +63,7 @@
         "hhh://*",
         "http://localhost:*"
       ],
-      "webOrigins": [
-        "http://localhost:*"
-      ],
+      "webOrigins": ["http://localhost:*"],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
@@ -204,10 +202,7 @@
         "http://localhost:3002/login/generic_oauth",
         "https://${DOMAIN}/grafana/login/generic_oauth"
       ],
-      "webOrigins": [
-        "http://grafana.localhost",
-        "https://${DOMAIN}"
-      ],
+      "webOrigins": ["http://grafana.localhost", "https://${DOMAIN}"],
       "attributes": {
         "pkce.code.challenge.method": "S256"
       },
@@ -243,9 +238,6 @@
       ]
     }
   ],
-  "defaultRoles": [
-    "offline_access",
-    "uma_authorization"
-  ],
+  "defaultRoles": ["offline_access", "uma_authorization"],
   "users": []
 }

@@ -12,7 +12,7 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   const res = await fetch(url, {
     ...opts,
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
       ...(opts.headers ?? {}),
     },
@@ -26,68 +26,68 @@ async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
   return res.json();
 }
 
-describe('apiFetch helper', () => {
+describe("apiFetch helper", () => {
   beforeEach(() => {
     jest.resetAllMocks();
   });
 
-  it('returns parsed JSON on success', async () => {
-    const payload = { id: '1', name: 'test' };
+  it("returns parsed JSON on success", async () => {
+    const payload = { id: "1", name: "test" };
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: true,
       json: jest.fn().mockResolvedValueOnce(payload),
     } as unknown as Response);
 
-    const result = await apiFetch('http://api/test', 'mytoken');
+    const result = await apiFetch("http://api/test", "mytoken");
     expect(result).toEqual(payload);
     expect(global.fetch).toHaveBeenCalledWith(
-      'http://api/test',
+      "http://api/test",
       expect.objectContaining({
         headers: expect.objectContaining({
-          Authorization: 'Bearer mytoken',
-          'Content-Type': 'application/json',
+          Authorization: "Bearer mytoken",
+          "Content-Type": "application/json",
         }),
-      }),
+      })
     );
   });
 
-  it('throws with error message from response body on non-ok response', async () => {
+  it("throws with error message from response body on non-ok response", async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: false,
       status: 403,
-      json: jest.fn().mockResolvedValueOnce({ error: 'Forbidden by server' }),
+      json: jest.fn().mockResolvedValueOnce({ error: "Forbidden by server" }),
     } as unknown as Response);
 
-    await expect(apiFetch('http://api/test', 'tok')).rejects.toThrow('Forbidden by server');
+    await expect(apiFetch("http://api/test", "tok")).rejects.toThrow("Forbidden by server");
   });
 
-  it('throws HTTP status message when body has no error field', async () => {
+  it("throws HTTP status message when body has no error field", async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: false,
       status: 500,
       json: jest.fn().mockResolvedValueOnce({}),
     } as unknown as Response);
 
-    await expect(apiFetch('http://api/test', 'tok')).rejects.toThrow('HTTP 500');
+    await expect(apiFetch("http://api/test", "tok")).rejects.toThrow("HTTP 500");
   });
 
-  it('attaches status code to thrown error', async () => {
+  it("attaches status code to thrown error", async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: false,
       status: 409,
-      json: jest.fn().mockResolvedValueOnce({ error: 'Conflict' }),
+      json: jest.fn().mockResolvedValueOnce({ error: "Conflict" }),
     } as unknown as Response);
 
-    await expect(apiFetch('http://api/test', 'tok')).rejects.toMatchObject({ status: 409 });
+    await expect(apiFetch("http://api/test", "tok")).rejects.toMatchObject({ status: 409 });
   });
 
-  it('throws HTTP status message when json() rejects', async () => {
+  it("throws HTTP status message when json() rejects", async () => {
     global.fetch = jest.fn().mockResolvedValueOnce({
       ok: false,
       status: 502,
-      json: jest.fn().mockRejectedValueOnce(new SyntaxError('bad json')),
+      json: jest.fn().mockRejectedValueOnce(new SyntaxError("bad json")),
     } as unknown as Response);
 
-    await expect(apiFetch('http://api/test', 'tok')).rejects.toThrow('HTTP 502');
+    await expect(apiFetch("http://api/test", "tok")).rejects.toThrow("HTTP 502");
   });
 });

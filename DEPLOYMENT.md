@@ -5,6 +5,7 @@
 This guide covers deploying Health Habit Hub to production using Portainer on the TU Dresden server.
 
 **Production environment:**
+
 - URL: `https://habit.wiwi.tu-dresden.de`
 - Server IP: `141.76.16.16`
 - Management: Portainer
@@ -43,6 +44,7 @@ LLM_API_KEY=<optional-but-needed-for-recommender-features>
 ```
 
 Recommended local defaults already present in `.env.example`:
+
 - `PATH_SUFFIX=localhost`
 - `APP_HOST_PORT=3000`
 - `TRAEFIK_HOST_PORT80=80`
@@ -58,6 +60,7 @@ docker compose down -v
 ```
 
 This resets:
+
 - MongoDB data
 - Neo4j data
 - LightRAG index
@@ -88,24 +91,25 @@ curl -s http://localhost:3000/api/v1/health | python3 -m json.tool
 
 Expected local URLs in this mode:
 
-| Service | Local URL | Notes |
-|---------|-----------|-------|
-| Main app via Traefik | `http://app.localhost` | Preferred browser URL for the app |
-| Admin panel via Traefik | `http://admin.localhost` | Local Next.js admin UI |
-| Traefik dashboard | `http://proxy.localhost` | Same dashboard as `http://localhost:8888` |
-| Backend API | `http://localhost:3000/api/v1/health` | Main backend health check |
-| Keycloak | `http://localhost:8080` | Realm + admin console |
-| Keycloak Admin Console | `http://localhost:8080/admin/` | Login with `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` |
-| Keycloak Realm Metadata | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | Quick realm import check |
-| Translation | `http://localhost:5001` | LibreTranslate in `docker-compose.local.yml` |
-| Neo4j Browser | `http://localhost:7474` | Login with `neo4j` + `NEO4J_PASSWORD` (local-only — not published in production) |
-| LightRAG | `http://localhost:9622` | Graph + vector knowledge base UI |
-| Recommender | `http://localhost:8001/docs` | FastAPI docs |
-| Redis | `localhost:6379` | No auth in local mode |
-| Prometheus | `http://prometheus.localhost` | Scrapes app metrics from `app:9091` |
-| Grafana | `http://grafana.localhost` | Login: `admin` / `KEYCLOAK_ADMIN_PASSWORD`. Pre-built HHH dashboard auto-provisioned |
+| Service                 | Local URL                                                           | Notes                                                                                |
+| ----------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Main app via Traefik    | `http://app.localhost`                                              | Preferred browser URL for the app                                                    |
+| Admin panel via Traefik | `http://admin.localhost`                                            | Local Next.js admin UI                                                               |
+| Traefik dashboard       | `http://proxy.localhost`                                            | Same dashboard as `http://localhost:8888`                                            |
+| Backend API             | `http://localhost:3000/api/v1/health`                               | Main backend health check                                                            |
+| Keycloak                | `http://localhost:8080`                                             | Realm + admin console                                                                |
+| Keycloak Admin Console  | `http://localhost:8080/admin/`                                      | Login with `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD`                              |
+| Keycloak Realm Metadata | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | Quick realm import check                                                             |
+| Translation             | `http://localhost:5001`                                             | LibreTranslate in `docker-compose.local.yml`                                         |
+| Neo4j Browser           | `http://localhost:7474`                                             | Login with `neo4j` + `NEO4J_PASSWORD` (local-only — not published in production)     |
+| LightRAG                | `http://localhost:9622`                                             | Graph + vector knowledge base UI                                                     |
+| Recommender             | `http://localhost:8001/docs`                                        | FastAPI docs                                                                         |
+| Redis                   | `localhost:6379`                                                    | No auth in local mode                                                                |
+| Prometheus              | `http://prometheus.localhost`                                       | Scrapes app metrics from `app:9091`                                                  |
+| Grafana                 | `http://grafana.localhost`                                          | Login: `admin` / `KEYCLOAK_ADMIN_PASSWORD`. Pre-built HHH dashboard auto-provisioned |
 
 Notes:
+
 - `*.localhost` resolves locally on modern browsers, so `app.localhost` and `admin.localhost` should work without editing `/etc/hosts`.
 - The admin app uses the `hhh-admin` Keycloak client and requires a Keycloak user with the `admin` or `researcher` realm role.
 - Redis is included in both `docker-compose.yml` and `docker-compose.local.yml` — it is the API-service response cache and is required by both stacks.
@@ -140,7 +144,7 @@ below); if it's empty, `POST /api/v1/restore` fails closed rather than
 minting a token. The route is rate-limited to 5 attempts/hour per IP, and
 every attempt is logged to MongoDB `restore_attempts` for review in the
 admin panel's **Restore Attempts** page — see
-`docs/architecture.md`'s *Account Recovery via Passphrase* section.
+`docs/architecture.md`'s _Account Recovery via Passphrase_ section.
 
 If participant creation fails, check:
 
@@ -152,6 +156,7 @@ docker logs hhh-keycloak --tail 100
 ### 6. Re-apply Local Keycloak Config After Reset
 
 After wiping Keycloak storage, re-run the repo deploy helper so local Keycloak picks up:
+
 - the realm import
 - the bare-user profile schema
 - the `hhh-backend` client secret alignment
@@ -168,6 +173,7 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
 ## Pre-Deployment Checklist
 
 ### 1. Server Prerequisites
+
 - [ ] Server accessible at `141.76.16.16`
 - [ ] Portainer installed and running
 - [ ] Ports 80 and 443 open in firewall
@@ -178,13 +184,15 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
   ```
 
 ### 2. DNS Configuration
+
 - [ ] Domain `habit.wiwi.tu-dresden.de` resolves to `141.76.16.16`
 - [ ] DNS propagation complete (verified with `dig habit.wiwi.tu-dresden.de`)
 
 ### 3. External Services
-  - Site key
-  - Secret key
-  - Domain `habit.wiwi.tu-dresden.de` added
+
+- Site key
+- Secret key
+- Domain `habit.wiwi.tu-dresden.de` added
 - [ ] SMTP relay/provider credentials obtained (any provider works — no vendor
       lock-in). Used for critical-alert emails: backup failures, LLM outages,
       BullMQ job failures, and service-reachability/5xx alerts. See
@@ -194,6 +202,7 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
   - Sender address (`SMTP_FROM`) and recipient (`ALERT_EMAIL`)
 
 ### 4. Security — Generate Secure Values
+
 - [ ] MongoDB password (`MONGO_PASSWORD`)
 - [ ] Mongo Express password (`MONGO_EXPRESS_PASSWORD`)
 - [ ] Neo4j password (`NEO4J_PASSWORD`)
@@ -218,16 +227,19 @@ Failure to do this will cause `hhh-translate` to start but fail to persist langu
 ## Portainer Deployment Steps
 
 ### Step 1: Access Portainer
+
 1. Navigate to the Portainer web interface
 2. Log in with your credentials
 3. Select your environment
 
 ### Step 2: Create Stack
+
 1. Go to **Stacks** → **Add stack**
 2. Stack name: `health-habit-hub-2`
 3. Build method: **Repository**
 
 ### Step 3: Configure Git Repository
+
 - **Repository URL:** `https://github.com/helict/health-habit-hub-2`
 - **Repository reference:** `refs/heads/master`
 - **Compose path:** `docker-compose.yml`
@@ -308,6 +320,7 @@ LLM_TEMPERATURE=0.2      # 0.0 = deterministic, 1.0 = creative
 ```
 
 ### Step 5: Deploy
+
 1. Click **Deploy the stack**
 2. Wait for deployment (5–10 minutes for initial setup; Keycloak first-boot takes ~90 s)
 3. Monitor container logs for errors
@@ -320,24 +333,25 @@ LLM_TEMPERATURE=0.2      # 0.0 = deterministic, 1.0 = creative
 
 All containers should be running:
 
-| Container | Role |
-|-----------|------|
-| `hhh-proxy` | Traefik reverse proxy |
-| `hhh-app` | Node.js backend API |
-| `hhh-mongo` | MongoDB — survey responses, recommendations, user preferences |
-| `hhh-mongo-express` | MongoDB web UI |
-| `hhh-neo4j` | Neo4j graph database — habit graph, BCIO ontology |
-| `hhh-redis` | Redis — notification locks and recommendation caching |
-| `hhh-translate` | LibreTranslate — EN↔DE habit translation |
-| `hhh-keycloak-db` | PostgreSQL — Keycloak backend database |
-| `hhh-keycloak` | Keycloak identity provider — authentication and authorisation |
-| `hhh-recommender` | Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement |
-| `hhh-lightrag` | LightRAG — graph + vector knowledge base |
-| `hhh-knowledge-mcp` | MCP server exposing the knowledge base to AI agents |
-| `hhh-admin` | Next.js admin panel — study management UI |
-| `hhh-backup` | Backup service |
+| Container           | Role                                                                                    |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| `hhh-proxy`         | Traefik reverse proxy                                                                   |
+| `hhh-app`           | Node.js backend API                                                                     |
+| `hhh-mongo`         | MongoDB — survey responses, recommendations, user preferences                           |
+| `hhh-mongo-express` | MongoDB web UI                                                                          |
+| `hhh-neo4j`         | Neo4j graph database — habit graph, BCIO ontology                                       |
+| `hhh-redis`         | Redis — notification locks and recommendation caching                                   |
+| `hhh-translate`     | LibreTranslate — EN↔DE habit translation                                                |
+| `hhh-keycloak-db`   | PostgreSQL — Keycloak backend database                                                  |
+| `hhh-keycloak`      | Keycloak identity provider — authentication and authorisation                           |
+| `hhh-recommender`   | Python FastAPI recommender service — habit classification, BCIO mapping, LLM refinement |
+| `hhh-lightrag`      | LightRAG — graph + vector knowledge base                                                |
+| `hhh-knowledge-mcp` | MCP server exposing the knowledge base to AI agents                                     |
+| `hhh-admin`         | Next.js admin panel — study management UI                                               |
+| `hhh-backup`        | Backup service                                                                          |
 
 ### 2. Verify SSL Certificate
+
 - Check Traefik logs: look for "certificate obtained"
 - Visit `https://habit.wiwi.tu-dresden.de`
 - Verify valid SSL certificate (green padlock)
@@ -394,6 +408,7 @@ docker exec hhh-app node scripts/backfill-de-translations.js --dry-run
 ```
 
 Expected output:
+
 ```
 [backfill] 0 habits already have translationDE. Found 42 to translate.
 [backfill] Processed 1/42: <uuid> → "Jeden Morgen joggen"
@@ -410,11 +425,13 @@ docker exec hhh-app node scripts/migrate-habits-bcio.js
 ### 5. Test Backup System
 
 Check backup logs:
+
 ```bash
 docker logs hhh-backup
 ```
 
 Verify backup files are created:
+
 - Location: `./backups` directory on the host (bind-mounted into the container at `/backups`)
 - Format: `full_backup_YYYYMMDD_HHMMSS.tar.gz`
 
@@ -468,6 +485,7 @@ hhh-backup-internal network (bridge, internal-only)
 ## Automatic Updates
 
 ### How It Works
+
 - Portainer polls the `master` branch every 5 minutes
 - If changes are detected:
   1. Pulls latest code
@@ -476,7 +494,9 @@ hhh-backup-internal network (bridge, internal-only)
   4. Zero-downtime for config-only changes
 
 ### Triggering a Manual Update
+
 In Portainer:
+
 1. Go to **Stacks** → `health-habit-hub-2`
 2. Click **Pull and redeploy**
 
@@ -489,6 +509,7 @@ In Portainer:
 **Problem:** Certificate not obtained
 
 **Solutions:**
+
 1. Check ports 80/443 are open:
    ```bash
    sudo ufw status
@@ -507,6 +528,7 @@ In Portainer:
 **Problem:** App can't connect to MongoDB / Neo4j / Redis / recommender
 
 **Solutions:**
+
 1. Verify all containers are on the same network:
    ```bash
    docker network inspect hhh-proxy
@@ -525,6 +547,7 @@ In Portainer:
 **Problem:** Backup container shows errors
 
 **Solutions:**
+
 1. Check backup logs:
    ```bash
    docker logs hhh-backup
@@ -538,6 +561,7 @@ In Portainer:
 **Problem:** Container in restart loop
 
 **Solutions:**
+
 1. Check container logs:
    ```bash
    docker logs <container-name>
@@ -557,14 +581,15 @@ In Portainer:
 docker compose -f docker-compose.local.yml up -d prometheus grafana
 ```
 
-| Service | Local URL | Port |
-|---------|-----------|------|
+| Service    | Local URL                     | Port |
+| ---------- | ----------------------------- | ---- |
 | Prometheus | `http://prometheus.localhost` | 9090 |
-| Grafana | `http://grafana.localhost` | 3002 |
+| Grafana    | `http://grafana.localhost`    | 3002 |
 
 Grafana credentials: `admin` / value of `KEYCLOAK_ADMIN_PASSWORD` in `.env`.
 
 The pre-built **HHH App Metrics** dashboard (`monitoring/grafana/dashboards/hhh-app.json`) is auto-provisioned. It shows:
+
 - HTTP request rate and error rate
 - p50 / p95 / p99 latency
 - Node.js heap and RSS memory
@@ -587,25 +612,31 @@ To silence an alert during planned maintenance, add a Grafana mute timing (**Ale
 ### Container Logs
 
 View logs in Portainer:
+
 - **Stacks** → `health-habit-hub-2` → click a container → **Logs**
 
 Or via CLI:
+
 ```bash
 docker logs -f <container-name>
 ```
 
 ### Resource Usage
+
 View in Portainer:
+
 - **Containers** → click a container → **Stats**
 
 ### Backup Status
 
 Check latest backup:
+
 ```bash
 docker exec hhh-backup ls -lh /backups/full_backup_*.tar.gz | tail -5
 ```
 
 View backup manifest:
+
 ```bash
 docker exec hhh-backup cat /backups/backup_*.manifest | tail -20
 ```
@@ -615,20 +646,24 @@ docker exec hhh-backup cat /backups/backup_*.manifest | tail -20
 ## Maintenance
 
 ### Updating Application Code
+
 1. Push changes to `master` branch
 2. Wait 5 minutes (or trigger a manual update in Portainer)
 3. Verify deployment in Portainer logs
 
 ### Rotating Passwords
+
 1. Generate a new secure value
 2. Update it in Portainer's environment variables
 3. Click **Update the stack**
 4. Restart the affected containers
 
 ### Rotating `API_SERVICE_SECRET`
+
 Both `hhh-app` and `hhh-recommender` read `API_SERVICE_SECRET` at startup. After updating the value in Portainer, redeploy the entire stack (or restart both containers) so both services use the same new secret simultaneously.
 
 ### Certificate Renewal
+
 Automatic via Let's Encrypt — certificates auto-renew 30 days before expiry. Monitor Traefik logs for renewal notices.
 
 ---
@@ -648,22 +683,22 @@ Automatic via Let's Encrypt — certificates auto-renew 30 days before expiry. M
 
 ## URLs Reference
 
-| Service | Production URL | Local (`docker-compose.local.yml`) | Direct Local Port |
-|---------|---------------|------------------------------------|-------------------|
-| Backend API | `https://habit.wiwi.tu-dresden.de/api/v1/` | `http://app.localhost/api/v1/` | `http://localhost:3000/api/v1/` |
-| Flutter Web App | `https://habit.wiwi.tu-dresden.de` | local mobile/web build pointing to local backend | — |
-| Admin Panel | `https://habit.wiwi.tu-dresden.de/admin` | `http://admin.localhost` | `http://localhost:3001` |
-| Keycloak | `https://habit.wiwi.tu-dresden.de/auth/` | `http://keycloak.localhost` | `http://localhost:8080` |
-| Keycloak Admin UI | `https://habit.wiwi.tu-dresden.de/auth/admin` | `http://keycloak.localhost/admin/` | `http://localhost:8080/admin/` |
-| Keycloak Realm Metadata | — | `http://keycloak.localhost/realms/hhh/.well-known/openid-configuration` | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` |
-| Mongo Express | `https://habit.wiwi.tu-dresden.de/mongo` | not in `docker-compose.local.yml` | `http://localhost:8081` (with `docker compose up`) |
-| Translation | `https://habit.wiwi.tu-dresden.de/translate` | `http://translate.localhost` | `http://localhost:5001` |
-| Neo4j Browser | not exposed (internal-only, see below) | `http://neo4j.localhost` | `http://localhost:7474` |
-| LightRAG | not exposed (internal-only) | `http://localhost:9622` | `http://localhost:9622` |
-| Recommender API docs | — | not routed via Traefik locally | `http://localhost:8001/docs` |
-| Prometheus | not exposed (internal-only) | `http://prometheus.localhost` | `http://localhost:9090` |
-| Grafana | `https://habit.wiwi.tu-dresden.de/grafana` | `http://grafana.localhost` | `http://localhost:3002` |
-| Traefik Dashboard | `https://habit.wiwi.tu-dresden.de/dashboard` | `http://proxy.localhost` | `http://localhost:8888` |
+| Service                 | Production URL                                | Local (`docker-compose.local.yml`)                                      | Direct Local Port                                                   |
+| ----------------------- | --------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| Backend API             | `https://habit.wiwi.tu-dresden.de/api/v1/`    | `http://app.localhost/api/v1/`                                          | `http://localhost:3000/api/v1/`                                     |
+| Flutter Web App         | `https://habit.wiwi.tu-dresden.de`            | local mobile/web build pointing to local backend                        | —                                                                   |
+| Admin Panel             | `https://habit.wiwi.tu-dresden.de/admin`      | `http://admin.localhost`                                                | `http://localhost:3001`                                             |
+| Keycloak                | `https://habit.wiwi.tu-dresden.de/auth/`      | `http://keycloak.localhost`                                             | `http://localhost:8080`                                             |
+| Keycloak Admin UI       | `https://habit.wiwi.tu-dresden.de/auth/admin` | `http://keycloak.localhost/admin/`                                      | `http://localhost:8080/admin/`                                      |
+| Keycloak Realm Metadata | —                                             | `http://keycloak.localhost/realms/hhh/.well-known/openid-configuration` | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` |
+| Mongo Express           | `https://habit.wiwi.tu-dresden.de/mongo`      | not in `docker-compose.local.yml`                                       | `http://localhost:8081` (with `docker compose up`)                  |
+| Translation             | `https://habit.wiwi.tu-dresden.de/translate`  | `http://translate.localhost`                                            | `http://localhost:5001`                                             |
+| Neo4j Browser           | not exposed (internal-only, see below)        | `http://neo4j.localhost`                                                | `http://localhost:7474`                                             |
+| LightRAG                | not exposed (internal-only)                   | `http://localhost:9622`                                                 | `http://localhost:9622`                                             |
+| Recommender API docs    | —                                             | not routed via Traefik locally                                          | `http://localhost:8001/docs`                                        |
+| Prometheus              | not exposed (internal-only)                   | `http://prometheus.localhost`                                           | `http://localhost:9090`                                             |
+| Grafana                 | `https://habit.wiwi.tu-dresden.de/grafana`    | `http://grafana.localhost`                                              | `http://localhost:3002`                                             |
+| Traefik Dashboard       | `https://habit.wiwi.tu-dresden.de/dashboard`  | `http://proxy.localhost`                                                | `http://localhost:8888`                                             |
 
 ---
 
@@ -693,20 +728,24 @@ If you need the graphical Neo4j Browser for a one-off investigation, temporarily
 ### MongoDB Data
 
 **Host paths:**
+
 - Database files: `/mnt/data/appdata/hhh2/mongo/db`
 - Config files: `/mnt/data/appdata/hhh2/mongo/config`
 
 **Access via Mongo Express (Web UI):**
+
 - URL: `https://habit.wiwi.tu-dresden.de/mongo`
 - Username: `admin` (from `MONGO_EXPRESS_USER`)
 - Password: value of `MONGO_EXPRESS_PASSWORD` in Portainer
 
 **Initialization:**
 MongoDB is automatically initialized on first run with:
+
 - Database: `surveyjs`
 - Initialization script: `mongo/entrypoint/surveyjs-init.js`
 
 **Backup MongoDB:**
+
 ```bash
 docker exec hhh-mongo mongodump \
   --username admin --password ${MONGO_PASSWORD} \
@@ -716,6 +755,7 @@ docker cp hhh-mongo:/tmp/backup ./mongo-backup-$(date +%Y%m%d)
 ```
 
 **Restore MongoDB:**
+
 ```bash
 docker cp ./mongo-backup-YYYYMMDD hhh-mongo:/tmp/restore
 
@@ -725,6 +765,7 @@ docker exec hhh-mongo mongorestore \
 ```
 
 **Direct CLI access:**
+
 ```bash
 docker exec -it hhh-mongo mongosh -u admin -p ${MONGO_PASSWORD} --authenticationDatabase admin
 ```
@@ -732,12 +773,14 @@ docker exec -it hhh-mongo mongosh -u admin -p ${MONGO_PASSWORD} --authentication
 ### Neo4j Data
 
 **Host paths:**
+
 - Database files: `/mnt/data/appdata/hhh2/neo4j/data`
 - Log files: `/mnt/data/appdata/hhh2/neo4j/logs`
 
 **Access via Browser:** see "Accessing Neo4j Browser via SSH Tunnel" above.
 
 **Backup Neo4j:**
+
 ```bash
 docker stop hhh-neo4j
 sudo tar -czf neo4j-backup-$(date +%Y%m%d).tar.gz /mnt/data/appdata/hhh2/neo4j/data
@@ -745,6 +788,7 @@ docker start hhh-neo4j
 ```
 
 **Restore Neo4j:**
+
 ```bash
 docker stop hhh-neo4j
 sudo tar -xzf neo4j-backup-YYYYMMDD.tar.gz -C /
@@ -752,6 +796,7 @@ docker start hhh-neo4j
 ```
 
 **Direct Cypher access:**
+
 ```bash
 docker exec -it hhh-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}
 ```
@@ -761,6 +806,7 @@ docker exec -it hhh-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}
 **Storage:** Named volume `hhh-lightrag-data` (graph + vector knowledge base index). Also captured automatically by the nightly backup service.
 
 **Backup LightRAG index:**
+
 ```bash
 docker run --rm \
   -v hhh-lightrag-data:/data \
@@ -769,6 +815,7 @@ docker run --rm \
 ```
 
 **Restore LightRAG index:**
+
 ```bash
 docker run --rm \
   -v hhh-lightrag-data:/data \
@@ -781,6 +828,7 @@ docker run --rm \
 **Storage:** Named volume `hhh-redis-data`
 
 Redis is used for:
+
 - Notification locks (preventing duplicate push notifications)
 - Recommendation response caching
 
@@ -841,21 +889,21 @@ reporting — a silent no-op unless configured:
 
 ### Rotation checklist (do now, then on every team change)
 
-| Secret | Where used | Rotate at |
-|---|---|---|
-| `MONGO_PASSWORD` | mongo, app, backup | regenerate + redeploy stack |
-| `NEO4J_PASSWORD` | neo4j, app, api-service | regenerate + redeploy |
-| `KEYCLOAK_ADMIN_PASSWORD` | keycloak, keycloak-init | Keycloak admin console + .env |
-| `KEYCLOAK_ADMIN_CLIENT_SECRET` (hhh-backend client) | app ↔ Keycloak | regenerate + redeploy keycloak-init + app |
-| `KEYCLOAK_ADMIN_UI_CLIENT_SECRET` (hhh-admin client) | admin panel login | regenerate + redeploy keycloak-init + admin |
-| `KEYCLOAK_ROPC_CLIENT_SECRET` (hhh-ropc client) | onboarding, credential rotation, passphrase-based restore | regenerate + redeploy keycloak-init + app |
-| `GRAFANA_CLIENT_SECRET` (grafana client) | Grafana SSO | regenerate + redeploy keycloak-init + grafana |
-| `API_SERVICE_SECRET` | app ↔ api-service | regenerate + redeploy both |
-| `LIGHTRAG_API_KEY`, `LLM_API_KEY` | lightrag, api-service | provider console |
-| `SMTP_USER` / `SMTP_PASS` | backup, LLM-outage, BullMQ, and reachability/5xx alert emails (see docs/runbook.md) | provider console or relay config |
-| ~~`MAIL_USER` / `MAIL_PASS` (Mailjet)~~ | removed — replaced by generic SMTP above | **revoke now** in the Mailjet console — previous values circulated in a repo working copy and were never rotated before the integration was removed |
-| ~~`RECAPTCHA_*`~~ | removed 2026-06 | **revoke now** in the Google reCAPTCHA console — keys are unused but were exposed |
-| `SENTRY_DSN` | app, mobile builds | Sentry project settings (low sensitivity — write-only DSN) |
+| Secret                                               | Where used                                                                          | Rotate at                                                                                                                                           |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MONGO_PASSWORD`                                     | mongo, app, backup                                                                  | regenerate + redeploy stack                                                                                                                         |
+| `NEO4J_PASSWORD`                                     | neo4j, app, api-service                                                             | regenerate + redeploy                                                                                                                               |
+| `KEYCLOAK_ADMIN_PASSWORD`                            | keycloak, keycloak-init                                                             | Keycloak admin console + .env                                                                                                                       |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET` (hhh-backend client)  | app ↔ Keycloak                                                                      | regenerate + redeploy keycloak-init + app                                                                                                           |
+| `KEYCLOAK_ADMIN_UI_CLIENT_SECRET` (hhh-admin client) | admin panel login                                                                   | regenerate + redeploy keycloak-init + admin                                                                                                         |
+| `KEYCLOAK_ROPC_CLIENT_SECRET` (hhh-ropc client)      | onboarding, credential rotation, passphrase-based restore                           | regenerate + redeploy keycloak-init + app                                                                                                           |
+| `GRAFANA_CLIENT_SECRET` (grafana client)             | Grafana SSO                                                                         | regenerate + redeploy keycloak-init + grafana                                                                                                       |
+| `API_SERVICE_SECRET`                                 | app ↔ api-service                                                                   | regenerate + redeploy both                                                                                                                          |
+| `LIGHTRAG_API_KEY`, `LLM_API_KEY`                    | lightrag, api-service                                                               | provider console                                                                                                                                    |
+| `SMTP_USER` / `SMTP_PASS`                            | backup, LLM-outage, BullMQ, and reachability/5xx alert emails (see docs/runbook.md) | provider console or relay config                                                                                                                    |
+| ~~`MAIL_USER` / `MAIL_PASS` (Mailjet)~~              | removed — replaced by generic SMTP above                                            | **revoke now** in the Mailjet console — previous values circulated in a repo working copy and were never rotated before the integration was removed |
+| ~~`RECAPTCHA_*`~~                                    | removed 2026-06                                                                     | **revoke now** in the Google reCAPTCHA console — keys are unused but were exposed                                                                   |
+| `SENTRY_DSN`                                         | app, mobile builds                                                                  | Sentry project settings (low sensitivity — write-only DSN)                                                                                          |
 
 After any rotation: `docker compose up -d` (affected services) and run
 `node scripts/smoke-e2e.mjs` against the deployment.
@@ -894,11 +942,11 @@ Firebase auto-creates unrestricted API keys per platform on project
 `health-habit-hub-v2`. As of 2026-07-13 these were locked down under
 **APIs & Services → Credentials**:
 
-| Key | Restriction | Value |
-|---|---|---|
-| Android key (`AIzaSyDpxvK…`) | Application restrictions → Android apps | package `de.felixreinsch.healthhabithub` + release SHA-1 above |
-| iOS key (`AIzaSyDKPS…`) | Application restrictions → iOS apps | bundle ID `de.felixreinsch.healthhabithub` |
-| Browser key (auto created by Firebase) | — | **deleted** — no client-side Firebase JS SDK usage anywhere in the repo (the app uses `firebase-admin` server-side via `app/services/notificationService.js`, authenticated by service account, not this key) |
+| Key                                    | Restriction                             | Value                                                                                                                                                                                                         |
+| -------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android key (`AIzaSyDpxvK…`)           | Application restrictions → Android apps | package `de.felixreinsch.healthhabithub` + release SHA-1 above                                                                                                                                                |
+| iOS key (`AIzaSyDKPS…`)                | Application restrictions → iOS apps     | bundle ID `de.felixreinsch.healthhabithub`                                                                                                                                                                    |
+| Browser key (auto created by Firebase) | —                                       | **deleted** — no client-side Firebase JS SDK usage anywhere in the repo (the app uses `firebase-admin` server-side via `app/services/notificationService.js`, authenticated by service account, not this key) |
 
 **Why:** an unrestricted key extracted from the shipped app binary could be
 used outside the signed app to hit any of the ~25 Firebase APIs enabled on

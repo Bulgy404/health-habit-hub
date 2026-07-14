@@ -25,14 +25,14 @@ Welcome to the Health Habit Hub project. This guide takes you from zero to a ful
 
 Install the following tools before proceeding. The table shows the minimum required version and how to verify your installation.
 
-| Tool | Minimum Version | Verify |
-|------|----------------|--------|
-| **Flutter** | 3.22.0 | `flutter --version` |
-| **Docker** | 24.0.0 | `docker --version` |
-| **Docker Compose** | 2.20.0 | `docker compose version` |
-| **Node.js** | 22.0.0 | `node --version` |
-| **npm** | 10.0.0 | `npm --version` |
-| **Git** | 2.40.0 | `git --version` |
+| Tool               | Minimum Version | Verify                   |
+| ------------------ | --------------- | ------------------------ |
+| **Flutter**        | 3.22.0          | `flutter --version`      |
+| **Docker**         | 24.0.0          | `docker --version`       |
+| **Docker Compose** | 2.20.0          | `docker compose version` |
+| **Node.js**        | 22.0.0          | `node --version`         |
+| **npm**            | 10.0.0          | `npm --version`          |
+| **Git**            | 2.40.0          | `git --version`          |
 
 ### Installation links
 
@@ -119,8 +119,8 @@ Expected output:
   "status": "ok",
   "version": "1.0.0",
   "services": {
-    "neo4j":    { "status": "ok", "latencyMs": 12 },
-    "mongo":    { "status": "ok", "latencyMs": 5  },
+    "neo4j": { "status": "ok", "latencyMs": 12 },
+    "mongo": { "status": "ok", "latencyMs": 5 },
     "keycloak": { "status": "ok", "latencyMs": 22 },
     "recommender": { "status": "ok", "latencyMs": 8 }
   }
@@ -153,11 +153,11 @@ hhh-proxy             running
 
 The Flutter app lives in the `mobile/` directory. All backend URLs are injected at compile time via `--dart-define` flags (defined in `mobile/lib/config/app_config.dart`):
 
-| Flag | Default (localhost) | Description |
-|------|--------------------|-|
-| `API_BASE_URL` | `http://localhost:3000/api/v1` | REST API base URL |
-| `KEYCLOAK_URL` | `http://localhost:8080` | Keycloak base URL (no realm path) |
-| `WS_BASE_URL` | `ws://localhost:3000/ws` | WebSocket base URL |
+| Flag           | Default (localhost)            | Description                       |
+| -------------- | ------------------------------ | --------------------------------- |
+| `API_BASE_URL` | `http://localhost:3000/api/v1` | REST API base URL                 |
+| `KEYCLOAK_URL` | `http://localhost:8080`        | Keycloak base URL (no realm path) |
+| `WS_BASE_URL`  | `ws://localhost:3000/ws`       | WebSocket base URL                |
 
 ```bash
 cd mobile
@@ -204,8 +204,8 @@ Participant survey targeting is explicit:
 
 The API also resolves stable aliases by survey `type`, so the mobile app can request `/surveys/profile` or `/surveys/habit-donation` even if the stored survey document uses a UUID `id`.
 
-| Platform | Screenshot |
-|----------|-----------|
+| Platform       | Screenshot                                                                                       |
+| -------------- | ------------------------------------------------------------------------------------------------ |
 | Chrome (local) | ![Flutter web running locally in Chrome](../assets/screenshots/developer/flutter-web-chrome.png) |
 
 ---
@@ -321,8 +321,8 @@ The backend uses Node's built-in test runner (not Jest) via `node --test`. Expec
 ℹ fail 0
 ```
 
-| Terminal | Screenshot |
-|----------|-----------|
+| Terminal         | Screenshot                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------- |
 | npm test passing | ![npm test output showing all tests passing](../assets/screenshots/developer/npm-test-passing.png) |
 
 ### Flutter tests

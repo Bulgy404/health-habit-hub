@@ -1900,7 +1900,10 @@ function ScopedReminderEditor({
   groupValues: Record<string, ReminderModeValue>;
   onGroupValueChange: (groupId: string, v: ReminderModeValue) => void;
   groups: StudySummary["groups"];
-  switches: React.ComponentType<{ value: ReminderModeValue; onChange: (v: ReminderModeValue) => void }>;
+  switches: React.ComponentType<{
+    value: ReminderModeValue;
+    onChange: (v: ReminderModeValue) => void;
+  }>;
 }) {
   const t = useTranslations("studies");
   return (
@@ -1929,9 +1932,7 @@ function ScopedReminderEditor({
         onChange={(e) => onScopeChange(e.target.checked ? "group" : "study")}
         label={t("remindersTab.perGroupLabel")}
       />
-      {groups.length === 0 && (
-        <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
-      )}
+      {groups.length === 0 && <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>}
     </div>
   );
 }
@@ -1966,27 +1967,27 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
   // — that's what study-wide scope is for). Seeded from the group's stored
   // override, falling back to the study-level value as a sensible starting
   // point when a group has no override yet.
-  const [groupReminders, setGroupReminders] = useState<Record<string, Record<ReminderType, ReminderModeValue>>>(
-    () =>
-      Object.fromEntries(
-        study.groups.map((g) => [
-          g.id,
-          Object.fromEntries(
-            REMINDER_TYPES.map((type) => [
-              type,
-              g.reminders?.[type] ?? study.reminders?.[type] ?? emptyReminderMode(),
-            ])
-          ) as Record<ReminderType, ReminderModeValue>,
-        ])
-      )
+  const [groupReminders, setGroupReminders] = useState<
+    Record<string, Record<ReminderType, ReminderModeValue>>
+  >(() =>
+    Object.fromEntries(
+      study.groups.map((g) => [
+        g.id,
+        Object.fromEntries(
+          REMINDER_TYPES.map((type) => [
+            type,
+            g.reminders?.[type] ?? study.reminders?.[type] ?? emptyReminderMode(),
+          ])
+        ) as Record<ReminderType, ReminderModeValue>,
+      ])
+    )
   );
 
   const [endOfStudyTitle, setEndOfStudyTitle] = useState(
     study.endOfStudyNotification?.title ?? "Study complete"
   );
   const [endOfStudyBody, setEndOfStudyBody] = useState(
-    study.endOfStudyNotification?.body ??
-      "Thank you for participating — your study has ended."
+    study.endOfStudyNotification?.body ?? "Thank you for participating — your study has ended."
   );
 
   // Study-update is the only reminder type backed by an actual delivery
@@ -1995,9 +1996,7 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
   // study-wide scope, or one per group for per-group scope.
   const [studyUpdateIntervalDays, setStudyUpdateIntervalDays] = useState(7);
   const [studyUpdateTitle, setStudyUpdateTitle] = useState("Study update");
-  const [studyUpdateBody, setStudyUpdateBody] = useState(
-    "Check the app for the latest updates."
-  );
+  const [studyUpdateBody, setStudyUpdateBody] = useState("Check the app for the latest updates.");
   const [existingCampaigns, setExistingCampaigns] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -2005,7 +2004,14 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
     async function loadExistingCampaigns() {
       try {
         const data = await apiFetch<
-          | { campaigns?: { id: string; recurrence?: unknown; targetType: string; targetIds: string[] }[] }
+          | {
+              campaigns?: {
+                id: string;
+                recurrence?: unknown;
+                targetType: string;
+                targetIds: string[];
+              }[];
+            }
           | { id: string; recurrence?: unknown; targetType: string; targetIds: string[] }[]
         >(`${NOTIFICATIONS_BASE}?studyId=${study.id}&status=scheduled`, token);
         const list = Array.isArray(data) ? data : (data.campaigns ?? []);
@@ -2028,10 +2034,12 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
   }, [study.id, token]);
 
   const [saving, setSaving] = useState<Record<ReminderType, boolean>>(
-    () => Object.fromEntries(REMINDER_TYPES.map((t2) => [t2, false])) as Record<ReminderType, boolean>
+    () =>
+      Object.fromEntries(REMINDER_TYPES.map((t2) => [t2, false])) as Record<ReminderType, boolean>
   );
   const [saved, setSaved] = useState<Record<ReminderType, boolean>>(
-    () => Object.fromEntries(REMINDER_TYPES.map((t2) => [t2, false])) as Record<ReminderType, boolean>
+    () =>
+      Object.fromEntries(REMINDER_TYPES.map((t2) => [t2, false])) as Record<ReminderType, boolean>
   );
   const [errors, setErrors] = useState<Record<ReminderType, string>>(
     () => Object.fromEntries(REMINDER_TYPES.map((t2) => [t2, ""])) as Record<ReminderType, string>
@@ -2045,9 +2053,21 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
         apiFetch(`${NOTIFICATIONS_BASE}/${id}`, token, { method: "DELETE" }).catch(() => {})
       )
     );
-    const targets: { key: string; value: ReminderModeValue; targetType: string; targetIds: string[] }[] =
+    const targets: {
+      key: string;
+      value: ReminderModeValue;
+      targetType: string;
+      targetIds: string[];
+    }[] =
       scope.studyUpdate === "study"
-        ? [{ key: "all", value: studyReminders.studyUpdate, targetType: "all_enrolled", targetIds: [] }]
+        ? [
+            {
+              key: "all",
+              value: studyReminders.studyUpdate,
+              targetType: "all_enrolled",
+              targetIds: [],
+            },
+          ]
         : study.groups.map((g) => ({
             key: g.id,
             value: groupReminders[g.id]?.studyUpdate ?? emptyReminderMode(),
@@ -2122,8 +2142,7 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
               endOfStudyNotification: {
                 title: endOfStudyTitle.trim() || "Study complete",
                 body:
-                  endOfStudyBody.trim() ||
-                  "Thank you for participating — your study has ended.",
+                  endOfStudyBody.trim() || "Thank you for participating — your study has ended.",
               },
             }),
           });
@@ -2193,7 +2212,11 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
       </div>
 
       {REMINDER_TYPES.map((type) => (
-        <div key={type} className={styles.reminderTypeSection} data-testid={`reminder-section-${type}`}>
+        <div
+          key={type}
+          className={styles.reminderTypeSection}
+          data-testid={`reminder-section-${type}`}
+        >
           <p className={styles.cueConfigGroupLabel}>{t(`remindersTab.${type}Label`)}</p>
           <span className={styles.hint}>{t(`remindersTab.${type}Hint`)}</span>
           {errors[type] && <div className={styles.errorMsg}>{errors[type]}</div>}
@@ -2215,7 +2238,9 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
           {type === "endOfStudy" &&
             (scope.endOfStudy === "study"
               ? studyReminders.endOfStudy.mode === "admin_fixed"
-              : study.groups.some((g) => groupReminders[g.id]?.endOfStudy?.mode === "admin_fixed")) && (
+              : study.groups.some(
+                  (g) => groupReminders[g.id]?.endOfStudy?.mode === "admin_fixed"
+                )) && (
               <div className={`${styles.formGroup} ${styles.formFull}`}>
                 <label className={styles.label}>{t("modal.fields.notificationTitleLabel")}</label>
                 <input
@@ -2237,7 +2262,9 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
           {type === "studyUpdate" &&
             (scope.studyUpdate === "study"
               ? studyReminders.studyUpdate.mode === "admin_fixed"
-              : study.groups.some((g) => groupReminders[g.id]?.studyUpdate?.mode === "admin_fixed")) && (
+              : study.groups.some(
+                  (g) => groupReminders[g.id]?.studyUpdate?.mode === "admin_fixed"
+                )) && (
               <div className={`${styles.formGroup} ${styles.formFull}`}>
                 <label className={styles.label}>{t("remindersTab.intervalDaysLabel")}</label>
                 <input
@@ -2649,13 +2676,7 @@ function StudyUpdateManualSend({ study, token }: { study: StudySummary; token: s
 // ── Study form modal ──────────────────────────────────────────────────────────
 
 type ModalTab =
-  | "details"
-  | "questionnaires"
-  | "schedule"
-  | "codes"
-  | "participants"
-  | "cue-config"
-  | "reminders";
+  "details" | "questionnaires" | "schedule" | "codes" | "participants" | "cue-config" | "reminders";
 
 function StudyModal({
   initial,

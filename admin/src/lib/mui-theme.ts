@@ -22,8 +22,7 @@ export const muiTheme = createTheme({
     info: { main: "#1d4ed8" }, // --color-info (light)
   },
   typography: {
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
   },
   shape: {
     borderRadius: 8,

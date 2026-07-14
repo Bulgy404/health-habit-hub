@@ -9,7 +9,7 @@ This guide walks researchers and administrators through every day-to-day task in
 Use this checklist when launching a new cohort of participants.
 
 1. **Log in as admin** — open `https://hhh.tu-dresden.de/admin` and authenticate with your admin credentials (Section 1).
-2. **Create participant accounts** — for each participant, use *Participants → New Participant*; the system immediately generates both credentials and the token card PDF (Section 2).
+2. **Create participant accounts** — for each participant, use _Participants → New Participant_; the system immediately generates both credentials and the token card PDF (Section 2).
 3. **Download and distribute token cards** — tap Download Token Card on each participant's detail view to retrieve the ready-made PDF; print and hand it out physically or via post (Section 2).
 4. **Assign study groups** — assign each participant to one of the four study groups (G1–G4) in the participant's detail view (Section 3).
 5. **Create or publish questionnaires** — set up the baseline profile survey and any follow-up questionnaires; assign them to the correct groups (Section 4).
@@ -51,21 +51,21 @@ The admin panel is accessible only to users with the `admin` or `researcher` Key
 
 **Step 3.** After login, the navigation bar will show an extra **Admin** tab (gear icon). Tap it to open the admin panel. The left sidebar is organised into five sections:
 
-| Section | Pages |
-|---|---|
-| **Research** | Studies, Analytics |
-| **Operations** | Participants *(admin only)*, Devices *(admin only)*, Donations *(admin only)*, Comments *(admin only)* |
-| **Configuration** | Cue Pools, Questionnaires, Profile Fields *(admin only)*, Knowledge Base *(admin only)* |
-| **Monitoring** | System *(admin only)*, Backups *(admin only)*, Audit Log *(admin only)*, Restore Attempts *(admin only)*, Team *(admin only)* |
-| **Support** | Help |
+| Section           | Pages                                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **Research**      | Studies, Analytics                                                                                                            |
+| **Operations**    | Participants _(admin only)_, Devices _(admin only)_, Donations _(admin only)_, Comments _(admin only)_                        |
+| **Configuration** | Cue Pools, Questionnaires, Profile Fields _(admin only)_, Knowledge Base _(admin only)_                                       |
+| **Monitoring**    | System _(admin only)_, Backups _(admin only)_, Audit Log _(admin only)_, Restore Attempts _(admin only)_, Team _(admin only)_ |
+| **Support**       | Help                                                                                                                          |
 
 `researcher` accounts see only Studies, Analytics, Cue Pools, and Questionnaires; every `adminOnly` page above is hidden from the sidebar entirely for that role.
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                            | Callout annotations                                                                                                                                                                                                                                         |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Admin login screen](../assets/screenshots/admin/01-admin-login.png) | **(1)** Username field — enter your admin account username. **(2)** Password field — enter your admin password (not a token card code). **(3)** Login button — tap to authenticate. **(4)** HHH logo and version number shown at the top of the login card. |
 
-*Figure 1: Admin login screen. Callout numbers correspond to the table above.*
+_Figure 1: Admin login screen. Callout numbers correspond to the table above._
 
 > **Tip:** If you see "Invalid credentials", check that you are using an admin account (not a participant token). Participant tokens are one-time tokens and cannot be used to log in as admin.
 
@@ -82,30 +82,32 @@ Each study participant needs an account and a printable token card with their QR
 **Step 3.** Fill in the **Display Name** (optional, for your reference only — participants are pseudonymised) and select the **Study Group** (you can change this later; see Section 3).
 
 **Step 4.** Tap **Create**. The system immediately:
+
 - Generates a pseudonymous username (e.g. `p-2024-0042`) and a random access password
 - Creates the participant's Keycloak account
 - Generates the token card PDF and stores it — no further action needed before downloading
 
 > **Note:** Participant passwords are stored internally as a bcrypt hash. Neither you nor any other admin can retrieve the raw password — it exists in readable form only on the printed token card. This is by design and requires no admin action.
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                                        | Callout annotations                                                                                                                                                                                                                                                                |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Create participant form](../assets/screenshots/admin/02-create-participant.png) | **(1)** Display Name field — researcher-visible only; not shown to the participant. **(2)** Study Group dropdown — defaults to G1; can be changed later. **(3)** Create button — generates credentials, creates the Keycloak account, and produces the token card PDF immediately. |
 
-*Figure 2a: New participant creation form.*
+_Figure 2a: New participant creation form._
 
 **Step 5.** After creation, the participant's detail view opens automatically. Tap **Download Token Card** to retrieve the pre-generated PDF. The download is instant — the PDF was created at the moment you tapped Create.
 
 **Step 6.** Print the token card and hand it to the participant. The card contains:
+
 - The study logo and participant pseudonym
 - A QR code that encodes `hhh://login?user=<username>&token=<password>`
 - The username and password in plain text (for manual entry)
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                                            | Callout annotations                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Download token card button](../assets/screenshots/admin/02-download-token-card.png) | **(1)** Participant pseudonym and internal ID. **(2)** Download Token Card button — retrieves the pre-generated PDF instantly. **(3)** Copy Credentials button — copies username:password to clipboard for digital distribution. **(4)** QR code preview showing the encoded deep link. |
 
-*Figure 2b: Participant detail view after creation, showing the token card download button.*
+_Figure 2b: Participant detail view after creation, showing the token card download button._
 
 > **Tip:** The token card PDF is re-downloadable at any time from the participant's detail view. Tokens do not expire unless you manually revoke them.
 
@@ -115,12 +117,12 @@ Each study participant needs an account and a printable token card with their QR
 
 Each participant must be assigned to exactly one study group (G1–G4). The group determines which questionnaire items are shown and how habits are classified.
 
-| Group | Description |
-|---|---|
-| G1 | Full intervention — structured habit donation |
-| G2 | Partial intervention — structured donation without recommendations |
-| G3 | Full intervention + free-text annotation |
-| G4 | Minimal intervention + free-text annotation |
+| Group | Description                                                        |
+| ----- | ------------------------------------------------------------------ |
+| G1    | Full intervention — structured habit donation                      |
+| G2    | Partial intervention — structured donation without recommendations |
+| G3    | Full intervention + free-text annotation                           |
+| G4    | Minimal intervention + free-text annotation                        |
 
 **Step 1.** In the Admin panel, tap **Participants** and open the participant you want to assign.
 
@@ -128,11 +130,11 @@ Each participant must be assigned to exactly one study group (G1–G4). The grou
 
 **Step 3.** Select the new group and tap **Save**.
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                             | Callout annotations                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Assign study group](../assets/screenshots/admin/03-assign-group.png) | **(1)** Participant pseudonym and current group badge. **(2)** Study Group dropdown — select G1, G2, G3, or G4. **(3)** Save button — immediately updates the group in Keycloak and Neo4j. **(4)** Group change history log showing previous assignments with timestamps. |
 
-*Figure 3: Assigning a study group to a participant.*
+_Figure 3: Assigning a study group to a participant._
 
 > **Warning:** Changing a participant's group mid-study may affect recommendation quality and data integrity. Only change the group before the participant logs in for the first time, unless instructed by the study lead.
 
@@ -142,10 +144,10 @@ Each participant must be assigned to exactly one study group (G1–G4). The grou
 
 The platform has two questionnaire systems that serve different purposes.
 
-| System | Where configured | Rendered by | Use case |
-|--------|-----------------|-------------|----------|
-| **SurveyJS Forms** | Admin panel → Surveys | WebView (SurveyJS) | Habit-donation prompts, profile forms — freely designed with a JSON schema editor |
-| **Study Questionnaires** | Admin panel → Questionnaires / Web portal → Studies | Native Flutter UI | Validated research instruments (SLIQ, RAND-36, SRHI) and researcher-created questionnaires assigned to studies |
+| System                   | Where configured                                    | Rendered by        | Use case                                                                                                       |
+| ------------------------ | --------------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------- |
+| **SurveyJS Forms**       | Admin panel → Surveys                               | WebView (SurveyJS) | Habit-donation prompts, profile forms — freely designed with a JSON schema editor                              |
+| **Study Questionnaires** | Admin panel → Questionnaires / Web portal → Studies | Native Flutter UI  | Validated research instruments (SLIQ, RAND-36, SRHI) and researcher-created questionnaires assigned to studies |
 
 ---
 
@@ -178,17 +180,17 @@ Survey availability follows four rules:
 
 **Step 5.** Tap **Save as Draft**. The questionnaire is not yet visible to participants.
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                                   | Callout annotations                                                                                                                                                                                                                                |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Questionnaire list](../assets/screenshots/admin/04-questionnaire-list.png) | **(1)** List of all questionnaires with status badges (Draft / Published / Archived). **(2)** + New Questionnaire button. **(3)** Filter bar to search by title or type. **(4)** Row action buttons: Edit, Publish/Archive, Assign Groups, Delete. |
 
-*Figure 4a: Questionnaire list view.*
+_Figure 4a: Questionnaire list view._
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                                            | Callout annotations                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Create questionnaire form](../assets/screenshots/admin/04-questionnaire-create.png) | **(1)** Title field. **(2)** Type selector (profile / habit). **(3)** JSON Schema editor with syntax highlighting. **(4)** Preview button — renders the form as participants will see it. **(5)** Save as Draft button. |
 
-*Figure 4b: New questionnaire creation form.*
+_Figure 4b: New questionnaire creation form._
 
 ### Publishing and Archiving
 
@@ -205,11 +207,11 @@ Survey availability follows four rules:
 
 If you want a questionnaire to appear for participants who are not assigned to any study group, set **Availability** to **Standard only** and leave the group list empty.
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                                                        | Callout annotations                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Assign questionnaire to groups](../assets/screenshots/admin/04-questionnaire-assign-groups.png) | **(1)** Questionnaire name shown at the top. **(2)** Group toggle checkboxes (G1–G4). **(3)** Currently assigned groups highlighted in teal. **(4)** Save Assignment button. |
 
-*Figure 4c: Assigning a questionnaire to specific study groups.*
+_Figure 4c: Assigning a questionnaire to specific study groups._
 
 ---
 
@@ -259,7 +261,7 @@ Questionnaires are linked to participants through studies. A participant sees th
 
 ### 4c. Scheduling Questionnaires on a Cadence
 
-The **Questionnaires** tab (above) makes a questionnaire available to a study; the **Schedule** tab controls *when* it becomes due for each participant — a recurring interval (e.g. every 7 days) or a set of fixed study weeks/days (e.g. baseline, week 4, week 8).
+The **Questionnaires** tab (above) makes a questionnaire available to a study; the **Schedule** tab controls _when_ it becomes due for each participant — a recurring interval (e.g. every 7 days) or a set of fixed study weeks/days (e.g. baseline, week 4, week 8).
 
 **Step 1.** Navigate to **Studies**, open a study, and click the **Schedule** tab.
 
@@ -267,15 +269,15 @@ The **Questionnaires** tab (above) makes a questionnaire available to a study; t
 
 **Step 3.** Use the **Schedule calendar** below the form to review what participants will see:
 
-| Control | Behavior |
-|---|---|
-| **Today** button | Jumps the calendar back to the current month, regardless of how far you've navigated. |
-| Click a day | Pre-fills the add-assignment form with a recurring cadence starting on that day and scrolls to it — a quick way to sketch out a schedule visually instead of computing day offsets by hand. |
-| Solid entries | Real occurrences already generated for enrolled participants. |
+| Control                    | Behavior                                                                                                                                                                                                   |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Today** button           | Jumps the calendar back to the current month, regardless of how far you've navigated.                                                                                                                      |
+| Click a day                | Pre-fills the add-assignment form with a recurring cadence starting on that day and scrolls to it — a quick way to sketch out a schedule visually instead of computing day offsets by hand.                |
+| Solid entries              | Real occurrences already generated for enrolled participants.                                                                                                                                              |
 | Dashed, italicized entries | A **preview** of what a participant enrolling today would see — shown for assignments that have no enrolled participants yet, so newly created assignments don't appear to be "missing" from the calendar. |
-| Greyed-out days | Past the study's end date (see below), if one is set. |
+| Greyed-out days            | Past the study's end date (see below), if one is set.                                                                                                                                                      |
 
-> **Why cadences are relative, not calendar dates.** Every schedule is expressed as an offset from each participant's own enrollment date, since participants join a study on different days. Clicking a calendar day computes the equivalent offset assuming enrollment happens today — the actual due date for each participant is still relative to when *they* enrolled.
+> **Why cadences are relative, not calendar dates.** Every schedule is expressed as an offset from each participant's own enrollment date, since participants join a study on different days. Clicking a calendar day computes the equivalent offset assuming enrollment happens today — the actual due date for each participant is still relative to when _they_ enrolled.
 
 #### Setting a Study End Date & End-of-Study Notification
 
@@ -291,14 +293,15 @@ The notification is scheduled locally on each participant's device (not a server
 
 The study's **Reminders** tab covers four reminder types, each with its own section and its own **Save** button. An overview strip at the top of the tab summarizes every type's current state at a glance. This tab also hosts what used to be a separate Notifications tab — one-off manual sends and campaign history now live inside the study-update section.
 
-| Type | What it controls |
-|---|---|
-| **Habit reminder** | The daily reminder time offered when a participant creates a habit |
-| **Questionnaire reminder** | The daily clock time a due-questionnaire notification fires |
-| **End-of-study reminder** | Whether/when a notification is sent on the study's end date (title/body entered alongside it) |
-| **Study update reminder** | A recurring broadcast push reminding participants to check the app, plus one-off manual messages |
+| Type                       | What it controls                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------ |
+| **Habit reminder**         | The daily reminder time offered when a participant creates a habit                               |
+| **Questionnaire reminder** | The daily clock time a due-questionnaire notification fires                                      |
+| **End-of-study reminder**  | Whether/when a notification is sent on the study's end date (title/body entered alongside it)    |
+| **Study update reminder**  | A recurring broadcast push reminding participants to check the app, plus one-off manual messages |
 
 Each section's **first** control is a scope switch, **"Configure per group"**:
+
 - **Off** (default): one study-wide editor applies to every participant.
 - **On**: one editor per group, each set independently — there's no "inherit" option in this mode, every group must have its own explicit setting. Switching back to study-wide clears all group overrides for that type.
 
@@ -314,26 +317,27 @@ The Habits dashboard shows all habits donated across all participants, with filt
 
 **Step 2.** The list shows all habit donations sorted by submission date (newest first). Each row shows: pseudonym, habit text, study group, BCIO category, and submission timestamp.
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                     | Callout annotations                                                                                                                                                                                                 |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Habits list](../assets/screenshots/admin/05-habits-list.png) | **(1)** Total donation count. **(2)** List of habit donations with group and BCIO category columns. **(3)** Sort controls (by date, group, or category). **(4)** Filter bar (see below). **(5)** CSV Export button. |
 
-*Figure 5a: Habits monitoring list.*
+_Figure 5a: Habits monitoring list._
 
 ### Filtering Habits
 
 **Step 1.** Use the filter bar above the list to narrow results:
+
 - **Group filter:** Select G1, G2, G3, G4, or All.
 - **BCIO category filter:** Select a BCT taxonomy category or All.
 - **Date range:** Set a start and end date to filter by donation date.
 
 **Step 2.** The list updates in real time as you change filters.
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                             | Callout annotations                                                                                                                              |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | ![Habits filter bar](../assets/screenshots/admin/05-habits-filter.png) | **(1)** Group filter dropdown. **(2)** BCIO category dropdown. **(3)** Start date picker. **(4)** End date picker. **(5)** Reset Filters button. |
 
-*Figure 5b: Filter controls on the habits dashboard.*
+_Figure 5b: Filter controls on the habits dashboard._
 
 ### Exporting to CSV
 
@@ -343,11 +347,11 @@ The Habits dashboard shows all habits donated across all participants, with filt
 
 The CSV contains columns: `participant_pseudonym`, `study_group`, `habit_text`, `bcio_category`, `submitted_at`, `annotation_text` (G3/G4 only).
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                                   | Callout annotations                                                                                                     |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | ![CSV export confirmation](../assets/screenshots/admin/05-habits-export.png) | **(1)** Export CSV button. **(2)** Row count shown before export (confirms scope). **(3)** Download progress indicator. |
 
-*Figure 5c: Triggering a CSV export.*
+_Figure 5c: Triggering a CSV export._
 
 ---
 
@@ -363,24 +367,24 @@ The participant detail drawer on the **Analytics** page shows a full activity su
 
 The drawer contains four sections:
 
-| Section | What it shows |
-|---|---|
-| **Summary** | Habits created, surveys completed, recommendations accepted/dismissed, profile completion, last active date |
-| **Reminders** | Current reminder frequency, autonomy score with score bar, and the per-signal breakdown (see below) |
-| **Completed surveys** | List of surveys the participant has submitted, with completion dates |
-| **Activity timeline** | Chronological log of all tracked events (enrolment, logins, habit creation, survey submissions, etc.) |
+| Section               | What it shows                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Summary**           | Habits created, surveys completed, recommendations accepted/dismissed, profile completion, last active date |
+| **Reminders**         | Current reminder frequency, autonomy score with score bar, and the per-signal breakdown (see below)         |
+| **Completed surveys** | List of surveys the participant has submitted, with completion dates                                        |
+| **Activity timeline** | Chronological log of all tracked events (enrolment, logins, habit creation, survey submissions, etc.)       |
 
 ### Reminder plan breakdown
 
 The **Reminders** section shows how the adaptive fading algorithm has assessed the participant's habit automaticity for each active intention:
 
-| Field | What it means |
-|---|---|
+| Field               | What it means                                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | **Frequency badge** | Current reminder cadence — `Daily` (red) → `Every 2 days` (orange) → `Twice weekly` (amber) → `Weekly` (green) → `Off` (grey) |
-| **Score bar** | Autonomy score 0–1; higher = more automatic, fewer reminders needed |
-| **SRHI** | Contribution from the participant's latest weekly habit-strength self-report (weight 50%) |
-| **Adherence 14d** | Contribution from the fraction of the past 14 days with a logged enactment (weight 35%) |
-| **Streak** | Contribution from the current consecutive-day streak, capped at 14 days (weight 15%) |
+| **Score bar**       | Autonomy score 0–1; higher = more automatic, fewer reminders needed                                                           |
+| **SRHI**            | Contribution from the participant's latest weekly habit-strength self-report (weight 50%)                                     |
+| **Adherence 14d**   | Contribution from the fraction of the past 14 days with a logged enactment (weight 35%)                                       |
+| **Streak**          | Contribution from the current consecutive-day streak, capped at 14 days (weight 15%)                                          |
 
 If the participant has no active intentions, the section shows "No active intentions".
 
@@ -394,17 +398,17 @@ If a participant loses their token card or a device is compromised, you can revo
 
 **Step 1.** Open the participant's detail view (Admin panel → Participants → select participant).
 
-**Step 2.** Tap **Revoke All Sessions**. A confirmation dialog appears: *"This will log the participant out of all devices immediately. Continue?"*
+**Step 2.** Tap **Revoke All Sessions**. A confirmation dialog appears: _"This will log the participant out of all devices immediately. Continue?"_
 
 **Step 3.** Tap **Confirm**. The participant's Keycloak sessions are terminated. They will see an "Invalid session" message on their next app action.
 
 **Step 4.** If the participant needs a new token card (e.g. lost card), tap **Regenerate Token** to issue a new random password, then download the updated token card (Section 2).
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                                  | Callout annotations                                                                                                                                                                                                                                                                                   |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | ![Revoke sessions panel](../assets/screenshots/admin/07-revoke-session.png) | **(1)** Active Sessions count — shows how many devices are currently authenticated. **(2)** Revoke All Sessions button (red, destructive action). **(3)** Confirmation dialog with participant pseudonym. **(4)** Regenerate Token button — issues a new password without revoking existing sessions. |
 
-*Figure 7: Revoking a participant's active device sessions.*
+_Figure 7: Revoking a participant's active device sessions._
 
 > **Warning:** Revoking sessions is immediate and irreversible. The participant will need their new token card to log in again.
 
@@ -420,24 +424,24 @@ The token card PDF layout — logo, font size, QR code position, and colour sche
 
 **Step 2.** Under **Token Card Format**, you can configure:
 
-| Setting | Description | Default |
-|---|---|---|
-| Logo URL | URL or base64 of the logo image shown at the top | HHH shield logo |
-| Primary colour | Hex colour for header and QR code border | `#1A73E8` |
-| Font size | Body text size in pt | `11` |
-| QR code size | QR block pixel size (80–200) | `120` |
-| Footer text | Custom text at card bottom (e.g. study contact) | `"Contact: study@tu-dresden.de"` |
-| Include plain text credentials | Show username/password below QR code | `true` |
+| Setting                        | Description                                      | Default                          |
+| ------------------------------ | ------------------------------------------------ | -------------------------------- |
+| Logo URL                       | URL or base64 of the logo image shown at the top | HHH shield logo                  |
+| Primary colour                 | Hex colour for header and QR code border         | `#1A73E8`                        |
+| Font size                      | Body text size in pt                             | `11`                             |
+| QR code size                   | QR block pixel size (80–200)                     | `120`                            |
+| Footer text                    | Custom text at card bottom (e.g. study contact)  | `"Contact: study@tu-dresden.de"` |
+| Include plain text credentials | Show username/password below QR code             | `true`                           |
 
 **Step 3.** Tap **Preview Token Card** to see a live preview PDF with the current settings applied to a sample participant.
 
 **Step 4.** Tap **Save Settings** to persist. All subsequently created participants will have token cards generated using the new format.
 
-| Screenshot | Callout annotations |
-|---|---|
+| Screenshot                                                                           | Callout annotations                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | ![Token card settings panel](../assets/screenshots/admin/08-token-card-settings.png) | **(1)** Logo URL input with inline image preview. **(2)** Primary colour swatch picker. **(3)** QR code size slider. **(4)** Footer text input. **(5)** Include plain text credentials toggle. **(6)** Preview Token Card button — opens PDF preview in a new tab. **(7)** Save Settings button. |
 
-*Figure 8: Token card format settings.*
+_Figure 8: Token card format settings._
 
 ---
 
@@ -455,10 +459,10 @@ The app supports English, German (Deutsch), French (Français), Japanese (日本
 
 **Step 4.** The app UI and all habit translations switch to the selected language without requiring a restart.
 
-| Setting | Description |
-|---|---|
+| Setting | Description                                                                                                                                                           |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | English | All UI strings and habit display text in English. Donated habits are shown using the English translation (`translationEN`) if available, otherwise the original text. |
-| Deutsch | All UI strings and habit display text in German. Donated habits are shown using the German translation (`translationDE`) if available, otherwise the original text. |
+| Deutsch | All UI strings and habit display text in German. Donated habits are shown using the German translation (`translationDE`) if available, otherwise the original text.   |
 
 > **Note for admins:** You cannot set a participant's language preference from the admin panel. Language is a personal preference configured by each participant in their own Settings screen. If a participant reports seeing content in the wrong language, ask them to open Settings and re-select their preferred language.
 
@@ -480,15 +484,15 @@ The list shows each cue's text, a quality badge (high / low), dimension scores (
 
 **Step 2.** Fill in the form:
 
-| Field | Valid values |
-|---|---|
-| Text | Free text — the cue sentence |
-| Quality | `low` or `high` |
-| Domain | e.g. `health`, `fitness`, `nutrition` |
-| Language | e.g. `en`, `de` |
-| Stability | Integer 1–5 |
-| Salience | Integer 1–5 |
-| Specificity | Integer 1–5 |
+| Field       | Valid values                          |
+| ----------- | ------------------------------------- |
+| Text        | Free text — the cue sentence          |
+| Quality     | `low` or `high`                       |
+| Domain      | e.g. `health`, `fitness`, `nutrition` |
+| Language    | e.g. `en`, `de`                       |
+| Stability   | Integer 1–5                           |
+| Salience    | Integer 1–5                           |
+| Specificity | Integer 1–5                           |
 
 **Step 3.** Tap **Save**. The cue appears in the list immediately.
 
@@ -514,7 +518,7 @@ Tap the **Delete** (trash) icon on any cue row and confirm the dialog. Deletion 
 
 ## 11. Configuring Study Conditions (Cue Config)
 
-> **Recommender toggle (study-level).** The study's **Details** tab has an *"Enable recommender for this study"* checkbox. When unchecked, participants enrolled in that study no longer see the recommender screen (the "Recs" tab) in the app. It applies to the whole study (all groups) and is enabled by default; the change takes effect the next time the participant's app refreshes its configuration.
+> **Recommender toggle (study-level).** The study's **Details** tab has an _"Enable recommender for this study"_ checkbox. When unchecked, participants enrolled in that study no longer see the recommender screen (the "Recs" tab) in the app. It applies to the whole study (all groups) and is enabled by default; the change takes effect the next time the participant's app refreshes its configuration.
 
 Each study group can have its own cue delivery settings. These are managed from the **Cue Config** tab inside a study's edit modal.
 
@@ -524,12 +528,12 @@ Each study group can have its own cue delivery settings. These are managed from 
 
 **Step 3.** For each group listed, configure the following settings:
 
-| Setting | Options | Description |
-|---|---|---|
-| Cue count | Single / Multi | Whether participants see one cue or multiple cues per session |
-| Cue source | `low_quality` / `high_quality` / `self_selected` | Pool from which cues are drawn |
-| Allowed behaviors | Checklist | Behavior types participants may log for this group |
-| Max habits | 1 / Unlimited | `1` restricts participants to study conditions; Unlimited mirrors the public app experience |
+| Setting           | Options                                          | Description                                                                                 |
+| ----------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Cue count         | Single / Multi                                   | Whether participants see one cue or multiple cues per session                               |
+| Cue source        | `low_quality` / `high_quality` / `self_selected` | Pool from which cues are drawn                                                              |
+| Allowed behaviors | Checklist                                        | Behavior types participants may log for this group                                          |
+| Max habits        | 1 / Unlimited                                    | `1` restricts participants to study conditions; Unlimited mirrors the public app experience |
 
 **Step 4.** Tap the **Save** button for each group individually. Settings for other groups are unaffected.
 
@@ -545,22 +549,22 @@ The standalone **Analytics** page (`/analytics`) is the primary research-monitor
 
 ### KPI cards
 
-| Card | What it shows |
-|---|---|
-| Total enrolled | All participants currently active in the study |
-| Active last 7 days | Percentage who logged at least one behaviour in the past week (amber above 10% inactive, red above 20%) |
-| Dropout count / rate | Cumulative dropout numbers; rate is colour-coded |
-| Mean SRHI (latest week) | Average habit-strength self-report score across all groups at the most recent weekly checkpoint |
-| Questionnaire completion | Average completion rate across all assigned questionnaires |
+| Card                     | What it shows                                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------------------- |
+| Total enrolled           | All participants currently active in the study                                                          |
+| Active last 7 days       | Percentage who logged at least one behaviour in the past week (amber above 10% inactive, red above 20%) |
+| Dropout count / rate     | Cumulative dropout numbers; rate is colour-coded                                                        |
+| Mean SRHI (latest week)  | Average habit-strength self-report score across all groups at the most recent weekly checkpoint         |
+| Questionnaire completion | Average completion rate across all assigned questionnaires                                              |
 
 ### Charts
 
-| Chart | What it shows |
-|---|---|
-| Weekly Active Rate | Bar chart — per-group percentage of enrolled participants active in the last 7 days |
-| SRHI Trajectory | Line chart — mean SRHI score per group per week; dashed reference line at score 4 (habit threshold) |
-| Cumulative Dropout | Step chart — running dropout count per group over time |
-| Questionnaire Completion | Horizontal bar chart — completion rate per questionnaire |
+| Chart                    | What it shows                                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------- |
+| Weekly Active Rate       | Bar chart — per-group percentage of enrolled participants active in the last 7 days                 |
+| SRHI Trajectory          | Line chart — mean SRHI score per group per week; dashed reference line at score 4 (habit threshold) |
+| Cumulative Dropout       | Step chart — running dropout count per group over time                                              |
+| Questionnaire Completion | Horizontal bar chart — completion rate per questionnaire                                            |
 
 ### Participant table and detail drawer
 
@@ -580,13 +584,14 @@ Push notifications can be sent to study participants from the **Reminders** tab 
 
 **Step 3.** Choose the target audience:
 
-| Target option | Who receives it |
-|---|---|
-| All enrolled | Every participant currently enrolled in the study |
-| Specific group | Only participants in the selected group (e.g. G1) |
+| Target option         | Who receives it                                                         |
+| --------------------- | ----------------------------------------------------------------------- |
+| All enrolled          | Every participant currently enrolled in the study                       |
+| Specific group        | Only participants in the selected group (e.g. G1)                       |
 | All enrolled in study | Synonym for "All enrolled" — included for clarity in multi-study setups |
 
 **Step 4.** Choose when to send:
+
 - **Send immediately** — tap **Send Now**; delivery begins within seconds.
 - **Schedule** — enable the date/time picker, set the desired date and time, then tap **Schedule**.
 
@@ -604,10 +609,10 @@ The **App Settings** page (Public App section in the sidebar, Smartphone icon) c
 
 **Step 2.** In the **Features** section, toggle:
 
-| Setting | Description |
-|---|---|
-| Guided implementation intention wizard | When enabled, public users are taken through a step-by-step wizard (habit → cues → LLM stitch → confirm → reminder). Habit and cues are always free text; disabling this only skips the LLM-stitching step. |
-| Community sharing opt-in shown by default | When enabled, the community-sharing toggle appears at the end of habit creation and is pre-selected. |
+| Setting                                   | Description                                                                                                                                                                                                 |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Guided implementation intention wizard    | When enabled, public users are taken through a step-by-step wizard (habit → cues → LLM stitch → confirm → reminder). Habit and cues are always free text; disabling this only skips the LLM-stitching step. |
+| Community sharing opt-in shown by default | When enabled, the community-sharing toggle appears at the end of habit creation and is pre-selected.                                                                                                        |
 
 Tap **Save changes** to apply.
 
@@ -625,11 +630,11 @@ Tap **Save changes** to apply. Changes take effect immediately for all public us
 
 The page shows:
 
-| Section | Contents |
-|---|---|
-| Last backup | Date, age, size, what triggered it, a per-component status (Mongo / LightRAG / Neo4j / Keycloak), and a **Download** button |
-| All backups | Every backup still within the retention window, including ones you've uploaded, each with its own **Download** button |
-| Recent activity | Who triggered, restored, uploaded, or downloaded what, and whether it succeeded |
+| Section         | Contents                                                                                                                    |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Last backup     | Date, age, size, what triggered it, a per-component status (Mongo / LightRAG / Neo4j / Keycloak), and a **Download** button |
+| All backups     | Every backup still within the retention window, including ones you've uploaded, each with its own **Download** button       |
+| Recent activity | Who triggered, restored, uploaded, or downloaded what, and whether it succeeded                                             |
 
 > **Retention.** Automatic (scheduled) backups older than the retention window are deleted automatically, and — separately — only the 10 most recent scheduled backups are ever kept regardless of age, so the list doesn't grow unbounded. Manual and uploaded backups are not subject to that count cap.
 
@@ -659,7 +664,7 @@ You can upload a `.tar.gz` backup archive — for example one downloaded from of
 
 **Step 1.** Find the backup in the list and tap **Restore**.
 
-**Step 2.** A safety backup of the *current* state is always taken automatically first — the restore only proceeds if that safety backup succeeds, so a botched restore is always recoverable. This adds some time before the actual restore starts.
+**Step 2.** A safety backup of the _current_ state is always taken automatically first — the restore only proceeds if that safety backup succeeds, so a botched restore is always recoverable. This adds some time before the actual restore starts.
 
 **Step 3.** If the backup you're restoring has a known failed component (e.g. Neo4j failed when it was originally created), the dialog shows a warning and you must explicitly tick **Restore anyway** to proceed.
 
@@ -701,4 +706,4 @@ The page shows every `POST /restore` call, newest first, with its outcome (`succ
 
 ---
 
-*Health Habit Hub — Admin Guide v1.2 · TU Dresden · 2026*
+_Health Habit Hub — Admin Guide v1.2 · TU Dresden · 2026_

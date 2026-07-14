@@ -75,11 +75,11 @@ Researchers and admins manage studies, questionnaires, and the knowledge base th
 
 ## Roles
 
-| Role | What they do |
-|---|---|
-| `user` | Mobile app participant — donates habits, fills questionnaires, receives recommendations, takes part in studies |
-| `researcher` | Admin portal — studies, questionnaires, cue pools, analytics, exports, notification campaigns |
-| `admin` | Admin portal — everything above plus participants, knowledge base, and platform settings |
+| Role         | What they do                                                                                                   |
+| ------------ | -------------------------------------------------------------------------------------------------------------- |
+| `user`       | Mobile app participant — donates habits, fills questionnaires, receives recommendations, takes part in studies |
+| `researcher` | Admin portal — studies, questionnaires, cue pools, analytics, exports, notification campaigns                  |
+| `admin`      | Admin portal — everything above plus participants, knowledge base, and platform settings                       |
 
 The full actor/use-case mapping lives in the [use case overview](docs/diagrams/use-cases/use-case-overview.md).
 
@@ -123,12 +123,12 @@ Traefik sits in front of everything as the reverse proxy and TLS terminator; int
 
 The platform covers **39 use cases** across five actors. Each one is specified with its own sequence diagram.
 
-| | |
-|---|---|
-| 📋 Structured catalogue (actors, endpoints, stores, traceability to code) | [`docs/diagrams/use-cases/use-case-overview.md`](docs/diagrams/use-cases/use-case-overview.md) |
-| 🎭 UML use case diagram | [`docs/diagrams/use-cases/use-case-diagram.puml`](docs/diagrams/use-cases/use-case-diagram.puml) |
-| 🔁 Sequence diagrams UC-01 … UC-39 (one per use case) | [`docs/diagrams/sequences/`](docs/diagrams/sequences/) |
-| 🧩 Domain class diagram (MongoDB + Neo4j + domain classes) | [`docs/diagrams/classes/class-diagram.mmd`](docs/diagrams/classes/class-diagram.mmd) |
+|                                                                           |                                                                                                  |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 📋 Structured catalogue (actors, endpoints, stores, traceability to code) | [`docs/diagrams/use-cases/use-case-overview.md`](docs/diagrams/use-cases/use-case-overview.md)   |
+| 🎭 UML use case diagram                                                   | [`docs/diagrams/use-cases/use-case-diagram.puml`](docs/diagrams/use-cases/use-case-diagram.puml) |
+| 🔁 Sequence diagrams UC-01 … UC-39 (one per use case)                     | [`docs/diagrams/sequences/`](docs/diagrams/sequences/)                                           |
+| 🧩 Domain class diagram (MongoDB + Neo4j + domain classes)                | [`docs/diagrams/classes/class-diagram.mmd`](docs/diagrams/classes/class-diagram.mmd)             |
 
 Highlights: the [habit donation pipeline](docs/diagrams/sequences/UC-03-donate-habit.mmd) (translate → LLM classify → BCIO map → Neo4j), the [RAG recommendation flow](docs/diagrams/sequences/UC-07-request-recommendations.mmd), and the [DFG study flows](docs/diagrams/sequences/UC-11-create-intention.mmd) (UC-09 – UC-13).
 
@@ -136,20 +136,20 @@ Highlights: the [habit donation pipeline](docs/diagrams/sequences/UC-03-donate-h
 
 ## Repository Layout
 
-| Path | Contents |
-|---|---|
-| `mobile/` | Flutter app (iOS / Android / Web) — Riverpod, GoRouter, Firebase |
-| `app/` | Node.js/Express backend — REST API `/api/v1/*`, routes → services → models |
-| `admin/` | Next.js 15 admin portal — NextAuth + Keycloak, MUI + CSS Modules UI |
-| `API-service/` | Python FastAPI — LLM classification, BCIO mapping, RAG recommendations |
-| `lightrag/` | LightRAG knowledge base (graph + vector) |
-| `knowledge-mcp/` | MCP server exposing the KB to AI agents (SSE) |
-| `keycloak/` | Realm config and init scripts |
-| `mongo/`, `neo4j/` | Data store seeds and init data |
-| `backup-service/` | Daily cron backups of all stores |
-| `monitoring/` | Monitoring stack configuration |
-| `scripts/` | Seeding, migration, and ops scripts |
-| `docs/` | All documentation — see [Documentation](#documentation) |
+| Path               | Contents                                                                   |
+| ------------------ | -------------------------------------------------------------------------- |
+| `mobile/`          | Flutter app (iOS / Android / Web) — Riverpod, GoRouter, Firebase           |
+| `app/`             | Node.js/Express backend — REST API `/api/v1/*`, routes → services → models |
+| `admin/`           | Next.js 15 admin portal — NextAuth + Keycloak, MUI + CSS Modules UI        |
+| `API-service/`     | Python FastAPI — LLM classification, BCIO mapping, RAG recommendations     |
+| `lightrag/`        | LightRAG knowledge base (graph + vector)                                   |
+| `knowledge-mcp/`   | MCP server exposing the KB to AI agents (SSE)                              |
+| `keycloak/`        | Realm config and init scripts                                              |
+| `mongo/`, `neo4j/` | Data store seeds and init data                                             |
+| `backup-service/`  | Daily cron backups of all stores                                           |
+| `monitoring/`      | Monitoring stack configuration                                             |
+| `scripts/`         | Seeding, migration, and ops scripts                                        |
+| `docs/`            | All documentation — see [Documentation](#documentation)                    |
 
 ---
 
@@ -176,53 +176,53 @@ make ios          # iPhone Simulator
 
 Local service URLs after `make dev`:
 
-| Service | URL |
-|---|---|
-| Flutter web | http://localhost |
-| Backend API | http://localhost:3000 |
-| API docs (Swagger UI) | http://localhost:3000/api/v1/docs |
-| Admin UI | http://admin.localhost |
-| Keycloak | http://localhost:8080 |
-| Neo4j Browser | http://localhost:7474 |
-| LightRAG (graph UI) | http://localhost:9622 |
-| LibreTranslate | http://localhost:5001 |
-| Python AI service | http://localhost:8001 |
-| Prometheus | http://prometheus.localhost |
-| Grafana | http://grafana.localhost (admin / `KEYCLOAK_ADMIN_PASSWORD`) |
-| Traefik dashboard | http://localhost:8888 |
+| Service               | URL                                                          |
+| --------------------- | ------------------------------------------------------------ |
+| Flutter web           | http://localhost                                             |
+| Backend API           | http://localhost:3000                                        |
+| API docs (Swagger UI) | http://localhost:3000/api/v1/docs                            |
+| Admin UI              | http://admin.localhost                                       |
+| Keycloak              | http://localhost:8080                                        |
+| Neo4j Browser         | http://localhost:7474                                        |
+| LightRAG (graph UI)   | http://localhost:9622                                        |
+| LibreTranslate        | http://localhost:5001                                        |
+| Python AI service     | http://localhost:8001                                        |
+| Prometheus            | http://prometheus.localhost                                  |
+| Grafana               | http://grafana.localhost (admin / `KEYCLOAK_ADMIN_PASSWORD`) |
+| Traefik dashboard     | http://localhost:8888                                        |
 
 Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new to the codebase? [docs/guides/developer-onboarding.md](docs/guides/developer-onboarding.md)
 
 ### Common commands
 
-| Command | Description |
-|---|---|
-| `make help` | List every available target (the default `make` goal) |
-| `make dev` | Start all services |
-| `make stop` | Stop all services |
-| `make seed` | Seed databases |
-| `make reset` | Wipe volumes, restart, re-seed |
-| `make logs` | Tail backend logs |
-| `make test` | Run all test suites |
-| `make monitoring` | Start Prometheus + Grafana |
+| Command           | Description                                           |
+| ----------------- | ----------------------------------------------------- |
+| `make help`       | List every available target (the default `make` goal) |
+| `make dev`        | Start all services                                    |
+| `make stop`       | Stop all services                                     |
+| `make seed`       | Seed databases                                        |
+| `make reset`      | Wipe volumes, restart, re-seed                        |
+| `make logs`       | Tail backend logs                                     |
+| `make test`       | Run all test suites                                   |
+| `make monitoring` | Start Prometheus + Grafana                            |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Mobile / Web | Flutter 3, Dart, Riverpod, GoRouter, Firebase |
-| Backend | Node.js 22, Express, ES modules |
-| Admin | Next.js 15, React 18, NextAuth.js, TypeScript, MUI (Material UI) v7 + Emotion, CSS Modules, Recharts |
-| AI service | Python 3.11, FastAPI, OpenAI-compatible LLM API |
-| Knowledge RAG | LightRAG 1.5 (graph + vector), FastMCP |
-| Databases | MongoDB 7, Neo4j 5, PostgreSQL 16 (Keycloak) — *Fuseki/RDF retired, see [docs/migration.md](docs/migration.md)* |
-| Cache / locks | Redis 7 |
-| Identity | Keycloak 26 |
-| Translation | LibreTranslate |
-| Proxy / SSL | Traefik v3, Let's Encrypt |
-| Infrastructure | Docker Compose, Portainer |
+| Layer          | Technology                                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------- |
+| Mobile / Web   | Flutter 3, Dart, Riverpod, GoRouter, Firebase                                                                   |
+| Backend        | Node.js 22, Express, ES modules                                                                                 |
+| Admin          | Next.js 15, React 18, NextAuth.js, TypeScript, MUI (Material UI) v7 + Emotion, CSS Modules, Recharts            |
+| AI service     | Python 3.11, FastAPI, OpenAI-compatible LLM API                                                                 |
+| Knowledge RAG  | LightRAG 1.5 (graph + vector), FastMCP                                                                          |
+| Databases      | MongoDB 7, Neo4j 5, PostgreSQL 16 (Keycloak) — _Fuseki/RDF retired, see [docs/migration.md](docs/migration.md)_ |
+| Cache / locks  | Redis 7                                                                                                         |
+| Identity       | Keycloak 26                                                                                                     |
+| Translation    | LibreTranslate                                                                                                  |
+| Proxy / SSL    | Traefik v3, Let's Encrypt                                                                                       |
+| Infrastructure | Docker Compose, Portainer                                                                                       |
 
 ---
 
@@ -230,45 +230,45 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 
 **Core**
 
-| Document | Description |
-|---|---|
-| [DOCUMENTATION.md](DOCUMENTATION.md) | Architecture deep-dive, environment variables, testing, troubleshooting |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | Production deployment guide |
-| [CHANGELOG.md](CHANGELOG.md) | Version history (Keep a Changelog / SemVer) |
-| [SECURITY.md](SECURITY.md) | Security policy and vulnerability reporting |
-| [BUG_AUDIT.md](BUG_AUDIT.md) | Current bug/reliability audit and open P0–P2 punch list |
-| [docs/archive/](docs/archive/) | Superseded audits and reviews (AUDIT.md, DEAD_CODE_AUDIT.md, UI_UX_REVIEW.md), kept for history |
-| [docs/app-store/review-information.md](docs/app-store/review-information.md) | App Store review notes, demo access, privacy labels |
+| Document                                                                     | Description                                                                                     |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [DOCUMENTATION.md](DOCUMENTATION.md)                                         | Architecture deep-dive, environment variables, testing, troubleshooting                         |
+| [DEPLOYMENT.md](DEPLOYMENT.md)                                               | Production deployment guide                                                                     |
+| [CHANGELOG.md](CHANGELOG.md)                                                 | Version history (Keep a Changelog / SemVer)                                                     |
+| [SECURITY.md](SECURITY.md)                                                   | Security policy and vulnerability reporting                                                     |
+| [BUG_AUDIT.md](BUG_AUDIT.md)                                                 | Current bug/reliability audit and open P0–P2 punch list                                         |
+| [docs/archive/](docs/archive/)                                               | Superseded audits and reviews (AUDIT.md, DEAD_CODE_AUDIT.md, UI_UX_REVIEW.md), kept for history |
+| [docs/app-store/review-information.md](docs/app-store/review-information.md) | App Store review notes, demo access, privacy labels                                             |
 
 **Diagrams** (diagrams-as-code — Mermaid + PlantUML, see [docs/diagrams/README.md](docs/diagrams/README.md) for rendering/export)
 
-| Diagram | Source |
-|---|---|
-| System architecture | [docs/diagrams/architecture/](docs/diagrams/architecture/) |
-| Use cases (diagram + catalogue) | [docs/diagrams/use-cases/](docs/diagrams/use-cases/) |
-| Sequence diagrams (UC-01 … UC-39) | [docs/diagrams/sequences/](docs/diagrams/sequences/) |
-| Domain class diagram | [docs/diagrams/classes/](docs/diagrams/classes/) |
+| Diagram                           | Source                                                     |
+| --------------------------------- | ---------------------------------------------------------- |
+| System architecture               | [docs/diagrams/architecture/](docs/diagrams/architecture/) |
+| Use cases (diagram + catalogue)   | [docs/diagrams/use-cases/](docs/diagrams/use-cases/)       |
+| Sequence diagrams (UC-01 … UC-39) | [docs/diagrams/sequences/](docs/diagrams/sequences/)       |
+| Domain class diagram              | [docs/diagrams/classes/](docs/diagrams/classes/)           |
 
 **Reference**
 
-| Document | Description |
-|---|---|
-| [docs/architecture.md](docs/architecture.md) | Per-service reference, pipelines, auth flows, data storage rationale |
-| [docs/data-model.md](docs/data-model.md) | Neo4j and MongoDB schemas with annotated queries (plus the retired Fuseki/RDF model, kept for historical data) |
-| [docs/api/openapi.yaml](docs/api/openapi.yaml) | OpenAPI 3.1 spec ([Postman collection](docs/api/hhh-postman-collection.json)) |
-| [docs/migration.md](docs/migration.md) | Neo4j schema migration plan |
-| [docs/runbook.md](docs/runbook.md) | Operations runbook |
+| Document                                       | Description                                                                                                    |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| [docs/architecture.md](docs/architecture.md)   | Per-service reference, pipelines, auth flows, data storage rationale                                           |
+| [docs/data-model.md](docs/data-model.md)       | Neo4j and MongoDB schemas with annotated queries (plus the retired Fuseki/RDF model, kept for historical data) |
+| [docs/api/openapi.yaml](docs/api/openapi.yaml) | OpenAPI 3.1 spec ([Postman collection](docs/api/hhh-postman-collection.json))                                  |
+| [docs/migration.md](docs/migration.md)         | Neo4j schema migration plan                                                                                    |
+| [docs/runbook.md](docs/runbook.md)             | Operations runbook                                                                                             |
 
 **Guides & manuals**
 
-| Document | Audience |
-|---|---|
-| [docs/guides/local-dev.md](docs/guides/local-dev.md) | Developers — local setup |
-| [docs/guides/developer-onboarding.md](docs/guides/developer-onboarding.md) | Developers — codebase tour |
-| [docs/guides/flutter-architecture.md](docs/guides/flutter-architecture.md) | Developers — mobile app internals |
-| [docs/guides/admin-guide.md](docs/guides/admin-guide.md) ([DE](docs/guides/admin-guide-de.md)) | Researchers / admins |
-| [docs/guides/participant-guide.md](docs/guides/participant-guide.md) ([DE](docs/guides/participant-guide-de.md)) | Study participants |
-| [docs/MANUAL-en.md](docs/MANUAL-en.md) ([DE](docs/MANUAL-de.md) · [JA](docs/MANUAL-ja.md)) | *Legacy* manual of the retired web experiment site (historical reference) |
+| Document                                                                                                         | Audience                                                                  |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| [docs/guides/local-dev.md](docs/guides/local-dev.md)                                                             | Developers — local setup                                                  |
+| [docs/guides/developer-onboarding.md](docs/guides/developer-onboarding.md)                                       | Developers — codebase tour                                                |
+| [docs/guides/flutter-architecture.md](docs/guides/flutter-architecture.md)                                       | Developers — mobile app internals                                         |
+| [docs/guides/admin-guide.md](docs/guides/admin-guide.md) ([DE](docs/guides/admin-guide-de.md))                   | Researchers / admins                                                      |
+| [docs/guides/participant-guide.md](docs/guides/participant-guide.md) ([DE](docs/guides/participant-guide-de.md)) | Study participants                                                        |
+| [docs/MANUAL-en.md](docs/MANUAL-en.md) ([DE](docs/MANUAL-de.md) · [JA](docs/MANUAL-ja.md))                       | _Legacy_ manual of the retired web experiment site (historical reference) |
 
 ---
 
@@ -293,6 +293,7 @@ git push origin v1.3.0
 ```
 
 The [`release.yml`](.github/workflows/release.yml) workflow then:
+
 1. Polls the GitHub API until the `ci-passed` check completes on the tagged commit
 2. Aborts if CI failed or timed out (> 15 min)
 3. Extracts the matching `## [1.3.0]` section from `CHANGELOG.md` as the release body

@@ -8,7 +8,7 @@ name: Nightly E2E smoke test
 
 on:
   schedule:
-    - cron: "30 3 * * *" # nightly 03:30 UTC
+    - cron: '30 3 * * *' # nightly 03:30 UTC
   workflow_dispatch: {}
 
 jobs:

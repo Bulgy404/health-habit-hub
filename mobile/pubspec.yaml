@@ -1,5 +1,5 @@
 name: hhh
-description: "Health Habit Hub - Flutter app for habit donation research"
+description: 'Health Habit Hub - Flutter app for habit donation research'
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -46,12 +46,12 @@ dev_dependencies:
   plugin_platform_interface: ^2.1.8
 
 flutter_launcher_icons:
-  image_path: "assets/icon/app_icon.png"
+  image_path: 'assets/icon/app_icon.png'
   android: true
   ios: true
   web:
     generate: true
-    image_path: "assets/icon/app_icon.png"
+    image_path: 'assets/icon/app_icon.png'
   windows:
     generate: false
   macos:

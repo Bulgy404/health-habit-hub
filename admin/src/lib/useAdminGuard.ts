@@ -17,8 +17,7 @@ import { useRouter } from "next/navigation";
 export function useAdminGuard(): { token: string } {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const token =
-    (session as { accessToken?: string } | null)?.accessToken ?? "";
+  const token = (session as { accessToken?: string } | null)?.accessToken ?? "";
 
   useEffect(() => {
     if (status === "loading") return;

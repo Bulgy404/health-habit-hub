@@ -32,7 +32,7 @@ Beim Onboarding wird Ihnen einmalig eine **Wiederherstellungsphrase** angezeigt 
 
 ## 2. Eine Gewohnheit spenden
 
-Eine Gewohnheit zu spenden bedeutet, eine Ihrer alltäglichen Routinen mit dem Forschungsprojekt zu teilen — zum Beispiel: *„Ich trinke jeden Morgen direkt nach dem Aufwachen ein Glas Wasser."* Alle Spenden sind anonym.
+Eine Gewohnheit zu spenden bedeutet, eine Ihrer alltäglichen Routinen mit dem Forschungsprojekt zu teilen — zum Beispiel: _„Ich trinke jeden Morgen direkt nach dem Aufwachen ein Glas Wasser."_ Alle Spenden sind anonym.
 
 **Schritt 1.** Tippen Sie unten auf die Registerkarte **Spenden**.
 
@@ -68,13 +68,13 @@ Falls Ihre Studie das erweiterte Gewohnheitsmodul (implementation intentions, t�
 
 ## 5. Wenn etwas nicht funktioniert
 
-| Problem | Was zu tun ist |
-|---|---|
-| QR-Code kann nicht gescannt werden | Geben Sie Benutzername und Passwort von Ihrer Token-Karte manuell ein |
-| App zeigt „Ungültige Anmeldedaten" | Prüfen Sie, ob Sie Benutzername und Passwort genau wie aufgedruckt eingegeben haben (Groß-/Kleinschreibung beachten) |
-| App verbindet sich nicht | Prüfen Sie Ihre WLAN- oder Mobilfunkverbindung und versuchen Sie es erneut |
-| Ich weiß nicht, welches Konto meins ist | Fragen Sie Ihren Studienkoordinator — er kann es für Sie nachschlagen |
-| Ich habe meine Token-Karte verloren und kenne meine Wiederherstellungsphrase nicht | Wenden Sie sich an Ihren Studienkoordinator für eine Ersatzkarte |
+| Problem                                                                            | Was zu tun ist                                                                                                       |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| QR-Code kann nicht gescannt werden                                                 | Geben Sie Benutzername und Passwort von Ihrer Token-Karte manuell ein                                                |
+| App zeigt „Ungültige Anmeldedaten"                                                 | Prüfen Sie, ob Sie Benutzername und Passwort genau wie aufgedruckt eingegeben haben (Groß-/Kleinschreibung beachten) |
+| App verbindet sich nicht                                                           | Prüfen Sie Ihre WLAN- oder Mobilfunkverbindung und versuchen Sie es erneut                                           |
+| Ich weiß nicht, welches Konto meins ist                                            | Fragen Sie Ihren Studienkoordinator — er kann es für Sie nachschlagen                                                |
+| Ich habe meine Token-Karte verloren und kenne meine Wiederherstellungsphrase nicht | Wenden Sie sich an Ihren Studienkoordinator für eine Ersatzkarte                                                     |
 
 ---
 
