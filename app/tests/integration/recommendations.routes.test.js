@@ -281,8 +281,9 @@ test('GET /recommendations/me returns empty array when no recommendations', asyn
   const freshDb = createMockDb();
   const freshApp = express();
   freshApp.use(express.json());
-  const { createApiRouter: createRouter } =
-    await import('../../routes/apiRouter.js');
+  const { createApiRouter: createRouter } = await import(
+    '../../routes/apiRouter.js'
+  );
   const okCheck = async () => ({ status: 'ok', latencyMs: 1 });
   const router = createRouter({
     jwksUrl: 'http://keycloak/jwks',

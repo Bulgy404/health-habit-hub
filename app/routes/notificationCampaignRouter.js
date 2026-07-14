@@ -24,8 +24,9 @@ export function createNotificationCampaignRouter({
   const send =
     fcmSend ??
     (async (tokens, title, body) => {
-      const { fcmSendMulticast } =
-        await import('../services/notificationService.js');
+      const { fcmSendMulticast } = await import(
+        '../services/notificationService.js'
+      );
       const database = await getDb();
       // Handles unconfigured Firebase (returns 0 + logs) and prunes tokens
       // Firebase reports as permanently invalid.
