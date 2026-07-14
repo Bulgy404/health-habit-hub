@@ -159,6 +159,82 @@ export async function generateWindowsForUser({
 }
 
 /**
+ * Create the week-1 window(s) for a freshly created habit. For every active
+ * assignment on the participant's study/group flagged `deliverOnHabitCreation`,
+ * a per-habit window is anchored at the habit's creation time (occurrence 1 =
+ * "week 1"). SRHI is excluded here — it has its own per-habit pipeline
+ * (srhiService.generateWindows) with dedicated scoring/sparkline — so this
+ * covers generic questionnaires only.
+ * @param {{ db, userId, studyId, groupId, intentionId, createdAt }} deps
+ * @returns {Promise<Array<{ questionnaireSlug: string, questionnaireTitle: string }>>}
+ *   The questionnaires for which a window was created (for push messaging).
+ */
+export async function generateHabitCreationWindows({
+  db,
+  userId,
+  studyId,
+  groupId,
+  intentionId,
+  createdAt,
+}) {
+  const effective = await resolveEffectiveAssignments({ db, studyId, groupId });
+  const flagged = effective.filter(
+    (a) => a.deliverOnHabitCreation === true && a.questionnaireSlug !== 'srhi'
+  );
+  if (flagged.length === 0) return [];
+  const sOid = toOid(studyId);
+  const gOid = groupId ? toOid(groupId) : null;
+  const iOid = toOid(intentionId);
+  const base = createdAt ? new Date(createdAt) : new Date();
+
+  const ops = flagged.map((a) => ({
+    updateOne: {
+      filter: {
+        userId: String(userId),
+        assignmentId: a._id,
+        intentionId: iOid,
+      },
+      update: {
+        $setOnInsert: {
+          userId: String(userId),
+          studyId: sOid,
+          groupId: gOid,
+          assignmentId: a._id,
+          questionnaireId: a.questionnaireId,
+          questionnaireSlug: a.questionnaireSlug,
+          intentionId: iOid,
+          occurrence: 1,
+          scheduledFor: base,
+          submittedAt: null,
+          responseId: null,
+          createdAt: new Date(),
+        },
+      },
+      upsert: true,
+    },
+  }));
+  await db.collection(WINDOWS).bulkWrite(ops, { ordered: false });
+  return flagged.map((a) => ({
+    questionnaireSlug: a.questionnaireSlug,
+    questionnaireTitle: a.questionnaireTitle ?? a.questionnaireSlug,
+  }));
+}
+
+/**
+ * Resolve whether an active SRHI assignment flagged `deliverOnHabitCreation`
+ * applies to a participant's study/group. Drives whether SRHI windows are
+ * generated when they create a habit.
+ * @param {{ db, studyId, groupId }} deps
+ * @returns {Promise<boolean>}
+ */
+export async function srhiDeliversOnHabitCreation({ db, studyId, groupId }) {
+  const effective = await resolveEffectiveAssignments({ db, studyId, groupId });
+  return effective.some(
+    (a) => a.questionnaireSlug === 'srhi' && a.deliverOnHabitCreation === true
+  );
+}
+
+/**
  * Regenerate windows for every enrolled participant of a study (used after an
  * assignment is created or changed). Reads enrolled users from Neo4j.
  * @param {{ db, studyId, neo4jRun }} deps
@@ -269,6 +345,7 @@ export async function listAssignments({ db, studyId }) {
     cadence: a.cadence,
     cadenceSummary: cadenceSummary(a.cadence),
     active: a.active !== false,
+    deliverOnHabitCreation: a.deliverOnHabitCreation === true,
     occurrences: scheduleOffsets(a.cadence).length,
   }));
 }
@@ -284,6 +361,7 @@ export async function createAssignment({
   groupId,
   questionnaireId,
   cadence,
+  deliverOnHabitCreation = false,
   neo4jRun,
 }) {
   const sOid = toOid(studyId);
@@ -326,6 +404,7 @@ export async function createAssignment({
         questionnaire.languages || ['en']
       ) || questionnaire.slug,
     cadence,
+    deliverOnHabitCreation: deliverOnHabitCreation === true,
     active: true,
     createdAt: now,
     updatedAt: now,
@@ -358,6 +437,8 @@ export async function updateAssignment({
   const $set = { updatedAt: new Date() };
   if (updates.cadence !== undefined) $set.cadence = updates.cadence;
   if (updates.active !== undefined) $set.active = updates.active;
+  if (updates.deliverOnHabitCreation !== undefined)
+    $set.deliverOnHabitCreation = updates.deliverOnHabitCreation === true;
   const res = await db
     .collection(ASSIGNMENTS)
     .updateOne({ _id: aOid, studyId: sOid }, { $set });

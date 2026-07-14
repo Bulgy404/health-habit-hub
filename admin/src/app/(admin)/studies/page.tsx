@@ -325,6 +325,7 @@ interface ScheduleAssignment {
   cadence: Cadence;
   cadenceSummary: string;
   active: boolean;
+  deliverOnHabitCreation?: boolean;
   occurrences: number;
 }
 
@@ -371,6 +372,7 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
   const [occurrences, setOccurrences] = useState(8);
   const [weeksStr, setWeeksStr] = useState("0, 4, 8");
   const [daysStr, setDaysStr] = useState("");
+  const [deliverOnHabitCreation, setDeliverOnHabitCreation] = useState(false);
   // The calendar day the admin last clicked, highlighted in the grid so the
   // click has visible feedback beyond the pre-filled form field below.
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -473,9 +475,11 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
           questionnaireId: qId,
           groupId: scope === "study" ? null : scope,
           cadence,
+          deliverOnHabitCreation,
         }),
       });
       setQId("");
+      setDeliverOnHabitCreation(false);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("scheduleTab.errors.addFailed"));
@@ -523,6 +527,14 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
                   <td style={cell}>{scopeLabel(a.groupId)}</td>
                   <td style={cell}>
                     {a.cadenceSummary} <span className={styles.hint}>({a.occurrences}×)</span>
+                    {a.deliverOnHabitCreation && (
+                      <span
+                        className={styles.hint}
+                        style={{ display: "block", color: "#0369a1" }}
+                      >
+                        {t("scheduleTab.deliverOnHabitCreationBadge")}
+                      </span>
+                    )}
                   </td>
                   <td style={cell}>{completionFor(a.questionnaireSlug)}</td>
                   <td style={cell}>
@@ -647,6 +659,18 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
             </div>
           </div>
         )}
+
+        <div className={styles.formGroup} style={{ marginTop: "0.75rem" }}>
+          <label className={styles.label} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={deliverOnHabitCreation}
+              onChange={(e) => setDeliverOnHabitCreation(e.target.checked)}
+            />
+            {t("scheduleTab.deliverOnHabitCreationLabel")}
+          </label>
+          <span className={styles.hint}>{t("scheduleTab.deliverOnHabitCreationHint")}</span>
+        </div>
 
         <div className={styles.cueConfigFooter}>
           <button className={styles.saveBtn} onClick={handleAdd} disabled={saving}>

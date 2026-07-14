@@ -11,6 +11,11 @@ import {
 } from '../services/intentionService.js';
 import { upsertLog, getLogs, deleteLog } from '../services/dailyLogService.js';
 import { generateWindows } from '../services/srhiService.js';
+import {
+  generateHabitCreationWindows,
+  srhiDeliversOnHabitCreation,
+} from '../services/questionnaireScheduleService.js';
+import { sendUserNotification } from '../services/notificationService.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'intentionsRouter' });
@@ -134,14 +139,74 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         return res
           .status(409)
           .json({ error: 'Habit limit reached for your study condition' });
-      await generateWindows({
+
+      // Resolve the participant's study/group from their enrollment so we can
+      // check which questionnaires are configured to deliver on habit creation.
+      const enrollment = await database
+        .collection('enrollments')
+        .findOne(
+          { userId: String(userId) },
+          { projection: { studyId: 1, groupId: 1 } }
+        );
+      const studyId = enrollment?.studyId
+        ? enrollment.studyId.toString()
+        : (result.studyId ?? null);
+      const groupId = enrollment?.groupId
+        ? enrollment.groupId.toString()
+        : (result.groupId ?? null);
+
+      // SRHI is generated only when the participant's study has an active SRHI
+      // assignment flagged to deliver on habit creation (see the default study
+      // seed). Its own per-habit pipeline handles scoring/sparkline.
+      const srhiEnabled = await srhiDeliversOnHabitCreation({
         db: database,
-        intentionId: result.id,
-        userId,
-        createdAt: result.createdAt,
-        studyId: result.studyId ?? null,
-        groupId: result.groupId ?? null,
+        studyId,
+        groupId,
       });
+      if (srhiEnabled) {
+        await generateWindows({
+          db: database,
+          intentionId: result.id,
+          userId,
+          createdAt: result.createdAt,
+          studyId,
+          groupId,
+        });
+      }
+
+      // Generic questionnaires flagged to deliver on habit creation get a
+      // per-habit week-1 window anchored at creation.
+      const genericDelivered = await generateHabitCreationWindows({
+        db: database,
+        userId,
+        studyId,
+        groupId,
+        intentionId: result.id,
+        createdAt: new Date(result.createdAt),
+      });
+
+      // Fire-and-forget push ~5s after creation nudging the participant to
+      // complete the just-scheduled check-in. Non-blocking so the 201 returns
+      // immediately; an in-process timer means the push is lost if the server
+      // restarts within the window, which is acceptable — the check-in is also
+      // visible in-app.
+      if (srhiEnabled || genericDelivered.length > 0) {
+        const habitLabel = result.behaviorLabel ?? '';
+        setTimeout(() => {
+          sendUserNotification({
+            db: database,
+            userId,
+            title: 'Habit check-in ready',
+            body: habitLabel
+              ? `Take a moment to rate your new habit: ${habitLabel}`
+              : 'Take a moment to rate your new habit.',
+            data: { type: 'srhi', intentionId: result.id },
+          }).catch((err) =>
+            log.error({ err }, '[intentions] habit-creation push failed')
+          );
+        }, 5000).unref?.();
+      }
+
       res.status(201).json(result);
     } catch (err) {
       log.error({ err: err }, '[intentions] error');

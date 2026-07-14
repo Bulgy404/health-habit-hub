@@ -10,7 +10,10 @@ import '../config/app_config.dart';
 import '../core/dio_provider.dart';
 import '../features/my_habits/my_habits_provider.dart';
 import '../l10n/app_localizations.dart';
+import '../providers/bubble_graph_provider.dart';
+import '../providers/show_in_graph_provider.dart';
 import '../services/consent_service.dart';
+import '../services/habit_service.dart';
 import '../services/offline_queue_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/reminder_scheduler_service.dart';
@@ -98,7 +101,8 @@ class ShellScreen extends ConsumerStatefulWidget {
   ConsumerState<ShellScreen> createState() => _ShellScreenState();
 }
 
-class _ShellScreenState extends ConsumerState<ShellScreen> {
+class _ShellScreenState extends ConsumerState<ShellScreen>
+    with WidgetsBindingObserver {
   // `branch` is the index of the matching StatefulShellBranch in app_router.dart.
   // Keep these in sync with the branch order there.
   List<_TabConfig> _allTabs(AppLocalizations l10n) => [
@@ -135,10 +139,12 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
   ];
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  DateTime? _pausedAt;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkConsentVersion();
       _initNotifications();
@@ -154,8 +160,44 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _connectivitySubscription?.cancel();
     super.dispose();
+  }
+
+  // Requests made just before/during backgrounding can be left stuck (the OS
+  // suspends the isolate mid-flight, or the socket goes stale while idle) with
+  // no error and no retry — the screen that started them is stuck loading
+  // forever, since a FutureProvider only runs once and caches its Future.
+  // Refreshing every network-backed provider on resume, after a long enough
+  // idle period that a stuck/stale request is actually likely, self-heals
+  // that instead of requiring the user to notice and manually pull-to-refresh
+  // every screen. A short app-switch (e.g. checking a notification) is below
+  // the threshold and does not trigger a refetch.
+  static const _idleRefreshThreshold = Duration(seconds: 60);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _pausedAt ??= DateTime.now();
+      return;
+    }
+    if (state != AppLifecycleState.resumed) return;
+    final pausedAt = _pausedAt;
+    _pausedAt = null;
+    if (pausedAt == null) return;
+    if (DateTime.now().difference(pausedAt) < _idleRefreshThreshold) return;
+
+    ref.invalidate(bubbleGraphProvider);
+    ref.invalidate(myStatsProvider);
+    ref.invalidate(habitStatsProvider);
+    ref.invalidate(myAnnotationsProvider);
+    ref.invalidate(habitConfigProvider);
+    ref.invalidate(intentionsProvider);
+    ref.invalidate(dueSrhiProvider);
+    ref.invalidate(allHabitsActivityProvider);
+    _drainOfflineQueueIfOnline();
   }
 
   /// UC-33: refresh the adaptive local habit reminders from the latest backend
@@ -279,9 +321,40 @@ class _ShellScreenState extends ConsumerState<ShellScreen> {
     });
   }
 
+  DateTime? _lastSessionExpiredPromptAt;
+
+  void _showSessionExpiredPrompt(AppLocalizations l10n) {
+    // A single dead session typically fails several in-flight requests at
+    // once (e.g. logs + trajectory both refetching), each bumping
+    // [sessionExpiredProvider] — debounce so that doesn't stack up several
+    // identical snackbars.
+    final now = DateTime.now();
+    final last = _lastSessionExpiredPromptAt;
+    if (last != null && now.difference(last) < const Duration(seconds: 5)) {
+      return;
+    }
+    _lastSessionExpiredPromptAt = now;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.sessionExpiredMessage),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+          label: l10n.signInAction,
+          onPressed: () =>
+              context.go('/signing-out', extra: '/onboarding/restore'),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    ref.listen<int>(sessionExpiredProvider, (previous, next) {
+      if (previous != null && next > previous) {
+        _showSessionExpiredPrompt(l10n);
+      }
+    });
     // Study-level feature flag: hide the recommender tab when the participant's
     // study disables it. Defaults to enabled while the config loads / on error.
     final recommenderEnabled = ref.watch(recommenderEnabledProvider);

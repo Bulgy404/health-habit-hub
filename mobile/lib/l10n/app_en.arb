@@ -1083,6 +1083,18 @@
   "@signOutConfirm": {
     "description": "Body of the sign-out confirmation dialog"
   },
+  "signingOut": "Signing out…",
+  "@signingOut": {
+    "description": "Shown on the full-screen progress indicator while sign-out is in progress"
+  },
+  "sessionExpiredMessage": "Your session expired. Please sign in again to continue.",
+  "@sessionExpiredMessage": {
+    "description": "Shown when the backend rejects a request because the session could not be renewed"
+  },
+  "signInAction": "Sign in",
+  "@signInAction": {
+    "description": "Button label to re-authenticate after a session expired"
+  },
   "aiDisclaimer": "AI-generated suggestions based on your study data. This is not medical advice; consult a doctor for health concerns.",
   "@aiDisclaimer": {
     "description": "AI provenance and medical disclaimer on the recommendations screen"

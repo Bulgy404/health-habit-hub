@@ -52,10 +52,26 @@ interface ParticipantHabit {
   donatedAt: string | null;
 }
 
+interface CreatedHabit {
+  id: string;
+  behaviorLabel: string;
+  intentionStatement: string;
+  status: string;
+  createdAt: string | null;
+}
+
+interface SrhiSummary {
+  completed: number;
+  total: number;
+  latestScore: number | null;
+}
+
 interface Progress {
   profile: { completed: boolean; completedAt: string | null };
   surveys: { id: string; title: string; completedAt: string | null }[];
   habitsCount: number;
+  createdHabits: CreatedHabit[];
+  srhi: SrhiSummary;
   recommendations: { accepted: number; dismissed: number };
   questionnaires: QuestionnaireWindow[];
   timeline: { type: string; timestamp: string | null; detail: string }[];
@@ -397,6 +413,19 @@ export default function ParticipantsPage() {
           completedAt: s.completedAt ? String(s.completedAt) : null,
         })),
         habitsCount: Number(data?.habitsCount ?? 0),
+        createdHabits: (data?.createdHabits ?? []).map((h: Record<string, unknown>) => ({
+          id: String(h.id ?? ""),
+          behaviorLabel: String(h.behaviorLabel ?? ""),
+          intentionStatement: String(h.intentionStatement ?? ""),
+          status: String(h.status ?? ""),
+          createdAt: h.createdAt ? String(h.createdAt) : null,
+        })),
+        srhi: {
+          completed: Number(data?.srhi?.completed ?? 0),
+          total: Number(data?.srhi?.total ?? 0),
+          latestScore:
+            data?.srhi?.latestScore != null ? Number(data.srhi.latestScore) : null,
+        },
         recommendations: {
           accepted: Number(data?.recommendations?.accepted ?? 0),
           dismissed: Number(data?.recommendations?.dismissed ?? 0),
@@ -890,28 +919,64 @@ export default function ParticipantsPage() {
                   </div>
                 </div>
                 <div className={styles.section}>
+                  <div className={styles.sectionTitle}>{t("srhiCheckins")}</div>
+                  <div>
+                    {t("srhiSummary", {
+                      completed: progress.srhi.completed,
+                      total: progress.srhi.total,
+                    })}
+                    {progress.srhi.latestScore != null && (
+                      <span className={styles.muted} style={{ marginLeft: 8 }}>
+                        {t("srhiLatestScore", {
+                          score: progress.srhi.latestScore.toFixed(2),
+                        })}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className={styles.section}>
                   <div className={styles.sectionTitle}>{t("createdHabits")}</div>
-                  {habits.length === 0 ? (
+                  {progress.createdHabits.length === 0 ? (
                     <div className={styles.muted}>{t("noHabitsCreated")}</div>
                   ) : (
-                    habits.map((h) => (
+                    progress.createdHabits.map((h) => (
                       <div key={h.id} className={styles.credRow}>
                         <span>
-                          {h.habitName || "—"}
-                          {h.category && h.category !== "Other" && (
-                            <span className={styles.badge} style={{ marginLeft: 8 }}>
-                              {h.category}
-                            </span>
-                          )}
-                          {!h.isHabit && (
+                          {h.behaviorLabel || h.intentionStatement || "—"}
+                          {h.status && h.status !== "active" && (
                             <span className={styles.muted} style={{ marginLeft: 8 }}>
-                              {t("notAHabit")}
+                              {h.status}
                             </span>
                           )}
                         </span>
-                        <span className={styles.muted}>{h.donatedAt ? fmt(h.donatedAt) : "—"}</span>
+                        <span className={styles.muted}>{h.createdAt ? fmt(h.createdAt) : "—"}</span>
                       </div>
                     ))
+                  )}
+                  {habits.length > 0 && (
+                    <>
+                      <div className={styles.muted} style={{ marginTop: 8 }}>
+                        {t("donatedHabits")}
+                      </div>
+                      {habits.map((h) => (
+                        <div key={h.id} className={styles.credRow}>
+                          <span>
+                            {h.habitName || "—"}
+                            {h.category && h.category !== "Other" && (
+                              <span className={styles.badge} style={{ marginLeft: 8 }}>
+                                {h.category}
+                              </span>
+                            )}
+                            {!h.isHabit && (
+                              <span className={styles.muted} style={{ marginLeft: 8 }}>
+                                {t("notAHabit")}
+                              </span>
+                            )}
+                          </span>
+                          <span className={styles.muted}>{h.donatedAt ? fmt(h.donatedAt) : "—"}</span>
+                        </div>
+                      ))}
+                    </>
                   )}
                 </div>
                 <div className={styles.section}>

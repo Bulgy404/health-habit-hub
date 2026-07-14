@@ -17,6 +17,7 @@ import 'package:hhh/core/dio_provider.dart';
 import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/providers/comments_enabled_provider.dart';
+import 'package:hhh/screens/signing_out_screen.dart';
 import 'package:hhh/screens/user_settings_screen.dart';
 import 'package:hhh/services/auth_service.dart';
 
@@ -150,6 +151,10 @@ Widget _buildSubject(Dio dio, _FakeAuthService authService) {
       GoRoute(
         path: '/onboarding/welcome',
         builder: (context, state) => const Scaffold(body: Text('Welcome')),
+      ),
+      GoRoute(
+        path: '/signing-out',
+        builder: (context, state) => const SigningOutScreen(),
       ),
     ],
   );
@@ -377,6 +382,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(authService.logoutCalls, 1);
+    // Shows the signing-out progress screen, then lands back on onboarding
+    // instead of leaving the user staring at the settings screen with no
+    // feedback while logout() is in flight.
+    expect(find.text('Welcome'), findsOneWidget);
   });
 
   testWidgets(

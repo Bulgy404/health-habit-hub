@@ -119,6 +119,19 @@ test('POST /api/v1/onboard returns 201 with tokens and credentials on success', 
     typeof body.password === 'string' && body.password.length > 0,
     'should return password'
   );
+
+  const tokenCall = mockFetchCalls.find(
+    (c) =>
+      String(c.url).includes('/protocol/openid-connect/token') &&
+      c.opts?.body?.toString().includes('grant_type=password')
+  );
+  assert.ok(tokenCall, 'should mint tokens via a password-grant call');
+  const params = new URLSearchParams(tokenCall.opts.body);
+  assert.strictEqual(
+    params.get('scope'),
+    'openid profile email offline_access',
+    'onboarding must request offline_access so refresh tokens survive normal usage gaps'
+  );
 });
 
 test('POST /api/v1/onboard username is a UUID', async () => {

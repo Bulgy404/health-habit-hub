@@ -1059,6 +1059,18 @@
     "description": "Settings entry to sign out"
   },
   "signOutConfirm": "本当にサインアウトしますか？",
+  "signingOut": "サインアウトしています…",
+  "@signingOut": {
+    "description": "Shown on the full-screen progress indicator while sign-out is in progress"
+  },
+  "sessionExpiredMessage": "セッションの有効期限が切れました。続けるには再度サインインしてください。",
+  "@sessionExpiredMessage": {
+    "description": "Shown when the backend rejects a request because the session could not be renewed"
+  },
+  "signInAction": "サインイン",
+  "@signInAction": {
+    "description": "Button label to re-authenticate after a session expired"
+  },
   "@signOutConfirm": {
     "description": "Body of the sign-out confirmation dialog"
   },

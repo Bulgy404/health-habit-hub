@@ -869,6 +869,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get signOutConfirm => 'Möchtest du dich wirklich abmelden?';
 
   @override
+  String get signingOut => 'Abmelden…';
+
+  @override
+  String get sessionExpiredMessage =>
+      'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an, um fortzufahren.';
+
+  @override
+  String get signInAction => 'Anmelden';
+
+  @override
   String get aiDisclaimer =>
       'KI-generierte Vorschläge auf Basis deiner Studiendaten. Dies ist keine medizinische Beratung; wende dich bei gesundheitlichen Fragen an einen Arzt.';
 

@@ -1,6 +1,8 @@
 import { logger } from '../utils/logger.js';
 import { countHabitsByUser } from '../db/adminQueries.js';
 import { getParticipantWindows } from './questionnaireScheduleService.js';
+import { listIntentions } from './intentionService.js';
+import { COLLECTION as SRHI_COLLECTION } from '../models/srhiResponse.js';
 
 /**
  * Build a chronological timeline of participant events.
@@ -97,6 +99,37 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
     log.error({ err }, '[adminStatsService] questionnaire windows error');
   }
 
+  // Habits the participant actually created in-app (implementation
+  // intentions). Distinct from the Neo4j *donated* Habit nodes counted above
+  // — a participant can create habits without ever donating one.
+  let createdHabits = [];
+  try {
+    createdHabits = await listIntentions({ db, userId: id });
+  } catch (err) {
+    log.error({ err }, '[adminStatsService] intentions error');
+  }
+
+  // SRHI check-in summary: completed = actually submitted. `total` counts every
+  // scheduled window (submitted or not); the headline number the admin cares
+  // about is `completed`.
+  let srhi = { completed: 0, total: 0, latestScore: null };
+  try {
+    const rows = await db
+      .collection(SRHI_COLLECTION)
+      .find({ userId: String(id) })
+      .sort({ scheduledFor: 1 })
+      .toArray();
+    const submitted = rows.filter((r) => r.submittedAt != null);
+    const latest = submitted[submitted.length - 1];
+    srhi = {
+      completed: submitted.length,
+      total: rows.length,
+      latestScore: latest?.score ?? null,
+    };
+  } catch (err) {
+    log.error({ err }, '[adminStatsService] srhi summary error');
+  }
+
   return {
     profile: {
       completed: participant?.profileCompleted || false,
@@ -108,6 +141,14 @@ export async function getParticipantProgress({ db, neo4jRun, id }) {
       completedAt: sr.completedAt,
     })),
     habitsCount,
+    createdHabits: createdHabits.map((h) => ({
+      id: h.id,
+      behaviorLabel: h.behaviorLabel,
+      intentionStatement: h.intentionStatement,
+      status: h.status,
+      createdAt: h.createdAt,
+    })),
+    srhi,
     recommendations: { accepted, dismissed },
     questionnaires,
     timeline,

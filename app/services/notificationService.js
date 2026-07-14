@@ -141,6 +141,24 @@ export async function fcmSendMulticast({ db, tokens, title, body, data }) {
 }
 
 /**
+ * Send a push to a single participant across all their registered devices,
+ * looked up by `userId` in the deviceTokens collection. Reuses
+ * `fcmSendMulticast` (so it prunes invalid tokens and degrades gracefully when
+ * Firebase is unconfigured). Returns the number of successful deliveries.
+ * @param {{ db: object, userId: string, title: string, body: string, data?: object }} params
+ * @returns {Promise<number>}
+ */
+export async function sendUserNotification({ db, userId, title, body, data }) {
+  const tokenDocs = await db
+    .collection(COLLECTION_DEVICE_TOKENS)
+    .find({ userId: String(userId) }, { projection: { token: 1 } })
+    .toArray();
+  const tokens = tokenDocs.map((d) => d.token);
+  if (tokens.length === 0) return 0;
+  return fcmSendMulticast({ db, tokens, title, body, data });
+}
+
+/**
  * Remove invalid/unregistered FCM tokens from the deviceTokens collection.
  *
  * @param {{ db: object, invalidTokens: string[] }} params

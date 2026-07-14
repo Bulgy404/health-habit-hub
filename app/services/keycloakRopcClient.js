@@ -44,7 +44,13 @@ export async function mintTokenForUser({
         client_secret: _clientSecret,
         username,
         password,
-        scope: 'openid profile email',
+        // offline_access issues a refresh token bound to Keycloak's offline
+        // session (30-day idle default, no max lifespan unless explicitly
+        // capped) instead of the regular SSO session (30-minute idle
+        // default) — this app is checked a few times a day, not
+        // continuously, so the regular default was logging participants out
+        // after every ordinary gap between opens.
+        scope: 'openid profile email offline_access',
       }),
     }
   );

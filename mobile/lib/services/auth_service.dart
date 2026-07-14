@@ -19,7 +19,11 @@ class AuthService {
   static String get _discoveryUrl =>
       '$_keycloakBaseUrl/realms/$_realm/.well-known/openid-configuration';
 
-  static const _scopes = ['openid', 'profile', 'email'];
+  // offline_access matches the scope the backend's ROPC helper
+  // (keycloakRopcClient.js) requests for onboarding/restore/rotation, so a
+  // token minted via this PKCE path gets the same long-lived offline
+  // session instead of the regular 30-minute-idle SSO session.
+  static const _scopes = ['openid', 'profile', 'email', 'offline_access'];
 
   static const _tokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
@@ -48,6 +52,27 @@ class AuthService {
   /// one refresh, otherwise the second replays an already-rotated (single-use)
   /// refresh token, gets rejected, and forces an unnecessary logout.
   Future<bool>? _refreshFuture;
+
+  /// Keycloak's token endpoint should answer in well under a second — this is
+  /// deliberately much tighter than the app's general API timeouts (which are
+  /// sized for slow LLM-backed calls), so a stuck/unreachable auth server
+  /// fails fast instead of leaving every screen that needs a token stuck on a
+  /// loading spinner for a minute or more.
+  static const _authCallTimeout = Duration(seconds: 10);
+
+  /// Set once both a refresh attempt and its one retry ([reauthenticate])
+  /// have been explicitly rejected by Keycloak (not a network blip) — see
+  /// [getAccessToken]. `null` when the last known refresh outcome was either
+  /// unattempted, successful, or an ordinary network/server error.
+  DateTime? _refreshDeadUntil;
+
+  /// How long [getAccessToken] skips retrying the refresh handshake after
+  /// [_refreshDeadUntil] is set. Short enough that a genuine recovery (the
+  /// user reconnects, or a transient Keycloak outage clears) is picked up
+  /// quickly; long enough that every provider/screen touched while the
+  /// session is dead doesn't each independently pay for a fresh doomed
+  /// refresh + retry round trip.
+  static const _deadCooldown = Duration(seconds: 30);
 
   /// Creates an [AuthService].
   AuthService({
@@ -97,7 +122,11 @@ class AuthService {
         'client_id': _clientId,
         'refresh_token': storedRefreshToken,
       },
-      options: Options(contentType: 'application/x-www-form-urlencoded'),
+      options: Options(
+        contentType: 'application/x-www-form-urlencoded',
+        sendTimeout: _authCallTimeout,
+        receiveTimeout: _authCallTimeout,
+      ),
     );
 
     final data = response.data!;
@@ -115,6 +144,9 @@ class AuthService {
       await _secureStorage.write(
           key: _expiryKey, value: expiry.toIso8601String());
     }
+    // A successful exchange proves the session is alive again — clear any
+    // cooldown left over from an earlier failed attempt.
+    _refreshDeadUntil = null;
   }
 
   /// Silently re-authenticates by exchanging the stored refresh token.
@@ -137,10 +169,25 @@ class AuthService {
     try {
       await refreshToken();
       return true;
-    } catch (_) {
+    } catch (e) {
+      if (_isTokenRejected(e)) {
+        // Two explicit rejections in a row (this and the [_performRefresh]
+        // attempt before it) is not a single-use-token rotation race
+        // (reauthenticate() exists for exactly that race, and a race would
+        // not survive a second attempt) — it's a session that will not come
+        // back on its own. See [getAccessToken] for what the cooldown does.
+        _refreshDeadUntil = DateTime.now().add(_deadCooldown);
+      }
       return false;
     }
   }
+
+  /// True when [e] is Keycloak explicitly rejecting the refresh token
+  /// (HTTP 400/401), as opposed to a network/connectivity/server error.
+  static bool _isTokenRejected(Object e) =>
+      e is DioException &&
+      e.response != null &&
+      (e.response!.statusCode == 400 || e.response!.statusCode == 401);
 
   /// Returns the current access token, auto-refreshing if within 60s of expiry.
   ///
@@ -155,7 +202,17 @@ class AuthService {
   /// calls [logout()] itself — see [_performRefresh] for why. Network errors
   /// leave tokens intact so the user is not logged out when the server is
   /// unreachable.
+  ///
+  /// Returns immediately without hitting the network at all while
+  /// [_refreshDeadUntil] is in the future — otherwise every screen/provider
+  /// that needs a token while the session is dead would each independently
+  /// re-run the full refresh-then-retry handshake against an endpoint
+  /// already known (moments ago) to reject it.
   Future<String?> getAccessToken() async {
+    final deadUntil = _refreshDeadUntil;
+    if (deadUntil != null && DateTime.now().isBefore(deadUntil)) {
+      return null;
+    }
     if (await _tokenNeedsRefresh()) {
       // Coalesce concurrent refreshes: the first caller starts the refresh, and
       // any others awaiting during that window share its result.
@@ -186,10 +243,7 @@ class AuthService {
       await refreshToken();
       return true;
     } catch (e) {
-      final isTokenRejected = e is DioException &&
-          e.response != null &&
-          (e.response!.statusCode == 400 || e.response!.statusCode == 401);
-      if (isTokenRejected) {
+      if (_isTokenRejected(e)) {
         return reauthenticate();
       }
       // Network / server error — keep the stored token and let the caller's API
@@ -281,7 +335,11 @@ class AuthService {
             'token': refreshToken,
             'token_type_hint': 'refresh_token',
           },
-          options: Options(contentType: 'application/x-www-form-urlencoded'),
+          options: Options(
+            contentType: 'application/x-www-form-urlencoded',
+            sendTimeout: _authCallTimeout,
+            receiveTimeout: _authCallTimeout,
+          ),
         );
       } catch (_) {
         // Best-effort — always clear local tokens even if revocation fails.
@@ -292,6 +350,7 @@ class AuthService {
     await _secureStorage.delete(key: _expiryKey);
     await _secureStorage.delete(key: _usernameKey);
     await _secureStorage.delete(key: _passwordKey);
+    _refreshDeadUntil = null;
     onLogout?.call();
   }
 
@@ -310,5 +369,6 @@ class AuthService {
         value: result.accessTokenExpirationDateTime!.toIso8601String(),
       );
     }
+    _refreshDeadUntil = null;
   }
 }

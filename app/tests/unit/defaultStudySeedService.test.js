@@ -13,21 +13,27 @@ import {
 // adminRouter.js) to make that state self-healing.
 
 function makeDb() {
-  const stores = { questionnaires: new Map(), studies: new Map() };
+  const stores = {
+    questionnaires: new Map(),
+    studies: new Map(),
+    questionnaire_assignments: new Map(),
+  };
+  // Shallow equality over the filter's own keys (handles both slug-keyed
+  // questionnaire upserts and the compound assignment upsert filter).
+  const matches = (doc, filter) =>
+    Object.keys(filter).every((k) => doc[k] === filter[k]);
   function collection(name) {
     const store = stores[name];
     return {
       async updateOne(filter, update) {
-        const existing = [...store.values()].find(
-          (d) => d.slug === filter.slug
-        );
+        const existing = [...store.values()].find((d) => matches(d, filter));
         if (existing) {
           Object.assign(existing, update.$set);
         } else {
           const doc = {
             _id: `${name}-${store.size + 1}`,
-            ...update.$set,
             ...update.$setOnInsert,
+            ...update.$set,
           };
           store.set(doc._id, doc);
         }
@@ -90,11 +96,28 @@ test('seedDefaultStudy: creates a default study linking sliq + rand-36 (not srhi
   assert.deepStrictEqual(linkedSlugs, ['rand-36', 'sliq']);
 });
 
-test('seedDefaultStudy: no-ops if a default study already exists', async () => {
+test('seedDefaultStudy: adds an SRHI assignment flagged deliverOnHabitCreation', async () => {
+  const db = makeDb();
+  await seedDefaultQuestionnaires(db);
+  await seedDefaultStudy(db);
+
+  const assignments = [...db.stores.questionnaire_assignments.values()];
+  const srhi = assignments.find((a) => a.questionnaireSlug === 'srhi');
+  assert.ok(srhi, 'SRHI assignment should be created');
+  assert.strictEqual(srhi.deliverOnHabitCreation, true);
+  assert.strictEqual(srhi.active, true);
+  assert.strictEqual(srhi.groupId, null);
+});
+
+test('seedDefaultStudy: idempotent — one default study, one SRHI assignment', async () => {
   const db = makeDb();
   await seedDefaultQuestionnaires(db);
   await seedDefaultStudy(db);
   await seedDefaultStudy(db);
   const defaults = [...db.stores.studies.values()].filter((s) => s.isDefault);
   assert.strictEqual(defaults.length, 1);
+  const srhiAssignments = [
+    ...db.stores.questionnaire_assignments.values(),
+  ].filter((a) => a.questionnaireSlug === 'srhi');
+  assert.strictEqual(srhiAssignments.length, 1);
 });

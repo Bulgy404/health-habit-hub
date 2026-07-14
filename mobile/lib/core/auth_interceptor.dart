@@ -9,9 +9,17 @@ import '../services/auth_service.dart';
 /// If no token is available the request is forwarded without the header.
 class AuthInterceptor extends Interceptor {
   /// Creates an [AuthInterceptor] backed by [_authService].
-  const AuthInterceptor(this._authService);
+  const AuthInterceptor(this._authService, {this.onUnauthorised});
 
   final AuthService _authService;
+
+  /// Invoked once per response the backend answers with 401 — regardless of
+  /// which screen/provider made the request. [AuthService] deliberately never
+  /// auto-logs-out on a dead session (see its docs), which previously meant a
+  /// 401 was a silent dead end: every screen showed its own generic error
+  /// with no indication the fix is "sign in again." This lets the app show
+  /// one consistent, actionable prompt instead.
+  final void Function()? onUnauthorised;
 
   @override
   Future<void> onRequest(
@@ -51,5 +59,11 @@ class AuthInterceptor extends Interceptor {
       debugPrint('AuthInterceptor /habits/share: no access token available');
     }
     handler.next(options);
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (err.response?.statusCode == 401) onUnauthorised?.call();
+    handler.next(err);
   }
 }

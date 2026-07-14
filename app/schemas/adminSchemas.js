@@ -193,7 +193,11 @@ export const updateGroupConfigSchema = z
     recommenderEnabled: z.boolean().optional().nullable(),
     // null = inherit the study-level habit-entry-mode setting for this group.
     habitEntryMode: z.enum(['freeText', 'structured']).optional().nullable(),
-    structuredActivityKeys: z.array(z.string().max(200)).max(20).optional().nullable(),
+    structuredActivityKeys: z
+      .array(z.string().max(200))
+      .max(20)
+      .optional()
+      .nullable(),
   })
   .strict();
 
@@ -226,12 +230,16 @@ export const createQuestionnaireAssignmentSchema = z.object({
   // null / omitted = study-wide (all groups); otherwise a specific group id.
   groupId: mongoId.nullable().optional(),
   cadence: cadenceSchema,
+  // When true, the first occurrence (week 1) is delivered right after a
+  // participant creates a habit (per-habit), instead of at enrollment.
+  deliverOnHabitCreation: z.boolean().optional(),
 });
 
 export const updateQuestionnaireAssignmentSchema = z
   .object({
     cadence: cadenceSchema.optional(),
     active: z.boolean().optional(),
+    deliverOnHabitCreation: z.boolean().optional(),
   })
   .strict();
 

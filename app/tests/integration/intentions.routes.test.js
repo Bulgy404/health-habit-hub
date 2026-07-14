@@ -49,11 +49,19 @@ function makeToken(roles = ['user'], sub = 'test-user') {
 // sequentially, not in parallel.
 let neo4jEnrollment = null;
 let studyDocs = [];
+// Mutable per-test hooks for the deliver-on-habit-creation feature: the Mongo
+// enrollment (studyId/groupId) and the study's questionnaire assignments that
+// gate whether SRHI windows are generated when a habit is created.
+let enrollmentDoc = null;
+let assignmentDocs = [];
+// Module-level so tests can assert how many SRHI windows the create-intention
+// route generated. Reset in each test that cares.
+let srhiInserts = [];
 
 function createMockDb() {
   const intentions = [];
   const logs = [];
-  const srhiWindows = [];
+  const srhiWindows = srhiInserts;
   const enrollments = [];
   const adminSettings = [];
 
@@ -207,8 +215,15 @@ function createMockDb() {
       if (name === 'enrollments') {
         return {
           findOne: async (q) =>
-            enrollments.find((e) => e.userId === q.userId) ?? null,
+            enrollmentDoc ??
+            enrollments.find((e) => e.userId === q.userId) ??
+            null,
           updateOne: async () => ({ matchedCount: 0 }),
+        };
+      }
+      if (name === 'questionnaire_assignments') {
+        return {
+          find: () => ({ toArray: async () => assignmentDocs }),
         };
       }
       if (name === 'admin_settings') {
@@ -356,6 +371,50 @@ test('POST /habits/intentions creates intention and returns 201', async () => {
   assert.ok(body._id || body.id);
   assert.strictEqual(body.behaviorKey, 'walking');
   assert.strictEqual(body.status, 'active');
+});
+
+test('POST /habits/intentions does NOT generate SRHI windows when no flagged assignment applies', async () => {
+  srhiInserts.length = 0;
+  assignmentDocs = [];
+  enrollmentDoc = null;
+  const res = await post(
+    INTENTIONS,
+    validBody,
+    makeToken(['user'], 'no-srhi-user')
+  );
+  assert.strictEqual(res.status, 201);
+  assert.strictEqual(srhiInserts.length, 0);
+});
+
+test('POST /habits/intentions generates SRHI windows when the study has a flagged SRHI assignment', async () => {
+  srhiInserts.length = 0;
+  const studyId = new ObjectId();
+  enrollmentDoc = { userId: 'srhi-user', studyId, groupId: null };
+  assignmentDocs = [
+    {
+      _id: new ObjectId(),
+      studyId,
+      groupId: null,
+      questionnaireId: new ObjectId(),
+      questionnaireSlug: 'srhi',
+      deliverOnHabitCreation: true,
+      active: true,
+    },
+  ];
+  try {
+    const res = await post(
+      INTENTIONS,
+      validBody,
+      makeToken(['user'], 'srhi-user')
+    );
+    assert.strictEqual(res.status, 201);
+    // srhiService.generateWindows pre-creates GENERATE_AHEAD (4) weekly windows.
+    assert.strictEqual(srhiInserts.length, 4);
+  } finally {
+    enrollmentDoc = null;
+    assignmentDocs = [];
+    srhiInserts.length = 0;
+  }
 });
 
 test('POST /habits/intentions returns 403 when the participant-s study disables self habit creation', async () => {

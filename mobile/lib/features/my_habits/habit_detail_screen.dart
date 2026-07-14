@@ -5,6 +5,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/exceptions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_format.dart';
@@ -12,6 +13,16 @@ import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/srhi_sparkline_widget.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
+
+/// A dead session previously showed as a raw `UnauthorisedException: Session
+/// expired` string here — technically correct but unreadable, and easy to
+/// mistake for the section still loading. [ShellScreen] already prompts to
+/// sign back in (see [sessionExpiredProvider]); this just makes the inline
+/// error legible instead of cryptic.
+String _errorText(AppLocalizations l10n, Object error) =>
+    error is UnauthorisedException
+        ? l10n.sessionExpiredMessage
+        : error.toString();
 
 /// Shows log history, SRHI trajectory chart, and actions for a habit intention.
 class HabitDetailScreen extends ConsumerWidget {
@@ -134,7 +145,7 @@ class HabitDetailScreen extends ConsumerWidget {
                     return ContributionGraphWidget(counts: counts);
                   },
                   loading: () => const LinearProgressIndicator(),
-                  error: (e, _) => Text(e.toString()),
+                  error: (e, _) => Text(_errorText(l10n, e)),
                 ),
                 // ── Habit strength (SRHI) ─────────────────────────────────
                 const SizedBox(height: 24),
@@ -183,7 +194,7 @@ class HabitDetailScreen extends ConsumerWidget {
                     );
                   },
                   loading: () => const LinearProgressIndicator(),
-                  error: (e, _) => Text(e.toString()),
+                  error: (e, _) => Text(_errorText(l10n, e)),
                 ),
               ],
             ),

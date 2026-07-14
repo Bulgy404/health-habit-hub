@@ -573,7 +573,8 @@ export function createStudiesRouter({
     validate(createQuestionnaireAssignmentSchema),
     async (req, res) => {
       try {
-        const { questionnaireId, groupId, cadence } = req.body;
+        const { questionnaireId, groupId, cadence, deliverOnHabitCreation } =
+          req.body;
         const database = await getDb();
         const result = await createAssignment({
           db: database,
@@ -581,6 +582,7 @@ export function createStudiesRouter({
           groupId: groupId ?? null,
           questionnaireId,
           cadence,
+          deliverOnHabitCreation: deliverOnHabitCreation === true,
           neo4jRun,
         });
         if (result.notFound)

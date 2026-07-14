@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/exceptions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_format.dart';
@@ -345,8 +346,14 @@ class _HabitCard extends ConsumerWidget {
                         ),
                       );
                     } catch (e) {
-                      // Surface the real reason so failures are diagnosable
-                      // instead of silently doing nothing.
+                      // A dead session already gets ShellScreen's global
+                      // "session expired, sign in again" prompt (triggered by
+                      // the same 401 via sessionExpiredProvider) — showing
+                      // this generic snackbar too would just be a confusing
+                      // second, contradictory-looking toast on top of it.
+                      if (e is UnauthorisedException) return;
+                      // Otherwise surface the real reason so failures are
+                      // diagnosable instead of silently doing nothing.
                       messenger.showSnackBar(
                         SnackBar(
                           content: Text(l10n.couldNotLogToday(e.toString())),

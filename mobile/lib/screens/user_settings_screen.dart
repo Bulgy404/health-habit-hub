@@ -500,7 +500,7 @@ class UserSettingsScreen extends ConsumerWidget {
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
-              ref.read(authServiceProvider).logout();
+              context.go('/signing-out');
             },
             child: Text(l10n.signOut),
           ),

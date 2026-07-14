@@ -865,6 +865,16 @@ class AppLocalizationsFr extends AppLocalizations {
   String get signOutConfirm => 'Êtes-vous sûr de vouloir vous déconnecter ?';
 
   @override
+  String get signingOut => 'Déconnexion…';
+
+  @override
+  String get sessionExpiredMessage =>
+      'Votre session a expiré. Veuillez vous reconnecter pour continuer.';
+
+  @override
+  String get signInAction => 'Se connecter';
+
+  @override
   String get aiDisclaimer =>
       'Suggestions générées par IA à partir des données de votre étude. Ceci ne constitue pas un avis médical ; consultez un médecin pour toute question de santé.';
 
