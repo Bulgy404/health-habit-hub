@@ -88,7 +88,9 @@ describe('updateStudySchema', () => {
   });
 
   it('rejects admin_default entirely (removed mode)', () => {
-    fail(updateStudySchema, { reminders: { habit: { mode: 'admin_default', time: '09:00' } } });
+    fail(updateStudySchema, {
+      reminders: { habit: { mode: 'admin_default', time: '09:00' } },
+    });
     fail(updateStudySchema, {
       reminders: { questionnaire: { mode: 'admin_default', time: '09:00' } },
     });

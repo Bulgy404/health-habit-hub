@@ -99,7 +99,9 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
       if (!cueConfig.selfHabitCreationEnabled) {
         return res
           .status(403)
-          .json({ error: 'Habit creation is disabled for your study condition' });
+          .json({
+            error: 'Habit creation is disabled for your study condition',
+          });
       }
 
       // Enforce the resolved habit-reminder mode server-side too — the

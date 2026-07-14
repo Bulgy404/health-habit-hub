@@ -66,60 +66,71 @@ export function createNotificationCampaignRouter({
     }
   });
 
-  router.post('/', validate(createNotificationCampaignSchema), async (req, res) => {
-    try {
-      const { studyId, title, body, targetType, targetIds, scheduledFor, recurrence } =
-        req.body;
-      const database = await getDb();
-      const campaign = await createCampaign({
-        db: database,
-        createdBy: req.user.sub,
-        studyId: studyId ?? null,
-        title,
-        body,
-        targetType,
-        targetIds: targetIds ?? [],
-        scheduledFor: scheduledFor ?? null,
-        recurrence: recurrence ?? null,
-      });
-      if (!scheduledFor) {
-        // Merge the real send result back onto the response — createCampaign's
-        // doc is a pre-send snapshot with recipientCount: null, so without
-        // this the admin UI always reports "sent to 0 participants"
-        // regardless of how many were actually reached.
-        const sendResult = await sendCampaign({
+  router.post(
+    '/',
+    validate(createNotificationCampaignSchema),
+    async (req, res) => {
+      try {
+        const {
+          studyId,
+          title,
+          body,
+          targetType,
+          targetIds,
+          scheduledFor,
+          recurrence,
+        } = req.body;
+        const database = await getDb();
+        const campaign = await createCampaign({
           db: database,
-          id: campaign.id,
-          send: send,
-          neo4jRun,
+          createdBy: req.user.sub,
+          studyId: studyId ?? null,
+          title,
+          body,
+          targetType,
+          targetIds: targetIds ?? [],
+          scheduledFor: scheduledFor ?? null,
+          recurrence: recurrence ?? null,
         });
-        if (!sendResult.notFound) {
-          campaign.recipientCount = sendResult.recipientCount;
-          campaign.resolvedUserCount = sendResult.resolvedUserCount;
-          campaign.tokenCount = sendResult.tokenCount;
-          campaign.sentAt = sendResult.sentAt;
-          campaign.status = 'sent';
-          campaign.deliveryWarning = deliveryWarningFor(sendResult);
-          log.info(
-            {
-              campaignId: campaign.id,
-              targetType,
-              recipientCount: sendResult.recipientCount,
-              resolvedUserCount: sendResult.resolvedUserCount,
-              tokenCount: sendResult.tokenCount,
-            },
-            campaign.deliveryWarning
-              ? `[notifications] campaign reached nobody: ${campaign.deliveryWarning}`
-              : '[notifications] campaign sent'
-          );
+        if (!scheduledFor) {
+          // Merge the real send result back onto the response — createCampaign's
+          // doc is a pre-send snapshot with recipientCount: null, so without
+          // this the admin UI always reports "sent to 0 participants"
+          // regardless of how many were actually reached.
+          const sendResult = await sendCampaign({
+            db: database,
+            id: campaign.id,
+            send: send,
+            neo4jRun,
+          });
+          if (!sendResult.notFound) {
+            campaign.recipientCount = sendResult.recipientCount;
+            campaign.resolvedUserCount = sendResult.resolvedUserCount;
+            campaign.tokenCount = sendResult.tokenCount;
+            campaign.sentAt = sendResult.sentAt;
+            campaign.status = 'sent';
+            campaign.deliveryWarning = deliveryWarningFor(sendResult);
+            log.info(
+              {
+                campaignId: campaign.id,
+                targetType,
+                recipientCount: sendResult.recipientCount,
+                resolvedUserCount: sendResult.resolvedUserCount,
+                tokenCount: sendResult.tokenCount,
+              },
+              campaign.deliveryWarning
+                ? `[notifications] campaign reached nobody: ${campaign.deliveryWarning}`
+                : '[notifications] campaign sent'
+            );
+          }
         }
+        res.status(201).json(campaign);
+      } catch (err) {
+        log.error({ err: err }, '[notifications] error');
+        res.status(500).json({ error: 'Internal server error' });
       }
-      res.status(201).json(campaign);
-    } catch (err) {
-      log.error({ err: err }, '[notifications] error');
-      res.status(500).json({ error: 'Internal server error' });
     }
-  });
+  );
 
   router.delete('/:id', async (req, res) => {
     try {

@@ -372,7 +372,10 @@ test('resolveHabitConfig: study-level habitReminder mode applies when the group 
     { studyId: studyId.toString(), groupId: groupId.toString() },
   ];
   const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
-  assert.deepEqual(config.habitReminder, { mode: 'admin_fixed', time: '07:30' });
+  assert.deepEqual(config.habitReminder, {
+    mode: 'admin_fixed',
+    time: '07:30',
+  });
 });
 
 test('resolveHabitConfig: group-level habitReminder override wins over the study-level setting', async () => {

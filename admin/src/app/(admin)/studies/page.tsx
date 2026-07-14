@@ -1867,10 +1867,21 @@ function summarizeReminder(
   return t("remindersTab.summaryPerGroup", { on: onCount, total: groups.length });
 }
 
+function isReminderEnabled(
+  scope: ReminderScope,
+  studyValue: ReminderModeValue,
+  groupValues: Record<string, ReminderModeValue>,
+  groups: StudySummary["groups"]
+): boolean {
+  if (scope === "study") return studyValue.mode !== "off";
+  return groups.some((g) => groupValues[g.id]?.mode !== "off");
+}
+
 /**
- * Scope switch ("Configure per group") + the study-wide or per-group
- * settings block(s) beneath it. Purely presentational/state-lifted — the
- * caller owns all the values and save logic.
+ * The study-wide or per-group settings block(s), followed by the scope
+ * switch ("Configure per group") that chooses between them. Purely
+ * presentational/state-lifted — the caller owns all the values and save
+ * logic.
  */
 function ScopedReminderEditor({
   scope,
@@ -1894,16 +1905,6 @@ function ScopedReminderEditor({
   const t = useTranslations("studies");
   return (
     <div>
-      <ToggleSwitch
-        className={styles.checkboxLabel}
-        checked={scope === "group"}
-        disabled={groups.length === 0}
-        onChange={(e) => onScopeChange(e.target.checked ? "group" : "study")}
-        label={t("remindersTab.perGroupLabel")}
-      />
-      {groups.length === 0 && (
-        <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
-      )}
       {scope === "study" ? (
         <Switches value={studyValue} onChange={onStudyValueChange} />
       ) : (
@@ -1920,6 +1921,16 @@ function ScopedReminderEditor({
             </div>
           ))}
         </div>
+      )}
+      <ToggleSwitch
+        className={styles.checkboxLabel}
+        checked={scope === "group"}
+        disabled={groups.length === 0}
+        onChange={(e) => onScopeChange(e.target.checked ? "group" : "study")}
+        label={t("remindersTab.perGroupLabel")}
+      />
+      {groups.length === 0 && (
+        <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
       )}
     </div>
   );
@@ -2154,20 +2165,31 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
     <div>
       {/* Overview: at-a-glance status for all 4 types before diving into details. */}
       <div className={styles.reminderOverview}>
-        {REMINDER_TYPES.map((type) => (
-          <div key={type} className={styles.reminderOverviewCard}>
-            <span className={styles.reminderOverviewTitle}>{t(`remindersTab.${type}Label`)}</span>
-            <span className={styles.reminderOverviewStatus}>
-              {summarizeReminder(
-                t,
-                scope[type],
-                studyReminders[type],
-                groupValuesFor(type) as Record<string, ReminderModeValue>,
-                study.groups
-              )}
-            </span>
-          </div>
-        ))}
+        {REMINDER_TYPES.map((type) => {
+          const enabled = isReminderEnabled(
+            scope[type],
+            studyReminders[type],
+            groupValuesFor(type) as Record<string, ReminderModeValue>,
+            study.groups
+          );
+          return (
+            <div
+              key={type}
+              className={`${styles.reminderOverviewCard} ${enabled ? styles.reminderOverviewCardEnabled : ""}`}
+            >
+              <span className={styles.reminderOverviewTitle}>{t(`remindersTab.${type}Label`)}</span>
+              <span className={styles.reminderOverviewStatus}>
+                {summarizeReminder(
+                  t,
+                  scope[type],
+                  studyReminders[type],
+                  groupValuesFor(type) as Record<string, ReminderModeValue>,
+                  study.groups
+                )}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       {REMINDER_TYPES.map((type) => (

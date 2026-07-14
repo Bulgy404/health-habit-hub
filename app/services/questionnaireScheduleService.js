@@ -401,7 +401,11 @@ export async function getDueQuestionnaires({
     reminders: defaultEffective.questionnaire,
     questionnaires: [],
     studyEndDate: null,
-    endOfStudyNotification: { ...defaultEffective.endOfStudy, title: '', body: '' },
+    endOfStudyNotification: {
+      ...defaultEffective.endOfStudy,
+      title: '',
+      body: '',
+    },
   };
 
   // Reminder / end-of-study config live on the participant's study (and,
