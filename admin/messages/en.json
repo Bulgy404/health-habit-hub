@@ -793,8 +793,8 @@
         "schedule": "Schedule",
         "codes": "Codes",
         "participants": "Participants",
-        "notifications": "Notifications",
-        "cueConfig": "Cue Config"
+        "cueConfig": "Cue Config",
+        "reminders": "Reminders"
       },
       "fields": {
         "nameLabel": "Name *",
@@ -808,14 +808,9 @@
         "onboardingHint": "When disabled, participants skip the first-time explainer screens (what a habit is, what cues are) when creating a habit. Can be overridden per group below.",
         "selfHabitLabel": "Enable habit creation",
         "selfHabitHint": "When disabled, participants in this study cannot create any habits — the My Habits screen is hidden from the app entirely. Can be overridden per group below.",
-        "remindersLabel": "Send questionnaire reminders",
-        "remindersHint": "When enabled, participants get a reminder notification on the day each questionnaire is due. Turn off to cancel reminders for this study (applied on the participant's next app open).",
-        "reminderTimeLabel": "Reminder time",
         "endDateLabel": "Study end date",
         "endDateHint": "Optional. When set, the schedule calendar stops projecting occurrences past this date.",
-        "endOfStudyLabel": "Send end-of-study notification",
-        "endOfStudyHintEnabled": "Delivered locally on the participant's device on the end date above.",
-        "endOfStudyHintDisabled": "Set a study end date above to enable this.",
+        "remindersMovedHint": "Habit, questionnaire, end-of-study, and study-update reminder timing are configured in the Reminders tab.",
         "notificationTitleLabel": "Notification title",
         "notificationBodyLabel": "Notification body",
         "groupCountLabel": "Number of groups",
@@ -1019,6 +1014,7 @@
       }
     },
     "notificationsTab": {
+      "manualSendTitle": "Send a one-off message",
       "composeTitle": "Compose notification",
       "titleLabel": "Title",
       "titlePlaceholder": "Notification title",
@@ -1066,6 +1062,25 @@
       "onboardingHint": "Overrides the study-level onboarding setting for this group only.",
       "selfHabitLabel": "Habit creation (this group)",
       "selfHabitHint": "When off, this group cannot create any habits — the My Habits screen is hidden from the app for this group."
+    },
+    "remindersTab": {
+      "habitLabel": "Habit reminder",
+      "habitHint": "When creating a habit, whether the participant can set a reminder time.",
+      "questionnaireLabel": "Questionnaire reminder",
+      "questionnaireHint": "The daily clock time a due-questionnaire notification fires.",
+      "endOfStudyLabel": "End-of-study reminder",
+      "endOfStudyHint": "Whether and when a notification is sent on the study's end date.",
+      "studyUpdateLabel": "Study update reminder",
+      "studyUpdateHint": "A recurring broadcast reminding participants to check the app, plus one-off manual messages.",
+      "intervalDaysLabel": "Repeat every (days)",
+      "perGroupLabel": "Configure per group",
+      "enabledLabel": "Reminder enabled",
+      "adminFixesTimeLabel": "Admin fixes the time",
+      "setTimeLabel": "Set a time",
+      "summaryOff": "Off",
+      "summaryParticipantChoice": "Participant picks the time",
+      "summaryFixed": "Fixed at {time}",
+      "summaryPerGroup": "Per group ({on}/{total} on)"
     }
   },
   "welcome": {

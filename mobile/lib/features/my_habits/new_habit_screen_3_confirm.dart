@@ -14,6 +14,7 @@ import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
 import '../../core/exceptions.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/study_group_config.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/study_config_provider.dart';
 import '../../services/reminder_scheduler_service.dart';
@@ -139,12 +140,18 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context)!;
     final studyConfig = ref.read(studyConfigProvider).value;
-    final reminderCfg = studyConfig?.reminderConfig;
+    final habitReminder = studyConfig?.reminders.habit;
+    final mode = habitReminder?.mode ?? ReminderMode.participantChoice;
 
-    // Determine effective reminder state from study config overrides.
-    final effectiveReminderEnabled =
-        reminderCfg != null ? reminderCfg.enabled : _reminderEnabled;
-    final effectiveReminderTime = reminderCfg?.fixedTime ?? _reminderTimeString;
+    // Determine the reminder time to submit from the resolved mode:
+    //  - off: no reminder, regardless of local switch state.
+    //  - adminFixed: the admin's locked time, regardless of local state.
+    //  - participantChoice: the participant's own choice.
+    final String? effectiveReminderTime = switch (mode) {
+      ReminderMode.off => null,
+      ReminderMode.adminFixed => habitReminder!.time,
+      ReminderMode.participantChoice => _reminderEnabled ? _reminderTimeString : null,
+    };
 
     setState(() {
       _submitting = true;
@@ -165,8 +172,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             durationMinutes: _durationMinutes,
             cues: widget.cues,
             intentionStatement: _intentionStatementEditable,
-            reminderTime:
-                effectiveReminderEnabled ? effectiveReminderTime : null,
+            reminderTime: effectiveReminderTime,
           );
       ref.invalidate(intentionsProvider);
 
@@ -227,11 +233,8 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final studyConfig = ref.watch(studyConfigProvider).value;
-    final reminderCfg = studyConfig?.reminderConfig;
-
-    // Study-override: if study has fixedTime, show it read-only.
-    final hasFixedTime = reminderCfg?.fixedTime != null;
-    final reminderControlledByStudy = reminderCfg != null;
+    final habitReminder = studyConfig?.reminders.habit;
+    final mode = habitReminder?.mode ?? ReminderMode.participantChoice;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.confirmPlanTitle)),
@@ -268,29 +271,43 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             Text(l10n.dailyReminderLabel,
                 style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
-            if (reminderControlledByStudy)
-              // Study controls reminder — show read-only status
+            if (mode == ReminderMode.off)
+              // Study disables habit reminders entirely for this
+              // participant — no switch, no picker, nothing to enter.
               Row(
                 children: [
                   Icon(
-                    reminderCfg.enabled ? Icons.notifications_active : Icons.notifications_off,
+                    Icons.notifications_off,
                     size: 20,
                     color: Theme.of(context).colorScheme.secondary,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    reminderCfg.enabled
-                        ? hasFixedTime
-                            ? l10n.confirmPlanReminderAtTime(
-                                reminderCfg.fixedTime!,
-                              )
-                            : l10n.confirmPlanRemindersEnabledByStudy
-                        : l10n.confirmPlanNoRemindersByStudy,
+                    l10n.confirmPlanNoRemindersByStudy,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              )
+            else if (mode == ReminderMode.adminFixed)
+              // Study locks the reminder to a fixed time — read-only,
+              // participant has no input.
+              Row(
+                children: [
+                  Icon(
+                    Icons.notifications_active,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.secondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.confirmPlanReminderAtTime(habitReminder!.time!),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
               )
             else
+              // participantChoice: the participant picks their own reminder
+              // time.
               Row(
                 children: [
                   Switch(
@@ -308,7 +325,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
                     Text(l10n.noReminders),
                 ],
               ),
-            if (!reminderControlledByStudy && _reminderEnabled)
+            if (mode == ReminderMode.participantChoice && _reminderEnabled)
               Text(
                 l10n.reminderFadingHint,
                 style: Theme.of(context).textTheme.bodySmall,

@@ -869,10 +869,6 @@
       }
     }
   },
-  "confirmPlanRemindersEnabledByStudy": "Reminders enabled (set by study)",
-  "@confirmPlanRemindersEnabledByStudy": {
-    "description": "Read-only reminder status when the study enables reminders without a fixed time"
-  },
   "confirmPlanNoRemindersByStudy": "No reminders (set by study)",
   "@confirmPlanNoRemindersByStudy": {
     "description": "Read-only reminder status when the study disables reminders"
@@ -1956,13 +1952,13 @@
   "@faqOfflineAnswer": {
     "description": "FAQ answer about offline behavior"
   },
-  "faqNotificationsQuestion": "Can I turn off certain reminders?",
+  "faqNotificationsQuestion": "Can I turn off reminders?",
   "@faqNotificationsQuestion": {
-    "description": "FAQ question about muting notification types"
+    "description": "FAQ question about notifications"
   },
-  "faqNotificationsAnswer": "Yes. Go to Settings → Notifications to turn habit, questionnaire, or study-update reminders on or off individually.",
+  "faqNotificationsAnswer": "Reminders are part of the study, so they can't be turned off inside the app. If you need to, you can manage notifications for this app in your phone's system settings.",
   "@faqNotificationsAnswer": {
-    "description": "FAQ answer about muting notification types"
+    "description": "FAQ answer explaining notifications are study-managed"
   },
   "faqConsentQuestion": "Can I withdraw my consent?",
   "@faqConsentQuestion": {
@@ -1971,22 +1967,6 @@
   "faqConsentAnswer": "Yes, at any time. Go to Settings → Study consent to review what you agreed to, or Settings → Delete account to withdraw and erase your data.",
   "@faqConsentAnswer": {
     "description": "FAQ answer about withdrawing consent"
-  },
-  "notificationsSection": "Notifications",
-  "@notificationsSection": {
-    "description": "Settings section label for notification-channel toggles"
-  },
-  "habitReminders": "Habit reminders",
-  "@habitReminders": {
-    "description": "Settings toggle for local habit-reminder notifications"
-  },
-  "questionnaireReminders": "Questionnaire reminders",
-  "@questionnaireReminders": {
-    "description": "Settings toggle for local questionnaire-due notifications"
-  },
-  "studyUpdateNotifications": "Study updates",
-  "@studyUpdateNotifications": {
-    "description": "Settings toggle for the end-of-study notification"
   },
   "changeRecoveryPassphrase": "Change recovery passphrase",
   "@changeRecoveryPassphrase": {

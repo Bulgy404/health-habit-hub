@@ -24,19 +24,50 @@
  *     allocationWeight: int (1–100, default 1) — relative weight for round-robin enrollment via study codes.
  *     cueConfig:        { restricted: boolean, cueCount, cueSource, cuePoolId, maxHabits } | null
  *     activityTypeConfig: { restricted: boolean, allowedActivityTypeIds: ObjectId[] } | null
- *     reminderConfig:   { enabled: boolean, fixedTime: string|null } | null  — fixedTime is "HH:MM"
+ *     reminders:        { habit, questionnaire, endOfStudy, studyUpdate } | null — same shape as
+ *                          study-level `reminders` below; each type independently null means
+ *                          "inherit the study-level setting for that type".
  *     autoDonate:       boolean — when true habits are auto-donated to the community on creation
  *   }>
  *   questionnaires  Array<ObjectId>  Refs to questionnaires collection.
  *   endDate      Date|null  Optional. When set, the study concludes on this date.
- *   endOfStudyNotification  { enabled: boolean, title: string, body: string } | null
- *                              Optional. Configures the local device notification sent to
- *                              participants when endDate is reached.
+ *   endOfStudyNotification  { title: string, body: string } | null
+ *                              Optional. Content for the end-of-study notification (whether/when
+ *                              it fires is configured via `reminders.endOfStudy` below).
+ *   reminders    { habit, questionnaire, endOfStudy, studyUpdate }  Optional. Each entry is
+ *                  { mode: 'off'|'participant_choice'|'admin_fixed', time: string|null }
+ *                  (time is "HH:MM", required for admin_fixed, null otherwise;
+ *                  'participant_choice' is valid for `habit` only — the other
+ *                  3 types have no participant-facing override).
+ *                  Absent entries fall back to reminderConfigService.defaultReminders().
  *   createdAt    Date
  *   updatedAt    Date
  */
 
 export const COLLECTION = 'studies';
+
+/** Reusable bsonType shape for one reminder type's { mode, time } config. */
+const REMINDER_MODE_BSON = {
+  bsonType: ['object', 'null'],
+  properties: {
+    mode: {
+      bsonType: 'string',
+      enum: ['off', 'participant_choice', 'admin_fixed'],
+    },
+    time: { bsonType: ['string', 'null'] },
+  },
+};
+
+/** Reusable bsonType shape for the { habit, questionnaire, endOfStudy, studyUpdate } group. */
+const REMINDERS_BSON = {
+  bsonType: ['object', 'null'],
+  properties: {
+    habit: REMINDER_MODE_BSON,
+    questionnaire: REMINDER_MODE_BSON,
+    endOfStudy: REMINDER_MODE_BSON,
+    studyUpdate: REMINDER_MODE_BSON,
+  },
+};
 
 /** MongoDB JSON Schema validator for the studies collection. */
 export const VALIDATOR = {
@@ -97,13 +128,7 @@ export const VALIDATOR = {
                 },
               },
             },
-            reminderConfig: {
-              bsonType: ['object', 'null'],
-              properties: {
-                enabled: { bsonType: 'bool' },
-                fixedTime: { bsonType: ['string', 'null'] },
-              },
-            },
+            reminders: REMINDERS_BSON,
             autoDonate: { bsonType: 'bool' },
           },
         },
@@ -116,11 +141,11 @@ export const VALIDATOR = {
       endOfStudyNotification: {
         bsonType: ['object', 'null'],
         properties: {
-          enabled: { bsonType: 'bool' },
           title: { bsonType: 'string' },
           body: { bsonType: 'string' },
         },
       },
+      reminders: REMINDERS_BSON,
       createdAt: { bsonType: 'date' },
       updatedAt: { bsonType: 'date' },
     },

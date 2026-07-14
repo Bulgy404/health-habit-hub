@@ -8,6 +8,7 @@ import {
 } from '../models/appSettings.js';
 import { pickAssignedCues } from './cuePoolService.js';
 import { getEnrollment } from './enrollmentNeo4j.js';
+import { resolveEffectiveReminders } from './reminderConfigService.js';
 
 // Locales with a translated activity-type label column; anything else falls
 // back to English.
@@ -79,7 +80,7 @@ async function readAppSettings(db) {
  * Priority: study group cueConfig (live) > free-entry public config.
  * Also includes the platform-wide app feature flags (app_settings singleton).
  * @param {{ db: object, userId: string, neo4jRun: Function, lang?: string }} deps
- * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array<{key: string, label: string}>, maxHabits: number|null, assignedCues: Array, recommenderEnabled: boolean, guidedHabitCreationEnabled: boolean, communityShareDefault: boolean }>}
+ * @returns {Promise<{ cueCount: string, cueSource: string, cuePoolId: string|null, behaviorOptions: Array<{key: string, label: string}>, maxHabits: number|null, assignedCues: Array, recommenderEnabled: boolean, guidedHabitCreationEnabled: boolean, communityShareDefault: boolean, habitReminder: { mode: string, time: string|null } }>}
  */
 export async function resolveHabitConfig({
   db,
@@ -102,6 +103,11 @@ export async function resolveHabitConfig({
   // group in the study), not a per-group one — unlike cueConfig, which is
   // still resolved per group below. Empty means free-text habit entry.
   let behaviorKeys = [];
+  // Resolved lazily below; undefined study/group falls back to
+  // resolveEffectiveReminders' own defaults (matches today's fully
+  // participant-chosen behavior for public/unenrolled users).
+  let study = null;
+  let group = null;
 
   if (enrollment?.studyId) {
     let studyOid;
@@ -112,7 +118,7 @@ export async function resolveHabitConfig({
     }
 
     if (studyOid) {
-      const study = await db.collection(STUDIES).findOne({ _id: studyOid });
+      study = await db.collection(STUDIES).findOne({ _id: studyOid });
 
       if (study) {
         recommenderEnabled = study.recommenderEnabled !== false;
@@ -124,7 +130,7 @@ export async function resolveHabitConfig({
 
         // Resolve cueConfig and per-group flag overrides live from the group.
         if (enrollment.groupId) {
-          const group = (study.groups || []).find(
+          group = (study.groups || []).find(
             (g) => g.id?.toString() === enrollment.groupId
           );
           cueConfig = group?.cueConfig ?? null;
@@ -138,6 +144,8 @@ export async function resolveHabitConfig({
       }
     }
   }
+
+  const habitReminder = resolveEffectiveReminders({ study, group }).habit;
 
   let cueCount, cueSource, cuePoolId, maxHabits;
 
@@ -175,6 +183,7 @@ export async function resolveHabitConfig({
     recommenderEnabled,
     onboardingEnabled,
     selfHabitCreationEnabled,
+    habitReminder,
     ...appSettings,
   };
 }

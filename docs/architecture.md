@@ -630,11 +630,68 @@ Data flow:
 | `/admin/notifications` | Researcher FCM notification campaign management |
 | `/admin/studies/:id/groups/:groupId/cue-config` | Per-group cue source, count, and behaviour config |
 
+### Study-Configurable Reminders (habit / questionnaire / end-of-study / study-update)
+
+Four reminder types share one mode model, configurable per study and
+per-group, from a single admin Studies → **Reminders** tab (the former
+separate Notifications tab is merged into it — see below):
+
+| Mode | Meaning |
+|---|---|
+| `off` | No reminder; the participant has no input at all |
+| `participant_choice` | The participant picks their own time. **Habit reminders only** — no participant-facing picker exists for the other 3 types, so their schema only allows `off`/`admin_fixed` |
+| `admin_fixed` | The admin locks the time; the participant has no input |
+
+The admin UI renders this as switches, not a mode dropdown: habit reminders
+get two cascading `ToggleSwitch`es ("Reminder enabled", then "Admin fixes the
+time" once enabled — off leaves it as `participant_choice`); the other three
+types get a single "Set a time" switch (off ↔ `admin_fixed`). Every type's
+first control is a **scope switch** ("Configure per group"): off shows one
+study-wide editor bound to `study.reminders[type]`; on shows one editor per
+group bound to `group.reminders[type]`, with no inherit option — exactly one
+of those is the active source of truth for a type at a time, and switching
+scope back to study-wide clears every group's override for that type.
+
+`app/services/reminderConfigService.js` is the single resolver:
+`resolveEffectiveReminders({ study, group })` returns the effective `{ mode,
+time }` per type — a non-null per-group override wins over the study-level
+default, independently per type. `habitConfigService.js` (habit reminders,
+consumed at intention-creation time and enforced server-side in
+`intentionsRouter.js` so a direct API call can't bypass an `off`/`admin_fixed`
+study condition) and `questionnaireScheduleService.js`'s
+`getDueQuestionnaires` (questionnaire + end-of-study reminders, consumed via
+`GET /api/v1/questionnaires/due`) both call it.
+
+`studyUpdate` is architecturally different: `off`/`admin_fixed` only (a
+coordinator broadcast has no "participant chooses" concept), and it's not a
+value read at the right moment like the other three — it's backed by one or
+more **recurring `notification_campaigns` documents**
+(`recurrence: {intervalDays, until}` set), not a local notification: one
+study-wide campaign (`targetType: 'all_enrolled'`) when scoped study-wide, or
+one per group (`targetType: 'group'`) when scoped per-group. Saving the
+section cancels every existing tracked campaign for the type and recreates
+exactly the ones that should exist (campaigns have no update endpoint) via
+`POST`/`DELETE /admin/notifications`. `notificationCampaignService.js`'s
+`sendCampaign` reschedules a recurring campaign (`intervalDays` later)
+instead of terminating after each send, so the same node-cron
+`dispatchDueCampaigns` poll (see the `notification_campaigns` row in
+`docs/data-model.md`) that dispatches one-off campaigns picks it up again
+automatically. The study-update section also hosts the merged-in one-off
+manual composer (individual/group/all target, send-now-or-schedule) and
+campaign history, previously the standalone Notifications tab — kept as an
+independent target selector rather than routed through the scope switch,
+since "message whoever I pick right now" is a different targeting concept
+than a scoped recurring reminder. Full field reference: `docs/data-model.md`'s
+**Reminders** and `notification_campaigns` sections.
+
 ### Adaptive Reminder Fading (UC-33)
 
-Participants pick a daily reminder time (`reminderTime`, `HH:mm`) when
-creating an implementation intention. The backend then computes a per-intention
-**reminder plan** that fades notification frequency as the habit becomes
+Participants creating a habit see an editable reminder-time picker unless the
+study's `reminders.habit` mode is `off` (no picker) or `admin_fixed`
+(read-only, locked to the admin's time) — see the section above. Whatever
+time is stored on the intention (`reminderTime`, `HH:mm`), the backend then
+computes a per-intention **reminder plan** that fades notification frequency
+as the habit becomes
 automatic — reminders are scaffolding (Lally et al. 2010), and keeping them
 constant risks reminder blindness while removing them too early collapses
 fragile habits.

@@ -56,9 +56,7 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [ ] Toggle self-service habit creation on/off
 - [ ] Switch habit entry mode between free-text and structured; when structured, manage the
       activity-type catalog (`ActivityTypesManager`)
-- [ ] Toggle questionnaire reminders on/off and set the reminder hour
 - [ ] Set/clear the study end date
-- [ ] Toggle end-of-study notification and edit its title/body
 - [ ] Change the number of groups (G1–Gn) and edit group labels; confirm the
       removal-warning appears when shrinking group count
 
@@ -68,6 +66,30 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [ ] Per-group: assign a cue pool and max-habits cap
 - [ ] Per-group: tri-state override (inherit / on / off) applies correctly against the
       study-level onboarding/self-habit-creation defaults
+
+**Reminders tab** (also hosts what used to be the separate Notifications tab)
+- [ ] Habit reminder: toggle "Reminder enabled", then "Admin fixes the time" — confirm a
+      time field only appears once both are on; off leaves it as participant-choice
+- [ ] Questionnaire / end-of-study / study-update reminders: toggle "Set a time" — confirm
+      a time field only appears when on (these three have no participant-choice option)
+- [ ] Re-open the study after saving — confirm the saved mode/time actually persists
+      (this is exactly the class of bug that was previously reported for the old
+      onboarding/self-habit-creation toggles)
+- [ ] Overview strip at the top of the tab reflects each type's current state at a glance
+- [ ] End-of-study reminder: title/body fields appear once "Set a time" is on; saved
+      content round-trips
+- [ ] Study-update reminder: turn on "Set a time", fill in interval days + title/body,
+      save — confirm a new recurring campaign appears in the history list with the given
+      schedule; switch back to off and confirm the campaign is cancelled
+- [ ] Study-update reminder: send a one-off notification now, targeted to "all" and to a
+      single group; schedule one for a future time; cancel a scheduled one; confirm the
+      sent-notification history list is accurate (recipient count, status)
+- [ ] Scope switch ("Configure per group"): for each reminder type, turn it on — confirm
+      one editor appears per group (no inherit option); turn it back off — confirm all
+      group overrides for that type are cleared and the study-wide value applies again
+- [ ] Habit reminder in the mobile app: create a habit under each mode and confirm the
+      confirm-screen behavior matches — Off shows no picker/switch, Participant-choice
+      shows an editable picker, Admin-fixed shows read-only text with the locked time
 
 **Questionnaires tab**
 - [ ] Assign library questionnaires to the study
@@ -97,12 +119,6 @@ This is the biggest page in the admin panel; budget the most test time here.
 - [ ] Paginated enrollment table loads
 - [ ] Download participants CSV
 - [ ] Download research export ZIP
-
-**Notifications tab**
-- [ ] Send a notification now, targeted to "all" and to a single group
-- [ ] Schedule a notification for a future time
-- [ ] Cancel a scheduled notification
-- [ ] Sent-notification history list is accurate (recipient count, status)
 
 ### 1.4 Participants (global)
 - [ ] Create a single participant (choose group, token-card format)
@@ -330,7 +346,8 @@ participant.
 - [ ] Appearance picker: light, dark, system — switch rapidly a few times, confirm no
       crash/visual glitch (regression check for the theme-switch assertion crash)
 - [ ] Community comments toggle
-- [ ] Notification toggles: habit reminders, questionnaire reminders, study updates
+- [ ] No participant-facing notification toggles (reminders are study-managed and
+      always on; participants can only mute via OS notification settings)
 - [ ] Export my data (GDPR) — downloads and opens the system share sheet
 - [ ] Sign out (confirm dialog)
 - [ ] Delete account (confirm dialog) — wipes local storage and returns to onboarding

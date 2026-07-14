@@ -44,4 +44,22 @@ describe("buildKeycloakLogoutUrl", () => {
       true
     );
   });
+
+  it("includes id_token_hint when a session ID token is passed, so Keycloak logs out silently instead of showing its confirmation page", () => {
+    process.env.NEXT_PUBLIC_KEYCLOAK_BROWSER_URL = "https://example.com/auth";
+    process.env.NEXT_PUBLIC_NEXTAUTH_URL = "https://example.com/admin";
+
+    const url = buildKeycloakLogoutUrl("https://example.com/admin", "the-id-token");
+
+    expect(url).toContain("id_token_hint=the-id-token");
+  });
+
+  it("omits id_token_hint entirely when no ID token is available", () => {
+    process.env.NEXT_PUBLIC_KEYCLOAK_BROWSER_URL = "https://example.com/auth";
+    process.env.NEXT_PUBLIC_NEXTAUTH_URL = "https://example.com/admin";
+
+    const url = buildKeycloakLogoutUrl("https://example.com/admin");
+
+    expect(url).not.toContain("id_token_hint");
+  });
 });

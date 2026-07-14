@@ -3,6 +3,10 @@ import { ObjectId } from 'mongodb';
 import { ASSIGNMENTS, WINDOWS } from '../models/questionnaireSchedule.js';
 import { getUsersForStudy } from './enrollmentNeo4j.js';
 import { resolveLocaleText } from '../utils/localeText.js';
+import {
+  defaultReminders,
+  resolveEffectiveReminders,
+} from './reminderConfigService.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -392,47 +396,42 @@ export async function getDueQuestionnaires({
 }) {
   const now = new Date();
   const horizon = new Date(now.getTime() + withinDays * DAY_MS);
-  const defaultReminders = { enabled: true, hour: 9 };
+  const defaultEffective = defaultReminders();
   const defaultResult = {
-    reminders: defaultReminders,
+    reminders: defaultEffective.questionnaire,
     questionnaires: [],
     studyEndDate: null,
-    endOfStudyNotification: { enabled: false, title: '', body: '' },
+    endOfStudyNotification: { ...defaultEffective.endOfStudy, title: '', body: '' },
   };
 
-  // Reminder / end-of-study config live on the participant's study, resolved
-  // via their enrollment — not via a due window, since a participant may have
-  // no due questionnaires left yet still need their study's end-date config.
+  // Reminder / end-of-study config live on the participant's study (and,
+  // per-type, may be overridden per group) — resolved via their enrollment,
+  // not via a due window, since a participant may have no due questionnaires
+  // left yet still need their study's end-date config.
   const enrollment = await db
     .collection('enrollments')
-    .findOne({ userId: String(userId) }, { projection: { studyId: 1 } });
+    .findOne(
+      { userId: String(userId) },
+      { projection: { studyId: 1, groupId: 1 } }
+    );
   if (!enrollment) return defaultResult;
 
-  const study = await db.collection('studies').findOne(
-    { _id: enrollment.studyId },
-    {
-      projection: {
-        questionnaireReminders: 1,
-        endDate: 1,
-        endOfStudyNotification: 1,
-      },
-    }
-  );
+  const study = await db
+    .collection('studies')
+    .findOne({ _id: enrollment.studyId });
+  if (!study) return defaultResult;
 
-  let reminders = defaultReminders;
-  if (study?.questionnaireReminders) {
-    reminders = {
-      enabled: study.questionnaireReminders.enabled !== false,
-      hour: Number.isInteger(study.questionnaireReminders.hour)
-        ? study.questionnaireReminders.hour
-        : 9,
-    };
-  }
-  const studyEndDate = study?.endDate ?? null;
+  const group = (study.groups || []).find(
+    (g) => g.id?.toString() === enrollment.groupId?.toString()
+  );
+  const effective = resolveEffectiveReminders({ study, group });
+
+  const reminders = effective.questionnaire;
+  const studyEndDate = study.endDate ?? null;
   const endOfStudyNotification = {
-    enabled: study?.endOfStudyNotification?.enabled === true,
-    title: study?.endOfStudyNotification?.title ?? '',
-    body: study?.endOfStudyNotification?.body ?? '',
+    ...effective.endOfStudy,
+    title: study.endOfStudyNotification?.title ?? '',
+    body: study.endOfStudyNotification?.body ?? '',
   };
 
   const wins = await db

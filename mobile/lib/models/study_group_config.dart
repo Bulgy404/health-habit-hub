@@ -4,6 +4,94 @@
 /// enrolled in any study (public / app-store path).
 library;
 
+/// One reminder type's delivery mode.
+///
+///  - [off]: no reminder; [ReminderModeConfig.time] is null.
+///  - [participantChoice]: the participant picks their own time; time is
+///    null. Habit reminders only — no participant-facing picker exists for
+///    the other 3 reminder types.
+///  - [adminFixed]: the admin locks [ReminderModeConfig.time]; the
+///    participant has no input at all.
+enum ReminderMode { off, participantChoice, adminFixed }
+
+ReminderMode _parseReminderMode(String? raw) {
+  switch (raw) {
+    case 'participant_choice':
+      return ReminderMode.participantChoice;
+    case 'admin_fixed':
+      return ReminderMode.adminFixed;
+    case 'off':
+    default:
+      return ReminderMode.off;
+  }
+}
+
+/// One reminder type's resolved mode + time, as returned by the backend's
+/// reminderConfigService.resolveEffectiveReminders.
+class ReminderModeConfig {
+  /// Creates a [ReminderModeConfig].
+  const ReminderModeConfig({required this.mode, this.time});
+
+  /// Delivery mode for this reminder type.
+  final ReminderMode mode;
+
+  /// "HH:MM" — present for [ReminderMode.adminFixed], null otherwise.
+  final String? time;
+
+  /// Deserialises from JSON.
+  factory ReminderModeConfig.fromJson(Map<String, dynamic> json) =>
+      ReminderModeConfig(
+        mode: _parseReminderMode(json['mode'] as String?),
+        time: json['time'] as String?,
+      );
+}
+
+/// Resolved reminders for all 4 types, already merged (group override over
+/// study-level default) by the backend.
+class RemindersConfig {
+  /// Creates a [RemindersConfig].
+  const RemindersConfig({
+    required this.habit,
+    required this.questionnaire,
+    required this.endOfStudy,
+    required this.studyUpdate,
+  });
+
+  /// Habit-creation reminder-time config.
+  final ReminderModeConfig habit;
+
+  /// Questionnaire due-date reminder-time config.
+  final ReminderModeConfig questionnaire;
+
+  /// End-of-study notification config.
+  final ReminderModeConfig endOfStudy;
+
+  /// Recurring study-update broadcast config.
+  final ReminderModeConfig studyUpdate;
+
+  /// Deserialises from JSON, defaulting any missing type to off.
+  factory RemindersConfig.fromJson(Map<String, dynamic>? json) {
+    const off = ReminderModeConfig(mode: ReminderMode.off);
+    if (json == null) {
+      return const RemindersConfig(
+        habit: off,
+        questionnaire: off,
+        endOfStudy: off,
+        studyUpdate: off,
+      );
+    }
+    ReminderModeConfig parse(String key) => json[key] != null
+        ? ReminderModeConfig.fromJson(json[key] as Map<String, dynamic>)
+        : off;
+    return RemindersConfig(
+      habit: parse('habit'),
+      questionnaire: parse('questionnaire'),
+      endOfStudy: parse('endOfStudy'),
+      studyUpdate: parse('studyUpdate'),
+    );
+  }
+}
+
 class StudyGroupConfig {
   /// Creates a [StudyGroupConfig].
   const StudyGroupConfig({
@@ -14,7 +102,7 @@ class StudyGroupConfig {
     this.recommenderEnabled = true,
     this.cueConfig,
     this.activityTypeConfig,
-    this.reminderConfig,
+    required this.reminders,
     this.autoDonate = false,
   });
 
@@ -39,8 +127,9 @@ class StudyGroupConfig {
   /// Activity type restriction config (null = all types allowed).
   final ActivityTypeGroupConfig? activityTypeConfig;
 
-  /// Reminder settings override (null = user chooses their own time).
-  final ReminderGroupConfig? reminderConfig;
+  /// Resolved reminder config for all 4 types (group override already merged
+  /// over the study-level default by the backend).
+  final RemindersConfig reminders;
 
   /// When true, habits are automatically donated to the community on creation.
   final bool autoDonate;
@@ -60,10 +149,8 @@ class StudyGroupConfig {
             ? ActivityTypeGroupConfig.fromJson(
                 json['activityTypeConfig'] as Map<String, dynamic>)
             : null,
-        reminderConfig: json['reminderConfig'] != null
-            ? ReminderGroupConfig.fromJson(
-                json['reminderConfig'] as Map<String, dynamic>)
-            : null,
+        reminders:
+            RemindersConfig.fromJson(json['reminders'] as Map<String, dynamic>?),
         autoDonate: json['autoDonate'] as bool? ?? false,
       );
 }
@@ -117,25 +204,5 @@ class ActivityTypeGroupConfig {
         allowedActivityTypeIds:
             (json['allowedActivityTypeIds'] as List<dynamic>?)?.cast<String>() ??
                 const [],
-      );
-}
-
-/// Reminder configuration from the study group.
-class ReminderGroupConfig {
-  const ReminderGroupConfig({
-    required this.enabled,
-    this.fixedTime,
-  });
-
-  /// Whether reminders are enabled for this group.
-  final bool enabled;
-
-  /// Fixed reminder time in "HH:MM" format, or null if user chooses their own.
-  final String? fixedTime;
-
-  factory ReminderGroupConfig.fromJson(Map<String, dynamic> json) =>
-      ReminderGroupConfig(
-        enabled: json['enabled'] as bool? ?? true,
-        fixedTime: json['fixedTime'] as String?,
       );
 }

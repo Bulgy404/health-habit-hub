@@ -700,10 +700,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get confirmPlanRemindersEnabledByStudy =>
-      'Erinnerungen aktiviert (von der Studie festgelegt)';
-
-  @override
   String get confirmPlanNoRemindersByStudy =>
       'Keine Erinnerungen (von der Studie festgelegt)';
 
@@ -1559,12 +1555,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'Gewohnheits-Einträge, die Sie offline absenden, werden auf Ihrem Gerät gespeichert und automatisch gesendet, sobald Sie wieder online sind.';
 
   @override
-  String get faqNotificationsQuestion =>
-      'Kann ich bestimmte Erinnerungen ausschalten?';
+  String get faqNotificationsQuestion => 'Kann ich Erinnerungen ausschalten?';
 
   @override
   String get faqNotificationsAnswer =>
-      'Ja. Gehen Sie zu Einstellungen → Benachrichtigungen, um Erinnerungen für Gewohnheiten, Fragebögen oder Studien-Updates einzeln ein- oder auszuschalten.';
+      'Erinnerungen sind Teil der Studie und können in der App nicht ausgeschaltet werden. Bei Bedarf können Sie Benachrichtigungen für diese App in den Systemeinstellungen Ihres Telefons verwalten.';
 
   @override
   String get faqConsentQuestion => 'Kann ich meine Einwilligung widerrufen?';
@@ -1572,18 +1567,6 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get faqConsentAnswer =>
       'Ja, jederzeit. Gehen Sie zu Einstellungen → Studieneinwilligung, um zu sehen, wozu Sie zugestimmt haben, oder zu Einstellungen → Konto löschen, um zu widerrufen und Ihre Daten zu löschen.';
-
-  @override
-  String get notificationsSection => 'Benachrichtigungen';
-
-  @override
-  String get habitReminders => 'Gewohnheits-Erinnerungen';
-
-  @override
-  String get questionnaireReminders => 'Fragebogen-Erinnerungen';
-
-  @override
-  String get studyUpdateNotifications => 'Studien-Updates';
 
   @override
   String get changeRecoveryPassphrase => 'Wiederherstellungs-Passphrase ändern';

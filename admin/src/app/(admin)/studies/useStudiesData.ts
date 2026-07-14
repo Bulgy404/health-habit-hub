@@ -6,6 +6,18 @@ import { apiFetch, apiUrl } from "@/lib/api";
 // the tab is visible. Matches the system page's REFRESH_MS.
 const REFRESH_MS = 30_000;
 
+type ReminderModeValue = {
+  mode: "off" | "participant_choice" | "admin_fixed";
+  time: string | null;
+};
+
+type RemindersConfig = {
+  habit: ReminderModeValue;
+  questionnaire: ReminderModeValue;
+  endOfStudy: ReminderModeValue;
+  studyUpdate: ReminderModeValue;
+};
+
 interface StudyGroup {
   id: string;
   label: string;
@@ -18,6 +30,12 @@ interface StudyGroup {
   } | null;
   onboardingEnabled?: boolean | null;
   selfHabitCreationEnabled?: boolean | null;
+  reminders?: {
+    habit: ReminderModeValue | null;
+    questionnaire: ReminderModeValue | null;
+    endOfStudy: ReminderModeValue | null;
+    studyUpdate: ReminderModeValue | null;
+  } | null;
 }
 
 export interface StudySummary {
@@ -33,9 +51,9 @@ export interface StudySummary {
   habitEntryMode: "freeText" | "structured";
   /** Activity-type catalog keys offered when habitEntryMode is 'structured'. */
   structuredActivityKeys: string[];
-  questionnaireReminders?: { enabled: boolean; hour: number };
+  reminders?: RemindersConfig;
   endDate?: string | null;
-  endOfStudyNotification?: { enabled: boolean; title: string; body: string };
+  endOfStudyNotification?: { title: string; body: string };
   groups: StudyGroup[];
   questionnaires: string[];
   participantCount: number;

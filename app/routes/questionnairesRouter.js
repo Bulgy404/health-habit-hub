@@ -106,9 +106,10 @@ export function createQuestionnairesRouter({ db } = {}) {
    *               properties:
    *                 reminders:
    *                   type: object
+   *                   description: Effective questionnaire-reminder config (group override, else study default)
    *                   properties:
-   *                     enabled: { type: boolean }
-   *                     hour: { type: integer, minimum: 0, maximum: 23 }
+   *                     mode: { type: string, enum: [off, admin_fixed] }
+   *                     time: { type: string, nullable: true, example: "09:00" }
    *                 questionnaires:
    *                   type: array
    *                   items:
@@ -126,8 +127,10 @@ export function createQuestionnairesRouter({ db } = {}) {
    *                   nullable: true
    *                 endOfStudyNotification:
    *                   type: object
+   *                   description: Effective mode/time merged with the study's title/body content
    *                   properties:
-   *                     enabled: { type: boolean }
+   *                     mode: { type: string, enum: [off, admin_fixed] }
+   *                     time: { type: string, nullable: true, example: "09:00" }
    *                     title: { type: string }
    *                     body: { type: string }
    *       401:

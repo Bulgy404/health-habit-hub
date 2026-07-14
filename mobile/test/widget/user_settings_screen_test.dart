@@ -1,8 +1,8 @@
 // Widget tests for UserSettingsScreen — the settings hub itself. Its
 // sub-screens (profile, help, rotate-passphrase, legal docs) already have
 // their own dedicated tests; this file focuses on what's unique to the hub:
-// the profile hero card, language/appearance pickers, the community/
-// notification toggles, export-my-data, sign-out, and delete-account.
+// the profile hero card, language/appearance pickers, the community-comments
+// toggle, export-my-data, sign-out, and delete-account.
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,7 +17,6 @@ import 'package:hhh/core/dio_provider.dart';
 import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/providers/auth_provider.dart';
 import 'package:hhh/providers/comments_enabled_provider.dart';
-import 'package:hhh/providers/notification_prefs_provider.dart';
 import 'package:hhh/screens/user_settings_screen.dart';
 import 'package:hhh/services/auth_service.dart';
 
@@ -82,30 +81,6 @@ class _FakeAuthService extends AuthService {
   @override
   Future<void> logout() async {
     logoutCalls++;
-  }
-}
-
-/// In-memory notification-prefs notifier: the real one re-syncs via
-/// ReminderSchedulerService (flutter_local_notifications), which has no
-/// platform implementation in widget tests. This override exercises the
-/// same UI/state contract without touching that plugin.
-class _FakeNotificationPrefsNotifier extends NotificationPrefsNotifier {
-  @override
-  NotificationPrefsState build() => const NotificationPrefsState();
-
-  @override
-  Future<void> setHabitReminders(bool value) async {
-    state = state.copyWith(habitReminders: value);
-  }
-
-  @override
-  Future<void> setQuestionnaireReminders(bool value) async {
-    state = state.copyWith(questionnaireReminders: value);
-  }
-
-  @override
-  Future<void> setStudyUpdates(bool value) async {
-    state = state.copyWith(studyUpdates: value);
   }
 }
 
@@ -183,7 +158,6 @@ Widget _buildSubject(Dio dio, _FakeAuthService authService) {
     overrides: [
       dioProvider.overrideWithValue(dio),
       authServiceProvider.overrideWithValue(authService),
-      notificationPrefsProvider.overrideWith(_FakeNotificationPrefsNotifier.new),
       commentsEnabledProvider.overrideWith(_FakeCommentsEnabledNotifier.new),
     ],
     child: MaterialApp.router(
@@ -217,13 +191,6 @@ Future<void> _scrollToAndTap(WidgetTester tester, Finder finder) async {
   await _scrollTo(tester, finder);
   await tester.tap(finder);
 }
-
-/// Finds the trailing [Switch] inside the same [SettingsRow]-built [Row] as
-/// the row's title [text].
-Finder _switchForRow(String text) => find.descendant(
-      of: find.ancestor(of: find.text(text), matching: find.byType(Row)).first,
-      matching: find.byType(Switch),
-    );
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -320,24 +287,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.widget<Switch>(toggle).value, isFalse);
-  });
-
-  testWidgets('the three notification toggles flip independently', (tester) async {
-    await tester.pumpWidget(_buildSubject(dio, authService));
-    await tester.pumpAndSettle();
-
-    for (final title in [
-      'Habit reminders',
-      'Questionnaire reminders',
-      'Study updates',
-    ]) {
-      await _scrollTo(tester, find.text(title));
-      final toggle = _switchForRow(title);
-      final before = tester.widget<Switch>(toggle).value;
-      await tester.tap(toggle);
-      await tester.pumpAndSettle();
-      expect(tester.widget<Switch>(toggle).value, !before);
-    }
   });
 
   testWidgets('tapping Help & Support navigates', (tester) async {

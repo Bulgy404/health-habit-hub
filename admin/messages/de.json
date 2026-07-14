@@ -793,8 +793,8 @@
         "schedule": "Zeitplan",
         "codes": "Codes",
         "participants": "Teilnehmende",
-        "notifications": "Benachrichtigungen",
-        "cueConfig": "Cue-Konfiguration"
+        "cueConfig": "Cue-Konfiguration",
+        "reminders": "Erinnerungen"
       },
       "fields": {
         "nameLabel": "Name *",
@@ -808,14 +808,9 @@
         "onboardingHint": "Wenn deaktiviert, überspringen Teilnehmende die einmaligen Erklärbildschirme (was eine Gewohnheit ist, was Cues sind) beim Erstellen einer Gewohnheit. Kann unten pro Gruppe überschrieben werden.",
         "selfHabitLabel": "Gewohnheitserstellung aktivieren",
         "selfHabitHint": "Wenn deaktiviert, können Teilnehmende dieser Studie keine Gewohnheiten erstellen — der Bildschirm „Meine Gewohnheiten“ wird in der App vollständig ausgeblendet. Kann unten pro Gruppe überschrieben werden.",
-        "remindersLabel": "Fragebogen-Erinnerungen senden",
-        "remindersHint": "Wenn aktiviert, erhalten Teilnehmende am Fälligkeitstag jedes Fragebogens eine Erinnerungsbenachrichtigung. Deaktivieren, um Erinnerungen für diese Studie abzubrechen (wird beim nächsten App-Öffnen der teilnehmenden Person angewendet).",
-        "reminderTimeLabel": "Erinnerungszeit",
         "endDateLabel": "Studienenddatum",
         "endDateHint": "Optional. Wenn gesetzt, projiziert der Zeitplankalender keine Termine mehr nach diesem Datum.",
-        "endOfStudyLabel": "Benachrichtigung zum Studienende senden",
-        "endOfStudyHintEnabled": "Wird lokal auf dem Gerät der teilnehmenden Person am oben angegebenen Enddatum zugestellt.",
-        "endOfStudyHintDisabled": "Lege oben ein Studienenddatum fest, um dies zu aktivieren.",
+        "remindersMovedHint": "Die zeitliche Steuerung von Gewohnheits-, Fragebogen-, Studienende- und Studien-Update-Erinnerungen erfolgt im Tab „Erinnerungen“.",
         "notificationTitleLabel": "Benachrichtigungstitel",
         "notificationBodyLabel": "Benachrichtigungstext",
         "groupCountLabel": "Anzahl der Gruppen",
@@ -1019,6 +1014,7 @@
       }
     },
     "notificationsTab": {
+      "manualSendTitle": "Einmalige Nachricht senden",
       "composeTitle": "Benachrichtigung verfassen",
       "titleLabel": "Titel",
       "titlePlaceholder": "Benachrichtigungstitel",
@@ -1066,6 +1062,25 @@
       "onboardingHint": "Überschreibt die studienweite Onboarding-Einstellung nur für diese Gruppe.",
       "selfHabitLabel": "Gewohnheitserstellung (diese Gruppe)",
       "selfHabitHint": "Wenn aus, kann diese Gruppe keine Gewohnheiten erstellen — der Bildschirm „Meine Gewohnheiten“ wird für diese Gruppe ausgeblendet."
+    },
+    "remindersTab": {
+      "habitLabel": "Gewohnheits-Erinnerung",
+      "habitHint": "Beim Erstellen einer Gewohnheit: ob die teilnehmende Person eine Erinnerungszeit festlegen kann.",
+      "questionnaireLabel": "Fragebogen-Erinnerung",
+      "questionnaireHint": "Die tägliche Uhrzeit, zu der eine Benachrichtigung für einen fälligen Fragebogen ausgelöst wird.",
+      "endOfStudyLabel": "Studienende-Erinnerung",
+      "endOfStudyHint": "Ob und wann am Studienenddatum eine Benachrichtigung gesendet wird.",
+      "studyUpdateLabel": "Studien-Update-Erinnerung",
+      "studyUpdateHint": "Eine wiederkehrende Rundnachricht, die Teilnehmende erinnert, die App zu öffnen, sowie einmalige manuelle Nachrichten.",
+      "intervalDaysLabel": "Wiederholen alle (Tage)",
+      "perGroupLabel": "Pro Gruppe konfigurieren",
+      "enabledLabel": "Erinnerung aktiviert",
+      "adminFixesTimeLabel": "Admin legt die Zeit fest",
+      "setTimeLabel": "Zeit festlegen",
+      "summaryOff": "Aus",
+      "summaryParticipantChoice": "Teilnehmende Person wählt die Zeit",
+      "summaryFixed": "Fest um {time}",
+      "summaryPerGroup": "Pro Gruppe ({on}/{total} an)"
     }
   },
   "welcome": {

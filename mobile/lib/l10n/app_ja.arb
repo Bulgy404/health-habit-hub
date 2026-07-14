@@ -848,10 +848,6 @@
       }
     }
   },
-  "confirmPlanRemindersEnabledByStudy": "リマインダー有効（研究の設定）",
-  "@confirmPlanRemindersEnabledByStudy": {
-    "description": "Read-only reminder status when the study enables reminders without a fixed time"
-  },
   "confirmPlanNoRemindersByStudy": "リマインダーなし（研究の設定）",
   "@confirmPlanNoRemindersByStudy": {
     "description": "Read-only reminder status when the study disables reminders"
@@ -1342,14 +1338,10 @@
   "faqDataAnswer": "はい。設定 → マイデータをエクスポート で、アカウントに紐づくすべてのデータをダウンロードできます。設定 → アカウントを削除 で完全に削除することもできます。削除は取り消せません。",
   "faqOfflineQuestion": "アプリ使用中に接続が切れたらどうなりますか？",
   "faqOfflineAnswer": "オフライン中に送信した習慣の記録は端末に保存され、オンラインに戻ると自動的に送信されます。",
-  "faqNotificationsQuestion": "特定のリマインダーをオフにできますか？",
-  "faqNotificationsAnswer": "はい。設定 → 通知 で、習慣・アンケート・研究アップデートのリマインダーを個別にオン/オフできます。",
+  "faqNotificationsQuestion": "リマインダーをオフにできますか？",
+  "faqNotificationsAnswer": "リマインダーは研究の一部であり、アプリ内でオフにすることはできません。必要な場合は、スマートフォンのシステム設定でこのアプリの通知を管理できます。",
   "faqConsentQuestion": "同意を撤回できますか？",
   "faqConsentAnswer": "はい、いつでも可能です。設定 → 研究への同意 で同意内容を確認できます。設定 → アカウントを削除 で同意を撤回しデータを削除できます。",
-  "notificationsSection": "通知",
-  "habitReminders": "習慣のリマインダー",
-  "questionnaireReminders": "アンケートのリマインダー",
-  "studyUpdateNotifications": "研究の更新情報",
   "changeRecoveryPassphrase": "復元用パスフレーズを変更",
   "rotatePassphraseTitle": "復元用パスフレーズを変更しますか？",
   "rotatePassphraseWarning": "現在の24単語のパスフレーズはすぐに使用できなくなります。新しいパスフレーズは必ず安全な場所に保存してください。",

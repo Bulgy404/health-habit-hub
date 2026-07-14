@@ -14,6 +14,27 @@ import { ToggleSwitch } from "@/components/toggle-switch";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+/** One reminder type's mode + time. See app/services/reminderConfigService.js. */
+export type ReminderModeValue = {
+  mode: "off" | "participant_choice" | "admin_fixed";
+  time: string | null;
+};
+
+export interface RemindersConfig {
+  habit: ReminderModeValue;
+  questionnaire: ReminderModeValue;
+  endOfStudy: ReminderModeValue;
+  studyUpdate: ReminderModeValue;
+}
+
+/** Per-group overrides: each type independently null = inherit study-level. */
+export type GroupRemindersConfig = {
+  habit: ReminderModeValue | null;
+  questionnaire: ReminderModeValue | null;
+  endOfStudy: ReminderModeValue | null;
+  studyUpdate: ReminderModeValue | null;
+} | null;
+
 interface StudyGroup {
   id: string;
   label: string;
@@ -23,6 +44,7 @@ interface StudyGroup {
   // null = inherit the study-level flag; boolean overrides per group.
   onboardingEnabled?: boolean | null;
   selfHabitCreationEnabled?: boolean | null;
+  reminders?: GroupRemindersConfig;
 }
 
 interface CueConfig {
@@ -45,9 +67,9 @@ interface StudySummary {
   habitEntryMode: "freeText" | "structured";
   /** Activity-type catalog keys offered when habitEntryMode is 'structured'. */
   structuredActivityKeys: string[];
-  questionnaireReminders?: { enabled: boolean; hour: number };
+  reminders?: RemindersConfig;
   endDate?: string | null;
-  endOfStudyNotification?: { enabled: boolean; title: string; body: string };
+  endOfStudyNotification?: { title: string; body: string };
   groups: StudyGroup[];
   questionnaires: string[];
   participantCount: number;
@@ -1542,9 +1564,714 @@ function ParticipantsTab({ study, token }: { study: StudySummary; token: string 
   );
 }
 
-// ── Notifications tab ─────────────────────────────────────────────────────────
+// ── Cue config tab ────────────────────────────────────────────────────────────
 
-function NotificationsTab({ study, token }: { study: StudySummary; token: string }) {
+/** Maps a nullable boolean override to the tri-state <select> value. */
+function triStateValue(v: boolean | null): "inherit" | "on" | "off" {
+  if (v === null || v === undefined) return "inherit";
+  return v ? "on" : "off";
+}
+
+/** Parses a tri-state <select> value back to a nullable boolean override. */
+function triStateParse(v: string): boolean | null {
+  if (v === "on") return true;
+  if (v === "off") return false;
+  return null;
+}
+
+function CueConfigTab({ study, token }: { study: StudySummary; token: string }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
+
+  const [groupStates, setGroupStates] = useState<
+    Record<
+      string,
+      CueConfig & {
+        onboardingEnabled: boolean | null;
+        selfHabitCreationEnabled: boolean | null;
+        saving: boolean;
+        saved: boolean;
+        error: string;
+      }
+    >
+  >(() =>
+    Object.fromEntries(
+      study.groups.map((g) => [
+        g.id,
+        {
+          cueCount: g.cueConfig?.cueCount ?? "multi",
+          cueSource: g.cueConfig?.cueSource ?? "high_quality",
+          cuePoolId: g.cueConfig?.cuePoolId ?? null,
+          maxHabits: g.cueConfig?.maxHabits ?? null,
+          // null = inherit study-level flag
+          onboardingEnabled: g.onboardingEnabled ?? null,
+          selfHabitCreationEnabled: g.selfHabitCreationEnabled ?? null,
+          saving: false,
+          saved: false,
+          error: "",
+        },
+      ])
+    )
+  );
+
+  function update(groupId: string, patch: Partial<(typeof groupStates)[string]>) {
+    setGroupStates((prev) => ({
+      ...prev,
+      [groupId]: { ...prev[groupId], ...patch, saved: false },
+    }));
+  }
+
+  async function handleSave(groupId: string) {
+    const s = groupStates[groupId];
+    update(groupId, { saving: true, error: "" });
+    try {
+      await apiFetch(`${API_BASE}/${study.id}/groups/${groupId}/cue-config`, token, {
+        method: "PATCH",
+        body: JSON.stringify({
+          cueCount: s.cueCount,
+          cueSource: s.cueSource,
+          cuePoolId: s.cuePoolId,
+          maxHabits: s.maxHabits,
+        }),
+      });
+      // Persist the per-group onboarding / self-creation overrides.
+      await apiFetch(`${API_BASE}/${study.id}/groups/${groupId}/config`, token, {
+        method: "PATCH",
+        body: JSON.stringify({
+          onboardingEnabled: s.onboardingEnabled,
+          selfHabitCreationEnabled: s.selfHabitCreationEnabled,
+        }),
+      });
+      update(groupId, { saving: false, saved: true });
+    } catch (err) {
+      update(groupId, {
+        saving: false,
+        error: err instanceof Error ? err.message : t("saveFailedGeneric"),
+      });
+    }
+  }
+
+  if (study.groups.length === 0) {
+    return <div className={styles.emptyState}>{t("cueConfigTab.noGroups")}</div>;
+  }
+
+  return (
+    <div>
+      {study.groups.map((g) => {
+        const s = groupStates[g.id];
+        if (!s) return null;
+        return (
+          <div key={g.id} className={styles.cueConfigGroup}>
+            <p className={styles.cueConfigGroupLabel}>
+              {g.label || t("groupFallbackLabel", { index: g.index })}
+            </p>
+            {s.error && <div className={styles.errorMsg}>{s.error}</div>}
+            <CueConfigForm
+              value={{
+                cueCount: s.cueCount,
+                cueSource: s.cueSource,
+                maxHabits: s.maxHabits,
+              }}
+              onChange={(patch) => update(g.id, patch)}
+              showMaxHabits
+            />
+            <div className={styles.formGrid}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>{t("cueConfigTab.onboardingLabel")}</label>
+                <select
+                  className={styles.select}
+                  value={triStateValue(s.onboardingEnabled)}
+                  onChange={(e) =>
+                    update(g.id, {
+                      onboardingEnabled: triStateParse(e.target.value),
+                    })
+                  }
+                >
+                  <option value="inherit">{t("cueConfigTab.inheritOption")}</option>
+                  <option value="on">{t("cueConfigTab.onOption")}</option>
+                  <option value="off">{t("cueConfigTab.offOption")}</option>
+                </select>
+                <span className={styles.hint}>{t("cueConfigTab.onboardingHint")}</span>
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>{t("cueConfigTab.selfHabitLabel")}</label>
+                <select
+                  className={styles.select}
+                  value={triStateValue(s.selfHabitCreationEnabled)}
+                  onChange={(e) =>
+                    update(g.id, {
+                      selfHabitCreationEnabled: triStateParse(e.target.value),
+                    })
+                  }
+                >
+                  <option value="inherit">{t("cueConfigTab.inheritOption")}</option>
+                  <option value="on">{t("cueConfigTab.onOption")}</option>
+                  <option value="off">{t("cueConfigTab.offOption")}</option>
+                </select>
+                <span className={styles.hint}>{t("cueConfigTab.selfHabitHint")}</span>
+              </div>
+            </div>
+            <div className={styles.cueConfigFooter}>
+              {s.saved && <span className={styles.savedMsg}>{t("saved")}</span>}
+              <button
+                className={styles.saveBtn}
+                onClick={() => handleSave(g.id)}
+                disabled={s.saving}
+              >
+                {s.saving ? tc("saving") : tc("save")}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Reminders tab ─────────────────────────────────────────────────────────────
+
+const REMINDER_TYPES = ["habit", "questionnaire", "endOfStudy", "studyUpdate"] as const;
+type ReminderType = (typeof REMINDER_TYPES)[number];
+type ReminderScope = "study" | "group";
+
+function emptyReminderMode(): ReminderModeValue {
+  return { mode: "off", time: null };
+}
+
+/**
+ * The next occurrence of "HH:MM" (today if still upcoming, else tomorrow),
+ * as an ISO string — used to anchor a new recurring campaign's first send.
+ * Subsequent sends advance by whole days, so this initial time-of-day
+ * persists across the recurrence.
+ */
+function nextOccurrenceIso(hhmm: string): string {
+  const [hours, minutes] = hhmm.split(":").map(Number);
+  const candidate = new Date();
+  candidate.setHours(hours, minutes, 0, 0);
+  if (candidate.getTime() <= Date.now()) {
+    candidate.setDate(candidate.getDate() + 1);
+  }
+  return candidate.toISOString();
+}
+
+/**
+ * Habit reminder's 3-state control: off / participant picks / admin fixes.
+ * Two cascading switches — habit is the only type with a real
+ * participant-facing picker, so it's the only one that needs a middle state.
+ */
+function HabitReminderSwitches({
+  value,
+  onChange,
+}: {
+  value: ReminderModeValue;
+  onChange: (v: ReminderModeValue) => void;
+}) {
+  const t = useTranslations("studies");
+  const enabled = value.mode !== "off";
+  const fixed = value.mode === "admin_fixed";
+  return (
+    <div className={styles.reminderSwitchGroup}>
+      <ToggleSwitch
+        className={styles.checkboxLabel}
+        checked={enabled}
+        onChange={(e) =>
+          onChange(
+            e.target.checked
+              ? { mode: "participant_choice", time: null }
+              : { mode: "off", time: null }
+          )
+        }
+        label={t("remindersTab.enabledLabel")}
+      />
+      {enabled && (
+        <>
+          <ToggleSwitch
+            className={styles.checkboxLabel}
+            checked={fixed}
+            onChange={(e) =>
+              onChange(
+                e.target.checked
+                  ? { mode: "admin_fixed", time: value.time ?? "09:00" }
+                  : { mode: "participant_choice", time: null }
+              )
+            }
+            label={t("remindersTab.adminFixesTimeLabel")}
+          />
+          {fixed && (
+            <input
+              type="time"
+              className={styles.input}
+              value={value.time ?? "09:00"}
+              onChange={(e) => onChange({ mode: "admin_fixed", time: e.target.value })}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Questionnaire / end-of-study / study-update's 2-state control: set a time,
+ * or don't. No participant-facing override exists for these types.
+ */
+function SetTimeSwitch({
+  value,
+  onChange,
+}: {
+  value: ReminderModeValue;
+  onChange: (v: ReminderModeValue) => void;
+}) {
+  const t = useTranslations("studies");
+  const on = value.mode === "admin_fixed";
+  return (
+    <div className={styles.reminderSwitchGroup}>
+      <ToggleSwitch
+        className={styles.checkboxLabel}
+        checked={on}
+        onChange={(e) =>
+          onChange(
+            e.target.checked
+              ? { mode: "admin_fixed", time: value.time ?? "09:00" }
+              : { mode: "off", time: null }
+          )
+        }
+        label={t("remindersTab.setTimeLabel")}
+      />
+      {on && (
+        <input
+          type="time"
+          className={styles.input}
+          value={value.time ?? "09:00"}
+          onChange={(e) => onChange({ mode: "admin_fixed", time: e.target.value })}
+        />
+      )}
+    </div>
+  );
+}
+
+/** One reminder type's one-line status, for the overview strip. */
+function summarizeReminder(
+  t: ReturnType<typeof useTranslations>,
+  scope: ReminderScope,
+  studyValue: ReminderModeValue,
+  groupValues: Record<string, ReminderModeValue>,
+  groups: StudySummary["groups"]
+): string {
+  if (scope === "study") {
+    if (studyValue.mode === "off") return t("remindersTab.summaryOff");
+    if (studyValue.mode === "participant_choice") return t("remindersTab.summaryParticipantChoice");
+    return t("remindersTab.summaryFixed", { time: studyValue.time ?? "" });
+  }
+  const onCount = groups.filter((g) => groupValues[g.id]?.mode !== "off").length;
+  return t("remindersTab.summaryPerGroup", { on: onCount, total: groups.length });
+}
+
+/**
+ * Scope switch ("Configure per group") + the study-wide or per-group
+ * settings block(s) beneath it. Purely presentational/state-lifted — the
+ * caller owns all the values and save logic.
+ */
+function ScopedReminderEditor({
+  scope,
+  onScopeChange,
+  studyValue,
+  onStudyValueChange,
+  groupValues,
+  onGroupValueChange,
+  groups,
+  switches: Switches,
+}: {
+  scope: ReminderScope;
+  onScopeChange: (s: ReminderScope) => void;
+  studyValue: ReminderModeValue;
+  onStudyValueChange: (v: ReminderModeValue) => void;
+  groupValues: Record<string, ReminderModeValue>;
+  onGroupValueChange: (groupId: string, v: ReminderModeValue) => void;
+  groups: StudySummary["groups"];
+  switches: React.ComponentType<{ value: ReminderModeValue; onChange: (v: ReminderModeValue) => void }>;
+}) {
+  const t = useTranslations("studies");
+  return (
+    <div>
+      <ToggleSwitch
+        className={styles.checkboxLabel}
+        checked={scope === "group"}
+        disabled={groups.length === 0}
+        onChange={(e) => onScopeChange(e.target.checked ? "group" : "study")}
+        label={t("remindersTab.perGroupLabel")}
+      />
+      {groups.length === 0 && (
+        <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
+      )}
+      {scope === "study" ? (
+        <Switches value={studyValue} onChange={onStudyValueChange} />
+      ) : (
+        <div className={styles.reminderGroupList}>
+          {groups.map((g) => (
+            <div key={g.id} className={styles.reminderGroupRow}>
+              <p className={styles.cueConfigGroupLabel}>
+                {g.label || t("groupFallbackLabel", { index: g.index })}
+              </p>
+              <Switches
+                value={groupValues[g.id] ?? emptyReminderMode()}
+                onChange={(v) => onGroupValueChange(g.id, v)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RemindersTab({ study, token }: { study: StudySummary; token: string }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
+
+  // Scope defaults to "group" for any type that already has at least one
+  // group-level override stored — otherwise "study".
+  const [scope, setScope] = useState<Record<ReminderType, ReminderScope>>(
+    () =>
+      Object.fromEntries(
+        REMINDER_TYPES.map((type) => [
+          type,
+          study.groups.some((g) => g.reminders?.[type] != null) ? "group" : "study",
+        ])
+      ) as Record<ReminderType, ReminderScope>
+  );
+
+  const [studyReminders, setStudyReminders] = useState<RemindersConfig>(
+    () =>
+      study.reminders ?? {
+        habit: emptyReminderMode(),
+        questionnaire: emptyReminderMode(),
+        endOfStudy: emptyReminderMode(),
+        studyUpdate: emptyReminderMode(),
+      }
+  );
+
+  // Per-group values are always concrete once in local state (no null/inherit
+  // — that's what study-wide scope is for). Seeded from the group's stored
+  // override, falling back to the study-level value as a sensible starting
+  // point when a group has no override yet.
+  const [groupReminders, setGroupReminders] = useState<Record<string, Record<ReminderType, ReminderModeValue>>>(
+    () =>
+      Object.fromEntries(
+        study.groups.map((g) => [
+          g.id,
+          Object.fromEntries(
+            REMINDER_TYPES.map((type) => [
+              type,
+              g.reminders?.[type] ?? study.reminders?.[type] ?? emptyReminderMode(),
+            ])
+          ) as Record<ReminderType, ReminderModeValue>,
+        ])
+      )
+  );
+
+  const [endOfStudyTitle, setEndOfStudyTitle] = useState(
+    study.endOfStudyNotification?.title ?? "Study complete"
+  );
+  const [endOfStudyBody, setEndOfStudyBody] = useState(
+    study.endOfStudyNotification?.body ??
+      "Thank you for participating — your study has ended."
+  );
+
+  // Study-update is the only reminder type backed by an actual delivery
+  // mechanism (recurring notification campaigns) rather than just a value
+  // read at the right moment. One campaign per active target — "all" for
+  // study-wide scope, or one per group for per-group scope.
+  const [studyUpdateIntervalDays, setStudyUpdateIntervalDays] = useState(7);
+  const [studyUpdateTitle, setStudyUpdateTitle] = useState("Study update");
+  const [studyUpdateBody, setStudyUpdateBody] = useState(
+    "Check the app for the latest updates."
+  );
+  const [existingCampaigns, setExistingCampaigns] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadExistingCampaigns() {
+      try {
+        const data = await apiFetch<
+          | { campaigns?: { id: string; recurrence?: unknown; targetType: string; targetIds: string[] }[] }
+          | { id: string; recurrence?: unknown; targetType: string; targetIds: string[] }[]
+        >(`${NOTIFICATIONS_BASE}?studyId=${study.id}&status=scheduled`, token);
+        const list = Array.isArray(data) ? data : (data.campaigns ?? []);
+        const byTarget: Record<string, string> = {};
+        for (const c of list) {
+          if (!c.recurrence) continue;
+          const key = c.targetType === "group" ? (c.targetIds[0] ?? "all") : "all";
+          byTarget[key] = c.id;
+        }
+        if (!cancelled) setExistingCampaigns(byTarget);
+      } catch {
+        // Non-fatal: the save flow just creates new campaigns if this lookup fails.
+      }
+    }
+    loadExistingCampaigns();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [study.id, token]);
+
+  const [saving, setSaving] = useState<Record<ReminderType, boolean>>(
+    () => Object.fromEntries(REMINDER_TYPES.map((t2) => [t2, false])) as Record<ReminderType, boolean>
+  );
+  const [saved, setSaved] = useState<Record<ReminderType, boolean>>(
+    () => Object.fromEntries(REMINDER_TYPES.map((t2) => [t2, false])) as Record<ReminderType, boolean>
+  );
+  const [errors, setErrors] = useState<Record<ReminderType, string>>(
+    () => Object.fromEntries(REMINDER_TYPES.map((t2) => [t2, ""])) as Record<ReminderType, string>
+  );
+
+  async function syncStudyUpdateCampaigns() {
+    // Campaigns have no update endpoint — cancel everything tracked, then
+    // recreate exactly what should exist for the current scope/values.
+    await Promise.all(
+      Object.values(existingCampaigns).map((id) =>
+        apiFetch(`${NOTIFICATIONS_BASE}/${id}`, token, { method: "DELETE" }).catch(() => {})
+      )
+    );
+    const targets: { key: string; value: ReminderModeValue; targetType: string; targetIds: string[] }[] =
+      scope.studyUpdate === "study"
+        ? [{ key: "all", value: studyReminders.studyUpdate, targetType: "all_enrolled", targetIds: [] }]
+        : study.groups.map((g) => ({
+            key: g.id,
+            value: groupReminders[g.id]?.studyUpdate ?? emptyReminderMode(),
+            targetType: "group",
+            targetIds: [g.id],
+          }));
+
+    const newCampaigns: Record<string, string> = {};
+    for (const target of targets) {
+      if (target.value.mode !== "admin_fixed") continue;
+      const created = await apiFetch<{ id: string }>(NOTIFICATIONS_BASE, token, {
+        method: "POST",
+        body: JSON.stringify({
+          studyId: study.id,
+          title: studyUpdateTitle.trim() || "Study update",
+          body: studyUpdateBody.trim() || "Check the app for the latest updates.",
+          targetType: target.targetType,
+          targetIds: target.targetIds,
+          scheduledFor: nextOccurrenceIso(target.value.time ?? "09:00"),
+          recurrence: { intervalDays: studyUpdateIntervalDays },
+        }),
+      });
+      newCampaigns[target.key] = created.id;
+    }
+    setExistingCampaigns(newCampaigns);
+  }
+
+  async function handleSaveType(type: ReminderType) {
+    setSaving((prev) => ({ ...prev, [type]: true }));
+    setErrors((prev) => ({ ...prev, [type]: "" }));
+    try {
+      if (scope[type] === "study") {
+        await apiFetch(`${API_BASE}/${study.id}`, token, {
+          method: "PUT",
+          body: JSON.stringify({
+            reminders: { [type]: studyReminders[type] },
+            ...(type === "endOfStudy"
+              ? {
+                  endOfStudyNotification: {
+                    title: endOfStudyTitle.trim() || "Study complete",
+                    body:
+                      endOfStudyBody.trim() ||
+                      "Thank you for participating — your study has ended.",
+                  },
+                }
+              : {}),
+          }),
+        });
+        // Study-wide is the single source of truth once selected — clear any
+        // lingering per-group overrides for this type so they actually inherit.
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ reminders: { [type]: null } }),
+            }).catch(() => {})
+          )
+        );
+      } else {
+        await Promise.all(
+          study.groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ reminders: { [type]: groupReminders[g.id][type] } }),
+            })
+          )
+        );
+        if (type === "endOfStudy") {
+          await apiFetch(`${API_BASE}/${study.id}`, token, {
+            method: "PUT",
+            body: JSON.stringify({
+              endOfStudyNotification: {
+                title: endOfStudyTitle.trim() || "Study complete",
+                body:
+                  endOfStudyBody.trim() ||
+                  "Thank you for participating — your study has ended.",
+              },
+            }),
+          });
+        }
+      }
+
+      if (type === "studyUpdate") {
+        await syncStudyUpdateCampaigns();
+      }
+
+      setSaved((prev) => ({ ...prev, [type]: true }));
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        [type]: err instanceof Error ? err.message : t("saveFailedGeneric"),
+      }));
+    } finally {
+      setSaving((prev) => ({ ...prev, [type]: false }));
+    }
+  }
+
+  function updateStudyValue(type: ReminderType, v: ReminderModeValue) {
+    setStudyReminders((prev) => ({ ...prev, [type]: v }));
+    setSaved((prev) => ({ ...prev, [type]: false }));
+  }
+
+  function updateGroupValue(type: ReminderType, groupId: string, v: ReminderModeValue) {
+    setGroupReminders((prev) => ({
+      ...prev,
+      [groupId]: { ...prev[groupId], [type]: v },
+    }));
+    setSaved((prev) => ({ ...prev, [type]: false }));
+  }
+
+  const groupValuesFor = (type: ReminderType) =>
+    Object.fromEntries(study.groups.map((g) => [g.id, groupReminders[g.id]?.[type]]));
+
+  return (
+    <div>
+      {/* Overview: at-a-glance status for all 4 types before diving into details. */}
+      <div className={styles.reminderOverview}>
+        {REMINDER_TYPES.map((type) => (
+          <div key={type} className={styles.reminderOverviewCard}>
+            <span className={styles.reminderOverviewTitle}>{t(`remindersTab.${type}Label`)}</span>
+            <span className={styles.reminderOverviewStatus}>
+              {summarizeReminder(
+                t,
+                scope[type],
+                studyReminders[type],
+                groupValuesFor(type) as Record<string, ReminderModeValue>,
+                study.groups
+              )}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {REMINDER_TYPES.map((type) => (
+        <div key={type} className={styles.reminderTypeSection} data-testid={`reminder-section-${type}`}>
+          <p className={styles.cueConfigGroupLabel}>{t(`remindersTab.${type}Label`)}</p>
+          <span className={styles.hint}>{t(`remindersTab.${type}Hint`)}</span>
+          {errors[type] && <div className={styles.errorMsg}>{errors[type]}</div>}
+
+          <ScopedReminderEditor
+            scope={scope[type]}
+            onScopeChange={(s) => {
+              setScope((prev) => ({ ...prev, [type]: s }));
+              setSaved((prev) => ({ ...prev, [type]: false }));
+            }}
+            studyValue={studyReminders[type]}
+            onStudyValueChange={(v) => updateStudyValue(type, v)}
+            groupValues={groupValuesFor(type) as Record<string, ReminderModeValue>}
+            onGroupValueChange={(groupId, v) => updateGroupValue(type, groupId, v)}
+            groups={study.groups}
+            switches={type === "habit" ? HabitReminderSwitches : SetTimeSwitch}
+          />
+
+          {type === "endOfStudy" &&
+            (scope.endOfStudy === "study"
+              ? studyReminders.endOfStudy.mode === "admin_fixed"
+              : study.groups.some((g) => groupReminders[g.id]?.endOfStudy?.mode === "admin_fixed")) && (
+              <div className={`${styles.formGroup} ${styles.formFull}`}>
+                <label className={styles.label}>{t("modal.fields.notificationTitleLabel")}</label>
+                <input
+                  className={styles.input}
+                  value={endOfStudyTitle}
+                  onChange={(e) => setEndOfStudyTitle(e.target.value)}
+                  maxLength={120}
+                />
+                <label className={styles.label}>{t("modal.fields.notificationBodyLabel")}</label>
+                <input
+                  className={styles.input}
+                  value={endOfStudyBody}
+                  onChange={(e) => setEndOfStudyBody(e.target.value)}
+                  maxLength={500}
+                />
+              </div>
+            )}
+
+          {type === "studyUpdate" &&
+            (scope.studyUpdate === "study"
+              ? studyReminders.studyUpdate.mode === "admin_fixed"
+              : study.groups.some((g) => groupReminders[g.id]?.studyUpdate?.mode === "admin_fixed")) && (
+              <div className={`${styles.formGroup} ${styles.formFull}`}>
+                <label className={styles.label}>{t("remindersTab.intervalDaysLabel")}</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  className={styles.input}
+                  value={studyUpdateIntervalDays}
+                  onChange={(e) =>
+                    setStudyUpdateIntervalDays(Math.max(1, parseInt(e.target.value, 10) || 1))
+                  }
+                />
+                <label className={styles.label}>{t("modal.fields.notificationTitleLabel")}</label>
+                <input
+                  className={styles.input}
+                  value={studyUpdateTitle}
+                  onChange={(e) => setStudyUpdateTitle(e.target.value)}
+                  maxLength={65}
+                />
+                <label className={styles.label}>{t("modal.fields.notificationBodyLabel")}</label>
+                <input
+                  className={styles.input}
+                  value={studyUpdateBody}
+                  onChange={(e) => setStudyUpdateBody(e.target.value)}
+                  maxLength={240}
+                />
+              </div>
+            )}
+
+          <div className={styles.cueConfigFooter}>
+            {saved[type] && <span className={styles.savedMsg}>{t("saved")}</span>}
+            <button
+              className={styles.saveBtn}
+              onClick={() => handleSaveType(type)}
+              disabled={saving[type]}
+            >
+              {saving[type] ? tc("saving") : tc("save")}
+            </button>
+          </div>
+
+          {type === "studyUpdate" && <StudyUpdateManualSend study={study} token={token} />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * One-off / scheduled-once manual sends + campaign history — merged in from
+ * the former standalone Notifications tab. Kept as an independent composer
+ * (its own individual/group/all target selector) rather than routed through
+ * the scoped-reminder model above, since "send this one specific message to
+ * whoever I pick right now" is a different targeting concept than a
+ * recurring, scope-bound reminder.
+ */
+function StudyUpdateManualSend({ study, token }: { study: StudySummary; token: string }) {
   const t = useTranslations("studies");
   const tc = useTranslations("common");
   const [title, setTitle] = useState("");
@@ -1712,6 +2439,8 @@ function NotificationsTab({ study, token }: { study: StudySummary; token: string
 
   return (
     <div className={styles.notificationsTab}>
+      <p className={styles.reminderSubsectionTitle}>{t("notificationsTab.manualSendTitle")}</p>
+
       {/* Compose form */}
       <div className={styles.notifSection}>
         <p className={styles.notifSectionTitle}>{t("notificationsTab.composeTitle")}</p>
@@ -1895,170 +2624,6 @@ function NotificationsTab({ study, token }: { study: StudySummary; token: string
   );
 }
 
-// ── Cue config tab ────────────────────────────────────────────────────────────
-
-/** Maps a nullable boolean override to the tri-state <select> value. */
-function triStateValue(v: boolean | null): "inherit" | "on" | "off" {
-  if (v === null || v === undefined) return "inherit";
-  return v ? "on" : "off";
-}
-
-/** Parses a tri-state <select> value back to a nullable boolean override. */
-function triStateParse(v: string): boolean | null {
-  if (v === "on") return true;
-  if (v === "off") return false;
-  return null;
-}
-
-function CueConfigTab({ study, token }: { study: StudySummary; token: string }) {
-  const t = useTranslations("studies");
-  const tc = useTranslations("common");
-
-  const [groupStates, setGroupStates] = useState<
-    Record<
-      string,
-      CueConfig & {
-        onboardingEnabled: boolean | null;
-        selfHabitCreationEnabled: boolean | null;
-        saving: boolean;
-        saved: boolean;
-        error: string;
-      }
-    >
-  >(() =>
-    Object.fromEntries(
-      study.groups.map((g) => [
-        g.id,
-        {
-          cueCount: g.cueConfig?.cueCount ?? "multi",
-          cueSource: g.cueConfig?.cueSource ?? "high_quality",
-          cuePoolId: g.cueConfig?.cuePoolId ?? null,
-          maxHabits: g.cueConfig?.maxHabits ?? null,
-          // null = inherit study-level flag
-          onboardingEnabled: g.onboardingEnabled ?? null,
-          selfHabitCreationEnabled: g.selfHabitCreationEnabled ?? null,
-          saving: false,
-          saved: false,
-          error: "",
-        },
-      ])
-    )
-  );
-
-  function update(groupId: string, patch: Partial<(typeof groupStates)[string]>) {
-    setGroupStates((prev) => ({
-      ...prev,
-      [groupId]: { ...prev[groupId], ...patch, saved: false },
-    }));
-  }
-
-  async function handleSave(groupId: string) {
-    const s = groupStates[groupId];
-    update(groupId, { saving: true, error: "" });
-    try {
-      await apiFetch(`${API_BASE}/${study.id}/groups/${groupId}/cue-config`, token, {
-        method: "PATCH",
-        body: JSON.stringify({
-          cueCount: s.cueCount,
-          cueSource: s.cueSource,
-          cuePoolId: s.cuePoolId,
-          maxHabits: s.maxHabits,
-        }),
-      });
-      // Persist the per-group onboarding / self-creation overrides.
-      await apiFetch(`${API_BASE}/${study.id}/groups/${groupId}/config`, token, {
-        method: "PATCH",
-        body: JSON.stringify({
-          onboardingEnabled: s.onboardingEnabled,
-          selfHabitCreationEnabled: s.selfHabitCreationEnabled,
-        }),
-      });
-      update(groupId, { saving: false, saved: true });
-    } catch (err) {
-      update(groupId, {
-        saving: false,
-        error: err instanceof Error ? err.message : t("saveFailedGeneric"),
-      });
-    }
-  }
-
-  if (study.groups.length === 0) {
-    return <div className={styles.emptyState}>{t("cueConfigTab.noGroups")}</div>;
-  }
-
-  return (
-    <div>
-      {study.groups.map((g) => {
-        const s = groupStates[g.id];
-        if (!s) return null;
-        return (
-          <div key={g.id} className={styles.cueConfigGroup}>
-            <p className={styles.cueConfigGroupLabel}>
-              {g.label || t("groupFallbackLabel", { index: g.index })}
-            </p>
-            {s.error && <div className={styles.errorMsg}>{s.error}</div>}
-            <CueConfigForm
-              value={{
-                cueCount: s.cueCount,
-                cueSource: s.cueSource,
-                maxHabits: s.maxHabits,
-              }}
-              onChange={(patch) => update(g.id, patch)}
-              showMaxHabits
-            />
-            <div className={styles.formGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>{t("cueConfigTab.onboardingLabel")}</label>
-                <select
-                  className={styles.select}
-                  value={triStateValue(s.onboardingEnabled)}
-                  onChange={(e) =>
-                    update(g.id, {
-                      onboardingEnabled: triStateParse(e.target.value),
-                    })
-                  }
-                >
-                  <option value="inherit">{t("cueConfigTab.inheritOption")}</option>
-                  <option value="on">{t("cueConfigTab.onOption")}</option>
-                  <option value="off">{t("cueConfigTab.offOption")}</option>
-                </select>
-                <span className={styles.hint}>{t("cueConfigTab.onboardingHint")}</span>
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>{t("cueConfigTab.selfHabitLabel")}</label>
-                <select
-                  className={styles.select}
-                  value={triStateValue(s.selfHabitCreationEnabled)}
-                  onChange={(e) =>
-                    update(g.id, {
-                      selfHabitCreationEnabled: triStateParse(e.target.value),
-                    })
-                  }
-                >
-                  <option value="inherit">{t("cueConfigTab.inheritOption")}</option>
-                  <option value="on">{t("cueConfigTab.onOption")}</option>
-                  <option value="off">{t("cueConfigTab.offOption")}</option>
-                </select>
-                <span className={styles.hint}>{t("cueConfigTab.selfHabitHint")}</span>
-              </div>
-            </div>
-            <div className={styles.cueConfigFooter}>
-              {s.saved && <span className={styles.savedMsg}>{t("saved")}</span>}
-              <button
-                className={styles.saveBtn}
-                onClick={() => handleSave(g.id)}
-                disabled={s.saving}
-              >
-                {s.saving ? tc("saving") : tc("save")}
-              </button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 // ── Study form modal ──────────────────────────────────────────────────────────
 
 type ModalTab =
@@ -2067,8 +2632,8 @@ type ModalTab =
   | "schedule"
   | "codes"
   | "participants"
-  | "notifications"
-  | "cue-config";
+  | "cue-config"
+  | "reminders";
 
 function StudyModal({
   initial,
@@ -2105,20 +2670,7 @@ function StudyModal({
     initial?.structuredActivityKeys ?? []
   );
   const { activityTypes } = useActivityTypes(token);
-  const [remindersEnabled, setRemindersEnabled] = useState(
-    initial?.questionnaireReminders?.enabled ?? true
-  );
-  const [reminderHour, setReminderHour] = useState(initial?.questionnaireReminders?.hour ?? 9);
   const [endDate, setEndDate] = useState(initial?.endDate ? initial.endDate.slice(0, 10) : "");
-  const [endOfStudyEnabled, setEndOfStudyEnabled] = useState(
-    initial?.endOfStudyNotification?.enabled ?? false
-  );
-  const [endOfStudyTitle, setEndOfStudyTitle] = useState(
-    initial?.endOfStudyNotification?.title ?? "Study complete"
-  );
-  const [endOfStudyBody, setEndOfStudyBody] = useState(
-    initial?.endOfStudyNotification?.body ?? "Thank you for participating — your study has ended."
-  );
   const [groupCount, setGroupCount] = useState(initial?.groups.length ?? 1);
   const [groupLabels, setGroupLabels] = useState<string[]>(() => {
     if (initial) return initial.groups.map((g) => g.label);
@@ -2187,13 +2739,7 @@ function StudyModal({
             // Explicit: [] means free text, never silently substituted with
             // the platform defaults.
             structuredActivityKeys,
-            questionnaireReminders: { enabled: remindersEnabled, hour: reminderHour },
             endDate: endDate ? new Date(`${endDate}T00:00:00Z`).toISOString() : null,
-            endOfStudyNotification: {
-              enabled: endOfStudyEnabled && !!endDate,
-              title: endOfStudyTitle.trim() || "Study complete",
-              body: endOfStudyBody.trim() || "Thank you for participating — your study has ended.",
-            },
           }),
         });
       } else {
@@ -2214,11 +2760,6 @@ function StudyModal({
             structuredActivityKeys,
             groups,
             endDate: endDate ? new Date(`${endDate}T00:00:00Z`).toISOString() : null,
-            endOfStudyNotification: {
-              enabled: endOfStudyEnabled && !!endDate,
-              title: endOfStudyTitle.trim() || "Study complete",
-              body: endOfStudyBody.trim() || "Thank you for participating — your study has ended.",
-            },
           }),
         });
       }
@@ -2360,16 +2901,16 @@ function StudyModal({
               {t("modal.tabs.participants")}
             </button>
             <button
-              className={`${styles.tab} ${activeTab === "notifications" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("notifications")}
-            >
-              {t("modal.tabs.notifications")}
-            </button>
-            <button
               className={`${styles.tab} ${activeTab === "cue-config" ? styles.tabActive : ""}`}
               onClick={() => setActiveTab("cue-config")}
             >
               {t("modal.tabs.cueConfig")}
+            </button>
+            <button
+              className={`${styles.tab} ${activeTab === "reminders" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("reminders")}
+            >
+              {t("modal.tabs.reminders")}
             </button>
           </div>
         )}
@@ -2453,41 +2994,6 @@ function StudyModal({
                 </div>
 
                 <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <ToggleSwitch
-                    className={styles.checkboxLabel}
-                    checked={remindersEnabled}
-                    onChange={(e) => setRemindersEnabled(e.target.checked)}
-                    label={t("modal.fields.remindersLabel")}
-                  />
-                  <span className={styles.hint}>{t("modal.fields.remindersHint")}</span>
-                  {remindersEnabled && (
-                    <div
-                      style={{
-                        marginTop: "0.5rem",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      <span className={styles.label} style={{ margin: 0 }}>
-                        {t("modal.fields.reminderTimeLabel")}
-                      </span>
-                      <select
-                        className={styles.select}
-                        value={reminderHour}
-                        onChange={(e) => setReminderHour(parseInt(e.target.value, 10))}
-                      >
-                        {Array.from({ length: 24 }, (_, h) => (
-                          <option key={h} value={h}>
-                            {String(h).padStart(2, "0")}:00
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-
-                <div className={`${styles.formGroup} ${styles.formFull}`}>
                   <label className={styles.label}>{t("modal.fields.endDateLabel")}</label>
                   <input
                     type="date"
@@ -2496,54 +3002,7 @@ function StudyModal({
                     onChange={(e) => setEndDate(e.target.value)}
                   />
                   <span className={styles.hint}>{t("modal.fields.endDateHint")}</span>
-                </div>
-
-                <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <ToggleSwitch
-                    className={styles.checkboxLabel}
-                    checked={endOfStudyEnabled}
-                    onChange={(e) => setEndOfStudyEnabled(e.target.checked)}
-                    disabled={!endDate}
-                    label={t("modal.fields.endOfStudyLabel")}
-                  />
-                  <span className={styles.hint}>
-                    {endDate
-                      ? t("modal.fields.endOfStudyHintEnabled")
-                      : t("modal.fields.endOfStudyHintDisabled")}
-                  </span>
-                  {endOfStudyEnabled && endDate && (
-                    <div
-                      style={{
-                        marginTop: "0.5rem",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      <div>
-                        <span className={styles.label} style={{ margin: 0 }}>
-                          {t("modal.fields.notificationTitleLabel")}
-                        </span>
-                        <input
-                          className={styles.input}
-                          value={endOfStudyTitle}
-                          onChange={(e) => setEndOfStudyTitle(e.target.value)}
-                          maxLength={120}
-                        />
-                      </div>
-                      <div>
-                        <span className={styles.label} style={{ margin: 0 }}>
-                          {t("modal.fields.notificationBodyLabel")}
-                        </span>
-                        <input
-                          className={styles.input}
-                          value={endOfStudyBody}
-                          onChange={(e) => setEndOfStudyBody(e.target.value)}
-                          maxLength={500}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <span className={styles.hint}>{t("modal.fields.remindersMovedHint")}</span>
                 </div>
 
                 <div className={styles.formGroup}>
@@ -2597,7 +3056,7 @@ function StudyModal({
           ) : activeTab === "cue-config" ? (
             initial && <CueConfigTab study={initial} token={token} />
           ) : (
-            initial && <NotificationsTab study={initial} token={token} />
+            initial && <RemindersTab study={initial} token={token} />
           )}
         </div>
 

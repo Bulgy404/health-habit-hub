@@ -1328,12 +1328,6 @@ abstract class AppLocalizations {
   /// **'Reminder at {time} (set by study)'**
   String confirmPlanReminderAtTime(String time);
 
-  /// Read-only reminder status when the study enables reminders without a fixed time
-  ///
-  /// In en, this message translates to:
-  /// **'Reminders enabled (set by study)'**
-  String get confirmPlanRemindersEnabledByStudy;
-
   /// Read-only reminder status when the study disables reminders
   ///
   /// In en, this message translates to:
@@ -2810,16 +2804,16 @@ abstract class AppLocalizations {
   /// **'Habit check-ins you submit while offline are saved on your device and sent automatically once you\'re back online.'**
   String get faqOfflineAnswer;
 
-  /// FAQ question about muting notification types
+  /// FAQ question about notifications
   ///
   /// In en, this message translates to:
-  /// **'Can I turn off certain reminders?'**
+  /// **'Can I turn off reminders?'**
   String get faqNotificationsQuestion;
 
-  /// FAQ answer about muting notification types
+  /// FAQ answer explaining notifications are study-managed
   ///
   /// In en, this message translates to:
-  /// **'Yes. Go to Settings → Notifications to turn habit, questionnaire, or study-update reminders on or off individually.'**
+  /// **'Reminders are part of the study, so they can\'t be turned off inside the app. If you need to, you can manage notifications for this app in your phone\'s system settings.'**
   String get faqNotificationsAnswer;
 
   /// FAQ question about withdrawing consent
@@ -2833,30 +2827,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Yes, at any time. Go to Settings → Study consent to review what you agreed to, or Settings → Delete account to withdraw and erase your data.'**
   String get faqConsentAnswer;
-
-  /// Settings section label for notification-channel toggles
-  ///
-  /// In en, this message translates to:
-  /// **'Notifications'**
-  String get notificationsSection;
-
-  /// Settings toggle for local habit-reminder notifications
-  ///
-  /// In en, this message translates to:
-  /// **'Habit reminders'**
-  String get habitReminders;
-
-  /// Settings toggle for local questionnaire-due notifications
-  ///
-  /// In en, this message translates to:
-  /// **'Questionnaire reminders'**
-  String get questionnaireReminders;
-
-  /// Settings toggle for the end-of-study notification
-  ///
-  /// In en, this message translates to:
-  /// **'Study updates'**
-  String get studyUpdateNotifications;
 
   /// Settings entry to rotate the recovery passphrase
   ///

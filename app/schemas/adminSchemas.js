@@ -47,11 +47,71 @@ const studyGroupSchema = z.object({
   id: z.string().optional(),
 });
 
+// Content only — whether/when it fires lives in remindersSchema.endOfStudy.
 const endOfStudyNotificationSchema = z.object({
-  enabled: z.boolean(),
   title: z.string().min(1).max(120),
   body: z.string().min(1).max(500),
 });
+
+// ── Reminders (habit / questionnaire / end-of-study / study-update) ──────────
+
+const HHMM_REGEX = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
+
+/**
+ * One reminder type's configuration: whether it's on, and — when on — a
+ * fixed (locked) time.
+ *   off:               no reminder; time must be omitted.
+ *   participant_choice: participant picks their own time; time must be omitted.
+ *                      Habit reminders only — no participant-facing time
+ *                      picker exists for the other 3 types.
+ *   admin_fixed:       admin locks `time`; participant has no input at all.
+ * @param {{ allowedModes?: string[] }} [opts] Restrict which modes are valid —
+ *   e.g. questionnaire/end-of-study/study-update only ever offer off/admin_fixed
+ *   ("set a time or don't") since there's no participant-facing override for
+ *   them.
+ */
+function reminderModeSchema({ allowedModes = ['off', 'admin_fixed'] } = {}) {
+  return z
+    .object({
+      mode: z.enum(allowedModes),
+      time: z.string().regex(HHMM_REGEX, 'must be HH:MM').optional().nullable(),
+    })
+    .strict()
+    .refine((v) => (v.mode === 'admin_fixed' ? !!v.time : true), {
+      message: 'time is required for admin_fixed mode',
+    })
+    .refine(
+      (v) => (v.mode === 'off' || v.mode === 'participant_choice' ? v.time == null : true),
+      { message: 'time must be omitted for off and participant_choice modes' }
+    );
+}
+
+const remindersSchema = z
+  .object({
+    habit: reminderModeSchema({
+      allowedModes: ['off', 'participant_choice', 'admin_fixed'],
+    }).optional(),
+    questionnaire: reminderModeSchema().optional(),
+    endOfStudy: reminderModeSchema().optional(),
+    studyUpdate: reminderModeSchema().optional(),
+  })
+  .strict();
+
+// Group-level: each type is independently nullable — null means "inherit the
+// study-level setting for this type", matching the existing convention used
+// by onboardingEnabled/selfHabitCreationEnabled.
+const groupRemindersSchema = z
+  .object({
+    habit: reminderModeSchema({
+      allowedModes: ['off', 'participant_choice', 'admin_fixed'],
+    })
+      .nullable()
+      .optional(),
+    questionnaire: reminderModeSchema().nullable().optional(),
+    endOfStudy: reminderModeSchema().nullable().optional(),
+    studyUpdate: reminderModeSchema().nullable().optional(),
+  })
+  .strict();
 
 export const createStudySchema = z.object({
   name: shortString,
@@ -65,11 +125,7 @@ export const createStudySchema = z.object({
   structuredActivityKeys: z.array(z.string().max(200)).max(20).optional(),
   endDate: z.string().datetime({ offset: true }).optional().nullable(),
   endOfStudyNotification: endOfStudyNotificationSchema.optional(),
-});
-
-const questionnaireRemindersSchema = z.object({
-  enabled: z.boolean(),
-  hour: z.number().int().min(0).max(23),
+  reminders: remindersSchema.optional(),
 });
 
 export const updateStudySchema = z
@@ -82,9 +138,9 @@ export const updateStudySchema = z
     selfHabitCreationEnabled: z.boolean().optional(),
     habitEntryMode: z.enum(['freeText', 'structured']).optional(),
     structuredActivityKeys: z.array(z.string().max(200)).max(20).optional(),
-    questionnaireReminders: questionnaireRemindersSchema.optional(),
     endDate: z.string().datetime({ offset: true }).optional().nullable(),
     endOfStudyNotification: endOfStudyNotificationSchema.optional(),
+    reminders: remindersSchema.optional(),
   })
   .strict();
 
@@ -122,20 +178,11 @@ const activityTypeConfigSchema = z.object({
   allowedActivityTypeIds: z.array(mongoId).max(50).optional(),
 });
 
-const reminderConfigSchema = z.object({
-  enabled: z.boolean(),
-  fixedTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/, 'must be HH:MM')
-    .optional()
-    .nullable(),
-});
-
 export const updateGroupConfigSchema = z
   .object({
     cueConfig: cueConfigSchema.optional().nullable(),
     activityTypeConfig: activityTypeConfigSchema.optional().nullable(),
-    reminderConfig: reminderConfigSchema.optional().nullable(),
+    reminders: groupRemindersSchema.optional().nullable(),
     autoDonate: z.boolean().optional(),
     // null = inherit the study-level flag; a boolean overrides it per group.
     onboardingEnabled: z.boolean().optional().nullable(),
@@ -350,4 +397,26 @@ export const triggerBackupSchema = z.object({
     })
     .strict()
     .optional(),
+});
+
+// ── Notification campaigns ────────────────────────────────────────────────────
+
+// A recurring campaign (the "study update reminder" type): after each send it
+// reschedules itself intervalDays later instead of terminating, until `until`
+// (if set) has passed.
+const campaignRecurrenceSchema = z
+  .object({
+    intervalDays: z.number().int().min(1).max(365),
+    until: z.string().datetime({ offset: true }).optional().nullable(),
+  })
+  .strict();
+
+export const createNotificationCampaignSchema = z.object({
+  studyId: mongoId.optional().nullable(),
+  title: z.string().min(1).max(65),
+  body: z.string().min(1).max(240),
+  targetType: z.enum(['individual', 'group', 'all_enrolled']),
+  targetIds: z.array(z.string()).max(50).optional(),
+  scheduledFor: z.string().datetime({ offset: true }).optional().nullable(),
+  recurrence: campaignRecurrenceSchema.optional().nullable(),
 });

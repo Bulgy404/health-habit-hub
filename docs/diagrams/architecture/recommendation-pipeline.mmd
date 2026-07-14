@@ -61,7 +61,7 @@ flowchart TD
         subgraph STUDYCFG["Study group config  (resolved per participant)"]
             SC1["`GET /study-config/me  *(JWT)*
             enrollment → study → group →
-            {cueConfig, activityTypeConfig, reminderConfig, autoDonate}`"]
+            {cueConfig, activityTypeConfig, reminders, autoDonate}`"]
         end
 
         FB_FETCH["`**MongoDB** recommendation_feedback

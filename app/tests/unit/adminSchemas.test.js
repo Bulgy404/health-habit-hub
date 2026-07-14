@@ -5,6 +5,8 @@ import {
   updateStudySchema,
   createStudyCodesSchema,
   cueConfigSchema,
+  updateGroupConfigSchema,
+  createNotificationCampaignSchema,
   createSurveySchema,
   updateSurveyStatusSchema,
   updateSurveyGroupsSchema,
@@ -68,6 +70,138 @@ describe('updateStudySchema', () => {
 
   it('accepts empty object', () => {
     ok(updateStudySchema, {});
+  });
+
+  it('accepts a full reminders object across all 4 types and modes', () => {
+    ok(updateStudySchema, {
+      reminders: {
+        habit: { mode: 'participant_choice' },
+        questionnaire: { mode: 'admin_fixed', time: '09:30' },
+        endOfStudy: { mode: 'admin_fixed', time: '18:00' },
+        studyUpdate: { mode: 'off' },
+      },
+    });
+  });
+
+  it('rejects admin_fixed without a time', () => {
+    fail(updateStudySchema, { reminders: { habit: { mode: 'admin_fixed' } } });
+  });
+
+  it('rejects admin_default entirely (removed mode)', () => {
+    fail(updateStudySchema, { reminders: { habit: { mode: 'admin_default', time: '09:00' } } });
+    fail(updateStudySchema, {
+      reminders: { questionnaire: { mode: 'admin_default', time: '09:00' } },
+    });
+  });
+
+  it('rejects off/participant_choice with a time set', () => {
+    fail(updateStudySchema, {
+      reminders: { habit: { mode: 'off', time: '09:00' } },
+    });
+    fail(updateStudySchema, {
+      reminders: { habit: { mode: 'participant_choice', time: '09:00' } },
+    });
+  });
+
+  it('rejects malformed HH:MM time', () => {
+    fail(updateStudySchema, {
+      reminders: { habit: { mode: 'admin_fixed', time: '9:00' } },
+    });
+    fail(updateStudySchema, {
+      reminders: { habit: { mode: 'admin_fixed', time: '25:00' } },
+    });
+  });
+
+  it('rejects participant_choice for studyUpdate/questionnaire/endOfStudy (habit-only mode)', () => {
+    fail(updateStudySchema, {
+      reminders: { studyUpdate: { mode: 'participant_choice' } },
+    });
+    fail(updateStudySchema, {
+      reminders: { questionnaire: { mode: 'participant_choice' } },
+    });
+    fail(updateStudySchema, {
+      reminders: { endOfStudy: { mode: 'participant_choice' } },
+    });
+  });
+
+  it('accepts off/admin_fixed for studyUpdate/questionnaire/endOfStudy', () => {
+    ok(updateStudySchema, { reminders: { studyUpdate: { mode: 'off' } } });
+    ok(updateStudySchema, {
+      reminders: { studyUpdate: { mode: 'admin_fixed', time: '09:00' } },
+    });
+    ok(updateStudySchema, { reminders: { questionnaire: { mode: 'off' } } });
+    ok(updateStudySchema, { reminders: { endOfStudy: { mode: 'off' } } });
+  });
+
+  it('endOfStudyNotification is content-only now (enabled is silently stripped, not validated)', () => {
+    const r = ok(updateStudySchema, {
+      endOfStudyNotification: { enabled: true, title: 'Done', body: 'Thanks' },
+    });
+    assert.equal(r.endOfStudyNotification.enabled, undefined);
+    assert.equal(r.endOfStudyNotification.title, 'Done');
+  });
+});
+
+// ── updateGroupConfigSchema ───────────────────────────────────────────────────
+
+describe('updateGroupConfigSchema', () => {
+  it('accepts null reminders (inherit study-level for all types)', () => {
+    ok(updateGroupConfigSchema, { reminders: null });
+  });
+
+  it('accepts a per-type mix of overrides and inherit (null)', () => {
+    ok(updateGroupConfigSchema, {
+      reminders: {
+        habit: { mode: 'admin_fixed', time: '07:00' },
+        questionnaire: null,
+        endOfStudy: null,
+        studyUpdate: null,
+      },
+    });
+  });
+
+  it('rejects the old reminderConfig shape (strict schema, unknown field)', () => {
+    fail(updateGroupConfigSchema, {
+      reminderConfig: { enabled: true, fixedTime: '08:00' },
+    });
+  });
+});
+
+// ── createNotificationCampaignSchema ──────────────────────────────────────────
+
+describe('createNotificationCampaignSchema', () => {
+  it('accepts a one-off campaign with no recurrence', () => {
+    ok(createNotificationCampaignSchema, {
+      title: 'Reminder',
+      body: 'Please complete your check-in.',
+      targetType: 'all_enrolled',
+    });
+  });
+
+  it('accepts a recurring campaign', () => {
+    ok(createNotificationCampaignSchema, {
+      title: 'Weekly update',
+      body: 'Check the app for news.',
+      targetType: 'all_enrolled',
+      recurrence: { intervalDays: 7 },
+    });
+  });
+
+  it('rejects an invalid intervalDays', () => {
+    fail(createNotificationCampaignSchema, {
+      title: 'x',
+      body: 'y',
+      targetType: 'all_enrolled',
+      recurrence: { intervalDays: 0 },
+    });
+  });
+
+  it('rejects a title over 65 chars', () => {
+    fail(createNotificationCampaignSchema, {
+      title: 'x'.repeat(66),
+      body: 'y',
+      targetType: 'all_enrolled',
+    });
   });
 });
 

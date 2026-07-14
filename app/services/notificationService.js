@@ -72,6 +72,7 @@ export async function sendToTokens({ messaging, tokens, title, body, data }) {
   const batchResponse = await messaging.sendEach(messages);
 
   const invalidTokens = [];
+  const errorCodes = {};
   let sent = 0;
   let failed = 0;
 
@@ -80,7 +81,8 @@ export async function sendToTokens({ messaging, tokens, title, body, data }) {
       sent++;
     } else {
       failed++;
-      const code = resp.error?.code;
+      const code = resp.error?.code || 'unknown';
+      errorCodes[code] = (errorCodes[code] || 0) + 1;
       if (
         code === 'messaging/invalid-registration-token' ||
         code === 'messaging/registration-token-not-registered'
@@ -90,7 +92,24 @@ export async function sendToTokens({ messaging, tokens, title, body, data }) {
     }
   });
 
-  return { sent, failed, invalidTokens };
+  // Surface *why* deliveries failed. Without this the failure is invisible and
+  // impossible to diagnose from logs — e.g. messaging/third-party-auth-error
+  // (APNs/web-push credential not configured in the Firebase project) looks
+  // identical to a bad token from the caller's side.
+  if (failed > 0) {
+    log.error(
+      {
+        sent,
+        failed,
+        errorCodes,
+        sampleError: batchResponse.responses.find((r) => !r.success)?.error
+          ?.message,
+      },
+      'FCM delivery failures'
+    );
+  }
+
+  return { sent, failed, invalidTokens, errorCodes };
 }
 
 /**

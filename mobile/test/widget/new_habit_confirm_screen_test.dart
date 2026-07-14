@@ -133,6 +133,15 @@ class _FakeMyHabitsService extends MyHabitsService {
 
 const _cues = [IntentionCue(text: 'After breakfast', source: 'self_selected')];
 
+/// Builds a [RemindersConfig] with the given habit-reminder mode, leaving the
+/// other 3 reminder types off (irrelevant to this screen).
+RemindersConfig _remindersWithHabit(ReminderModeConfig habit) => RemindersConfig(
+      habit: habit,
+      questionnaire: const ReminderModeConfig(mode: ReminderMode.off),
+      endOfStudy: const ReminderModeConfig(mode: ReminderMode.off),
+      studyUpdate: const ReminderModeConfig(mode: ReminderMode.off),
+    );
+
 Widget _buildSubject({
   required HabitConfig config,
   required MyHabitsService myHabitsService,
@@ -273,15 +282,17 @@ void main() {
   });
 
   testWidgets(
-      'shows a read-only reminder status with a fixed time when the study controls reminders',
+      'admin_fixed: shows a read-only reminder status with the fixed time, no picker',
       (tester) async {
     await tester.pumpWidget(_buildSubject(
       config: _userControlledConfig,
       myHabitsService: _FakeMyHabitsService.pending(),
-      studyConfig: const StudyGroupConfig(
+      studyConfig: StudyGroupConfig(
         studyId: 's1',
         studyName: 'Study',
-        reminderConfig: ReminderGroupConfig(enabled: true, fixedTime: '20:00'),
+        reminders: _remindersWithHabit(
+          const ReminderModeConfig(mode: ReminderMode.adminFixed, time: '20:00'),
+        ),
       ),
     ));
     await tester.pumpAndSettle();
@@ -291,37 +302,89 @@ void main() {
   });
 
   testWidgets(
-      'shows a read-only "enabled" status when the study controls reminders without a fixed time',
+      'participant_choice (explicit group override): reveals an editable picker with no study-set default',
       (tester) async {
     await tester.pumpWidget(_buildSubject(
       config: _userControlledConfig,
       myHabitsService: _FakeMyHabitsService.pending(),
-      studyConfig: const StudyGroupConfig(
+      studyConfig: StudyGroupConfig(
         studyId: 's1',
         studyName: 'Study',
-        reminderConfig: ReminderGroupConfig(enabled: true),
+        reminders: _remindersWithHabit(
+          const ReminderModeConfig(mode: ReminderMode.participantChoice),
+        ),
       ),
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('Reminders enabled (set by study)'), findsOneWidget);
+    expect(find.byType(Switch), findsOneWidget);
+    expect(find.text('19:00'), findsOneWidget);
   });
 
   testWidgets(
-      'shows a read-only "no reminders" status when the study disables reminders',
+      'off: shows a read-only "no reminders" status, no switch, no picker',
       (tester) async {
     await tester.pumpWidget(_buildSubject(
       config: _userControlledConfig,
       myHabitsService: _FakeMyHabitsService.pending(),
-      studyConfig: const StudyGroupConfig(
+      studyConfig: StudyGroupConfig(
         studyId: 's1',
         studyName: 'Study',
-        reminderConfig: ReminderGroupConfig(enabled: false),
+        reminders: _remindersWithHabit(
+          const ReminderModeConfig(mode: ReminderMode.off),
+        ),
       ),
     ));
     await tester.pumpAndSettle();
 
     expect(find.text('No reminders (set by study)'), findsOneWidget);
+    expect(find.byType(Switch), findsNothing);
+  });
+
+  testWidgets(
+      'off: submits a null reminderTime even if the client were to attempt one (no UI path to enter one)',
+      (tester) async {
+    final service = _FakeMyHabitsService.success();
+    await tester.pumpWidget(_buildSubject(
+      config: _userControlledConfig,
+      myHabitsService: service,
+      studyConfig: StudyGroupConfig(
+        studyId: 's1',
+        studyName: 'Study',
+        reminders: _remindersWithHabit(
+          const ReminderModeConfig(mode: ReminderMode.off),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create habit'));
+    await tester.pumpAndSettle();
+
+    expect(service.lastCall!['reminderTime'], isNull);
+  });
+
+  testWidgets(
+      'admin_fixed: submits the admin-locked time regardless of local switch state',
+      (tester) async {
+    final service = _FakeMyHabitsService.success();
+    await tester.pumpWidget(_buildSubject(
+      config: _userControlledConfig,
+      myHabitsService: service,
+      studyConfig: StudyGroupConfig(
+        studyId: 's1',
+        studyName: 'Study',
+        reminders: _remindersWithHabit(
+          const ReminderModeConfig(mode: ReminderMode.adminFixed, time: '06:15'),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create habit'));
+    await tester.pumpAndSettle();
+
+    expect(service.lastCall!['reminderTime'], '06:15');
   });
 
   testWidgets(

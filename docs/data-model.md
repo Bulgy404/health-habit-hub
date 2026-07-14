@@ -932,19 +932,56 @@ A research study/cohort: its experiment groups, participant-facing feature toggl
 | `recommenderEnabled` | Boolean | No | Absence = enabled. When `false`, participants don't see the recommender screen |
 | `onboardingEnabled` | Boolean | No | Absence = enabled. Per-group override in `groups[].onboardingEnabled` |
 | `selfHabitCreationEnabled` | Boolean | No | Absence = enabled. Per-group override in `groups[].selfHabitCreationEnabled` |
-| `questionnaireReminders` | Object | No | `{ enabled, hour }` — local due-date reminder config, defaults `{ true, 9 }` |
+| `reminders` | Object | No | `{ habit, questionnaire, endOfStudy, studyUpdate }` — see **Reminders** below. Per-group override in `groups[].reminders` |
 | `endDate` | Date \| null | No | When set, the study concludes on this date; the admin schedule calendar stops projecting occurrences past it |
-| `endOfStudyNotification` | Object \| null | No | `{ enabled, title, body }` — configures the local device notification fired on `endDate`. Defaults to `enabled: false` |
-| `groups` | Array | Yes | 1–4 experiment groups: `{ id, label, index, allocationWeight, cueConfig, activityTypeConfig, reminderConfig, autoDonate, onboardingEnabled, selfHabitCreationEnabled }` |
+| `endOfStudyNotification` | Object \| null | No | `{ title, body }` — **content only**; whether/when it fires is `reminders.endOfStudy` above. Defaults to a generic title/body |
+| `groups` | Array | Yes | 1–4 experiment groups: `{ id, label, index, allocationWeight, cueConfig, activityTypeConfig, reminders, autoDonate, onboardingEnabled, selfHabitCreationEnabled }` |
 | `questionnaires` | Array\<ObjectId\> | Yes | Refs to `questionnaires._id` administered natively in the study (separate from cadence-based `questionnaire_assignments` below) |
 | `createdAt` / `updatedAt` | Date | Yes | Timestamps |
 
-`endOfStudyNotification` is delivered by the mobile app scheduling a local
-notification (`flutter_local_notifications`), not a server push — the app
-picks up `endDate`/`endOfStudyNotification` via `GET /api/v1/questionnaires/due`
-(present regardless of whether any questionnaires are currently due) and
-reschedules on every app start, the same pattern used for questionnaire
-reminders.
+**Reminders.** Each of the 4 types (`habit`, `questionnaire`, `endOfStudy`,
+`studyUpdate`) is `{ mode, time }`:
+
+| `mode` | Meaning |
+|---|---|
+| `off` | No reminder; `time` is `null` |
+| `participant_choice` | The participant picks their own time; `time` is `null`. **Habit reminders only** — no participant-facing picker exists for the other 3 types, so their schema only allows `off`/`admin_fixed` |
+| `admin_fixed` | The admin locks `time`; the participant has no input |
+
+`study.reminders` sets the study-wide default per type; `group.reminders`
+(each type independently nullable) overrides it per group — resolved by
+`reminderConfigService.resolveEffectiveReminders({ study, group })`. Absent
+entries fall back to `reminderConfigService.defaultReminders()`: `habit` →
+`participant_choice`; `questionnaire`/`endOfStudy` → `admin_fixed` at 09:00;
+`studyUpdate` → `off`.
+
+`habit`/`questionnaire`/`endOfStudy` are delivered by the mobile app
+scheduling a **local** notification (`flutter_local_notifications`), not a
+server push. The app resolves the effective habit-reminder config via
+`GET /api/v1/study-config/me` (used at habit-creation time) and the
+questionnaire/end-of-study config via `GET /api/v1/questionnaires/due`
+(present regardless of whether any questionnaires are currently due),
+rescheduling on every app start.
+
+`studyUpdate` is different: it's a recurring **server-pushed** notification,
+implemented as one or more `notification_campaigns` documents (see below)
+with `recurrence` set — one per group when the admin scopes it per-group
+(`targetType: 'group'`), or one study-wide (`targetType: 'all_enrolled'`).
+`sendCampaign` reschedules each campaign (`intervalDays` later) after every
+send instead of terminating, so `dispatchDueCampaigns`' node-cron job
+(`notificationService.js`, every 60s) picks it up again on its next tick.
+Campaigns have no update endpoint, so changing a study-update reminder's
+schedule cancels the existing campaign(s) and creates new ones.
+
+**Admin UI**: all 4 reminder types are configured from a single Studies →
+**Reminders** tab (the former separate Notifications tab was merged into it
+— manual one-off/scheduled-once sends and campaign history now live under
+the study-update reminder's section). For every type, the first control is a
+scope switch ("Configure per group"): off shows one study-wide editor, on
+shows one editor per group with no inherit option — exactly one of
+`study.reminders[type]` or every `group.reminders[type]` is the active
+source of truth at a time; switching scope back to study-wide clears all
+group overrides for that type.
 
 ---
 
@@ -1180,7 +1217,9 @@ Indexes: `{quality, domain, language}`
 
 #### `notification_campaigns`
 
-Researcher-composed push notification campaigns.
+Researcher-composed push notification campaigns — both one-off/single-scheduled
+sends from the admin **Notifications** tab, and recurring "study update
+reminder" campaigns created from the **Reminders** tab (`recurrence` set).
 
 | Field | Type | Description |
 |---|---|---|
@@ -1191,13 +1230,23 @@ Researcher-composed push notification campaigns.
 | `body` | String | Max 240 chars |
 | `targetType` | String | `"individual"`, `"group"`, or `"all_enrolled"` |
 | `targetIds` | String[] | userIds or groupIds |
-| `scheduledFor` | Date\|null | `null` = send immediately on creation |
-| `sentAt` | Date\|null | |
-| `recipientCount` | Int\|null | |
-| `status` | String | `"draft"`, `"scheduled"`, `"sent"`, `"failed"` |
+| `scheduledFor` | Date\|null | `null` = send immediately on creation; for a recurring campaign, advances by `recurrence.intervalDays` after each send |
+| `sentAt` | Date\|null | Timestamp of the most recent send |
+| `recipientCount` | Int\|null | Successful FCM delivery count from the most recent send |
+| `resolvedUserCount` | Int\|null | How many users the `targetType` resolved to, before token lookup (delivery diagnostics) |
+| `tokenCount` | Int\|null | How many of those users had a registered device token (delivery diagnostics) |
+| `recurrence` | Object\|null | `{ intervalDays, until }` — when set, `sendCampaign` reschedules instead of terminating after each send, until `until` (if set) has passed |
+| `sendCount` | Int | Number of times a recurring campaign has been sent |
+| `status` | String | `"draft"`, `"scheduled"`, `"sent"`, `"failed"`, `"cancelled"` — a recurring campaign stays `"scheduled"` between sends, never terminally `"sent"` |
 | `createdAt` | Date | |
 
 Indexes: `{status, scheduledFor}`, `{studyId}` (sparse)
+
+Dispatch: `dispatchDueCampaigns` (`notificationCampaignService.js`) is polled
+every 60s by a node-cron job (`notificationService.js`'s
+`startNotificationScheduler`, Redis-locked for multi-instance safety),
+picking up every `status: "scheduled"` campaign whose `scheduledFor` has
+passed.
 
 ---
 

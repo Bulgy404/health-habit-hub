@@ -652,9 +652,6 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get confirmPlanRemindersEnabledByStudy => 'リマインダー有効（研究の設定）';
-
-  @override
   String get confirmPlanNoRemindersByStudy => 'リマインダーなし（研究の設定）';
 
   @override
@@ -1454,11 +1451,11 @@ class AppLocalizationsJa extends AppLocalizations {
       'オフライン中に送信した習慣の記録は端末に保存され、オンラインに戻ると自動的に送信されます。';
 
   @override
-  String get faqNotificationsQuestion => '特定のリマインダーをオフにできますか？';
+  String get faqNotificationsQuestion => 'リマインダーをオフにできますか？';
 
   @override
   String get faqNotificationsAnswer =>
-      'はい。設定 → 通知 で、習慣・アンケート・研究アップデートのリマインダーを個別にオン/オフできます。';
+      'リマインダーは研究の一部であり、アプリ内でオフにすることはできません。必要な場合は、スマートフォンのシステム設定でこのアプリの通知を管理できます。';
 
   @override
   String get faqConsentQuestion => '同意を撤回できますか？';
@@ -1466,18 +1463,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get faqConsentAnswer =>
       'はい、いつでも可能です。設定 → 研究への同意 で同意内容を確認できます。設定 → アカウントを削除 で同意を撤回しデータを削除できます。';
-
-  @override
-  String get notificationsSection => '通知';
-
-  @override
-  String get habitReminders => '習慣のリマインダー';
-
-  @override
-  String get questionnaireReminders => 'アンケートのリマインダー';
-
-  @override
-  String get studyUpdateNotifications => '研究の更新情報';
 
   @override
   String get changeRecoveryPassphrase => '復元用パスフレーズを変更';

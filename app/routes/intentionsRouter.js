@@ -101,6 +101,24 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
           .status(403)
           .json({ error: 'Habit creation is disabled for your study condition' });
       }
+
+      // Enforce the resolved habit-reminder mode server-side too — the
+      // mobile app hides/pre-fills the reminder-time picker per mode, but a
+      // direct API call must not be able to bypass an "off" or "admin_fixed"
+      // study condition.
+      const habitReminder = cueConfig.habitReminder;
+      if (habitReminder?.mode === 'off' && reminderTime != null) {
+        return res.status(400).json({
+          error: 'Reminders are disabled for your study condition',
+        });
+      }
+      const reminderTimeToStore =
+        habitReminder?.mode === 'off'
+          ? null
+          : habitReminder?.mode === 'admin_fixed'
+            ? habitReminder.time
+            : (reminderTime ?? null);
+
       const result = await createIntention({
         db: database,
         userId,
@@ -109,7 +127,7 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         durationMinutes,
         cues,
         intentionStatement,
-        reminderTime: reminderTime ?? null,
+        reminderTime: reminderTimeToStore,
         cueConfig,
       });
       if (result.limitReached)
