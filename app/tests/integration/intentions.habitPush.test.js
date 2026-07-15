@@ -13,9 +13,11 @@ import { createIntentionsRouter } from '../../routes/intentionsRouter.js';
 
 const STUDY_ID = new ObjectId();
 
-// Assignment the mock study exposes — an active SRHI assignment flagged to
-// deliver on habit creation, which is what gates SRHI window generation + push.
+// Assignment the mock study exposes — an active SRHI assignment — plus the
+// questionnaire definitions' `scope`, which together gate SRHI window
+// generation + push (habit-scoped + active).
 let assignmentDocs;
+let questionnaireDocs;
 // Records SRHI windows the route generated, so we can assert delivery happened.
 let srhiInserts;
 // Captures every notifier invocation (the "push").
@@ -54,6 +56,12 @@ function makeDb() {
         return {
           ...generic(),
           find: () => ({ toArray: async () => assignmentDocs }),
+        };
+      }
+      if (name === 'questionnaires') {
+        return {
+          ...generic(),
+          find: () => ({ toArray: async () => questionnaireDocs }),
         };
       }
       if (name === 'srhi_responses') {
@@ -116,6 +124,7 @@ after(() => {
 
 beforeEach(() => {
   assignmentDocs = [];
+  questionnaireDocs = [];
   srhiInserts = [];
   pushCalls = [];
 });
@@ -132,17 +141,18 @@ async function createHabit() {
 const flush = () => new Promise((r) => setTimeout(r, 30));
 
 test('fires exactly one check-in push when SRHI delivers on habit creation', async () => {
+  const srhiQuestionnaireId = new ObjectId();
   assignmentDocs = [
     {
       _id: new ObjectId(),
       studyId: STUDY_ID,
       groupId: null,
-      questionnaireId: new ObjectId(),
+      questionnaireId: srhiQuestionnaireId,
       questionnaireSlug: 'srhi',
-      deliverOnHabitCreation: true,
       active: true,
     },
   ];
+  questionnaireDocs = [{ _id: srhiQuestionnaireId, scope: 'habit' }];
 
   const res = await createHabit();
   assert.strictEqual(res.status, 201);

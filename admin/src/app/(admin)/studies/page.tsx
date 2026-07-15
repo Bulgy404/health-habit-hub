@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import styles from "./page.module.css";
 
@@ -90,6 +90,7 @@ interface QuestionnaireSummary {
   description: LocaleText;
   isLibrary: boolean;
   active: boolean;
+  scope: "study" | "habit";
 }
 
 interface StudyCode {
@@ -157,161 +158,14 @@ const API_BASE = apiUrl("/admin/studies");
 const QUESTIONNAIRES_API = apiUrl("/admin/questionnaires");
 const NOTIFICATIONS_BASE = apiUrl("/admin/notifications");
 
-// ── Questionnaires tab ────────────────────────────────────────────────────────
-
-function QuestionnairesTab({
-  study,
-  token,
-  onSaved,
-}: {
-  study: StudySummary;
-  token: string;
-  onSaved: () => void;
-}) {
-  const t = useTranslations("studies");
-  const tc = useTranslations("common");
-  const [allQuestionnaires, setAllQuestionnaires] = useState<QuestionnaireSummary[]>([]);
-  const [selected, setSelected] = useState<Set<string>>(new Set(study.questionnaires ?? []));
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setLoadError("");
-    apiFetch(QUESTIONNAIRES_API, token)
-      .then((data) => {
-        if (!cancelled) {
-          setAllQuestionnaires(Array.isArray(data) ? (data as QuestionnaireSummary[]) : []);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled)
-          setLoadError(
-            err instanceof Error ? err.message : t("questionnairesTab.errors.loadFailed")
-          );
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token, t]);
-
-  function toggleId(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    setSaved(false);
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    setSaveError("");
-    setSaved(false);
-    try {
-      await apiFetch(`${API_BASE}/${study.id}`, token, {
-        method: "PUT",
-        body: JSON.stringify({ questionnaires: Array.from(selected) }),
-      });
-      setSaved(true);
-      onSaved();
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : t("saveFailedGeneric"));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const library = allQuestionnaires.filter((q) => q.isLibrary);
-  const custom = allQuestionnaires.filter((q) => !q.isLibrary);
-
-  return (
-    <div className={styles.questionnairesTab}>
-      {loadError && <div className={styles.errorMsg}>{loadError}</div>}
-      {loading ? (
-        <div className={styles.loadingState}>{tc("loading")}</div>
-      ) : allQuestionnaires.length === 0 ? (
-        <div className={styles.emptyState}>{t("questionnairesTab.empty")}</div>
-      ) : (
-        <>
-          {library.length > 0 && (
-            <div className={styles.qSection}>
-              <p className={styles.qSectionTitle}>{t("questionnairesTab.libraryTitle")}</p>
-              <div className={styles.qList}>
-                {library.map((q) => (
-                  <ToggleSwitch
-                    key={q.id}
-                    className={styles.qItem}
-                    checked={selected.has(q.id)}
-                    onChange={() => toggleId(q.id)}
-                    label={
-                      <>
-                        <span className={styles.qTitle}>{previewText(q.title)}</span>
-                        {!q.active && (
-                          <span className={styles.qInactive}>
-                            {t("questionnairesTab.inactiveBadge")}
-                          </span>
-                        )}
-                      </>
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          {custom.length > 0 && (
-            <div className={styles.qSection}>
-              <p className={styles.qSectionTitle}>{t("questionnairesTab.customTitle")}</p>
-              <div className={styles.qList}>
-                {custom.map((q) => (
-                  <ToggleSwitch
-                    key={q.id}
-                    className={styles.qItem}
-                    checked={selected.has(q.id)}
-                    onChange={() => toggleId(q.id)}
-                    label={
-                      <>
-                        <span className={styles.qTitle}>{previewText(q.title)}</span>
-                        {!q.active && (
-                          <span className={styles.qInactive}>
-                            {t("questionnairesTab.inactiveBadge")}
-                          </span>
-                        )}
-                      </>
-                    }
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-          {saveError && <div className={styles.errorMsg}>{saveError}</div>}
-          <div className={styles.qFooter}>
-            {saved && <span className={styles.savedMsg}>{t("saved")}</span>}
-            <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-              {saving ? tc("saving") : tc("save")}
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-// ── Questionnaire schedule tab ─────────────────────────────────────────────────
+// ── Questionnaires tab (unified list + inline scheduling) ─────────────────────
 
 interface Cadence {
   mode: "interval" | "fixed";
   startOffsetDays?: number;
   intervalDays?: number;
   occurrences?: number;
+  continuous?: boolean;
   weeks?: number[];
   days?: number[];
 }
@@ -325,7 +179,6 @@ interface ScheduleAssignment {
   cadence: Cadence;
   cadenceSummary: string;
   active: boolean;
-  deliverOnHabitCreation?: boolean;
   occurrences: number;
 }
 
@@ -347,86 +200,49 @@ interface CalendarEntry {
 }
 
 /**
- * Assign questionnaires to a study (all groups) or to a specific group, on a
- * recurring-interval or fixed-week cadence, and view completion across
- * participants. Scheduled "windows" are generated per participant; completion
- * is tracked as they submit responses.
+ * One row per questionnaire (library + custom): a toggle turns it on/off for
+ * this study, and — only while on — exposes an inline cadence editor. A
+ * questionnaire's `scope` (set on its definition) decides which cadence
+ * fields the editor shows: 'study' anchors to enrollment (editable "first
+ * due"), 'habit' anchors to each habit's creation (fixed ~5s delay, applies
+ * once per habit instead of once per participant). Group-specific overrides
+ * and a calendar preview live under each row.
  */
-function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token: string }) {
+function QuestionnairesTab({ study, token }: { study: StudySummary; token: string }) {
   const t = useTranslations("studies");
   const tc = useTranslations("common");
+  const [allQuestionnaires, setAllQuestionnaires] = useState<QuestionnaireSummary[]>([]);
   const [assignments, setAssignments] = useState<ScheduleAssignment[]>([]);
   const [completion, setCompletion] = useState<Completion[]>([]);
   const [calendar, setCalendar] = useState<CalendarEntry[]>([]);
-  const [allQ, setAllQ] = useState<QuestionnaireSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  // Add-assignment form
-  const [qId, setQId] = useState("");
-  const [scope, setScope] = useState("study"); // "study" or a group id
-  const [mode, setMode] = useState<"interval" | "fixed">("interval");
-  const [startOffsetDays, setStartOffsetDays] = useState(0);
-  const [intervalDays, setIntervalDays] = useState(7);
-  const [occurrences, setOccurrences] = useState(8);
-  const [weeksStr, setWeeksStr] = useState("0, 4, 8");
-  const [daysStr, setDaysStr] = useState("");
-  const [deliverOnHabitCreation, setDeliverOnHabitCreation] = useState(false);
-  // The calendar day the admin last clicked, highlighted in the grid so the
-  // click has visible feedback beyond the pre-filled form field below.
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const addFormRef = useRef<HTMLDivElement | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
 
   const base = `${API_BASE}/${study.id}/questionnaire-assignments`;
-
-  // Clicking a calendar day pre-fills the "Add assignment" form with an
-  // interval cadence starting on that day (relative to today, since windows
-  // are always scheduled relative to a participant's enrollment date).
-  function handleDayClick(dateStr: string) {
-    const clicked = new Date(`${dateStr}T00:00:00`);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diffDays = Math.max(
-      0,
-      Math.round((clicked.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
-    );
-    setMode("interval");
-    setStartOffsetDays(diffDays);
-    setSelectedDate(dateStr);
-    addFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-
-  // Resolved calendar date of the first occurrence, derived from the offset so
-  // it stays in sync whether the admin clicked a day or typed a number.
-  const firstDueDate = (() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + (startOffsetDays || 0));
-    return d.toISOString();
-  })();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [data, qs, cal] = await Promise.all([
-        apiFetch(base, token),
+      const [qs, data, cal] = await Promise.all([
         apiFetch(QUESTIONNAIRES_API, token),
+        apiFetch(base, token),
         apiFetch(`${API_BASE}/${study.id}/questionnaire-calendar`, token).catch(() => ({
           calendar: [],
         })),
       ]);
+      setAllQuestionnaires(Array.isArray(qs) ? (qs as QuestionnaireSummary[]) : []);
       setAssignments((data.assignments ?? []) as ScheduleAssignment[]);
       setCompletion((data.completion ?? []) as Completion[]);
       setCalendar((cal?.calendar ?? []) as CalendarEntry[]);
-      setAllQ(Array.isArray(qs) ? (qs as QuestionnaireSummary[]) : []);
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("scheduleTab.errors.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [base, token, t]);
+  }, [base, token, study.id, t]);
 
   useEffect(() => {
     load();
@@ -446,13 +262,285 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
     });
   }
 
-  async function handleAdd() {
-    if (!qId) {
-      setError(t("scheduleTab.errors.chooseQuestionnaire"));
+  function setBusy(id: string, busy: boolean) {
+    setBusyIds((prev) => {
+      const next = new Set(prev);
+      if (busy) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function setRowExpanded(id: string, value: boolean) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (value) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  async function handleToggle(q: QuestionnaireSummary, assignment: ScheduleAssignment | undefined) {
+    if (!assignment) {
+      // No assignment yet: just open the editor. It's only created once the
+      // admin explicitly saves a cadence — never auto-created by the toggle.
+      setRowExpanded(q.id, true);
       return;
     }
+    setBusy(q.id, true);
+    try {
+      await apiFetch(`${base}/${assignment.id}`, token, {
+        method: "PUT",
+        body: JSON.stringify({ active: !assignment.active }),
+      });
+      setRowExpanded(q.id, !assignment.active);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("saveFailedGeneric"));
+    } finally {
+      setBusy(q.id, false);
+    }
+  }
+
+  async function handleCreate(
+    q: QuestionnaireSummary,
+    cadence: Cadence,
+    groupId: string | null = null
+  ) {
+    setBusy(q.id, true);
+    try {
+      await apiFetch(base, token, {
+        method: "POST",
+        body: JSON.stringify({ questionnaireId: q.id, groupId, cadence }),
+      });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("scheduleTab.errors.addFailed"));
+    } finally {
+      setBusy(q.id, false);
+    }
+  }
+
+  async function handleUpdateCadence(
+    q: QuestionnaireSummary,
+    assignment: ScheduleAssignment,
+    cadence: Cadence
+  ) {
+    setBusy(q.id, true);
+    try {
+      await apiFetch(`${base}/${assignment.id}`, token, {
+        method: "PUT",
+        body: JSON.stringify({ cadence }),
+      });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("saveFailedGeneric"));
+    } finally {
+      setBusy(q.id, false);
+    }
+  }
+
+  async function handleRemove(q: QuestionnaireSummary, assignment: ScheduleAssignment) {
+    if (!confirm(t("scheduleTab.confirmRemove"))) return;
+    setBusy(q.id, true);
+    try {
+      await apiFetch(`${base}/${assignment.id}`, token, { method: "DELETE" });
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("scheduleTab.errors.deleteFailed"));
+    } finally {
+      setBusy(q.id, false);
+    }
+  }
+
+  if (loading) return <div className={styles.loadingState}>{tc("loading")}</div>;
+
+  const library = allQuestionnaires.filter((q) => q.isLibrary);
+  const custom = allQuestionnaires.filter((q) => !q.isLibrary);
+  const byQuestionnaireId = new Map(
+    assignments.filter((a) => !a.groupId).map((a) => [a.questionnaireId, a])
+  );
+  const overridesByQuestionnaireId = new Map<string, ScheduleAssignment[]>();
+  for (const a of assignments) {
+    if (!a.groupId) continue;
+    const list = overridesByQuestionnaireId.get(a.questionnaireId) ?? [];
+    list.push(a);
+    overridesByQuestionnaireId.set(a.questionnaireId, list);
+  }
+
+  function renderRow(q: QuestionnaireSummary) {
+    const assignment = byQuestionnaireId.get(q.id);
+    const overrides = overridesByQuestionnaireId.get(q.id) ?? [];
+    const isOn = assignment?.active === true;
+    const isExpanded = expanded.has(q.id);
+    const busy = busyIds.has(q.id);
+    // Read-only when peeking at a deactivated assignment's cadence without
+    // having toggled it on — editing an off-but-existing schedule requires
+    // turning it back on first.
+    const editorDisabled = assignment !== undefined && !assignment.active;
+
+    return (
+      <div key={q.id} className={styles.qItem}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "0.75rem",
+          }}
+        >
+          <ToggleSwitch
+            checked={isOn}
+            disabled={busy}
+            onChange={() => handleToggle(q, assignment)}
+            label={
+              <>
+                <span className={styles.qTitle}>{previewText(q.title)}</span>
+                {!q.active && (
+                  <span className={styles.qInactive}>{t("questionnairesTab.inactiveBadge")}</span>
+                )}
+                <span className={styles.hint} style={{ marginLeft: "0.5rem" }}>
+                  {q.scope === "habit"
+                    ? t("scheduleTab.scopeHabitBadge")
+                    : t("scheduleTab.scopeStudyBadge")}
+                </span>
+              </>
+            }
+          />
+          <button
+            className={styles.saveBtn}
+            style={{ background: "transparent", color: "var(--color-text-secondary)" }}
+            onClick={() => setRowExpanded(q.id, !isExpanded)}
+          >
+            {isExpanded ? tc("hide") : tc("details")}
+          </button>
+        </div>
+
+        {isExpanded && (
+          <div className={styles.cueConfigGroup} style={{ marginTop: "0.75rem" }}>
+            <CadenceEditor
+              questionnaire={q}
+              assignment={assignment}
+              disabled={editorDisabled || busy}
+              onSave={(cadence) =>
+                assignment ? handleUpdateCadence(q, assignment, cadence) : handleCreate(q, cadence)
+              }
+              onRemove={assignment ? () => handleRemove(q, assignment) : undefined}
+            />
+
+            {isOn && (
+              <p className={styles.hint} style={{ marginTop: "0.5rem" }}>
+                {t("scheduleTab.completedHeader")}: {completionFor(q.slug)}
+              </p>
+            )}
+
+            {overrides.length > 0 && (
+              <div style={{ marginTop: "1rem" }}>
+                <p className={styles.qSectionTitle}>{t("scheduleTab.groupOverridesTitle")}</p>
+                {overrides.map((o) => (
+                  <div key={o.id} className={styles.hint} style={{ marginBottom: "0.35rem" }}>
+                    {scopeLabel(o.groupId)}: {o.cadenceSummary} ({o.occurrences}×){" "}
+                    <button
+                      className={styles.saveBtn}
+                      style={{ background: "transparent", color: "#dc2626", padding: 0 }}
+                      onClick={() => handleRemove(q, o)}
+                    >
+                      {t("scheduleTab.remove")}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {isOn && study.groups.length > 0 && (
+              <GroupOverrideForm
+                questionnaire={q}
+                groups={study.groups}
+                excludeGroupIds={overrides.map((o) => o.groupId).filter((g): g is string => !!g)}
+                onAdd={(groupId, cadence) => handleCreate(q, cadence, groupId)}
+              />
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {error && <div className={styles.errorMsg}>{error}</div>}
+      {allQuestionnaires.length === 0 ? (
+        <div className={styles.emptyState}>{t("questionnairesTab.empty")}</div>
+      ) : (
+        <>
+          {library.length > 0 && (
+            <div className={styles.qSection}>
+              <p className={styles.qSectionTitle}>{t("questionnairesTab.libraryTitle")}</p>
+              <div className={styles.qList}>{library.map(renderRow)}</div>
+            </div>
+          )}
+          {custom.length > 0 && (
+            <div className={styles.qSection}>
+              <p className={styles.qSectionTitle}>{t("questionnairesTab.customTitle")}</p>
+              <div className={styles.qList}>{custom.map(renderRow)}</div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Calendar of scheduled questionnaire due dates */}
+      <div>
+        <p className={styles.qSectionTitle}>{t("scheduleTab.calendarTitle")}</p>
+        <p className={styles.hint} style={{ marginTop: "-0.25rem", marginBottom: "0.5rem" }}>
+          {t("scheduleTab.calendarHint")}
+        </p>
+        <ScheduleCalendar entries={calendar} endDate={study.endDate ?? null} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Cadence fields for one assignment (existing or not-yet-created). Fields
+ * shown depend on the questionnaire's scope: study-scoped shows the
+ * editable "first due" offset; habit-scoped replaces it with a static note,
+ * since its first occurrence is fixed at habit creation + ~5s.
+ */
+function CadenceEditor({
+  questionnaire,
+  assignment,
+  disabled,
+  onSave,
+  onRemove,
+}: {
+  questionnaire: QuestionnaireSummary;
+  assignment: ScheduleAssignment | undefined;
+  disabled: boolean;
+  onSave: (cadence: Cadence) => Promise<void>;
+  onRemove?: () => void;
+}) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
+  const initial = assignment?.cadence;
+  const isHabitScoped = questionnaire.scope === "habit";
+  const [mode, setMode] = useState<"interval" | "fixed">(initial?.mode ?? "interval");
+  const [startOffsetDays, setStartOffsetDays] = useState(initial?.startOffsetDays ?? 0);
+  const [intervalDays, setIntervalDays] = useState(initial?.intervalDays ?? 7);
+  const [continuous, setContinuous] = useState(initial?.continuous === true);
+  const [occurrences, setOccurrences] = useState(initial?.occurrences ?? 8);
+  const [weeksStr, setWeeksStr] = useState((initial?.weeks ?? [0, 4, 8]).join(", "));
+  const [daysStr, setDaysStr] = useState((initial?.days ?? []).join(", "));
+  const [saving, setSaving] = useState(false);
+
+  const firstDueDate = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + (startOffsetDays || 0));
+    return d.toISOString();
+  })();
+
+  async function handleSave() {
     setSaving(true);
-    setError("");
     try {
       const parseList = (s: string) =>
         s
@@ -461,7 +549,12 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
           .filter((n) => !Number.isNaN(n));
       let cadence: Cadence;
       if (mode === "interval") {
-        cadence = { mode, startOffsetDays, intervalDays, occurrences };
+        cadence = {
+          mode,
+          startOffsetDays: isHabitScoped ? 0 : startOffsetDays,
+          intervalDays,
+          ...(continuous ? { continuous: true } : { occurrences }),
+        };
       } else {
         const weeks = parseList(weeksStr);
         const days = parseList(daysStr);
@@ -469,138 +562,34 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
         if (weeks.length) cadence.weeks = weeks;
         if (days.length) cadence.days = days;
       }
-      await apiFetch(base, token, {
-        method: "POST",
-        body: JSON.stringify({
-          questionnaireId: qId,
-          groupId: scope === "study" ? null : scope,
-          cadence,
-          deliverOnHabitCreation,
-        }),
-      });
-      setQId("");
-      setDeliverOnHabitCreation(false);
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("scheduleTab.errors.addFailed"));
+      await onSave(cadence);
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm(t("scheduleTab.confirmRemove"))) return;
-    try {
-      await apiFetch(`${base}/${id}`, token, { method: "DELETE" });
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("scheduleTab.errors.deleteFailed"));
-    }
-  }
-
-  if (loading) return <div className={styles.loadingState}>{tc("loading")}</div>;
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {error && <div className={styles.errorMsg}>{error}</div>}
-
-      {/* Current assignments */}
-      <div>
-        <p className={styles.qSectionTitle}>{t("scheduleTab.assignedTitle")}</p>
-        {assignments.length === 0 ? (
-          <p className={styles.hint}>{t("scheduleTab.noneAssigned")}</p>
-        ) : (
-          <table className={styles.table} style={{ width: "100%" }}>
-            <thead>
-              <tr>
-                <th style={cellHead}>{t("scheduleTab.questionnaireHeader")}</th>
-                <th style={cellHead}>{t("scheduleTab.scopeHeader")}</th>
-                <th style={cellHead}>{t("scheduleTab.cadenceHeader")}</th>
-                <th style={cellHead}>{t("scheduleTab.completedHeader")}</th>
-                <th style={cellHead}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {assignments.map((a) => (
-                <tr key={a.id}>
-                  <td style={cell}>{a.questionnaireTitle}</td>
-                  <td style={cell}>{scopeLabel(a.groupId)}</td>
-                  <td style={cell}>
-                    {a.cadenceSummary} <span className={styles.hint}>({a.occurrences}×)</span>
-                    {a.deliverOnHabitCreation && (
-                      <span
-                        className={styles.hint}
-                        style={{ display: "block", color: "#0369a1" }}
-                      >
-                        {t("scheduleTab.deliverOnHabitCreationBadge")}
-                      </span>
-                    )}
-                  </td>
-                  <td style={cell}>{completionFor(a.questionnaireSlug)}</td>
-                  <td style={cell}>
-                    <button
-                      className={styles.saveBtn}
-                      style={{ background: "transparent", color: "#dc2626" }}
-                      onClick={() => handleDelete(a.id)}
-                    >
-                      {t("scheduleTab.remove")}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+    <div>
+      <div className={styles.formGrid}>
+        <div className={styles.formGroup}>
+          <label className={styles.label}>{t("scheduleTab.cadenceHeader")}</label>
+          <select
+            className={styles.select}
+            value={mode}
+            disabled={disabled}
+            onChange={(e) => setMode(e.target.value as "interval" | "fixed")}
+          >
+            <option value="interval">{t("scheduleTab.intervalOption")}</option>
+            <option value="fixed">{t("scheduleTab.fixedOption")}</option>
+          </select>
+        </div>
       </div>
 
-      {/* Add assignment */}
-      <div className={styles.cueConfigGroup} ref={addFormRef}>
-        <p className={styles.cueConfigGroupLabel}>{t("scheduleTab.addTitle")}</p>
-        <div className={styles.formGrid}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>{t("scheduleTab.questionnaireHeader")}</label>
-            <select className={styles.select} value={qId} onChange={(e) => setQId(e.target.value)}>
-              <option value="">{t("scheduleTab.selectPlaceholder")}</option>
-              {allQ.map((q) => (
-                <option key={q.id} value={q.id}>
-                  {previewText(q.title)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>{t("scheduleTab.appliesToLabel")}</label>
-            <select
-              className={styles.select}
-              value={scope}
-              onChange={(e) => setScope(e.target.value)}
-            >
-              <option value="study">{t("scheduleTab.wholeStudyOption")}</option>
-              {study.groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {t("scheduleTab.groupOnlyOption", {
-                    label: g.label || t("groupFallbackLabel", { index: g.index }),
-                  })}
-                </option>
-              ))}
-            </select>
-            <span className={styles.hint}>{t("scheduleTab.appliesToHint")}</span>
-          </div>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>{t("scheduleTab.cadenceHeader")}</label>
-            <select
-              className={styles.select}
-              value={mode}
-              onChange={(e) => setMode(e.target.value as "interval" | "fixed")}
-            >
-              <option value="interval">{t("scheduleTab.intervalOption")}</option>
-              <option value="fixed">{t("scheduleTab.fixedOption")}</option>
-            </select>
-          </div>
-        </div>
+      {isHabitScoped && <p className={styles.hint}>{t("scheduleTab.habitAnchoredHint")}</p>}
 
-        {mode === "interval" ? (
-          <div className={styles.formGrid}>
+      {mode === "interval" ? (
+        <div className={styles.formGrid}>
+          {!isHabitScoped && (
             <div className={styles.formGroup}>
               <label className={styles.label}>{t("scheduleTab.firstDueLabel")}</label>
               <input
@@ -608,22 +597,41 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
                 type="number"
                 min={0}
                 value={startOffsetDays}
+                disabled={disabled}
                 onChange={(e) => setStartOffsetDays(parseInt(e.target.value, 10) || 0)}
               />
               <span className={styles.hint}>
                 {t("scheduleTab.firstDueResolved", { date: fmtDate(firstDueDate) })}
               </span>
             </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>{t("scheduleTab.everyDaysLabel")}</label>
+          )}
+          <div className={styles.formGroup}>
+            <label className={styles.label}>{t("scheduleTab.everyDaysLabel")}</label>
+            <input
+              className={styles.select}
+              type="number"
+              min={1}
+              value={intervalDays}
+              disabled={disabled}
+              onChange={(e) => setIntervalDays(parseInt(e.target.value, 10) || 1)}
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label
+              className={styles.label}
+              style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}
+            >
               <input
-                className={styles.select}
-                type="number"
-                min={1}
-                value={intervalDays}
-                onChange={(e) => setIntervalDays(parseInt(e.target.value, 10) || 1)}
+                type="checkbox"
+                checked={continuous}
+                disabled={disabled}
+                onChange={(e) => setContinuous(e.target.checked)}
               />
-            </div>
+              {t("scheduleTab.continuousLabel")}
+            </label>
+            <span className={styles.hint}>{t("scheduleTab.continuousHint")}</span>
+          </div>
+          {!continuous && (
             <div className={styles.formGroup}>
               <label className={styles.label}>{t("scheduleTab.occurrencesLabel")}</label>
               <input
@@ -631,67 +639,116 @@ function QuestionnaireScheduleTab({ study, token }: { study: StudySummary; token
                 type="number"
                 min={1}
                 value={occurrences}
+                disabled={disabled}
                 onChange={(e) => setOccurrences(parseInt(e.target.value, 10) || 1)}
               />
             </div>
-          </div>
-        ) : (
-          <div className={styles.formGrid}>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>{t("scheduleTab.weeksLabel")}</label>
-              <input
-                className={styles.select}
-                value={weeksStr}
-                onChange={(e) => setWeeksStr(e.target.value)}
-                placeholder={t("scheduleTab.weeksPlaceholder")}
-              />
-              <span className={styles.hint}>{t("scheduleTab.weeksHint")}</span>
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>{t("scheduleTab.daysLabel")}</label>
-              <input
-                className={styles.select}
-                value={daysStr}
-                onChange={(e) => setDaysStr(e.target.value)}
-                placeholder={t("scheduleTab.daysPlaceholder")}
-              />
-              <span className={styles.hint}>{t("scheduleTab.daysHint")}</span>
-            </div>
-          </div>
-        )}
-
-        <div className={styles.formGroup} style={{ marginTop: "0.75rem" }}>
-          <label className={styles.label} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+          )}
+        </div>
+      ) : (
+        <div className={styles.formGrid}>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>{t("scheduleTab.weeksLabel")}</label>
             <input
-              type="checkbox"
-              checked={deliverOnHabitCreation}
-              onChange={(e) => setDeliverOnHabitCreation(e.target.checked)}
+              className={styles.select}
+              value={weeksStr}
+              disabled={disabled}
+              onChange={(e) => setWeeksStr(e.target.value)}
+              placeholder={t("scheduleTab.weeksPlaceholder")}
             />
-            {t("scheduleTab.deliverOnHabitCreationLabel")}
-          </label>
-          <span className={styles.hint}>{t("scheduleTab.deliverOnHabitCreationHint")}</span>
+            <span className={styles.hint}>{t("scheduleTab.weeksHint")}</span>
+          </div>
+          <div className={styles.formGroup}>
+            <label className={styles.label}>{t("scheduleTab.daysLabel")}</label>
+            <input
+              className={styles.select}
+              value={daysStr}
+              disabled={disabled}
+              onChange={(e) => setDaysStr(e.target.value)}
+              placeholder={t("scheduleTab.daysPlaceholder")}
+            />
+            <span className={styles.hint}>{t("scheduleTab.daysHint")}</span>
+          </div>
         </div>
+      )}
 
-        <div className={styles.cueConfigFooter}>
-          <button className={styles.saveBtn} onClick={handleAdd} disabled={saving}>
-            {saving ? t("addingEllipsis") : t("scheduleTab.addAssignment")}
+      <div className={styles.cueConfigFooter}>
+        {onRemove && (
+          <button
+            className={styles.saveBtn}
+            style={{ background: "transparent", color: "#dc2626" }}
+            disabled={disabled}
+            onClick={onRemove}
+          >
+            {t("scheduleTab.remove")}
           </button>
-        </div>
+        )}
+        <button className={styles.saveBtn} onClick={handleSave} disabled={disabled || saving}>
+          {saving ? tc("saving") : tc("save")}
+        </button>
       </div>
+    </div>
+  );
+}
 
-      {/* Calendar of scheduled questionnaire due dates */}
-      <div>
-        <p className={styles.qSectionTitle}>{t("scheduleTab.calendarTitle")}</p>
-        <p className={styles.hint} style={{ marginTop: "-0.25rem", marginBottom: "0.5rem" }}>
-          {t("scheduleTab.calendarHint")}
-        </p>
-        <ScheduleCalendar
-          entries={calendar}
-          endDate={study.endDate ?? null}
-          onDayClick={handleDayClick}
-          selectedDate={selectedDate}
-        />
+/** Inline form to add a group-specific cadence override for a questionnaire. */
+function GroupOverrideForm({
+  questionnaire,
+  groups,
+  excludeGroupIds,
+  onAdd,
+}: {
+  questionnaire: QuestionnaireSummary;
+  groups: StudyGroup[];
+  excludeGroupIds: string[];
+  onAdd: (groupId: string, cadence: Cadence) => Promise<void>;
+}) {
+  const t = useTranslations("studies");
+  const available = groups.filter((g) => !excludeGroupIds.includes(g.id));
+  const [groupId, setGroupId] = useState(available[0]?.id ?? "");
+  const [show, setShow] = useState(false);
+
+  if (available.length === 0) return null;
+
+  if (!show) {
+    return (
+      <button
+        className={styles.saveBtn}
+        style={{ background: "transparent", marginTop: "0.75rem" }}
+        onClick={() => setShow(true)}
+      >
+        {t("scheduleTab.addGroupOverride")}
+      </button>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: "0.75rem" }}>
+      <div className={styles.formGroup}>
+        <label className={styles.label}>{t("scheduleTab.appliesToLabel")}</label>
+        <select
+          className={styles.select}
+          value={groupId}
+          onChange={(e) => setGroupId(e.target.value)}
+        >
+          {available.map((g) => (
+            <option key={g.id} value={g.id}>
+              {t("scheduleTab.groupOnlyOption", {
+                label: g.label || t("groupFallbackLabel", { index: g.index }),
+              })}
+            </option>
+          ))}
+        </select>
       </div>
+      <CadenceEditor
+        questionnaire={questionnaire}
+        assignment={undefined}
+        disabled={false}
+        onSave={async (cadence) => {
+          await onAdd(groupId, cadence);
+          setShow(false);
+        }}
+      />
     </div>
   );
 }
@@ -896,21 +953,6 @@ function ScheduleCalendar({
     </div>
   );
 }
-
-const cellHead: CSSProperties = {
-  textAlign: "left",
-  padding: "0.5rem 0.75rem",
-  fontSize: "0.75rem",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  color: "var(--color-text-muted)",
-  borderBottom: "1px solid var(--color-border)",
-};
-const cell: CSSProperties = {
-  padding: "0.6rem 0.75rem",
-  borderBottom: "1px solid var(--color-border)",
-  fontSize: "0.9rem",
-};
 
 // ── Codes tab ─────────────────────────────────────────────────────────────────
 
@@ -1761,7 +1803,9 @@ function isEntryModeStructuredActive(
 ): boolean {
   return scope === "study"
     ? studyValue.enabled && studyValue.entryMode === "structured"
-    : groups.some((g) => groupValues[g.id]?.enabled && groupValues[g.id]?.entryMode === "structured");
+    : groups.some(
+        (g) => groupValues[g.id]?.enabled && groupValues[g.id]?.entryMode === "structured"
+      );
 }
 
 function summarizeEntryMode(
@@ -1781,7 +1825,9 @@ function summarizeEntryMode(
   }
   const enabledGroups = groups.filter((g) => groupValues[g.id]?.enabled);
   if (enabledGroups.length === 0) return t("habitCreationTab.entryModeNaLabel");
-  const structured = enabledGroups.filter((g) => groupValues[g.id]?.entryMode === "structured").length;
+  const structured = enabledGroups.filter(
+    (g) => groupValues[g.id]?.entryMode === "structured"
+  ).length;
   return t("habitCreationTab.entryModeSummaryPerGroup", {
     on: structured,
     total: enabledGroups.length,
@@ -1827,8 +1873,11 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
         study.groups.map((g) => [g.id, g.recommenderEnabled ?? study.recommenderEnabled])
       )
   );
-  const [groupOnboardingEnabled, setGroupOnboardingEnabled] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(study.groups.map((g) => [g.id, g.onboardingEnabled ?? study.onboardingEnabled]))
+  const [groupOnboardingEnabled, setGroupOnboardingEnabled] = useState<Record<string, boolean>>(
+    () =>
+      Object.fromEntries(
+        study.groups.map((g) => [g.id, g.onboardingEnabled ?? study.onboardingEnabled])
+      )
   );
   const [groupHabitCreation, setGroupHabitCreation] = useState<Record<string, HabitCreationValue>>(
     () =>
@@ -1990,26 +2039,55 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
     habitCreationScope === "study"
       ? studyHabitCreation.enabled && studyHabitCreation.entryMode === "structured"
       : study.groups.some(
-          (g) => groupHabitCreation[g.id]?.enabled && groupHabitCreation[g.id]?.entryMode === "structured"
+          (g) =>
+            groupHabitCreation[g.id]?.enabled &&
+            groupHabitCreation[g.id]?.entryMode === "structured"
         );
 
   const overviewCards = [
     {
       key: "recommender",
       title: t("habitCreationTab.recommenderLabel"),
-      enabled: isBoolEnabled(recommenderScope, studyRecommenderEnabled, groupRecommenderEnabled, study.groups),
-      status: summarizeBool(t, recommenderScope, studyRecommenderEnabled, groupRecommenderEnabled, study.groups),
+      enabled: isBoolEnabled(
+        recommenderScope,
+        studyRecommenderEnabled,
+        groupRecommenderEnabled,
+        study.groups
+      ),
+      status: summarizeBool(
+        t,
+        recommenderScope,
+        studyRecommenderEnabled,
+        groupRecommenderEnabled,
+        study.groups
+      ),
     },
     {
       key: "onboarding",
       title: t("habitCreationTab.onboardingLabel"),
-      enabled: isBoolEnabled(onboardingScope, studyOnboardingEnabled, groupOnboardingEnabled, study.groups),
-      status: summarizeBool(t, onboardingScope, studyOnboardingEnabled, groupOnboardingEnabled, study.groups),
+      enabled: isBoolEnabled(
+        onboardingScope,
+        studyOnboardingEnabled,
+        groupOnboardingEnabled,
+        study.groups
+      ),
+      status: summarizeBool(
+        t,
+        onboardingScope,
+        studyOnboardingEnabled,
+        groupOnboardingEnabled,
+        study.groups
+      ),
     },
     {
       key: "habitCreation",
       title: t("habitCreationTab.habitCreationLabel"),
-      enabled: isHabitCreationActive(habitCreationScope, studyHabitCreation, groupHabitCreation, study.groups),
+      enabled: isHabitCreationActive(
+        habitCreationScope,
+        studyHabitCreation,
+        groupHabitCreation,
+        study.groups
+      ),
       status: summarizeHabitCreationEnabled(
         t,
         habitCreationScope,
@@ -2021,8 +2099,19 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
     {
       key: "entryMode",
       title: t("habitCreationTab.entryModeLabel"),
-      enabled: isEntryModeStructuredActive(habitCreationScope, studyHabitCreation, groupHabitCreation, study.groups),
-      status: summarizeEntryMode(t, habitCreationScope, studyHabitCreation, groupHabitCreation, study.groups),
+      enabled: isEntryModeStructuredActive(
+        habitCreationScope,
+        studyHabitCreation,
+        groupHabitCreation,
+        study.groups
+      ),
+      status: summarizeEntryMode(
+        t,
+        habitCreationScope,
+        studyHabitCreation,
+        groupHabitCreation,
+        study.groups
+      ),
     },
   ];
 
@@ -2078,11 +2167,17 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
           onChange={(e) => setRecommenderScope(e.target.checked ? "group" : "study")}
           label={t("habitCreationTab.perGroupLabel")}
         />
-        {study.groups.length === 0 && <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>}
+        {study.groups.length === 0 && (
+          <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
+        )}
 
         <div className={styles.cueConfigFooter}>
           {saved.recommender && <span className={styles.savedMsg}>{t("saved")}</span>}
-          <button className={styles.saveBtn} onClick={handleSaveRecommender} disabled={saving.recommender}>
+          <button
+            className={styles.saveBtn}
+            onClick={handleSaveRecommender}
+            disabled={saving.recommender}
+          >
             {saving.recommender ? tc("saving") : tc("save")}
           </button>
         </div>
@@ -2126,17 +2221,26 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
           onChange={(e) => setOnboardingScope(e.target.checked ? "group" : "study")}
           label={t("habitCreationTab.perGroupLabel")}
         />
-        {study.groups.length === 0 && <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>}
+        {study.groups.length === 0 && (
+          <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
+        )}
 
         <div className={styles.cueConfigFooter}>
           {saved.onboarding && <span className={styles.savedMsg}>{t("saved")}</span>}
-          <button className={styles.saveBtn} onClick={handleSaveOnboarding} disabled={saving.onboarding}>
+          <button
+            className={styles.saveBtn}
+            onClick={handleSaveOnboarding}
+            disabled={saving.onboarding}
+          >
             {saving.onboarding ? tc("saving") : tc("save")}
           </button>
         </div>
       </div>
 
-      <div className={styles.reminderTypeSection} data-testid="habit-creation-section-habitCreation">
+      <div
+        className={styles.reminderTypeSection}
+        data-testid="habit-creation-section-habitCreation"
+      >
         <p className={styles.cueConfigGroupLabel}>{t("habitCreationTab.habitCreationLabel")}</p>
         <span className={styles.hint}>{t("habitCreationTab.habitCreationHint")}</span>
         {errors.habitCreation && <div className={styles.errorMsg}>{errors.habitCreation}</div>}
@@ -2159,7 +2263,8 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
                   setStudyHabitCreation((v) => ({
                     ...v,
                     entryMode: patch.habitEntryMode ?? v.entryMode,
-                    structuredActivityKeys: patch.structuredActivityKeys ?? v.structuredActivityKeys,
+                    structuredActivityKeys:
+                      patch.structuredActivityKeys ?? v.structuredActivityKeys,
                   }))
                 }
                 activityTypes={activityTypes}
@@ -2221,7 +2326,9 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
           onChange={(e) => setHabitCreationScope(e.target.checked ? "group" : "study")}
           label={t("habitCreationTab.perGroupLabel")}
         />
-        {study.groups.length === 0 && <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>}
+        {study.groups.length === 0 && (
+          <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>
+        )}
 
         {showActivityTypesManager && <ActivityTypesManager token={token} />}
 
@@ -3190,7 +3297,6 @@ function StudyUpdateManualSend({ study, token }: { study: StudySummary; token: s
 type ModalTab =
   | "details"
   | "questionnaires"
-  | "schedule"
   | "codes"
   | "participants"
   | "cue-config"
@@ -3421,12 +3527,6 @@ function StudyModal({
               {t("modal.tabs.questionnaires")}
             </button>
             <button
-              className={`${styles.tab} ${activeTab === "schedule" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("schedule")}
-            >
-              {t("modal.tabs.schedule")}
-            </button>
-            <button
               className={`${styles.tab} ${activeTab === "codes" ? styles.tabActive : ""}`}
               onClick={() => setActiveTab("codes")}
             >
@@ -3547,9 +3647,7 @@ function StudyModal({
               </div>
             </>
           ) : activeTab === "questionnaires" ? (
-            initial && <QuestionnairesTab study={initial} token={token} onSaved={onSaved} />
-          ) : activeTab === "schedule" ? (
-            initial && <QuestionnaireScheduleTab study={initial} token={token} />
+            initial && <QuestionnairesTab study={initial} token={token} />
           ) : activeTab === "codes" ? (
             initial && <CodesTab study={initial} token={token} />
           ) : activeTab === "participants" ? (

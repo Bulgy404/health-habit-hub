@@ -1,6 +1,7 @@
 // app/services/studyAnalyticsService.js
 import { ObjectId } from 'mongodb';
 import { getUsersForStudy } from './enrollmentNeo4j.js';
+import { resolveEffectiveAssignments } from './questionnaireScheduleService.js';
 
 const DAILY_LOGS = 'daily_behavior_logs';
 const SRHI = 'srhi_responses';
@@ -172,17 +173,15 @@ export async function getQuestionnaireCompletionRates({
   }
 
   const study = await db.collection(STUDIES).findOne({ _id: oid });
-  if (
-    !study ||
-    !Array.isArray(study.questionnaires) ||
-    study.questionnaires.length === 0
-  ) {
-    return [];
-  }
+  if (!study) return [];
 
-  const questionnaireIds = study.questionnaires.map((id) =>
-    id instanceof ObjectId ? id : new ObjectId(id)
-  );
+  const assignments = await resolveEffectiveAssignments({
+    db,
+    studyId: oid,
+    groupId: null,
+  });
+  if (assignments.length === 0) return [];
+  const questionnaireIds = assignments.map((a) => a.questionnaireId);
 
   const enrollments = neo4jRun ? await getUsersForStudy(neo4jRun, studyId) : [];
 

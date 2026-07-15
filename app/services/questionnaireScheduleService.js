@@ -1,7 +1,7 @@
 // app/services/questionnaireScheduleService.js
 import { ObjectId } from 'mongodb';
 import { ASSIGNMENTS, WINDOWS } from '../models/questionnaireSchedule.js';
-import { getUsersForStudy } from './enrollmentNeo4j.js';
+import { getUsersForStudy, syncStudy } from './enrollmentNeo4j.js';
 import { resolveLocaleText } from '../utils/localeText.js';
 import {
   defaultReminders,
@@ -9,6 +9,14 @@ import {
 } from './reminderConfigService.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Rolling buffer size for continuous cadences — how many future/open windows
+// are kept materialized at a time instead of generating a giant upfront batch.
+const CONTINUOUS_TOPUP_CAP = 12;
+// Delay applied to a habit-scoped questionnaire's first occurrence, anchored
+// at habit (intention) creation — shared with srhiService.js so both
+// "anchor at habit creation" implementations stay in sync.
+export const HABIT_ANCHOR_DELAY_MS = 5000;
 
 function toOid(v) {
   if (!v) return null;
@@ -43,10 +51,12 @@ export function scheduleOffsets(cadence) {
   } else {
     const start = Math.max(0, Math.round(cadence.startOffsetDays ?? 0));
     const interval = Math.max(1, Math.round(cadence.intervalDays ?? 7));
-    const occ = Math.min(
-      200,
-      Math.max(1, Math.round(cadence.occurrences ?? 1))
-    );
+    // Continuous cadences never generate all occurrences upfront — only the
+    // initial rolling buffer; topUpContinuousWindows() extends it over time.
+    const occ =
+      cadence.continuous === true
+        ? CONTINUOUS_TOPUP_CAP
+        : Math.min(200, Math.max(1, Math.round(cadence.occurrences ?? 1)));
     offsets = Array.from({ length: occ }, (_, k) => start + k * interval);
   }
   return [...new Set(offsets)].sort((a, b) => a - b);
@@ -67,10 +77,13 @@ export function cadenceSummary(cadence) {
     if (days.length) parts.push(`days ${days.join(', ')}`);
     return parts.length ? parts.join(' + ') : 'No timepoints';
   }
-  const occ = cadence.occurrences ?? 1;
   const iv = cadence.intervalDays ?? 7;
   const start = cadence.startOffsetDays ?? 0;
   const every = iv === 7 ? 'weekly' : iv === 1 ? 'daily' : `every ${iv} days`;
+  if (cadence.continuous === true) {
+    return `${every}, continuous${start ? `, from day ${start}` : ''}`;
+  }
+  const occ = cadence.occurrences ?? 1;
   return `${occ}× ${every}${start ? `, from day ${start}` : ''}`;
 }
 
@@ -159,15 +172,42 @@ export async function generateWindowsForUser({
 }
 
 /**
- * Create the week-1 window(s) for a freshly created habit. For every active
- * assignment on the participant's study/group flagged `deliverOnHabitCreation`,
- * a per-habit window is anchored at the habit's creation time (occurrence 1 =
- * "week 1"). SRHI is excluded here — it has its own per-habit pipeline
- * (srhiService.generateWindows) with dedicated scoring/sparkline — so this
- * covers generic questionnaires only.
+ * Effective assignments whose questionnaire is habit-scoped
+ * (`questionnaires.scope === 'habit'`) — these anchor to each habit's
+ * creation time rather than enrollment, and generate one independent window
+ * series per habit instead of per participant.
+ * @param {{ db, studyId, groupId }} deps
+ * @returns {Promise<Array>}
+ */
+export async function resolveHabitScopeAssignments({ db, studyId, groupId }) {
+  const effective = await resolveEffectiveAssignments({ db, studyId, groupId });
+  if (effective.length === 0) return [];
+  const qIds = effective.map((a) => a.questionnaireId);
+  const qDocs = await db
+    .collection('questionnaires')
+    .find({ _id: { $in: qIds } }, { projection: { scope: 1 } })
+    .toArray();
+  const scopeById = new Map(
+    qDocs.map((q) => [
+      q._id.toString(),
+      q.scope === 'habit' ? 'habit' : 'study',
+    ])
+  );
+  return effective.filter(
+    (a) => scopeById.get(a.questionnaireId.toString()) === 'habit'
+  );
+}
+
+/**
+ * Create the window series for a freshly created habit. For every active,
+ * habit-scoped assignment (`questionnaires.scope === 'habit'`) on the
+ * participant's study/group, the assignment's full cadence is expanded and
+ * anchored at the habit's creation time + HABIT_ANCHOR_DELAY_MS. SRHI is
+ * excluded here — it has its own per-habit pipeline (srhiService.generateWindows)
+ * with dedicated scoring/sparkline — so this covers generic questionnaires only.
  * @param {{ db, userId, studyId, groupId, intentionId, createdAt }} deps
  * @returns {Promise<Array<{ questionnaireSlug: string, questionnaireTitle: string }>>}
- *   The questionnaires for which a window was created (for push messaging).
+ *   The questionnaires for which windows were created (for push messaging).
  */
 export async function generateHabitCreationWindows({
   db,
@@ -177,43 +217,56 @@ export async function generateHabitCreationWindows({
   intentionId,
   createdAt,
 }) {
-  const effective = await resolveEffectiveAssignments({ db, studyId, groupId });
-  const flagged = effective.filter(
-    (a) => a.deliverOnHabitCreation === true && a.questionnaireSlug !== 'srhi'
-  );
+  const habitScope = await resolveHabitScopeAssignments({
+    db,
+    studyId,
+    groupId,
+  });
+  const flagged = habitScope.filter((a) => a.questionnaireSlug !== 'srhi');
   if (flagged.length === 0) return [];
   const sOid = toOid(studyId);
   const gOid = groupId ? toOid(groupId) : null;
   const iOid = toOid(intentionId);
-  const base = createdAt ? new Date(createdAt) : new Date();
+  const base = new Date(
+    (createdAt ? new Date(createdAt) : new Date()).getTime() +
+      HABIT_ANCHOR_DELAY_MS
+  );
 
-  const ops = flagged.map((a) => ({
-    updateOne: {
-      filter: {
-        userId: String(userId),
-        assignmentId: a._id,
-        intentionId: iOid,
-      },
-      update: {
-        $setOnInsert: {
-          userId: String(userId),
-          studyId: sOid,
-          groupId: gOid,
-          assignmentId: a._id,
-          questionnaireId: a.questionnaireId,
-          questionnaireSlug: a.questionnaireSlug,
-          intentionId: iOid,
-          occurrence: 1,
-          scheduledFor: base,
-          submittedAt: null,
-          responseId: null,
-          createdAt: new Date(),
+  const ops = [];
+  for (const a of flagged) {
+    scheduleOffsets(a.cadence).forEach((offDays, i) => {
+      ops.push({
+        updateOne: {
+          filter: {
+            userId: String(userId),
+            assignmentId: a._id,
+            occurrence: i + 1,
+            intentionId: iOid,
+          },
+          update: {
+            $setOnInsert: {
+              userId: String(userId),
+              studyId: sOid,
+              groupId: gOid,
+              assignmentId: a._id,
+              questionnaireId: a.questionnaireId,
+              questionnaireSlug: a.questionnaireSlug,
+              intentionId: iOid,
+              occurrence: i + 1,
+              scheduledFor: new Date(base.getTime() + offDays * DAY_MS),
+              submittedAt: null,
+              responseId: null,
+              createdAt: new Date(),
+            },
+          },
+          upsert: true,
         },
-      },
-      upsert: true,
-    },
-  }));
-  await db.collection(WINDOWS).bulkWrite(ops, { ordered: false });
+      });
+    });
+  }
+  if (ops.length) {
+    await db.collection(WINDOWS).bulkWrite(ops, { ordered: false });
+  }
   return flagged.map((a) => ({
     questionnaireSlug: a.questionnaireSlug,
     questionnaireTitle: a.questionnaireTitle ?? a.questionnaireSlug,
@@ -221,17 +274,19 @@ export async function generateHabitCreationWindows({
 }
 
 /**
- * Resolve whether an active SRHI assignment flagged `deliverOnHabitCreation`
- * applies to a participant's study/group. Drives whether SRHI windows are
- * generated when they create a habit.
+ * Resolve whether an active, habit-scoped SRHI assignment applies to a
+ * participant's study/group. Drives whether SRHI windows are generated when
+ * they create a habit.
  * @param {{ db, studyId, groupId }} deps
  * @returns {Promise<boolean>}
  */
-export async function srhiDeliversOnHabitCreation({ db, studyId, groupId }) {
-  const effective = await resolveEffectiveAssignments({ db, studyId, groupId });
-  return effective.some(
-    (a) => a.questionnaireSlug === 'srhi' && a.deliverOnHabitCreation === true
-  );
+export async function srhiHabitScopeActive({ db, studyId, groupId }) {
+  const habitScope = await resolveHabitScopeAssignments({
+    db,
+    studyId,
+    groupId,
+  });
+  return habitScope.some((a) => a.questionnaireSlug === 'srhi');
 }
 
 /**
@@ -280,7 +335,101 @@ export async function markWindowSubmitted({
     },
     { sort: { scheduledFor: 1 }, returnDocument: 'after' }
   );
+  if (updated) {
+    // Best-effort: replenish the continuous buffer now that one window
+    // closed. Never blocks the caller's response on this.
+    topUpContinuousWindows({
+      db,
+      userId,
+      assignmentId: updated.assignmentId,
+      intentionId: updated.intentionId ?? null,
+    }).catch(() => {});
+  }
   return !!updated;
+}
+
+/**
+ * Top up a continuous cadence's rolling window buffer for one
+ * (user, assignment, intention) series, up to CONTINUOUS_TOPUP_CAP open
+ * windows. No-op for inactive assignments or non-continuous cadences.
+ * Extends from the last existing window's `scheduledFor` rather than
+ * recomputing from the original enrollment/habit-creation anchor, so the
+ * windows collection stays self-sufficient — no need to thread the anchor
+ * date through every call site.
+ * @param {{ db, userId, assignmentId, intentionId? }} deps
+ * @returns {Promise<number>} number of windows created
+ */
+export async function topUpContinuousWindows({
+  db,
+  userId,
+  assignmentId,
+  intentionId = null,
+}) {
+  const aOid = toOid(assignmentId);
+  if (!aOid) return 0;
+  const assignment = await db.collection(ASSIGNMENTS).findOne({ _id: aOid });
+  if (!assignment || assignment.active === false) return 0;
+  if (
+    assignment.cadence?.mode !== 'interval' ||
+    assignment.cadence?.continuous !== true
+  ) {
+    return 0;
+  }
+
+  const iOid = intentionId ? toOid(intentionId) : null;
+  const filter = {
+    userId: String(userId),
+    assignmentId: aOid,
+    intentionId: iOid,
+    submittedAt: null,
+  };
+  const openCount = await db.collection(WINDOWS).countDocuments(filter);
+  if (openCount >= CONTINUOUS_TOPUP_CAP) return 0;
+  const need = CONTINUOUS_TOPUP_CAP - openCount;
+
+  const [last] = await db
+    .collection(WINDOWS)
+    .find({ userId: String(userId), assignmentId: aOid, intentionId: iOid })
+    .sort({ occurrence: -1 })
+    .limit(1)
+    .toArray();
+  if (!last) return 0; // nothing to extend from — initial generation always seeds ≥1
+
+  const interval = Math.max(
+    1,
+    Math.round(assignment.cadence.intervalDays ?? 7)
+  );
+  const ops = Array.from({ length: need }, (_, k) => ({
+    updateOne: {
+      filter: {
+        userId: String(userId),
+        assignmentId: aOid,
+        occurrence: last.occurrence + k + 1,
+        intentionId: iOid,
+      },
+      update: {
+        $setOnInsert: {
+          userId: String(userId),
+          studyId: last.studyId,
+          groupId: last.groupId,
+          assignmentId: aOid,
+          questionnaireId: last.questionnaireId,
+          questionnaireSlug: last.questionnaireSlug,
+          intentionId: iOid,
+          occurrence: last.occurrence + k + 1,
+          scheduledFor: new Date(
+            last.scheduledFor.getTime() + (k + 1) * interval * DAY_MS
+          ),
+          submittedAt: null,
+          responseId: null,
+          createdAt: new Date(),
+        },
+      },
+      upsert: true,
+    },
+  }));
+  await db.collection(WINDOWS).bulkWrite(ops, { ordered: false });
+  return ops.length;
 }
 
 /** Remove windows for an assignment. By default only open (unsubmitted) ones. */
@@ -345,9 +494,34 @@ export async function listAssignments({ db, studyId }) {
     cadence: a.cadence,
     cadenceSummary: cadenceSummary(a.cadence),
     active: a.active !== false,
-    deliverOnHabitCreation: a.deliverOnHabitCreation === true,
     occurrences: scheduleOffsets(a.cadence).length,
   }));
+}
+
+/**
+ * Keep the Neo4j `Study -[:HAS_QUESTIONNAIRE]-> Questionnaire` edge in sync
+ * with currently-active assignments. This is the single writer of that edge
+ * (assignment create/update/delete) — study name/CRUD no longer derives it
+ * from the legacy `study.questionnaires` array.
+ * @param {{ db, studyId, neo4jRun }} deps
+ */
+export async function syncStudyQuestionnaireGraph({ db, studyId, neo4jRun }) {
+  if (!neo4jRun) return;
+  const sOid = toOid(studyId);
+  if (!sOid) return;
+  const active = await db
+    .collection(ASSIGNMENTS)
+    .find({ studyId: sOid, active: { $ne: false } })
+    .project({ questionnaireSlug: 1 })
+    .toArray();
+  const slugs = [
+    ...new Set(active.map((a) => a.questionnaireSlug).filter(Boolean)),
+  ];
+  const study = await db
+    .collection('studies')
+    .findOne({ _id: sOid }, { projection: { name: 1 } });
+  if (!study) return;
+  await syncStudy(neo4jRun, { uuid: sOid.toString(), name: study.name, slugs });
 }
 
 /**
@@ -361,7 +535,6 @@ export async function createAssignment({
   groupId,
   questionnaireId,
   cadence,
-  deliverOnHabitCreation = false,
   neo4jRun,
 }) {
   const sOid = toOid(studyId);
@@ -404,7 +577,6 @@ export async function createAssignment({
         questionnaire.languages || ['en']
       ) || questionnaire.slug,
     cadence,
-    deliverOnHabitCreation: deliverOnHabitCreation === true,
     active: true,
     createdAt: now,
     updatedAt: now,
@@ -419,6 +591,7 @@ export async function createAssignment({
 
   // Backfill windows for everyone already enrolled in this study.
   await regenerateStudyWindows({ db, studyId: sOid, neo4jRun });
+  await syncStudyQuestionnaireGraph({ db, studyId: sOid, neo4jRun });
 
   return { id: doc._id.toString() };
 }
@@ -437,18 +610,22 @@ export async function updateAssignment({
   const $set = { updatedAt: new Date() };
   if (updates.cadence !== undefined) $set.cadence = updates.cadence;
   if (updates.active !== undefined) $set.active = updates.active;
-  if (updates.deliverOnHabitCreation !== undefined)
-    $set.deliverOnHabitCreation = updates.deliverOnHabitCreation === true;
   const res = await db
     .collection(ASSIGNMENTS)
     .updateOne({ _id: aOid, studyId: sOid }, { $set });
   if (res.matchedCount === 0) return { notFound: true };
   await regenerateStudyWindows({ db, studyId: sOid, neo4jRun });
+  await syncStudyQuestionnaireGraph({ db, studyId: sOid, neo4jRun });
   return { updated: true };
 }
 
 /** Delete an assignment and its open (unsubmitted) windows. */
-export async function deleteAssignment({ db, studyId, assignmentId }) {
+export async function deleteAssignment({
+  db,
+  studyId,
+  assignmentId,
+  neo4jRun,
+}) {
   const sOid = toOid(studyId);
   const aOid = toOid(assignmentId);
   if (!sOid || !aOid) return { notFound: true };
@@ -457,6 +634,7 @@ export async function deleteAssignment({ db, studyId, assignmentId }) {
     .deleteOne({ _id: aOid, studyId: sOid });
   if (res.deletedCount === 0) return { notFound: true };
   await deleteAssignmentWindows({ db, assignmentId: aOid, onlyOpen: true });
+  await syncStudyQuestionnaireGraph({ db, studyId: sOid, neo4jRun });
   return { deleted: true };
 }
 
@@ -528,6 +706,24 @@ export async function getDueQuestionnaires({
     })
     .sort({ scheduledFor: 1 })
     .toArray();
+
+  // Best-effort: replenish any continuous cadences' rolling buffers on read.
+  // Newly created windows land beyond `horizon` in the common case, so this
+  // doesn't affect the response below — it only tops up the buffer for next
+  // time. Never let a top-up failure break this read.
+  const openSeries = new Map();
+  for (const w of wins) {
+    openSeries.set(`${w.assignmentId}|${w.intentionId ?? ''}`, {
+      assignmentId: w.assignmentId,
+      intentionId: w.intentionId ?? null,
+    });
+  }
+  await Promise.all(
+    [...openSeries.values()].map((s) =>
+      topUpContinuousWindows({ db, userId, ...s }).catch(() => {})
+    )
+  );
+
   if (wins.length === 0) {
     return {
       reminders,

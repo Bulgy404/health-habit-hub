@@ -145,6 +145,10 @@ export const VALIDATOR = {
           },
         },
       },
+      // @deprecated — superseded by questionnaire_assignments.active as the
+      // single source of truth for which questionnaires apply to a study.
+      // No longer written by the admin UI; left declared only for backward
+      // compatibility with any pre-existing documents.
       questionnaires: {
         bsonType: 'array',
         items: { bsonType: 'objectId' },

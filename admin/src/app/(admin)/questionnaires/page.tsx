@@ -47,6 +47,9 @@ interface QuestionnaireSummary {
   languages: Lang[];
   active: boolean;
   isLibrary: boolean;
+  // 'study' (default): anchored to enrollment, applies once per participant.
+  // 'habit': anchored to each habit's creation, applies once per habit.
+  scope: "study" | "habit";
   questionCount: number;
   updatedAt: string | null;
 }
@@ -293,6 +296,7 @@ function QuestionnaireModal({
   const [slugManual, setSlugManual] = useState(isEdit);
   const [description, setDescription] = useState<LocaleText>(initial?.description ?? {});
   const [version, setVersion] = useState(initial?.version ?? "1");
+  const [scope, setScope] = useState<"study" | "habit">(initial?.scope ?? "study");
   const [languages, setLanguages] = useState<Lang[]>(initial?.languages ?? ["en"]);
   const [activeLang, setActiveLang] = useState<Lang>(initial?.languages?.[0] ?? "en");
   const [questions, setQuestions] = useState<Question[]>(initial?.questions ?? []);
@@ -395,6 +399,7 @@ function QuestionnaireModal({
         version,
         languages,
         questions: prunedQuestions,
+        scope,
       };
       if (isEdit) {
         await apiFetch(`${API_BASE}/${initial!.id}`, token, {
@@ -500,6 +505,20 @@ function QuestionnaireModal({
                 onChange={(e) => setVersion(e.target.value)}
                 placeholder="1"
               />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>{t("scopeLabel")}</label>
+              <select
+                className={styles.select}
+                value={scope}
+                onChange={(e) => setScope(e.target.value as "study" | "habit")}
+              >
+                <option value="study">{t("scopeStudyOption")}</option>
+                <option value="habit">{t("scopeHabitOption")}</option>
+              </select>
+              <span className={styles.hint}>
+                {scope === "habit" ? t("scopeHabitHint") : t("scopeStudyHint")}
+              </span>
             </div>
           </div>
 
@@ -873,6 +892,7 @@ export default function QuestionnairesPage() {
                   <tr>
                     <th>{t("titleHeader")}</th>
                     <th>{t("slugHeader")}</th>
+                    <th>{t("scopeHeader")}</th>
                     <th>{t("languagesHeader")}</th>
                     <th>{t("questionsHeader")}</th>
                     <th>{t("version")}</th>
@@ -882,7 +902,7 @@ export default function QuestionnairesPage() {
                 <tbody>
                   {libraryQuestionnaires.length === 0 ? (
                     <tr>
-                      <td colSpan={6}>
+                      <td colSpan={7}>
                         <div className={styles.emptyState}>{t("noLibraryQuestionnaires")}</div>
                       </td>
                     </tr>
@@ -892,6 +912,9 @@ export default function QuestionnairesPage() {
                         <td>{previewText(q.title)}</td>
                         <td>
                           <span className={styles.slugCell}>{q.slug}</span>
+                        </td>
+                        <td>
+                          {q.scope === "habit" ? t("scopeHabitOption") : t("scopeStudyOption")}
                         </td>
                         <td>{(q.languages ?? []).map((l) => l.toUpperCase()).join(", ")}</td>
                         <td>{q.questionCount}</td>
@@ -926,6 +949,7 @@ export default function QuestionnairesPage() {
                     <th>{t("titleHeader")}</th>
                     <th>{t("slugHeader")}</th>
                     <th>{tc("status")}</th>
+                    <th>{t("scopeHeader")}</th>
                     <th>{t("languagesHeader")}</th>
                     <th>{t("questionsHeader")}</th>
                     <th>{t("version")}</th>
@@ -936,7 +960,7 @@ export default function QuestionnairesPage() {
                 <tbody>
                   {customQuestionnaires.length === 0 ? (
                     <tr>
-                      <td colSpan={8}>
+                      <td colSpan={9}>
                         <div className={styles.emptyState}>{t("noCustomQuestionnaires")}</div>
                       </td>
                     </tr>
@@ -955,6 +979,9 @@ export default function QuestionnairesPage() {
                             >
                               {q.active ? t("active") : t("inactive")}
                             </span>
+                          </td>
+                          <td>
+                            {q.scope === "habit" ? t("scopeHabitOption") : t("scopeStudyOption")}
                           </td>
                           <td>{(q.languages ?? []).map((l) => l.toUpperCase()).join(", ")}</td>
                           <td>{q.questionCount}</td>

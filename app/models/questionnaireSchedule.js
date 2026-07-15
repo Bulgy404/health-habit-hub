@@ -33,9 +33,10 @@ export async function ensureIndexes(db) {
 
   const windows = db.collection(WINDOWS);
   // One window per participant per assignment occurrence. `intentionId` is part
-  // of the key so per-habit "deliver on habit creation" windows (all
-  // occurrence 1, one per habit) don't collide; enrollment-scheduled windows
-  // have no intentionId (indexed as null) and stay unique by occurrence.
+  // of the key so per-habit windows (questionnaire.scope === 'habit', one
+  // series per habit) don't collide with each other or with study-scoped
+  // windows, which have no intentionId (indexed as null) and stay unique by
+  // occurrence.
   // Drop the legacy 3-field index if it exists from a prior deploy.
   try {
     await windows.dropIndex('windows_user_assignment_occurrence_unique');

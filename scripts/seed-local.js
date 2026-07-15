@@ -337,7 +337,6 @@ async function seedDefaultStudy() {
     await client.connect();
     const db = client.db(MONGO_DB);
     const studies = db.collection('studies');
-    const questionnaires = db.collection('questionnaires');
 
     const { ObjectId } = appRequire('mongodb');
 
@@ -345,16 +344,10 @@ async function seedDefaultStudy() {
     const existing = await studies.findOne({ isDefault: true });
     if (existing) {
       console.log(
-        `[mongo]   default study already exists ("${existing.name}"), ensuring SRHI assignment.`
+        `[mongo]   default study already exists ("${existing.name}").`
       );
-      await ensureSrhiAssignment(db, existing._id, ObjectId);
       return;
     }
-
-    // Resolve SLIQ and RAND-36 questionnaire IDs
-    const sliq = await questionnaires.findOne({ slug: 'sliq' });
-    const rand36 = await questionnaires.findOne({ slug: 'rand-36' });
-    const qIds = [sliq?._id, rand36?._id].filter(Boolean);
 
     const now = new Date();
     const doc = {
@@ -376,57 +369,18 @@ async function seedDefaultStudy() {
           autoDonate: false,
         },
       ],
-      questionnaires: qIds,
+      // No questionnaire is pre-enabled — an admin must explicitly turn each
+      // one on for the study via the admin UI.
+      questionnaires: [],
       createdAt: now,
       updatedAt: now,
     };
 
-    const { insertedId } = await studies.insertOne(doc);
-    console.log(
-      `[mongo]   default study "Default Study" created (questionnaires: ${qIds.length})`
-    );
-    await ensureSrhiAssignment(db, insertedId, ObjectId);
+    await studies.insertOne(doc);
+    console.log('[mongo]   default study "Default Study" created (no questionnaires enabled)');
   } finally {
     await client.close();
   }
-}
-
-// Upsert an active, study-wide SRHI assignment flagged to deliver on habit
-// creation (counts as week 1). Idempotent — mirrors
-// defaultStudySeedService.ensureSrhiHabitCreationAssignment.
-async function ensureSrhiAssignment(db, studyId, ObjectId) {
-  const srhi = await db.collection('questionnaires').findOne({ slug: 'srhi' });
-  if (!srhi) {
-    console.log('[mongo]   SRHI questionnaire not found — skipping assignment.');
-    return;
-  }
-  const now = new Date();
-  await db.collection('questionnaire_assignments').updateOne(
-    { studyId, groupId: null, questionnaireId: srhi._id },
-    {
-      $set: {
-        questionnaireSlug: 'srhi',
-        questionnaireTitle: 'SRHI',
-        cadence: {
-          mode: 'interval',
-          startOffsetDays: 0,
-          intervalDays: 7,
-          occurrences: 4,
-        },
-        deliverOnHabitCreation: true,
-        active: true,
-        updatedAt: now,
-      },
-      $setOnInsert: {
-        studyId,
-        groupId: null,
-        questionnaireId: srhi._id,
-        createdAt: now,
-      },
-    },
-    { upsert: true }
-  );
-  console.log('[mongo]   SRHI habit-creation assignment ensured.');
 }
 
 // ── Neo4j seeding ──────────────────────────────────────────────────────────

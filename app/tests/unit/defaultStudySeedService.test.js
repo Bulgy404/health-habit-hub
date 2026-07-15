@@ -3,14 +3,18 @@ import assert from 'node:assert';
 import {
   seedDefaultQuestionnaires,
   seedDefaultStudy,
+  ensureSrhiHabitCreationAssignment,
 } from '../../services/defaultStudySeedService.js';
 
 // Regression coverage: neither the manual seed script (scripts/seed-local.js)
 // nor a fresh Mongo volume ever populated the `questionnaires` collection or
 // a default study automatically — a deploy that skipped `make seed` hit
 // "failed to load questionnaires" and had no default study to enroll
-// participants into. These functions now run on every app boot (see
-// adminRouter.js) to make that state self-healing.
+// participants into. seedDefaultQuestionnaires/seedDefaultStudy now run on
+// every app boot (see adminRouter.js) to make that state self-healing — but
+// seed a default study with NO questionnaires enabled; an admin must
+// explicitly turn each one on. ensureSrhiHabitCreationAssignment is no
+// longer called from boot; it's exercised directly here for ops tooling.
 
 function makeDb() {
   const stores = {
@@ -78,7 +82,7 @@ test('seedDefaultQuestionnaires: is idempotent (re-run does not duplicate)', asy
   assert.strictEqual(db.stores.questionnaires.size, 3);
 });
 
-test('seedDefaultStudy: creates a default study linking sliq + rand-36 (not srhi)', async () => {
+test('seedDefaultStudy: creates a default study with no questionnaires enabled', async () => {
   const db = makeDb();
   await seedDefaultQuestionnaires(db);
   await seedDefaultStudy(db);
@@ -86,38 +90,58 @@ test('seedDefaultStudy: creates a default study linking sliq + rand-36 (not srhi
   const study = [...db.stores.studies.values()].find((s) => s.isDefault);
   assert.ok(study, 'default study should exist');
   assert.strictEqual(study.groups.length, 1);
+  assert.deepStrictEqual(study.questionnaires, []);
 
-  const linkedSlugs = study.questionnaires
-    .map((id) =>
-      [...db.stores.questionnaires.values()].find((q) => q._id === id)
-    )
-    .map((q) => q.slug)
-    .sort();
-  assert.deepStrictEqual(linkedSlugs, ['rand-36', 'sliq']);
+  // Nothing pre-assigns/activates any questionnaire for the new default study.
+  assert.strictEqual(db.stores.questionnaire_assignments.size, 0);
 });
 
-test('seedDefaultStudy: adds an SRHI assignment flagged deliverOnHabitCreation', async () => {
-  const db = makeDb();
-  await seedDefaultQuestionnaires(db);
-  await seedDefaultStudy(db);
-
-  const assignments = [...db.stores.questionnaire_assignments.values()];
-  const srhi = assignments.find((a) => a.questionnaireSlug === 'srhi');
-  assert.ok(srhi, 'SRHI assignment should be created');
-  assert.strictEqual(srhi.deliverOnHabitCreation, true);
-  assert.strictEqual(srhi.active, true);
-  assert.strictEqual(srhi.groupId, null);
-});
-
-test('seedDefaultStudy: idempotent — one default study, one SRHI assignment', async () => {
+test('seedDefaultStudy: idempotent — exactly one default study', async () => {
   const db = makeDb();
   await seedDefaultQuestionnaires(db);
   await seedDefaultStudy(db);
   await seedDefaultStudy(db);
   const defaults = [...db.stores.studies.values()].filter((s) => s.isDefault);
   assert.strictEqual(defaults.length, 1);
+});
+
+test('ensureSrhiHabitCreationAssignment: first call creates an inactive assignment', async () => {
+  const db = makeDb();
+  await seedDefaultQuestionnaires(db);
+  await seedDefaultStudy(db);
+  const study = [...db.stores.studies.values()].find((s) => s.isDefault);
+
+  await ensureSrhiHabitCreationAssignment(db, study._id);
+
+  const assignments = [...db.stores.questionnaire_assignments.values()];
+  const srhi = assignments.find((a) => a.questionnaireSlug === 'srhi');
+  assert.ok(srhi, 'SRHI assignment should be created');
+  assert.strictEqual(srhi.active, false);
+  assert.strictEqual(srhi.groupId, null);
+});
+
+test('ensureSrhiHabitCreationAssignment: never overwrites an existing assignment (respects admin choice)', async () => {
+  const db = makeDb();
+  await seedDefaultQuestionnaires(db);
+  await seedDefaultStudy(db);
+  const study = [...db.stores.studies.values()].find((s) => s.isDefault);
+
+  await ensureSrhiHabitCreationAssignment(db, study._id);
+  const srhi = [...db.stores.questionnaire_assignments.values()].find(
+    (a) => a.questionnaireSlug === 'srhi'
+  );
+  // Simulate an admin turning it on after the initial insert.
+  srhi.active = true;
+
+  await ensureSrhiHabitCreationAssignment(db, study._id);
+
   const srhiAssignments = [
     ...db.stores.questionnaire_assignments.values(),
   ].filter((a) => a.questionnaireSlug === 'srhi');
-  assert.strictEqual(srhiAssignments.length, 1);
+  assert.strictEqual(srhiAssignments.length, 1, 'still exactly one assignment');
+  assert.strictEqual(
+    srhiAssignments[0].active,
+    true,
+    'admin activation is preserved, not reset'
+  );
 });

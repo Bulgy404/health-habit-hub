@@ -16,6 +16,7 @@ import {
   createQuestionnaireSchema,
   updateQuestionnaireSchema,
 } from '../../schemas/adminSchemas.js';
+import { ASSIGNMENTS as QUESTIONNAIRE_ASSIGNMENTS } from '../../models/questionnaireSchedule.js';
 
 const log = logger.child({ module: 'surveysRouter' });
 
@@ -473,6 +474,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
           languages: q.languages || ['en'],
           active: q.active !== false,
           isLibrary: q.isLibrary === true,
+          scope: q.scope === 'habit' ? 'habit' : 'study',
           questionCount: Array.isArray(q.questions) ? q.questions.length : 0,
           updatedAt: q.updatedAt || q.createdAt || null,
         }))
@@ -509,6 +511,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         languages: doc.languages || ['en'],
         active: doc.active !== false,
         isLibrary: doc.isLibrary === true,
+        scope: doc.scope === 'habit' ? 'habit' : 'study',
         questions: Array.isArray(doc.questions) ? doc.questions : [],
         updatedAt: doc.updatedAt || doc.createdAt || null,
       });
@@ -524,8 +527,15 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
     validate(createQuestionnaireSchema),
     async (req, res) => {
       try {
-        const { slug, title, description, version, languages, questions } =
-          req.body;
+        const {
+          slug,
+          title,
+          description,
+          version,
+          languages,
+          questions,
+          scope,
+        } = req.body;
         const database = await getDb();
 
         // Every questionnaire needs a slug — responses and questionnaire
@@ -585,6 +595,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
           languages,
           active: true,
           isLibrary: false,
+          scope: scope === 'habit' ? 'habit' : 'study',
           questions: Array.isArray(questions) ? questions : [],
           createdAt: now,
           updatedAt: now,
@@ -629,13 +640,16 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
             .status(403)
             .json({ error: 'Cannot modify a library questionnaire' });
         }
-        const { title, description, version, languages, questions } = req.body;
+        const { title, description, version, languages, questions, scope } =
+          req.body;
         const update = { updatedAt: new Date() };
         if (title !== undefined) update.title = title;
         if (description !== undefined) update.description = description;
         if (version !== undefined) update.version = version;
         if (languages !== undefined) update.languages = languages;
         if (questions !== undefined) update.questions = questions;
+        if (scope !== undefined)
+          update.scope = scope === 'habit' ? 'habit' : 'study';
         await database
           .collection('questionnaires')
           .updateOne({ _id: oid }, { $set: update });
@@ -696,10 +710,20 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
           .status(403)
           .json({ error: 'Cannot delete a library questionnaire' });
       }
-      // Check if assigned to any active study
-      const studyCount = await database
-        .collection('studies')
-        .countDocuments({ questionnaires: oid, isActive: true });
+      // Check if assigned (active questionnaire_assignments) to any active study.
+      const activeAssignments = await database
+        .collection(QUESTIONNAIRE_ASSIGNMENTS)
+        .find({ questionnaireId: oid, active: { $ne: false } })
+        .toArray();
+      let studyCount = 0;
+      if (activeAssignments.length > 0) {
+        const studyIds = [
+          ...new Set(activeAssignments.map((a) => a.studyId.toString())),
+        ].map((s) => new ObjectId(s));
+        studyCount = await database
+          .collection('studies')
+          .countDocuments({ _id: { $in: studyIds }, isActive: true });
+      }
       if (studyCount > 0) {
         return res
           .status(409)

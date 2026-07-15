@@ -2,12 +2,15 @@ import { ObjectId } from 'mongodb';
 import { COLLECTION } from '../models/srhiResponse.js';
 import { SRHI_ITEM_IDS } from '../utils/srhi.js';
 import { setEnrollmentField } from './enrollmentNeo4j.js';
+import { HABIT_ANCHOR_DELAY_MS } from './questionnaireScheduleService.js';
 
 const WINDOW_DAYS = 3;
 const GENERATE_AHEAD = 4;
 
 /**
  * Generate SRHI survey windows for a new intention (one per week for GENERATE_AHEAD weeks).
+ * The first window is anchored HABIT_ANCHOR_DELAY_MS after habit creation,
+ * matching the general habit-scope anchor used by generic questionnaires.
  * @param {{ db: object, intentionId: string, userId: string, createdAt: Date, studyId?: string|null, groupId?: string|null }} deps
  * @returns {Promise<Array>} The inserted window documents.
  */
@@ -23,11 +26,10 @@ export async function generateWindows({
   const sOid = studyId ? new ObjectId(studyId) : null;
   const gOid = groupId ? new ObjectId(groupId) : null;
   const now = new Date();
+  const anchor = createdAt.getTime() + HABIT_ANCHOR_DELAY_MS;
   const docs = [];
   for (let w = 1; w <= GENERATE_AHEAD; w++) {
-    const scheduledFor = new Date(
-      createdAt.getTime() + (w - 1) * 7 * 24 * 60 * 60 * 1000
-    );
+    const scheduledFor = new Date(anchor + (w - 1) * 7 * 24 * 60 * 60 * 1000);
     docs.push({
       intentionId: oid,
       userId,

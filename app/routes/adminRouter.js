@@ -92,8 +92,8 @@ export function createAdminRouter({
   // Seed default settings, activity types, the questionnaire library, and the
   // default study asynchronously on router creation. Idempotent — safe to
   // run on every boot, so a fresh deploy that never ran `make seed` still
-  // ends up with a usable default study (questionnaire seeding must run
-  // first: seedDefaultStudy looks up SLIQ/RAND-36 by slug to link them).
+  // ends up with a usable default study. No questionnaire is pre-enabled for
+  // it — an admin must explicitly turn each one on via the admin UI.
   (async () => {
     try {
       const database = await getDb();

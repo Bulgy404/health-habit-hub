@@ -57,24 +57,18 @@ export async function seedDefaultQuestionnaires(db) {
 }
 
 /**
- * Ensure a default study exists, linking the SLIQ and RAND-36 library
- * questionnaires (SRHI is scheduled per-intention, not at the study level —
- * see srhiService.js). No-ops if a default study already exists. Mirrors
- * scripts/seed-local.js's seedDefaultStudy().
+ * Ensure a default study exists. Questionnaires are never pre-enabled for
+ * it — SLIQ, RAND-36, and SRHI are seeded as library *definitions* only
+ * (see seedDefaultQuestionnaires above); an admin must explicitly turn each
+ * one on for the study via the admin UI. No-ops if a default study already
+ * exists. Mirrors scripts/seed-local.js's seedDefaultStudy().
  * @param {import('mongodb').Db} db
  */
 export async function seedDefaultStudy(db) {
   const studies = db.collection(STUDIES);
-  const questionnaires = db.collection(QUESTIONNAIRES_COLLECTION);
   let study = await studies.findOne({ isDefault: true });
 
   if (!study) {
-    const [sliq, rand36] = await Promise.all([
-      questionnaires.findOne({ slug: 'sliq' }),
-      questionnaires.findOne({ slug: 'rand-36' }),
-    ]);
-    const qIds = [sliq?._id, rand36?._id].filter(Boolean);
-
     const now = new Date();
     const { insertedId } = await studies.insertOne({
       name: 'Default Study',
@@ -83,22 +77,21 @@ export async function seedDefaultStudy(db) {
       isDefault: true,
       isActive: true,
       groups: DEFAULT_GROUPS,
-      questionnaires: qIds,
+      questionnaires: [],
       createdAt: now,
       updatedAt: now,
     });
     study = { _id: insertedId };
-    log.info({ questionnaireCount: qIds.length }, 'Default study seeded');
+    log.info('Default study seeded');
   }
-
-  // Ensure SRHI is delivered on habit creation for the default study (counts as
-  // week 1). Idempotent — also backfills studies created before this feature.
-  await ensureSrhiHabitCreationAssignment(db, study._id);
 }
 
 /**
- * Upsert an active SRHI questionnaire assignment (study-wide) flagged
- * `deliverOnHabitCreation` for the given study. Safe to run repeatedly.
+ * Upsert a (deactivated) SRHI questionnaire assignment (study-wide) for the
+ * given study, if one doesn't already exist. Only touches fields via
+ * `$setOnInsert` — never overwrites an existing document, so an admin's
+ * choice to turn SRHI on/off or edit its cadence is never reasserted. Not
+ * called automatically on boot; kept exported for ops tooling / tests.
  * @param {import('mongodb').Db} db
  * @param {ObjectId} studyId
  */
@@ -114,7 +107,10 @@ export async function ensureSrhiHabitCreationAssignment(db, studyId) {
   await db.collection(ASSIGNMENTS).updateOne(
     { studyId, groupId: null, questionnaireId: srhi._id },
     {
-      $set: {
+      $setOnInsert: {
+        studyId,
+        groupId: null,
+        questionnaireId: srhi._id,
         questionnaireSlug: 'srhi',
         questionnaireTitle:
           resolveLocaleText(srhi.title, 'en', srhi.languages || ['en']) ||
@@ -127,21 +123,16 @@ export async function ensureSrhiHabitCreationAssignment(db, studyId) {
           intervalDays: 7,
           occurrences: 4,
         },
-        deliverOnHabitCreation: true,
-        active: true,
-        updatedAt: now,
-      },
-      $setOnInsert: {
-        studyId,
-        groupId: null,
-        questionnaireId: srhi._id,
+        // Admin must explicitly opt in — never defaulted on.
+        active: false,
         createdAt: now,
+        updatedAt: now,
       },
     },
     { upsert: true }
   );
   log.info(
     { studyId: studyId.toString() },
-    'SRHI habit-creation assignment ensured'
+    'SRHI default assignment ensured (inactive unless already changed)'
   );
 }

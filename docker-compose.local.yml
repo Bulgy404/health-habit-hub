@@ -41,9 +41,13 @@ services:
       - NODE_ENV=development
       - MONGO_HOST=mongo
       - KEYCLOAK_URL=http://keycloak:8080
-      # Accept both internal Docker issuer and host-local issuer for iOS simulator
-      # logins that use http://localhost:8080.
-      - KEYCLOAK_JWT_ISSUER=http://keycloak:8080/realms/hhh,http://localhost:8080/realms/hhh
+      # Accept the internal Docker issuer, the host-local issuer (iOS simulator
+      # / web use http://localhost:8080), and — for a cabled physical device —
+      # the Mac's LAN-IP issuer. Set DEV_LAN_HOST to your Mac's LAN IP (e.g.
+      # 172.18.232.220) so token refresh from the phone (which talks to Keycloak
+      # at that IP) mints tokens the backend still accepts. Defaults to localhost
+      # (a harmless duplicate) when unset.
+      - KEYCLOAK_JWT_ISSUER=http://keycloak:8080/realms/hhh,http://localhost:8080/realms/hhh,http://${DEV_LAN_HOST:-localhost}:8080/realms/hhh
       - KEYCLOAK_REALM=${KEYCLOAK_REALM:-hhh}
       - KEYCLOAK_CLIENT_ID=${KEYCLOAK_CLIENT_ID:-hhh-flutter}
       - KEYCLOAK_ADMIN_CLIENT_ID=${KEYCLOAK_ADMIN_CLIENT_ID:-hhh-backend}
@@ -155,7 +159,11 @@ services:
       - KC_DB=dev-file
     command: start-dev --import-realm --health-enabled=true
     ports:
-      - '127.0.0.1:8080:8080'
+      # Bind to all interfaces (not just loopback) so a cabled physical device
+      # can reach Keycloak at the Mac's LAN IP for token refresh. Set
+      # KEYCLOAK_HOST_BIND=127.0.0.1 to restore loopback-only if you don't need
+      # on-device testing.
+      - '${KEYCLOAK_HOST_BIND:-0.0.0.0}:8080:8080'
     networks:
       - hhh-proxy
       - hhh-app

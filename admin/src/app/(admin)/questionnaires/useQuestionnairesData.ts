@@ -14,6 +14,9 @@ export interface QuestionnaireSummary {
   languages: Lang[];
   active: boolean;
   isLibrary: boolean;
+  // 'study' (default): anchored to enrollment, applies once per participant.
+  // 'habit': anchored to each habit's creation, applies once per habit.
+  scope: "study" | "habit";
   questionCount: number;
   updatedAt: string | null;
 }

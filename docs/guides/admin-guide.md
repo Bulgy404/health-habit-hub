@@ -231,7 +231,14 @@ Study Questionnaires are validated research instruments and researcher-created q
 
 **Step 3.** Enter a **Title** and **Description**. Add questions using the visual question builder — each question has a type (Open text, Single choice, Multi choice, Scale) and an optional list of answer options.
 
-**Step 4.** Click **Save**. The questionnaire is now available to link to studies.
+**Step 4.** Choose a **Scope**:
+
+- **At enrollment (study-wide)** — the default. The questionnaire is about the participant as a whole (e.g. a baseline lifestyle survey); its schedule is anchored to when the participant enrolled.
+- **Per habit (on habit creation)** — the questionnaire only makes sense once a participant has a specific habit to answer about (e.g. SRHI's habit-strength check-in). Its schedule is anchored to each habit's creation time instead, and applies once per habit, not once per participant.
+
+Scope can't be changed per study — it's a property of the questionnaire itself, set once here.
+
+**Step 5.** Click **Save**. The questionnaire is now available to link to studies.
 
 #### Creating a Custom Questionnaire (Flutter admin panel)
 
@@ -239,45 +246,41 @@ Study Questionnaires are validated research instruments and researcher-created q
 
 **Step 2.** Switch to the **Custom** tab and tap the **+** button.
 
-**Step 3.** Enter a title, description, and add questions. Tap **Create**.
-
-#### Assigning Questionnaires to a Study
-
-Questionnaires are linked to participants through studies. A participant sees the questionnaires assigned to the study they are enrolled in.
-
-**Via the web admin portal:**
-
-**Step 1.** Navigate to **Studies** in the sidebar.
-
-**Step 2.** Open an existing study or create a new one.
-
-**Step 3.** Open the **Questionnaires** tab in the study editor. Check the questionnaires (library or custom) that should be administered to participants in this study.
-
-**Step 4.** Click **Save** — participants enrolled in the study will immediately see the assigned questionnaires on their Profile screen.
-
-> **No seed script required.** All questionnaire management — including adding new library instruments and custom researcher-designed questionnaires — is handled entirely through the admin UI.
+**Step 3.** Enter a title, description, scope, and add questions. Tap **Create**.
 
 ---
 
-### 4c. Scheduling Questionnaires on a Cadence
+### 4c. Assigning & Scheduling Questionnaires in a Study
 
-The **Questionnaires** tab (above) makes a questionnaire available to a study; the **Schedule** tab controls _when_ it becomes due for each participant — a recurring interval (e.g. every 7 days) or a set of fixed study weeks/days (e.g. baseline, week 4, week 8).
+Questionnaires are linked to participants through studies, on a single unified **Questionnaires** tab in the study editor — no separate "assign" and "schedule" steps.
 
-**Step 1.** Navigate to **Studies**, open a study, and click the **Schedule** tab.
+**Step 1.** Navigate to **Studies** in the sidebar, and open an existing study or create a new one.
 
-**Step 2.** Under **Add a questionnaire**, pick the questionnaire, choose whether it applies to the whole study or a single group, and set its cadence (recurring interval or fixed weeks/days). Click **Add assignment**.
+**Step 2.** Open the **Questionnaires** tab. Every questionnaire (library and custom) is listed with an on/off toggle. **Nothing is on by default** — an admin must explicitly turn each one on for the study, including SLIQ, RAND-36, and SRHI.
 
-**Step 3.** Use the **Schedule calendar** below the form to review what participants will see:
+**Step 3.** Turn a questionnaire **on**. This reveals an inline cadence editor for it:
+
+- **Recurring interval or fixed study weeks/days**, same options as before (e.g. every 7 days, or baseline/week 4/week 8).
+- For study-scoped questionnaires, an editable **"First due" (days after enrollment)** field.
+- For habit-scoped questionnaires (e.g. SRHI), no "first due" field — a note explains the first check-in is delivered automatically ~5 seconds after the participant creates a habit, and the questionnaire applies once per habit rather than once per participant.
+- A **"Continuous (no end date)"** checkbox — check this instead of setting a fixed occurrence count to keep delivering the questionnaire indefinitely (e.g. an ongoing weekly check-in with no planned end). Up to 12 upcoming occurrences are kept scheduled at a time and topped up automatically as participants complete them.
+
+**Step 4.** Click **Save** on the cadence editor to confirm the schedule — participants enrolled in the study will see the questionnaire according to that cadence. Turning the toggle off again deactivates it (windows stop being generated) without losing the configured cadence, so it's easy to re-enable later.
+
+**Step 5 (optional).** Use **+ Add group override** inside a questionnaire's expanded row to give a specific group (G1–G4) a different cadence than the study-wide one — a group-specific override always takes precedence over the study-wide schedule for that questionnaire.
+
+**Step 6.** Use the **Schedule calendar** below the questionnaire list to review what participants will see:
 
 | Control                    | Behavior                                                                                                                                                                                                   |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Today** button           | Jumps the calendar back to the current month, regardless of how far you've navigated.                                                                                                                      |
-| Click a day                | Pre-fills the add-assignment form with a recurring cadence starting on that day and scrolls to it — a quick way to sketch out a schedule visually instead of computing day offsets by hand.                |
 | Solid entries              | Real occurrences already generated for enrolled participants.                                                                                                                                              |
-| Dashed, italicized entries | A **preview** of what a participant enrolling today would see — shown for assignments that have no enrolled participants yet, so newly created assignments don't appear to be "missing" from the calendar. |
+| Dashed, italicized entries | A **preview** of what a participant enrolling today would see — shown for assignments that have no enrolled participants yet, so newly created assignments don't appear to be "missing" from the calendar. For continuous cadences, the preview only shows the next 12 occurrences, not an unbounded list. |
 | Greyed-out days            | Past the study's end date (see below), if one is set.                                                                                                                                                      |
 
-> **Why cadences are relative, not calendar dates.** Every schedule is expressed as an offset from each participant's own enrollment date, since participants join a study on different days. Clicking a calendar day computes the equivalent offset assuming enrollment happens today — the actual due date for each participant is still relative to when _they_ enrolled.
+> **No seed script required.** All questionnaire management — including adding new library instruments, custom researcher-designed questionnaires, and their per-study schedules — is handled entirely through the admin UI.
+
+> **Why cadences are relative, not calendar dates.** Every study-scoped schedule is expressed as an offset from each participant's own enrollment date, since participants join a study on different days; habit-scoped schedules are likewise relative to each habit's own creation date, since habits are created at different times too.
 
 #### Setting a Study End Date & End-of-Study Notification
 

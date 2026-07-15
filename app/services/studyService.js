@@ -15,6 +15,7 @@ import {
   normalizeReminders,
   resolveEffectiveReminders,
 } from './reminderConfigService.js';
+import { syncStudyQuestionnaireGraph } from './questionnaireScheduleService.js';
 
 /**
  * When a study's groups shrink, every reference to a removed group
@@ -223,23 +224,17 @@ export async function createStudy({
 
   const result = await db.collection(STUDIES).insertOne(doc);
 
-  // Sync Study node to Neo4j (non-breaking: skip if neo4jRun not provided)
+  // Sync Study node to Neo4j (non-breaking: skip if neo4jRun not provided).
+  // A brand-new study has no questionnaire_assignments yet — the
+  // HAS_QUESTIONNAIRE edge is exclusively maintained from there on by
+  // questionnaireScheduleService.syncStudyQuestionnaireGraph, so this starts
+  // empty regardless of any legacy `questionnaires` field on the payload.
   if (neo4jRun) {
     try {
-      // Resolve questionnaire slugs
-      let slugs = [];
-      if (questionnaireIds.length > 0) {
-        const qDocs = await db
-          .collection('questionnaires')
-          .find({ _id: { $in: questionnaireIds } })
-          .project({ slug: 1 })
-          .toArray();
-        slugs = qDocs.map((q) => q.slug).filter(Boolean);
-      }
       await syncStudy(neo4jRun, {
         uuid: result.insertedId.toString(),
         name,
-        slugs,
+        slugs: [],
       });
     } catch (err) {
       // Non-fatal: Neo4j sync failure should not roll back the MongoDB insert
@@ -400,29 +395,17 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
 
   await db.collection(STUDIES).updateOne({ _id: oid }, { $set });
 
-  // Sync Study node to Neo4j (non-breaking: skip if neo4jRun not provided)
+  // Sync Study node to Neo4j (non-breaking: skip if neo4jRun not provided).
+  // Questionnaire slugs are resolved from active questionnaire_assignments,
+  // not the legacy `questionnaires` field on this update payload — that's
+  // the only writer of the HAS_QUESTIONNAIRE edge, so a name-only update
+  // here can't stomp on assignment-driven state.
   if (neo4jRun) {
     try {
-      // Fetch latest study state for slug resolution
-      const latest = await db.collection(STUDIES).findOne({ _id: oid });
-      let slugs = [];
-      const qIds = latest?.questionnaires ?? [];
-      if (qIds.length > 0) {
-        const qDocs = await db
-          .collection('questionnaires')
-          .find({ _id: { $in: qIds } })
-          .project({ slug: 1 })
-          .toArray();
-        slugs = qDocs.map((q) => q.slug).filter(Boolean);
-      }
-      await syncStudy(neo4jRun, {
-        uuid: id,
-        name: latest?.name ?? updates.name ?? existing.name,
-        slugs,
-      });
+      await syncStudyQuestionnaireGraph({ db, studyId: oid, neo4jRun });
     } catch (err) {
       console.error(
-        '[studyService] Neo4j syncStudy failed after update:',
+        '[studyService] Neo4j syncStudyQuestionnaireGraph failed after update:',
         err?.message
       );
     }

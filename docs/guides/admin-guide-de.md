@@ -233,7 +233,14 @@ Studien-Fragebögen sind validierte Messinstrumente und benutzerdefinierte Frage
 
 **Schritt 3.** Titel und Beschreibung eingeben. Fragen mit dem visuellen Fragen-Editor hinzufügen — jede Frage hat einen Typ (Freitext, Einfachauswahl, Mehrfachauswahl, Skala) und optional eine Antwortliste.
 
-**Schritt 4.** Auf **Save** klicken. Der Fragebogen steht nun zur Verknüpfung mit Studien zur Verfügung.
+**Schritt 4.** Einen **Geltungsbereich** wählen:
+
+- **Bei Einschreibung (studienweit)** — die Voreinstellung. Der Fragebogen betrifft die teilnehmende Person als Ganzes (z. B. eine Baseline-Lebensstil-Erhebung); sein Zeitplan ist am Einschreibedatum verankert.
+- **Pro Gewohnheit (bei Gewohnheitserstellung)** — der Fragebogen ergibt nur Sinn, sobald eine konkrete Gewohnheit existiert, auf die er sich bezieht (z. B. der SRHI-Check-in zur Gewohnheitsstärke). Sein Zeitplan ist stattdessen am Erstellungszeitpunkt jeder Gewohnheit verankert und gilt einmal pro Gewohnheit, nicht einmal pro teilnehmender Person.
+
+Der Geltungsbereich lässt sich nicht pro Studie ändern — er ist eine Eigenschaft des Fragebogens selbst und wird hier einmalig festgelegt.
+
+**Schritt 5.** Auf **Save** klicken. Der Fragebogen steht nun zur Verknüpfung mit Studien zur Verfügung.
 
 #### Benutzerdefinierten Fragebogen erstellen (Flutter Admin-Panel)
 
@@ -241,45 +248,41 @@ Studien-Fragebögen sind validierte Messinstrumente und benutzerdefinierte Frage
 
 **Schritt 2.** Zum Tab **Custom** wechseln und auf das **+**-Symbol tippen.
 
-**Schritt 3.** Titel, Beschreibung und Fragen eingeben. Auf **Create** tippen.
-
-#### Fragebögen einer Studie zuweisen
-
-Fragebögen werden Teilnehmenden über Studien zugänglich gemacht. Teilnehmende sehen die Fragebögen, die der Studie zugewiesen sind, in der sie eingeschrieben sind.
-
-**Über das Web-Admin-Portal:**
-
-**Schritt 1.** Zu **Studies** in der Seitenleiste navigieren.
-
-**Schritt 2.** Eine vorhandene Studie öffnen oder eine neue erstellen.
-
-**Schritt 3.** Den Tab **Questionnaires** im Studien-Editor öffnen. Die Fragebögen (Bibliothek oder benutzerdefiniert) auswählen, die den Teilnehmenden in dieser Studie verabreicht werden sollen.
-
-**Schritt 4.** Auf **Save** klicken — Teilnehmende, die in der Studie eingeschrieben sind, sehen die zugewiesenen Fragebögen sofort auf ihrem Profil-Bildschirm.
-
-> **Kein Seed-Skript erforderlich.** Die gesamte Fragebogenverwaltung — einschließlich neuer Bibliotheksinstrumente und benutzerdefinierter Fragebögen — erfolgt vollständig über die Admin-Oberfläche.
+**Schritt 3.** Titel, Beschreibung, Geltungsbereich und Fragen eingeben. Auf **Create** tippen.
 
 ---
 
-### 4c. Fragebögen nach Zeitplan einplanen
+### 4c. Fragebögen einer Studie zuweisen und einplanen
 
-Der Tab **Questionnaires** (oben) macht einen Fragebogen für eine Studie verfügbar; der Tab **Schedule** legt fest, _wann_ er für jede teilnehmende Person fällig wird — als wiederkehrendes Intervall (z. B. alle 7 Tage) oder als feste Studienwochen/-tage (z. B. Baseline, Woche 4, Woche 8).
+Fragebögen werden Teilnehmenden über Studien zugänglich gemacht — auf einem einzigen, vereinheitlichten **Questionnaires**-Tab im Studien-Editor, ohne getrennte Schritte für "Zuweisen" und "Zeitplan".
 
-**Schritt 1.** Zu **Studies** navigieren, eine Studie öffnen und den Tab **Schedule** anklicken.
+**Schritt 1.** Zu **Studies** in der Seitenleiste navigieren, eine vorhandene Studie öffnen oder eine neue erstellen.
 
-**Schritt 2.** Unter **Add a questionnaire** den Fragebogen auswählen, festlegen, ob er für die gesamte Studie oder nur eine Gruppe gilt, und den Turnus (wiederkehrendes Intervall oder feste Wochen/Tage) einstellen. Auf **Add assignment** klicken.
+**Schritt 2.** Den Tab **Questionnaires** öffnen. Jeder Fragebogen (Bibliothek und benutzerdefiniert) wird mit einem Ein/Aus-Schalter aufgelistet. **Standardmäßig ist nichts aktiviert** — ein Admin muss jeden Fragebogen explizit für die Studie aktivieren, auch SLIQ, RAND-36 und SRHI.
 
-**Schritt 3.** Mit dem **Schedule calendar** unterhalb des Formulars prüfen, was Teilnehmende sehen werden:
+**Schritt 3.** Einen Fragebogen **aktivieren**. Dies öffnet einen eingebetteten Zeitplan-Editor:
+
+- **Wiederkehrendes Intervall oder feste Studienwochen/-tage**, wie zuvor (z. B. alle 7 Tage, oder Baseline/Woche 4/Woche 8).
+- Bei studienbezogenen Fragebögen ein editierbares Feld **„Erste Fälligkeit" (Tage nach Einschreibung)**.
+- Bei gewohnheitsbezogenen Fragebögen (z. B. SRHI) kein Feld für die erste Fälligkeit — ein Hinweis erklärt, dass der erste Check-in automatisch ~5 Sekunden nach Erstellung einer Gewohnheit gesendet wird und der Fragebogen einmal pro Gewohnheit statt einmal pro Person gilt.
+- Ein Kontrollkästchen **„Fortlaufend (kein Enddatum)"** — statt einer festen Anzahl von Wiederholungen ankreuzen, um den Fragebogen unbegrenzt fortlaufend zuzustellen (z. B. ein dauerhafter wöchentlicher Check-in ohne geplantes Ende). Es werden jeweils bis zu 12 kommende Termine geplant und automatisch nachgefüllt, sobald Teilnehmende sie beantworten.
+
+**Schritt 4.** Im Zeitplan-Editor auf **Save** klicken, um den Zeitplan zu bestätigen — eingeschriebene Teilnehmende sehen den Fragebogen entsprechend diesem Turnus. Den Schalter wieder auszuschalten deaktiviert ihn (es werden keine neuen Termine mehr generiert), ohne den konfigurierten Zeitplan zu verwerfen — er lässt sich also später leicht wieder aktivieren.
+
+**Schritt 5 (optional).** Im aufgeklappten Bereich eines Fragebogens **+ Gruppenüberschreibung hinzufügen** verwenden, um einer bestimmten Gruppe (G1–G4) einen abweichenden Zeitplan zu geben — eine gruppenspezifische Überschreibung hat für diese Gruppe immer Vorrang vor dem studienweiten Zeitplan.
+
+**Schritt 6.** Mit dem **Schedule calendar** unterhalb der Fragebogenliste prüfen, was Teilnehmende sehen werden:
 
 | Element                        | Verhalten                                                                                                                                                                                                                                              |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Today**-Schaltfläche         | Springt im Kalender zurück zum aktuellen Monat, unabhängig davon, wie weit navigiert wurde.                                                                                                                                                            |
-| Klick auf einen Tag            | Füllt das Formular zum Hinzufügen einer Zuweisung mit einem wiederkehrenden Turnus vor, der an diesem Tag beginnt, und scrollt dorthin — praktisch, um einen Zeitplan visuell zu skizzieren, statt Tagesabstände manuell zu berechnen.                 |
 | Durchgezogene Einträge         | Reale Termine, die bereits für eingeschriebene Teilnehmende generiert wurden.                                                                                                                                                                          |
-| Gestrichelte, kursive Einträge | Eine **Vorschau**, wie der Zeitplan für eine Person aussähe, die sich heute einschreibt — wird für Zuweisungen angezeigt, die noch keine eingeschriebenen Teilnehmenden haben, damit neu erstellte Zuweisungen im Kalender nicht wie "fehlend" wirken. |
+| Gestrichelte, kursive Einträge | Eine **Vorschau**, wie der Zeitplan für eine Person aussähe, die sich heute einschreibt — wird für Zuweisungen angezeigt, die noch keine eingeschriebenen Teilnehmenden haben, damit neu erstellte Zuweisungen im Kalender nicht wie "fehlend" wirken. Bei fortlaufenden Zeitplänen zeigt die Vorschau nur die nächsten 12 Termine, keine unbegrenzte Liste. |
 | Ausgegraute Tage               | Liegen nach dem Studienenddatum (siehe unten), falls eines gesetzt ist.                                                                                                                                                                                |
 
-> **Warum Zeitpläne relativ und nicht als Kalenderdatum angegeben sind.** Jeder Zeitplan wird als Versatz zum individuellen Einschreibedatum jeder teilnehmenden Person ausgedrückt, da Teilnehmende an unterschiedlichen Tagen einer Studie beitreten. Ein Klick auf einen Kalendertag berechnet den entsprechenden Versatz unter der Annahme, dass die Einschreibung heute erfolgt — das tatsächliche Fälligkeitsdatum für jede Person bleibt relativ zu ihrem eigenen Einschreibedatum.
+> **Kein Seed-Skript erforderlich.** Die gesamte Fragebogenverwaltung — einschließlich neuer Bibliotheksinstrumente, benutzerdefinierter Fragebögen und ihrer studienspezifischen Zeitpläne — erfolgt vollständig über die Admin-Oberfläche.
+
+> **Warum Zeitpläne relativ und nicht als Kalenderdatum angegeben sind.** Jeder studienbezogene Zeitplan wird als Versatz zum individuellen Einschreibedatum jeder teilnehmenden Person ausgedrückt, da Teilnehmende an unterschiedlichen Tagen einer Studie beitreten; gewohnheitsbezogene Zeitpläne sind entsprechend relativ zum Erstellungsdatum der jeweiligen Gewohnheit, da auch Gewohnheiten zu unterschiedlichen Zeitpunkten erstellt werden.
 
 #### Studienenddatum & Benachrichtigung zum Studienende festlegen
 
