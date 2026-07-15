@@ -26,7 +26,8 @@ sequenceDiagram
             B->>M: insertOne(restore_attempts, {ip, outcome: "invalid_phrase"})
             B-->>F: 400 Invalid passphrase or account not found
         else well-formed phrase
-            B->>KC: ROPC token request (username, password)
+            B->>KC: ROPC token request (username, password)<br/>scope: openid profile email offline_access
+            Note over B,KC: offline_access binds the refresh token to Keycloak's<br/>offline session (180-day rolling idle, no max lifespan)<br/>so participants aren't logged out between ordinary app opens
             alt Keycloak unreachable
                 B->>M: insertOne(restore_attempts, {ip, username, outcome: "keycloak_unreachable"})
                 B-->>F: 502 Keycloak is unreachable

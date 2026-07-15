@@ -46,7 +46,11 @@ sequenceDiagram
     F->>B: POST /api/v1/habits/intentions {behaviorKey, cues, intentionStatement, reminderTime}
     B->>M: intentions.insertOne({userId, behaviorKey, …})
     M-->>B: {id}
+    Note over B,M: Deliver-on-habit-creation check-ins: for each active questionnaire<br/>assignment on the participant's study/group flagged<br/>deliverOnHabitCreation (SRHI by default in the default study),<br/>generate its week-1 window anchored at creation.<br/>SRHI becomes 4 weekly srhi_responses rows (week 1 = today),<br/>other questionnaires become one questionnaire_windows row per habit.
     B-->>F: 201 Created
+    opt a check-in was scheduled
+        Note over B: Fire-and-forget: about 5 s later the backend pushes an FCM<br/>Habit check-in ready nudge to the participant's devices<br/>(deep-link data type=srhi, intentionId), see UC-15
+    end
 
     alt autoDonate = true (study group setting)
         F->>B: POST /api/v1/habits/share {sentence, language}

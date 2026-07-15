@@ -1041,12 +1041,24 @@ A questionnaire assigned to a study on a cadence. `groupId: null` = study-wide
 | `questionnaireTitle`      | String           | Yes      | Denormalised title (for admin display)                         |
 | `cadence`                 | Object           | Yes      | Schedule — see below                                           |
 | `active`                  | Boolean          | Yes      | Whether the assignment currently generates windows             |
+| `deliverOnHabitCreation`  | Boolean          | No       | When `true`, the first occurrence (week 1) is delivered per-habit right after the participant creates a habit, rather than anchored at enrollment — see below. Defaults to `false`. |
 | `createdAt` / `updatedAt` | Date             | Yes      | Timestamps                                                     |
 
 **Cadence** is one of two shapes:
 
 - **Interval** — `{ mode: "interval", startOffsetDays, intervalDays, occurrences }`. Due dates = `enrolledAt + startOffsetDays + k·intervalDays` for `k` in `0 … occurrences-1`.
 - **Fixed** — `{ mode: "fixed", weeks?: number[], days?: number[] }`. Due dates = the union of `week·7` and exact `day` offsets after enrollment (week 0 / day 0 = baseline at enrollment).
+
+**Deliver on habit creation.** Normally windows are anchored at the participant's
+enrollment. When an assignment sets `deliverOnHabitCreation: true`, its first window is
+instead generated **per habit**, anchored at habit-creation time (counting as "week 1"),
+and a push notification nudges the participant ~5 s later. The admin toggles this per
+assignment in Studies → Schedule. The default study seeds an SRHI assignment with this flag
+on (`ensureSrhiHabitCreationAssignment`); **SRHI is special-cased** — the flag gates its own
+per-habit pipeline (`srhiService.generateWindows`, writing to `srhi_responses`, which keeps
+SRHI's scoring/sparkline) rather than creating a generic `questionnaire_windows` row. Any
+other flagged questionnaire creates one `questionnaire_windows` row per habit (see the
+`intentionId` field below).
 
 A group-scoped assignment for a questionnaire overrides the study-wide
 assignment for that same questionnaire. Unique index on
@@ -1087,11 +1099,15 @@ created/changed (back-filled for already-enrolled participants).
 | `questionnaireId`   | ObjectId         | Yes      | Ref to `questionnaires._id`                            |
 | `questionnaireSlug` | String           | Yes      | Denormalised slug                                      |
 | `occurrence`        | Int              | Yes      | 1-based index within the assignment's schedule         |
-| `scheduledFor`      | Date             | Yes      | Due date (`enrolledAt + offset`)                       |
+| `intentionId`       | ObjectId \| null | No       | Set only for `deliverOnHabitCreation` windows — the `implementation_intentions._id` this per-habit window belongs to; `null` for enrollment-anchored windows |
+| `scheduledFor`      | Date             | Yes      | Due date (`enrolledAt + offset`, or habit `createdAt` for per-habit windows) |
 | `submittedAt`       | Date \| null     | Yes      | When completed (null = open)                           |
 | `responseId`        | ObjectId \| null | Yes      | Ref to the `form_responses` entry it was answered with |
 
-Unique index on `(userId, assignmentId, occurrence)`. Study-level completion
+Unique index on `(userId, assignmentId, occurrence, intentionId)` — `intentionId` is part
+of the key so per-habit deliver-on-creation windows (all `occurrence: 1`, one per habit)
+don't collide, while enrollment-anchored windows (`intentionId: null`) stay unique by
+occurrence. Study-level completion
 (`completed / total`) is aggregated over this collection; per-participant
 completion + answers power the admin participant view.
 
