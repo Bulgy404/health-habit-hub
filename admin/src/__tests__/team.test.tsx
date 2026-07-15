@@ -67,7 +67,7 @@ describe("TeamPage", () => {
     render(<TeamPage />);
     await screen.findByText("alice");
 
-    await user.click(screen.getByRole("button", { name: /add team member/i }));
+    await user.click(screen.getByRole("button", { name: /manage roles/i }));
     await user.type(screen.getByPlaceholderText(/search by username or email/i), "carol");
     await user.click(screen.getByRole("button", { name: /^search$/i }));
 
