@@ -239,28 +239,76 @@ sequenceDiagram
 
 ## Auth Flow
 
+The participant **never sees a Keycloak login page**. Authentication is built on a 24-word
+recovery passphrase (a pure re-encoding of the account's username UUID + 16-byte password,
+no server secret). The **backend** exchanges those credentials for a token pair via the
+confidential `hhh-ropc` client — the mobile app never performs the password grant itself,
+which is why the public `hhh-flutter` client has direct-access grants disabled. The three
+minting entry points (`/onboard`, `/restore`, `/users/me/rotate-credentials`) all route
+through `app/services/keycloakRopcClient.js`, which requests the `offline_access` scope.
+
 ```mermaid
 sequenceDiagram
-    participant Flutter
-    participant Keycloak
-    participant Backend as Node.js Backend
+    autonumber
+    actor P as Participant
+    participant F as Flutter App
+    participant B as Backend (Express)
+    participant KC as Keycloak
 
-    Flutter->>Flutter: Generate code_verifier + code_challenge (S256)
-    Flutter->>Keycloak: GET /auth/realms/hhh/protocol/openid-connect/auth<br/>?response_type=code&client_id=hhh-flutter<br/>&redirect_uri=hhh://callback&code_challenge=...&code_challenge_method=S256
-    Keycloak-->>Flutter: 302 → login page
-    Flutter->>Keycloak: POST login credentials
-    Keycloak-->>Flutter: 302 → hhh://callback?code=...
-    Flutter->>Keycloak: POST /token<br/>grant_type=authorization_code&code=...&code_verifier=...
-    Keycloak-->>Flutter: { access_token, refresh_token, id_token }
+    Note over P,KC: New account — POST /api/v1/onboard
+    P->>F: Complete onboarding
+    F->>B: POST /api/v1/onboard
+    B->>B: Generate userId + username (UUIDs)<br/>and a 16-byte password
+    B->>KC: Admin API: create realm user, assign role user
+    B->>KC: ROPC token grant (hhh-ropc)<br/>scope: openid profile email offline_access
+    KC-->>B: access_token, refresh_token, expires_in
+    B-->>F: 201 { tokens, username, password }
+    F->>F: Derive 24-word recovery phrase,<br/>store tokens in flutter_secure_storage
+    F-->>P: Show recovery phrase once (write it down)
 
-    Note over Flutter: Tokens stored in flutter_secure_storage
+    Note over P,KC: New device — POST /api/v1/restore
+    P->>F: Enter recovery phrase
+    F->>B: POST /api/v1/restore { phrase }
+    B->>B: credentialsFromRecoveryPhrase(phrase)<br/>to username + password
+    B->>KC: ROPC token grant (hhh-ropc)<br/>scope: openid profile email offline_access
+    KC-->>B: access_token, refresh_token, expires_in
+    B-->>F: 200 { tokens }
+    Note over F,KC: refresh_token is bound to Keycloak's offline session<br/>(180-day rolling idle, no max lifespan), not the 30-min<br/>SSO session, so ordinary gaps between opens don't log the user out
 
-    Flutter->>Backend: Any protected request<br/>Authorization: Bearer <access_token>
-    Backend->>Backend: Extract JWT header, look up kid in JWKS cache
-    Note over Backend: JWKS fetched from Keycloak on startup and cached
-    Backend->>Backend: Verify RS256 signature + exp + realm_access.roles
-    Backend-->>Flutter: 200 response or 401 Unauthorized
+    Note over P,KC: Authenticated requests and silent refresh
+    F->>B: Any protected request<br/>Authorization: Bearer access_token
+    B->>B: Verify RS256 sig via cached JWKS,<br/>check exp + realm_access.roles
+    B-->>F: 200 response or 401 Unauthorized
+    F->>KC: When access token nears expiry:<br/>POST /token grant_type=refresh_token, client_id=hhh-flutter
+    KC-->>F: new access_token + refresh_token<br/>(each refresh resets the 180-day idle clock)
 ```
+
+> **Dormant alternative:** a PKCE authorization-code flow (`AuthService.login()`, public
+> `hhh-flutter` client) still exists in the mobile codebase but has no current call site. It
+> requests the same `offline_access` scope, so token-lifetime behaviour would be identical
+> if it were ever wired up. See also the sequence diagrams
+> [UC-02 onboard](diagrams/sequences/UC-02-onboard.mmd) and
+> [UC-39 recover](diagrams/sequences/UC-39-recover-account-passphrase.mmd).
+
+### Session & token lifetime
+
+The mobile session is deliberately long-lived because the app is a habit tracker opened a
+few times a day, not a continuously-used website. Requesting the `offline_access` scope
+binds the refresh token to Keycloak's **offline session** instead of the regular SSO
+session:
+
+| Setting | Keycloak default | This realm (`keycloak/hhh-realm.json`) |
+| --- | --- | --- |
+| SSO session idle (regular tokens, no `offline_access`) | 30 min | unused by the mobile app |
+| `offlineSessionIdleTimeout` | 30 days | **180 days** |
+| `offlineSessionMaxLifespanEnabled` | `false` (no cap) | `false` (no cap) |
+
+It is a **rolling window, not a fixed expiry**: every silent refresh resets the 180-day
+idle timer and there is no absolute maximum, so a participant who opens the app at least
+once every six months stays signed in indefinitely (the "always signed in" model apps like
+WhatsApp use). Explicit sign-out still revokes the token via `/protocol/openid-connect/revoke`.
+Full rationale, the four token-minting call sites, and how to add a hard session cap later
+are in [DOCUMENTATION.md §11 → Session & Token Lifetime](../DOCUMENTATION.md).
 
 ### Realm Roles
 

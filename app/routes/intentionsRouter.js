@@ -20,7 +20,25 @@ import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'intentionsRouter' });
 
-export function createIntentionsRouter({ db, neo4jRun } = {}) {
+// Delay before the post-habit-creation check-in push fires. A short in-process
+// timer, overridable so tests can drive the push synchronously instead of
+// waiting 5 real seconds.
+const HABIT_PUSH_DELAY_MS = 5000;
+
+/**
+ * @param {object} deps
+ * @param {object} [deps.db]
+ * @param {Function} [deps.neo4jRun]
+ * @param {Function} [deps.notify] Injectable notifier (defaults to the FCM
+ *   per-user sender) so tests can assert the push without a real Firebase.
+ * @param {number} [deps.pushDelayMs] Override the push delay (tests use 0).
+ */
+export function createIntentionsRouter({
+  db,
+  neo4jRun,
+  notify = sendUserNotification,
+  pushDelayMs = HABIT_PUSH_DELAY_MS,
+} = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -193,18 +211,20 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
       if (srhiEnabled || genericDelivered.length > 0) {
         const habitLabel = result.behaviorLabel ?? '';
         setTimeout(() => {
-          sendUserNotification({
-            db: database,
-            userId,
-            title: 'Habit check-in ready',
-            body: habitLabel
-              ? `Take a moment to rate your new habit: ${habitLabel}`
-              : 'Take a moment to rate your new habit.',
-            data: { type: 'srhi', intentionId: result.id },
-          }).catch((err) =>
+          Promise.resolve(
+            notify({
+              db: database,
+              userId,
+              title: 'Habit check-in ready',
+              body: habitLabel
+                ? `Take a moment to rate your new habit: ${habitLabel}`
+                : 'Take a moment to rate your new habit.',
+              data: { type: 'srhi', intentionId: result.id },
+            })
+          ).catch((err) =>
             log.error({ err }, '[intentions] habit-creation push failed')
           );
-        }, 5000).unref?.();
+        }, pushDelayMs).unref?.();
       }
 
       res.status(201).json(result);

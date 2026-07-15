@@ -34,8 +34,8 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 - **Habit classification pipeline** — LLM-based habit extraction, BCIO ontology mapping, and recommendation generation via the Python FastAPI service
 - **Semantic knowledge base** — Neo4j habit graph with BCIO ontology alignment, plus a LightRAG graph+vector knowledge base _(the former Fuseki/RDF triplestore has been retired — see docs/migration.md)_
 - **Multi-language support** — English, German, French, Japanese, and Dutch (LibreTranslate for automatic translation + LLM refinement)
-- **Automated notifications** — Redis-coordinated scheduled push notification dispatch
-- **Researcher admin panel** — study management, participant tracking, questionnaire authoring
+- **Automated notifications** — Redis-coordinated scheduled push notification dispatch, plus per-habit check-in delivery (see _Questionnaire Scheduling & Check-in Delivery_)
+- **Researcher admin panel** — study management, participant tracking, questionnaire authoring and scheduling
 
 ---
 
@@ -527,7 +527,39 @@ Users without these roles see the `/access-denied` page. The Next.js edge middle
 - **Backups** — last-backup status per component, on-demand trigger, and restore from an existing or uploaded archive
 - **Audit log** — paginated log of admin actions
 - **Knowledge base** — view and manage the habit knowledge base
+- **Questionnaire scheduling** — assign questionnaires to a study/group on a cadence, and optionally flag one to **deliver on habit creation** (Studies → Schedule); see below
 - **Data export** — export questionnaire response and study analytics data
+
+### Questionnaire Scheduling & Check-in Delivery
+
+Researchers assign questionnaires to a study (all groups) or a specific group on a **cadence**
+(recurring interval, or fixed weeks/days after enrollment) in **Studies → Schedule**. Each
+participant gets per-occurrence `questionnaire_windows` generated on enrollment; submitting a
+response marks the next open window complete. Completion is shown as **completed / total** per
+questionnaire (the count reflects *submitted* windows, not merely scheduled ones).
+
+**Deliver on habit creation.** An assignment can be flagged **"Deliver first occurrence on
+habit creation (counts as week 1)"**. Instead of anchoring the first window at enrollment, the
+backend generates it **per habit** the moment the participant creates a habit
+(`POST /habits/intentions`), and fires a fire-and-forget FCM push (~5 s later, reusing the
+existing device-token → FCM path) nudging them to complete it. The push carries a deep-link
+payload (`{ type: "srhi", intentionId }`) and the check-in is also visible in-app immediately.
+
+- **SRHI** (the weekly habit-strength check-in) is special-cased: the flag gates its own
+  per-habit pipeline (`srhiService.generateWindows` → 4 weekly `srhi_responses` rows, week 1 =
+  creation day), preserving SRHI's dedicated scoring and sparkline. The **default study seeds
+  this SRHI assignment automatically** (idempotently, on boot — it also back-fills a
+  pre-existing default study), so organic participants get SRHI check-ins from their first habit.
+- Any **other** flagged questionnaire creates one generic `questionnaire_windows` row per habit
+  (keyed by `intentionId`).
+
+Behaviour is driven by the assignment's `deliverOnHabitCreation` flag (see
+`docs/data-model.md` → `questionnaire_assignments` / `questionnaire_windows`). The participant's
+Progress view in the admin panel surfaces created habits (from `implementation_intentions`) and
+an **SRHI check-ins** summary (`completed / scheduled` + latest score). Relevant code:
+`app/routes/intentionsRouter.js`, `app/services/questionnaireScheduleService.js`
+(`generateHabitCreationWindows`, `srhiDeliversOnHabitCreation`),
+`app/services/defaultStudySeedService.js` (`ensureSrhiHabitCreationAssignment`).
 
 ### Test Suite
 

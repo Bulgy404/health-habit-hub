@@ -6,8 +6,10 @@ sequenceDiagram
     participant B as Backend (srhiService)
     participant M as MongoDB
 
+    Note over B,M: Windows are pre-generated, not computed on the fly. When a habit is<br/>created — and the participant's study has an active SRHI assignment<br/>flagged deliverOnHabitCreation (default study: yes) — srhiService.<br/>generateWindows inserts 4 weekly srhi_responses rows (week 1 = creation<br/>day). A ~5 s FCM push then nudges the participant (see UC-35 / UC-15).
+
     F->>B: GET /api/v1/srhi/due
-    B->>M: Compute next due window per active intention (weekNumber since creation)
+    B->>M: Find pending windows (submittedAt=null) whose<br/>scheduledFor is within the 3-day submission window
     M-->>B: due windows
     B-->>F: [{intentionId, weekNumber, scheduledFor}]
     P->>F: Answer 12 SRHI items (1-7 scale)

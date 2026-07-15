@@ -12,8 +12,9 @@ sequenceDiagram
     KC-->>F: Login page
     P->>KC: Enter credentials
     KC-->>F: 302 hhh://callback?code=...
-    F->>KC: POST /token (code + code_verifier)
+    F->>KC: POST /token (code + code_verifier)<br/>scope: openid profile email offline_access
     KC-->>F: access_token, refresh_token, id_token
+    Note over F,KC: offline_access binds the refresh token to the 180-day<br/>rolling offline session, not the 30-min SSO session.<br/>Silent refresh on each open resets the idle clock
     F->>F: Store tokens in flutter_secure_storage
     F->>B: GET /api/v1/users/me (Bearer access_token)
     B->>B: Verify RS256 sig via cached JWKS, check roles
