@@ -72,14 +72,19 @@ test-backend: format ## Backend: lint + unit tests + security audit
 	# the time). force-exit sidesteps it by exiting once all tests + hooks have
 	# reported, instead of waiting for the event loop to drain naturally.
 	cd app && npx prettier --check . && npx eslint . && \
-	node --test --test-force-exit "tests/unit/**/*.test.js" && \
+	node --test --test-force-exit "tests/unit/**/*.test.js" "tests/integration/**/*.test.js" && \
 	npm audit --audit-level=critical
 
 test-flutter: ## Flutter: analyze + widget/unit tests
 	cd mobile && flutter analyze lib/ test/ && flutter test
 
-test-python: ## Python API-service: pytest
-	set -a && . ./.env && set +a && cd API-service && python3 -m pytest tests/ -v
+test-python: ## Python API-service: pytest (prefers API-service/.venv if present)
+	# Prefer the project venv's interpreter — a bare `python3` often resolves to
+	# a Homebrew Python without the test deps (pytest), which fails the target
+	# even though the venv is set up. Falls back to python3 when no venv exists.
+	set -a && . ./.env && set +a && cd API-service && \
+	PY=$$([ -x .venv/bin/python ] && echo .venv/bin/python || echo python3) && \
+	$$PY -m pytest tests/ -v
 
 test-admin: ## Admin: typecheck
 	cd admin && npx tsc --noEmit
