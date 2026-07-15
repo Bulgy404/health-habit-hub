@@ -144,7 +144,8 @@ export async function resolveHabitConfig({
 
         // A non-null group override wins over the study-level entry mode,
         // same as the flags above.
-        const effectiveHabitEntryMode = group?.habitEntryMode ?? study.habitEntryMode;
+        const effectiveHabitEntryMode =
+          group?.habitEntryMode ?? study.habitEntryMode;
         const effectiveStructuredActivityKeys =
           group?.structuredActivityKeys ?? study.structuredActivityKeys;
         if (effectiveHabitEntryMode === 'structured') {
