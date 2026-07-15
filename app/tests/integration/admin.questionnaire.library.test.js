@@ -59,15 +59,23 @@ function createMockDb() {
   function matchesFilter(doc, filter) {
     for (const [key, val] of Object.entries(filter)) {
       if (key === '$in') continue;
+      if (key === '$or') {
+        if (!val.some((clause) => matchesFilter(doc, clause))) return false;
+        continue;
+      }
       if (typeof val === 'object' && val !== null) {
         if ('$in' in val) {
-          const list = val.$in.map((v) => v.toString());
+          const list = val.$in.map((v) => v?.toString());
           if (!list.includes(doc[key]?.toString())) return false;
           continue;
         }
         if ('$exists' in val) {
           const exists = key in doc;
           if (val.$exists !== exists) return false;
+          continue;
+        }
+        if ('$ne' in val) {
+          if (doc[key] === val.$ne) return false;
           continue;
         }
       }
@@ -412,15 +420,30 @@ test('DELETE /api/v1/admin/questionnaires/:id - 409 if assigned to active study'
   );
   const { id } = await createRes.json();
 
-  // Seed a study that references this questionnaire
+  // Seed an active study and an active assignment linking this questionnaire
+  // to it — the delete guard now checks questionnaire_assignments, not the
+  // legacy study.questionnaires array.
+  const studyId = new ObjectId();
   mockDb._seed('studies', [
     {
-      _id: new ObjectId(),
+      _id: studyId,
       name: 'Active Study',
       isDefault: false,
       isActive: true,
       groups: [],
-      questionnaires: [new ObjectId(id)],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]);
+  mockDb._seed('questionnaire_assignments', [
+    {
+      _id: new ObjectId(),
+      studyId,
+      groupId: null,
+      questionnaireId: new ObjectId(id),
+      questionnaireSlug: 'assigned-q',
+      cadence: { mode: 'interval', intervalDays: 7, occurrences: 1 },
+      active: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -473,7 +496,21 @@ test('GET /api/v1/participant/questionnaires - returns study questionnaires for 
       isDefault: false,
       isActive: true,
       groups: [{ id: groupId, label: 'Group A', index: 1 }],
-      questionnaires: [new ObjectId(qId)],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]);
+  // participantRouter now derives "available questionnaires" from active
+  // questionnaire_assignments, not the legacy study.questionnaires array.
+  mockDb._seed('questionnaire_assignments', [
+    {
+      _id: new ObjectId(),
+      studyId,
+      groupId: null,
+      questionnaireId: new ObjectId(qId),
+      questionnaireSlug: 'participant-q',
+      cadence: { mode: 'interval', intervalDays: 7, occurrences: 1 },
+      active: true,
       createdAt: new Date(),
       updatedAt: new Date(),
     },

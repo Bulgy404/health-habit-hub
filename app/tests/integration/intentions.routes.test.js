@@ -49,11 +49,13 @@ function makeToken(roles = ['user'], sub = 'test-user') {
 // sequentially, not in parallel.
 let neo4jEnrollment = null;
 let studyDocs = [];
-// Mutable per-test hooks for the deliver-on-habit-creation feature: the Mongo
-// enrollment (studyId/groupId) and the study's questionnaire assignments that
-// gate whether SRHI windows are generated when a habit is created.
+// Mutable per-test hooks for the habit-scope feature: the Mongo enrollment
+// (studyId/groupId), the study's questionnaire assignments, and the
+// questionnaire definitions' `scope` — together these gate whether SRHI
+// windows are generated when a habit is created.
 let enrollmentDoc = null;
 let assignmentDocs = [];
+let questionnaireDocs = [];
 // Module-level so tests can assert how many SRHI windows the create-intention
 // route generated. Reset in each test that cares.
 let srhiInserts = [];
@@ -226,6 +228,11 @@ function createMockDb() {
           find: () => ({ toArray: async () => assignmentDocs }),
         };
       }
+      if (name === 'questionnaires') {
+        return {
+          find: () => ({ toArray: async () => questionnaireDocs }),
+        };
+      }
       if (name === 'admin_settings') {
         return {
           find: () => ({ toArray: async () => adminSettings }),
@@ -386,21 +393,22 @@ test('POST /habits/intentions does NOT generate SRHI windows when no flagged ass
   assert.strictEqual(srhiInserts.length, 0);
 });
 
-test('POST /habits/intentions generates SRHI windows when the study has a flagged SRHI assignment', async () => {
+test('POST /habits/intentions generates SRHI windows when the study has an active, habit-scoped SRHI assignment', async () => {
   srhiInserts.length = 0;
   const studyId = new ObjectId();
+  const srhiQuestionnaireId = new ObjectId();
   enrollmentDoc = { userId: 'srhi-user', studyId, groupId: null };
   assignmentDocs = [
     {
       _id: new ObjectId(),
       studyId,
       groupId: null,
-      questionnaireId: new ObjectId(),
+      questionnaireId: srhiQuestionnaireId,
       questionnaireSlug: 'srhi',
-      deliverOnHabitCreation: true,
       active: true,
     },
   ];
+  questionnaireDocs = [{ _id: srhiQuestionnaireId, scope: 'habit' }];
   try {
     const res = await post(
       INTENTIONS,
@@ -413,6 +421,7 @@ test('POST /habits/intentions generates SRHI windows when the study has a flagge
   } finally {
     enrollmentDoc = null;
     assignmentDocs = [];
+    questionnaireDocs = [];
     srhiInserts.length = 0;
   }
 });

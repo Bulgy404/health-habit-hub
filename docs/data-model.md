@@ -888,6 +888,7 @@ Questionnaire definitions. Loaded from seed data or admin tooling. Only document
 | `version`     | String    | Yes      | Schema version string (e.g. `"1.0"`)                |
 | `questions`   | Array     | Yes      | Array of question objects (type, id, text, options) |
 | `active`      | Boolean   | Yes      | `true` means visible to participants                |
+| `scope`       | String    | No       | `study` (default) — anchored to enrollment, applies once per participant. `habit` — anchored to each habit's creation (+~5s), applies once per habit. Drives how `questionnaire_assignments.cadence` is interpreted; see below. |
 
 ---
 
@@ -945,7 +946,7 @@ A research study/cohort: its experiment groups, participant-facing feature toggl
 | `endDate`                  | Date \| null      | No       | When set, the study concludes on this date; the admin schedule calendar stops projecting occurrences past it                                                       |
 | `endOfStudyNotification`   | Object \| null    | No       | `{ title, body }` — **content only**; whether/when it fires is `reminders.endOfStudy` above. Defaults to a generic title/body                                      |
 | `groups`                   | Array             | Yes      | 1–4 experiment groups: `{ id, label, index, allocationWeight, cueConfig, activityTypeConfig, reminders, autoDonate, onboardingEnabled, selfHabitCreationEnabled }` |
-| `questionnaires`           | Array\<ObjectId\> | Yes      | Refs to `questionnaires._id` administered natively in the study (separate from cadence-based `questionnaire_assignments` below)                                    |
+| `questionnaires`           | Array\<ObjectId\> | Yes      | @deprecated — superseded by `questionnaire_assignments.active` as the single source of truth for which questionnaires apply to a study. No longer written by the admin UI; kept only for backward-compat reads of old data                                    |
 | `createdAt` / `updatedAt`  | Date              | Yes      | Timestamps                                                                                                                                                         |
 
 **Reminders.** Each of the 4 types (`habit`, `questionnaire`, `endOfStudy`,
@@ -1040,25 +1041,20 @@ A questionnaire assigned to a study on a cadence. `groupId: null` = study-wide
 | `questionnaireSlug`       | String           | Yes      | Denormalised slug (matches `form_responses.questionnaireSlug`) |
 | `questionnaireTitle`      | String           | Yes      | Denormalised title (for admin display)                         |
 | `cadence`                 | Object           | Yes      | Schedule — see below                                           |
-| `active`                  | Boolean          | Yes      | Whether the assignment currently generates windows             |
-| `deliverOnHabitCreation`  | Boolean          | No       | When `true`, the first occurrence (week 1) is delivered per-habit right after the participant creates a habit, rather than anchored at enrollment — see below. Defaults to `false`. |
+| `active`                  | Boolean          | Yes      | The single on/off flag for this questionnaire in this study — gates both availability and whether windows are generated. Never defaulted `true` automatically; an admin must explicitly turn it on. |
 | `createdAt` / `updatedAt` | Date             | Yes      | Timestamps                                                     |
 
 **Cadence** is one of two shapes:
 
-- **Interval** — `{ mode: "interval", startOffsetDays, intervalDays, occurrences }`. Due dates = `enrolledAt + startOffsetDays + k·intervalDays` for `k` in `0 … occurrences-1`.
-- **Fixed** — `{ mode: "fixed", weeks?: number[], days?: number[] }`. Due dates = the union of `week·7` and exact `day` offsets after enrollment (week 0 / day 0 = baseline at enrollment).
+- **Interval** — `{ mode: "interval", startOffsetDays, intervalDays, occurrences, continuous? }`. Due dates = `anchor + startOffsetDays + k·intervalDays` for `k` in `0 … occurrences-1` (see **Scope & anchor** below for what "anchor" means). When `continuous: true`, `occurrences` is ignored and windows are generated on a rolling basis instead of a fixed count — see **Continuous delivery** below.
+- **Fixed** — `{ mode: "fixed", weeks?: number[], days?: number[] }`. Due dates = the union of `week·7` and exact `day` offsets after the anchor (week 0 / day 0 = the anchor itself).
 
-**Deliver on habit creation.** Normally windows are anchored at the participant's
-enrollment. When an assignment sets `deliverOnHabitCreation: true`, its first window is
-instead generated **per habit**, anchored at habit-creation time (counting as "week 1"),
-and a push notification nudges the participant ~5 s later. The admin toggles this per
-assignment in Studies → Schedule. The default study seeds an SRHI assignment with this flag
-on (`ensureSrhiHabitCreationAssignment`); **SRHI is special-cased** — the flag gates its own
-per-habit pipeline (`srhiService.generateWindows`, writing to `srhi_responses`, which keeps
-SRHI's scoring/sparkline) rather than creating a generic `questionnaire_windows` row. Any
-other flagged questionnaire creates one `questionnaire_windows` row per habit (see the
-`intentionId` field below).
+**Scope & anchor.** The questionnaire *definition*'s `scope` field (see `questionnaires` above) determines what "anchor" means for a given assignment's cadence:
+
+- `scope: 'study'` (default) — anchored at the participant's **enrollment**. `startOffsetDays` ("first due") is admin-editable. Windows are generated per participant (`intentionId: null`).
+- `scope: 'habit'` — anchored at each habit's (intention's) **creation time + ~5 seconds** (`HABIT_ANCHOR_DELAY_MS`), not admin-editable. Windows are generated **per habit** — a participant with 3 habits gets 3 independent window series, one per habit (see the `intentionId` field below). SRHI is habit-scoped but keeps its own dedicated pipeline (`srhiService.generateWindows`, writing to `srhi_responses`, for its scoring/sparkline) rather than generic `questionnaire_windows` rows; any other habit-scoped questionnaire uses the generic pipeline (`generateHabitCreationWindows`).
+
+**Continuous delivery.** A `continuous: true` interval cadence never generates all its windows upfront — only a rolling buffer capped at 12 future/open windows at a time (`CONTINUOUS_TOPUP_CAP`). The buffer is topped back up to 12 opportunistically whenever a window is submitted (`markWindowSubmitted`) or when the participant's due-list is read (`getDueQuestionnaires`), extending from the last existing window's `scheduledFor` rather than recomputing from the original enrollment/habit-creation date.
 
 A group-scoped assignment for a questionnaire overrides the study-wide
 assignment for that same questionnaire. Unique index on
@@ -1099,15 +1095,15 @@ created/changed (back-filled for already-enrolled participants).
 | `questionnaireId`   | ObjectId         | Yes      | Ref to `questionnaires._id`                            |
 | `questionnaireSlug` | String           | Yes      | Denormalised slug                                      |
 | `occurrence`        | Int              | Yes      | 1-based index within the assignment's schedule         |
-| `intentionId`       | ObjectId \| null | No       | Set only for `deliverOnHabitCreation` windows — the `implementation_intentions._id` this per-habit window belongs to; `null` for enrollment-anchored windows |
-| `scheduledFor`      | Date             | Yes      | Due date (`enrolledAt + offset`, or habit `createdAt` for per-habit windows) |
+| `intentionId`       | ObjectId \| null | No       | Set only for `scope: 'habit'` windows — the `implementation_intentions._id` this per-habit window series belongs to; `null` for `scope: 'study'` (enrollment-anchored) windows |
+| `scheduledFor`      | Date             | Yes      | Due date (`enrolledAt + offset` for study-scoped, or habit `createdAt + ~5s + offset` for habit-scoped windows) |
 | `submittedAt`       | Date \| null     | Yes      | When completed (null = open)                           |
 | `responseId`        | ObjectId \| null | Yes      | Ref to the `form_responses` entry it was answered with |
 
 Unique index on `(userId, assignmentId, occurrence, intentionId)` — `intentionId` is part
-of the key so per-habit deliver-on-creation windows (all `occurrence: 1`, one per habit)
-don't collide, while enrollment-anchored windows (`intentionId: null`) stay unique by
-occurrence. Study-level completion
+of the key so a habit-scoped questionnaire's per-habit window series (multiple occurrences
+per habit) don't collide with each other or with study-scoped windows, which have no
+intentionId (`null`) and stay unique by occurrence. Study-level completion
 (`completed / total`) is aggregated over this collection; per-participant
 completion + answers power the admin participant view.
 

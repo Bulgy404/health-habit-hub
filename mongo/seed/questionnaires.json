@@ -104,7 +104,8 @@
         "required": true
       }
     ],
-    "isLibrary": true
+    "isLibrary": true,
+    "scope": "study"
   },
   {
     "_id": "questionnaire-rand-36",
@@ -999,7 +1000,8 @@
         "required": true
       }
     ],
-    "isLibrary": true
+    "isLibrary": true,
+    "scope": "study"
   },
   {
     "_id": "questionnaire-srhi",
@@ -1166,6 +1168,7 @@
         "required": true
       }
     ],
-    "isLibrary": true
+    "isLibrary": true,
+    "scope": "habit"
   }
 ]

@@ -209,6 +209,9 @@ const cadenceSchema = z
     startOffsetDays: z.number().int().min(0).max(365).optional(),
     intervalDays: z.number().int().min(1).max(365).optional(),
     occurrences: z.number().int().min(1).max(200).optional(),
+    // When true (interval mode only), occurrences is ignored and windows are
+    // generated on a rolling basis indefinitely instead of a fixed count.
+    continuous: z.boolean().optional(),
     // Fixed timepoints: whole weeks and/or exact days after enrollment.
     weeks: z.array(z.number().int().min(0).max(104)).max(52).optional(),
     days: z.array(z.number().int().min(0).max(730)).max(120).optional(),
@@ -218,10 +221,11 @@ const cadenceSchema = z
       c.mode === 'fixed'
         ? (Array.isArray(c.weeks) && c.weeks.length > 0) ||
           (Array.isArray(c.days) && c.days.length > 0)
-        : c.intervalDays != null && c.occurrences != null,
+        : c.intervalDays != null &&
+          (c.continuous === true || c.occurrences != null),
     {
       message:
-        'interval mode requires intervalDays + occurrences; fixed mode requires weeks and/or days',
+        'interval mode requires intervalDays (+ occurrences unless continuous); fixed mode requires weeks and/or days',
     }
   );
 
@@ -230,16 +234,12 @@ export const createQuestionnaireAssignmentSchema = z.object({
   // null / omitted = study-wide (all groups); otherwise a specific group id.
   groupId: mongoId.nullable().optional(),
   cadence: cadenceSchema,
-  // When true, the first occurrence (week 1) is delivered right after a
-  // participant creates a habit (per-habit), instead of at enrollment.
-  deliverOnHabitCreation: z.boolean().optional(),
 });
 
 export const updateQuestionnaireAssignmentSchema = z
   .object({
     cadence: cadenceSchema.optional(),
     active: z.boolean().optional(),
-    deliverOnHabitCreation: z.boolean().optional(),
   })
   .strict();
 
@@ -265,6 +265,9 @@ export const createQuestionnaireSchema = z.object({
   version: z.string().max(20).optional(),
   languages: languagesSchema,
   questions: z.array(questionSchema).max(200).optional(),
+  // 'study' (default): anchored to enrollment, applies once per participant.
+  // 'habit': anchored to each habit's creation, applies once per habit.
+  scope: z.enum(['study', 'habit']).optional(),
 });
 
 export const updateQuestionnaireSchema = z.object({
@@ -273,6 +276,7 @@ export const updateQuestionnaireSchema = z.object({
   version: z.string().max(20).optional(),
   languages: languagesSchema.optional(),
   questions: z.array(questionSchema).max(200).optional(),
+  scope: z.enum(['study', 'habit']).optional(),
 });
 
 // ── Surveys ───────────────────────────────────────────────────────────────────

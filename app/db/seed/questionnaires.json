@@ -237,6 +237,7 @@
       }
     ],
     "isLibrary": true,
+    "scope": "study",
     "languages": ["en", "de", "fr", "ja", "nl"]
   },
   {
@@ -2255,6 +2256,7 @@
       }
     ],
     "isLibrary": true,
+    "scope": "study",
     "languages": ["en", "de", "fr", "ja", "nl"]
   },
   {
@@ -3047,6 +3049,7 @@
       }
     ],
     "isLibrary": true,
+    "scope": "habit",
     "languages": ["en", "de", "fr", "ja", "nl"]
   }
 ]

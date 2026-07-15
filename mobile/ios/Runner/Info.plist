@@ -39,6 +39,17 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Dev convenience: allow cleartext HTTP to RFC-1918 LAN hosts (e.g. a Mac
+	     running the local backend/Keycloak) so a cabled physical device can
+	     reach the stack via --dart-define=API_BASE_URL=http://<lan-ip>:3000/...
+	     `localhost` is already ATS-exempt; a raw LAN IP is not. This exception
+	     covers only local/private networks — it does NOT permit cleartext to
+	     public internet hosts, so it is safe to leave in place. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

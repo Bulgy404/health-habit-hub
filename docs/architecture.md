@@ -888,10 +888,12 @@ participants; this is now fixed as part of wiring up switch/leave.
 
 **Boot-time default study/questionnaire safety net:** `skip-code` (and
 therefore `leave-study`, which reuses the same default-study round-robin)
-requires a default study with the SLIQ/RAND-36/SRHI questionnaire library
-already seeded. Two divergent, unwired manual seed scripts previously meant
-a fresh deploy that skipped `make seed` had neither, and participants hit
-"failed to load questionnaires" with no default study to fall back into.
+requires a default study to exist and the SLIQ/RAND-36/SRHI questionnaire
+library to be seeded (as *definitions* — this does not pre-assign or
+activate any of them for the study; an admin must explicitly turn each one
+on via the admin UI). Two divergent, unwired manual seed scripts previously
+meant a fresh deploy that skipped `make seed` had neither, and participants
+hit "failed to load questionnaires" with no default study to fall back into.
 `app/services/defaultStudySeedService.js` now runs idempotently on every
 backend boot (from `adminRouter.js`'s existing self-seeding hook) to
 guarantee both exist, self-healing any deploy regardless of whether the

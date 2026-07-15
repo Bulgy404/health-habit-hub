@@ -4,6 +4,7 @@ import { makeGetDb } from '../utils/getDb.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { COLLECTION_DEVICE_TOKENS } from '../services/notificationService.js';
 import { getEnrollment } from '../services/enrollmentNeo4j.js';
+import { resolveEffectiveAssignments } from '../services/questionnaireScheduleService.js';
 import { resolveLocaleText } from '../utils/localeText.js';
 import { logger } from '../utils/logger.js';
 
@@ -74,9 +75,12 @@ export function createParticipantRouter({ db, neo4jRun } = {}) {
         return res.status(404).json({ error: 'Study not found or inactive' });
       }
 
-      const questionnaireIds = (study.questionnaires || []).filter(
-        (id) => id instanceof ObjectId
-      );
+      const assignments = await resolveEffectiveAssignments({
+        db: database,
+        studyId: studyOid,
+        groupId: enrollment.groupId ?? null,
+      });
+      const questionnaireIds = assignments.map((a) => a.questionnaireId);
 
       if (questionnaireIds.length === 0) {
         return res.json([]);

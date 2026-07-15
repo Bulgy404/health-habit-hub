@@ -13,7 +13,7 @@ import { upsertLog, getLogs, deleteLog } from '../services/dailyLogService.js';
 import { generateWindows } from '../services/srhiService.js';
 import {
   generateHabitCreationWindows,
-  srhiDeliversOnHabitCreation,
+  srhiHabitScopeActive,
 } from '../services/questionnaireScheduleService.js';
 import { sendUserNotification } from '../services/notificationService.js';
 import { logger } from '../utils/logger.js';
@@ -173,10 +173,10 @@ export function createIntentionsRouter({
         ? enrollment.groupId.toString()
         : (result.groupId ?? null);
 
-      // SRHI is generated only when the participant's study has an active SRHI
-      // assignment flagged to deliver on habit creation (see the default study
-      // seed). Its own per-habit pipeline handles scoring/sparkline.
-      const srhiEnabled = await srhiDeliversOnHabitCreation({
+      // SRHI is generated only when the participant's study has an active,
+      // habit-scoped SRHI assignment. Its own per-habit pipeline handles
+      // scoring/sparkline.
+      const srhiEnabled = await srhiHabitScopeActive({
         db: database,
         studyId,
         groupId,
@@ -192,8 +192,8 @@ export function createIntentionsRouter({
         });
       }
 
-      // Generic questionnaires flagged to deliver on habit creation get a
-      // per-habit week-1 window anchored at creation.
+      // Generic habit-scoped questionnaires get their full window series
+      // anchored at habit creation.
       const genericDelivered = await generateHabitCreationWindows({
         db: database,
         userId,
