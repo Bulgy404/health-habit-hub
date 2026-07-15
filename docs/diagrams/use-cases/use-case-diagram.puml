@@ -128,6 +128,14 @@ UC01 ..> KC : <<authenticates via>>
 UC17 ..> KC : <<authenticates via>>
 UC39 ..> KC : <<ROPC token mint>>
 UC02 ..> KC : <<creates user>>
+
+note bottom of KC
+  Participant token mints (UC-02 onboard, UC-39 restore,
+  and the dormant UC-01 PKCE path) request **offline_access**,
+  binding the refresh token to Keycloak's 180-day rolling
+  offline session (no idle-gap logouts). Explicit sign-out
+  still revokes it. See DOCUMENTATION.md Session & Token Lifetime.
+end note
 UC03 ..> LLM : <<classify + map BCIO>>
 UC07 ..> LLM : <<RAG generation>>
 UC24 ..> FCM : <<push>>
