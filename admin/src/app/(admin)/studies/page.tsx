@@ -219,6 +219,7 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
+  const [pendingOn, setPendingOn] = useState<Set<string>>(new Set());
 
   const base = `${API_BASE}/${study.id}/questionnaire-assignments`;
 
@@ -282,9 +283,19 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
 
   async function handleToggle(q: QuestionnaireSummary, assignment: ScheduleAssignment | undefined) {
     if (!assignment) {
-      // No assignment yet: just open the editor. It's only created once the
-      // admin explicitly saves a cadence — never auto-created by the toggle.
-      setRowExpanded(q.id, true);
+      // No real assignment to derive `checked` from yet: flip a local
+      // "pending on" flag so the switch shows on/green immediately and the
+      // cadence editor expands/collapses in sync. Nothing is persisted
+      // until the admin saves a cadence via handleCreate, which clears
+      // this flag once the real assignment lands.
+      const turningOn = !pendingOn.has(q.id);
+      setPendingOn((prev) => {
+        const next = new Set(prev);
+        if (turningOn) next.add(q.id);
+        else next.delete(q.id);
+        return next;
+      });
+      setRowExpanded(q.id, turningOn);
       return;
     }
     setBusy(q.id, true);
@@ -313,9 +324,20 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
         method: "POST",
         body: JSON.stringify({ questionnaireId: q.id, groupId, cadence }),
       });
+      if (!groupId) {
+        // Only the study-wide create corresponds to the pending flag — a
+        // group override can be added independently while the study-wide
+        // assignment is still pending.
+        setPendingOn((prev) => {
+          if (!prev.has(q.id)) return prev;
+          const next = new Set(prev);
+          next.delete(q.id);
+          return next;
+        });
+      }
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("scheduleTab.errors.addFailed"));
+      throw e instanceof Error ? e : new Error(t("scheduleTab.errors.addFailed"));
     } finally {
       setBusy(q.id, false);
     }
@@ -334,7 +356,7 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
       });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("saveFailedGeneric"));
+      throw e instanceof Error ? e : new Error(t("saveFailedGeneric"));
     } finally {
       setBusy(q.id, false);
     }
@@ -345,6 +367,12 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
     setBusy(q.id, true);
     try {
       await apiFetch(`${base}/${assignment.id}`, token, { method: "DELETE" });
+      setPendingOn((prev) => {
+        if (!prev.has(q.id)) return prev;
+        const next = new Set(prev);
+        next.delete(q.id);
+        return next;
+      });
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("scheduleTab.errors.deleteFailed"));
@@ -372,6 +400,7 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
     const assignment = byQuestionnaireId.get(q.id);
     const overrides = overridesByQuestionnaireId.get(q.id) ?? [];
     const isOn = assignment?.active === true;
+    const switchOn = isOn || pendingOn.has(q.id);
     const isExpanded = expanded.has(q.id);
     const busy = busyIds.has(q.id);
     // Read-only when peeking at a deactivated assignment's cadence without
@@ -390,7 +419,7 @@ function QuestionnairesTab({ study, token }: { study: StudySummary; token: strin
           }}
         >
           <ToggleSwitch
-            checked={isOn}
+            checked={switchOn}
             disabled={busy}
             onChange={() => handleToggle(q, assignment)}
             label={
@@ -531,6 +560,7 @@ function CadenceEditor({
   const [weeksStr, setWeeksStr] = useState((initial?.weeks ?? [0, 4, 8]).join(", "));
   const [daysStr, setDaysStr] = useState((initial?.days ?? []).join(", "));
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   const firstDueDate = (() => {
     const d = new Date();
@@ -540,29 +570,42 @@ function CadenceEditor({
   })();
 
   async function handleSave() {
+    setError("");
+    const parseList = (s: string) =>
+      s
+        .split(",")
+        .map((x) => parseInt(x.trim(), 10))
+        .filter((n) => !Number.isNaN(n));
+
+    let cadence: Cadence;
+    if (mode === "interval") {
+      if (intervalDays == null || (!continuous && occurrences == null)) {
+        setError(t("scheduleTab.errors.missingInterval"));
+        return;
+      }
+      cadence = {
+        mode,
+        startOffsetDays: isHabitScoped ? 0 : startOffsetDays,
+        intervalDays,
+        ...(continuous ? { continuous: true } : { occurrences }),
+      };
+    } else {
+      const weeks = parseList(weeksStr);
+      const days = parseList(daysStr);
+      if (weeks.length === 0 && days.length === 0) {
+        setError(t("scheduleTab.errors.noTimeSlots"));
+        return;
+      }
+      cadence = { mode: "fixed" };
+      if (weeks.length) cadence.weeks = weeks;
+      if (days.length) cadence.days = days;
+    }
+
     setSaving(true);
     try {
-      const parseList = (s: string) =>
-        s
-          .split(",")
-          .map((x) => parseInt(x.trim(), 10))
-          .filter((n) => !Number.isNaN(n));
-      let cadence: Cadence;
-      if (mode === "interval") {
-        cadence = {
-          mode,
-          startOffsetDays: isHabitScoped ? 0 : startOffsetDays,
-          intervalDays,
-          ...(continuous ? { continuous: true } : { occurrences }),
-        };
-      } else {
-        const weeks = parseList(weeksStr);
-        const days = parseList(daysStr);
-        cadence = { mode: "fixed" };
-        if (weeks.length) cadence.weeks = weeks;
-        if (days.length) cadence.days = days;
-      }
       await onSave(cadence);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("saveFailedGeneric"));
     } finally {
       setSaving(false);
     }
@@ -672,6 +715,7 @@ function CadenceEditor({
         </div>
       )}
 
+      {error && <div className={styles.errorMsg}>{error}</div>}
       <div className={styles.cueConfigFooter}>
         {onRemove && (
           <button

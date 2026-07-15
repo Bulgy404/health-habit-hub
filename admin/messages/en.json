@@ -967,7 +967,9 @@
       "errors": {
         "loadFailed": "Failed to load schedule",
         "addFailed": "Failed to add assignment",
-        "deleteFailed": "Failed to delete assignment"
+        "deleteFailed": "Failed to delete assignment",
+        "noTimeSlots": "Add at least one week or day before saving.",
+        "missingInterval": "Set an interval (days) before saving."
       }
     },
     "codesTab": {

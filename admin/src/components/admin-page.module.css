@@ -106,6 +106,7 @@
   border-radius: 6px;
   font-size: var(--fs-sm);
   background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .tableWrap {

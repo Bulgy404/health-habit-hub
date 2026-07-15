@@ -396,6 +396,7 @@
   border-radius: 5px;
   font-size: 0.85rem;
   background: var(--color-surface);
+  color: var(--color-text);
   outline: none;
   font-family: inherit;
 }

@@ -916,7 +916,9 @@
       "errors": {
         "loadFailed": "Échec du chargement du calendrier",
         "addFailed": "Échec de l'ajout de l'assignation",
-        "deleteFailed": "Échec de la suppression de l'assignation"
+        "deleteFailed": "Échec de la suppression de l'assignation",
+        "noTimeSlots": "Ajoutez au moins une semaine ou un jour avant d'enregistrer.",
+        "missingInterval": "Définissez un intervalle (jours) avant d'enregistrer."
       }
     },
     "codesTab": {
