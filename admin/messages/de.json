@@ -967,7 +967,9 @@
       "errors": {
         "loadFailed": "Zeitplan konnte nicht geladen werden",
         "addFailed": "Zuweisung konnte nicht hinzugefügt werden",
-        "deleteFailed": "Zuweisung konnte nicht gelöscht werden"
+        "deleteFailed": "Zuweisung konnte nicht gelöscht werden",
+        "noTimeSlots": "Füge mindestens eine Woche oder einen Tag hinzu, bevor du speicherst.",
+        "missingInterval": "Lege ein Intervall (Tage) fest, bevor du speicherst."
       }
     },
     "codesTab": {

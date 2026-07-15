@@ -743,7 +743,7 @@
 }
 
 .qItem:hover {
-  background: #f8fafc;
+  background: var(--color-surface-alt);
 }
 
 .qTitle {
@@ -1015,6 +1015,8 @@
   font-family: inherit;
   margin-bottom: 1rem;
   box-sizing: border-box;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 .downloadBtn {

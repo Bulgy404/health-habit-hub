@@ -916,7 +916,9 @@
       "errors": {
         "loadFailed": "Planning kon niet worden geladen",
         "addFailed": "Toewijzing kon niet worden toegevoegd",
-        "deleteFailed": "Toewijzing kon niet worden verwijderd"
+        "deleteFailed": "Toewijzing kon niet worden verwijderd",
+        "noTimeSlots": "Voeg minstens één week of dag toe voordat je opslaat.",
+        "missingInterval": "Stel een interval (dagen) in voordat je opslaat."
       }
     },
     "codesTab": {
