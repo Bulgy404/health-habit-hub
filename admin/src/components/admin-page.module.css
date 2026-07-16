@@ -337,7 +337,7 @@
 }
 
 .credBox {
-  background: #f8fafc;
+  background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 1rem;

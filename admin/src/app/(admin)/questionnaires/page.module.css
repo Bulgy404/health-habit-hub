@@ -80,7 +80,7 @@
 }
 
 .table tr:hover td {
-  background: #f8fafc;
+  background: var(--color-surface-alt);
 }
 
 .slugCell {
@@ -134,7 +134,7 @@
 }
 
 .actionBtnDanger:hover {
-  background: #fee2e2;
+  background: var(--color-surface-alt);
 }
 
 .emptyState {
@@ -368,7 +368,7 @@
 }
 
 .removeQBtn:hover {
-  background: #fee2e2;
+  background: var(--color-surface-alt);
 }
 
 .optionsSection {

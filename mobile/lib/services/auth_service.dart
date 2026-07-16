@@ -325,9 +325,9 @@ class AuthService {
   /// on the server so a stolen refresh token cannot be replayed. Revocation
   /// failure is silently ignored — local tokens are always cleared regardless.
   Future<void> logout() async {
-    final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
-    if (refreshToken != null) {
-      try {
+    try {
+      final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
+      if (refreshToken != null) {
         await (_dio ?? Dio()).post<void>(
           '$_keycloakBaseUrl/realms/$_realm/protocol/openid-connect/revoke',
           data: {
@@ -341,9 +341,10 @@ class AuthService {
             receiveTimeout: _authCallTimeout,
           ),
         );
-      } catch (_) {
-        // Best-effort — always clear local tokens even if revocation fails.
       }
+    } catch (_) {
+      // Best-effort — always clear local tokens even if reading the refresh
+      // token or revoking it fails (e.g. a secure-storage platform error).
     }
     await _secureStorage.delete(key: _tokenKey);
     await _secureStorage.delete(key: _refreshTokenKey);

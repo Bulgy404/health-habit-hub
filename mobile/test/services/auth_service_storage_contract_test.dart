@@ -71,6 +71,24 @@ class MockFlutterSecureStorage extends FlutterSecureStorage {
   }
 }
 
+/// Storage whose read() always throws — models a keychain/platform error.
+/// delete() still works, so logout()'s best-effort contract can be verified.
+class _ReadThrowingStorage extends MockFlutterSecureStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    calls.add({'method': 'read', 'key': key});
+    throw Exception('secure storage unavailable');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Stub for FlutterAppAuth
 // ---------------------------------------------------------------------------
@@ -333,6 +351,63 @@ void main() {
       final deletesBeforeCallback =
           storage.calls.where((c) => c['method'] == 'delete').length;
       expect(deletesBeforeCallback, 5);
+    });
+
+    test(
+        'clears all tokens and fires onLogout even when the storage read '
+        'throws (best-effort contract)', () async {
+      // A keychain/platform error while reading the refresh token must not
+      // abort logout — the doc promises local tokens are always cleared.
+      final throwing = _ReadThrowingStorage();
+      final log = <String>[];
+      final service = AuthService(
+        secureStorage: throwing,
+        onLogout: () => log.add('logout'),
+      );
+
+      await service.logout(); // must not throw
+
+      final deletedKeys = throwing.calls
+          .where((c) => c['method'] == 'delete')
+          .map((c) => c['key'] as String)
+          .toSet();
+      expect(
+        deletedKeys,
+        equals({
+          'access_token',
+          'refresh_token',
+          'token_expiry',
+          'username',
+          'password',
+        }),
+      );
+      expect(log, equals(['logout']));
+    });
+
+    test('clears all tokens even when the revocation HTTP call fails',
+        () async {
+      // Keycloak unreachable / 500 on the revoke endpoint — logout must still
+      // clear local state rather than surface the error.
+      storage.seedValue('refresh_token', 'ref');
+      final dio = _mockDio([const _MockResponse(statusCode: 500)]);
+      final service = AuthService(secureStorage: storage, dio: dio);
+
+      await service.logout(); // must not throw
+
+      final deletedKeys = storage.calls
+          .where((c) => c['method'] == 'delete')
+          .map((c) => c['key'] as String)
+          .toSet();
+      expect(
+        deletedKeys,
+        equals({
+          'access_token',
+          'refresh_token',
+          'token_expiry',
+          'username',
+          'password',
+        }),
+      );
     });
   });
 
