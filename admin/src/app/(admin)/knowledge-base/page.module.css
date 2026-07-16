@@ -110,7 +110,7 @@
 }
 
 .table tr:hover td {
-  background: #f8fafc;
+  background: var(--color-surface-alt);
 }
 
 .filenameCell {
@@ -163,7 +163,7 @@
 }
 
 .actionBtnDanger:hover {
-  background: #fee2e2;
+  background: var(--color-surface-alt);
 }
 
 .emptyState {

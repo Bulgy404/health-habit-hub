@@ -208,7 +208,7 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--color-text-muted);
-  background: #f8fafc;
+  background: var(--color-surface-alt);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -222,7 +222,7 @@
   border-bottom: none;
 }
 .table tbody tr:hover td {
-  background: #f8fafc;
+  background: var(--color-surface-alt);
 }
 
 .mono {
@@ -392,7 +392,7 @@
 }
 
 .drawerStat {
-  background: #f8fafc;
+  background: var(--color-surface-alt);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 0.75rem 1rem;

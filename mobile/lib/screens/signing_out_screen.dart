@@ -37,7 +37,13 @@ class _SigningOutScreenState extends ConsumerState<SigningOutScreen> {
   }
 
   Future<void> _signOut() async {
-    await ref.read(authServiceProvider).logout();
+    try {
+      await ref.read(authServiceProvider).logout();
+    } catch (_) {
+      // logout() is meant to be best-effort (local tokens always cleared —
+      // see its doc), but if it still throws, don't strand the user on this
+      // spinner forever with no way back (this screen is `canPop: false`).
+    }
     if (mounted) context.go(widget.nextRoute);
   }
 
