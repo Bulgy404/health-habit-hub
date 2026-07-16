@@ -9,7 +9,7 @@ This guide covers deploying Health Habit Hub to production using Portainer on th
 - URL: `https://habit.wiwi.tu-dresden.de`
 - Server IP: `141.76.16.16`
 - Management: Portainer
-- Auto-update: Every 5 minutes from `master` branch
+- Auto-update: Every 5 minutes from `main` branch
 
 ---
 
@@ -172,6 +172,16 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
 
 ## Pre-Deployment Checklist
 
+### 0. Code Quality
+
+- [ ] `make test` passes locally (or the individual `test-backend`,
+      `test-flutter`, `test-python`, `test-admin` targets) — this is the only
+      gate before a push reaches production, since Portainer's auto-update
+      polls `main` on a timer with no CI check of its own.
+- [ ] If the change touches admin UI styling, manually check both light and
+      dark mode in a browser — CSS module changes aren't covered by
+      `test-admin`'s typecheck.
+
 ### 1. Server Prerequisites
 
 - [ ] Server accessible at `141.76.16.16`
@@ -240,8 +250,8 @@ Failure to do this will cause `hhh-translate` to start but fail to persist langu
 
 ### Step 3: Configure Git Repository
 
-- **Repository URL:** `https://github.com/helict/health-habit-hub-2`
-- **Repository reference:** `refs/heads/master`
+- **Repository URL:** `https://github.com/Bulgy404/health-habit-hub.git`
+- **Repository reference:** `refs/heads/main`
 - **Compose path:** `docker-compose.yml`
 - **GitOps updates:** Enable
   - Polling interval: 5 minutes
@@ -486,7 +496,7 @@ hhh-backup-internal network (bridge, internal-only)
 
 ### How It Works
 
-- Portainer polls the `master` branch every 5 minutes
+- Portainer polls the `main` branch every 5 minutes
 - If changes are detected:
   1. Pulls latest code
   2. Rebuilds images if needed
@@ -647,9 +657,13 @@ docker exec hhh-backup cat /backups/backup_*.manifest | tail -20
 
 ### Updating Application Code
 
-1. Push changes to `master` branch
-2. Wait 5 minutes (or trigger a manual update in Portainer)
-3. Verify deployment in Portainer logs
+1. Run `make test` locally first (backend lint + unit/integration tests +
+   `npm audit`, Flutter analyze + tests, Python API-service pytest, admin
+   typecheck) — Portainer's auto-update has no CI gate of its own, so this is
+   the only check before a push reaches production.
+2. Push changes to `main` branch
+3. Wait 5 minutes (or trigger a manual update in Portainer)
+4. Verify deployment in Portainer logs
 
 ### Rotating Passwords
 
