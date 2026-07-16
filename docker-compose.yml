@@ -43,6 +43,7 @@ services:
     image: hhh/app
     container_name: hhh-app
     build: ./app
+    pull_policy: build
     restart: always
     env_file: .env
     environment:
@@ -389,6 +390,7 @@ services:
     image: hhh/lightrag
     container_name: hhh-lightrag
     build: ./lightrag
+    pull_policy: build
     restart: always
     env_file: .env
     environment:
@@ -426,6 +428,7 @@ services:
     image: hhh/knowledge-mcp
     container_name: hhh-knowledge-mcp
     build: ./knowledge-mcp
+    pull_policy: build
     restart: always
     environment:
       - LIGHTRAG_URL=${LIGHTRAG_URL:-http://lightrag:9621}
@@ -458,6 +461,7 @@ services:
     image: hhh/recommender
     container_name: hhh-recommender
     build: ./API-service
+    pull_policy: build
     restart: always
     env_file: .env
     environment:
@@ -501,6 +505,7 @@ services:
   admin:
     image: hhh/admin
     container_name: hhh-admin
+    pull_policy: build
     build:
       context: ./admin
       # NEXT_PUBLIC_* vars are inlined into the client bundle at `next build`
@@ -714,6 +719,7 @@ services:
     image: hhh/backup
     container_name: hhh-backup
     build: ./backup-service
+    pull_policy: build
     restart: always
     env_file: .env
     environment:
