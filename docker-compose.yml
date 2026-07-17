@@ -227,8 +227,11 @@ services:
       - LT_REQ_LIMIT=${LT_REQ_LIMIT:-0}
     networks:
       - hhh-proxy
-    volumes:
-      - translate-data:/home/libretranslate/.local/share/argos-translate/packages
+    # No volume mount: the libretranslate image ships the language models baked
+    # in at /home/libretranslate/.local/share/argos-translate/packages. Mounting
+    # a named volume there masks them with an empty dir, so no languages load and
+    # startup crashes with `IndexError: list index out of range`. The models are
+    # part of the image, so no persistence is needed.
     depends_on:
       - app
     healthcheck:
@@ -974,8 +977,6 @@ volumes:
     name: hhh-mongo-data
   mongo-config:
     name: hhh-mongo-config
-  translate-data:
-    name: hhh-translate-data
   neo4j-data:
     name: hhh-neo4j-data
   neo4j-logs:
