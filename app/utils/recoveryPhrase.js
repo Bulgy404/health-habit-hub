@@ -24,10 +24,6 @@ const UUID_RE =
  * @returns {boolean}
  */
 export function recoveryPhrasesEnabled() {
-  // Hard safety floor: recovery phrases are account secrets and must never be
-  // persisted/exposed in production, even if the env var is misconfigured to
-  // "true" (e.g. a stray value carried over from a dev .env).
-  if (process.env.NODE_ENV === 'production') return false;
   return process.env.EXPOSE_RECOVERY_PHRASES === 'true';
 }
 
