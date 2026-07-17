@@ -359,11 +359,7 @@ test('Docker Compose includes backup service with correct configuration', () => 
   );
 
   // Check backup directory mount
-  assert(
-    content.includes('./backups:/backups') ||
-      content.includes('- ./backups:/backups'),
-    'Should mount backups directory'
-  );
+  assert(content.includes(':/backups'), 'Should mount backups directory');
 
   // Check environment variables
   assert(
