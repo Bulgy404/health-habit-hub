@@ -221,7 +221,66 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
 - [ ] Traefik dashboard hash: `htpasswd -nb admin your-password`
 - [ ] **API service shared secret** (`API_SERVICE_SECRET`): `openssl rand -hex 32`
 
-### 5. Volume Permissions (First Deploy Only)
+### 5. Bind-Mount Config Directory (Required — Portainer CE Limitation)
+
+Portainer **Community Edition** does not support "relative path volumes" for
+Git-based stacks (that's a paid Business Edition feature — you'll see
+"Re-pull image" and "Force redeployment" greyed out as Business features too,
+which is a good sign you're on CE). Without it, a Git-based Portainer stack
+only fetches/writes `docker-compose.yml` itself into its own per-deploy stack
+folder (`/data/compose/<id>/`, a new numeric ID every deploy) — none of the
+repo's other files (`monitoring/`, `keycloak/`, `mongo/entrypoint/`,
+`neo4j/import/`) come along with it. Any relative `./...` bind mount that
+references them then points at a path that doesn't exist on disk.
+
+Docker's response to a missing bind-mount **source** is to silently
+auto-create an empty **directory** there to satisfy the mount — which then
+crashes any service expecting a *file* at that path (blackbox-exporter,
+Prometheus, the Keycloak realm import) with an OCI error like:
+
+```
+error mounting ".../monitoring/blackbox/blackbox.yml" to rootfs at
+"/etc/blackbox_exporter/config.yml" ... not a directory
+```
+
+**Fix (one-time, before the first deploy):** clone the repo directly onto the
+server at a stable path outside Portainer's per-deploy folder.
+`docker-compose.yml`'s bind mounts already point here by default
+(`${HHH_REPO_DIR:-/opt/hhh/repo}/...` for tracked config,
+`${HHH_DATA_DIR:-/opt/hhh/data}/...` for runtime data/secrets like backups
+and rclone credentials that shouldn't live in the git checkout):
+
+```bash
+sudo mkdir -p /opt/hhh
+sudo git clone https://github.com/Bulgy404/health-habit-hub.git /opt/hhh/repo
+sudo mkdir -p /opt/hhh/data/backups /opt/hhh/data/rclone
+```
+
+Both directories need to be readable by whatever UID/GID the containers run
+as — usually **not** root and **not** your login user:
+
+```bash
+sudo chmod -R go+rX /opt/hhh
+```
+
+Grant read access to **both** `group` (`g+r`) and `other` (`o+r`), not just
+one. Several images (e.g. Keycloak: `uid=1000(keycloak) gid=0(root)`) run as
+a non-root UID whose **group is `0`/root** — Linux permission checks use the
+*first matching class* (owner → group → other), so if a container's UID
+shares the file's owning group, the **group** bits are what get checked, and
+`other`-only permissions are silently ignored even though they'd otherwise
+allow the read. `go+rX` covers both cases.
+
+This clone is independent of Portainer's own Git polling, which only
+re-fetches the compose file text — when you change anything under
+`monitoring/`, `keycloak/`, `mongo/entrypoint/`, or `neo4j/import/`, update
+the server's copy too:
+
+```bash
+cd /opt/hhh/repo && sudo git pull && sudo chmod -R go+rX /opt/hhh/repo
+```
+
+### 6. Volume Permissions (First Deploy Only)
 
 LibreTranslate runs as UID 1032 inside the container. Create the host directory with the correct ownership before the first deploy so language model downloads succeed:
 
@@ -254,9 +313,16 @@ Failure to do this will cause `hhh-translate` to start but fail to persist langu
 - **Repository reference:** `refs/heads/main`
 - **Compose path:** `docker-compose.yml`
 - **GitOps updates:** Enable
-  - Polling interval: 5 minutes
-  - Re-pull image: Enable
-  - Force redeployment: Enable
+  - Mechanism: Polling, interval 5 minutes
+  - Re-pull image / Force redeployment: **Business Edition features** — greyed
+    out on Community Edition. Not required; GitOps polling still re-fetches
+    and redeploys `docker-compose.yml` on CE, just without those two extras.
+
+> **Before deploying:** this only clones `docker-compose.yml` itself, not the
+> rest of the repository (see [Bind-Mount Config
+> Directory](#5-bind-mount-config-directory-required--portainer-ce-limitation)
+> under Prerequisites) — complete that one-time server setup first, or the
+> deploy will fail on missing config files.
 
 ### Step 4: Override Environment Variables
 
@@ -578,6 +644,74 @@ In Portainer:
    ```
 2. Verify environment variables are set correctly in Portainer
 3. Check resource constraints (memory/CPU)
+
+### Bind-Mounted Config File Becomes an Empty Directory
+
+**Problem:** Deploy fails with an OCI runtime error like:
+
+```
+error mounting ".../monitoring/blackbox/blackbox.yml" to rootfs at
+"/etc/blackbox_exporter/config.yml" ... not a directory
+```
+
+**Cause:** The bind-mount source doesn't exist on the host as a *file* —
+Docker auto-creates it as an empty *directory* to satisfy the mount, then
+the container fails because it expected a file there. See [Bind-Mount Config
+Directory](#5-bind-mount-config-directory-required--portainer-ce-limitation)
+under Prerequisites — this happens if `/opt/hhh/repo` hasn't been
+cloned/updated yet, or its permissions don't allow the container's UID/GID
+to read it.
+
+**Solutions:**
+
+1. Confirm the file exists and is non-empty: `ls -la /opt/hhh/repo/<path>`
+2. If it's an empty directory instead of a file, `sudo rmdir` it, then
+   re-clone/re-pull `/opt/hhh/repo` so the real file lands there.
+3. Re-check permissions: `sudo chmod -R go+rX /opt/hhh`.
+
+### Keycloak Container Unhealthy / `keycloak-init` Never Starts
+
+**Problem:** Deploy fails with `dependency failed to start: container
+hhh-keycloak is unhealthy`, and `hhh-keycloak-init` never runs.
+
+**Solutions, in order of likelihood:**
+
+1. **Missing `KC_HTTP_ENABLED=true`:** Keycloak 26.x refuses to boot at all
+   in production mode without either HTTPS certs or this flag, since Traefik
+   (not Keycloak) terminates TLS. Symptom: the container exits within ~1
+   second with `Key material not provided to setup HTTPS...`. Already set on
+   the `keycloak` service in `docker-compose.yml` — if this regresses,
+   that's why.
+2. **Missing `--health-enabled=true` on the `start` command:** Keycloak
+   boots and runs fine, but Docker's healthcheck (`curl
+   .../health/ready`) fails continuously because Keycloak doesn't expose
+   that endpoint unless health checks are explicitly enabled. Symptom:
+   Keycloak's own logs show a clean, successful boot (`Listening on:
+   http://0.0.0.0:8080`) that runs for several minutes before a *graceful*
+   shutdown — Docker gave up waiting on the healthcheck and stopped it, not
+   a crash. Already set in `docker-compose.yml` (`command: start
+   --import-realm --health-enabled=true`) — if this regresses, that's why.
+3. **`hhh-realm.json` permission denied:** see the group-vs-other permission
+   gotcha in the [Bind-Mount Config
+   Directory](#5-bind-mount-config-directory-required--portainer-ce-limitation)
+   section — this file needs to be group- *or* other-readable by Keycloak's
+   container UID, not just one or the other.
+
+**Debugging tip:** Portainer tears down the whole stack automatically the
+moment a deploy fails, often within a second or two — by the time you `docker
+logs <container>` by hand, it may already say `No such container`. To catch
+the real error, subscribe to Docker's live event stream *before* redeploying
+so you attach to the log stream the moment the container starts, rather than
+racing to fetch logs afterward:
+
+```bash
+sudo docker events --filter 'container=hhh-keycloak' --filter 'event=start' | head -1 | while read -r line; do
+  sudo docker logs -f hhh-keycloak
+done | tee /tmp/keycloak.log
+```
+
+Then redeploy and watch this terminal — it streams the container's real
+startup output live, including whatever happens right before it's torn down.
 
 ---
 
