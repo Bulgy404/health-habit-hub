@@ -20,10 +20,12 @@ scrape_configs:
     static_configs:
       - targets:
           - http://app:3000/api/v1/health
-          - http://mongo-express:8081/mongo/
           - http://translate:5000/languages
           - http://neo4j:7474
-          - http://keycloak:8080/health/ready
+          # Keycloak health lives on the management port (9000), and
+          # KC_HTTP_RELATIVE_PATH=/auth moves it under /auth — so it is
+          # /auth/health/ready on 9000, NOT /health/ready on 8080 (404).
+          - http://keycloak:9000/auth/health/ready
           - http://recommender:8000/health
           - http://prometheus:9090/-/healthy
           - http://grafana:3000/grafana/api/health
@@ -47,10 +49,14 @@ scrape_configs:
           - lightrag:9621
           - knowledge-mcp:8002
           - proxy:80
+          # mongo-express is behind basic-auth (HTTP probe gets 401, not 2xx),
+          # so probe the listener with TCP instead — matches the "auth-gated"
+          # guidance in blackbox.yml.
+          - mongo-express:8081
       # keycloak-db (Postgres) intentionally has no direct probe: local dev
       # uses Keycloak's embedded dev-file store (no keycloak-db container at
       # all — see docker-compose.local.yml), and in production a backing-store
-      # failure already surfaces via the keycloak:8080/health/ready probe above.
+      # failure already surfaces via the keycloak:9000/auth/health/ready probe above.
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

@@ -809,6 +809,10 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      # The dashboard provider (provisioning/dashboards/dashboard.yml) reads JSON
+      # from /etc/grafana/dashboards — mount it, or Grafana logs a repeating
+      # "stat /etc/grafana/dashboards: no such file or directory" every 10s.
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
     depends_on:
       - prometheus
     healthcheck:
