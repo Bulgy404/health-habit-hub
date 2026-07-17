@@ -340,7 +340,14 @@ services:
       keycloak-db:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:9000/health/ready']
+      # The Keycloak 26 image (ubi9-micro) has no curl — probe the management
+      # port (9000) with bash's built-in /dev/tcp instead. Mirrors
+      # docker-compose.local.yml.
+      test:
+        [
+          'CMD-SHELL',
+          "bash -c 'exec 3<>/dev/tcp/localhost/9000 && printf \"GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && cat <&3 | grep -q UP'",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
