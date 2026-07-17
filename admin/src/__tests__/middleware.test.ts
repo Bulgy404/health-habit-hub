@@ -45,7 +45,10 @@ describe("middleware", () => {
       const callbackUrl = new URL(location, "http://0.0.0.0:3001").searchParams.get("callbackUrl");
       expect(callbackUrl).toBe("http://admin.localhost/system");
     } finally {
-      process.env.NEXTAUTH_URL = original;
+      // Restore properly — assigning `undefined` would coerce to the string
+      // "undefined" and poison later tests that read NEXTAUTH_URL.
+      if (original === undefined) delete process.env.NEXTAUTH_URL;
+      else process.env.NEXTAUTH_URL = original;
     }
   });
 

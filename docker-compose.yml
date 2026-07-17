@@ -27,12 +27,13 @@ services:
       - traefik-certs:/certs
     labels:
       - traefik.enable=true
-      - traefik.http.routers.dashboard.rule=Host(`${DOMAIN}`) && (PathPrefix(`/dashboard`) || PathPrefix(`/api`))
-      - traefik.http.routers.dashboard.entrypoints=websecure
-      - traefik.http.routers.dashboard.tls.certresolver=letsencrypt
-      - traefik.http.routers.dashboard.service=api@internal
-      - traefik.http.routers.dashboard.middlewares=dashboard-auth
-      - traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_AUTH}
+      # NOTE: the Traefik dashboard/api@internal router is intentionally NOT
+      # exposed here. It previously used `PathPrefix(/api)`, which (being a
+      # longer, higher-priority rule than the app's `Host(DOMAIN)` catch-all)
+      # shadowed the ENTIRE application API — /api/v1/* and the admin panel's
+      # /admin/api/auth/* — behind Traefik basic-auth, breaking the mobile app
+      # and admin login. If the Traefik dashboard is needed, expose it on a
+      # dedicated host (e.g. traefik.${DOMAIN}), never under /api.
     logging:
       driver: json-file
       options:
@@ -330,6 +331,10 @@ services:
       - path: .env
         required: false
     environment:
+      # Realm import substitutes ${DOMAIN} in the hhh-admin client redirect URIs
+      # (https://${DOMAIN}/admin/*); without DOMAIN in the container env it would
+      # import literally and every OAuth callback would fail "Invalid redirect_uri".
+      - DOMAIN=${DOMAIN}
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_PROXY_HEADERS=xforwarded
