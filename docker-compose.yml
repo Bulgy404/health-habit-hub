@@ -331,7 +331,7 @@ services:
       - KC_DB_URL=jdbc:postgresql://keycloak-db:5432/keycloak
       - KC_DB_USERNAME=${KC_DB_USERNAME:-keycloak}
       - KC_DB_PASSWORD=${KC_DB_PASSWORD}
-    command: start --import-realm
+    command: start --import-realm --health-enabled=true
     networks:
       - hhh-proxy
     volumes:
