@@ -209,7 +209,11 @@ services:
     image: libretranslate/libretranslate:v1.9.5
     container_name: hhh-translate
     restart: always
-    user: '1032:1032'
+    # No `user:` override — the image runs as its built-in `libretranslate`
+    # user, which owns /home/libretranslate/.local/share/argos-translate.
+    # Forcing a different UID makes the argos model store unwritable
+    # (Permission denied on index.json), so no languages load and the app
+    # crashes with `IndexError: list index out of range`.
     env_file:
       # Portainer repository deploys have no .env in the checkout; UI variables
       # are substitution-only. stack.env (in the repo) supplies non-secret
