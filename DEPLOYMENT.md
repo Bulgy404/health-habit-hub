@@ -691,7 +691,16 @@ hhh-keycloak is unhealthy`, and `hhh-keycloak-init` never runs.
    shutdown — Docker gave up waiting on the healthcheck and stopped it, not
    a crash. Already set in `docker-compose.yml` (`command: start
    --import-realm --health-enabled=true`) — if this regresses, that's why.
-3. **`hhh-realm.json` permission denied:** see the group-vs-other permission
+3. **Healthcheck pointed at the wrong port:** enabling health checks in
+   Keycloak 26.x also spins up a separate **management interface** (health
+   + metrics), listening on **port 9000** by default — `/health/ready` is no
+   longer served on the main port 8080 at all. Symptom: same as above (clean
+   boot, graceful shutdown after the healthcheck gives up), but Keycloak's
+   boot log will explicitly say `Listening on: http://0.0.0.0:8080.
+   Management interface listening on http://0.0.0.0:9000.` The
+   `healthcheck.test` in `docker-compose.yml` must target port **9000**, not
+   8080 — if this regresses, that's why.
+4. **`hhh-realm.json` permission denied:** see the group-vs-other permission
    gotcha in the [Bind-Mount Config
    Directory](#5-bind-mount-config-directory-required--portainer-ce-limitation)
    section — this file needs to be group- *or* other-readable by Keycloak's
