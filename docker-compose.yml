@@ -321,7 +321,7 @@ services:
       - path: .env
         required: false
     environment:
-      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_PROXY_HEADERS=xforwarded
       - KC_HOSTNAME_STRICT=false
@@ -373,7 +373,7 @@ services:
       # The bootstrap script below reads these from the container environment —
       # explicit interpolation so Portainer UI variables reach it (see the
       # env_file note above).
-      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN}
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - HHH_ADMIN_USER=${HHH_ADMIN_USER:-admin}
       - KEYCLOAK_ADMIN_CLIENT_SECRET=${KEYCLOAK_ADMIN_CLIENT_SECRET}
