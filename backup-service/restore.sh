@@ -202,13 +202,13 @@ elif [ -f "$RESTORE_DIR/keycloak/hhh-realm.json" ]; then
     # printf instead of an inline -d argument, so they never appear in
     # `ps aux` / `/proc/<pid>/cmdline` for the curl subprocess.
     KC_TOKEN=$(printf 'client_id=admin-cli&grant_type=password&username=%s&password=%s' "$KEYCLOAK_ADMIN" "$KEYCLOAK_ADMIN_PASSWORD" | curl -sf -X POST \
-      "http://${KEYCLOAK_HOST}:8080/realms/master/protocol/openid-connect/token" \
+      "http://${KEYCLOAK_HOST}:8080/auth/realms/master/protocol/openid-connect/token" \
       --data @- \
       2>/dev/null | jq -r '.access_token // empty' || true)
 
     if [ -n "$KC_TOKEN" ] && [ "$KC_TOKEN" != "null" ]; then
       if curl -sf -X POST \
-        "http://${KEYCLOAK_HOST}:8080/admin/realms/hhh/partialImport" \
+        "http://${KEYCLOAK_HOST}:8080/auth/admin/realms/hhh/partialImport" \
         -H "Authorization: Bearer $KC_TOKEN" \
         -H "Content-Type: application/json" \
         -d @"$RESTORE_DIR/keycloak/hhh-realm.json" \
