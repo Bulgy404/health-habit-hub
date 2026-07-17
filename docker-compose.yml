@@ -206,7 +206,9 @@ services:
         max-file: '3'
 
   translate:
-    image: libretranslate/libretranslate:v1.9.5
+    image: hhh/translate
+    build: ./translate
+    pull_policy: build
     container_name: hhh-translate
     restart: always
     # No `user:` override — the image runs as its built-in `libretranslate`
