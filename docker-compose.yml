@@ -350,12 +350,15 @@ services:
         condition: service_healthy
     healthcheck:
       # The Keycloak 26 image (ubi9-micro) has no curl — probe the management
-      # port (9000) with bash's built-in /dev/tcp instead. Mirrors
-      # docker-compose.local.yml.
+      # port (9000) with bash's built-in /dev/tcp instead.
+      # NOTE: KC_HTTP_RELATIVE_PATH=/auth moves the management health endpoints
+      # under /auth, so the path is /auth/health/ready (not /health/ready — that
+      # returns 404 here, unlike docker-compose.local.yml which sets no relative
+      # path).
       test:
         [
           'CMD-SHELL',
-          "bash -c 'exec 3<>/dev/tcp/localhost/9000 && printf \"GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && cat <&3 | grep -q UP'",
+          "bash -c 'exec 3<>/dev/tcp/localhost/9000 && printf \"GET /auth/health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && cat <&3 | grep -q UP'",
         ]
       interval: 30s
       timeout: 10s
