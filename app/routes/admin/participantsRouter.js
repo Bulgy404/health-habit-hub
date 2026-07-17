@@ -18,6 +18,10 @@ import { logger } from '../../utils/logger.js';
 const log = logger.child({ module: 'participantsRouter' });
 
 function testToolsEnabled() {
+  // Hard safety floor: dev/test tools (e.g. fast-forwarding a participant's
+  // schedule) would corrupt real study data, so they are never enabled in
+  // production regardless of the env var.
+  if (process.env.NODE_ENV === 'production') return false;
   return process.env.ENABLE_TEST_TOOLS === 'true';
 }
 
