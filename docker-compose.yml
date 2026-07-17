@@ -145,7 +145,7 @@ services:
     networks:
       - hhh-proxy
     volumes:
-      - ./mongo/entrypoint:/docker-entrypoint-initdb.d:ro
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/mongo/entrypoint:/docker-entrypoint-initdb.d:ro
       - mongo-data:/data/db
       - mongo-config:/data/configdb
     healthcheck:
@@ -271,7 +271,7 @@ services:
     volumes:
       - neo4j-data:/data
       - neo4j-logs:/logs
-      - ./neo4j/import:/import:ro
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/neo4j/import:/import:ro
     healthcheck:
       test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost:7474']
       interval: 30s
@@ -334,7 +334,7 @@ services:
     networks:
       - hhh-proxy
     volumes:
-      - ./keycloak/hhh-realm.json:/opt/keycloak/data/import/hhh-realm.json:ro
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/keycloak/hhh-realm.json:/opt/keycloak/data/import/hhh-realm.json:ro
     depends_on:
       keycloak-db:
         condition: service_healthy
@@ -381,7 +381,7 @@ services:
       - KEYCLOAK_ROPC_CLIENT_SECRET=${KEYCLOAK_ROPC_CLIENT_SECRET}
       - GRAFANA_CLIENT_SECRET=${GRAFANA_CLIENT_SECRET}
     volumes:
-      - ./keycloak/hhh-user-profile.json:/opt/keycloak/bootstrap/hhh-user-profile.json:ro
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/keycloak/hhh-user-profile.json:/opt/keycloak/bootstrap/hhh-user-profile.json:ro
     networks:
       - hhh-proxy
     depends_on:
@@ -679,7 +679,7 @@ services:
     networks:
       - hhh-proxy
     volumes:
-      - ./monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
     command:
       - --config.file=/etc/blackbox_exporter/config.yml
     healthcheck:
@@ -709,7 +709,7 @@ services:
     networks:
       - hhh-proxy
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -783,7 +783,7 @@ services:
       - hhh-proxy
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     depends_on:
       - prometheus
     healthcheck:
@@ -859,12 +859,12 @@ services:
       # hhh-backup-internal network.
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
     volumes:
-      - ./backups:/backups
+      - ${HHH_DATA_DIR:-/opt/hhh/data}/backups:/backups
       # If OFFSITE_REMOTE is set: this container now runs backup.sh/restore.sh
       # as a non-root user (docker-entrypoint.sh chowns /backups on start, but
       # cannot chown this read-only mount) — ensure these files are readable
-      # by "other" on the host, e.g. `chmod -R o+r ./backup-service/rclone`.
-      - ./backup-service/rclone:/config/rclone:ro
+      # by "other" on the host, e.g. `chmod -R o+r /opt/hhh/data/rclone`.
+      - ${HHH_DATA_DIR:-/opt/hhh/data}/rclone:/config/rclone:ro
       - lightrag-data:/lightrag:ro
     networks:
       - hhh-proxy
