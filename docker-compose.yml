@@ -177,12 +177,17 @@ services:
     depends_on:
       - mongo
     healthcheck:
+      # Lightweight TCP-connect probe: just confirm the HTTP listener is up on
+      # 8081. The previous HTTP GET to /mongo/ was fragile — it is basic-auth
+      # gated and renders a page that queries MongoDB, so it timed out during
+      # Mongo reconnect windows and flapped the container to "unhealthy" even
+      # though mongo-express was serving fine.
       test:
         [
           'CMD',
           'node',
           '-e',
-          "require('http').get('http://localhost:8081/mongo/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))",
+          "require('net').connect(8081, '127.0.0.1', () => process.exit(0)).on('error', () => process.exit(1))",
         ]
       interval: 30s
       timeout: 10s
