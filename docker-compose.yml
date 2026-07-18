@@ -652,7 +652,12 @@ services:
       - path: .env
         required: false
     environment:
-      - NEXTAUTH_URL=https://${DOMAIN}/admin
+      # NextAuth v4 with a Next.js basePath (/admin) needs the FULL path to its
+      # API here, including /api/auth — otherwise it emits sign-in/callback/CSRF
+      # links at /admin/* instead of /admin/api/auth/*, and login loops on
+      # /admin/signin?csrf=true. NEXT_PUBLIC_NEXTAUTH_URL stays the app base
+      # (/admin) — it's used for post-logout redirects, not NextAuth routing.
+      - NEXTAUTH_URL=https://${DOMAIN}/admin/api/auth
       - NEXT_PUBLIC_NEXTAUTH_URL=https://${DOMAIN}/admin
       - NEXT_PUBLIC_KEYCLOAK_BROWSER_URL=https://${DOMAIN}/auth
       - NEXT_PUBLIC_API_URL=https://${DOMAIN}/api/v1

@@ -36,12 +36,16 @@ describe("middleware", () => {
     // callbackUrl must come from NEXTAUTH_URL instead, or a successful
     // sign-in redirects the browser to an unreachable address.
     const original = process.env.NEXTAUTH_URL;
-    process.env.NEXTAUTH_URL = "http://admin.localhost";
+    // NEXTAUTH_URL includes the /api/auth path (basePath deployment); the
+    // callbackUrl must be built from the app base (that minus /api/auth), and
+    // the sign-in redirect must target the auth API.
+    process.env.NEXTAUTH_URL = "http://admin.localhost/api/auth";
     try {
       mockedGetToken.mockResolvedValueOnce(null);
       const req = new NextRequest("http://0.0.0.0:3001/system");
       const res = await middleware(req);
       const location = res.headers.get("location")!;
+      expect(location).toContain("http://admin.localhost/api/auth/signin");
       const callbackUrl = new URL(location, "http://0.0.0.0:3001").searchParams.get("callbackUrl");
       expect(callbackUrl).toBe("http://admin.localhost/system");
     } finally {
