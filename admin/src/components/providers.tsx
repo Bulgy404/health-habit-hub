@@ -28,6 +28,11 @@ function SessionGuard({ children }: { children: React.ReactNode }) {
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  // The app is served under a base path (default /admin), so the NextAuth client
+  // must target `<basePath>/api/auth` — otherwise signIn()/useSession()/CSRF fetch
+  // the root `/api/auth/*`, which the reverse proxy routes to the backend API, not
+  // the admin app. That breaks CSRF validation and sign-in silently loops.
+  const authBasePath = `${process.env.NEXT_PUBLIC_BASE_PATH ?? "/admin"}/api/auth`;
   return (
     <AppRouterCacheProvider options={{ key: "mui" }}>
       <ThemeProvider theme={muiTheme}>
@@ -38,7 +43,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
           without a manual page reload. refetchOnWindowFocus additionally
           recovers the moment the user returns to an idle tab.
         */}
-        <SessionProvider refetchInterval={4 * 60} refetchOnWindowFocus>
+        <SessionProvider
+          basePath={authBasePath}
+          refetchInterval={4 * 60}
+          refetchOnWindowFocus
+        >
           <SessionGuard>{children}</SessionGuard>
         </SessionProvider>
       </ThemeProvider>
