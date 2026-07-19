@@ -8,6 +8,10 @@
  * (#2e8c00), a clean system sans-serif stack, a centred readable column, and
  * light/dark awareness via `prefers-color-scheme`. The rendered document body
  * (`contentHtml`) is trusted first-party markdown from `app/language/**`.
+ *
+ * NOTE: the global CSP (middleware/securityHeaders.js) blocks un-nonced inline
+ * <style>, so the caller MUST pass `nonce` (from res.locals.cspNonce) — without
+ * it the browser drops the CSS and the page falls back to unstyled serif text.
  */
 
 const PAGES = ['privacy', 'imprint', 'accessibility'];
@@ -40,6 +44,7 @@ function escapeHtml(str = '') {
  * @param {string} opts.pageName One of `privacy` | `imprint` | `accessibility`.
  * @param {string} opts.contentHtml Rendered document body (trusted HTML).
  * @param {Record<string,string>} [opts.meta] Front-matter (version, effectiveDate).
+ * @param {string} [opts.nonce]  CSP nonce for the inline <style> (required in prod).
  * @returns {string} Full HTML document.
  */
 export function renderLegalPage({
@@ -48,16 +53,18 @@ export function renderLegalPage({
   pageName,
   contentHtml,
   meta = {},
+  nonce = '',
 }) {
   const otherLang = lang === 'de' ? 'en' : 'de';
   const labels = NAV_LABELS[lang] ?? NAV_LABELS.en;
+  const nonceAttr = nonce ? ` nonce="${escapeHtml(nonce)}"` : '';
 
-  const crossLinks = PAGES.map((p) => {
+  const tabs = PAGES.map((p) => {
     const href = `/${lang}/${p}`;
     const label = escapeHtml(labels[p]);
     return p === pageName
-      ? `<span class="crumb active" aria-current="page">${label}</span>`
-      : `<a class="crumb" href="${href}">${label}</a>`;
+      ? `<span class="tab active" aria-current="page">${label}</span>`
+      : `<a class="tab" href="${href}">${label}</a>`;
   }).join('');
 
   const effective = meta.effectiveDate
@@ -73,17 +80,19 @@ export function renderLegalPage({
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="index,follow" />
   <title>${escapeHtml(title)} · Health Habit Hub</title>
-  <style>
+  <style${nonceAttr}>
     :root {
       --primary: #2e8c00; --primary-hover: #256f00;
-      --bg: #f7f8f7; --surface: #ffffff; --text: #1a1c19;
+      --bg: #f4f6f3; --surface: #ffffff; --text: #1a1c19;
       --muted: #5c6159; --border: #e2e5e0; --link: #256f00;
+      --chip: #eef2ea;
     }
     @media (prefers-color-scheme: dark) {
       :root {
         --primary: #7bd44e; --primary-hover: #93e06a;
-        --bg: #12140f; --surface: #1b1e18; --text: #e3e4de;
+        --bg: #10120d; --surface: #1b1e18; --text: #e3e4de;
         --muted: #a3a89d; --border: #2c312a; --link: #9fe07a;
+        --chip: #232821;
       }
     }
     * { box-sizing: border-box; }
@@ -92,58 +101,90 @@ export function renderLegalPage({
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       line-height: 1.65; -webkit-font-smoothing: antialiased;
     }
-    header.top {
-      background: var(--primary); color: #fff; padding: 1.25rem 1rem;
+    .wrap { max-width: 820px; margin: 0 auto; padding: 0 1rem; }
+    header.top { background: var(--primary); color: #fff; padding: 1.4rem 0 1.5rem; }
+    header.top .brand {
+      font-weight: 700; letter-spacing: .2px; opacity: .95; font-size: .9rem;
+      text-transform: uppercase;
     }
-    header.top .inner { max-width: 780px; margin: 0 auto; }
-    header.top .brand { font-weight: 700; letter-spacing: .2px; opacity: .95; font-size: .95rem; }
-    header.top h1 { margin: .35rem 0 0; font-size: 1.6rem; line-height: 1.25; }
-    .meta { color: rgba(255,255,255,.85); font-size: .85rem; margin: .4rem 0 0; }
-    nav.crumbs {
-      max-width: 780px; margin: 0 auto; padding: .75rem 1rem 0;
-      display: flex; flex-wrap: wrap; gap: .35rem .75rem; font-size: .9rem;
+    header.top h1 { margin: .35rem 0 0; font-size: 1.7rem; line-height: 1.25; }
+    .meta { color: rgba(255,255,255,.88); font-size: .85rem; margin: .45rem 0 0; }
+    /* Tab bar */
+    .toolbar {
+      position: sticky; top: 0; z-index: 5;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 3px rgba(0,0,0,.04);
     }
-    .crumb { color: var(--link); text-decoration: none; }
-    .crumb:hover { text-decoration: underline; }
-    .crumb.active { color: var(--muted); font-weight: 600; }
-    main {
-      max-width: 780px; margin: 1rem auto 3rem; padding: 1.5rem 1.25rem 2rem;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    .toolbar .wrap {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: .75rem; flex-wrap: wrap; padding-top: .7rem; padding-bottom: .7rem;
     }
-    main h1, main h2 { font-size: 1.3rem; margin: 1.8rem 0 .6rem; line-height: 1.3; }
-    main h1:first-child, main h2:first-child { margin-top: 0; }
-    main h3 { font-size: 1.08rem; margin: 1.4rem 0 .4rem; }
-    main h4, main h5 { font-size: 1rem; margin: 1.1rem 0 .3rem; }
-    main p, main li { color: var(--text); }
-    main a { color: var(--link); }
-    main ul { padding-left: 1.25rem; }
-    main hr { border: 0; border-top: 1px solid var(--border); margin: 2rem 0; }
+    .tabs { display: flex; gap: .4rem; flex-wrap: wrap; }
+    .tab {
+      display: inline-block; padding: .48rem .95rem; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--chip);
+      color: var(--link); text-decoration: none; font-size: .9rem; font-weight: 600;
+      transition: background .12s, border-color .12s, color .12s;
+    }
+    .tab:hover { border-color: var(--primary); }
+    .tab.active {
+      background: var(--primary); color: #fff; border-color: var(--primary);
+      box-shadow: 0 1px 4px rgba(46,140,0,.35);
+    }
+    .lang {
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .42rem .8rem; border-radius: 999px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--link); text-decoration: none; font-size: .85rem; font-weight: 600;
+    }
+    .lang:hover { border-color: var(--primary); }
+    /* Document card */
+    main.card {
+      margin: 1.5rem auto 1rem; padding: 1.75rem 1.5rem 2rem;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    }
+    main.card h1, main.card h2 { font-size: 1.32rem; margin: 1.9rem 0 .6rem; line-height: 1.3; }
+    main.card h1:first-child, main.card h2:first-child { margin-top: 0; }
+    main.card h3 { font-size: 1.1rem; margin: 1.5rem 0 .4rem; }
+    main.card h4, main.card h5 { font-size: 1rem; margin: 1.15rem 0 .3rem; }
+    main.card p, main.card li { color: var(--text); }
+    main.card a { color: var(--link); }
+    main.card ul { padding-left: 1.25rem; }
+    main.card hr { border: 0; border-top: 1px solid var(--border); margin: 2rem 0; }
     footer.foot {
-      max-width: 780px; margin: 0 auto 3rem; padding: 0 1.25rem;
-      color: var(--muted); font-size: .85rem; display: flex; flex-wrap: wrap;
-      gap: .5rem 1rem; align-items: center; justify-content: space-between;
+      margin: 0 auto 3rem; color: var(--muted); font-size: .85rem;
+      display: flex; flex-wrap: wrap; gap: .5rem 1rem;
+      align-items: center; justify-content: space-between;
     }
     footer.foot a { color: var(--link); text-decoration: none; }
     footer.foot a:hover { text-decoration: underline; }
-    .lang-switch { display: inline-flex; gap: .5rem; }
+    @media (max-width: 560px) {
+      main.card { border-radius: 0; border-left: 0; border-right: 0; margin-left: -1rem; margin-right: -1rem; }
+    }
   </style>
 </head>
 <body>
   <header class="top">
-    <div class="inner">
+    <div class="wrap">
       <div class="brand">Health Habit Hub</div>
       <h1>${escapeHtml(title)}</h1>
       ${effective}
     </div>
   </header>
-  <nav class="crumbs" aria-label="Legal pages">${crossLinks}</nav>
-  <main>${contentHtml}</main>
-  <footer class="foot">
-    <span>© ${new Date().getFullYear()} TU Dresden · Research Group Digital Health</span>
-    <span class="lang-switch">
-      <a href="/${otherLang}/${pageName}">${otherLang === 'de' ? 'Deutsch' : 'English'}</a>
-    </span>
-  </footer>
+  <div class="toolbar">
+    <div class="wrap">
+      <nav class="tabs" aria-label="Legal documents">${tabs}</nav>
+      <a class="lang" href="/${otherLang}/${pageName}" hreflang="${otherLang}">
+        ${otherLang === 'de' ? '🇩🇪 Deutsch' : '🇬🇧 English'}
+      </a>
+    </div>
+  </div>
+  <div class="wrap">
+    <main class="card">${contentHtml}</main>
+    <footer class="foot">
+      <span>© ${new Date().getFullYear()} TU Dresden · Research Group Digital Health</span>
+    </footer>
+  </div>
 </body>
 </html>`;
 }

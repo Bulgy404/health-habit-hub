@@ -17,6 +17,7 @@ export async function renderAccessibility(req, res, next) {
           pageName: 'accessibility',
           contentHtml: html,
           meta,
+          nonce: res.locals.cspNonce,
         })
       );
     }

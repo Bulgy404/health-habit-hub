@@ -20,6 +20,7 @@ export async function renderPrivacyPolicy(req, res, next) {
           pageName: 'privacy',
           contentHtml: html,
           meta,
+          nonce: res.locals.cspNonce,
         })
       );
     }
