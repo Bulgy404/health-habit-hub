@@ -334,6 +334,16 @@ The admin panel is a **Next.js 15** (App Router) / **React 18** application writ
 
 The Next.js admin panel uses NextAuth v4 with the Keycloak provider. On each request, `src/middleware.ts` calls `getToken()` to validate the session JWT and additionally logs method, path, user `sub`, roles, and request latency (visible in `docker logs hhh-admin`). If the decoded token's `realm_access.roles` array does not include `admin` or `researcher`, the user is redirected to `/access-denied`. The Keycloak client used is `hhh-admin` (confidential client with client secret).
 
+#### Sub-path routing behind the reverse proxy (production)
+
+In production the admin panel is **not** on its own subdomain — Traefik serves it under a path prefix on the shared host: `https://${DOMAIN}/admin`. The Next.js app is built with `basePath: /admin` (`admin/next.config.mjs`), so its routes — including the NextAuth API at `/admin/api/auth/*` — all live under that prefix. Three things must line up for sign-in to work, and all three are required together:
+
+1. **`NEXTAUTH_URL` must be the full path to the NextAuth API, including `/api/auth`:** `https://${DOMAIN}/admin/api/auth`. NextAuth v4 derives the base path for its sign-in/callback/CSRF links from this value. If it is set to just `https://${DOMAIN}/admin`, NextAuth emits links at `/admin/*` instead of `/admin/api/auth/*`; the sign-in POST then misses the handler and the browser silently loops on `/admin/signin?csrf=true` without ever reaching Keycloak. (`NEXT_PUBLIC_NEXTAUTH_URL` stays the app base `https://${DOMAIN}/admin` — it is used only for the post-logout redirect, not NextAuth routing.)
+2. **The NextAuth React client must know the base path:** `<SessionProvider basePath="/admin/api/auth">` (`admin/src/components/providers.tsx`), or the client-side `signIn()` / `useSession()` / CSRF calls hit the root `/api/auth/*`, which Traefik routes to the **backend API** service instead of the admin app.
+3. **Traefik must not shadow `/api`:** the Traefik dashboard/`api@internal` router must **not** be exposed under `PathPrefix(/api)`. It previously was, behind basic-auth, which shadowed both the mobile app's `/api/v1/*` and the admin panel's `/admin/api/auth/*` — producing a browser basic-auth popup instead of the Keycloak login. If the Traefik dashboard is needed, expose it on a dedicated host (`traefik.${DOMAIN}`), never under `/api`.
+
+The Keycloak `hhh-admin` client's **Valid Redirect URIs** must include `https://${DOMAIN}/admin/*` so the callback `https://${DOMAIN}/admin/api/auth/callback/keycloak` is accepted. This is seeded from `keycloak/hhh-realm.json` (`${DOMAIN}` is substituted on import) — but note the realm import is **skipped when the realm already exists**, so on an upgrade you may need to update the redirect URIs on the running client directly (see `DEPLOYMENT.md`).
+
 #### Inside the JWT callback
 
 `realm_access.roles` is present on **access tokens** but absent from ID tokens (Keycloak default). The JWT callback in `admin/src/lib/auth.ts` therefore decodes roles from `account.access_token` directly rather than from the OIDC `profile` (ID token claims).
