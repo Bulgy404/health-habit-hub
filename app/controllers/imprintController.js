@@ -17,6 +17,7 @@ export async function renderImprint(req, res, next) {
           pageName: 'imprint',
           contentHtml: html,
           meta,
+          nonce: res.locals.cspNonce,
         })
       );
     }
