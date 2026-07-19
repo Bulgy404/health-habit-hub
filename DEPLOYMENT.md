@@ -271,14 +271,27 @@ shares the file's owning group, the **group** bits are what get checked, and
 `other`-only permissions are silently ignored even though they'd otherwise
 allow the read. `go+rX` covers both cases.
 
-This clone is independent of Portainer's own Git polling, which only
-re-fetches the compose file text — when you change anything under
-`monitoring/`, `keycloak/`, `mongo/entrypoint/`, or `neo4j/import/`, update
-the server's copy too:
+This clone is refreshed **automatically on every stack (re)deploy** by the
+`config-sync` service in `docker-compose.yml` — a one-shot `alpine/git` container
+that runs `git fetch` + `git reset --hard` on `/opt/hhh/repo` and fixes read
+permissions before the config-consuming services (`mongo`, `neo4j`, `keycloak`,
+`keycloak-init`, `blackbox-exporter`, `prometheus`, `grafana`) start. They
+`depends_on: config-sync` with `condition: service_completed_successfully`, so
+they always mount the up-to-date files. **You no longer need to `git pull` this
+clone by hand** — just redeploy the stack.
 
-```bash
-cd /opt/hhh/repo && sudo git pull && sudo chmod -R go+rX /opt/hhh/repo
-```
+Notes:
+
+- Only the **one-time initial clone** (above) is manual; after that it self-updates.
+- `config-sync` is **best-effort**: if the fetch fails (e.g. transient network),
+  it logs a warning and exits 0 so the stack still starts on the existing files.
+  Check it with `docker logs hhh-config-sync`.
+- It syncs to `main` by default. If you deploy the stack from a different ref,
+  set `HHH_CONFIG_REF` (Portainer env var) to the same ref so the config files
+  match the deployed `docker-compose.yml`.
+- To force an out-of-band refresh without a full redeploy:
+  `docker start -a hhh-config-sync` then restart the consumer(s), e.g.
+  `docker restart hhh-prometheus`.
 
 ### 6. Volume Permissions (First Deploy Only)
 

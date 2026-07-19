@@ -135,6 +135,44 @@ services:
         max-size: '10m'
         max-file: '3'
 
+  # Portainer CE only checks out docker-compose.yml (not the repo's other
+  # files), so tracked config under monitoring/, keycloak/, mongo/ and neo4j/ is
+  # bind-mounted from a separate on-server clone at ${HHH_REPO_DIR:-/opt/hhh/repo}.
+  # This one-shot job refreshes that clone to the deployed ref and fixes read
+  # permissions on every (re)deploy, so config changes never need a manual
+  # `git pull`. Best-effort: it always exits 0 so a transient fetch failure can't
+  # block the stack — services then use the files already on disk. The
+  # config-consuming services (mongo, neo4j, keycloak, keycloak-init,
+  # blackbox-exporter, prometheus, grafana) depend on it completing.
+  config-sync:
+    image: alpine/git:latest
+    container_name: hhh-config-sync
+    restart: 'no'
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        git config --global --add safe.directory /repo || true
+        if [ -d /repo/.git ]; then
+          if git -C /repo fetch origin "${HHH_CONFIG_REF:-main}" && git -C /repo reset --hard "origin/${HHH_CONFIG_REF:-main}"; then
+            echo "config-sync: updated /repo to ${HHH_CONFIG_REF:-main}"
+          else
+            echo "config-sync: fetch failed — using existing files"
+          fi
+        else
+          echo "config-sync: /repo is not a git clone — run the one-time clone (see DEPLOYMENT.md)"
+        fi
+        chmod -R a+rX /repo || true
+        echo "config-sync: done"
+    volumes:
+      - ${HHH_REPO_DIR:-/opt/hhh/repo}:/repo
+    networks:
+      - hhh-proxy
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
   mongo:
     image: mongo:7.0
     container_name: hhh-mongo
@@ -145,6 +183,9 @@ services:
       - MONGO_INITDB_DATABASE=surveyjs
     networks:
       - hhh-proxy
+    depends_on:
+      config-sync:
+        condition: service_completed_successfully
     volumes:
       - ${HHH_REPO_DIR:-/opt/hhh/repo}/mongo/entrypoint:/docker-entrypoint-initdb.d:ro
       - mongo-data:/data/db
@@ -283,6 +324,9 @@ services:
     # host exposed the browser/bolt endpoints over plaintext with no TLS.
     networks:
       - hhh-proxy
+    depends_on:
+      config-sync:
+        condition: service_completed_successfully
     volumes:
       - neo4j-data:/data
       - neo4j-logs:/logs
@@ -358,6 +402,8 @@ services:
     depends_on:
       keycloak-db:
         condition: service_healthy
+      config-sync:
+        condition: service_completed_successfully
     healthcheck:
       # The Keycloak 26 image (ubi9-micro) has no curl — probe the management
       # port (9000) with bash's built-in /dev/tcp instead.
@@ -417,6 +463,8 @@ services:
     depends_on:
       keycloak:
         condition: service_healthy
+      config-sync:
+        condition: service_completed_successfully
     entrypoint: ['/bin/sh', '-lc']
     command: >
       'until /opt/keycloak/bin/kcadm.sh config credentials
@@ -713,6 +761,9 @@ services:
     restart: always
     networks:
       - hhh-proxy
+    depends_on:
+      config-sync:
+        condition: service_completed_successfully
     volumes:
       - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
     command:
@@ -743,6 +794,9 @@ services:
     restart: always
     networks:
       - hhh-proxy
+    depends_on:
+      config-sync:
+        condition: service_completed_successfully
     volumes:
       - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -824,7 +878,10 @@ services:
       # "stat /etc/grafana/dashboards: no such file or directory" every 10s.
       - ${HHH_REPO_DIR:-/opt/hhh/repo}/monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
     depends_on:
-      - prometheus
+      prometheus:
+        condition: service_started
+      config-sync:
+        condition: service_completed_successfully
     healthcheck:
       # GF_SERVER_SERVE_FROM_SUB_PATH=true means the API is mounted under
       # /grafana internally too, not just at the public router path.
