@@ -13,8 +13,16 @@
 const PAGES = ['privacy', 'imprint', 'accessibility'];
 
 const NAV_LABELS = {
-  en: { privacy: 'Privacy Policy', imprint: 'Imprint', accessibility: 'Accessibility' },
-  de: { privacy: 'Datenschutz', imprint: 'Impressum', accessibility: 'Barrierefreiheit' },
+  en: {
+    privacy: 'Privacy Policy',
+    imprint: 'Imprint',
+    accessibility: 'Accessibility',
+  },
+  de: {
+    privacy: 'Datenschutz',
+    imprint: 'Impressum',
+    accessibility: 'Barrierefreiheit',
+  },
 };
 
 function escapeHtml(str = '') {
@@ -34,7 +42,13 @@ function escapeHtml(str = '') {
  * @param {Record<string,string>} [opts.meta] Front-matter (version, effectiveDate).
  * @returns {string} Full HTML document.
  */
-export function renderLegalPage({ title, lang, pageName, contentHtml, meta = {} }) {
+export function renderLegalPage({
+  title,
+  lang,
+  pageName,
+  contentHtml,
+  meta = {},
+}) {
   const otherLang = lang === 'de' ? 'en' : 'de';
   const labels = NAV_LABELS[lang] ?? NAV_LABELS.en;
 
