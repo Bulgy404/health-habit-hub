@@ -580,6 +580,44 @@ In Portainer:
 
 ## Troubleshooting
 
+### Admin login loops / never reaches Keycloak
+
+**Problem:** Clicking sign-in on `https://${DOMAIN}/admin` just reloads to
+`…/admin/api/auth/signin?callbackUrl=…/admin/signin?csrf=true` and never shows the
+Keycloak login page — or a browser **basic-auth popup** appears instead of Keycloak.
+
+**Cause & fix — the admin panel is served under the `/admin` sub-path, and three
+things must all be correct (all handled in the repo; listed here so you know why):**
+
+1. **`NEXTAUTH_URL` must include the API path.** In `docker-compose.yml` it is
+   `https://${DOMAIN}/admin/api/auth` (**not** `…/admin`). With `basePath: /admin`,
+   NextAuth v4 builds its sign-in/callback/CSRF links from this value; if it lacks
+   `/api/auth`, links point at `/admin/*`, the sign-in POST misses the handler, and
+   login loops on `/admin/signin?csrf=true`. It is derived from `DOMAIN`, so setting
+   `DOMAIN` correctly is all that's needed.
+2. **`<SessionProvider basePath="/admin/api/auth">`** (`admin/src/components/providers.tsx`)
+   — otherwise the client's `signIn()`/`useSession()`/CSRF calls hit the root
+   `/api/auth/*`, which Traefik routes to the backend API, not the admin app.
+3. **Traefik must not expose its dashboard under `PathPrefix(/api)`** (removed in
+   `docker-compose.yml`) — it shadowed `/admin/api/auth/*` behind basic-auth, which
+   is what produces the browser basic-auth popup.
+
+Because #1 lives in a **built** image (`middleware.ts`) *and* a runtime env, a
+redeploy must **rebuild the admin image** (Portainer rebuild, or
+`docker compose build --no-cache admin`) as well as pick up the new compose env.
+
+Also confirm the Keycloak `hhh-admin` client's Valid Redirect URIs include
+`https://${DOMAIN}/admin/*` (the realm import seeds this, but the import is skipped
+when the realm already exists — on an upgrade, set it on the running client):
+
+```bash
+docker exec hhh-keycloak /opt/keycloak/bin/kcadm.sh config credentials \
+  --server http://localhost:8080/auth --realm master \
+  --user admin --password "$KEYCLOAK_ADMIN_PASSWORD"
+docker exec hhh-keycloak /opt/keycloak/bin/kcadm.sh get clients -r hhh \
+  -q clientId=hhh-admin --fields 'clientId,redirectUris'
+```
+
 ### SSL Certificate Issues
 
 **Problem:** Certificate not obtained
