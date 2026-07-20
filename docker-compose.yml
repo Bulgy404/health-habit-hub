@@ -387,6 +387,18 @@ services:
       - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
       - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
       - KC_PROXY_HEADERS=xforwarded
+      # Pin the public address so the OIDC discovery document and the `iss`
+      # claim Keycloak stamps on tokens always agree. Without it Keycloak
+      # derives both per-request, so fetching
+      # /auth/realms/hhh/.well-known/openid-configuration over the internal
+      # Docker hostname advertises issuer=http://keycloak:8080/auth/realms/hhh
+      # while issued tokens carry https://<domain>/auth/realms/hhh — the
+      # discrepancy that made the admin's KEYCLOAK_ISSUER look right while
+      # failing openid-client's iss validation (error=OAuthCallback).
+      # KC_HOSTNAME_STRICT=false keeps internal calls (Host: keycloak:8080)
+      # working; nothing relies on discovery returning internal URLs, since the
+      # admin and backend configure their endpoints explicitly.
+      - KC_HOSTNAME=https://${DOMAIN}
       - KC_HOSTNAME_STRICT=false
       - KC_HTTP_ENABLED=true
       - KC_HTTP_RELATIVE_PATH=/auth

@@ -352,15 +352,21 @@ The Keycloak `hhh-admin` client's **Valid Redirect URIs** must include `https://
 
 Because Keycloak runs inside Docker but the browser runs on the host, the admin panel cannot rely on OIDC discovery (`wellKnown`) — the discovery document returns the internal Docker hostname (`http://keycloak:8080/...`) for the authorization endpoint, which browsers cannot resolve. The NextAuth provider instead sets endpoints explicitly:
 
-| Endpoint                 | Resolves to                        | Env var                 |
-| ------------------------ | ---------------------------------- | ----------------------- |
-| `authorization.url`      | `http://localhost:8080`            | `KEYCLOAK_BROWSER_URL`  |
-| `token`                  | `http://keycloak:8080` (internal)  | `KEYCLOAK_INTERNAL_URL` |
-| `userinfo`               | `http://keycloak:8080` (internal)  | `KEYCLOAK_INTERNAL_URL` |
-| `jwks_endpoint`          | `http://keycloak:8080` (internal)  | `KEYCLOAK_INTERNAL_URL` |
-| Issuer (`iss` validator) | `http://localhost:8080/realms/hhh` | `KEYCLOAK_ISSUER`       |
+| Endpoint                 | Local dev                          | Production                                     | Env var                 |
+| ------------------------ | ---------------------------------- | ---------------------------------------------- | ----------------------- |
+| `authorization.url`      | `http://localhost:8080`            | `https://<domain>/auth`                        | `KEYCLOAK_BROWSER_URL`  |
+| `token`                  | `http://keycloak:8080` (internal)  | `http://keycloak:8080/auth` (internal)         | `KEYCLOAK_INTERNAL_URL` |
+| `userinfo`               | `http://keycloak:8080` (internal)  | `http://keycloak:8080/auth` (internal)         | `KEYCLOAK_INTERNAL_URL` |
+| `jwks_endpoint`          | `http://keycloak:8080` (internal)  | `http://keycloak:8080/auth` (internal)         | `KEYCLOAK_INTERNAL_URL` |
+| Issuer (`iss` validator) | `http://localhost:8080/realms/hhh` | `https://<domain>/auth/realms/hhh` (**public**) | `KEYCLOAK_ISSUER`       |
 
-Note that `KEYCLOAK_ISSUER` uses the **browser-facing** hostname even though token/JWKS calls go to the internal hostname. This is because Keycloak in `start-dev` mode stamps the `iss` claim on issued tokens from the browser-side Host header.
+Two production-only traps, both of which surface as `error=OAuthCallback` *after* Keycloak has already authenticated the user:
+
+1. **The `/auth` prefix.** Production sets `KC_HTTP_RELATIVE_PATH=/auth`, so every realm endpoint — including the server-to-server token/userinfo/JWKS calls made over the internal Docker hostname — lives under `/auth`. Omitting it makes the token exchange 404. Local dev sets no relative path, which is why its values legitimately differ.
+2. **The issuer must be the PUBLIC URL**, even though token/JWKS are fetched internally. Keycloak stamps `iss` from the frontend request context (the browser flow through the proxy), not from the endpoint that mints the token. Using the internal form fails openid-client validation with:
+   `iss mismatch, expected http://keycloak:8080/auth/realms/hhh, got: https://<domain>/auth/realms/hhh`
+
+> **Do not trust the internal discovery document to resolve trap 2.** Fetching `/auth/realms/hhh/.well-known/openid-configuration` over the internal hostname advertises `issuer: http://keycloak:8080/auth/realms/hhh`, which contradicts what issued tokens carry. Production now sets `KC_HOSTNAME=https://<domain>` so discovery and the `iss` claim agree; the issued token is authoritative either way.
 
 #### Page-level role guards
 
