@@ -61,7 +61,7 @@ const TOOLS: ToolLink[] = [
   {
     name: "Bull Board",
     descriptionKey: "bullBoard",
-    url: env(process.env.NEXT_PUBLIC_BULL_BOARD_URL, `${APP_ORIGIN}/admin/queues`),
+    url: env(process.env.NEXT_PUBLIC_BULL_BOARD_URL, `${APP_ORIGIN}/queues`),
     Icon: ListChecks,
   },
   {

@@ -117,6 +117,10 @@ services:
       # Dev-only backdoors — hard-default OFF in production.
       - EXPOSE_RECOVERY_PHRASES=${EXPOSE_RECOVERY_PHRASES:-false}
       - ENABLE_TEST_TOOLS=${ENABLE_TEST_TOOLS:-false}
+      # Mounts the Bull Board queue dashboard at /queues in production. Safe
+      # only because the /queues Traefik router below gates it behind
+      # INTERNAL_TOOLS_TRAEFIK_AUTH — Bull Board has no auth of its own.
+      - ENABLE_QUEUE_DASHBOARD=${ENABLE_QUEUE_DASHBOARD:-true}
     networks:
       - hhh-proxy
     depends_on:
@@ -141,6 +145,19 @@ services:
       - traefik.http.routers.app.tls.certresolver=letsencrypt
       - traefik.http.routers.app.service=app
       - traefik.http.services.app.loadbalancer.server.port=3000
+      # Bull Board queue dashboard, served by this same container at /queues
+      # (see app.js — deliberately not under /admin, which routes to the admin
+      # panel). Its own router so the basic-auth middleware applies ONLY to
+      # /queues and not to the app's catch-all Host rule above. PathPrefix is
+      # longer than that catch-all, so Traefik gives this router priority.
+      - traefik.http.routers.queues.rule=Host(`${DOMAIN}`) && PathPrefix(`/queues`)
+      - traefik.http.routers.queues.entrypoints=websecure
+      - traefik.http.routers.queues.tls.certresolver=letsencrypt
+      - traefik.http.routers.queues.service=app
+      # No stripprefix: setBasePath('/queues') already makes Bull Board emit
+      # asset/API URLs under /queues, so it expects the prefix intact.
+      - traefik.http.middlewares.queues-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      - traefik.http.routers.queues.middlewares=queues-auth
     logging:
       driver: json-file
       options:
@@ -829,6 +846,7 @@ services:
         NEXT_PUBLIC_PROMETHEUS_URL: https://${DOMAIN}/prometheus
         NEXT_PUBLIC_REDIS_INSIGHT_URL: https://${DOMAIN}/redisinsight
         NEXT_PUBLIC_NEO4J_BROWSER_URL: https://${DOMAIN}/neo4j/browser
+        NEXT_PUBLIC_BULL_BOARD_URL: https://${DOMAIN}/queues
     restart: always
     env_file:
       # Portainer repository deploys have no .env in the checkout; UI variables
