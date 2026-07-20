@@ -631,6 +631,48 @@ docker exec hhh-keycloak /opt/keycloak/bin/kcadm.sh get clients -r hhh \
   -q clientId=hhh-admin --fields 'clientId,redirectUris'
 ```
 
+### Admin login fails with `error=OAuthCallback`
+
+**Problem:** Keycloak authenticates you, then the browser lands back on
+`…/admin/api/auth/signin?error=OAuthCallback` ("Try signing in with a different
+account"). This is *after* the sign-in loop above is fixed — Keycloak's own logs
+look clean, because the failure is on the admin's server-to-server callback.
+
+**Diagnose first — NextAuth logs the real reason:**
+
+```bash
+sudo docker logs --tail 60 hhh-admin        # attempt a login, then run this
+```
+
+Two causes, both from `KC_HTTP_RELATIVE_PATH=/auth` (all handled in the repo;
+listed so the values aren't "corrected" back):
+
+1. **`/auth` missing on the internal endpoints.** `KEYCLOAK_INTERNAL_URL` must be
+   `http://keycloak:8080/auth`. Without it `admin/src/lib/auth.ts` builds
+   `http://keycloak:8080/realms/hhh/.../token`, which 404s.
+2. **`KEYCLOAK_ISSUER` must be the PUBLIC URL** — `https://${DOMAIN}/auth/realms/hhh`
+   — even though token/userinfo/JWKS are fetched internally. Keycloak stamps
+   `iss` from the frontend request context, so tokens carry the public issuer.
+   The internal form produces:
+   `iss mismatch, expected http://keycloak:8080/auth/realms/hhh, got: https://<domain>/auth/realms/hhh`
+
+> ⚠️ The **internal discovery document is misleading here**: fetching
+> `/auth/realms/hhh/.well-known/openid-configuration` over the Docker hostname
+> advertises `issuer: http://keycloak:8080/auth/realms/hhh`, contradicting the
+> issued token. `KC_HOSTNAME=https://${DOMAIN}` is now set on the keycloak
+> service so the two agree — but the **issued token is authoritative**.
+
+Both are runtime `environment:` values, so a redeploy applies them with **no
+image rebuild**. Verify they are actually live (Portainer has served stale
+compose before):
+
+```bash
+sudo docker exec hhh-admin env | grep -E 'KEYCLOAK_ISSUER|KEYCLOAK_INTERNAL_URL'
+```
+
+Local dev is unaffected — `docker-compose.local.yml` sets no relative path, so
+its non-`/auth` values are correct there.
+
 ### SSL Certificate Issues
 
 **Problem:** Certificate not obtained
