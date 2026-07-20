@@ -20,8 +20,19 @@ import 'services/fresh_install_guard.dart';
 const _sentryDsn = String.fromEnvironment('SENTRY_DSN');
 
 Future<void> main() async {
-  AppConfig.assertProductionConfig();
+  // Binding first: a throw before this renders as a bare white screen with no
+  // Flutter error UI, which is impossible to diagnose on a device.
   WidgetsFlutterBinding.ensureInitialized();
+
+  // A release build compiled without the --dart-define values would point at
+  // localhost. Surface that on screen instead of throwing, so the cause is
+  // visible on the device rather than showing a blank app.
+  final configError = AppConfig.productionConfigError();
+  if (configError != null) {
+    runApp(_ConfigErrorApp(message: configError));
+    return;
+  }
+
   // Must run before anything reads onboarding/auth state from secure
   // storage — see fresh_install_guard.dart for why that state can survive
   // a reinstall on its own.
@@ -57,4 +68,56 @@ Future<void> main() async {
     },
     appRunner: () => runApp(const ProviderScope(child: HhhApp())),
   );
+}
+
+/// Shown instead of the app when a release build is missing its
+/// `--dart-define` configuration. Deliberately dependency-free (no Riverpod,
+/// no localisation) so it can render even when nothing else is initialised.
+class _ConfigErrorApp extends StatelessWidget {
+  const _ConfigErrorApp({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF1A1C19),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      color: Color(0xFFFFB300), size: 48),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Configuration error',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SelectableText(
+                    message,
+                    style: const TextStyle(
+                      color: Color(0xFFE3E4DE),
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

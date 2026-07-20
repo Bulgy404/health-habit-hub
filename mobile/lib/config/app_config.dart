@@ -46,22 +46,39 @@ abstract final class AppConfig {
     defaultValue: 'felix.reinsch@tu-dresden.de',
   );
 
-  /// Refuses to run a release build against the localhost defaults — a
-  /// release build produced without passing all three --dart-define flags
-  /// above would otherwise silently ship pointing at localhost with no way
-  /// to override it post-build. `assert()` is stripped in release mode, so
-  /// this is a real (non-assert) check, called once from `main()`.
+  /// Names of the `--dart-define` values a release build is missing (i.e. still
+  /// at their localhost defaults). Empty when the build is correctly configured.
+  ///
+  /// A release build produced without these flags would otherwise ship pointing
+  /// at localhost with no way to override it post-build. `assert()` is stripped
+  /// in release mode, so this is a real (non-assert) check.
+  static List<String> missingProductionDefines() {
+    if (!kReleaseMode) return const [];
+    return [
+      if (apiBaseUrl == _localhostApiBaseUrl) 'API_BASE_URL',
+      if (keycloakUrl == _localhostKeycloakUrl) 'KEYCLOAK_URL',
+      if (wsBaseUrl == _localhostWsBaseUrl) 'WS_BASE_URL',
+    ];
+  }
+
+  /// Human-readable description of a misconfigured release build, or `null`
+  /// when the configuration is valid. Preferred over [assertProductionConfig]
+  /// in `main()` so the failure can be surfaced on screen instead of throwing
+  /// before the Flutter binding exists (which renders as a blank white screen).
+  static String? productionConfigError() {
+    final missing = missingProductionDefines();
+    if (missing.isEmpty) return null;
+    return 'This release build was compiled without the required '
+        '--dart-define values: ${missing.join(', ')}.\n\n'
+        'It would point at localhost, so it refuses to start.\n\n'
+        'Rebuild with:\n'
+        'flutter build ipa --release '
+        '--dart-define-from-file=dart_defines_prod.json';
+  }
+
+  /// Throwing variant of [productionConfigError], kept for non-UI callers.
   static void assertProductionConfig() {
-    if (!kReleaseMode) return;
-    final usingLocalhostDefault =
-        apiBaseUrl == _localhostApiBaseUrl ||
-        keycloakUrl == _localhostKeycloakUrl ||
-        wsBaseUrl == _localhostWsBaseUrl;
-    if (usingLocalhostDefault) {
-      throw StateError(
-        'Release build was compiled without API_BASE_URL/KEYCLOAK_URL/WS_BASE_URL '
-        '--dart-define overrides — refusing to run pointing at localhost.',
-      );
-    }
+    final error = productionConfigError();
+    if (error != null) throw StateError(error);
   }
 }
