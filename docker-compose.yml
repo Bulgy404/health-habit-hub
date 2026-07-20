@@ -715,9 +715,17 @@ services:
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - KEYCLOAK_CLIENT_ID=hhh-admin
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET}
-      - KEYCLOAK_ISSUER=http://keycloak:8080/realms/hhh
+      # Keycloak runs with KC_HTTP_RELATIVE_PATH=/auth, so EVERY realm endpoint
+      # lives under /auth — including the server-to-server token/userinfo/JWKS
+      # calls the admin makes over the internal Docker hostname. Omitting /auth
+      # here makes the token exchange 404 and NextAuth fails with
+      # `error=OAuthCallback` after Keycloak has already authenticated the user.
+      # The issuer must match what Keycloak stamps on tokens minted via that
+      # internal endpoint (cf. the backend's KEYCLOAK_JWT_ISSUER, which accepts
+      # both the public and internal forms).
+      - KEYCLOAK_ISSUER=http://keycloak:8080/auth/realms/hhh
       - KEYCLOAK_BROWSER_URL=https://${DOMAIN}/auth
-      - KEYCLOAK_INTERNAL_URL=http://keycloak:8080
+      - KEYCLOAK_INTERNAL_URL=http://keycloak:8080/auth
     networks:
       - hhh-proxy
     depends_on:
