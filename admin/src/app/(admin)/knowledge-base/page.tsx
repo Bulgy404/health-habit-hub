@@ -25,9 +25,10 @@ function fmtDate(iso: string): string {
 
 const API_BASE = apiUrl("/kb");
 
-// LightRAG's own WebUI (knowledge-graph visualizer) — internal-only in
-// production (no Traefik route), so this only resolves to something useful
-// when explicitly configured. Falls back to the local dev port mapping.
+// LightRAG's own WebUI (knowledge-graph visualizer), exposed via Traefik at
+// /lightrag/webui in production (see docker-compose.yml) — basic-auth gated,
+// same as the other internal tool links on the System page. Falls back to
+// the local dev port mapping when unset.
 const LIGHTRAG_WEBUI_URL =
   process.env.NEXT_PUBLIC_LIGHTRAG_WEBUI_URL?.trim() || "http://localhost:9622";
 

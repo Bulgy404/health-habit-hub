@@ -1418,3 +1418,27 @@ The platform applies soft-deletion for participants. The table below documents w
 3. Remove documents from `profiles`, `survey_responses`, `habit_donations`, `recommendations_log` where `userId`/`participantId` matches.
 
 The platform's built-in soft-delete covers pseudonymisation only.
+
+### 5.1 Self-service deletion (mobile app "Delete account")
+
+Separate from the admin-initiated soft-delete above, participants can delete
+their own account from the mobile app (Settings → Delete account), which
+calls `DELETE /api/v1/users/me` (`app/routes/usersRouter.js`). Unlike the
+admin flow, this one **does** automatically remove the Keycloak identity —
+it's identity/credential removal, not a data-erasure request:
+
+| Data                                    | On self-service delete                                        |
+| ---------------------------------------- | --------------------------------------------------------------- |
+| Keycloak user account                   | **Deleted** (`kc.deleteUser(userId)`) — participant can no longer sign in |
+| `participants.recoveryPhrase`           | **Cleared** (`null`)                                            |
+| `participants.accountDeletedAt`         | **Set** (current timestamp)                                     |
+| `deviceTokens` for this user             | **Deleted** — stops push notifications                          |
+| `participants.username`, `.group`, etc. | **Retained** — unlike the admin flow, not anonymised            |
+| `profiles`, `survey_responses`/logs, `habit_donations`, `recommendations_log`, Neo4j graph nodes | **Not modified** — kept for research, identifiable only via `userId`/`participantId`, which is now an orphaned random UUID with no surviving identity record |
+
+The mobile app's delete-confirmation copy (`deleteAccountContent` in
+`mobile/lib/l10n/app_*.arb`) describes this accurately: the account/login is
+permanently gone, but contributed data stays server-side as anonymous
+entries. If a participant additionally wants their contributed data erased
+(not just pseudonymised), that still requires the manual operator steps
+above.

@@ -1,14 +1,9 @@
 import express from 'express';
-import neo4j from 'neo4j-driver';
 import { randomBytes } from 'node:crypto';
 import { makeGetDb } from '../utils/getDb.js';
-import { deleteHabitComments } from '../db/habitQueries.js';
 import { COLLECTION as HABIT_COMMENTS_COLLECTION } from '../models/habitComment.js';
-import { deleteEnrollment } from '../services/enrollmentNeo4j.js';
 import { createKeycloakAdminClient } from '../services/keycloakAdminClient.js';
 import { mintTokenForUser } from '../services/keycloakRopcClient.js';
-import { config } from '../utils/config.js';
-import { registerNeo4jDriver } from '../utils/neo4jDrivers.js';
 import {
   recoveryPhraseFromCredentials,
   recoveryPhrasesEnabled,
@@ -19,37 +14,23 @@ const log = logger.child({ module: 'usersRouter' });
 
 const SUPPORTED_LANGUAGES = ['en', 'de', 'ja', 'fr', 'nl'];
 
+// neo4jRun is accepted (and still injected by apiRouter) for interface
+// stability, but no route here touches Neo4j anymore: account deletion
+// retains all graph data (comments, enrollment) — see DELETE /me below.
 export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
+  void neo4jRun;
   const router = express.Router();
   const getDb = makeGetDb(db);
 
-  // Production fallbacks (mirrors adminRouter/habitsRouter): when not
-  // injected (tests inject mocks), create real clients so account deletion
-  // ALWAYS erases the Keycloak identity and the user's Comment nodes.
+  // Production fallback (mirrors adminRouter/habitsRouter): when not
+  // injected (tests inject mocks), create a real client so account deletion
+  // ALWAYS erases the Keycloak identity.
   // Resolved once here (not per-request) so the admin token cache
   // (55s TTL, see keycloakAdminClient.js) is actually reused across requests.
   const kcAdmin = keycloak || createKeycloakAdminClient();
   const getKeycloak = () => kcAdmin;
   const kcBase = process.env.KEYCLOAK_URL || 'http://keycloak:8080';
   const kcRealm = process.env.KEYCLOAK_REALM || 'hhh';
-  let _neo4jDriver = null;
-  async function queryNeo4j(cypher, params = {}) {
-    if (neo4jRun) return neo4jRun(cypher, params);
-    if (!_neo4jDriver) {
-      _neo4jDriver = neo4j.driver(
-        config.neo4j.uri,
-        neo4j.auth.basic(config.neo4j.user, config.neo4j.password)
-      );
-      registerNeo4jDriver(_neo4jDriver);
-    }
-    const session = _neo4jDriver.session();
-    try {
-      const result = await session.run(cypher, params);
-      return result.records.map((r) => r.toObject());
-    } finally {
-      await session.close();
-    }
-  }
 
   // GET /api/v1/users/me – return caller's user record (creates default if absent)
   router.get('/me', async (req, res) => {
@@ -148,10 +129,12 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
     }
   });
 
-  // DELETE /api/v1/users/me – GDPR / App Store account deletion.
-  // Removes all participant-linked documents from MongoDB and deletes the
-  // Keycloak account. Donated habits in Neo4j carry no user identifier and
-  // are therefore already anonymous (see informed-consent document).
+  // Collections that hold documents linked to a participant's userId. Used
+  // by the GDPR Art. 20 export below. Account deletion (DELETE /me) does NOT
+  // erase these: contributed study data is retained pseudonymously — the
+  // linking userId is a random UUID whose Keycloak identity is deleted, so
+  // the data can no longer be attributed to a person (see informed-consent
+  // and privacy-statement documents, which the deletion dialog links to).
   const USER_COLLECTIONS = [
     'users',
     'profiles',
@@ -273,37 +256,40 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
     }
   });
 
+  // DELETE /api/v1/users/me – App Store Guideline 5.1.1(v) account removal.
+  //
+  // Removes the participant's *identity*, not their contributed study data:
+  //   - the Keycloak account is deleted (nobody can sign in as, or be
+  //     identified through, this participant again),
+  //   - push device tokens are deleted (a deleted account must not keep
+  //     receiving notifications),
+  //   - the stored recovery phrase is cleared (credential material for the
+  //     now-deleted identity).
+  //
+  // All study contributions (profiles, logs, questionnaire answers, comments,
+  // enrollment, donated habits) are retained: they are keyed only by a random
+  // UUID whose identity record no longer exists, so they cannot be traced
+  // back to a person. This retention model is what the in-app deletion dialog
+  // states, with links to the privacy statement and imprint.
   router.delete('/me', async (req, res) => {
     try {
       const database = await getDb();
       const userId = String(req.user.sub);
 
-      // Erase the user's anonymous Comment nodes from the habit graph first
-      // (ownership is only known via the habit_comments mapping).
+      // Stop push notifications to this account's devices.
+      const tokensResult = await database
+        .collection('deviceTokens')
+        .deleteMany({ userId });
+
+      // Clear stored credential material; keep the participant document so
+      // study statistics stay intact, but mark when the account was removed.
       try {
-        const ownComments = await database
-          .collection(HABIT_COMMENTS_COLLECTION)
-          .find({ userId })
-          .toArray();
-        await deleteHabitComments(
-          queryNeo4j,
-          ownComments.map((c) => String(c.commentId))
+        await database.collection('participants').updateOne(
+          { userId },
+          { $set: { recoveryPhrase: null, accountDeletedAt: new Date() } }
         );
       } catch (err) {
-        log.warn({ err }, '[usersRouter] comment-node erasure failed');
-      }
-
-      // Delete ENROLLED_IN relationship from Neo4j (non-fatal)
-      try {
-        await deleteEnrollment(queryNeo4j, userId);
-      } catch (err) {
-        log.warn({ err }, '[usersRouter] neo4j enrollment erasure failed');
-      }
-
-      const deleted = {};
-      for (const name of USER_COLLECTIONS) {
-        const result = await database.collection(name).deleteMany({ userId });
-        deleted[name] = result?.deletedCount ?? 0;
+        log.warn({ err }, '[usersRouter] participant record update failed');
       }
 
       const kc = getKeycloak();
@@ -315,8 +301,11 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
         );
       }
 
-      log.info({ userId, deleted }, '[usersRouter] account deleted');
-      res.status(200).json({ ok: true, deleted });
+      log.info(
+        { userId, deviceTokensDeleted: tokensResult?.deletedCount ?? 0 },
+        '[usersRouter] account identity removed (contributed data retained anonymously)'
+      );
+      res.status(200).json({ ok: true, identityRemoved: true });
     } catch (err) {
       log.error({ err: err }, '[usersRouter] account deletion error');
       res.status(500).json({ error: 'Internal server error' });

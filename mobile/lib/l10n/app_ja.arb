@@ -1018,7 +1018,7 @@
   "@deleteAccountTitle": {
     "description": "Title of the account-deletion confirmation dialog"
   },
-  "deleteAccountContent": "アカウントと、それに紐づくすべてのデータ（プロフィール、研究参加、習慣プラン、毎日の記録、質問票の回答、推奨）が完全に削除されます。\n\n提供された習慣は匿名で保存されており、あなたに紐づけることはできません。\n\nこの操作は取り消せません。",
+  "deleteAccountContent": "この操作によりアカウントとログイン情報が完全に削除されます。再度サインインすることはできず、元に戻すこともできません。\n\n提供いただいたデータ(習慣プラン、毎日の記録、質問票の回答、寄付データ)はサーバー上に残りますが、匿名の情報としてのみ保存されます。アカウントと識別情報が削除された後は、これらのデータをあなたに紐づけることはできません。\n\nご質問やご懸念がある場合は、以下をご覧ください:",
   "@deleteAccountContent": {
     "description": "Body of the account-deletion confirmation dialog"
   },
@@ -1365,5 +1365,6 @@
   "rotatePassphraseFailed": "新しいパスフレーズを生成できませんでした。接続を確認して再試行してください。",
   "copyToClipboard": "クリップボードにコピー",
   "passphraseCopied": "パスフレーズをクリップボードにコピーしました",
-  "close": "閉じる"
+  "close": "閉じる",
+  "appVersion": "バージョン {version}（{buildNumber}）"
 }

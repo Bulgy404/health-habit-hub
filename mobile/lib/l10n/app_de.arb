@@ -268,7 +268,7 @@
   "@deleteAccountTitle": {
     "description": "Title of the account-deletion confirmation dialog"
   },
-  "deleteAccountContent": "Dadurch werden dein Konto und alle damit verknüpften Daten dauerhaft gelöscht: Profil, Studienteilnahme, Gewohnheitspläne, tägliche Einträge, Fragebogenantworten und Empfehlungen.\n\nGespendete Gewohnheiten sind anonym gespeichert und können nicht auf dich zurückgeführt werden.\n\nDies kann nicht rückgängig gemacht werden.",
+  "deleteAccountContent": "Dies entfernt dauerhaft dein Konto und deinen Zugang – eine erneute Anmeldung ist nicht mehr möglich, und dies kann nicht rückgängig gemacht werden.\n\nDeine beigetragenen Daten (Gewohnheitspläne, tägliche Einträge, Fragebogenantworten und Spenden) bleiben auf unseren Servern gespeichert, jedoch nur als anonyme Einträge: Sobald dein Konto und deine Identität entfernt sind, lässt sich nichts davon mehr auf dich zurückführen.\n\nFragen oder Bedenken dazu? Siehe:",
   "@deleteAccountContent": {
     "description": "Body of the account-deletion confirmation dialog"
   },
@@ -615,5 +615,6 @@
   "rotatePassphraseFailed": "Neue Passphrase konnte nicht erstellt werden. Bitte Verbindung prüfen und erneut versuchen.",
   "copyToClipboard": "In Zwischenablage kopieren",
   "passphraseCopied": "Passphrase in Zwischenablage kopiert",
-  "close": "Schließen"
+  "close": "Schließen",
+  "appVersion": "Version {version} ({buildNumber})"
 }

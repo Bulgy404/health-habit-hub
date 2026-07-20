@@ -13,11 +13,14 @@ notes / bug tracker before shipping.
 ## 0. Pre-Flight (Infrastructure)
 
 - [x] `docker compose ps` — all services `Up`/`healthy` (Traefik, Keycloak, keycloak-db, app,
-      admin, recommender, mongo, neo4j, redis, lightrag, translate, grafana, prometheus)
+      admin, recommender, mongo, neo4j, redis, redisinsight, lightrag, translate, grafana, prometheus)
 - [ ] HTTPS cert valid on the public domain (or accepted self-signed in local/staging)
 - [x] Admin panel loads at `/admin` and redirects to Keycloak login when signed out
 - [x] Mobile app can reach the API base URL configured for this environment
 - [x] Grafana dashboards load and Prometheus targets are all "up"
+- [ ] `INTERNAL_TOOLS_TRAEFIK_AUTH` set (not the placeholder) — gates LightRAG/Prometheus/RedisInsight/Neo4j Browser
+- [ ] Port `NEO4J_BOLT_PORT` (default 7687) open in the firewall/security group, alongside 80/443 — required for Neo4j Browser's query console; see docs/runbook.md §"Open Ports"
+- [ ] Admin panel "System & Links" page: LightRAG WebUI, Prometheus, RedisInsight, Neo4j Browser links all load (prompt for the shared basic-auth credential, then reach the tool)
 
 ---
 
@@ -385,8 +388,13 @@ participant.
 - [ ] No participant-facing notification toggles (reminders are study-managed and
       always on; participants can only mute via OS notification settings)
 - [ ] Export my data (GDPR) — downloads and opens the system share sheet
-- [ ] Sign out (confirm dialog)
-- [ ] Delete account (confirm dialog) — wipes local storage and returns to onboarding
+- [ ] Sign out (confirm dialog) — server-side session is actually revoked (check Keycloak's
+      "Sessions" tab for the user, not just that the app returns to the sign-in screen)
+- [ ] Delete account (confirm dialog) — copy explains the account/login is removed but
+      contributed data is retained anonymised; Privacy Statement and Imprint links in the
+      dialog both navigate correctly; confirming wipes local storage and returns to onboarding
+- [ ] App version footer at the bottom of the Account screen shows a real version/build
+      number (not blank — confirms `package_info_plus` resolved on this platform)
 
 **Profile**
 

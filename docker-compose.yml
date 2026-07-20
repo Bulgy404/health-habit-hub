@@ -13,6 +13,17 @@ services:
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --entrypoints.websecure.address=:443
+      # Dedicated entrypoint for Neo4j's bolt-over-websocket channel (used by
+      # the Browser UI at /neo4j to actually run queries — see neo4j service
+      # labels below). It can't share the websecure entrypoint's Host($DOMAIN)
+      # routing the way path-based tools do, because the Bolt URI scheme has
+      # no path component: the driver in the browser only ever knows
+      # host:port, never a path. A separate port on the SAME $DOMAIN sidesteps
+      # that without needing a whole new subdomain/DNS record — Traefik
+      # reuses the cert already issued for $DOMAIN on websecure (same SNI),
+      # it just needs this port reachable (open it in your firewall/security
+      # group alongside 80/443).
+      - --entrypoints.neo4jbolt.address=:7687
       - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
       - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}
       - --certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json
@@ -20,6 +31,7 @@ services:
     ports:
       - '${TRAEFIK_HTTP_PORT:-80}:80'
       - '${TRAEFIK_HTTPS_PORT:-443}:443'
+      - '${NEO4J_BOLT_PORT:-7687}:7687'
     networks:
       - hhh-proxy
     volumes:
@@ -318,10 +330,24 @@ services:
       - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD}
       - NEO4J_server_directories_import=/import
       - NEO4J_PLUGINS=["graph-data-science"]
-    # No published ports: like prometheus, neo4j is internal-only in
-    # production, reachable only from other containers on hhh-proxy
-    # (app connects via bolt://neo4j:7687). Publishing 7474/7687 to the
-    # host exposed the browser/bolt endpoints over plaintext with no TLS.
+      # Public host:port the Browser UI should use when it discovers/opens
+      # its bolt-over-websocket connection. The Bolt URI scheme has no path
+      # component, so this can't be disambiguated by path the way the HTTP
+      # UI is (below) — it needs its own port, not its own subdomain: same
+      # $DOMAIN, dedicated entrypoint (see proxy service's neo4jbolt
+      # entrypoint + ports: mapping).
+      - NEO4J_dbms_connector_http_advertised__address=${DOMAIN}:443
+      - NEO4J_dbms_connector_bolt_advertised__address=${DOMAIN}:${NEO4J_BOLT_PORT:-7687}
+    # No host ports published directly on this service: app still reaches it
+    # over the internal hhh-proxy network at bolt://neo4j:7687, and the proxy
+    # service is what publishes the public bolt port. The Browser UI +
+    # bolt-over-websocket ARE reachable publicly via Traefik (TLS-terminated,
+    # basic-auth gated — see labels below) at https://$DOMAIN/neo4j/browser/.
+    # Raw TCP bolt for native drivers (cypher-shell, Neo4j Desktop, etc.
+    # connecting from outside the Docker network, not through a browser) is
+    # intentionally NOT exposed — that needs Neo4j to terminate its own TLS
+    # (a separate cert-provisioning project), not just a Traefik route, and
+    # nothing here needs it yet.
     networks:
       - hhh-proxy
     depends_on:
@@ -337,6 +363,27 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    labels:
+      - traefik.enable=true
+      # Browser UI — Neo4j serves its own app at /browser/, matching what's
+      # left after Traefik strips /neo4j.
+      - traefik.http.routers.neo4j.rule=Host(`${DOMAIN}`) && PathPrefix(`/neo4j`)
+      - traefik.http.routers.neo4j.entrypoints=websecure
+      - traefik.http.routers.neo4j.tls.certresolver=letsencrypt
+      - traefik.http.routers.neo4j.service=neo4j-http
+      - traefik.http.services.neo4j-http.loadbalancer.server.port=7474
+      - traefik.http.middlewares.neo4j-strip.stripprefix.prefixes=/neo4j
+      - traefik.http.routers.neo4j.middlewares=neo4j-auth,neo4j-strip
+      # Bolt-over-websocket, used by the Browser UI itself to run queries —
+      # lives on the dedicated neo4jbolt entrypoint (see proxy service), so a
+      # bare Host rule with no path is safe: nothing else listens there.
+      - traefik.http.routers.neo4j-bolt.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.neo4j-bolt.entrypoints=neo4jbolt
+      - traefik.http.routers.neo4j-bolt.tls.certresolver=letsencrypt
+      - traefik.http.routers.neo4j-bolt.service=neo4j-bolt
+      - traefik.http.services.neo4j-bolt.loadbalancer.server.port=7687
+      - traefik.http.routers.neo4j-bolt.middlewares=neo4j-auth
+      - traefik.http.middlewares.neo4j-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
     logging:
       driver: json-file
       options:
@@ -554,6 +601,59 @@ services:
         max-size: '10m'
         max-file: '3'
 
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: hhh-redisinsight
+    restart: always
+    environment:
+      # RedisInsight explicitly does not support path-rewriting behind a
+      # reverse proxy — RI_PROXY_PATH must match the public path exactly and
+      # Traefik must forward it unstripped (see labels below), unlike
+      # lightrag/prometheus/translate which do get stripped.
+      - RI_PROXY_PATH=/redisinsight
+      - RI_ACCEPT_TERMS_AND_CONDITIONS=true
+      # Pre-populate the connection to the app's own Redis so it's usable
+      # immediately after login instead of needing the password pasted in by hand.
+      - RI_REDIS_HOST=redis
+      - RI_REDIS_PORT=6379
+      - RI_REDIS_ALIAS=hhh-redis
+      - RI_REDIS_USERNAME=default
+      - RI_REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redisinsight-data:/data
+    networks:
+      - hhh-proxy
+    depends_on:
+      - redis
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '--no-verbose',
+          '--tries=1',
+          '--spider',
+          'http://localhost:5540/redisinsight',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.redisinsight.rule=Host(`${DOMAIN}`) && PathPrefix(`/redisinsight`)
+      - traefik.http.routers.redisinsight.entrypoints=websecure
+      - traefik.http.routers.redisinsight.tls.certresolver=letsencrypt
+      - traefik.http.routers.redisinsight.service=redisinsight
+      - traefik.http.services.redisinsight.loadbalancer.server.port=5540
+      - traefik.http.middlewares.redisinsight-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      - traefik.http.routers.redisinsight.middlewares=redisinsight-auth
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
   lightrag:
     image: hhh/lightrag
     container_name: hhh-lightrag
@@ -581,6 +681,11 @@ services:
       - EMBEDDING_API_BASE=${EMBEDDING_API_BASE:-https://llm.scads.ai/v1}
       - EMBEDDING_API_KEY=${EMBEDDING_API_KEY:-${LLM_API_KEY}}
       - EMBEDDING_DIM=${EMBEDDING_DIM:-2560}
+      # Public prefix this is served under (see Traefik labels below). LightRAG
+      # bakes this into the WebUI's asset/API URLs so the browser's follow-up
+      # requests already include /lightrag — Traefik strips it back off before
+      # forwarding, same round-trip as the `translate` service further down.
+      - LIGHTRAG_API_PREFIX=/lightrag
     volumes:
       - lightrag-data:/app/data
     networks:
@@ -599,6 +704,19 @@ services:
       timeout: 10s
       retries: 5
       start_period: 60s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.lightrag.rule=Host(`${DOMAIN}`) && PathPrefix(`/lightrag`)
+      - traefik.http.routers.lightrag.entrypoints=websecure
+      - traefik.http.routers.lightrag.tls.certresolver=letsencrypt
+      - traefik.http.routers.lightrag.service=lightrag
+      - traefik.http.services.lightrag.loadbalancer.server.port=9621
+      - traefik.http.middlewares.lightrag-strip.stripprefix.prefixes=/lightrag
+      # Traefik-level gate in front of LightRAG's own X-API-Key requirement —
+      # the WebUI login only asks for that key, no separate username/password,
+      # so this is the actual first line of defense for the public route.
+      - traefik.http.middlewares.lightrag-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      - traefik.http.routers.lightrag.middlewares=lightrag-auth,lightrag-strip
     logging:
       driver: json-file
       options:
@@ -707,6 +825,10 @@ services:
         NEXT_PUBLIC_API_DOCS_URL: https://${DOMAIN}/api-docs
         NEXT_PUBLIC_GRAFANA_URL: ${NEXT_PUBLIC_GRAFANA_URL:-https://${DOMAIN}/grafana}
         NEXT_PUBLIC_MONGO_EXPRESS_URL: https://${DOMAIN}/mongo
+        NEXT_PUBLIC_LIGHTRAG_WEBUI_URL: https://${DOMAIN}/lightrag/webui
+        NEXT_PUBLIC_PROMETHEUS_URL: https://${DOMAIN}/prometheus
+        NEXT_PUBLIC_REDIS_INSIGHT_URL: https://${DOMAIN}/redisinsight
+        NEXT_PUBLIC_NEO4J_BROWSER_URL: https://${DOMAIN}/neo4j/browser
     restart: always
     env_file:
       # Portainer repository deploys have no .env in the checkout; UI variables
@@ -729,6 +851,10 @@ services:
       - NEXT_PUBLIC_API_DOCS_URL=https://${DOMAIN}/api-docs
       - NEXT_PUBLIC_GRAFANA_URL=${NEXT_PUBLIC_GRAFANA_URL:-https://${DOMAIN}/grafana}
       - NEXT_PUBLIC_MONGO_EXPRESS_URL=https://${DOMAIN}/mongo
+      - NEXT_PUBLIC_LIGHTRAG_WEBUI_URL=https://${DOMAIN}/lightrag/webui
+      - NEXT_PUBLIC_PROMETHEUS_URL=https://${DOMAIN}/prometheus
+      - NEXT_PUBLIC_REDIS_INSIGHT_URL=https://${DOMAIN}/redisinsight
+      - NEXT_PUBLIC_NEO4J_BROWSER_URL=https://${DOMAIN}/neo4j/browser
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - KEYCLOAK_CLIENT_ID=hhh-admin
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET}
@@ -834,6 +960,13 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.retention.time=30d
+      # web.external-url fixes relative links generated by the UI (so they
+      # point at /prometheus/...); web.route-prefix is deliberately left
+      # unprefixed (/) so Prometheus's own internal routes — including
+      # /-/healthy below — stay unprefixed too. Traefik strips /prometheus
+      # before forwarding, so what Prometheus sees never has the prefix.
+      - --web.external-url=https://${DOMAIN}/prometheus
+      - --web.route-prefix=/
     healthcheck:
       test:
         [
@@ -848,6 +981,16 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.prometheus.rule=Host(`${DOMAIN}`) && PathPrefix(`/prometheus`)
+      - traefik.http.routers.prometheus.entrypoints=websecure
+      - traefik.http.routers.prometheus.tls.certresolver=letsencrypt
+      - traefik.http.routers.prometheus.service=prometheus
+      - traefik.http.services.prometheus.loadbalancer.server.port=9090
+      - traefik.http.middlewares.prometheus-strip.stripprefix.prefixes=/prometheus
+      - traefik.http.middlewares.prometheus-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      - traefik.http.routers.prometheus.middlewares=prometheus-auth,prometheus-strip
     logging:
       driver: json-file
       options:
@@ -1097,6 +1240,8 @@ volumes:
     name: hhh-keycloak-db-data
   redis-data:
     name: hhh-redis-data
+  redisinsight-data:
+    name: hhh-redisinsight-data
   lightrag-data:
     name: hhh-lightrag-data
   prometheus-data:

@@ -126,6 +126,7 @@ class _MockResponse {
 class _MockAdapter implements HttpClientAdapter {
   final List<_MockResponse> _responses;
   int _index = 0;
+  final List<RequestOptions> requests = [];
 
   _MockAdapter(this._responses);
 
@@ -135,6 +136,7 @@ class _MockAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    requests.add(options);
     if (_index >= _responses.length) {
       throw StateError('_MockAdapter ran out of responses (index $_index)');
     }
@@ -179,6 +181,20 @@ String get _validJwt {
       DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
           1000;
   return _buildJwt(expSeconds: future);
+}
+
+/// A refresh token whose `azp` claim names the client it was issued to —
+/// used to exercise AuthService's azp-based dispatch (Keycloak directly for
+/// `hhh-flutter`, the backend's /auth/* routes for anything else, e.g. the
+/// confidential `hhh-ropc` client used by onboarding/restore/rotation).
+String _buildJwtWithAzp(String azp) {
+  final header = base64Url.encode(utf8.encode('{"alg":"none","typ":"JWT"}'));
+  final future =
+      DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
+          1000;
+  final payload = base64Url.encode(
+      utf8.encode(jsonEncode({'sub': 'test', 'exp': future, 'azp': azp})));
+  return '$header.$payload.fakesig';
 }
 
 // ---------------------------------------------------------------------------
@@ -407,6 +423,65 @@ void main() {
           'username',
           'password',
         }),
+      );
+    });
+
+    test(
+        'revokes directly against Keycloak when the refresh token was issued '
+        'to hhh-flutter (azp matches)', () async {
+      storage.seedValue('refresh_token', _buildJwtWithAzp('hhh-flutter'));
+      final adapter = _MockAdapter([const _MockResponse()]);
+      final dio = Dio()..httpClientAdapter = adapter;
+      final service = AuthService(secureStorage: storage, dio: dio);
+
+      await service.logout();
+
+      expect(adapter.requests, hasLength(1));
+      expect(
+        adapter.requests.single.path,
+        'http://localhost:8080/realms/hhh/protocol/openid-connect/revoke',
+      );
+      expect(adapter.requests.single.data, isA<Map>().having(
+        (m) => m['client_id'],
+        'client_id',
+        'hhh-flutter',
+      ));
+    });
+
+    test(
+        'routes through the backend /auth/revoke when the refresh token was '
+        'issued to a different client (e.g. hhh-ropc) — Keycloak ignores '
+        'revocation requests from a client other than the token\'s issuer',
+        () async {
+      storage.seedValue('refresh_token', _buildJwtWithAzp('hhh-ropc'));
+      final adapter = _MockAdapter([const _MockResponse()]);
+      final dio = Dio()..httpClientAdapter = adapter;
+      final service = AuthService(secureStorage: storage, dio: dio);
+
+      await service.logout();
+
+      expect(adapter.requests, hasLength(1));
+      expect(
+        adapter.requests.single.path,
+        'http://localhost:3000/api/v1/auth/revoke',
+      );
+    });
+
+    test(
+        'routes through the backend /auth/revoke when the refresh token is '
+        'opaque/undecodable (onboarding/restore-issued tokens are not JWTs '
+        'AuthService itself minted)', () async {
+      storage.seedValue('refresh_token', 'opaque-server-issued-token');
+      final adapter = _MockAdapter([const _MockResponse()]);
+      final dio = Dio()..httpClientAdapter = adapter;
+      final service = AuthService(secureStorage: storage, dio: dio);
+
+      await service.logout();
+
+      expect(adapter.requests, hasLength(1));
+      expect(
+        adapter.requests.single.path,
+        'http://localhost:3000/api/v1/auth/revoke',
       );
     });
   });
