@@ -718,12 +718,18 @@ services:
       # Keycloak runs with KC_HTTP_RELATIVE_PATH=/auth, so EVERY realm endpoint
       # lives under /auth — including the server-to-server token/userinfo/JWKS
       # calls the admin makes over the internal Docker hostname. Omitting /auth
-      # here makes the token exchange 404 and NextAuth fails with
+      # makes the token exchange 404 and NextAuth fails with
       # `error=OAuthCallback` after Keycloak has already authenticated the user.
-      # The issuer must match what Keycloak stamps on tokens minted via that
-      # internal endpoint (cf. the backend's KEYCLOAK_JWT_ISSUER, which accepts
-      # both the public and internal forms).
-      - KEYCLOAK_ISSUER=http://keycloak:8080/auth/realms/hhh
+      #
+      # KEYCLOAK_ISSUER must be the PUBLIC url even though token/userinfo/JWKS
+      # are fetched internally: Keycloak stamps `iss` from the frontend request
+      # context (the browser flow through Traefik), not from the endpoint that
+      # mints the token. Using the internal form fails with
+      # `iss mismatch, expected http://keycloak:8080/auth/realms/hhh,
+      #  got: https://<domain>/auth/realms/hhh`.
+      # NOTE: the internal discovery document advertises the *internal* issuer —
+      # do not trust it here; the issued token is what counts.
+      - KEYCLOAK_ISSUER=https://${DOMAIN}/auth/realms/hhh
       - KEYCLOAK_BROWSER_URL=https://${DOMAIN}/auth
       - KEYCLOAK_INTERNAL_URL=http://keycloak:8080/auth
     networks:
