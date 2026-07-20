@@ -2,19 +2,35 @@ import 'package:flutter/foundation.dart' show kReleaseMode;
 
 /// Compile-time configuration constants.
 ///
-/// Override defaults with --dart-define flags at build time:
-///   flutter run --dart-define=API_BASE_URL=https://api.example.com/api/v1
-///   flutter run --dart-define=KEYCLOAK_URL=https://keycloak.example.com
-///   flutter run --dart-define=WS_BASE_URL=wss://api.example.com/ws
+/// These are baked into the binary at build time (`String.fromEnvironment` is a
+/// const) — there is no runtime config file on device. The defaults are
+/// **mode-dependent** so the common paths need no flags:
+///
+///   * debug/profile (`flutter run`)        -> localhost, for local development
+///   * release (`flutter build ipa`, Xcode
+///     Product > Archive)                   -> production
+///
+/// That means an Xcode archive — which cannot pass Flutter `--dart-define`
+/// flags — still produces a correctly configured production build.
+///
+/// Override either default explicitly (e.g. for a staging server) with:
+///   flutter build ipa --dart-define-from-file=dart_defines_prod.json
+///   flutter run --dart-define=API_BASE_URL=https://staging.example.com/api/v1
 abstract final class AppConfig {
   static const _localhostApiBaseUrl = 'http://localhost:3000/api/v1';
   static const _localhostKeycloakUrl = 'http://localhost:8080';
   static const _localhostWsBaseUrl = 'ws://localhost:3000/ws';
 
+  // Production endpoints. These are public URLs (already published in the app's
+  // legal pages and docs), so committing them exposes nothing sensitive.
+  static const _prodApiBaseUrl = 'https://habit.wiwi.tu-dresden.de/api/v1';
+  static const _prodKeycloakUrl = 'https://habit.wiwi.tu-dresden.de/auth';
+  static const _prodWsBaseUrl = 'wss://habit.wiwi.tu-dresden.de/ws';
+
   /// Base URL for the REST API, including the `/api/v1` path prefix.
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: _localhostApiBaseUrl,
+    defaultValue: kReleaseMode ? _prodApiBaseUrl : _localhostApiBaseUrl,
   );
 
   /// Base URL of the app server without the `/api/v1` suffix.
@@ -31,13 +47,13 @@ abstract final class AppConfig {
   /// Base URL of the Keycloak authentication server.
   static const keycloakUrl = String.fromEnvironment(
     'KEYCLOAK_URL',
-    defaultValue: _localhostKeycloakUrl,
+    defaultValue: kReleaseMode ? _prodKeycloakUrl : _localhostKeycloakUrl,
   );
 
   /// WebSocket base URL for real-time features.
   static const wsBaseUrl = String.fromEnvironment(
     'WS_BASE_URL',
-    defaultValue: _localhostWsBaseUrl,
+    defaultValue: kReleaseMode ? _prodWsBaseUrl : _localhostWsBaseUrl,
   );
 
   /// Contact address shown on the Help & Support screen.
@@ -46,13 +62,14 @@ abstract final class AppConfig {
     defaultValue: 'felix.reinsch@tu-dresden.de',
   );
 
-  /// Names of the `--dart-define` values a release build is missing (i.e. still
-  /// at their localhost defaults). Empty when the build is correctly configured.
+  /// Names of the endpoints a release build has pointed at localhost. Empty for
+  /// a correctly configured build.
   ///
-  /// A release build produced without these flags would otherwise ship pointing
-  /// at localhost with no way to override it post-build. `assert()` is stripped
-  /// in release mode, so this is a real (non-assert) check.
-  static List<String> missingProductionDefines() {
+  /// Release builds now default to production, so this only trips when someone
+  /// explicitly passes a localhost `--dart-define` into a release build — which
+  /// would ship an app that cannot reach any server. `assert()` is stripped in
+  /// release mode, so this is a real (non-assert) check.
+  static List<String> localhostOverridesInRelease() {
     if (!kReleaseMode) return const [];
     return [
       if (apiBaseUrl == _localhostApiBaseUrl) 'API_BASE_URL',
@@ -66,14 +83,15 @@ abstract final class AppConfig {
   /// in `main()` so the failure can be surfaced on screen instead of throwing
   /// before the Flutter binding exists (which renders as a blank white screen).
   static String? productionConfigError() {
-    final missing = missingProductionDefines();
-    if (missing.isEmpty) return null;
-    return 'This release build was compiled without the required '
-        '--dart-define values: ${missing.join(', ')}.\n\n'
-        'It would point at localhost, so it refuses to start.\n\n'
-        'Rebuild with:\n'
-        'flutter build ipa --release '
-        '--dart-define-from-file=dart_defines_prod.json';
+    final localhost = localhostOverridesInRelease();
+    if (localhost.isEmpty) return null;
+    return 'This release build points at localhost for: '
+        '${localhost.join(', ')}.\n\n'
+        'A release build cannot reach localhost on a device, so it refuses to '
+        'start.\n\n'
+        'Rebuild without the localhost --dart-define overrides (release '
+        'defaults to production):\n'
+        'flutter build ipa --release';
   }
 
   /// Throwing variant of [productionConfigError], kept for non-UI callers.
