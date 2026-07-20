@@ -362,7 +362,6 @@ export default function BackupsPage() {
               onDelete={setDeleteTarget}
               downloading={downloadingFile === status.lastBackup.file}
               disabled={running}
-              highlight
             />
           ) : (
             <p className={styles.muted}>{t("noBackupsYet")}</p>
@@ -421,7 +420,7 @@ export default function BackupsPage() {
                     <td>
                       <ComponentBadges manifest={m} />
                     </td>
-                    <td style={{ display: "flex", gap: "0.5rem" }}>
+                    <td style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                       <button
                         className={styles.actionBtn}
                         onClick={() => handleDownload(m)}
@@ -607,7 +606,6 @@ function BackupRow({
   onDelete,
   downloading,
   disabled,
-  highlight,
 }: {
   manifest: Manifest;
   onRestore: (m: Manifest) => void;
@@ -615,14 +613,10 @@ function BackupRow({
   onDelete: (m: Manifest) => void;
   downloading?: boolean;
   disabled?: boolean;
-  highlight?: boolean;
 }) {
   const t = useTranslations("backups");
   return (
-    <div
-      className={styles.tableWrap}
-      style={{ padding: "1rem 1.25rem", background: highlight ? "#f8fafc" : undefined }}
-    >
+    <div className={styles.tableWrap} style={{ padding: "1rem 1.25rem" }}>
       <div
         style={{
           display: "flex",
@@ -640,7 +634,7 @@ function BackupRow({
           </div>
         </div>
         <ComponentBadges manifest={manifest} />
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           <button
             className={styles.actionBtn}
             onClick={() => onDownload(manifest)}

@@ -157,6 +157,9 @@ services:
       # No stripprefix: setBasePath('/queues') already makes Bull Board emit
       # asset/API URLs under /queues, so it expects the prefix intact.
       - traefik.http.middlewares.queues-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      # Also keeps the Basic header off the app container, which reads
+      # Authorization itself for JWT-bearing /api/v1 requests.
+      - traefik.http.middlewares.queues-auth.basicauth.removeheader=true
       - traefik.http.routers.queues.middlewares=queues-auth
     logging:
       driver: json-file
@@ -643,6 +646,18 @@ services:
     depends_on:
       - redis
     healthcheck:
+      # MUST be 127.0.0.1, not localhost. This image's /etc/hosts maps
+      # localhost to both 127.0.0.1 and ::1; wget tries the IPv6 address
+      # first, but RedisInsight binds IPv4 only — so `localhost` gave a hard
+      # "Connection refused" on every path and flapped the container to
+      # unhealthy while it was serving perfectly well.
+      #
+      # /redisinsight (not /) is correct here: RI_PROXY_PATH genuinely
+      # remounts the app under that prefix, so / returns 404.
+      #
+      # NB: a healthy RedisInsight logs only "Running docker-entry.sh" and
+      # nothing further — its entrypoint echoes that line then exec's the Node
+      # app, which is silent on stdout. That log is NOT a hang.
       test:
         [
           'CMD',
@@ -650,12 +665,12 @@ services:
           '--no-verbose',
           '--tries=1',
           '--spider',
-          'http://localhost:5540/redisinsight',
+          'http://127.0.0.1:5540/redisinsight',
         ]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 60s
     labels:
       - traefik.enable=true
       - traefik.http.routers.redisinsight.rule=Host(`${DOMAIN}`) && PathPrefix(`/redisinsight`)
@@ -664,6 +679,7 @@ services:
       - traefik.http.routers.redisinsight.service=redisinsight
       - traefik.http.services.redisinsight.loadbalancer.server.port=5540
       - traefik.http.middlewares.redisinsight-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      - traefik.http.middlewares.redisinsight-auth.basicauth.removeheader=true
       - traefik.http.routers.redisinsight.middlewares=redisinsight-auth
     logging:
       driver: json-file
@@ -729,10 +745,28 @@ services:
       - traefik.http.routers.lightrag.service=lightrag
       - traefik.http.services.lightrag.loadbalancer.server.port=9621
       - traefik.http.middlewares.lightrag-strip.stripprefix.prefixes=/lightrag
-      # Traefik-level gate in front of LightRAG's own X-API-Key requirement —
-      # the WebUI login only asks for that key, no separate username/password,
-      # so this is the actual first line of defense for the public route.
+      # DO NOT REMOVE — this is the ONLY real authentication on LightRAG.
+      #
+      # LightRAG's own #/login screen is not a gate in this configuration.
+      # Upstream: "If Account credentials are not configured, the Web UI will
+      # access the system as a Guest. Therefore, even if only an API Key is
+      # configured, all APIs can still be accessed through the Guest account."
+      # We set LIGHTRAG_API_KEY but deliberately not AUTH_ACCOUNTS /
+      # TOKEN_SECRET, so Guest access is live — drop this middleware and the
+      # knowledge base becomes publicly readable.
+      #
+      # Accepted trade-off: anyone past this shared gate also has Guest-level
+      # full API access without needing LIGHTRAG_API_KEY. Closing that means
+      # setting AUTH_ACCOUNTS + TOKEN_SECRET (see docs/runbook.md).
       - traefik.http.middlewares.lightrag-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      # removeheader is ESSENTIAL here, not cosmetic. Traefik forwards the
+      # `Authorization: Basic ...` header upstream by default; LightRAG's API
+      # expects `Authorization: Bearer <jwt>` from its own login, chokes on the
+      # Basic credential it never asked for, and answers 401 — which makes the
+      # WebUI bounce straight back to its own #/login screen after you have
+      # already passed the Traefik gate. Stripping it lets LightRAG's own auth
+      # see an unauthenticated request and behave normally.
+      - traefik.http.middlewares.lightrag-auth.basicauth.removeheader=true
       - traefik.http.routers.lightrag.middlewares=lightrag-auth,lightrag-strip
     logging:
       driver: json-file
@@ -1008,6 +1042,10 @@ services:
       - traefik.http.services.prometheus.loadbalancer.server.port=9090
       - traefik.http.middlewares.prometheus-strip.stripprefix.prefixes=/prometheus
       - traefik.http.middlewares.prometheus-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      # Don't hand the shared internal-tools credential to Prometheus; it has
+      # no auth of its own and no reason to see it (see lightrag, where
+      # forwarding it actively breaks the app).
+      - traefik.http.middlewares.prometheus-auth.basicauth.removeheader=true
       - traefik.http.routers.prometheus.middlewares=prometheus-auth,prometheus-strip
     logging:
       driver: json-file
