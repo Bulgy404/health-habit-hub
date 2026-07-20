@@ -41,21 +41,30 @@ researcher-curated knowledge base.
 
 ## Privacy Policy URL (App Store Connect → App Information)
 
-The in-app privacy document is served dynamically per locale from the
-backend (`{appBaseUrl}/{locale}/privacy`), so there is no URL hardcoded in
-the app. For the **App Privacy Policy URL** field in App Store Connect, use
-the English version of the currently deployed backend:
+The in-app privacy document is served per locale from the backend
+(`{appBaseUrl}/{locale}/privacy`). Release builds default to the production
+host (see `AppConfig` / `docs/guides/flutter-architecture.md` §7), so for the
+**App Privacy Policy URL** field in App Store Connect use:
 
 ```
-https://<production-domain>/en/privacy
+https://habit.wiwi.tu-dresden.de/en/privacy
 ```
 
-**Before submitting:** confirm `<production-domain>` — the value currently
-set in this checkout's `.env` (`DOMAIN=habit.felixreinsch.de`) looks like a
-personal/dev deployment, not necessarily the final production host. Resolve
-against whatever domain the App Store build's `API_BASE_URL` --dart-define
-actually points to, then verify the URL loads in a browser before pasting it
-into Connect.
+Related legal pages (same host, `/de/...` for German):
+
+| Page                    | URL                                                 |
+| ----------------------- | --------------------------------------------------- |
+| Privacy Policy          | `https://habit.wiwi.tu-dresden.de/en/privacy`       |
+| Imprint                 | `https://habit.wiwi.tu-dresden.de/en/imprint`       |
+| Accessibility statement | `https://habit.wiwi.tu-dresden.de/en/accessibility` |
+
+These are server-rendered HTML for browsers (the app fetches JSON from the same
+URLs via content negotiation), so they open standalone for reviewers.
+
+**Before submitting:** open the URL in a browser to confirm it loads and is
+styled. If the release build was overridden to a different backend via
+`--dart-define`, use that host instead — the URL must match the build being
+reviewed.
 
 ## Demo access for review
 
