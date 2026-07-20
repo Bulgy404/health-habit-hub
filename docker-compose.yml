@@ -398,7 +398,12 @@ services:
       # KC_HOSTNAME_STRICT=false keeps internal calls (Host: keycloak:8080)
       # working; nothing relies on discovery returning internal URLs, since the
       # admin and backend configure their endpoints explicitly.
-      - KC_HOSTNAME=https://${DOMAIN}
+      #
+      # MUST include /auth: KC_HOSTNAME defines the ENTIRE public base URL and
+      # KC_HTTP_RELATIVE_PATH is NOT appended to it. Setting it without the path
+      # yields issuer=https://<domain>/realms/hhh (no /auth), which breaks the
+      # admin's iss validation and the public URLs Traefik routes on PathPrefix(/auth).
+      - KC_HOSTNAME=https://${DOMAIN}/auth
       - KC_HOSTNAME_STRICT=false
       - KC_HTTP_ENABLED=true
       - KC_HTTP_RELATIVE_PATH=/auth
