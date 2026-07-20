@@ -834,7 +834,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get deleteAccountContent =>
-      'Dadurch werden dein Konto und alle damit verknüpften Daten dauerhaft gelöscht: Profil, Studienteilnahme, Gewohnheitspläne, tägliche Einträge, Fragebogenantworten und Empfehlungen.\n\nGespendete Gewohnheiten sind anonym gespeichert und können nicht auf dich zurückgeführt werden.\n\nDies kann nicht rückgängig gemacht werden.';
+      'Dies entfernt dauerhaft dein Konto und deinen Zugang – eine erneute Anmeldung ist nicht mehr möglich, und dies kann nicht rückgängig gemacht werden.\n\nDeine beigetragenen Daten (Gewohnheitspläne, tägliche Einträge, Fragebogenantworten und Spenden) bleiben auf unseren Servern gespeichert, jedoch nur als anonyme Einträge: Sobald dein Konto und deine Identität entfernt sind, lässt sich nichts davon mehr auf dich zurückführen.\n\nFragen oder Bedenken dazu? Siehe:';
 
   @override
   String get deleteAccountConfirm => 'Endgültig löschen';
@@ -1617,4 +1617,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get close => 'Schließen';
+
+  @override
+  String appVersion(String version, String buildNumber) {
+    return 'Version $version ($buildNumber)';
+  }
 }

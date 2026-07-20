@@ -815,7 +815,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get deleteAccountContent =>
-      'Dit verwijdert je account en alle bijbehorende gegevens permanent: je profiel, studie-inschrijving, gewoonteplannen, dagelijkse registraties, vragenlijstantwoorden en aanbevelingen.\n\nGedeelde gewoontes worden anoniem opgeslagen en kunnen niet naar jou worden herleid.\n\nDit kan niet ongedaan worden gemaakt.';
+      'Dit verwijdert je account en inlogtoegang permanent — je kunt niet meer inloggen, en dit kan niet ongedaan worden gemaakt.\n\nJe bijgedragen gegevens (gewoonteplannen, dagelijkse registraties, vragenlijstantwoorden en donaties) blijven op onze servers staan, maar alleen als anonieme gegevens: zodra je account en identiteit zijn verwijderd, kan niets daarvan nog naar jou worden herleid.\n\nVragen of zorgen hierover? Zie:';
 
   @override
   String get deleteAccountConfirm => 'Definitief verwijderen';
@@ -1589,4 +1589,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get close => 'Sluiten';
+
+  @override
+  String appVersion(String version, String buildNumber) {
+    return 'Versie $version ($buildNumber)';
+  }
 }

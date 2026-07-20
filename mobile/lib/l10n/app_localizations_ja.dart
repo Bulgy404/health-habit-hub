@@ -779,7 +779,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get deleteAccountContent =>
-      'アカウントと、それに紐づくすべてのデータ（プロフィール、研究参加、習慣プラン、毎日の記録、質問票の回答、推奨）が完全に削除されます。\n\n提供された習慣は匿名で保存されており、あなたに紐づけることはできません。\n\nこの操作は取り消せません。';
+      'この操作によりアカウントとログイン情報が完全に削除されます。再度サインインすることはできず、元に戻すこともできません。\n\n提供いただいたデータ(習慣プラン、毎日の記録、質問票の回答、寄付データ)はサーバー上に残りますが、匿名の情報としてのみ保存されます。アカウントと識別情報が削除された後は、これらのデータをあなたに紐づけることはできません。\n\nご質問やご懸念がある場合は、以下をご覧ください:';
 
   @override
   String get deleteAccountConfirm => '完全に削除';
@@ -1510,4 +1510,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get close => '閉じる';
+
+  @override
+  String appVersion(String version, String buildNumber) {
+    return 'バージョン $version（$buildNumber）';
+  }
 }

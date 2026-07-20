@@ -1039,7 +1039,7 @@
   "@deleteAccountTitle": {
     "description": "Title of the account-deletion confirmation dialog"
   },
-  "deleteAccountContent": "This permanently deletes your account and all data linked to it: your profile, study enrollment, habit plans, daily logs, questionnaire answers, and recommendations.\n\nHabit donations are stored anonymously and cannot be traced back to you.\n\nThis cannot be undone.",
+  "deleteAccountContent": "This permanently removes your account and login — you won't be able to sign back in, and this cannot be undone.\n\nYour contributed data (habit plans, daily logs, questionnaire answers, and donations) stays on our servers, but only as anonymous entries: once your account and identity are removed, nothing links that data back to you.\n\nQuestions or concerns about this? See:",
   "@deleteAccountContent": {
     "description": "Body of the account-deletion confirmation dialog"
   },
@@ -2027,5 +2027,17 @@
   "close": "Close",
   "@close": {
     "description": "Generic tooltip/label for a close icon button"
+  },
+  "appVersion": "Version {version} ({buildNumber})",
+  "@appVersion": {
+    "description": "Footer on the Account screen showing the installed app version and build number",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "buildNumber": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -103,11 +103,17 @@ class AuthService {
     onLogin?.call();
   }
 
-  /// Exchanges the stored refresh token for a new access token via a direct
-  /// HTTP call to Keycloak's token endpoint.
+  /// Exchanges the stored refresh token for a new access token.
   ///
-  /// This works for tokens issued by any grant type (PKCE or direct-grant).
-  /// Throws if no refresh token is stored or if Keycloak rejects it.
+  /// Tokens issued by the PKCE login flow (client `hhh-flutter`) are refreshed
+  /// directly against Keycloak's token endpoint. Tokens minted server-side by
+  /// onboarding/restore/rotation (confidential client `hhh-ropc`) cannot be —
+  /// Keycloak rejects a refresh token presented by a different client than the
+  /// one it was issued to — so those are routed through the backend's
+  /// `/auth/refresh` endpoint, which holds the hhh-ropc client secret. Which
+  /// path to take is decided from the refresh token's own `azp` claim.
+  ///
+  /// Throws if no refresh token is stored or if the exchange is rejected.
   Future<void> refreshToken() async {
     final storedRefreshToken =
         await _secureStorage.read(key: _refreshTokenKey);
@@ -115,19 +121,31 @@ class AuthService {
       throw Exception('No refresh token available');
     }
 
-    final response = await (_dio ?? Dio()).post<Map<String, dynamic>>(
-      '$_keycloakBaseUrl/realms/$_realm/protocol/openid-connect/token',
-      data: {
-        'grant_type': 'refresh_token',
-        'client_id': _clientId,
-        'refresh_token': storedRefreshToken,
-      },
-      options: Options(
-        contentType: 'application/x-www-form-urlencoded',
-        sendTimeout: _authCallTimeout,
-        receiveTimeout: _authCallTimeout,
-      ),
-    );
+    final issuedToThisClient =
+        _issuingClientId(storedRefreshToken) == _clientId;
+    final response = issuedToThisClient
+        ? await (_dio ?? Dio()).post<Map<String, dynamic>>(
+            '$_keycloakBaseUrl/realms/$_realm/protocol/openid-connect/token',
+            data: {
+              'grant_type': 'refresh_token',
+              'client_id': _clientId,
+              'refresh_token': storedRefreshToken,
+            },
+            options: Options(
+              contentType: 'application/x-www-form-urlencoded',
+              sendTimeout: _authCallTimeout,
+              receiveTimeout: _authCallTimeout,
+            ),
+          )
+        : await (_dio ?? Dio()).post<Map<String, dynamic>>(
+            '${AppConfig.apiBaseUrl}/auth/refresh',
+            data: {'refresh_token': storedRefreshToken},
+            options: Options(
+              contentType: 'application/json',
+              sendTimeout: _authCallTimeout,
+              receiveTimeout: _authCallTimeout,
+            ),
+          );
 
     final data = response.data!;
     if (data['access_token'] != null) {
@@ -179,6 +197,25 @@ class AuthService {
         _refreshDeadUntil = DateTime.now().add(_deadCooldown);
       }
       return false;
+    }
+  }
+
+  /// Returns the `azp` (authorized party) claim of [jwt] — the client the
+  /// token was issued to — or null when the token can't be decoded (opaque
+  /// tokens, malformed input). Callers treat null as "not this client" so an
+  /// undecodable token falls back to the backend refresh path — the path used
+  /// by the onboarding/restore flows that store tokens without going through
+  /// this service.
+  static String? _issuingClientId(String jwt) {
+    try {
+      final parts = jwt.split('.');
+      if (parts.length != 3) return null;
+      final payload =
+          utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final claims = jsonDecode(payload) as Map<String, dynamic>;
+      return claims['azp'] as String?;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -320,27 +357,43 @@ class AuthService {
 
   /// Logs out locally and revokes the Keycloak server-side session.
   ///
-  /// Calls Keycloak's token revocation endpoint (RFC 7009) with the stored
-  /// refresh token before clearing local storage. This invalidates the session
-  /// on the server so a stolen refresh token cannot be replayed. Revocation
-  /// failure is silently ignored — local tokens are always cleared regardless.
+  /// Revokes the stored refresh token (RFC 7009) before clearing local
+  /// storage, invalidating the session on the server so a stolen refresh
+  /// token cannot be replayed. Like [refreshToken], the revocation path is
+  /// picked from the token's `azp` claim: `hhh-flutter` tokens go straight to
+  /// Keycloak's revocation endpoint, while server-minted `hhh-ropc` tokens go
+  /// through the backend's `/auth/revoke` (Keycloak ignores revocation from a
+  /// client other than the token's issuer). Revocation failure is silently
+  /// ignored — local tokens are always cleared regardless.
   Future<void> logout() async {
     try {
       final refreshToken = await _secureStorage.read(key: _refreshTokenKey);
       if (refreshToken != null) {
-        await (_dio ?? Dio()).post<void>(
-          '$_keycloakBaseUrl/realms/$_realm/protocol/openid-connect/revoke',
-          data: {
-            'client_id': _clientId,
-            'token': refreshToken,
-            'token_type_hint': 'refresh_token',
-          },
-          options: Options(
-            contentType: 'application/x-www-form-urlencoded',
-            sendTimeout: _authCallTimeout,
-            receiveTimeout: _authCallTimeout,
-          ),
-        );
+        if (_issuingClientId(refreshToken) == _clientId) {
+          await (_dio ?? Dio()).post<void>(
+            '$_keycloakBaseUrl/realms/$_realm/protocol/openid-connect/revoke',
+            data: {
+              'client_id': _clientId,
+              'token': refreshToken,
+              'token_type_hint': 'refresh_token',
+            },
+            options: Options(
+              contentType: 'application/x-www-form-urlencoded',
+              sendTimeout: _authCallTimeout,
+              receiveTimeout: _authCallTimeout,
+            ),
+          );
+        } else {
+          await (_dio ?? Dio()).post<void>(
+            '${AppConfig.apiBaseUrl}/auth/revoke',
+            data: {'refresh_token': refreshToken},
+            options: Options(
+              contentType: 'application/json',
+              sendTimeout: _authCallTimeout,
+              receiveTimeout: _authCallTimeout,
+            ),
+          );
+        }
       }
     } catch (_) {
       // Best-effort — always clear local tokens even if reading the refresh

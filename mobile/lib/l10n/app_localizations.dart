@@ -1571,7 +1571,7 @@ abstract class AppLocalizations {
   /// Body of the account-deletion confirmation dialog
   ///
   /// In en, this message translates to:
-  /// **'This permanently deletes your account and all data linked to it: your profile, study enrollment, habit plans, daily logs, questionnaire answers, and recommendations.\n\nHabit donations are stored anonymously and cannot be traced back to you.\n\nThis cannot be undone.'**
+  /// **'This permanently removes your account and login — you won\'t be able to sign back in, and this cannot be undone.\n\nYour contributed data (habit plans, daily logs, questionnaire answers, and donations) stays on our servers, but only as anonymous entries: once your account and identity are removed, nothing links that data back to you.\n\nQuestions or concerns about this? See:'**
   String get deleteAccountContent;
 
   /// Destructive confirm button of the deletion dialog
@@ -2917,6 +2917,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get close;
+
+  /// Footer on the Account screen showing the installed app version and build number
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version} ({buildNumber})'**
+  String appVersion(String version, String buildNumber);
 }
 
 class _AppLocalizationsDelegate

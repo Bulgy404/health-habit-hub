@@ -17,6 +17,7 @@ import { createHabitsRouter } from './habitsRouter.js';
 import { createAdminRouter } from './adminRouter.js';
 import { createOnboardRouter } from './onboardRouter.js';
 import { createRestoreRouter } from './restoreRouter.js';
+import { createAuthRouter } from './authRouter.js';
 import { createQuestionnairesRouter } from './questionnairesRouter.js';
 import {
   createQuestionnaireResponsesRouter,
@@ -201,6 +202,10 @@ export function createApiRouter({
   // Public: passphrase-based account restore on a new device (rate limited
   // separately, no JWT required — the caller has no session yet).
   router.use('/restore', createRestoreRouter({ db }));
+
+  // Public: refresh of hhh-ropc-issued token pairs (rate limited separately,
+  // no JWT required — the caller's access token may already be expired).
+  router.use('/auth', createAuthRouter());
 
   // Sanitize request bodies before auth (general protection)
   router.use(sanitizeBody);

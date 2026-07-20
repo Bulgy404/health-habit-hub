@@ -13,6 +13,7 @@ import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/comments_enabled_provider.dart';
 import '../providers/locale_provider.dart';
+import '../providers/package_info_provider.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/settings_card.dart';
 
@@ -31,6 +32,7 @@ class UserSettingsScreen extends ConsumerWidget {
     final currentLocale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
     final commentsEnabled = ref.watch(commentsEnabledProvider);
+    final packageInfo = ref.watch(packageInfoProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Account')),
@@ -272,6 +274,22 @@ class UserSettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
+
+          // ── App info footer ─────────────────────────────────────────
+          const SizedBox(height: 16),
+          Center(
+            child: packageInfo.when(
+              data: (info) => Text(
+                l10n.appVersion(info.version, info.buildNumber),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
+            ),
+          ),
         ],
       ),
     );
@@ -439,7 +457,43 @@ class UserSettingsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.deleteAccountTitle),
-        content: Text(l10n.deleteAccountContent),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.deleteAccountContent),
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.push('/settings/privacy');
+                },
+                child: Text(
+                  l10n.privacyStatement,
+                  style: const TextStyle(
+                    color: Color(0xFF2563EB),
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              InkWell(
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.push('/settings/imprint');
+                },
+                child: Text(
+                  l10n.imprint,
+                  style: const TextStyle(
+                    color: Color(0xFF2563EB),
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -472,7 +526,12 @@ class UserSettingsScreen extends ConsumerWidget {
       messenger.showSnackBar(SnackBar(content: Text(l10n.deleteAccountFailed)));
       return;
     }
-    // Server-side data is gone — wipe everything locally and restart onboarding.
+    // The backend only removes the account's identity/credentials (see
+    // usersRouter.js DELETE /me) — contributed data (profile, logs,
+    // questionnaire answers, donated habits) stays server-side, kept only
+    // under a random UUID with no identity record, so it can't be traced
+    // back to this device/account. Local storage is wiped regardless, since
+    // there's no account left to sign back into either way.
     const storage = FlutterSecureStorage();
     await storage.deleteAll();
     await ref.read(authServiceProvider).logout();

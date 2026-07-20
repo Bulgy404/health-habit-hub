@@ -830,7 +830,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get deleteAccountContent =>
-      'Cette action supprime définitivement votre compte et toutes les données qui y sont liées : votre profil, votre inscription à l\'étude, vos plans d\'habitudes, vos journaux quotidiens, vos réponses aux questionnaires et vos recommandations.\n\nLes habitudes partagées sont stockées de manière anonyme et ne peuvent pas être retracées jusqu\'à vous.\n\nCette action est irréversible.';
+      'Cette action supprime définitivement votre compte et votre accès — vous ne pourrez plus vous reconnecter, et cette action est irréversible.\n\nVos données contribuées (plans d\'habitudes, journaux quotidiens, réponses aux questionnaires et dons) restent sur nos serveurs, mais uniquement sous forme d\'entrées anonymes : une fois votre compte et votre identité supprimés, rien ne permet de les relier à vous.\n\nDes questions ou des préoccupations à ce sujet ? Consultez :';
 
   @override
   String get deleteAccountConfirm => 'Supprimer définitivement';
@@ -1615,4 +1615,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get close => 'Fermer';
+
+  @override
+  String appVersion(String version, String buildNumber) {
+    return 'Version $version ($buildNumber)';
+  }
 }

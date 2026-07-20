@@ -810,7 +810,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get deleteAccountContent =>
-      'This permanently deletes your account and all data linked to it: your profile, study enrollment, habit plans, daily logs, questionnaire answers, and recommendations.\n\nHabit donations are stored anonymously and cannot be traced back to you.\n\nThis cannot be undone.';
+      'This permanently removes your account and login — you won\'t be able to sign back in, and this cannot be undone.\n\nYour contributed data (habit plans, daily logs, questionnaire answers, and donations) stays on our servers, but only as anonymous entries: once your account and identity are removed, nothing links that data back to you.\n\nQuestions or concerns about this? See:';
 
   @override
   String get deleteAccountConfirm => 'Delete permanently';
@@ -1577,4 +1577,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get close => 'Close';
+
+  @override
+  String appVersion(String version, String buildNumber) {
+    return 'Version $version ($buildNumber)';
+  }
 }

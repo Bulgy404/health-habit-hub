@@ -62,3 +62,105 @@ export async function mintTokenForUser({
   const data = await tokenRes.json();
   return { ok: true, data };
 }
+
+/**
+ * Revokes a refresh token that was issued to the confidential hhh-ropc
+ * client (RFC 7009), killing its server-side (offline) session.
+ *
+ * Same cross-client constraint as [refreshTokenForUser]: Keycloak ignores a
+ * revocation request from a different client than the token's issuer, so the
+ * mobile app's public hhh-flutter client cannot revoke ROPC-minted tokens —
+ * sign-out routes them through the backend instead.
+ *
+ * @param {{ refreshToken: string, base?: string, realm?: string, clientId?: string, clientSecret?: string }} params
+ * @returns {Promise<{ok: boolean, status: number}>}
+ */
+export async function revokeRefreshTokenForUser({
+  refreshToken,
+  base,
+  realm,
+  clientId,
+  clientSecret,
+}) {
+  const _base = base || process.env.KEYCLOAK_URL || 'http://keycloak:8080';
+  const _realm = realm || process.env.KEYCLOAK_REALM || 'hhh';
+  const _clientId =
+    clientId || process.env.KEYCLOAK_ROPC_CLIENT_ID || 'hhh-ropc';
+  const _clientSecret =
+    clientSecret || process.env.KEYCLOAK_ROPC_CLIENT_SECRET || '';
+  if (!_clientSecret && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'KEYCLOAK_ROPC_CLIENT_SECRET must be set in production — refusing to revoke tokens with an empty ROPC client secret.'
+    );
+  }
+
+  const revokeRes = await fetch(
+    `${_base}/realms/${_realm}/protocol/openid-connect/revoke`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: _clientId,
+        client_secret: _clientSecret,
+        token: refreshToken,
+        token_type_hint: 'refresh_token',
+      }),
+    }
+  );
+
+  return { ok: revokeRes.ok, status: revokeRes.status };
+}
+
+/**
+ * Exchanges a refresh token that was issued to the confidential hhh-ropc
+ * client for a fresh token pair.
+ *
+ * Keycloak refuses to honour a refresh token presented by a different client
+ * than the one it was issued to, so tokens minted by [mintTokenForUser]
+ * (onboarding, restore, credential rotation) can never be refreshed by the
+ * mobile app's public hhh-flutter client directly — they must come back
+ * through the backend, which holds the hhh-ropc client secret.
+ *
+ * @param {{ refreshToken: string, base?: string, realm?: string, clientId?: string, clientSecret?: string }} params
+ * @returns {Promise<{ok: true, data: {access_token: string, refresh_token: string, expires_in: number}} | {ok: false, status: number}>}
+ */
+export async function refreshTokenForUser({
+  refreshToken,
+  base,
+  realm,
+  clientId,
+  clientSecret,
+}) {
+  const _base = base || process.env.KEYCLOAK_URL || 'http://keycloak:8080';
+  const _realm = realm || process.env.KEYCLOAK_REALM || 'hhh';
+  const _clientId =
+    clientId || process.env.KEYCLOAK_ROPC_CLIENT_ID || 'hhh-ropc';
+  const _clientSecret =
+    clientSecret || process.env.KEYCLOAK_ROPC_CLIENT_SECRET || '';
+  if (!_clientSecret && process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'KEYCLOAK_ROPC_CLIENT_SECRET must be set in production — refusing to refresh tokens with an empty ROPC client secret.'
+    );
+  }
+
+  const tokenRes = await fetch(
+    `${_base}/realms/${_realm}/protocol/openid-connect/token`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        client_id: _clientId,
+        client_secret: _clientSecret,
+        refresh_token: refreshToken,
+      }),
+    }
+  );
+
+  if (!tokenRes.ok) {
+    return { ok: false, status: tokenRes.status };
+  }
+
+  const data = await tokenRes.json();
+  return { ok: true, data };
+}

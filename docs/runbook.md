@@ -63,10 +63,15 @@ git --version
 | ---- | -------- | --------------------------------------------------------- |
 | 80   | TCP      | HTTP (redirected to HTTPS by Traefik)                     |
 | 443  | TCP      | HTTPS (Traefik TLS termination)                           |
+| 7687 | TCP      | Neo4j Browser's bolt-over-websocket channel (Traefik-proxied, TLS + basic-auth — see "Internal tool links" below), `NEO4J_BOLT_PORT` |
 | 8080 | TCP      | Keycloak admin UI (restrict to trusted IPs in production) |
 
 > **Security note:** Port 8080 should be firewalled to admin IP ranges only.
-> Never expose Neo4j (7474/7687) or MongoDB (27017) externally.
+> Never expose Neo4j (7474/7687) or MongoDB (27017) *directly* — the only
+> supported public path to Neo4j is through Traefik (path `/neo4j` for the
+> Browser UI, port 7687 above for its query channel), both basic-auth gated
+> via `INTERNAL_TOOLS_TRAEFIK_AUTH`. MongoDB stays fully internal; use
+> mongo-express (`/mongo`) instead.
 
 ---
 
@@ -834,6 +839,13 @@ docker compose -f docker-compose.local.yml up -d redis-insight
 docker compose -f docker-compose.local.yml stop redis-insight
 ```
 
+**In production:** RedisInsight is deployed as a normal part of the stack (not
+a manual start/stop step) and reachable at `https://<DOMAIN>/redisinsight`,
+gated by the shared `INTERNAL_TOOLS_TRAEFIK_AUTH` basic-auth credential (also
+in front of LightRAG, Prometheus, and Neo4j Browser — see docker-compose.yml).
+The connection to the app's Redis instance is pre-configured via `RI_REDIS_*`
+env vars, so there's no "Add Redis Database" step to do by hand there.
+
 ---
 
 ## 13. Troubleshooting
@@ -1065,7 +1077,12 @@ docker compose up -d hhh-lightrag hhh-knowledge-mcp hhh-recommender
 > **Note:** LightRAG takes ~30 seconds to initialize its storage on first start. Wait for `{"status":"ok"}` from `curl http://localhost:9621/health` before considering it failed.
 
 **Graph visualization:**
-The LightRAG graph UI is at `http://localhost:9621` inside Docker. Access it from the server via SSH tunnel:
+In production, the LightRAG WebUI is reachable directly at
+`https://<DOMAIN>/lightrag/webui` (basic-auth gated by
+`INTERNAL_TOOLS_TRAEFIK_AUTH`, same as the admin portal's Knowledge Base
+"View Graph" link) — no tunnel needed. The SSH tunnel below is only for
+reaching it from inside the Docker network directly (e.g. while debugging
+`LIGHTRAG_API_PREFIX` itself, where the public route may not be trustworthy):
 
 ```bash
 ssh -L 9622:localhost:9621 your-server
