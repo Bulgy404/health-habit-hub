@@ -111,6 +111,18 @@ API_SERVICE_SECRET=<hex-secret>       # shared secret between hhh-app and hhh-re
 LIGHTRAG_API_KEY=<hex-secret>         # bearer token protecting LightRAG REST API
 ```
 
+> **LightRAG auth — known, accepted gap.** `LIGHTRAG_API_KEY` alone does *not*
+> secure LightRAG. Upstream: "If Account credentials are not configured, the Web
+> UI will access the system as a Guest ... even if only an API Key is
+> configured, all APIs can still be accessed through the Guest account." We do
+> not set `AUTH_ACCOUNTS`/`TOKEN_SECRET`, so the only real gate on LightRAG is
+> the Traefik basic-auth middleware (`INTERNAL_TOOLS_TRAEFIK_AUTH`). Two
+> consequences: never remove that middleware, and treat anyone holding the
+> shared internal-tools credential as having full LightRAG API access. To close
+> it, set `AUTH_ACCOUNTS` (hash passwords with `lightrag-hash-password
+> --username admin`) plus `TOKEN_SECRET`, then LightRAG's own login becomes a
+> genuine per-user gate.
+
 Generate a strong value for `API_SERVICE_SECRET`:
 
 ```bash
