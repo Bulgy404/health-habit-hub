@@ -1118,6 +1118,134 @@ After any rotation: `docker compose up -d` (affected services) and run
 
 ---
 
+## Mobile App — Build, Install & Ship
+
+### How the app is configured (read this first)
+
+Backend URLs are **compile-time constants** (`String.fromEnvironment` in
+`mobile/lib/config/app_config.dart`) — there is no runtime config file on the
+device. The defaults are **mode-dependent**, so the common paths need no flags:
+
+| Build mode                                          | Endpoints used                          |
+| --------------------------------------------------- | --------------------------------------- |
+| debug / profile (`flutter run`)                      | `localhost` (local dev stack)           |
+| release (`flutter build ipa`, Xcode Product→Archive) | `https://habit.wiwi.tu-dresden.de/...`  |
+
+This matters because an **Xcode archive cannot pass Flutter `--dart-define`
+flags**. Before this was mode-dependent, archiving from Xcode silently produced
+a localhost build that showed a **blank white screen** on device. See
+`docs/guides/flutter-architecture.md` §7.
+
+Override either default (e.g. a staging server) with:
+
+```bash
+flutter build ipa --release --dart-define-from-file=dart_defines_prod.json
+```
+
+If a *release* build is ever explicitly pointed at localhost, the app now renders
+an on-screen configuration error naming the offending values instead of a white
+screen (`_ConfigErrorApp` in `mobile/lib/main.dart`).
+
+### Run locally in debug (development)
+
+```bash
+# start the backend first — debug builds target localhost
+make dev                      # or: docker compose -f docker-compose.local.yml up
+
+cd mobile
+flutter run                   # attached device or simulator
+flutter run -d chrome         # web
+```
+
+Hot reload, DevTools and breakpoints are available. Note a debug build **only
+runs while tethered** to the Mac (JIT + Dart VM service) — it will flash and quit
+if you unplug. Use `--release` for standalone use.
+
+To debug against production instead:
+`flutter run --dart-define-from-file=dart_defines_prod.json`
+
+### Run a release build on a physical iPhone
+
+```bash
+cd mobile
+flutter devices               # note your device id
+flutter run --release -d <your-iphone-id>
+```
+
+No flags needed (release defaults to production). The app **stays installed**
+after unplugging — 1 year with a paid Apple Developer account, 7 days with a free
+personal Apple ID (then re-run to renew). With a personal profile, first launch
+also needs: **Settings → General → VPN & Device Management → Trust**.
+
+### Ship to TestFlight (step by step)
+
+1. **Bump the build number** — every upload must be unique:
+   ```yaml
+   # mobile/pubspec.yaml
+   version: 1.0.0+2      # was 1.0.0+1
+   ```
+2. **Check signing** (once): `open ios/Runner.xcworkspace` → Runner target →
+   **Signing & Capabilities** → *Automatically manage signing* ✓, correct **Team**,
+   and **Push Notifications** + **Background Modes → Remote notifications** present
+   (required for FCM in a distribution build).
+3. **Build the archive**:
+   ```bash
+   cd mobile
+   flutter clean && flutter pub get
+   flutter build ipa --release
+   ```
+   Produces `build/ios/archive/Runner.xcarchive`.
+4. **Upload**: Xcode → **Window → Organizer → Archives** → select the archive →
+   **Distribute App** → **App Store Connect** → **Upload** → defaults →
+   *Automatically manage signing* → **Upload**.
+   (Alternative: drag `build/ios/ipa/*.ipa` into the **Transporter** app.)
+5. **Wait for processing** — App Store Connect → app → **TestFlight** tab shows
+   "Processing" for ~5–15 min. Answer the **export compliance** prompt (standard
+   HTTPS/TLS → exempt; or set `ITSAppUsesNonExemptEncryption=false` in `Info.plist`
+   to skip it each time).
+6. **Add testers** — **TestFlight → Internal Testing** → group → add testers →
+   attach the build. Internal testing needs **no review** and is live in minutes.
+   External testers (up to 10 000) require a one-time light **Beta App Review**.
+7. **Install** — on the device, install **TestFlight** from the App Store, open the
+   invite, tap **Install**. Later builds appear there automatically.
+
+> **Login-gated app:** the study app requires a Keycloak account, so TestFlight
+> "Test Information" (and later App Review) **must include working demo
+> credentials**, or external/beta review is rejected. See
+> `docs/app-store/review-information.md`.
+
+### App icon & launch image
+
+Both are real assets, not placeholders — `flutter build ipa` validates this:
+
+- **App icon**: `mobile/ios/Runner/Assets.xcassets/AppIcon.appiconset/` (21 PNGs,
+  generated from `mobile/assets/icon/app_icon.png`). No alpha, no rounded corners.
+- **Launch image**: `mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset/`
+  (180 / 360 / 540 px, generated from the same source; the storyboard centres it).
+  Flutter ships 1×1 px placeholders by default, which trips
+  *"Launch image is set to the default placeholder icon"* — regenerate with:
+  ```bash
+  cd mobile/ios/Runner/Assets.xcassets/LaunchImage.imageset
+  SRC=../../../../assets/icon/app_icon.png
+  cp "$SRC" LaunchImage.png    && sips -z 180 180 LaunchImage.png
+  cp "$SRC" LaunchImage@2x.png && sips -z 360 360 LaunchImage@2x.png
+  cp "$SRC" LaunchImage@3x.png && sips -z 540 540 LaunchImage@3x.png
+  ```
+
+### Legal URLs required by the stores
+
+| Field                     | URL                                                    |
+| ------------------------- | ------------------------------------------------------ |
+| Privacy Policy (required) | `https://habit.wiwi.tu-dresden.de/en/privacy`          |
+| Imprint                   | `https://habit.wiwi.tu-dresden.de/en/imprint`          |
+| Accessibility statement   | `https://habit.wiwi.tu-dresden.de/en/accessibility`    |
+
+German variants use `/de/...`. These are server-rendered HTML pages (browsers get
+a styled page, the mobile app gets JSON from the same URL via content
+negotiation), so they open standalone for reviewers.
+
+---
+
 ## Mobile Release Signing & Firebase API Keys
 
 ### Android release keystore
