@@ -60,7 +60,7 @@
       "auditLog": "Audit-Log",
       "team": "Team & Rollen",
       "help": "Hilfe",
-      "restoreAttempts": "Wiederherstellungsversuche"
+      "restoreAttempts": "Wiederherstellung"
     },
     "language": "Sprache",
     "toggleTheme": "Design wechseln",
@@ -1138,7 +1138,7 @@
     "getStarted": "Loslegen"
   },
   "restoreAttempts": {
-    "title": "Wiederherstellungsversuche",
+    "title": "Wiederherstellung",
     "subtitle": "Sicherheitsüberwachung für die passphrasenbasierte Kontowiederherstellung (POST /restore). Wiederherstellungsphrasen haben kein serverseitiges Geheimnis, das ein Erraten verlangsamt — diese Ansicht zeigt wiederholte Versuche, die die Ratenbegrenzung allein nicht aufdeckt.",
     "flaggedTitle": "Markierte IPs",
     "flaggedSubtitle": "IPs mit 3 oder mehr nicht erfolgreichen Wiederherstellungsversuchen in der letzten Stunde.",

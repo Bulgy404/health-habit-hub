@@ -788,9 +788,18 @@ Two browser UIs are available in local development to inspect the BullMQ habit-d
 
 Bull Board is mounted inside the app server and exposes a live view of the `habit-donations` BullMQ queue.
 
-**URL:** http://app.localhost/admin/queues
+**URL:** http://app.localhost/queues (local) · https://$DOMAIN/queues (production)
 
-Only available when `NODE_ENV !== production`. No extra login required in local dev — the app container is only reachable from localhost.
+Note the path is `/queues`, **not** `/admin/queues`: in production Traefik routes
+`PathPrefix(/admin)` to the Next.js admin panel, so anything mounted under
+`/admin` by the app server is unreachable from outside.
+
+In local dev it is always on and needs no login — the app container is only
+reachable from localhost. In production it is mounted only when
+`ENABLE_QUEUE_DASHBOARD=true` (the compose default) and is gated by Traefik
+basic-auth using the shared `INTERNAL_TOOLS_TRAEFIK_AUTH` credential. Bull Board
+has **no authentication of its own**, so never expose `/queues` without that
+middleware.
 
 What you can do:
 
@@ -801,7 +810,7 @@ What you can do:
 
 **Typical workflow after `make seed`:**
 
-1. Open http://app.localhost/admin/queues
+1. Open http://app.localhost/queues
 2. Watch jobs move from **Waiting** → **Active** → **Completed** in real time
 3. If a job lands in **Failed**, click it to read the error and retry
 

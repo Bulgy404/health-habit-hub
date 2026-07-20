@@ -172,21 +172,32 @@ import {
 // and worker should run (they connect to Redis). Tests never set this.
 app.use('/api/v1', express.json(), createApiRouter({ enableQueue: true }));
 
-// Bull Board — queue dashboard (local/staging only, never in production).
-if (process.env.NODE_ENV !== 'production') {
+// Bull Board — queue dashboard. Served at /queues, NOT under /admin: in
+// production Traefik routes PathPrefix(`/admin`) to the Next.js admin panel
+// container, so anything mounted here under /admin never reaches this app.
+//
+// Bull Board ships no auth of its own. In production the only thing in front
+// of it is Traefik basic-auth (INTERNAL_TOOLS_TRAEFIK_AUTH, shared with the
+// other internal tools) — so it must never be mounted without that gate.
+// Locally there is no Traefik, which is why the dashboard is open in dev.
+const queueBoardEnabled =
+  process.env.NODE_ENV !== 'production' ||
+  process.env.ENABLE_QUEUE_DASHBOARD === 'true';
+
+if (queueBoardEnabled) {
   const { createBullBoard } = await import('@bull-board/api');
   const { BullMQAdapter } = await import('@bull-board/api/bullMQAdapter');
   const { ExpressAdapter } = await import('@bull-board/express');
   const { getHabitQueue } = await import('./lib/habitQueue.js');
 
   const boardAdapter = new ExpressAdapter();
-  boardAdapter.setBasePath('/admin/queues');
+  boardAdapter.setBasePath('/queues');
   createBullBoard({
     queues: [new BullMQAdapter(getHabitQueue())],
     serverAdapter: boardAdapter,
   });
-  app.use('/admin/queues', boardAdapter.getRouter());
-  log.info('Queue dashboard: http://app.localhost/admin/queues');
+  app.use('/queues', boardAdapter.getRouter());
+  log.info('Queue dashboard mounted at /queues');
 }
 
 // Crash/error reporting (no-op unless SENTRY_DSN is set).

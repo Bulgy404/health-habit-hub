@@ -253,7 +253,7 @@ describe("SystemPage", () => {
       "http://localhost:8080/admin/master/console/#/hhh",
       "http://grafana.localhost",
       "http://localhost:9090",
-      "http://localhost:3000/admin/queues",
+      "http://localhost:3000/queues",
       "http://localhost:5540",
       "http://localhost:7474",
       "http://localhost:8081",
