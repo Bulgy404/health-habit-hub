@@ -289,30 +289,27 @@ All service classes receive the `Dio` instance from `dioProvider` via Riverpod. 
 
 ## 7. Configuration and Environment Variables
 
-All backend URLs are injected at **compile time** via `--dart-define` flags (not at runtime). They are read in `mobile/lib/config/app_config.dart`:
+All backend URLs are baked in at **compile time** (`String.fromEnvironment` is a const — there is no runtime config file on device). They are read in `mobile/lib/config/app_config.dart`, and the defaults are **mode-dependent**:
 
 ```dart
 abstract final class AppConfig {
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:3000/api/v1',
+    defaultValue: kReleaseMode ? _prodApiBaseUrl : _localhostApiBaseUrl,
   );
-  static const keycloakUrl = String.fromEnvironment(
-    'KEYCLOAK_URL',
-    defaultValue: 'http://localhost:8080',
-  );
-  static const wsBaseUrl = String.fromEnvironment(
-    'WS_BASE_URL',
-    defaultValue: 'ws://localhost:3000/ws',
-  );
+  // …same pattern for keycloakUrl and wsBaseUrl
 }
 ```
 
-| `--dart-define` key | Default                        | Description                            |
-| ------------------- | ------------------------------ | -------------------------------------- |
-| `API_BASE_URL`      | `http://localhost:3000/api/v1` | REST API base URL                      |
-| `KEYCLOAK_URL`      | `http://localhost:8080`        | Keycloak base URL (no realm path)      |
-| `WS_BASE_URL`       | `ws://localhost:3000/ws`       | WebSocket base URL for recommendations |
+| `--dart-define` key | Debug default (`flutter run`)  | Release default (`build ipa` / Xcode archive) |
+| ------------------- | ------------------------------ | --------------------------------------------- |
+| `API_BASE_URL`      | `http://localhost:3000/api/v1` | `https://habit.wiwi.tu-dresden.de/api/v1`     |
+| `KEYCLOAK_URL`      | `http://localhost:8080`        | `https://habit.wiwi.tu-dresden.de/auth`       |
+| `WS_BASE_URL`       | `ws://localhost:3000/ws`       | `wss://habit.wiwi.tu-dresden.de/ws`           |
+
+**Why mode-dependent:** an Xcode archive (*Product → Archive*) cannot pass Flutter `--dart-define` flags. When release defaulted to localhost, such a build shipped pointing at localhost and rendered a **blank white screen** on device. Defaulting release to production makes `flutter build ipa` and Xcode archives correct with no flags; `flutter run` still uses localhost for local development.
+
+Passing `--dart-define` (or `--dart-define-from-file=dart_defines_prod.json`) still works and overrides either default — use it for a staging server. If a *release* build is explicitly pointed at localhost, `AppConfig.productionConfigError()` returns a message and `main()` renders it on screen instead of starting the app (see `_ConfigErrorApp` in `main.dart`) — never a silent white screen.
 
 **Do not use hardcoded URLs in service files.** Always reference `AppConfig` constants.
 
