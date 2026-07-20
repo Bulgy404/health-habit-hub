@@ -363,6 +363,15 @@ services:
     # service is what publishes the public bolt port. The Browser UI +
     # bolt-over-websocket ARE reachable publicly via Traefik (TLS-terminated,
     # basic-auth gated — see labels below) at https://$DOMAIN/neo4j/browser/.
+    #
+    # Known limitation of serving Browser under a path prefix: its service
+    # discovery document at / returns ABSOLUTE URLs built from the request
+    # host (e.g. https://$DOMAIN/db/{db}/query/v2) with no /neo4j prefix, so
+    # auto-discovery points at paths this router doesn't own. Browser's own
+    # queries go over bolt, not those URLs, so it still works — just enter
+    # the connect URL by hand: bolt://$DOMAIN:${NEO4J_BOLT_PORT:-7687}. A
+    # dedicated subdomain (neo4j.$DOMAIN) is the only way to fix this
+    # properly, since Browser assumes it owns the origin root.
     # Raw TCP bolt for native drivers (cypher-shell, Neo4j Desktop, etc.
     # connecting from outside the Docker network, not through a browser) is
     # intentionally NOT exposed — that needs Neo4j to terminate its own TLS
@@ -393,7 +402,18 @@ services:
       - traefik.http.routers.neo4j.service=neo4j-http
       - traefik.http.services.neo4j-http.loadbalancer.server.port=7474
       - traefik.http.middlewares.neo4j-strip.stripprefix.prefixes=/neo4j
-      - traefik.http.routers.neo4j.middlewares=neo4j-auth,neo4j-strip
+      # The TRAILING SLASH is load-bearing. Neo4j answers /browser with a
+      # 301 to the absolute path /browser/ — which has already lost the
+      # /neo4j prefix Traefik stripped, so the browser follows it to
+      # $DOMAIN/browser/, misses this router's PathPrefix, falls through to
+      # the app catch-all and 404s. Requesting /neo4j/browser/ directly
+      # returns 200 with no redirect at all. This middleware normalises the
+      # bare forms (/neo4j, /neo4j/, /neo4j/browser) up front so a
+      # hand-typed URL can't trip the 301. It must run BEFORE neo4j-strip,
+      # while the prefix is still on the path.
+      - traefik.http.middlewares.neo4j-slash.redirectregex.regex=^(https?://[^/]+)/neo4j(/browser)?/?$$
+      - traefik.http.middlewares.neo4j-slash.redirectregex.replacement=$${1}/neo4j/browser/
+      - traefik.http.routers.neo4j.middlewares=neo4j-auth,neo4j-slash,neo4j-strip
       # Bolt-over-websocket, used by the Browser UI itself to run queries —
       # lives on the dedicated neo4jbolt entrypoint (see proxy service), so a
       # bare Host rule with no path is safe: nothing else listens there.
@@ -879,7 +899,7 @@ services:
         NEXT_PUBLIC_LIGHTRAG_WEBUI_URL: https://${DOMAIN}/lightrag/webui
         NEXT_PUBLIC_PROMETHEUS_URL: https://${DOMAIN}/prometheus
         NEXT_PUBLIC_REDIS_INSIGHT_URL: https://${DOMAIN}/redisinsight
-        NEXT_PUBLIC_NEO4J_BROWSER_URL: https://${DOMAIN}/neo4j/browser
+        NEXT_PUBLIC_NEO4J_BROWSER_URL: https://${DOMAIN}/neo4j/browser/
         NEXT_PUBLIC_BULL_BOARD_URL: https://${DOMAIN}/queues
     restart: always
     env_file:
@@ -906,7 +926,7 @@ services:
       - NEXT_PUBLIC_LIGHTRAG_WEBUI_URL=https://${DOMAIN}/lightrag/webui
       - NEXT_PUBLIC_PROMETHEUS_URL=https://${DOMAIN}/prometheus
       - NEXT_PUBLIC_REDIS_INSIGHT_URL=https://${DOMAIN}/redisinsight
-      - NEXT_PUBLIC_NEO4J_BROWSER_URL=https://${DOMAIN}/neo4j/browser
+      - NEXT_PUBLIC_NEO4J_BROWSER_URL=https://${DOMAIN}/neo4j/browser/
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - KEYCLOAK_CLIENT_ID=hhh-admin
       - KEYCLOAK_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET}
