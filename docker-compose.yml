@@ -456,6 +456,20 @@ services:
     # intentionally NOT exposed — that needs Neo4j to terminate its own TLS
     # (a separate cert-provisioning project), not just a Traefik route, and
     # nothing here needs it yet.
+    #
+    # Loopback-only publish for admin SSH tunnels. Bound to 127.0.0.1 (NOT
+    # 0.0.0.0), so these are reachable only from the server's own localhost —
+    # i.e. only through an SSH tunnel, never from the internet (independent of
+    # the perimeter firewall). Distinct host ports (17474/17687) avoid clashing
+    # with Traefik's public 0.0.0.0:7687. This gives the tunnel a STABLE target
+    # so admins don't have to chase the container's changing bridge IP:
+    #   ssh -L 7474:localhost:17474 -L 7687:localhost:17687 <user>@<server>
+    #   then open http://localhost:7474 and connect to bolt://localhost:7687
+    #   (serving Browser over http avoids the HTTPS->ws:// mixed-content block).
+    # See docs/runbook.md "Connecting to Neo4j Browser".
+    ports:
+      - '127.0.0.1:17474:7474'
+      - '127.0.0.1:17687:7687'
     networks:
       - hhh-proxy
     depends_on:

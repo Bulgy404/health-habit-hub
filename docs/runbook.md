@@ -177,27 +177,38 @@ Check whether 7687 is reachable: the server always *listens*
 "connection refused"/timeout, the firewall is still blocking it.
 
 **Method B — SSH tunnel (no firewall change; recommended for admin use).**
-Tunnel straight to the Neo4j container's plain bolt port — SSH encrypts the hop,
-so no TLS is needed on the connection itself.
+The neo4j service publishes its HTTP (7474) and bolt (7687) ports on the
+server's **loopback only** at `127.0.0.1:17474` / `127.0.0.1:17687` (see
+docker-compose.yml). These are reachable *only* from the server's localhost —
+i.e. only through an SSH tunnel, never from the internet — so no firewall change
+is involved. Tunnel BOTH ports:
 
 ```bash
-# 1) On the server, get the Neo4j container's IP (changes if the container is recreated):
-sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' hhh-neo4j
-#    e.g. 172.18.0.11
-
-# 2) From your laptop, open the tunnel (substitute the IP + your SSH login):
-ssh -L 7687:172.18.0.11:7687 service@141.76.16.16
+# From your laptop (substitute your SSH login):
+ssh -L 7474:localhost:17474 -L 7687:localhost:17687 service@141.76.16.16
 ```
 
-Then, in Neo4j Browser (keep the SSH session open):
+Then, keeping that session open, open Neo4j Browser **served locally over http**:
 
-- Connect URL: `bolt://localhost:7687`  — plain `bolt://`, **not** `bolt+s://`
+```
+http://localhost:7474
+```
+
+and connect with:
+
+- Connect URL: `bolt://localhost:7687`  — plain `bolt://`, **not** `bolt+s://`.
+  (Browser may pre-fill the advertised `<DOMAIN>:7687`; overwrite it.)
 - Auth: Username / Password, `neo4j` / `NEO4J_PASSWORD`
 
-> Do **not** tunnel to the server's own `localhost:7687` — that hits Traefik's
-> TLS bolt endpoint, whose certificate is for `<DOMAIN>`, not `localhost`, so
-> `bolt+s://localhost` fails cert validation. Tunnel to the container IP and use
-> plain `bolt://`.
+> **Why both ports, and why `http://localhost:7474` instead of the public
+> `/neo4j` page:** the public Browser page is served over **HTTPS**, and an
+> HTTPS page may not open an insecure `ws://` (plain bolt) socket — the browser
+> blocks it as mixed content, with no error detail. Loading Browser from
+> `http://localhost:7474` (also tunneled) keeps page and bolt both plain-over-
+> localhost, so it connects. Also do **not** tunnel to the server's own
+> `localhost:7687` — that's Traefik's TLS endpoint whose cert is for `<DOMAIN>`,
+> not `localhost`. The loopback ports above target Neo4j directly, so they need
+> no TLS and no container-IP lookup (the IP changes on every recreate).
 
 Generate a strong value for `API_SERVICE_SECRET`:
 
