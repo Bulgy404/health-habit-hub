@@ -34,6 +34,19 @@ const SCHEMA_STATEMENTS = [
   // Questionnaire slug — for HAS_QUESTIONNAIRE traversal
   `CREATE CONSTRAINT questionnaire_slug IF NOT EXISTS
      FOR (q:Questionnaire) REQUIRE q.slug IS UNIQUE`,
+  // Vector indexes for cross-user semantic habit search (M3 recommendation
+  // pipeline, see API-service/routers/extract_habits.py). Dimensions must
+  // match EMBEDDING_DIMENSIONS (default: 2560 = Qwen3-Embedding-4B) — kept in
+  // sync with neo4j/init/constraints.cypher, the CI-only equivalent of this file.
+  `CREATE VECTOR INDEX habit_embedding_idx IF NOT EXISTS
+     FOR (h:Habit) ON (h.embedding)
+     OPTIONS {indexConfig: {\`vector.dimensions\`: 2560, \`vector.similarity_function\`: 'cosine'}}`,
+  `CREATE VECTOR INDEX context_embedding_idx IF NOT EXISTS
+     FOR (c:Context) ON (c.embedding)
+     OPTIONS {indexConfig: {\`vector.dimensions\`: 2560, \`vector.similarity_function\`: 'cosine'}}`,
+  `CREATE VECTOR INDEX bcio_embedding_idx IF NOT EXISTS
+     FOR (b:BCIOConcept) ON (b.embedding)
+     OPTIONS {indexConfig: {\`vector.dimensions\`: 2560, \`vector.similarity_function\`: 'cosine'}}`,
 ];
 
 /**
