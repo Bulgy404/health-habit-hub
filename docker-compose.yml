@@ -57,7 +57,7 @@ services:
   # (htpasswd hashes) with a single Keycloak login: oauth2-proxy runs as a
   # Traefik forward-auth backend and only lets accounts holding the realm `admin`
   # role through (study participants with `user` are denied). See the `sso-auth`
-  # + `sso-errors` middleware labels below and the per-tool routers that use them.
+  # middleware label below and the per-tool routers that use it.
   # LightRAG is NOT gated here — it uses its own AUTH_ACCOUNTS login (see lightrag
   # service); Neo4j's raw bolt port 7687 can't be SSO-gated and keeps its own auth.
   oauth2-proxy:
@@ -104,18 +104,21 @@ services:
       - traefik.http.routers.oauth2-proxy.tls.certresolver=letsencrypt
       - traefik.http.routers.oauth2-proxy.service=oauth2-proxy
       - traefik.http.services.oauth2-proxy.loadbalancer.server.port=4180
-      # ── Shared SSO middlewares, attached to each internal-tool router ──
-      # sso-auth: forward every request to /oauth2/auth; 2xx = allowed, and the
-      # identity headers are copied back onto the request to the tool.
-      - traefik.http.middlewares.sso-auth.forwardauth.address=http://oauth2-proxy:4180/oauth2/auth
+      # ── Shared SSO middleware, attached to each internal-tool router ──
+      # sso-auth forwards each request to oauth2-proxy's ROOT (`/`), NOT
+      # `/oauth2/auth`. This matters: `/oauth2/auth` answers 401 when
+      # unauthenticated, and Traefik v3's errors middleware can't turn a 401 into
+      # a browser redirect (it keeps the 401 status, only swapping the body, so
+      # the browser just shows 401 — verified locally). oauth2-proxy's root, in
+      # reverse-proxy mode, instead answers 302 → Keycloak for unauthenticated
+      # requests, and Traefik forwardAuth propagates that 302 straight to the
+      # browser. Authenticated requests get 200 (static upstream) → allowed
+      # through, with the identity headers copied onto the request to the tool.
+      # trustForwardHeader lets oauth2-proxy read X-Forwarded-Uri so the
+      # post-login redirect lands back on the originally-requested tool path.
+      - traefik.http.middlewares.sso-auth.forwardauth.address=http://oauth2-proxy:4180/
       - traefik.http.middlewares.sso-auth.forwardauth.trustForwardHeader=true
       - traefik.http.middlewares.sso-auth.forwardauth.authResponseHeaders=X-Auth-Request-User,X-Auth-Request-Email,X-Auth-Request-Preferred-Username,Authorization
-      # sso-errors: turn oauth2-proxy's 401/403 into a redirect to the Keycloak
-      # login (carrying the original URL) instead of a dead 401 page. This
-      # forwardAuth+errors pairing is the canonical oauth2-proxy/Traefik recipe.
-      - traefik.http.middlewares.sso-errors.errors.status=401-403
-      - traefik.http.middlewares.sso-errors.errors.service=oauth2-proxy
-      - traefik.http.middlewares.sso-errors.errors.query=/oauth2/sign_in?rd={url}
     logging:
       driver: json-file
       options:
@@ -227,7 +230,7 @@ services:
       # No stripprefix: setBasePath('/queues') already makes Bull Board emit
       # asset/API URLs under /queues, so it expects the prefix intact.
       # Gated by Keycloak SSO (admin role) — see oauth2-proxy service.
-      - traefik.http.routers.queues.middlewares=sso-auth,sso-errors
+      - traefik.http.routers.queues.middlewares=sso-auth
     logging:
       driver: json-file
       options:
@@ -310,7 +313,7 @@ services:
       - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASSWORD}
       - ME_CONFIG_MONGODB_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD}@mongo:27017/
       # mongo-express's own basic auth is disabled — access is now gated by
-      # Keycloak SSO at the Traefik layer (sso-auth/sso-errors below), so a
+      # Keycloak SSO at the Traefik layer (sso-auth below), so a
       # second login here would just be a redundant prompt.
       - ME_CONFIG_BASICAUTH_ENABLED=false
       - ME_CONFIG_SITE_BASEURL=/mongo/
@@ -344,7 +347,7 @@ services:
       - traefik.http.services.mongo-express.loadbalancer.server.port=8081
       # Gated by Keycloak SSO (admin role) — see oauth2-proxy service. This is a
       # full DB admin UI, so the admin-role gate is the single line of defense.
-      - traefik.http.routers.mongo-express.middlewares=sso-auth,sso-errors
+      - traefik.http.routers.mongo-express.middlewares=sso-auth
     logging:
       driver: json-file
       options:
@@ -483,7 +486,7 @@ services:
       # HTTP Browser UI is gated by Keycloak SSO (admin role) — see oauth2-proxy.
       # SSO runs before the slash-normalise/strip so unauthenticated users are
       # redirected to Keycloak first.
-      - traefik.http.routers.neo4j.middlewares=sso-auth,sso-errors,neo4j-slash,neo4j-strip
+      - traefik.http.routers.neo4j.middlewares=sso-auth,neo4j-slash,neo4j-strip
       # Bolt-over-websocket, used by the Browser UI itself to run queries —
       # lives on the dedicated neo4jbolt entrypoint (see proxy service), so a
       # bare Host rule with no path is safe: nothing else listens there.
@@ -777,7 +780,7 @@ services:
       - traefik.http.routers.redisinsight.service=redisinsight
       - traefik.http.services.redisinsight.loadbalancer.server.port=5540
       # Gated by Keycloak SSO (admin role) — see oauth2-proxy service.
-      - traefik.http.routers.redisinsight.middlewares=sso-auth,sso-errors
+      - traefik.http.routers.redisinsight.middlewares=sso-auth
     logging:
       driver: json-file
       options:
@@ -1131,7 +1134,7 @@ services:
       - traefik.http.middlewares.prometheus-strip.stripprefix.prefixes=/prometheus
       # Gated by Keycloak SSO (admin role) — see oauth2-proxy service. SSO runs
       # before the prefix strip so unauthenticated users hit Keycloak first.
-      - traefik.http.routers.prometheus.middlewares=sso-auth,sso-errors,prometheus-strip
+      - traefik.http.routers.prometheus.middlewares=sso-auth,prometheus-strip
     logging:
       driver: json-file
       options:

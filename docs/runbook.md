@@ -63,7 +63,7 @@ git --version
 | ---- | -------- | --------------------------------------------------------- |
 | 80   | TCP      | HTTP (redirected to HTTPS by Traefik)                     |
 | 443  | TCP      | HTTPS (Traefik TLS termination)                           |
-| 7687 | TCP      | Neo4j Browser's bolt-over-websocket channel (Traefik-proxied, TLS + basic-auth — see "Internal tool links" below), `NEO4J_BOLT_PORT` |
+| 7687 | TCP      | Neo4j Browser's bolt-over-websocket channel (Traefik-proxied, TLS; auth is Neo4j's own username/password), `NEO4J_BOLT_PORT` |
 | 8080 | TCP      | Keycloak admin UI (restrict to trusted IPs in production) |
 
 > **Security note:** Port 8080 should be firewalled to admin IP ranges only.
@@ -126,8 +126,9 @@ There are no htpasswd hashes to manage anymore.
 - **How it works:** `oauth2-proxy` (confidential Keycloak client `oauth2-proxy`,
   secret injected by `keycloak-init` from `OAUTH2_PROXY_CLIENT_SECRET`, cookie
   signed with `OAUTH2_PROXY_COOKIE_SECRET`) runs as a Traefik forward-auth
-  backend. Each tool router carries the shared `sso-auth` + `sso-errors`
-  middlewares; unauthenticated requests are redirected to Keycloak and back.
+  backend. Each tool router carries the shared `sso-auth` forward-auth
+  middleware (pointed at oauth2-proxy's root, so unauthenticated requests get a
+  302 to Keycloak — not a dead 401); after login you land back on the tool.
 - **Two exceptions, by design:**
   - **LightRAG** (`/lightrag`) is **not** on the SSO — it can't do OIDC. It uses
     its **own login** instead: `AUTH_ACCOUNTS=admin:${LIGHTRAG_AUTH_PASSWORD}` +
@@ -839,7 +840,7 @@ Note the path is `/queues`, **not** `/admin/queues`: in production Traefik route
 In local dev it is always on and needs no login — the app container is only
 reachable from localhost. In production it is mounted only when
 `ENABLE_QUEUE_DASHBOARD=true` (the compose default) and is gated by Keycloak SSO
-(the `sso-auth`/`sso-errors` middlewares, admin role) on the `/queues` router.
+(the `sso-auth` forward-auth middleware, admin role) on the `/queues` router.
 Bull Board has **no authentication of its own**, so never expose `/queues`
 without that gate.
 
@@ -892,7 +893,7 @@ docker compose -f docker-compose.local.yml stop redis-insight
 
 **In production:** RedisInsight is deployed as a normal part of the stack (not
 a manual start/stop step) and reachable at `https://<DOMAIN>/redisinsight`,
-gated by Keycloak SSO (admin role, the `sso-auth`/`sso-errors` middlewares —
+gated by Keycloak SSO (admin role, the `sso-auth` forward-auth middleware —
 same as Prometheus, Bull Board, Neo4j Browser and mongo-express; see
 docker-compose.yml). The connection to the app's Redis instance is pre-configured via `RI_REDIS_*`
 env vars, so there's no "Add Redis Database" step to do by hand there.
