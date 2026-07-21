@@ -840,11 +840,13 @@ If the study protocol needs a hard cap on session age (e.g. for consent-renewal 
 
 ### Roles
 
-| Role          | Granted to              | Access                                                    |
-| ------------- | ----------------------- | --------------------------------------------------------- |
-| `participant` | Study participants      | Own data only — surveys, habits, recommendations, profile |
-| `researcher`  | Research staff          | All participant data (read), admin APIs, knowledge base   |
-| `admin`       | Platform administrators | Full access including user management                     |
+The realm (`keycloak/hhh-realm.json`) defines three roles: `user`, `researcher`, `admin`.
+
+| Role         | Granted to              | Access                                                    |
+| ------------ | ----------------------- | --------------------------------------------------------- |
+| `user`       | Study participants      | Own data only — surveys, habits, recommendations, profile |
+| `researcher` | Research staff          | All participant data (read), admin APIs, knowledge base   |
+| `admin`      | Platform administrators | Full access including user management; internal-tool SSO  |
 
 ### Password Storage
 
