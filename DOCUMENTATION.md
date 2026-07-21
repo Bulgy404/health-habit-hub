@@ -304,7 +304,8 @@ All variables are defined in `stack.env`. In production, override sensitive valu
 | `DOMAIN`                 | `habit.wiwi.tu-dresden.de` | Production domain name                            |
 | `SERVER_IP`              | `141.76.16.16`             | Server IP address                                 |
 | `ACME_EMAIL`             | —                          | Email for Let's Encrypt certificate notifications |
-| `TRAEFIK_DASHBOARD_AUTH` | —                          | htpasswd-format credentials for Traefik dashboard |
+| `OAUTH2_PROXY_CLIENT_SECRET` | —                      | Keycloak client secret for the oauth2-proxy SSO gate (internal tools) |
+| `OAUTH2_PROXY_COOKIE_SECRET` | —                      | 32-byte secret signing the SSO session cookie |
 
 ### Application
 

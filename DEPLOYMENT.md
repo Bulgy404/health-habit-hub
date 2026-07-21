@@ -214,8 +214,9 @@ If you are only using `docker-compose.local.yml`, this is the safest way to brin
 ### 4. Security — Generate Secure Values
 
 - [ ] MongoDB password (`MONGO_PASSWORD`)
-- [ ] Mongo Express password (`MONGO_EXPRESS_PASSWORD`)
 - [ ] Neo4j password (`NEO4J_PASSWORD`)
+- [ ] oauth2-proxy secrets (`OAUTH2_PROXY_CLIENT_SECRET`, `OAUTH2_PROXY_COOKIE_SECRET`)
+- [ ] LightRAG login (`LIGHTRAG_AUTH_PASSWORD`, `LIGHTRAG_TOKEN_SECRET`)
 - [ ] Keycloak admin password (`KEYCLOAK_ADMIN_PASSWORD`)
 - [ ] Keycloak PostgreSQL password (`KC_DB_PASSWORD`)
 - [ ] Traefik dashboard hash: `htpasswd -nb admin your-password`
@@ -346,7 +347,6 @@ The `stack.env` file in the repository contains placeholder values. Override eve
 ```env
 # Passwords — generate secure values!
 MONGO_PASSWORD=<your-secure-mongo-password>
-MONGO_EXPRESS_PASSWORD=<your-secure-mongo-express-password>
 NEO4J_PASSWORD=<your-secure-neo4j-password>
 
 # Keycloak
@@ -363,13 +363,19 @@ KEYCLOAK_ADMIN_CLIENT_SECRET=<your-hhh-backend-client-secret>
 KEYCLOAK_ADMIN_UI_CLIENT_SECRET=<your-hhh-admin-client-secret>
 GRAFANA_CLIENT_SECRET=<your-grafana-client-secret>
 KEYCLOAK_ROPC_CLIENT_SECRET=<your-hhh-ropc-client-secret>
+# oauth2-proxy — SSO gate for the internal tools (admin role). The client secret
+# is injected into the oauth2-proxy Keycloak client by keycloak-init; the cookie
+# secret signs the SSO session — MUST be 16/24/32 chars (openssl rand -base64 24).
+OAUTH2_PROXY_CLIENT_SECRET=<your-oauth2-proxy-client-secret>
+OAUTH2_PROXY_COOKIE_SECRET=<your-32-byte-cookie-secret>
+
+# LightRAG's own login (not SSO) — username admin
+LIGHTRAG_AUTH_PASSWORD=<your-lightrag-password>
+LIGHTRAG_TOKEN_SECRET=<your-lightrag-jwt-secret>
 
 # API service shared secret — MUST match in both hhh-app and hhh-recommender
 # Generate with: openssl rand -hex 32
 API_SERVICE_SECRET=<your-shared-api-service-secret>
-
-# Traefik Dashboard (generate: htpasswd -nb admin your-password)
-TRAEFIK_DASHBOARD_AUTH=<your-htpasswd-hash>
 
 # Generic SMTP — used for critical-alert emails (backup, LLM outages, BullMQ
 # failures, service-reachability/5xx alerts). Any provider/relay works.
@@ -922,7 +928,7 @@ Automatic via Let's Encrypt — certificates auto-renew 30 days before expiry. M
 
 - [ ] All passwords are strong and unique
 - [ ] `API_SERVICE_SECRET` generated with `openssl rand -hex 32`
-- [ ] Traefik dashboard protected with `TRAEFIK_DASHBOARD_AUTH`
+- [ ] Internal tools reachable only via Keycloak SSO (admin role); LightRAG behind its own login
 - [ ] Regular backups verified
 - [ ] Security updates applied to base images
 - [ ] Logs monitored for suspicious activity
@@ -985,8 +991,8 @@ If you need the graphical Neo4j Browser for a one-off investigation, temporarily
 **Access via Mongo Express (Web UI):**
 
 - URL: `https://habit.wiwi.tu-dresden.de/mongo`
-- Username: `admin` (from `MONGO_EXPRESS_USER`)
-- Password: value of `MONGO_EXPRESS_PASSWORD` in Portainer
+- Auth: Keycloak SSO — log in with your Keycloak account (must hold the realm
+  `admin` role). mongo-express's own basic auth is disabled.
 
 **Initialization:**
 MongoDB is automatically initialized on first run with:
