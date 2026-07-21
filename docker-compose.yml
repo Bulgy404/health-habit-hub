@@ -84,6 +84,12 @@ services:
       - OAUTH2_PROXY_PASS_ACCESS_TOKEN=true
       - OAUTH2_PROXY_SKIP_PROVIDER_BUTTON=true
       - OAUTH2_PROXY_CODE_CHALLENGE_METHOD=S256
+      # Identify users by preferred_username, NOT email. Keycloak accounts here
+      # (esp. admin-created ones) often have no email, and oauth2-proxy otherwise
+      # fails the callback with 500 "could not enrich oidc session: neither the
+      # id_token nor the profileURL set an email". preferred_username is always
+      # present. EMAIL_DOMAINS=* then accepts it regardless of format.
+      - OAUTH2_PROXY_OIDC_EMAIL_CLAIM=preferred_username
       - OAUTH2_PROXY_EMAIL_DOMAINS=*
       # Keycloak accounts may not have verified emails; don't block on that.
       - OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL=true
