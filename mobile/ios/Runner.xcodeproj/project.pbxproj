@@ -215,6 +215,7 @@
 				97C146EC1CF9000F007C117D /* Resources */,
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
+				42B9B85F603E0B8D7B3EEDAC /* Generate Missing dSYMs */,
 			);
 			buildRules = (
 			);
@@ -369,6 +370,21 @@
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
+		};
+		42B9B85F603E0B8D7B3EEDAC /* Generate Missing dSYMs */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Generate Missing dSYMs";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Xcode's Swift Package Manager integration doesn't always emit a dSYM for\n# dynamically-linked package frameworks (e.g. Sentry.framework, pulled in\n# transitively via FlutterGeneratedPluginSwiftPackage) into the archive's\n# dSYMs folder. App Store Connect then rejects the upload with a UUID\n# mismatch (\"did not include a dSYM ... with UUID ...\"). This regenerates\n# any missing framework dSYM straight from the embedded binary, so the UUID\n# always matches what actually shipped.\nif [ \"$ACTION\" != \"install\" ] || [ -z \"$DWARF_DSYM_FOLDER_PATH\" ]; then\n  exit 0\nfi\n\nFRAMEWORKS_DIR=\"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}\"\n[ -d \"$FRAMEWORKS_DIR\" ] || exit 0\n\nfind \"$FRAMEWORKS_DIR\" -maxdepth 1 -name '*.framework' -type d | while read -r FRAMEWORK; do\n  NAME=$(basename \"$FRAMEWORK\" .framework)\n  BINARY=\"$FRAMEWORK/$NAME\"\n  DSYM_OUT=\"$DWARF_DSYM_FOLDER_PATH/$NAME.framework.dSYM\"\n  if [ -f \"$BINARY\" ] && [ ! -d \"$DSYM_OUT\" ]; then\n    echo \"generate-missing-dsyms: creating dSYM for $NAME\"\n    dsymutil \"$BINARY\" -o \"$DSYM_OUT\"\n  fi\ndone\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
