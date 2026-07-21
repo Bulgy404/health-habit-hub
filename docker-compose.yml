@@ -319,9 +319,12 @@ services:
       - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASSWORD}
       - ME_CONFIG_MONGODB_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD}@mongo:27017/
       # mongo-express's own basic auth is disabled — access is now gated by
-      # Keycloak SSO at the Traefik layer (sso-auth below), so a
-      # second login here would just be a redundant prompt.
-      - ME_CONFIG_BASICAUTH_ENABLED=false
+      # Keycloak SSO at the Traefik layer (sso-auth below), so a second login
+      # here would just be a redundant prompt. The var is ME_CONFIG_BASICAUTH
+      # (boolean); mongo-express 1.0.2 IGNORES ME_CONFIG_BASICAUTH_ENABLED, and
+      # without this it falls back to a basic-auth prompt whose old credentials
+      # no longer exist — locking you out even after SSO.
+      - ME_CONFIG_BASICAUTH=false
       - ME_CONFIG_SITE_BASEURL=/mongo/
     networks:
       - hhh-proxy
