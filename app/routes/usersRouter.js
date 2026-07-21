@@ -284,10 +284,12 @@ export function createUsersRouter({ db, keycloak, neo4jRun } = {}) {
       // Clear stored credential material; keep the participant document so
       // study statistics stay intact, but mark when the account was removed.
       try {
-        await database.collection('participants').updateOne(
-          { userId },
-          { $set: { recoveryPhrase: null, accountDeletedAt: new Date() } }
-        );
+        await database
+          .collection('participants')
+          .updateOne(
+            { userId },
+            { $set: { recoveryPhrase: null, accountDeletedAt: new Date() } }
+          );
       } catch (err) {
         log.warn({ err }, '[usersRouter] participant record update failed');
       }

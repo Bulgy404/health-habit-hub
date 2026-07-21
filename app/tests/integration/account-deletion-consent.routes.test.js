@@ -272,10 +272,13 @@ test('DELETE /users/me returns 401 without token', async () => {
   assert.strictEqual(res.status, 401);
 });
 
-test('deletes all participant data and the Keycloak identity', async () => {
+test('removes the identity but retains contributed study data', async () => {
   const sub = 'doomed-user';
-  // Seed data across several collections
+  // Seed the identity's push tokens plus contributed study data across
+  // several collections (the mock DB shares one module-level store, so any
+  // createMockDb() instance writes to what the server's router reads).
   const db = createMockDb();
+  await db.collection('deviceTokens').insertOne({ userId: sub, token: 't1' });
   for (const c of ['users', 'implementation_intentions', 'consents']) {
     await db.collection(c).insertOne({ userId: sub, payload: c });
   }
@@ -288,20 +291,34 @@ test('deletes all participant data and the Keycloak identity', async () => {
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.strictEqual(body.ok, true);
-  assert.strictEqual(body.deleted.users >= 1, true);
-  // enrollment is now deleted from Neo4j, not MongoDB
-  assert.strictEqual(body.deleted.implementation_intentions >= 1, true);
-  assert.strictEqual(body.deleted.consents >= 1, true);
+  // New contract: identity removed, contributed data intentionally retained.
+  assert.strictEqual(body.identityRemoved, true);
 
-  // Keycloak identity removed
+  // Keycloak identity removed so nobody can sign in as this participant again.
   assert.ok(keycloakDeletions.includes(sub));
 
-  // Other users' data untouched
+  // Push tokens for the deleted account are gone (no notifications after
+  // delete). findOne filters by userId; countDocuments in this mock ignores
+  // its query and would see rows other tests left in the shared store.
+  assert.strictEqual(
+    await db.collection('deviceTokens').findOne({ userId: sub }),
+    null
+  );
+
+  // Contributed study data is RETAINED — it is keyed only by the now-orphaned
+  // UUID and cannot be traced back to a person. This is the whole point of the
+  // retention model (see the route's DELETE /me comment).
+  assert.ok(
+    await db.collection('implementation_intentions').findOne({ userId: sub })
+  );
+  assert.ok(await db.collection('consents').findOne({ userId: sub }));
+
+  // Other participants' data is untouched.
   const other = await db.collection('users').findOne({ userId: 'other-user' });
   assert.ok(other);
 });
 
-test('deletion is idempotent — second call succeeds with zero counts', async () => {
+test('deletion is idempotent — a second call still succeeds', async () => {
   const token = makeToken(['user'], 'doomed-user');
   const res = await fetch(`${baseUrl}/api/v1/users/me`, {
     method: 'DELETE',
@@ -310,5 +327,5 @@ test('deletion is idempotent — second call succeeds with zero counts', async (
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.strictEqual(body.ok, true);
-  assert.strictEqual(body.deleted.users, 0);
+  assert.strictEqual(body.identityRemoved, true);
 });
