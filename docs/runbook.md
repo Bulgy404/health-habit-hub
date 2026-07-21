@@ -138,10 +138,11 @@ There are no htpasswd hashes to manage anymore.
     Key is configured, all APIs can still be accessed through the Guest account").
   - **Neo4j bolt** (port 7687) is raw TCP/websocket, not HTTP, so forward-auth
     can't apply. It's protected by Neo4j's own username/password (`NEO4J_AUTH`).
-    Connect Neo4j Browser manually: URL `bolt+s://<DOMAIN>:7687`, auth type
-    Username/Password, user `neo4j`, password `NEO4J_PASSWORD`. (Browser's SSO
-    auto-discovery error at `/neo4j` is cosmetic — connect by hand. Requires the
-    firewall to allow port 7687.)
+    Connect Neo4j Browser manually (auth type Username/Password, user `neo4j`,
+    password `NEO4J_PASSWORD`); Browser's SSO auto-discovery error at `/neo4j`
+    is cosmetic — connect by hand. **See "Connecting to Neo4j Browser" below**
+    for the two connection methods (the direct `bolt+s://` route needs port 7687
+    open in the perimeter firewall; the SSH tunnel does not).
 
 **Secrets to set** (plaintext — no hashes, no `$`-escaping traps):
 `OAUTH2_PROXY_CLIENT_SECRET`, `OAUTH2_PROXY_COOKIE_SECRET` (`openssl rand -base64
@@ -155,6 +156,48 @@ There are no htpasswd hashes to manage anymore.
 > "Client not found" on the `/auth/.../auth` redirect means that step didn't run,
 > so check the `hhh-keycloak-init` logs — and (3) `OAUTH2_PROXY_CLIENT_SECRET`
 > matches on both oauth2-proxy and the Keycloak client.
+
+### Connecting to Neo4j Browser
+
+The Neo4j Browser **page** (`https://<DOMAIN>/neo4j`) loads over 443 behind the
+Keycloak SSO like the other tools. But its **bolt query connection** is a separate
+channel on **port 7687**, and there are two ways to reach it. Auth is always
+Neo4j's own: user `neo4j`, password `NEO4J_PASSWORD`.
+
+**Method A — direct (requires port 7687 open in the perimeter firewall).**
+The TU Dresden firewall blocks non-standard ports by default, so this only works
+once 7687 is opened (via a ZIH firewall request for `TCP 7687` to `141.76.16.16`).
+Then, in Neo4j Browser:
+
+- Connect URL: `bolt+s://<DOMAIN>:7687` (`+s` — Traefik terminates TLS on 7687)
+- Auth: Username / Password, `neo4j` / `NEO4J_PASSWORD`
+
+Check whether 7687 is reachable: the server always *listens*
+(`sudo ss -tlnp | grep 7687` shows docker-proxy); if an external client gets
+"connection refused"/timeout, the firewall is still blocking it.
+
+**Method B — SSH tunnel (no firewall change; recommended for admin use).**
+Tunnel straight to the Neo4j container's plain bolt port — SSH encrypts the hop,
+so no TLS is needed on the connection itself.
+
+```bash
+# 1) On the server, get the Neo4j container's IP (changes if the container is recreated):
+sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' hhh-neo4j
+#    e.g. 172.18.0.11
+
+# 2) From your laptop, open the tunnel (substitute the IP + your SSH login):
+ssh -L 7687:172.18.0.11:7687 service@141.76.16.16
+```
+
+Then, in Neo4j Browser (keep the SSH session open):
+
+- Connect URL: `bolt://localhost:7687`  — plain `bolt://`, **not** `bolt+s://`
+- Auth: Username / Password, `neo4j` / `NEO4J_PASSWORD`
+
+> Do **not** tunnel to the server's own `localhost:7687` — that hits Traefik's
+> TLS bolt endpoint, whose certificate is for `<DOMAIN>`, not `localhost`, so
+> `bolt+s://localhost` fails cert validation. Tunnel to the container IP and use
+> plain `bolt://`.
 
 Generate a strong value for `API_SERVICE_SECRET`:
 
