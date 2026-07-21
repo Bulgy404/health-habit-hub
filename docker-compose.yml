@@ -156,7 +156,7 @@ services:
       - traefik.http.routers.queues.service=app
       # No stripprefix: setBasePath('/queues') already makes Bull Board emit
       # asset/API URLs under /queues, so it expects the prefix intact.
-      - traefik.http.middlewares.queues-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      - traefik.http.middlewares.queues-auth.basicauth.users=${BULLBOARD_TRAEFIK_AUTH:-${INTERNAL_TOOLS_TRAEFIK_AUTH}}
       # Also keeps the Basic header off the app container, which reads
       # Authorization itself for JWT-bearing /api/v1 requests.
       - traefik.http.middlewares.queues-auth.basicauth.removeheader=true
@@ -423,7 +423,7 @@ services:
       - traefik.http.routers.neo4j-bolt.service=neo4j-bolt
       - traefik.http.services.neo4j-bolt.loadbalancer.server.port=7687
       - traefik.http.routers.neo4j-bolt.middlewares=neo4j-auth
-      - traefik.http.middlewares.neo4j-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      - traefik.http.middlewares.neo4j-auth.basicauth.users=${NEO4J_TRAEFIK_AUTH:-${INTERNAL_TOOLS_TRAEFIK_AUTH}}
     logging:
       driver: json-file
       options:
@@ -698,7 +698,7 @@ services:
       - traefik.http.routers.redisinsight.tls.certresolver=letsencrypt
       - traefik.http.routers.redisinsight.service=redisinsight
       - traefik.http.services.redisinsight.loadbalancer.server.port=5540
-      - traefik.http.middlewares.redisinsight-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      - traefik.http.middlewares.redisinsight-auth.basicauth.users=${REDISINSIGHT_TRAEFIK_AUTH:-${INTERNAL_TOOLS_TRAEFIK_AUTH}}
       - traefik.http.middlewares.redisinsight-auth.basicauth.removeheader=true
       - traefik.http.routers.redisinsight.middlewares=redisinsight-auth
     logging:
@@ -778,7 +778,7 @@ services:
       # Accepted trade-off: anyone past this shared gate also has Guest-level
       # full API access without needing LIGHTRAG_API_KEY. Closing that means
       # setting AUTH_ACCOUNTS + TOKEN_SECRET (see docs/runbook.md).
-      - traefik.http.middlewares.lightrag-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      - traefik.http.middlewares.lightrag-auth.basicauth.users=${LIGHTRAG_TRAEFIK_AUTH:-${INTERNAL_TOOLS_TRAEFIK_AUTH}}
       # removeheader is ESSENTIAL here, not cosmetic. Traefik forwards the
       # `Authorization: Basic ...` header upstream by default; LightRAG's API
       # expects `Authorization: Bearer <jwt>` from its own login, chokes on the
@@ -1061,7 +1061,7 @@ services:
       - traefik.http.routers.prometheus.service=prometheus
       - traefik.http.services.prometheus.loadbalancer.server.port=9090
       - traefik.http.middlewares.prometheus-strip.stripprefix.prefixes=/prometheus
-      - traefik.http.middlewares.prometheus-auth.basicauth.users=${INTERNAL_TOOLS_TRAEFIK_AUTH}
+      - traefik.http.middlewares.prometheus-auth.basicauth.users=${PROMETHEUS_TRAEFIK_AUTH:-${INTERNAL_TOOLS_TRAEFIK_AUTH}}
       # Don't hand the shared internal-tools credential to Prometheus; it has
       # no auth of its own and no reason to see it (see lightrag, where
       # forwarding it actively breaks the app).
