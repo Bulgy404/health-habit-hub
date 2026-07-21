@@ -52,6 +52,76 @@ services:
         max-size: '10m'
         max-file: '3'
 
+  # SSO gate for the internal tools (Prometheus, Bull Board, RedisInsight, Neo4j
+  # Browser UI, mongo-express). Replaces the old per-tool Traefik basic-auth
+  # (htpasswd hashes) with a single Keycloak login: oauth2-proxy runs as a
+  # Traefik forward-auth backend and only lets accounts holding the realm `admin`
+  # role through (study participants with `user` are denied). See the `sso-auth`
+  # + `sso-errors` middleware labels below and the per-tool routers that use them.
+  # LightRAG is NOT gated here — it uses its own AUTH_ACCOUNTS login (see lightrag
+  # service); Neo4j's raw bolt port 7687 can't be SSO-gated and keeps its own auth.
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.13.0
+    container_name: hhh-oauth2-proxy
+    restart: always
+    environment:
+      - OAUTH2_PROXY_PROVIDER=keycloak-oidc
+      - OAUTH2_PROXY_OIDC_ISSUER_URL=https://${DOMAIN}/auth/realms/hhh
+      - OAUTH2_PROXY_CLIENT_ID=oauth2-proxy
+      - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_PROXY_CLIENT_SECRET}
+      # 32-byte random; base64/hex both accepted. Rotating it invalidates sessions.
+      - OAUTH2_PROXY_COOKIE_SECRET=${OAUTH2_PROXY_COOKIE_SECRET}
+      # Only realm-`admin` accounts may pass. keycloak-oidc reads realm roles from
+      # the token's realm_access.roles (and the `roles` claim the client mapper adds).
+      - OAUTH2_PROXY_ALLOWED_ROLES=admin
+      - OAUTH2_PROXY_SCOPE=openid email profile roles
+      - OAUTH2_PROXY_REDIRECT_URL=https://${DOMAIN}/oauth2/callback
+      # Forward-auth mode: no real upstream, just returns 202/200 for /oauth2/auth.
+      - OAUTH2_PROXY_UPSTREAMS=static://200
+      - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
+      - OAUTH2_PROXY_REVERSE_PROXY=true
+      - OAUTH2_PROXY_SET_XAUTHREQUEST=true
+      - OAUTH2_PROXY_PASS_ACCESS_TOKEN=true
+      - OAUTH2_PROXY_SKIP_PROVIDER_BUTTON=true
+      - OAUTH2_PROXY_CODE_CHALLENGE_METHOD=S256
+      - OAUTH2_PROXY_EMAIL_DOMAINS=*
+      # Keycloak accounts may not have verified emails; don't block on that.
+      - OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL=true
+      - OAUTH2_PROXY_COOKIE_SECURE=true
+      - OAUTH2_PROXY_COOKIE_DOMAINS=${DOMAIN}
+      - OAUTH2_PROXY_WHITELIST_DOMAINS=${DOMAIN}
+    networks:
+      - hhh-proxy
+    depends_on:
+      keycloak-init:
+        condition: service_completed_successfully
+    labels:
+      - traefik.enable=true
+      # Public router for oauth2-proxy's own endpoints (sign_in, start, callback,
+      # auth). No auth middleware here — this IS the login surface.
+      - traefik.http.routers.oauth2-proxy.rule=Host(`${DOMAIN}`) && PathPrefix(`/oauth2/`)
+      - traefik.http.routers.oauth2-proxy.entrypoints=websecure
+      - traefik.http.routers.oauth2-proxy.tls.certresolver=letsencrypt
+      - traefik.http.routers.oauth2-proxy.service=oauth2-proxy
+      - traefik.http.services.oauth2-proxy.loadbalancer.server.port=4180
+      # ── Shared SSO middlewares, attached to each internal-tool router ──
+      # sso-auth: forward every request to /oauth2/auth; 2xx = allowed, and the
+      # identity headers are copied back onto the request to the tool.
+      - traefik.http.middlewares.sso-auth.forwardauth.address=http://oauth2-proxy:4180/oauth2/auth
+      - traefik.http.middlewares.sso-auth.forwardauth.trustForwardHeader=true
+      - traefik.http.middlewares.sso-auth.forwardauth.authResponseHeaders=X-Auth-Request-User,X-Auth-Request-Email,X-Auth-Request-Preferred-Username,Authorization
+      # sso-errors: turn oauth2-proxy's 401/403 into a redirect to the Keycloak
+      # login (carrying the original URL) instead of a dead 401 page. This
+      # forwardAuth+errors pairing is the canonical oauth2-proxy/Traefik recipe.
+      - traefik.http.middlewares.sso-errors.errors.status=401-403
+      - traefik.http.middlewares.sso-errors.errors.service=oauth2-proxy
+      - traefik.http.middlewares.sso-errors.errors.query=/oauth2/sign_in?rd={url}
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
   app:
     image: hhh/app
     container_name: hhh-app
@@ -118,8 +188,8 @@ services:
       - EXPOSE_RECOVERY_PHRASES=${EXPOSE_RECOVERY_PHRASES:-false}
       - ENABLE_TEST_TOOLS=${ENABLE_TEST_TOOLS:-false}
       # Mounts the Bull Board queue dashboard at /queues in production. Safe
-      # only because the /queues Traefik router below gates it behind
-      # INTERNAL_TOOLS_TRAEFIK_AUTH — Bull Board has no auth of its own.
+      # only because the /queues Traefik router below gates it behind Keycloak
+      # SSO (admin role) — Bull Board has no auth of its own.
       - ENABLE_QUEUE_DASHBOARD=${ENABLE_QUEUE_DASHBOARD:-true}
     networks:
       - hhh-proxy
@@ -156,11 +226,8 @@ services:
       - traefik.http.routers.queues.service=app
       # No stripprefix: setBasePath('/queues') already makes Bull Board emit
       # asset/API URLs under /queues, so it expects the prefix intact.
-      - traefik.http.middlewares.queues-auth.basicauth.users=${BULLBOARD_TRAEFIK_AUTH:-${INTERNAL_TOOLS_TRAEFIK_AUTH}}
-      # Also keeps the Basic header off the app container, which reads
-      # Authorization itself for JWT-bearing /api/v1 requests.
-      - traefik.http.middlewares.queues-auth.basicauth.removeheader=true
-      - traefik.http.routers.queues.middlewares=queues-auth
+      # Gated by Keycloak SSO (admin role) — see oauth2-proxy service.
+      - traefik.http.routers.queues.middlewares=sso-auth,sso-errors
     logging:
       driver: json-file
       options:
@@ -242,8 +309,10 @@ services:
       - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USER:-admin}
       - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASSWORD}
       - ME_CONFIG_MONGODB_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD}@mongo:27017/
-      - ME_CONFIG_BASICAUTH_USERNAME=${MONGO_EXPRESS_USER}
-      - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_EXPRESS_PASSWORD}
+      # mongo-express's own basic auth is disabled — access is now gated by
+      # Keycloak SSO at the Traefik layer (sso-auth/sso-errors below), so a
+      # second login here would just be a redundant prompt.
+      - ME_CONFIG_BASICAUTH_ENABLED=false
       - ME_CONFIG_SITE_BASEURL=/mongo/
     networks:
       - hhh-proxy
@@ -273,11 +342,9 @@ services:
       - traefik.http.routers.mongo-express.tls.certresolver=letsencrypt
       - traefik.http.routers.mongo-express.service=mongo-express
       - traefik.http.services.mongo-express.loadbalancer.server.port=8081
-      # Second auth layer in front of mongo-express's own basic auth — this is
-      # a full DB admin UI, so a single leaked/weak ME_CONFIG_BASICAUTH_PASSWORD
-      # shouldn't be the only thing standing between it and the internet.
-      - traefik.http.routers.mongo-express.middlewares=mongo-express-auth
-      - traefik.http.middlewares.mongo-express-auth.basicauth.users=${MONGO_EXPRESS_TRAEFIK_AUTH}
+      # Gated by Keycloak SSO (admin role) — see oauth2-proxy service. This is a
+      # full DB admin UI, so the admin-role gate is the single line of defense.
+      - traefik.http.routers.mongo-express.middlewares=sso-auth,sso-errors
     logging:
       driver: json-file
       options:
@@ -413,17 +480,21 @@ services:
       # while the prefix is still on the path.
       - traefik.http.middlewares.neo4j-slash.redirectregex.regex=^(https?://[^/]+)/neo4j(/browser)?/?$$
       - traefik.http.middlewares.neo4j-slash.redirectregex.replacement=$${1}/neo4j/browser/
-      - traefik.http.routers.neo4j.middlewares=neo4j-auth,neo4j-slash,neo4j-strip
+      # HTTP Browser UI is gated by Keycloak SSO (admin role) — see oauth2-proxy.
+      # SSO runs before the slash-normalise/strip so unauthenticated users are
+      # redirected to Keycloak first.
+      - traefik.http.routers.neo4j.middlewares=sso-auth,sso-errors,neo4j-slash,neo4j-strip
       # Bolt-over-websocket, used by the Browser UI itself to run queries —
       # lives on the dedicated neo4jbolt entrypoint (see proxy service), so a
       # bare Host rule with no path is safe: nothing else listens there.
+      # NOT SSO-gated: bolt is a raw TCP/websocket stream, not HTTP, so
+      # forward-auth can't apply — it authenticates with Neo4j's own
+      # username/password (NEO4J_AUTH) at the bolt-protocol level instead.
       - traefik.http.routers.neo4j-bolt.rule=Host(`${DOMAIN}`)
       - traefik.http.routers.neo4j-bolt.entrypoints=neo4jbolt
       - traefik.http.routers.neo4j-bolt.tls.certresolver=letsencrypt
       - traefik.http.routers.neo4j-bolt.service=neo4j-bolt
       - traefik.http.services.neo4j-bolt.loadbalancer.server.port=7687
-      - traefik.http.routers.neo4j-bolt.middlewares=neo4j-auth
-      - traefik.http.middlewares.neo4j-auth.basicauth.users=${NEO4J_TRAEFIK_AUTH:-${INTERNAL_TOOLS_TRAEFIK_AUTH}}
     logging:
       driver: json-file
       options:
@@ -560,6 +631,7 @@ services:
       - KEYCLOAK_ADMIN_UI_CLIENT_SECRET=${KEYCLOAK_ADMIN_UI_CLIENT_SECRET}
       - KEYCLOAK_ROPC_CLIENT_SECRET=${KEYCLOAK_ROPC_CLIENT_SECRET}
       - GRAFANA_CLIENT_SECRET=${GRAFANA_CLIENT_SECRET}
+      - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_PROXY_CLIENT_SECRET}
     volumes:
       - ${HHH_REPO_DIR:-/opt/hhh/repo}/keycloak/hhh-user-profile.json:/opt/keycloak/bootstrap/hhh-user-profile.json:ro
     networks:
@@ -590,6 +662,12 @@ services:
         /opt/keycloak/bin/kcadm.sh update clients/$$GRAFANA_ID -r hhh -s secret="$$GRAFANA_CLIENT_SECRET";
       else
         echo "WARNING: grafana client not found — recreate the Keycloak volume (or add the client) so the realm re-imports it" >&2;
+      fi &&
+      OAUTH2_PROXY_ID=$$(/opt/keycloak/bin/kcadm.sh get clients -r hhh -q clientId=oauth2-proxy --fields id --format csv --noquotes) &&
+      if [ -n "$$OAUTH2_PROXY_ID" ]; then
+        /opt/keycloak/bin/kcadm.sh update clients/$$OAUTH2_PROXY_ID -r hhh -s secret="$$OAUTH2_PROXY_CLIENT_SECRET";
+      else
+        echo "WARNING: oauth2-proxy client not found — recreate the Keycloak volume (or add the client) so the realm re-imports it" >&2;
       fi &&
       SA_ID=$$(/opt/keycloak/bin/kcadm.sh get clients/$$BACKEND_ID/service-account-user -r hhh --fields id --format csv --noquotes) &&
       /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$SA_ID --cclientid realm-management --rolename realm-admin &&
@@ -698,9 +776,8 @@ services:
       - traefik.http.routers.redisinsight.tls.certresolver=letsencrypt
       - traefik.http.routers.redisinsight.service=redisinsight
       - traefik.http.services.redisinsight.loadbalancer.server.port=5540
-      - traefik.http.middlewares.redisinsight-auth.basicauth.users=${REDISINSIGHT_TRAEFIK_AUTH:-${INTERNAL_TOOLS_TRAEFIK_AUTH}}
-      - traefik.http.middlewares.redisinsight-auth.basicauth.removeheader=true
-      - traefik.http.routers.redisinsight.middlewares=redisinsight-auth
+      # Gated by Keycloak SSO (admin role) — see oauth2-proxy service.
+      - traefik.http.routers.redisinsight.middlewares=sso-auth,sso-errors
     logging:
       driver: json-file
       options:
@@ -739,6 +816,13 @@ services:
       # requests already include /lightrag — Traefik strips it back off before
       # forwarding, same round-trip as the `translate` service further down.
       - LIGHTRAG_API_PREFIX=/lightrag
+      # LightRAG's own authentication (replaces the removed Traefik basic-auth).
+      # AUTH_ACCOUNTS turns the WebUI's #/login into a real per-user gate and
+      # closes the Guest-access hole (without it, a set LIGHTRAG_API_KEY still
+      # leaves full API access open to the Guest account). TOKEN_SECRET signs the
+      # JWTs it issues after login — must be a stable random secret.
+      - AUTH_ACCOUNTS=admin:${LIGHTRAG_AUTH_PASSWORD}
+      - TOKEN_SECRET=${LIGHTRAG_TOKEN_SECRET}
     volumes:
       - lightrag-data:/app/data
     networks:
@@ -765,29 +849,13 @@ services:
       - traefik.http.routers.lightrag.service=lightrag
       - traefik.http.services.lightrag.loadbalancer.server.port=9621
       - traefik.http.middlewares.lightrag-strip.stripprefix.prefixes=/lightrag
-      # DO NOT REMOVE — this is the ONLY real authentication on LightRAG.
-      #
-      # LightRAG's own #/login screen is not a gate in this configuration.
-      # Upstream: "If Account credentials are not configured, the Web UI will
-      # access the system as a Guest. Therefore, even if only an API Key is
-      # configured, all APIs can still be accessed through the Guest account."
-      # We set LIGHTRAG_API_KEY but deliberately not AUTH_ACCOUNTS /
-      # TOKEN_SECRET, so Guest access is live — drop this middleware and the
-      # knowledge base becomes publicly readable.
-      #
-      # Accepted trade-off: anyone past this shared gate also has Guest-level
-      # full API access without needing LIGHTRAG_API_KEY. Closing that means
-      # setting AUTH_ACCOUNTS + TOKEN_SECRET (see docs/runbook.md).
-      - traefik.http.middlewares.lightrag-auth.basicauth.users=${LIGHTRAG_TRAEFIK_AUTH:-${INTERNAL_TOOLS_TRAEFIK_AUTH}}
-      # removeheader is ESSENTIAL here, not cosmetic. Traefik forwards the
-      # `Authorization: Basic ...` header upstream by default; LightRAG's API
-      # expects `Authorization: Bearer <jwt>` from its own login, chokes on the
-      # Basic credential it never asked for, and answers 401 — which makes the
-      # WebUI bounce straight back to its own #/login screen after you have
-      # already passed the Traefik gate. Stripping it lets LightRAG's own auth
-      # see an unauthenticated request and behave normally.
-      - traefik.http.middlewares.lightrag-auth.basicauth.removeheader=true
-      - traefik.http.routers.lightrag.middlewares=lightrag-auth,lightrag-strip
+      # LightRAG is deliberately NOT behind the Keycloak SSO gate: it can't do
+      # OIDC, and layering Traefik auth in front of its own login is what caused
+      # the endless sign-in loop (browser Basic prompt fighting LightRAG's #/login
+      # / API 401s). Instead LightRAG uses its OWN auth — AUTH_ACCOUNTS +
+      # TOKEN_SECRET on the service below — which is a proper per-user gate and
+      # closes the Guest-access hole. So only the prefix strip stays here.
+      - traefik.http.routers.lightrag.middlewares=lightrag-strip
     logging:
       driver: json-file
       options:
@@ -1061,12 +1129,9 @@ services:
       - traefik.http.routers.prometheus.service=prometheus
       - traefik.http.services.prometheus.loadbalancer.server.port=9090
       - traefik.http.middlewares.prometheus-strip.stripprefix.prefixes=/prometheus
-      - traefik.http.middlewares.prometheus-auth.basicauth.users=${PROMETHEUS_TRAEFIK_AUTH:-${INTERNAL_TOOLS_TRAEFIK_AUTH}}
-      # Don't hand the shared internal-tools credential to Prometheus; it has
-      # no auth of its own and no reason to see it (see lightrag, where
-      # forwarding it actively breaks the app).
-      - traefik.http.middlewares.prometheus-auth.basicauth.removeheader=true
-      - traefik.http.routers.prometheus.middlewares=prometheus-auth,prometheus-strip
+      # Gated by Keycloak SSO (admin role) — see oauth2-proxy service. SSO runs
+      # before the prefix strip so unauthenticated users hit Keycloak first.
+      - traefik.http.routers.prometheus.middlewares=sso-auth,sso-errors,prometheus-strip
     logging:
       driver: json-file
       options:

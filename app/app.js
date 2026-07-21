@@ -177,8 +177,8 @@ app.use('/api/v1', express.json(), createApiRouter({ enableQueue: true }));
 // container, so anything mounted here under /admin never reaches this app.
 //
 // Bull Board ships no auth of its own. In production the only thing in front
-// of it is Traefik basic-auth (INTERNAL_TOOLS_TRAEFIK_AUTH, shared with the
-// other internal tools) — so it must never be mounted without that gate.
+// of it is Keycloak SSO (oauth2-proxy forward-auth, admin role) applied to the
+// /queues Traefik router — so it must never be mounted without that gate.
 // Locally there is no Traefik, which is why the dashboard is open in dev.
 const queueBoardEnabled =
   process.env.NODE_ENV !== 'production' ||
