@@ -238,6 +238,58 @@
         "offline_access",
         "microprofile-jwt"
       ]
+    },
+    {
+      "clientId": "oauth2-proxy",
+      "name": "oauth2-proxy",
+      "description": "Confidential OIDC client for oauth2-proxy — SSO gate in front of the internal tools (Prometheus, Bull Board, RedisInsight, Neo4j Browser, mongo-express). Access is restricted to the realm 'admin' role by oauth2-proxy's --allowed-role.",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "oauth2-proxy-secret-change-me",
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://localhost/oauth2/callback",
+        "https://${DOMAIN}/oauth2/callback"
+      ],
+      "webOrigins": ["https://${DOMAIN}"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "roles",
+            "jsonType.label": "String"
+          }
+        }
+      ],
+      "defaultClientScopes": [
+        "basic",
+        "openid",
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ]
     }
   ],
   "defaultRoles": ["offline_access", "uma_authorization"],
