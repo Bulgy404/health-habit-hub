@@ -123,6 +123,43 @@ LIGHTRAG_API_KEY=<hex-secret>         # bearer token protecting LightRAG REST AP
 > --username admin`) plus `TOKEN_SECRET`, then LightRAG's own login becomes a
 > genuine per-user gate.
 
+### Internal-tool basic-auth (shared credential + per-tool overrides)
+
+The five internal tools exposed for the admin portal's "System & Links" page —
+**LightRAG WebUI** (`/lightrag`), **Prometheus** (`/prometheus`),
+**RedisInsight** (`/redisinsight`), **Neo4j Browser** (`/neo4j`), **Bull Board**
+(`/queues`) — all sit behind Traefik basic-auth.
+
+- **`INTERNAL_TOOLS_TRAEFIK_AUTH` is the shared default.** Set just this one
+  variable and all five tools use the same login.
+- **Per-tool overrides are optional.** To give one tool its own password, set
+  its variable; any tool left unset falls back to `INTERNAL_TOOLS_TRAEFIK_AUTH`:
+
+  | Tool | Override variable | Falls back to |
+  |------|-------------------|---------------|
+  | Prometheus   | `PROMETHEUS_TRAEFIK_AUTH`   | `INTERNAL_TOOLS_TRAEFIK_AUTH` |
+  | Bull Board   | `BULLBOARD_TRAEFIK_AUTH`    | `INTERNAL_TOOLS_TRAEFIK_AUTH` |
+  | RedisInsight | `REDISINSIGHT_TRAEFIK_AUTH` | `INTERNAL_TOOLS_TRAEFIK_AUTH` |
+  | Neo4j Browser| `NEO4J_TRAEFIK_AUTH`        | `INTERNAL_TOOLS_TRAEFIK_AUTH` |
+  | LightRAG     | `LIGHTRAG_TRAEFIK_AUTH`     | `INTERNAL_TOOLS_TRAEFIK_AUTH` |
+
+  (`mongo-express` at `/mongo` is separate — it always uses its own
+  `MONGO_EXPRESS_TRAEFIK_AUTH`, never the shared credential.)
+
+**Format for every one of these variables** — `user:hash` in htpasswd/bcrypt
+format, never a bare password (a value with no colon makes Traefik drop the
+router → 404 instead of a login prompt). The hash is one-way: whatever plaintext
+you hashed *is* the password; it can only be reset, not recovered. Generate one
+with `htpasswd -nbB admin 'your-password'`.
+
+> **The `$` trap — cause of the endless sign-in re-prompt.** A bcrypt hash
+> contains `$`. Paste it **raw** into a Portainer UI variable
+> (`admin:$2y$05$…`), but **double every `$` to `$$`** in a `.env`/`stack.env`
+> file (`admin:$$2y$$05$$…`). Putting the `$$` form into Portainer corrupts the
+> hash, so no password ever matches and the browser keeps re-asking to sign in.
+> Verify before deploying: `htpasswd -nbB admin 'pw' > /tmp/h && htpasswd -vb
+> /tmp/h admin 'pw'` should print `correct`.
+
 Generate a strong value for `API_SERVICE_SECRET`:
 
 ```bash
