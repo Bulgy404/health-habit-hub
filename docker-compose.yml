@@ -635,6 +635,9 @@ services:
       - KEYCLOAK_ROPC_CLIENT_SECRET=${KEYCLOAK_ROPC_CLIENT_SECRET}
       - GRAFANA_CLIENT_SECRET=${GRAFANA_CLIENT_SECRET}
       - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_PROXY_CLIENT_SECRET}
+      # Used to build the oauth2-proxy client's redirect URI when creating it
+      # (see the create-if-missing branch in the bootstrap script below).
+      - DOMAIN=${DOMAIN}
     volumes:
       - ${HHH_REPO_DIR:-/opt/hhh/repo}/keycloak/hhh-user-profile.json:/opt/keycloak/bootstrap/hhh-user-profile.json:ro
     networks:
@@ -670,7 +673,8 @@ services:
       if [ -n "$$OAUTH2_PROXY_ID" ]; then
         /opt/keycloak/bin/kcadm.sh update clients/$$OAUTH2_PROXY_ID -r hhh -s secret="$$OAUTH2_PROXY_CLIENT_SECRET";
       else
-        echo "WARNING: oauth2-proxy client not found — recreate the Keycloak volume (or add the client) so the realm re-imports it" >&2;
+        echo "oauth2-proxy client missing — creating it (the realm was first imported before this client existed; recreating the volume is NOT needed)" >&2 &&
+        /opt/keycloak/bin/kcadm.sh create clients -r hhh -s clientId=oauth2-proxy -s enabled=true -s protocol=openid-connect -s publicClient=false -s standardFlowEnabled=true -s serviceAccountsEnabled=false -s "redirectUris=[\"https://$$DOMAIN/oauth2/callback\"]" -s "webOrigins=[\"https://$$DOMAIN\"]" -s secret="$$OAUTH2_PROXY_CLIENT_SECRET";
       fi &&
       SA_ID=$$(/opt/keycloak/bin/kcadm.sh get clients/$$BACKEND_ID/service-account-user -r hhh --fields id --format csv --noquotes) &&
       /opt/keycloak/bin/kcadm.sh add-roles -r hhh --uid $$SA_ID --cclientid realm-management --rolename realm-admin &&

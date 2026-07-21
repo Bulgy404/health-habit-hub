@@ -149,9 +149,11 @@ There are no htpasswd hashes to manage anymore.
 `LIGHTRAG_AUTH_PASSWORD`, `LIGHTRAG_TOKEN_SECRET` (`openssl rand -hex 32`).
 
 > **If a tool won't load after deploy:** check that (1) your Keycloak account has
-> the `admin` role, (2) `keycloak-init` logged the oauth2-proxy secret update (no
-> "oauth2-proxy client not found" warning — if present, recreate the Keycloak
-> volume so the realm re-imports the client), and (3) `OAUTH2_PROXY_CLIENT_SECRET`
+> the `admin` role, (2) `keycloak-init` provisioned the client — on a realm that
+> predates it, the init logs "oauth2-proxy client missing — creating it" and
+> creates the client automatically (no volume recreation needed); a Keycloak 400
+> "Client not found" on the `/auth/.../auth` redirect means that step didn't run,
+> so check the `hhh-keycloak-init` logs — and (3) `OAUTH2_PROXY_CLIENT_SECRET`
 > matches on both oauth2-proxy and the Keycloak client.
 
 Generate a strong value for `API_SERVICE_SECRET`:
