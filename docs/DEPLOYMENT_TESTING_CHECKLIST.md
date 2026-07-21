@@ -18,9 +18,11 @@ notes / bug tracker before shipping.
 - [x] Admin panel loads at `/admin` and redirects to Keycloak login when signed out
 - [x] Mobile app can reach the API base URL configured for this environment
 - [x] Grafana dashboards load and Prometheus targets are all "up"
-- [ ] `INTERNAL_TOOLS_TRAEFIK_AUTH` set (not the placeholder) — gates LightRAG/Prometheus/RedisInsight/Neo4j Browser
+- [ ] `OAUTH2_PROXY_CLIENT_SECRET` + `OAUTH2_PROXY_COOKIE_SECRET` set (not placeholders); your Keycloak account has the realm `admin` role — gates Prometheus/Bull Board/RedisInsight/Neo4j Browser/mongo-express via SSO
+- [ ] `LIGHTRAG_AUTH_PASSWORD` + `LIGHTRAG_TOKEN_SECRET` set — LightRAG's own login (not SSO)
+- [ ] `keycloak-init` logs the oauth2-proxy client-secret update (no "oauth2-proxy client not found" warning)
 - [ ] Port `NEO4J_BOLT_PORT` (default 7687) open in the firewall/security group, alongside 80/443 — required for Neo4j Browser's query console; see docs/runbook.md §"Open Ports"
-- [ ] Admin panel "System & Links" page: LightRAG WebUI, Prometheus, RedisInsight, Neo4j Browser links all load (prompt for the shared basic-auth credential, then reach the tool)
+- [ ] Admin panel "System & Links" page: Prometheus, Bull Board, RedisInsight, Neo4j Browser, mongo-express links redirect to Keycloak, log in once (admin role), then reach the tool; LightRAG loads behind its own login
 
 ---
 

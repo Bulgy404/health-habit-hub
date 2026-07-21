@@ -68,10 +68,10 @@ git --version
 
 > **Security note:** Port 8080 should be firewalled to admin IP ranges only.
 > Never expose Neo4j (7474/7687) or MongoDB (27017) *directly* — the only
-> supported public path to Neo4j is through Traefik (path `/neo4j` for the
-> Browser UI, port 7687 above for its query channel), both basic-auth gated
-> via `INTERNAL_TOOLS_TRAEFIK_AUTH`. MongoDB stays fully internal; use
-> mongo-express (`/mongo`) instead.
+> supported public path to Neo4j is through Traefik: the `/neo4j` Browser UI is
+> Keycloak-SSO gated (admin role), and its bolt query channel on port 7687 uses
+> Neo4j's own username/password. MongoDB stays fully internal; use mongo-express
+> (`/mongo`, also SSO-gated) instead.
 
 ---
 
@@ -111,17 +111,47 @@ API_SERVICE_SECRET=<hex-secret>       # shared secret between hhh-app and hhh-re
 LIGHTRAG_API_KEY=<hex-secret>         # bearer token protecting LightRAG REST API
 ```
 
-> **LightRAG auth — known, accepted gap.** `LIGHTRAG_API_KEY` alone does *not*
-> secure LightRAG. Upstream: "If Account credentials are not configured, the Web
-> UI will access the system as a Guest ... even if only an API Key is
-> configured, all APIs can still be accessed through the Guest account." We do
-> not set `AUTH_ACCOUNTS`/`TOKEN_SECRET`, so the only real gate on LightRAG is
-> the Traefik basic-auth middleware (`INTERNAL_TOOLS_TRAEFIK_AUTH`). Two
-> consequences: never remove that middleware, and treat anyone holding the
-> shared internal-tools credential as having full LightRAG API access. To close
-> it, set `AUTH_ACCOUNTS` (hash passwords with `lightrag-hash-password
-> --username admin`) plus `TOKEN_SECRET`, then LightRAG's own login becomes a
-> genuine per-user gate.
+### Internal-tool access — Keycloak SSO (admin role)
+
+The internal tools exposed for the admin portal's "System & Links" page —
+**Prometheus** (`/prometheus`), **Bull Board** (`/queues`), **RedisInsight**
+(`/redisinsight`), **Neo4j Browser UI** (`/neo4j`), **mongo-express** (`/mongo`)
+— are gated by **Keycloak SSO** via `oauth2-proxy`, not by per-tool passwords.
+There are no htpasswd hashes to manage anymore.
+
+- **You log in with your normal Keycloak account.** Only accounts holding the
+  realm **`admin`** role are allowed through; study participants (role `user`)
+  are denied. Grant a teammate access by giving their Keycloak user the `admin`
+  role — no config change or redeploy needed.
+- **How it works:** `oauth2-proxy` (confidential Keycloak client `oauth2-proxy`,
+  secret injected by `keycloak-init` from `OAUTH2_PROXY_CLIENT_SECRET`, cookie
+  signed with `OAUTH2_PROXY_COOKIE_SECRET`) runs as a Traefik forward-auth
+  backend. Each tool router carries the shared `sso-auth` + `sso-errors`
+  middlewares; unauthenticated requests are redirected to Keycloak and back.
+- **Two exceptions, by design:**
+  - **LightRAG** (`/lightrag`) is **not** on the SSO — it can't do OIDC. It uses
+    its **own login** instead: `AUTH_ACCOUNTS=admin:${LIGHTRAG_AUTH_PASSWORD}` +
+    `TOKEN_SECRET=${LIGHTRAG_TOKEN_SECRET}` on the lightrag service. This both
+    fixes the old double-prompt loop and closes LightRAG's Guest-access hole
+    (`LIGHTRAG_API_KEY` alone does not secure it — upstream: "even if only an API
+    Key is configured, all APIs can still be accessed through the Guest account").
+  - **Neo4j bolt** (port 7687) is raw TCP/websocket, not HTTP, so forward-auth
+    can't apply. It's protected by Neo4j's own username/password (`NEO4J_AUTH`).
+    Connect Neo4j Browser manually: URL `bolt+s://<DOMAIN>:7687`, auth type
+    Username/Password, user `neo4j`, password `NEO4J_PASSWORD`. (Browser's SSO
+    auto-discovery error at `/neo4j` is cosmetic — connect by hand. Requires the
+    firewall to allow port 7687.)
+
+**Secrets to set** (plaintext — no hashes, no `$`-escaping traps):
+`OAUTH2_PROXY_CLIENT_SECRET`, `OAUTH2_PROXY_COOKIE_SECRET` (`openssl rand -base64
+24` — must be 16/24/32 chars; the 44-char `rand -base64 32` is rejected),
+`LIGHTRAG_AUTH_PASSWORD`, `LIGHTRAG_TOKEN_SECRET` (`openssl rand -hex 32`).
+
+> **If a tool won't load after deploy:** check that (1) your Keycloak account has
+> the `admin` role, (2) `keycloak-init` logged the oauth2-proxy secret update (no
+> "oauth2-proxy client not found" warning — if present, recreate the Keycloak
+> volume so the realm re-imports the client), and (3) `OAUTH2_PROXY_CLIENT_SECRET`
+> matches on both oauth2-proxy and the Keycloak client.
 
 Generate a strong value for `API_SERVICE_SECRET`:
 
@@ -808,10 +838,10 @@ Note the path is `/queues`, **not** `/admin/queues`: in production Traefik route
 
 In local dev it is always on and needs no login — the app container is only
 reachable from localhost. In production it is mounted only when
-`ENABLE_QUEUE_DASHBOARD=true` (the compose default) and is gated by Traefik
-basic-auth using the shared `INTERNAL_TOOLS_TRAEFIK_AUTH` credential. Bull Board
-has **no authentication of its own**, so never expose `/queues` without that
-middleware.
+`ENABLE_QUEUE_DASHBOARD=true` (the compose default) and is gated by Keycloak SSO
+(the `sso-auth`/`sso-errors` middlewares, admin role) on the `/queues` router.
+Bull Board has **no authentication of its own**, so never expose `/queues`
+without that gate.
 
 What you can do:
 
@@ -862,9 +892,9 @@ docker compose -f docker-compose.local.yml stop redis-insight
 
 **In production:** RedisInsight is deployed as a normal part of the stack (not
 a manual start/stop step) and reachable at `https://<DOMAIN>/redisinsight`,
-gated by the shared `INTERNAL_TOOLS_TRAEFIK_AUTH` basic-auth credential (also
-in front of LightRAG, Prometheus, and Neo4j Browser — see docker-compose.yml).
-The connection to the app's Redis instance is pre-configured via `RI_REDIS_*`
+gated by Keycloak SSO (admin role, the `sso-auth`/`sso-errors` middlewares —
+same as Prometheus, Bull Board, Neo4j Browser and mongo-express; see
+docker-compose.yml). The connection to the app's Redis instance is pre-configured via `RI_REDIS_*`
 env vars, so there's no "Add Redis Database" step to do by hand there.
 
 ---
@@ -1099,9 +1129,9 @@ docker compose up -d hhh-lightrag hhh-knowledge-mcp hhh-recommender
 
 **Graph visualization:**
 In production, the LightRAG WebUI is reachable directly at
-`https://<DOMAIN>/lightrag/webui` (basic-auth gated by
-`INTERNAL_TOOLS_TRAEFIK_AUTH`, same as the admin portal's Knowledge Base
-"View Graph" link) — no tunnel needed. The SSH tunnel below is only for
+`https://<DOMAIN>/lightrag/webui` (behind LightRAG's own login — user `admin`,
+`LIGHTRAG_AUTH_PASSWORD`; not the Keycloak SSO) — no tunnel needed. The SSH
+tunnel below is only for
 reaching it from inside the Docker network directly (e.g. while debugging
 `LIGHTRAG_API_PREFIX` itself, where the public route may not be trustworthy):
 
