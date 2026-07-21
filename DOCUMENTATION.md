@@ -24,6 +24,18 @@
 
 ---
 
+> **This file is the central reference** — architecture, containers, environment,
+> security, and API. Deeper, task-specific docs live alongside it:
+> | Doc | Use it for |
+> | --- | --- |
+> | [`DEPLOYMENT.md`](DEPLOYMENT.md) | Step-by-step first production deploy (Portainer, secrets) |
+> | [`docs/runbook.md`](docs/runbook.md) | Day-two ops: updates, rollback, backup/restore, secret rotation, Neo4j Browser access, troubleshooting |
+> | [`docs/DEPLOYMENT_TESTING_CHECKLIST.md`](docs/DEPLOYMENT_TESTING_CHECKLIST.md) | Post-deploy smoke-test checklist |
+> | [`docs/data-model.md`](docs/data-model.md) | MongoDB collections + Neo4j graph schema |
+> | [`docs/architecture.md`](docs/architecture.md) | Extended architecture narrative |
+> | [`docs/diagrams/`](docs/diagrams/README.md) | Diagrams-as-code (system, sequences, use cases, class model) |
+> | [`docs/migration.md`](docs/migration.md) | Fuseki → Neo4j/LightRAG migration history |
+
 ## 1. Project Overview
 
 Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresden (Chair of Business Informatics, esp. Health Informatics). It enables participants to donate, explore, and receive recommendations about health habits in the context of a longitudinal research study.
@@ -45,61 +57,94 @@ Health Habit Hub (H3) is a mobile-first research platform developed at TU Dresde
 
 ### System Diagram
 
+Everything runs as Docker containers on one host, path-routed behind Traefik on a
+single domain (`habit.wiwi.tu-dresden.de`). The Flutter app and admin panel are
+the public entrypoints; a set of internal admin/debug tools sit behind a Keycloak
+SSO gate (`oauth2-proxy`).
+
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                          Participants                            │
-│                    Flutter Mobile App (iOS/Android/Web)          │
-└───────────────────────────┬──────────────────────────────────────┘
-                            │ HTTPS / WSS
-                            ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                    Traefik (reverse proxy + SSL)                 │
-│                    Let's Encrypt — habit.wiwi.tu-dresden.de      │
-└───┬──────────────────────┬──────────────────────────────────────┘
-    │                      │
-    ▼                      ▼
-┌──────────┐       ┌──────────────────┐      ┌────────────────────┐
-│ Keycloak │       │  Node.js/Express  │◄────►│ Python FastAPI     │
-│ (realm:  │◄─────►│  Backend (app/)  │      │ (API-service/)     │
-│  hhh)    │  JWT  │  Port 3000       │      │ Port 8000          │
-└──────────┘  JWKS └────────┬─────────┘      │ Auth: shared secret│
-                            │                └────────────────────┘
-                ┌───────────┼───────────┐
-                ▼           ▼           ▼
-         ┌──────────┐ ┌──────────┐ ┌──────────────┐
-         │ MongoDB  │ │  Neo4j   │ │  LightRAG    │
-         │ (surveys,│ │ (habit   │ │ (RDF/SPARQL  │
-         │  prefs,  │ │  graph,  │ │  ontology)   │
-         │  QRs)    │ │  BCIO)   │ │              │
-         └──────────┘ └──────────┘ └──────────────┘
-
-┌──────────────────────────────────────────────────────────────────┐
-│                 Next.js Admin App (admin/)                       │
-│                 Port 3001 — researcher/admin role only           │
-└──────────────────────────────────────────────────────────────────┘
-
-┌──────────────┐   ┌────────────────────┐   ┌────────────────────┐
-│    Redis     │   │  LibreTranslate    │   │  Backup Service    │
-│ (notif. lock,│   │  (EN↔DE, v1.9.5)  │   │  (MongoDB, Neo4j,  │
-│  rec. cache) │   │  Port 5000         │   │  LightRAG, Keycloak)│
-└──────────────┘   └────────────────────┘   └────────────────────┘
+ Participants (Flutter app)          Researchers / Admins (browser)
+        │  HTTPS / WSS                        │  HTTPS
+        └──────────────┬──────────────────────┘
+                       ▼
+        ┌──────────────────────────────────────────────┐
+        │  proxy — Traefik v3 (TLS, Let's Encrypt)       │  :80/:443, bolt :7687
+        └──┬───────────┬───────────┬──────────┬─────────┘
+           │ /api/v1   │ /admin    │ /auth     │ (internal tools)
+           ▼           ▼           ▼           ▼
+      ┌────────┐  ┌────────┐  ┌──────────┐  ┌───────────────────────────┐
+      │  app   │  │ admin  │  │ keycloak │  │ oauth2-proxy (SSO gate)   │
+      │ Node   │  │ Next.js│  │  + kc-db │  │ forward-auth, admin role  │
+      │ :3000  │  │ :3001  │  │ (postgres)│ └──────────────┬────────────┘
+      └───┬────┘  └────────┘  └──────────┘                 │ gated
+          │ service token                    ┌─────────────┴─────────────────┐
+          ▼                                   ▼      ▼       ▼        ▼       ▼
+   ┌────────────┐                        Prometheus Grafana RedisInsight  Bull  mongo-
+   │ recommender│                                                         Board express
+   │ Python API │──chat/embed──▶ LLM (llm.scads.ai)                    (/queues) (/mongo)
+   │ :8000      │──▶ lightrag ──entity/embed──▶ LLM      LightRAG WebUI (/lightrag,
+   └─────┬──────┘   (graph+vector KB, :9621)              own login, not SSO)
+         │
+  ┌──────┼───────────┬──────────────┐        Data stores
+  ▼      ▼           ▼              ▼
+┌──────┐┌──────┐  ┌──────┐    ┌───────────┐
+│mongo ││neo4j │  │redis │    │ knowledge │  Ops/support: config-sync (git pull),
+│ :27017││bolt  │  │ :6379│    │ -mcp :8002│  backup, docker-socket-proxy,
+│      ││:7687 │  │      │    │ (MCP/SSE) │  blackbox-exporter, keycloak-init
+└──────┘└──────┘  └──────┘    └───────────┘
 ```
 
 ### Service Responsibilities
 
-| Service                     | Technology                                                                                           | Responsibility                                                                                                                                 |
-| --------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `app`                       | Node.js 22, Express, ES modules                                                                      | REST API (JWT-protected), WebSocket server for recommendations, notification scheduler, survey/habit/recommendation routes                     |
-| `mobile`                    | Flutter (Dart), go_router, Riverpod                                                                  | iOS/Android/web app; Keycloak PKCE auth; habit donation; recommendation display; onboarding                                                    |
-| `admin`                     | Next.js 15, React 18, TypeScript, NextAuth.js, MUI (Material UI) v7 + Emotion, CSS Modules, Recharts | Researcher/admin dashboard; participant management; questionnaire authoring; study configuration                                               |
-| `recommender` (API-service) | Python 3, FastAPI                                                                                    | LLM-based habit classification, BCIO mapping, context extraction, habit recommendation; protected by `API_SERVICE_SECRET`                      |
-| `keycloak`                  | Keycloak 26.5.5                                                                                      | Identity provider; realm `hhh`; clients: `hhh-flutter` (public PKCE), `hhh-backend` (confidential service account), `hhh-admin` (confidential) |
-| `mongo`                     | MongoDB 8.2                                                                                          | Survey definitions, questionnaire responses, user preferences, notification state                                                              |
-| `neo4j`                     | Neo4j 5                                                                                              | Habit graph, BCIO relationship data, semantic graph queries                                                                                    |
-| `translate`                 | LibreTranslate v1.9.5                                                                                | Self-hosted EN↔DE machine translation                                                                                                          |
-| `redis`                     | Redis 7                                                                                              | Distributed lock for notification cron, recommendation caching                                                                                 |
-| `proxy`                     | Traefik v3.6.1                                                                                       | Reverse proxy, automatic Let's Encrypt SSL, host-based routing                                                                                 |
-| `backup-service`            | Bash scripts                                                                                         | Daily automated backups of MongoDB, Neo4j, LightRAG data, and Keycloak realm export                                                            |
+All 22 containers, grouped by role. Container names are prefixed `hhh-`
+(e.g. service `app` → container `hhh-app`).
+
+**Edge & identity**
+
+| Service | Image | Responsibility |
+| --- | --- | --- |
+| `proxy` | `traefik:v3.6.1` | Reverse proxy; TLS via Let's Encrypt; path-based routing on `${DOMAIN}`; dedicated `neo4jbolt` entrypoint on :7687 |
+| `oauth2-proxy` | `oauth2-proxy:v7.13.0` | Keycloak SSO **forward-auth gate** for the internal tools; only realm `admin` role passes. Identifies users by `preferred_username` |
+| `keycloak` | `keycloak:26.5.5` | Identity provider; realm `hhh`; clients: `hhh-flutter` (public PKCE), `hhh-backend` (confidential SA), `hhh-admin`, `hhh-ropc`, `grafana`, `oauth2-proxy` |
+| `keycloak-db` | `postgres:16-alpine` | Keycloak's persistence backend |
+| `keycloak-init` | `keycloak:26.5.5` | One-shot init: injects client secrets, creates the `oauth2-proxy` client if missing, seeds the admin user (via `kcadm`) |
+
+**Application**
+
+| Service | Image | Responsibility |
+| --- | --- | --- |
+| `app` | `hhh/app` (Node 22, Express) | REST API `/api/v1/*` (JWT-verified via Keycloak JWKS); WebSocket recommendations; notification scheduler; BullMQ `habitQueue`; Bull Board at `/queues` |
+| `admin` | `hhh/admin` (Next.js 15, MUI, NextAuth) | Researcher/admin dashboard at `/admin`; participant management; questionnaire authoring; study config. OIDC login via Keycloak (`hhh-admin`) |
+| `recommender` | `hhh/recommender` (Python, FastAPI) | LLM habit classification, BCIO mapping, context extraction, RAG recommendation; protected by `API_SERVICE_SECRET` |
+| `knowledge-mcp` | `hhh/knowledge-mcp` (FastMCP, SSE, :8002) | MCP server exposing `search_knowledge` / `ingest_document` over the LightRAG KB to AI agents |
+| `translate` | `hhh/translate` (LibreTranslate, baked EN/DE/JA/FR/NL) | Self-hosted machine translation used by the backend |
+
+**Data stores**
+
+| Service | Image | Responsibility |
+| --- | --- | --- |
+| `mongo` | `mongo:7.0` | Studies, questionnaires, intentions, logs, SRHI trajectories, recommendations, restore attempts, device tokens |
+| `neo4j` | `neo4j:5` | Habit / Context / BCIOConcept graph; bolt :7687. Loopback ports `127.0.0.1:17474/17687` for admin SSH tunnels |
+| `redis` | `redis:7-alpine` | API-service response cache; BullMQ `habitQueue`; notification-cron lock |
+| `lightrag` | `hhh/lightrag` (lightrag-hku 1.5.0, :9621) | Graph + vector knowledge base for RAG. Has its **own** login (`AUTH_ACCOUNTS`) — not on the SSO |
+
+**Internal tools** (all HTTP tools gated by `oauth2-proxy` SSO / admin role)
+
+| Service | Image | Responsibility |
+| --- | --- | --- |
+| `mongo-express` | `mongo-express:1.0` | Web UI for MongoDB at `/mongo` (own basic-auth disabled; SSO-gated) |
+| `redisinsight` | `redis/redisinsight:latest` | Web UI for Redis at `/redisinsight` |
+| `prometheus` | `prom/prometheus:v3.4.1` | Metrics scraping + 30-day retention at `/prometheus` |
+| `grafana` | `grafana/grafana-oss:12.0.1` | Dashboards at `/grafana`; its own Keycloak OIDC SSO (separate from oauth2-proxy) |
+| `blackbox-exporter` | `prom/blackbox-exporter:v0.25.0` | Probes service endpoints for Prometheus uptime metrics |
+
+**Ops & support**
+
+| Service | Image | Responsibility |
+| --- | --- | --- |
+| `config-sync` | `alpine/git:latest` | One-shot: refreshes the on-server `/opt/hhh/repo` config clone before dependents start |
+| `backup` | `hhh/backup` | ~24h loop: MongoDB dump, Neo4j dump, LightRAG tar, Keycloak realm export; configurable retention |
+| `docker-socket-proxy` | `tecnativa/docker-socket-proxy:0.3.0` | Scoped Docker API for the backup service (no raw socket mount) |
 
 ---
 
@@ -275,8 +320,11 @@ health-habit-hub/
 
 | Database                             | Purpose                                                                           |
 | ------------------------------------ | --------------------------------------------------------------------------------- |
-| MongoDB 8.2                          | Survey definitions, questionnaire responses, user preferences, notification state |
+| MongoDB 7.0                          | Survey definitions, questionnaire responses, user preferences, notification state |
 | Neo4j 5                              | Donated habit graph, BCIO relationships, semantic graph                           |
+| Redis 7                              | API-service response cache, BullMQ `habitQueue`, notification-cron lock           |
+| PostgreSQL 16                        | Keycloak persistence (`keycloak-db`)                                              |
+| LightRAG (graph + vector)            | RAG knowledge base for the recommendation pipeline                                |
 | ~~Apache Fuseki (Jena)~~ _(retired)_ | Former RDF triple store; ontology files kept for reference                        |
 
 ### Infrastructure
@@ -304,8 +352,6 @@ All variables are defined in `stack.env`. In production, override sensitive valu
 | `DOMAIN`                 | `habit.wiwi.tu-dresden.de` | Production domain name                            |
 | `SERVER_IP`              | `141.76.16.16`             | Server IP address                                 |
 | `ACME_EMAIL`             | —                          | Email for Let's Encrypt certificate notifications |
-| `OAUTH2_PROXY_CLIENT_SECRET` | —                      | Keycloak client secret for the oauth2-proxy SSO gate (internal tools) |
-| `OAUTH2_PROXY_COOKIE_SECRET` | —                      | 32-byte secret signing the SSO session cookie |
 
 ### Application
 
@@ -328,6 +374,24 @@ All variables are defined in `stack.env`. In production, override sensitive valu
 | `KEYCLOAK_ADMIN_CLIENT_SECRET`    | —             | Secret for `hhh-backend` client **(change in Portainer)**        |
 | `NEXTAUTH_SECRET`                 | —             | Secret for NextAuth.js session signing **(change in Portainer)** |
 | `KEYCLOAK_ADMIN_UI_CLIENT_SECRET` | —             | Secret for `hhh-admin` client **(change in Portainer)**          |
+| `KEYCLOAK_ROPC_CLIENT_SECRET`     | —             | Secret for `hhh-ropc` client (server-side passphrase auth)       |
+
+### Internal-tool SSO & LightRAG
+
+The internal admin/debug tools use Keycloak SSO via `oauth2-proxy`; LightRAG uses
+its own login. There are **no** per-tool htpasswd/basic-auth variables anymore
+(the former `INTERNAL_TOOLS_TRAEFIK_AUTH`, per-tool `*_TRAEFIK_AUTH`,
+`MONGO_EXPRESS_*`, and `TRAEFIK_DASHBOARD_AUTH` were removed).
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `OAUTH2_PROXY_CLIENT_SECRET` | — | Secret for the `oauth2-proxy` Keycloak client (injected by `keycloak-init`) **(change in Portainer)** |
+| `OAUTH2_PROXY_COOKIE_SECRET` | — | Signs the SSO session cookie; **must be 16/24/32 chars** (`openssl rand -base64 24`) **(change in Portainer)** |
+| `GRAFANA_CLIENT_SECRET` | — | Secret for the `grafana` Keycloak OIDC client **(change in Portainer)** |
+| `LIGHTRAG_API_KEY` | — | Bearer token for the LightRAG REST API (internal callers) |
+| `LIGHTRAG_AUTH_PASSWORD` | — | Password for LightRAG's own WebUI login (user `admin`) **(change in Portainer)** |
+| `LIGHTRAG_TOKEN_SECRET` | — | Signs LightRAG's login JWTs (`openssl rand -hex 32`) **(change in Portainer)** |
+| `ENABLE_QUEUE_DASHBOARD` | `true` | Mounts Bull Board at `/queues` in production (SSO-gated) |
 
 ### MongoDB
 
@@ -716,6 +780,43 @@ Rules:
 - **Node.js backend ↔ Keycloak (passphrase auth):** Confidential client `hhh-ropc` with the resource-owner-password-credentials (ROPC) grant, kept behind a server-held secret so the ROPC capability isn't available to anyone who extracts the public `hhh-flutter` client ID from the app (`hhh-flutter` has `directAccessGrantsEnabled: false` for exactly this reason).
 - **Next.js admin ↔ Keycloak:** Confidential client `hhh-admin` via NextAuth.js. Session is maintained server-side; access tokens are not exposed to the browser.
 - **Node.js backend ↔ Python API service:** Shared secret (`API_SERVICE_SECRET`) sent as an HTTP header. The Python service refuses all requests without a valid secret.
+- **Internal tools ↔ Keycloak SSO:** Prometheus, Bull Board (`/queues`), RedisInsight, the Neo4j Browser **UI** (`/neo4j`) and mongo-express (`/mongo`) sit behind `oauth2-proxy` as a Traefik forward-auth gate. You log in with your normal Keycloak account and only accounts holding the realm **`admin`** role pass (participants with `user` are denied). No per-tool passwords or htpasswd hashes exist anymore. See [Internal-tool access (SSO)](#internal-tool-access-sso) below.
+
+### Internal-tool access (SSO)
+
+The internal admin/debug tools are gated by **Keycloak SSO** via `oauth2-proxy`,
+which runs as a Traefik forward-auth backend. Design notes and per-tool auth:
+
+| Path | Tool | Auth |
+| --- | --- | --- |
+| `/prometheus` | Prometheus | Keycloak SSO (admin role) |
+| `/queues` | Bull Board | Keycloak SSO (admin role) |
+| `/redisinsight` | RedisInsight | Keycloak SSO (admin role) |
+| `/mongo` | mongo-express | Keycloak SSO (admin role); own basic-auth disabled (`ME_CONFIG_BASICAUTH=false`) |
+| `/neo4j` | Neo4j Browser **UI** | Keycloak SSO (admin role) |
+| bolt :7687 | Neo4j **query channel** | Neo4j's own username/password (raw TCP — can't be SSO-gated) |
+| `/lightrag` | LightRAG WebUI | LightRAG's **own** login (`AUTH_ACCOUNTS`) — no OIDC, so not on the SSO |
+| `/grafana` | Grafana | Grafana's own Keycloak OIDC (separate `grafana` client, role-mapped) |
+
+Implementation details:
+
+- The `sso-auth` Traefik middleware forwards each request to `oauth2-proxy`'s
+  **root** (not `/oauth2/auth`) — the root returns a **302 to Keycloak** for
+  unauthenticated requests, which Traefik propagates as a real browser redirect.
+  (The Traefik `errors`-middleware approach can't do this on v3: it keeps the 401
+  status, so the browser never redirects.)
+- oauth2-proxy identifies users by **`preferred_username`**
+  (`OAUTH2_PROXY_OIDC_EMAIL_CLAIM`), because Keycloak accounts here often have no
+  email and it otherwise 500s the callback with "could not enrich oidc session".
+- The `oauth2-proxy` Keycloak client is created/repaired by `keycloak-init` on
+  every deploy (no realm-volume recreation needed).
+- **LightRAG is deliberately off the SSO** — it can't do OIDC, and layering the
+  Traefik gate in front of its own login caused an endless sign-in loop. Its
+  `AUTH_ACCOUNTS`/`TOKEN_SECRET` login is a proper per-user gate and closes the
+  otherwise-open Guest-access hole.
+- **Neo4j Browser** connection: bolt :7687 is blocked by the TU perimeter
+  firewall; use the SSH-tunnel method in [docs/runbook.md](docs/runbook.md)
+  ("Connecting to Neo4j Browser").
 
 ### Session & Token Lifetime
 
