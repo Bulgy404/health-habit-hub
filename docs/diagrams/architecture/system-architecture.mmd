@@ -15,7 +15,8 @@ flowchart TB
     end
 
     %% ------- Edge -------
-    traefik["Traefik v3<br/>Reverse proxy · TLS (Let's Encrypt)<br/>:80 / :443"]
+    traefik["Traefik v3<br/>Reverse proxy · TLS (Let's Encrypt)<br/>:80 / :443 · bolt :7687"]
+    oauth2proxy["oauth2-proxy<br/>Keycloak SSO forward-auth gate<br/>internal tools · admin role only"]
 
     %% ------- Application layer -------
     subgraph appsvc["Application Services (Docker, hhh-proxy network)"]
@@ -47,7 +48,15 @@ flowchart TB
     %% ------- Monitoring -------
     subgraph monitoring["Monitoring"]
         prometheus["Prometheus<br/>metrics · 30d retention"]
-        grafana["Grafana<br/>dashboards · Keycloak SSO"]
+        grafana["Grafana<br/>dashboards · own Keycloak OIDC"]
+        blackbox["blackbox-exporter<br/>endpoint probes"]
+    end
+
+    %% ------- Internal tools (behind oauth2-proxy SSO, admin role) -------
+    subgraph tools["Internal tools — Keycloak SSO (admin role)"]
+        redisinsight["RedisInsight<br/>/redisinsight"]
+        bullboard["Bull Board<br/>/queues (served by backend)"]
+        lightragui["LightRAG WebUI<br/>/lightrag · own login (not SSO)"]
     end
 
     %% ------- Ops -------
@@ -94,13 +103,24 @@ flowchart TB
     backup -- "tar lightrag-data" --> lightrag
     backup -- "partial-export API" --> keycloak
     backup -- "docker exec (Keycloak DB dump)" --> dockerproxy
-    researcher_actor -- "/mongo/ (Basic Auth)" --> mongoexpress
     mongoexpress --> mongo
+
+    %% ------- Edges: internal-tool SSO -------
+    researcher_actor -- "internal tools" --> traefik
+    traefik -- "/prometheus /grafana /mongo /redisinsight /queues /neo4j" --> oauth2proxy
+    oauth2proxy -. "forward-auth (302 → Keycloak)" .-> keycloak
+    oauth2proxy -- "admin role OK" --> prometheus
+    oauth2proxy --> grafana
+    oauth2proxy --> mongoexpress
+    oauth2proxy --> redisinsight
+    oauth2proxy --> bullboard
+    redisinsight --> redis
+    lightragui -. "own AUTH_ACCOUNTS login" .-> lightrag
 
     %% ------- Edges: monitoring -------
     prometheus -. "scrape /metrics" .-> backend
     prometheus -. "scrape /metrics" .-> apiservice
-    researcher_actor -- "dashboards" --> grafana
+    prometheus -. "probe" .-> blackbox
     grafana -. "OIDC SSO" .-> keycloak
     grafana --> prometheus
 
@@ -108,7 +128,9 @@ flowchart TB
     classDef store fill:#e7f1ff,stroke:#2a6fb8
     classDef ext fill:#f3e8ff,stroke:#7c3aed
     classDef ops fill:#eafbe7,stroke:#2e8c00
+    classDef tool fill:#ffe9e0,stroke:#d2601a
     class participant_actor,researcher_actor,agent_actor actor
-    class mongo,neo4j,lightrag,redis,postgres,mongoexpress store
+    class mongo,neo4j,lightrag,redis,postgres store
     class llm,fcm ext
-    class backup,dockerproxy,prometheus,grafana ops
+    class backup,dockerproxy,prometheus,grafana,blackbox ops
+    class oauth2proxy,mongoexpress,redisinsight,bullboard,lightragui tool
