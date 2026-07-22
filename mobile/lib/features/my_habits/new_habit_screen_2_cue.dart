@@ -77,8 +77,14 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
     super.dispose();
   }
 
+  /// Effective cap on self-selected cues: an admin-configured `'single'`
+  /// study allows exactly one, while `'multi'` just means "more than one"
+  /// with no specific configured count, so it falls back to the general
+  /// sanity ceiling [kMaxCues].
+  int get _maxCues => widget.config.cueCount == 'single' ? 1 : kMaxCues;
+
   void _addCue() {
-    if (_cueControllers.length >= kMaxCues) return;
+    if (_cueControllers.length >= _maxCues) return;
     setState(() {
       _cueControllers.add(TextEditingController());
       _error = null;
@@ -278,7 +284,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
       );
     }
     // ── Add-cue button (hidden once the max is reached) ──────────────────
-    if (_cueControllers.length < kMaxCues) {
+    if (_cueControllers.length < _maxCues) {
       widgets.add(
         Align(
           alignment: Alignment.centerLeft,
@@ -286,7 +292,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
             onPressed: _addCue,
             icon: const Icon(Icons.add),
             label: Text(
-              l10n.addAnotherCueCount(_cueControllers.length, kMaxCues),
+              l10n.addAnotherCueCount(_cueControllers.length, _maxCues),
             ),
           ),
         ),
@@ -296,7 +302,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
         Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Text(
-            l10n.setCueMaxReachedNote(kMaxCues),
+            l10n.setCueMaxReachedNote(_maxCues),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),

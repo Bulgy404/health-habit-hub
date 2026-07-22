@@ -5,17 +5,17 @@ import express from 'express';
 import { ObjectId } from 'mongodb';
 import { createIntentionsRouter } from '../../routes/intentionsRouter.js';
 
-// Focused coverage for the post-habit-creation check-in push: when a
-// participant's study delivers SRHI on habit creation, POST /habits/intentions
-// must fire exactly one push to that participant with the right payload. We
-// mount the router directly (rather than the full apiRouter) so we can inject a
+// Focused coverage for the post-habit-creation check-in push: SRHI delivers
+// unconditionally on every habit creation, so POST /habits/intentions must
+// fire exactly one push to that participant with the right payload. We mount
+// the router directly (rather than the full apiRouter) so we can inject a
 // notifier spy and a zero-delay timer instead of a real Firebase + 5s wait.
 
 const STUDY_ID = new ObjectId();
 
-// Assignment the mock study exposes — an active SRHI assignment — plus the
-// questionnaire definitions' `scope`, which together gate SRHI window
-// generation + push (habit-scoped + active).
+// questionnaire_assignments/questionnaires fixtures are only relevant to the
+// *generic* habit-scoped questionnaire pipeline now (generateHabitCreationWindows)
+// — SRHI itself no longer reads either collection.
 let assignmentDocs;
 let questionnaireDocs;
 // Records SRHI windows the route generated, so we can assert delivery happened.
@@ -140,19 +140,8 @@ async function createHabit() {
 // setTimeout(0) defers the push to the next tick; give it room to run.
 const flush = () => new Promise((r) => setTimeout(r, 30));
 
-test('fires exactly one check-in push when SRHI delivers on habit creation', async () => {
-  const srhiQuestionnaireId = new ObjectId();
-  assignmentDocs = [
-    {
-      _id: new ObjectId(),
-      studyId: STUDY_ID,
-      groupId: null,
-      questionnaireId: srhiQuestionnaireId,
-      questionnaireSlug: 'srhi',
-      active: true,
-    },
-  ];
-  questionnaireDocs = [{ _id: srhiQuestionnaireId, scope: 'habit' }];
+test('fires exactly one check-in push on habit creation, with no questionnaire_assignments involved', async () => {
+  assignmentDocs = []; // SRHI is unconditional — no assignment gates it.
 
   const res = await createHabit();
   assert.strictEqual(res.status, 201);
@@ -170,16 +159,4 @@ test('fires exactly one check-in push when SRHI delivers on habit creation', asy
   assert.strictEqual(push.data.type, 'srhi');
   assert.strictEqual(push.data.intentionId, body.id);
   assert.ok(/walk/i.test(push.body), 'push body should name the new habit');
-});
-
-test('does NOT push when no questionnaire delivers on habit creation', async () => {
-  assignmentDocs = []; // no flagged assignment for this study
-
-  const res = await createHabit();
-  assert.strictEqual(res.status, 201);
-
-  await flush();
-
-  assert.strictEqual(srhiInserts.length, 0);
-  assert.strictEqual(pushCalls.length, 0);
 });

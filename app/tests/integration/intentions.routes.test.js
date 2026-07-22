@@ -49,10 +49,11 @@ function makeToken(roles = ['user'], sub = 'test-user') {
 // sequentially, not in parallel.
 let neo4jEnrollment = null;
 let studyDocs = [];
-// Mutable per-test hooks for the habit-scope feature: the Mongo enrollment
-// (studyId/groupId), the study's questionnaire assignments, and the
-// questionnaire definitions' `scope` — together these gate whether SRHI
-// windows are generated when a habit is created.
+// Mutable per-test hooks for the generic habit-scoped questionnaire pipeline
+// (generateHabitCreationWindows): the Mongo enrollment (studyId/groupId),
+// the study's questionnaire assignments, and the questionnaire definitions'
+// `scope`. SRHI itself is unconditional and never reads these — see the
+// "independent of questionnaire_assignments" test below.
 let enrollmentDoc = null;
 let assignmentDocs = [];
 let questionnaireDocs = [];
@@ -380,50 +381,22 @@ test('POST /habits/intentions creates intention and returns 201', async () => {
   assert.strictEqual(body.status, 'active');
 });
 
-test('POST /habits/intentions does NOT generate SRHI windows when no flagged assignment applies', async () => {
+test('POST /habits/intentions always generates SRHI windows, independent of questionnaire_assignments', async () => {
+  // SRHI is unconditional (no per-study assignment/toggle) — its only
+  // precondition is that habit creation itself is enabled, which is already
+  // enforced earlier in the handler. Assert this holds with no assignments
+  // at all present.
   srhiInserts.length = 0;
   assignmentDocs = [];
   enrollmentDoc = null;
   const res = await post(
     INTENTIONS,
     validBody,
-    makeToken(['user'], 'no-srhi-user')
+    makeToken(['user'], 'no-assignments-user')
   );
   assert.strictEqual(res.status, 201);
-  assert.strictEqual(srhiInserts.length, 0);
-});
-
-test('POST /habits/intentions generates SRHI windows when the study has an active, habit-scoped SRHI assignment', async () => {
-  srhiInserts.length = 0;
-  const studyId = new ObjectId();
-  const srhiQuestionnaireId = new ObjectId();
-  enrollmentDoc = { userId: 'srhi-user', studyId, groupId: null };
-  assignmentDocs = [
-    {
-      _id: new ObjectId(),
-      studyId,
-      groupId: null,
-      questionnaireId: srhiQuestionnaireId,
-      questionnaireSlug: 'srhi',
-      active: true,
-    },
-  ];
-  questionnaireDocs = [{ _id: srhiQuestionnaireId, scope: 'habit' }];
-  try {
-    const res = await post(
-      INTENTIONS,
-      validBody,
-      makeToken(['user'], 'srhi-user')
-    );
-    assert.strictEqual(res.status, 201);
-    // srhiService.generateWindows pre-creates GENERATE_AHEAD (4) weekly windows.
-    assert.strictEqual(srhiInserts.length, 4);
-  } finally {
-    enrollmentDoc = null;
-    assignmentDocs = [];
-    questionnaireDocs = [];
-    srhiInserts.length = 0;
-  }
+  // srhiService.generateWindows pre-creates GENERATE_AHEAD (4) weekly windows.
+  assert.strictEqual(srhiInserts.length, 4);
 });
 
 test('POST /habits/intentions returns 403 when the participant-s study disables self habit creation', async () => {

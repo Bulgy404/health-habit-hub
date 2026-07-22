@@ -88,6 +88,14 @@ const _selfSelectedConfig = HabitConfig(
   guidedHabitCreationEnabled: true,
 );
 
+const _selfSelectedSingleConfig = HabitConfig(
+  cueCount: 'single',
+  cueSource: 'self_selected',
+  behaviorOptions: [],
+  srhiItems: [],
+  guidedHabitCreationEnabled: true,
+);
+
 const _preRatedConfig = HabitConfig(
   cueCount: 'single',
   cueSource: 'high_quality',
@@ -240,6 +248,16 @@ void main() {
     expect(find.byType(TextField), findsNWidgets(7));
     expect(find.textContaining('Add another cue'), findsNothing);
     expect(find.text('You can add up to 7 cues.'), findsOneWidget);
+  });
+
+  testWidgets(
+      'caps self-selected cues at 1 with no add button when cueCount is single',
+      (tester) async {
+    await tester.pumpWidget(_buildSubject(_selfSelectedSingleConfig));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.textContaining('Add another cue'), findsNothing);
   });
 
   testWidgets('can remove a self-selected cue field', (tester) async {

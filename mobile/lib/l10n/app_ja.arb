@@ -28,6 +28,10 @@
   "@submissionFailed": {
     "description": "Snackbar message when a form submission fails"
   },
+  "questionnaireAlreadyCompleted": "この質問票はすでに完了しており、まだ再度回答することはできません。",
+  "@questionnaireAlreadyCompleted": {
+    "description": "Error shown when submitting a questionnaire the backend rejects because it's not currently due (already completed, next occurrence not open yet)"
+  },
   "noConnection": "接続がありません",
   "@noConnection": {
     "description": "Offline banner heading"
@@ -178,6 +182,15 @@
   "profileEnterText": "テキストを入力",
   "@profileEnterText": {
     "description": "Hint text for a free-text custom profile field"
+  },
+  "profileIncompleteBanner": "プロフィールに未入力の項目があります: {fields}",
+  "@profileIncompleteBanner": {
+    "description": "Banner shown in the account summary when one or more profile fields (e.g. gender, age) haven't been filled in yet, listing their labels",
+    "placeholders": { "fields": { "type": "String" } }
+  },
+  "profileCompleteNow": "今すぐ入力",
+  "@profileCompleteNow": {
+    "description": "Button in the profile-incomplete banner that opens the profile edit form"
   },
   "couldNotLoadProfile": "プロフィールを読み込めませんでした。\n接続を確認してください。",
   "@couldNotLoadProfile": {
@@ -767,6 +780,15 @@
   "noQuestionnairesAssigned": "あなたの研究に割り当てられた質問票はありません。",
   "@noQuestionnairesAssigned": {
     "description": "Empty state message shown on the profile screen when the participant's study has no questionnaires"
+  },
+  "questionnaireCompletedOn": "{date}に完了",
+  "@questionnaireCompletedOn": {
+    "description": "Label under a greyed-out, no-longer-editable questionnaire in the profile's Health Questionnaires list, showing when it was submitted",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "questionnaireNotYetAvailable": "まだ利用できません",
+  "@questionnaireNotYetAvailable": {
+    "description": "Label under a greyed-out questionnaire in the profile's Health Questionnaires list that has never been completed and has no open window yet"
   },
   "questionnaireReminderMessage": "回答可能な健康質問票があります。",
   "@questionnaireReminderMessage": {

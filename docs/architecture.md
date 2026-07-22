@@ -772,6 +772,15 @@ adherence14d = enacted days in the past 14 days / 14  // today excluded
 streakNorm   = min(current streak, 14) / 14
 ```
 
+A missing SRHI score maps `srhiNorm` to `0` (worst case), not "excluded from
+the sum" — so with the default weights, an intention with zero SRHI data can
+never exceed `autonomy = 0.5`. Since SRHI became unconditional (every habit
+now gets a real weekly SRHI trajectory from creation — see the DFG Study
+Module section above), this ceiling is no longer hit in practice; previously,
+any study that hadn't opted into the old SRHI toggle had every intention
+permanently capped below the `weekly`/`off` tiers, regardless of how
+consistent the participant was.
+
 **Tier mapping** (score lower bounds): `daily` → ≥0.45 `every_2_days` →
 ≥0.60 `twice_weekly` → ≥0.75 `weekly` → ≥0.90 `off`.
 
@@ -793,8 +802,12 @@ fading itself an experimental factor (per the Prüfplan).
 start, after intention creation, and after each SRHI submission, then
 cancels and reschedules local notifications for the next 14 days
 (`mobile/lib/services/reminder_scheduler_service.dart`,
-`flutter_local_notifications` + `timezone`). No server push is involved —
-reminders fire on-device. See `docs/diagrams/sequences/UC-33-adaptive-reminders.mmd`.
+`flutter_local_notifications` + `timezone`), each carrying payload `/habits`
+so tapping one deep-links straight into My Habits (wired via
+`onDidReceiveNotificationResponse` for a running app and
+`getNotificationAppLaunchDetails()` on cold start —
+`push_notification_service.dart`). No server push is involved — reminders
+fire on-device. See `docs/diagrams/sequences/UC-33-adaptive-reminders.mmd`.
 
 **Admin visibility:** `GET /api/v1/admin/participants/:id/reminder-plans`
 (admin/researcher roles) returns the same plan payload for any participant.
@@ -904,16 +917,19 @@ participants; this is now fixed as part of wiring up switch/leave.
 
 **Boot-time default study/questionnaire safety net:** `skip-code` (and
 therefore `leave-study`, which reuses the same default-study round-robin)
-requires a default study to exist and the SLIQ/RAND-36/SRHI questionnaire
-library to be seeded (as *definitions* — this does not pre-assign or
-activate any of them for the study; an admin must explicitly turn each one
-on via the admin UI). Two divergent, unwired manual seed scripts previously
-meant a fresh deploy that skipped `make seed` had neither, and participants
-hit "failed to load questionnaires" with no default study to fall back into.
+requires a default study to exist and the SLIQ/RAND-36 questionnaire library
+to be seeded (as *definitions* — this does not pre-assign or activate either
+for the study; an admin must explicitly turn each one on via the admin UI).
+Two divergent, unwired manual seed scripts previously meant a fresh deploy
+that skipped `make seed` had neither, and participants hit "failed to load
+questionnaires" with no default study to fall back into.
 `app/services/defaultStudySeedService.js` now runs idempotently on every
 backend boot (from `adminRouter.js`'s existing self-seeding hook) to
 guarantee both exist, self-healing any deploy regardless of whether the
-manual seed script was ever run.
+manual seed script was ever run. The same boot hook also runs
+`retireLegacySrhiLibraryEntry()`, which deletes any leftover `srhi`
+questionnaire document/assignments — SRHI is no longer a library entry (see
+below); it's unconditional and needs neither.
 
 ### New MongoDB Collections
 

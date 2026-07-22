@@ -63,6 +63,29 @@ void main() {
       expect(result, isEmpty);
     });
 
+    test('parses available/completedAt, defaulting to available when absent', () async {
+      adapter.onGet(
+        '$_base/participant/questionnaires',
+        (server) => server.reply(200, [
+          {
+            'slug': 'sliq',
+            'title': 'SLIQ',
+            'available': false,
+            'completedAt': '2026-07-01T09:00:00.000Z',
+          },
+          {'slug': 'rand-36', 'title': 'RAND-36'},
+        ]),
+        queryParameters: {'lang': 'en'},
+      );
+
+      final result = await service.fetchParticipantQuestionnaires('en');
+
+      expect(result[0].available, false);
+      expect(result[0].completedAt, DateTime.parse('2026-07-01T09:00:00.000Z'));
+      expect(result[1].available, true);
+      expect(result[1].completedAt, isNull);
+    });
+
     test('propagates DioException on server error', () async {
       adapter.onGet(
         '$_base/participant/questionnaires',

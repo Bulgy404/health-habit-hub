@@ -107,14 +107,30 @@ class ParticipantQuestionnaire {
   /// Human-readable questionnaire title.
   final String title;
 
+  /// Whether there's an open window due now — fillable when true.
+  final bool available;
+
+  /// When the most recently closed window was submitted, or `null` if never
+  /// completed.
+  final DateTime? completedAt;
+
   /// Creates a [ParticipantQuestionnaire].
-  const ParticipantQuestionnaire({required this.slug, required this.title});
+  const ParticipantQuestionnaire({
+    required this.slug,
+    required this.title,
+    required this.available,
+    this.completedAt,
+  });
 
   /// Deserialises a [ParticipantQuestionnaire] from JSON.
   factory ParticipantQuestionnaire.fromJson(Map<String, dynamic> json) {
     return ParticipantQuestionnaire(
       slug: json['slug'] as String,
       title: json['title'] as String,
+      available: json['available'] as bool? ?? true,
+      completedAt: json['completedAt'] != null
+          ? DateTime.tryParse(json['completedAt'] as String)
+          : null,
     );
   }
 }

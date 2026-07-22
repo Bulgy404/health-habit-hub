@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -197,7 +198,26 @@ class _QuestionnaireFormWidgetState
       );
       if (!mounted) return;
       notifier.reset();
+      // Refresh completion state everywhere it's shown — Profile's Health
+      // Questionnaires list (greys this one out) and Share's due-task cards.
+      ref.invalidate(participantQuestionnairesProvider);
+      ref.invalidate(dueQuestionnairesProvider);
       widget.onSubmitted();
+    } on DioException catch (err) {
+      if (!mounted) return;
+      // Already completed / not due again yet — the backend enforces this
+      // even if the UI's greyed-out state was somehow bypassed (stale cache,
+      // a background tab). Also refresh so the UI catches up.
+      if (err.response?.statusCode == 409) {
+        ref.invalidate(participantQuestionnairesProvider);
+        ref.invalidate(dueQuestionnairesProvider);
+      }
+      setState(() {
+        _isSubmitting = false;
+        _error = err.response?.statusCode == 409
+            ? l10n.questionnaireAlreadyCompleted
+            : l10n.submissionFailed;
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() {

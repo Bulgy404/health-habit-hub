@@ -30,6 +30,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get submissionFailed => 'Échec de l\'envoi. Veuillez réessayer.';
 
   @override
+  String get questionnaireAlreadyCompleted =>
+      'Ce questionnaire a déjà été complété et ne peut pas encore être rempli à nouveau.';
+
+  @override
   String get noConnection => 'Aucune connexion';
 
   @override
@@ -147,6 +151,14 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get profileEnterText => 'Saisissez du texte';
+
+  @override
+  String profileIncompleteBanner(String fields) {
+    return 'Il manque à votre profil : $fields';
+  }
+
+  @override
+  String get profileCompleteNow => 'Compléter maintenant';
 
   @override
   String get couldNotLoadProfile =>
@@ -617,6 +629,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get noQuestionnairesAssigned =>
       'Aucun questionnaire n\'est attribué à votre étude.';
+
+  @override
+  String questionnaireCompletedOn(String date) {
+    return 'Terminé le $date';
+  }
+
+  @override
+  String get questionnaireNotYetAvailable => 'Pas encore disponible';
 
   @override
   String get questionnaireReminderMessage =>

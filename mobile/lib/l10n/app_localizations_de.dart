@@ -31,6 +31,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Übermittlung fehlgeschlagen. Bitte erneut versuchen.';
 
   @override
+  String get questionnaireAlreadyCompleted =>
+      'Dieser Fragebogen wurde bereits abgeschlossen und kann noch nicht erneut ausgefüllt werden.';
+
+  @override
   String get noConnection => 'Keine Verbindung';
 
   @override
@@ -147,6 +151,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get profileEnterText => 'Text eingeben';
+
+  @override
+  String profileIncompleteBanner(String fields) {
+    return 'In deinem Profil fehlt noch: $fields';
+  }
+
+  @override
+  String get profileCompleteNow => 'Jetzt ergänzen';
 
   @override
   String get couldNotLoadProfile =>
@@ -621,6 +633,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get noQuestionnairesAssigned =>
       'Keine Fragebögen für deine Studie zugewiesen.';
+
+  @override
+  String questionnaireCompletedOn(String date) {
+    return 'Abgeschlossen am $date';
+  }
+
+  @override
+  String get questionnaireNotYetAvailable => 'Noch nicht verfügbar';
 
   @override
   String get questionnaireReminderMessage =>

@@ -11,7 +11,10 @@ sequenceDiagram
     F->>B: POST /api/v1/participant/register-token {fcmToken}
     B->>M: Store token for userId
     B-->>F: 200 registered
-    Note over B,FCM: Later: researcher campaign (UC-24) targets this user
-    B->>FCM: send(message, tokens)
+    Note over B,FCM: Later: researcher campaign (UC-24) targets this user, or the<br/>habit-creation check-in push fires (data: {type: "srhi", screen: "habits",<br/>intentionId}, see UC-13/UC-35)
+    B->>FCM: send(message, tokens, data: {screen})
     FCM-->>F: Push notification delivered
-    F->>F: Show notification / deep-link into app
+    F->>F: routeFromNotificationPayload(data): screen "habits" -> /habits<br/>(My Habits), "questionnaire" -> /settings/profile (My Profile),<br/>"explore" -> /explore, default -> /share
+    F->>F: GoRouter.go(route) via getInitialMessage()<br/>(cold start) / onMessageOpenedApp (background)
+
+    Note over F: The "Questionnaire ready" LOCAL reminder (non-SRHI due questionnaires,<br/>reminder_scheduler_service.dart) is a separate mechanism from FCM above — it's<br/>scheduled on-device via flutter_local_notifications, not sent through this<br/>backend. Its payload is a fixed "/settings/profile" route, wired through<br/>onDidReceiveNotificationResponse / getNotificationAppLaunchDetails(). See<br/>UC-33 for the habit-reminder local notification, which instead routes to<br/>"/habits".

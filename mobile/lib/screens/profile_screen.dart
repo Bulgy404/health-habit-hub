@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
 import '../features/my_habits/my_habits_provider.dart';
+import '../features/questionnaire/questionnaire_models.dart';
 import '../features/questionnaire/questionnaire_service.dart';
 import '../l10n/app_localizations.dart';
 import '../screens/onboarding/profile_fields.dart';
@@ -117,7 +119,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ..addAll(existing);
         setState(() {
           _definitions = defs;
-          _editing = existing.isEmpty;
+          // Always land on the summary — profile fields are optional and
+          // already offered once during onboarding, so an empty/incomplete
+          // profile should surface as a banner there (see _buildSummary),
+          // not force the edit form in front of the rest of the account
+          // page (study membership, questionnaires, etc.) every time.
           _loading = false;
         });
       }
@@ -130,9 +136,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     }
   }
-
-  bool get _hasProfile =>
-      _definitions.any((d) => _values.containsKey(d.fieldId));
 
   bool get _canSubmit {
     if (_submitting) return false;
@@ -458,13 +461,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     )
                   : Text(l10n.save),
             ),
-            if (_hasProfile) ...[
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => setState(() => _editing = false),
-                child: Text(l10n.cancel),
-              ),
-            ],
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => setState(() => _editing = false),
+              child: Text(l10n.cancel),
+            ),
           ],
         ],
       ),
@@ -478,6 +479,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final tt = Theme.of(context).textTheme;
     final filledDefs =
         _definitions.where((d) => _values.containsKey(d.fieldId)).toList();
+    final missingDefs =
+        _definitions.where((d) => !_values.containsKey(d.fieldId)).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
@@ -509,7 +512,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ],
                   ),
                   Divider(color: cs.outlineVariant, height: 24),
-                  if (filledDefs.isEmpty)
+                  if (missingDefs.isNotEmpty) ...[
+                    _ProfileIncompleteBanner(
+                      missingLabels: missingDefs.map((d) => d.label).toList(),
+                      onCompleteNow: () => setState(() => _editing = true),
+                      l10n: l10n,
+                    ),
+                    if (filledDefs.isNotEmpty) const SizedBox(height: 16),
+                  ],
+                  if (filledDefs.isEmpty && missingDefs.isEmpty)
                     Text(
                       'No profile data entered yet.',
                       style:
@@ -546,6 +557,59 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             label: Text(l10n.restoreAccountOnDevice),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 48),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Indicator shown in the account summary when one or more (optional)
+/// profile fields haven't been filled in yet — a nudge, not a gate: the rest
+/// of the account page (study membership, questionnaires) is always visible
+/// regardless of profile completeness.
+class _ProfileIncompleteBanner extends StatelessWidget {
+  const _ProfileIncompleteBanner({
+    required this.missingLabels,
+    required this.onCompleteNow,
+    required this.l10n,
+  });
+
+  final List<String> missingLabels;
+  final VoidCallback onCompleteNow;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.tertiaryContainer,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, color: cs.onTertiaryContainer, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l10n.profileIncompleteBanner(missingLabels.join(', ')),
+                  style: TextStyle(color: cs.onTertiaryContainer),
+                ),
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onCompleteNow,
+              child: Text(l10n.profileCompleteNow),
             ),
           ),
         ],
@@ -599,15 +663,7 @@ class _StudyQuestionnairesSection extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final q in questionnaires) ...[
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        context.push('/questionnaire/${q.slug}'),
-                    icon: const Icon(Icons.assignment),
-                    label: Text(q.title),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                    ),
-                  ),
+                  _QuestionnaireTile(questionnaire: q, l10n: l10n),
                   const SizedBox(height: 8),
                 ],
               ],
@@ -616,6 +672,78 @@ class _StudyQuestionnairesSection extends ConsumerWidget {
         ),
       ],
     );
+  }
+}
+
+/// One row in the Health Questionnaires list: a green, tappable button while
+/// [ParticipantQuestionnaire.available] is true (an open window is due now),
+/// or a greyed-out, non-interactive tile once completed — answers can't be
+/// changed after submission, so re-opening the form isn't offered until the
+/// next occurrence becomes due.
+class _QuestionnaireTile extends StatelessWidget {
+  const _QuestionnaireTile({required this.questionnaire, required this.l10n});
+
+  final ParticipantQuestionnaire questionnaire;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    if (questionnaire.available) {
+      final green = Theme.of(context).colorScheme.primary;
+      return OutlinedButton.icon(
+        onPressed: () => context.push('/questionnaire/${questionnaire.slug}'),
+        icon: const Icon(Icons.assignment),
+        label: Text(questionnaire.title),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(double.infinity, 48),
+          foregroundColor: green,
+          side: BorderSide(color: green),
+        ),
+      );
+    }
+
+    final muted = Theme.of(context).colorScheme.onSurface.withAlpha(140);
+    final completedAt = questionnaire.completedAt;
+    final subtitle = completedAt != null
+        ? l10n.questionnaireCompletedOn(_formatDate(context, completedAt))
+        : l10n.questionnaireNotYetAvailable;
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 48),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: muted),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle_outline, color: muted),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(questionnaire.title, style: TextStyle(color: muted)),
+                Text(
+                  subtitle,
+                  style: TextStyle(color: muted, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(BuildContext context, DateTime date) {
+    final locale = Localizations.localeOf(context).toString();
+    try {
+      return DateFormat.yMMMd(locale).format(date.toLocal());
+    } catch (_) {
+      return date.toLocal().toString().split(' ').first;
+    }
   }
 }
 

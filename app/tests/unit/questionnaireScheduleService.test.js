@@ -3,8 +3,8 @@ import assert from 'node:assert';
 import { ObjectId } from 'mongodb';
 import {
   getDueQuestionnaires,
-  srhiHabitScopeActive,
   generateHabitCreationWindows,
+  generateWindowsForUser,
   scheduleOffsets,
   topUpContinuousWindows,
   HABIT_ANCHOR_DELAY_MS,
@@ -146,77 +146,24 @@ function makeAssignmentDb({ assignments = [], questionnaires = [] } = {}) {
   };
 }
 
-test('srhiHabitScopeActive: true only when an active SRHI assignment is habit-scoped', async () => {
-  const studyId = new ObjectId();
-  const srhiId = new ObjectId();
-  const on = makeAssignmentDb({
-    assignments: [
-      { questionnaireId: srhiId, questionnaireSlug: 'srhi', groupId: null },
-    ],
-    questionnaires: [{ _id: srhiId, scope: 'habit' }],
-  });
-  assert.strictEqual(
-    await srhiHabitScopeActive({ db: on, studyId, groupId: null }),
-    true
-  );
-
-  // SRHI assignment exists but its questionnaire is study-scoped.
-  const notHabitScoped = makeAssignmentDb({
-    assignments: [
-      { questionnaireId: srhiId, questionnaireSlug: 'srhi', groupId: null },
-    ],
-    questionnaires: [{ _id: srhiId, scope: 'study' }],
-  });
-  assert.strictEqual(
-    await srhiHabitScopeActive({ db: notHabitScoped, studyId, groupId: null }),
-    false
-  );
-
-  // Only a different, habit-scoped questionnaire is assigned — no SRHI.
-  const sliqId = new ObjectId();
-  const noSrhi = makeAssignmentDb({
-    assignments: [
-      { questionnaireId: sliqId, questionnaireSlug: 'sliq', groupId: null },
-    ],
-    questionnaires: [{ _id: sliqId, scope: 'habit' }],
-  });
-  assert.strictEqual(
-    await srhiHabitScopeActive({ db: noSrhi, studyId, groupId: null }),
-    false
-  );
-});
-
-test('generateHabitCreationWindows: expands the full cadence for habit-scoped non-SRHI questionnaires, anchored at createdAt + HABIT_ANCHOR_DELAY_MS', async () => {
+test('generateHabitCreationWindows: expands the full cadence for a habit-scoped questionnaire, anchored at createdAt + HABIT_ANCHOR_DELAY_MS', async () => {
   const studyId = new ObjectId();
   const intentionId = new ObjectId();
   const createdAt = new Date('2026-07-14T10:00:00.000Z');
-  const sliqId = new ObjectId();
-  const srhiId = new ObjectId();
+  const checkInId = new ObjectId();
   const assignmentId = new ObjectId();
   const db = makeAssignmentDb({
     assignments: [
       {
         _id: assignmentId,
-        questionnaireId: sliqId,
-        questionnaireSlug: 'sliq',
-        questionnaireTitle: 'SLIQ',
+        questionnaireId: checkInId,
+        questionnaireSlug: 'custom-habit-check-in',
+        questionnaireTitle: 'Custom Habit Check-in',
         cadence: { mode: 'interval', intervalDays: 7, occurrences: 3 },
         groupId: null,
       },
-      // SRHI is excluded here (handled by its own pipeline) even though
-      // it's habit-scoped too.
-      {
-        _id: new ObjectId(),
-        questionnaireId: srhiId,
-        questionnaireSlug: 'srhi',
-        cadence: { mode: 'interval', intervalDays: 7, occurrences: 4 },
-        groupId: null,
-      },
     ],
-    questionnaires: [
-      { _id: sliqId, scope: 'habit' },
-      { _id: srhiId, scope: 'habit' },
-    ],
+    questionnaires: [{ _id: checkInId, scope: 'habit' }],
   });
   const created = await generateHabitCreationWindows({
     db,
@@ -228,7 +175,7 @@ test('generateHabitCreationWindows: expands the full cadence for habit-scoped no
   });
   assert.deepStrictEqual(
     created.map((c) => c.questionnaireSlug),
-    ['sliq']
+    ['custom-habit-check-in']
   );
   // 3 occurrences from the cadence, not just occurrence 1.
   assert.strictEqual(db._bulk.length, 3);
@@ -273,6 +220,71 @@ test('generateHabitCreationWindows: no-op when no habit-scoped assignments', asy
     createdAt: new Date(),
   });
   assert.deepStrictEqual(created, []);
+  assert.strictEqual(db._bulk.length, 0);
+});
+
+test('generateWindowsForUser: excludes habit-scoped assignments (e.g. SRHI) — they anchor to habit creation, not enrollment', async () => {
+  const sliqId = new ObjectId();
+  const srhiId = new ObjectId();
+  const db = makeAssignmentDb({
+    assignments: [
+      {
+        _id: new ObjectId(),
+        questionnaireId: sliqId,
+        questionnaireSlug: 'sliq',
+        cadence: { mode: 'interval', intervalDays: 7, occurrences: 2 },
+        groupId: null,
+      },
+      {
+        _id: new ObjectId(),
+        questionnaireId: srhiId,
+        questionnaireSlug: 'srhi',
+        cadence: { mode: 'interval', intervalDays: 7, occurrences: 4 },
+        groupId: null,
+      },
+    ],
+    questionnaires: [
+      { _id: sliqId, scope: 'study' },
+      { _id: srhiId, scope: 'habit' },
+    ],
+  });
+  const created = await generateWindowsForUser({
+    db,
+    userId: 'u1',
+    studyId: new ObjectId(),
+    groupId: null,
+    enrolledAt: new Date(),
+  });
+  // Only the 2 sliq occurrences — none of the 4 srhi ones.
+  assert.strictEqual(created, 2);
+  assert.strictEqual(db._bulk.length, 2);
+  assert.ok(
+    db._bulk.every((op) => op.updateOne.update.$setOnInsert.questionnaireSlug === 'sliq')
+  );
+});
+
+test('generateWindowsForUser: no-op when every assignment is habit-scoped', async () => {
+  const srhiId = new ObjectId();
+  const db = makeAssignmentDb({
+    assignments: [
+      {
+        _id: new ObjectId(),
+        questionnaireId: srhiId,
+        questionnaireSlug: 'srhi',
+        cadence: { mode: 'interval', intervalDays: 7, occurrences: 4 },
+        groupId: null,
+      },
+    ],
+    questionnaires: [{ _id: srhiId, scope: 'habit' }],
+  });
+  const created = await generateWindowsForUser({
+    db,
+    userId: 'u1',
+    studyId: new ObjectId(),
+    groupId: null,
+    enrolledAt: new Date(),
+  });
+  assert.strictEqual(created, 0);
   assert.strictEqual(db._bulk.length, 0);
 });
 

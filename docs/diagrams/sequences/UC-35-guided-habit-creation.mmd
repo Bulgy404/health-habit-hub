@@ -46,11 +46,9 @@ sequenceDiagram
     F->>B: POST /api/v1/habits/intentions {behaviorKey, cues, intentionStatement, reminderTime}
     B->>M: intentions.insertOne({userId, behaviorKey, …})
     M-->>B: {id}
-    Note over B,M: Habit-scoped check-ins: for each active questionnaire assignment<br/>whose questionnaire has scope='habit' on the participant's study/group<br/>(none by default — an admin must opt in), generate its full cadence<br/>anchored ~5s after creation. SRHI becomes 4 weekly srhi_responses rows<br/>(its own pipeline); other habit-scoped questionnaires become one<br/>questionnaire_windows row per occurrence, per habit.
+    Note over B,M: SRHI (srhiService.generateWindows) always fires here, unconditionally —<br/>4 weekly srhi_responses rows, its own pipeline, no assignment/scope check.<br/>Separately, for each ACTIVE questionnaire_assignment whose questionnaire has<br/>scope='habit' on the participant's study/group (an admin opt-in, none by<br/>default), generateHabitCreationWindows also expands its full cadence into<br/>questionnaire_windows, anchored ~5s after creation, one row per occurrence.
     B-->>F: 201 Created
-    opt a check-in was scheduled
-        Note over B: Fire-and-forget: about 5 s later the backend pushes an FCM<br/>Habit check-in ready nudge to the participant's devices<br/>(deep-link data type=srhi, intentionId), see UC-15
-    end
+    Note over B: Fire-and-forget: about 5 s later the backend pushes an FCM<br/>"Habit check-in ready" nudge to the participant's devices — always fires<br/>(SRHI above is unconditional), deep-linking to My Habits<br/>(data: {type: "srhi", screen: "habits", intentionId}), see UC-15
 
     alt autoDonate = true (study group setting)
         F->>B: POST /api/v1/habits/share {sentence, language}

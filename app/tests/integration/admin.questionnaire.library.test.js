@@ -96,11 +96,17 @@ function createMockDb() {
       return {
         find(query = {}) {
           const results = store.filter((doc) => matchesFilter(doc, query));
-          return {
+          const cursor = {
+            sort(spec) {
+              const [[field, dir]] = Object.entries(spec);
+              results.sort((a, b) => (a[field] > b[field] ? 1 : a[field] < b[field] ? -1 : 0) * dir);
+              return cursor;
+            },
             async toArray() {
               return results.map((d) => ({ ...d }));
             },
           };
+          return cursor;
         },
         async findOne(query = {}) {
           const found = store.find((doc) => matchesFilter(doc, query));
@@ -117,6 +123,19 @@ function createMockDb() {
           if (idx === -1) return { matchedCount: 0, modifiedCount: 0 };
           if (update.$set) Object.assign(store[idx], update.$set);
           return { matchedCount: 1, modifiedCount: 1 };
+        },
+        async findOneAndUpdate(filter, update, options = {}) {
+          let matches = store.filter((doc) => matchesFilter(doc, filter));
+          if (options.sort) {
+            const [[field, dir]] = Object.entries(options.sort);
+            matches = [...matches].sort(
+              (a, b) => (a[field] > b[field] ? 1 : a[field] < b[field] ? -1 : 0) * dir
+            );
+          }
+          const found = matches[0];
+          if (!found) return null;
+          if (update.$set) Object.assign(found, update.$set);
+          return found;
         },
         async updateMany(filter, update) {
           let count = 0;
@@ -524,4 +543,171 @@ test('GET /api/v1/participant/questionnaires - returns study questionnaires for 
   const found = body.find((q) => q.id === qId);
   assert.ok(found, 'enrolled participant should see assigned questionnaire');
   assert.strictEqual(found.title, 'Participant Q');
+});
+
+test('GET /api/v1/participant/questionnaires - hides a habit-scoped questionnaire until the participant has a window for it', async () => {
+  const adminToken = makeToken(['admin']);
+  const createRes = await post(
+    '/api/v1/admin/questionnaires',
+    {
+      title: { en: 'Custom Habit Check-in' },
+      languages: ['en'],
+      questions: [{ id: 'q1', text: { en: 'Q1' }, type: 'text' }],
+      scope: 'habit',
+    },
+    adminToken
+  );
+  const { id: qId } = await createRes.json();
+
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  neo4jEnrollments.set('habit-q-user', {
+    studyId: studyId.toString(),
+    groupId: groupId.toString(),
+    enrolledAt: new Date().toISOString(),
+    studyCodeUsed: null,
+  });
+  mockDb._seed('studies', [
+    {
+      _id: studyId,
+      name: 'Study With Habit-Scoped Q',
+      isDefault: false,
+      isActive: true,
+      groups: [{ id: groupId, label: 'Group A', index: 1 }],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]);
+  mockDb._seed('questionnaire_assignments', [
+    {
+      _id: new ObjectId(),
+      studyId,
+      groupId: null,
+      questionnaireId: new ObjectId(qId),
+      questionnaireSlug: 'custom-habit-check-in',
+      cadence: { mode: 'interval', intervalDays: 7, occurrences: 1 },
+      active: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]);
+
+  const participantToken = makeToken(['user'], 'habit-q-user');
+
+  // No habit created yet — no window — the definition isn't listed.
+  const beforeRes = await get('/api/v1/participant/questionnaires', participantToken);
+  const beforeBody = await beforeRes.json();
+  assert.ok(
+    !beforeBody.some((q) => q.id === qId),
+    'habit-scoped questionnaire must not be listed before a habit exists'
+  );
+
+  // Participant creates a habit — generateHabitCreationWindows materializes a
+  // window for this assignment (simulated directly here).
+  mockDb._seed('questionnaire_windows', [
+    {
+      _id: new ObjectId(),
+      userId: 'habit-q-user',
+      questionnaireSlug: 'custom-habit-check-in',
+      occurrence: 1,
+      scheduledFor: new Date(),
+      submittedAt: null,
+    },
+  ]);
+
+  const afterRes = await get('/api/v1/participant/questionnaires', participantToken);
+  const afterBody = await afterRes.json();
+  const found = afterBody.find((q) => q.id === qId);
+  assert.ok(found, 'habit-scoped questionnaire should be listed once a window exists');
+  assert.strictEqual(found.title, 'Custom Habit Check-in');
+});
+
+test('GET /api/v1/participant/questionnaires - reports available/completedAt, and POST /questionnaire-responses blocks resubmission once the due window is closed', async () => {
+  const adminToken = makeToken(['admin']);
+  const createRes = await post(
+    '/api/v1/admin/questionnaires',
+    {
+      title: { en: 'Wellbeing Check' },
+      languages: ['en'],
+      questions: [{ id: 'q1', text: { en: 'Q1' }, type: 'text' }],
+    },
+    adminToken
+  );
+  const { id: qId } = await createRes.json();
+
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  neo4jEnrollments.set('resubmit-user', {
+    studyId: studyId.toString(),
+    groupId: groupId.toString(),
+    enrolledAt: new Date().toISOString(),
+    studyCodeUsed: null,
+  });
+  mockDb._seed('studies', [
+    {
+      _id: studyId,
+      name: 'Study With Resubmission Guard',
+      isDefault: false,
+      isActive: true,
+      groups: [{ id: groupId, label: 'Group A', index: 1 }],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]);
+  mockDb._seed('questionnaire_assignments', [
+    {
+      _id: new ObjectId(),
+      studyId,
+      groupId: null,
+      questionnaireId: new ObjectId(qId),
+      questionnaireSlug: 'wellbeing-check',
+      cadence: { mode: 'interval', intervalDays: 7, occurrences: 1 },
+      active: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  ]);
+  const past = new Date(Date.now() - 60 * 1000);
+  mockDb._seed('questionnaire_windows', [
+    {
+      _id: new ObjectId(),
+      userId: 'resubmit-user',
+      assignmentId: new ObjectId(),
+      questionnaireSlug: 'wellbeing-check',
+      occurrence: 1,
+      scheduledFor: past,
+      submittedAt: null,
+      responseId: null,
+    },
+  ]);
+
+  const participantToken = makeToken(['user'], 'resubmit-user');
+
+  // Due now, never completed — available, no completedAt.
+  const beforeRes = await get('/api/v1/participant/questionnaires', participantToken);
+  const before = (await beforeRes.json()).find((q) => q.id === qId);
+  assert.strictEqual(before.available, true);
+  assert.strictEqual(before.completedAt, null);
+
+  // First submission succeeds and closes the window.
+  const submitRes = await post(
+    '/api/v1/questionnaire-responses',
+    { questionnaireSlug: 'wellbeing-check', answers: { q1: 'fine' } },
+    participantToken
+  );
+  assert.strictEqual(submitRes.status, 201);
+
+  // Now greyed out: not available, completedAt set.
+  const afterRes = await get('/api/v1/participant/questionnaires', participantToken);
+  const after = (await afterRes.json()).find((q) => q.id === qId);
+  assert.strictEqual(after.available, false);
+  assert.ok(after.completedAt, 'completedAt should be set after submission');
+
+  // Resubmitting is rejected — no open due window left.
+  const resubmitRes = await post(
+    '/api/v1/questionnaire-responses',
+    { questionnaireSlug: 'wellbeing-check', answers: { q1: 'changed my mind' } },
+    participantToken
+  );
+  assert.strictEqual(resubmitRes.status, 409);
 });

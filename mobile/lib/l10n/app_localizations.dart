@@ -146,6 +146,12 @@ abstract class AppLocalizations {
   /// **'Submission failed. Please try again.'**
   String get submissionFailed;
 
+  /// Error shown when submitting a questionnaire the backend rejects because it's not currently due (already completed, next occurrence not open yet)
+  ///
+  /// In en, this message translates to:
+  /// **'This questionnaire has already been completed and can\'t be filled out again yet.'**
+  String get questionnaireAlreadyCompleted;
+
   /// Offline banner heading
   ///
   /// In en, this message translates to:
@@ -361,6 +367,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter text'**
   String get profileEnterText;
+
+  /// Banner shown in the account summary when one or more profile fields (e.g. gender, age) haven't been filled in yet, listing their labels
+  ///
+  /// In en, this message translates to:
+  /// **'Your profile is missing: {fields}'**
+  String profileIncompleteBanner(String fields);
+
+  /// Button in the profile-incomplete banner that opens the profile edit form
+  ///
+  /// In en, this message translates to:
+  /// **'Complete now'**
+  String get profileCompleteNow;
 
   /// Offline banner body for profile screen
   ///
@@ -1189,6 +1207,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No questionnaires assigned to your study.'**
   String get noQuestionnairesAssigned;
+
+  /// Label under a greyed-out, no-longer-editable questionnaire in the profile's Health Questionnaires list, showing when it was submitted
+  ///
+  /// In en, this message translates to:
+  /// **'Completed on {date}'**
+  String questionnaireCompletedOn(String date);
+
+  /// Label under a greyed-out questionnaire in the profile's Health Questionnaires list that has never been completed and has no open window yet
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet available'**
+  String get questionnaireNotYetAvailable;
 
   /// Snackbar shown after app startup when at least one study questionnaire is currently due
   ///

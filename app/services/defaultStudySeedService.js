@@ -4,7 +4,6 @@ import { dirname, resolve } from 'node:path';
 import { ObjectId } from 'mongodb';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { ASSIGNMENTS } from '../models/questionnaireSchedule.js';
-import { resolveLocaleText } from '../utils/localeText.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'defaultStudySeedService' });
@@ -31,7 +30,7 @@ const DEFAULT_GROUPS = [
 ];
 
 /**
- * Upsert the built-in questionnaire library (SLIQ, RAND-36, SRHI) by slug.
+ * Upsert the built-in questionnaire library (SLIQ, RAND-36) by slug.
  * Idempotent — safe to run on every boot. Mirrors scripts/seed-local.js's
  * seedMongo() so a fresh deploy that never ran the manual seed script still
  * ends up with a usable questionnaire library.
@@ -57,11 +56,37 @@ export async function seedDefaultQuestionnaires(db) {
 }
 
 /**
- * Ensure a default study exists. Questionnaires are never pre-enabled for
- * it — SLIQ, RAND-36, and SRHI are seeded as library *definitions* only
- * (see seedDefaultQuestionnaires above); an admin must explicitly turn each
- * one on for the study via the admin UI. No-ops if a default study already
- * exists. Mirrors scripts/seed-local.js's seedDefaultStudy().
+ * Remove the retired SRHI library entry from any environment that seeded it
+ * before SRHI became unconditional (see intentionsRouter.js) — it's no
+ * longer part of the questionnaire library, and a stale `questionnaire_id`/
+ * `questionnaire_assignments` row referencing it could otherwise leak SRHI
+ * back into the generic study-scoped window pipeline (a since-deleted
+ * questionnaireId resolves to no scope, which the generic pipeline treats as
+ * study-scoped by default). Idempotent — safe to run on every boot.
+ * @param {import('mongodb').Db} db
+ */
+export async function retireLegacySrhiLibraryEntry(db) {
+  const { deletedCount: assignmentsRemoved } = await db
+    .collection(ASSIGNMENTS)
+    .deleteMany({ questionnaireSlug: 'srhi' });
+  const { deletedCount: questionnaireRemoved } = await db
+    .collection(QUESTIONNAIRES_COLLECTION)
+    .deleteMany({ slug: 'srhi' });
+  if (assignmentsRemoved || questionnaireRemoved) {
+    log.info(
+      { assignmentsRemoved, questionnaireRemoved },
+      'Retired legacy SRHI library entry / assignments'
+    );
+  }
+}
+
+/**
+ * Ensure a default study exists. Study-scoped questionnaires (SLIQ, RAND-36)
+ * are seeded as library *definitions* only (see seedDefaultQuestionnaires
+ * above); an admin must explicitly turn each one on for the study via the
+ * admin UI. SRHI is unconditional — see intentionsRouter.js — and needs no
+ * assignment. No-ops if a default study already exists. Mirrors
+ * scripts/seed-local.js's seedDefaultStudy().
  * @param {import('mongodb').Db} db
  */
 export async function seedDefaultStudy(db) {
@@ -84,55 +109,4 @@ export async function seedDefaultStudy(db) {
     study = { _id: insertedId };
     log.info('Default study seeded');
   }
-}
-
-/**
- * Upsert a (deactivated) SRHI questionnaire assignment (study-wide) for the
- * given study, if one doesn't already exist. Only touches fields via
- * `$setOnInsert` — never overwrites an existing document, so an admin's
- * choice to turn SRHI on/off or edit its cadence is never reasserted. Not
- * called automatically on boot; kept exported for ops tooling / tests.
- * @param {import('mongodb').Db} db
- * @param {ObjectId} studyId
- */
-export async function ensureSrhiHabitCreationAssignment(db, studyId) {
-  const srhi = await db
-    .collection(QUESTIONNAIRES_COLLECTION)
-    .findOne({ slug: 'srhi' });
-  if (!srhi) {
-    log.warn('SRHI questionnaire not found — skipping default assignment');
-    return;
-  }
-  const now = new Date();
-  await db.collection(ASSIGNMENTS).updateOne(
-    { studyId, groupId: null, questionnaireId: srhi._id },
-    {
-      $setOnInsert: {
-        studyId,
-        groupId: null,
-        questionnaireId: srhi._id,
-        questionnaireSlug: 'srhi',
-        questionnaireTitle:
-          resolveLocaleText(srhi.title, 'en', srhi.languages || ['en']) ||
-          'srhi',
-        // Nominal cadence for admin display; SRHI's own per-habit pipeline
-        // (srhiService.generateWindows) drives the actual weekly windows.
-        cadence: {
-          mode: 'interval',
-          startOffsetDays: 0,
-          intervalDays: 7,
-          occurrences: 4,
-        },
-        // Admin must explicitly opt in — never defaulted on.
-        active: false,
-        createdAt: now,
-        updatedAt: now,
-      },
-    },
-    { upsert: true }
-  );
-  log.info(
-    { studyId: studyId.toString() },
-    'SRHI default assignment ensured (inactive unless already changed)'
-  );
 }

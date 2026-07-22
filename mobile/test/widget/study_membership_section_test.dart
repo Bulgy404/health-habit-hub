@@ -36,8 +36,6 @@ void _mockBaseline(DioAdapter adapter) {
     '$_base/profile-field-definitions',
     (server) => server.reply(200, <dynamic>[]),
   );
-  // Must be non-empty, or ProfileScreen falls into edit mode (existing.isEmpty
-  // => _editing = true), which never renders the summary view / this section.
   adapter.onGet(
     '$_base/user-profile',
     (server) => server.reply(200, {

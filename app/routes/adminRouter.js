@@ -30,6 +30,7 @@ import { seedActivityTypes } from '../services/activityTypeService.js';
 import {
   seedDefaultQuestionnaires,
   seedDefaultStudy,
+  retireLegacySrhiLibraryEntry,
 } from '../services/defaultStudySeedService.js';
 import { createBackupsRouter } from './admin/backupsRouter.js';
 import { createSystemRouter } from './admin/systemRouter.js';
@@ -101,6 +102,7 @@ export function createAdminRouter({
       await seedActivityTypes(database);
       await seedDefaultQuestionnaires(database);
       await seedDefaultStudy(database);
+      await retireLegacySrhiLibraryEntry(database);
     } catch {
       // Non-fatal: initialization errors are ignored
     }

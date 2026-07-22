@@ -12,6 +12,11 @@ void main() {
       expect(route, '/settings/profile');
     });
 
+    test('habits screen navigates to /habits', () {
+      final route = routeFromNotificationPayload({'screen': 'habits'});
+      expect(route, '/habits');
+    });
+
     test('explore screen navigates to /explore', () {
       final route = routeFromNotificationPayload({'screen': 'explore'});
       expect(route, '/explore');

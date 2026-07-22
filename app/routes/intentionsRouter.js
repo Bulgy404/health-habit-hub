@@ -11,10 +11,7 @@ import {
 } from '../services/intentionService.js';
 import { upsertLog, getLogs, deleteLog } from '../services/dailyLogService.js';
 import { generateWindows } from '../services/srhiService.js';
-import {
-  generateHabitCreationWindows,
-  srhiHabitScopeActive,
-} from '../services/questionnaireScheduleService.js';
+import { generateHabitCreationWindows } from '../services/questionnaireScheduleService.js';
 import { sendUserNotification } from '../services/notificationService.js';
 import { logger } from '../utils/logger.js';
 
@@ -173,28 +170,21 @@ export function createIntentionsRouter({
         ? enrollment.groupId.toString()
         : (result.groupId ?? null);
 
-      // SRHI is generated only when the participant's study has an active,
-      // habit-scoped SRHI assignment. Its own per-habit pipeline handles
-      // scoring/sparkline.
-      const srhiEnabled = await srhiHabitScopeActive({
+      // SRHI runs for every habit, unconditionally — self-habit-creation was
+      // already verified enabled above, and that's SRHI's only precondition.
+      // Its own per-habit pipeline handles scoring/sparkline.
+      await generateWindows({
         db: database,
+        intentionId: result.id,
+        userId,
+        createdAt: result.createdAt,
         studyId,
         groupId,
       });
-      if (srhiEnabled) {
-        await generateWindows({
-          db: database,
-          intentionId: result.id,
-          userId,
-          createdAt: result.createdAt,
-          studyId,
-          groupId,
-        });
-      }
 
       // Generic habit-scoped questionnaires get their full window series
       // anchored at habit creation.
-      const genericDelivered = await generateHabitCreationWindows({
+      await generateHabitCreationWindows({
         db: database,
         userId,
         studyId,
@@ -207,25 +197,23 @@ export function createIntentionsRouter({
       // complete the just-scheduled check-in. Non-blocking so the 201 returns
       // immediately; an in-process timer means the push is lost if the server
       // restarts within the window, which is acceptable — the check-in is also
-      // visible in-app.
-      if (srhiEnabled || genericDelivered.length > 0) {
-        const habitLabel = result.behaviorLabel ?? '';
-        setTimeout(() => {
-          Promise.resolve(
-            notify({
-              db: database,
-              userId,
-              title: 'Habit check-in ready',
-              body: habitLabel
-                ? `Take a moment to rate your new habit: ${habitLabel}`
-                : 'Take a moment to rate your new habit.',
-              data: { type: 'srhi', intentionId: result.id },
-            })
-          ).catch((err) =>
-            log.error({ err }, '[intentions] habit-creation push failed')
-          );
-        }, pushDelayMs).unref?.();
-      }
+      // visible in-app. SRHI above always delivers, so this always fires.
+      const habitLabel = result.behaviorLabel ?? '';
+      setTimeout(() => {
+        Promise.resolve(
+          notify({
+            db: database,
+            userId,
+            title: 'Habit check-in ready',
+            body: habitLabel
+              ? `Take a moment to rate your new habit: ${habitLabel}`
+              : 'Take a moment to rate your new habit.',
+            data: { type: 'srhi', screen: 'habits', intentionId: result.id },
+          })
+        ).catch((err) =>
+          log.error({ err }, '[intentions] habit-creation push failed')
+        );
+      }, pushDelayMs).unref?.();
 
       res.status(201).json(result);
     } catch (err) {

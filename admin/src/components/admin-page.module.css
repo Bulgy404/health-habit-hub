@@ -238,6 +238,43 @@
   justify-content: flex-end;
 }
 
+/* Job status banner (backups page): always a light info/error card, on
+   purpose, regardless of the active theme — so its colors are fixed here
+   rather than pulled from --color-text/--color-surface-alt, which invert
+   in dark mode and would put near-white text on this near-white card. */
+.statusBanner {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #1e1b4b;
+}
+
+.statusBannerFailed {
+  background: #fef2f2;
+  color: #7f1d1d;
+}
+
+.statusBanner .muted {
+  color: #4338ca;
+}
+
+.statusBannerFailed .muted {
+  color: #b91c1c;
+}
+
+.statusBannerFailed .error {
+  color: #b91c1c;
+}
+
+.statusBanner .code {
+  background: rgba(30, 27, 75, 0.08);
+}
+
+.statusBannerFailed .code {
+  background: rgba(127, 29, 29, 0.08);
+}
+
 .pageBtn {
   padding: 0.4rem 0.9rem;
   border: 1px solid var(--color-border);
@@ -332,7 +369,7 @@
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
   color: var(--color-text-muted);
   margin-bottom: 0.5rem;
 }

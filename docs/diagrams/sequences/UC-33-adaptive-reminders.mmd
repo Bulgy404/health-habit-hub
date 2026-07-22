@@ -9,10 +9,14 @@ sequenceDiagram
 
     P->>F: Create intention, pick reminder time (Cupertino wheel)
     F->>B: POST /habits/intentions {.., reminderTime: "19:30"}
+    Note over F,B: SRHI is unconditional (see UC-13) — every habit now has a real SRHI<br/>trajectory to draw on. A null/missing SRHI score maps to 0 (worst case), not<br/>"excluded" — so before this, a study that never assigned SRHI had every<br/>intention's autonomy score capped at 0.5 (0.35 adherence + 0.15 streak),<br/>which is below every tier threshold past "every_2_days". Reminders could<br/>never fade to weekly/off for those studies. Now every study gets real SRHI<br/>data, so the fading logic works uniformly everywhere.
     Note over F,B: On app start and after every SRHI submission:
     F->>B: GET /habits/intentions/reminder-plans
     B->>M: active intentions + srhi_responses + daily_behavior_logs + admin_settings (reminder_* weights)
     B->>B: autonomy = 0.5*SRHI + 0.35*adherence14d + 0.15*streak<br/>tier: daily -> every_2_days -> twice_weekly -> weekly -> off<br/>hysteresis: fading needs 2 supporting SRHI weeks<br/>recovery: adherence7d < 0.5 snaps back to daily
     B-->>F: {plans: [{intentionId, reminderTime, frequency, autonomyScore, components}]}
-    F->>OS: cancelAll + zonedSchedule next 14 days per plan (local notifications)
+    F->>OS: cancelAll + zonedSchedule next 14 days per plan<br/>(local notifications, payload: "/habits")
     OS-->>P: Reminder fires at chosen time — less often as the habit strengthens
+    P->>OS: Taps the reminder
+    OS->>F: onDidReceiveNotificationResponse(payload) /<br/>getNotificationAppLaunchDetails() on cold start
+    F->>F: GoRouter.go("/habits") — lands on My Habits

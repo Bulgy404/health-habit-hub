@@ -134,6 +134,7 @@ class ReminderSchedulerService {
             iOS: DarwinNotificationDetails(),
           ),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: '/habits',
         );
       }
     }
@@ -207,6 +208,10 @@ class ReminderSchedulerService {
           iOS: DarwinNotificationDetails(),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        // Non-SRHI questionnaires live in the Profile tab (My Profile →
+        // Health Questionnaires) — route there rather than deep-linking into
+        // a specific questionnaire, consistent with where they're browsed.
+        payload: '/settings/profile',
       );
     }
   }

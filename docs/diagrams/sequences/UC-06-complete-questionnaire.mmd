@@ -7,14 +7,25 @@ sequenceDiagram
     participant M as MongoDB
     participant N4 as Neo4j
 
-    P->>F: Open Questionnaires
+    P->>F: Open My Profile > Health Questionnaires
     F->>B: GET /api/v1/participant/questionnaires
     B->>M: Resolve study enrollment -> assigned questionnaires
-    M-->>B: questionnaire definitions + completion status
-    B-->>F: pending questionnaires
-    P->>F: Answer questions, submit
-    F->>B: POST /api/v1/questionnaire-responses {questionnaireId, answers}
-    B->>B: Validate answers against question schema
-    B->>M: insert(form_responses)
-    B->>N4: Link response metadata to participant graph (where applicable)
-    B-->>F: 201 response recorded
+    M-->>B: questionnaire definitions (scope: study | habit)
+    B->>M: getQuestionnaireCompletionStatus: for every returned slug,<br/>find questionnaire_windows for this user (earliest open one -><br/>available/nextDueAt; latest closed one -> completedAt)
+    Note over B,M: Study-scoped definitions are always listed once assigned.<br/>A habit-scoped one (e.g. an admin-defined check-in, see UC-20) is only<br/>listed once the participant has an actual window for it — i.e. has already<br/>created a relevant habit (see UC-35). SRHI itself never appears here at<br/>all: it's unconditional and has no `questionnaires` collection entry —<br/>it lives only in My Habits (UC-13).
+    B-->>F: questionnaires + {available, completedAt, nextDueAt} per slug
+    F->>F: available=true -> green, tappable button<br/>available=false -> greyed-out tile, non-interactive,<br/>showing "Completed on {completedAt}" (or "Not yet available")
+    P->>F: Tap an available questionnaire, answer questions, submit
+    F->>B: POST /api/v1/questionnaire-responses {questionnaireSlug, answers}
+    B->>M: getQuestionnaireCompletionStatus for this one slug
+    alt slug has a window AND it's not currently available
+        B-->>F: 409 — already completed / next occurrence not due yet
+        F->>F: Show "already completed" error (handles a stale cache/race,<br/>since the UI already hides this case)
+    else available, or no window at all (ad-hoc, ungated)
+        B->>B: Validate answers against question schema
+        B->>M: insert(form_responses)
+        B->>M: markWindowSubmitted: close the earliest open window,<br/>stamp submittedAt + link responseId (best-effort — logged, not fatal)
+        B->>N4: Link response metadata to participant graph (where applicable)
+        B-->>F: 201 response recorded
+        F->>F: Invalidate participantQuestionnairesProvider +<br/>dueQuestionnairesProvider — this item greys out immediately,<br/>without waiting for a restart. Answers can't be changed after this;<br/>the tile turns green again once the next occurrence's window is due.
+    end

@@ -79,10 +79,10 @@ ThemeData _buildLightTheme() {
           return GoogleFonts.figtree(
             color: _kPrimaryDark,
             fontWeight: FontWeight.w700,
-            fontSize: 11,
+            fontSize: 10,
           );
         }
-        return GoogleFonts.figtree(color: _kMuted, fontSize: 11);
+        return GoogleFonts.figtree(color: _kMuted, fontSize: 10);
       }),
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -196,12 +196,12 @@ ThemeData _buildDarkTheme() {
           return GoogleFonts.figtree(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize: 12,
+            fontSize: 10,
           );
         }
         return GoogleFonts.figtree(
           color: Colors.white.withAlpha(153),
-          fontSize: 12,
+          fontSize: 10,
         );
       }),
     ),

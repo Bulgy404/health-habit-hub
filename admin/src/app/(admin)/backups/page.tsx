@@ -287,12 +287,11 @@ export default function BackupsPage() {
           already shows what just completed. */}
       {job && job.phase !== "done" && (
         <div
-          className={styles.tableWrap}
-          style={{
-            padding: "1rem 1.25rem",
-            marginBottom: "1.25rem",
-            background: job.phase === "failed" ? "#fef2f2" : "#eef2ff",
-          }}
+          className={
+            job.phase === "failed"
+              ? `${styles.statusBanner} ${styles.statusBannerFailed}`
+              : styles.statusBanner
+          }
         >
           <strong>{phaseLabel[job.phase]}</strong>
           {job.type === "restore" && job.targetFilename && (

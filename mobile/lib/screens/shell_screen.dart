@@ -296,10 +296,21 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
   Future<void> _initNotifications() async {
     try {
       final service = ref.read(pushNotificationServiceProvider);
-      await service.initialize();
+      await service.initialize(
+        onLocalNotificationTap: (route) {
+          if (mounted) context.go(route);
+        },
+      );
     } catch (_) {
       // Firebase not configured or unavailable — silently skip.
       return;
+    }
+
+    // Handle a local notification (e.g. a habit reminder) that launched the
+    // app from a cold start.
+    final localLaunchRoute = await getInitialLocalNotificationPayload();
+    if (localLaunchRoute != null && localLaunchRoute.isNotEmpty && mounted) {
+      context.go(localLaunchRoute);
     }
 
     // Handle notification tapped while app was terminated.
@@ -391,24 +402,29 @@ class _ShellScreenState extends ConsumerState<ShellScreen>
             ),
           ),
         ),
-        child: NavigationBar(
-          selectedIndex: currentVisibleIndex,
-          onDestinationSelected: (visibleIndex) {
-            final branchIndex = visibleTabs[visibleIndex].branch;
-            widget.navigationShell.goBranch(
-              branchIndex,
-              initialLocation:
-                  branchIndex == widget.navigationShell.currentIndex,
-            );
-          },
-          destinations: visibleTabs
-              .map(
-                (tab) => NavigationDestination(
-                  icon: Icon(tab.icon),
-                  label: tab.label,
-                ),
-              )
-              .toList(),
+        child: DefaultTextStyle.merge(
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          child: NavigationBar(
+            selectedIndex: currentVisibleIndex,
+            onDestinationSelected: (visibleIndex) {
+              final branchIndex = visibleTabs[visibleIndex].branch;
+              widget.navigationShell.goBranch(
+                branchIndex,
+                initialLocation:
+                    branchIndex == widget.navigationShell.currentIndex,
+              );
+            },
+            destinations: visibleTabs
+                .map(
+                  (tab) => NavigationDestination(
+                    icon: Icon(tab.icon),
+                    label: tab.label,
+                  ),
+                )
+                .toList(),
+          ),
         ),
       ),
     );

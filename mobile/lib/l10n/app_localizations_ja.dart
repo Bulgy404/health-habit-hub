@@ -30,6 +30,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get submissionFailed => '送信に失敗しました。もう一度お試しください。';
 
   @override
+  String get questionnaireAlreadyCompleted =>
+      'この質問票はすでに完了しており、まだ再度回答することはできません。';
+
+  @override
   String get noConnection => '接続がありません';
 
   @override
@@ -140,6 +144,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get profileEnterText => 'テキストを入力';
+
+  @override
+  String profileIncompleteBanner(String fields) {
+    return 'プロフィールに未入力の項目があります: $fields';
+  }
+
+  @override
+  String get profileCompleteNow => '今すぐ入力';
 
   @override
   String get couldNotLoadProfile => 'プロフィールを読み込めませんでした。\n接続を確認してください。';
@@ -577,6 +589,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get noQuestionnairesAssigned => 'あなたの研究に割り当てられた質問票はありません。';
+
+  @override
+  String questionnaireCompletedOn(String date) {
+    return '$dateに完了';
+  }
+
+  @override
+  String get questionnaireNotYetAvailable => 'まだ利用できません';
 
   @override
   String get questionnaireReminderMessage => '回答可能な健康質問票があります。';

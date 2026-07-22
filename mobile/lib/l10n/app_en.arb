@@ -28,6 +28,10 @@
   "@submissionFailed": {
     "description": "Snackbar message when a form submission fails"
   },
+  "questionnaireAlreadyCompleted": "This questionnaire has already been completed and can't be filled out again yet.",
+  "@questionnaireAlreadyCompleted": {
+    "description": "Error shown when submitting a questionnaire the backend rejects because it's not currently due (already completed, next occurrence not open yet)"
+  },
   "noConnection": "No connection",
   "@noConnection": {
     "description": "Offline banner heading"
@@ -181,6 +185,15 @@
   "profileEnterText": "Enter text",
   "@profileEnterText": {
     "description": "Hint text for a free-text custom profile field"
+  },
+  "profileIncompleteBanner": "Your profile is missing: {fields}",
+  "@profileIncompleteBanner": {
+    "description": "Banner shown in the account summary when one or more profile fields (e.g. gender, age) haven't been filled in yet, listing their labels",
+    "placeholders": { "fields": { "type": "String" } }
+  },
+  "profileCompleteNow": "Complete now",
+  "@profileCompleteNow": {
+    "description": "Button in the profile-incomplete banner that opens the profile edit form"
   },
   "couldNotLoadProfile": "Could not load profile.\nPlease check your connection.",
   "@couldNotLoadProfile": {
@@ -770,6 +783,15 @@
   "noQuestionnairesAssigned": "No questionnaires assigned to your study.",
   "@noQuestionnairesAssigned": {
     "description": "Empty state message shown on the profile screen when the participant's study has no questionnaires"
+  },
+  "questionnaireCompletedOn": "Completed on {date}",
+  "@questionnaireCompletedOn": {
+    "description": "Label under a greyed-out, no-longer-editable questionnaire in the profile's Health Questionnaires list, showing when it was submitted",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "questionnaireNotYetAvailable": "Not yet available",
+  "@questionnaireNotYetAvailable": {
+    "description": "Label under a greyed-out questionnaire in the profile's Health Questionnaires list that has never been completed and has no open window yet"
   },
   "questionnaireReminderMessage": "You have a health questionnaire ready to fill out.",
   "@questionnaireReminderMessage": {

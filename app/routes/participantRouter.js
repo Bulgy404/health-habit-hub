@@ -4,7 +4,10 @@ import { makeGetDb } from '../utils/getDb.js';
 import { COLLECTION as STUDIES } from '../models/study.js';
 import { COLLECTION_DEVICE_TOKENS } from '../services/notificationService.js';
 import { getEnrollment } from '../services/enrollmentNeo4j.js';
-import { resolveEffectiveAssignments } from '../services/questionnaireScheduleService.js';
+import {
+  resolveEffectiveAssignments,
+  getQuestionnaireCompletionStatus,
+} from '../services/questionnaireScheduleService.js';
 import { resolveLocaleText } from '../utils/localeText.js';
 import { logger } from '../utils/logger.js';
 
@@ -39,6 +42,9 @@ export function createParticipantRouter({ db, neo4jRun } = {}) {
    *                   description: { type: string }
    *                   version: { type: string }
    *                   questions: { type: array }
+   *                   available: { type: boolean, description: "Has an open window due now — tappable/fillable" }
+   *                   completedAt: { type: string, format: date-time, nullable: true, description: "Most recent submission that closed a window" }
+   *                   nextDueAt: { type: string, format: date-time, nullable: true, description: "Earliest still-open window's due date, whether due now or in the future" }
    *       401:
    *         description: Missing or invalid JWT
    *       404:
@@ -91,9 +97,33 @@ export function createParticipantRouter({ db, neo4jRun } = {}) {
         .find({ _id: { $in: questionnaireIds } })
         .toArray();
 
+      const statusBySlug = await getQuestionnaireCompletionStatus({
+        db: database,
+        userId,
+        slugs: docs.map((q) => q.slug),
+      });
+
+      // Habit-scoped questionnaires (e.g. a custom one an admin defines,
+      // anchored to habit creation like SRHI) only make sense once the
+      // participant has actually encountered them via a habit — i.e. has (or
+      // has had) a window for them (see generateHabitCreationWindows).
+      // Study-scoped ones are always listed once assigned, same as today.
+      const visibleDocs = docs.filter(
+        (q) => q.scope !== 'habit' || statusBySlug.has(q.slug)
+      );
+
       res.json(
-        docs.map((q) => {
+        visibleDocs.map((q) => {
           const languages = q.languages || ['en'];
+          // No status entry means no window was ever generated for this
+          // slug (e.g. a legacy ad-hoc questionnaire outside the
+          // assignment/window system) — leave it open/always-fillable
+          // rather than hiding or disabling it.
+          const status = statusBySlug.get(q.slug) ?? {
+            available: true,
+            completedAt: null,
+            nextDueAt: null,
+          };
           return {
             id: q._id.toString(),
             slug: q.slug,
@@ -108,6 +138,9 @@ export function createParticipantRouter({ db, neo4jRun } = {}) {
                 label: resolveLocaleText(o.label, lang, languages),
               })),
             })),
+            available: status.available,
+            completedAt: status.completedAt,
+            nextDueAt: status.nextDueAt,
           };
         })
       );

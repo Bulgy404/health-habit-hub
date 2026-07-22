@@ -598,33 +598,61 @@ Users without these roles see the `/access-denied` page. The Next.js edge middle
 ### Questionnaire Scheduling & Check-in Delivery
 
 Researchers assign questionnaires to a study (all groups) or a specific group on a **cadence**
-(recurring interval, or fixed weeks/days after enrollment) in **Studies → Schedule**. Each
-participant gets per-occurrence `questionnaire_windows` generated on enrollment; submitting a
-response marks the next open window complete. Completion is shown as **completed / total** per
-questionnaire (the count reflects *submitted* windows, not merely scheduled ones).
+(recurring interval, or fixed weeks/days after enrollment) in **Studies → Questionnaires**. Each
+questionnaire *definition* has a `scope` — `study` (default) or `habit` — which decides what an
+assignment's cadence anchors to, not a separate per-assignment flag:
 
-**Deliver on habit creation.** An assignment can be flagged **"Deliver first occurrence on
-habit creation (counts as week 1)"**. Instead of anchoring the first window at enrollment, the
-backend generates it **per habit** the moment the participant creates a habit
-(`POST /habits/intentions`), and fires a fire-and-forget FCM push (~5 s later, reusing the
-existing device-token → FCM path) nudging them to complete it. The push carries a deep-link
-payload (`{ type: "srhi", intentionId }`) and the check-in is also visible in-app immediately.
+- **`scope: 'study'`** — windows anchor to **enrollment**, generated per participant
+  (`generateWindowsForUser`, back-filled for already-enrolled participants whenever an
+  assignment is created/changed). This is SLIQ/RAND-36 and any other general study questionnaire.
+- **`scope: 'habit'`** — windows anchor to **each habit's creation time** (+~5s) instead,
+  generated per habit (`generateHabitCreationWindows`, called from `POST /habits/intentions`) —
+  never back-filled for habits that already existed when the assignment was created. A habit-scoped
+  questionnaire is invisible to a participant (Profile list, Share tab "Today's tasks") until they've
+  actually created a relevant habit — see `docs/data-model.md` → `questionnaires` /
+  `questionnaire_windows` for the exact visibility rule.
 
-- **SRHI** (the weekly habit-strength check-in) is special-cased: the flag gates its own
-  per-habit pipeline (`srhiService.generateWindows` → 4 weekly `srhi_responses` rows, week 1 =
-  creation day), preserving SRHI's dedicated scoring and sparkline. The **default study seeds
-  this SRHI assignment automatically** (idempotently, on boot — it also back-fills a
-  pre-existing default study), so organic participants get SRHI check-ins from their first habit.
-- Any **other** flagged questionnaire creates one generic `questionnaire_windows` row per habit
-  (keyed by `intentionId`).
+Submitting a response marks the next open window complete. Completion is shown as
+**completed / total** per questionnaire (the count reflects *submitted* windows, not merely
+scheduled ones) in the study's Questionnaires tab, and per-occurrence with an exact timestamp
+(`t("doneOn")`) in a participant's Progress modal.
 
-Behaviour is driven by the assignment's `deliverOnHabitCreation` flag (see
-`docs/data-model.md` → `questionnaire_assignments` / `questionnaire_windows`). The participant's
-Progress view in the admin panel surfaces created habits (from `implementation_intentions`) and
-an **SRHI check-ins** summary (`completed / scheduled` + latest score). Relevant code:
-`app/routes/intentionsRouter.js`, `app/services/questionnaireScheduleService.js`
-(`generateHabitCreationWindows`, `srhiDeliversOnHabitCreation`),
-`app/services/defaultStudySeedService.js` (`ensureSrhiHabitCreationAssignment`).
+**Completed questionnaires can't be resubmitted, and the Flutter app reflects this.** A
+questionnaire is only fillable while it has an open `questionnaire_windows` entry due now
+(`getQuestionnaireCompletionStatus`, `app/services/questionnaireScheduleService.js`) — once that
+window closes, the participant's Profile → Health Questionnaires list greys the item out
+(non-interactive, `Completed on {date}`) instead of the usual green, tappable button, and it stays
+that way until the *next* cadence occurrence's window opens (windows for the full cadence are
+pre-generated upfront, so "available again" isn't a manual admin action — it's just the next
+occurrence's `scheduledFor` arriving). This is enforced server-side too, not just hidden in the
+UI: `POST /questionnaire-responses` rejects a submission with `409` if the slug has ever had a
+window but none is currently open-and-due — a stale cached list on the client can't bypass it. A
+questionnaire with no window at all (legacy/ad-hoc, outside the assignment system) stays
+always-open, unchanged. Relevant code: `app/routes/participantRouter.js`, `app/routes/questionnaireResponsesRouter.js`,
+`mobile/lib/screens/profile_screen.dart` (`_QuestionnaireTile`).
+
+**SRHI (the weekly habit-strength check-in) is not part of this system at all.** It used to be a
+`scope: 'habit'` library questionnaire like any other, toggled on per study via an assignment —
+but that meant every participant-facing endpoint had to remember to exclude it (it has its own
+dedicated slider UI in My Habits, not the generic radio-button questionnaire renderer), and it
+was easy to miss one spot, which is exactly how it once became reachable/fillable from the
+Profile questionnaire list before a participant had even created a habit. SRHI is now
+**unconditional**: every `POST /habits/intentions` call fires
+`srhiService.generateWindows` directly — 4 weekly `srhi_responses` rows, week 1 = creation day —
+with no `questionnaires` library entry, no `questionnaire_assignments` row, and no admin toggle.
+Item text (a 12-item, 1–7 slider scale) is hardcoded in `app/utils/srhi.js`, served via
+`GET /me/habit-config` as `srhiItems`. A fire-and-forget FCM push (~5 s later) nudges the
+participant to complete it, deep-linking straight into My Habits (`data: { type: "srhi", screen:
+"habits", intentionId }`); the check-in is also visible in-app immediately. Any environment that
+seeded the old SRHI library entry/assignment gets it cleaned up automatically on boot
+(`retireLegacySrhiLibraryEntry`, idempotent, see `app/services/defaultStudySeedService.js`).
+
+The participant's Progress view in the admin panel surfaces created habits (from
+`implementation_intentions`) and an **SRHI check-ins** summary (`completed / scheduled` + latest
+score) — sourced directly from `srhi_responses`, independent of the scheduling system above.
+Relevant code: `app/routes/intentionsRouter.js`, `app/services/srhiService.js`,
+`app/services/questionnaireScheduleService.js` (`generateWindowsForUser`,
+`generateHabitCreationWindows`, `resolveHabitScopeAssignments`).
 
 ### Test Suite
 

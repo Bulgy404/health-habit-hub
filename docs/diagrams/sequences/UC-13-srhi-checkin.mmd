@@ -6,17 +6,17 @@ sequenceDiagram
     participant B as Backend (srhiService)
     participant M as MongoDB
 
-    Note over B,M: Windows are pre-generated, not computed on the fly. When a habit is<br/>created — and the participant's study has an active, habit-scoped SRHI<br/>assignment (off by default; an admin must opt in) — srhiService.<br/>generateWindows inserts 4 weekly srhi_responses rows (week 1 = creation<br/>day + ~5s). A ~5 s FCM push then nudges the participant (see UC-35 / UC-15).
+    Note over B,M: Windows are pre-generated, not computed on the fly. SRHI is<br/>unconditional — no per-study admin toggle — so every habit creation triggers<br/>srhiService.generateWindows, inserting 4 weekly srhi_responses rows (week 1 =<br/>creation day + ~5s), independent of questionnaire_assignments. Item text/scale<br/>(1-7 slider) is hardcoded in app/utils/srhi.js, not read from the questionnaires<br/>collection. A ~5 s FCM push (data.screen=habits) then deep-links the<br/>participant straight into My Habits (see UC-35 / UC-15).
 
     F->>B: GET /api/v1/srhi/due
     B->>M: Find pending windows (submittedAt=null) whose<br/>scheduledFor is within the 3-day submission window
     M-->>B: due windows
     B-->>F: [{intentionId, weekNumber, scheduledFor}]
     P->>F: Answer 12 SRHI items (1-7 scale)
-    F->>B: POST /api/v1/srhi {intentionId, weekNumber, items}
+    F->>B: POST /api/v1/srhi/{intentionId}/week/{weekNumber} {items}
     B->>B: Compute score = mean(srhi_1..srhi_12)
     B->>M: upsert(srhi_responses, key {intentionId, weekNumber})
     M-->>B: stored
     B-->>F: 201 {score}
-    F->>B: GET /api/v1/srhi/history
-    B-->>F: score trajectory per intention
+    F->>B: GET /api/v1/srhi/{intentionId}/trajectory
+    B-->>F: score trajectory for this intention

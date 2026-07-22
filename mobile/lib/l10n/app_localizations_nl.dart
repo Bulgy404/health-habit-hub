@@ -30,6 +30,10 @@ class AppLocalizationsNl extends AppLocalizations {
   String get submissionFailed => 'Verzenden mislukt. Probeer het opnieuw.';
 
   @override
+  String get questionnaireAlreadyCompleted =>
+      'Deze vragenlijst is al voltooid en kan nog niet opnieuw worden ingevuld.';
+
+  @override
   String get noConnection => 'Geen verbinding';
 
   @override
@@ -144,6 +148,14 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get profileEnterText => 'Voer tekst in';
+
+  @override
+  String profileIncompleteBanner(String fields) {
+    return 'Je profiel mist nog: $fields';
+  }
+
+  @override
+  String get profileCompleteNow => 'Nu aanvullen';
 
   @override
   String get couldNotLoadProfile =>
@@ -603,6 +615,14 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get noQuestionnairesAssigned =>
       'Er zijn geen vragenlijsten aan je studie toegewezen.';
+
+  @override
+  String questionnaireCompletedOn(String date) {
+    return 'Voltooid op $date';
+  }
+
+  @override
+  String get questionnaireNotYetAvailable => 'Nog niet beschikbaar';
 
   @override
   String get questionnaireReminderMessage =>
