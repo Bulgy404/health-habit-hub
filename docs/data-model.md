@@ -126,7 +126,7 @@ graph.
 (:Questionnaire)-[:HAS_ITEM]->(:QuestionnaireItem {uid, questionnaireSlug, itemId, text, type, position, adhoc})
 
 (:User {userID})-[:ENROLLED_IN]->(:Study)
-(:User {userID})-[:SUBMITTED]->(:QuestionnaireResponse {responseId, submittedAt, questionnaireSlug})
+(:User {userID})-[:SUBMITTED]->(:QuestionnaireResponse {responseId, submittedAt, questionnaireSlug, occurrence, scheduledFor})
 (:QuestionnaireResponse)-[:FOR_QUESTIONNAIRE]->(:Questionnaire)
 (:QuestionnaireResponse)-[:HAS_ANSWER {value, rawValue}]->(:QuestionnaireItem)
 ```
@@ -135,7 +135,7 @@ graph.
 | --- | --- |
 | `Questionnaire` | One per definition, keyed by `slug` (constraint `questionnaire_slug`). `title`/`version` mirror MongoDB. |
 | `QuestionnaireItem` | One per question. Keyed by a synthetic `uid = "<slug>::<itemId>"` (constraint `questionnaire_item_uid`) — a single-property key because composite/NODE KEY constraints are Enterprise-only. `adhoc: true` marks an answer key that wasn't in the definition. |
-| `QuestionnaireResponse` | **One node per completion**, so repeated fills form a time series. `responseId` is the MongoDB `form_responses._id` (constraint `questionnaire_response_id`), which makes the sync idempotent on retry. |
+| `QuestionnaireResponse` | **One node per completion**, so repeated fills form a time series. `responseId` is the MongoDB `form_responses._id` (constraint `questionnaire_response_id`), which makes the sync idempotent on retry. For **recurring** questionnaires, `occurrence` (1, 2, 3 …) and `scheduledFor` come from the closed `questionnaire_windows` document, so a series can be analysed **by study week** rather than only by calendar date. Both are `null` for ad-hoc submissions that had no open window. Because `submittedAt` stays the real fill time, comparing it to `scheduledFor` identifies late fills. |
 | `HAS_ANSWER` | `value` is the numeric score when the answer parses as a number, else `null`; `rawValue` always keeps the original answer, so free-text and multi-select are preserved. |
 
 **Who writes what**
@@ -149,6 +149,30 @@ graph.
 
 Graph writes are **best-effort and non-blocking** — a Neo4j outage never fails a
 participant's submission, and the startup reconcile self-heals drift.
+
+**Example: a weekly questionnaire by study week**
+
+```cypher
+// One participant's trajectory, ordered by study week, flagging late fills
+MATCH (u:User {userID: $sub})-[:SUBMITTED]->(r:QuestionnaireResponse)
+      -[:FOR_QUESTIONNAIRE]->(:Questionnaire {slug: 'srhi'})
+MATCH (r)-[a:HAS_ANSWER]->(:QuestionnaireItem {itemId: 'q1'})
+RETURN r.occurrence AS week, r.scheduledFor AS dueOn, r.submittedAt AS filledOn,
+       a.value AS score,
+       CASE WHEN r.scheduledFor IS NULL THEN 'ad-hoc'
+            WHEN r.submittedAt > r.scheduledFor + duration({days: 1}) THEN 'late'
+            ELSE 'on time' END AS timing
+ORDER BY coalesce(r.occurrence, 999);
+
+// Cohort comparison: every participant's score at week 4
+MATCH (u:User)-[:SUBMITTED]->(r:QuestionnaireResponse {questionnaireSlug: 'srhi', occurrence: 4})
+      -[a:HAS_ANSWER]->(:QuestionnaireItem {itemId: 'q1'})
+RETURN u.userID AS participant, a.value AS score;
+```
+
+Repeating a questionnaire never duplicates the questionnaire or its items — all
+responses point at the **same** `QuestionnaireItem` nodes, so a weekly cadence
+adds one response node plus one `HAS_ANSWER` edge per answered item.
 
 > **Retired (2026-07):** an earlier model wrote `(:Submission)-[:HAS_SCORE]->(:QuestionItem)`
 > hung off a `(:User {userId})` node — note the lowercase `d`, which did not match

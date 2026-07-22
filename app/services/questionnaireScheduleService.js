@@ -116,6 +116,27 @@ export async function resolveEffectiveAssignments({ db, studyId, groupId }) {
 }
 
 /**
+ * Maps each of [questionnaireIds] (ObjectId) to its questionnaire's scope —
+ * `'habit'` or `'study'` (the default for missing/undefined `scope`).
+ * Single source of truth for the habit-vs-study split so
+ * [resolveHabitScopeAssignments] and [generateWindowsForUser] can't drift.
+ * @param {{ db, questionnaireIds: import('mongodb').ObjectId[] }} deps
+ * @returns {Promise<Map<string, 'habit' | 'study'>>}
+ */
+async function scopeByQuestionnaireId({ db, questionnaireIds }) {
+  const qDocs = await db
+    .collection('questionnaires')
+    .find({ _id: { $in: questionnaireIds } }, { projection: { scope: 1 } })
+    .toArray();
+  return new Map(
+    qDocs.map((q) => [
+      q._id.toString(),
+      q.scope === 'habit' ? 'habit' : 'study',
+    ])
+  );
+}
+
+/**
  * Create (idempotently) the scheduled windows for one participant based on the
  * assignments that apply to them.
  * @param {{ db, userId, studyId, groupId, enrolledAt }} deps
@@ -130,12 +151,26 @@ export async function generateWindowsForUser({
 }) {
   const effective = await resolveEffectiveAssignments({ db, studyId, groupId });
   if (effective.length === 0) return 0;
+
+  // Habit-scoped assignments (e.g. SRHI) anchor to each habit's own creation
+  // time instead of enrollment — see generateHabitCreationWindows. Exclude
+  // them here so a habit-scoped questionnaire never gets an
+  // enrollment-anchored window in the generic pipeline.
+  const scopeById = await scopeByQuestionnaireId({
+    db,
+    questionnaireIds: effective.map((a) => a.questionnaireId),
+  });
+  const studyScope = effective.filter(
+    (a) => scopeById.get(a.questionnaireId.toString()) !== 'habit'
+  );
+  if (studyScope.length === 0) return 0;
+
   const base = enrolledAt ? new Date(enrolledAt) : new Date();
   const sOid = toOid(studyId);
   const gOid = groupId ? toOid(groupId) : null;
 
   const ops = [];
-  for (const a of effective) {
+  for (const a of studyScope) {
     const offsets = scheduleOffsets(a.cadence);
     offsets.forEach((offDays, i) => {
       ops.push({
@@ -182,17 +217,10 @@ export async function generateWindowsForUser({
 export async function resolveHabitScopeAssignments({ db, studyId, groupId }) {
   const effective = await resolveEffectiveAssignments({ db, studyId, groupId });
   if (effective.length === 0) return [];
-  const qIds = effective.map((a) => a.questionnaireId);
-  const qDocs = await db
-    .collection('questionnaires')
-    .find({ _id: { $in: qIds } }, { projection: { scope: 1 } })
-    .toArray();
-  const scopeById = new Map(
-    qDocs.map((q) => [
-      q._id.toString(),
-      q.scope === 'habit' ? 'habit' : 'study',
-    ])
-  );
+  const scopeById = await scopeByQuestionnaireId({
+    db,
+    questionnaireIds: effective.map((a) => a.questionnaireId),
+  });
   return effective.filter(
     (a) => scopeById.get(a.questionnaireId.toString()) === 'habit'
   );
@@ -202,9 +230,11 @@ export async function resolveHabitScopeAssignments({ db, studyId, groupId }) {
  * Create the window series for a freshly created habit. For every active,
  * habit-scoped assignment (`questionnaires.scope === 'habit'`) on the
  * participant's study/group, the assignment's full cadence is expanded and
- * anchored at the habit's creation time + HABIT_ANCHOR_DELAY_MS. SRHI is
- * excluded here — it has its own per-habit pipeline (srhiService.generateWindows)
- * with dedicated scoring/sparkline — so this covers generic questionnaires only.
+ * anchored at the habit's creation time + HABIT_ANCHOR_DELAY_MS. SRHI has its
+ * own separate, unconditional pipeline (srhiService.generateWindows, invoked
+ * directly from intentionsRouter.js) and no `questionnaires` document of its
+ * own, so it can never appear in `habitScope` here — this covers any other,
+ * admin-defined habit-scoped questionnaire.
  * @param {{ db, userId, studyId, groupId, intentionId, createdAt }} deps
  * @returns {Promise<Array<{ questionnaireSlug: string, questionnaireTitle: string }>>}
  *   The questionnaires for which windows were created (for push messaging).
@@ -222,8 +252,7 @@ export async function generateHabitCreationWindows({
     studyId,
     groupId,
   });
-  const flagged = habitScope.filter((a) => a.questionnaireSlug !== 'srhi');
-  if (flagged.length === 0) return [];
+  if (habitScope.length === 0) return [];
   const sOid = toOid(studyId);
   const gOid = groupId ? toOid(groupId) : null;
   const iOid = toOid(intentionId);
@@ -233,7 +262,7 @@ export async function generateHabitCreationWindows({
   );
 
   const ops = [];
-  for (const a of flagged) {
+  for (const a of habitScope) {
     scheduleOffsets(a.cadence).forEach((offDays, i) => {
       ops.push({
         updateOne: {
@@ -267,26 +296,10 @@ export async function generateHabitCreationWindows({
   if (ops.length) {
     await db.collection(WINDOWS).bulkWrite(ops, { ordered: false });
   }
-  return flagged.map((a) => ({
+  return habitScope.map((a) => ({
     questionnaireSlug: a.questionnaireSlug,
     questionnaireTitle: a.questionnaireTitle ?? a.questionnaireSlug,
   }));
-}
-
-/**
- * Resolve whether an active, habit-scoped SRHI assignment applies to a
- * participant's study/group. Drives whether SRHI windows are generated when
- * they create a habit.
- * @param {{ db, studyId, groupId }} deps
- * @returns {Promise<boolean>}
- */
-export async function srhiHabitScopeActive({ db, studyId, groupId }) {
-  const habitScope = await resolveHabitScopeAssignments({
-    db,
-    studyId,
-    groupId,
-  });
-  return habitScope.some((a) => a.questionnaireSlug === 'srhi');
 }
 
 /**
@@ -313,10 +326,18 @@ export async function regenerateStudyWindows({ db, studyId, neo4jRun }) {
 
 /**
  * Mark the earliest still-open window for (user, questionnaire) as submitted and
- * link it to the stored response. No-op (returns false) if no window matches
- * (e.g. an ad-hoc questionnaire that was never scheduled).
+ * link it to the stored response.
+ *
+ * Returns the closed window's scheduling context so callers can record *which*
+ * scheduled occurrence a response belongs to (e.g. "study week 4"), which is
+ * what lets a recurring questionnaire be analysed by study week rather than by
+ * calendar date. Returns `null` when no window matches — an ad-hoc
+ * questionnaire that was never scheduled. (Still truthy/falsy-compatible with
+ * the previous boolean return.)
+ *
  * @param {{ db, userId, questionnaireSlug, responseId, submittedAt }} deps
- * @returns {Promise<boolean>}
+ * @returns {Promise<null|{occurrence: number|null, scheduledFor: Date|null,
+ *   assignmentId: *, studyId: *, intentionId: *}>}
  */
 export async function markWindowSubmitted({
   db,
@@ -335,17 +356,70 @@ export async function markWindowSubmitted({
     },
     { sort: { scheduledFor: 1 }, returnDocument: 'after' }
   );
-  if (updated) {
-    // Best-effort: replenish the continuous buffer now that one window
-    // closed. Never blocks the caller's response on this.
-    topUpContinuousWindows({
-      db,
-      userId,
-      assignmentId: updated.assignmentId,
-      intentionId: updated.intentionId ?? null,
-    }).catch(() => {});
+  if (!updated) return null;
+
+  // Best-effort: replenish the continuous buffer now that one window
+  // closed. Never blocks the caller's response on this.
+  topUpContinuousWindows({
+    db,
+    userId,
+    assignmentId: updated.assignmentId,
+    intentionId: updated.intentionId ?? null,
+  }).catch(() => {});
+
+  return {
+    occurrence:
+      typeof updated.occurrence === 'number' ? updated.occurrence : null,
+    scheduledFor: updated.scheduledFor ?? null,
+    assignmentId: updated.assignmentId ?? null,
+    studyId: updated.studyId ?? null,
+    intentionId: updated.intentionId ?? null,
+  };
+}
+
+/**
+ * Per-slug completion/availability status for a participant, derived from
+ * `questionnaire_windows`. Powers both the Profile "Health Questionnaires"
+ * list (`available` decides green/tappable vs. greyed-out, `completedAt`
+ * drives the "Completed on ..." label, `nextDueAt` a "next due" hint when
+ * not currently available) and the resubmission guard in
+ * `POST /questionnaire-responses` (a slug absent from the returned map has
+ * no scheduled window at all — an ad-hoc questionnaire, left ungated).
+ * @param {{ db, userId, slugs: string[] }} deps
+ * @returns {Promise<Map<string, { available: boolean, completedAt: Date|null, nextDueAt: Date|null }>>}
+ */
+export async function getQuestionnaireCompletionStatus({ db, userId, slugs }) {
+  const bySlug = new Map();
+  if (slugs.length === 0) return bySlug;
+  const now = new Date();
+  const windows = await db
+    .collection(WINDOWS)
+    .find(
+      { userId: String(userId), questionnaireSlug: { $in: slugs } },
+      { projection: { questionnaireSlug: 1, submittedAt: 1, scheduledFor: 1 } }
+    )
+    .sort({ scheduledFor: 1 })
+    .toArray();
+
+  for (const w of windows) {
+    const entry = bySlug.get(w.questionnaireSlug) ?? {
+      available: false,
+      completedAt: null,
+      nextDueAt: null,
+    };
+    if (w.submittedAt) {
+      if (!entry.completedAt || w.submittedAt > entry.completedAt) {
+        entry.completedAt = w.submittedAt;
+      }
+    } else if (entry.nextDueAt === null) {
+      // Windows are sorted by scheduledFor ascending, so the first open one
+      // seen per slug is the earliest — no need to compare later ones.
+      entry.nextDueAt = w.scheduledFor;
+      entry.available = w.scheduledFor <= now;
+    }
+    bySlug.set(w.questionnaireSlug, entry);
   }
-  return !!updated;
+  return bySlug;
 }
 
 /**

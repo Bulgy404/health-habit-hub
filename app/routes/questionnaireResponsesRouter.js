@@ -156,6 +156,8 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
     responseId,
     submittedAt,
     answers,
+    occurrence = null,
+    scheduledFor = null,
   }) {
     await mergeUserAndHabits(queryNeo4j, userId);
     await createQuestionnaireResponse(queryNeo4j, {
@@ -164,6 +166,8 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       responseId,
       submittedAt,
       answers,
+      occurrence,
+      scheduledFor,
     });
   }
 
@@ -281,9 +285,13 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
 
       // Mark the participant's next scheduled window for this questionnaire as
       // completed and link it to the response (best-effort — ad-hoc / unscheduled
-      // submissions simply have no window to close).
+      // submissions simply have no window to close). The returned window tells
+      // us which scheduled occurrence this fill belongs to, which is carried
+      // into the graph below so recurring questionnaires can be analysed by
+      // study week rather than by calendar date.
+      let window = null;
       try {
-        await markWindowSubmitted({
+        window = await markWindowSubmitted({
           db: database,
           userId,
           questionnaireSlug,
@@ -303,6 +311,8 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
         responseId: insertedId.toString(),
         submittedAt,
         answers,
+        occurrence: window?.occurrence ?? null,
+        scheduledFor: window?.scheduledFor ?? null,
       }).catch((err) => {
         log.error({ err: err }, '[questionnaire-responses] neo4j sync error:');
       });

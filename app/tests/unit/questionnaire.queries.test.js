@@ -116,6 +116,38 @@ test('createQuestionnaireResponse keeps rawValue for non-numeric answers', async
   assert.strictEqual(byId.picks.rawValue, JSON.stringify(['a', 'b']));
 });
 
+test('createQuestionnaireResponse records the scheduled occurrence (study week)', async () => {
+  const { calls, run } = recorder();
+  await createQuestionnaireResponse(run, {
+    userId: 'u',
+    questionnaireSlug: 'srhi',
+    responseId: 'r-week4',
+    submittedAt: new Date('2026-02-03T09:00:00Z'), // filled 2 days late
+    scheduledFor: new Date('2026-02-01T00:00:00Z'),
+    occurrence: 4,
+    answers: { q1: '5' },
+  });
+  const { cypher, params } = calls[0];
+  assert.ok(cypher.includes('r.occurrence = $occurrence'));
+  assert.ok(cypher.includes('r.scheduledFor'));
+  assert.strictEqual(params.occurrence, 4);
+  assert.strictEqual(params.scheduledFor, '2026-02-01T00:00:00.000Z');
+  // submittedAt stays the real fill time, so "late" is still visible
+  assert.strictEqual(params.submittedAt, '2026-02-03T09:00:00.000Z');
+});
+
+test('createQuestionnaireResponse leaves occurrence null for ad-hoc submissions', async () => {
+  const { calls, run } = recorder();
+  await createQuestionnaireResponse(run, {
+    userId: 'u',
+    questionnaireSlug: 'adhoc',
+    responseId: 'r-1',
+    answers: { q1: '1' },
+  });
+  assert.strictEqual(calls[0].params.occurrence, null);
+  assert.strictEqual(calls[0].params.scheduledFor, null);
+});
+
 test('createQuestionnaireResponse is a no-op when identifiers are missing', async () => {
   const { calls, run } = recorder();
   await createQuestionnaireResponse(run, {

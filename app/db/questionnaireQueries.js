@@ -120,13 +120,28 @@ export async function deleteQuestionnaireDefinition(queryNeo4j, slug) {
  * Answer keys that aren't in the questionnaire definition still get an item
  * node (flagged `adhoc: true`) so nothing is ever left dangling.
  *
+ * For recurring questionnaires (weekly, etc.) `occurrence` and `scheduledFor`
+ * come from the closed `questionnaire_windows` document, so the graph can be
+ * queried by **study week** ("SRHI at occurrence 4 across all participants")
+ * rather than only by calendar date, and a late fill is still attributed to the
+ * week it was due. Both are null for ad-hoc/unscheduled submissions.
+ *
  * @param {Function} queryNeo4j
  * @param {{userId: string, questionnaireSlug: string, responseId: string,
- *          submittedAt?: Date|string, answers?: Object}} params
+ *          submittedAt?: Date|string, answers?: Object,
+ *          occurrence?: number|null, scheduledFor?: Date|string|null}} params
  */
 export async function createQuestionnaireResponse(
   queryNeo4j,
-  { userId, questionnaireSlug, responseId, submittedAt, answers } = {}
+  {
+    userId,
+    questionnaireSlug,
+    responseId,
+    submittedAt,
+    answers,
+    occurrence = null,
+    scheduledFor = null,
+  } = {}
 ) {
   if (!userId || !questionnaireSlug || !responseId) return;
 
@@ -155,6 +170,18 @@ export async function createQuestionnaireResponse(
         ? new Date(submittedAt).toISOString()
         : new Date().toISOString();
 
+  // Null for ad-hoc submissions with no scheduled window.
+  let scheduledForIso = null;
+  if (scheduledFor) {
+    const d =
+      scheduledFor instanceof Date ? scheduledFor : new Date(scheduledFor);
+    if (!Number.isNaN(d.getTime())) scheduledForIso = d.toISOString();
+  }
+  const occurrenceValue =
+    typeof occurrence === 'number' && Number.isFinite(occurrence)
+      ? occurrence
+      : null;
+
   await queryNeo4j(
     `MERGE (u:User {userID: $userId})
        ON CREATE SET u.createdAt = datetime()
@@ -162,7 +189,12 @@ export async function createQuestionnaireResponse(
      MERGE (r:QuestionnaireResponse {responseId: $responseId})
        ON CREATE SET r.submittedAt = datetime($submittedAt)
        ON MATCH  SET r.submittedAt = datetime($submittedAt)
-     SET r.questionnaireSlug = $questionnaireSlug
+     SET r.questionnaireSlug = $questionnaireSlug,
+         // Which scheduled occurrence this fill belongs to (study week N).
+         // Null for ad-hoc submissions that had no open window.
+         r.occurrence = $occurrence,
+         r.scheduledFor = CASE WHEN $scheduledFor IS NULL
+                               THEN NULL ELSE datetime($scheduledFor) END
      MERGE (u)-[:SUBMITTED]->(r)
      MERGE (r)-[:FOR_QUESTIONNAIRE]->(q)
      WITH r, q
@@ -185,6 +217,8 @@ export async function createQuestionnaireResponse(
       questionnaireSlug: String(questionnaireSlug),
       responseId: String(responseId),
       submittedAt: submittedAtIso,
+      occurrence: occurrenceValue,
+      scheduledFor: scheduledForIso,
       entries,
     }
   );
