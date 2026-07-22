@@ -16,7 +16,10 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import { parseFrontMatter } from '../utils/markdown.js';
 
-const LANGS = ['en', 'de', 'ja'];
+// Must cover every locale actually served at /:lng/{doc} (see app/language/*).
+// fr and nl were previously missing here, so those two could silently drift out
+// of sync with the binding German version without CI noticing.
+const LANGS = ['en', 'de', 'ja', 'fr', 'nl'];
 const DOCS = ['privacy', 'imprint', 'accessibility', 'consent'];
 const REQUIRED_KEYS = ['version', 'effectiveDate', 'bindingLanguage'];
 

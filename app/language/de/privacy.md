@@ -1,6 +1,6 @@
 ---
-version: 1.0.0
-effectiveDate: 2026-03-15
+version: 1.1.0
+effectiveDate: 2026-07-22
 bindingLanguage: de
 ---
 
@@ -155,3 +155,88 @@ Wir nutzen Google Fonts für einheitliche Typografie. Ihr Browser lädt Fonts vo
 Wir nutzen reCAPTCHA, um automatisierte Anfragen zu verhindern. Google analysiert Ihr Verhalten (z. B. IP, Mausbewegungen) im Hintergrund. Nutzung auf Basis von Art. 6 Abs. 1 lit. f DSGVO oder mit Einwilligung (Art. 6 Abs. 1 lit. a & § 25 Abs. 1 TDDDG). Widerruf möglich.
 
 Quelle: [e-recht24.de]("https://www.e-recht24.de")
+
+# Datenschutz in der App „Health Habit Hub"
+
+Die vorstehenden Abschnitte betreffen die Website. Der folgende Abschnitt
+beschreibt ergänzend die Verarbeitung personenbezogener Daten in der mobilen App
+„Health Habit Hub" im Rahmen der wissenschaftlichen Studie.
+
+## Verantwortliche Stelle und Kontakt
+
+Die Studie wird durchgeführt von der Technischen Universität Dresden,
+Professur für Wirtschaftsinformatik, insb. Health Informatics.
+Kontakt in Datenschutzfragen zur Studie: digital-health@tu-dresden.de
+
+## Freiwilligkeit
+
+Die Teilnahme an der Studie ist freiwillig. Sie können Ihre Einwilligung
+jederzeit mit Wirkung für die Zukunft widerrufen und die Teilnahme beenden,
+ohne dass Ihnen daraus Nachteile entstehen.
+
+## Welche Daten wir verarbeiten
+
+Die App ist auf Datensparsamkeit ausgelegt. Wir erheben **keinen Namen, keine
+E-Mail-Adresse und keine Telefonnummer**.
+
+- **Pseudonymes Konto:** Bei der Registrierung wird ein Konto mit einer
+  zufälligen Kennung erstellt. Der Zugang erfolgt über eine 24-Wort-
+  Wiederherstellungsphrase, die auf Ihrem Gerät erzeugt wird. Wir können aus
+  diesen Daten allein nicht auf Ihre Person schließen.
+- **Von Ihnen eingegebene Studiendaten:** gespendete Gewohnheiten (Freitext),
+  Antworten auf Fragebögen einschließlich Zeitpunkt der Beantwortung, sowie
+  optionale Angaben aus dem Profil (z. B. Altersgruppe, Geschlecht).
+- **Studienzuordnung:** Zugehörigkeit zu Studie und Studiengruppe sowie
+  Zeitpunkt des Beitritts.
+- **Push-Benachrichtigungen:** Wenn Sie Benachrichtigungen aktivieren, wird eine
+  Geräte-Kennung (Push-Token) gespeichert, um Erinnerungen zuzustellen.
+- **Technische Daten:** Protokolldaten zur Fehleranalyse und zum sicheren
+  Betrieb (z. B. Zeitpunkt des Zugriffs, Fehlermeldungen).
+
+## Zwecke und Rechtsgrundlagen
+
+Die Verarbeitung erfolgt zum Zweck der wissenschaftlichen Forschung zu
+Gesundheitsgewohnheiten sowie zum technischen Betrieb der App.
+
+Rechtsgrundlage ist Ihre Einwilligung nach Art. 6 Abs. 1 lit. a DSGVO, die Sie
+zu Beginn der Studie erteilen. Soweit Ihre Angaben Gesundheitsdaten im Sinne von
+Art. 9 DSGVO darstellen, erfolgt die Verarbeitung auf Grundlage Ihrer
+ausdrücklichen Einwilligung nach Art. 9 Abs. 2 lit. a DSGVO.
+
+## Empfänger und Auftragsverarbeiter
+
+- **Hosting:** Die Studiendaten werden auf Servern der TU Dresden verarbeitet.
+- **Sprachmodell-Dienst:** Zur automatischen Einordnung der von Ihnen
+  eingegebenen Gewohnheiten wird der Text an einen KI-Dienst (ScaDS.AI,
+  llm.scads.ai) übermittelt. Übertragen wird ausschließlich der Text der
+  Gewohnheit, nicht Ihre Kennung.
+- **Push-Benachrichtigungen:** Für die Zustellung von Benachrichtigungen wird
+  Firebase Cloud Messaging (Google Ireland Limited) eingesetzt. Dabei werden
+  das Push-Token und der Benachrichtigungsinhalt übertragen. Sie können
+  Benachrichtigungen jederzeit in den Systemeinstellungen deaktivieren.
+
+Eine Übermittlung Ihrer Daten zu Werbezwecken findet nicht statt. Es findet kein
+Tracking über Apps oder Websites anderer Anbieter hinweg statt.
+
+## Speicherdauer
+
+Ihre Studiendaten werden für die Dauer der Studie und den anschließenden
+Auswertungs- und Archivierungszeitraum gemäß den Regeln guter
+wissenschaftlicher Praxis gespeichert.
+
+## Ihre Rechte
+
+Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der
+Verarbeitung, Datenübertragbarkeit sowie auf Widerruf Ihrer Einwilligung. In der
+App können Sie Ihre Daten jederzeit selbst exportieren. Ihnen steht zudem ein
+Beschwerderecht bei einer Datenschutz-Aufsichtsbehörde zu.
+
+## Löschung Ihres Kontos
+
+In den Einstellungen der App können Sie Ihr Konto jederzeit selbst löschen.
+Dabei werden Ihr Zugang und Ihre Kennung entfernt, sodass eine Anmeldung nicht
+mehr möglich ist und Ihre bisherigen Beiträge Ihnen nicht mehr zugeordnet werden
+können. Bereits erhobene Studienbeiträge verbleiben in **anonymisierter** Form
+im Datenbestand, da sie nach der Löschung Ihrer Kennung keiner Person mehr
+zugeordnet werden können. Dies dient der Integrität bereits erfolgter
+wissenschaftlicher Auswertungen.

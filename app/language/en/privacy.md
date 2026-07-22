@@ -1,6 +1,6 @@
 ---
-version: 1.0.0
-effectiveDate: 2026-03-15
+version: 1.1.0
+effectiveDate: 2026-07-22
 bindingLanguage: de
 ---
 
@@ -155,3 +155,84 @@ We use Google Fonts for consistent typography. Your browser loads fonts from Goo
 We use reCAPTCHA to prevent automated requests. Google analyzes your behavior (e.g., IP, mouse movements) in the background. Use based on Art. 6 (1) (f) GDPR or with consent (Art. 6 (1) (a) & Section 25 (1) TDDDG). Revocation possible.
 
 Source: [e-recht24.de]("https://www.e-recht24.de")
+
+# Privacy in the "Health Habit Hub" app
+
+The sections above concern the website. The following section additionally
+describes the processing of personal data in the "Health Habit Hub" mobile app
+as part of the research study.
+
+## Controller and contact
+
+The study is conducted by Technische Universität Dresden, Chair of Business
+Informatics, esp. Health Informatics.
+Contact for data protection questions about the study: digital-health@tu-dresden.de
+
+## Voluntary participation
+
+Participation in the study is voluntary. You may withdraw your consent at any
+time with effect for the future and end your participation, without any
+disadvantage to you.
+
+## What data we process
+
+The app is designed for data minimisation. We do **not** collect your name,
+email address or phone number.
+
+- **Pseudonymous account:** on registration an account with a random identifier
+  is created. Access is via a 24-word recovery phrase generated on your device.
+  From this data alone we cannot identify you personally.
+- **Study data you enter:** donated habits (free text), questionnaire answers
+  including the time of completion, and optional profile details (e.g. age
+  group, gender).
+- **Study assignment:** your study and study group, and the time you joined.
+- **Push notifications:** if you enable notifications, a device identifier (push
+  token) is stored so reminders can be delivered.
+- **Technical data:** log data for error analysis and secure operation (e.g.
+  time of access, error messages).
+
+## Purposes and legal basis
+
+Processing takes place for the purpose of scientific research into health
+habits and for the technical operation of the app.
+
+The legal basis is your consent under Art. 6(1)(a) GDPR, which you give at the
+start of the study. Where your entries constitute health data within the meaning
+of Art. 9 GDPR, processing is based on your explicit consent under
+Art. 9(2)(a) GDPR.
+
+## Recipients and processors
+
+- **Hosting:** study data is processed on servers of TU Dresden.
+- **Language-model service:** to automatically classify the habits you enter,
+  the text is transmitted to an AI service (ScaDS.AI, llm.scads.ai). Only the
+  text of the habit is transmitted, not your identifier.
+- **Push notifications:** Firebase Cloud Messaging (Google Ireland Limited) is
+  used to deliver notifications. The push token and the notification content are
+  transmitted. You can disable notifications at any time in your system settings.
+
+Your data is not passed on for advertising purposes. No tracking across other
+providers' apps or websites takes place.
+
+## Storage period
+
+Your study data is stored for the duration of the study and the subsequent
+analysis and archiving period in accordance with the rules of good scientific
+practice.
+
+## Your rights
+
+You have the right to information, rectification, erasure, restriction of
+processing, data portability, and to withdraw your consent. You can export your
+data yourself at any time in the app. You also have the right to lodge a
+complaint with a data protection supervisory authority.
+
+## Deleting your account
+
+You can delete your account yourself at any time in the app settings. This
+removes your access and your identifier, so that signing in is no longer
+possible and your previous contributions can no longer be attributed to you.
+Study contributions already collected remain in the dataset in **anonymised**
+form, because after your identifier is deleted they can no longer be linked to
+any person. This preserves the integrity of scientific analyses already carried
+out.

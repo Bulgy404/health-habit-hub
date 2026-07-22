@@ -1,6 +1,6 @@
 ---
-version: 1.0.0
-effectiveDate: 2026-03-15
+version: 1.1.0
+effectiveDate: 2026-07-22
 bindingLanguage: de
 ---
 
@@ -155,3 +155,91 @@ Nous utilisons Google Fonts pour une typographie homogène. Votre navigateur cha
 Nous utilisons reCAPTCHA pour empêcher les requêtes automatisées. Google analyse votre comportement (par exemple l'IP, les mouvements de la souris) en arrière-plan. Utilisation sur la base de l'art. 6 (1) f) du RGPD ou avec consentement (art. 6 (1) a) et § 25 (1) du TDDDG). Révocation possible.
 
 Source : [e-recht24.de]("https://www.e-recht24.de")
+
+# Protection des données dans l'application « Health Habit Hub »
+
+Les sections précédentes concernent le site web. La section suivante décrit en
+complément le traitement des données à caractère personnel dans l'application
+mobile « Health Habit Hub » dans le cadre de l'étude scientifique.
+
+## Responsable du traitement et contact
+
+L'étude est menée par la Technische Universität Dresden, chaire d'informatique
+de gestion, en particulier Health Informatics.
+Contact pour les questions de protection des données : digital-health@tu-dresden.de
+
+## Participation volontaire
+
+La participation à l'étude est volontaire. Vous pouvez retirer votre
+consentement à tout moment avec effet pour l'avenir et mettre fin à votre
+participation, sans aucun préjudice pour vous.
+
+## Quelles données nous traitons
+
+L'application est conçue selon le principe de minimisation des données. Nous ne
+collectons **ni votre nom, ni votre adresse e-mail, ni votre numéro de
+téléphone**.
+
+- **Compte pseudonyme :** lors de l'inscription, un compte doté d'un
+  identifiant aléatoire est créé. L'accès s'effectue au moyen d'une phrase de
+  récupération de 24 mots générée sur votre appareil. Ces données seules ne
+  permettent pas de vous identifier.
+- **Données d'étude que vous saisissez :** habitudes partagées (texte libre),
+  réponses aux questionnaires, y compris la date de réponse, et informations
+  facultatives de profil (par ex. tranche d'âge, genre).
+- **Affectation à l'étude :** votre étude et votre groupe d'étude, ainsi que la
+  date d'adhésion.
+- **Notifications push :** si vous activez les notifications, un identifiant
+  d'appareil (jeton push) est enregistré afin de délivrer les rappels.
+- **Données techniques :** journaux destinés à l'analyse des erreurs et à un
+  fonctionnement sécurisé (par ex. heure d'accès, messages d'erreur).
+
+## Finalités et bases juridiques
+
+Le traitement est effectué à des fins de recherche scientifique sur les
+habitudes de santé et pour le fonctionnement technique de l'application.
+
+La base juridique est votre consentement au titre de l'art. 6, § 1, point a) du
+RGPD, donné au début de l'étude. Dans la mesure où vos saisies constituent des
+données de santé au sens de l'art. 9 du RGPD, le traitement repose sur votre
+consentement explicite au titre de l'art. 9, § 2, point a) du RGPD.
+
+## Destinataires et sous-traitants
+
+- **Hébergement :** les données de l'étude sont traitées sur les serveurs de la
+  TU Dresden.
+- **Service de modèle de langage :** afin de classer automatiquement les
+  habitudes que vous saisissez, le texte est transmis à un service d'IA
+  (ScaDS.AI, llm.scads.ai). Seul le texte de l'habitude est transmis, et non
+  votre identifiant.
+- **Notifications push :** Firebase Cloud Messaging (Google Ireland Limited) est
+  utilisé pour délivrer les notifications. Le jeton push et le contenu de la
+  notification sont transmis. Vous pouvez désactiver les notifications à tout
+  moment dans les réglages de votre système.
+
+Vos données ne sont pas transmises à des fins publicitaires. Aucun suivi à
+travers les applications ou sites web d'autres fournisseurs n'a lieu.
+
+## Durée de conservation
+
+Vos données d'étude sont conservées pendant la durée de l'étude ainsi que
+pendant la période d'analyse et d'archivage qui suit, conformément aux règles
+de bonne pratique scientifique.
+
+## Vos droits
+
+Vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation
+du traitement, de portabilité des données ainsi que du droit de retirer votre
+consentement. Vous pouvez exporter vos données vous-même à tout moment dans
+l'application. Vous disposez en outre du droit d'introduire une réclamation
+auprès d'une autorité de contrôle de la protection des données.
+
+## Suppression de votre compte
+
+Vous pouvez supprimer votre compte vous-même à tout moment dans les réglages de
+l'application. Votre accès et votre identifiant sont alors supprimés, de sorte
+qu'une connexion n'est plus possible et que vos contributions antérieures ne
+peuvent plus vous être attribuées. Les contributions à l'étude déjà collectées
+restent dans le jeu de données sous forme **anonymisée**, car après la
+suppression de votre identifiant elles ne peuvent plus être rattachées à une
+personne. Cela garantit l'intégrité des analyses scientifiques déjà réalisées.
