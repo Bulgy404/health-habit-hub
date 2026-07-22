@@ -435,6 +435,16 @@ internal HTTP API (`backup-service/api/`) that only the admin panel's
 backend talks to over the internal Docker network — it is never reachable
 from outside the stack.
 
+The Keycloak step (realm export + `pg_dump` of `keycloak-db`) needs
+`backup-service/backup.sh`/`restore.sh` to know Keycloak's base URL correctly
+— prod runs Keycloak under `/auth` (`KC_HTTP_RELATIVE_PATH=/auth`), local dev
+doesn't, so both scripts read a `KEYCLOAK_URL` env var (`.../auth` in
+`docker-compose.yml`, no suffix in `docker-compose.local.yml`) rather than
+hardcoding either. Local dev also has no `keycloak-db` at all (`KC_DB=dev-file`
+— embedded, no Postgres), so `docker-compose.local.yml` explicitly clears
+`KC_DB_PASSWORD` for the backup service, which makes the database-dump step
+report "Skipped (no credentials)" locally instead of erroring.
+
 ### 6.1 List available backups
 
 ```bash

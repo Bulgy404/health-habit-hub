@@ -149,9 +149,13 @@ async function seedMongo() {
     const db = client.db(MONGO_DB);
     const collection = db.collection('questionnaires');
 
+    // Single source of truth — same file app/services/defaultStudySeedService.js
+    // upserts on every backend boot. (A separate, drifted copy used to live at
+    // mongo/seed/questionnaires.json; it was missing i18n and still had the
+    // retired SRHI library entry — removed rather than kept in sync by hand.)
     const questionnaires = JSON.parse(
       readFileSync(
-        resolve(__dirname, '../mongo/seed/questionnaires.json'),
+        resolve(__dirname, '../app/db/seed/questionnaires.json'),
         'utf8'
       )
     );

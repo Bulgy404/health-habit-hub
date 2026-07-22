@@ -101,7 +101,7 @@ Expected local URLs in this mode:
 | Keycloak Admin Console  | `http://localhost:8080/admin/`                                      | Login with `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD`                              |
 | Keycloak Realm Metadata | `http://localhost:8080/realms/hhh/.well-known/openid-configuration` | Quick realm import check                                                             |
 | Translation             | `http://localhost:5001`                                             | LibreTranslate in `docker-compose.local.yml`                                         |
-| Neo4j Browser           | `http://localhost:7474`                                             | Login with `neo4j` + `NEO4J_PASSWORD` (local-only — not published in production)     |
+| Neo4j Browser           | `http://localhost:7474`                                             | Login with `neo4j` + `NEO4J_PASSWORD` (prod publishes loopback-only equivalents at `17474`/`17687` for SSH-tunnel admin access — see `docs/runbook.md`) |
 | LightRAG                | `http://localhost:9622`                                             | Graph + vector knowledge base UI                                                     |
 | Recommender             | `http://localhost:8001/docs`                                        | FastAPI docs                                                                         |
 | Redis                   | `localhost:6379`                                                    | No auth in local mode                                                                |
@@ -114,6 +114,7 @@ Notes:
 - The admin app uses the `hhh-admin` Keycloak client and requires a Keycloak user with the `admin` or `researcher` realm role.
 - Redis is included in both `docker-compose.yml` and `docker-compose.local.yml` — it is the API-service response cache and is required by both stacks.
 - The `backup` service and its `docker-socket-proxy` sidecar also start with this stack — see [`docs/runbook.md`](docs/runbook.md) for how backups work locally.
+- **`make seed` hangs on "`[neo4j] Not ready (attempt N/30)...`" but the neo4j container looks healthy?** This has happened as a Docker/OrbStack host-port-forward glitch: `docker ps` shows `hhh-neo4j` healthy and its logs show Bolt/HTTP both listening, but `127.0.0.1:7474`/`7687` refuse connections from the host (other services' published ports keep working fine). `docker exec hhh-neo4j cypher-shell -u neo4j -p $NEO4J_PASSWORD "RETURN 1;"` still succeeds in this state (it goes through `docker exec`, not the host port, so it isn't a useful check here). Fix: `docker restart hhh-neo4j` — no data loss, no volume reset needed.
 
 ### 4. Create a Local Admin User in Keycloak
 
@@ -564,7 +565,7 @@ hhh-proxy network (bridge)
    |-- hhh-keycloak-db  PostgreSQL — Keycloak database (internal only)
    |-- hhh-mongo        MongoDB
    |-- hhh-mongo-express MongoDB UI
-   |-- hhh-neo4j        Graph DB — internal-only, no published port (see below)
+   |-- hhh-neo4j        Graph DB — loopback-only ports 17474/17687 for SSH-tunnel admin access (see below)
    |-- hhh-translate    LibreTranslate — UID 1032, volume chown required
    |-- hhh-prometheus   Metrics — internal-only, no published port
    |-- hhh-grafana      Dashboards — routed at /grafana, Keycloak SSO
@@ -960,22 +961,15 @@ Automatic via Let's Encrypt — certificates auto-renew 30 days before expiry. M
 
 ## Accessing Neo4j in Production
 
-Neo4j is internal-only in production: `docker-compose.yml` does not publish ports 7474/7687 on the host at all (same treatment as Prometheus), so there is nothing to reach even with an SSH tunnel. Neo4j is only reachable from other containers on the internal `hhh-proxy` network.
+Neo4j is not reachable from the internet in production, but it **is** published on the server's **loopback only** — `127.0.0.1:17474` (HTTP) / `127.0.0.1:17687` (Bolt) — specifically for SSH-tunnel admin access, alongside the always-available `docker exec ... cypher-shell` route. See [`docs/runbook.md`](docs/runbook.md) → "Connecting to Neo4j Browser" for both methods (direct bolt+s via an opened firewall port, and the recommended SSH-tunnel + `http://localhost:7474` approach) — that's the authoritative, kept-up-to-date version; don't duplicate it here.
 
-For ad-hoc production queries, use `cypher-shell` directly inside the container over SSH — this works because `docker exec` goes through the Docker daemon, not a published network port, so no port needs to be open:
+For a quick ad-hoc query without a tunnel, `docker exec` goes through the Docker daemon rather than a published network port, so it works regardless:
 
 ```bash
 ssh service@habit.wiwi.tu-dresden.de 'docker exec -it hhh-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD}'
 ```
 
-Or SSH in first and run it interactively:
-
-```bash
-ssh service@habit.wiwi.tu-dresden.de
-docker exec -it hhh-neo4j cypher-shell -u neo4j -p ${NEO4J_PASSWORD} -a bolt://localhost:7687
-```
-
-If you need the graphical Neo4j Browser for a one-off investigation, temporarily publish the port yourself (e.g. `docker run --rm -it --network hhh-proxy --link hhh-neo4j alpine ...` or a short-lived `docker compose` port override), use it, then remove the override — do not leave 7474/7687 published on the host as a standing change. For routine local development, use `docker-compose.local.yml`, where Neo4j Browser is already reachable at `http://neo4j.localhost`.
+For routine local development, use `docker-compose.local.yml`, where Neo4j Browser is reachable directly at `http://neo4j.localhost` or `http://localhost:7474` — no tunnel needed.
 
 ---
 
@@ -1103,7 +1097,7 @@ docker exec -it hhh-redis redis-cli
 - All persistent data is stored in named Docker volumes or host-mounted directories under `/mnt/data/appdata/hhh2/`
 - SSL certificates are stored in `/mnt/data/appdata/hhh2/traefik-certs/`
 - LibreTranslate volume at `/mnt/data/appdata/hhh2/translate` must be owned by UID 1032 before first deploy
-- Neo4j has no published port in production (internal-only) — use `docker exec -it hhh-neo4j cypher-shell` over SSH, see "Accessing Neo4j in Production" above
+- Neo4j is not internet-reachable, but is published loopback-only (`127.0.0.1:17474`/`17687`) for SSH-tunnel admin access, or reachable directly via `docker exec -it hhh-neo4j cypher-shell` — see "Accessing Neo4j in Production" above
 
 ---
 
