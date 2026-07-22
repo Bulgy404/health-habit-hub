@@ -53,22 +53,27 @@ test('Mongo connect + CRUD (integration)', async (t) => {
     assert.ok(loaded, 'Survey not found after insertion');
     assert.strictEqual(loaded.id, surveyId);
 
+    // survey_responses is the live submission collection (written by
+    // createSurveyRouter's POST /surveys/:id/results). The old `results`
+    // collection belonged to the removed legacy survey controller.
     const resDoc = {
       surveyId,
-      data: { a: 1 },
-      submittedAt: new Date(),
-      userId: 'mongo-test-user',
+      participantId: 'mongo-test-user',
+      answers: { a: 1 },
+      completedAt: new Date(),
     };
-    const ins = await db.collection('results').insertOne(resDoc);
-    assert.ok(ins.insertedId, 'Failed to insert result document');
+    const ins = await db.collection('survey_responses').insertOne(resDoc);
+    assert.ok(ins.insertedId, 'Failed to insert survey response document');
 
-    const got = await db.collection('results').findOne({ _id: ins.insertedId });
-    assert.ok(got, 'Result document not found after insertion');
-    assert.strictEqual(got.userId, 'mongo-test-user');
+    const got = await db
+      .collection('survey_responses')
+      .findOne({ _id: ins.insertedId });
+    assert.ok(got, 'Survey response document not found after insertion');
+    assert.strictEqual(got.participantId, 'mongo-test-user');
 
     // Clean up test data
     await db.collection('surveys').deleteMany({ id: surveyId });
-    await db.collection('results').deleteOne({ _id: ins.insertedId });
+    await db.collection('survey_responses').deleteOne({ _id: ins.insertedId });
   } finally {
     if (db) {
       await disconnect();
