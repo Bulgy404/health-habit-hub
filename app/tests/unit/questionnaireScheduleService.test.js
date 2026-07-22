@@ -259,7 +259,9 @@ test('generateWindowsForUser: excludes habit-scoped assignments (e.g. SRHI) — 
   assert.strictEqual(created, 2);
   assert.strictEqual(db._bulk.length, 2);
   assert.ok(
-    db._bulk.every((op) => op.updateOne.update.$setOnInsert.questionnaireSlug === 'sliq')
+    db._bulk.every(
+      (op) => op.updateOne.update.$setOnInsert.questionnaireSlug === 'sliq'
+    )
   );
 });
 

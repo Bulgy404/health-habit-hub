@@ -138,4 +138,3 @@ test('seedDefaultStudy: idempotent — exactly one default study', async () => {
   const defaults = [...db.stores.studies.values()].filter((s) => s.isDefault);
   assert.strictEqual(defaults.length, 1);
 });
-

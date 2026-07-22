@@ -99,7 +99,10 @@ function createMockDb() {
           const cursor = {
             sort(spec) {
               const [[field, dir]] = Object.entries(spec);
-              results.sort((a, b) => (a[field] > b[field] ? 1 : a[field] < b[field] ? -1 : 0) * dir);
+              results.sort(
+                (a, b) =>
+                  (a[field] > b[field] ? 1 : a[field] < b[field] ? -1 : 0) * dir
+              );
               return cursor;
             },
             async toArray() {
@@ -129,7 +132,8 @@ function createMockDb() {
           if (options.sort) {
             const [[field, dir]] = Object.entries(options.sort);
             matches = [...matches].sort(
-              (a, b) => (a[field] > b[field] ? 1 : a[field] < b[field] ? -1 : 0) * dir
+              (a, b) =>
+                (a[field] > b[field] ? 1 : a[field] < b[field] ? -1 : 0) * dir
             );
           }
           const found = matches[0];
@@ -595,7 +599,10 @@ test('GET /api/v1/participant/questionnaires - hides a habit-scoped questionnair
   const participantToken = makeToken(['user'], 'habit-q-user');
 
   // No habit created yet — no window — the definition isn't listed.
-  const beforeRes = await get('/api/v1/participant/questionnaires', participantToken);
+  const beforeRes = await get(
+    '/api/v1/participant/questionnaires',
+    participantToken
+  );
   const beforeBody = await beforeRes.json();
   assert.ok(
     !beforeBody.some((q) => q.id === qId),
@@ -615,10 +622,16 @@ test('GET /api/v1/participant/questionnaires - hides a habit-scoped questionnair
     },
   ]);
 
-  const afterRes = await get('/api/v1/participant/questionnaires', participantToken);
+  const afterRes = await get(
+    '/api/v1/participant/questionnaires',
+    participantToken
+  );
   const afterBody = await afterRes.json();
   const found = afterBody.find((q) => q.id === qId);
-  assert.ok(found, 'habit-scoped questionnaire should be listed once a window exists');
+  assert.ok(
+    found,
+    'habit-scoped questionnaire should be listed once a window exists'
+  );
   assert.strictEqual(found.title, 'Custom Habit Check-in');
 });
 
@@ -684,7 +697,10 @@ test('GET /api/v1/participant/questionnaires - reports available/completedAt, an
   const participantToken = makeToken(['user'], 'resubmit-user');
 
   // Due now, never completed — available, no completedAt.
-  const beforeRes = await get('/api/v1/participant/questionnaires', participantToken);
+  const beforeRes = await get(
+    '/api/v1/participant/questionnaires',
+    participantToken
+  );
   const before = (await beforeRes.json()).find((q) => q.id === qId);
   assert.strictEqual(before.available, true);
   assert.strictEqual(before.completedAt, null);
@@ -698,7 +714,10 @@ test('GET /api/v1/participant/questionnaires - reports available/completedAt, an
   assert.strictEqual(submitRes.status, 201);
 
   // Now greyed out: not available, completedAt set.
-  const afterRes = await get('/api/v1/participant/questionnaires', participantToken);
+  const afterRes = await get(
+    '/api/v1/participant/questionnaires',
+    participantToken
+  );
   const after = (await afterRes.json()).find((q) => q.id === qId);
   assert.strictEqual(after.available, false);
   assert.ok(after.completedAt, 'completedAt should be set after submission');
@@ -706,7 +725,10 @@ test('GET /api/v1/participant/questionnaires - reports available/completedAt, an
   // Resubmitting is rejected — no open due window left.
   const resubmitRes = await post(
     '/api/v1/questionnaire-responses',
-    { questionnaireSlug: 'wellbeing-check', answers: { q1: 'changed my mind' } },
+    {
+      questionnaireSlug: 'wellbeing-check',
+      answers: { q1: 'changed my mind' },
+    },
     participantToken
   );
   assert.strictEqual(resubmitRes.status, 409);
