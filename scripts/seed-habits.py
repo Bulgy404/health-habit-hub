@@ -20,6 +20,10 @@ Usage:
     python3 scripts/seed-habits.py [--mode seed|e2e] [--concurrency N] [--habits N] [--dry-run]
 
 Reads APP_LOCAL_PORT, RECOMMENDER_LOCAL_PORT, and API_SERVICE_SECRET from .env.
+
+To target a non-local stack (e.g. running inside the compose network), set
+APP_BASE_URL / RECOMMENDER_BASE_URL to full origins instead of the *_LOCAL_PORT
+variables, and NEO4J_URI to the corresponding bolt URL.
 """
 from __future__ import annotations
 
@@ -38,16 +42,31 @@ from neo4j import AsyncGraphDatabase, NotificationMinimumSeverity  # type: ignor
 # ---------------------------------------------------------------------------
 # Load .env
 # ---------------------------------------------------------------------------
+def _candidate_env_files() -> list[Path]:
+    """SEED_ENV_FILE wins; otherwise .env then stack.env from the repo root."""
+    root = Path(__file__).parent.parent
+    override = os.environ.get("SEED_ENV_FILE")
+    if override:
+        return [Path(override).expanduser()]
+    return [root / ".env", root / "stack.env"]
+
+
 def _load_env() -> None:
-    env_path = Path(__file__).parent.parent / ".env"
-    if not env_path.exists():
+    for env_path in _candidate_env_files():
+        if env_path.exists():
+            break
+    else:
         return
     for line in env_path.read_text().splitlines():
         line = line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
-        key, _, value = line.partition("=")
-        value = value.split("#")[0].strip()
+        key, _, value = line.removeprefix("export ").partition("=")
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+            value = value[1:-1]          # quoted: take verbatim, '#' and all
+        else:
+            value = value.split(" #")[0].strip()
         os.environ.setdefault(key.strip(), value)
 
 
@@ -56,8 +75,16 @@ _load_env()
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-_APP_BASE        = f"http://localhost:{os.environ.get('APP_LOCAL_PORT', '3000')}/api/v1"
-_API_BASE        = f"http://localhost:{os.environ.get('RECOMMENDER_LOCAL_PORT', '8001')}/api/v1"
+_APP_ORIGIN      = os.environ.get(
+    "APP_BASE_URL",
+    f"http://localhost:{os.environ.get('APP_LOCAL_PORT', '3000')}",
+).rstrip("/")
+_API_ORIGIN      = os.environ.get(
+    "RECOMMENDER_BASE_URL",
+    f"http://localhost:{os.environ.get('RECOMMENDER_LOCAL_PORT', '8001')}",
+).rstrip("/")
+_APP_BASE        = f"{_APP_ORIGIN}/api/v1"
+_API_BASE        = f"{_API_ORIGIN}/api/v1"
 _NEO4J_URI       = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
 _NEO4J_USER      = os.environ.get("NEO4J_USER", "neo4j")
 _NEO4J_PASSWORD  = os.environ.get("NEO4J_PASSWORD", "password")
@@ -389,7 +416,7 @@ async def run_seed(concurrency: int, habit_count: int, dry_run: bool) -> None:
 # ===========================================================================
 
 async def _wait_for_recommender(client: httpx.AsyncClient, timeout_s=600, poll_s=5.0) -> None:
-    url = f"http://localhost:{os.environ.get('RECOMMENDER_LOCAL_PORT', '8001')}/health"
+    url = f"{_API_ORIGIN}/health"
     deadline = time.monotonic() + timeout_s
     attempt = 0
     while time.monotonic() < deadline:

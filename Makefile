@@ -91,7 +91,8 @@ test-admin: ## Admin: typecheck
 
 seed-habits: ## Seed Neo4j with 100 test habits via full donation pipeline (MODE=seed for fast direct path)
 	python3 -m pip install --quiet --break-system-packages httpx neo4j
-	set -a && . ./.env && set +a && NEO4J_URI=bolt://localhost:7687 python3 scripts/seed-habits.py --mode $(or $(MODE),e2e) --concurrency $(or $(CONCURRENCY),5)
+	set -a && [ -f ./$(or $(ENV_FILE),.env) ] && . ./$(or $(ENV_FILE),.env); set +a; \
+	NEO4J_URI=$(or $(NEO4J_URI),bolt://localhost:7687) python3 scripts/seed-habits.py --mode $(or $(MODE),e2e) --concurrency $(or $(CONCURRENCY),5)
 
 # ── Production (run on server) ────────────────────────────
 # All prod targets use docker-compose.yml (the default file).
