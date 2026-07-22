@@ -329,14 +329,23 @@ test('POST /questionnaire-responses — triggers neo4j user sync', async () => {
   const newCalls = neo4jMock.getCalls().slice(callsBefore);
   assert.ok(
     newCalls.length >= 2,
-    'expected at least 2 neo4j calls (mergeUser + createSubmission)'
+    'expected at least 2 neo4j calls (mergeUser + createQuestionnaireResponse)'
   );
   assert.ok(
     newCalls.some((c) => c.params.userId === 'user-neo4j-sync'),
     'expected a call with the submitting userId'
   );
   assert.ok(
-    newCalls.some((c) => c.params.questionnaireId === 'sliq'),
-    'expected a call with the questionnaireId'
+    newCalls.some((c) => c.params.questionnaireSlug === 'sliq'),
+    'expected a call with the questionnaireSlug'
   );
+
+  // The response must be linked into the graph, not left as an island: one
+  // timestamped QuestionnaireResponse tied to both the user and the questionnaire.
+  const responseCall = newCalls.find((c) => c.params.responseId !== undefined);
+  assert.ok(responseCall, 'expected a createQuestionnaireResponse call');
+  assert.ok(responseCall.cypher.includes('(u)-[:SUBMITTED]->(r)'));
+  assert.ok(responseCall.cypher.includes('(r)-[:FOR_QUESTIONNAIRE]->(q)'));
+  assert.ok(responseCall.cypher.includes('u:User {userID: $userId}'));
+  assert.strictEqual(responseCall.params.entries.length, 2);
 });

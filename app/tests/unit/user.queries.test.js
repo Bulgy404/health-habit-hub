@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   mergeUserAndHabits,
-  createSubmissionWithScores,
   setUserProfileProperties,
 } from '../../db/userQueries.js';
 
@@ -17,18 +16,31 @@ test('mergeUserAndHabits calls queryNeo4j with userId param', async () => {
   assert.ok(calls.every((c) => c.params.userId === 'user-abc'));
 });
 
-test('createSubmissionWithScores passes all scores to queryNeo4j', async () => {
+// Regression: these MERGEs previously used `userId` (lowercase d) while the
+// uniqueness constraint, enrollment, donations and the questionnaire read query
+// all use `userID` — which silently created a duplicate User node and left every
+// questionnaire submission disconnected from the study graph.
+test('User MERGEs use the userID property, matching the schema constraint', async () => {
   const calls = [];
   const mockRun = async (cypher, params) => {
     calls.push({ cypher, params });
     return [];
   };
-  const answers = { sliq_diet: '2', sliq_activity: '3' };
-  await createSubmissionWithScores(mockRun, 'user-abc', 'sliq', answers);
-  const scoreCall = calls.find((c) => c.params.scores !== undefined);
-  assert.ok(scoreCall, 'expected a call with scores param');
-  assert.strictEqual(scoreCall.params.scores.length, 2);
-  assert.ok(scoreCall.params.scores.every((s) => typeof s.value === 'number'));
+  await mergeUserAndHabits(mockRun, 'user-abc');
+  await setUserProfileProperties(mockRun, 'user-abc', [
+    { questionId: 'gender', value: 'female', type: 'select' },
+  ]);
+  assert.ok(calls.length >= 2);
+  for (const { cypher } of calls) {
+    assert.ok(
+      cypher.includes('u:User {userID:'),
+      `expected MERGE on userID, got: ${cypher}`
+    );
+    assert.ok(
+      !/User \{userId:/.test(cypher),
+      `must not MERGE on lowercase userId: ${cypher}`
+    );
+  }
 });
 
 test('setUserProfileProperties merges user and sets props on User node', async () => {

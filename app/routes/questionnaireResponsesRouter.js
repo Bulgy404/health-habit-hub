@@ -4,11 +4,12 @@ import { config } from '../utils/config.js';
 import { registerNeo4jDriver } from '../utils/neo4jDrivers.js';
 import { makeGetDb } from '../utils/getDb.js';
 import { logger } from '../utils/logger.js';
+import { mergeUserAndHabits } from '../db/userQueries.js';
+import { createQuestionnaireResponse } from '../db/questionnaireQueries.js';
 import {
-  mergeUserAndHabits,
-  createSubmissionWithScores,
-} from '../db/userQueries.js';
-import { markWindowSubmitted } from '../services/questionnaireScheduleService.js';
+  markWindowSubmitted,
+  getQuestionnaireCompletionStatus,
+} from '../services/questionnaireScheduleService.js';
 import { requireServiceToken } from '../middleware/requireServiceToken.js';
 
 const log = logger.child({ module: 'questionnaireResponsesRouter' });
@@ -149,14 +150,21 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
     }
   }
 
-  async function syncUserGraph(userId, questionnaireId, answers) {
+  async function syncUserGraph({
+    userId,
+    questionnaireSlug,
+    responseId,
+    submittedAt,
+    answers,
+  }) {
     await mergeUserAndHabits(queryNeo4j, userId);
-    await createSubmissionWithScores(
-      queryNeo4j,
+    await createQuestionnaireResponse(queryNeo4j, {
       userId,
-      questionnaireId,
-      answers
-    );
+      questionnaireSlug,
+      responseId,
+      submittedAt,
+      answers,
+    });
   }
 
   // Ensure index on form_responses for efficient per-user queries
@@ -221,6 +229,8 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
    *         description: Missing required fields
    *       401:
    *         description: Missing or invalid JWT
+   *       409:
+   *         description: Questionnaire is scheduled but not currently due — already completed, or the next occurrence isn't open yet
    */
   router.post('/', async (req, res) => {
     try {
@@ -238,6 +248,27 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
       }
 
       const database = await getDb();
+
+      // A scheduled questionnaire (has ever had a window generated for it)
+      // can only be (re)submitted while it has an open window due now — this
+      // is what actually blocks editing/resubmitting a completed one, not
+      // just the app hiding the button. A slug with no window at all (e.g. a
+      // legacy ad-hoc questionnaire outside the assignment system) is left
+      // ungated, matching its previous always-open behaviour.
+      const status = (
+        await getQuestionnaireCompletionStatus({
+          db: database,
+          userId,
+          slugs: [questionnaireSlug],
+        })
+      ).get(questionnaireSlug);
+      if (status && !status.available) {
+        return res.status(409).json({
+          error:
+            'This questionnaire is not currently due — it may already be completed, or the next occurrence is not open yet.',
+        });
+      }
+
       const submittedAt = new Date();
       const { insertedId } = await database
         .collection('form_responses')
@@ -263,8 +294,16 @@ export function createQuestionnaireResponsesRouter({ db, neo4jRun } = {}) {
         log.error({ err }, '[questionnaire-responses] window link error');
       }
 
-      // Sync to Neo4j — non-blocking: errors are logged but never surface to the caller
-      syncUserGraph(userId, questionnaireSlug, answers).catch((err) => {
+      // Sync to Neo4j — non-blocking: errors are logged but never surface to the
+      // caller (a graph outage must never fail a participant's submission).
+      // responseId is the Mongo _id, which makes the graph write idempotent.
+      syncUserGraph({
+        userId,
+        questionnaireSlug,
+        responseId: insertedId.toString(),
+        submittedAt,
+        answers,
+      }).catch((err) => {
         log.error({ err: err }, '[questionnaire-responses] neo4j sync error:');
       });
 

@@ -163,6 +163,7 @@ import {
 import { closeHabitQueue } from './lib/habitQueue.js';
 import { closeAllNeo4jDrivers, runNeo4j } from './utils/neo4jDrivers.js';
 import { runSeedDefaultProfileFields } from './db/seedProfileFields.js';
+import { runSyncAllQuestionnaireDefinitions } from './services/questionnaireGraphSync.js';
 import { ensureNeo4jSchema } from './utils/neo4jSchema.js';
 import {
   initErrorReporting,
@@ -213,6 +214,11 @@ connectMongo()
 
 // Seed default profile field definitions (gender, age_group) if not already present.
 runSeedDefaultProfileFields();
+
+// Project questionnaire definitions (Mongo = source of truth) into the Neo4j
+// graph as Questionnaire + QuestionnaireItem nodes. Idempotent and non-fatal;
+// covers seeded questionnaires and self-heals drift on every boot.
+runSyncAllQuestionnaireDefinitions();
 
 // Start scheduled notification dispatcher (runs every 60 s)
 const notificationTask = startNotificationScheduler({

@@ -17,12 +17,53 @@ import {
   updateQuestionnaireSchema,
 } from '../../schemas/adminSchemas.js';
 import { ASSIGNMENTS as QUESTIONNAIRE_ASSIGNMENTS } from '../../models/questionnaireSchedule.js';
+import {
+  syncOneQuestionnaireDefinition,
+  removeQuestionnaireDefinition,
+} from '../../services/questionnaireGraphSync.js';
 
 const log = logger.child({ module: 'surveysRouter' });
 
-export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
+export function createSurveysRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
+
+  /**
+   * Project a questionnaire definition into the Neo4j graph (Questionnaire +
+   * QuestionnaireItem nodes) after a create/update. Best-effort: the graph is a
+   * projection of Mongo, so a Neo4j problem must never fail questionnaire
+   * management — same policy as studyService's syncStudyQuestionnaireGraph.
+   * @param {object} database
+   * @param {string} slug
+   */
+  async function syncQuestionnaireGraph(database, slug) {
+    if (!slug) return;
+    try {
+      await syncOneQuestionnaireDefinition({ db: database, slug, neo4jRun });
+    } catch (err) {
+      log.error(
+        { err, slug },
+        '[surveysRouter] questionnaire graph sync failed'
+      );
+    }
+  }
+
+  /**
+   * Drop a questionnaire (and its items) from the graph after a delete.
+   * Best-effort, same rationale as above.
+   * @param {string} slug
+   */
+  async function removeQuestionnaireGraph(slug) {
+    if (!slug) return;
+    try {
+      await removeQuestionnaireDefinition({ slug, neo4jRun });
+    } catch (err) {
+      log.error(
+        { err, slug },
+        '[surveysRouter] questionnaire graph delete failed'
+      );
+    }
+  }
 
   // ── Survey CRUD endpoints ─────────────────────────────────────────────────
 
@@ -603,6 +644,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         const result = await database
           .collection('questionnaires')
           .insertOne(doc);
+        await syncQuestionnaireGraph(database, finalSlug);
         res.status(201).json({
           ok: true,
           id: result.insertedId.toString(),
@@ -653,6 +695,10 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
         await database
           .collection('questionnaires')
           .updateOne({ _id: oid }, { $set: update });
+        const updated = await database
+          .collection('questionnaires')
+          .findOne({ _id: oid }, { projection: { slug: 1 } });
+        await syncQuestionnaireGraph(database, updated?.slug);
         res.json({ ok: true, id });
       } catch (err) {
         log.error({ err: err }, 'unhandled route error');
@@ -730,6 +776,7 @@ export function createSurveysRouter({ db, neo4jRun: _neo4jRun } = {}) {
           .json({ error: 'Questionnaire is assigned to an active study' });
       }
       await database.collection('questionnaires').deleteOne({ _id: oid });
+      await removeQuestionnaireGraph(existing.slug);
       res.locals.auditAction = 'delete_questionnaire';
       res.locals.auditResourceType = 'questionnaire';
       res.locals.auditResourceId = id;

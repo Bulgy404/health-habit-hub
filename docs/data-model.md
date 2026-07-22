@@ -28,7 +28,10 @@ This document is the canonical reference for all data stores in the Health Habit
 
 Neo4j stores the habit knowledge graph using a single active schema (`Habit`, `Context`, `BCIOConcept`), created by the donate pipeline (`POST /api/v1/habits/donate`). All endpoints (feed, stats, public list) read this schema.
 
-> **Note (2026-06):** the former n10s/RDF schema (`hhh__Habit`, `hhh__Donor`, …) was retired without data migration — no legacy data existed. The n10s plugin is no longer loaded. Sections 1.2–1.4 below are kept as a historical reference only.
+> **Note (2026-06):** the former n10s/RDF schema (`hhh__Habit`, `hhh__Donor`, …) was retired without data migration — no legacy data existed. The n10s plugin is no longer loaded. Sections 1.3–1.5 below are kept as a historical reference only.
+
+The graph has two active parts: the **habit knowledge graph** (§1.1) and the
+**study/questionnaire graph** (§1.2).
 
 ### 1.1 Current Schema (Donate Pipeline)
 
@@ -111,7 +114,51 @@ erase a participant's comments without de-anonymising the graph.
 
 ---
 
-### 1.2 Old Schema (n10s / Ontology Import) — _retired, historical reference_
+### 1.2 Study & Questionnaire Graph
+
+MongoDB is the source of truth for questionnaires (`questionnaires`) and their
+answers (`form_responses`); Neo4j holds a **projection** of both so a study, its
+questionnaires, their items and each participant's answers are traversable in one
+graph.
+
+```cypher
+(:Study {uuid, name})-[:HAS_QUESTIONNAIRE]->(:Questionnaire {slug, title, version})
+(:Questionnaire)-[:HAS_ITEM]->(:QuestionnaireItem {uid, questionnaireSlug, itemId, text, type, position, adhoc})
+
+(:User {userID})-[:ENROLLED_IN]->(:Study)
+(:User {userID})-[:SUBMITTED]->(:QuestionnaireResponse {responseId, submittedAt, questionnaireSlug})
+(:QuestionnaireResponse)-[:FOR_QUESTIONNAIRE]->(:Questionnaire)
+(:QuestionnaireResponse)-[:HAS_ANSWER {value, rawValue}]->(:QuestionnaireItem)
+```
+
+| Node / edge | Notes |
+| --- | --- |
+| `Questionnaire` | One per definition, keyed by `slug` (constraint `questionnaire_slug`). `title`/`version` mirror MongoDB. |
+| `QuestionnaireItem` | One per question. Keyed by a synthetic `uid = "<slug>::<itemId>"` (constraint `questionnaire_item_uid`) — a single-property key because composite/NODE KEY constraints are Enterprise-only. `adhoc: true` marks an answer key that wasn't in the definition. |
+| `QuestionnaireResponse` | **One node per completion**, so repeated fills form a time series. `responseId` is the MongoDB `form_responses._id` (constraint `questionnaire_response_id`), which makes the sync idempotent on retry. |
+| `HAS_ANSWER` | `value` is the numeric score when the answer parses as a number, else `null`; `rawValue` always keeps the original answer, so free-text and multi-select are preserved. |
+
+**Who writes what**
+
+| Writer | Responsibility |
+| --- | --- |
+| `services/enrollmentNeo4j.js:syncStudy` | `Study` node + `HAS_QUESTIONNAIRE` edges (driven by assignment changes via `questionnaireScheduleService.syncStudyQuestionnaireGraph`) |
+| `db/questionnaireQueries.js:syncQuestionnaireDefinition` | `Questionnaire` + its `QuestionnaireItem` nodes; prunes items dropped from the definition |
+| `db/questionnaireQueries.js:createQuestionnaireResponse` | `QuestionnaireResponse` + `SUBMITTED` / `FOR_QUESTIONNAIRE` / `HAS_ANSWER` |
+| `services/questionnaireGraphSync.js` | Startup reconcile of all definitions, plus per-questionnaire sync from the admin CRUD handlers (so admin-created questionnaires appear immediately) |
+
+Graph writes are **best-effort and non-blocking** — a Neo4j outage never fails a
+participant's submission, and the startup reconcile self-heals drift.
+
+> **Retired (2026-07):** an earlier model wrote `(:Submission)-[:HAS_SCORE]->(:QuestionItem)`
+> hung off a `(:User {userId})` node — note the lowercase `d`, which did not match
+> the `userID` constraint used everywhere else. That created a duplicate `User`
+> per participant and left every submission disconnected from the study graph.
+> Both labels are gone; nothing reads them.
+
+---
+
+### 1.3 Old Schema (n10s / Ontology Import) — _retired, historical reference_
 
 All labels and property names use the `hhh__` prefix (neosemantics convention for namespace `http://example.com/hhh#`).
 
@@ -205,7 +252,7 @@ Generic RDF resource nodes created by n10s for any ontology class not mapped to 
 
 ---
 
-### 1.3 Relationship Types (Old Schema)
+### 1.4 Relationship Types (Old Schema)
 
 All relationship types use the `hhh__` prefix.
 
@@ -219,7 +266,7 @@ All relationship types use the `hhh__` prefix.
 
 ---
 
-### 1.4 Annotated Cypher Queries
+### 1.5 Annotated Cypher Queries
 
 #### Q1 — Count habits donated by each study group
 
@@ -890,6 +937,24 @@ Questionnaire definitions. Loaded from seed data or admin tooling. Only document
 | `active`      | Boolean   | Yes      | `true` means visible to participants                |
 | `scope`       | String    | No       | `study` (default) — anchored to enrollment, applies once per participant. `habit` — anchored to each habit's creation (+~5s), applies once per habit. Drives how `questionnaire_assignments.cadence` is interpreted; see below. |
 
+**SRHI is not a document in this collection.** It used to be (`slug: 'srhi'`,
+`scope: 'habit'`), toggled on per study like any other questionnaire, but that
+required the same "habit-scoped → exclude from generic listings" filter to be
+re-applied at every participant-facing endpoint, and it was easy to miss one
+(that's exactly how it originally leaked into the Profile questionnaire list
+before a habit existed). SRHI is now unconditional: its item text and 1–7
+scale live in `app/utils/srhi.js` (served via `GET /api/v1/me/habit-config` as
+`srhiItems`), and `POST /habits/intentions` always kicks off its dedicated
+window pipeline (`srhiService.generateWindows` → `srhi_responses`, see below)
+with no assignment/scope check at all. `retireLegacySrhiLibraryEntry()`
+(`defaultStudySeedService.js`, run on every boot) removes any leftover `srhi`
+document and `questionnaire_assignments` rows from databases seeded before
+this change — a stale assignment referencing a deleted `questionnaireId`
+would otherwise resolve to no scope and get treated as study-scoped by the
+generic pipeline, leaking SRHI back into enrollment-anchored windows.
+Any *other* `scope: 'habit'` questionnaire an admin defines still goes
+through the normal library + assignment flow described below.
+
 ---
 
 #### `form_responses`
@@ -925,6 +990,16 @@ On submission the response is also linked to the participant's next open
 `questionnaire_windows` entry for that questionnaire (marking that scheduled
 timepoint complete). Ad-hoc submissions with no matching window simply store the
 response without linking.
+
+**Resubmission is rejected, not just hidden.** Before inserting, the handler
+calls `getQuestionnaireCompletionStatus` (see `questionnaire_windows` below):
+if the slug has ever had a window but none is currently open-and-due, the
+request is rejected with `409` — answers can't be changed once a window
+closes, and a new submission isn't accepted until the next occurrence's
+window opens. A slug that has never had any window (an ad-hoc questionnaire
+outside the assignment/window system) is left ungated, matching its previous
+always-open behaviour. This is enforced server-side, independent of the
+Flutter app's greyed-out UI — a stale client cache can't bypass it.
 
 ---
 
@@ -1052,7 +1127,7 @@ A questionnaire assigned to a study on a cadence. `groupId: null` = study-wide
 **Scope & anchor.** The questionnaire *definition*'s `scope` field (see `questionnaires` above) determines what "anchor" means for a given assignment's cadence:
 
 - `scope: 'study'` (default) — anchored at the participant's **enrollment**. `startOffsetDays` ("first due") is admin-editable. Windows are generated per participant (`intentionId: null`).
-- `scope: 'habit'` — anchored at each habit's (intention's) **creation time + ~5 seconds** (`HABIT_ANCHOR_DELAY_MS`), not admin-editable. Windows are generated **per habit** — a participant with 3 habits gets 3 independent window series, one per habit (see the `intentionId` field below). SRHI is habit-scoped but keeps its own dedicated pipeline (`srhiService.generateWindows`, writing to `srhi_responses`, for its scoring/sparkline) rather than generic `questionnaire_windows` rows; any other habit-scoped questionnaire uses the generic pipeline (`generateHabitCreationWindows`).
+- `scope: 'habit'` — anchored at each habit's (intention's) **creation time + ~5 seconds** (`HABIT_ANCHOR_DELAY_MS`), not admin-editable. Windows are generated **per habit** — a participant with 3 habits gets 3 independent window series, one per habit (see the `intentionId` field below), via `generateHabitCreationWindows`. SRHI is *not* an assignment at all — see the note in `questionnaires` above — it uses a completely separate, unconditional pipeline (`srhiService.generateWindows`, writing to `srhi_responses`) invoked directly by `POST /habits/intentions`, with no `questionnaire_assignments` row and no scope check.
 
 **Continuous delivery.** A `continuous: true` interval cadence never generates all its windows upfront — only a rolling buffer capped at 12 future/open windows at a time (`CONTINUOUS_TOPUP_CAP`). The buffer is topped back up to 12 opportunistically whenever a window is submitted (`markWindowSubmitted`) or when the participant's due-list is read (`getDueQuestionnaires`), extending from the last existing window's `scheduledFor` rather than recomputing from the original enrollment/habit-creation date.
 
@@ -1082,8 +1157,14 @@ assignment for that same questionnaire. Unique index on
 #### `questionnaire_windows`
 
 One scheduled occurrence of an assignment for one participant, plus its
-completion state. Generated on enrollment and whenever an assignment is
-created/changed (back-filled for already-enrolled participants).
+completion state. For `scope: 'study'` assignments: generated on enrollment
+and whenever an assignment is created/changed (back-filled for
+already-enrolled participants) — `generateWindowsForUser` explicitly excludes
+`scope: 'habit'` assignments from this enrollment-anchored path. For
+`scope: 'habit'` assignments: generated instead on habit creation, one series
+per habit (`generateHabitCreationWindows`, called from `POST
+/habits/intentions`) — never backfilled for existing habits when an
+assignment is newly created/activated.
 
 | Field               | BSON Type        | Required | Description                                            |
 | ------------------- | ---------------- | -------- | ------------------------------------------------------ |
@@ -1216,6 +1297,11 @@ One document per (intention, weekNumber) — SRHI measurement window.
 Indexes: `{intentionId, weekNumber}` unique, `{userId, submittedAt}`
 
 The 12 SRHI items are the validated Self-Report Habit Index (Verplanken & Orbell, 2003) — item text is returned by `GET /api/v1/me/habit-config` as `srhiItems`.
+
+4 weekly windows are pre-generated unconditionally on every habit creation
+(`POST /habits/intentions` → `srhiService.generateWindows`) — there is no
+per-study opt-in and no `questionnaires`/`questionnaire_assignments` row
+involved (see the note in `questionnaires` above).
 
 ---
 

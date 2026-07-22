@@ -34,6 +34,15 @@ const SCHEMA_STATEMENTS = [
   // Questionnaire slug — for HAS_QUESTIONNAIRE traversal
   `CREATE CONSTRAINT questionnaire_slug IF NOT EXISTS
      FOR (q:Questionnaire) REQUIRE q.slug IS UNIQUE`,
+  // One item node per (questionnaire, question). Keyed by a synthetic
+  // `uid` = "<slug>::<itemId>" rather than a composite constraint, because
+  // composite/NODE KEY constraints are Enterprise-only — this works on Community.
+  `CREATE CONSTRAINT questionnaire_item_uid IF NOT EXISTS
+     FOR (i:QuestionnaireItem) REQUIRE i.uid IS UNIQUE`,
+  // One response node per completed questionnaire. `responseId` is the MongoDB
+  // form_responses._id, which makes the graph sync idempotent on retry.
+  `CREATE CONSTRAINT questionnaire_response_id IF NOT EXISTS
+     FOR (r:QuestionnaireResponse) REQUIRE r.responseId IS UNIQUE`,
   // Vector indexes for cross-user semantic habit search (M3 recommendation
   // pipeline, see API-service/routers/extract_habits.py). Dimensions must
   // match EMBEDDING_DIMENSIONS (default: 2560 = Qwen3-Embedding-4B) — kept in

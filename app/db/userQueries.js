@@ -14,47 +14,12 @@
  */
 export async function mergeUserAndHabits(queryNeo4j, userId) {
   await queryNeo4j(
-    `MERGE (u:User {userId: $userId})
+    `MERGE (u:User {userID: $userId})
      ON CREATE SET u.createdAt = datetime()
      WITH u
      MATCH (h:Habit {userID: $userId})
      MERGE (u)-[:DONATED]->(h)`,
     { userId }
-  );
-}
-
-/**
- * Create a Submission node for one questionnaire fill, link it to the User,
- * and store each item score as a [:HAS_SCORE] edge to a (shared) QuestionItem node.
- *
- * Generic by design: `answers` is the raw flat map from MongoDB; any
- * questionnaire slug flows through without code changes.
- *
- * @param {Function} queryNeo4j
- * @param {string} userId
- * @param {string} questionnaireId   e.g. 'sliq', 'rand-36', 'srhi'
- * @param {Object} answers           flat map { questionId: rawValue }
- */
-export async function createSubmissionWithScores(
-  queryNeo4j,
-  userId,
-  questionnaireId,
-  answers
-) {
-  const scores = Object.entries(answers).map(([itemId, value]) => ({
-    itemId,
-    value: parseFloat(value) || 0,
-  }));
-
-  await queryNeo4j(
-    `MERGE (u:User {userId: $userId})
-     CREATE (s:Submission {questionnaireId: $questionnaireId, submittedAt: datetime()})
-     CREATE (u)-[:SUBMITTED]->(s)
-     WITH s
-     UNWIND $scores AS score
-     MERGE (qi:QuestionItem {id: score.itemId, questionnaireId: $questionnaireId})
-     CREATE (s)-[:HAS_SCORE {value: score.value}]->(qi)`,
-    { userId, questionnaireId, scores }
   );
 }
 
@@ -85,7 +50,7 @@ export async function setUserProfileProperties(queryNeo4j, userId, fields) {
   }
   if (Object.keys(props).length === 0) return;
   await queryNeo4j(
-    `MERGE (u:User {userId: $userId})
+    `MERGE (u:User {userID: $userId})
      SET u += $props`,
     { userId, props }
   );
