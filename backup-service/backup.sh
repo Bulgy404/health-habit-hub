@@ -15,7 +15,12 @@ ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
 # API-service and Grafana alerting — see docs/runbook.md). BACKUP_EMAIL is a
 # deprecated alias, still read as a fallback for anyone who only set that one.
 ALERT_EMAIL=${ALERT_EMAIL:-${BACKUP_EMAIL:-}}
-KEYCLOAK_HOST=${KEYCLOAK_HOST:-keycloak}
+# Full base URL including any relative path Keycloak is mounted at — prod
+# runs Keycloak under /auth (KC_HTTP_RELATIVE_PATH=/auth, see docker-compose.yml),
+# local dev does not. Set explicitly per-environment in each compose file
+# rather than assumed here, matching KEYCLOAK_URL's meaning everywhere else
+# in the codebase (app/services/keycloakAdminClient.js etc.).
+KEYCLOAK_URL=${KEYCLOAK_URL:-http://keycloak:8080}
 KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN:-admin}
 KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-}
 KC_DB_HOST=${KC_DB_HOST:-keycloak-db}
@@ -218,14 +223,14 @@ if [ "$INCLUDE_KEYCLOAK" = "true" ]; then
     # printf instead of an inline -d argument, so they never appear in
     # `ps aux` / `/proc/<pid>/cmdline` for the curl subprocess.
     KC_TOKEN=$(printf 'client_id=admin-cli&grant_type=password&username=%s&password=%s' "$KEYCLOAK_ADMIN" "$KEYCLOAK_ADMIN_PASSWORD" | curl -sf -X POST \
-      "http://${KEYCLOAK_HOST}:8080/auth/realms/master/protocol/openid-connect/token" \
+      "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
       --data @- \
       2>/dev/null | jq -r '.access_token // empty' 2>/dev/null || true)
 
     if [ -n "$KC_TOKEN" ] && [ "$KC_TOKEN" != "null" ]; then
       if curl -sf \
         -X POST \
-        "http://${KEYCLOAK_HOST}:8080/auth/admin/realms/hhh/partial-export?exportClients=true&exportGroupsAndRoles=true" \
+        "${KEYCLOAK_URL}/admin/realms/hhh/partial-export?exportClients=true&exportGroupsAndRoles=true" \
         -H "Authorization: Bearer $KC_TOKEN" \
         -H "Content-Type: application/json" \
         -o "$BACKUP_DIR/$DATE/keycloak/hhh-realm.json" \

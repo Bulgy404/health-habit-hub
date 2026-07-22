@@ -194,7 +194,9 @@ echo "Restoring Keycloak realm config (if backup present)..."
 if [ "$SKIP_KEYCLOAK" = true ]; then
   echo "Skipped (--skip-keycloak requested)"
 elif [ -f "$RESTORE_DIR/keycloak/hhh-realm.json" ]; then
-  KEYCLOAK_HOST="${KEYCLOAK_HOST:-keycloak}"
+  # See backup.sh for why this is a full base URL rather than a bare host —
+  # prod mounts Keycloak under /auth, local dev doesn't.
+  KEYCLOAK_URL="${KEYCLOAK_URL:-http://keycloak:8080}"
   KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
 
   if [ -n "${KEYCLOAK_ADMIN_PASSWORD:-}" ]; then
@@ -202,13 +204,13 @@ elif [ -f "$RESTORE_DIR/keycloak/hhh-realm.json" ]; then
     # printf instead of an inline -d argument, so they never appear in
     # `ps aux` / `/proc/<pid>/cmdline` for the curl subprocess.
     KC_TOKEN=$(printf 'client_id=admin-cli&grant_type=password&username=%s&password=%s' "$KEYCLOAK_ADMIN" "$KEYCLOAK_ADMIN_PASSWORD" | curl -sf -X POST \
-      "http://${KEYCLOAK_HOST}:8080/auth/realms/master/protocol/openid-connect/token" \
+      "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
       --data @- \
       2>/dev/null | jq -r '.access_token // empty' || true)
 
     if [ -n "$KC_TOKEN" ] && [ "$KC_TOKEN" != "null" ]; then
       if curl -sf -X POST \
-        "http://${KEYCLOAK_HOST}:8080/auth/admin/realms/hhh/partialImport" \
+        "${KEYCLOAK_URL}/admin/realms/hhh/partialImport" \
         -H "Authorization: Bearer $KC_TOKEN" \
         -H "Content-Type: application/json" \
         -d @"$RESTORE_DIR/keycloak/hhh-realm.json" \

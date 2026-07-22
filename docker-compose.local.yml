@@ -536,6 +536,12 @@ services:
     env_file:
       - .env
     environment:
+      # Local dev's Keycloak runs with KC_DB=dev-file (embedded, no Postgres —
+      # there is no keycloak-db service here, unlike prod). Explicitly clear
+      # KC_DB_PASSWORD so backup.sh takes its existing "not configured" skip
+      # path instead of trying (and failing) to pg_dump a database that
+      # doesn't exist locally, even if .env happens to define one for prod use.
+      - KC_DB_PASSWORD=
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-14}
       - OFFSITE_REMOTE=${OFFSITE_REMOTE:-}
       - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
@@ -554,6 +560,9 @@ services:
       # reachable from other containers on hhh-proxy.
       - BACKUP_API_SECRET=${BACKUP_API_SECRET:-CHANGE_THIS_BACKUP_API_SECRET}
       - BACKUP_UPLOAD_MAX_MB=${BACKUP_UPLOAD_MAX_MB:-2048}
+      # Local dev's Keycloak has no /auth relative path (unlike prod) — see
+      # backup-service/backup.sh for why this is a full base URL.
+      - KEYCLOAK_URL=http://keycloak:8080
       # docker.sock is never mounted directly into this container (that would
       # be root-equivalent host access) — the docker CLI talks to the scoped
       # docker-socket-proxy below instead, reachable only on the
