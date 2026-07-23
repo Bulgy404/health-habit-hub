@@ -236,6 +236,7 @@ Step-by-step setup: [docs/guides/local-dev.md](docs/guides/local-dev.md) · new 
 | [DEPLOYMENT.md](DEPLOYMENT.md)                                               | Production deployment guide                                                                     |
 | [CHANGELOG.md](CHANGELOG.md)                                                 | Version history (Keep a Changelog / SemVer)                                                     |
 | [SECURITY.md](SECURITY.md)                                                   | Security policy and vulnerability reporting                                                     |
+| [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)                             | Attribution for third-party content (BCIO ontology, knowledge corpus policy)                    |
 | [BUG_AUDIT.md](BUG_AUDIT.md)                                                 | Current bug/reliability audit and open P0–P2 punch list                                         |
 | [docs/archive/](docs/archive/)                                               | Superseded audits and reviews (AUDIT.md, DEAD_CODE_AUDIT.md, UI_UX_REVIEW.md), kept for history |
 | [docs/app-store/review-information.md](docs/app-store/review-information.md) | App Store review notes, demo access, privacy labels                                             |

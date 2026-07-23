@@ -855,6 +855,12 @@ services:
       - TOKEN_SECRET=${LIGHTRAG_TOKEN_SECRET}
     volumes:
       - lightrag-data:/app/data
+      # Knowledge corpus, provided at deploy time — NOT baked into the image and
+      # never committed (see lightrag/knowledge/README.md). The seed documents
+      # may be third-party literature we aren't licensed to redistribute, so
+      # they must not ship inside a public image. Read-only, and optional: the
+      # entrypoint logs "No PDFs found" and starts normally when it's empty.
+      - ${LIGHTRAG_KNOWLEDGE_DIR:-./lightrag/knowledge}:/app/inputs:ro
     networks:
       - hhh-proxy
     healthcheck:

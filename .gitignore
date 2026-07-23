@@ -63,3 +63,12 @@ docs/superpowers/
 
 # rclone offsite-backup credentials
 backup-service/rclone/
+
+# LightRAG knowledge corpus — source documents are NEVER committed.
+# The corpus may contain third-party, copyright-protected literature that we
+# are not licensed to redistribute, and this repository is public. Provide the
+# documents at deploy time instead (see lightrag/knowledge/README.md and the
+# LIGHTRAG_KNOWLEDGE_DIR bind mount in docker-compose.yml).
+lightrag/knowledge/*
+!lightrag/knowledge/.gitkeep
+!lightrag/knowledge/README.md
