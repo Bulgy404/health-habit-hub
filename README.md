@@ -105,7 +105,7 @@ flowchart TB
     flutter --> traefik
     adminui --> traefik
     traefik --> backend
-    flutter -. "OIDC + PKCE" .-> keycloak
+    flutter -. "refresh_token grant" .-> keycloak
     backend -. "JWKS verify" .-> keycloak
     backend --> mongo
     backend --> neo4j

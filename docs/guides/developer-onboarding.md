@@ -260,7 +260,7 @@ npm install
 npm run dev  # starts Next.js dev server on http://localhost:3001
 ```
 
-The dev server starts on port **3001** (separate from the Node.js backend on 3000).
+The dev server starts on port **3001** (separate from the Node.js backend on 3000). The app itself is served under `/admin` (Next.js `basePath`), so open `http://localhost:3001/admin`, not the bare port.
 
 ### Authentication
 
@@ -269,7 +269,7 @@ The admin app connects to Keycloak for authentication. You need a Keycloak user 
 The following environment variables control the admin app's auth behaviour (already set in `docker-compose.local.yml` for the containerised version; set them in a local `.env.local` file inside `admin/` when running outside Docker):
 
 ```ini
-NEXTAUTH_URL=http://localhost:3001
+NEXTAUTH_URL=http://localhost:3001/admin/api/auth
 NEXTAUTH_SECRET=any-random-string-for-local-dev
 KEYCLOAK_CLIENT_ID=hhh-admin
 KEYCLOAK_CLIENT_SECRET=hhh-admin-secret-change-me

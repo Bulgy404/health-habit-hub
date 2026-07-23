@@ -260,3 +260,44 @@ classDiagram
     Habit "1" --> "0..*" Context : HAS_CONTEXT
     Context "1" --> "0..*" BCIOConcept : MAPS_TO
     Habit "*" ..> "1" User : donated by (anonymised)
+
+    %% ===================== Study & Questionnaire graph (Neo4j) =====================
+    %% MongoDB (Study, Questionnaire above) is the source of truth; these are its
+    %% Neo4j projection — see docs/data-model.md §1.2.
+    class StudyGraph["Study"] {
+        <<Neo4j node>>
+        +String uuid
+        +String name
+    }
+    class QuestionnaireGraph["Questionnaire"] {
+        <<Neo4j node>>
+        +String slug
+        +String title
+        +String version
+    }
+    class QuestionnaireItem {
+        <<Neo4j node>>
+        +String uid  slug::itemId
+        +String questionnaireSlug
+        +String itemId
+        +String text
+        +String type
+        +Int position
+        +Boolean adhoc
+    }
+    class QuestionnaireResponse {
+        <<Neo4j node>>
+        +String responseId  MongoDB form_responses._id
+        +Date submittedAt
+        +String questionnaireSlug
+        +Int occurrence
+        +Date scheduledFor
+    }
+    Study ..> StudyGraph : projected as (uuid = _id)
+    Questionnaire ..> QuestionnaireGraph : projected as (slug)
+    StudyGraph "1" --> "0..*" QuestionnaireGraph : HAS_QUESTIONNAIRE
+    QuestionnaireGraph "1" --> "0..*" QuestionnaireItem : HAS_ITEM
+    User "1" --> "0..*" StudyGraph : ENROLLED_IN
+    User "1" --> "0..*" QuestionnaireResponse : SUBMITTED
+    QuestionnaireResponse "*" --> "1" QuestionnaireGraph : FOR_QUESTIONNAIRE
+    QuestionnaireResponse "*" --> "0..*" QuestionnaireItem : HAS_ANSWER (value, rawValue)

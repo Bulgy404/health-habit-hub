@@ -199,8 +199,10 @@ The admin panel is a Next.js application (in `admin/`) that provides a web UI fo
 
 When the local Docker stack is running (`make dev`), the admin app is available at:
 
-- **`http://admin.localhost`** — via the Traefik proxy (recommended; matches the `NEXTAUTH_URL` configured for the container)
-- **`http://localhost:3001`** — direct port binding (useful for debugging, but NextAuth redirects target `admin.localhost`)
+- **`http://admin.localhost/admin`** — via the Traefik proxy (recommended; matches the `NEXTAUTH_URL` configured for the container)
+- **`http://localhost:3001/admin`** — direct port binding (useful for debugging, but NextAuth redirects target `admin.localhost`)
+
+> The `/admin` suffix is required either way — the admin app has a Next.js `basePath` of `/admin` baked in at build time, so the bare host 404s.
 
 > **Note:** `http://admin.localhost` requires that your browser resolves `.localhost` subdomains to `127.0.0.1`. All major browsers on macOS do this automatically — no `/etc/hosts` changes needed.
 
@@ -220,7 +222,7 @@ The created user is automatically assigned both `admin` and `researcher` roles, 
 To log in to the admin panel:
 
 1. Wait for `keycloak-init` to complete (it runs once on stack startup; check `docker compose -f docker-compose.local.yml logs keycloak-init`).
-2. Open `http://admin.localhost` in your browser.
+2. Open `http://admin.localhost/admin` in your browser.
 3. Sign in with the username from `HHH_ADMIN_USER` and the password from `KEYCLOAK_ADMIN_PASSWORD`.
 
 > **Note:** No manual Keycloak UI steps are required. If you want to change the admin username, edit `HHH_ADMIN_USER` in `.env` and re-run `make reset` (or restart the `keycloak-init` container after wiping the Keycloak volume).
@@ -235,7 +237,7 @@ npm install
 npm run dev
 ```
 
-This starts the Next.js dev server on `http://localhost:3001` with hot reload. The `admin` container in Docker must be stopped first to avoid a port conflict:
+This starts the Next.js dev server on `http://localhost:3001` with hot reload — open `http://localhost:3001/admin` (the app has a `/admin` basePath, so the bare port 404s). The `admin` container in Docker must be stopped first to avoid a port conflict:
 
 ```bash
 docker compose -f docker-compose.local.yml stop admin
@@ -378,7 +380,7 @@ If it exited with an error, restart it:
 docker compose -f docker-compose.local.yml up keycloak-init
 ```
 
-**Fix 2:** Make sure you are accessing the admin panel at `http://admin.localhost` and not `http://localhost:3001`. NextAuth's `NEXTAUTH_URL` is set to `http://admin.localhost`, so redirect URIs will not match when using the direct port.
+**Fix 2:** Make sure you are accessing the admin panel at `http://admin.localhost/admin` and not `http://localhost:3001` (without the path). NextAuth's `NEXTAUTH_URL` is set to `http://admin.localhost/admin/api/auth`, so redirect URIs will not match when using the direct port or omitting `/admin`.
 
 **Fix 3:** Browser redirects to `http://keycloak:8080/...` and fails with "site can't be reached". This means OIDC discovery (`wellKnown`) is leaking the internal Docker hostname into the browser. The current `admin/src/lib/auth.ts` no longer uses `wellKnown` and instead sets the authorization endpoint explicitly to `KEYCLOAK_BROWSER_URL`. If you see this symptom, confirm `KEYCLOAK_BROWSER_URL=http://localhost:8080` is set on the admin container and rebuild.
 
