@@ -17,7 +17,7 @@ Digital Health Research Group
 
 Dipl.-Wi.-Ing. Felix Reinsch
 E-mail : [digital-health@tu-dresden.de](mailto:digital-health@tu-dresden.de)
-Téléphone : [+49 351 463-37671](tel: +4935146337671)
+Téléphone : [+49 351 463-37671](tel:+4935146337671)
 
 ## Clause de non-responsabilité
 
