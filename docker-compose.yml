@@ -855,12 +855,26 @@ services:
       - TOKEN_SECRET=${LIGHTRAG_TOKEN_SECRET}
     volumes:
       - lightrag-data:/app/data
-      # Knowledge corpus, provided at deploy time — NOT baked into the image and
-      # never committed (see lightrag/knowledge/README.md). The seed documents
-      # may be third-party literature we aren't licensed to redistribute, so
-      # they must not ship inside a public image. Read-only, and optional: the
-      # entrypoint logs "No PDFs found" and starts normally when it's empty.
-      - ${LIGHTRAG_KNOWLEDGE_DIR:-./lightrag/knowledge}:/app/inputs:ro
+      # Knowledge corpus — NOT baked into the image and never committed (see
+      # lightrag/knowledge/README.md); the documents may be third-party
+      # literature we aren't licensed to redistribute, so they must not ship
+      # inside a public image.
+      #
+      # MUST be writable: the WebUI's "upload document" endpoint writes into
+      # /app/inputs, so a read-only mount fails with
+      # "[Errno 30] Read-only file system" on upload.
+      #
+      # Defaults to the named volume `lightrag-inputs`, which Docker initialises
+      # from the image's /app/inputs — created before the chown in the
+      # Dockerfile, so it is owned by the non-root `lightrag` user and is
+      # writable (same mechanism as lightrag-data above). Uploads then persist
+      # across redeploys.
+      #
+      # To use a host directory instead, set LIGHTRAG_KNOWLEDGE_DIR to an
+      # ABSOLUTE path (e.g. /opt/hhh/knowledge). It must be writable by the
+      # container's `lightrag` user, otherwise uploads fail with EACCES —
+      # see lightrag/knowledge/README.md.
+      - ${LIGHTRAG_KNOWLEDGE_DIR:-lightrag-inputs}:/app/inputs
     networks:
       - hhh-proxy
     healthcheck:
@@ -1426,6 +1440,10 @@ volumes:
     name: hhh-redisinsight-data
   lightrag-data:
     name: hhh-lightrag-data
+  # Uploaded / staged knowledge documents (mounted at /app/inputs). Kept out of
+  # the image and out of git; see lightrag/knowledge/README.md.
+  lightrag-inputs:
+    name: hhh-lightrag-inputs
   prometheus-data:
     name: hhh-prometheus-data
   grafana-data:
