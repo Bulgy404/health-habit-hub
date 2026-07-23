@@ -255,7 +255,7 @@ services:
       # `environment:` (which has no effect on an already-built image). Kept
       # in sync with the values below.
       args:
-        NEXT_PUBLIC_NEXTAUTH_URL: http://admin.${PATH_SUFFIX:-localhost}
+        NEXT_PUBLIC_NEXTAUTH_URL: http://admin.${PATH_SUFFIX:-localhost}/admin
         NEXT_PUBLIC_KEYCLOAK_BROWSER_URL: http://localhost:8080
         NEXT_PUBLIC_API_URL: http://localhost:${APP_LOCAL_PORT:-3000}/api/v1
         NEXT_PUBLIC_MONGO_EXPRESS_URL: http://localhost:8081
@@ -264,8 +264,8 @@ services:
     env_file:
       - .env
     environment:
-      - NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}
-      - NEXT_PUBLIC_NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}
+      - NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}/admin/api/auth
+      - NEXT_PUBLIC_NEXTAUTH_URL=http://admin.${PATH_SUFFIX:-localhost}/admin
       - NEXT_PUBLIC_KEYCLOAK_BROWSER_URL=http://localhost:8080
       - NEXT_PUBLIC_API_URL=http://localhost:${APP_LOCAL_PORT:-3000}/api/v1
       - NEXT_PUBLIC_MONGO_EXPRESS_URL=http://localhost:8081

@@ -276,6 +276,7 @@ class HhhApp extends ConsumerWidget {
     // ── Main layout ───────────────────────────────────────────────────────────
     return MaterialApp.router(
       title: 'Health Habit Hub',
+      debugShowCheckedModeBanner: false,
       theme: _buildLightTheme(),
       darkTheme: _buildDarkTheme(),
       themeMode: themeMode,
