@@ -939,86 +939,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /admin/audit-log:
+  /admin/surveys:
     get:
-      summary: List general admin action audit entries
-      description: >
-        Paginated, newest first. Covers every mutating admin request except /backups/* (which has its own dedicated
-        audit log, see /backups/audit-log).
+      summary: List all surveys (admin view)
+      description: Returns all surveys regardless of status. Admin and researcher only.
       tags:
         - Admin
       security:
         - bearerAuth: []
-      parameters:
-        - in: query
-          name: limit
-          schema:
-            type: integer
-            default: 50
-            maximum: 200
-        - in: query
-          name: resourceType
-          schema:
-            type: string
-        - in: query
-          name: byUserId
-          schema:
-            type: string
-        - in: query
-          name: action
-          schema:
-            type: string
       responses:
         '200':
-          description: Paginated audit entries
-        '403':
-          description: Caller does not have admin role
-  /admin/notifications/send:
-    post:
-      summary: Send push notification immediately to study participants
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - studyId
-                - title
-                - body
-              properties:
-                studyId:
-                  type: string
-                groupId:
-                  type: string
-                  description: Optional group filter
-                title:
-                  type: string
-                body:
-                  type: string
-                data:
-                  type: object
-      responses:
-        '200':
-          description: Notification dispatched
+          description: All surveys
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  sent:
-                    type: integer
-                  failed:
-                    type: integer
-        '400':
-          description: Missing required fields
-  /admin/notifications/schedule:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Survey'
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     post:
-      summary: Schedule a push notification for future delivery
+      summary: Create a new survey
+      description: Creates a new survey in draft status. Title and type are required.
       tags:
         - Admin
       security:
@@ -1030,49 +982,61 @@ paths:
             schema:
               type: object
               required:
-                - studyId
                 - title
-                - body
-                - scheduledAt
+                - type
               properties:
-                studyId:
-                  type: string
-                groupId:
-                  type: string
                 title:
                   type: string
-                body:
+                  example: Baseline Questionnaire
+                type:
                   type: string
-                data:
+                  example: questionnaire
+                jsonSchema:
                   type: object
-                scheduledAt:
-                  type: string
-                  format: date-time
+                  description: SurveyJS JSON definition
+                assignedGroups:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - G1
+                      - G2
+                      - G3
+                      - G4
+                  example:
+                    - G1
+                    - G2
       responses:
         '201':
-          description: Notification scheduled
+          description: Survey created
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
+                $ref: '#/components/schemas/Survey'
         '400':
-          description: Missing required fields or invalid scheduledAt
-  /admin/notifications/scheduled:
-    get:
-      summary: List pending scheduled notifications
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: Array of pending scheduled notifications
-  /admin/notifications/scheduled/{id}:
-    delete:
-      summary: Cancel a pending scheduled notification
+          description: Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: title and type are required
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/surveys/{id}:
+    put:
+      summary: Update a survey
+      description: Updates any combination of title, type, jsonSchema, assignedGroups, or status for the specified survey.
       tags:
         - Admin
       security:
@@ -1083,11 +1047,336 @@ paths:
           required: true
           schema:
             type: string
+            format: uuid
+          description: Survey UUID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                type:
+                  type: string
+                jsonSchema:
+                  type: object
+                assignedGroups:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - G1
+                      - G2
+                      - G3
+                      - G4
+                status:
+                  type: string
+                  enum:
+                    - draft
+                    - published
+                    - archived
       responses:
         '200':
-          description: Notification cancelled
+          description: Survey updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+                  id:
+                    type: string
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '404':
-          description: Notification not found or already sent
+          description: Survey not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/surveys/{id}/status:
+    patch:
+      summary: Update survey status
+      description: Transitions a survey between draft, published, and archived states.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - draft
+                    - published
+                    - archived
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  id:
+                    type: string
+                  status:
+                    type: string
+        '400':
+          description: Invalid status value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Survey not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/surveys/{id}/groups:
+    patch:
+      summary: Assign study groups to a survey
+      description: Sets the list of study groups (G1-G4) that can see this survey.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - groups
+              properties:
+                groups:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - G1
+                      - G2
+                      - G3
+                      - G4
+                  example:
+                    - G1
+                    - G3
+      responses:
+        '200':
+          description: Groups updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  id:
+                    type: string
+                  assignedGroups:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Invalid groups array
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Caller does not have admin or researcher role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Survey not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/studies/{id}/export:
+    get:
+      summary: Download all data for a study
+      description: >-
+        Returns a JSON snapshot of the study, its enrollments, participants, questionnaire assignments/windows, and all
+        participant-scoped data (responses, logs, SRHI, donations, comments). Token-card binaries are omitted and
+        recovery phrases are redacted unless EXPOSE_RECOVERY_PHRASES is enabled.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Study id
+      responses:
+        '200':
+          description: JSON export bundle (attachment)
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Study not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/studies/{id}/delete:
+    post:
+      summary: Delete a study from the admin UI (soft-delete)
+      description: >-
+        Hides the study from the studies list while retaining all of its data in the backend. Requires the exact study
+        name as confirmation. The default study cannot be deleted.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Study id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - confirmName
+              properties:
+                confirmName:
+                  type: string
+                  description: Must exactly match the study's name
+      responses:
+        '200':
+          description: Study hidden from the list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+        '400':
+          description: Name confirmation did not match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Study not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Cannot delete the default study
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/restore-attempts:
+    get:
+      summary: List passphrase-based account-restore attempts
+      description: >
+        Paginated, newest first. Security-monitoring view over every POST /restore call (success and failure), plus a
+        list of IPs currently flagged for repeated non-success attempts in the last hour — a signal the per-IP rate
+        limiter alone doesn't surface.
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - in: query
+          name: outcome
+          schema:
+            type: string
+        - in: query
+          name: ip
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated restore attempts, plus currently flagged IPs
+        '403':
+          description: Caller does not have admin role
   /admin/participants:
     get:
       summary: List all active participants
@@ -1513,23 +1802,132 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /admin/restore-attempts:
+  /admin/notifications/send:
+    post:
+      summary: Send push notification immediately to study participants
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - studyId
+                - title
+                - body
+              properties:
+                studyId:
+                  type: string
+                groupId:
+                  type: string
+                  description: Optional group filter
+                title:
+                  type: string
+                body:
+                  type: string
+                data:
+                  type: object
+      responses:
+        '200':
+          description: Notification dispatched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent:
+                    type: integer
+                  failed:
+                    type: integer
+        '400':
+          description: Missing required fields
+  /admin/notifications/schedule:
+    post:
+      summary: Schedule a push notification for future delivery
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - studyId
+                - title
+                - body
+                - scheduledAt
+              properties:
+                studyId:
+                  type: string
+                groupId:
+                  type: string
+                title:
+                  type: string
+                body:
+                  type: string
+                data:
+                  type: object
+                scheduledAt:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Notification scheduled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+        '400':
+          description: Missing required fields or invalid scheduledAt
+  /admin/notifications/scheduled:
     get:
-      summary: List passphrase-based account-restore attempts
-      description: >
-        Paginated, newest first. Security-monitoring view over every POST /restore call (success and failure), plus a
-        list of IPs currently flagged for repeated non-success attempts in the last hour — a signal the per-IP rate
-        limiter alone doesn't surface.
+      summary: List pending scheduled notifications
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Array of pending scheduled notifications
+  /admin/notifications/scheduled/{id}:
+    delete:
+      summary: Cancel a pending scheduled notification
       tags:
         - Admin
       security:
         - bearerAuth: []
       parameters:
-        - in: query
-          name: page
+        - in: path
+          name: id
+          required: true
           schema:
-            type: integer
-            default: 1
+            type: string
+      responses:
+        '200':
+          description: Notification cancelled
+        '404':
+          description: Notification not found or already sent
+  /admin/audit-log:
+    get:
+      summary: List general admin action audit entries
+      description: >
+        Paginated, newest first. Covers every mutating admin request except /backups/* (which has its own dedicated
+        audit log, see /backups/audit-log).
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
         - in: query
           name: limit
           schema:
@@ -1537,420 +1935,22 @@ paths:
             default: 50
             maximum: 200
         - in: query
-          name: outcome
+          name: resourceType
           schema:
             type: string
         - in: query
-          name: ip
+          name: byUserId
+          schema:
+            type: string
+        - in: query
+          name: action
           schema:
             type: string
       responses:
         '200':
-          description: Paginated restore attempts, plus currently flagged IPs
+          description: Paginated audit entries
         '403':
           description: Caller does not have admin role
-  /admin/studies/{id}/export:
-    get:
-      summary: Download all data for a study
-      description: >-
-        Returns a JSON snapshot of the study, its enrollments, participants, questionnaire assignments/windows, and all
-        participant-scoped data (responses, logs, SRHI, donations, comments). Token-card binaries are omitted and
-        recovery phrases are redacted unless EXPOSE_RECOVERY_PHRASES is enabled.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: Study id
-      responses:
-        '200':
-          description: JSON export bundle (attachment)
-          content:
-            application/json:
-              schema:
-                type: object
-        '404':
-          description: Study not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /admin/studies/{id}/delete:
-    post:
-      summary: Delete a study from the admin UI (soft-delete)
-      description: >-
-        Hides the study from the studies list while retaining all of its data in the backend. Requires the exact study
-        name as confirmation. The default study cannot be deleted.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: Study id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - confirmName
-              properties:
-                confirmName:
-                  type: string
-                  description: Must exactly match the study's name
-      responses:
-        '200':
-          description: Study hidden from the list
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-                    example: true
-        '400':
-          description: Name confirmation did not match
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Study not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Cannot delete the default study
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /admin/surveys:
-    get:
-      summary: List all surveys (admin view)
-      description: Returns all surveys regardless of status. Admin and researcher only.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      responses:
-        '200':
-          description: All surveys
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Survey'
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    post:
-      summary: Create a new survey
-      description: Creates a new survey in draft status. Title and type are required.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - title
-                - type
-              properties:
-                title:
-                  type: string
-                  example: Baseline Questionnaire
-                type:
-                  type: string
-                  example: questionnaire
-                jsonSchema:
-                  type: object
-                  description: SurveyJS JSON definition
-                assignedGroups:
-                  type: array
-                  items:
-                    type: string
-                    enum:
-                      - G1
-                      - G2
-                      - G3
-                      - G4
-                  example:
-                    - G1
-                    - G2
-      responses:
-        '201':
-          description: Survey created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Survey'
-        '400':
-          description: Missing required fields
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: title and type are required
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /admin/surveys/{id}:
-    put:
-      summary: Update a survey
-      description: Updates any combination of title, type, jsonSchema, assignedGroups, or status for the specified survey.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-          description: Survey UUID
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                title:
-                  type: string
-                type:
-                  type: string
-                jsonSchema:
-                  type: object
-                assignedGroups:
-                  type: array
-                  items:
-                    type: string
-                    enum:
-                      - G1
-                      - G2
-                      - G3
-                      - G4
-                status:
-                  type: string
-                  enum:
-                    - draft
-                    - published
-                    - archived
-      responses:
-        '200':
-          description: Survey updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-                    example: true
-                  id:
-                    type: string
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Survey not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /admin/surveys/{id}/status:
-    patch:
-      summary: Update survey status
-      description: Transitions a survey between draft, published, and archived states.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - status
-              properties:
-                status:
-                  type: string
-                  enum:
-                    - draft
-                    - published
-                    - archived
-      responses:
-        '200':
-          description: Status updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-                  id:
-                    type: string
-                  status:
-                    type: string
-        '400':
-          description: Invalid status value
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Survey not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /admin/surveys/{id}/groups:
-    patch:
-      summary: Assign study groups to a survey
-      description: Sets the list of study groups (G1-G4) that can see this survey.
-      tags:
-        - Admin
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - groups
-              properties:
-                groups:
-                  type: array
-                  items:
-                    type: string
-                    enum:
-                      - G1
-                      - G2
-                      - G3
-                      - G4
-                  example:
-                    - G1
-                    - G3
-      responses:
-        '200':
-          description: Groups updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  ok:
-                    type: boolean
-                  id:
-                    type: string
-                  assignedGroups:
-                    type: array
-                    items:
-                      type: string
-        '400':
-          description: Invalid groups array
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Missing or invalid JWT
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Caller does not have admin or researcher role
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Survey not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
   /surveys:
     get:
       summary: List surveys
