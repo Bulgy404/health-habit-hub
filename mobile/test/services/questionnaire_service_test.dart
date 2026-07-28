@@ -99,4 +99,41 @@ void main() {
       );
     });
   });
+
+  group('fetchDueQuestionnaires', () {
+    test('excludes srhi items — they have no entry in the generic '
+        'questionnaires collection that /questionnaire/:slug reads from, '
+        'so surfacing them here would route to a 404', () async {
+      adapter.onGet(
+        '$_base/questionnaires/due',
+        (server) => server.reply(200, {
+          'questionnaires': [
+            {
+              'windowId': 'w1',
+              'questionnaireSlug': 'sliq',
+              'questionnaireTitle': 'SLIQ',
+              'occurrence': 1,
+              'scheduledFor': '2026-07-01T09:00:00.000Z',
+              'isDue': true,
+            },
+            {
+              'windowId': 'w2',
+              'questionnaireSlug': 'srhi',
+              'questionnaireTitle': 'Weekly check-in: Walking',
+              'occurrence': 1,
+              'scheduledFor': '2026-07-01T09:00:00.000Z',
+              'isDue': true,
+              'intentionId': 'intention-1',
+            },
+          ],
+        }),
+        queryParameters: {'lang': 'en'},
+      );
+
+      final result = await service.fetchDueQuestionnaires('en');
+
+      expect(result.length, 1);
+      expect(result.single.slug, 'sliq');
+    });
+  });
 }

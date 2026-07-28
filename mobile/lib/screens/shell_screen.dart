@@ -44,8 +44,11 @@ final dueQuestionnaireProvider = Provider<Future<String?> Function()>((ref) {
           );
       final items = (response.data?['questionnaires'] as List<dynamic>? ?? [])
           .whereType<Map<String, dynamic>>();
+      // Excludes 'srhi': it has its own in-app due-surface (the habit list's
+      // check-in card) and no entry in the generic questionnaires collection
+      // that '/questionnaire/:slug' reads from — routing it there would 404.
       final due = items.firstWhere(
-        (it) => it['isDue'] == true,
+        (it) => it['isDue'] == true && it['questionnaireSlug'] != 'srhi',
         orElse: () => const {},
       );
       return due['questionnaireSlug']?.toString();

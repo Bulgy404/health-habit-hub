@@ -48,6 +48,13 @@ class QuestionnaireService {
   /// Returns the participant's due + upcoming scheduled questionnaires
   /// (from the questionnaire scheduling system), with titles resolved in
   /// [lang].
+  ///
+  /// Excludes `srhi` items: the endpoint also carries per-habit SRHI
+  /// check-ins so [ReminderSchedulerService] can schedule their local
+  /// notifications, but SRHI has its own dedicated in-app surface (the habit
+  /// list's check-in card) and submission flow — routing it through the
+  /// generic `/questionnaire/:slug` screen here would 404 (SRHI isn't in the
+  /// `questionnaires` collection that route reads from).
   Future<List<DueQuestionnaire>> fetchDueQuestionnaires(String lang) async {
     final response = await _dio.get<Map<String, dynamic>>(
       '$_baseUrl/questionnaires/due',
@@ -58,6 +65,7 @@ class QuestionnaireService {
     return list
         .cast<Map<String, dynamic>>()
         .map(DueQuestionnaire.fromJson)
+        .where((q) => q.slug != 'srhi')
         .toList();
   }
 
