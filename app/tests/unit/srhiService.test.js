@@ -37,9 +37,7 @@ function makeDb(responses = [], intentions = []) {
             const api = {
               sort(spec) {
                 const [[key, dir]] = Object.entries(spec);
-                results = [...results].sort(
-                  (a, b) => (a[key] - b[key]) * dir
-                );
+                results = [...results].sort((a, b) => (a[key] - b[key]) * dir);
                 return api;
               },
               limit(n) {
@@ -183,7 +181,9 @@ test('topUpSrhiWindows: extends the buffer when the intention is still active', 
     intentionId,
     userId: 'u1',
     weekNumber,
-    scheduledFor: new Date(now.getTime() + weekNumber * 7 * 24 * 60 * 60 * 1000),
+    scheduledFor: new Date(
+      now.getTime() + weekNumber * 7 * 24 * 60 * 60 * 1000
+    ),
     submittedAt: weekNumber === 4 ? null : now,
     score: weekNumber === 4 ? null : 4,
     studyId: null,
@@ -191,7 +191,12 @@ test('topUpSrhiWindows: extends the buffer when the intention is still active', 
     createdAt: now,
   }));
   const db = makeDb(windows, [
-    { _id: intentionId, userId: 'u1', status: 'active', behaviorLabel: 'Walking' },
+    {
+      _id: intentionId,
+      userId: 'u1',
+      status: 'active',
+      behaviorLabel: 'Walking',
+    },
   ]);
 
   const created = await topUpSrhiWindows({
@@ -225,7 +230,12 @@ test('topUpSrhiWindows: no-ops once the habit is no longer active', async () => 
     },
   ];
   const db = makeDb(windows, [
-    { _id: intentionId, userId: 'u1', status: 'abandoned', behaviorLabel: 'Walking' },
+    {
+      _id: intentionId,
+      userId: 'u1',
+      status: 'abandoned',
+      behaviorLabel: 'Walking',
+    },
   ]);
 
   const created = await topUpSrhiWindows({
@@ -245,7 +255,9 @@ test('getUpcomingSrhiQuestionnaireItems: shapes windows like generic due questio
     intentionId,
     userId: 'u1',
     weekNumber,
-    scheduledFor: new Date(now.getTime() + (weekNumber - 4) * 7 * 24 * 60 * 60 * 1000),
+    scheduledFor: new Date(
+      now.getTime() + (weekNumber - 4) * 7 * 24 * 60 * 60 * 1000
+    ),
     submittedAt: weekNumber < 4 ? now : null,
     score: weekNumber < 4 ? 4 : null,
     studyId: null,
@@ -253,11 +265,20 @@ test('getUpcomingSrhiQuestionnaireItems: shapes windows like generic due questio
     createdAt: now,
   }));
   const db = makeDb(windows, [
-    { _id: intentionId, userId: 'u1', status: 'active', behaviorLabel: 'Walking' },
+    {
+      _id: intentionId,
+      userId: 'u1',
+      status: 'active',
+      behaviorLabel: 'Walking',
+    },
   ]);
 
   const horizon = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  const items = await getUpcomingSrhiQuestionnaireItems({ db, userId: 'u1', horizon });
+  const items = await getUpcomingSrhiQuestionnaireItems({
+    db,
+    userId: 'u1',
+    horizon,
+  });
 
   assert.equal(items.length, 1);
   assert.equal(items[0].questionnaireSlug, 'srhi');

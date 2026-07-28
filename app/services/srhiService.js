@@ -72,9 +72,11 @@ export async function topUpSrhiWindows({ db, intentionId, userId }) {
     );
   if (!intention || intention.status !== 'active') return 0;
 
-  const openCount = await db
-    .collection(COLLECTION)
-    .countDocuments({ intentionId: oid, userId: String(userId), submittedAt: null });
+  const openCount = await db.collection(COLLECTION).countDocuments({
+    intentionId: oid,
+    userId: String(userId),
+    submittedAt: null,
+  });
   if (openCount >= SRHI_TOPUP_CAP) return 0;
   const need = SRHI_TOPUP_CAP - openCount;
 
@@ -140,7 +142,11 @@ export async function getDueWindows({ db, userId }) {
  * @param {{ db: object, userId: string, horizon: Date }} deps
  * @returns {Promise<Array>}
  */
-export async function getUpcomingSrhiQuestionnaireItems({ db, userId, horizon }) {
+export async function getUpcomingSrhiQuestionnaireItems({
+  db,
+  userId,
+  horizon,
+}) {
   const now = new Date();
   const wins = await db
     .collection(COLLECTION)
