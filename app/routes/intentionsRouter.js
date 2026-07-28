@@ -12,30 +12,16 @@ import {
 import { upsertLog, getLogs, deleteLog } from '../services/dailyLogService.js';
 import { generateWindows } from '../services/srhiService.js';
 import { generateHabitCreationWindows } from '../services/questionnaireScheduleService.js';
-import { sendUserNotification } from '../services/notificationService.js';
 import { logger } from '../utils/logger.js';
 
 const log = logger.child({ module: 'intentionsRouter' });
-
-// Delay before the post-habit-creation check-in push fires. A short in-process
-// timer, overridable so tests can drive the push synchronously instead of
-// waiting 5 real seconds.
-const HABIT_PUSH_DELAY_MS = 5000;
 
 /**
  * @param {object} deps
  * @param {object} [deps.db]
  * @param {Function} [deps.neo4jRun]
- * @param {Function} [deps.notify] Injectable notifier (defaults to the FCM
- *   per-user sender) so tests can assert the push without a real Firebase.
- * @param {number} [deps.pushDelayMs] Override the push delay (tests use 0).
  */
-export function createIntentionsRouter({
-  db,
-  neo4jRun,
-  notify = sendUserNotification,
-  pushDelayMs = HABIT_PUSH_DELAY_MS,
-} = {}) {
+export function createIntentionsRouter({ db, neo4jRun } = {}) {
   const router = express.Router();
   const getDb = makeGetDb(db);
 
@@ -192,28 +178,6 @@ export function createIntentionsRouter({
         intentionId: result.id,
         createdAt: new Date(result.createdAt),
       });
-
-      // Fire-and-forget push ~5s after creation nudging the participant to
-      // complete the just-scheduled check-in. Non-blocking so the 201 returns
-      // immediately; an in-process timer means the push is lost if the server
-      // restarts within the window, which is acceptable — the check-in is also
-      // visible in-app. SRHI above always delivers, so this always fires.
-      const habitLabel = result.behaviorLabel ?? '';
-      setTimeout(() => {
-        Promise.resolve(
-          notify({
-            db: database,
-            userId,
-            title: 'Habit check-in ready',
-            body: habitLabel
-              ? `Take a moment to rate your new habit: ${habitLabel}`
-              : 'Take a moment to rate your new habit.',
-            data: { type: 'srhi', screen: 'habits', intentionId: result.id },
-          })
-        ).catch((err) =>
-          log.error({ err }, '[intentions] habit-creation push failed')
-        );
-      }, pushDelayMs).unref?.();
 
       res.status(201).json(result);
     } catch (err) {
