@@ -141,10 +141,12 @@ class ReminderSchedulerService {
   }
 
   /// Schedules a local notification at each upcoming scheduled questionnaire
-  /// due date (`GET /questionnaires/due`). Due-now questionnaires are shown as
-  /// "today's task" cards instead, so only future occurrences are notified.
-  /// Uses a dedicated id range that it clears first, so it never disturbs the
-  /// habit reminders.
+  /// due date (`GET /questionnaires/due`), including weekly per-habit SRHI
+  /// check-ins (`questionnaireSlug == 'srhi'`), which the backend keeps
+  /// generating for as long as the habit stays active. Due-now questionnaires
+  /// are shown as "today's task" cards instead, so only future occurrences
+  /// are notified. Uses a dedicated id range that it clears first, so it
+  /// never disturbs the habit reminders.
   Future<void> syncQuestionnaireReminders() async {
     await _ensureTimezone();
 
@@ -192,11 +194,14 @@ class ReminderSchedulerService {
       );
       if (!fireAt.isAfter(now)) continue; // already passed → shown as a card
       final title = it['questionnaireTitle']?.toString() ?? 'Questionnaire';
+      final isSrhi = it['questionnaireSlug']?.toString() == 'srhi';
 
       await _plugin.zonedSchedule(
         id: _qNotifBase + idx++,
-        title: 'Questionnaire ready',
-        body: '$title is ready to complete.',
+        title: isSrhi ? 'Weekly check-in ready' : 'Questionnaire ready',
+        body: isSrhi
+            ? '$title — a quick check-in is ready.'
+            : '$title is ready to complete.',
         scheduledDate: fireAt,
         notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
@@ -208,10 +213,15 @@ class ReminderSchedulerService {
           iOS: DarwinNotificationDetails(),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        // SRHI is habit-scoped — route to that habit's detail screen (shows
+        // the check-in prompt), where a plain path-only deep link is enough.
         // Non-SRHI questionnaires live in the Profile tab (My Profile →
         // Health Questionnaires) — route there rather than deep-linking into
-        // a specific questionnaire, consistent with where they're browsed.
-        payload: '/settings/profile',
+        // a specific questionnaire, since the form itself needs question data
+        // that a bare route string can't carry.
+        payload: isSrhi
+            ? '/habits/${it['intentionId']}'
+            : '/settings/profile',
       );
     }
   }

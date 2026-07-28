@@ -1,6 +1,7 @@
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
 import { getDueQuestionnaires } from '../services/questionnaireScheduleService.js';
+import { getUpcomingSrhiQuestionnaireItems } from '../services/srhiService.js';
 import { resolveLocaleText } from '../utils/localeText.js';
 import { logger } from '../utils/logger.js';
 
@@ -92,7 +93,9 @@ export function createQuestionnairesRouter({ db } = {}) {
    *       Returns questionnaires due now or within the next 30 days for the
    *       authenticated participant, their reminder settings, and their
    *       study's end date / end-of-study notification config (present even
-   *       when no questionnaires are currently due).
+   *       when no questionnaires are currently due). Includes each active
+   *       habit's per-week SRHI check-in (`questionnaireSlug: "srhi"`), which
+   *       keeps recurring for as long as the habit stays active.
    *     tags: [Questionnaires]
    *     security:
    *       - bearerAuth: []
@@ -121,6 +124,10 @@ export function createQuestionnairesRouter({ db } = {}) {
    *                       occurrence: { type: integer }
    *                       scheduledFor: { type: string, format: date-time }
    *                       isDue: { type: boolean }
+   *                       intentionId:
+   *                         type: string
+   *                         nullable: true
+   *                         description: Present for habit-scoped items (e.g. `questionnaireSlug: "srhi"`)
    *                 studyEndDate:
    *                   type: string
    *                   format: date-time
@@ -143,6 +150,15 @@ export function createQuestionnairesRouter({ db } = {}) {
       const lang = req.query.lang || 'en';
       const database = await getDb();
       const due = await getDueQuestionnaires({ db: database, userId, lang });
+      const horizon = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const srhiItems = await getUpcomingSrhiQuestionnaireItems({
+        db: database,
+        userId,
+        horizon,
+      });
+      due.questionnaires = [...due.questionnaires, ...srhiItems].sort(
+        (a, b) => new Date(a.scheduledFor) - new Date(b.scheduledFor)
+      );
       res.json(due);
     } catch (err) {
       log.error({ err: err }, '[questionnaires] due error');

@@ -222,8 +222,16 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   }
 
   Future<void> _syncRemindersQuietly(Dio dio) async {
+    final service = ReminderSchedulerService(dio: dio);
     try {
-      await ReminderSchedulerService(dio: dio).syncReminders();
+      await service.syncReminders();
+    } catch (_) {
+      // Non-fatal: rescheduled on next app start.
+    }
+    try {
+      // Picks up this habit's first SRHI check-in reminder immediately,
+      // rather than waiting for the next app cold start.
+      await service.syncQuestionnaireReminders();
     } catch (_) {
       // Non-fatal: rescheduled on next app start.
     }

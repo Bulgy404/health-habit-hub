@@ -463,6 +463,8 @@ To add a link for a new paper, add its DOI to `data/references.json`:
 
 If the LLM cites a hallucinated filename (or none), the response falls back to attaching all retrieved papers, so evidence links are never lost.
 
+**LightRAG never supplies a URL/DOI itself** — it only returns document filenames as part of the retrieved context (`extract_document_filenames()` regexes `file_path` out of the raw chunk/entity text). The link is entirely a manual overlay: `data/references.json` is curated by hand, one entry per paper, and as of this writing it contains exactly **one** entry (Wood & Rünger, 2016). Any other cited paper — curated or not — renders as plain unlinked text until someone adds its DOI to `references.json`. This overlay is also scoped to the RAG recommendation pipeline only; static in-app copy that cites research (e.g. the implementation-intention onboarding screen's "Gollwitzer & Sheeran, 2006" text in `mobile/lib/features/my_habits/habit_onboarding_widgets.dart`) is hardcoded and unrelated to this mechanism — it has no `url`/`doi` field and is never linked.
+
 ### Pipeline input reference
 
 Every data source queried during a single recommendation run:
