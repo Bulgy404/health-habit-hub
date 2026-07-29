@@ -64,6 +64,9 @@ docs/superpowers/
 # rclone offsite-backup credentials
 backup-service/rclone/
 
+# Personal working notes/paper drafts — not meant for the public repo.
+paper/
+
 # LightRAG knowledge corpus — source documents are NEVER committed.
 # The corpus may contain third-party, copyright-protected literature that we
 # are not licensed to redistribute, and this repository is public. Provide the
