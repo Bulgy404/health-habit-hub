@@ -89,6 +89,48 @@ export async function readReminderConfig(db) {
   };
 }
 
+/**
+ * §7.2 Implementation Intention Reminder — default rotating phrasing templates.
+ *
+ * Repeating the exact intention sentence verbatim every time risks its own
+ * habituation / reminder-blindness, so the app rotates through a small set of
+ * phrasings. Templates use {cue} and {behavior} placeholders. Kept in an
+ * admin-editable collection (admin_settings, same spirit as reminder_weight_*)
+ * so researchers can vary/test phrasing per study arm.
+ */
+export const DEFAULT_II_REMINDER_TEMPLATES = [
+  'Remember: {cue} → {behavior}',
+  'Your plan for today: when {cue}, {behavior}',
+  'Time to check in — {cue} means: {behavior}',
+];
+
+/**
+ * Read the admin-editable §7.2 reminder phrasing templates from admin_settings
+ * (key: reminder_ii_templates, a JSON array of strings). Falls back to
+ * DEFAULT_II_REMINDER_TEMPLATES when unset, empty, or malformed.
+ * @param {import('mongodb').Db} db
+ * @returns {Promise<string[]>}
+ */
+export async function readReminderTemplates(db) {
+  try {
+    const doc = await db
+      .collection('admin_settings')
+      .findOne({ key: 'reminder_ii_templates' });
+    const raw = doc?.value;
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    if (
+      Array.isArray(parsed) &&
+      parsed.length > 0 &&
+      parsed.every((t) => typeof t === 'string' && t.trim())
+    ) {
+      return parsed;
+    }
+  } catch {
+    // Fall through to defaults on any read/parse error.
+  }
+  return DEFAULT_II_REMINDER_TEMPLATES;
+}
+
 /** Map an SRHI composite (1–7) to 0–1; null → 0 (no measurement yet). */
 function srhiNorm(score) {
   if (score == null || !Number.isFinite(score)) return 0;
@@ -217,6 +259,10 @@ export function computeReminderPlan({
     intentionId: intention.id,
     reminderTime: intention.reminderTime ?? null,
     frequency: FREQUENCIES[tier],
+    // §7.2 Implementation Intention Reminder — cue + behavior text so the app
+    // can build "when {cue}, {behavior}" reminder copy without a second fetch.
+    behaviorLabel: intention.behaviorLabel ?? null,
+    cueText: intention.cueText ?? null,
     autonomyScore: Number(autonomyScore.toFixed(3)),
     components: {
       srhi: Number(components.srhi.toFixed(3)),
@@ -258,6 +304,12 @@ export async function computeReminderPlans({ db, userId, now = new Date() }) {
           id: String(doc._id),
           reminderTime: doc.reminderTime ?? null,
           createdAt: doc.createdAt,
+          // §7.2 — surface the behavior label and the first cue's text.
+          behaviorLabel: doc.behaviorLabel ?? null,
+          cueText:
+            Array.isArray(doc.cues) && doc.cues.length > 0
+              ? (doc.cues[0]?.text ?? null)
+              : null,
         },
         srhiScores: srhi
           .filter((s) => s.score != null)

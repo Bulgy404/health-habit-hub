@@ -21,6 +21,7 @@
 10. [API Reference](#10-api-reference)
 11. [Security](#11-security)
 12. [Troubleshooting](#12-troubleshooting)
+13. [Behavioral Principle Features (§7)](#13-behavioral-principle-features-7)
 
 ---
 
@@ -930,3 +931,302 @@ For the full operational runbook (service restart procedures, database access, b
 - Run `make logs-all` to watch all containers. Wait for the `mongo` container to show `Waiting for connections` before the app will connect successfully.
 - If the problem persists, run `make reset` to wipe and restart all volumes with a clean state.
 - Ensure `MONGO_USER`, `MONGO_PASSWORD`, and `MONGO_AUTH_SOURCE` in `.env` match the values used when the MongoDB volume was first initialized. Changing credentials after volume creation requires wiping the volume.
+
+## 13. Behavioral Principle Features (§7)
+
+This section documents the five habit-formation principle features implemented
+from the research plan (§7.1–§7.5) and the additive data/research signals (§8).
+All five follow the codebase's existing conventions: the nullable study→group
+config-override pattern (like `recommenderEnabled`), the Mongo (event/state) vs.
+Neo4j (structural/graph) split, transparent recomputed-on-read scoring (like
+`reminderPlanService`), and admin-tunable thresholds via `admin_settings`.
+
+### 13.1 Habit Distinction — build vs. quit (§7.4)
+
+Every implementation intention carries a required `habitType` of `'build'`
+(forming a new behaviour) or `'quit'` (breaking an existing one). It is chosen
+up front on the habit-creation path (a prominent Build/Break control, not a
+buried field), because it changes downstream cue guidance and is a standard
+research covariate for every other analysis in this plan.
+
+- **Mongo:** `implementation_intentions.habitType` (`'build' | 'quit'`, required;
+  validator-enforced). Legacy documents are backfilled to `'build'` via
+  `backfillHabitFields()`. Indexed by `{ userId, habitType, status }`.
+- **Neo4j:** donated `Habit` nodes gain a `habit_type` property, so the
+  community bubble graph and any admin graph view filter build vs. quit with a
+  one-property `WHERE` clause.
+- **API:** `POST /habits/intentions` requires `habitType` (400 otherwise) and
+  echoes it back. `GET /habits/bubble-graph` returns `habitType` per bubble.
+- **Mobile:** build habits render green, quit habits red (a coloured card
+  border on `my_habits_screen`); the Explore bubble graph has an All/Build/Quit
+  filter chip.
+
+### 13.2 Habit Stacking (§7.1)
+
+Attach a new habit to an existing "anchor" habit so the anchor becomes its cue
+("After I [anchor], I will [new behaviour]").
+
+- **Mongo:** `implementation_intentions.stackedOn` (ObjectId anchor reference or
+  null) and `creationMode` (`'standalone' | 'stacked'`, required). `creationMode`
+  lets researchers compare autonomy-tier progression for stacked vs. standalone
+  habits.
+- **Neo4j:** on donation, a `(:Habit)-[:STACKED_WITH]->(:Habit)` edge links the
+  anchor and new habit nodes (matched by uuid); `creation_mode` is a node
+  property. This turns "which habits get stacked onto which" into a real graph
+  question Mongo can't answer well.
+- **Config:** `habitStackingEnabled` (study + group, nullable override; default
+  enabled).
+- **LLM:** `POST /api/v1/llm/stack-merge` (API-service; prompt
+  `prompts/stack_merge.txt`) merges `{ anchor_text, new_behavior_text, language }`
+  into one natural if-then sentence in the user's language, proxied through the
+  backend at `POST /habits/stack-merge` (like `/habits/stitch-intention`).
+- **Mobile:** a "Stack onto an existing habit" option in the cue step (pick a
+  tracked habit as anchor, or free-type one — the anchor need not be tracked; a
+  free-typed anchor is donated through `/habits/share` first so a `STACKED_WITH`
+  edge can form). Stacked habits render nested beneath their anchor with a
+  staircase connector on `my_habits_screen`.
+
+### 13.3 Implementation Intention Reminder (§7.2)
+
+Reminders can spell out the plan ("when {cue}, {behavior}") instead of a generic
+nudge.
+
+- **Config:** `reminderContentMode` (`'generic' | 'implementation_intention'`,
+  study + group nullable override; default `'generic'`).
+- **API:** `GET /habits/intentions/reminder-plans` now returns the resolved
+  `reminderContentMode`, each plan's `cueText`/`behaviorLabel`, and
+  `reminderTemplates` — a set of rotating phrasing templates (with `{cue}` /
+  `{behavior}` placeholders) editable via the `admin_settings` key
+  `reminder_ii_templates` (defaults in `reminderPlanService.DEFAULT_II_REMINDER_TEMPLATES`).
+- **Mobile:** `reminder_scheduler_service.dart` selects a template by a rotating
+  index per scheduled reminder (so the copy itself doesn't habituate) and fills
+  in the cue/behavior; falls back to the generic body in `generic` mode or when
+  cue/behavior are missing.
+
+### 13.4 Information Overload guard (§7.3, depends on §7.4)
+
+Focus a participant's limited attention on strengthening current habits before
+adding new ones of the *same type*. The cap is not fixed — it grows as existing
+habits become automatic.
+
+- **Config:** `informationOverloadGuard: { enabled, userOptOutAllowed }` (study +
+  group nullable override; default disabled) and the admin-tunable global
+  `admin_settings` key `information_overload_unlock_tier` (default `'weekly'`).
+- **Algorithm** (`intentionService.checkOverloadGuard`, extending the existing
+  `maxHabits` check in `createIntention`): each habit type starts with a cap of 1
+  active habit; the cap rises by 1 for every active habit of that type that has
+  already reached `unlock_tier` — the reminder-frequency tier from the Fading
+  Reminders signal (`computeReminderPlan`), reused rather than a new metric.
+  `unlock_tier: 'off'` is a hard cap of 1 per type. **Exact rule and tier
+  thresholds: [§13.7](#137-scoring-algorithms--full-reference).**
+- **API:** a blocked `POST /habits/intentions` returns `409` with
+  `{ limitReached: true, reason: 'information_overload', unlockTier, currentTier }`
+  so the app can explain *why*, not just refuse.
+- **Opt-out:** `GET /me/preferences` and
+  `PATCH /me/preferences/information-overload-opt-out` (stored in
+  `user_preferences`); the opt-out is only honoured when the study/group sets
+  `userOptOutAllowed` (enforced server-side, 403 otherwise).
+- **Mobile:** a rationale info card on the creation path; an opt-out toggle in
+  Settings, shown only when the guard is enabled and opt-out is permitted.
+
+### 13.5 Gamification — badges, levels, praise (§7.5)
+
+Praise Rewards, Challenges & Levels, and Praise Messages combined into one
+system: badges are the reward, tier progress is the "level," and praise text is
+the copy that accompanies a badge/tier-up — deliberately scoped to real
+milestones, not the market's fire-on-every-log pattern.
+
+- **Principle:** `gamificationService.js` reinterprets signals the app already
+  computes (`reminderPlanService`'s frequency tier, streak, adherence, SRHI) —
+  no new tracking. XP and levels are recomputed fresh on read; only
+  `implementation_intentions.earnedBadges: [{ badgeKey, earnedAt }]` is persisted
+  (so a badge isn't re-notified).
+- **XP / levels:** XP = weighted sum of enacted logs, streak milestones
+  (7/14/30 days), SRHI submissions, and a large bonus per frequency tier-up
+  (advancing automaticity is worth far more than routine logging). Level follows
+  a standard curve `xpForLevel(n) = round(base·(n−1)^exp)`. All weights/curve
+  params are `admin_settings` keys (`gamification_*`), making them an
+  experimental factor. **Exact formulas, defaults, and a worked example:
+  [§13.7](#137-scoring-algorithms--full-reference).**
+- **Badges** (tied to meaningful states, not arbitrary counts): *First Step*
+  (habit created), *Building Momentum* (first tier-up), *Steady Habit* (14-day
+  streak), *Second Nature* (habit reaches `off`), *Habit Architect* (created via
+  stacking — rewards §7.1), *Quit Champion* (a quit habit reaches `off`).
+  Exact trigger predicates: [§13.7](#137-scoring-algorithms--full-reference).
+- **API:** `GET /habits/intentions/gamification` returns `{ totalXp, level,
+  xpIntoLevel, xpToNextLevel, badges, newlyEarned, perHabit }` and persists newly
+  earned badges.
+- **Mobile:** a Badges/Achievements section with an XP progress bar on the
+  Profile screen; a compact level + XP bar in Settings; a per-habit traffic-light
+  indicator (red = `daily` … green = `weekly`/`off`) on each habit card. A badge/
+  tier-up fires a one-time local praise notification drawing a rotating praise
+  line per badge (same anti-repetition principle as §7.2).
+
+### 13.6 Data & research analysis plan (§8)
+
+All signals are additive to the existing Mongo/Neo4j split:
+
+| New signal | Mongo | Neo4j |
+|---|---|---|
+| Build vs. quit | `implementation_intentions.habitType` | `Habit.habit_type` property |
+| Stacking | `stackedOn`, `creationMode` | `(:Habit)-[:STACKED_WITH]->(:Habit)`, `Habit.creation_mode` |
+| Reminder mode | `reminderContentMode` resolved per plan | — |
+| Overload gating | 409 `information_overload` responses (why, which tier); `user_preferences` opt-out | — |
+| Gamification | `earnedBadges` per user/habit | — |
+
+Because the stacking relationship and habit type live on the graph, a
+researcher-facing view (an admin analytics panel, or a documented Cypher query
+for Neo4j Browser/Bloom) can show the stacking network directly, and a
+build/quit filter on the community bubble graph is a one-property `WHERE` clause
+(`WHERE h.habit_type = 'quit'`).
+
+### 13.7 Scoring algorithms — full reference
+
+Both §7.3 (Information Overload) and §7.5 (Gamification) are driven by scores
+rather than by hand-set flags, and every constant below is a pre-registerable
+experimental parameter. This section is the canonical statement of those
+algorithms and their defaults.
+
+#### A. Autonomy score and reminder tiers (the shared substrate)
+
+Implemented in `app/services/reminderPlanService.js`. This pre-dates the §7
+features; §7.3's unlock rule and §7.5's traffic light, tier-up XP, and
+*Building Momentum* / *Second Nature* / *Quit Champion* badges all **read this
+tier** rather than defining a second notion of "automatic". The extended
+narrative (rationale, literature) is in
+[`docs/architecture.md`](docs/architecture.md).
+
+```
+autonomy = wSrhi·srhiNorm + wAdherence·adherence14d + wStreak·streakNorm
+         = 0.50·srhiNorm + 0.35·adherence14d + 0.15·streakNorm      (defaults)
+```
+
+| Component | Definition | Range |
+| --- | --- | --- |
+| `srhiNorm` | Latest weekly SRHI composite mapped `(score − 1) / 6`, clamped. Missing SRHI → **0** (not "excluded"). | 0–1 |
+| `adherence14d` | Distinct days with an `enacted: true` log among the **14 calendar days before today** (today is excluded — it may simply not be logged yet). | 0–1 |
+| `streakNorm` | `min(streakDays / 14, 1)`, where the streak is consecutive enacted days ending today or yesterday. | 0–1 |
+
+The score maps onto five tiers by lower-bound thresholds
+`[0.45, 0.60, 0.75, 0.90]`:
+
+| Tier index | `frequency` | Autonomy ≥ | Traffic light (§7.5) | Reminders scheduled / 14 days |
+| --- | --- | --- | --- | --- |
+| 0 | `daily` | — | 🔴 red | 14 |
+| 1 | `every_2_days` | 0.45 | 🟡 amber | 7 |
+| 2 | `twice_weekly` | 0.60 | 🟡 amber | 4 |
+| 3 | `weekly` | 0.75 | 🟢 green | 2 |
+| 4 | `off` | 0.90 | 🟢 green | 0 |
+
+Two deliberate asymmetries:
+
+- **Hysteresis (fading is slow).** Reaching tier ≥ 2 additionally requires the
+  *previous* week's SRHI to support at least the same tier; otherwise the tier is
+  held at `max(previousTier, 1)`. One good week is not yet a habit.
+- **Recovery (re-scaffolding is immediate).** If 7-day adherence falls below
+  `recoveryAdherence` (0.5), the tier snaps straight back to `daily`, regardless
+  of SRHI.
+
+**Practical ceiling worth knowing when testing:** with no SRHI data the score
+cannot exceed `0.35 + 0.15 = 0.50`, so a habit with perfect logging but no
+check-ins tops out at tier 1 (`every_2_days`). Reaching `weekly`/`off` requires
+SRHI — see [`docs/testing-section7-features.md`](docs/testing-section7-features.md) §3.
+
+#### B. XP (§7.5)
+
+Implemented in `app/services/gamificationService.js`, computed **per habit** and
+summed across the user's **active** habits:
+
+```
+XP(habit) = enactedLogs      · xpPerEnactedLog        (all-time enacted logs)
+          + srhiSubmissions  · xpPerSrhiSubmission
+          + streakBonus(currentStreakDays)            (cumulative, see below)
+          + tierIndex        · xpPerTierUp            (tierIndex 0–4, from §A)
+```
+
+| Parameter | Default | `admin_settings` key |
+| --- | --- | --- |
+| `xpPerEnactedLog` | 10 | `gamification_xp_per_log` |
+| `xpPerSrhiSubmission` | 25 | `gamification_xp_per_srhi` |
+| `xpPerTierUp` | 200 | `gamification_xp_per_tier_up` |
+| `streakMilestones` | `{7: 50, 14: 120, 30: 300}` | *(not overridable)* |
+| `levelCurveBase` | 100 | `gamification_level_curve_base` |
+| `levelCurveExp` | 1.5 | `gamification_level_curve_exp` |
+
+Streak bonuses are **cumulative**: a 30-day streak awards 50 + 120 + 300 = 470.
+The 20:1 ratio between a tier-up (200) and a daily log (10) is the core design
+choice — advancing automaticity dominates routine logging, which is what keeps
+this from becoming the "Overinvested", fire-on-every-log pattern §7.5 rejects.
+
+#### C. Levels (§7.5)
+
+```
+xpForLevel(n) = round(levelCurveBase · (n − 1) ^ levelCurveExp)    // n ≥ 1 → 0 at level 1
+level(totalXp) = the largest n such that xpForLevel(n) ≤ totalXp
+```
+
+With the defaults (base 100, exp 1.5):
+
+| Level | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Cumulative XP | 0 | 100 | 283 | 520 | 800 | 1118 | 1470 | 1852 | 2263 | 2700 |
+
+**Worked example.** A build habit with 20 enacted logs, a current 14-day streak,
+2 submitted SRHI check-ins, sitting at tier 3 (`weekly`):
+
+```
+XP = 20·10 + 2·25 + (50 + 120) + 3·200 = 200 + 50 + 170 + 600 = 1020
+→ level 5 (800 ≤ 1020 < 1118), xpIntoLevel 220, xpToNextLevel 98
+```
+
+#### D. Badge trigger predicates (§7.5)
+
+Evaluated per habit on every read of `GET /habits/intentions/gamification`.
+Badges are **state-based, not count-based** — each is a predicate over the
+habit's current state, so they cannot be farmed by volume.
+
+| Badge | `badgeKey` | Exact condition |
+| --- | --- | --- |
+| First Step | `first_step` | Always (the habit exists) |
+| Building Momentum | `building_momentum` | `tierIndex ≥ 1` (faded past `daily`) |
+| Steady Habit | `steady_habit` | `currentStreakDays ≥ 14` |
+| Second Nature | `second_nature` | `frequency === 'off'` |
+| Habit Architect | `habit_architect` | `creationMode === 'stacked'` (§7.1) |
+| Quit Champion | `quit_champion` | `habitType === 'quit'` **and** `frequency === 'off'` |
+
+#### E. Information Overload unlock rule (§7.3)
+
+Implemented in `intentionService.checkOverloadGuard`:
+
+```
+cap(type) = 1 + count(active habits of that type whose tierIndex ≥ unlockTierIndex)
+blocked   ⟺ activeHabitsOfType ≥ cap(type)
+```
+
+`unlockTier` comes from the `admin_settings` key
+`information_overload_unlock_tier` (default `weekly`, i.e. tier index 3). The
+special value `off` is treated as unreachable, making it a **hard cap of 1 per
+type**. Build and quit caps are independent. A blocked request returns `409`
+with `unlockTier` and the most recent habit's `currentTier` so the app can
+explain what has to happen.
+
+#### F. Properties worth knowing
+
+- **Recomputed on read, not accumulated.** XP, level, and tier are derived fresh
+  from logs/SRHI on every request; only `earnedBadges` is persisted. There is no
+  running total to drift out of sync or to migrate.
+- **XP and level can go *down*.** Because `tierIndex` contributes 200 XP per tier
+  and the recovery rule can drop a habit from `weekly` back to `daily`, a lapse
+  reduces total XP — and can therefore reduce the displayed level. Pausing or
+  completing a habit also removes it from the sum (only `status: 'active'`
+  habits count). This is a consequence of the recompute-on-read design; if a
+  study needs monotonic levels, that is a deliberate change to make, not a bug
+  to patch around.
+- **Badges are sticky.** Once written to `earnedBadges` a badge is never revoked,
+  even if the underlying predicate stops holding. `newlyEarned` is therefore
+  non-empty only on the first read after a badge is achieved, which is what makes
+  the praise notification fire exactly once.
+- **Everything is tunable per deployment**, but the `gamification_*`,
+  `reminder_*`, `information_overload_unlock_tier`, and `reminder_ii_templates`
+  keys have **no admin-portal UI** — set them directly in the `admin_settings`
+  collection (see [`docs/testing-section7-features.md`](docs/testing-section7-features.md) §1b).

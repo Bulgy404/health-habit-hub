@@ -18,6 +18,7 @@ function makeDb({
   enrollment = null,
   study = null,
   adminSettings = [],
+  overloadUnlockTierDoc = null,
   cuePools = [],
   appSettings = null,
   activityTypes = defaultActivityTypes,
@@ -35,6 +36,11 @@ function makeDb({
       if (name === 'admin_settings')
         return {
           find: () => ({ toArray: async () => adminSettings }),
+          // §7.3 unlock tier is read via findOne (key filter).
+          findOne: async (filter) =>
+            filter?.key === 'information_overload_unlock_tier'
+              ? overloadUnlockTierDoc
+              : null,
         };
       if (name === 'cue_pools')
         return {
@@ -343,6 +349,99 @@ test('resolveHabitConfig: public user gets empty assignedCues', async () => {
   };
   const config = await resolveHabitConfig({ db, userId: 'u3' });
   assert.deepEqual(config.assignedCues, []);
+});
+
+// ── §7.1/§7.2/§7.3 feature config resolution ─────────────────────────────────
+
+test('resolveHabitConfig: §7 config defaults for a public/unenrolled user', async () => {
+  const db = makeDb({ enrollment: null });
+  const config = await resolveHabitConfig({ db, userId: 'pub' });
+  assert.equal(config.habitStackingEnabled, true);
+  assert.equal(config.reminderContentMode, 'generic');
+  assert.deepEqual(config.informationOverloadGuard, {
+    enabled: false,
+    userOptOutAllowed: false,
+  });
+  // Defaults to 'weekly' when the admin setting is absent.
+  assert.equal(config.informationOverloadUnlockTier, 'weekly');
+});
+
+test('resolveHabitConfig: study-level §7 config applies without a group override', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      habitStackingEnabled: false,
+      reminderContentMode: 'implementation_intention',
+      informationOverloadGuard: { enabled: true, userOptOutAllowed: true },
+      groups: [{ id: groupId, label: 'G1', index: 1 }],
+    },
+    overloadUnlockTierDoc: {
+      key: 'information_overload_unlock_tier',
+      value: 'twice_weekly',
+    },
+  });
+  const neo4jRun = async () => [
+    { studyId: studyId.toString(), groupId: groupId.toString() },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.equal(config.habitStackingEnabled, false);
+  assert.equal(config.reminderContentMode, 'implementation_intention');
+  assert.deepEqual(config.informationOverloadGuard, {
+    enabled: true,
+    userOptOutAllowed: true,
+  });
+  assert.equal(config.informationOverloadUnlockTier, 'twice_weekly');
+});
+
+test('resolveHabitConfig: group-level §7 override wins over study-level', async () => {
+  const { ObjectId } = await import('../../models/survey.js');
+  const studyId = new ObjectId();
+  const groupId = new ObjectId();
+  const db = makeDb({
+    study: {
+      _id: studyId,
+      recommenderEnabled: true,
+      habitStackingEnabled: true,
+      reminderContentMode: 'generic',
+      informationOverloadGuard: { enabled: false, userOptOutAllowed: false },
+      groups: [
+        {
+          id: groupId,
+          label: 'G1',
+          index: 1,
+          habitStackingEnabled: false,
+          reminderContentMode: 'implementation_intention',
+          informationOverloadGuard: { enabled: true, userOptOutAllowed: false },
+        },
+      ],
+    },
+  });
+  const neo4jRun = async () => [
+    { studyId: studyId.toString(), groupId: groupId.toString() },
+  ];
+  const config = await resolveHabitConfig({ db, userId: 'u1', neo4jRun });
+  assert.equal(config.habitStackingEnabled, false);
+  assert.equal(config.reminderContentMode, 'implementation_intention');
+  assert.deepEqual(config.informationOverloadGuard, {
+    enabled: true,
+    userOptOutAllowed: false,
+  });
+});
+
+test('resolveHabitConfig: invalid admin unlock tier falls back to weekly', async () => {
+  const db = makeDb({
+    enrollment: null,
+    overloadUnlockTierDoc: {
+      key: 'information_overload_unlock_tier',
+      value: 'nonsense',
+    },
+  });
+  const config = await resolveHabitConfig({ db, userId: 'u1' });
+  assert.equal(config.informationOverloadUnlockTier, 'weekly');
 });
 
 // ── habitReminder resolution ─────────────────────────────────────────────────

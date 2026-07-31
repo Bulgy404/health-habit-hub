@@ -39,3 +39,26 @@ class ValidationException extends AppException {
   /// Creates a [ValidationException].
   const ValidationException([super.message = 'Validation failed']);
 }
+
+/// Thrown when habit creation is blocked by the §7.3 Information Overload
+/// guard: the participant already has an active habit of this type that hasn't
+/// yet become automatic enough to unlock another slot. Carries the reminder
+/// tier the existing habit must reach ([unlockTier]) and where it is now
+/// ([currentTier]) so the UI can explain the block rather than just refuse.
+class InformationOverloadException extends AppException {
+  /// Creates an [InformationOverloadException].
+  // `AppException`'s unnamed constructor takes `message` positionally, so it
+  // can't be forwarded with a named `super.message` parameter — pass it on
+  // explicitly instead (same approach as `ServerException` above).
+  const InformationOverloadException({
+    required this.unlockTier,
+    required this.currentTier,
+    String message = 'Focus on your current habit first',
+  }) : super(message);
+
+  /// Reminder-frequency tier the existing habit must reach to unlock a slot.
+  final String unlockTier;
+
+  /// The existing habit's current reminder-frequency tier.
+  final String currentTier;
+}

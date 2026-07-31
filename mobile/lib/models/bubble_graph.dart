@@ -74,6 +74,10 @@ class HabitBubble {
   /// Maps annotation type identifiers to their cumulative counts.
   final Map<String, int> annotationCounts;
 
+  /// Whether this is a build or quit habit (§7.4). Defaults to `'build'` for
+  /// habits donated before Habit Distinction existed.
+  final String habitType;
+
   /// Creates a [HabitBubble].
   const HabitBubble({
     required this.id,
@@ -81,6 +85,7 @@ class HabitBubble {
     required this.originalText,
     required this.language,
     required this.annotationCounts,
+    this.habitType = 'build',
   });
 
   /// Sum of all annotation counts across all annotation types.
@@ -100,6 +105,7 @@ class HabitBubble {
       originalText: json['originalText'] as String? ?? '',
       language: json['language'] as String? ?? '',
       annotationCounts: counts,
+      habitType: json['habitType'] as String? ?? 'build',
     );
   }
 }

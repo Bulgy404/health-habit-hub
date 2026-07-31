@@ -116,6 +116,12 @@ const groupRemindersSchema = z
   })
   .strict();
 
+/** §7.3 Information Overload guard config (study- and group-level). */
+export const informationOverloadGuardSchema = z.object({
+  enabled: z.boolean(),
+  userOptOutAllowed: z.boolean().optional(),
+});
+
 export const createStudySchema = z.object({
   name: shortString,
   description: longString.optional(),
@@ -126,6 +132,12 @@ export const createStudySchema = z.object({
   selfHabitCreationEnabled: z.boolean().optional(),
   habitEntryMode: z.enum(['freeText', 'structured']).optional(),
   structuredActivityKeys: z.array(z.string().max(200)).max(20).optional(),
+  // §7.1/§7.2/§7.3 study-level feature config.
+  habitStackingEnabled: z.boolean().optional(),
+  reminderContentMode: z
+    .enum(['generic', 'implementation_intention'])
+    .optional(),
+  informationOverloadGuard: informationOverloadGuardSchema.optional(),
   endDate: z.string().datetime({ offset: true }).optional().nullable(),
   endOfStudyNotification: endOfStudyNotificationSchema.optional(),
   reminders: remindersSchema.optional(),
@@ -141,6 +153,12 @@ export const updateStudySchema = z
     selfHabitCreationEnabled: z.boolean().optional(),
     habitEntryMode: z.enum(['freeText', 'structured']).optional(),
     structuredActivityKeys: z.array(z.string().max(200)).max(20).optional(),
+    // §7.1/§7.2/§7.3 study-level feature config.
+    habitStackingEnabled: z.boolean().optional(),
+    reminderContentMode: z
+      .enum(['generic', 'implementation_intention'])
+      .optional(),
+    informationOverloadGuard: informationOverloadGuardSchema.optional(),
     endDate: z.string().datetime({ offset: true }).optional().nullable(),
     endOfStudyNotification: endOfStudyNotificationSchema.optional(),
     reminders: remindersSchema.optional(),
@@ -191,6 +209,15 @@ export const updateGroupConfigSchema = z
     onboardingEnabled: z.boolean().optional().nullable(),
     selfHabitCreationEnabled: z.boolean().optional().nullable(),
     recommenderEnabled: z.boolean().optional().nullable(),
+    // §7.1/§7.2/§7.3 group-level overrides (null = inherit study-level).
+    habitStackingEnabled: z.boolean().optional().nullable(),
+    reminderContentMode: z
+      .enum(['generic', 'implementation_intention'])
+      .optional()
+      .nullable(),
+    informationOverloadGuard: informationOverloadGuardSchema
+      .optional()
+      .nullable(),
     // null = inherit the study-level habit-entry-mode setting for this group.
     habitEntryMode: z.enum(['freeText', 'structured']).optional().nullable(),
     structuredActivityKeys: z

@@ -189,7 +189,11 @@
   "profileIncompleteBanner": "Your profile is missing: {fields}",
   "@profileIncompleteBanner": {
     "description": "Banner shown in the account summary when one or more profile fields (e.g. gender, age) haven't been filled in yet, listing their labels",
-    "placeholders": { "fields": { "type": "String" } }
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
   },
   "profileCompleteNow": "Complete now",
   "@profileCompleteNow": {
@@ -230,7 +234,11 @@
   "studyMembershipGroupLabel": "Group: {groupLabel}",
   "@studyMembershipGroupLabel": {
     "description": "Shows the participant's group within their current study",
-    "placeholders": { "groupLabel": { "type": "String" } }
+    "placeholders": {
+      "groupLabel": {
+        "type": "String"
+      }
+    }
   },
   "studyMembershipLoadFailed": "Couldn't load your study information.",
   "@studyMembershipLoadFailed": {
@@ -263,7 +271,11 @@
   "studyMembershipJoinSuccess": "You've joined {studyName}.",
   "@studyMembershipJoinSuccess": {
     "description": "Snackbar shown after successfully switching to a new study",
-    "placeholders": { "studyName": { "type": "String" } }
+    "placeholders": {
+      "studyName": {
+        "type": "String"
+      }
+    }
   },
   "studyMembershipAlreadyInStudy": "You're already in that study.",
   "@studyMembershipAlreadyInStudy": {
@@ -787,7 +799,11 @@
   "questionnaireCompletedOn": "Completed on {date}",
   "@questionnaireCompletedOn": {
     "description": "Label under a greyed-out, no-longer-editable questionnaire in the profile's Health Questionnaires list, showing when it was submitted",
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "questionnaireNotYetAvailable": "Not yet available",
   "@questionnaireNotYetAvailable": {
@@ -2061,5 +2077,20 @@
         "type": "String"
       }
     }
-  }
+  },
+  "habitTypeBuild": "Build a new habit",
+  "habitTypeQuit": "Break a habit",
+  "habitTypeFilterAll": "All",
+  "informationOverloadInfo": "To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.",
+  "informationOverloadBlocked": "Let's focus on your current habit first — a new slot opens once it becomes more automatic.",
+  "stackOntoExistingHabitTitle": "Stack onto an existing habit",
+  "stackOntoExistingHabitSubtitle": "Anchor this new habit to one you already do",
+  "stackAnchorPickLabel": "Anchor habit",
+  "stackAnchorNone": "None",
+  "stackAnchorFreeTextLabel": "Or type an anchor habit",
+  "stackAnchorFreeTextHint": "e.g. After my morning coffee",
+  "habitsSection": "Habits",
+  "informationOverloadOptOutTitle": "Allow multiple new habits",
+  "informationOverloadOptOutSubtitle": "Turn off the one-habit-at-a-time focus guard",
+  "progressSection": "Progress"
 }

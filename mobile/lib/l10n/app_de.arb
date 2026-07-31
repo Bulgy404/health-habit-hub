@@ -621,5 +621,20 @@
   "copyToClipboard": "In Zwischenablage kopieren",
   "passphraseCopied": "Passphrase in Zwischenablage kopiert",
   "close": "Schließen",
-  "appVersion": "Version {version} ({buildNumber})"
+  "appVersion": "Version {version} ({buildNumber})",
+  "habitTypeBuild": "Build a new habit",
+  "habitTypeQuit": "Break a habit",
+  "habitTypeFilterAll": "All",
+  "informationOverloadInfo": "To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.",
+  "informationOverloadBlocked": "Let's focus on your current habit first — a new slot opens once it becomes more automatic.",
+  "stackOntoExistingHabitTitle": "Stack onto an existing habit",
+  "stackOntoExistingHabitSubtitle": "Anchor this new habit to one you already do",
+  "stackAnchorPickLabel": "Anchor habit",
+  "stackAnchorNone": "None",
+  "stackAnchorFreeTextLabel": "Or type an anchor habit",
+  "stackAnchorFreeTextHint": "e.g. After my morning coffee",
+  "habitsSection": "Habits",
+  "informationOverloadOptOutTitle": "Allow multiple new habits",
+  "informationOverloadOptOutSubtitle": "Turn off the one-habit-at-a-time focus guard",
+  "progressSection": "Progress"
 }

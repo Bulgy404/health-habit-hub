@@ -126,6 +126,61 @@ test('createIntention: maxHabits=null allows multiple', async () => {
   assert.equal(result.status, 'active');
 });
 
+test('createIntention: persists habitType and defaults creationMode/stackedOn (§7.4/§7.1)', async () => {
+  const db = makeDb();
+  const result = await createIntention({
+    db,
+    userId: 'u1',
+    behaviorKey: 'smoking',
+    behaviorLabel: 'Stop smoking',
+    durationMinutes: 5,
+    cues: [{ text: 'After lunch', cueId: null, source: 'self_selected' }],
+    intentionStatement: 'After lunch, I will chew gum instead of smoking.',
+    habitType: 'quit',
+    cueConfig: { maxHabits: null },
+  });
+  assert.equal(result.habitType, 'quit');
+  assert.equal(result.creationMode, 'standalone');
+  assert.equal(result.stackedOn, null);
+  assert.deepEqual(result.earnedBadges, []);
+});
+
+test('createIntention: normalises unknown habitType to build', async () => {
+  const db = makeDb();
+  const result = await createIntention({
+    db,
+    userId: 'u1',
+    behaviorKey: 'walking',
+    behaviorLabel: 'Walking',
+    durationMinutes: 20,
+    cues: [],
+    intentionStatement: '',
+    habitType: 'nonsense',
+    cueConfig: { maxHabits: null },
+  });
+  assert.equal(result.habitType, 'build');
+});
+
+test('createIntention: records stacking metadata (§7.1)', async () => {
+  const anchorId = new ObjectId();
+  const db = makeDb();
+  const result = await createIntention({
+    db,
+    userId: 'u1',
+    behaviorKey: 'flossing',
+    behaviorLabel: 'Flossing',
+    durationMinutes: 2,
+    cues: [{ text: 'After brushing', cueId: null, source: 'self_selected' }],
+    intentionStatement: 'After I brush my teeth, I will floss.',
+    habitType: 'build',
+    stackedOn: anchorId.toString(),
+    creationMode: 'stacked',
+    cueConfig: { maxHabits: null },
+  });
+  assert.equal(result.creationMode, 'stacked');
+  assert.equal(result.stackedOn, anchorId.toString());
+});
+
 test('updateIntentionStatus: sets new status', async () => {
   const id = new ObjectId();
   const db = makeDb([

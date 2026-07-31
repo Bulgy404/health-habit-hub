@@ -30,6 +30,10 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
     required this.behaviorLabel,
     required this.config,
     required this.cues,
+    required this.habitType,
+    this.stackedOn,
+    this.creationMode = 'standalone',
+    this.anchorText,
     this.stitchedSentence,
     super.key,
   });
@@ -45,6 +49,20 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
 
   /// Implementation intention cues entered in the previous step.
   final List<IntentionCue> cues;
+
+  /// Whether the participant is building or quitting a habit (§7.4).
+  final HabitType habitType;
+
+  /// The anchor intention id when this habit was stacked (§7.1); else null.
+  final String? stackedOn;
+
+  /// `'standalone'` or `'stacked'` (§7.1).
+  final String creationMode;
+
+  /// Free-typed anchor habit text when the anchor isn't a tracked habit (§7.1).
+  /// Donated to the community first (best-effort) so a STACKED_WITH edge can
+  /// form between it and this new habit in the graph.
+  final String? anchorText;
 
   /// LLM-stitched intention sentence (from /habits/stitch-intention), if available.
   final String? stitchedSentence;
@@ -172,6 +190,9 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             durationMinutes: _durationMinutes,
             cues: widget.cues,
             intentionStatement: _intentionStatementEditable,
+            habitType: widget.habitType,
+            stackedOn: widget.stackedOn,
+            creationMode: widget.creationMode,
             reminderTime: effectiveReminderTime,
           );
       ref.invalidate(intentionsProvider);
@@ -187,6 +208,10 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
         sentence: sentence,
         language: language,
       );
+    } on InformationOverloadException {
+      // §7.3 — explain the block (focus on the current habit first) rather
+      // than showing the generic limit message.
+      setState(() => _error = l10n.informationOverloadBlocked);
     } on ValidationException {
       setState(() => _error = l10n.habitLimitReached);
     } catch (e) {
@@ -208,13 +233,56 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
       unawaited(_shareQuietly(dio, sentence, language));
     }
     unawaited(_syncRemindersQuietly(dio));
+    // §7.5 — refresh gamification and fire a praise notification for any badge
+    // just unlocked (e.g. First Step, or Habit Architect for a stacked habit).
+    unawaited(_praiseQuietly(dio));
+  }
+
+  Future<void> _praiseQuietly(Dio dio) async {
+    try {
+      final service = MyHabitsService(dio: dio);
+      final g = await service.fetchGamification();
+      final keys = g.newlyEarned.map((b) => b.badgeKey).toList();
+      if (keys.isNotEmpty) {
+        await ReminderSchedulerService(dio: dio).showPraiseNotifications(keys);
+      }
+    } catch (_) {
+      // Non-fatal: praise is a nicety.
+    }
   }
 
   Future<void> _shareQuietly(Dio dio, String sentence, String language) async {
     try {
+      // §7.1 Habit Stacking — when a free-typed anchor was given, donate it
+      // first so the new habit can reference its graph node by uuid, forming a
+      // (:Habit)-[:STACKED_WITH]->(:Habit) edge. The share response's jobId is
+      // the new node's uuid. Best-effort: on any failure we still donate the
+      // new habit without the link.
+      String? anchorUuid;
+      final anchor = widget.anchorText?.trim();
+      if (anchor != null && anchor.isNotEmpty) {
+        try {
+          final res = await dio.post<Map<String, dynamic>>(
+            '${AppConfig.apiBaseUrl}/habits/share',
+            data: {'sentence': anchor, 'language': language},
+          );
+          anchorUuid = res.data?['jobId']?.toString() ??
+              res.data?['uuid']?.toString();
+        } catch (_) {
+          // Non-fatal: anchor donation failed; link is simply omitted.
+        }
+      }
       await dio.post<Map<String, dynamic>>(
         '${AppConfig.apiBaseUrl}/habits/share',
-        data: {'sentence': sentence, 'language': language},
+        data: {
+          'sentence': sentence,
+          'language': language,
+          // §7.4/§7.1 — tag the donated node so the graph records build/quit
+          // and the stacking relationship.
+          'habitType': widget.habitType.wire,
+          'creationMode': widget.creationMode,
+          'stackedOnUuid': ?anchorUuid,
+        },
       );
     } catch (_) {
       // Non-fatal: sharing is optional and anonymous.

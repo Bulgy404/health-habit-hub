@@ -151,6 +151,12 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
       habitEntryMode:
         s.habitEntryMode === 'structured' ? 'structured' : 'freeText',
       structuredActivityKeys: s.structuredActivityKeys ?? [],
+      habitStackingEnabled: s.habitStackingEnabled !== false,
+      reminderContentMode:
+        s.reminderContentMode === 'implementation_intention'
+          ? 'implementation_intention'
+          : 'generic',
+      informationOverloadGuard: s.informationOverloadGuard ?? null,
       reminders: normalizeReminders(s),
       endDate: s.endDate ?? null,
       endOfStudyNotification: normalizeEndOfStudyContent(s),
@@ -179,6 +185,9 @@ export async function createStudy({
   selfHabitCreationEnabled = true,
   habitEntryMode = 'freeText',
   structuredActivityKeys = [],
+  habitStackingEnabled = true,
+  reminderContentMode = 'generic',
+  informationOverloadGuard = null,
   endDate = null,
   endOfStudyNotification,
   reminders,
@@ -211,6 +220,19 @@ export async function createStudy({
     structuredActivityKeys: Array.isArray(structuredActivityKeys)
       ? structuredActivityKeys
       : [],
+    // §7.1/§7.2/§7.3 study-level feature config.
+    habitStackingEnabled: habitStackingEnabled !== false,
+    reminderContentMode:
+      reminderContentMode === 'implementation_intention'
+        ? 'implementation_intention'
+        : 'generic',
+    informationOverloadGuard: informationOverloadGuard
+      ? {
+          enabled: informationOverloadGuard.enabled === true,
+          userOptOutAllowed:
+            informationOverloadGuard.userOptOutAllowed === true,
+        }
+      : null,
     reminders: reminders ?? {},
     endDate: endDate ? new Date(endDate) : null,
     endOfStudyNotification: normalizeEndOfStudyContent({
@@ -274,6 +296,12 @@ export async function getStudy({ db, id }) {
     habitEntryMode:
       study.habitEntryMode === 'structured' ? 'structured' : 'freeText',
     structuredActivityKeys: study.structuredActivityKeys ?? [],
+    habitStackingEnabled: study.habitStackingEnabled !== false,
+    reminderContentMode:
+      study.reminderContentMode === 'implementation_intention'
+        ? 'implementation_intention'
+        : 'generic',
+    informationOverloadGuard: study.informationOverloadGuard ?? null,
     reminders: normalizeReminders(study),
     endDate: study.endDate ?? null,
     endOfStudyNotification: normalizeEndOfStudyContent(study),
@@ -329,6 +357,22 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
   if (updates.habitEntryMode !== undefined)
     $set.habitEntryMode =
       updates.habitEntryMode === 'structured' ? 'structured' : 'freeText';
+  // §7.1/§7.2/§7.3 study-level feature config.
+  if (updates.habitStackingEnabled !== undefined)
+    $set.habitStackingEnabled = updates.habitStackingEnabled;
+  if (updates.reminderContentMode !== undefined)
+    $set.reminderContentMode =
+      updates.reminderContentMode === 'implementation_intention'
+        ? 'implementation_intention'
+        : 'generic';
+  if (updates.informationOverloadGuard !== undefined)
+    $set.informationOverloadGuard = updates.informationOverloadGuard
+      ? {
+          enabled: updates.informationOverloadGuard.enabled === true,
+          userOptOutAllowed:
+            updates.informationOverloadGuard.userOptOutAllowed === true,
+        }
+      : null;
   if (updates.structuredActivityKeys !== undefined)
     $set.structuredActivityKeys = Array.isArray(updates.structuredActivityKeys)
       ? updates.structuredActivityKeys
@@ -671,6 +715,20 @@ export async function updateGroupConfig({ db, studyId, groupId, config }) {
     updated.habitEntryMode = config.habitEntryMode;
   if (config.structuredActivityKeys !== undefined)
     updated.structuredActivityKeys = config.structuredActivityKeys;
+  // §7.1/§7.2/§7.3 group-level overrides (null = inherit study-level).
+  if (config.habitStackingEnabled !== undefined)
+    updated.habitStackingEnabled = config.habitStackingEnabled;
+  if (config.reminderContentMode !== undefined)
+    updated.reminderContentMode = config.reminderContentMode;
+  if (config.informationOverloadGuard !== undefined)
+    updated.informationOverloadGuard =
+      config.informationOverloadGuard == null
+        ? null
+        : {
+            enabled: config.informationOverloadGuard.enabled === true,
+            userOptOutAllowed:
+              config.informationOverloadGuard.userOptOutAllowed === true,
+          };
 
   groups[groupIndex] = updated;
 

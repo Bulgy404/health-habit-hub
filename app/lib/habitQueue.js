@@ -98,6 +98,9 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
         duration,
         healthBenefit,
         wellbeingImpact,
+        habitType,
+        stackedOnUuid,
+        creationMode,
       } = job.data;
 
       // Classification now happens here rather than synchronously in the
@@ -113,6 +116,9 @@ export function startHabitWorker({ queryNeo4j, getDb, apiBase, translateUrl }) {
         duration,
         healthBenefit,
         wellbeingImpact,
+        habitType,
+        stackedOnUuid,
+        creationMode,
         queryNeo4j,
         getDb,
         apiBase,

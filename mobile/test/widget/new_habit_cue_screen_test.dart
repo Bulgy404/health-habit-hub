@@ -41,6 +41,7 @@ Widget _buildSubject(HabitConfig config, {String? initialCue}) {
           behaviorKey: 'walk',
           behaviorLabel: 'Walking',
           config: config,
+          habitType: HabitType.build,
           initialCue: initialCue,
         ),
       ),

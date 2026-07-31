@@ -125,9 +125,15 @@ class MyHabitsScreen extends ConsumerWidget {
                     ),
                   );
                 }
+                // §7.1 Habit Stacking — order stacked habits directly beneath
+                // their anchor and indent them so the "staircase" is visible.
+                final ordered = _orderWithStacks(active);
                 return SliverList.builder(
-                  itemCount: active.length,
-                  itemBuilder: (context, i) => _HabitCard(intention: active[i]),
+                  itemCount: ordered.length,
+                  itemBuilder: (context, i) => _HabitCard(
+                    intention: ordered[i].intention,
+                    isStackedChild: ordered[i].isStackedChild,
+                  ),
                 );
               },
               loading: () => const SliverFillRemaining(
@@ -193,9 +199,46 @@ class _SrhiPromptCard extends StatelessWidget {
   }
 }
 
-class _HabitCard extends ConsumerWidget {
-  const _HabitCard({required this.intention});
+/// One row in the ordered habit list: the intention plus whether it should be
+/// rendered indented as a stacked child of the row above it (§7.1).
+class _OrderedHabit {
+  const _OrderedHabit(this.intention, {required this.isStackedChild});
   final Intention intention;
+  final bool isStackedChild;
+}
+
+/// Orders [active] so each stacked habit (`stackedOn` set) appears immediately
+/// beneath its anchor and is flagged for indentation. Stacked habits whose
+/// anchor is not in the list (e.g. a free-typed or completed anchor) fall back
+/// to their natural position, un-indented. Preserves the incoming order for
+/// anchors/standalone habits.
+List<_OrderedHabit> _orderWithStacks(List<Intention> active) {
+  final byId = {for (final i in active) i.id: i};
+  final childrenByAnchor = <String, List<Intention>>{};
+  for (final i in active) {
+    final anchor = i.stackedOn;
+    if (anchor != null && byId.containsKey(anchor)) {
+      childrenByAnchor.putIfAbsent(anchor, () => []).add(i);
+    }
+  }
+  final result = <_OrderedHabit>[];
+  for (final i in active) {
+    // Skip stacked children here — they are emitted under their anchor.
+    if (i.stackedOn != null && byId.containsKey(i.stackedOn)) continue;
+    result.add(_OrderedHabit(i, isStackedChild: false));
+    for (final child in childrenByAnchor[i.id] ?? const <Intention>[]) {
+      result.add(_OrderedHabit(child, isStackedChild: true));
+    }
+  }
+  return result;
+}
+
+class _HabitCard extends ConsumerWidget {
+  const _HabitCard({required this.intention, this.isStackedChild = false});
+  final Intention intention;
+
+  /// Whether to render this card indented under its anchor (§7.1 staircase).
+  final bool isStackedChild;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -216,9 +259,27 @@ class _HabitCard extends ConsumerWidget {
         ? Colors.green.shade900.withAlpha(90)
         : Colors.green.shade50;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    // §7.4 Habit Distinction — build habits read green, quit habits red, via a
+    // coloured left accent border. A quick at-a-glance signal that doesn't
+    // depend on reading the label.
+    final bool isQuit = intention.habitType == HabitType.quit;
+    final Color typeColor =
+        isQuit ? Colors.red.shade400 : Colors.green.shade500;
+
+    final card = Card(
+      margin: EdgeInsets.only(
+        // §7.1 — stacked children get no left margin here; the connector Row
+        // that wraps the card supplies the indent instead.
+        left: isStackedChild ? 0 : 16,
+        right: 16,
+        top: 6,
+        bottom: 6,
+      ),
       color: todayLogged ? loggedColor : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: typeColor, width: 1.5),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () {
@@ -229,11 +290,37 @@ class _HabitCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                intention.behaviorLabel,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              Row(
+                children: [
+                  // §7.5 Gamification — traffic-light of the reminder-frequency
+                  // tier (red = daily … green = weekly/off), a direct read of
+                  // the fading-reminders signal.
+                  _TrafficLightDot(intentionId: intention.id),
+                  const SizedBox(width: 8),
+                  // §7.4 — build/quit badge.
+                  Icon(
+                    isQuit
+                        ? Icons.do_not_disturb_alt
+                        : Icons.add_circle_outline,
+                    size: 16,
+                    color: typeColor,
+                  ),
+                  // §7.1 — a stacked habit shows a small link glyph.
+                  if (intention.isStacked) ...[
+                    const SizedBox(width: 4),
+                    Icon(Icons.link, size: 16, color: typeColor),
+                  ],
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      intention.behaviorLabel,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -378,6 +465,67 @@ class _HabitCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+
+    // §7.1 — a stacked child gets a small elbow connector on its left so the
+    // staircase reads as "this habit hangs off the one above".
+    if (!isStackedChild) return card;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(
+          width: 40,
+          child: Icon(
+            Icons.subdirectory_arrow_right,
+            size: 20,
+            color: typeColor,
+          ),
+        ),
+        Expanded(child: card),
+      ],
+    );
+  }
+}
+
+/// §7.5 Gamification — a small traffic-light dot reflecting a habit's current
+/// reminder-frequency tier: red = `daily`, amber = `every_2_days`/
+/// `twice_weekly`, green = `weekly`/`off`. It is a direct visualisation of the
+/// existing fading-reminders signal (reminderPlanService), no new backend
+/// logic. Falls back to a neutral dot while the plan is loading.
+class _TrafficLightDot extends ConsumerWidget {
+  const _TrafficLightDot({required this.intentionId});
+
+  final String intentionId;
+
+  /// Maps a reminder-frequency tier to its traffic-light colour.
+  static Color colorForFrequency(String? frequency) {
+    switch (frequency) {
+      case 'weekly':
+      case 'off':
+        return Colors.green;
+      case 'every_2_days':
+      case 'twice_weekly':
+        return Colors.amber;
+      case 'daily':
+      default:
+        return Colors.red;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final freqAsync = ref.watch(reminderFrequenciesProvider);
+    final frequency = freqAsync.maybeWhen(
+      data: (map) => map[intentionId],
+      orElse: () => null,
+    );
+    final color = frequency == null
+        ? Theme.of(context).disabledColor
+        : colorForFrequency(frequency);
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 }

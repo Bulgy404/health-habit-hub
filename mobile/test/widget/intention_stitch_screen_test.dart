@@ -102,6 +102,7 @@ Widget _buildSubject(
           behaviorKey: 'walk',
           behaviorLabel: behaviorLabel,
           config: _config,
+          habitType: HabitType.build,
           cues: cues,
         ),
       ),

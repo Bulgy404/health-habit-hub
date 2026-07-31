@@ -94,6 +94,13 @@ export async function resolveHabitConfig({
   // Study-level feature flag and live cueConfig from the study group.
   let recommenderEnabled = true;
   let cueConfig = null;
+  // §7.1 Habit Stacking / §7.2 Reminder mode / §7.3 Information Overload —
+  // same nullable study→group override pattern as recommenderEnabled. Defaults
+  // preserve today's behaviour for public/unenrolled users: stacking available,
+  // generic reminders, overload guard off.
+  let habitStackingEnabled = true;
+  let reminderContentMode = 'generic';
+  let informationOverloadGuard = { enabled: false, userOptOutAllowed: false };
   // Onboarding + self-habit-creation flags. Default enabled for everyone
   // (public/free-entry users). Study level sets the baseline; a non-null
   // group-level value overrides it.
@@ -124,6 +131,23 @@ export async function resolveHabitConfig({
         recommenderEnabled = study.recommenderEnabled !== false;
         onboardingEnabled = study.onboardingEnabled !== false;
         selfHabitCreationEnabled = study.selfHabitCreationEnabled !== false;
+        // §7.1/§7.2/§7.3 study-level baselines (null/absent → default).
+        if (study.habitStackingEnabled != null) {
+          habitStackingEnabled = study.habitStackingEnabled !== false;
+        }
+        if (
+          study.reminderContentMode === 'implementation_intention' ||
+          study.reminderContentMode === 'generic'
+        ) {
+          reminderContentMode = study.reminderContentMode;
+        }
+        if (study.informationOverloadGuard != null) {
+          informationOverloadGuard = {
+            enabled: study.informationOverloadGuard.enabled === true,
+            userOptOutAllowed:
+              study.informationOverloadGuard.userOptOutAllowed === true,
+          };
+        }
 
         // Resolve cueConfig and per-group flag overrides live from the group.
         if (enrollment.groupId) {
@@ -139,6 +163,23 @@ export async function resolveHabitConfig({
           }
           if (group?.recommenderEnabled != null) {
             recommenderEnabled = group.recommenderEnabled;
+          }
+          // A non-null group value overrides the study-level baseline.
+          if (group?.habitStackingEnabled != null) {
+            habitStackingEnabled = group.habitStackingEnabled !== false;
+          }
+          if (
+            group?.reminderContentMode === 'implementation_intention' ||
+            group?.reminderContentMode === 'generic'
+          ) {
+            reminderContentMode = group.reminderContentMode;
+          }
+          if (group?.informationOverloadGuard != null) {
+            informationOverloadGuard = {
+              enabled: group.informationOverloadGuard.enabled === true,
+              userOptOutAllowed:
+                group.informationOverloadGuard.userOptOutAllowed === true,
+            };
           }
         }
 
@@ -182,6 +223,11 @@ export async function resolveHabitConfig({
     behaviorKeys,
     lang
   );
+  // §7.3 — the reminder-frequency tier an existing habit must reach before
+  // another of the same type unlocks. Admin-tunable global setting, same
+  // spirit as the reminder_* keys.
+  const informationOverloadUnlockTier =
+    await readInformationOverloadUnlockTier(db);
 
   return {
     cueCount,
@@ -194,6 +240,38 @@ export async function resolveHabitConfig({
     onboardingEnabled,
     selfHabitCreationEnabled,
     habitReminder,
+    // §7.1/§7.2/§7.3 resolved feature config.
+    habitStackingEnabled,
+    reminderContentMode,
+    informationOverloadGuard,
+    informationOverloadUnlockTier,
     ...appSettings,
   };
+}
+
+/** Valid reminder-frequency tiers for the overload unlock threshold. */
+const OVERLOAD_TIERS = [
+  'daily',
+  'every_2_days',
+  'twice_weekly',
+  'weekly',
+  'off',
+];
+
+/**
+ * Read the admin-tunable §7.3 unlock tier from admin_settings
+ * (key: information_overload_unlock_tier). Defaults to 'weekly'.
+ * @param {object} db
+ * @returns {Promise<string>}
+ */
+async function readInformationOverloadUnlockTier(db) {
+  try {
+    const doc = await db
+      .collection('admin_settings')
+      .findOne({ key: 'information_overload_unlock_tier' });
+    const value = doc?.value;
+    return OVERLOAD_TIERS.includes(value) ? value : 'weekly';
+  } catch {
+    return 'weekly';
+  }
 }

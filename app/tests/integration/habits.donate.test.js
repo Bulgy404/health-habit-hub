@@ -222,9 +222,26 @@ before(async () => {
         return { ok: true, json: async () => MOCK_MAP_BCIO };
       }
 
+      // §7.1 Habit Stacking — stack-merge proxy target.
+      if (urlStr.includes('/api/v1/llm/stack-merge')) {
+        const body = JSON.parse(options?.body || '{}');
+        return {
+          ok: true,
+          status: 200,
+          text: async () =>
+            JSON.stringify({
+              sentence: `After I ${body.anchor_text}, I will ${body.new_behavior_text}.`,
+            }),
+          json: async () => ({
+            sentence: `After I ${body.anchor_text}, I will ${body.new_behavior_text}.`,
+          }),
+        };
+      }
+
       return {
         ok: false,
         status: 404,
+        text: async () => JSON.stringify({ error: 'Not found' }),
         json: async () => ({ error: 'Not found' }),
       };
     }
@@ -409,4 +426,39 @@ test('Two users donating similar habits share a single BCIOConcept node', async 
     mergedIds.length >= 2,
     'Both donations should MERGE the same BCIOConcept ID'
   );
+});
+
+// ── §7.1 Habit Stacking — stack-merge proxy ─────────────────────────────────
+
+test('POST /habits/stack-merge returns a combined intention sentence', async () => {
+  const res = await post(
+    '/api/v1/habits/stack-merge',
+    {
+      anchor_text: 'make my morning coffee',
+      new_behavior_text: 'take my vitamins',
+      language: 'en',
+    },
+    makeToken('stacker-1')
+  );
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.match(body.sentence, /morning coffee/);
+  assert.match(body.sentence, /vitamins/);
+});
+
+test('POST /habits/stack-merge returns 400 when inputs are missing', async () => {
+  const res = await post(
+    '/api/v1/habits/stack-merge',
+    { anchor_text: 'brush teeth' },
+    makeToken('stacker-2')
+  );
+  assert.strictEqual(res.status, 400);
+});
+
+test('POST /habits/stack-merge requires auth', async () => {
+  const res = await post('/api/v1/habits/stack-merge', {
+    anchor_text: 'a',
+    new_behavior_text: 'b',
+  });
+  assert.strictEqual(res.status, 401);
 });

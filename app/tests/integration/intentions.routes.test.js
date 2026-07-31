@@ -337,6 +337,8 @@ const validBody = {
     { text: 'After dinner each evening', source: 'pre_rated', cueId: null },
   ],
   intentionStatement: 'After dinner each evening, I will go for a 20-min walk.',
+  // §7.4 Habit Distinction — habitType is now a required field on create.
+  habitType: 'build',
 };
 
 // ── Auth enforcement ──────────────────────────────────────────────────────────
@@ -379,6 +381,39 @@ test('POST /habits/intentions creates intention and returns 201', async () => {
   assert.ok(body._id || body.id);
   assert.strictEqual(body.behaviorKey, 'walking');
   assert.strictEqual(body.status, 'active');
+  // §7.4 — habitType echoed back and creationMode defaulted.
+  assert.strictEqual(body.habitType, 'build');
+  assert.strictEqual(body.creationMode, 'standalone');
+});
+
+test('POST /habits/intentions returns 400 when habitType is missing (§7.4)', async () => {
+  const { habitType: _drop, ...noType } = validBody;
+  const res = await post(
+    INTENTIONS,
+    noType,
+    makeToken(['user'], 'no-type-user')
+  );
+  assert.strictEqual(res.status, 400);
+});
+
+test('POST /habits/intentions returns 400 for an invalid habitType (§7.4)', async () => {
+  const res = await post(
+    INTENTIONS,
+    { ...validBody, habitType: 'maybe' },
+    makeToken(['user'], 'bad-type-user')
+  );
+  assert.strictEqual(res.status, 400);
+});
+
+test('POST /habits/intentions persists a quit habit (§7.4)', async () => {
+  const res = await post(
+    INTENTIONS,
+    { ...validBody, habitType: 'quit' },
+    makeToken(['user'], 'quit-user')
+  );
+  assert.strictEqual(res.status, 201);
+  const body = await res.json();
+  assert.strictEqual(body.habitType, 'quit');
 });
 
 test('POST /habits/intentions always generates SRHI windows, independent of questionnaire_assignments', async () => {
@@ -642,4 +677,27 @@ test('DELETE /habits/intentions/:id/logs/:date returns 404 for an intention owne
     1,
     'owner log must survive the attacker delete attempt'
   );
+});
+
+// ── §7.5 Gamification ───────────────────────────────────────────────────────
+
+test('GET /habits/intentions/gamification returns a summary with First Step', async () => {
+  const token = makeToken(['user'], 'gami-user');
+  const created = await post(INTENTIONS, validBody, token);
+  assert.strictEqual(created.status, 201);
+
+  const res = await get(`${INTENTIONS}/gamification`, token);
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+  assert.ok(typeof body.totalXp === 'number');
+  assert.ok(body.level >= 1);
+  assert.ok(Array.isArray(body.badges));
+  assert.ok(body.badges.some((b) => b.badgeKey === 'first_step'));
+  // First Step is newly earned on this first read.
+  assert.ok(body.newlyEarned.some((b) => b.badgeKey === 'first_step'));
+});
+
+test('GET /habits/intentions/gamification requires auth', async () => {
+  const res = await get(`${INTENTIONS}/gamification`);
+  assert.strictEqual(res.status, 401);
 });

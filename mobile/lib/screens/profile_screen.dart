@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
+import '../features/my_habits/gamification_ui.dart';
 import '../features/my_habits/my_habits_provider.dart';
 import '../features/questionnaire/questionnaire_models.dart';
 import '../features/questionnaire/questionnaire_service.dart';
@@ -487,6 +488,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // §7.5 Gamification — badges earned across the participant's habits.
+          const _BadgesSection(),
+          const SizedBox(height: 16),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -1031,6 +1035,84 @@ class _StudyMembershipSectionState
           ),
         ],
       ],
+    );
+  }
+}
+
+/// §7.5 Gamification — a card showing the participant's level, XP progress, and
+/// the badges they've earned across their habits. Silent while loading and
+/// hidden entirely when the user has no habits/badges yet.
+class _BadgesSection extends ConsumerWidget {
+  const _BadgesSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final gamificationAsync = ref.watch(gamificationProvider);
+
+    return gamificationAsync.maybeWhen(
+      data: (g) {
+        final keys = g.distinctBadgeKeys.toList();
+        if (keys.isEmpty && g.totalXp == 0) {
+          return const SizedBox.shrink();
+        }
+        final denom = g.xpIntoLevel + g.xpToNextLevel;
+        final progress = denom > 0 ? g.xpIntoLevel / denom : 0.0;
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.emoji_events_outlined,
+                        color: cs.primary, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Achievements',
+                      style: tt.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    const Spacer(),
+                    Text('Level ${g.level}',
+                        style: tt.labelLarge
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: progress.clamp(0.0, 1.0),
+                    minHeight: 8,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text('${g.xpToNextLevel} XP to next level',
+                    style: tt.bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant)),
+                if (keys.isNotEmpty) ...[
+                  Divider(color: cs.outlineVariant, height: 24),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final key in keys)
+                        Chip(
+                          avatar: Icon(badgeMetaFor(key).icon, size: 18),
+                          label: Text(badgeMetaFor(key).label),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
     );
   }
 }

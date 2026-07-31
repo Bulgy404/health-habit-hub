@@ -65,6 +65,10 @@ class HabitConfig {
     this.communityShareDefault = true,
     this.onboardingEnabled = true,
     this.selfHabitCreationEnabled = true,
+    this.habitStackingEnabled = true,
+    this.reminderContentMode = 'generic',
+    this.informationOverloadEnabled = false,
+    this.informationOverloadOptOutAllowed = false,
   });
 
   /// Cue count mode: `'single'` or `'multi'`.
@@ -115,6 +119,23 @@ class HabitConfig {
   /// study/group; defaults to `true` for public users.
   final bool selfHabitCreationEnabled;
 
+  /// Whether the "stack onto an existing habit" cue option is offered
+  /// (§7.1 Habit Stacking). Resolved from the participant's study/group;
+  /// defaults to `true`.
+  final bool habitStackingEnabled;
+
+  /// Reminder copy mode: `'generic'` or `'implementation_intention'`
+  /// (§7.2). Controls whether reminders repeat the plan's cue→behavior.
+  final String reminderContentMode;
+
+  /// Whether the §7.3 Information Overload guard is active for this
+  /// participant (limits concurrent new habits per type). Defaults `false`.
+  final bool informationOverloadEnabled;
+
+  /// Whether the participant may opt out of the §7.3 guard. Only meaningful
+  /// when [informationOverloadEnabled] is `true`. Defaults `false`.
+  final bool informationOverloadOptOutAllowed;
+
   /// Deserialises from the habit-config API response.
   factory HabitConfig.fromJson(Map<String, dynamic> json) => HabitConfig(
         cueCount: json['cueCount'] as String? ?? 'multi',
@@ -144,6 +165,17 @@ class HabitConfig {
         onboardingEnabled: json['onboardingEnabled'] as bool? ?? true,
         selfHabitCreationEnabled:
             json['selfHabitCreationEnabled'] as bool? ?? true,
+        habitStackingEnabled: json['habitStackingEnabled'] as bool? ?? true,
+        reminderContentMode:
+            json['reminderContentMode'] as String? ?? 'generic',
+        informationOverloadEnabled:
+            (json['informationOverloadGuard'] as Map<String, dynamic>?)?[
+                    'enabled'] as bool? ??
+                false,
+        informationOverloadOptOutAllowed:
+            (json['informationOverloadGuard'] as Map<String, dynamic>?)?[
+                    'userOptOutAllowed'] as bool? ??
+                false,
       );
 }
 
@@ -180,6 +212,25 @@ class IntentionCue {
       };
 }
 
+/// The kind of habit a participant is forming: building a new behaviour or
+/// breaking an existing one (§7.4 Habit Distinction). Drives cue guidance and
+/// the habit card's colour, and is a standard research covariate.
+enum HabitType {
+  /// Building a new behaviour — trigger cues.
+  build,
+
+  /// Breaking an existing behaviour — disruption/removal cues.
+  quit;
+
+  /// Wire value sent to / received from the backend.
+  String get wire => name;
+
+  /// Parses the backend string, defaulting to [HabitType.build] for legacy
+  /// habits created before Habit Distinction existed.
+  static HabitType fromWire(String? value) =>
+      value == 'quit' ? HabitType.quit : HabitType.build;
+}
+
 /// An implementation intention created by the user.
 class Intention {
   /// Creates an [Intention].
@@ -192,6 +243,10 @@ class Intention {
     required this.intentionStatement,
     required this.status,
     required this.createdAt,
+    this.habitType = HabitType.build,
+    this.stackedOn,
+    this.creationMode = 'standalone',
+    this.earnedBadges = const [],
   });
 
   /// Unique intention identifier.
@@ -218,6 +273,22 @@ class Intention {
   /// Timestamp when the intention was created.
   final DateTime createdAt;
 
+  /// Whether this is a build or quit habit (§7.4 Habit Distinction).
+  final HabitType habitType;
+
+  /// When set, the id of the anchor intention this habit was stacked onto
+  /// (§7.1 Habit Stacking); `null` for standalone habits.
+  final String? stackedOn;
+
+  /// How the habit was created: `'standalone'` or `'stacked'` (§7.1).
+  final String creationMode;
+
+  /// Gamification badges earned for this habit (§7.5).
+  final List<EarnedBadge> earnedBadges;
+
+  /// Whether this habit was created by stacking onto an anchor (§7.1).
+  bool get isStacked => creationMode == 'stacked';
+
   /// Deserialises from the intentions API response.
   factory Intention.fromJson(Map<String, dynamic> json) => Intention(
         id: (json['_id'] ?? json['id']) as String,
@@ -231,6 +302,139 @@ class Intention {
         intentionStatement: json['intentionStatement'] as String,
         status: json['status'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String),
+        habitType: HabitType.fromWire(json['habitType'] as String?),
+        stackedOn: json['stackedOn'] as String?,
+        creationMode: json['creationMode'] as String? ?? 'standalone',
+        earnedBadges: (json['earnedBadges'] as List<dynamic>?)
+                ?.cast<Map<String, dynamic>>()
+                .map(EarnedBadge.fromJson)
+                .toList() ??
+            const [],
+      );
+}
+
+/// The participant's §7.3 Information Overload preferences and eligibility.
+class InformationOverloadPrefs {
+  /// Creates an [InformationOverloadPrefs].
+  const InformationOverloadPrefs({
+    required this.optOut,
+    required this.guardEnabled,
+    required this.optOutAllowed,
+  });
+
+  /// Whether the participant has opted out of the guard.
+  final bool optOut;
+
+  /// Whether the guard is active for the participant's study condition.
+  final bool guardEnabled;
+
+  /// Whether opting out is permitted (controls whether the toggle is shown).
+  final bool optOutAllowed;
+
+  /// Deserialises from the /me/preferences response.
+  factory InformationOverloadPrefs.fromJson(Map<String, dynamic> json) =>
+      InformationOverloadPrefs(
+        optOut: json['informationOverloadOptOut'] as bool? ?? false,
+        guardEnabled:
+            json['informationOverloadGuardEnabled'] as bool? ?? false,
+        optOutAllowed:
+            json['informationOverloadOptOutAllowed'] as bool? ?? false,
+      );
+}
+
+/// The user's §7.5 gamification summary: XP, level, and earned badges.
+class Gamification {
+  /// Creates a [Gamification] summary.
+  const Gamification({
+    required this.totalXp,
+    required this.level,
+    required this.xpIntoLevel,
+    required this.xpToNextLevel,
+    required this.nextLevelXp,
+    required this.badges,
+    required this.newlyEarned,
+  });
+
+  /// Total accumulated XP across active habits.
+  final int totalXp;
+
+  /// Current level.
+  final int level;
+
+  /// XP earned into the current level.
+  final int xpIntoLevel;
+
+  /// XP remaining until the next level.
+  final int xpToNextLevel;
+
+  /// Cumulative XP threshold for the next level.
+  final int nextLevelXp;
+
+  /// All currently-earned badges (badgeKey per habit; may repeat keys).
+  final List<GamificationBadge> badges;
+
+  /// Badges newly earned on this read — used to fire a one-time praise
+  /// notification.
+  final List<GamificationBadge> newlyEarned;
+
+  /// Distinct earned badge keys, for a compact profile display.
+  Set<String> get distinctBadgeKeys =>
+      badges.map((b) => b.badgeKey).toSet();
+
+  /// Deserialises from the /habits/intentions/gamification response.
+  factory Gamification.fromJson(Map<String, dynamic> json) => Gamification(
+        totalXp: (json['totalXp'] as num?)?.toInt() ?? 0,
+        level: (json['level'] as num?)?.toInt() ?? 1,
+        xpIntoLevel: (json['xpIntoLevel'] as num?)?.toInt() ?? 0,
+        xpToNextLevel: (json['xpToNextLevel'] as num?)?.toInt() ?? 0,
+        nextLevelXp: (json['nextLevelXp'] as num?)?.toInt() ?? 0,
+        badges: (json['badges'] as List<dynamic>?)
+                ?.cast<Map<String, dynamic>>()
+                .map(GamificationBadge.fromJson)
+                .toList() ??
+            const [],
+        newlyEarned: (json['newlyEarned'] as List<dynamic>?)
+                ?.cast<Map<String, dynamic>>()
+                .map(GamificationBadge.fromJson)
+                .toList() ??
+            const [],
+      );
+}
+
+/// One earned badge in a [Gamification] summary (badge key + owning habit).
+class GamificationBadge {
+  /// Creates a [GamificationBadge].
+  const GamificationBadge({required this.badgeKey, required this.intentionId});
+
+  /// Stable badge identifier.
+  final String badgeKey;
+
+  /// The habit this badge belongs to.
+  final String intentionId;
+
+  /// Deserialises from JSON.
+  factory GamificationBadge.fromJson(Map<String, dynamic> json) =>
+      GamificationBadge(
+        badgeKey: json['badgeKey'] as String? ?? '',
+        intentionId: json['intentionId'] as String? ?? '',
+      );
+}
+
+/// A gamification badge earned for a habit (§7.5).
+class EarnedBadge {
+  /// Creates an [EarnedBadge].
+  const EarnedBadge({required this.badgeKey, required this.earnedAt});
+
+  /// Stable badge identifier (e.g. `'first_step'`, `'second_nature'`).
+  final String badgeKey;
+
+  /// When the badge was earned.
+  final DateTime earnedAt;
+
+  /// Deserialises from JSON.
+  factory EarnedBadge.fromJson(Map<String, dynamic> json) => EarnedBadge(
+        badgeKey: json['badgeKey'] as String,
+        earnedAt: DateTime.parse(json['earnedAt'] as String),
       );
 }
 

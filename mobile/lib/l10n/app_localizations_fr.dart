@@ -1640,4 +1640,49 @@ class AppLocalizationsFr extends AppLocalizations {
   String appVersion(String version, String buildNumber) {
     return 'Version $version ($buildNumber)';
   }
+
+  @override
+  String get habitTypeBuild => 'Build a new habit';
+
+  @override
+  String get habitTypeQuit => 'Break a habit';
+
+  @override
+  String get habitTypeFilterAll => 'All';
+
+  @override
+  String get informationOverloadInfo => 'To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.';
+
+  @override
+  String get informationOverloadBlocked => 'Let\'s focus on your current habit first — a new slot opens once it becomes more automatic.';
+
+  @override
+  String get stackOntoExistingHabitTitle => 'Stack onto an existing habit';
+
+  @override
+  String get stackOntoExistingHabitSubtitle => 'Anchor this new habit to one you already do';
+
+  @override
+  String get stackAnchorPickLabel => 'Anchor habit';
+
+  @override
+  String get stackAnchorNone => 'None';
+
+  @override
+  String get stackAnchorFreeTextLabel => 'Or type an anchor habit';
+
+  @override
+  String get stackAnchorFreeTextHint => 'e.g. After my morning coffee';
+
+  @override
+  String get habitsSection => 'Habits';
+
+  @override
+  String get informationOverloadOptOutTitle => 'Allow multiple new habits';
+
+  @override
+  String get informationOverloadOptOutSubtitle => 'Turn off the one-habit-at-a-time focus guard';
+
+  @override
+  String get progressSection => 'Progress';
 }

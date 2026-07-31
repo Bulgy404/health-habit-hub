@@ -33,6 +33,12 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
   // "don't show yet" so the card doesn't flash in then disappear.
   bool? _hasSeenIntro;
 
+  // §7.4 Habit Distinction — the build/quit choice is made here, up front,
+  // because it changes downstream cue guidance (build → trigger cues; quit →
+  // disruption/removal cues, per Verplanken & Wood 2006) and is a standard
+  // research covariate. Defaults to build.
+  HabitType _habitType = HabitType.build;
+
   @override
   void initState() {
     super.initState();
@@ -72,8 +78,39 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
                     onDismiss: _dismissIntro,
                   ),
                 ),
+              // §7.3 Information Overload — brief rationale so the growing
+              // per-type cap doesn't feel arbitrary if it blocks creation.
+              if (config.informationOverloadEnabled)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Card(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.lightbulb_outline, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              l10n.informationOverloadInfo,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: _HabitTypeSelector(
+                  value: _habitType,
+                  onChanged: (t) => setState(() => _habitType = t),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
                 child: Text(
                   l10n.pickBehaviorTitle,
                   style: Theme.of(context)
@@ -84,8 +121,9 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
               ),
               Expanded(
                 child: config.behaviorOptions.isEmpty
-                    ? _FreeEntryBehaviorForm(config: config)
-                    : _BehaviorList(config: config),
+                    ? _FreeEntryBehaviorForm(
+                        config: config, habitType: _habitType)
+                    : _BehaviorList(config: config, habitType: _habitType),
               ),
             ],
           );
@@ -95,11 +133,53 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
   }
 }
 
+/// §7.4 Habit Distinction — prominent build/quit choice. Rendered as a pair of
+/// segmented buttons (not a buried field) so the distinction is deliberate.
+class _HabitTypeSelector extends StatelessWidget {
+  const _HabitTypeSelector({required this.value, required this.onChanged});
+
+  final HabitType value;
+  final ValueChanged<HabitType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    return SegmentedButton<HabitType>(
+      segments: [
+        ButtonSegment(
+          value: HabitType.build,
+          icon: const Icon(Icons.add_circle_outline),
+          label: Text(l10n.habitTypeBuild),
+        ),
+        ButtonSegment(
+          value: HabitType.quit,
+          icon: const Icon(Icons.do_not_disturb_alt),
+          label: Text(l10n.habitTypeQuit),
+        ),
+      ],
+      selected: {value},
+      onSelectionChanged: (s) => onChanged(s.first),
+      style: ButtonStyle(
+        // Tint the selection to match the card colours used elsewhere
+        // (green = build, red = quit) for a consistent visual language.
+        backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (!states.contains(WidgetState.selected)) return null;
+          return value == HabitType.build
+              ? scheme.primaryContainer
+              : scheme.errorContainer;
+        }),
+      ),
+    );
+  }
+}
+
 /// Catalog picker shown when the study restricts behavior options.
 class _BehaviorList extends StatelessWidget {
-  const _BehaviorList({required this.config});
+  const _BehaviorList({required this.config, required this.habitType});
 
   final HabitConfig config;
+  final HabitType habitType;
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +198,7 @@ class _BehaviorList extends StatelessWidget {
               extra: {
                 'behaviorKey': option.key,
                 'behaviorLabel': option.label,
+                'habitType': habitType.wire,
                 'config': config,
               },
             ),
@@ -130,9 +211,10 @@ class _BehaviorList extends StatelessWidget {
 
 /// Free-text habit entry for public users (no behavior catalog).
 class _FreeEntryBehaviorForm extends StatefulWidget {
-  const _FreeEntryBehaviorForm({required this.config});
+  const _FreeEntryBehaviorForm({required this.config, required this.habitType});
 
   final HabitConfig config;
+  final HabitType habitType;
 
   @override
   State<_FreeEntryBehaviorForm> createState() => _FreeEntryBehaviorFormState();
@@ -170,6 +252,7 @@ class _FreeEntryBehaviorFormState extends State<_FreeEntryBehaviorForm> {
       extra: {
         'behaviorKey': _slugify(label),
         'behaviorLabel': label,
+        'habitType': widget.habitType.wire,
         'config': widget.config,
       },
     );

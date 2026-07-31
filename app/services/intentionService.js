@@ -1,10 +1,20 @@
 import { ObjectId } from 'mongodb';
 import { COLLECTION } from '../models/implementationIntention.js';
+import {
+  FREQUENCIES,
+  readReminderConfig,
+  computeReminderPlan,
+} from './reminderPlanService.js';
 
 /**
  * Create a new implementation intention for a user.
- * Returns { limitReached: true } if the user has reached the maxHabits cap.
- * @param {{ db: object, userId: string, enrollmentId?: string|null, studyId?: string|null, groupId?: string|null, behaviorKey: string, behaviorLabel: string, durationMinutes: number, cues: Array, intentionStatement: string, cueConfig?: object }} deps
+ *
+ * Returns a limit indicator instead of creating when a cap is hit:
+ *   - { limitReached: true }                              — legacy maxHabits cap
+ *   - { limitReached: true, unlockTier, currentTier }     — §7.3 Information
+ *     Overload per-type build/quit cap (see checkOverloadGuard)
+ *
+ * @param {{ db: object, userId: string, enrollmentId?: string|null, studyId?: string|null, groupId?: string|null, behaviorKey: string, behaviorLabel: string, durationMinutes: number, cues: Array, intentionStatement: string, habitType?: string, stackedOn?: string|null, creationMode?: string, cueConfig?: object, overload?: object|null }} deps
  * @returns {Promise<object|{ limitReached: boolean }>} Serialized intention or limit indicator.
  */
 export async function createIntention({
@@ -18,16 +28,43 @@ export async function createIntention({
   durationMinutes,
   cues,
   intentionStatement,
+  habitType = 'build',
+  stackedOn = null,
+  creationMode = 'standalone',
   reminderTime = null,
   cueConfig,
+  overload = null,
 }) {
+  const normalizedType = habitType === 'quit' ? 'quit' : 'build';
   if (cueConfig?.maxHabits != null) {
     const count = await db
       .collection(COLLECTION)
       .countDocuments({ userId: String(userId), status: 'active' });
     if (count >= cueConfig.maxHabits) return { limitReached: true };
   }
+
+  // §7.3 Information Overload — per-type (build/quit) cap that grows as the
+  // participant's existing habits of that type become automatic. Evaluated
+  // only when a study/group enables the guard.
+  if (overload?.enabled) {
+    const guard = await checkOverloadGuard({
+      db,
+      userId,
+      habitType: normalizedType,
+      overload,
+    });
+    if (guard.limitReached) return guard;
+  }
+
   const now = new Date();
+  let stackedOnOid = null;
+  if (stackedOn) {
+    try {
+      stackedOnOid = new ObjectId(stackedOn);
+    } catch {
+      stackedOnOid = null;
+    }
+  }
   const doc = {
     userId,
     enrollmentId: enrollmentId ? new ObjectId(enrollmentId) : null,
@@ -38,6 +75,10 @@ export async function createIntention({
     durationMinutes: parseInt(durationMinutes, 10),
     cues,
     intentionStatement,
+    habitType: normalizedType,
+    stackedOn: stackedOnOid,
+    creationMode: creationMode === 'stacked' ? 'stacked' : 'standalone',
+    earnedBadges: [],
     reminderTime,
     status: 'active',
     createdAt: now,
@@ -101,6 +142,94 @@ export async function updateIntentionStatus({ db, id, userId, status }) {
   return { updated: true };
 }
 
+/**
+ * §7.3 Information Overload guard.
+ *
+ * Behavioural rationale: focus a participant's limited attentional resources
+ * on strengthening current habits before adding new ones of the same type.
+ * The cap is not fixed — it *grows* as existing habits become automatic, so
+ * the guard slows people down early and gets out of the way once a habit is
+ * self-sustaining.
+ *
+ * Algorithm: each habit type (build/quit) starts with a cap of 1 active habit.
+ * The cap is then raised by 1 for every active habit of that type that has
+ * already reached `unlockTier` — the reminder-frequency tier from the Fading
+ * Reminders signal (reminderPlanService), reused here rather than inventing a
+ * new automaticity metric. So a participant whose only build habit has faded
+ * to "weekly" reminders has unlocked a second build slot.
+ *
+ * @param {{ db: object, userId: string, habitType: 'build'|'quit', overload: { unlockTier: string } }} deps
+ * @returns {Promise<{ limitReached: false }|{ limitReached: true, unlockTier: string, currentTier: string }>}
+ */
+export async function checkOverloadGuard({
+  db,
+  userId,
+  habitType,
+  overload,
+  now = new Date(),
+}) {
+  const unlockTier = overload?.unlockTier ?? 'weekly';
+  // 'off' means the guard never opens further slots — a hard cap of 1 per type.
+  const unlockIndex =
+    unlockTier === 'off'
+      ? FREQUENCIES.length // unreachable — nothing counts as unlocked
+      : Math.max(FREQUENCIES.indexOf(unlockTier), 0);
+
+  const active = await db
+    .collection(COLLECTION)
+    .find({ userId: String(userId), habitType, status: 'active' })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  const baseCap = 1;
+  if (active.length < baseCap) return { limitReached: false };
+
+  const config = await readReminderConfig(db);
+
+  let unlockedCount = 0;
+  let mostRecentTier = 'daily';
+  for (let i = 0; i < active.length; i++) {
+    const doc = active[i];
+    const [srhi, logs] = await Promise.all([
+      db
+        .collection('srhi_responses')
+        .find({ intentionId: doc._id, userId: String(userId) })
+        .sort({ weekNumber: -1 })
+        .toArray(),
+      db
+        .collection('daily_behavior_logs')
+        .find({ intentionId: doc._id, userId: String(userId) })
+        .toArray(),
+    ]);
+    const plan = computeReminderPlan({
+      intention: {
+        id: String(doc._id),
+        reminderTime: doc.reminderTime ?? null,
+        createdAt: doc.createdAt,
+      },
+      srhiScores: srhi
+        .filter((s) => s.score != null)
+        .map((s) => Number(s.score)),
+      logs,
+      config,
+      now,
+    });
+    const tierIndex = Math.max(FREQUENCIES.indexOf(plan.frequency), 0);
+    if (i === 0) mostRecentTier = plan.frequency;
+    if (tierIndex >= unlockIndex) unlockedCount += 1;
+  }
+
+  const effectiveCap = baseCap + unlockedCount;
+  if (active.length >= effectiveCap) {
+    return {
+      limitReached: true,
+      unlockTier,
+      currentTier: mostRecentTier,
+    };
+  }
+  return { limitReached: false };
+}
+
 function serialize(doc) {
   return {
     id: doc._id.toString(),
@@ -113,6 +242,14 @@ function serialize(doc) {
     durationMinutes: doc.durationMinutes,
     cues: doc.cues,
     intentionStatement: doc.intentionStatement,
+    // §7.4 / §7.1 — default legacy docs so the app always receives a value.
+    habitType: doc.habitType ?? 'build',
+    stackedOn: doc.stackedOn?.toString() ?? null,
+    creationMode: doc.creationMode ?? 'standalone',
+    earnedBadges: (doc.earnedBadges ?? []).map((b) => ({
+      badgeKey: b.badgeKey,
+      earnedAt: b.earnedAt,
+    })),
     reminderTime: doc.reminderTime ?? null,
     status: doc.status,
     createdAt: doc.createdAt,

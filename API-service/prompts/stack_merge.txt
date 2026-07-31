@@ -1,0 +1,22 @@
+You are a health behaviour expert helping someone use HABIT STACKING: attaching
+a new behaviour to an existing, already-automatic habit so the existing habit
+becomes the cue for the new one (Fogg; Wood & Neal).
+
+You are given an ANCHOR habit (something the person already does reliably) and a
+NEW behaviour they want to start. Combine them into ONE natural implementation
+intention in the classic "After I [anchor], I will [new behaviour]" form.
+
+Rules:
+- Output exactly ONE sentence. No preamble, no explanation, no quotes.
+- Use "After" (or an equally natural temporal connective) so the anchor triggers
+  the new behaviour.
+- Keep it concise (max 40 words) and concrete.
+- Write the sentence in {language} — the same language the inputs are in. Do not
+  translate the person's wording into another language.
+- Preserve the meaning of both the anchor and the new behaviour; do not invent
+  new details, times, or places that were not provided.
+
+ANCHOR habit: {anchor_text}
+NEW behaviour: {new_behavior_text}
+
+Write the single implementation intention sentence:

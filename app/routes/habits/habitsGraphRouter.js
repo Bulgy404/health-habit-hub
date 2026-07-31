@@ -171,6 +171,8 @@ export function createHabitsGraphRouter({ queryNeo4j, getDb } = {}) {
             label: row.habitLabel || '',
             originalText: row.originalText || '',
             language: row.language || '',
+            // §7.4 — build/quit so the mobile bubble graph can filter by type.
+            habitType: row.habitType === 'quit' ? 'quit' : 'build',
           });
         }
       }

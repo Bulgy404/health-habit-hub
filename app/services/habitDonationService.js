@@ -163,6 +163,9 @@ async function _createHabitNode(
     duration,
     healthBenefit,
     wellbeingImpact,
+    habitType,
+    stackedOnUuid,
+    creationMode,
     translationEN,
     translationDE,
     translationJA,
@@ -179,6 +182,14 @@ async function _createHabitNode(
     : 0;
   const safeUserId = typeof userID === 'string' ? userID : '';
 
+  // §7.4/§7.1 — habit_type ('build'|'quit') and creation_mode
+  // ('standalone'|'stacked') are stored as node properties so the community
+  // bubble graph and any admin graph view can filter build vs. quit, and the
+  // stacking network is queryable, with a single-property WHERE clause.
+  const safeHabitType = habitType === 'quit' ? 'quit' : 'build';
+  const safeCreationMode =
+    creationMode === 'stacked' ? 'stacked' : 'standalone';
+
   await queryNeo4j(
     `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: $language,
        is_habit: true, habit_confidence: $habit_confidence, userID: $userID,
@@ -187,7 +198,8 @@ async function _createHabitNode(
        translationJA: $translationJA, translationFR: $translationFR,
        translationNL: $translationNL,
        frequency: $frequency, duration: $duration,
-       health_benefit: $health_benefit, wellbeing_impact: $wellbeing_impact})`,
+       health_benefit: $health_benefit, wellbeing_impact: $wellbeing_impact,
+       habit_type: $habit_type, creation_mode: $creation_mode})`,
     {
       uuid,
       sentence,
@@ -205,8 +217,26 @@ async function _createHabitNode(
       duration: duration ?? null,
       health_benefit: healthBenefit ?? null,
       wellbeing_impact: wellbeingImpact ?? null,
+      habit_type: safeHabitType,
+      creation_mode: safeCreationMode,
     }
   );
+
+  // §7.1 Habit Stacking — when this donation was created by stacking onto an
+  // existing anchor habit that is itself in the graph, link them:
+  //   (:Habit {anchor})-[:STACKED_WITH]->(:Habit {this})
+  // The anchor is matched by uuid; if it isn't in the graph (the user free-typed
+  // an anchor they never donated) the MERGE simply no-ops, leaving creation_mode
+  // as the record that this was a stacked habit.
+  if (stackedOnUuid) {
+    await queryNeo4j(
+      `MATCH (anchor:Habit {uuid: $anchorUuid})
+       MATCH (h:Habit {uuid: $uuid})
+       MERGE (anchor)-[r:STACKED_WITH]->(h)
+         ON CREATE SET r.at = $created_at`,
+      { anchorUuid: stackedOnUuid, uuid, created_at: createdAt }
+    );
+  }
 
   // Link the donation into the graph so it can be traversed from the donor and
   // the study, not only via the scalar userID/studyId properties:
@@ -360,6 +390,9 @@ async function writeToNeo4j(
     duration,
     healthBenefit,
     wellbeingImpact,
+    habitType,
+    stackedOnUuid,
+    creationMode,
     translationEN,
     translationDE,
     translationJA,
@@ -384,6 +417,9 @@ async function writeToNeo4j(
       duration,
       healthBenefit,
       wellbeingImpact,
+      habitType,
+      stackedOnUuid,
+      creationMode,
       translationEN,
       translationDE,
       translationJA,
@@ -517,6 +553,9 @@ export async function shareHabit({
   duration = null,
   healthBenefit = null,
   wellbeingImpact = null,
+  habitType = 'build',
+  stackedOnUuid = null,
+  creationMode = 'standalone',
   queryNeo4j,
   getDb,
   apiBase,
@@ -567,6 +606,9 @@ export async function shareHabit({
       duration,
       healthBenefit,
       wellbeingImpact,
+      habitType,
+      stackedOnUuid,
+      creationMode,
       translationEN,
       translationDE,
       translationJA,
@@ -613,6 +655,9 @@ export async function enqueueHabitDonation({
   duration = null,
   healthBenefit = null,
   wellbeingImpact = null,
+  habitType = 'build',
+  stackedOnUuid = null,
+  creationMode = 'standalone',
   habitQueue,
 }) {
   await habitQueue.add(
@@ -628,6 +673,9 @@ export async function enqueueHabitDonation({
       duration,
       healthBenefit,
       wellbeingImpact,
+      habitType,
+      stackedOnUuid,
+      creationMode,
     },
     { jobId: uuid }
   );

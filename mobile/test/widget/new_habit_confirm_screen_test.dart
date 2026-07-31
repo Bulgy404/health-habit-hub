@@ -94,7 +94,10 @@ class _FakeMyHabitsService extends MyHabitsService {
     required int durationMinutes,
     required List<IntentionCue> cues,
     required String intentionStatement,
+    required HabitType habitType,
     String? reminderTime,
+    String? stackedOn,
+    String creationMode = 'standalone',
   }) async {
     lastCall = {
       'behaviorKey': behaviorKey,
@@ -102,7 +105,10 @@ class _FakeMyHabitsService extends MyHabitsService {
       'durationMinutes': durationMinutes,
       'cues': cues,
       'intentionStatement': intentionStatement,
+      'habitType': habitType,
       'reminderTime': reminderTime,
+      'stackedOn': stackedOn,
+      'creationMode': creationMode,
     };
     switch (_mode) {
       case _Mode.success:
@@ -115,6 +121,9 @@ class _FakeMyHabitsService extends MyHabitsService {
           intentionStatement: intentionStatement,
           status: 'active',
           createdAt: DateTime(2026, 1, 1),
+          habitType: habitType,
+          stackedOn: stackedOn,
+          creationMode: creationMode,
         );
       case _Mode.limitReached:
         throw const ValidationException('Habit limit reached');
@@ -159,6 +168,7 @@ Widget _buildSubject({
           behaviorKey: 'walk',
           behaviorLabel: behaviorLabel,
           config: config,
+          habitType: HabitType.build,
           cues: cues,
           stitchedSentence: stitchedSentence,
         ),

@@ -2,7 +2,11 @@
 import express from 'express';
 import { makeGetDb } from '../utils/getDb.js';
 import { resolveHabitConfig } from '../services/habitConfigService.js';
-import { computeReminderPlans } from '../services/reminderPlanService.js';
+import {
+  computeReminderPlans,
+  readReminderTemplates,
+} from '../services/reminderPlanService.js';
+import { computeUserGamification } from '../services/gamificationService.js';
 import {
   createIntention,
   listIntentions,
@@ -10,6 +14,7 @@ import {
   getIntention,
 } from '../services/intentionService.js';
 import { upsertLog, getLogs, deleteLog } from '../services/dailyLogService.js';
+import { getPreferences } from '../services/userPreferencesService.js';
 import { generateWindows } from '../services/srhiService.js';
 import { generateHabitCreationWindows } from '../services/questionnaireScheduleService.js';
 import { logger } from '../utils/logger.js';
@@ -46,13 +51,44 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
   router.get('/reminder-plans', async (req, res) => {
     try {
       const database = await getDb();
-      const plans = await computeReminderPlans({
+      const userId = String(req.user.sub);
+      // §7.2 — resolve the participant's reminder content mode + the (admin-
+      // editable) rotating phrasing templates so the app can render
+      // "when {cue}, {behavior}" style reminders when the mode is
+      // implementation_intention, and vary the phrasing to avoid its own
+      // habituation. Best-effort: fall back to generic + defaults on error.
+      const [plans, cueConfig, templates] = await Promise.all([
+        computeReminderPlans({ db: database, userId }),
+        resolveHabitConfig({ db: database, userId, neo4jRun }).catch(() => ({
+          reminderContentMode: 'generic',
+        })),
+        readReminderTemplates(database),
+      ]);
+      res.json({
+        plans,
+        reminderContentMode: cueConfig.reminderContentMode ?? 'generic',
+        reminderTemplates: templates,
+      });
+    } catch (err) {
+      log.error({ err: err }, '[intentions] reminder-plans error');
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
+  // GET /api/v1/habits/intentions/gamification
+  // §7.5 — XP, level, and earned badges, recomputed fresh from the same
+  // signals reminderPlanService uses. Persists newly earned badges so the app
+  // can show a one-time praise notification for `newlyEarned`.
+  router.get('/gamification', async (req, res) => {
+    try {
+      const database = await getDb();
+      const summary = await computeUserGamification({
         db: database,
         userId: String(req.user.sub),
       });
-      res.json({ plans });
+      res.json(summary);
     } catch (err) {
-      log.error({ err: err }, '[intentions] reminder-plans error');
+      log.error({ err: err }, '[intentions] gamification error');
       res.status(500).json({ error: 'Internal server error' });
     }
   });
@@ -65,6 +101,9 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         durationMinutes,
         cues,
         intentionStatement,
+        habitType,
+        stackedOn,
+        creationMode,
         reminderTime,
       } = req.body;
       if (
@@ -85,6 +124,25 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         return res.status(400).json({
           error:
             'behaviorKey, behaviorLabel, durationMinutes, cues, and intentionStatement are required',
+        });
+      }
+      // §7.4 Habit Distinction — habitType is a required build/quit choice made
+      // at the start of habit creation; reject anything else so the research
+      // covariate is never silently defaulted for app-created habits.
+      if (habitType !== 'build' && habitType !== 'quit') {
+        return res
+          .status(400)
+          .json({ error: "habitType must be 'build' or 'quit'" });
+      }
+      // §7.1 Habit Stacking — creationMode is optional; when 'stacked' an
+      // anchor reference should accompany it.
+      if (
+        creationMode != null &&
+        creationMode !== 'standalone' &&
+        creationMode !== 'stacked'
+      ) {
+        return res.status(400).json({
+          error: "creationMode must be 'standalone' or 'stacked'",
         });
       }
       const database = await getDb();
@@ -125,6 +183,25 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
             ? habitReminder.time
             : (reminderTime ?? null);
 
+      // §7.3 Information Overload — resolve the (per study/group) guard so the
+      // service can enforce the growing per-type cap. Absent/disabled → no-op.
+      // When the study allows it and the participant has opted out, the guard
+      // is skipped (a natural within-study comparison: gated vs. opted-out).
+      let overload = null;
+      if (cueConfig.informationOverloadGuard?.enabled) {
+        const optOutAllowed =
+          cueConfig.informationOverloadGuard.userOptOutAllowed === true;
+        const prefs = optOutAllowed
+          ? await getPreferences({ db: database, userId })
+          : { informationOverloadOptOut: false };
+        if (!(optOutAllowed && prefs.informationOverloadOptOut)) {
+          overload = {
+            enabled: true,
+            unlockTier: cueConfig.informationOverloadUnlockTier ?? 'weekly',
+          };
+        }
+      }
+
       const result = await createIntention({
         db: database,
         userId,
@@ -133,13 +210,30 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         durationMinutes,
         cues,
         intentionStatement,
+        habitType,
+        stackedOn: stackedOn ?? null,
+        creationMode: creationMode ?? 'standalone',
         reminderTime: reminderTimeToStore,
         cueConfig,
+        overload,
       });
-      if (result.limitReached)
+      if (result.limitReached) {
+        // §7.3 returns unlockTier/currentTier so the app can explain *why* the
+        // habit was blocked (and what has to happen to unlock a new slot),
+        // rather than a bare refusal. The legacy maxHabits cap has neither.
+        if (result.unlockTier) {
+          return res.status(409).json({
+            error: 'Habit limit reached for your study condition',
+            limitReached: true,
+            reason: 'information_overload',
+            unlockTier: result.unlockTier,
+            currentTier: result.currentTier,
+          });
+        }
         return res
           .status(409)
           .json({ error: 'Habit limit reached for your study condition' });
+      }
 
       // Resolve the participant's study/group from their enrollment so we can
       // check which questionnaires are configured to deliver on habit creation.

@@ -5,6 +5,7 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../config/app_config.dart';
+import '../features/my_habits/gamification_ui.dart';
 
 const _channelId = 'hhh_habit_reminders';
 const _channelName = 'Habit reminders';
@@ -27,6 +28,14 @@ const _endOfStudyChannelDescription = 'Notice when your study concludes';
 // and questionnaire-reminder (500000..500019) ranges.
 const _endOfStudyNotifId = 500100;
 
+// §7.5 Gamification praise notifications — their own channel + id range so they
+// never collide with (or get cancelled by) the reminder ranges above.
+const _praiseChannelId = 'hhh_praise';
+const _praiseChannelName = 'Achievements';
+const _praiseChannelDescription = 'Congratulations when you earn a badge';
+const _praiseNotifBase = 600000;
+const _praiseNotifMax = 20;
+
 final _plugin = FlutterLocalNotificationsPlugin();
 bool _tzReady = false;
 
@@ -44,6 +53,69 @@ class ReminderSchedulerService {
   ReminderSchedulerService({required Dio dio}) : _dio = dio;
 
   final Dio _dio;
+
+  /// §7.5 Gamification — fire a one-time praise notification for each newly
+  /// earned badge, drawing a rotating praise line per badge (via [praiseFor])
+  /// so repeated milestones don't reuse identical copy. Deliberately scoped to
+  /// real milestones, not every log. Best-effort; failures are swallowed.
+  Future<void> showPraiseNotifications(List<String> badgeKeys) async {
+    if (badgeKeys.isEmpty) return;
+    await _ensureTimezone();
+    var i = 0;
+    for (final key in badgeKeys.take(_praiseNotifMax)) {
+      final meta = badgeMetaFor(key);
+      final body = praiseFor(key, rotation: i);
+      try {
+        await _plugin.show(
+          id: _praiseNotifBase + i,
+          title: '🏅 ${meta.label}',
+          body: body,
+          notificationDetails: const NotificationDetails(
+            android: AndroidNotificationDetails(
+              _praiseChannelId,
+              _praiseChannelName,
+              channelDescription: _praiseChannelDescription,
+              importance: Importance.defaultImportance,
+            ),
+            iOS: DarwinNotificationDetails(),
+          ),
+          payload: '/profile',
+        );
+      } catch (_) {
+        // Non-fatal: a praise notification is a nicety, never a blocker.
+      }
+      i++;
+    }
+  }
+
+  /// §7.2 — builds a reminder body. In `implementation_intention` mode it
+  /// fills the rotating template at [templateIndex] with the plan's cue and
+  /// behavior ("when {cue}, {behavior}"); otherwise (or when cue/behavior are
+  /// missing) it returns the generic nudge. Pure and static so it is unit
+  /// testable without the notification plugin.
+  static String reminderBody({
+    required String mode,
+    required List<String> templates,
+    required int templateIndex,
+    String? cue,
+    String? behavior,
+  }) {
+    const generic = 'Your plan: stay on track today. Open the app to log it.';
+    // Normalise to non-nullable locals up front, so the emptiness checks below
+    // double as the null checks and no `!` assertions are needed.
+    final trimmedCue = cue?.trim() ?? '';
+    final trimmedBehavior = behavior?.trim() ?? '';
+    if (mode != 'implementation_intention' ||
+        trimmedCue.isEmpty ||
+        trimmedBehavior.isEmpty ||
+        templates.isEmpty) {
+      return generic;
+    }
+    final template = templates[templateIndex % templates.length];
+    return template
+        .replaceAll('{cue}', trimmedCue)
+        .replaceAll('{behavior}', trimmedBehavior);
+  }
 
   /// Day offsets (from today) per backend frequency tier for a 14-day window.
   static const Map<String, List<int>> offsetsForFrequency = {
@@ -97,11 +169,28 @@ class ReminderSchedulerService {
         .whereType<Map<String, dynamic>>()
         .toList();
 
+    // §7.2 Implementation Intention Reminder — when the study condition is
+    // 'implementation_intention', reminders spell out "when {cue}, {behavior}"
+    // instead of a generic nudge, rotating through admin-editable phrasing
+    // templates so the copy itself doesn't habituate.
+    final reminderContentMode =
+        response.data?['reminderContentMode']?.toString() ?? 'generic';
+    final templates = (response.data?['reminderTemplates'] as List<dynamic>?)
+            ?.whereType<String>()
+            .toList() ??
+        const <String>[];
+
     var notificationId = 0;
+    // Rotating index across every scheduled reminder so consecutive nudges use
+    // different phrasings rather than repeating one template.
+    var templateIndex = 0;
     for (final plan in plans) {
       final reminderTime = plan['reminderTime']?.toString();
       final frequency = plan['frequency']?.toString() ?? 'daily';
       if (reminderTime == null) continue;
+
+      final cue = plan['cueText']?.toString();
+      final behavior = plan['behaviorLabel']?.toString();
 
       final parts = reminderTime.split(':');
       final hour = int.tryParse(parts[0]) ?? 19;
@@ -119,10 +208,19 @@ class ReminderSchedulerService {
         ).add(Duration(days: offset - 1));
         if (!fireAt.isAfter(now)) fireAt = fireAt.add(const Duration(days: 1));
 
+        final body = reminderBody(
+          mode: reminderContentMode,
+          templates: templates,
+          templateIndex: templateIndex,
+          cue: cue,
+          behavior: behavior,
+        );
+        templateIndex++;
+
         await _plugin.zonedSchedule(
           id: notificationId++,
           title: 'Time for your habit',
-          body: 'Your plan: stay on track today. Open the app to log it.',
+          body: body,
           scheduledDate: fireAt,
           notificationDetails: const NotificationDetails(
             android: AndroidNotificationDetails(

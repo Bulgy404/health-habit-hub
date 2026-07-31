@@ -70,6 +70,15 @@ const REMINDER_MODE_BSON = {
   },
 };
 
+/** Reusable bsonType shape for the §7.3 Information Overload guard config. */
+const INFO_OVERLOAD_GUARD_BSON = {
+  bsonType: ['object', 'null'],
+  properties: {
+    enabled: { bsonType: 'bool' },
+    userOptOutAllowed: { bsonType: 'bool' },
+  },
+};
+
 /** Reusable bsonType shape for the { habit, questionnaire, endOfStudy, studyUpdate } group. */
 const REMINDERS_BSON = {
   bsonType: ['object', 'null'],
@@ -101,6 +110,15 @@ export const VALIDATOR = {
       isActive: { bsonType: 'bool' },
       // Optional: absence is treated as enabled (true) for backward compatibility.
       recommenderEnabled: { bsonType: 'bool' },
+      // §7.1 Habit Stacking — study-wide toggle; a group's value overrides.
+      habitStackingEnabled: { bsonType: 'bool' },
+      // §7.2 Implementation Intention Reminder — reminder copy mode.
+      reminderContentMode: {
+        bsonType: 'string',
+        enum: ['generic', 'implementation_intention'],
+      },
+      // §7.3 Information Overload — growing per-type habit cap guard.
+      informationOverloadGuard: INFO_OVERLOAD_GUARD_BSON,
       // Optional: absence is treated as 'freeText' for backward compatibility.
       habitEntryMode: { bsonType: 'string', enum: ['freeText', 'structured'] },
       structuredActivityKeys: {
@@ -142,6 +160,13 @@ export const VALIDATOR = {
             },
             reminders: REMINDERS_BSON,
             autoDonate: { bsonType: 'bool' },
+            // §7.1/§7.2/§7.3 group-level overrides (null = inherit study).
+            habitStackingEnabled: { bsonType: ['bool', 'null'] },
+            reminderContentMode: {
+              bsonType: ['string', 'null'],
+              enum: ['generic', 'implementation_intention', null],
+            },
+            informationOverloadGuard: INFO_OVERLOAD_GUARD_BSON,
           },
         },
       },

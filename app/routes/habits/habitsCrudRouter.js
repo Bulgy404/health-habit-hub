@@ -416,7 +416,17 @@ export function createHabitsCrudRouter({
       duration,
       health_benefit,
       wellbeing_impact,
+      habitType,
+      stackedOnUuid,
+      creationMode,
     } = req.body || {};
+    // §7.4/§7.1 — optional on the donation path (community donations without a
+    // build/quit choice default to 'build'); normalise anything unexpected.
+    const safeHabitType = habitType === 'quit' ? 'quit' : 'build';
+    const safeCreationMode =
+      creationMode === 'stacked' ? 'stacked' : 'standalone';
+    const safeStackedOnUuid =
+      typeof stackedOnUuid === 'string' && stackedOnUuid ? stackedOnUuid : null;
     const userId = req.user?.sub;
     if (!userId || typeof userId !== 'string') {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -484,6 +494,9 @@ export function createHabitsCrudRouter({
           duration: duration ?? null,
           healthBenefit: health_benefit ?? null,
           wellbeingImpact: wellbeing_impact ?? null,
+          habitType: safeHabitType,
+          stackedOnUuid: safeStackedOnUuid,
+          creationMode: safeCreationMode,
           queryNeo4j,
           getDb,
           apiBase,
@@ -510,6 +523,9 @@ export function createHabitsCrudRouter({
         duration: duration ?? null,
         healthBenefit: health_benefit ?? null,
         wellbeingImpact: wellbeing_impact ?? null,
+        habitType: safeHabitType,
+        stackedOnUuid: safeStackedOnUuid,
+        creationMode: safeCreationMode,
         habitQueue,
       });
 
@@ -637,6 +653,54 @@ export function createHabitsCrudRouter({
       return res.json({ sentence, cached });
     } catch (err) {
       log.error({ err }, 'stitch-intention proxy error');
+      return res.status(503).json({ error: 'Service unavailable' });
+    }
+  });
+
+  // POST /api/v1/habits/stack-merge — §7.1 Habit Stacking proxy to API-service.
+  // Merges an anchor habit + a new behaviour into one implementation intention
+  // sentence, in the user's language. Proxied through the backend like
+  // /habits/stitch-intention so the mobile app never talks to the LLM service
+  // directly (auth + service token stay server-side).
+  router.post('/stack-merge', async (req, res) => {
+    const {
+      anchor_text: anchorText,
+      new_behavior_text: newBehaviorText,
+      language = 'en',
+    } = req.body || {};
+    if (!anchorText || !newBehaviorText) {
+      return res
+        .status(400)
+        .json({ error: 'anchor_text and new_behavior_text are required' });
+    }
+    const apiBase =
+      apiServiceUrl || process.env.API_SERVICE_URL || 'http://recommender:8000';
+    const headers = { 'Content-Type': 'application/json' };
+    if (process.env.API_SERVICE_SECRET)
+      headers['X-Service-Auth-Token'] = process.env.API_SERVICE_SECRET;
+    try {
+      const upstream = await fetch(`${apiBase}/api/v1/llm/stack-merge`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          anchor_text: anchorText,
+          new_behavior_text: newBehaviorText,
+          language,
+        }),
+      });
+      if (!upstream.ok) {
+        const text = await upstream.text().catch(() => '');
+        return res
+          .status(upstream.status >= 500 ? 502 : upstream.status)
+          .json({ error: text || 'Upstream error' });
+      }
+      const data = await upstream.json();
+      if (data?.sentence == null) {
+        return res.status(502).json({ error: 'Upstream error' });
+      }
+      return res.json({ sentence: data.sentence });
+    } catch (err) {
+      log.error({ err }, 'stack-merge proxy error');
       return res.status(503).json({ error: 'Service unavailable' });
     }
   });

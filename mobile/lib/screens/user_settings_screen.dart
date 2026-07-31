@@ -9,6 +9,8 @@ import 'package:share_plus/share_plus.dart';
 
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
+import '../features/my_habits/my_habits_provider.dart';
+import '../features/my_habits/my_habits_service.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/auth_provider.dart';
 import '../providers/comments_enabled_provider.dart';
@@ -25,6 +27,19 @@ const _kGreenGlow = [
 class UserSettingsScreen extends ConsumerWidget {
   /// Creates a [UserSettingsScreen].
   const UserSettingsScreen({super.key});
+
+  /// §7.3 — persist the Information Overload opt-out, then refresh the prefs so
+  /// the toggle reflects the server's (authoritative) value.
+  Future<void> _setOverloadOptOut(WidgetRef ref, bool value) async {
+    try {
+      await ref
+          .read(myHabitsServiceProvider)
+          .setInformationOverloadOptOut(value);
+    } catch (_) {
+      // Non-fatal: the provider refresh below re-reads the true state.
+    }
+    ref.invalidate(informationOverloadPrefsProvider);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -186,6 +201,84 @@ class UserSettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
+
+          // ── §7.5 Gamification — level + XP progress ──────────────────
+          ...ref.watch(gamificationProvider).maybeWhen(
+                data: (g) => (g.totalXp == 0 && g.badges.isEmpty)
+                    ? const <Widget>[]
+                    : [
+                        SectionLabel(l10n.progressSection),
+                        SettingsCard(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.stars_outlined,
+                                          size: 20),
+                                      const SizedBox(width: 10),
+                                      Text('Level ${g.level}',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.w700)),
+                                      const Spacer(),
+                                      Text('${g.xpToNextLevel} XP to next'),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: LinearProgressIndicator(
+                                      value: (g.xpIntoLevel +
+                                                  g.xpToNextLevel) >
+                                              0
+                                          ? (g.xpIntoLevel /
+                                                  (g.xpIntoLevel +
+                                                      g.xpToNextLevel))
+                                              .clamp(0.0, 1.0)
+                                          : 0.0,
+                                      minHeight: 8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                orElse: () => const <Widget>[],
+              ),
+
+          // ── §7.3 Information Overload opt-out ────────────────────────
+          // Only shown when the participant's study enables the guard AND
+          // permits opting out; otherwise the section is omitted entirely.
+          ...ref.watch(informationOverloadPrefsProvider).maybeWhen(
+                data: (prefs) => (prefs.guardEnabled && prefs.optOutAllowed)
+                    ? [
+                        SectionLabel(l10n.habitsSection),
+                        SettingsCard(
+                          children: [
+                            SettingsRow(
+                              icon: Icons.filter_1,
+                              title: l10n.informationOverloadOptOutTitle,
+                              subtitle:
+                                  l10n.informationOverloadOptOutSubtitle,
+                              trailing: Switch(
+                                value: prefs.optOut,
+                                onChanged: (value) =>
+                                    _setOverloadOptOut(ref, value),
+                              ),
+                              onTap: () =>
+                                  _setOverloadOptOut(ref, !prefs.optOut),
+                            ),
+                          ],
+                        ),
+                      ]
+                    : const <Widget>[],
+                orElse: () => const <Widget>[],
+              ),
 
           // ── Help & Support ───────────────────────────────────────────
           SectionLabel(l10n.helpAndSupport),

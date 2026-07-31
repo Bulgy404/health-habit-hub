@@ -206,6 +206,7 @@ export async function getHabitBubbleGraph(queryNeo4j, lang = 'en') {
       ${localizedLabelExpr('h')} AS habitLabel,
       coalesce(h.sentence, '')   AS originalText,
       coalesce(h.language, '')   AS language,
+      coalesce(h.habit_type, 'build') AS habitType,
       c.dimension                AS dimension
     ORDER BY c.dimension, habitLabel
   `,

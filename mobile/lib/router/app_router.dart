@@ -148,6 +148,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         behaviorKey: extra['behaviorKey'] as String,
                         behaviorLabel: extra['behaviorLabel'] as String,
                         config: extra['config'] as HabitConfig,
+                        habitType:
+                            HabitType.fromWire(extra['habitType'] as String?),
                         initialCue: extra['initialCue'] as String?,
                       );
                     },
@@ -160,6 +162,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                         behaviorKey: extra['behaviorKey'] as String,
                         behaviorLabel: extra['behaviorLabel'] as String,
                         config: extra['config'] as HabitConfig,
+                        habitType:
+                            HabitType.fromWire(extra['habitType'] as String?),
+                        stackedOn: extra['stackedOn'] as String?,
+                        creationMode:
+                            extra['creationMode'] as String? ?? 'standalone',
+                        anchorText: extra['anchorText'] as String?,
                         cues: (extra['cues'] as List<dynamic>)
                             .cast<IntentionCue>(),
                       );
@@ -173,6 +181,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                         behaviorKey: extra['behaviorKey'] as String,
                         behaviorLabel: extra['behaviorLabel'] as String,
                         config: extra['config'] as HabitConfig,
+                        habitType:
+                            HabitType.fromWire(extra['habitType'] as String?),
+                        stackedOn: extra['stackedOn'] as String?,
+                        creationMode:
+                            extra['creationMode'] as String? ?? 'standalone',
+                        anchorText: extra['anchorText'] as String?,
                         cues: (extra['cues'] as List<dynamic>)
                             .cast<IntentionCue>(),
                         stitchedSentence:

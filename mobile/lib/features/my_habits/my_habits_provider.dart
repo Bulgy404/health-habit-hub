@@ -41,6 +41,25 @@ final dueSrhiProvider = FutureProvider<List<SrhiWindow>>((ref) {
   return ref.watch(myHabitsServiceProvider).fetchDueSrhi();
 });
 
+/// Per-habit reminder-frequency tier (intentionId → 'daily'…'off'), used for
+/// the §7.5 traffic-light indicator on each habit card.
+final reminderFrequenciesProvider =
+    FutureProvider<Map<String, String>>((ref) {
+  return ref.watch(myHabitsServiceProvider).fetchReminderFrequencies();
+});
+
+/// The participant's §7.3 Information Overload preferences/eligibility, used to
+/// show and drive the opt-out toggle in settings.
+final informationOverloadPrefsProvider =
+    FutureProvider<InformationOverloadPrefs>((ref) {
+  return ref.watch(myHabitsServiceProvider).fetchInformationOverloadPrefs();
+});
+
+/// The §7.5 gamification summary (XP, level, badges) for the current user.
+final gamificationProvider = FutureProvider<Gamification>((ref) {
+  return ref.watch(myHabitsServiceProvider).fetchGamification();
+});
+
 /// Daily logs for a specific intention. Keyed by intentionId.
 final intentionLogsProvider =
     FutureProvider.family<List<DailyLog>, String>((ref, intentionId) {

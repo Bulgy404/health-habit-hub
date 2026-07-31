@@ -7,6 +7,8 @@ import {
   adherenceRate,
   DEFAULT_CONFIG,
   FREQUENCIES,
+  DEFAULT_II_REMINDER_TEMPLATES,
+  readReminderTemplates,
 } from '../../services/reminderPlanService.js';
 
 const NOW = new Date('2026-06-10T12:00:00Z');
@@ -149,5 +151,71 @@ describe('reminder plan tiers', () => {
       assert.ok(plan.components[key] >= 0 && plan.components[key] <= 1);
     }
     assert.ok(FREQUENCIES.includes(plan.frequency));
+  });
+});
+
+// ── §7.2 Implementation Intention Reminder ──────────────────────────────────
+
+describe('§7.2 reminder content', () => {
+  test('computeReminderPlan surfaces behaviorLabel and cueText', () => {
+    const plan = computeReminderPlan({
+      intention: {
+        id: 'i1',
+        reminderTime: '19:00',
+        createdAt: new Date('2026-06-01T00:00:00Z'),
+        behaviorLabel: 'Walking',
+        cueText: 'After dinner',
+      },
+      now: NOW,
+    });
+    assert.equal(plan.behaviorLabel, 'Walking');
+    assert.equal(plan.cueText, 'After dinner');
+  });
+
+  function makeSettingsDb(doc) {
+    return {
+      collection(name) {
+        assert.equal(name, 'admin_settings');
+        return { findOne: async () => doc };
+      },
+    };
+  }
+
+  test('readReminderTemplates returns defaults when unset', async () => {
+    const templates = await readReminderTemplates(makeSettingsDb(null));
+    assert.deepEqual(templates, DEFAULT_II_REMINDER_TEMPLATES);
+  });
+
+  test('readReminderTemplates parses a JSON-string array from admin_settings', async () => {
+    const custom = ['A: {cue} → {behavior}', 'B: {behavior} after {cue}'];
+    const templates = await readReminderTemplates(
+      makeSettingsDb({
+        key: 'reminder_ii_templates',
+        value: JSON.stringify(custom),
+      })
+    );
+    assert.deepEqual(templates, custom);
+  });
+
+  test('readReminderTemplates accepts an already-array value', async () => {
+    const custom = ['only one {cue} {behavior}'];
+    const templates = await readReminderTemplates(
+      makeSettingsDb({ key: 'reminder_ii_templates', value: custom })
+    );
+    assert.deepEqual(templates, custom);
+  });
+
+  test('readReminderTemplates falls back to defaults on malformed value', async () => {
+    const templates = await readReminderTemplates(
+      makeSettingsDb({ key: 'reminder_ii_templates', value: '{not json' })
+    );
+    assert.deepEqual(templates, DEFAULT_II_REMINDER_TEMPLATES);
+  });
+
+  test('readReminderTemplates ignores an empty array', async () => {
+    const templates = await readReminderTemplates(
+      makeSettingsDb({ key: 'reminder_ii_templates', value: [] })
+    );
+    assert.deepEqual(templates, DEFAULT_II_REMINDER_TEMPLATES);
   });
 });

@@ -29,6 +29,10 @@ class IntentionStitchScreen extends ConsumerStatefulWidget {
     required this.behaviorLabel,
     required this.config,
     required this.cues,
+    required this.habitType,
+    this.stackedOn,
+    this.creationMode = 'standalone',
+    this.anchorText,
     super.key,
   });
 
@@ -43,6 +47,18 @@ class IntentionStitchScreen extends ConsumerStatefulWidget {
 
   /// Cues entered/assigned in the previous step.
   final List<IntentionCue> cues;
+
+  /// Whether the participant is building or quitting a habit (§7.4).
+  final HabitType habitType;
+
+  /// The anchor intention id when stacked (§7.1); else null.
+  final String? stackedOn;
+
+  /// `'standalone'` or `'stacked'` (§7.1).
+  final String creationMode;
+
+  /// Free-typed anchor habit text, forwarded to the confirm step (§7.1).
+  final String? anchorText;
 
   @override
   ConsumerState<IntentionStitchScreen> createState() =>
@@ -143,6 +159,10 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
         'behaviorLabel': widget.behaviorLabel,
         'config': widget.config,
         'cues': widget.cues,
+        'habitType': widget.habitType.wire,
+        'stackedOn': ?widget.stackedOn,
+        'creationMode': widget.creationMode,
+        'anchorText': ?widget.anchorText,
         'stitchedSentence': _sentence,
       },
     );

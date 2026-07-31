@@ -10,6 +10,7 @@ import '../../providers/locale_provider.dart';
 import 'habit_onboarding_prefs.dart';
 import 'habit_onboarding_widgets.dart';
 import 'my_habits_models.dart';
+import 'my_habits_provider.dart';
 
 /// Maximum number of self-selected cues a user can attach to one habit.
 const int kMaxCues = 7;
@@ -21,6 +22,7 @@ class SetCueScreen extends ConsumerStatefulWidget {
     required this.behaviorKey,
     required this.behaviorLabel,
     required this.config,
+    required this.habitType,
     this.initialCue,
     super.key,
   });
@@ -34,6 +36,10 @@ class SetCueScreen extends ConsumerStatefulWidget {
   /// Habit configuration loaded from the backend.
   final HabitConfig config;
 
+  /// Whether the participant is building or quitting a habit (§7.4). Carried
+  /// through so it reaches the create call, and so cue guidance can differ.
+  final HabitType habitType;
+
   /// Optional cue text to prefill the first cue field (e.g. suggested by the
   /// recommender). The user can freely edit or replace it.
   final String? initialCue;
@@ -46,6 +52,12 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
   /// One controller per self-selected cue field. Starts with a single cue.
   final List<TextEditingController> _cueControllers = [TextEditingController()];
   String? _error;
+  // §7.1 Habit Stacking — when the user stacks onto an existing habit, the
+  // anchor intention's id (null = standalone). Set by the stacking picker.
+  String? _stackedOnId;
+  // Free-typed anchor habit text to donate through /habits/share, tagged as an
+  // anchor (§7.1). The anchor need not already be tracked in the app.
+  final TextEditingController _anchorController = TextEditingController();
   // Persisted per-device (see HabitOnboardingPrefs): once dismissed, the
   // explainer stays dismissed across app restarts, not just this session.
   // Null while the stored value is still loading — showIntro treats that as
@@ -74,6 +86,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
     for (final c in _cueControllers) {
       c.dispose();
     }
+    _anchorController.dispose();
     super.dispose();
   }
 
@@ -139,11 +152,20 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
 
     setState(() => _error = null);
 
+    final anchorText = _anchorController.text.trim();
+    // §7.1 — stacked if the user picked an existing anchor OR free-typed one.
+    final isStacked = _stackedOnId != null || anchorText.isNotEmpty;
     final extra = <String, dynamic>{
       'behaviorKey': widget.behaviorKey,
       'behaviorLabel': widget.behaviorLabel,
       'config': widget.config,
+      'habitType': widget.habitType.wire,
       'cues': cues,
+      // §7.1 Habit Stacking — anchor reference (when tracked), free-typed
+      // anchor text (donated as an anchor), and the creation mode.
+      'stackedOn': ?_stackedOnId,
+      'anchorText': anchorText.isNotEmpty ? anchorText : null,
+      'creationMode': isStacked ? 'stacked' : 'standalone',
     };
 
     // When the guided wizard is enabled, hand off to the animated stitch
@@ -187,6 +209,11 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 20),
+            // ── §7.1 Habit Stacking — "stack onto an existing habit" ────
+            if (widget.config.habitStackingEnabled) ...[
+              _buildStackingCard(context),
+              const SizedBox(height: 16),
+            ],
             // ── Cue input / assigned cues ──────────────────────────────
             if (isPreRated)
               ..._buildAssignedCues(context)
@@ -207,6 +234,80 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// §7.1 Habit Stacking — lets the user anchor this new habit onto one they
+  /// already have. Picking an existing active habit sets [_stackedOnId] to its
+  /// id (a real STACKED_WITH edge in the graph) and prefills the first cue with
+  /// "After I [anchor]". The anchor need not be tracked: the free-text field
+  /// records an anchor the app doesn't know about, still tagging this habit as
+  /// stacked so the research signal (creationMode) is captured.
+  Widget _buildStackingCard(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final intentionsAsync = ref.watch(intentionsProvider);
+    final active = intentionsAsync.maybeWhen(
+      data: (list) => list.where((i) => i.status == 'active').toList(),
+      orElse: () => const <Intention>[],
+    );
+
+    return Card(
+      child: ExpansionTile(
+        leading: const Icon(Icons.link),
+        title: Text(l10n.stackOntoExistingHabitTitle),
+        subtitle: Text(l10n.stackOntoExistingHabitSubtitle),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        children: [
+          if (active.isNotEmpty)
+            DropdownButtonFormField<String>(
+              initialValue: _stackedOnId,
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: l10n.stackAnchorPickLabel,
+                border: const OutlineInputBorder(),
+              ),
+              items: [
+                DropdownMenuItem<String>(
+                  value: null,
+                  child: Text(l10n.stackAnchorNone),
+                ),
+                for (final i in active)
+                  DropdownMenuItem<String>(
+                    value: i.id,
+                    child: Text(
+                      i.behaviorLabel,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+              onChanged: (id) {
+                setState(() {
+                  _stackedOnId = id;
+                  if (id != null) {
+                    final anchor =
+                        active.firstWhere((i) => i.id == id).behaviorLabel;
+                    _anchorController.text = anchor;
+                    // Prefill the first cue as the anchor trigger.
+                    if (widget.config.cueSource == 'self_selected') {
+                      _cueControllers.first.text = 'After I $anchor';
+                    }
+                  }
+                });
+              },
+            ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _anchorController,
+            decoration: InputDecoration(
+              labelText: l10n.stackAnchorFreeTextLabel,
+              hintText: l10n.stackAnchorFreeTextHint,
+              border: const OutlineInputBorder(),
+            ),
+            textCapitalization: TextCapitalization.sentences,
+            maxLength: 100,
+          ),
+        ],
       ),
     );
   }

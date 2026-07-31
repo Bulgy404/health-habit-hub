@@ -2953,6 +2953,51 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Version {version} ({buildNumber})'**
   String appVersion(String version, String buildNumber);
+
+  /// §7 feature string
+  String get habitTypeBuild;
+
+  /// §7 feature string
+  String get habitTypeQuit;
+
+  /// §7 feature string
+  String get habitTypeFilterAll;
+
+  /// §7 feature string
+  String get informationOverloadInfo;
+
+  /// §7 feature string
+  String get informationOverloadBlocked;
+
+  /// §7 feature string
+  String get stackOntoExistingHabitTitle;
+
+  /// §7 feature string
+  String get stackOntoExistingHabitSubtitle;
+
+  /// §7 feature string
+  String get stackAnchorPickLabel;
+
+  /// §7 feature string
+  String get stackAnchorNone;
+
+  /// §7 feature string
+  String get stackAnchorFreeTextLabel;
+
+  /// §7 feature string
+  String get stackAnchorFreeTextHint;
+
+  /// §7 feature string
+  String get habitsSection;
+
+  /// §7 feature string
+  String get informationOverloadOptOutTitle;
+
+  /// §7 feature string
+  String get informationOverloadOptOutSubtitle;
+
+  /// §7 feature string
+  String get progressSection;
 }
 
 class _AppLocalizationsDelegate

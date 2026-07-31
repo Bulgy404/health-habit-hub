@@ -36,6 +36,7 @@ import { createProfileFieldDefinitionsPublicRouter } from './profileFieldDefinit
 import { createIntentionsRouter } from './intentionsRouter.js';
 import { createSrhiRouter } from './srhiRouter.js';
 import { createHabitConfigRouter } from './habitConfigRouter.js';
+import { createUserPreferencesRouter } from './userPreferencesRouter.js';
 import { createStudyConfigRouter } from './studyConfigRouter.js';
 import { createCuePoolRouter } from './cuePoolRouter.js';
 import { createStudyExportRouter } from './studyExportRouter.js';
@@ -281,6 +282,13 @@ export function createApiRouter({
     '/me/habit-config',
     requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
     createHabitConfigRouter({ db, neo4jRun: runNeo4j })
+  );
+
+  // Per-user preferences (§7.3 Information Overload opt-out)
+  router.use(
+    '/me/preferences',
+    requireRole(ROLES.USER, ROLES.ADMIN, ROLES.RESEARCHER),
+    createUserPreferencesRouter({ db, neo4jRun: runNeo4j })
   );
 
   // Cue pool management (admin + researcher only)

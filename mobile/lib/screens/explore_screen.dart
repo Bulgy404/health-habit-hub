@@ -49,6 +49,29 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   BubbleGraph? _graphOverride;
   String? _pulseHabitId;
   int _lastTabIndex = 0;
+  // §7.4 Habit Distinction — community bubble-graph filter: 'all' | 'build' |
+  // 'quit'. Filters bubbles by their habit_type (a one-property filter).
+  String _habitTypeFilter = 'all';
+
+  /// Returns a copy of [graph] keeping only bubbles matching the active
+  /// build/quit filter; dimensions left empty by the filter are dropped.
+  BubbleGraph _filteredGraph(BubbleGraph graph) {
+    if (_habitTypeFilter == 'all') return graph;
+    final dims = graph.dimensions
+        .map((d) => DimensionBubble(
+              id: d.id,
+              label: d.label,
+              habitCount: d.habits
+                  .where((h) => h.habitType == _habitTypeFilter)
+                  .length,
+              habits: d.habits
+                  .where((h) => h.habitType == _habitTypeFilter)
+                  .toList(),
+            ))
+        .where((d) => d.habits.isNotEmpty)
+        .toList();
+    return BubbleGraph(dimensions: dims);
+  }
 
   @override
   void initState() {
@@ -129,6 +152,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           originalText: h.originalText,
           language: h.language,
           annotationCounts: updated.annotationCounts,
+          habitType: h.habitType,
         );
       }).toList();
 
@@ -218,17 +242,25 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         ),
       );
     } else {
-      final graph = _graphOverride ?? graphAsync.value!;
-      if (graph.dimensions.isEmpty) {
-        body = Center(child: Text(l10n.noHabitDataYet));
-      } else {
-        body = BubbleGraphWidget(
-          graph: graph,
-          pulseHabitId: _pulseHabitId,
-          onHabitTap: (bubble, dimension) =>
-              _showHabitDetail(bubble, dimension, graph),
-        );
-      }
+      final rawGraph = _graphOverride ?? graphAsync.value!;
+      final graph = _filteredGraph(rawGraph);
+      final graphView = graph.dimensions.isEmpty
+          ? Center(child: Text(l10n.noHabitDataYet))
+          : BubbleGraphWidget(
+              graph: graph,
+              pulseHabitId: _pulseHabitId,
+              onHabitTap: (bubble, dimension) =>
+                  _showHabitDetail(bubble, dimension, graph),
+            );
+      body = Column(
+        children: [
+          _HabitTypeFilterBar(
+            value: _habitTypeFilter,
+            onChanged: (v) => setState(() => _habitTypeFilter = v),
+          ),
+          Expanded(child: graphView),
+        ],
+      );
     }
 
     return Scaffold(
@@ -1044,6 +1076,40 @@ class _AnnotationSectionState extends State<_AnnotationSection> {
           ),
         const SizedBox(height: 8),
       ],
+    );
+  }
+}
+
+/// §7.4 Habit Distinction — All / Build / Quit filter chips for the community
+/// bubble graph. Selecting a type filters the visible bubbles by their
+/// `habit_type` (a one-property filter on the graph).
+class _HabitTypeFilterBar extends StatelessWidget {
+  const _HabitTypeFilterBar({required this.value, required this.onChanged});
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final options = <(String, String)>[
+      ('all', l10n.habitTypeFilterAll),
+      ('build', l10n.habitTypeBuild),
+      ('quit', l10n.habitTypeQuit),
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Wrap(
+        spacing: 8,
+        children: [
+          for (final (key, label) in options)
+            ChoiceChip(
+              label: Text(label),
+              selected: value == key,
+              onSelected: (_) => onChanged(key),
+            ),
+        ],
+      ),
     );
   }
 }
