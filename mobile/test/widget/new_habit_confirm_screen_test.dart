@@ -20,6 +20,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications_platform_interface/flutter_local_notifications_platform_interface.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,6 +35,14 @@ import 'package:hhh/providers/locale_provider.dart';
 import 'package:hhh/providers/study_config_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
+// The umbrella `flutter_local_notifications` package deliberately hides
+// MethodChannelFlutterLocalNotificationsPlugin from its public export (it's
+// an implementation detail apps aren't meant to construct) — importing its
+// defining file directly is the only way to get a concrete
+// FlutterLocalNotificationsPlatform instance in a bare `flutter test` VM,
+// which never runs the real app's plugin-registrant startup step.
+// ignore: implementation_imports
+import 'package:flutter_local_notifications/src/platform_flutter_local_notifications.dart';
 
 // ---------------------------------------------------------------------------
 // Platform channel mocks
@@ -45,6 +54,12 @@ const _timezoneChannel = MethodChannel('flutter_timezone');
 
 void _mockPlatformChannels() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // Real app startup wires this up via each platform's generated plugin
+  // registrant, which a bare `flutter test` VM never runs — without it,
+  // any call into the plugin (e.g. pendingNotificationRequests) throws
+  // LateInitializationError instead of reaching the mocked channel below.
+  FlutterLocalNotificationsPlatform.instance =
+      MethodChannelFlutterLocalNotificationsPlugin();
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   messenger.setMockMethodCallHandler(_notificationsChannel, (call) async {

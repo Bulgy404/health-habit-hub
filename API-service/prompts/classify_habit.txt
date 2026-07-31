@@ -9,8 +9,8 @@ A sentence is NOT a habit if it is:
 - Unrelated to health or wellbeing
 
 If the sentence IS a habit, also classify it as one of:
-- "build" — the person is trying to start or increase a behaviour (e.g. "I meditate every morning", "After my morning coffee, I will do 10 pushups.")
-- "quit" — the person is trying to stop, reduce, or resist a behaviour (e.g. "I quit smoking after dinner", "When I feel stressed, I will not check my phone.")
+- "build" — the person is trying to start, increase, or maintain a behaviour that is beneficial or neutral for health/wellbeing (e.g. "I meditate every morning", "After my morning coffee, I will do 10 pushups.")
+- "quit" — EITHER the person is explicitly trying to stop, reduce, or resist a behaviour (e.g. "I quit smoking after dinner", "When I feel stressed, I will not check my phone.") OR the sentence simply describes performing a behaviour that is commonly understood to be harmful to health or wellbeing, even with no stop/reduce wording at all (e.g. "I smoke every day when I feel stressed.", "I drink a lot of alcohol on weekends.", "I doomscroll on my phone every night before bed."). Documenting a harmful behaviour in a health-habit context implies it's something to cut down on, not something to encourage — classify it "quit" even without explicit cessation language.
 
 Sentence language: {language}
 Sentence: {sentence}

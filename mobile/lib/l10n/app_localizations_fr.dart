@@ -1662,6 +1662,15 @@ class AppLocalizationsFr extends AppLocalizations {
   String get habitTypeFilterAll => 'All';
 
   @override
+  String get habitImpactFilterAll => 'All';
+
+  @override
+  String get habitImpactFilterHigh => 'High impact';
+
+  @override
+  String get habitImpactFilterLow => 'Low impact';
+
+  @override
   String get informationOverloadInfo =>
       'To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.';
 

@@ -52,21 +52,42 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   // §7.4 Habit Distinction — community bubble-graph filter: 'all' | 'build' |
   // 'quit'. Filters bubbles by their habit_type (a one-property filter).
   String _habitTypeFilter = 'all';
+  // Second filter axis: 'all' | 'high' | 'low', on HabitBubble.impactScore
+  // (the higher of the donor's self-rated health/wellbeing scores). Build/quit
+  // is a framing distinction (started vs. stopped), not a health-impact one —
+  // a harmful habit like smoking can be phrased as "build" with no cessation
+  // language, so this surfaces the actual perceived impact independently.
+  String _impactFilter = 'all';
+
+  static const _highImpactThreshold = 4;
+  static const _lowImpactThreshold = 2;
+
+  bool _matchesImpactFilter(HabitBubble h) {
+    switch (_impactFilter) {
+      case 'high':
+        return (h.impactScore ?? -1) >= _highImpactThreshold;
+      case 'low':
+        final score = h.impactScore;
+        return score != null && score <= _lowImpactThreshold;
+      default:
+        return true;
+    }
+  }
 
   /// Returns a copy of [graph] keeping only bubbles matching the active
-  /// build/quit filter; dimensions left empty by the filter are dropped.
+  /// build/quit and impact filters; dimensions left empty by the filters are
+  /// dropped.
   BubbleGraph _filteredGraph(BubbleGraph graph) {
-    if (_habitTypeFilter == 'all') return graph;
+    if (_habitTypeFilter == 'all' && _impactFilter == 'all') return graph;
+    bool matches(HabitBubble h) =>
+        (_habitTypeFilter == 'all' || h.habitType == _habitTypeFilter) &&
+        _matchesImpactFilter(h);
     final dims = graph.dimensions
         .map((d) => DimensionBubble(
               id: d.id,
               label: d.label,
-              habitCount: d.habits
-                  .where((h) => h.habitType == _habitTypeFilter)
-                  .length,
-              habits: d.habits
-                  .where((h) => h.habitType == _habitTypeFilter)
-                  .toList(),
+              habitCount: d.habits.where(matches).length,
+              habits: d.habits.where(matches).toList(),
             ))
         .where((d) => d.habits.isNotEmpty)
         .toList();
@@ -153,6 +174,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           language: h.language,
           annotationCounts: updated.annotationCounts,
           habitType: h.habitType,
+          healthBenefit: h.healthBenefit,
+          wellbeingImpact: h.wellbeingImpact,
         );
       }).toList();
 
@@ -257,6 +280,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
           _HabitTypeFilterBar(
             value: _habitTypeFilter,
             onChanged: (v) => setState(() => _habitTypeFilter = v),
+          ),
+          _ImpactFilterBar(
+            value: _impactFilter,
+            onChanged: (v) => setState(() => _impactFilter = v),
           ),
           Expanded(child: graphView),
         ],
@@ -1099,6 +1126,42 @@ class _HabitTypeFilterBar extends StatelessWidget {
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Wrap(
+        spacing: 8,
+        children: [
+          for (final (key, label) in options)
+            ChoiceChip(
+              label: Text(label),
+              selected: value == key,
+              onSelected: (_) => onChanged(key),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// All / High impact / Low impact filter chips for the community bubble
+/// graph, on top of the build/quit filter. "Impact" is the higher of the
+/// donor's self-rated health-benefit and wellbeing-impact scores (1-5) —
+/// independent of build/quit, which only reflects how the sentence is
+/// phrased, not whether the habit is actually good for the person.
+class _ImpactFilterBar extends StatelessWidget {
+  const _ImpactFilterBar({required this.value, required this.onChanged});
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final options = <(String, String)>[
+      ('all', l10n.habitImpactFilterAll),
+      ('high', l10n.habitImpactFilterHigh),
+      ('low', l10n.habitImpactFilterLow),
+    ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: Wrap(
         spacing: 8,
         children: [

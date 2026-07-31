@@ -171,6 +171,40 @@ class ReminderSchedulerService {
     'off': [],
   };
 
+  // Every offsetsForFrequency list tops out at day 14 ('daily'), so 20 slots
+  // per intention leaves headroom without wasting id space.
+  static const _maxOffsetsPerIntention = 20;
+
+  /// Deterministic notification id for a habit reminder, derived from the
+  /// intention id + day offset instead of iteration order.
+  ///
+  /// Scheduling is idempotent by construction: the same (intentionId,
+  /// offset) pair always maps to the same id, so if [syncReminders] ever
+  /// runs twice for the same reminder (e.g. two call sites racing — see the
+  /// in-flight guard below), the second `zonedSchedule` call *replaces* the
+  /// first's notification instead of adding a second pending one. Stays
+  /// within [0, _qNotifBase) so it never collides with the questionnaire/
+  /// end-of-study/praise/recovery ranges above. Public + static (like
+  /// [reminderBody]) so it's unit-testable without the notification plugin.
+  static int reminderNotificationId(String intentionId, int dayOffset) {
+    final bucketCount = _qNotifBase ~/ _maxOffsetsPerIntention;
+    final bucket = stableHash(intentionId) % bucketCount;
+    return bucket * _maxOffsetsPerIntention +
+        (dayOffset - 1) % _maxOffsetsPerIntention;
+  }
+
+  /// FNV-1a string hash — deterministic across app runs and platforms
+  /// (unlike relying on [Object.hashCode], whose exact algorithm isn't a
+  /// public contract), used to spread intention ids across the id range in
+  /// [reminderNotificationId].
+  static int stableHash(String input) {
+    var hash = 0x811c9dc5;
+    for (final unit in input.codeUnits) {
+      hash = ((hash ^ unit) * 0x01000193) & 0xFFFFFFFF;
+    }
+    return hash;
+  }
+
   static Future<void> _ensureTimezone() async {
     if (_tzReady) return;
     tzdata.initializeTimeZones();
@@ -199,11 +233,39 @@ class ReminderSchedulerService {
     }
   }
 
+  // ReminderSchedulerService is constructed fresh at every call site
+  // (new_habit_screen_3_confirm.dart, srhi_form_screen.dart, shell_screen.dart
+  // all `ReminderSchedulerService(dio: ...)` their own instance) rather than
+  // being a shared singleton, so an instance field can't coordinate between
+  // them — this has to be static, shared across every instance in the
+  // process, to actually prevent two of those call sites racing each other.
+  static Future<void>? _syncInFlight;
+
   /// Fetches current plans and replaces all pending habit reminders.
   ///
   /// Habit reminders are part of the study protocol and always scheduled;
   /// participants cannot mute them in-app (only via OS notification settings).
-  Future<void> syncReminders() async {
+  ///
+  /// Coalesces overlapping calls: if a sync is already running (e.g. the app
+  /// starting up in ShellScreen races a sync fired right after habit
+  /// creation), a second call joins the in-flight one instead of running its
+  /// own concurrent cancel→fetch→schedule cycle — that race was the root
+  /// cause of duplicate reminders, since each concurrent run's cancel could
+  /// land after the other's schedule. [reminderNotificationId] being
+  /// deterministic is a second, independent guard against duplicates even if
+  /// two calls do end up back-to-back rather than truly concurrent.
+  Future<void> syncReminders() {
+    final inFlight = _syncInFlight;
+    if (inFlight != null) return inFlight;
+    final future = _doSyncReminders();
+    _syncInFlight = future;
+    future.whenComplete(() {
+      if (identical(_syncInFlight, future)) _syncInFlight = null;
+    });
+    return future;
+  }
+
+  Future<void> _doSyncReminders() async {
     await _ensureTimezone();
     await _cancelPendingHabitReminders();
 
@@ -225,14 +287,14 @@ class ReminderSchedulerService {
             .toList() ??
         const <String>[];
 
-    var notificationId = 0;
     // Rotating index across every scheduled reminder so consecutive nudges use
     // different phrasings rather than repeating one template.
     var templateIndex = 0;
     for (final plan in plans) {
       final reminderTime = plan['reminderTime']?.toString();
       final frequency = plan['frequency']?.toString() ?? 'daily';
-      if (reminderTime == null) continue;
+      final intentionId = plan['intentionId']?.toString();
+      if (reminderTime == null || intentionId == null) continue;
 
       final cue = plan['cueText']?.toString();
       final behavior = plan['behaviorLabel']?.toString();
@@ -263,7 +325,7 @@ class ReminderSchedulerService {
         templateIndex++;
 
         await _plugin.zonedSchedule(
-          id: notificationId++,
+          id: reminderNotificationId(intentionId, offset),
           title: 'Time for your habit',
           body: body,
           scheduledDate: fireAt,

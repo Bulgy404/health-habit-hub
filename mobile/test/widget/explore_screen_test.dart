@@ -125,4 +125,51 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(BubbleGraphWidget), findsOneWidget);
   });
+
+  testWidgets(
+      'impact filter narrows dimension habitCount independently of the '
+      'build/quit filter', (tester) async {
+    final graph = BubbleGraph.fromJson({
+      'dimensions': [
+        {
+          'id': 'TIME',
+          'label': 'Time',
+          'habitCount': 2,
+          'habits': [
+            {
+              'id': 'uuid-1',
+              'label': 'Meditate',
+              'originalText': 'Meditate',
+              'language': 'en',
+              'annotationCounts': {'helpful': 0, 'iDoThis': 0},
+              'healthBenefit': 5,
+              'wellbeingImpact': 5,
+            },
+            {
+              'id': 'uuid-2',
+              'label': 'Smoke when stressed',
+              'originalText': 'Smoke when stressed',
+              'language': 'en',
+              'annotationCounts': {'helpful': 0, 'iDoThis': 0},
+              'healthBenefit': 1,
+              'wellbeingImpact': 1,
+            },
+          ],
+        },
+      ],
+    });
+
+    await tester.pumpWidget(_buildWithGraph(() async => graph));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 habits'), findsOneWidget);
+
+    await tester.tap(find.text('High impact'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 habit'), findsOneWidget);
+
+    await tester.tap(find.text('Low impact'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 habit'), findsOneWidget);
+  });
 }

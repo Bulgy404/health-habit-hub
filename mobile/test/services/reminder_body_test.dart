@@ -70,4 +70,46 @@ void main() {
       expect(body, contains('stay on track'));
     });
   });
+
+  group('ReminderSchedulerService.reminderNotificationId', () {
+    test('is deterministic — same (intentionId, offset) always maps to the '
+        'same id, so two syncReminders() calls scheduling the same reminder '
+        'replace rather than duplicate it', () {
+      final a = ReminderSchedulerService.reminderNotificationId(
+          'intention-1', 3);
+      final b = ReminderSchedulerService.reminderNotificationId(
+          'intention-1', 3);
+      expect(a, b);
+    });
+
+    test('different offsets for the same intention get different ids', () {
+      final ids = {
+        for (var offset = 1; offset <= 14; offset++)
+          ReminderSchedulerService.reminderNotificationId(
+              'intention-1', offset),
+      };
+      expect(ids.length, 14);
+    });
+
+    test('different intentions get different ids (no collision for these '
+        'sample ids)', () {
+      final a = ReminderSchedulerService.reminderNotificationId(
+          'intention-1', 1);
+      final b = ReminderSchedulerService.reminderNotificationId(
+          'intention-2', 1);
+      expect(a, isNot(b));
+    });
+
+    test('stays within the habit-reminder id range (below the questionnaire '
+        'range starting at 500000)', () {
+      for (final id in [
+        ReminderSchedulerService.reminderNotificationId('a', 1),
+        ReminderSchedulerService.reminderNotificationId('68abc123def456', 14),
+        ReminderSchedulerService.reminderNotificationId('', 7),
+      ]) {
+        expect(id, greaterThanOrEqualTo(0));
+        expect(id, lessThan(500000));
+      }
+    });
+  });
 }

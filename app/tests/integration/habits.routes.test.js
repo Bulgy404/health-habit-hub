@@ -187,6 +187,36 @@ const FIXTURE_GRAPH_ROWS = [
   },
 ];
 
+// A Neo4j Integer-like object (as the driver returns for whole-number
+// properties without disableLosslessIntegers) — health_benefit/wellbeing_impact
+// must be unwrapped via .toNumber(), not read as a plain JS number.
+function fakeNeoInt(n) {
+  return { toNumber: () => n };
+}
+
+const FIXTURE_BUBBLE_GRAPH_ROWS = [
+  {
+    habitId: 'uuid-1',
+    habitLabel: 'Drink water daily',
+    originalText: 'Drink water daily',
+    language: 'en',
+    habitType: 'build',
+    healthBenefit: fakeNeoInt(4),
+    wellbeingImpact: fakeNeoInt(5),
+    dimension: 'BEHAVIOR',
+  },
+  {
+    habitId: 'uuid-2',
+    habitLabel: 'I smoke when stressed',
+    originalText: 'I smoke when stressed',
+    language: 'en',
+    habitType: 'quit',
+    healthBenefit: null,
+    wellbeingImpact: null,
+    dimension: 'BEHAVIOR',
+  },
+];
+
 function createMockNeo4jRun() {
   const annotationCounts = {};
   const comments = []; // {id, text, createdAt, habitId}
@@ -200,6 +230,9 @@ function createMockNeo4jRun() {
         { category: 'hhh__Group1', count: 1 },
         { category: 'hhh__Group2', count: 1 },
       ];
+    }
+    if (cypher.includes('AS healthBenefit')) {
+      return FIXTURE_BUBBLE_GRAPH_ROWS;
     }
     if (cypher.includes('AS conceptId')) {
       return FIXTURE_GRAPH_ROWS;
@@ -575,6 +608,21 @@ test('GET /api/v1/habits/graph returns graph with nodes and edges', async () => 
   const edge = body.edges[0];
   assert.ok(edge.source.startsWith('h:'));
   assert.ok(edge.target.startsWith('c:'));
+});
+
+test('GET /api/v1/habits/bubble-graph includes healthBenefit/wellbeingImpact, unwrapping Neo4j Integer objects and preserving null', async () => {
+  const res = await get('/api/v1/habits/bubble-graph', makeToken());
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+
+  const habits = body.dimensions.flatMap((d) => d.habits);
+  const rated = habits.find((h) => h.id === 'uuid-1');
+  const unrated = habits.find((h) => h.id === 'uuid-2');
+
+  assert.strictEqual(rated.healthBenefit, 4);
+  assert.strictEqual(rated.wellbeingImpact, 5);
+  assert.strictEqual(unrated.healthBenefit, null);
+  assert.strictEqual(unrated.wellbeingImpact, null);
 });
 
 // ── Community comments ───────────────────────────────────────────────────────

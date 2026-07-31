@@ -2990,6 +2990,24 @@ abstract class AppLocalizations {
   /// **'All'**
   String get habitTypeFilterAll;
 
+  /// No description provided for @habitImpactFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get habitImpactFilterAll;
+
+  /// No description provided for @habitImpactFilterHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High impact'**
+  String get habitImpactFilterHigh;
+
+  /// No description provided for @habitImpactFilterLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low impact'**
+  String get habitImpactFilterLow;
+
   /// No description provided for @informationOverloadInfo.
   ///
   /// In en, this message translates to:

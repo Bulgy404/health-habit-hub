@@ -2,6 +2,8 @@
 /// GET /api/v1/habits/graph.
 library;
 
+import 'dart:math' as math;
+
 /// Top-level graph model containing a list of behaviour dimensions.
 class BubbleGraph {
   /// The list of behaviour dimensions in the graph.
@@ -78,6 +80,14 @@ class HabitBubble {
   /// habits donated before Habit Distinction existed.
   final String habitType;
 
+  /// Donor's self-rated physical-health benefit (1-5), or `null` if left
+  /// unrated at donation time.
+  final int? healthBenefit;
+
+  /// Donor's self-rated wellbeing impact (1-5), or `null` if left unrated at
+  /// donation time.
+  final int? wellbeingImpact;
+
   /// Creates a [HabitBubble].
   const HabitBubble({
     required this.id,
@@ -86,6 +96,8 @@ class HabitBubble {
     required this.language,
     required this.annotationCounts,
     this.habitType = 'build',
+    this.healthBenefit,
+    this.wellbeingImpact,
   });
 
   /// Sum of all annotation counts across all annotation types.
@@ -94,6 +106,14 @@ class HabitBubble {
 
   /// Number of users who marked this habit as "I do this too".
   int get iDoThisCount => annotationCounts['iDoThis'] ?? 0;
+
+  /// Combined impact score for filtering: the higher of [healthBenefit] and
+  /// [wellbeingImpact] (a habit that's great for either counts as
+  /// high-impact), or `null` if neither was rated.
+  int? get impactScore {
+    if (healthBenefit == null && wellbeingImpact == null) return null;
+    return math.max(healthBenefit ?? 0, wellbeingImpact ?? 0);
+  }
 
   /// Deserialises a [HabitBubble] from JSON.
   factory HabitBubble.fromJson(Map<String, dynamic> json) {
@@ -106,6 +126,8 @@ class HabitBubble {
       language: json['language'] as String? ?? '',
       annotationCounts: counts,
       habitType: json['habitType'] as String? ?? 'build',
+      healthBenefit: (json['healthBenefit'] as num?)?.toInt(),
+      wellbeingImpact: (json['wellbeingImpact'] as num?)?.toInt(),
     );
   }
 }

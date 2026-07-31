@@ -196,3 +196,19 @@ def test_prompt_treats_implementation_intentions_as_habits():
     text = PROMPT_PATH.read_text()
     assert "implementation-intention" in text
     assert "when/after" in text or "when" in text.lower()
+
+
+def test_prompt_classifies_undeclared_harmful_behaviour_as_quit():
+    """Regression guard: "I smoke every day when I feel stressed" has no
+    stop/quit/reduce wording at all, so a prompt that only recognised
+    explicit cessation language classified it "build" (the fallback for
+    anything not unambiguously "quit") — the same bucket as "I meditate every
+    morning". Since donating a habit sentence in a health app implies wanting
+    to work on it, a description of a commonly-harmful behaviour (smoking,
+    heavy drinking, doomscrolling, ...) must be classified "quit" even
+    without cessation language. Asserts the prompt instructs this so the fix
+    isn't quietly reverted.
+    """
+    text = PROMPT_PATH.read_text()
+    assert "harmful" in text.lower()
+    assert "smoke" in text.lower() or "smoking" in text.lower()

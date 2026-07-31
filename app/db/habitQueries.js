@@ -194,7 +194,7 @@ export async function getHabitsByCategory(queryNeo4j) {
  * Includes seeded habits so the view is populated from day one.
  * @param {Function} queryNeo4j
  * @param {string} [lang='en'] - Viewer's app language; picks which translation slot habitLabel resolves to.
- * @returns {Promise<Array>} Array of { habitId, habitLabel, originalText, language, dimension }
+ * @returns {Promise<Array>} Array of { habitId, habitLabel, originalText, language, habitType, healthBenefit, wellbeingImpact, dimension }
  */
 export async function getHabitBubbleGraph(queryNeo4j, lang = 'en') {
   const normalizedLang = normalizeDisplayLang(lang);
@@ -207,6 +207,8 @@ export async function getHabitBubbleGraph(queryNeo4j, lang = 'en') {
       coalesce(h.sentence, '')   AS originalText,
       coalesce(h.language, '')   AS language,
       coalesce(h.habit_type, 'build') AS habitType,
+      h.health_benefit           AS healthBenefit,
+      h.wellbeing_impact         AS wellbeingImpact,
       c.dimension                AS dimension
     ORDER BY c.dimension, habitLabel
   `,

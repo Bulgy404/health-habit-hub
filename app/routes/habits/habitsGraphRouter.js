@@ -4,6 +4,17 @@ import { logger } from '../../utils/logger.js';
 
 const log = logger.child({ module: 'habitsGraphRouter' });
 
+// Neo4j returns Integer objects for integer properties, and health_benefit /
+// wellbeing_impact are optional (null means "not rated" — distinct from a
+// real 0, which isn't even a valid rating — so unlike habitQueries.js's own
+// neoInt() this must NOT coerce null/undefined to 0).
+function neoIntOrNull(val) {
+  if (val == null) return null;
+  if (typeof val === 'object' && typeof val.toNumber === 'function')
+    return val.toNumber();
+  return Number(val);
+}
+
 const DIMENSION_LABELS = {
   TIME: 'Time',
   BEHAVIOR: 'Behavior',
@@ -173,6 +184,12 @@ export function createHabitsGraphRouter({ queryNeo4j, getDb } = {}) {
             language: row.language || '',
             // §7.4 — build/quit so the mobile bubble graph can filter by type.
             habitType: row.habitType === 'quit' ? 'quit' : 'build',
+            // Self-rated 1-5 scores from donation time (see habitsCrudRouter's
+            // isValidRating) — null when the donor left them blank, so the
+            // mobile impact filter can distinguish "not rated" from "rated
+            // low". Not clamped/defaulted here; the client owns that logic.
+            healthBenefit: neoIntOrNull(row.healthBenefit),
+            wellbeingImpact: neoIntOrNull(row.wellbeingImpact),
           });
         }
       }
