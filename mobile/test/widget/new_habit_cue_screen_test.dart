@@ -278,6 +278,7 @@ void main() {
 
   testWidgets('validates the first self-selected cue is at least 10 chars',
       (tester) async {
+    _growView(tester);
     await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
     await tester.pumpAndSettle();
 
@@ -316,6 +317,7 @@ void main() {
   testWidgets(
       'routes to the stitching screen when guidedHabitCreationEnabled is true',
       (tester) async {
+    _growView(tester);
     await tester.pumpWidget(_buildSubject(_selfSelectedConfig));
     await tester.pumpAndSettle();
 
@@ -332,6 +334,7 @@ void main() {
   testWidgets(
       'routes straight to confirm when guidedHabitCreationEnabled is false',
       (tester) async {
+    _growView(tester);
     const config = HabitConfig(
       cueCount: 'multi',
       cueSource: 'self_selected',
@@ -355,6 +358,7 @@ void main() {
   testWidgets(
       'tapping Next with no cues assigned still proceeds using the fallback assigned cue',
       (tester) async {
+    _growView(tester);
     await tester.pumpWidget(_buildSubject(_preRatedNoneAssignedConfig));
     await tester.pumpAndSettle();
 

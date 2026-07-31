@@ -370,9 +370,12 @@ make test-flutter   # Flutter: analyze + widget/unit tests
 make test-admin     # Admin: typecheck
 ```
 
-`make test-flutter` and `make test-admin` were **not** runnable in the
-environment where these features were written — run them locally first. You will
-also want:
+`make test-backend` runs on eslint 10 (see CHANGELOG) and reports 0 npm
+vulnerabilities. `make test-admin` still reports devDependency-only audit
+findings whose only "fix" is a destructive downgrade — see the CHANGELOG entry
+before acting on them.
+
+You will also want, after any Flutter SDK upgrade:
 
 ```bash
 cd mobile && flutter gen-l10n   # regenerate localizations from the .arb files
