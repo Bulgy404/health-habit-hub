@@ -36,7 +36,23 @@ export const BADGES = {
   HABIT_ARCHITECT: 'habit_architect', // created via habit stacking (§7.1)
   QUIT_CHAMPION: 'quit_champion', // a quit habit reaches 'off'
   COMMUNITY_CONTRIBUTOR: 'community_contributor', // shares habits regularly
+  HABIT_GRADUATE: 'habit_graduate', // graduated: self-sustained, no longer tracked
 };
+
+/**
+ * Per-habit badges whose predicate can become false again (tier drops, streak
+ * breaks) and should therefore be *revoked* — as opposed to `FIRST_STEP` and
+ * `HABIT_ARCHITECT`, which record a historical fact (the habit was created;
+ * it was created via stacking) that never un-happens. Revoking one of these
+ * fires a "get back on track" notification (mobile) instead of a praise one.
+ * `COMMUNITY_CONTRIBUTOR` (sharing) is user-level and out of scope here.
+ */
+export const REVOCABLE_BADGES = new Set([
+  BADGES.BUILDING_MOMENTUM,
+  BADGES.STEADY_HABIT,
+  BADGES.SECOND_NATURE,
+  BADGES.QUIT_CHAMPION,
+]);
 
 export const DEFAULT_GAMIFICATION_CONFIG = {
   xpPerEnactedLog: 10,
@@ -56,6 +72,20 @@ export const DEFAULT_GAMIFICATION_CONFIG = {
   // Consecutive weeks with >=1 share required for Community Contributor —
   // rewards sharing *regularly*, not a single one-off share.
   shareStreakWeeksForBadge: 4,
+  // Automaticity-graduation flow (srhiService.submitSrhi): a habit that
+  // reached 'off' at some point (reminderPlanService.markAutomaticityReached)
+  // and has gone quiet for this many days gets its next SRHI submission
+  // treated as a graduation check instead of a plain lapse.
+  graduationSilenceDays: 7,
+  // SRHI is a 1-7 scale; this is deliberately a bit above the ~4 commonly
+  // cited as "habitual" (Verplanken & Orbell) — retiring a habit from active
+  // tracking is a bigger, harder-to-reverse call than just noting habit
+  // strength, so the bar for it is set higher.
+  graduationScoreThreshold: 5,
+  // Awarded once, on top of the XP the habit had already earned (which is
+  // frozen/banked at graduation — a habit shouldn't lose its accumulated XP
+  // just because it exits the active-habit sum).
+  graduationBonusXp: 500,
 };
 
 /**
@@ -79,6 +109,9 @@ export async function readGamificationConfig(db) {
             'gamification_level_curve_exp',
             'gamification_xp_per_share',
             'gamification_share_streak_weeks_for_badge',
+            'gamification_graduation_silence_days',
+            'gamification_graduation_score_threshold',
+            'gamification_graduation_bonus_xp',
           ],
         },
       })
@@ -115,6 +148,18 @@ export async function readGamificationConfig(db) {
       shareStreakWeeksForBadge: num(
         'gamification_share_streak_weeks_for_badge',
         DEFAULT_GAMIFICATION_CONFIG.shareStreakWeeksForBadge
+      ),
+      graduationSilenceDays: num(
+        'gamification_graduation_silence_days',
+        DEFAULT_GAMIFICATION_CONFIG.graduationSilenceDays
+      ),
+      graduationScoreThreshold: num(
+        'gamification_graduation_score_threshold',
+        DEFAULT_GAMIFICATION_CONFIG.graduationScoreThreshold
+      ),
+      graduationBonusXp: num(
+        'gamification_graduation_bonus_xp',
+        DEFAULT_GAMIFICATION_CONFIG.graduationBonusXp
       ),
     };
   } catch {
@@ -300,6 +345,7 @@ function disabledGamificationSummary() {
     nextLevelXp: 0,
     badges: [],
     newlyEarned: [],
+    newlyLost: [],
     perHabit: [],
     shareCount: 0,
     shareStreakWeeks: 0,
@@ -395,8 +441,14 @@ async function computeShareGamification({
  * re-notified) and returning the aggregate plus the list of badges earned this
  * read (for a praise notification client-side).
  *
+ * Revocable badges (see `REVOCABLE_BADGES`) are also *revoked* when their
+ * predicate stops holding (a tier or streak regressed) — `newlyLost` mirrors
+ * `newlyEarned` so the client can fire a "get back on track" notification
+ * instead of a praise one. `FIRST_STEP`/`HABIT_ARCHITECT` record historical
+ * facts and are never revoked.
+ *
  * @param {{ db: import('mongodb').Db, userId: string, now?: Date, persist?: boolean }} deps
- * @returns {Promise<{ totalXp: number, level: number, xpIntoLevel: number, xpToNextLevel: number, nextLevelXp: number, badges: Array, newlyEarned: Array, perHabit: Array }>}
+ * @returns {Promise<{ totalXp: number, level: number, xpIntoLevel: number, xpToNextLevel: number, nextLevelXp: number, badges: Array, newlyEarned: Array, newlyLost: Array, perHabit: Array }>}
  */
 export async function computeUserGamification({
   db,
@@ -423,7 +475,34 @@ export async function computeUserGamification({
   let totalXp = 0;
   const allBadges = [];
   const newlyEarned = [];
+  const newlyLost = [];
   const perHabit = [];
+
+  // Automaticity-graduation flow (srhiService.submitSrhi): a graduated habit
+  // is no longer 'active' so it drops out of the loop below entirely — fold
+  // its frozen `bankedXp` and its (never-revoked) Habit Graduate badge back
+  // in here, so graduating a habit doesn't make its earned XP disappear.
+  const graduated = await db
+    .collection(COLLECTION)
+    .find({
+      userId: String(userId),
+      status: 'completed',
+      completedReason: 'graduated',
+    })
+    .toArray();
+  for (const doc of graduated) {
+    totalXp += doc.bankedXp ?? 0;
+    for (const b of doc.earnedBadges ?? []) {
+      allBadges.push({ intentionId: String(doc._id), badgeKey: b.badgeKey });
+    }
+    perHabit.push({
+      intentionId: String(doc._id),
+      behaviorLabel: doc.behaviorLabel ?? null,
+      xp: doc.bankedXp ?? 0,
+      frequency: 'graduated',
+      badges: (doc.earnedBadges ?? []).map((b) => b.badgeKey),
+    });
+  }
 
   for (const doc of intentions) {
     const [srhi, logs] = await Promise.all([
@@ -456,7 +535,15 @@ export async function computeUserGamification({
     totalXp += result.xp;
 
     const already = new Set((doc.earnedBadges ?? []).map((b) => b.badgeKey));
+    const current = new Set(result.badges);
     const habitNew = result.badges.filter((k) => !already.has(k));
+    // Revocable badges (see REVOCABLE_BADGES) that were earned before but
+    // whose predicate no longer holds — e.g. a tier or streak regressed.
+    // FIRST_STEP/HABIT_ARCHITECT are historical facts, never in this set.
+    const habitLost = [...already].filter(
+      (k) => REVOCABLE_BADGES.has(k) && !current.has(k)
+    );
+
     for (const badgeKey of habitNew) {
       const entry = { badgeKey, earnedAt: now };
       newlyEarned.push({ intentionId: String(doc._id), ...entry });
@@ -466,6 +553,17 @@ export async function computeUserGamification({
           .updateOne(
             { _id: doc._id },
             { $push: { earnedBadges: entry }, $set: { updatedAt: now } }
+          );
+      }
+    }
+    for (const badgeKey of habitLost) {
+      newlyLost.push({ intentionId: String(doc._id), badgeKey, lostAt: now });
+      if (persist) {
+        await db
+          .collection(COLLECTION)
+          .updateOne(
+            { _id: doc._id },
+            { $pull: { earnedBadges: { badgeKey } }, $set: { updatedAt: now } }
           );
       }
     }
@@ -512,6 +610,7 @@ export async function computeUserGamification({
     nextLevelXp,
     badges: allBadges,
     newlyEarned,
+    newlyLost,
     perHabit,
     shareCount: shareResult.shareCount,
     shareStreakWeeks: shareResult.shareStreakWeeks,

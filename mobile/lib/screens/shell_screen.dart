@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../config/app_config.dart';
 import '../core/dio_provider.dart';
 import '../features/my_habits/my_habits_provider.dart';
+import '../features/my_habits/my_habits_service.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/bubble_graph_provider.dart';
 import '../providers/show_in_graph_provider.dart';
@@ -81,6 +82,23 @@ final habitReminderSyncProvider = Provider<Future<void> Function()>((ref) {
       await service.syncEndOfStudyNotification();
     } catch (_) {
       // Non-fatal: rescheduled on next app start.
+    }
+    // §7.5 — this is the main place badge changes actually get noticed: most
+    // badges are earned/lost days or weeks after habit creation (the other
+    // check, right after creating a habit, mostly only ever sees First Step).
+    try {
+      final g = await MyHabitsService(dio: ref.read(dioProvider))
+          .fetchGamification();
+      final earnedKeys = g.newlyEarned.map((b) => b.badgeKey).toList();
+      if (earnedKeys.isNotEmpty) {
+        await service.showPraiseNotifications(earnedKeys);
+      }
+      final lostKeys = g.newlyLost.map((b) => b.badgeKey).toList();
+      if (lostKeys.isNotEmpty) {
+        await service.showGetBackOnTrackNotifications(lostKeys);
+      }
+    } catch (_) {
+      // Non-fatal: rechecked on next app start.
     }
   };
 });

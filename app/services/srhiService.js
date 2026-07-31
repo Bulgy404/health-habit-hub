@@ -4,6 +4,12 @@ import { COLLECTION as INTENTIONS_COLLECTION } from '../models/implementationInt
 import { SRHI_ITEM_IDS } from '../utils/srhi.js';
 import { setEnrollmentField } from './enrollmentNeo4j.js';
 import { HABIT_ANCHOR_DELAY_MS } from './questionnaireScheduleService.js';
+import { readReminderConfig } from './reminderPlanService.js';
+import {
+  BADGES,
+  readGamificationConfig,
+  computeHabitGamification,
+} from './gamificationService.js';
 
 const WINDOW_DAYS = 3;
 const GENERATE_AHEAD = 4;
@@ -232,7 +238,129 @@ export async function submitSrhi({
     );
   }
 
-  return serialize(result);
+  const graduation = await checkAutomaticityGraduation({
+    db,
+    intentionOid: oid,
+    userId,
+    score,
+    now,
+  }).catch(() => null); // best-effort — never let this block a normal submission
+
+  return { ...serialize(result), ...(graduation ? { graduation } : {}) };
+}
+
+/**
+ * Automaticity-graduation flow: a habit that has ever reached full
+ * automaticity (`reachedAutomaticityAt` set by
+ * `reminderPlanService.markAutomaticityReached`) and has since gone quiet —
+ * no enacted daily log for `graduationSilenceDays` — is ambiguous. Silence
+ * could mean it lapsed, or it could mean it's now so automatic the
+ * participant no longer needs the app for it. Rather than assume lapse (the
+ * default reading elsewhere — see the recovery rule in
+ * `reminderPlanService.computeReminderPlan`), the next SRHI submission is
+ * used to disambiguate:
+ *
+ *   - strong score (>= graduationScoreThreshold) → the habit graduates:
+ *     marked `completed`/`graduated`, its current XP is frozen onto
+ *     `bankedXp` (plus a one-time bonus) so graduating doesn't erase earned
+ *     XP, and it earns the (never-revoked) Habit Graduate badge.
+ *   - weak score → nothing special happens here. The habit stays active, and
+ *     the *existing* recovery rule (tier snaps to `daily`) plus badge
+ *     revocation (`REVOCABLE_BADGES`) already handle "this was actually a
+ *     lapse" on the next reminder/gamification read — no new code needed for
+ *     that branch.
+ *
+ * @param {{ db: object, intentionOid: ObjectId, userId: string, score: number, now: Date }} deps
+ * @returns {Promise<{ candidate: boolean, graduated: boolean, badgeKey?: string, bonusXp?: number, bankedXp?: number }|null>}
+ */
+async function checkAutomaticityGraduation({
+  db,
+  intentionOid,
+  userId,
+  score,
+  now,
+}) {
+  const intention = await db
+    .collection(INTENTIONS_COLLECTION)
+    .findOne({ _id: intentionOid, userId: String(userId) });
+  if (!intention || intention.status !== 'active') return null;
+  if (!intention.reachedAutomaticityAt) return null;
+
+  const logs = await db
+    .collection('daily_behavior_logs')
+    .find({ intentionId: intentionOid, userId: String(userId) })
+    .toArray();
+  const config = await readGamificationConfig(db);
+  const silentDays = daysSinceLastEnactedLog(logs, now);
+  if (silentDays < config.graduationSilenceDays) return null;
+
+  if (score < config.graduationScoreThreshold) {
+    return { candidate: true, graduated: false };
+  }
+
+  const reminderConfig = await readReminderConfig(db);
+  const srhi = await db
+    .collection(COLLECTION)
+    .find({ intentionId: intentionOid, userId: String(userId) })
+    .sort({ weekNumber: -1 })
+    .toArray();
+  const srhiScores = srhi
+    .filter((s) => s.score != null)
+    .map((s) => Number(s.score));
+  const srhiSubmissionCount = srhi.filter(
+    (s) => s.submittedAt != null || s.score != null
+  ).length;
+  const { xp: frozenXp } = computeHabitGamification({
+    intention,
+    logs,
+    srhiScores,
+    srhiSubmissionCount,
+    reminderConfig,
+    config,
+    now,
+  });
+  const bankedXp = frozenXp + config.graduationBonusXp;
+
+  await db.collection(INTENTIONS_COLLECTION).updateOne(
+    { _id: intentionOid },
+    {
+      $set: {
+        status: 'completed',
+        completedReason: 'graduated',
+        bankedXp,
+        graduatedAt: now,
+        updatedAt: now,
+      },
+      $push: {
+        earnedBadges: { badgeKey: BADGES.HABIT_GRADUATE, earnedAt: now },
+      },
+    }
+  );
+
+  return {
+    candidate: true,
+    graduated: true,
+    badgeKey: BADGES.HABIT_GRADUATE,
+    bonusXp: config.graduationBonusXp,
+    bankedXp,
+  };
+}
+
+/**
+ * Days since the most recent `enacted: true` daily log, as of `now`.
+ * `Infinity` if there are no enacted logs at all.
+ * @param {Array<{ date: string, enacted: boolean }>} logs
+ * @param {Date} now
+ * @returns {number}
+ */
+export function daysSinceLastEnactedLog(logs, now) {
+  const enactedDates = logs
+    .filter((l) => l.enacted)
+    .map((l) => l.date)
+    .sort();
+  if (enactedDates.length === 0) return Infinity;
+  const last = new Date(enactedDates[enactedDates.length - 1]);
+  return Math.floor((now.getTime() - last.getTime()) / (24 * 60 * 60 * 1000));
 }
 
 /**

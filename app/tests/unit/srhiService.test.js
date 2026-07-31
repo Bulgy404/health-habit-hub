@@ -7,10 +7,12 @@ import {
   submitSrhi,
   topUpSrhiWindows,
   getUpcomingSrhiQuestionnaireItems,
+  daysSinceLastEnactedLog,
 } from '../../services/srhiService.js';
 import { SRHI_ITEM_IDS } from '../../utils/srhi.js';
+import { BADGES } from '../../services/gamificationService.js';
 
-function makeDb(responses = [], intentions = []) {
+function makeDb(responses = [], intentions = [], logsByIntention = {}) {
   const store = [...responses];
   const intentionStore = [...intentions];
   return {
@@ -84,7 +86,9 @@ function makeDb(responses = [], intentions = []) {
             const doc = intentionStore.find(
               (i) => i._id.toString() === filter._id.toString()
             );
-            return doc ? { ...doc } : null;
+            if (!doc) return null;
+            if (filter.userId && doc.userId !== filter.userId) return null;
+            return { ...doc };
           },
           find(filter = {}) {
             const ids = (filter._id?.$in ?? []).map((id) => id.toString());
@@ -95,7 +99,31 @@ function makeDb(responses = [], intentions = []) {
             );
             return { toArray: async () => results.map((x) => ({ ...x })) };
           },
+          async updateOne(filter, update) {
+            const doc = intentionStore.find(
+              (i) => i._id.toString() === filter._id.toString()
+            );
+            if (doc) {
+              Object.assign(doc, update.$set);
+              if (update.$push?.earnedBadges) {
+                doc.earnedBadges = [
+                  ...(doc.earnedBadges ?? []),
+                  update.$push.earnedBadges,
+                ];
+              }
+            }
+            return { matchedCount: doc ? 1 : 0 };
+          },
         };
+      if (name === 'daily_behavior_logs')
+        return {
+          find(filter = {}) {
+            const arr = logsByIntention[String(filter.intentionId)] ?? [];
+            return { toArray: async () => arr.map((x) => ({ ...x })) };
+          },
+        };
+      if (name === 'admin_settings')
+        return { find: () => ({ toArray: async () => [] }) };
       if (name === 'enrollments')
         return {
           async updateOne() {},
@@ -290,4 +318,191 @@ test('getUpcomingSrhiQuestionnaireItems: shapes windows like generic due questio
     .collection('srhi_responses')
     .countDocuments({ intentionId: intentionId.toString(), submittedAt: null });
   assert.equal(openCount, 4);
+});
+
+// ── Automaticity-graduation flow ────────────────────────────────────────────
+
+function itemsForScore(score) {
+  return Object.fromEntries(SRHI_ITEM_IDS.map((id) => [id, score]));
+}
+
+function daysAgoIso(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+test('daysSinceLastEnactedLog: Infinity when there are no enacted logs', () => {
+  assert.equal(daysSinceLastEnactedLog([], new Date()), Infinity);
+  assert.equal(
+    daysSinceLastEnactedLog(
+      [{ date: '2026-01-01', enacted: false }],
+      new Date()
+    ),
+    Infinity
+  );
+});
+
+test('daysSinceLastEnactedLog: counts from the most recent enacted date', () => {
+  const now = new Date('2026-06-10T12:00:00Z');
+  const logs = [
+    { date: '2026-06-01', enacted: true },
+    { date: '2026-06-03', enacted: true },
+    { date: '2026-06-02', enacted: false },
+  ];
+  assert.equal(daysSinceLastEnactedLog(logs, now), 7);
+});
+
+test('submitSrhi: not a graduation candidate when automaticity was never reached', async () => {
+  const intentionId = new ObjectId();
+  const window = {
+    _id: new ObjectId(),
+    intentionId,
+    userId: 'u1',
+    weekNumber: 1,
+    scheduledFor: new Date(),
+    submittedAt: null,
+    score: null,
+    createdAt: new Date(),
+  };
+  const db = makeDb(
+    [window],
+    [
+      {
+        _id: intentionId,
+        userId: 'u1',
+        status: 'active',
+        reachedAutomaticityAt: null, // never reached 'off'
+      },
+    ]
+  );
+  const result = await submitSrhi({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    weekNumber: 1,
+    items: itemsForScore(6),
+  });
+  assert.equal(result.graduation, undefined);
+});
+
+test('submitSrhi: not a candidate when the silence is too recent', async () => {
+  const intentionId = new ObjectId();
+  const window = {
+    _id: new ObjectId(),
+    intentionId,
+    userId: 'u1',
+    weekNumber: 1,
+    scheduledFor: new Date(),
+    submittedAt: null,
+    score: null,
+    createdAt: new Date(),
+  };
+  const db = makeDb(
+    [window],
+    [
+      {
+        _id: intentionId,
+        userId: 'u1',
+        status: 'active',
+        reachedAutomaticityAt: new Date(),
+      },
+    ],
+    { [intentionId.toString()]: [{ date: daysAgoIso(2), enacted: true }] } // only 2 days silent
+  );
+  const result = await submitSrhi({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    weekNumber: 1,
+    items: itemsForScore(6),
+  });
+  assert.equal(result.graduation, undefined);
+});
+
+test('submitSrhi: a strong score after silence graduates the habit', async () => {
+  const intentionId = new ObjectId();
+  const window = {
+    _id: new ObjectId(),
+    intentionId,
+    userId: 'u1',
+    weekNumber: 3,
+    scheduledFor: new Date(),
+    submittedAt: null,
+    score: null,
+    createdAt: new Date(),
+  };
+  const intentionDoc = {
+    _id: intentionId,
+    userId: 'u1',
+    status: 'active',
+    habitType: 'build',
+    creationMode: 'standalone',
+    createdAt: new Date(daysAgoIso(60)),
+    reachedAutomaticityAt: new Date(daysAgoIso(20)),
+    earnedBadges: [],
+  };
+  const db = makeDb([window], [intentionDoc], {
+    [intentionId.toString()]: [{ date: daysAgoIso(10), enacted: true }], // 10 days silent
+  });
+
+  const result = await submitSrhi({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    weekNumber: 3,
+    items: itemsForScore(6), // well above the default 5.0 threshold
+  });
+
+  assert.ok(result.graduation);
+  assert.equal(result.graduation.candidate, true);
+  assert.equal(result.graduation.graduated, true);
+  assert.equal(result.graduation.badgeKey, BADGES.HABIT_GRADUATE);
+  assert.equal(result.graduation.bonusXp, 500);
+  assert.ok(result.graduation.bankedXp >= 500);
+
+  // The intention itself was updated: completed, banked XP, badge recorded.
+  assert.equal(intentionDoc.status, 'completed');
+  assert.equal(intentionDoc.completedReason, 'graduated');
+  assert.equal(intentionDoc.bankedXp, result.graduation.bankedXp);
+  assert.ok(
+    intentionDoc.earnedBadges.some((b) => b.badgeKey === BADGES.HABIT_GRADUATE)
+  );
+});
+
+test('submitSrhi: a weak score after silence does not graduate the habit', async () => {
+  const intentionId = new ObjectId();
+  const window = {
+    _id: new ObjectId(),
+    intentionId,
+    userId: 'u1',
+    weekNumber: 3,
+    scheduledFor: new Date(),
+    submittedAt: null,
+    score: null,
+    createdAt: new Date(),
+  };
+  const intentionDoc = {
+    _id: intentionId,
+    userId: 'u1',
+    status: 'active',
+    reachedAutomaticityAt: new Date(daysAgoIso(20)),
+  };
+  const db = makeDb([window], [intentionDoc], {
+    [intentionId.toString()]: [{ date: daysAgoIso(10), enacted: true }],
+  });
+
+  const result = await submitSrhi({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+    weekNumber: 3,
+    items: itemsForScore(2), // well below the threshold
+  });
+
+  assert.deepEqual(result.graduation, { candidate: true, graduated: false });
+  // Left untouched — the existing recovery/revocation mechanisms handle this
+  // on the next reminder/gamification read, not here.
+  assert.equal(intentionDoc.status, 'active');
+  assert.equal(intentionDoc.bankedXp, undefined);
 });

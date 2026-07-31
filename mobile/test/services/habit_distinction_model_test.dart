@@ -64,6 +64,30 @@ void main() {
       expect(intention.creationMode, 'standalone');
       expect(intention.isStacked, false);
       expect(intention.earnedBadges, isEmpty);
+      expect(intention.isGraduated, false);
+    });
+
+    test('isGraduated is true only for status=completed + reason=graduated', () {
+      Intention withStatus(String status, String? reason) => Intention.fromJson({
+            'id': 'i3',
+            'behaviorKey': 'walking',
+            'behaviorLabel': 'Walking',
+            'durationMinutes': 20,
+            'cues': [
+              {'text': 'After dinner', 'source': 'self_selected'},
+            ],
+            'intentionStatement': 'After dinner, I will walk.',
+            'status': status,
+            'createdAt': '2026-07-31T10:00:00.000Z',
+            if (reason != null) 'completedReason': reason,
+            'bankedXp': 2200,
+          });
+
+      expect(withStatus('completed', 'graduated').isGraduated, true);
+      expect(withStatus('completed', 'graduated').bankedXp, 2200);
+      // Manually completed, not via graduation — should not be flagged.
+      expect(withStatus('completed', null).isGraduated, false);
+      expect(withStatus('active', null).isGraduated, false);
     });
   });
 
@@ -98,6 +122,50 @@ void main() {
       expect(config.reminderContentMode, 'generic');
       expect(config.informationOverloadEnabled, false);
       expect(config.informationOverloadOptOutAllowed, false);
+    });
+  });
+
+  group('SrhiTrajectoryPoint.graduation (automaticity-graduation flow)', () {
+    test('parses a graduated result', () {
+      final point = SrhiTrajectoryPoint.fromJson(const {
+        'weekNumber': 12,
+        'score': 6.2,
+        'submittedAt': '2026-07-31T10:00:00.000Z',
+        'graduation': {
+          'candidate': true,
+          'graduated': true,
+          'badgeKey': 'habit_graduate',
+          'bonusXp': 500,
+          'bankedXp': 2200,
+        },
+      });
+
+      expect(point.graduation, isNotNull);
+      expect(point.graduation!.candidate, true);
+      expect(point.graduation!.graduated, true);
+      expect(point.graduation!.badgeKey, 'habit_graduate');
+      expect(point.graduation!.bonusXp, 500);
+      expect(point.graduation!.bankedXp, 2200);
+    });
+
+    test('is null for an ordinary (non-candidate) submission', () {
+      final point = SrhiTrajectoryPoint.fromJson(const {
+        'weekNumber': 3,
+        'score': 4.0,
+        'submittedAt': '2026-07-31T10:00:00.000Z',
+      });
+      expect(point.graduation, isNull);
+    });
+
+    test('candidate-but-not-graduated omits badge/XP fields', () {
+      final point = SrhiTrajectoryPoint.fromJson(const {
+        'weekNumber': 9,
+        'score': 2.0,
+        'graduation': {'candidate': true, 'graduated': false},
+      });
+      expect(point.graduation!.candidate, true);
+      expect(point.graduation!.graduated, false);
+      expect(point.graduation!.badgeKey, isNull);
     });
   });
 }

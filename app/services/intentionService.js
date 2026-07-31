@@ -252,6 +252,10 @@ function serialize(doc) {
     })),
     reminderTime: doc.reminderTime ?? null,
     status: doc.status,
+    // Automaticity-graduation flow (srhiService.submitSrhi): set only when
+    // status is 'completed' via graduation, not a manual completion.
+    completedReason: doc.completedReason ?? null,
+    bankedXp: doc.bankedXp ?? null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };

@@ -27,6 +27,7 @@ const Map<String, BadgeMeta> kBadgeMeta = {
   'quit_champion': BadgeMeta('Quit Champion', Icons.emoji_events_outlined),
   'community_contributor':
       BadgeMeta('Community Contributor', Icons.diversity_3_outlined),
+  'habit_graduate': BadgeMeta('Habit Graduate', Icons.school_outlined),
 };
 
 /// Resolve badge metadata, with a safe fallback for unknown keys.
@@ -70,6 +71,10 @@ const Map<String, List<String>> kPraiseMessages = {
     'Community Contributor — thanks for sharing, week after week.',
     'Your shared habits are helping others find theirs. Keep it up.',
   ],
+  'habit_graduate': [
+    "Habit Graduate — this one's fully yours now. You don't need us anymore.",
+    "Graduated! This habit runs on its own now — truly second nature.",
+  ],
 };
 
 /// Pick a praise line for [badgeKey], rotating by [rotation] so repeats vary.
@@ -78,6 +83,39 @@ String praiseFor(String badgeKey, {int rotation = 0}) {
   final options = kPraiseMessages[badgeKey];
   if (options == null || options.isEmpty) {
     return 'New badge earned — nice work!';
+  }
+  return options[rotation % options.length];
+}
+
+/// A badge that was revoked because its tier/streak regressed (see
+/// `REVOCABLE_BADGES` in `gamificationService.js`) — never for `first_step`,
+/// `habit_architect`, or `community_contributor`, which aren't revocable.
+/// Deliberately supportive, not shaming: a lapse is normal, not a failure.
+const Map<String, List<String>> kGetBackOnTrackMessages = {
+  'building_momentum': [
+    'A quieter week for this habit — reminders are back to help you restart.',
+    'This one slipped a little. Let\'s pick it back up.',
+  ],
+  'steady_habit': [
+    'The streak broke, but the habit hasn\'t — let\'s start a new one today.',
+    'Fourteen days is still within reach. Back on track starts now.',
+  ],
+  'second_nature': [
+    'This habit needs a bit more support again — that\'s completely normal.',
+    'Automatic habits can wobble too. A few reminders will help it stick again.',
+  ],
+  'quit_champion': [
+    'This one crept back in — no judgment, just a fresh restart.',
+    'Slips happen on the way to quitting for good. Let\'s get back to it.',
+  ],
+};
+
+/// Pick a "get back on track" line for a revoked [badgeKey], rotating by
+/// [rotation]. Falls back to a generic, still-supportive nudge.
+String getBackOnTrackFor(String badgeKey, {int rotation = 0}) {
+  final options = kGetBackOnTrackMessages[badgeKey];
+  if (options == null || options.isEmpty) {
+    return 'This habit could use a little support again — let\'s get back to it.';
   }
   return options[rotation % options.length];
 }

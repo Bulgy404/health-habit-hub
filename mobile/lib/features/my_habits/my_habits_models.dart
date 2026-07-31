@@ -247,6 +247,8 @@ class Intention {
     this.stackedOn,
     this.creationMode = 'standalone',
     this.earnedBadges = const [],
+    this.completedReason,
+    this.bankedXp,
   });
 
   /// Unique intention identifier.
@@ -286,8 +288,21 @@ class Intention {
   /// Gamification badges earned for this habit (§7.5).
   final List<EarnedBadge> earnedBadges;
 
+  /// Set when `status == 'completed'` via the automaticity-graduation flow
+  /// (as opposed to a manual completion) — currently only ever `'graduated'`.
+  final String? completedReason;
+
+  /// XP frozen at graduation time, so a graduated habit keeps the XP it
+  /// earned instead of losing it by exiting the active-habit sum.
+  final int? bankedXp;
+
   /// Whether this habit was created by stacking onto an anchor (§7.1).
   bool get isStacked => creationMode == 'stacked';
+
+  /// Whether this habit graduated (became self-sustained/automatic) rather
+  /// than being manually marked complete.
+  bool get isGraduated =>
+      status == 'completed' && completedReason == 'graduated';
 
   /// Deserialises from the intentions API response.
   factory Intention.fromJson(Map<String, dynamic> json) => Intention(
@@ -310,6 +325,8 @@ class Intention {
                 .map(EarnedBadge.fromJson)
                 .toList() ??
             const [],
+        completedReason: json['completedReason'] as String?,
+        bankedXp: (json['bankedXp'] as num?)?.toInt(),
       );
 }
 
@@ -354,6 +371,7 @@ class Gamification {
     required this.nextLevelXp,
     required this.badges,
     required this.newlyEarned,
+    this.newlyLost = const [],
     this.shareCount = 0,
     this.shareStreakWeeks = 0,
   });
@@ -387,6 +405,12 @@ class Gamification {
   /// notification.
   final List<GamificationBadge> newlyEarned;
 
+  /// Revocable badges (tier/streak regressed) newly *lost* on this read —
+  /// used to fire a one-time "get back on track" notification, distinct from
+  /// the praise one. `first_step`/`habit_architect`/`community_contributor`
+  /// never appear here (see `REVOCABLE_BADGES` in `gamificationService.js`).
+  final List<GamificationBadge> newlyLost;
+
   /// Habits shared/donated to the community.
   final int shareCount;
 
@@ -411,6 +435,11 @@ class Gamification {
                 .toList() ??
             const [],
         newlyEarned: (json['newlyEarned'] as List<dynamic>?)
+                ?.cast<Map<String, dynamic>>()
+                .map(GamificationBadge.fromJson)
+                .toList() ??
+            const [],
+        newlyLost: (json['newlyLost'] as List<dynamic>?)
                 ?.cast<Map<String, dynamic>>()
                 .map(GamificationBadge.fromJson)
                 .toList() ??
@@ -539,6 +568,7 @@ class SrhiTrajectoryPoint {
     this.score,
     this.submittedAt,
     this.scheduledFor,
+    this.graduation,
   });
 
   /// Study week number for this data point.
@@ -554,6 +584,10 @@ class SrhiTrajectoryPoint {
   /// not-yet-submitted windows too, so the next due date can be shown.
   final DateTime? scheduledFor;
 
+  /// Present only when this submission was evaluated as an
+  /// automaticity-graduation check (see `srhiService.submitSrhi`).
+  final SrhiGraduationResult? graduation;
+
   /// Deserialises from JSON.
   factory SrhiTrajectoryPoint.fromJson(Map<String, dynamic> json) =>
       SrhiTrajectoryPoint(
@@ -566,5 +600,49 @@ class SrhiTrajectoryPoint {
         scheduledFor: json['scheduledFor'] != null
             ? DateTime.parse(json['scheduledFor'] as String)
             : null,
+        graduation: json['graduation'] != null
+            ? SrhiGraduationResult.fromJson(
+                json['graduation'] as Map<String, dynamic>,
+              )
+            : null,
+      );
+}
+
+/// Result of the automaticity-graduation check on an SRHI submission (see
+/// `srhiService.submitSrhi` / `checkAutomaticityGraduation`). Only present
+/// when the habit was silent long enough to be a graduation candidate.
+class SrhiGraduationResult {
+  /// Creates an [SrhiGraduationResult].
+  const SrhiGraduationResult({
+    required this.candidate,
+    required this.graduated,
+    this.badgeKey,
+    this.bonusXp,
+    this.bankedXp,
+  });
+
+  /// Whether this submission was evaluated as a graduation check at all.
+  final bool candidate;
+
+  /// Whether the habit graduated (strong score) as a result.
+  final bool graduated;
+
+  /// The badge awarded on graduation (`'habit_graduate'`).
+  final String? badgeKey;
+
+  /// One-time XP bonus awarded on graduation, on top of banked XP.
+  final int? bonusXp;
+
+  /// The habit's XP, frozen at the moment of graduation.
+  final int? bankedXp;
+
+  /// Deserialises from JSON.
+  factory SrhiGraduationResult.fromJson(Map<String, dynamic> json) =>
+      SrhiGraduationResult(
+        candidate: json['candidate'] as bool? ?? false,
+        graduated: json['graduated'] as bool? ?? false,
+        badgeKey: json['badgeKey'] as String?,
+        bonusXp: (json['bonusXp'] as num?)?.toInt(),
+        bankedXp: (json['bankedXp'] as num?)?.toInt(),
       );
 }

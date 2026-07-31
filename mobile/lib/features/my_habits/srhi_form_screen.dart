@@ -68,7 +68,7 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
       _error = null;
     });
     try {
-      await ref.read(myHabitsServiceProvider).submitSrhi(
+      final result = await ref.read(myHabitsServiceProvider).submitSrhi(
             intentionId: widget.intentionId,
             weekNumber: widget.weekNumber,
             items: Map<String, int>.from(_answers),
@@ -82,6 +82,40 @@ class _SrhiFormScreenState extends ConsumerState<SrhiFormScreen> {
       } catch (_) {
         // Non-fatal: resynced on next app start.
       }
+
+      // Automaticity-graduation flow — this submission was strong enough,
+      // after a silent week, to retire the habit from active tracking. Known
+      // right away (no need to wait for the next gamification sync), so
+      // celebrate immediately and refresh the habits list (status changed).
+      if (result.graduation?.graduated == true) {
+        ref.invalidate(intentionsProvider);
+        try {
+          await ReminderSchedulerService(dio: ref.read(dioProvider))
+              .showPraiseNotifications(['habit_graduate']);
+        } catch (_) {
+          // Non-fatal: praise is a nicety.
+        }
+        if (mounted) {
+          await showDialog<void>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: const Text('🎓 Habit graduated!'),
+              content: Text(
+                '${widget.behaviorLabel} is now fully self-sustained — you '
+                "don't need to track it in the app anymore. It's moved to "
+                'Graduated habits, and you can always reactivate it later.',
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Nice!'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+
       if (mounted) context.pop();
     } catch (e) {
       setState(() => _error = e.toString());

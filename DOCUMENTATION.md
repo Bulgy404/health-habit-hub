@@ -21,7 +21,7 @@
 10. [API Reference](#10-api-reference)
 11. [Security](#11-security)
 12. [Troubleshooting](#12-troubleshooting)
-13. [Behavioral Principle Features (§7)](#13-behavioral-principle-features-7)
+13. [Behavioral Principle Features](#13-behavioral-principle-features)
 
 ---
 
@@ -932,14 +932,61 @@ For the full operational runbook (service restart procedures, database access, b
 - If the problem persists, run `make reset` to wipe and restart all volumes with a clean state.
 - Ensure `MONGO_USER`, `MONGO_PASSWORD`, and `MONGO_AUTH_SOURCE` in `.env` match the values used when the MongoDB volume was first initialized. Changing credentials after volume creation requires wiping the volume.
 
-## 13. Behavioral Principle Features (§7)
+## 13. Behavioral Principle Features
 
-This section documents the five habit-formation principle features implemented
-from the research plan (§7.1–§7.5) and the additive data/research signals (§8).
-All five follow the codebase's existing conventions: the nullable study→group
-config-override pattern (like `recommenderEnabled`), the Mongo (event/state) vs.
-Neo4j (structural/graph) split, transparent recomputed-on-read scoring (like
-`reminderPlanService`), and admin-tunable thresholds via `admin_settings`.
+This app's habit-formation mechanics are grounded in a specific research
+foundation: Stark et al. (2023, *Building Habits in the Digital Age*) derived 13
+design principles (DPs) for digital habit formation from a literature review and
+a content analysis of 57 commercial habit apps; Reinsch et al. (2026, *Built For
+Sprints, Needed For Marathons*) empirically prioritized those principles (a
+survey of 22 habit-formation scientists and 108 app users) and folded in four
+further studies (Stawarz et al. 2016; Pinder et al. 2016; Zhu et al. 2024;
+Schwarzer et al. 2018), arriving at 18 distinct principles across the four
+stages of habit formation (Decision → Action → Repetition → Automaticity).
+
+§13.0 below catalogs all 18 and states plainly whether each is implemented and
+where. §13.1–§13.5 document the five that were *added* to close the gaps that
+catalog identified — those five share this section's conventions: the nullable
+study→group config-override pattern (like `recommenderEnabled`), the Mongo
+(event/state) vs. Neo4j (structural/graph) split, transparent
+recomputed-on-read scoring (like `reminderPlanService`), and admin-tunable
+thresholds via `admin_settings`. §13.6 covers the resulting data/research
+signals; §13.7 is the full scoring-algorithm reference for §7.3 and §7.5.
+
+### 13.0 All 18 design principles
+
+| # | Design principle | Stage | Status | Where |
+|---|---|---|---|---|
+| 1 | **Information Provision** — educational content on a habit's benefits, to support the initial decision | Decision | ✅ Fulfilled | Recommender's `rationale` field + cited sources (see §2's recommendation pipeline) |
+| 2 | **Implementation Intention** — the if-then plan binding a behavior to a context | Decision | ✅ Fulfilled | The core habit-creation flow (`intentionStatement`) — the app's organizing concept, not a bolt-on |
+| 3 | **Contextual Cues** — detailed context (time/place/prior action/internal state) so the cue is actually rememberable | Decision | ✅ Fulfilled | Admin-curated `cue_pools` rated on stability/salience/specificity; the BCIO `Context` ontology (`PhysicalSetting`, `TimeReference`, `InternalState`, `People`) |
+| 4 | **Avoid Information Overload** — don't present everything at once | Decision | ✅ Fulfilled (§7.3) | The Information Overload guard — see §13.4 |
+| 5 | **Habit Distinction** — build- and quit-habits need different handling | Decision | ✅ Fulfilled (§7.4) | `habitType` — see §13.1 |
+| 6 | **Just-in-Time Reminders** — notify when the habit should happen | Action | ✅ Fulfilled | Local notifications at each habit's `reminderTime`, adaptive frequency (§13.7 §A) |
+| 7 | **Flexible Habit Management** — pause/skip without penalty | Action–Automaticity | ✅ Fulfilled | `implementation_intentions.status` (`active/paused/completed/abandoned`) + an in-app action |
+| 8 | **Personalization** — goals/reminders/interface adapt to the individual | all 4 stages | ✅ Fulfilled | Cue config, reminder time, locale, habit-entry mode — all resolved per study/group in `habitConfigService.resolveHabitConfig()` |
+| 9 | **Self-Comparison** — compare against your own history | Action–Repetition | ✅ Fulfilled | SRHI trajectory/sparkline, daily-log contribution graph |
+| 10 | **Social Interaction** — compare with other users | Action–Repetition | ✅ Fulfilled, by design | Anonymized community bubble graph + reactions — see the note below |
+| 11 | **Social Sharing** — share achievements with others | Action–Repetition | ✅ Fulfilled, by design | Anonymous habit donation (not named-friend sharing) + share XP/badge (§13.2/§13.5) |
+| 12 | **Praise Messages** — motivational text on completion | Action–Repetition | ✅ Fulfilled (§7.5) | Rotating praise copy tied to a badge/tier-up — see §13.5 |
+| 13 | **Praise Rewards** — virtual rewards for achievements | Action–Repetition | ✅ Fulfilled (§7.5) | Badges — see §13.5 |
+| 14 | **Challenges and Levels** — difficulty tiers to sustain engagement | Action–Repetition | ✅ Fulfilled (§7.5) | XP/level curve + per-habit traffic light — see §13.5 |
+| 15 | **Implementation Intention Reminder** — a reminder that reinforces the if-then plan itself, not just a bare trigger | Action–Repetition | ✅ Fulfilled (§7.2) | Rotating "when {cue}, {behavior}" templates — see §13.3 |
+| 16 | **Fading Reminders** — taper reminders as the habit strengthens | Repetition | ✅ Fulfilled, exemplary | The autonomy-score algorithm, `reminderPlanService.js` — see §13.7 §A |
+| 17 | **Fading Features** — stop reinforcing a habit once it's automatic | Automaticity | ✅ Fulfilled | The `off` tier plus the automaticity-graduation flow (§13.5.2): a habit that stays automatic and goes quiet can graduate entirely, at which point SRHI stops too, not just reminders. The caveat only still applies to habits that are merely lapsed, not yet graduated or recovered — see §13.7 §A |
+| 18 | **Habit Stacking** — anchor a new habit to an already-automatic one | Automaticity | ✅ Fulfilled (§7.1) | Anchor + LLM merge + Neo4j `STACKED_WITH` — see §13.2 |
+
+**All 18 are implemented.** Principles 1–3, 6–11, and 16–17 predate the §7 work
+(they were already part of the app); 4, 5, 12–15, and 18 were the gaps §7 closed.
+
+Two are marked "by design" rather than a literal reading of the literature:
+Social Interaction and Social Sharing intentionally use an **anonymized**
+community model (reactions + anonymous comments on a shared bubble graph)
+instead of the literature's named-friend/leaderboard framing — anonymization is
+a non-negotiable project requirement, not an oversight. The literature-derived
+survey (Reinsch et al. 2026) separately found these two principles rated lowest
+of all 18 by end users, which is a point in favor of this design, not against
+it.
 
 ### 13.1 Habit Distinction — build vs. quit (§7.4)
 
@@ -1073,10 +1120,10 @@ milestones, not the market's fire-on-every-log pattern.
   persisted on a small per-user Mongo doc (`user_gamification`) rather than on
   an `implementation_intentions` document.
 - **API:** `GET /habits/intentions/gamification` returns `{ enabled, totalXp,
-  level, xpIntoLevel, xpToNextLevel, badges, newlyEarned, perHabit, shareCount,
-  shareStreakWeeks }` and persists newly earned badges. `enabled` reflects the
-  study/group `gamificationEnabled` toggle; when `false` every other field is
-  zeroed and the client should hide the feature entirely.
+  level, xpIntoLevel, xpToNextLevel, badges, newlyEarned, newlyLost, perHabit,
+  shareCount, shareStreakWeeks }` and persists newly earned/lost badges.
+  `enabled` reflects the study/group `gamificationEnabled` toggle; when `false`
+  every other field is zeroed and the client should hide the feature entirely.
 - **Mobile:** a Badges/Achievements section with an XP progress bar on the
   Profile screen; a compact level + XP bar in Settings — both shown from zero
   XP as soon as gamification is enabled (an empty bar is deliberate: it signals
@@ -1085,6 +1132,82 @@ milestones, not the market's fire-on-every-log pattern.
   traffic-light indicator (red = `daily` … green = `weekly`/`off`) on each habit
   card. A badge/tier-up fires a one-time local praise notification drawing a
   rotating praise line per badge (same anti-repetition principle as §7.2).
+
+#### 13.5.1 Badge revocation — "get back on track"
+
+`BUILDING_MOMENTUM`, `STEADY_HABIT`, `SECOND_NATURE`, and `QUIT_CHAMPION` are
+**revocable** (`REVOCABLE_BADGES` in `gamificationService.js`): if a tier or
+streak that earned one of them regresses, the badge is `$pull`-ed from
+`earnedBadges` and reported in `newlyLost`, mirroring `newlyEarned`.
+`FIRST_STEP`, `HABIT_ARCHITECT`, and `COMMUNITY_CONTRIBUTOR` are never revoked
+— they record historical facts (the habit was created; it was created via
+stacking; sharing was sustained at the time) rather than current state.
+
+Mobile fires a **distinct**, deliberately supportive notification for a lost
+badge (`showGetBackOnTrackNotifications`, its own channel `hhh_recovery`, own
+id range, rotating copy via `getBackOnTrackFor` — "no judgment, just a fresh
+restart," never shaming language) rather than reusing the praise channel. The
+main place this actually gets checked is the app-start sync
+(`habitReminderSyncProvider` in `shell_screen.dart`) — most badge changes
+happen days or weeks after habit creation, so checking only right after
+creating a habit (the other call site) would almost never catch one.
+
+#### 13.5.2 Automaticity-graduation flow (SRHI-gated)
+
+A habit that reaches full automaticity (`off` tier) and then goes quiet is
+ambiguous: silence could mean it lapsed, or it could mean the participant no
+longer needs the app for it at all — forcing reminders back on a habit that's
+genuinely self-sustained would be counterproductive. Rather than assume lapse
+by default, the next SRHI submission is used to disambiguate:
+
+```
+habit reaches 'off' tier (reminderPlanService.markAutomaticityReached stamps
+  implementation_intentions.reachedAutomaticityAt, sticky, once)
+  → no enacted log for graduationSilenceDays (default 7)
+  → next SRHI submission is treated as a graduation check:
+      score >= graduationScoreThreshold (default 5.0 of 7)
+        → GRADUATED: status → 'completed', completedReason → 'graduated',
+          current XP frozen onto bankedXp + graduationBonusXp (default 500),
+          Habit Graduate badge awarded (never revoked)
+      score <  graduationScoreThreshold
+        → nothing new happens here — the *existing* recovery rule (tier
+          snaps to 'daily') and badge revocation (§13.5.1) already handle
+          "this was actually a lapse" on the next read
+```
+
+- **Why the threshold is higher than the literature's "habitual" cutoff:**
+  SRHI is a 1–7 scale; ~4 is commonly cited (Verplanken & Orbell) as
+  indicating a habitual behavior, but retiring a habit from active tracking is
+  a bigger, harder-to-reverse call than just noting habit strength, so the bar
+  (default 5.0) is set higher.
+- **Why banked XP, not just the bonus:** a habit that graduates exits the
+  `status: 'active'` query `computeUserGamification` sums XP over — without
+  freezing its XP onto `bankedXp`, graduating a habit would make months of
+  earned XP disappear, which would read as a punishment for what's meant to be
+  the best possible outcome. `computeUserGamification` folds `bankedXp` from
+  `status: 'completed', completedReason: 'graduated'` documents back into
+  `totalXp` alongside the active-habit sum.
+- **Config** (`admin_settings`, `gamification_*` keys, same tunable pattern as
+  the rest of §7.5): `graduationSilenceDays` (7), `graduationScoreThreshold`
+  (5), `graduationBonusXp` (500).
+- **API:** the graduation check runs inside `POST /srhi/:intentionId/week/:weekNumber`
+  (`srhiService.submitSrhi` → `checkAutomaticityGraduation`) and is best-effort
+  — a failure there never blocks a normal SRHI submission. When applicable, the
+  response gains a `graduation: { candidate, graduated, badgeKey?, bonusXp?,
+  bankedXp? }` field alongside the normal SRHI response fields.
+- **Mobile:** `srhi_form_screen.dart` reacts immediately when
+  `graduation.graduated == true` — no need to wait for the next gamification
+  sync, since the outcome is already known — showing a congratulations dialog,
+  firing the Habit Graduate praise notification, and refreshing the habits
+  list. `my_habits_screen.dart` shows graduated habits in a separate, greyed-out
+  "Graduated habits" section (rather than hiding them) with a **Reactivate**
+  button (`PATCH /habits/intentions/:id/status` → `'active'`).
+- **Interaction with §7 Fading Features caveat:** this closes the gap noted in
+  §13.0 row 17 for habits that actually graduate — SRHI stops recurring
+  entirely once a habit's status leaves `'active'` (`topUpSrhiWindows` only
+  tops up active habits). The caveat still applies to habits that are merely
+  lapsed (still `'active'`, not yet graduated or recovered), where SRHI
+  continues by design.
 
 ### 13.6 Data & research analysis plan (§8)
 
@@ -1096,8 +1219,9 @@ All signals are additive to the existing Mongo/Neo4j split:
 | Stacking | `stackedOn`, `creationMode` | `(:Habit)-[:STACKED_WITH]->(:Habit)`, `Habit.creation_mode` |
 | Reminder mode | `reminderContentMode` resolved per plan | — |
 | Overload gating | 409 `information_overload` responses (why, which tier); `user_preferences` opt-out | — |
-| Gamification | `earnedBadges` per habit; `user_gamification.earnedBadges` for user-scoped badges | — |
+| Gamification | `earnedBadges` per habit (added *and removed*, §13.5.1); `user_gamification.earnedBadges` for user-scoped badges | — |
 | Sharing | (read-only from Neo4j; no Mongo write) | `Habit.created_at` per donated habit → share XP and streak |
+| Automaticity graduation | `reachedAutomaticityAt`, `status`/`completedReason`/`bankedXp`/`graduatedAt` on `implementation_intentions` (§13.5.2) | — |
 
 Because the stacking relationship and habit type live on the graph, a
 researcher-facing view (an admin analytics panel, or a documented Cypher query
@@ -1244,19 +1368,22 @@ Evaluated per habit (or, for sharing, per user) on every read of
 count-based** — each is a predicate over current state, so they cannot be
 farmed by volume.
 
-| Badge | `badgeKey` | Exact condition | Scope |
-| --- | --- | --- | --- |
-| First Step | `first_step` | Always (the habit exists) | per habit |
-| Building Momentum | `building_momentum` | `tierIndex ≥ 1` (faded past `daily`) | per habit |
-| Steady Habit | `steady_habit` | `currentStreakDays ≥ 14` | per habit |
-| Second Nature | `second_nature` | `frequency === 'off'` | per habit |
-| Habit Architect | `habit_architect` | `creationMode === 'stacked'` (§7.1) | per habit |
-| Quit Champion | `quit_champion` | `habitType === 'quit'` **and** `frequency === 'off'` | per habit |
-| Community Contributor | `community_contributor` | `currentShareStreakWeeks ≥ shareStreakWeeksForBadge` (default 4 consecutive weeks with ≥1 share) | per user |
+| Badge | `badgeKey` | Exact condition | Scope | Revocable? |
+| --- | --- | --- | --- | --- |
+| First Step | `first_step` | Always (the habit exists) | per habit | No |
+| Building Momentum | `building_momentum` | `tierIndex ≥ 1` (faded past `daily`) | per habit | Yes (§13.5.1) |
+| Steady Habit | `steady_habit` | `currentStreakDays ≥ 14` | per habit | Yes (§13.5.1) |
+| Second Nature | `second_nature` | `frequency === 'off'` | per habit | Yes (§13.5.1) |
+| Habit Architect | `habit_architect` | `creationMode === 'stacked'` (§7.1) | per habit | No |
+| Quit Champion | `quit_champion` | `habitType === 'quit'` **and** `frequency === 'off'` | per habit | Yes (§13.5.1) |
+| Community Contributor | `community_contributor` | `currentShareStreakWeeks ≥ shareStreakWeeksForBadge` (default 4 consecutive weeks with ≥1 share) | per user | No |
+| Habit Graduate | `habit_graduate` | Awarded once, at the moment `checkAutomaticityGraduation` graduates the habit (§13.5.2) | per habit | No |
 
 Per-habit badges persist on `implementation_intentions.earnedBadges`; the
 user-scoped Community Contributor persists on `user_gamification.earnedBadges`
-instead, since it isn't tied to any one tracked intention.
+instead, since it isn't tied to any one tracked intention. "Revocable" badges
+are removed (`$pull`) when their predicate stops holding, per §13.5.1 — every
+other badge records a historical fact and is never revoked.
 
 #### E. Information Overload unlock rule (§7.3)
 
@@ -1286,6 +1413,22 @@ explain what has to happen.
   habits count). This is a consequence of the recompute-on-read design; if a
   study needs monotonic levels, that is a deliberate change to make, not a bug
   to patch around.
+
+  **Concretely, on the §A/§B worked example** (continuing it to day 70 with a
+  single missed day at day 58 and a 4-day lapse at days 66–69, everything else
+  identical): the streak-milestone bonus is **not sticky** — it depends on the
+  *current* streak at read time, not on having ever reached it — so even one
+  missed day zeroes it instantly, and losing a tier at the same time compounds
+  the drop:
+
+  ![Autonomy score dipping on a single missed day (streak resets, tier drops one level since this habit was right at the 0.9 boundary) and hard-resetting to 'daily' during the 4-day lapse](docs/assets/gamification/lapse-autonomy-example.svg)
+
+  ![Cumulative XP dropping 670 XP in the single missed day (470 lost streak bonus + 200 lost tier bonus) and a further 625 XP over the 4-day lapse](docs/assets/gamification/lapse-xp-example.svg)
+
+  Note the last few days of the first chart: the raw score (≈0.72) would on its
+  own justify `twice_weekly`, but the background shows `daily` — that's the
+  recovery rule overriding the score outright once 7-day adherence drops below
+  0.5, regardless of what the score says.
 - **Badges are sticky.** Once written to `earnedBadges` a badge is never revoked,
   even if the underlying predicate stops holding. `newlyEarned` is therefore
   non-empty only on the first read after a badge is achieved, which is what makes

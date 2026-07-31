@@ -36,6 +36,16 @@ const _praiseChannelDescription = 'Congratulations when you earn a badge';
 const _praiseNotifBase = 600000;
 const _praiseNotifMax = 20;
 
+// "Get back on track" notifications for revoked badges — a distinct channel
+// (supportive tone, not an achievement) and its own id range so it can never
+// collide with the praise range above.
+const _recoveryChannelId = 'hhh_recovery';
+const _recoveryChannelName = 'Habit support';
+const _recoveryChannelDescription =
+    'A supportive nudge when a habit needs help getting back on track';
+const _recoveryNotifBase = 700000;
+const _recoveryNotifMax = 20;
+
 final _plugin = FlutterLocalNotificationsPlugin();
 bool _tzReady = false;
 
@@ -83,6 +93,41 @@ class ReminderSchedulerService {
         );
       } catch (_) {
         // Non-fatal: a praise notification is a nicety, never a blocker.
+      }
+      i++;
+    }
+  }
+
+  /// Fire a one-time, supportively-worded notification for each badge that
+  /// was just *revoked* (its tier/streak regressed — see `REVOCABLE_BADGES`
+  /// in `gamificationService.js`), rotating copy via [getBackOnTrackFor] the
+  /// same way [showPraiseNotifications] rotates praise. Uses its own channel
+  /// so it never reads as a celebration. Best-effort; failures are swallowed.
+  Future<void> showGetBackOnTrackNotifications(List<String> badgeKeys) async {
+    if (badgeKeys.isEmpty) return;
+    await _ensureTimezone();
+    var i = 0;
+    for (final key in badgeKeys.take(_recoveryNotifMax)) {
+      final meta = badgeMetaFor(key);
+      final body = getBackOnTrackFor(key, rotation: i);
+      try {
+        await _plugin.show(
+          id: _recoveryNotifBase + i,
+          title: 'Let\'s get back on track',
+          body: '${meta.label}: $body',
+          notificationDetails: const NotificationDetails(
+            android: AndroidNotificationDetails(
+              _recoveryChannelId,
+              _recoveryChannelName,
+              channelDescription: _recoveryChannelDescription,
+              importance: Importance.defaultImportance,
+            ),
+            iOS: DarwinNotificationDetails(),
+          ),
+          payload: '/habits',
+        );
+      } catch (_) {
+        // Non-fatal: this is a nicety, never a blocker.
       }
       i++;
     }

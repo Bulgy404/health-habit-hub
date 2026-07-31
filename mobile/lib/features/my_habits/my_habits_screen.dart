@@ -146,6 +146,39 @@ class MyHabitsScreen extends ConsumerWidget {
               error: (e, _) =>
                   SliverFillRemaining(child: Center(child: Text(e.toString()))),
             ),
+            // Automaticity-graduation flow — habits that became self-sustained
+            // (an SRHI check confirmed strong habit strength after a silent
+            // week) are greyed out here rather than removed, with a way back.
+            intentionsAsync.when(
+              data: (intentions) {
+                final graduated = intentions
+                    .where((i) => i.isGraduated)
+                    .toList();
+                if (graduated.isEmpty) {
+                  return const SliverToBoxAdapter(child: SizedBox.shrink());
+                }
+                return SliverMainAxisGroup(
+                  slivers: [
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(16, 20, 16, 4),
+                        child: Text(
+                          'Graduated habits',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                    SliverList.builder(
+                      itemCount: graduated.length,
+                      itemBuilder: (context, i) =>
+                          _GraduatedHabitCard(intention: graduated[i]),
+                    ),
+                  ],
+                );
+              },
+              loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+              error: (_, _) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            ),
           ],
         ),
       ),
@@ -526,6 +559,62 @@ class _TrafficLightDot extends ConsumerWidget {
       width: 10,
       height: 10,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+}
+
+/// A greyed-out card for a habit that graduated (became self-sustained via
+/// the automaticity-graduation flow) — kept visible rather than hidden, with
+/// a way back to active tracking if the participant wants it.
+class _GraduatedHabitCard extends ConsumerWidget {
+  const _GraduatedHabitCard({required this.intention});
+  final Intention intention;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(Icons.school_outlined, color: cs.onSurfaceVariant),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    intention.behaviorLabel,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    'Graduated — this habit is fully self-sustained.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () async {
+                await ref
+                    .read(myHabitsServiceProvider)
+                    .updateStatus(intention.id, 'active');
+                ref.invalidate(intentionsProvider);
+              },
+              child: const Text('Reactivate'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,4 +1,4 @@
-<svg width="1260" height="330" viewBox="0 0 1260 330" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<svg width="1440" height="330" viewBox="0 0 1440 330" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
   <defs>
     <style>
       .bg { fill: #FFFFFF; }
@@ -6,9 +6,9 @@
       .trigger { font-size: 11px; fill: #6B6B67; text-anchor: middle; }
     </style>
   </defs>
-  <rect width="1260" height="330" class="bg"/>
+  <rect width="1440" height="330" class="bg"/>
 
-  <!-- 7 medallions, 180px pitch -->
+  <!-- 8 medallions, 180px pitch -->
 
   <!-- 1. First Step — indigo, flag -->
   <g transform="translate(90,150)">
@@ -104,5 +104,19 @@
     <text y="86" class="label">Community</text>
     <text y="102" class="label">Contributor</text>
     <text y="120" class="trigger">shares habits regularly</text>
+  </g>
+
+  <!-- 8. Habit Graduate — gold, graduation cap (automaticity-graduation flow) -->
+  <g transform="translate(1350,150)">
+    <circle r="52" fill="#FBF3DE" stroke="#B8860B" stroke-width="3"/>
+    <circle r="44" fill="none" stroke="#B8860B" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+    <g fill="#B8860B">
+      <path d="M0 -18 L24 -8 L0 2 L-24 -8 Z"/>
+      <rect x="-2" y="-2" width="4" height="14"/>
+      <circle cx="0" cy="13" r="2.6"/>
+    </g>
+    <path d="M-14 -4 V6 Q0 12 14 6 V-4" fill="none" stroke="#B8860B" stroke-width="2"/>
+    <text y="86" class="label">Habit Graduate</text>
+    <text y="104" class="trigger">graduated: self-sustained</text>
   </g>
 </svg>

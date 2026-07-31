@@ -242,9 +242,16 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
     try {
       final service = MyHabitsService(dio: dio);
       final g = await service.fetchGamification();
-      final keys = g.newlyEarned.map((b) => b.badgeKey).toList();
-      if (keys.isNotEmpty) {
-        await ReminderSchedulerService(dio: dio).showPraiseNotifications(keys);
+      final scheduler = ReminderSchedulerService(dio: dio);
+      final earnedKeys = g.newlyEarned.map((b) => b.badgeKey).toList();
+      if (earnedKeys.isNotEmpty) {
+        await scheduler.showPraiseNotifications(earnedKeys);
+      }
+      // Unlikely right after creation, but kept symmetric with the app-start
+      // sync in shell_screen.dart, which is where this normally fires.
+      final lostKeys = g.newlyLost.map((b) => b.badgeKey).toList();
+      if (lostKeys.isNotEmpty) {
+        await scheduler.showGetBackOnTrackNotifications(lostKeys);
       }
     } catch (_) {
       // Non-fatal: praise is a nicety.

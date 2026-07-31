@@ -9,7 +9,9 @@ import {
   FREQUENCIES,
   DEFAULT_II_REMINDER_TEMPLATES,
   readReminderTemplates,
+  markAutomaticityReached,
 } from '../../services/reminderPlanService.js';
+import { ObjectId } from 'mongodb';
 
 const NOW = new Date('2026-06-10T12:00:00Z');
 
@@ -217,5 +219,70 @@ describe('§7.2 reminder content', () => {
       makeSettingsDb({ key: 'reminder_ii_templates', value: [] })
     );
     assert.deepEqual(templates, DEFAULT_II_REMINDER_TEMPLATES);
+  });
+});
+
+describe('markAutomaticityReached', () => {
+  function makeIntentionsDb(doc) {
+    const updates = [];
+    return {
+      db: {
+        collection: (name) => {
+          if (name !== 'implementation_intentions') {
+            throw new Error(`unexpected: ${name}`);
+          }
+          return {
+            async updateOne(filter, update) {
+              updates.push({ filter, update });
+              if (String(filter._id) === String(doc._id)) {
+                Object.assign(doc, update.$set);
+              }
+              return { matchedCount: 1 };
+            },
+          };
+        },
+      },
+      updates,
+    };
+  }
+
+  test('stamps reachedAutomaticityAt the first time the tier is off', async () => {
+    const doc = { _id: new ObjectId() };
+    const { db, updates } = makeIntentionsDb(doc);
+    await markAutomaticityReached({
+      db,
+      intentionDoc: doc,
+      frequency: 'off',
+      now: NOW,
+    });
+    assert.equal(updates.length, 1);
+    assert.equal(doc.reachedAutomaticityAt, NOW);
+  });
+
+  test('does nothing when the tier is not off', async () => {
+    const doc = { _id: new ObjectId() };
+    const { db, updates } = makeIntentionsDb(doc);
+    await markAutomaticityReached({
+      db,
+      intentionDoc: doc,
+      frequency: 'weekly',
+      now: NOW,
+    });
+    assert.equal(updates.length, 0);
+    assert.equal(doc.reachedAutomaticityAt, undefined);
+  });
+
+  test('does nothing when already stamped (sticky, never overwritten)', async () => {
+    const already = new Date('2026-01-01T00:00:00Z');
+    const doc = { _id: new ObjectId(), reachedAutomaticityAt: already };
+    const { db, updates } = makeIntentionsDb(doc);
+    await markAutomaticityReached({
+      db,
+      intentionDoc: doc,
+      frequency: 'off',
+      now: NOW,
+    });
+    assert.equal(updates.length, 0);
+    assert.equal(doc.reachedAutomaticityAt, already);
   });
 });

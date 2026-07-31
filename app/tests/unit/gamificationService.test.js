@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import { ObjectId } from 'mongodb';
 import {
   BADGES,
+  REVOCABLE_BADGES,
   DEFAULT_GAMIFICATION_CONFIG,
   xpForLevel,
   levelForXp,
@@ -117,8 +118,17 @@ function makeDb({
   const collection = (name) => {
     if (name === 'implementation_intentions') {
       return {
-        find() {
-          return { toArray: async () => intentions.map((d) => ({ ...d })) };
+        find(filter = {}) {
+          const matched = intentions.filter((d) => {
+            if (filter.status && d.status !== filter.status) return false;
+            if (
+              filter.completedReason &&
+              d.completedReason !== filter.completedReason
+            )
+              return false;
+            return true;
+          });
+          return { toArray: async () => matched.map((d) => ({ ...d })) };
         },
         async updateOne(filter, update) {
           pushed.push({ id: String(filter._id), update });
@@ -130,6 +140,12 @@ function makeDb({
               ...(doc.earnedBadges ?? []),
               update.$push.earnedBadges,
             ];
+          }
+          if (doc && update.$pull?.earnedBadges?.badgeKey) {
+            const key = update.$pull.earnedBadges.badgeKey;
+            doc.earnedBadges = (doc.earnedBadges ?? []).filter(
+              (b) => b.badgeKey !== key
+            );
           }
           return { matchedCount: 1 };
         },
@@ -339,4 +355,112 @@ test('computeUserGamification: Community Contributor is not re-earned once persi
     ),
     false
   );
+});
+
+// ── Badge revocation ("get back on track") ──────────────────────────────────
+
+test('REVOCABLE_BADGES contains only the tier/streak badges, not historical facts', () => {
+  assert.ok(REVOCABLE_BADGES.has(BADGES.BUILDING_MOMENTUM));
+  assert.ok(REVOCABLE_BADGES.has(BADGES.STEADY_HABIT));
+  assert.ok(REVOCABLE_BADGES.has(BADGES.SECOND_NATURE));
+  assert.ok(REVOCABLE_BADGES.has(BADGES.QUIT_CHAMPION));
+  assert.equal(REVOCABLE_BADGES.has(BADGES.FIRST_STEP), false);
+  assert.equal(REVOCABLE_BADGES.has(BADGES.HABIT_ARCHITECT), false);
+  assert.equal(REVOCABLE_BADGES.has(BADGES.COMMUNITY_CONTRIBUTOR), false);
+});
+
+test('computeUserGamification: revokes Steady Habit once the streak breaks', async () => {
+  const id = new ObjectId();
+  // Earned Steady Habit previously; today's logs no longer show a 14-day streak.
+  const db = makeDb({
+    intentions: [
+      {
+        _id: id,
+        userId: 'u1',
+        habitType: 'build',
+        creationMode: 'standalone',
+        status: 'active',
+        createdAt: new Date('2026-05-01T00:00:00Z'),
+        earnedBadges: [
+          { badgeKey: BADGES.FIRST_STEP, earnedAt: NOW },
+          { badgeKey: BADGES.STEADY_HABIT, earnedAt: NOW },
+        ],
+      },
+    ],
+    logsByIntention: { [String(id)]: logsForDays(2) }, // streak of 2, not 14
+  });
+  const summary = await computeUserGamification({ db, userId: 'u1', now: NOW });
+
+  assert.ok(
+    summary.newlyLost.some(
+      (b) => b.intentionId === String(id) && b.badgeKey === BADGES.STEADY_HABIT
+    )
+  );
+  assert.equal(
+    summary.badges.some((b) => b.badgeKey === BADGES.STEADY_HABIT),
+    false
+  );
+  assert.equal(db._pushed.length, 1);
+  assert.ok(db._pushed[0].update.$pull?.earnedBadges);
+});
+
+test('computeUserGamification: revokes Second Nature once the tier regresses', async () => {
+  const id = new ObjectId();
+  const db = makeDb({
+    intentions: [
+      {
+        _id: id,
+        userId: 'u1',
+        habitType: 'build',
+        creationMode: 'standalone',
+        status: 'active',
+        createdAt: new Date('2026-05-01T00:00:00Z'),
+        earnedBadges: [
+          { badgeKey: BADGES.FIRST_STEP, earnedAt: NOW },
+          { badgeKey: BADGES.SECOND_NATURE, earnedAt: NOW },
+        ],
+      },
+    ],
+    logsByIntention: {}, // no logs at all -> daily tier, well below 'off'
+  });
+  const summary = await computeUserGamification({ db, userId: 'u1', now: NOW });
+
+  assert.ok(summary.newlyLost.some((b) => b.badgeKey === BADGES.SECOND_NATURE));
+  // First Step is not revocable — untouched even though the doc wasn't
+  // re-earning it (already recorded).
+  assert.equal(
+    summary.newlyEarned.some((b) => b.badgeKey === BADGES.FIRST_STEP),
+    false
+  );
+  assert.ok(summary.badges.some((b) => b.badgeKey === BADGES.FIRST_STEP));
+});
+
+test('computeUserGamification: never revokes Habit Architect (a historical fact)', async () => {
+  const id = new ObjectId();
+  // Contrived: earnedBadges claims Habit Architect, but creationMode here is
+  // 'standalone' (so it wouldn't be earned fresh) — should still be left alone
+  // since it isn't in REVOCABLE_BADGES, proving the revocation is gated by
+  // membership in that set, not just "not currently in result.badges".
+  const db = makeDb({
+    intentions: [
+      {
+        _id: id,
+        userId: 'u1',
+        habitType: 'build',
+        creationMode: 'standalone',
+        status: 'active',
+        createdAt: NOW,
+        earnedBadges: [
+          { badgeKey: BADGES.FIRST_STEP, earnedAt: NOW },
+          { badgeKey: BADGES.HABIT_ARCHITECT, earnedAt: NOW },
+        ],
+      },
+    ],
+  });
+  const summary = await computeUserGamification({ db, userId: 'u1', now: NOW });
+  assert.equal(
+    summary.newlyLost.some((b) => b.badgeKey === BADGES.HABIT_ARCHITECT),
+    false
+  );
+  assert.equal(db._pushed.length, 0);
 });

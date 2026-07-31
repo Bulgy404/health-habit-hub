@@ -275,6 +275,38 @@ export function computeReminderPlan({
 }
 
 /**
+ * Automaticity-graduation flow — stamp `reachedAutomaticityAt` the first time
+ * a habit's tier is observed at `off`. Sticky: never cleared once set, so it
+ * records that the habit *has* reached full automaticity at least once, not
+ * its current tier — a later lapse (which drops the tier back down, per the
+ * recovery rule) must not erase that it happened. Read by
+ * `srhiService.submitSrhi()`'s graduation check (a habit silent for a while
+ * after reaching this marker gets an SRHI-gated "has it become self-sustained,
+ * or has it lapsed?" check instead of being treated as a plain lapse).
+ * Best-effort: a failed write here never breaks the reminder-plan response;
+ * it's simply retried next time this is computed.
+ * @param {{ db: import('mongodb').Db, intentionDoc: object, frequency: string, now: Date }} deps
+ */
+export async function markAutomaticityReached({
+  db,
+  intentionDoc,
+  frequency,
+  now,
+}) {
+  if (frequency !== 'off' || intentionDoc.reachedAutomaticityAt) return;
+  try {
+    await db
+      .collection('implementation_intentions')
+      .updateOne(
+        { _id: intentionDoc._id },
+        { $set: { reachedAutomaticityAt: now } }
+      );
+  } catch {
+    // Non-fatal — best-effort, retried whenever this is next computed.
+  }
+}
+
+/**
  * Compute reminder plans for all of a user's active intentions.
  * @param {{ db: import('mongodb').Db, userId: string, now?: Date }} deps
  * @returns {Promise<Array>}
@@ -299,7 +331,7 @@ export async function computeReminderPlans({ db, userId, now = new Date() }) {
           .find({ intentionId: doc._id, userId: String(userId) })
           .toArray(),
       ]);
-      return computeReminderPlan({
+      const plan = computeReminderPlan({
         intention: {
           id: String(doc._id),
           reminderTime: doc.reminderTime ?? null,
@@ -318,6 +350,13 @@ export async function computeReminderPlans({ db, userId, now = new Date() }) {
         config,
         now,
       });
+      await markAutomaticityReached({
+        db,
+        intentionDoc: doc,
+        frequency: plan.frequency,
+        now,
+      });
+      return plan;
     })
   );
   return plans;
