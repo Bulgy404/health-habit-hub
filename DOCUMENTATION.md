@@ -1051,16 +1051,40 @@ milestones, not the market's fire-on-every-log pattern.
 - **Badges** (tied to meaningful states, not arbitrary counts): *First Step*
   (habit created), *Building Momentum* (first tier-up), *Steady Habit* (14-day
   streak), *Second Nature* (habit reaches `off`), *Habit Architect* (created via
-  stacking — rewards §7.1), *Quit Champion* (a quit habit reaches `off`).
-  Exact trigger predicates: [§13.7](#137-scoring-algorithms--full-reference).
-- **API:** `GET /habits/intentions/gamification` returns `{ totalXp, level,
-  xpIntoLevel, xpToNextLevel, badges, newlyEarned, perHabit }` and persists newly
-  earned badges.
+  stacking — rewards §7.1), *Quit Champion* (a quit habit reaches `off`),
+  *Community Contributor* (shares/donates habits for several consecutive weeks
+  — see "Sharing" below). Exact trigger predicates:
+  [§13.7](#137-scoring-algorithms--full-reference).
+
+  ![The seven badges: icon, colour, and unlock condition for each](docs/assets/gamification/badges-showcase.svg)
+
+  Colours aren't decorative: amber matches the traffic light's amber tiers,
+  green matches the `off` tier's green, and *Quit Champion* reuses the same red
+  already used for quit-type habits (§7.4) — badge colour always follows an
+  already-established meaning, never an arbitrary series order.
+- **Sharing (user-level, not tied to any one habit):** donating a habit to the
+  community corpus (`POST /habits/share`) earns `xpPerShare` XP (default 20)
+  per share. *Community Contributor* requires sharing in each of the last
+  `shareStreakWeeksForBadge` (default 4) **consecutive weeks** — rewarding
+  sustained contribution, not a single one-off share — computed from Neo4j
+  donation timestamps (`getDonationDatesByUser`) via `currentShareStreakWeeks`,
+  the same day-streak logic as `currentStreakDays` but bucketed by week. Since
+  a share isn't scoped to one tracked intention, its earned-badge state is
+  persisted on a small per-user Mongo doc (`user_gamification`) rather than on
+  an `implementation_intentions` document.
+- **API:** `GET /habits/intentions/gamification` returns `{ enabled, totalXp,
+  level, xpIntoLevel, xpToNextLevel, badges, newlyEarned, perHabit, shareCount,
+  shareStreakWeeks }` and persists newly earned badges. `enabled` reflects the
+  study/group `gamificationEnabled` toggle; when `false` every other field is
+  zeroed and the client should hide the feature entirely.
 - **Mobile:** a Badges/Achievements section with an XP progress bar on the
-  Profile screen; a compact level + XP bar in Settings; a per-habit traffic-light
-  indicator (red = `daily` … green = `weekly`/`off`) on each habit card. A badge/
-  tier-up fires a one-time local praise notification drawing a rotating praise
-  line per badge (same anti-repetition principle as §7.2).
+  Profile screen; a compact level + XP bar in Settings — both shown from zero
+  XP as soon as gamification is enabled (an empty bar is deliberate: it signals
+  there's a progression system to discover, rather than only appearing once
+  something is earned), and hidden only when `enabled` is `false`. A per-habit
+  traffic-light indicator (red = `daily` … green = `weekly`/`off`) on each habit
+  card. A badge/tier-up fires a one-time local praise notification drawing a
+  rotating praise line per badge (same anti-repetition principle as §7.2).
 
 ### 13.6 Data & research analysis plan (§8)
 
@@ -1072,7 +1096,8 @@ All signals are additive to the existing Mongo/Neo4j split:
 | Stacking | `stackedOn`, `creationMode` | `(:Habit)-[:STACKED_WITH]->(:Habit)`, `Habit.creation_mode` |
 | Reminder mode | `reminderContentMode` resolved per plan | — |
 | Overload gating | 409 `information_overload` responses (why, which tier); `user_preferences` opt-out | — |
-| Gamification | `earnedBadges` per user/habit | — |
+| Gamification | `earnedBadges` per habit; `user_gamification.earnedBadges` for user-scoped badges | — |
+| Sharing | (read-only from Neo4j; no Mongo write) | `Habit.created_at` per donated habit → share XP and streak |
 
 Because the stacking relationship and habit type live on the graph, a
 researcher-facing view (an admin analytics panel, or a documented Cypher query
@@ -1118,6 +1143,8 @@ The score maps onto five tiers by lower-bound thresholds
 | 3 | `weekly` | 0.75 | 🟢 green | 2 |
 | 4 | `off` | 0.90 | 🟢 green | 0 |
 
+![Reminder-frequency tier as a function of the autonomy score, with a worked example at score 0.62](docs/assets/gamification/autonomy-tier-function.svg)
+
 Two deliberate asymmetries:
 
 - **Hysteresis (fading is slow).** Reaching tier ≥ 2 additionally requires the
@@ -1132,6 +1159,22 @@ cannot exceed `0.35 + 0.15 = 0.50`, so a habit with perfect logging but no
 check-ins tops out at tier 1 (`every_2_days`). Reaching `weekly`/`off` requires
 SRHI — see [`docs/testing-section7-features.md`](docs/testing-section7-features.md) §3.
 
+**Worked example, plotted over time.** A synthetic-but-formula-accurate 10-week
+run for one build habit — imperfect logging for the first 9 days, then unbroken
+daily logs; SRHI submitted weekly, improving 3.0 → 6.8 across 10 windows:
+
+![One build habit's autonomy score across 10 weeks, background shaded by tier, each badge's first day marked](docs/assets/gamification/autonomy-worked-example.svg)
+
+The score crosses 0.45 on day 11 (`daily → every_2_days`, *Building Momentum*).
+By day 20 it reaches 0.767 — past the 0.75 `weekly` threshold — but hysteresis
+holds it at `twice_weekly`, because the previous week's SRHI (3.6) doesn't yet
+support a two-tier jump. It isn't until day 54, with two strong consecutive
+SRHI weeks, that it clears 0.9 and the habit reaches `off` — *Second Nature*.
+
+Cumulative XP for the same run, same badge days marked:
+
+![Cumulative XP for the same worked example, with each badge's first day and XP total marked](docs/assets/gamification/xp-worked-example.svg)
+
 #### B. XP (§7.5)
 
 Implemented in `app/services/gamificationService.js`, computed **per habit** and
@@ -1142,6 +1185,9 @@ XP(habit) = enactedLogs      · xpPerEnactedLog        (all-time enacted logs)
           + srhiSubmissions  · xpPerSrhiSubmission
           + streakBonus(currentStreakDays)            (cumulative, see below)
           + tierIndex        · xpPerTierUp            (tierIndex 0–4, from §A)
+
+XP(user)  = Σ XP(habit) over active habits
+          + shareCount · xpPerShare        (habits shared/donated, all-time)
 ```
 
 | Parameter | Default | `admin_settings` key |
@@ -1152,11 +1198,16 @@ XP(habit) = enactedLogs      · xpPerEnactedLog        (all-time enacted logs)
 | `streakMilestones` | `{7: 50, 14: 120, 30: 300}` | *(not overridable)* |
 | `levelCurveBase` | 100 | `gamification_level_curve_base` |
 | `levelCurveExp` | 1.5 | `gamification_level_curve_exp` |
+| `xpPerShare` | 20 | `gamification_xp_per_share` |
+| `shareStreakWeeksForBadge` | 4 | `gamification_share_streak_weeks_for_badge` |
 
 Streak bonuses are **cumulative**: a 30-day streak awards 50 + 120 + 300 = 470.
 The 20:1 ratio between a tier-up (200) and a daily log (10) is the core design
 choice — advancing automaticity dominates routine logging, which is what keeps
 this from becoming the "Overinvested", fire-on-every-log pattern §7.5 rejects.
+Share XP is computed from Neo4j (`getDonationDatesByUser`), not Mongo, and is
+best-effort: with no `neo4jRun` available it silently contributes zero rather
+than failing the whole summary.
 
 #### C. Levels (§7.5)
 
@@ -1179,20 +1230,33 @@ XP = 20·10 + 2·25 + (50 + 120) + 3·200 = 200 + 50 + 170 + 600 = 1020
 → level 5 (800 ≤ 1020 < 1118), xpIntoLevel 220, xpToNextLevel 98
 ```
 
+![xpForLevel(n) = 100·(n−1)^1.5, with the §A worked example's 2,200 XP marked against the curve](docs/assets/gamification/xp-level-curve.svg)
+
+The curve is superlinear by design: level 2 costs only 100 XP (reachable from
+*First Step* alone), but level 9 costs 2,263 — climbing later levels needs
+sustained habit strength over time, not just more logging. The §A worked
+example's 10-week run ends at 2,200 XP, landing at level 8.
+
 #### D. Badge trigger predicates (§7.5)
 
-Evaluated per habit on every read of `GET /habits/intentions/gamification`.
-Badges are **state-based, not count-based** — each is a predicate over the
-habit's current state, so they cannot be farmed by volume.
+Evaluated per habit (or, for sharing, per user) on every read of
+`GET /habits/intentions/gamification`. Badges are **state-based, not
+count-based** — each is a predicate over current state, so they cannot be
+farmed by volume.
 
-| Badge | `badgeKey` | Exact condition |
-| --- | --- | --- |
-| First Step | `first_step` | Always (the habit exists) |
-| Building Momentum | `building_momentum` | `tierIndex ≥ 1` (faded past `daily`) |
-| Steady Habit | `steady_habit` | `currentStreakDays ≥ 14` |
-| Second Nature | `second_nature` | `frequency === 'off'` |
-| Habit Architect | `habit_architect` | `creationMode === 'stacked'` (§7.1) |
-| Quit Champion | `quit_champion` | `habitType === 'quit'` **and** `frequency === 'off'` |
+| Badge | `badgeKey` | Exact condition | Scope |
+| --- | --- | --- | --- |
+| First Step | `first_step` | Always (the habit exists) | per habit |
+| Building Momentum | `building_momentum` | `tierIndex ≥ 1` (faded past `daily`) | per habit |
+| Steady Habit | `steady_habit` | `currentStreakDays ≥ 14` | per habit |
+| Second Nature | `second_nature` | `frequency === 'off'` | per habit |
+| Habit Architect | `habit_architect` | `creationMode === 'stacked'` (§7.1) | per habit |
+| Quit Champion | `quit_champion` | `habitType === 'quit'` **and** `frequency === 'off'` | per habit |
+| Community Contributor | `community_contributor` | `currentShareStreakWeeks ≥ shareStreakWeeksForBadge` (default 4 consecutive weeks with ≥1 share) | per user |
+
+Per-habit badges persist on `implementation_intentions.earnedBadges`; the
+user-scoped Community Contributor persists on `user_gamification.earnedBadges`
+instead, since it isn't tied to any one tracked intention.
 
 #### E. Information Overload unlock rule (§7.3)
 

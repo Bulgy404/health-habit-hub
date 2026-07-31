@@ -138,6 +138,8 @@ export const createStudySchema = z.object({
     .enum(['generic', 'implementation_intention'])
     .optional(),
   informationOverloadGuard: informationOverloadGuardSchema.optional(),
+  // §7.5 Gamification — study-wide on/off toggle.
+  gamificationEnabled: z.boolean().optional(),
   endDate: z.string().datetime({ offset: true }).optional().nullable(),
   endOfStudyNotification: endOfStudyNotificationSchema.optional(),
   reminders: remindersSchema.optional(),
@@ -159,6 +161,8 @@ export const updateStudySchema = z
       .enum(['generic', 'implementation_intention'])
       .optional(),
     informationOverloadGuard: informationOverloadGuardSchema.optional(),
+    // §7.5 Gamification — study-wide on/off toggle.
+    gamificationEnabled: z.boolean().optional(),
     endDate: z.string().datetime({ offset: true }).optional().nullable(),
     endOfStudyNotification: endOfStudyNotificationSchema.optional(),
     reminders: remindersSchema.optional(),
@@ -218,6 +222,8 @@ export const updateGroupConfigSchema = z
     informationOverloadGuard: informationOverloadGuardSchema
       .optional()
       .nullable(),
+    // §7.5 group-level gamification override (null = inherit study-level).
+    gamificationEnabled: z.boolean().optional().nullable(),
     // null = inherit the study-level habit-entry-mode setting for this group.
     habitEntryMode: z.enum(['freeText', 'structured']).optional().nullable(),
     structuredActivityKeys: z

@@ -1508,6 +1508,24 @@ abstract class AppLocalizations {
   /// **'SRHI data will appear after your first weekly check-in.'**
   String get noTrajectoryYet;
 
+  /// X-axis title for the SRHI trajectory chart (time)
+  ///
+  /// In en, this message translates to:
+  /// **'Study week'**
+  String get srhiChartWeekAxis;
+
+  /// Y-axis title for the SRHI trajectory chart (habit strength)
+  ///
+  /// In en, this message translates to:
+  /// **'SRHI score (1–7)'**
+  String get srhiChartScoreAxis;
+
+  /// Tooltip shown when tapping a point on the SRHI chart
+  ///
+  /// In en, this message translates to:
+  /// **'Week {week}: {score} / 7'**
+  String srhiChartTooltip(int week, String score);
+
   /// Title of the dismissible SRHI explainer card on the habit detail screen
   ///
   /// In en, this message translates to:
@@ -2954,49 +2972,94 @@ abstract class AppLocalizations {
   /// **'Version {version} ({buildNumber})'**
   String appVersion(String version, String buildNumber);
 
-  /// §7 feature string
+  /// No description provided for @habitTypeBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Build a new habit'**
   String get habitTypeBuild;
 
-  /// §7 feature string
+  /// No description provided for @habitTypeQuit.
+  ///
+  /// In en, this message translates to:
+  /// **'Break a habit'**
   String get habitTypeQuit;
 
-  /// §7 feature string
+  /// No description provided for @habitTypeFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
   String get habitTypeFilterAll;
 
-  /// §7 feature string
+  /// No description provided for @informationOverloadInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.'**
   String get informationOverloadInfo;
 
-  /// §7 feature string
+  /// No description provided for @informationOverloadBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s focus on your current habit first — a new slot opens once it becomes more automatic.'**
   String get informationOverloadBlocked;
 
-  /// §7 feature string
+  /// No description provided for @stackOntoExistingHabitTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stack onto an existing habit'**
   String get stackOntoExistingHabitTitle;
 
-  /// §7 feature string
+  /// No description provided for @stackOntoExistingHabitSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Anchor this new habit to one you already do'**
   String get stackOntoExistingHabitSubtitle;
 
-  /// §7 feature string
+  /// No description provided for @stackAnchorPickLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Anchor habit'**
   String get stackAnchorPickLabel;
 
-  /// §7 feature string
+  /// No description provided for @stackAnchorNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
   String get stackAnchorNone;
 
-  /// §7 feature string
+  /// No description provided for @stackAnchorFreeTextLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Or type an anchor habit'**
   String get stackAnchorFreeTextLabel;
 
-  /// §7 feature string
+  /// No description provided for @stackAnchorFreeTextHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. After my morning coffee'**
   String get stackAnchorFreeTextHint;
 
-  /// §7 feature string
+  /// No description provided for @habitsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Habits'**
   String get habitsSection;
 
-  /// §7 feature string
+  /// No description provided for @informationOverloadOptOutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow multiple new habits'**
   String get informationOverloadOptOutTitle;
 
-  /// §7 feature string
+  /// No description provided for @informationOverloadOptOutSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off the one-habit-at-a-time focus guard'**
   String get informationOverloadOptOutSubtitle;
 
-  /// §7 feature string
+  /// No description provided for @progressSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
   String get progressSection;
 }
 

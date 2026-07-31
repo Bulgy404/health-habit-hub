@@ -8,6 +8,7 @@ import {
   levelForXp,
   computeHabitGamification,
   computeUserGamification,
+  currentShareStreakWeeks,
 } from '../../services/gamificationService.js';
 import { DEFAULT_CONFIG as REMINDER_CONFIG } from '../../services/reminderPlanService.js';
 
@@ -103,8 +104,16 @@ test('computeHabitGamification: automatic quit habit earns Second Nature + Quit 
 
 // ── computeUserGamification (with persistence) ──────────────────────────────
 
-function makeDb({ intentions, srhiByIntention = {}, logsByIntention = {} }) {
+function makeDb({
+  intentions,
+  srhiByIntention = {},
+  logsByIntention = {},
+  userGamificationDoc = null,
+}) {
   const pushed = [];
+  let userGamification = userGamificationDoc
+    ? { ...userGamificationDoc }
+    : null;
   const collection = (name) => {
     if (name === 'implementation_intentions') {
       return {
@@ -145,9 +154,43 @@ function makeDb({ intentions, srhiByIntention = {}, logsByIntention = {} }) {
     if (name === 'admin_settings') {
       return { find: () => ({ toArray: async () => [] }) };
     }
+    if (name === 'user_gamification') {
+      return {
+        async findOne() {
+          return userGamification ? { ...userGamification } : null;
+        },
+        async updateOne(filter, update) {
+          pushed.push({ id: 'user_gamification', update });
+          if (!userGamification) userGamification = { earnedBadges: [] };
+          if (update.$push?.earnedBadges) {
+            userGamification.earnedBadges = [
+              ...(userGamification.earnedBadges ?? []),
+              update.$push.earnedBadges,
+            ];
+          }
+          return { matchedCount: 1 };
+        },
+      };
+    }
     throw new Error(`unexpected collection: ${name}`);
   };
-  return { collection, _pushed: pushed };
+  return {
+    collection,
+    _pushed: pushed,
+    get _userGamification() {
+      return userGamification;
+    },
+  };
+}
+
+/** A fake neo4jRun returning `donationDates` for the share-history query. */
+function makeNeo4jRun(donationDates) {
+  return async (cypher) => {
+    if (cypher.includes('h.created_at AS at')) {
+      return donationDates.map((at) => ({ at }));
+    }
+    return []; // e.g. the ENROLLED_IN lookup — no enrollment, gamification stays on
+  };
 }
 
 test('computeUserGamification: aggregates XP and persists newly earned badges', async () => {
@@ -195,4 +238,105 @@ test('computeUserGamification: does not re-earn a badge already recorded', async
     false
   );
   assert.equal(db._pushed.length, 0);
+});
+
+// ── §7.5 sharing: XP + Community Contributor badge ──────────────────────────
+
+function daysAgo(n) {
+  const d = new Date(NOW);
+  d.setDate(d.getDate() - n);
+  return d.toISOString();
+}
+
+test('currentShareStreakWeeks: no shares is a zero streak', () => {
+  assert.equal(currentShareStreakWeeks([], NOW), 0);
+});
+
+test('currentShareStreakWeeks: one share per week for 4 straight weeks', () => {
+  const dates = [daysAgo(1), daysAgo(8), daysAgo(15), daysAgo(22)];
+  assert.equal(currentShareStreakWeeks(dates, NOW), 4);
+});
+
+test('currentShareStreakWeeks: a gap week breaks the streak', () => {
+  const dates = [daysAgo(1), daysAgo(8), daysAgo(30)]; // weeks 0,1 then a gap
+  assert.equal(currentShareStreakWeeks(dates, NOW), 2);
+});
+
+test('computeUserGamification: no neo4jRun contributes zero share XP/badges', async () => {
+  const db = makeDb({ intentions: [] });
+  const summary = await computeUserGamification({ db, userId: 'u1', now: NOW });
+  assert.equal(summary.shareCount, 0);
+  assert.equal(summary.shareStreakWeeks, 0);
+  assert.equal(
+    summary.badges.some((b) => b.badgeKey === BADGES.COMMUNITY_CONTRIBUTOR),
+    false
+  );
+});
+
+test('computeUserGamification: awards share XP and Community Contributor for regular sharing', async () => {
+  const db = makeDb({ intentions: [] });
+  const neo4jRun = makeNeo4jRun([
+    daysAgo(1),
+    daysAgo(8),
+    daysAgo(15),
+    daysAgo(22),
+  ]);
+  const summary = await computeUserGamification({
+    db,
+    userId: 'u1',
+    neo4jRun,
+    now: NOW,
+  });
+  assert.equal(summary.shareCount, 4);
+  assert.equal(summary.shareStreakWeeks, 4);
+  assert.equal(summary.totalXp, 4 * DEFAULT_GAMIFICATION_CONFIG.xpPerShare);
+  assert.ok(
+    summary.newlyEarned.some((b) => b.badgeKey === BADGES.COMMUNITY_CONTRIBUTOR)
+  );
+  assert.equal(db._userGamification.earnedBadges.length, 1);
+});
+
+test('computeUserGamification: a single share earns XP but not the streak badge', async () => {
+  const db = makeDb({ intentions: [] });
+  const neo4jRun = makeNeo4jRun([daysAgo(1)]);
+  const summary = await computeUserGamification({
+    db,
+    userId: 'u1',
+    neo4jRun,
+    now: NOW,
+  });
+  assert.equal(summary.shareCount, 1);
+  assert.equal(summary.totalXp, DEFAULT_GAMIFICATION_CONFIG.xpPerShare);
+  assert.equal(
+    summary.badges.some((b) => b.badgeKey === BADGES.COMMUNITY_CONTRIBUTOR),
+    false
+  );
+});
+
+test('computeUserGamification: Community Contributor is not re-earned once persisted', async () => {
+  const db = makeDb({
+    intentions: [],
+    userGamificationDoc: {
+      userId: 'u1',
+      earnedBadges: [{ badgeKey: BADGES.COMMUNITY_CONTRIBUTOR, earnedAt: NOW }],
+    },
+  });
+  const neo4jRun = makeNeo4jRun([
+    daysAgo(1),
+    daysAgo(8),
+    daysAgo(15),
+    daysAgo(22),
+  ]);
+  const summary = await computeUserGamification({
+    db,
+    userId: 'u1',
+    neo4jRun,
+    now: NOW,
+  });
+  assert.equal(
+    summary.newlyEarned.some(
+      (b) => b.badgeKey === BADGES.COMMUNITY_CONTRIBUTOR
+    ),
+    false
+  );
 });

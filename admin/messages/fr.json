@@ -808,7 +808,9 @@
         "participants": "Participants",
         "cueConfig": "Configuration des repères",
         "habitCreation": "Création d'habitudes",
-        "reminders": "Rappels"
+        "reminders": "Rappels",
+        "behaviorChange": "Changement de comportement",
+        "gamification": "Gamification"
       },
       "fields": {
         "nameLabel": "Nom *",
@@ -1063,6 +1065,31 @@
       "summaryOff": "Désactivé",
       "summaryParticipantChoice": "Le participant choisit l'heure",
       "summaryFixed": "Fixé à {time}",
+      "summaryPerGroup": "Par groupe ({on}/{total} activés)"
+    },
+    "behaviorChangeTab": {
+      "habitStackingLabel": "Empilement d'habitudes",
+      "habitStackingHint": "Lorsqu'activé, les participants peuvent ancrer une nouvelle habitude sur une habitude existante (« après m'être brossé les dents, je vais… »).",
+      "habitStackingEnabledLabel": "Empilement d'habitudes activé",
+      "reminderContentLabel": "Rappels d'intention de mise en œuvre",
+      "reminderContentHint": "Lorsqu'activé, le texte du rappel utilise l'intention de mise en œuvre du participant (« quand X, je ferai Y ») au lieu d'une formulation générique.",
+      "reminderContentEnabledLabel": "Utiliser le texte d'intention de mise en œuvre",
+      "infoOverloadLabel": "Protection contre la surcharge d'informations",
+      "infoOverloadHint": "Lorsqu'activé, une nouvelle habitude d'un type donné n'est débloquée que lorsqu'une habitude existante de ce type atteint un palier de fréquence de rappel — évitant la surcharge liée à trop d'habitudes à la fois.",
+      "infoOverloadEnabledLabel": "Protection activée",
+      "infoOverloadOptOutLabel": "Permettre aux participants de se désinscrire",
+      "perGroupLabel": "Configurer par groupe",
+      "summaryOn": "Activé",
+      "summaryOff": "Désactivé",
+      "summaryPerGroup": "Par groupe ({on}/{total} activés)"
+    },
+    "gamificationTab": {
+      "label": "Gamification",
+      "hint": "Lorsqu'activé, les participants gagnent des XP, des niveaux et des badges d'encouragement en développant leurs habitudes. Le réglage des XP et des niveaux est configuré globalement.",
+      "enabledLabel": "Gamification activée",
+      "perGroupLabel": "Configurer par groupe",
+      "summaryOn": "Activé",
+      "summaryOff": "Désactivé",
       "summaryPerGroup": "Par groupe ({on}/{total} activés)"
     },
     "analyticsTab": {

@@ -346,6 +346,7 @@ class InformationOverloadPrefs {
 class Gamification {
   /// Creates a [Gamification] summary.
   const Gamification({
+    required this.enabled,
     required this.totalXp,
     required this.level,
     required this.xpIntoLevel,
@@ -353,9 +354,17 @@ class Gamification {
     required this.nextLevelXp,
     required this.badges,
     required this.newlyEarned,
+    this.shareCount = 0,
+    this.shareStreakWeeks = 0,
   });
 
-  /// Total accumulated XP across active habits.
+  /// Whether gamification is enabled for this participant's study/group —
+  /// the admin-configurable off-switch (`gamificationEnabled`). When false,
+  /// every other field is zeroed; callers should hide the feature entirely
+  /// rather than showing an all-zero card.
+  final bool enabled;
+
+  /// Total accumulated XP across active habits, plus sharing (§7.5).
   final int totalXp;
 
   /// Current level.
@@ -371,11 +380,18 @@ class Gamification {
   final int nextLevelXp;
 
   /// All currently-earned badges (badgeKey per habit; may repeat keys).
+  /// User-level badges (e.g. Community Contributor) carry a null habit id.
   final List<GamificationBadge> badges;
 
   /// Badges newly earned on this read — used to fire a one-time praise
   /// notification.
   final List<GamificationBadge> newlyEarned;
+
+  /// Habits shared/donated to the community.
+  final int shareCount;
+
+  /// Consecutive weeks with at least one share, ending this week or last.
+  final int shareStreakWeeks;
 
   /// Distinct earned badge keys, for a compact profile display.
   Set<String> get distinctBadgeKeys =>
@@ -383,6 +399,7 @@ class Gamification {
 
   /// Deserialises from the /habits/intentions/gamification response.
   factory Gamification.fromJson(Map<String, dynamic> json) => Gamification(
+        enabled: json['enabled'] as bool? ?? true,
         totalXp: (json['totalXp'] as num?)?.toInt() ?? 0,
         level: (json['level'] as num?)?.toInt() ?? 1,
         xpIntoLevel: (json['xpIntoLevel'] as num?)?.toInt() ?? 0,
@@ -398,6 +415,8 @@ class Gamification {
                 .map(GamificationBadge.fromJson)
                 .toList() ??
             const [],
+        shareCount: (json['shareCount'] as num?)?.toInt() ?? 0,
+        shareStreakWeeks: (json['shareStreakWeeks'] as num?)?.toInt() ?? 0,
       );
 }
 

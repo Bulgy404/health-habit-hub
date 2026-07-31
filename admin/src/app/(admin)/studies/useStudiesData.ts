@@ -40,6 +40,17 @@ interface StudyGroup {
     endOfStudy: ReminderModeValue | null;
     studyUpdate: ReminderModeValue | null;
   } | null;
+  // §7.1/§7.2/§7.3/§7.5 group-level overrides (null = inherit study-level).
+  habitStackingEnabled?: boolean | null;
+  reminderContentMode?: "generic" | "implementation_intention" | null;
+  informationOverloadGuard?: InformationOverloadGuard | null;
+  gamificationEnabled?: boolean | null;
+}
+
+/** §7.3 Information Overload guard — a growing per-type habit cap. */
+export interface InformationOverloadGuard {
+  enabled: boolean;
+  userOptOutAllowed: boolean;
 }
 
 export interface StudySummary {
@@ -55,6 +66,11 @@ export interface StudySummary {
   habitEntryMode: "freeText" | "structured";
   /** Activity-type catalog keys offered when habitEntryMode is 'structured'. */
   structuredActivityKeys: string[];
+  // §7.1/§7.2/§7.3/§7.5 study-level feature config.
+  habitStackingEnabled: boolean;
+  reminderContentMode: "generic" | "implementation_intention";
+  informationOverloadGuard: InformationOverloadGuard | null;
+  gamificationEnabled: boolean;
   reminders?: RemindersConfig;
   endDate?: string | null;
   endOfStudyNotification?: { title: string; body: string };

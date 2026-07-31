@@ -22,3 +22,23 @@ export async function countHabitsByUser(neo4jRun, userId) {
   const cnt = records[0]?.cnt;
   return typeof cnt?.toNumber === 'function' ? cnt.toNumber() : (cnt ?? 0);
 }
+
+/**
+ * §7.5 Gamification — timestamps of every habit a user has shared/donated,
+ * for share-based XP and the "shares regularly" badge. `created_at` is
+ * stamped on the Habit node at donation time (habitDonationService.js) and
+ * only donations ever create a Habit node for a given userID, so this is
+ * equivalent to querying the `(:User)-[:DONATED]->(:Habit)` edge directly.
+ *
+ * @param {Function} neo4jRun - Neo4j query runner
+ * @param {string} userId     - The userID property on Habit nodes
+ * @returns {Promise<string[]>} ISO timestamps, oldest first
+ */
+export async function getDonationDatesByUser(neo4jRun, userId) {
+  const records = await neo4jRun(
+    `MATCH (h:Habit {userID: $userId}) WHERE h.created_at IS NOT NULL
+     RETURN h.created_at AS at ORDER BY at ASC`,
+    { userId }
+  );
+  return records.map((r) => r.at).filter((at) => typeof at === 'string');
+}

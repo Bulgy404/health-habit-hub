@@ -808,7 +808,9 @@
         "participants": "Deelnemers",
         "cueConfig": "Cue-configuratie",
         "habitCreation": "Gewoonte aanmaken",
-        "reminders": "Herinneringen"
+        "reminders": "Herinneringen",
+        "behaviorChange": "Gedragsverandering",
+        "gamification": "Gamification"
       },
       "fields": {
         "nameLabel": "Naam *",
@@ -1063,6 +1065,31 @@
       "summaryOff": "Uit",
       "summaryParticipantChoice": "Deelnemer kiest de tijd",
       "summaryFixed": "Vast om {time}",
+      "summaryPerGroup": "Per groep ({on}/{total} aan)"
+    },
+    "behaviorChangeTab": {
+      "habitStackingLabel": "Gewoonten stapelen",
+      "habitStackingHint": "Wanneer ingeschakeld kunnen deelnemers een nieuwe gewoonte koppelen aan een bestaande (\"nadat ik mijn tanden heb gepoetst, ga ik…\").",
+      "habitStackingEnabledLabel": "Gewoonten stapelen ingeschakeld",
+      "reminderContentLabel": "Implementatie-intentie-herinneringen",
+      "reminderContentHint": "Wanneer ingeschakeld gebruikt de herinneringstekst de implementatie-intentie van de deelnemer (\"wanneer X, dan doe ik Y\") in plaats van algemene bewoordingen.",
+      "reminderContentEnabledLabel": "Implementatie-intentietekst gebruiken",
+      "infoOverloadLabel": "Bescherming tegen informatie-overload",
+      "infoOverloadHint": "Wanneer ingeschakeld wordt een nieuwe gewoonte van een bepaald type pas ontgrendeld zodra een bestaande van dat type een herinneringsfrequentie-niveau bereikt — dit voorkomt overbelasting door te veel gewoonten tegelijk.",
+      "infoOverloadEnabledLabel": "Bescherming ingeschakeld",
+      "infoOverloadOptOutLabel": "Deelnemers laten afmelden",
+      "perGroupLabel": "Per groep configureren",
+      "summaryOn": "Aan",
+      "summaryOff": "Uit",
+      "summaryPerGroup": "Per groep ({on}/{total} aan)"
+    },
+    "gamificationTab": {
+      "label": "Gamification",
+      "hint": "Wanneer ingeschakeld verdienen deelnemers XP, niveaus en lofbadges voor het opbouwen van hun gewoonten. De XP- en niveau-instellingen worden globaal geconfigureerd.",
+      "enabledLabel": "Gamification ingeschakeld",
+      "perGroupLabel": "Per groep configureren",
+      "summaryOn": "Aan",
+      "summaryOff": "Uit",
       "summaryPerGroup": "Per groep ({on}/{total} aan)"
     },
     "analyticsTab": {

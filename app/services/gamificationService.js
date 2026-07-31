@@ -14,7 +14,11 @@
  * only so a badge isn't re-notified.
  */
 
+import { ObjectId } from 'mongodb';
 import { COLLECTION } from '../models/implementationIntention.js';
+import { COLLECTION as USER_GAMIFICATION } from '../models/userGamification.js';
+import { getEnrollment } from './enrollmentNeo4j.js';
+import { getDonationDatesByUser } from '../db/adminQueries.js';
 import {
   FREQUENCIES,
   readReminderConfig,
@@ -31,6 +35,7 @@ export const BADGES = {
   SECOND_NATURE: 'second_nature', // habit reaches the 'off' tier
   HABIT_ARCHITECT: 'habit_architect', // created via habit stacking (§7.1)
   QUIT_CHAMPION: 'quit_champion', // a quit habit reaches 'off'
+  COMMUNITY_CONTRIBUTOR: 'community_contributor', // shares habits regularly
 };
 
 export const DEFAULT_GAMIFICATION_CONFIG = {
@@ -44,6 +49,13 @@ export const DEFAULT_GAMIFICATION_CONFIG = {
   // Level curve: xpForLevel(n) = round(levelCurveBase * n^levelCurveExp).
   levelCurveBase: 100,
   levelCurveExp: 1.5,
+  // XP per habit shared/donated to the community. User-level, not tied to
+  // any one tracked intention — a share contributes to the shared corpus,
+  // it isn't a personal habit-formation event.
+  xpPerShare: 20,
+  // Consecutive weeks with >=1 share required for Community Contributor —
+  // rewards sharing *regularly*, not a single one-off share.
+  shareStreakWeeksForBadge: 4,
 };
 
 /**
@@ -65,6 +77,8 @@ export async function readGamificationConfig(db) {
             'gamification_xp_per_tier_up',
             'gamification_level_curve_base',
             'gamification_level_curve_exp',
+            'gamification_xp_per_share',
+            'gamification_share_streak_weeks_for_badge',
           ],
         },
       })
@@ -93,6 +107,14 @@ export async function readGamificationConfig(db) {
       levelCurveExp: num(
         'gamification_level_curve_exp',
         DEFAULT_GAMIFICATION_CONFIG.levelCurveExp
+      ),
+      xpPerShare: num(
+        'gamification_xp_per_share',
+        DEFAULT_GAMIFICATION_CONFIG.xpPerShare
+      ),
+      shareStreakWeeksForBadge: num(
+        'gamification_share_streak_weeks_for_badge',
+        DEFAULT_GAMIFICATION_CONFIG.shareStreakWeeksForBadge
       ),
     };
   } catch {
@@ -133,6 +155,36 @@ function streakMilestoneXp(streakDays, config) {
     if (streakDays >= Number(days)) xp += bonus;
   }
   return xp;
+}
+
+/**
+ * §7.5 — consecutive weeks (ending this week or last) with at least one
+ * share/donation, for the Community Contributor badge. Mirrors
+ * `currentStreakDays`'s day-based logic (reminderPlanService.js), one week
+ * bucket at a time instead of one day, so "regularly" means sustained,
+ * repeated sharing rather than a single one-off contribution.
+ * @param {string[]} donationDates ISO timestamps
+ * @param {Date} now
+ * @returns {number}
+ */
+export function currentShareStreakWeeks(donationDates, now = new Date()) {
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  const weeksSinceNow = new Set(
+    donationDates.map((d) =>
+      Math.floor((now.getTime() - new Date(d).getTime()) / WEEK_MS)
+    )
+  );
+  // A streak may not yet include "this week" (week 0) if nothing has been
+  // shared since it started — allow it to instead start from last week, same
+  // as currentStreakDays allowing yesterday to anchor an ongoing streak.
+  let week = weeksSinceNow.has(0) ? 0 : 1;
+  if (!weeksSinceNow.has(week)) return 0;
+  let streak = 0;
+  while (weeksSinceNow.has(week)) {
+    streak += 1;
+    week += 1;
+  }
+  return streak;
 }
 
 /**
@@ -198,6 +250,146 @@ export function computeHabitGamification({
 }
 
 /**
+ * Resolve whether gamification is enabled for a participant, following the same
+ * study→group nullable-override pattern as the other §7 feature flags (see
+ * habitConfigService.resolveHabitConfig). Defaults to enabled for
+ * public/unenrolled users and when no enrollment lookup is available.
+ * @param {{ db: import('mongodb').Db, userId: string, neo4jRun?: Function }} deps
+ * @returns {Promise<boolean>}
+ */
+export async function resolveGamificationEnabled({ db, userId, neo4jRun }) {
+  if (!neo4jRun) return true;
+  let enrollment = null;
+  try {
+    enrollment = await getEnrollment(neo4jRun, String(userId));
+  } catch {
+    return true;
+  }
+  if (!enrollment?.studyId) return true;
+
+  let studyOid;
+  try {
+    studyOid = new ObjectId(enrollment.studyId);
+  } catch {
+    return true;
+  }
+  const study = await db.collection('studies').findOne({ _id: studyOid });
+  if (!study) return true;
+
+  let enabled = study.gamificationEnabled !== false;
+  if (enrollment.groupId) {
+    const group = (study.groups || []).find(
+      (g) => g.id?.toString() === enrollment.groupId
+    );
+    // A non-null group override wins over the study-level baseline.
+    if (group?.gamificationEnabled != null) {
+      enabled = group.gamificationEnabled !== false;
+    }
+  }
+  return enabled;
+}
+
+/** Disabled-state summary — same shape as an enabled read, but all-zero. */
+function disabledGamificationSummary() {
+  return {
+    enabled: false,
+    totalXp: 0,
+    level: 1,
+    xpIntoLevel: 0,
+    xpToNextLevel: 0,
+    nextLevelXp: 0,
+    badges: [],
+    newlyEarned: [],
+    perHabit: [],
+    shareCount: 0,
+    shareStreakWeeks: 0,
+  };
+}
+
+/**
+ * §7.5 — XP and the Community Contributor badge for sharing/donating habits.
+ * User-level (not tied to any one tracked intention), so it reads Neo4j
+ * donation timestamps directly rather than a Mongo per-habit doc, and
+ * persists any newly-earned badge onto a small per-user Mongo doc
+ * (`user_gamification`) instead of onto an intention.
+ *
+ * Best-effort: with no `neo4jRun` (e.g. some test setups), or on a query
+ * error, contributes zero XP/badges rather than failing the whole summary —
+ * consistent with how the rest of this service treats missing dependencies.
+ *
+ * @param {{ db: import('mongodb').Db, userId: string, neo4jRun?: Function, config: typeof DEFAULT_GAMIFICATION_CONFIG, now: Date, persist: boolean }} deps
+ * @returns {Promise<{ xp: number, shareCount: number, shareStreakWeeks: number, badges: string[], newlyEarned: Array }>}
+ */
+async function computeShareGamification({
+  db,
+  userId,
+  neo4jRun,
+  config,
+  now,
+  persist,
+}) {
+  if (!neo4jRun) {
+    return {
+      xp: 0,
+      shareCount: 0,
+      shareStreakWeeks: 0,
+      badges: [],
+      newlyEarned: [],
+    };
+  }
+
+  let donationDates = [];
+  try {
+    donationDates = await getDonationDatesByUser(neo4jRun, String(userId));
+  } catch {
+    return {
+      xp: 0,
+      shareCount: 0,
+      shareStreakWeeks: 0,
+      badges: [],
+      newlyEarned: [],
+    };
+  }
+
+  const shareCount = donationDates.length;
+  const shareStreakWeeks = currentShareStreakWeeks(donationDates, now);
+  const xp = shareCount * config.xpPerShare;
+
+  const badges = [];
+  if (shareStreakWeeks >= config.shareStreakWeeksForBadge) {
+    badges.push(BADGES.COMMUNITY_CONTRIBUTOR);
+  }
+
+  const newlyEarned = [];
+  if (badges.length > 0) {
+    const existing = await db
+      .collection(USER_GAMIFICATION)
+      .findOne({ userId: String(userId) });
+    const already = new Set(
+      (existing?.earnedBadges ?? []).map((b) => b.badgeKey)
+    );
+    const userNew = badges.filter((k) => !already.has(k));
+    for (const badgeKey of userNew) {
+      const entry = { badgeKey, earnedAt: now };
+      newlyEarned.push({ intentionId: null, ...entry });
+      if (persist) {
+        await db.collection(USER_GAMIFICATION).updateOne(
+          { userId: String(userId) },
+          {
+            $push: { earnedBadges: entry },
+            $set: { updatedAt: now },
+            $setOnInsert: { userId: String(userId) },
+          },
+          { upsert: true }
+        );
+      }
+    }
+  }
+
+  return { xp, shareCount, shareStreakWeeks, badges, newlyEarned };
+}
+
+/**
  * Compute the whole-user gamification summary across active habits, persisting
  * any *newly* earned badges onto each habit's `earnedBadges` (so they are not
  * re-notified) and returning the aggregate plus the list of badges earned this
@@ -209,9 +401,15 @@ export function computeHabitGamification({
 export async function computeUserGamification({
   db,
   userId,
+  neo4jRun,
   now = new Date(),
   persist = true,
 }) {
+  // §7.5 — respect the study/group gamification toggle. When off, return a
+  // zeroed summary so the client can hide the feature without extra work.
+  const enabled = await resolveGamificationEnabled({ db, userId, neo4jRun });
+  if (!enabled) return disabledGamificationSummary();
+
   const [config, reminderConfig] = await Promise.all([
     readGamificationConfig(db),
     readReminderConfig(db),
@@ -284,12 +482,29 @@ export async function computeUserGamification({
     });
   }
 
+  // §7.5 — sharing/donating habits earns XP and (with sustained sharing) the
+  // Community Contributor badge, on top of the per-habit signals above.
+  const shareResult = await computeShareGamification({
+    db,
+    userId,
+    neo4jRun,
+    config,
+    now,
+    persist,
+  });
+  totalXp += shareResult.xp;
+  for (const badgeKey of shareResult.badges) {
+    allBadges.push({ intentionId: null, badgeKey });
+  }
+  newlyEarned.push(...shareResult.newlyEarned);
+
   const { level, xpIntoLevel, xpToNextLevel, nextLevelXp } = levelForXp(
     totalXp,
     config
   );
 
   return {
+    enabled: true,
     totalXp,
     level,
     xpIntoLevel,
@@ -298,5 +513,7 @@ export async function computeUserGamification({
     badges: allBadges,
     newlyEarned,
     perHabit,
+    shareCount: shareResult.shareCount,
+    shareStreakWeeks: shareResult.shareStreakWeeks,
   };
 }

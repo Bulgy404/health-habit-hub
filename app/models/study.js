@@ -119,6 +119,8 @@ export const VALIDATOR = {
       },
       // §7.3 Information Overload — growing per-type habit cap guard.
       informationOverloadGuard: INFO_OVERLOAD_GUARD_BSON,
+      // §7.5 Gamification — study-wide on/off toggle; a group's value overrides.
+      gamificationEnabled: { bsonType: 'bool' },
       // Optional: absence is treated as 'freeText' for backward compatibility.
       habitEntryMode: { bsonType: 'string', enum: ['freeText', 'structured'] },
       structuredActivityKeys: {
@@ -167,6 +169,8 @@ export const VALIDATOR = {
               enum: ['generic', 'implementation_intention', null],
             },
             informationOverloadGuard: INFO_OVERLOAD_GUARD_BSON,
+            // §7.5 group-level gamification override (null = inherit study).
+            gamificationEnabled: { bsonType: ['bool', 'null'] },
           },
         },
       },

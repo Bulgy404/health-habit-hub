@@ -10,7 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_format.dart';
 import '../../widgets/contribution_graph_widget.dart';
-import '../../widgets/srhi_sparkline_widget.dart';
+import '../../widgets/srhi_chart_widget.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
 
@@ -186,9 +186,9 @@ class HabitDetailScreen extends ConsumerWidget {
                                   .bodySmall
                                   ?.copyWith(color: Colors.grey))
                         else
-                          SrhiSparklineWidget(
+                          SrhiChartWidget(
                             trajectory: trajectory,
-                            height: 120,
+                            height: 220,
                           ),
                       ],
                     );

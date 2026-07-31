@@ -25,6 +25,8 @@ const Map<String, BadgeMeta> kBadgeMeta = {
   'second_nature': BadgeMeta('Second Nature', Icons.auto_awesome),
   'habit_architect': BadgeMeta('Habit Architect', Icons.account_tree_outlined),
   'quit_champion': BadgeMeta('Quit Champion', Icons.emoji_events_outlined),
+  'community_contributor':
+      BadgeMeta('Community Contributor', Icons.diversity_3_outlined),
 };
 
 /// Resolve badge metadata, with a safe fallback for unknown keys.
@@ -63,6 +65,10 @@ const Map<String, List<String>> kPraiseMessages = {
   'quit_champion': [
     'Quit Champion — you broke the pattern. Huge.',
     "You've left that habit behind for good. Champion.",
+  ],
+  'community_contributor': [
+    'Community Contributor — thanks for sharing, week after week.',
+    'Your shared habits are helping others find theirs. Keep it up.',
   ],
 };
 

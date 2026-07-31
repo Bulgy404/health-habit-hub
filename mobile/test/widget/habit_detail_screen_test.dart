@@ -8,6 +8,7 @@ import 'package:hhh/features/my_habits/my_habits_models.dart';
 import 'package:hhh/features/my_habits/my_habits_service.dart';
 import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/widgets/contribution_graph_widget.dart';
+import 'package:hhh/widgets/srhi_chart_widget.dart';
 
 final _fakeDio = Dio();
 
@@ -115,6 +116,33 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('5.3'), findsOneWidget);
+    // The labelled trajectory chart replaces the axis-less sparkline.
+    expect(find.byType(SrhiChartWidget), findsOneWidget);
+  });
+
+  testWidgets('renders the SRHI chart with a single submitted point', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildSubject(
+        _FakeMyHabitsService(
+          intentions: [_intention],
+          trajectory: const [
+            SrhiTrajectoryPoint(weekNumber: 1, score: 4.0),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // A single fill should read as a chart (axes + point), not a lone dot.
+    expect(find.byType(SrhiChartWidget), findsOneWidget);
+    expect(find.text('Study week'), findsOneWidget);
+    expect(find.text('SRHI score (1–7)'), findsOneWidget);
+    expect(
+      find.text('SRHI data will appear after your first weekly check-in.'),
+      findsNothing,
+    );
   });
 
   testWidgets('shows "Due now" when the next check-in is not in the future', (

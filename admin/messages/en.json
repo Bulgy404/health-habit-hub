@@ -808,7 +808,9 @@
         "participants": "Participants",
         "cueConfig": "Cue Config",
         "habitCreation": "Habit Creation",
-        "reminders": "Reminders"
+        "reminders": "Reminders",
+        "behaviorChange": "Behavior Change",
+        "gamification": "Gamification"
       },
       "fields": {
         "nameLabel": "Name *",
@@ -1114,6 +1116,31 @@
       "summaryOff": "Off",
       "summaryParticipantChoice": "Participant picks the time",
       "summaryFixed": "Fixed at {time}",
+      "summaryPerGroup": "Per group ({on}/{total} on)"
+    },
+    "behaviorChangeTab": {
+      "habitStackingLabel": "Habit Stacking",
+      "habitStackingHint": "When on, participants can anchor a new habit onto an existing one (\"after I brush my teeth, I will…\").",
+      "habitStackingEnabledLabel": "Habit stacking enabled",
+      "reminderContentLabel": "Implementation-Intention Reminders",
+      "reminderContentHint": "When on, reminder copy uses the participant's implementation intention (\"when X, I will Y\") instead of generic wording.",
+      "reminderContentEnabledLabel": "Use implementation-intention copy",
+      "infoOverloadLabel": "Information-Overload Guard",
+      "infoOverloadHint": "When on, a new habit of a given type only unlocks once an existing one of that type reaches a reminder-frequency tier — preventing overload from too many habits at once.",
+      "infoOverloadEnabledLabel": "Guard enabled",
+      "infoOverloadOptOutLabel": "Let participants opt out",
+      "perGroupLabel": "Configure per group",
+      "summaryOn": "On",
+      "summaryOff": "Off",
+      "summaryPerGroup": "Per group ({on}/{total} on)"
+    },
+    "gamificationTab": {
+      "label": "Gamification",
+      "hint": "When on, participants earn XP, levels, and praise badges for building their habits. XP and level tuning is configured globally.",
+      "enabledLabel": "Gamification enabled",
+      "perGroupLabel": "Configure per group",
+      "summaryOn": "On",
+      "summaryOff": "Off",
       "summaryPerGroup": "Per group ({on}/{total} on)"
     }
   },

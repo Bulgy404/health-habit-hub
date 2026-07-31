@@ -1,0 +1,108 @@
+<svg width="1260" height="330" viewBox="0 0 1260 330" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .bg { fill: #FFFFFF; }
+      .label { font-size: 14px; font-weight: 700; fill: #1E2422; text-anchor: middle; }
+      .trigger { font-size: 11px; fill: #6B6B67; text-anchor: middle; }
+    </style>
+  </defs>
+  <rect width="1260" height="330" class="bg"/>
+
+  <!-- 7 medallions, 180px pitch -->
+
+  <!-- 1. First Step — indigo, flag -->
+  <g transform="translate(90,150)">
+    <circle r="52" fill="#F1F0FB" stroke="#4F46E5" stroke-width="3"/>
+    <circle r="44" fill="none" stroke="#4F46E5" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+    <g stroke="#4F46E5" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-10 18 V-20"/>
+      <path d="M-10 -20 L14 -13 L-10 -6 Z" fill="#4F46E5"/>
+    </g>
+    <text y="86" class="label">First Step</text>
+    <text y="104" class="trigger">habit created</text>
+  </g>
+
+  <!-- 2. Building Momentum — amber, trending up -->
+  <g transform="translate(270,150)">
+    <circle r="52" fill="#FFF8E1" stroke="#FFA000" stroke-width="3"/>
+    <circle r="44" fill="none" stroke="#FFA000" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+    <g stroke="#FFA000" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-18 14 L-6 0 L4 8 L18 -14"/>
+      <path d="M6 -14 H18 V-2"/>
+    </g>
+    <text y="86" class="label">Building</text>
+    <text y="102" class="label">Momentum</text>
+    <text y="120" class="trigger">first reminder tier-up</text>
+  </g>
+
+  <!-- 3. Steady Habit — indigo, calendar -->
+  <g transform="translate(450,150)">
+    <circle r="52" fill="#F1F0FB" stroke="#4F46E5" stroke-width="3"/>
+    <circle r="44" fill="none" stroke="#4F46E5" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+    <g stroke="#4F46E5" stroke-width="2.2" fill="none" stroke-linejoin="round">
+      <rect x="-17" y="-14" width="34" height="30" rx="3"/>
+      <line x1="-17" y1="-4" x2="17" y2="-4"/>
+      <line x1="-9" y1="-20" x2="-9" y2="-10"/>
+      <line x1="9" y1="-20" x2="9" y2="-10"/>
+    </g>
+    <circle cx="-8" cy="6" r="1.8" fill="#4F46E5"/>
+    <circle cx="1" cy="6" r="1.8" fill="#4F46E5"/>
+    <circle cx="10" cy="6" r="1.8" fill="#4F46E5"/>
+    <text y="86" class="label">Steady Habit</text>
+    <text y="104" class="trigger">14-day streak</text>
+  </g>
+
+  <!-- 4. Second Nature — green, sparkle -->
+  <g transform="translate(630,150)">
+    <circle r="52" fill="#E8F5E9" stroke="#43A047" stroke-width="3"/>
+    <circle r="44" fill="none" stroke="#43A047" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+    <path d="M0 -22 L6 -6 L22 0 L6 6 L0 22 L-6 6 L-22 0 L-6 -6 Z" fill="#43A047"/>
+    <text y="86" class="label">Second Nature</text>
+    <text y="104" class="trigger">habit reaches 'off' tier</text>
+  </g>
+
+  <!-- 5. Habit Architect — violet, node tree (stacking) -->
+  <g transform="translate(810,150)">
+    <circle r="52" fill="#F1F0FB" stroke="#7C4DFF" stroke-width="3"/>
+    <circle r="44" fill="none" stroke="#7C4DFF" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+    <g stroke="#7C4DFF" stroke-width="2.2" fill="none">
+      <path d="M0 -16 V-2 M0 -2 L-14 12 M0 -2 L14 12"/>
+    </g>
+    <circle cx="0" cy="-20" r="6" fill="#7C4DFF"/>
+    <circle cx="-16" cy="16" r="6" fill="#7C4DFF"/>
+    <circle cx="16" cy="16" r="6" fill="#7C4DFF"/>
+    <text y="86" class="label">Habit Architect</text>
+    <text y="104" class="trigger">created via habit stacking</text>
+  </g>
+
+  <!-- 6. Quit Champion — red (matches quit-habit accent), trophy -->
+  <g transform="translate(990,150)">
+    <circle r="52" fill="#FDECEA" stroke="#E53935" stroke-width="3"/>
+    <circle r="44" fill="none" stroke="#E53935" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+    <g stroke="#E53935" stroke-width="2.2" fill="none" stroke-linejoin="round">
+      <path d="M-12 -16 H12 V-8 A12 12 0 0 1 -12 -8 Z"/>
+      <path d="M-12 -15 H-20 A8 8 0 0 0 -8 -3"/>
+      <path d="M12 -15 H20 A8 8 0 0 1 8 -3"/>
+      <rect x="-3.5" y="-3" width="7" height="12" fill="#E53935"/>
+      <rect x="-9" y="9" width="18" height="5" rx="1.5" fill="#E53935"/>
+    </g>
+    <text y="86" class="label">Quit Champion</text>
+    <text y="104" class="trigger">a quit habit reaches 'off'</text>
+  </g>
+
+  <!-- 7. Community Contributor — teal, three people (shares regularly) -->
+  <g transform="translate(1170,150)">
+    <circle r="52" fill="#E0F7FA" stroke="#00897B" stroke-width="3"/>
+    <circle r="44" fill="none" stroke="#00897B" stroke-width="1" stroke-dasharray="2 4" opacity="0.5"/>
+    <g fill="none" stroke="#00897B" stroke-width="2">
+      <circle cx="0" cy="-12" r="6"/>
+      <circle cx="-15" cy="6" r="6"/>
+      <circle cx="15" cy="6" r="6"/>
+      <path d="M0 -6 V0 M-15 12 V16 M15 12 V16"/>
+      <path d="M-8 2 Q0 8 8 2"/>
+    </g>
+    <text y="86" class="label">Community</text>
+    <text y="102" class="label">Contributor</text>
+    <text y="120" class="trigger">shares habits regularly</text>
+  </g>
+</svg>

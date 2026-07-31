@@ -996,6 +996,9 @@
   "@noTrajectoryYet": {
     "description": "Empty state for trajectory chart"
   },
+  "srhiChartWeekAxis": "調査週",
+  "srhiChartScoreAxis": "SRHIスコア（1〜7）",
+  "srhiChartTooltip": "第{week}週：{score} / 7",
   "srhiExplanationTitle": "SRHIとは？",
   "@srhiExplanationTitle": {
     "description": "Title of the dismissible SRHI explainer card on the habit detail screen"

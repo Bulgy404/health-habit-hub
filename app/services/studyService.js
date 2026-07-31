@@ -157,6 +157,7 @@ export async function listStudies({ db, page = 1, limit = 20 }) {
           ? 'implementation_intention'
           : 'generic',
       informationOverloadGuard: s.informationOverloadGuard ?? null,
+      gamificationEnabled: s.gamificationEnabled !== false,
       reminders: normalizeReminders(s),
       endDate: s.endDate ?? null,
       endOfStudyNotification: normalizeEndOfStudyContent(s),
@@ -188,6 +189,7 @@ export async function createStudy({
   habitStackingEnabled = true,
   reminderContentMode = 'generic',
   informationOverloadGuard = null,
+  gamificationEnabled = true,
   endDate = null,
   endOfStudyNotification,
   reminders,
@@ -233,6 +235,7 @@ export async function createStudy({
             informationOverloadGuard.userOptOutAllowed === true,
         }
       : null,
+    gamificationEnabled: gamificationEnabled !== false,
     reminders: reminders ?? {},
     endDate: endDate ? new Date(endDate) : null,
     endOfStudyNotification: normalizeEndOfStudyContent({
@@ -302,6 +305,7 @@ export async function getStudy({ db, id }) {
         ? 'implementation_intention'
         : 'generic',
     informationOverloadGuard: study.informationOverloadGuard ?? null,
+    gamificationEnabled: study.gamificationEnabled !== false,
     reminders: normalizeReminders(study),
     endDate: study.endDate ?? null,
     endOfStudyNotification: normalizeEndOfStudyContent(study),
@@ -373,6 +377,8 @@ export async function updateStudy({ db, id, updates, neo4jRun }) {
             updates.informationOverloadGuard.userOptOutAllowed === true,
         }
       : null;
+  if (updates.gamificationEnabled !== undefined)
+    $set.gamificationEnabled = updates.gamificationEnabled;
   if (updates.structuredActivityKeys !== undefined)
     $set.structuredActivityKeys = Array.isArray(updates.structuredActivityKeys)
       ? updates.structuredActivityKeys
@@ -729,6 +735,8 @@ export async function updateGroupConfig({ db, studyId, groupId, config }) {
             userOptOutAllowed:
               config.informationOverloadGuard.userOptOutAllowed === true,
           };
+  if (config.gamificationEnabled !== undefined)
+    updated.gamificationEnabled = config.gamificationEnabled;
 
   groups[groupIndex] = updated;
 

@@ -808,7 +808,9 @@
         "participants": "Teilnehmende",
         "cueConfig": "Cue-Konfiguration",
         "habitCreation": "Gewohnheitserstellung",
-        "reminders": "Erinnerungen"
+        "reminders": "Erinnerungen",
+        "behaviorChange": "Verhaltensänderung",
+        "gamification": "Gamification"
       },
       "fields": {
         "nameLabel": "Name *",
@@ -1114,6 +1116,31 @@
       "summaryOff": "Aus",
       "summaryParticipantChoice": "Teilnehmende Person wählt die Zeit",
       "summaryFixed": "Fest um {time}",
+      "summaryPerGroup": "Pro Gruppe ({on}/{total} an)"
+    },
+    "behaviorChangeTab": {
+      "habitStackingLabel": "Habit Stacking",
+      "habitStackingHint": "Wenn aktiviert, können Teilnehmende eine neue Gewohnheit an eine bestehende koppeln („Nachdem ich mir die Zähne geputzt habe, werde ich …“).",
+      "habitStackingEnabledLabel": "Habit Stacking aktiviert",
+      "reminderContentLabel": "Umsetzungsabsicht-Erinnerungen",
+      "reminderContentHint": "Wenn aktiviert, verwendet der Erinnerungstext die Umsetzungsabsicht der teilnehmenden Person („Wenn X, dann werde ich Y“) statt allgemeiner Formulierungen.",
+      "reminderContentEnabledLabel": "Umsetzungsabsicht-Text verwenden",
+      "infoOverloadLabel": "Schutz vor Informationsüberlastung",
+      "infoOverloadHint": "Wenn aktiviert, wird eine neue Gewohnheit eines bestimmten Typs erst freigeschaltet, wenn eine bestehende dieses Typs eine Erinnerungsfrequenz-Stufe erreicht – so wird Überlastung durch zu viele Gewohnheiten auf einmal vermieden.",
+      "infoOverloadEnabledLabel": "Schutz aktiviert",
+      "infoOverloadOptOutLabel": "Teilnehmenden das Abwählen erlauben",
+      "perGroupLabel": "Pro Gruppe konfigurieren",
+      "summaryOn": "An",
+      "summaryOff": "Aus",
+      "summaryPerGroup": "Pro Gruppe ({on}/{total} an)"
+    },
+    "gamificationTab": {
+      "label": "Gamification",
+      "hint": "Wenn aktiviert, sammeln Teilnehmende XP, Level und Lob-Abzeichen für den Aufbau ihrer Gewohnheiten. Die XP- und Level-Einstellungen werden global konfiguriert.",
+      "enabledLabel": "Gamification aktiviert",
+      "perGroupLabel": "Pro Gruppe konfigurieren",
+      "summaryOn": "An",
+      "summaryOff": "Aus",
       "summaryPerGroup": "Pro Gruppe ({on}/{total} an)"
     }
   },

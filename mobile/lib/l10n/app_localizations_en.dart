@@ -781,6 +781,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'SRHI data will appear after your first weekly check-in.';
 
   @override
+  String get srhiChartWeekAxis => 'Study week';
+
+  @override
+  String get srhiChartScoreAxis => 'SRHI score (1–7)';
+
+  @override
+  String srhiChartTooltip(int week, String score) {
+    return 'Week $week: $score / 7';
+  }
+
+  @override
   String get srhiExplanationTitle => 'What\'s SRHI?';
 
   @override
@@ -1613,16 +1624,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get habitTypeFilterAll => 'All';
 
   @override
-  String get informationOverloadInfo => 'To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.';
+  String get informationOverloadInfo =>
+      'To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.';
 
   @override
-  String get informationOverloadBlocked => 'Let\'s focus on your current habit first — a new slot opens once it becomes more automatic.';
+  String get informationOverloadBlocked =>
+      'Let\'s focus on your current habit first — a new slot opens once it becomes more automatic.';
 
   @override
   String get stackOntoExistingHabitTitle => 'Stack onto an existing habit';
 
   @override
-  String get stackOntoExistingHabitSubtitle => 'Anchor this new habit to one you already do';
+  String get stackOntoExistingHabitSubtitle =>
+      'Anchor this new habit to one you already do';
 
   @override
   String get stackAnchorPickLabel => 'Anchor habit';
@@ -1643,7 +1657,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get informationOverloadOptOutTitle => 'Allow multiple new habits';
 
   @override
-  String get informationOverloadOptOutSubtitle => 'Turn off the one-habit-at-a-time focus guard';
+  String get informationOverloadOptOutSubtitle =>
+      'Turn off the one-habit-at-a-time focus guard';
 
   @override
   String get progressSection => 'Progress';

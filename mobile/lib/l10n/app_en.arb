@@ -1017,6 +1017,22 @@
   "@noTrajectoryYet": {
     "description": "Empty state for trajectory chart"
   },
+  "srhiChartWeekAxis": "Study week",
+  "@srhiChartWeekAxis": {
+    "description": "X-axis title for the SRHI trajectory chart (time)"
+  },
+  "srhiChartScoreAxis": "SRHI score (1–7)",
+  "@srhiChartScoreAxis": {
+    "description": "Y-axis title for the SRHI trajectory chart (habit strength)"
+  },
+  "srhiChartTooltip": "Week {week}: {score} / 7",
+  "@srhiChartTooltip": {
+    "description": "Tooltip shown when tapping a point on the SRHI chart",
+    "placeholders": {
+      "week": { "type": "int" },
+      "score": { "type": "String" }
+    }
+  },
   "srhiExplanationTitle": "What's SRHI?",
   "@srhiExplanationTitle": {
     "description": "Title of the dismissible SRHI explainer card on the habit detail screen"

@@ -203,8 +203,13 @@ class UserSettingsScreen extends ConsumerWidget {
           ),
 
           // ── §7.5 Gamification — level + XP progress ──────────────────
+          // Shown as soon as gamification is enabled for this participant's
+          // study/group — including at zero XP for a brand-new user. An
+          // empty bar is deliberate: it signals there's a progression system
+          // to discover, rather than hiding until there's something to show.
+          // Only truly hidden when the admin has disabled it (`g.enabled`).
           ...ref.watch(gamificationProvider).maybeWhen(
-                data: (g) => (g.totalXp == 0 && g.badges.isEmpty)
+                data: (g) => !g.enabled
                     ? const <Widget>[]
                     : [
                         SectionLabel(l10n.progressSection),

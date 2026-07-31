@@ -49,6 +49,17 @@ interface StudyGroup {
   habitEntryMode?: "freeText" | "structured" | null;
   structuredActivityKeys?: string[] | null;
   reminders?: GroupRemindersConfig;
+  // §7.1/§7.2/§7.3/§7.5 group-level overrides (null = inherit study-level).
+  habitStackingEnabled?: boolean | null;
+  reminderContentMode?: "generic" | "implementation_intention" | null;
+  informationOverloadGuard?: InformationOverloadGuard | null;
+  gamificationEnabled?: boolean | null;
+}
+
+/** §7.3 Information Overload guard — a growing per-type habit cap. */
+interface InformationOverloadGuard {
+  enabled: boolean;
+  userOptOutAllowed: boolean;
 }
 
 interface CueConfig {
@@ -71,6 +82,11 @@ interface StudySummary {
   habitEntryMode: "freeText" | "structured";
   /** Activity-type catalog keys offered when habitEntryMode is 'structured'. */
   structuredActivityKeys: string[];
+  // §7.1/§7.2/§7.3/§7.5 study-level feature config.
+  habitStackingEnabled: boolean;
+  reminderContentMode: "generic" | "implementation_intention";
+  informationOverloadGuard: InformationOverloadGuard | null;
+  gamificationEnabled: boolean;
   reminders?: RemindersConfig;
   endDate?: string | null;
   endOfStudyNotification?: { title: string; body: string };
@@ -3336,6 +3352,503 @@ function StudyUpdateManualSend({ study, token }: { study: StudySummary; token: s
   );
 }
 
+// ── Behavior-change tab ───────────────────────────────────────────────────────
+
+type BehaviorSection = "habitStacking" | "reminderContent" | "infoOverload";
+type Scope = "study" | "group";
+
+const EMPTY_GUARD: InformationOverloadGuard = {
+  enabled: false,
+  userOptOutAllowed: false,
+};
+
+/**
+ * §7.1 Habit Stacking, §7.2 Implementation-Intention reminder copy, and §7.3
+ * Information-Overload guard — three independently study-wide-or-per-group
+ * sections, same shape and layout as HabitCreationTab. Each section owns its
+ * scope switch and Save button; study-scope saves also null out every group
+ * override so inheritance is restored.
+ */
+function BehaviorChangeTab({ study, token }: { study: StudySummary; token: string }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
+  const groups = study.groups;
+
+  // ── Habit stacking (boolean) ────────────────────────────────────────────
+  const [stackScope, setStackScope] = useState<Scope>(() =>
+    groups.some((g) => g.habitStackingEnabled != null) ? "group" : "study"
+  );
+  const [studyStack, setStudyStack] = useState(study.habitStackingEnabled);
+  const [groupStack, setGroupStack] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      groups.map((g) => [g.id, g.habitStackingEnabled ?? study.habitStackingEnabled])
+    )
+  );
+
+  // ── Reminder content mode (boolean: implementation-intention on/off) ─────
+  const studyII = study.reminderContentMode === "implementation_intention";
+  const [reminderScope, setReminderScope] = useState<Scope>(() =>
+    groups.some((g) => g.reminderContentMode != null) ? "group" : "study"
+  );
+  const [studyReminder, setStudyReminder] = useState(studyII);
+  const [groupReminder, setGroupReminder] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      groups.map((g) => [
+        g.id,
+        g.reminderContentMode != null
+          ? g.reminderContentMode === "implementation_intention"
+          : studyII,
+      ])
+    )
+  );
+
+  // ── Information-overload guard ({ enabled, userOptOutAllowed }) ───────────
+  const studyGuard = study.informationOverloadGuard ?? EMPTY_GUARD;
+  const [guardScope, setGuardScope] = useState<Scope>(() =>
+    groups.some((g) => g.informationOverloadGuard != null) ? "group" : "study"
+  );
+  const [studyOverload, setStudyOverload] = useState<InformationOverloadGuard>(studyGuard);
+  const [groupOverload, setGroupOverload] = useState<Record<string, InformationOverloadGuard>>(() =>
+    Object.fromEntries(groups.map((g) => [g.id, g.informationOverloadGuard ?? studyGuard]))
+  );
+
+  const [saving, setSaving] = useState<Record<BehaviorSection, boolean>>({
+    habitStacking: false,
+    reminderContent: false,
+    infoOverload: false,
+  });
+  const [saved, setSaved] = useState<Record<BehaviorSection, boolean>>({
+    habitStacking: false,
+    reminderContent: false,
+    infoOverload: false,
+  });
+  const [errors, setErrors] = useState<Record<BehaviorSection, string>>({
+    habitStacking: "",
+    reminderContent: "",
+    infoOverload: "",
+  });
+
+  function putStudy(body: object) {
+    return apiFetch(`${API_BASE}/${study.id}`, token, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  }
+  function patchGroup(groupId: string, body: object) {
+    return apiFetch(`${API_BASE}/${study.id}/groups/${groupId}/config`, token, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async function runSave(section: BehaviorSection, fn: () => Promise<void>) {
+    setSaving((p) => ({ ...p, [section]: true }));
+    setErrors((p) => ({ ...p, [section]: "" }));
+    try {
+      await fn();
+      setSaved((p) => ({ ...p, [section]: true }));
+    } catch (err) {
+      setErrors((p) => ({
+        ...p,
+        [section]: err instanceof Error ? err.message : t("saveFailedGeneric"),
+      }));
+    } finally {
+      setSaving((p) => ({ ...p, [section]: false }));
+    }
+  }
+
+  const saveHabitStacking = () =>
+    runSave("habitStacking", async () => {
+      if (stackScope === "study") {
+        await putStudy({ habitStackingEnabled: studyStack });
+        await Promise.all(
+          groups.map((g) => patchGroup(g.id, { habitStackingEnabled: null }).catch(() => {}))
+        );
+      } else {
+        await Promise.all(
+          groups.map((g) => patchGroup(g.id, { habitStackingEnabled: groupStack[g.id] }))
+        );
+      }
+    });
+
+  const saveReminderContent = () =>
+    runSave("reminderContent", async () => {
+      const toMode = (b: boolean) => (b ? "implementation_intention" : "generic");
+      if (reminderScope === "study") {
+        await putStudy({ reminderContentMode: toMode(studyReminder) });
+        await Promise.all(
+          groups.map((g) => patchGroup(g.id, { reminderContentMode: null }).catch(() => {}))
+        );
+      } else {
+        await Promise.all(
+          groups.map((g) => patchGroup(g.id, { reminderContentMode: toMode(groupReminder[g.id]) }))
+        );
+      }
+    });
+
+  const saveInfoOverload = () =>
+    runSave("infoOverload", async () => {
+      if (guardScope === "study") {
+        await putStudy({ informationOverloadGuard: studyOverload });
+        await Promise.all(
+          groups.map((g) => patchGroup(g.id, { informationOverloadGuard: null }).catch(() => {}))
+        );
+      } else {
+        await Promise.all(
+          groups.map((g) => patchGroup(g.id, { informationOverloadGuard: groupOverload[g.id] }))
+        );
+      }
+    });
+
+  // ── Overview strip ───────────────────────────────────────────────────────
+  const summarizeBoolScope = (scope: Scope, sv: boolean, gv: Record<string, boolean>) => {
+    if (scope === "study")
+      return sv ? t("behaviorChangeTab.summaryOn") : t("behaviorChangeTab.summaryOff");
+    const on = groups.filter((g) => gv[g.id]).length;
+    return t("behaviorChangeTab.summaryPerGroup", { on, total: groups.length });
+  };
+  const boolActive = (scope: Scope, sv: boolean, gv: Record<string, boolean>) =>
+    scope === "study" ? sv : groups.some((g) => gv[g.id]);
+
+  const overviewCards = [
+    {
+      key: "habitStacking",
+      title: t("behaviorChangeTab.habitStackingLabel"),
+      enabled: boolActive(stackScope, studyStack, groupStack),
+      status: summarizeBoolScope(stackScope, studyStack, groupStack),
+    },
+    {
+      key: "reminderContent",
+      title: t("behaviorChangeTab.reminderContentLabel"),
+      enabled: boolActive(reminderScope, studyReminder, groupReminder),
+      status: summarizeBoolScope(reminderScope, studyReminder, groupReminder),
+    },
+    {
+      key: "infoOverload",
+      title: t("behaviorChangeTab.infoOverloadLabel"),
+      enabled:
+        guardScope === "study"
+          ? studyOverload.enabled
+          : groups.some((g) => groupOverload[g.id]?.enabled),
+      status:
+        guardScope === "study"
+          ? studyOverload.enabled
+            ? t("behaviorChangeTab.summaryOn")
+            : t("behaviorChangeTab.summaryOff")
+          : t("behaviorChangeTab.summaryPerGroup", {
+              on: groups.filter((g) => groupOverload[g.id]?.enabled).length,
+              total: groups.length,
+            }),
+    },
+  ];
+
+  const perGroupToggle = (scope: Scope, onChange: (s: Scope) => void) => (
+    <>
+      <ToggleSwitch
+        className={styles.checkboxLabel}
+        checked={scope === "group"}
+        disabled={groups.length === 0}
+        onChange={(e) => onChange(e.target.checked ? "group" : "study")}
+        label={t("behaviorChangeTab.perGroupLabel")}
+      />
+      {groups.length === 0 && <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>}
+    </>
+  );
+
+  const sectionFooter = (section: BehaviorSection, onSave: () => void) => (
+    <div className={styles.cueConfigFooter}>
+      {saved[section] && <span className={styles.savedMsg}>{t("saved")}</span>}
+      <button className={styles.saveBtn} onClick={onSave} disabled={saving[section]}>
+        {saving[section] ? tc("saving") : tc("save")}
+      </button>
+    </div>
+  );
+
+  return (
+    <div>
+      <div className={styles.reminderOverview}>
+        {overviewCards.map((card) => (
+          <div
+            key={card.key}
+            className={`${styles.reminderOverviewCard} ${card.enabled ? styles.reminderOverviewCardEnabled : ""}`}
+          >
+            <span className={styles.reminderOverviewTitle}>{card.title}</span>
+            <span className={styles.reminderOverviewStatus}>{card.status}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Habit stacking */}
+      <div className={styles.reminderTypeSection} data-testid="behavior-section-habitStacking">
+        <p className={styles.cueConfigGroupLabel}>{t("behaviorChangeTab.habitStackingLabel")}</p>
+        <span className={styles.hint}>{t("behaviorChangeTab.habitStackingHint")}</span>
+        {errors.habitStacking && <div className={styles.errorMsg}>{errors.habitStacking}</div>}
+
+        {stackScope === "study" ? (
+          <ToggleSwitch
+            className={styles.checkboxLabel}
+            checked={studyStack}
+            onChange={(e) => setStudyStack(e.target.checked)}
+            label={t("behaviorChangeTab.habitStackingEnabledLabel")}
+          />
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {groups.map((g) => (
+              <div key={g.id} className={styles.reminderGroupRow}>
+                <p className={styles.cueConfigGroupLabel}>
+                  {g.label || t("groupFallbackLabel", { index: g.index })}
+                </p>
+                <ToggleSwitch
+                  className={styles.checkboxLabel}
+                  checked={groupStack[g.id] ?? false}
+                  onChange={(e) => setGroupStack((p) => ({ ...p, [g.id]: e.target.checked }))}
+                  label={t("behaviorChangeTab.habitStackingEnabledLabel")}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        {perGroupToggle(stackScope, setStackScope)}
+        {sectionFooter("habitStacking", saveHabitStacking)}
+      </div>
+
+      {/* Implementation-intention reminder copy */}
+      <div className={styles.reminderTypeSection} data-testid="behavior-section-reminderContent">
+        <p className={styles.cueConfigGroupLabel}>{t("behaviorChangeTab.reminderContentLabel")}</p>
+        <span className={styles.hint}>{t("behaviorChangeTab.reminderContentHint")}</span>
+        {errors.reminderContent && <div className={styles.errorMsg}>{errors.reminderContent}</div>}
+
+        {reminderScope === "study" ? (
+          <ToggleSwitch
+            className={styles.checkboxLabel}
+            checked={studyReminder}
+            onChange={(e) => setStudyReminder(e.target.checked)}
+            label={t("behaviorChangeTab.reminderContentEnabledLabel")}
+          />
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {groups.map((g) => (
+              <div key={g.id} className={styles.reminderGroupRow}>
+                <p className={styles.cueConfigGroupLabel}>
+                  {g.label || t("groupFallbackLabel", { index: g.index })}
+                </p>
+                <ToggleSwitch
+                  className={styles.checkboxLabel}
+                  checked={groupReminder[g.id] ?? false}
+                  onChange={(e) => setGroupReminder((p) => ({ ...p, [g.id]: e.target.checked }))}
+                  label={t("behaviorChangeTab.reminderContentEnabledLabel")}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        {perGroupToggle(reminderScope, setReminderScope)}
+        {sectionFooter("reminderContent", saveReminderContent)}
+      </div>
+
+      {/* Information-overload guard */}
+      <div className={styles.reminderTypeSection} data-testid="behavior-section-infoOverload">
+        <p className={styles.cueConfigGroupLabel}>{t("behaviorChangeTab.infoOverloadLabel")}</p>
+        <span className={styles.hint}>{t("behaviorChangeTab.infoOverloadHint")}</span>
+        {errors.infoOverload && <div className={styles.errorMsg}>{errors.infoOverload}</div>}
+
+        {guardScope === "study" ? (
+          <div className={styles.reminderSwitchGroup}>
+            <ToggleSwitch
+              className={styles.checkboxLabel}
+              checked={studyOverload.enabled}
+              onChange={(e) => setStudyOverload((v) => ({ ...v, enabled: e.target.checked }))}
+              label={t("behaviorChangeTab.infoOverloadEnabledLabel")}
+            />
+            {studyOverload.enabled && (
+              <ToggleSwitch
+                className={styles.checkboxLabel}
+                checked={studyOverload.userOptOutAllowed}
+                onChange={(e) =>
+                  setStudyOverload((v) => ({ ...v, userOptOutAllowed: e.target.checked }))
+                }
+                label={t("behaviorChangeTab.infoOverloadOptOutLabel")}
+              />
+            )}
+          </div>
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {groups.map((g) => {
+              const v = groupOverload[g.id] ?? EMPTY_GUARD;
+              return (
+                <div key={g.id} className={styles.reminderGroupRow}>
+                  <p className={styles.cueConfigGroupLabel}>
+                    {g.label || t("groupFallbackLabel", { index: g.index })}
+                  </p>
+                  <div className={styles.reminderSwitchGroup}>
+                    <ToggleSwitch
+                      className={styles.checkboxLabel}
+                      checked={v.enabled}
+                      onChange={(e) =>
+                        setGroupOverload((p) => ({
+                          ...p,
+                          [g.id]: { ...v, enabled: e.target.checked },
+                        }))
+                      }
+                      label={t("behaviorChangeTab.infoOverloadEnabledLabel")}
+                    />
+                    {v.enabled && (
+                      <ToggleSwitch
+                        className={styles.checkboxLabel}
+                        checked={v.userOptOutAllowed}
+                        onChange={(e) =>
+                          setGroupOverload((p) => ({
+                            ...p,
+                            [g.id]: { ...v, userOptOutAllowed: e.target.checked },
+                          }))
+                        }
+                        label={t("behaviorChangeTab.infoOverloadOptOutLabel")}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {perGroupToggle(guardScope, setGuardScope)}
+        {sectionFooter("infoOverload", saveInfoOverload)}
+      </div>
+    </div>
+  );
+}
+
+// ── Gamification tab ──────────────────────────────────────────────────────────
+
+/**
+ * §7.5 Gamification — a single study-wide-or-per-group on/off toggle. XP/level
+ * tuning stays global (admin_settings). Same scoped layout as the other tabs.
+ */
+function GamificationTab({ study, token }: { study: StudySummary; token: string }) {
+  const t = useTranslations("studies");
+  const tc = useTranslations("common");
+  const groups = study.groups;
+
+  const [scope, setScope] = useState<Scope>(() =>
+    groups.some((g) => g.gamificationEnabled != null) ? "group" : "study"
+  );
+  const [studyEnabled, setStudyEnabled] = useState(study.gamificationEnabled);
+  const [groupEnabled, setGroupEnabled] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      groups.map((g) => [g.id, g.gamificationEnabled ?? study.gamificationEnabled])
+    )
+  );
+
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSave() {
+    setSaving(true);
+    setError("");
+    try {
+      if (scope === "study") {
+        await apiFetch(`${API_BASE}/${study.id}`, token, {
+          method: "PUT",
+          body: JSON.stringify({ gamificationEnabled: studyEnabled }),
+        });
+        await Promise.all(
+          groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ gamificationEnabled: null }),
+            }).catch(() => {})
+          )
+        );
+      } else {
+        await Promise.all(
+          groups.map((g) =>
+            apiFetch(`${API_BASE}/${study.id}/groups/${g.id}/config`, token, {
+              method: "PATCH",
+              body: JSON.stringify({ gamificationEnabled: groupEnabled[g.id] }),
+            })
+          )
+        );
+      }
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("saveFailedGeneric"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const active = scope === "study" ? studyEnabled : groups.some((g) => groupEnabled[g.id]);
+  const status =
+    scope === "study"
+      ? studyEnabled
+        ? t("gamificationTab.summaryOn")
+        : t("gamificationTab.summaryOff")
+      : t("gamificationTab.summaryPerGroup", {
+          on: groups.filter((g) => groupEnabled[g.id]).length,
+          total: groups.length,
+        });
+
+  return (
+    <div>
+      <div className={styles.reminderOverview}>
+        <div
+          className={`${styles.reminderOverviewCard} ${active ? styles.reminderOverviewCardEnabled : ""}`}
+        >
+          <span className={styles.reminderOverviewTitle}>{t("gamificationTab.label")}</span>
+          <span className={styles.reminderOverviewStatus}>{status}</span>
+        </div>
+      </div>
+
+      <div className={styles.reminderTypeSection} data-testid="gamification-section">
+        <p className={styles.cueConfigGroupLabel}>{t("gamificationTab.label")}</p>
+        <span className={styles.hint}>{t("gamificationTab.hint")}</span>
+        {error && <div className={styles.errorMsg}>{error}</div>}
+
+        {scope === "study" ? (
+          <ToggleSwitch
+            className={styles.checkboxLabel}
+            checked={studyEnabled}
+            onChange={(e) => setStudyEnabled(e.target.checked)}
+            label={t("gamificationTab.enabledLabel")}
+          />
+        ) : (
+          <div className={styles.reminderGroupList}>
+            {groups.map((g) => (
+              <div key={g.id} className={styles.reminderGroupRow}>
+                <p className={styles.cueConfigGroupLabel}>
+                  {g.label || t("groupFallbackLabel", { index: g.index })}
+                </p>
+                <ToggleSwitch
+                  className={styles.checkboxLabel}
+                  checked={groupEnabled[g.id] ?? false}
+                  onChange={(e) => setGroupEnabled((p) => ({ ...p, [g.id]: e.target.checked }))}
+                  label={t("gamificationTab.enabledLabel")}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        <ToggleSwitch
+          className={styles.checkboxLabel}
+          checked={scope === "group"}
+          disabled={groups.length === 0}
+          onChange={(e) => setScope(e.target.checked ? "group" : "study")}
+          label={t("gamificationTab.perGroupLabel")}
+        />
+        {groups.length === 0 && <span className={styles.hint}>{t("cueConfigTab.noGroups")}</span>}
+
+        <div className={styles.cueConfigFooter}>
+          {saved && <span className={styles.savedMsg}>{t("saved")}</span>}
+          <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+            {saving ? tc("saving") : tc("save")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Study form modal ──────────────────────────────────────────────────────────
 
 type ModalTab =
@@ -3345,7 +3858,9 @@ type ModalTab =
   | "participants"
   | "cue-config"
   | "habit-creation"
-  | "reminders";
+  | "reminders"
+  | "behavior-change"
+  | "gamification";
 
 function StudyModal({
   initial,
@@ -3600,6 +4115,18 @@ function StudyModal({
             >
               {t("modal.tabs.reminders")}
             </button>
+            <button
+              className={`${styles.tab} ${activeTab === "behavior-change" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("behavior-change")}
+            >
+              {t("modal.tabs.behaviorChange")}
+            </button>
+            <button
+              className={`${styles.tab} ${activeTab === "gamification" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("gamification")}
+            >
+              {t("modal.tabs.gamification")}
+            </button>
           </div>
         )}
 
@@ -3700,8 +4227,12 @@ function StudyModal({
             initial && <CueConfigTab study={initial} token={token} />
           ) : activeTab === "habit-creation" ? (
             initial && <HabitCreationTab study={initial} token={token} />
-          ) : (
+          ) : activeTab === "reminders" ? (
             initial && <RemindersTab study={initial} token={token} />
+          ) : activeTab === "behavior-change" ? (
+            initial && <BehaviorChangeTab study={initial} token={token} />
+          ) : (
+            initial && <GamificationTab study={initial} token={token} />
           )}
         </div>
 

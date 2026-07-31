@@ -85,6 +85,7 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
       const summary = await computeUserGamification({
         db: database,
         userId: String(req.user.sub),
+        neo4jRun,
       });
       res.json(summary);
     } catch (err) {

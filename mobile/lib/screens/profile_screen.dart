@@ -1041,7 +1041,9 @@ class _StudyMembershipSectionState
 
 /// §7.5 Gamification — a card showing the participant's level, XP progress, and
 /// the badges they've earned across their habits. Silent while loading and
-/// hidden entirely when the user has no habits/badges yet.
+/// hidden only when the admin has disabled gamification for this study/group
+/// — otherwise shown from zero, so a brand-new user sees the empty bar and
+/// gets curious about it rather than the card only appearing once earned.
 class _BadgesSection extends ConsumerWidget {
   const _BadgesSection();
 
@@ -1054,7 +1056,7 @@ class _BadgesSection extends ConsumerWidget {
     return gamificationAsync.maybeWhen(
       data: (g) {
         final keys = g.distinctBadgeKeys.toList();
-        if (keys.isEmpty && g.totalXp == 0) {
+        if (!g.enabled) {
           return const SizedBox.shrink();
         }
         final denom = g.xpIntoLevel + g.xpToNextLevel;
