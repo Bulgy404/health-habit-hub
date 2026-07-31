@@ -186,6 +186,11 @@ async function _createHabitNode(
   // ('standalone'|'stacked') are stored as node properties so the community
   // bubble graph and any admin graph view can filter build vs. quit, and the
   // stacking network is queryable, with a single-property WHERE clause.
+  // habitType here is already the *effective* value resolved in shareHabit()
+  // — an explicit user choice when the structured New Habit flow made one,
+  // otherwise the classifier's own build/quit read of the sentence (see
+  // shareHabit) — this is the only habit_type property Neo4j gets; there is
+  // deliberately no separate "LLM tag" property to keep in sync with it.
   const safeHabitType = habitType === 'quit' ? 'quit' : 'build';
   const safeCreationMode =
     creationMode === 'stacked' ? 'stacked' : 'standalone';
@@ -540,6 +545,7 @@ export async function translateHabit(
  * @param {Function} params.translate  - translate(sentence, src, tgt, base, url) => string|null
  * @param {string} params.translateUrl - LibreTranslate endpoint URL
  * @param {Function} [params.translateTerm] - translateTerm(term, src, tgt, base) => string|null, used to localise new BCIO concept labels for the admin portal
+ * @param {string} [params.habitType] - Explicit 'build'|'quit' choice from the structured New Habit flow. Omitted (undefined) for free-text community donations, which fall back to the classifier's own read of the sentence.
  *
  * @returns {{ is_habit: boolean, uuid?: string, message: string }}
  */
@@ -553,7 +559,7 @@ export async function shareHabit({
   duration = null,
   healthBenefit = null,
   wellbeingImpact = null,
-  habitType = 'build',
+  habitType,
   stackedOnUuid = null,
   creationMode = 'standalone',
   queryNeo4j,
@@ -572,6 +578,16 @@ export async function shareHabit({
       getDb
     );
   }
+
+  // habitType is only set when the caller made an explicit build/quit choice
+  // (the structured New Habit flow); every other route to this pipeline —
+  // most notably the free-text community donation screen — goes through the
+  // same classifier call above, so its own habit_type read is the right
+  // fallback instead of a hardcoded default.
+  const effectiveHabitType =
+    habitType === 'build' || habitType === 'quit'
+      ? habitType
+      : classified.habit_type;
 
   const contextPhrases = await extractContext(
     uuid,
@@ -606,7 +622,7 @@ export async function shareHabit({
       duration,
       healthBenefit,
       wellbeingImpact,
-      habitType,
+      habitType: effectiveHabitType,
       stackedOnUuid,
       creationMode,
       translationEN,
@@ -655,11 +671,14 @@ export async function enqueueHabitDonation({
   duration = null,
   healthBenefit = null,
   wellbeingImpact = null,
-  habitType = 'build',
+  habitType,
   stackedOnUuid = null,
   creationMode = 'standalone',
   habitQueue,
 }) {
+  // habitType is intentionally left undefined (not defaulted here) when the
+  // caller made no explicit choice — the worker's shareHabit() call resolves
+  // that fallback from the classifier, not this queueing step.
   await habitQueue.add(
     'process',
     {

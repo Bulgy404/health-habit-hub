@@ -44,6 +44,8 @@ class ClassifyHabitResponse(BaseModel):
     language: str
     is_habit: bool
     confidence: float
+    habit_type: str | None = None
+    """"build" or "quit" when is_habit is true; null otherwise."""
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +54,18 @@ class ClassifyHabitResponse(BaseModel):
 def _cache_key(sentence: str, language: str) -> str:
     """Build a deterministic Redis key from sentence and language."""
     return make_cache_key("classify_habit", sentence, language)
+
+
+def _normalize_habit_type(value: object, is_habit: bool) -> str | None:
+    """Coerce an LLM-supplied habit_type into "build"/"quit"/None.
+
+    Not a habit → always None. A habit with a missing/unrecognised value
+    defaults to "build" (the same fallback the donation pipeline already
+    uses for community donations with no explicit build/quit choice).
+    """
+    if not is_habit:
+        return None
+    return "quit" if value == "quit" else "build"
 
 
 # ---------------------------------------------------------------------------
@@ -85,6 +99,9 @@ async def classify_habit(body: ClassifyHabitRequest) -> ClassifyHabitResponse:
                     language=body.language,
                     is_habit=data["is_habit"],
                     confidence=data["confidence"],
+                    habit_type=_normalize_habit_type(
+                        data.get("habit_type"), data["is_habit"]
+                    ),
                 )
         except Exception as exc:  # noqa: BLE001
             logger.warning("Redis read error (%s) — falling back to LLM.", exc)
@@ -116,12 +133,21 @@ async def classify_habit(body: ClassifyHabitRequest) -> ClassifyHabitResponse:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={"error": "Classifier returned invalid response", "code": "llm_invalid_response"},
         ) from exc
+    habit_type = _normalize_habit_type(parsed.get("habit_type"), is_habit)
 
     # --- cache write ---
     if redis_client is not None:
         try:
             await redis_client.setex(
-                key, _REDIS_TTL, json.dumps({"is_habit": is_habit, "confidence": confidence})
+                key,
+                _REDIS_TTL,
+                json.dumps(
+                    {
+                        "is_habit": is_habit,
+                        "confidence": confidence,
+                        "habit_type": habit_type,
+                    }
+                ),
             )
         except Exception as exc:  # noqa: BLE001
             logger.warning("Redis write error (%s) — result not cached.", exc)
@@ -132,4 +158,5 @@ async def classify_habit(body: ClassifyHabitRequest) -> ClassifyHabitResponse:
         language=body.language,
         is_habit=is_habit,
         confidence=confidence,
+        habit_type=habit_type,
     )

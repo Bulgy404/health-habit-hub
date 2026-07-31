@@ -8,10 +8,14 @@ A sentence is NOT a habit if it is:
 - A vague aspiration with no concrete recurring behaviour or trigger ("I want to start exercising")
 - Unrelated to health or wellbeing
 
+If the sentence IS a habit, also classify it as one of:
+- "build" — the person is trying to start or increase a behaviour (e.g. "I meditate every morning", "After my morning coffee, I will do 10 pushups.")
+- "quit" — the person is trying to stop, reduce, or resist a behaviour (e.g. "I quit smoking after dinner", "When I feel stressed, I will not check my phone.")
+
 Sentence language: {language}
 Sentence: {sentence}
 
 Reply with a JSON object only — no markdown, no explanation:
-{{"is_habit": true|false, "confidence": 0.0-1.0}}
+{{"is_habit": true|false, "confidence": 0.0-1.0, "habit_type": "build"|"quit"|null}}
 
-`confidence` is your certainty (1.0 = completely certain).
+`confidence` is your certainty (1.0 = completely certain). `habit_type` is null when `is_habit` is false.

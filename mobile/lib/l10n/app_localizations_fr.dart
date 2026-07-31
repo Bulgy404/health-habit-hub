@@ -627,8 +627,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get thankYou => 'Merci';
 
   @override
-  String get noQuestionnairesAssigned =>
-      'Aucun questionnaire n\'est attribué à votre étude.';
+  String get noQuestionnairesDue =>
+      'Aucun questionnaire à remplir pour le moment.';
 
   @override
   String questionnaireCompletedOn(String date) {

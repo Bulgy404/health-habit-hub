@@ -71,17 +71,28 @@ class QuestionnaireService {
 
   /// Returns the questionnaires assigned to the participant's enrolled
   /// study, with titles resolved in [lang].
+  ///
+  /// A 404 means there's nothing to show — either the participant isn't
+  /// enrolled in a study, or the study has no questionnaires assigned —
+  /// which is treated the same as an assigned-but-empty list (`[]`) rather
+  /// than an error, so the profile screen can hide the section instead of
+  /// showing a scary "failed to load" message for an entirely normal state.
   Future<List<ParticipantQuestionnaire>> fetchParticipantQuestionnaires(
     String lang,
   ) async {
-    final response = await _dio.get<List<dynamic>>(
-      '$_baseUrl/participant/questionnaires',
-      queryParameters: {'lang': lang},
-    );
-    return (response.data ?? [])
-        .cast<Map<String, dynamic>>()
-        .map(ParticipantQuestionnaire.fromJson)
-        .toList();
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '$_baseUrl/participant/questionnaires',
+        queryParameters: {'lang': lang},
+      );
+      return (response.data ?? [])
+          .cast<Map<String, dynamic>>()
+          .map(ParticipantQuestionnaire.fromJson)
+          .toList();
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return const [];
+      rethrow;
+    }
   }
 }
 

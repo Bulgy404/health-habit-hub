@@ -789,9 +789,9 @@
   "@thankYou": {
     "description": "AppBar title for confirmation screens"
   },
-  "noQuestionnairesAssigned": "あなたの研究に割り当てられた質問票はありません。",
-  "@noQuestionnairesAssigned": {
-    "description": "Empty state message shown on the profile screen when the participant's study has no questionnaires"
+  "noQuestionnairesDue": "現在回答が必要な質問票はありません。",
+  "@noQuestionnairesDue": {
+    "description": "Shown on the profile screen when the participant's study has assigned questionnaires but none are currently due"
   },
   "questionnaireCompletedOn": "{date}に完了",
   "@questionnaireCompletedOn": {

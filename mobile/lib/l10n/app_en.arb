@@ -792,9 +792,9 @@
   "@thankYou": {
     "description": "AppBar title for confirmation screens"
   },
-  "noQuestionnairesAssigned": "No questionnaires assigned to your study.",
-  "@noQuestionnairesAssigned": {
-    "description": "Empty state message shown on the profile screen when the participant's study has no questionnaires"
+  "noQuestionnairesDue": "No questionnaires due right now.",
+  "@noQuestionnairesDue": {
+    "description": "Shown on the profile screen when the participant's study has assigned questionnaires but none are currently due"
   },
   "questionnaireCompletedOn": "Completed on {date}",
   "@questionnaireCompletedOn": {

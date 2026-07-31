@@ -183,7 +183,7 @@
   "questionnaireThankYou": "Merci d'avoir complété le questionnaire. Vos réponses permettent de personnaliser vos recommandations d'habitudes.",
   "backToProfile": "Retour au profil",
   "thankYou": "Merci",
-  "noQuestionnairesAssigned": "Aucun questionnaire n'est attribué à votre étude.",
+  "noQuestionnairesDue": "Aucun questionnaire à remplir pour le moment.",
   "questionnaireCompletedOn": "Terminé le {date}",
   "questionnaireNotYetAvailable": "Pas encore disponible",
   "questionnaireReminderMessage": "Un questionnaire de santé est prêt à être rempli.",

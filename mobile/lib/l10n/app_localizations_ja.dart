@@ -588,7 +588,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get thankYou => 'ありがとうございます';
 
   @override
-  String get noQuestionnairesAssigned => 'あなたの研究に割り当てられた質問票はありません。';
+  String get noQuestionnairesDue => '現在回答が必要な質問票はありません。';
 
   @override
   String questionnaireCompletedOn(String date) {

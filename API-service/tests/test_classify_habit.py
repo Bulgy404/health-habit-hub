@@ -69,6 +69,86 @@ async def test_non_habit_sentence_returns_is_habit_false():
 
 
 @pytest.mark.asyncio
+async def test_quit_habit_returns_habit_type_quit():
+    """A cessation-style sentence → habit_type='quit'."""
+    llm_reply = json.dumps(
+        {"is_habit": True, "confidence": 0.9, "habit_type": "quit"}
+    )
+
+    with (
+        patch("routers.classify_habit._get_redis", new=AsyncMock(return_value=None)),
+        patch("routers.classify_habit.chat_complete", new=AsyncMock(return_value=llm_reply)),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/api/v1/llm/classify-habit",
+                json={
+                    "sentence": "I quit smoking after every dinner",
+                    "language": "en",
+                    "user_id": "user-quit",
+                },
+            )
+
+    assert resp.status_code == 200
+    assert resp.json()["habit_type"] == "quit"
+
+
+@pytest.mark.asyncio
+async def test_non_habit_sentence_has_null_habit_type():
+    """habit_type must be null when is_habit is false, even if the LLM sends one."""
+    llm_reply = json.dumps(
+        {"is_habit": False, "confidence": 0.88, "habit_type": "build"}
+    )
+
+    with (
+        patch("routers.classify_habit._get_redis", new=AsyncMock(return_value=None)),
+        patch("routers.classify_habit.chat_complete", new=AsyncMock(return_value=llm_reply)),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/api/v1/llm/classify-habit",
+                json={
+                    "sentence": "Exercise is beneficial for everyone",
+                    "language": "en",
+                    "user_id": "user-xyz",
+                },
+            )
+
+    assert resp.status_code == 200
+    assert resp.json()["habit_type"] is None
+
+
+@pytest.mark.asyncio
+async def test_missing_habit_type_defaults_to_build():
+    """Backward compatibility: an LLM reply without habit_type still parses,
+    defaulting to 'build' (existing mocks/cache entries predate this field)."""
+    llm_reply = json.dumps({"is_habit": True, "confidence": 0.95})
+
+    with (
+        patch("routers.classify_habit._get_redis", new=AsyncMock(return_value=None)),
+        patch("routers.classify_habit.chat_complete", new=AsyncMock(return_value=llm_reply)),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await client.post(
+                "/api/v1/llm/classify-habit",
+                json={
+                    "sentence": "I walk 10 000 steps every day",
+                    "language": "en",
+                    "user_id": "user-abc",
+                },
+            )
+
+    assert resp.status_code == 200
+    assert resp.json()["habit_type"] == "build"
+
+
+@pytest.mark.asyncio
 async def test_cache_hit_returns_cached_value():
     """When Redis has a cached result the LLM is NOT called."""
     cached_payload = json.dumps({"is_habit": True, "confidence": 0.99})

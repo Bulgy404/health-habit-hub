@@ -183,7 +183,7 @@
   "questionnaireThankYou": "Bedankt voor het invullen van de vragenlijst. Je antwoorden helpen om je gewoonteaanbevelingen te personaliseren.",
   "backToProfile": "Terug naar profiel",
   "thankYou": "Bedankt",
-  "noQuestionnairesAssigned": "Er zijn geen vragenlijsten aan je studie toegewezen.",
+  "noQuestionnairesDue": "Er staan op dit moment geen vragenlijsten open.",
   "questionnaireCompletedOn": "Voltooid op {date}",
   "questionnaireNotYetAvailable": "Nog niet beschikbaar",
   "questionnaireReminderMessage": "Er staat een gezondheidsvragenlijst voor je klaar.",

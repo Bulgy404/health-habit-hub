@@ -613,8 +613,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get thankYou => 'Bedankt';
 
   @override
-  String get noQuestionnairesAssigned =>
-      'Er zijn geen vragenlijsten aan je studie toegewezen.';
+  String get noQuestionnairesDue =>
+      'Er staan op dit moment geen vragenlijsten open.';
 
   @override
   String questionnaireCompletedOn(String date) {

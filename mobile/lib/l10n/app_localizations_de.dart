@@ -631,8 +631,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get thankYou => 'Vielen Dank';
 
   @override
-  String get noQuestionnairesAssigned =>
-      'Keine Fragebögen für deine Studie zugewiesen.';
+  String get noQuestionnairesDue => 'Aktuell stehen keine Fragebögen an.';
 
   @override
   String questionnaireCompletedOn(String date) {

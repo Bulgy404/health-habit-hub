@@ -608,8 +608,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get thankYou => 'Thank You';
 
   @override
-  String get noQuestionnairesAssigned =>
-      'No questionnaires assigned to your study.';
+  String get noQuestionnairesDue => 'No questionnaires due right now.';
 
   @override
   String questionnaireCompletedOn(String date) {

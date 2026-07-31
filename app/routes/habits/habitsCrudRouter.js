@@ -420,9 +420,13 @@ export function createHabitsCrudRouter({
       stackedOnUuid,
       creationMode,
     } = req.body || {};
-    // §7.4/§7.1 — optional on the donation path (community donations without a
-    // build/quit choice default to 'build'); normalise anything unexpected.
-    const safeHabitType = habitType === 'quit' ? 'quit' : 'build';
+    // §7.4/§7.1 — optional on the donation path: the structured New Habit
+    // flow sends an explicit choice, but free-text community donations
+    // (donate_screen.dart) never do. Pass through only a recognised explicit
+    // value; leave it undefined otherwise so shareHabit() falls back to the
+    // classifier's own build/quit read of the sentence instead of guessing.
+    const explicitHabitType =
+      habitType === 'build' || habitType === 'quit' ? habitType : undefined;
     const safeCreationMode =
       creationMode === 'stacked' ? 'stacked' : 'standalone';
     const safeStackedOnUuid =
@@ -494,7 +498,7 @@ export function createHabitsCrudRouter({
           duration: duration ?? null,
           healthBenefit: health_benefit ?? null,
           wellbeingImpact: wellbeing_impact ?? null,
-          habitType: safeHabitType,
+          habitType: explicitHabitType,
           stackedOnUuid: safeStackedOnUuid,
           creationMode: safeCreationMode,
           queryNeo4j,
@@ -523,7 +527,7 @@ export function createHabitsCrudRouter({
         duration: duration ?? null,
         healthBenefit: health_benefit ?? null,
         wellbeingImpact: wellbeing_impact ?? null,
-        habitType: safeHabitType,
+        habitType: explicitHabitType,
         stackedOnUuid: safeStackedOnUuid,
         creationMode: safeCreationMode,
         habitQueue,

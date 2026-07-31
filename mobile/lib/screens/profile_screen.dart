@@ -552,7 +552,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 24),
           _StudyQuestionnairesSection(l10n: l10n),
-          const SizedBox(height: 24),
           const _StudyMembershipSection(),
           const SizedBox(height: 16),
           OutlinedButton.icon(
@@ -635,6 +634,57 @@ class _StudyQuestionnairesSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final questionnairesAsync = ref.watch(participantQuestionnairesProvider);
 
+    return questionnairesAsync.when(
+      loading: () => _sectionWithHeader(
+        const Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => _sectionWithHeader(
+        Text(
+          l10n.failedToLoadQuestionnaire,
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        ),
+      ),
+      data: (questionnaires) {
+        // Nothing assigned by a study admin (or the participant isn't
+        // enrolled in a study, which the service layer also surfaces as an
+        // empty list) — there is nothing to show, so the whole section,
+        // including its header, is hidden rather than shown empty.
+        if (questionnaires.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final anyAvailable = questionnaires.any((q) => q.available);
+        if (!anyAvailable) {
+          // Assigned, but nothing is due right now — a neutral status
+          // message rather than a wall of greyed-out "not yet available"
+          // tiles for every assigned questionnaire.
+          return _sectionWithHeader(
+            Text(
+              l10n.noQuestionnairesDue,
+              style: TextStyle(
+                color:
+                    Theme.of(context).colorScheme.onSurface.withAlpha(153),
+              ),
+            ),
+          );
+        }
+
+        return _sectionWithHeader(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final q in questionnaires) ...[
+                _QuestionnaireTile(questionnaire: q, l10n: l10n),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sectionWithHeader(Widget content) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -643,37 +693,8 @@ class _StudyQuestionnairesSection extends ConsumerWidget {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        questionnairesAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => Text(
-            l10n.failedToLoadQuestionnaire,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.error,
-            ),
-          ),
-          data: (questionnaires) {
-            if (questionnaires.isEmpty) {
-              return Text(
-                l10n.noQuestionnairesAssigned,
-                style: TextStyle(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withAlpha(153),
-                ),
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final q in questionnaires) ...[
-                  _QuestionnaireTile(questionnaire: q, l10n: l10n),
-                  const SizedBox(height: 8),
-                ],
-              ],
-            );
-          },
-        ),
+        content,
+        const SizedBox(height: 24),
       ],
     );
   }

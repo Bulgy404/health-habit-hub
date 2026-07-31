@@ -1202,11 +1202,11 @@ abstract class AppLocalizations {
   /// **'Thank You'**
   String get thankYou;
 
-  /// Empty state message shown on the profile screen when the participant's study has no questionnaires
+  /// Shown on the profile screen when the participant's study has assigned questionnaires but none are currently due
   ///
   /// In en, this message translates to:
-  /// **'No questionnaires assigned to your study.'**
-  String get noQuestionnairesAssigned;
+  /// **'No questionnaires due right now.'**
+  String get noQuestionnairesDue;
 
   /// Label under a greyed-out, no-longer-editable questionnaire in the profile's Health Questionnaires list, showing when it was submitted
   ///

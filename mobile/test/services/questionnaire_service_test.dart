@@ -98,6 +98,21 @@ void main() {
         throwsA(isA<DioException>()),
       );
     });
+
+    test(
+        'returns empty list (not an error) on 404 — not enrolled or study '
+        'has no questionnaires assigned', () async {
+      adapter.onGet(
+        '$_base/participant/questionnaires',
+        (server) =>
+            server.reply(404, {'error': 'Not enrolled in any study'}),
+        queryParameters: {'lang': 'en'},
+      );
+
+      final result = await service.fetchParticipantQuestionnaires('en');
+
+      expect(result, isEmpty);
+    });
   });
 
   group('fetchDueQuestionnaires', () {

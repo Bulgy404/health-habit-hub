@@ -183,7 +183,7 @@
   "questionnaireThankYou": "Vielen Dank für das Ausfüllen des Fragebogens. Deine Antworten helfen dabei, deine Gewohnheitsempfehlungen zu personalisieren.",
   "backToProfile": "Zurück zum Profil",
   "thankYou": "Vielen Dank",
-  "noQuestionnairesAssigned": "Keine Fragebögen für deine Studie zugewiesen.",
+  "noQuestionnairesDue": "Aktuell stehen keine Fragebögen an.",
   "questionnaireCompletedOn": "Abgeschlossen am {date}",
   "questionnaireNotYetAvailable": "Noch nicht verfügbar",
   "questionnaireReminderMessage": "Ein Gesundheitsfragebogen wartet auf deine Antworten.",

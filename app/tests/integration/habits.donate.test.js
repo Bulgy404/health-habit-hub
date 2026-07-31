@@ -203,7 +203,13 @@ before(async () => {
         const isHabit =
           body.sentence && body.sentence.toLowerCase().includes('sky')
             ? MOCK_CLASSIFY_HABIT_NOT_HABIT
-            : { ...MOCK_CLASSIFY_HABIT_IS_HABIT, sentence: body.sentence };
+            : {
+                ...MOCK_CLASSIFY_HABIT_IS_HABIT,
+                sentence: body.sentence,
+                habit_type: body.sentence?.toLowerCase().includes('quit')
+                  ? 'quit'
+                  : 'build',
+              };
         return { ok: true, json: async () => isHabit };
       }
 
@@ -372,6 +378,35 @@ test('POST /api/v1/habits/donate creates a Habit node in Neo4j', async () => {
   assert.ok(latest.uuid);
   assert.strictEqual(latest.sentence, 'I meditate for 10 minutes each morning');
   assert.strictEqual(latest.is_habit, undefined); // stored as string literal in cypher
+});
+
+test('POST /api/v1/habits/donate falls back to the classifier for habit_type when no explicit choice is sent', async () => {
+  // No habitType in the body (the community donate_screen.dart flow never
+  // sends one) — habit_type must come from the classifier's own read of the
+  // sentence content instead of defaulting to 'build'.
+  await post(
+    '/api/v1/habits/donate',
+    { sentence: 'I quit smoking after every dinner', language: 'en' },
+    makeToken('user-5')
+  );
+  const latest = neo4jMock.getHabits().at(-1);
+  assert.strictEqual(latest.habit_type, 'quit');
+});
+
+test('POST /api/v1/habits/donate honours an explicit habitType over the classifier', async () => {
+  // The structured New Habit flow can send an explicit choice; it must win
+  // even when the sentence content would classify differently.
+  await post(
+    '/api/v1/habits/donate',
+    {
+      sentence: 'I quit smoking after every dinner',
+      language: 'en',
+      habitType: 'build',
+    },
+    makeToken('user-6')
+  );
+  const latest = neo4jMock.getHabits().at(-1);
+  assert.strictEqual(latest.habit_type, 'build');
 });
 
 // ── Integration: two users share one BCIOConcept node ────────────────────────
