@@ -79,7 +79,7 @@ void main() {
             'intentionStatement': 'After dinner, I will walk.',
             'status': status,
             'createdAt': '2026-07-31T10:00:00.000Z',
-            if (reason != null) 'completedReason': reason,
+            'completedReason': ?reason,
             'bankedXp': 2200,
           });
 
