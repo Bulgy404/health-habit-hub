@@ -99,12 +99,12 @@
 }
 
 .badgeActive {
-  background: #dcfce7;
+  background: var(--color-success-bg);
   color: var(--color-success);
 }
 
 .badgeInactive {
-  background: #fee2e2;
+  background: var(--color-error-bg);
   color: var(--color-error);
 }
 
@@ -130,7 +130,7 @@
 
 .actionBtnDanger {
   color: var(--color-error);
-  border-color: #fca5a5;
+  border-color: var(--color-error);
 }
 
 .actionBtnDanger:hover {
@@ -550,8 +550,8 @@
 
 .errorMsg {
   padding: 0.75rem 1rem;
-  background: #fee2e2;
-  border: 1px solid #fca5a5;
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error);
   border-radius: 6px;
   color: var(--color-error);
   font-size: 0.85rem;
@@ -601,8 +601,8 @@
 
 /* Library badge */
 .badgeLibrary {
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--color-info-bg);
+  color: var(--color-info);
 }
 
 /* Preview modal */

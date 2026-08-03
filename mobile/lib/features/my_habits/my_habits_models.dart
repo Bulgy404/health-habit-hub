@@ -569,6 +569,7 @@ class SrhiTrajectoryPoint {
     this.submittedAt,
     this.scheduledFor,
     this.graduation,
+    this.autonomyScore,
   });
 
   /// Study week number for this data point.
@@ -588,6 +589,12 @@ class SrhiTrajectoryPoint {
   /// automaticity-graduation check (see `srhiService.submitSrhi`).
   final SrhiGraduationResult? graduation;
 
+  /// The automaticity index (0-1) as of this checkpoint — replayed
+  /// server-side from the SRHI score, adherence and streak that existed at
+  /// submission time (see `reminderPlanService.computeAutonomyScore`).
+  /// `null` for weeks not yet submitted.
+  final double? autonomyScore;
+
   /// Deserialises from JSON.
   factory SrhiTrajectoryPoint.fromJson(Map<String, dynamic> json) =>
       SrhiTrajectoryPoint(
@@ -604,6 +611,9 @@ class SrhiTrajectoryPoint {
             ? SrhiGraduationResult.fromJson(
                 json['graduation'] as Map<String, dynamic>,
               )
+            : null,
+        autonomyScore: json['autonomyScore'] != null
+            ? (json['autonomyScore'] as num).toDouble()
             : null,
       );
 }

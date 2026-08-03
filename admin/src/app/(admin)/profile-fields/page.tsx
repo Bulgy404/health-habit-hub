@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
+import { Spinner } from "@/components/spinner";
 import styles from "./page.module.css";
 
 const VALID_TYPES = ["text", "number", "date", "select"] as const;
@@ -42,6 +43,7 @@ export default function ProfileFieldsPage() {
   const [newOption, setNewOption] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -54,6 +56,7 @@ export default function ProfileFieldsPage() {
   async function handleSave() {
     if (!token) return;
     setError(null);
+    setSaving(true);
     try {
       if (editingId) {
         const { label, type, options, required, order } = form;
@@ -74,6 +77,8 @@ export default function ProfileFieldsPage() {
       setForm(emptyForm());
     } catch (e) {
       setError(e instanceof Error ? e.message : t("saveFailed"));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -273,8 +278,8 @@ export default function ProfileFieldsPage() {
           </div>
 
           <div className={styles.formActions}>
-            <button className={styles.saveButton} onClick={handleSave}>
-              {editingId ? tc("save") : t("create")}
+            <button className={styles.saveButton} onClick={handleSave} disabled={saving}>
+              {saving ? <Spinner /> : editingId ? tc("save") : t("create")}
             </button>
             <button
               className={styles.cancelButton}

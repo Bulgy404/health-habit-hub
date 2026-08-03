@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
+import { Spinner } from "@/components/spinner";
 import styles from "./page.module.css";
 import { useQuestionnairesData } from "./useQuestionnairesData";
 
@@ -559,7 +560,7 @@ function QuestionnaireModal({
             {tc("cancel")}
           </button>
           <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-            {saving ? tc("saving") : isEdit ? t("saveChanges") : t("create")}
+            {saving ? <Spinner /> : isEdit ? t("saveChanges") : t("create")}
           </button>
         </div>
       </div>

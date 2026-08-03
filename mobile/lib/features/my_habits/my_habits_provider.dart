@@ -56,7 +56,16 @@ final informationOverloadPrefsProvider =
 });
 
 /// The §7.5 gamification summary (XP, level, badges) for the current user.
-final gamificationProvider = FutureProvider<Gamification>((ref) {
+///
+/// `autoDispose` rather than a plain `FutureProvider`: XP/badges are
+/// recomputed fresh server-side on every read (see gamificationService.js),
+/// and habit donations are classified asynchronously off-request, so a
+/// share/log/create can take a moment to show up. A cached-forever provider
+/// would keep showing the pre-action numbers for the rest of the app
+/// session even after the backend catches up; autoDispose means each time a
+/// screen navigates to/from a widget watching this, it refetches instead of
+/// serving a stale snapshot.
+final gamificationProvider = FutureProvider.autoDispose<Gamification>((ref) {
   return ref.watch(myHabitsServiceProvider).fetchGamification();
 });
 

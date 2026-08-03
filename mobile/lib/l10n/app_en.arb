@@ -1033,6 +1033,30 @@
       "score": { "type": "String" }
     }
   },
+  "automaticityTitle": "Automaticity",
+  "@automaticityTitle": {
+    "description": "Section title above the automaticity trajectory chart, shown below habit strength"
+  },
+  "automaticityExplanationBody": "Automaticity combines your habit strength, recent adherence, and current streak into a single 0-100% score of how self-sustaining this habit has become. It's the same signal that determines how often you're reminded.",
+  "@automaticityExplanationBody": {
+    "description": "Body text explaining what the automaticity chart shows"
+  },
+  "noAutomaticityYet": "Automaticity data will appear after your first weekly check-in.",
+  "@noAutomaticityYet": {
+    "description": "Empty state for the automaticity trajectory chart"
+  },
+  "automaticityChartScoreAxis": "Automaticity",
+  "@automaticityChartScoreAxis": {
+    "description": "Y-axis title for the automaticity trajectory chart"
+  },
+  "automaticityChartTooltip": "Week {week}: {percent}%",
+  "@automaticityChartTooltip": {
+    "description": "Tooltip shown when tapping a point on the automaticity chart",
+    "placeholders": {
+      "week": { "type": "int" },
+      "percent": { "type": "String" }
+    }
+  },
   "srhiExplanationTitle": "What's SRHI?",
   "@srhiExplanationTitle": {
     "description": "Title of the dismissible SRHI explainer card on the habit detail screen"
@@ -2100,6 +2124,19 @@
   "habitImpactFilterAll": "All",
   "habitImpactFilterHigh": "High impact",
   "habitImpactFilterLow": "Low impact",
+  "exploreFiltersTooltip": "Filters",
+  "exploreFiltersTitle": "Filters",
+  "exploreFilterHabitTypeLabel": "Habit Type",
+  "exploreFilterHealthBenefitLabel": "Health Benefit",
+  "exploreFilterWellbeingLabel": "Wellbeing",
+  "habitHealthBenefitFilterAll": "All",
+  "habitHealthBenefitFilterHigh": "High benefit",
+  "habitHealthBenefitFilterLow": "Low benefit",
+  "habitWellbeingFilterAll": "All",
+  "habitWellbeingFilterHigh": "High wellbeing",
+  "habitWellbeingFilterLow": "Low wellbeing",
+  "exploreFiltersClearAll": "Clear all",
+  "exploreFiltersDone": "Done",
   "informationOverloadInfo": "To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.",
   "informationOverloadBlocked": "Let's focus on your current habit first — a new slot opens once it becomes more automatic.",
   "stackOntoExistingHabitTitle": "Stack onto an existing habit",
@@ -2111,5 +2148,17 @@
   "habitsSection": "Habits",
   "informationOverloadOptOutTitle": "Allow multiple new habits",
   "informationOverloadOptOutSubtitle": "Turn off the one-habit-at-a-time focus guard",
-  "progressSection": "Progress"
+  "progressSection": "Progress",
+  "achievementsTitle": "Achievements",
+  "@achievementsTitle": {
+    "description": "Title of the badges/achievements screen, opened by tapping the Progress card in settings"
+  },
+  "achievementsSubtitle": "Badges you've earned, and badges still to unlock.",
+  "@achievementsSubtitle": {
+    "description": "Subtitle explaining the achievements screen shows both earned and locked badges"
+  },
+  "achievementsLockedTag": "Locked",
+  "@achievementsLockedTag": {
+    "description": "Small tag shown on a not-yet-earned badge tile"
+  }
 }

@@ -8,6 +8,7 @@ import {
   topUpSrhiWindows,
   getUpcomingSrhiQuestionnaireItems,
   daysSinceLastEnactedLog,
+  getTrajectory,
 } from '../../services/srhiService.js';
 import { SRHI_ITEM_IDS } from '../../utils/srhi.js';
 import { BADGES } from '../../services/gamificationService.js';
@@ -351,6 +352,74 @@ test('daysSinceLastEnactedLog: counts from the most recent enacted date', () => 
     { date: '2026-06-02', enacted: false },
   ];
   assert.equal(daysSinceLastEnactedLog(logs, now), 7);
+});
+
+test('getTrajectory: replays autonomyScore per submitted week, null for unsubmitted', async () => {
+  const intentionId = new ObjectId();
+  const week1SubmittedAt = new Date(daysAgoIso(20));
+  const week2SubmittedAt = new Date(daysAgoIso(5));
+  const windows = [
+    {
+      _id: new ObjectId(),
+      intentionId,
+      userId: 'u1',
+      weekNumber: 1,
+      scheduledFor: week1SubmittedAt,
+      submittedAt: week1SubmittedAt,
+      score: 3, // weak habit strength early on
+      createdAt: week1SubmittedAt,
+    },
+    {
+      _id: new ObjectId(),
+      intentionId,
+      userId: 'u1',
+      weekNumber: 2,
+      scheduledFor: week2SubmittedAt,
+      submittedAt: week2SubmittedAt,
+      score: 7, // strong habit strength later
+      createdAt: week2SubmittedAt,
+    },
+    {
+      _id: new ObjectId(),
+      intentionId,
+      userId: 'u1',
+      weekNumber: 3,
+      scheduledFor: new Date(),
+      submittedAt: null,
+      score: null,
+      createdAt: new Date(),
+    },
+  ];
+  // A solid run of enacted logs leading up to week 2 (but not week 1), so
+  // adherence/streak — and therefore autonomyScore — should be higher by
+  // week 2 than week 1.
+  const logs = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((n) => ({
+    date: daysAgoIso(n),
+    enacted: true,
+  }));
+  const db = makeDb(windows, [], { [intentionId.toString()]: logs });
+
+  const trajectory = await getTrajectory({
+    db,
+    intentionId: intentionId.toString(),
+    userId: 'u1',
+  });
+
+  assert.equal(trajectory.length, 3);
+  assert.deepEqual(
+    trajectory.map((t) => t.weekNumber),
+    [1, 2, 3]
+  );
+  assert.equal(trajectory[2].autonomyScore, null); // not yet submitted
+
+  const [w1, w2] = trajectory;
+  assert.equal(typeof w1.autonomyScore, 'number');
+  assert.equal(typeof w2.autonomyScore, 'number');
+  assert.ok(w1.autonomyScore >= 0 && w1.autonomyScore <= 1);
+  assert.ok(w2.autonomyScore >= 0 && w2.autonomyScore <= 1);
+  // Higher SRHI score and far more adherence/streak by week 2 → strictly
+  // higher automaticity index.
+  assert.ok(w2.autonomyScore > w1.autonomyScore);
 });
 
 test('submitSrhi: not a graduation candidate when automaticity was never reached', async () => {

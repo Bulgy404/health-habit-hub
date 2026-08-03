@@ -196,6 +196,9 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             reminderTime: effectiveReminderTime,
           );
       ref.invalidate(intentionsProvider);
+      // §7.5 — a new habit earns the First Step badge; refresh so Settings/
+      // Profile don't show stale XP/badges until some other screen refetches.
+      ref.invalidate(gamificationProvider);
 
       // The habit is now created — navigate immediately. Community sharing and
       // reminder scheduling are best-effort and can be slow (a network call

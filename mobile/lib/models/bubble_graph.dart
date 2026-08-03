@@ -2,8 +2,6 @@
 /// GET /api/v1/habits/graph.
 library;
 
-import 'dart:math' as math;
-
 /// Top-level graph model containing a list of behaviour dimensions.
 class BubbleGraph {
   /// The list of behaviour dimensions in the graph.
@@ -106,14 +104,6 @@ class HabitBubble {
 
   /// Number of users who marked this habit as "I do this too".
   int get iDoThisCount => annotationCounts['iDoThis'] ?? 0;
-
-  /// Combined impact score for filtering: the higher of [healthBenefit] and
-  /// [wellbeingImpact] (a habit that's great for either counts as
-  /// high-impact), or `null` if neither was rated.
-  int? get impactScore {
-    if (healthBenefit == null && wellbeingImpact == null) return null;
-    return math.max(healthBenefit ?? 0, wellbeingImpact ?? 0);
-  }
 
   /// Deserialises a [HabitBubble] from JSON.
   factory HabitBubble.fromJson(Map<String, dynamic> json) {

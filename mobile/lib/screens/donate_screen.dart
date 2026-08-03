@@ -18,6 +18,8 @@ import '../config/app_config.dart';
 import '../features/questionnaire/questionnaire_service.dart';
 import '../core/dio_provider.dart';
 import '../l10n/app_localizations.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_icons.dart';
 import '../providers/locale_provider.dart';
 import '../services/offline_queue_service.dart';
 import '../services/survey_service.dart';
@@ -279,11 +281,12 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
   Widget _sharedTodayCard() {
     final l10n = AppLocalizations.of(context)!;
     final colorScheme = Theme.of(context).colorScheme;
+    final green = context.appColors.primary;
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF45B700), width: 1),
+        border: Border.all(color: green, width: 1),
         boxShadow: _kCardShadow,
       ),
       padding: const EdgeInsets.all(18),
@@ -292,11 +295,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.check_circle,
-                color: Color(0xFF2E8C00),
-                size: 28,
-              ),
+              Icon(AppIcons.success, color: green, size: 28),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -304,8 +303,8 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
                   children: [
                     Text(
                       l10n.donateSharedTodayTitle,
-                      style: const TextStyle(
-                        color: Color(0xFF2E8C00),
+                      style: TextStyle(
+                        color: green,
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
@@ -328,10 +327,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             width: double.infinity,
             child: FilledButton.icon(
               onPressed: () => setState(() => _surveyMode = true),
-              icon: const Icon(Icons.add_circle_outline),
+              icon: const Icon(AppIcons.addMore),
               label: Text(l10n.donateShareAnotherButton),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF45B700),
+                backgroundColor: green,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 textStyle: const TextStyle(

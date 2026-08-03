@@ -14,6 +14,7 @@ import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
 import '../../services/study_config_service.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_icons.dart';
 import 'habit_onboarding_widgets.dart';
 import 'my_habits_models.dart';
 
@@ -263,7 +264,7 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 8),
-                  Icon(Icons.check_circle, color: scheme.primary, size: 44),
+                  Icon(AppIcons.success, color: scheme.primary, size: 44),
                   const SizedBox(height: 16),
                   Text(
                     HabitOnboardingCopy.intentionRevealTitleFor(lang),

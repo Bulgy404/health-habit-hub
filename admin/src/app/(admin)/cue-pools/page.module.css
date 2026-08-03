@@ -78,8 +78,8 @@
 }
 .errorMsg {
   padding: 0.75rem 1rem;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--color-error-bg);
+  border: 1px solid var(--color-error);
   border-radius: 6px;
   color: var(--color-error);
   font-size: var(--fs-sm);
@@ -88,14 +88,14 @@
 .deleteBtn {
   padding: 0.25rem 0.6rem;
   background: transparent;
-  border: 1px solid #fca5a5;
+  border: 1px solid var(--color-error);
   color: var(--color-error);
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.8rem;
 }
 .deleteBtn:hover {
-  background: #fef2f2;
+  background: var(--color-error-bg);
 }
 .deleteBtn:disabled {
   opacity: 0.4;
@@ -109,12 +109,12 @@
   font-weight: 600;
 }
 .qualityHigh {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 .qualityLow {
-  background: #fef9c3;
-  color: #854d0e;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
 }
 .panel {
   border: 1px solid var(--color-border);
@@ -243,8 +243,8 @@
 }
 .importResult {
   padding: 0.6rem 1rem;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success);
   border-radius: 6px;
   color: #166534;
   font-size: var(--fs-sm);

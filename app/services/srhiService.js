@@ -4,7 +4,12 @@ import { COLLECTION as INTENTIONS_COLLECTION } from '../models/implementationInt
 import { SRHI_ITEM_IDS } from '../utils/srhi.js';
 import { setEnrollmentField } from './enrollmentNeo4j.js';
 import { HABIT_ANCHOR_DELAY_MS } from './questionnaireScheduleService.js';
-import { readReminderConfig } from './reminderPlanService.js';
+import {
+  readReminderConfig,
+  computeAutonomyScore,
+  currentStreakDays,
+  adherenceRate,
+} from './reminderPlanService.js';
 import {
   BADGES,
   readGamificationConfig,
@@ -364,23 +369,66 @@ export function daysSinceLastEnactedLog(logs, now) {
 }
 
 /**
- * Return the SRHI score trajectory for an intention, sorted by week number.
+ * Return the SRHI score trajectory for an intention, sorted by week number —
+ * including a replayed `autonomyScore` (the automaticity index driving
+ * reminder fading, see reminderPlanService.computeAutonomyScore) as of each
+ * submitted checkpoint.
+ *
+ * `autonomyScore` is a pure function of the latest SRHI score, 14-day
+ * adherence and current streak, so rather than needing a new persisted
+ * historical series, it's recomputed here for each submitted week using only
+ * the logs/SRHI scores that existed as of that week's `submittedAt` — giving
+ * a genuine historical automaticity trend, not just today's snapshot.
+ * `null` for weeks that haven't been submitted yet.
+ *
  * @param {{ db: object, intentionId: string, userId: string }} deps
- * @returns {Promise<Array<{ weekNumber: number, scheduledFor: Date, submittedAt: Date|null, score: number|null }>>}
+ * @returns {Promise<Array<{ weekNumber: number, scheduledFor: Date, submittedAt: Date|null, score: number|null, autonomyScore: number|null }>>}
  */
 export async function getTrajectory({ db, intentionId, userId }) {
   const oid = new ObjectId(intentionId);
-  const docs = await db
-    .collection(COLLECTION)
-    .find({ intentionId: oid, userId: String(userId) })
-    .sort({ weekNumber: 1 })
-    .toArray();
-  return docs.map((d) => ({
-    weekNumber: d.weekNumber,
-    scheduledFor: d.scheduledFor,
-    submittedAt: d.submittedAt,
-    score: d.score,
-  }));
+  const [docs, logs, reminderConfig] = await Promise.all([
+    db
+      .collection(COLLECTION)
+      .find({ intentionId: oid, userId: String(userId) })
+      .sort({ weekNumber: 1 })
+      .toArray(),
+    db
+      .collection('daily_behavior_logs')
+      .find({ intentionId: oid, userId: String(userId) })
+      .toArray(),
+    readReminderConfig(db),
+  ]);
+
+  const submitted = docs
+    .filter((d) => d.submittedAt != null && d.score != null)
+    .sort((a, b) => a.submittedAt - b.submittedAt);
+
+  return docs.map((d) => {
+    let autonomyScore = null;
+    if (d.submittedAt != null && d.score != null) {
+      const asOf = d.submittedAt;
+      const priorScores = submitted
+        .filter((s) => s.submittedAt <= asOf)
+        .map((s) => Number(s.score));
+      const latestSrhi = priorScores[priorScores.length - 1] ?? null;
+      const logsUpToDate = logs.filter((l) => new Date(l.date) <= asOf);
+      autonomyScore = computeAutonomyScore(
+        {
+          latestSrhi,
+          adherence14d: adherenceRate(logsUpToDate, 14, asOf),
+          streakDays: currentStreakDays(logsUpToDate, asOf),
+        },
+        reminderConfig
+      ).autonomyScore;
+    }
+    return {
+      weekNumber: d.weekNumber,
+      scheduledFor: d.scheduledFor,
+      submittedAt: d.submittedAt,
+      score: d.score,
+      autonomyScore,
+    };
+  });
 }
 
 function serialize(doc) {

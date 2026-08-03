@@ -1,0 +1,19 @@
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  /* currentColor, not a hardcoded white — so it reads correctly whether the
+     button it sits in has a solid brand-color fill (white text) or is
+     transparent/outlined (theme text color), in either light or dark mode. */
+  border: 2px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

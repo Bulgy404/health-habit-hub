@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import { apiUrl } from "@/lib/api";
+import { Spinner } from "@/components/spinner";
 import styles from "./page.module.css";
 import { useKnowledgeBaseData } from "./useKnowledgeBaseData";
 
@@ -119,7 +120,7 @@ function UploadModal({
             {tc("cancel")}
           </button>
           <button className={styles.saveBtn} onClick={handleUpload} disabled={uploading}>
-            {uploading ? t("uploading") : tc("upload")}
+            {uploading ? <Spinner /> : tc("upload")}
           </button>
         </div>
       </div>

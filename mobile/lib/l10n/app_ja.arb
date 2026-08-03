@@ -999,6 +999,11 @@
   "srhiChartWeekAxis": "調査週",
   "srhiChartScoreAxis": "SRHIスコア（1〜7）",
   "srhiChartTooltip": "第{week}週：{score} / 7",
+  "automaticityTitle": "Automaticity",
+  "automaticityExplanationBody": "Automaticity combines your habit strength, recent adherence, and current streak into a single 0-100% score of how self-sustaining this habit has become. It's the same signal that determines how often you're reminded.",
+  "noAutomaticityYet": "Automaticity data will appear after your first weekly check-in.",
+  "automaticityChartScoreAxis": "Automaticity",
+  "automaticityChartTooltip": "Week {week}: {percent}%",
   "srhiExplanationTitle": "SRHIとは？",
   "@srhiExplanationTitle": {
     "description": "Title of the dismissible SRHI explainer card on the habit detail screen"
@@ -1414,6 +1419,19 @@
   "habitImpactFilterAll": "All",
   "habitImpactFilterHigh": "High impact",
   "habitImpactFilterLow": "Low impact",
+  "exploreFiltersTooltip": "Filters",
+  "exploreFiltersTitle": "Filters",
+  "exploreFilterHabitTypeLabel": "Habit Type",
+  "exploreFilterHealthBenefitLabel": "Health Benefit",
+  "exploreFilterWellbeingLabel": "Wellbeing",
+  "habitHealthBenefitFilterAll": "All",
+  "habitHealthBenefitFilterHigh": "High benefit",
+  "habitHealthBenefitFilterLow": "Low benefit",
+  "habitWellbeingFilterAll": "All",
+  "habitWellbeingFilterHigh": "High wellbeing",
+  "habitWellbeingFilterLow": "Low wellbeing",
+  "exploreFiltersClearAll": "Clear all",
+  "exploreFiltersDone": "Done",
   "informationOverloadInfo": "To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.",
   "informationOverloadBlocked": "Let's focus on your current habit first — a new slot opens once it becomes more automatic.",
   "stackOntoExistingHabitTitle": "Stack onto an existing habit",
@@ -1425,5 +1443,8 @@
   "habitsSection": "Habits",
   "informationOverloadOptOutTitle": "Allow multiple new habits",
   "informationOverloadOptOutSubtitle": "Turn off the one-habit-at-a-time focus guard",
-  "progressSection": "Progress"
+  "progressSection": "Progress",
+  "achievementsTitle": "Achievements",
+  "achievementsSubtitle": "Badges you've earned, and badges still to unlock.",
+  "achievementsLockedTag": "Locked"
 }

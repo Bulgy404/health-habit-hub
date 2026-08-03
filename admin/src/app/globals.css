@@ -29,6 +29,17 @@
   --color-warning: #d97706;
   --color-error: #dc2626;
   --color-info: #1d4ed8;
+  /* Pale tint backgrounds for status badges/pills (paired with the solid
+     --color-success/warning/error/info text above). Kept as separate tokens
+     rather than the foreground color at low alpha, so each pair can be
+     tuned independently for contrast in both themes — see the dark
+     overrides below, where these become dark surfaces instead of paler
+     tints (the text token brightens in dark mode, so the background must
+     darken to keep matching contrast, not just fade a light tint). */
+  --color-success-bg: #dcfce7;
+  --color-warning-bg: #fef9c3;
+  --color-error-bg: #fee2e2;
+  --color-info-bg: #dbeafe;
   --sidebar-width: 240px;
 
   /* Type scale */
@@ -63,6 +74,14 @@
   --color-warning: #fbbf24;
   --color-error: #f87171;
   --color-info: #60a5fa;
+  /* Dark surfaces in the same hue, not a faded tint — the text above is
+     already a bright, light shade in dark mode, so the badge background
+     needs to go dark to hold contrast, not stay pale (see --color-*-bg
+     in :root for why these are separate tokens from the text color). */
+  --color-success-bg: #14532d;
+  --color-warning-bg: #78350f;
+  --color-error-bg: #7f1d1d;
+  --color-info-bg: #1e3a8a;
   --color-primary-action: #3aa300;
   --color-primary-action-hover: #4ec600;
   --color-primary-dark: #4ec600;
@@ -80,6 +99,10 @@
     --color-warning: #fbbf24;
     --color-error: #f87171;
     --color-info: #60a5fa;
+    --color-success-bg: #14532d;
+    --color-warning-bg: #78350f;
+    --color-error-bg: #7f1d1d;
+    --color-info-bg: #1e3a8a;
     --color-primary-action: #3aa300;
     --color-primary-action-hover: #4ec600;
     --color-primary-dark: #4ec600;

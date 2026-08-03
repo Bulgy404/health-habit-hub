@@ -20,6 +20,7 @@ import '../features/questionnaire/questionnaire_screen.dart';
 import '../features/recommendation/goal_input_screen.dart';
 import '../features/recommendation/loading_screen.dart';
 import '../providers/auth_provider.dart';
+import '../screens/achievements_screen.dart';
 import '../screens/donate_screen.dart';
 import '../screens/explore_screen.dart';
 import '../screens/help_support_screen.dart';
@@ -249,6 +250,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'profile',
                     builder: (context, state) => const ProfileScreen(),
+                  ),
+                  GoRoute(
+                    path: 'achievements',
+                    builder: (context, state) => const AchievementsScreen(),
                   ),
                   GoRoute(
                     path: 'privacy',

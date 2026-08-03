@@ -791,6 +791,25 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get automaticityTitle => 'Automaticity';
+
+  @override
+  String get automaticityExplanationBody =>
+      'Automaticity combines your habit strength, recent adherence, and current streak into a single 0-100% score of how self-sustaining this habit has become. It\'s the same signal that determines how often you\'re reminded.';
+
+  @override
+  String get noAutomaticityYet =>
+      'Automaticity data will appear after your first weekly check-in.';
+
+  @override
+  String get automaticityChartScoreAxis => 'Automaticity';
+
+  @override
+  String automaticityChartTooltip(int week, String percent) {
+    return 'Week $week: $percent%';
+  }
+
+  @override
   String get srhiExplanationTitle => 'What\'s SRHI?';
 
   @override
@@ -1632,6 +1651,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get habitImpactFilterLow => 'Low impact';
 
   @override
+  String get exploreFiltersTooltip => 'Filters';
+
+  @override
+  String get exploreFiltersTitle => 'Filters';
+
+  @override
+  String get exploreFilterHabitTypeLabel => 'Habit Type';
+
+  @override
+  String get exploreFilterHealthBenefitLabel => 'Health Benefit';
+
+  @override
+  String get exploreFilterWellbeingLabel => 'Wellbeing';
+
+  @override
+  String get habitHealthBenefitFilterAll => 'All';
+
+  @override
+  String get habitHealthBenefitFilterHigh => 'High benefit';
+
+  @override
+  String get habitHealthBenefitFilterLow => 'Low benefit';
+
+  @override
+  String get habitWellbeingFilterAll => 'All';
+
+  @override
+  String get habitWellbeingFilterHigh => 'High wellbeing';
+
+  @override
+  String get habitWellbeingFilterLow => 'Low wellbeing';
+
+  @override
+  String get exploreFiltersClearAll => 'Clear all';
+
+  @override
+  String get exploreFiltersDone => 'Done';
+
+  @override
   String get informationOverloadInfo =>
       'To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.';
 
@@ -1670,4 +1728,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get progressSection => 'Progress';
+
+  @override
+  String get achievementsTitle => 'Achievements';
+
+  @override
+  String get achievementsSubtitle =>
+      'Badges you\'ve earned, and badges still to unlock.';
+
+  @override
+  String get achievementsLockedTag => 'Locked';
 }

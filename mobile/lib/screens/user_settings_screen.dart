@@ -17,6 +17,8 @@ import '../providers/comments_enabled_provider.dart';
 import '../providers/locale_provider.dart';
 import '../providers/package_info_provider.dart';
 import '../providers/theme_provider.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_icons.dart';
 import '../widgets/settings_card.dart';
 
 const _kGreenGlow = [
@@ -215,39 +217,50 @@ class UserSettingsScreen extends ConsumerWidget {
                         SectionLabel(l10n.progressSection),
                         SettingsCard(
                           children: [
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.stars_outlined,
-                                          size: 20),
-                                      const SizedBox(width: 10),
-                                      Text('Level ${g.level}',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.w700)),
-                                      const Spacer(),
-                                      Text('${g.xpToNextLevel} XP to next'),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 10),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: LinearProgressIndicator(
-                                      value: (g.xpIntoLevel +
-                                                  g.xpToNextLevel) >
-                                              0
-                                          ? (g.xpIntoLevel /
-                                                  (g.xpIntoLevel +
-                                                      g.xpToNextLevel))
-                                              .clamp(0.0, 1.0)
-                                          : 0.0,
-                                      minHeight: 8,
+                            InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () =>
+                                  context.push('/settings/achievements'),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.stars_outlined,
+                                            size: 20),
+                                        const SizedBox(width: 10),
+                                        Text('Level ${g.level}',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.w700)),
+                                        const Spacer(),
+                                        Text('${g.xpToNextLevel} XP to next'),
+                                        const SizedBox(width: 4),
+                                        Icon(Icons.chevron_right,
+                                            size: 18,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant),
+                                      ],
                                     ),
-                                  ),
-                                ],
+                                    const SizedBox(height: 10),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: LinearProgressIndicator(
+                                        value: (g.xpIntoLevel +
+                                                    g.xpToNextLevel) >
+                                                0
+                                            ? (g.xpIntoLevel /
+                                                    (g.xpIntoLevel +
+                                                        g.xpToNextLevel))
+                                                .clamp(0.0, 1.0)
+                                            : 0.0,
+                                        minHeight: 8,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -435,7 +448,7 @@ class UserSettingsScreen extends ConsumerWidget {
               ListTile(
                 title: Text(label),
                 trailing: current == code
-                    ? const Icon(Icons.check, color: Color(0xFF45B700))
+                    ? Icon(AppIcons.selected, color: context.appColors.primary)
                     : null,
                 onTap: () async {
                   Navigator.of(sheetContext).pop();
@@ -491,7 +504,7 @@ class UserSettingsScreen extends ConsumerWidget {
                 leading: Icon(icon),
                 title: Text(label),
                 trailing: current == mode
-                    ? const Icon(Icons.check, color: Color(0xFF45B700))
+                    ? Icon(AppIcons.selected, color: context.appColors.primary)
                     : null,
                 onTap: () => Navigator.of(sheetContext).pop(mode),
               ),

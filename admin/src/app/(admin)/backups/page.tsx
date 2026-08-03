@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import { apiFetch, apiUpload, apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
+import { Spinner } from "@/components/spinner";
 import styles from "@/components/admin-page.module.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -276,7 +277,7 @@ export default function BackupsPage() {
           onClick={() => setShowTriggerOptions(true)}
           disabled={triggering || running}
         >
-          {triggering ? t("startingEllipsis") : t("triggerNow")}
+          {triggering ? <Spinner /> : t("triggerNow")}
         </button>
       </div>
 
@@ -379,7 +380,7 @@ export default function BackupsPage() {
               onClick={handleUpload}
               disabled={!uploadFile || uploading}
             >
-              {uploading ? t("uploadingEllipsis") : t("uploadBackup")}
+              {uploading ? <Spinner /> : t("uploadBackup")}
             </button>
           </div>
 
@@ -802,7 +803,7 @@ function RestoreModal({
             onClick={handleConfirm}
             disabled={!canSubmit}
           >
-            {submitting ? t("startingRestoreEllipsis") : t("restore")}
+            {submitting ? <Spinner /> : t("restore")}
           </button>
         </div>
       </div>
@@ -892,7 +893,7 @@ function DeleteModal({
             onClick={handleConfirm}
             disabled={!canSubmit}
           >
-            {submitting ? t("deletingEllipsis") : t("delete")}
+            {submitting ? <Spinner /> : t("delete")}
           </button>
         </div>
       </div>
@@ -967,7 +968,7 @@ function TriggerModal({
             onClick={() => onConfirm({ mongo, neo4j, lightrag, keycloak })}
             disabled={submitting || noneSelected}
           >
-            {submitting ? t("startingEllipsis") : t("startBackup")}
+            {submitting ? <Spinner /> : t("startBackup")}
           </button>
         </div>
       </div>

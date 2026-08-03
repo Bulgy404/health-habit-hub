@@ -7,6 +7,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../theme/app_colors.dart';
+
 /// Localized copy for one explainer block.
 class _Copy {
   const _Copy({required this.en, required this.de, required this.ja});
@@ -135,17 +137,22 @@ class OnboardingExplainerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    // A fixed, pre-checked-for-contrast green/on-green pair (see
+    // AppColors.greenLight/onGreenLight) rather than an alpha-blended
+    // colorScheme.primaryContainer — the latter turns into a muddy,
+    // low-contrast tint in dark mode since it depends on whatever's behind
+    // the card.
+    final colors = context.appColors;
     return Card(
       elevation: 0,
-      color: scheme.primaryContainer.withValues(alpha: 0.45),
+      color: colors.greenLight,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: scheme.primary),
+            Icon(icon, color: colors.onGreenLight),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -154,22 +161,24 @@ class OnboardingExplainerCard extends StatelessWidget {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: colors.onGreenLight,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     body,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(height: 1.4),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: colors.onGreenLight,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
             ),
             if (onDismiss != null)
               IconButton(
-                icon: const Icon(Icons.close, size: 18),
+                icon: Icon(Icons.close, size: 18, color: colors.onGreenLight),
                 tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                 onPressed: onDismiss,
               ),

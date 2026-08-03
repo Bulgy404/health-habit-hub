@@ -52,36 +52,45 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   // §7.4 Habit Distinction — community bubble-graph filter: 'all' | 'build' |
   // 'quit'. Filters bubbles by their habit_type (a one-property filter).
   String _habitTypeFilter = 'all';
-  // Second filter axis: 'all' | 'high' | 'low', on HabitBubble.impactScore
-  // (the higher of the donor's self-rated health/wellbeing scores). Build/quit
-  // is a framing distinction (started vs. stopped), not a health-impact one —
-  // a harmful habit like smoking can be phrased as "build" with no cessation
-  // language, so this surfaces the actual perceived impact independently.
-  String _impactFilter = 'all';
+  // Independent filter axes: 'all' | 'high' | 'low', on the donor's
+  // self-rated health-benefit and wellbeing-impact scores (1-5) separately.
+  // Build/quit is a framing distinction (started vs. stopped), not a
+  // health-impact one — a harmful habit like smoking can be phrased as
+  // "build" with no cessation language — and health benefit and wellbeing
+  // are themselves independent axes (a habit can be great for one and
+  // middling for the other), so each gets its own filter rather than being
+  // collapsed into a single combined "impact" score.
+  String _healthBenefitFilter = 'all';
+  String _wellbeingFilter = 'all';
 
-  static const _highImpactThreshold = 4;
-  static const _lowImpactThreshold = 2;
+  static const _highThreshold = 4;
+  static const _lowThreshold = 2;
 
-  bool _matchesImpactFilter(HabitBubble h) {
-    switch (_impactFilter) {
+  bool get _hasActiveFilters =>
+      _habitTypeFilter != 'all' ||
+      _healthBenefitFilter != 'all' ||
+      _wellbeingFilter != 'all';
+
+  bool _matchesTieredFilter(int? score, String filter) {
+    switch (filter) {
       case 'high':
-        return (h.impactScore ?? -1) >= _highImpactThreshold;
+        return (score ?? -1) >= _highThreshold;
       case 'low':
-        final score = h.impactScore;
-        return score != null && score <= _lowImpactThreshold;
+        return score != null && score <= _lowThreshold;
       default:
         return true;
     }
   }
 
   /// Returns a copy of [graph] keeping only bubbles matching the active
-  /// build/quit and impact filters; dimensions left empty by the filters are
-  /// dropped.
+  /// habit-type, health-benefit and wellbeing filters; dimensions left empty
+  /// by the filters are dropped.
   BubbleGraph _filteredGraph(BubbleGraph graph) {
-    if (_habitTypeFilter == 'all' && _impactFilter == 'all') return graph;
+    if (!_hasActiveFilters) return graph;
     bool matches(HabitBubble h) =>
         (_habitTypeFilter == 'all' || h.habitType == _habitTypeFilter) &&
-        _matchesImpactFilter(h);
+        _matchesTieredFilter(h.healthBenefit, _healthBenefitFilter) &&
+        _matchesTieredFilter(h.wellbeingImpact, _wellbeingFilter);
     final dims = graph.dimensions
         .map((d) => DimensionBubble(
               id: d.id,
@@ -92,6 +101,31 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         .where((d) => d.habits.isNotEmpty)
         .toList();
     return BubbleGraph(dimensions: dims);
+  }
+
+  void _openFilterSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _FilterSheet(
+        habitTypeFilter: _habitTypeFilter,
+        healthBenefitFilter: _healthBenefitFilter,
+        wellbeingFilter: _wellbeingFilter,
+        onHabitTypeChanged: (v) => setState(() => _habitTypeFilter = v),
+        onHealthBenefitChanged: (v) =>
+            setState(() => _healthBenefitFilter = v),
+        onWellbeingChanged: (v) => setState(() => _wellbeingFilter = v),
+        onClearAll: () => setState(() {
+          _habitTypeFilter = 'all';
+          _healthBenefitFilter = 'all';
+          _wellbeingFilter = 'all';
+        }),
+      ),
+    );
   }
 
   @override
@@ -275,25 +309,31 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
               onHabitTap: (bubble, dimension) =>
                   _showHabitDetail(bubble, dimension, graph),
             );
-      body = Column(
-        children: [
-          _HabitTypeFilterBar(
-            value: _habitTypeFilter,
-            onChanged: (v) => setState(() => _habitTypeFilter = v),
-          ),
-          _ImpactFilterBar(
-            value: _impactFilter,
-            onChanged: (v) => setState(() => _impactFilter = v),
-          ),
-          Expanded(child: graphView),
-        ],
-      );
+      body = graphView;
     }
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.exploreHabits),
         actions: [
+          // Filters only apply to the Graph tab; only show the icon there.
+          AnimatedBuilder(
+            animation: _tabController,
+            builder: (context, _) {
+              if (_tabController.index != 0 || graphAsync.isLoading) {
+                return const SizedBox.shrink();
+              }
+              return IconButton(
+                onPressed: _openFilterSheet,
+                icon: Badge(
+                  isLabelVisible: _hasActiveFilters,
+                  smallSize: 8,
+                  child: const Icon(Icons.filter_list),
+                ),
+                tooltip: l10n.exploreFiltersTooltip,
+              );
+            },
+          ),
           if (!graphAsync.isLoading)
             IconButton(
               onPressed: () {
@@ -652,6 +692,7 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
                         _node.category,
                         style: tt.labelMedium?.copyWith(
                           color: cs.onSecondaryContainer,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
@@ -1107,72 +1148,156 @@ class _AnnotationSectionState extends State<_AnnotationSection> {
   }
 }
 
-/// §7.4 Habit Distinction — All / Build / Quit filter chips for the community
-/// bubble graph. Selecting a type filters the visible bubbles by their
-/// `habit_type` (a one-property filter on the graph).
-class _HabitTypeFilterBar extends StatelessWidget {
-  const _HabitTypeFilterBar({required this.value, required this.onChanged});
+/// §7.4 Habit Distinction — the collapsed filter popup for the community
+/// bubble graph, opened via the app-bar filter icon. Groups the three
+/// independent filter axes (habit type, health benefit, wellbeing) that used
+/// to be two always-visible chip rows into a single bottom sheet, so they
+/// don't permanently take up space above the graph.
+class _FilterSheet extends StatelessWidget {
+  const _FilterSheet({
+    required this.habitTypeFilter,
+    required this.healthBenefitFilter,
+    required this.wellbeingFilter,
+    required this.onHabitTypeChanged,
+    required this.onHealthBenefitChanged,
+    required this.onWellbeingChanged,
+    required this.onClearAll,
+  });
 
-  final String value;
-  final ValueChanged<String> onChanged;
+  final String habitTypeFilter;
+  final String healthBenefitFilter;
+  final String wellbeingFilter;
+  final ValueChanged<String> onHabitTypeChanged;
+  final ValueChanged<String> onHealthBenefitChanged;
+  final ValueChanged<String> onWellbeingChanged;
+  final VoidCallback onClearAll;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final options = <(String, String)>[
-      ('all', l10n.habitTypeFilterAll),
-      ('build', l10n.habitTypeBuild),
-      ('quit', l10n.habitTypeQuit),
-    ];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Wrap(
-        spacing: 8,
-        children: [
-          for (final (key, label) in options)
-            ChoiceChip(
-              label: Text(label),
-              selected: value == key,
-              onSelected: (_) => onChanged(key),
+    return StatefulBuilder(
+      builder: (context, setSheetState) {
+        void wrap(ValueChanged<String> onChanged, String value) {
+          onChanged(value);
+          setSheetState(() {});
+        }
+
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              16,
+              20,
+              16 + MediaQuery.of(context).viewInsets.bottom,
             ),
-        ],
-      ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.exploreFiltersTitle,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        onClearAll();
+                        setSheetState(() {});
+                      },
+                      child: Text(l10n.exploreFiltersClearAll),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _FilterChipGroup(
+                  label: l10n.exploreFilterHabitTypeLabel,
+                  value: habitTypeFilter,
+                  options: [
+                    ('all', l10n.habitTypeFilterAll),
+                    ('build', l10n.habitTypeBuild),
+                    ('quit', l10n.habitTypeQuit),
+                  ],
+                  onChanged: (v) => wrap(onHabitTypeChanged, v),
+                ),
+                const SizedBox(height: 16),
+                _FilterChipGroup(
+                  label: l10n.exploreFilterHealthBenefitLabel,
+                  value: healthBenefitFilter,
+                  options: [
+                    ('all', l10n.habitHealthBenefitFilterAll),
+                    ('high', l10n.habitHealthBenefitFilterHigh),
+                    ('low', l10n.habitHealthBenefitFilterLow),
+                  ],
+                  onChanged: (v) => wrap(onHealthBenefitChanged, v),
+                ),
+                const SizedBox(height: 16),
+                _FilterChipGroup(
+                  label: l10n.exploreFilterWellbeingLabel,
+                  value: wellbeingFilter,
+                  options: [
+                    ('all', l10n.habitWellbeingFilterAll),
+                    ('high', l10n.habitWellbeingFilterHigh),
+                    ('low', l10n.habitWellbeingFilterLow),
+                  ],
+                  onChanged: (v) => wrap(onWellbeingChanged, v),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(l10n.exploreFiltersDone),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-/// All / High impact / Low impact filter chips for the community bubble
-/// graph, on top of the build/quit filter. "Impact" is the higher of the
-/// donor's self-rated health-benefit and wellbeing-impact scores (1-5) —
-/// independent of build/quit, which only reflects how the sentence is
-/// phrased, not whether the habit is actually good for the person.
-class _ImpactFilterBar extends StatelessWidget {
-  const _ImpactFilterBar({required this.value, required this.onChanged});
+class _FilterChipGroup extends StatelessWidget {
+  const _FilterChipGroup({
+    required this.label,
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
 
+  final String label;
   final String value;
+  final List<(String, String)> options;
   final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final options = <(String, String)>[
-      ('all', l10n.habitImpactFilterAll),
-      ('high', l10n.habitImpactFilterHigh),
-      ('low', l10n.habitImpactFilterLow),
-    ];
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      child: Wrap(
-        spacing: 8,
-        children: [
-          for (final (key, label) in options)
-            ChoiceChip(
-              label: Text(label),
-              selected: value == key,
-              onSelected: (_) => onChanged(key),
-            ),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            for (final (key, optionLabel) in options)
+              ChoiceChip(
+                label: Text(optionLabel),
+                selected: value == key,
+                onSelected: (_) => onChanged(key),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_config.dart';
 import '../../core/dio_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_icons.dart';
 import '../../utils/bip39_wordlist.dart';
 import '../../widgets/passphrase_word_grid.dart';
 import 'welcome_screen.dart';
@@ -356,15 +358,15 @@ class _PassphraseScreenState extends ConsumerState<PassphraseScreen> {
                 Container(
                   width: 20, height: 20,
                   decoration: BoxDecoration(
-                    color: _confirmed ? const Color(0xFF45B700) : Colors.transparent,
+                    color: _confirmed ? context.appColors.primary : Colors.transparent,
                     border: Border.all(
-                      color: _confirmed ? const Color(0xFF45B700) : const Color(0xFFD1D5DB),
+                      color: _confirmed ? context.appColors.primary : const Color(0xFFD1D5DB),
                       width: 1.5,
                     ),
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: _confirmed
-                      ? const Icon(Icons.check, size: 14, color: Colors.white)
+                      ? const Icon(AppIcons.selected, size: 14, color: Colors.white)
                       : null,
                 ),
                 const SizedBox(width: 10),

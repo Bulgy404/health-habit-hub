@@ -1526,6 +1526,36 @@ abstract class AppLocalizations {
   /// **'Week {week}: {score} / 7'**
   String srhiChartTooltip(int week, String score);
 
+  /// Section title above the automaticity trajectory chart, shown below habit strength
+  ///
+  /// In en, this message translates to:
+  /// **'Automaticity'**
+  String get automaticityTitle;
+
+  /// Body text explaining what the automaticity chart shows
+  ///
+  /// In en, this message translates to:
+  /// **'Automaticity combines your habit strength, recent adherence, and current streak into a single 0-100% score of how self-sustaining this habit has become. It\'s the same signal that determines how often you\'re reminded.'**
+  String get automaticityExplanationBody;
+
+  /// Empty state for the automaticity trajectory chart
+  ///
+  /// In en, this message translates to:
+  /// **'Automaticity data will appear after your first weekly check-in.'**
+  String get noAutomaticityYet;
+
+  /// Y-axis title for the automaticity trajectory chart
+  ///
+  /// In en, this message translates to:
+  /// **'Automaticity'**
+  String get automaticityChartScoreAxis;
+
+  /// Tooltip shown when tapping a point on the automaticity chart
+  ///
+  /// In en, this message translates to:
+  /// **'Week {week}: {percent}%'**
+  String automaticityChartTooltip(int week, String percent);
+
   /// Title of the dismissible SRHI explainer card on the habit detail screen
   ///
   /// In en, this message translates to:
@@ -3008,6 +3038,84 @@ abstract class AppLocalizations {
   /// **'Low impact'**
   String get habitImpactFilterLow;
 
+  /// No description provided for @exploreFiltersTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get exploreFiltersTooltip;
+
+  /// No description provided for @exploreFiltersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get exploreFiltersTitle;
+
+  /// No description provided for @exploreFilterHabitTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Habit Type'**
+  String get exploreFilterHabitTypeLabel;
+
+  /// No description provided for @exploreFilterHealthBenefitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Health Benefit'**
+  String get exploreFilterHealthBenefitLabel;
+
+  /// No description provided for @exploreFilterWellbeingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Wellbeing'**
+  String get exploreFilterWellbeingLabel;
+
+  /// No description provided for @habitHealthBenefitFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get habitHealthBenefitFilterAll;
+
+  /// No description provided for @habitHealthBenefitFilterHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High benefit'**
+  String get habitHealthBenefitFilterHigh;
+
+  /// No description provided for @habitHealthBenefitFilterLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low benefit'**
+  String get habitHealthBenefitFilterLow;
+
+  /// No description provided for @habitWellbeingFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get habitWellbeingFilterAll;
+
+  /// No description provided for @habitWellbeingFilterHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High wellbeing'**
+  String get habitWellbeingFilterHigh;
+
+  /// No description provided for @habitWellbeingFilterLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low wellbeing'**
+  String get habitWellbeingFilterLow;
+
+  /// No description provided for @exploreFiltersClearAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get exploreFiltersClearAll;
+
+  /// No description provided for @exploreFiltersDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get exploreFiltersDone;
+
   /// No description provided for @informationOverloadInfo.
   ///
   /// In en, this message translates to:
@@ -3079,6 +3187,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Progress'**
   String get progressSection;
+
+  /// Title of the badges/achievements screen, opened by tapping the Progress card in settings
+  ///
+  /// In en, this message translates to:
+  /// **'Achievements'**
+  String get achievementsTitle;
+
+  /// Subtitle explaining the achievements screen shows both earned and locked badges
+  ///
+  /// In en, this message translates to:
+  /// **'Badges you\'ve earned, and badges still to unlock.'**
+  String get achievementsSubtitle;
+
+  /// Small tag shown on a not-yet-earned badge tile
+  ///
+  /// In en, this message translates to:
+  /// **'Locked'**
+  String get achievementsLockedTag;
 }
 
 class _AppLocalizationsDelegate

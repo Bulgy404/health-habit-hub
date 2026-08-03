@@ -21,6 +21,7 @@ class HabitOnboardingPrefs {
 
   static const _habitIntroKey = 'habit_onboarding_seen_v1';
   static const _cueIntroKey = 'cue_onboarding_seen_v1';
+  static const _dotLegendIntroKey = 'dot_legend_onboarding_seen_v1';
 
   /// Returns true if the "what's a habit?" explainer has already been
   /// dismissed once.
@@ -35,6 +36,14 @@ class HabitOnboardingPrefs {
 
   /// Marks the "what's a cue?" explainer as seen so it is not shown again.
   static Future<void> markCueIntroSeen() => _markSeen(_cueIntroKey);
+
+  /// Returns true if the traffic-light dot legend explainer on the My
+  /// Habits screen has already been dismissed once.
+  static Future<bool> hasSeenDotLegendIntro() => _hasSeen(_dotLegendIntroKey);
+
+  /// Marks the dot legend explainer as seen so it is not shown again.
+  static Future<void> markDotLegendIntroSeen() =>
+      _markSeen(_dotLegendIntroKey);
 
   static Future<bool> _hasSeen(String key) async {
     final prefs = await SharedPreferences.getInstance();

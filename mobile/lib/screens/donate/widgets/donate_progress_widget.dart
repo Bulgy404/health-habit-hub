@@ -8,6 +8,8 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_icons.dart';
 
 // ---------------------------------------------------------------------------
 // Submit button
@@ -85,13 +87,13 @@ class DonateSuccessWidget extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFFEDF7E5),
+                color: context.appColors.greenLight,
                 borderRadius: BorderRadius.circular(22),
               ),
-              child: const Icon(
-                Icons.check_circle,
+              child: Icon(
+                AppIcons.success,
                 size: 44,
-                color: Color(0xFF45B700),
+                color: context.appColors.primary,
               ),
             ),
             const SizedBox(height: 24),

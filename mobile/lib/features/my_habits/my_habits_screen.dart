@@ -17,6 +17,7 @@ import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/skeleton.dart';
 import '../../widgets/srhi_sparkline_widget.dart';
+import 'habit_onboarding_prefs.dart';
 import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
@@ -106,6 +107,12 @@ class MyHabitsScreen extends ConsumerWidget {
               error: (_, _) =>
                   const SliverToBoxAdapter(child: SizedBox.shrink()),
             ),
+            // Only relevant once there's an actual dot to explain — a user
+            // with no habits yet has nothing on screen for this hint to
+            // point at.
+            if (intentionsAsync.value?.any((i) => i.status == 'active') ??
+                false)
+              const SliverToBoxAdapter(child: _DotLegendCard()),
             intentionsAsync.when(
               data: (intentions) {
                 final active = intentions
@@ -330,14 +337,6 @@ class _HabitCard extends ConsumerWidget {
                   // the fading-reminders signal.
                   _TrafficLightDot(intentionId: intention.id),
                   const SizedBox(width: 8),
-                  // §7.4 — build/quit badge.
-                  Icon(
-                    isQuit
-                        ? Icons.do_not_disturb_alt
-                        : Icons.add_circle_outline,
-                    size: 16,
-                    color: typeColor,
-                  ),
                   // §7.1 — a stacked habit shows a small link glyph.
                   if (intention.isStacked) ...[
                     const SizedBox(width: 4),
@@ -457,6 +456,10 @@ class _HabitCard extends ConsumerWidget {
                       // graph, so today's log shows up immediately instead of
                       // only after a manual pull-to-refresh.
                       ref.invalidate(allHabitsActivityProvider);
+                      // Logging XP-earns immediately — refresh so the level/XP
+                      // display doesn't show stale numbers until some other
+                      // screen happens to refetch it.
+                      ref.invalidate(gamificationProvider);
                       messenger.showSnackBar(
                         SnackBar(
                           content: Text(
@@ -559,6 +562,141 @@ class _TrafficLightDot extends ConsumerWidget {
       width: 10,
       height: 10,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+}
+
+/// First-time explainer for the traffic-light dot on each habit card (see
+/// [_TrafficLightDot]) — shown once, dismissible via a small close button,
+/// and never shown again on this device (see [HabitOnboardingPrefs]).
+class _DotLegendCard extends StatefulWidget {
+  const _DotLegendCard();
+
+  @override
+  State<_DotLegendCard> createState() => _DotLegendCardState();
+}
+
+class _DotLegendCardState extends State<_DotLegendCard> {
+  // Null while the stored value is still loading — treated as "don't show
+  // yet" so the card doesn't flash in and immediately disappear.
+  bool? _hasSeen;
+
+  @override
+  void initState() {
+    super.initState();
+    HabitOnboardingPrefs.hasSeenDotLegendIntro().then((seen) {
+      if (mounted) setState(() => _hasSeen = seen);
+    });
+  }
+
+  void _dismiss() {
+    setState(() => _hasSeen = true);
+    HabitOnboardingPrefs.markDotLegendIntroSeen();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasSeen != false) return const SizedBox.shrink();
+    // A fixed, pre-checked-for-contrast green/on-green pair (see
+    // AppColors.greenLight/onGreenLight) rather than an alpha-blended
+    // colorScheme.primaryContainer — the latter turns into a muddy,
+    // low-contrast tint in dark mode since it depends on whatever's behind
+    // the card.
+    final colors = context.appColors;
+    final tt = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: Card(
+        elevation: 0,
+        color: colors.greenLight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'What does the dot mean?',
+                      style: tt.titleSmall?.copyWith(
+                        color: colors.onGreenLight,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _DotLegendRow(
+                      color: Colors.red,
+                      textColor: colors.onGreenLight,
+                      text:
+                          'Red: this habit is new, so reminders come daily.',
+                    ),
+                    const SizedBox(height: 4),
+                    _DotLegendRow(
+                      color: Colors.amber,
+                      textColor: colors.onGreenLight,
+                      text: 'Amber: you\'re building momentum, and reminders '
+                          'are easing off.',
+                    ),
+                    const SizedBox(height: 4),
+                    _DotLegendRow(
+                      color: Colors.green,
+                      textColor: colors.onGreenLight,
+                      text: 'Green: the habit is sticking, and reminders '
+                          'have mostly faded away.',
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.close, size: 18, color: colors.onGreenLight),
+                tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                onPressed: _dismiss,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DotLegendRow extends StatelessWidget {
+  const _DotLegendRow({
+    required this.color,
+    required this.text,
+    required this.textColor,
+  });
+  final Color color;
+  final String text;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 5),
+          child: Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: textColor,
+              height: 1.3,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

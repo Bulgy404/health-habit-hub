@@ -95,21 +95,21 @@
 }
 
 .bannerOk {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-  color: #15803d;
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 
 .bannerWarn {
-  border-color: #fed7aa;
-  background: #fffbeb;
-  color: #b45309;
+  border-color: var(--color-warning);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
 }
 
 .bannerErr {
-  border-color: #fecaca;
-  background: #fef2f2;
-  color: #b91c1c;
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
+  color: var(--color-error);
 }
 
 .bannerTitle {
@@ -154,17 +154,17 @@
 }
 
 .badgeOk {
-  background: #dcfce7;
+  background: var(--color-success-bg);
   color: var(--color-success);
 }
 
 .badgeErr {
-  background: #fee2e2;
+  background: var(--color-error-bg);
   color: var(--color-error);
 }
 
 .badgeWarn {
-  background: #fef3c7;
+  background: var(--color-warning-bg);
   color: var(--color-warning);
 }
 
@@ -260,8 +260,8 @@
 }
 
 .pipelineStageErr {
-  background: #fef2f2;
-  border-color: #fecaca;
+  background: var(--color-error-bg);
+  border-color: var(--color-error);
 }
 
 .pipelineCount {

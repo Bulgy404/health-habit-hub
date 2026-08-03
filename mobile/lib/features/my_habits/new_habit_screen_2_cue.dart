@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
+import '../../theme/app_icons.dart';
 import 'habit_onboarding_prefs.dart';
 import 'habit_onboarding_widgets.dart';
 import 'my_habits_models.dart';
@@ -391,7 +392,7 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
           alignment: Alignment.centerLeft,
           child: TextButton.icon(
             onPressed: _addCue,
-            icon: const Icon(Icons.add),
+            icon: const Icon(AppIcons.addMore),
             label: Text(
               l10n.addAnotherCueCount(_cueControllers.length, _maxCues),
             ),

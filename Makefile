@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 
 .PHONY: help \
-        dev stop seed verify-keycloak fix-keycloak logs logs-all ios reset \
+        dev stop seed seed-user verify-keycloak fix-keycloak logs logs-all ios reset \
         monitoring monitoring-stop logs-prometheus logs-grafana \
         format test test-backend test-flutter test-python test-admin seed-habits \
         prod-up prod-stop prod-ps prod-logs prod-build prod-restart \
@@ -22,6 +22,10 @@ seed: ## Seed local MongoDB, Neo4j, Keycloak, and Neo4j community habit graph
 	set -a && . ./.env && set +a && export KEYCLOAK_URL=http://localhost:8080 && cd app && npm run seed
 	$(MAKE) verify-keycloak || ( $(MAKE) fix-keycloak && $(MAKE) verify-keycloak )
 	$(MAKE) seed-habits MODE=e2e
+	$(MAKE) seed-user
+
+seed-user: ## Seed the fixed-passphrase QA test participant (see scripts/seed-test-user.js)
+	set -a && . ./.env && set +a && export KEYCLOAK_URL=http://localhost:8080 && node scripts/seed-test-user.js
 
 verify-keycloak: ## Verify hhh-flutter default scopes include stable identity claims (sub)
 	bash scripts/verify-keycloak-claims.sh

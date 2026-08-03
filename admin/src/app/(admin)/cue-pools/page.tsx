@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
+import { Spinner } from "@/components/spinner";
 import styles from "./page.module.css";
 import { useCuePoolsData } from "./useCuePoolsData";
 
@@ -312,7 +313,7 @@ export default function CuePoolsPage() {
           </div>
           <div className={styles.formFooter}>
             <button className={styles.saveBtn} onClick={handleCreate} disabled={creating}>
-              {creating ? t("creating") : t("create")}
+              {creating ? <Spinner /> : t("create")}
             </button>
           </div>
         </div>

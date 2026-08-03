@@ -9,6 +9,7 @@ import '../../core/exceptions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_format.dart';
+import '../../widgets/automaticity_chart_widget.dart';
 import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/srhi_chart_widget.dart';
 import 'my_habits_provider.dart';
@@ -191,6 +192,39 @@ class HabitDetailScreen extends ConsumerWidget {
                             height: 220,
                           ),
                       ],
+                    );
+                  },
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, _) => Text(_errorText(l10n, e)),
+                ),
+                // ── Automaticity ───────────────────────────────────────────
+                const SizedBox(height: 24),
+                Text(l10n.automaticityTitle,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text(l10n.automaticityExplanationBody,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(color: Colors.grey)),
+                const SizedBox(height: 8),
+                trajectoryAsync.when(
+                  data: (trajectory) {
+                    final hasAutomaticity =
+                        trajectory.any((p) => p.autonomyScore != null);
+                    if (!hasAutomaticity) {
+                      return Text(l10n.noAutomaticityYet,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(color: Colors.grey));
+                    }
+                    return AutomaticityChartWidget(
+                      trajectory: trajectory,
+                      height: 220,
                     );
                   },
                   loading: () => const LinearProgressIndicator(),

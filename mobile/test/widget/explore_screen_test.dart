@@ -127,8 +127,9 @@ void main() {
   });
 
   testWidgets(
-      'impact filter narrows dimension habitCount independently of the '
-      'build/quit filter', (tester) async {
+      'health benefit filter (opened from the filter icon) narrows '
+      'dimension habitCount independently of the build/quit filter',
+      (tester) async {
     final graph = BubbleGraph.fromJson({
       'dimensions': [
         {
@@ -164,11 +165,16 @@ void main() {
 
     expect(find.text('2 habits'), findsOneWidget);
 
-    await tester.tap(find.text('High impact'));
+    // Filters are collapsed behind an app-bar icon + popup rather than
+    // always-visible chip rows.
+    await tester.tap(find.byIcon(Icons.filter_list));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('High benefit'));
     await tester.pumpAndSettle();
     expect(find.text('1 habit'), findsOneWidget);
 
-    await tester.tap(find.text('Low impact'));
+    await tester.tap(find.text('Low benefit'));
     await tester.pumpAndSettle();
     expect(find.text('1 habit'), findsOneWidget);
   });

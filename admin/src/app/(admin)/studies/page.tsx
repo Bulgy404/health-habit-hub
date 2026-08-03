@@ -11,6 +11,7 @@ import { CueConfigForm } from "@/components/cue-config-form";
 import { HabitEntryModeForm } from "@/components/habit-entry-mode-form";
 import { ActivityTypesManager } from "@/components/activity-types-manager";
 import { ToggleSwitch } from "@/components/toggle-switch";
+import { Spinner } from "@/components/spinner";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -577,6 +578,7 @@ function CadenceEditor({
   const [daysStr, setDaysStr] = useState((initial?.days ?? []).join(", "));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
 
   const firstDueDate = (() => {
     const d = new Date();
@@ -587,6 +589,7 @@ function CadenceEditor({
 
   async function handleSave() {
     setError("");
+    setSaved(false);
     const parseList = (s: string) =>
       s
         .split(",")
@@ -620,6 +623,7 @@ function CadenceEditor({
     setSaving(true);
     try {
       await onSave(cadence);
+      setSaved(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("saveFailedGeneric"));
     } finally {
@@ -733,6 +737,7 @@ function CadenceEditor({
 
       {error && <div className={styles.errorMsg}>{error}</div>}
       <div className={styles.cueConfigFooter}>
+        {saved && <span className={styles.savedMsg}>{t("saved")}</span>}
         {onRemove && (
           <button
             className={styles.saveBtn}
@@ -744,7 +749,7 @@ function CadenceEditor({
           </button>
         )}
         <button className={styles.saveBtn} onClick={handleSave} disabled={disabled || saving}>
-          {saving ? tc("saving") : tc("save")}
+          {saving ? <Spinner /> : tc("save")}
         </button>
       </div>
     </div>
@@ -1225,11 +1230,13 @@ function CodesTab({ study, token }: { study: StudySummary; token: string }) {
             {t("codesTab.equalButton")}
           </button>
           <button className={styles.saveBtn} onClick={handleSaveAllocation} disabled={savingAlloc}>
-            {allocSaved
-              ? t("codesTab.savedAllocation")
-              : savingAlloc
-                ? tc("saving")
-                : t("codesTab.saveAllocation")}
+            {allocSaved ? (
+              t("codesTab.savedAllocation")
+            ) : savingAlloc ? (
+              <Spinner />
+            ) : (
+              t("codesTab.saveAllocation")
+            )}
           </button>
         </div>
       </div>
@@ -1276,7 +1283,7 @@ function CodesTab({ study, token }: { study: StudySummary; token: string }) {
         </div>
         {studyGenError && <div className={styles.errorMsg}>{studyGenError}</div>}
         <button className={styles.saveBtn} onClick={handleStudyGenerate} disabled={studyGenerating}>
-          {studyGenerating ? t("generatingEllipsis") : t("codesTab.generateCodes")}
+          {studyGenerating ? <Spinner /> : t("codesTab.generateCodes")}
         </button>
         {studyGenCodes.length > 0 && (
           <div className={styles.genResult}>
@@ -1360,7 +1367,7 @@ function CodesTab({ study, token }: { study: StudySummary; token: string }) {
             </div>
             {genError && <div className={styles.errorMsg}>{genError}</div>}
             <button className={styles.saveBtn} onClick={handleGenerate} disabled={generating}>
-              {generating ? t("generatingEllipsis") : t("codesTab.generateTargeted")}
+              {generating ? <Spinner /> : t("codesTab.generateTargeted")}
             </button>
             {generatedCodes.length > 0 && (
               <div className={styles.genResult}>
@@ -1786,7 +1793,7 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
                 onClick={() => handleSave(g.id)}
                 disabled={s.saving}
               >
-                {s.saving ? tc("saving") : tc("save")}
+                {s.saving ? <Spinner /> : tc("save")}
               </button>
             </div>
           </div>
@@ -2238,7 +2245,7 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
             onClick={handleSaveRecommender}
             disabled={saving.recommender}
           >
-            {saving.recommender ? tc("saving") : tc("save")}
+            {saving.recommender ? <Spinner /> : tc("save")}
           </button>
         </div>
       </div>
@@ -2292,7 +2299,7 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
             onClick={handleSaveOnboarding}
             disabled={saving.onboarding}
           >
-            {saving.onboarding ? tc("saving") : tc("save")}
+            {saving.onboarding ? <Spinner /> : tc("save")}
           </button>
         </div>
       </div>
@@ -2399,7 +2406,7 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
             onClick={handleSaveHabitCreation}
             disabled={saving.habitCreation}
           >
-            {saving.habitCreation ? tc("saving") : tc("save")}
+            {saving.habitCreation ? <Spinner /> : tc("save")}
           </button>
         </div>
       </div>
@@ -2980,7 +2987,7 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
               onClick={() => handleSaveType(type)}
               disabled={saving[type]}
             >
-              {saving[type] ? tc("saving") : tc("save")}
+              {saving[type] ? <Spinner /> : tc("save")}
             </button>
           </div>
 
@@ -3256,11 +3263,13 @@ function StudyUpdateManualSend({ study, token }: { study: StudySummary; token: s
 
           <div className={styles.notifFormFooter}>
             <button className={styles.saveBtn} onClick={handleSend} disabled={sending}>
-              {sending
-                ? t("notificationsTab.sendingEllipsis")
-                : sendMode === "now"
-                  ? t("notificationsTab.send")
-                  : t("notificationsTab.scheduleOption")}
+              {sending ? (
+                <Spinner />
+              ) : sendMode === "now" ? (
+                t("notificationsTab.send")
+              ) : (
+                t("notificationsTab.scheduleOption")
+              )}
             </button>
           </div>
         </div>
@@ -3559,7 +3568,7 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
     <div className={styles.cueConfigFooter}>
       {saved[section] && <span className={styles.savedMsg}>{t("saved")}</span>}
       <button className={styles.saveBtn} onClick={onSave} disabled={saving[section]}>
-        {saving[section] ? tc("saving") : tc("save")}
+        {saving[section] ? <Spinner /> : tc("save")}
       </button>
     </div>
   );
@@ -3841,7 +3850,7 @@ function GamificationTab({ study, token }: { study: StudySummary; token: string 
         <div className={styles.cueConfigFooter}>
           {saved && <span className={styles.savedMsg}>{t("saved")}</span>}
           <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-            {saving ? tc("saving") : tc("save")}
+            {saving ? <Spinner /> : tc("save")}
           </button>
         </div>
       </div>
@@ -4358,11 +4367,13 @@ function StudyModal({
                 {tc("cancel")}
               </button>
               <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-                {saving
-                  ? tc("saving")
-                  : isEdit
-                    ? t("modal.footer.saveChanges")
-                    : t("modal.footer.create")}
+                {saving ? (
+                  <Spinner />
+                ) : isEdit ? (
+                  t("modal.footer.saveChanges")
+                ) : (
+                  t("modal.footer.create")
+                )}
               </button>
             </div>
           </div>

@@ -239,7 +239,7 @@
 }
 
 .statusActive {
-  background: #dcfce7;
+  background: var(--color-success-bg);
   color: var(--color-success);
 }
 .statusInactive {
@@ -247,7 +247,7 @@
   color: #6b7280;
 }
 .statusDropped {
-  background: #fee2e2;
+  background: var(--color-error-bg);
   color: var(--color-error);
 }
 
@@ -270,7 +270,7 @@
   padding: 1rem 1.5rem;
   color: var(--color-error);
   font-size: var(--fs-sm);
-  background: #fee2e2;
+  background: var(--color-error-bg);
   border-radius: 8px;
   margin-bottom: 1rem;
 }
@@ -576,20 +576,20 @@
 }
 
 .frequencyDaily {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--color-error-bg);
+  color: var(--color-error);
 }
 .frequencyEvery2Days {
-  background: #ffedd5;
-  color: #c2410c;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
 }
 .frequencyTwiceWeekly {
-  background: #fef9c3;
-  color: #92400e;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
 }
 .frequencyWeekly {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 .frequencyOff {
   background: var(--color-surface-alt);

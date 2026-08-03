@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_icons.dart';
 import 'questionnaire_form_widget.dart';
 import 'questionnaire_service.dart';
 
@@ -83,7 +84,7 @@ class QuestionnaireConfirmationScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.check_circle_outline,
+                AppIcons.success,
                 size: 72,
                 color: context.appColors.primary,
               ),

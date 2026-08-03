@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl, API_BASE_URL } from "@/lib/api";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import { ToggleSwitch } from "@/components/toggle-switch";
+import { Spinner } from "@/components/spinner";
 import styles from "@/components/admin-page.module.css";
 
 const GROUPS = ["G1", "G2", "G3", "G4"] as const;
@@ -704,7 +705,7 @@ export default function ParticipantsPage() {
                 {tc("cancel")}
               </button>
               <button className={styles.saveButton} onClick={handleCreate} disabled={creating}>
-                {creating ? t("creatingEllipsis") : tc("add")}
+                {creating ? <Spinner /> : tc("add")}
               </button>
             </div>
           </div>
