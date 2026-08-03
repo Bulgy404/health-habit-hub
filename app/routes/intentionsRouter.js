@@ -127,14 +127,21 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
             'behaviorKey, behaviorLabel, durationMinutes, cues, and intentionStatement are required',
         });
       }
-      // §7.4 Habit Distinction — habitType is a required build/quit choice made
-      // at the start of habit creation; reject anything else so the research
-      // covariate is never silently defaulted for app-created habits.
-      if (habitType !== 'build' && habitType !== 'quit') {
+      // §7.4 Habit Distinction — habitType is a build/quit choice made at the
+      // start of habit creation. Omitted entirely (old app builds predating
+      // this feature never send it) falls back to 'build', same as the
+      // donation flow and the intentionService default, so pre-update clients
+      // keep working; an explicit but unrecognised value is still rejected.
+      if (
+        habitType != null &&
+        habitType !== 'build' &&
+        habitType !== 'quit'
+      ) {
         return res
           .status(400)
           .json({ error: "habitType must be 'build' or 'quit'" });
       }
+      const effectiveHabitType = habitType === 'quit' ? 'quit' : 'build';
       // §7.1 Habit Stacking — creationMode is optional; when 'stacked' an
       // anchor reference should accompany it.
       if (
@@ -211,7 +218,7 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         durationMinutes,
         cues,
         intentionStatement,
-        habitType,
+        habitType: effectiveHabitType,
         stackedOn: stackedOn ?? null,
         creationMode: creationMode ?? 'standalone',
         reminderTime: reminderTimeToStore,

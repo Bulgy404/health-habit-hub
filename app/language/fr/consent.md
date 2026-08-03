@@ -1,6 +1,6 @@
 ---
-version: 1.2.0
-effectiveDate: 2026-07-08
+version: 1.3.0
+effectiveDate: 2026-08-03
 bindingLanguage: de
 ---
 
@@ -20,7 +20,7 @@ Avant de lire tous les détails, voici un résumé rapide :
 - **Qui mène l'étude ?** Le groupe de recherche Digital Health de la TU Dresden — examinée et approuvée par un comité d'éthique indépendant.
 - **Mes données sont-elles en sécurité ?** Toutes les données sont stockées sous une forme **entièrement anonymisée**. Aucun nom, aucune adresse e-mail, aucune adresse postale.
 - **La participation est-elle volontaire ?** Oui — vous pouvez arrêter à tout moment, pour quelque raison que ce soit, sans aucune conséquence.
-- **Puis-je supprimer mes données ?** Comme toutes les données sont anonymes, il n'est pas possible d'identifier ni de supprimer des enregistrements individuels après l'anonymisation. Vous pouvez toutefois supprimer votre compte et l'ensemble des données associées dans les paramètres de l'application à tout moment, tant que vous participez encore.
+- **Puis-je supprimer mes données ?** Vous pouvez supprimer votre compte à tout moment dans les paramètres de l'application, tant que vous participez encore. Cela supprime uniquement votre compte ; vos données d'étude, déjà collectées de manière anonyme, restent dans la base de données de recherche. Si, dans un cas urgent, vous souhaitez néanmoins faire supprimer ces données anonymes, veuillez contacter directement l'équipe de l'étude.
 
 ---
 
@@ -30,7 +30,7 @@ Chère participante, cher participant potentiel,
 
 Merci de l'intérêt que vous portez à notre recherche. **L'application Health Habit Hub** fait partie de l'étude **HabConnect – from Habit to Health**, planifiée et menée par le groupe de recherche Digital Health, Faculté des sciences économiques et de gestion, Technische Universität Dresden. L'étude est autofinancée par notre établissement et a été examinée par un comité d'éthique indépendant, qui n'a soulevé aucune objection.
 
-Votre participation est volontaire. Vous pouvez arrêter à tout moment sans avoir à en donner la raison et sans que cela n'entraîne d'inconvénient pour vous.
+Votre participation est volontaire. Vous pouvez arrêter à tout moment sans avoir à en donner la raison et sans que cela n'entraîne d'inconvénient pour vous. Si vous avez pris connaissance de l'étude par l'intermédiaire d'un établissement clinique partenaire, votre décision de participer ou non n'a aucune influence sur votre traitement médical ou votre suivi.
 
 ## Pourquoi cette étude est-elle menée ?
 
@@ -46,11 +46,11 @@ Exemples de questions de recherche :
 - Quels facteurs influencent le fait que les personnes intègrent de nouvelles habitudes dans leur quotidien ?
 - Comment les interventions numériques influencent-elles le maintien à long terme d'habitudes saines ?
 
-L'objectif est de développer des recommandations scientifiquement fondées et applicables au quotidien, qui aident les personnes à mener une vie plus saine sur le long terme.
+L'objectif est de développer des recommandations scientifiquement fondées et applicables au quotidien, qui aident les personnes à mener une vie plus saine sur le long terme. Il s'agit également d'étudier comment l'intervention numérique existante peut soutenir les patientes et patients majeurs, sortis de l'hôpital après une prise en charge en soins intensifs, dans la mise en place d'habitudes favorables à la santé. La question de recherche scientifique et les applications numériques utilisées restent inchangées.
 
 ## Comment se déroule l'étude ?
 
-Il n'y a pas de durée de participation fixe — vous décidez vous-même combien de temps et avec quelle intensité vous participez.
+Il n'y a pas de durée de participation fixe — vous décidez vous-même combien de temps et avec quelle intensité vous participez. Vous pouvez être informé(e) de l'étude soit via la mise à disposition publique de l'application Health Habit Hub, soit par l'intermédiaire d'un établissement clinique partenaire. Quel que soit le canal de recrutement, la participation se déroule exclusivement via les applications numériques décrites dans le présent document.
 
 **Dans l'application Health Habit Hub, vous pouvez :**
 
@@ -91,6 +91,8 @@ Nous collectons :
 - Le comportement d'utilisation de l'application (par exemple, si une habitude recommandée a été suivie)
 - Les réponses aux questionnaires hebdomadaires sur la force des habitudes et le bien-être
 
+Si vous avez pris connaissance de l'étude par l'intermédiaire d'un établissement clinique partenaire, aucune donnée issue de votre dossier patient ou d'autres systèmes d'information cliniques n'est transmise à l'étude. Toutes les informations collectées dans le cadre de l'étude sont saisies exclusivement par vous-même au sein de l'application Health Habit Hub. L'établissement clinique n'a aucun accès à vos données d'étude.
+
 ### Comment les données sont-elles utilisées ?
 
 Vos données anonymisées seront utilisées pour :
@@ -118,7 +120,7 @@ Les données anonymes sont stockées sur les serveurs de la TU Dresden et peuven
 
 ### Vos droits
 
-Comme toutes les données sont anonymes, nous ne pouvons attribuer aucun enregistrement spécifique à une personne après l'anonymisation. Pour toute question ou préoccupation, veuillez contacter :
+Comme toutes les données sont anonymes, nous ne pouvons attribuer aucun enregistrement spécifique à une personne après l'anonymisation. Vous pouvez supprimer votre compte à tout moment dans les paramètres de l'application tant que vous participez encore ; seul votre compte est alors supprimé, vos données d'étude déjà collectées de manière anonyme restant dans la base de données de recherche. Si, dans un cas urgent, vous souhaitez néanmoins faire supprimer ces données anonymes, veuillez contacter directement l'équipe de l'étude. Pour toute question ou préoccupation, veuillez contacter :
 
 **Felix Reinsch**
 felix.reinsch@tu-dresden.de
@@ -149,6 +151,7 @@ J'ai lu et compris les informations relatives à cette étude. J'ai été inform
 - ma participation est volontaire,
 - je peux arrêter à tout moment sans avoir à en donner la raison,
 - toutes mes données seront entièrement anonymisées,
+- la suppression de mon compte ne supprime que mon compte, mes données d'étude déjà collectées de manière anonyme étant conservées, sauf si je demande en outre, dans un cas urgent, leur suppression directement auprès de l'équipe de l'étude,
 - les données seront utilisées à des fins scientifiques et dans une base de données de recherche ouverte.
 
 **En continuant, je consens à l'utilisation anonyme de mes données dans le cadre de la recherche HabConnect.**

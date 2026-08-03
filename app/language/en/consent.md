@@ -1,6 +1,6 @@
 ---
-version: 1.2.0
-effectiveDate: 2026-07-08
+version: 1.3.0
+effectiveDate: 2026-08-03
 bindingLanguage: de
 ---
 
@@ -20,7 +20,7 @@ Before reading the full details, here is a quick summary:
 - **Who runs the study?** The Digital Health Research Group at TU Dresden — reviewed and approved by an independent ethics committee.
 - **Is my data safe?** All data is stored in **fully anonymised** form. No name, no email, no address.
 - **Is participation voluntary?** Yes — you can stop at any time, for any reason, with no consequences.
-- **Can I delete my data?** Because all data is anonymous, individual records cannot be identified or deleted after anonymisation. However, you can delete your account and all associated data in the app settings at any time while you are still participating.
+- **Can I delete my data?** You can delete your account at any time in the app settings while you are still participating. This deletes only your account; your already anonymously collected study data remains in the research database. If, in an urgent case, you would still like this anonymous data removed, please contact the study team directly.
 
 ---
 
@@ -30,7 +30,7 @@ Dear prospective participant,
 
 Thank you for your interest in our research. The **Health Habit Hub app** is part of the **HabConnect – from Habit to Health** study, planned and conducted by the Digital Health Research Group, Faculty of Business and Economics, Technische Universität Dresden. The study is self-funded by our institution and has been reviewed by an independent ethics committee, which raised no objections.
 
-Your participation is voluntary. You can stop at any time without giving a reason and without any disadvantage to you.
+Your participation is voluntary. You can stop at any time without giving a reason and without any disadvantage to you. If you learned of the study through a cooperating clinical institution, your decision to participate or not has no influence whatsoever on your medical treatment or aftercare.
 
 ## Why is this study being conducted?
 
@@ -46,11 +46,11 @@ Example research questions:
 - Which factors influence whether people integrate new habits into their daily lives?
 - How do digital interventions affect the long-term maintenance of healthy habits?
 
-The goal is to develop scientifically sound, practical recommendations that help people lead healthier lives in the long term.
+The goal is to develop scientifically sound, practical recommendations that help people lead healthier lives in the long term. In addition, we will examine how the existing digital intervention can support adult patients who have been discharged from hospital after completing intensive-care treatment in establishing health-promoting habits. The scientific research question and the digital applications used remain unchanged.
 
 ## How does the study work?
 
-There is no fixed participation period — you decide how long and how intensively you take part.
+There is no fixed participation period — you decide how long and how intensively you take part. You may learn of the study either through the public availability of the Health Habit Hub app or through a cooperating clinical institution. Regardless of the recruitment channel, participation takes place exclusively through the digital applications described in this document.
 
 **In the Health Habit Hub app** you can:
 
@@ -91,6 +91,8 @@ We collect:
 - App usage behaviour (e.g. whether a recommended habit was followed)
 - Weekly questionnaire responses on habit strength and well-being
 
+If you learned of the study through a cooperating clinical institution, no data from your patient records or other clinical information systems is transferred into the study. All information collected as part of the study is entered exclusively by you within the Health Habit Hub app. The clinical institution has no access to your study data.
+
 ### How is the data used?
 
 Your anonymised data will be used for:
@@ -118,7 +120,7 @@ Anonymous data is stored on TU Dresden servers and may be kept permanently to su
 
 ### Your rights
 
-Because all data is anonymous, we cannot attribute specific records to any individual after anonymisation. For questions or concerns, please contact:
+Because all data is anonymous, we cannot attribute specific records to any individual after anonymisation. You can delete your account at any time in the app settings while you are still participating; this deletes only your account, while your already anonymously collected study data remains in the research database. If, in an urgent case, you would still like this anonymous data removed, please contact the study team directly. For questions or concerns, please contact:
 
 **Felix Reinsch**
 felix.reinsch@tu-dresden.de
@@ -149,6 +151,7 @@ I have read and understood the information about this study. I have been informe
 - my participation is voluntary,
 - I can stop at any time without giving a reason,
 - all my data will be fully anonymised,
+- deleting my account deletes only my account, while my already anonymously collected study data remains, unless I additionally request its removal directly from the study team in an urgent case,
 - the data will be used for scientific purposes and in an open research database.
 
 **By continuing, I consent to the anonymous use of my data within the HabConnect research.**

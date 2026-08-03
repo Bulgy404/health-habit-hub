@@ -386,14 +386,16 @@ test('POST /habits/intentions creates intention and returns 201', async () => {
   assert.strictEqual(body.creationMode, 'standalone');
 });
 
-test('POST /habits/intentions returns 400 when habitType is missing (§7.4)', async () => {
+test('POST /habits/intentions defaults to build when habitType is missing (pre-§7.4 app builds)', async () => {
   const { habitType: _drop, ...noType } = validBody;
   const res = await post(
     INTENTIONS,
     noType,
     makeToken(['user'], 'no-type-user')
   );
-  assert.strictEqual(res.status, 400);
+  assert.strictEqual(res.status, 201);
+  const body = await res.json();
+  assert.strictEqual(body.habitType, 'build');
 });
 
 test('POST /habits/intentions returns 400 for an invalid habitType (§7.4)', async () => {

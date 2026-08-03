@@ -1,6 +1,6 @@
 ---
-version: 1.2.0
-effectiveDate: 2026-07-08
+version: 1.3.0
+effectiveDate: 2026-08-03
 bindingLanguage: de
 ---
 
@@ -16,9 +16,9 @@ Bevor Sie die Details lesen, hier die wesentlichen Punkte zusammengefasst:
 
 - **Worum geht es?** Sie teilen Ihre Alltagsgewohnheiten und erhalten dafür personalisierte Empfehlungen für einen gesünderen Lebensstil.
 - **Wer führt die Studie durch?** Die Forschungsgruppe Digital Health der TU Dresden – geprüft und genehmigt von einer unabhängigen Ethikkommission.
-- **Sind meine Daten sicher?** Alle Daten werden **vollständig anonymisiert** gespeichert. Kein Name, keine E-Mail, keine Adresse.
+- **Sind meine Daten sicher?** Alle Daten werden **vollständig anonymisiert** erhoben und gespeichert. Kein Name, keine E-Mail, keine Adresse.
 - **Ist die Teilnahme freiwillig?** Ja – Sie können jederzeit und ohne Angabe von Gründen aufhören.
-- **Kann ich meine Daten löschen?** Da alle Daten anonym sind, ist eine nachträgliche Identifikation und Löschung nicht möglich. Sie können jedoch Ihr Konto und alle damit verbundenen Daten in den App-Einstellungen löschen, solange Sie noch teilnehmen.
+- **Kann ich meine Daten löschen?** Sie können Ihr Konto jederzeit in den App-Einstellungen löschen, solange Sie noch teilnehmen. Dabei wird Ihr Konto gelöscht; Ihre bereits anonymisierten Studiendaten verbleiben in der Forschungsdatenbank, da sie zu diesem Zeitpunkt keiner Person mehr zugeordnet werden können. Möchten Sie in einem dringenden Fall auch die vollständige Löschung dieser anonymisierten Daten veranlassen, wenden Sie sich bitte direkt an das Studienteam (Kontakt siehe Abschnitt „Datenschutz").
 
 ---
 
@@ -28,7 +28,7 @@ Sehr geehrte Interessentin, sehr geehrter Interessent,
 
 herzlichen Dank für Ihr Interesse an unserer wissenschaftlichen Studie. Die **Health Habit Hub App** gehört zur **HabConnect – from Habit to Health**-Studie, die von der Technischen Universität Dresden, Fakultät Wirtschaftswissenschaften, Forschungsgruppe Digital Health geplant und durchgeführt wird. Die Studie wird von unserer Einrichtung selbst finanziert und wurde von einer unabhängigen Ethikkommission geprüft, die keine Einwände erhoben hat.
 
-Ihre Teilnahme ist freiwillig. Sie können jederzeit aufhören, ohne Gründe nennen zu müssen und ohne dass Ihnen dadurch Nachteile entstehen.
+Ihre Teilnahme ist freiwillig. Sie können jederzeit aufhören, ohne Gründe nennen zu müssen und ohne dass Ihnen dadurch Nachteile entstehen. Wenn Sie über eine kooperierende klinische Einrichtung auf die Studie aufmerksam gemacht wurden, hat Ihre Entscheidung für oder gegen eine Teilnahme keinerlei Einfluss auf Ihre medizinische Behandlung oder Nachsorge.
 
 ## Warum wird diese Studie durchgeführt?
 
@@ -44,11 +44,11 @@ Beispiele für unsere Forschungsfragen:
 - Welche Faktoren beeinflussen, ob Menschen neue Gewohnheiten in ihren Alltag integrieren?
 - Wie wirken digitale Interventionen auf die langfristige Aufrechterhaltung gesunder Gewohnheiten?
 
-Das Ziel: wissenschaftlich fundierte, alltagstaugliche Empfehlungen entwickeln, die Menschen langfristig bei einem gesünderen Leben unterstützen.
+Das Ziel: wissenschaftlich fundierte, alltagstaugliche Empfehlungen entwickeln, die Menschen langfristig bei einem gesünderen Leben unterstützen. Zusätzlich soll untersucht werden, wie die bestehende digitale Intervention volljährige Patientinnen und Patienten, die nach Abschluss einer intensivmedizinischen Behandlung aus dem Krankenhaus entlassen wurden, bei der Etablierung gesundheitsförderlicher Gewohnheiten unterstützen kann. Die wissenschaftliche Fragestellung und die eingesetzten digitalen Anwendungen bleiben dabei unverändert.
 
 ## Wie läuft die Studie ab?
 
-Es gibt keine feste Teilnahmedauer – Sie entscheiden selbst, wie lange und wie intensiv Sie mitmachen.
+Es gibt keine feste Teilnahmedauer – Sie entscheiden selbst, wie lange und wie intensiv Sie mitmachen. Sie können entweder über die öffentliche Bereitstellung der Health Habit Hub App oder über eine kooperierende klinische Einrichtung auf die Studie aufmerksam gemacht werden. Unabhängig vom Rekrutierungsweg erfolgt die Teilnahme ausschließlich über die in dieser Information beschriebenen digitalen Anwendungen.
 
 **In der Health Habit Hub App** können Sie:
 
@@ -89,6 +89,8 @@ Wir erheben Angaben zu:
 - App-Nutzungsverhalten (z. B. ob eine empfohlene Gewohnheit umgesetzt wurde)
 - Wöchentliche Fragebögen zu Gewohnheitsstärke und Wohlbefinden
 
+Werden Sie über eine kooperierende klinische Einrichtung auf die Studie aufmerksam gemacht, werden keine Daten aus Ihrer Patientenakte oder anderen klinischen Informationssystemen in die Studie übernommen. Sämtliche im Rahmen der Studie erhobenen Informationen werden ausschließlich von Ihnen selbst innerhalb der Health Habit Hub App eingegeben. Die klinische Einrichtung erhält keinen Zugriff auf Ihre Studiendaten.
+
 ### Wie werden die Daten verwendet?
 
 Ihre anonymisierten Daten werden für folgende Zwecke genutzt:
@@ -112,11 +114,11 @@ Für Japan und Kanada liegt ein EU-Angemessenheitsbeschluss vor. Belgien ist EU-
 
 ### Wie lange werden die Daten gespeichert?
 
-Die anonymen Daten werden auf den Servern der TU Dresden gespeichert. Sie können dauerhaft aufbewahrt werden, um wissenschaftliche Langzeitforschung zu ermöglichen. Sobald Daten vollständig anonymisiert sind, ist eine nachträgliche Identifikation und damit auch eine gezielte Löschung nicht mehr möglich.
+Die anonymen Daten werden auf den Servern der TU Dresden gespeichert. Sie können dauerhaft aufbewahrt werden, um wissenschaftliche Langzeitforschung zu ermöglichen. Sobald Daten vollständig anonymisiert sind, ist eine nachträgliche Identifikation und damit auch eine gezielte Löschung einzelner Datensätze nicht mehr möglich.
 
 ### Ihre Rechte
 
-Da alle Daten anonym sind, können wir nach der Anonymisierung keine spezifischen Datensätze mehr einer Person zuordnen. Für Fragen oder Anliegen wenden Sie sich bitte an:
+Da alle Daten anonym erhoben werden, können wir nach der Erhebung keine spezifischen Datensätze mehr einer Person zuordnen. Sie können Ihr Konto jederzeit in den App-Einstellungen löschen, solange Sie noch teilnehmen; dabei wird nur Ihr Konto gelöscht, Ihre bereits anonym erhobenen Studiendaten verbleiben in der Forschungsdatenbank. Falls Sie in einem dringenden Fall dennoch die Entfernung dieser anonymen Daten wünschen, wenden Sie sich bitte direkt an das Studienteam. Für Fragen oder Anliegen wenden Sie sich bitte an:
 
 **Felix Reinsch**
 felix.reinsch@tu-dresden.de
@@ -147,6 +149,7 @@ Ich habe die Informationen zu dieser Studie gelesen und verstanden. Ich wurde da
 - meine Teilnahme freiwillig ist,
 - ich jederzeit ohne Angabe von Gründen aufhören kann,
 - alle meine Daten vollständig anonymisiert werden,
+- eine Löschung meines Kontos nur mein Konto entfernt, meine bereits anonym erhobenen Studiendaten jedoch verbleiben, sofern ich nicht in einem dringenden Fall die zusätzliche Entfernung dieser Daten direkt beim Studienteam beantrage,
 - die Daten für wissenschaftliche Zwecke und in einer offenen Forschungsdatenbank verwendet werden.
 
 **Durch das Fortfahren stimme ich der anonymen Nutzung meiner Daten im Rahmen der HabConnect-Forschung zu.**

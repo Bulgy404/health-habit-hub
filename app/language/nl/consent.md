@@ -1,6 +1,6 @@
 ---
-version: 1.2.0
-effectiveDate: 2026-07-08
+version: 1.3.0
+effectiveDate: 2026-08-03
 bindingLanguage: de
 ---
 
@@ -20,7 +20,7 @@ Voordat u de volledige details leest, hier een korte samenvatting:
 - **Wie voert de studie uit?** De Digital Health Research Group van de TU Dresden — beoordeeld en goedgekeurd door een onafhankelijke ethische commissie.
 - **Zijn mijn gegevens veilig?** Alle gegevens worden **volledig geanonimiseerd** opgeslagen. Geen naam, geen e-mailadres, geen adres.
 - **Is deelname vrijwillig?** Ja — u kunt op elk moment en om welke reden dan ook stoppen, zonder gevolgen.
-- **Kan ik mijn gegevens verwijderen?** Omdat alle gegevens anoniem zijn, kunnen individuele gegevens na anonimisering niet meer worden geïdentificeerd of verwijderd. U kunt echter, zolang u nog deelneemt, te allen tijde uw account en alle bijbehorende gegevens verwijderen via de app-instellingen.
+- **Kan ik mijn gegevens verwijderen?** U kunt uw account te allen tijde verwijderen via de app-instellingen, zolang u nog deelneemt. Hierbij wordt alleen uw account verwijderd; uw reeds anoniem verzamelde studiegegevens blijven bewaard in de onderzoeksdatabase. Wilt u in een dringend geval toch verwijdering van deze anonieme gegevens, neem dan rechtstreeks contact op met het studieteam.
 
 ---
 
@@ -30,7 +30,7 @@ Geachte potentiële deelnemer,
 
 Hartelijk dank voor uw interesse in ons onderzoek. De **Health Habit Hub-app** maakt deel uit van de studie **HabConnect – from Habit to Health**, gepland en uitgevoerd door de Digital Health Research Group, Faculty of Business and Economics, Technische Universität Dresden. De studie wordt door onze instelling zelf gefinancierd en is beoordeeld door een onafhankelijke ethische commissie, die geen bezwaren heeft geuit.
 
-Uw deelname is vrijwillig. U kunt op elk moment stoppen zonder opgaaf van redenen en zonder dat dit nadelige gevolgen voor u heeft.
+Uw deelname is vrijwillig. U kunt op elk moment stoppen zonder opgaaf van redenen en zonder dat dit nadelige gevolgen voor u heeft. Als u via een samenwerkende klinische instelling op de studie bent geattendeerd, heeft uw beslissing om al dan niet deel te nemen geen enkele invloed op uw medische behandeling of nazorg.
 
 ## Waarom wordt deze studie uitgevoerd?
 
@@ -46,11 +46,11 @@ Voorbeelden van onderzoeksvragen:
 - Welke factoren beïnvloeden of mensen nieuwe gewoonten in hun dagelijks leven integreren?
 - Hoe beïnvloeden digitale interventies het langdurig volhouden van gezonde gewoonten?
 
-Het doel is om wetenschappelijk onderbouwde, praktische aanbevelingen te ontwikkelen die mensen helpen op lange termijn gezonder te leven.
+Het doel is om wetenschappelijk onderbouwde, praktische aanbevelingen te ontwikkelen die mensen helpen op lange termijn gezonder te leven. Daarnaast wordt onderzocht hoe de bestaande digitale interventie meerderjarige patiënten die na afronding van een intensivemedische behandeling uit het ziekenhuis zijn ontslagen, kan ondersteunen bij het opbouwen van gezondheidsbevorderende gewoonten. De wetenschappelijke onderzoeksvraag en de gebruikte digitale toepassingen blijven daarbij ongewijzigd.
 
 ## Hoe verloopt de studie?
 
-Er is geen vaste deelnameperiode — u bepaalt zelf hoe lang en hoe intensief u deelneemt.
+Er is geen vaste deelnameperiode — u bepaalt zelf hoe lang en hoe intensief u deelneemt. U kunt op de studie zijn geattendeerd via de publieke beschikbaarstelling van de Health Habit Hub-app of via een samenwerkende klinische instelling. Ongeacht de wervingsweg verloopt de deelname uitsluitend via de in deze informatie beschreven digitale toepassingen.
 
 **In de Health Habit Hub-app kunt u:**
 
@@ -91,6 +91,8 @@ Wij verzamelen:
 - App-gebruiksgedrag (bijv. of een aanbevolen gewoonte is opgevolgd)
 - Antwoorden op wekelijkse vragenlijsten over gewoontesterkte en welzijn
 
+Als u via een samenwerkende klinische instelling op de studie bent geattendeerd, worden er geen gegevens uit uw patiëntendossier of andere klinische informatiesystemen in de studie overgenomen. Alle in het kader van de studie verzamelde informatie wordt uitsluitend door uzelf ingevoerd binnen de Health Habit Hub-app. De klinische instelling krijgt geen toegang tot uw studiegegevens.
+
 ### Hoe worden de gegevens gebruikt?
 
 Uw geanonimiseerde gegevens worden gebruikt voor:
@@ -118,7 +120,7 @@ Anonieme gegevens worden opgeslagen op de servers van de TU Dresden en kunnen pe
 
 ### Uw rechten
 
-Omdat alle gegevens anoniem zijn, kunnen wij na anonimisering geen specifieke gegevens meer aan een individu toewijzen. Voor vragen of zorgen kunt u contact opnemen met:
+Omdat alle gegevens anoniem zijn, kunnen wij na anonimisering geen specifieke gegevens meer aan een individu toewijzen. U kunt uw account te allen tijde verwijderen via de app-instellingen zolang u nog deelneemt; hierbij wordt alleen uw account verwijderd, terwijl uw reeds anoniem verzamelde studiegegevens bewaard blijven in de onderzoeksdatabase. Wilt u in een dringend geval toch verwijdering van deze anonieme gegevens, neem dan rechtstreeks contact op met het studieteam. Voor vragen of zorgen kunt u contact opnemen met:
 
 **Felix Reinsch**
 felix.reinsch@tu-dresden.de
@@ -149,6 +151,7 @@ Ik heb de informatie over deze studie gelezen en begrepen. Ik ben geïnformeerd 
 - mijn deelname vrijwillig is,
 - ik op elk moment kan stoppen zonder opgaaf van redenen,
 - al mijn gegevens volledig worden geanonimiseerd,
+- het verwijderen van mijn account alleen mijn account verwijdert, terwijl mijn reeds anoniem verzamelde studiegegevens bewaard blijven, tenzij ik in een dringend geval de aanvullende verwijdering hiervan rechtstreeks bij het studieteam aanvraag,
 - de gegevens worden gebruikt voor wetenschappelijke doeleinden en in een open onderzoeksdatabase.
 
 **Door verder te gaan, geef ik toestemming voor het anonieme gebruik van mijn gegevens binnen het HabConnect-onderzoek.**
