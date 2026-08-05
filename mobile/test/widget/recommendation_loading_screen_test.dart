@@ -223,8 +223,13 @@ void main() {
       findsNothing,
     );
 
-    // Past the phase duration plus the label fade transition: phase 1.
-    await _pumpFor(tester, const Duration(milliseconds: 700));
+    // Past the phase duration plus the label fade-out: phase 1. The fade is
+    // now spring-driven (AppSpring.standard) rather than a fixed 400ms
+    // tween — a critically damped spring only asymptotically reaches 0, so
+    // SpringSimulation's distance+velocity tolerance takes closer to ~700ms
+    // wall-clock to consider it "done" (vs. the old fixed 400ms). Padded
+    // well past that here rather than pinning to the exact settle time.
+    await _pumpFor(tester, const Duration(milliseconds: 900));
     expect(
       find.text("Checking what's already working for you…"),
       findsOneWidget,

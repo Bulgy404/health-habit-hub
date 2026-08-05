@@ -601,7 +601,11 @@ class _ProfileIncompleteBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: cs.tertiaryContainer,
+        // errorContainer, not tertiaryContainer — Material 3's seed-derived
+        // tertiary tone reads as blue against this app's green primary,
+        // which doesn't read as "needs attention" the way red/error does
+        // for a missing-information banner.
+        color: cs.errorContainer,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -610,12 +614,12 @@ class _ProfileIncompleteBanner extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.info_outline, color: cs.onTertiaryContainer, size: 20),
+              Icon(Icons.info_outline, color: cs.onErrorContainer, size: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   l10n.profileIncompleteBanner(missingLabels.join(', ')),
-                  style: TextStyle(color: cs.onTertiaryContainer),
+                  style: TextStyle(color: cs.onErrorContainer),
                 ),
               ),
             ],

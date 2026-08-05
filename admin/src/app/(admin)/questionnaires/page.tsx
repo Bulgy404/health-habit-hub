@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
+import { Reorder, useDragControls } from "motion/react";
+import { momentumSpring } from "@/lib/motion";
 import { apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
-import { Spinner } from "@/components/spinner";
+import { SpinnerLabel } from "@/components/spinner";
 import styles from "./page.module.css";
 import { useQuestionnairesData } from "./useQuestionnairesData";
 
@@ -141,24 +143,15 @@ function QuestionCard({
   activeLang,
   onChange,
   onRemove,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  isDragging,
-  isDragOver,
 }: {
   question: Question;
   index: number;
   activeLang: Lang;
   onChange: (q: Question) => void;
   onRemove: () => void;
-  onDragStart: () => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: () => void;
-  isDragging: boolean;
-  isDragOver: boolean;
 }) {
   const t = useTranslations("questionnaires");
+  const dragControls = useDragControls();
   const hasOptions = question.type === "single_choice" || question.type === "multi_choice";
 
   function updateField<K extends keyof Question>(key: K, value: Question[K]) {
@@ -190,24 +183,23 @@ function QuestionCard({
     onChange({ ...question, options: question.options.filter((_, idx) => idx !== i) });
   }
 
-  const cardClass = [
-    styles.questionCard,
-    isDragging ? styles.questionCardDragging : "",
-    isDragOver ? styles.questionCardDragOver : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-
   return (
-    <div
-      className={cardClass}
-      draggable
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
+    <Reorder.Item
+      value={question}
+      dragListener={false}
+      dragControls={dragControls}
+      className={styles.questionCard}
+      transition={momentumSpring}
+      whileDrag={{ scale: 1.02, boxShadow: "0 8px 24px rgba(15, 23, 42, 0.18)" }}
     >
       <div className={styles.questionCardHeader}>
-        <span className={styles.dragHandle}>⠿</span>
+        <span
+          className={styles.dragHandle}
+          onPointerDown={(e) => dragControls.start(e)}
+          style={{ touchAction: "none" }}
+        >
+          ⠿
+        </span>
         <span className={styles.questionIndex}>{t("questionLabel", { index: index + 1 })}</span>
       </div>
       <div className={styles.questionCardBody}>
@@ -272,7 +264,7 @@ function QuestionCard({
           </button>
         </div>
       </div>
-    </div>
+    </Reorder.Item>
   );
 }
 
@@ -303,8 +295,6 @@ function QuestionnaireModal({
   const [questions, setQuestions] = useState<Question[]>(initial?.questions ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const dragIndex = useRef<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   function handleTitleChange(val: string) {
     setTitle((prev) => ({ ...prev, [activeLang]: val }));
@@ -340,32 +330,6 @@ function QuestionnaireModal({
 
   function removeQuestion(i: number) {
     setQuestions((qs) => qs.filter((_, idx) => idx !== i));
-  }
-
-  function handleDragStart(i: number) {
-    dragIndex.current = i;
-  }
-
-  function handleDragOver(e: React.DragEvent, i: number) {
-    e.preventDefault();
-    setDragOverIndex(i);
-  }
-
-  function handleDrop(i: number) {
-    const from = dragIndex.current;
-    if (from === null || from === i) {
-      dragIndex.current = null;
-      setDragOverIndex(null);
-      return;
-    }
-    setQuestions((qs) => {
-      const arr = [...qs];
-      const [item] = arr.splice(from, 1);
-      arr.splice(i, 0, item);
-      return arr;
-    });
-    dragIndex.current = null;
-    setDragOverIndex(null);
   }
 
   async function handleSave() {
@@ -536,21 +500,18 @@ function QuestionnaireModal({
             {questions.length === 0 ? (
               <div className={styles.emptyQuestions}>{t("noQuestionsYet")}</div>
             ) : (
-              questions.map((q, i) => (
-                <QuestionCard
-                  key={q.id}
-                  question={q}
-                  index={i}
-                  activeLang={activeLang}
-                  onChange={(updated) => updateQuestion(i, updated)}
-                  onRemove={() => removeQuestion(i)}
-                  onDragStart={() => handleDragStart(i)}
-                  onDragOver={(e) => handleDragOver(e, i)}
-                  onDrop={() => handleDrop(i)}
-                  isDragging={dragIndex.current === i}
-                  isDragOver={dragOverIndex === i && dragIndex.current !== i}
-                />
-              ))
+              <Reorder.Group as="div" axis="y" values={questions} onReorder={setQuestions}>
+                {questions.map((q, i) => (
+                  <QuestionCard
+                    key={q.id}
+                    question={q}
+                    index={i}
+                    activeLang={activeLang}
+                    onChange={(updated) => updateQuestion(i, updated)}
+                    onRemove={() => removeQuestion(i)}
+                  />
+                ))}
+              </Reorder.Group>
             )}
           </div>
         </div>
@@ -560,7 +521,7 @@ function QuestionnaireModal({
             {tc("cancel")}
           </button>
           <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-            {saving ? <Spinner /> : isEdit ? t("saveChanges") : t("create")}
+            <SpinnerLabel loading={saving} label={isEdit ? t("saveChanges") : t("create")} />
           </button>
         </div>
       </div>

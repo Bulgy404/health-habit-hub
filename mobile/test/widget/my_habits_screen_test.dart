@@ -238,4 +238,89 @@ void main() {
       isNotEmpty,
     );
   });
+
+  group('§7.1 habit stacking connector', () {
+    final anchor = Intention(
+      id: 'anchor-1',
+      behaviorKey: 'read_before_bed',
+      behaviorLabel: 'Read a book for ten minutes',
+      durationMinutes: 10,
+      cues: [IntentionCue(text: 'I get into bed', source: 'pre_rated')],
+      intentionStatement: 'I get into bed, I will read for ten minutes.',
+      status: 'active',
+      createdAt: DateTime(2026, 1, 1),
+    );
+    final child1 = Intention(
+      id: 'child-1',
+      behaviorKey: 'gratitude_note',
+      behaviorLabel: 'Write down one thing I am grateful for',
+      durationMinutes: 2,
+      cues: const [],
+      intentionStatement: 'After reading, I will write a gratitude note.',
+      status: 'active',
+      createdAt: DateTime(2026, 1, 2),
+      stackedOn: 'anchor-1',
+      creationMode: 'stacked',
+    );
+    final child2 = Intention(
+      id: 'child-2',
+      behaviorKey: 'stretch',
+      behaviorLabel: 'Stretch for two minutes',
+      durationMinutes: 2,
+      cues: const [],
+      intentionStatement: 'After journaling, I will stretch.',
+      status: 'active',
+      createdAt: DateTime(2026, 1, 3),
+      stackedOn: 'anchor-1',
+      creationMode: 'stacked',
+    );
+
+    testWidgets(
+        'draws a connector for each stacked habit but not the anchor or a standalone habit',
+        (tester) async {
+      await tester.pumpWidget(_buildSubject(
+        config: const HabitConfig(
+          cueCount: 'single',
+          cueSource: 'high_quality',
+          behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
+          maxHabits: null,
+          srhiItems: [],
+        ),
+        intentions: [anchor, child1, child2, _activeIntention],
+      ));
+      await tester.pumpAndSettle();
+
+      // One IntrinsicHeight-wrapped connector per stacked child (anchor and
+      // the standalone "Walking" habit get none) — see _HabitCard.build's
+      // §7.1 branch in my_habits_screen.dart.
+      expect(find.byType(IntrinsicHeight), findsNWidgets(2));
+      expect(find.byType(CustomPaint), findsWidgets);
+    });
+
+    testWidgets('places each stacked child directly beneath its anchor',
+        (tester) async {
+      await tester.pumpWidget(_buildSubject(
+        config: const HabitConfig(
+          cueCount: 'single',
+          cueSource: 'high_quality',
+          behaviorOptions: [BehaviorOption(key: 'walking', label: 'Walking')],
+          maxHabits: null,
+          srhiItems: [],
+        ),
+        // Deliberately out of anchor/child order and interleaved with the
+        // standalone habit, to prove _orderWithStacks re-groups them under
+        // their anchor — child1/child2 stay in their relative input order,
+        // since _orderWithStacks preserves that (not a canonical order) to
+        // decide which stacked child is "last" for the connector.
+        intentions: [_activeIntention, child1, child2, anchor],
+      ));
+      await tester.pumpAndSettle();
+
+      final anchorY = tester.getTopLeft(find.text(anchor.behaviorLabel)).dy;
+      final child1Y = tester.getTopLeft(find.text(child1.behaviorLabel)).dy;
+      final child2Y = tester.getTopLeft(find.text(child2.behaviorLabel)).dy;
+      expect(anchorY, lessThan(child1Y));
+      expect(child1Y, lessThan(child2Y));
+    });
+  });
 }

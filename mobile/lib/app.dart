@@ -16,6 +16,17 @@ import 'router/app_router.dart';
 import 'theme/app_colors.dart';
 
 // ---------------------------------------------------------------------------
+// Sheet/dialog shape shared by both themes — see _buildLightTheme/_buildDarkTheme
+// ---------------------------------------------------------------------------
+
+const _kSheetShape = RoundedRectangleBorder(
+  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+);
+const _kDialogShape = RoundedRectangleBorder(
+  borderRadius: BorderRadius.all(Radius.circular(20)),
+);
+
+// ---------------------------------------------------------------------------
 // Brand colors
 // ---------------------------------------------------------------------------
 
@@ -146,6 +157,12 @@ ThemeData _buildLightTheme() {
         fontSize: 15,
       ),
     ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      shape: _kSheetShape,
+      showDragHandle: true,
+      dragHandleColor: _kBorder,
+    ),
+    dialogTheme: const DialogThemeData(shape: _kDialogShape),
     extensions: const [AppColors.light],
   );
 }
@@ -249,6 +266,16 @@ ThemeData _buildDarkTheme() {
       backgroundColor: kDarkSurface,
       labelStyle: const TextStyle(color: Colors.white),
       selectedColor: _kPrimaryDark,
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: kDarkSurface,
+      shape: _kSheetShape,
+      showDragHandle: true,
+      dragHandleColor: Colors.white.withAlpha(64),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: kDarkSurface,
+      shape: _kDialogShape,
     ),
     extensions: const [AppColors.dark],
   );

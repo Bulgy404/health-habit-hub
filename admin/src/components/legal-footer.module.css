@@ -23,9 +23,16 @@
 
 .links a {
   color: var(--color-primary-action, #256f00);
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .links a {
+    transition: text-decoration-color var(--dur-fast, 0.15s) var(--ease-standard, ease);
+  }
 }
 
 .links a:hover {
-  text-decoration: underline;
+  text-decoration-color: currentColor;
 }

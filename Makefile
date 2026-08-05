@@ -3,7 +3,7 @@
 .PHONY: help \
         dev stop seed seed-user verify-keycloak fix-keycloak logs logs-all ios reset \
         monitoring monitoring-stop logs-prometheus logs-grafana \
-        format test test-backend test-flutter test-python test-admin seed-habits \
+        format test test-backend test-flutter test-python test-admin test-alert-email seed-habits \
         prod-up prod-stop prod-ps prod-logs prod-build prod-restart \
         prod-keycloak prod-seed prod-update prod-cutover
 
@@ -24,7 +24,7 @@ seed: ## Seed local MongoDB, Neo4j, Keycloak, and Neo4j community habit graph
 	$(MAKE) seed-habits MODE=e2e
 	$(MAKE) seed-user
 
-seed-user: ## Seed the fixed-passphrase QA test participant (see scripts/seed-test-user.js)
+seed-user: ## Seed QA test participant(s) with rich history (COUNT=1-5, default 1 — see scripts/seed-test-user.js)
 	set -a && . ./.env && set +a && export KEYCLOAK_URL=http://localhost:8080 && node scripts/seed-test-user.js
 
 verify-keycloak: ## Verify hhh-flutter default scopes include stable identity claims (sub)
@@ -92,6 +92,9 @@ test-python: ## Python API-service: pytest (prefers API-service/.venv if present
 
 test-admin: ## Admin: typecheck
 	cd admin && npx tsc --noEmit
+
+test-alert-email: ## Send one real test alert email via the configured SMTP relay (manual only, never runs from `make test`)
+	set -a && . ./.env && set +a && python3 scripts/send-test-alert.py
 
 seed-habits: ## Seed Neo4j with 100 test habits via full donation pipeline (MODE=seed for fast direct path)
 	python3 -m pip install --quiet --break-system-packages httpx neo4j

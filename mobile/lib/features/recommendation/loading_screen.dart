@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/motion.dart';
 import '../../widgets/entrance_fade.dart';
 import '../../widgets/skeleton.dart';
 import 'recommendation_feature_service.dart';
@@ -38,7 +39,12 @@ const _skeletonCardCount = 3;
 /// How long the one-time staggered build-up of the skeleton cards takes —
 /// they appear one at a time, not all at once, while the request is still
 /// in flight; once built, they just sit there pulsing for the rest of the
-/// wait.
+/// wait. Deliberately a fixed duration, not a spring: this paces an
+/// `Interval`-sliced staggered reveal across a known timeline, which a
+/// spring's emergent settle time can't reliably reproduce (an
+/// animation-review pass caught an earlier version of this using
+/// `animateWithSpring`, which collapsed the whole staggered build-up to a
+/// few hundred ms).
 const _skeletonBuildDuration = Duration(milliseconds: 2200);
 
 /// Floor under the total time this screen is shown. At least
@@ -97,10 +103,18 @@ class _RecommendationLoadingScreenState
 
   Future<void> _advancePhase() async {
     if (!mounted) return;
-    await _labelFade.reverse();
+    // §1.7 — the rotation itself is informational (it tracks real request
+    // progress), so the Timer.periodic driving it keeps running under
+    // reduced motion; only the decorative fade transition is dropped in
+    // favor of a plain instant text swap.
+    if (reducedMotion(context)) {
+      setState(() => _phaseIndex = (_phaseIndex + 1) % _phaseCount);
+      return;
+    }
+    await _labelFade.animateWithSpring(0);
     if (!mounted) return;
     setState(() => _phaseIndex = (_phaseIndex + 1) % _phaseCount);
-    await _labelFade.forward();
+    await _labelFade.animateWithSpring(1);
   }
 
   // ---------------------------------------------------------------------------

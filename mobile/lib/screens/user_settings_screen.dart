@@ -19,11 +19,8 @@ import '../providers/package_info_provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_icons.dart';
+import '../theme/motion.dart';
 import '../widgets/settings_card.dart';
-
-const _kGreenGlow = [
-  BoxShadow(color: Color(0x4745B700), blurRadius: 28, offset: Offset(0, 8)),
-];
 
 /// App settings screen for theme, language, and account management.
 class UserSettingsScreen extends ConsumerWidget {
@@ -63,7 +60,7 @@ class UserSettingsScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFF45B700),
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: _kGreenGlow,
+                boxShadow: AppShadows.greenGlow,
               ),
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -419,11 +416,9 @@ class UserSettingsScreen extends ConsumerWidget {
     WidgetRef ref,
     String current,
   ) {
+    // shape: now comes from the app-wide BottomSheetThemeData (app.dart).
     showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -476,11 +471,9 @@ class UserSettingsScreen extends ConsumerWidget {
     // (and its Theme InheritedWidget) while the closing sheet's own Elements
     // — which read Theme.of(sheetContext) — are still mid-teardown, which
     // trips Flutter's InheritedElement `_dependents.isEmpty` assertion.
+    // shape: now comes from the app-wide BottomSheetThemeData (app.dart).
     final selected = await showModalBottomSheet<ThemeMode>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,

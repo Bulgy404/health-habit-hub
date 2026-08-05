@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
+import { motion } from "motion/react";
 import styles from "./sidebar.module.css";
 
 const STORAGE_KEY = "hhh-admin-theme";
@@ -45,7 +46,20 @@ export function ThemeToggle({ label }: { label: string }) {
 
   return (
     <button onClick={toggle} className={styles.themeToggle} aria-label={label} type="button">
-      {isDark ? <Sun size={14} strokeWidth={1.75} /> : <Moon size={14} strokeWidth={1.75} />}
+      {/* Fade-in only, not AnimatePresence — see spinner.tsx's SpinnerLabel
+          doc comment for why: `mode="wait"` would leave the icon slot blank
+          for ~150ms between the old icon's exit and the new one mounting,
+          and a true overlapping crossfade needs absolute positioning this
+          single icon swap doesn't warrant. */}
+      <motion.span
+        key={isDark ? "sun" : "moon"}
+        style={{ display: "inline-flex" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.15 }}
+      >
+        {isDark ? <Sun size={14} strokeWidth={1.75} /> : <Moon size={14} strokeWidth={1.75} />}
+      </motion.span>
       {label}
     </button>
   );

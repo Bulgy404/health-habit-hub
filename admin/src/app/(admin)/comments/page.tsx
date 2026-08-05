@@ -164,7 +164,30 @@ export default function CommentsPage() {
         <p className={styles.subtitle}>{t("flaggedSubtitle")}</p>
 
         {flaggedLoading ? (
-          <p>{tc("loading")}</p>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th style={{ width: "35%" }}>{t("comment")}</th>
+                  <th style={{ width: "25%" }}>{t("onHabit")}</th>
+                  <th style={{ width: "20%" }}>{t("flagReason")}</th>
+                  <th>{t("posted")}</th>
+                  <th>{tc("actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className={styles.skeletonRow}>
+                    {Array.from({ length: 5 }).map((__, j) => (
+                      <td key={j}>
+                        <span className={styles.skeletonBar} style={{ width: "80%" }} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
@@ -220,7 +243,29 @@ export default function CommentsPage() {
       </div>
 
       {loading ? (
-        <p>{tc("loading")}</p>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th style={{ width: "40%" }}>{t("comment")}</th>
+                <th style={{ width: "35%" }}>{t("onHabit")}</th>
+                <th>{t("posted")}</th>
+                <th>{tc("actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <tr key={i} className={styles.skeletonRow}>
+                  {Array.from({ length: 4 }).map((__, j) => (
+                    <td key={j}>
+                      <span className={styles.skeletonBar} style={{ width: "80%" }} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>

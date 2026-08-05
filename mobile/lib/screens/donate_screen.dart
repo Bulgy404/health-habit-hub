@@ -23,21 +23,11 @@ import '../theme/app_icons.dart';
 import '../providers/locale_provider.dart';
 import '../services/offline_queue_service.dart';
 import '../services/survey_service.dart';
+import '../theme/motion.dart';
 import '../utils/date_format.dart';
 import '../widgets/contribution_graph_widget.dart';
 import 'donate/widgets/donate_form_widget.dart';
 import 'donate/widgets/donate_progress_widget.dart';
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const _kCardShadow = [
-  BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4)),
-];
-const _kGreenGlow = [
-  BoxShadow(color: Color(0x4745B700), blurRadius: 28, offset: Offset(0, 8)),
-];
 
 // ---------------------------------------------------------------------------
 // Main screen
@@ -160,7 +150,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         // docs/design-system.md.
         color: context.appColors.primaryDark,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: _kGreenGlow,
+        boxShadow: AppShadows.greenGlow,
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -168,11 +158,11 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         children: [
           Text(
             l10n.donateShareEyebrow,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white70,
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              letterSpacing: 1,
+              letterSpacing: trackingForLabel(10),
             ),
           ),
           const SizedBox(height: 6),
@@ -191,7 +181,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           const SizedBox(height: 14),
-          GestureDetector(
+          PressableScale(
             onTap: () => setState(() => _surveyMode = true),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -221,7 +211,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF4F46E5),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: _kCardShadow,
+        boxShadow: AppShadows.card,
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -229,11 +219,11 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         children: [
           Text(
             l10n.donateQuestionnaireEyebrow,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white70,
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              letterSpacing: 1,
+              letterSpacing: trackingForLabel(10),
             ),
           ),
           const SizedBox(height: 6),
@@ -252,7 +242,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
             style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
           const SizedBox(height: 14),
-          GestureDetector(
+          PressableScale(
             onTap: () async {
               await context.push('/questionnaire/${q.slug}');
               if (mounted) ref.invalidate(dueQuestionnairesProvider);
@@ -290,7 +280,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: green, width: 1),
-        boxShadow: _kCardShadow,
+        boxShadow: AppShadows.card,
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -360,7 +350,7 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: _kCardShadow,
+          boxShadow: AppShadows.card,
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -603,11 +593,11 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
               padding: const EdgeInsets.fromLTRB(18, 12, 18, 6),
               child: Text(
                 l10n.donateTodaysTasksEyebrow,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Color(0xFF6B7280),
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: 1,
+                  letterSpacing: trackingForLabel(11),
                 ),
               ),
             ),

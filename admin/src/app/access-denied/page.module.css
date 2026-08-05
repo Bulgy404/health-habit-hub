@@ -46,7 +46,14 @@
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: background-color 0.2s;
+}
+
+/* Gated: a tap on touch can leave :hover "stuck" until the next tap
+   elsewhere, animating a hover-only transition on a phantom hover. */
+@media (hover: hover) and (pointer: fine) {
+  .button {
+    transition: background-color var(--dur-base) var(--ease-standard);
+  }
 }
 
 .button:hover {

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-const _kCardShadow = [
-  BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4)),
-];
+import '../theme/motion.dart';
 
 /// Uppercase, small-caps-style label used above a [SettingsCard] group.
 class SectionLabel extends StatelessWidget {
@@ -21,7 +19,7 @@ class SectionLabel extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.8,
+          letterSpacing: trackingForLabel(11),
           color: Theme.of(context).colorScheme.outline,
         ),
       ),
@@ -45,7 +43,7 @@ class SettingsCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: _kCardShadow,
+          boxShadow: AppShadows.card,
         ),
         child: Column(children: children),
       ),

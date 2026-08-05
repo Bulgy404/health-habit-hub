@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
+import { Spinner, SpinnerLabel } from "@/components/spinner";
 import styles from "./admin-page.module.css";
 
 const ACTIVITY_TYPES_API = apiUrl("/admin/activity-types");
@@ -135,7 +136,9 @@ export function ActivityTypesManager({ token }: { token: string }) {
       </p>
       {error && <p className={styles.error}>{error}</p>}
       {loading ? (
-        <p className={styles.muted}>{t("loadingEllipsis")}</p>
+        <p className={styles.muted}>
+          <Spinner /> {t("loadingEllipsis")}
+        </p>
       ) : (
         <>
           <div className={styles.tableWrap}>
@@ -256,7 +259,7 @@ export function ActivityTypesManager({ token }: { token: string }) {
               label={t("default")}
             />
             <button className={styles.addButton} onClick={add} disabled={adding}>
-              {adding ? t("addingEllipsis") : t("add")}
+              <SpinnerLabel loading={adding} label={t("add")} />
             </button>
           </div>
         </>

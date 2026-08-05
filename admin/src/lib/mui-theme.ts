@@ -37,5 +37,29 @@ export const muiTheme = createTheme({
         },
       },
     },
+    MuiSwitch: {
+      styleOverrides: {
+        // Move MUI's default track/thumb-color transitions onto the app's
+        // shared motion tokens. Deliberately NOT touching
+        // .MuiSwitch-switchBase's thumb-position transition here — MUI
+        // positions it via `left` (a layout property, not `transform`), and
+        // an animation-review pass flagged animating `left` as forcing a
+        // layout pass on every toggle. Overriding MUI's internal
+        // positioning to use `transform` instead would mean re-implementing
+        // SwitchBase's layout, not worth it for a toggle switch — left as
+        // MUI's own default transition instead of adding one on top of it.
+        root: {
+          "& .MuiSwitch-switchBase": {
+            transition: "color var(--dur-fast) var(--ease-standard)",
+          },
+          "& .MuiSwitch-track": {
+            transition: "background-color var(--dur-fast) var(--ease-standard)",
+          },
+          "& .MuiSwitch-thumb": {
+            transition: "transform var(--dur-fast) var(--ease-standard)",
+          },
+        },
+      },
+    },
   },
 });

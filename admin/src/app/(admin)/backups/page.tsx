@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import { apiFetch, apiUpload, apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
-import { Spinner } from "@/components/spinner";
+import { SpinnerLabel } from "@/components/spinner";
 import styles from "@/components/admin-page.module.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -277,7 +277,7 @@ export default function BackupsPage() {
           onClick={() => setShowTriggerOptions(true)}
           disabled={triggering || running}
         >
-          {triggering ? <Spinner /> : t("triggerNow")}
+          <SpinnerLabel loading={triggering} label={t("triggerNow")} />
         </button>
       </div>
 
@@ -317,7 +317,7 @@ export default function BackupsPage() {
                     height: "100%",
                     width: `${(job.step / job.totalSteps) * 100}%`,
                     background: "var(--color-primary)",
-                    transition: "width 0.4s ease",
+                    transition: "width var(--dur-base) var(--ease-standard)",
                   }}
                 />
               </div>
@@ -380,7 +380,7 @@ export default function BackupsPage() {
               onClick={handleUpload}
               disabled={!uploadFile || uploading}
             >
-              {uploading ? <Spinner /> : t("uploadBackup")}
+              <SpinnerLabel loading={uploading} label={t("uploadBackup")} />
             </button>
           </div>
 
@@ -803,7 +803,7 @@ function RestoreModal({
             onClick={handleConfirm}
             disabled={!canSubmit}
           >
-            {submitting ? <Spinner /> : t("restore")}
+            <SpinnerLabel loading={submitting} label={t("restore")} />
           </button>
         </div>
       </div>
@@ -893,7 +893,7 @@ function DeleteModal({
             onClick={handleConfirm}
             disabled={!canSubmit}
           >
-            {submitting ? <Spinner /> : t("delete")}
+            <SpinnerLabel loading={submitting} label={t("delete")} />
           </button>
         </div>
       </div>
@@ -968,7 +968,7 @@ function TriggerModal({
             onClick={() => onConfirm({ mongo, neo4j, lightrag, keycloak })}
             disabled={submitting || noneSelected}
           >
-            {submitting ? <Spinner /> : t("startBackup")}
+            <SpinnerLabel loading={submitting} label={t("startBackup")} />
           </button>
         </div>
       </div>

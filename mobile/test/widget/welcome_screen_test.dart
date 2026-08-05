@@ -55,7 +55,8 @@ Widget _buildSubject() {
 void main() {
   testWidgets(
       'shows the welcome splash with title, subtitle, Get Started, and '
-      'Restore link, with no page indicator dots', (tester) async {
+      'Restore link, with the page indicator dots invisible',
+      (tester) async {
     await tester.pumpWidget(_buildSubject());
     await tester.pump();
 
@@ -70,8 +71,13 @@ void main() {
     );
     expect(find.text('Get Started'), findsOneWidget);
     expect(find.text('Restore existing account'), findsOneWidget);
-    // Dots (AnimatedContainer) are only shown once the walkthrough starts.
-    expect(find.byType(AnimatedContainer), findsNothing);
+    // The dots row is now always present (not conditionally inserted) so
+    // that onPageChanged flipping _currentPage mid-drag can't shrink the
+    // PageView and jump its content — see welcome_screen.dart's comment on
+    // the indicator Opacity. On page 0 it's just transparent, not absent.
+    expect(find.byType(AnimatedContainer), findsNWidgets(3));
+    final opacity = tester.widget<Opacity>(find.byType(Opacity));
+    expect(opacity.opacity, 0);
   });
 
   testWidgets(

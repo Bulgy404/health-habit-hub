@@ -305,38 +305,48 @@ class _ActionButtons extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          if (currentIdx > 0) ...[
-            Expanded(
-              child: OutlinedButton(
-                onPressed: onBack,
-                child: Text(l10n.questionnaireFormBackButton),
+    // This widget isn't wrapped in a SafeArea by its parent screen (a plain
+    // Scaffold), so a flat EdgeInsets.all(16) previously left these buttons
+    // right up against the iPhone home indicator / Android gesture bar, and
+    // felt tight against the side edges too. SafeArea's `minimum` guarantees
+    // at least that much space even on devices with no system inset, while
+    // still respecting a larger one where it exists.
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Row(
+          children: [
+            if (currentIdx > 0) ...[
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: onBack,
+                  child: Text(l10n.questionnaireFormBackButton),
+                ),
               ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              flex: 2,
+              child: isLast
+                  ? FilledButton(
+                      onPressed: isSubmitting ? null : onSubmit,
+                      child: isSubmitting
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(l10n.questionnaireFormSubmitButton),
+                    )
+                  : FilledButton(
+                      onPressed: onSaveAndContinue,
+                      child: Text(l10n.questionnaireFormSaveAndContinueButton),
+                    ),
             ),
-            const SizedBox(width: 12),
           ],
-          Expanded(
-            flex: 2,
-            child: isLast
-                ? FilledButton(
-                    onPressed: isSubmitting ? null : onSubmit,
-                    child: isSubmitting
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(l10n.questionnaireFormSubmitButton),
-                  )
-                : FilledButton(
-                    onPressed: onSaveAndContinue,
-                    child: Text(l10n.questionnaireFormSaveAndContinueButton),
-                  ),
-          ),
-        ],
+        ),
       ),
     );
   }

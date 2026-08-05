@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl, API_BASE_URL } from "@/lib/api";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import { ToggleSwitch } from "@/components/toggle-switch";
-import { Spinner } from "@/components/spinner";
+import { SpinnerLabel } from "@/components/spinner";
 import styles from "@/components/admin-page.module.css";
 
 const GROUPS = ["G1", "G2", "G3", "G4"] as const;
@@ -424,8 +424,7 @@ export default function ParticipantsPage() {
         srhi: {
           completed: Number(data?.srhi?.completed ?? 0),
           total: Number(data?.srhi?.total ?? 0),
-          latestScore:
-            data?.srhi?.latestScore != null ? Number(data.srhi.latestScore) : null,
+          latestScore: data?.srhi?.latestScore != null ? Number(data.srhi.latestScore) : null,
         },
         recommendations: {
           accepted: Number(data?.recommendations?.accepted ?? 0),
@@ -705,7 +704,7 @@ export default function ParticipantsPage() {
                 {tc("cancel")}
               </button>
               <button className={styles.saveButton} onClick={handleCreate} disabled={creating}>
-                {creating ? <Spinner /> : tc("add")}
+                <SpinnerLabel loading={creating} label={tc("add")} />
               </button>
             </div>
           </div>
@@ -974,7 +973,9 @@ export default function ParticipantsPage() {
                               </span>
                             )}
                           </span>
-                          <span className={styles.muted}>{h.donatedAt ? fmt(h.donatedAt) : "—"}</span>
+                          <span className={styles.muted}>
+                            {h.donatedAt ? fmt(h.donatedAt) : "—"}
+                          </span>
                         </div>
                       ))}
                     </>

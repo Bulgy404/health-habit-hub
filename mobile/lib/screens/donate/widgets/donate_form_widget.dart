@@ -8,6 +8,7 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../theme/motion.dart';
 
 // ---------------------------------------------------------------------------
 // Public widget
@@ -279,10 +280,6 @@ class _RatingQuestion extends StatelessWidget {
   final ValueChanged<int> onSelected;
   final String? caption;
 
-  static const _kCardShadow = [
-    BoxShadow(color: Color(0x14000000), blurRadius: 20, offset: Offset(0, 4)),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -307,36 +304,42 @@ class _RatingQuestion extends StatelessWidget {
           children: List.generate(options.length, (i) {
             final value = i + 1;
             final isSelected = selected == value;
-            return GestureDetector(
-              onTap: enabled ? () => onSelected(value) : null,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
+            final chip = Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 8,
+              ),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFFEDF7E5) : Colors.white,
+                borderRadius: BorderRadius.circular(100),
+                border: Border.all(
+                  color: isSelected
+                      ? const Color(0xFF45B700)
+                      : const Color(0xFFE5E7EB),
+                  width: isSelected ? 1.5 : 1,
                 ),
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFEDF7E5) : Colors.white,
-                  borderRadius: BorderRadius.circular(100),
-                  border: Border.all(
-                    color: isSelected
-                        ? const Color(0xFF45B700)
-                        : const Color(0xFFE5E7EB),
-                    width: isSelected ? 1.5 : 1,
-                  ),
-                  boxShadow: _kCardShadow,
-                ),
-                child: Text(
-                  options[i],
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected
-                        ? const Color(0xFF2E8C00)
-                        : const Color(0xFF374151),
-                  ),
+                boxShadow: AppShadows.card,
+              ),
+              child: Text(
+                options[i],
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected
+                      ? const Color(0xFF2E8C00)
+                      : const Color(0xFF374151),
                 ),
               ),
             );
+            // PressableScale.onTap is non-nullable — only wrap when the
+            // chip is actually tappable, so a disabled chip stays inert
+            // rather than showing press feedback for a no-op.
+            return enabled
+                ? PressableScale(
+                    onTap: () => onSelected(value),
+                    child: chip,
+                  )
+                : chip;
           }),
         ),
       ],

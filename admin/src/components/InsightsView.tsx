@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { RefreshCw } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { motion } from "motion/react";
 import { apiFetch, apiUrl } from "@/lib/api";
+import { SpinnerLabel } from "@/components/spinner";
 import styles from "@/components/admin-page.module.css";
 
 interface InsightMeta {
@@ -99,7 +101,8 @@ function InsightCard({ meta, token }: { meta: InsightMeta; token: string }) {
           disabled={loading}
           title={t("recomputeNow")}
         >
-          <RefreshCw size={14} style={{ verticalAlign: "-2px" }} /> {loading ? "…" : t("refresh")}
+          <RefreshCw size={14} style={{ verticalAlign: "-2px" }} />{" "}
+          <SpinnerLabel loading={loading} label={t("refresh")} />
         </button>
       </div>
 
@@ -225,13 +228,25 @@ export function InsightsView() {
 
       {error && <p className={styles.error}>{error}</p>}
       {loading ? (
-        <p>{tc("loading")}</p>
+        <motion.p
+          key="loading"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15 }}
+        >
+          {tc("loading")}
+        </motion.p>
       ) : (
-        <div key={nonce}>
+        <motion.div
+          key={nonce}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15 }}
+        >
           {metas.map((m) => (
             <InsightCard key={m.key} meta={m} token={token ?? ""} />
           ))}
-        </div>
+        </motion.div>
       )}
     </div>
   );

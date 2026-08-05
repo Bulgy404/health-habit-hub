@@ -166,10 +166,41 @@ test('getDueWindows: returns open windows within 3-day window', async () => {
     score: null,
     createdAt: now,
   };
-  const db = makeDb([openWindow]);
+  const db = makeDb(
+    [openWindow],
+    [{ _id: intentionId, userId: 'u1', status: 'active' }]
+  );
   const due = await getDueWindows({ db, userId: 'u1' });
   assert.equal(due.length, 1);
   assert.equal(due[0].weekNumber, 1);
+});
+
+test('getDueWindows: excludes a window whose habit is no longer active', async () => {
+  const activeId = new ObjectId();
+  const abandonedId = new ObjectId();
+  const now = new Date();
+  const windowFor = (intentionId, weekNumber) => ({
+    _id: new ObjectId(),
+    intentionId,
+    userId: 'u1',
+    weekNumber,
+    scheduledFor: new Date(now - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+    submittedAt: null,
+    score: null,
+    createdAt: now,
+  });
+  const db = makeDb(
+    [windowFor(activeId, 1), windowFor(abandonedId, 3)],
+    [
+      { _id: activeId, userId: 'u1', status: 'active' },
+      // Already had windows generated before it was abandoned — those
+      // shouldn't keep showing as due once the habit is no longer active.
+      { _id: abandonedId, userId: 'u1', status: 'abandoned' },
+    ]
+  );
+  const due = await getDueWindows({ db, userId: 'u1' });
+  assert.equal(due.length, 1);
+  assert.equal(due[0].intentionId, activeId.toString());
 });
 
 test('submitSrhi: computes mean score from 12 items', async () => {

@@ -46,8 +46,12 @@ export async function createIntention({
 
   // §7.3 Information Overload — per-type (build/quit) cap that grows as the
   // participant's existing habits of that type become automatic. Evaluated
-  // only when a study/group enables the guard.
-  if (overload?.enabled) {
+  // only when a study/group enables the guard, and skipped for a habit
+  // stacked onto one the participant is already tracking — stacking is a
+  // low-overhead extension of an established habit, not a new independent
+  // commitment, so it shouldn't compete for the same capacity slot (and
+  // blocking it would defeat the point of offering stacking at all).
+  if (overload?.enabled && creationMode !== 'stacked') {
     const guard = await checkOverloadGuard({
       db,
       userId,

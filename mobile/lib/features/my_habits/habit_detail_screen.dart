@@ -85,6 +85,13 @@ class HabitDetailScreen extends ConsumerWidget {
                         .read(myHabitsServiceProvider)
                         .updateStatus(intentionId, 'abandoned');
                     ref.invalidate(intentionsProvider);
+                    // An abandoned habit's already-generated SRHI windows
+                    // stop being "due" server-side, but this list is its own
+                    // cached provider — without invalidating it too, the
+                    // My Habits screen keeps showing the stale weekly
+                    // check-in for this habit until something else happens
+                    // to invalidate it (e.g. backgrounding the app).
+                    ref.invalidate(dueSrhiProvider);
                     if (context.mounted) context.pop();
                   }
                 }

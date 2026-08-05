@@ -126,10 +126,19 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 ],
               ),
             ),
-            // Page indicator dots shown only during the walkthrough pages.
-            if (_currentPage > 0)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
+            // Page indicator dots, visible only during the walkthrough pages
+            // — but the row itself is always present (just transparent on
+            // page 0), never conditionally inserted/removed. onPageChanged
+            // flips _currentPage mid-drag, as soon as a swipe crosses the
+            // halfway point, well before the gesture ends — conditionally
+            // rendering this row on that same flag used to make it pop in
+            // mid-swipe, shrinking the PageView's height by the row's size
+            // and visibly jumping every page's content at that exact
+            // instant. Reserving the space permanently removes the jump.
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Opacity(
+                opacity: _currentPage > 0 ? 1 : 0,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
@@ -149,6 +158,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),

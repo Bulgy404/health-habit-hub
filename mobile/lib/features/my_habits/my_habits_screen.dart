@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/exceptions.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/motion.dart';
 import '../../utils/date_format.dart';
 import '../../widgets/contribution_graph_widget.dart';
 import '../../widgets/empty_state.dart';
@@ -31,6 +32,11 @@ import 'my_habits_service.dart';
 // pinned to the same values instead of drifting to one-off numbers.
 const double _kCardRadius = 20;
 const double _kCardBorderWidth = 1.5;
+
+/// Width of the connector gutter to the left of a stacked habit card (§7.1)
+/// — wider than a standalone card's 16px left margin so the indent itself
+/// is unmistakable at a glance, not just the drawn line inside it.
+const double _kStackGutterWidth = 48;
 
 /// Displays the user's active habit intentions with daily log strips and
 /// SRHI sparklines.  Opens SRHI prompts when weekly check-ins are due.
@@ -150,6 +156,7 @@ class MyHabitsScreen extends ConsumerWidget {
                   itemBuilder: (context, i) => _HabitCard(
                     intention: ordered[i].intention,
                     isStackedChild: ordered[i].isStackedChild,
+                    isLastStackedChild: ordered[i].isLastStackedChild,
                   ),
                 );
               },
@@ -286,9 +293,18 @@ class _SrhiPromptCard extends StatelessWidget {
 /// One row in the ordered habit list: the intention plus whether it should be
 /// rendered indented as a stacked child of the row above it (§7.1).
 class _OrderedHabit {
-  const _OrderedHabit(this.intention, {required this.isStackedChild});
+  const _OrderedHabit(
+    this.intention, {
+    required this.isStackedChild,
+    this.isLastStackedChild = false,
+  });
   final Intention intention;
   final bool isStackedChild;
+
+  /// Whether this is the last stacked child under its anchor — the
+  /// connector trunk stops at this row's elbow instead of continuing down
+  /// to a sibling (§7.1 staircase, see _StackConnectorPainter).
+  final bool isLastStackedChild;
 }
 
 /// Orders [active] so each stacked habit (`stackedOn` set) appears immediately
@@ -310,19 +326,34 @@ List<_OrderedHabit> _orderWithStacks(List<Intention> active) {
     // Skip stacked children here — they are emitted under their anchor.
     if (i.stackedOn != null && byId.containsKey(i.stackedOn)) continue;
     result.add(_OrderedHabit(i, isStackedChild: false));
-    for (final child in childrenByAnchor[i.id] ?? const <Intention>[]) {
-      result.add(_OrderedHabit(child, isStackedChild: true));
+    final children = childrenByAnchor[i.id] ?? const <Intention>[];
+    for (var idx = 0; idx < children.length; idx++) {
+      result.add(
+        _OrderedHabit(
+          children[idx],
+          isStackedChild: true,
+          isLastStackedChild: idx == children.length - 1,
+        ),
+      );
     }
   }
   return result;
 }
 
 class _HabitCard extends ConsumerWidget {
-  const _HabitCard({required this.intention, this.isStackedChild = false});
+  const _HabitCard({
+    required this.intention,
+    this.isStackedChild = false,
+    this.isLastStackedChild = false,
+  });
   final Intention intention;
 
   /// Whether to render this card indented under its anchor (§7.1 staircase).
   final bool isStackedChild;
+
+  /// Whether this is the last stacked child under its anchor — see
+  /// _OrderedHabit.isLastStackedChild.
+  final bool isLastStackedChild;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -519,9 +550,10 @@ class _HabitCard extends ConsumerWidget {
                           enacted: true,
                         );
                       }
-                      // A short tap confirms the log landed without
-                      // requiring the user to read the snackbar — this is
-                      // the app's core loop, so it should feel rewarding.
+                      // The checkbox itself flips to reflect the new state,
+                      // so a haptic tap is enough confirmation — a snackbar
+                      // on top of that for the single most frequent action
+                      // on this screen was just noise.
                       unawaited(HapticFeedback.lightImpact());
                       ref.invalidate(intentionLogsProvider(intention.id));
                       // Also refresh the page-level aggregate contribution
@@ -532,14 +564,6 @@ class _HabitCard extends ConsumerWidget {
                       // level/XP display doesn't show stale numbers until
                       // some other screen happens to refetch it.
                       ref.invalidate(gamificationProvider);
-                      messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            wasLogged ? l10n.habitUnlogged : l10n.loggedToday,
-                          ),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
                     } catch (e) {
                       // A dead session already gets ShellScreen's global
                       // "session expired, sign in again" prompt (triggered
@@ -565,24 +589,77 @@ class _HabitCard extends ConsumerWidget {
       ),
     );
 
-    // §7.1 — a stacked child gets a small elbow connector on its left so the
-    // staircase reads as "this habit hangs off the one above".
+    // §7.1 — a stacked child gets a drawn elbow connector on its left, in a
+    // wider gutter than before, so the staircase reads clearly as "this
+    // habit hangs off the one above" rather than a subtle single-icon hint.
+    // CrossAxisAlignment.stretch makes the gutter span this row's full
+    // height (margin included), so the vertical trunk's top/bottom edges
+    // land exactly in the 12px gaps between cards — meeting a continuing
+    // trunk from the row above/below with no visible seam. IntrinsicHeight
+    // is required for stretch to work here at all: this Row sits directly
+    // in a sliver list item, which gives it an *unbounded* height (so the
+    // card can size itself) — stretch alone has nothing to stretch to
+    // without IntrinsicHeight resolving a concrete height first.
     if (!isStackedChild) return card;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        SizedBox(
-          width: 40,
-          child: Icon(
-            Icons.subdirectory_arrow_right,
-            size: 20,
-            color: typeColor,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: _kStackGutterWidth,
+            child: CustomPaint(
+              painter: _StackConnectorPainter(
+                color: typeColor,
+                continuesBelow: !isLastStackedChild,
+              ),
+            ),
           ),
-        ),
-        Expanded(child: card),
-      ],
+          Expanded(child: card),
+        ],
+      ),
     );
   }
+}
+
+/// Draws a tree-style "elbow" connector for a stacked habit card (§7.1): a
+/// vertical trunk down to a fixed elbow height, then a horizontal branch out
+/// to the card. [continuesBelow] extends the trunk past the elbow to the
+/// bottom of this row, so a chain of several habits stacked onto the same
+/// anchor reads as one continuous line with a branch off it per habit,
+/// rather than several disconnected elbows.
+class _StackConnectorPainter extends CustomPainter {
+  const _StackConnectorPainter({
+    required this.color,
+    required this.continuesBelow,
+  });
+
+  final Color color;
+  final bool continuesBelow;
+
+  /// Distance from the top of this row to the elbow — lines up with the
+  /// vertical centre of the card's icon/title row (6px item gap + 16px card
+  /// padding + roughly half the icon row's height).
+  static const _elbowY = 32.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withAlpha(180)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final midX = size.width / 2;
+
+    canvas.drawLine(Offset(midX, 0), Offset(midX, _elbowY), paint);
+    canvas.drawLine(Offset(midX, _elbowY), Offset(size.width, _elbowY), paint);
+    if (continuesBelow) {
+      canvas.drawLine(Offset(midX, _elbowY), Offset(midX, size.height), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _StackConnectorPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.continuesBelow != continuesBelow;
 }
 
 /// Big, tappable on/off checkbox for "did you do this today", shown on each
@@ -593,7 +670,7 @@ class _HabitCard extends ConsumerWidget {
 /// a 20px rounded rect, and every *interactive control* (buttons, the
 /// traffic-light dot right next to this one) is fully round; a rounded
 /// square here would be a third, off-brand shape mixed into both.
-class _LogCheckbox extends StatelessWidget {
+class _LogCheckbox extends StatefulWidget {
   const _LogCheckbox({
     required this.checked,
     required this.color,
@@ -605,33 +682,75 @@ class _LogCheckbox extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_LogCheckbox> createState() => _LogCheckboxState();
+}
+
+class _LogCheckboxState extends State<_LogCheckbox>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(vsync: this, value: widget.checked ? 1 : 0);
+  }
+
+  @override
+  void didUpdateWidget(covariant _LogCheckbox oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A fast double-tap should feel continuous, not restart from a jump —
+    // retarget the live value instead of the old fixed-duration swap.
+    // AppSpring.quick, not .standard: this is logged tens of times/day, the
+    // app's single highest-frequency tap — it needs to feel instant, not
+    // reveal-paced.
+    if (oldWidget.checked != widget.checked) {
+      _controller.animateWithSpring(
+        widget.checked ? 1 : 0,
+        spring: AppSpring.quick,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       shape: const CircleBorder(),
       child: InkWell(
         customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: checked ? color : Colors.transparent,
-            border: Border.all(color: color, width: 2),
-            shape: BoxShape.circle,
-          ),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 180),
-            child: checked
-                ? const Icon(
+        onTap: widget.onTap,
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, _) {
+            final t = _controller.value;
+            return Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Color.lerp(Colors.transparent, widget.color, t),
+                border: Border.all(color: widget.color, width: 2),
+                shape: BoxShape.circle,
+              ),
+              child: Opacity(
+                opacity: t,
+                child: Transform.scale(
+                  scale: t,
+                  child: const Icon(
                     Icons.check,
                     color: Colors.white,
                     size: 26,
-                    key: ValueKey('checked'),
-                  )
-                : const SizedBox.shrink(key: ValueKey('unchecked')),
-          ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );

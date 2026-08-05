@@ -120,6 +120,15 @@ export async function topUpSrhiWindows({ db, intentionId, userId }) {
 
 /**
  * Return all pending SRHI windows that are due within the 3-day submission window.
+ *
+ * Excludes windows for a habit that's no longer active (paused/completed/
+ * abandoned) — generateWindows/topUpSrhiWindows already stop *creating* new
+ * windows once a habit leaves 'active' (see topUpSrhiWindows' doc comment),
+ * but windows generated before that point are left in the collection with
+ * submittedAt: null, so without this filter they'd keep showing as "due" for
+ * up to WINDOW_DAYS after the habit was abandoned instead of disappearing
+ * immediately. Mirrors the same active-only join already done in
+ * getUpcomingSrhiQuestionnaireItems below.
  * @param {{ db: object, userId: string }} deps
  * @returns {Promise<Array>} Serialized due window documents.
  */
@@ -136,7 +145,20 @@ export async function getDueWindows({ db, userId }) {
       scheduledFor: { $lte: now, $gte: windowCutoff },
     })
     .toArray();
-  return docs.map(serialize);
+  if (docs.length === 0) return [];
+
+  const activeIntentions = await db
+    .collection(INTENTIONS_COLLECTION)
+    .find(
+      { _id: { $in: docs.map((d) => d.intentionId) }, status: 'active' },
+      { projection: { _id: 1 } }
+    )
+    .toArray();
+  const activeIds = new Set(activeIntentions.map((i) => i._id.toString()));
+
+  return docs
+    .filter((d) => activeIds.has(d.intentionId.toString()))
+    .map(serialize);
 }
 
 /**

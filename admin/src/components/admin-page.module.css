@@ -23,12 +23,18 @@
 
 .subtitle {
   color: var(--color-text-muted);
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
 }
 
 .contactLink {
   color: var(--color-primary-action);
   text-decoration: underline;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .contactLink {
+    transition: color var(--dur-fast) var(--ease-standard);
+  }
 }
 
 .contactLink:hover {
@@ -49,6 +55,12 @@
   cursor: pointer;
   white-space: nowrap;
   text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .addButton {
+    transition: background-color var(--dur-fast) var(--ease-standard);
+  }
 }
 
 .addButton:hover {
@@ -96,7 +108,7 @@
   font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-label);
 }
 
 .input,
@@ -135,7 +147,7 @@
   color: var(--color-text-muted);
   font-size: var(--fs-xs);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-label);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -151,6 +163,12 @@
 
 .table tr:last-child td {
   border-bottom: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .table tbody tr td {
+    transition: background-color var(--dur-fast) var(--ease-standard);
+  }
 }
 
 .table tbody tr:hover td {
@@ -349,6 +367,12 @@
   cursor: pointer;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .saveButton {
+    transition: background-color var(--dur-fast) var(--ease-standard);
+  }
+}
+
 .saveButton:hover {
   background: var(--color-primary-action-hover);
 }
@@ -369,7 +393,7 @@
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-label);
   color: var(--color-text-muted);
   margin-bottom: 0.5rem;
 }

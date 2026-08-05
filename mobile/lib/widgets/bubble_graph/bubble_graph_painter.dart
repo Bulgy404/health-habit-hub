@@ -21,12 +21,24 @@ class BubbleChipWidget extends StatefulWidget {
   /// Called with a pan delta when the user drags the chip.
   final void Function(Offset delta) onDrag;
 
+  /// Called when a drag gesture begins, before the first [onDrag] delta.
+  ///
+  /// Lets the canvas cancel any in-flight momentum animation for this bubble
+  /// so the new drag starts from the bubble's live on-screen position.
+  final VoidCallback onDragStart;
+
+  /// Called when a drag gesture ends, with the release velocity in
+  /// pixels/second, so the canvas can carry momentum into a fling.
+  final void Function(Offset velocity) onDragEnd;
+
   /// Creates a [BubbleChipWidget].
   const BubbleChipWidget({
     super.key,
     required this.bubble,
     required this.onTap,
     required this.onDrag,
+    required this.onDragStart,
+    required this.onDragEnd,
   });
 
   @override
@@ -101,7 +113,9 @@ class _BubbleChipWidgetState extends State<BubbleChipWidget>
       onTap: widget.onTap,
       child: GestureDetector(
         onTap: widget.onTap,
+        onPanStart: (_) => widget.onDragStart(),
         onPanUpdate: (details) => widget.onDrag(details.delta),
+        onPanEnd: (details) => widget.onDragEnd(details.velocity.pixelsPerSecond),
         child: AnimatedBuilder(
           animation: _pulseController,
           builder: (context, child) {

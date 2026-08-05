@@ -93,6 +93,16 @@ const _freeEntryConfig = HabitConfig(
   srhiItems: [],
 );
 
+const _overloadGuardConfig = HabitConfig(
+  cueCount: 'multi',
+  cueSource: 'high_quality',
+  behaviorOptions: [
+    BehaviorOption(key: 'walk', label: 'Walking'),
+  ],
+  srhiItems: [],
+  informationOverloadEnabled: true,
+);
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -150,6 +160,54 @@ void main() {
 
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getBool('habit_onboarding_seen_v1'), isTrue);
+  });
+
+  testWidgets(
+      'shows the §7.3 information-overload explainer card when the guard is enabled and not yet seen',
+      (tester) async {
+    await tester.pumpWidget(_buildSubject(_overloadGuardConfig));
+    await tester.pumpAndSettle();
+
+    expect(find.text('One habit at a time'), findsOneWidget);
+    expect(
+      find.textContaining("Habit stacking isn't affected by this limit"),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      'does not show the information-overload explainer card once already dismissed (persisted)',
+      (tester) async {
+    SharedPreferences.setMockInitialValues({
+      'overload_guard_onboarding_seen_v1': true,
+    });
+
+    await tester.pumpWidget(_buildSubject(_overloadGuardConfig));
+    await tester.pumpAndSettle();
+
+    expect(find.text('One habit at a time'), findsNothing);
+  });
+
+  testWidgets(
+      'dismissing the information-overload explainer card hides it, persists the dismissal, and leaves the "what\'s a habit?" card alone',
+      (tester) async {
+    await tester.pumpWidget(_buildSubject(_overloadGuardConfig));
+    await tester.pumpAndSettle();
+
+    expect(find.text('One habit at a time'), findsOneWidget);
+    expect(find.text("What's a habit?"), findsOneWidget);
+
+    // Two dismissible cards are stacked (habit intro above, overload guard
+    // below) — tap the second close button, which belongs to the guard card.
+    await tester.tap(find.byIcon(Icons.close).last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('One habit at a time'), findsNothing);
+    expect(find.text("What's a habit?"), findsOneWidget);
+
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('overload_guard_onboarding_seen_v1'), isTrue);
+    expect(prefs.getBool('habit_onboarding_seen_v1'), isNot(isTrue));
   });
 
   testWidgets(

@@ -818,14 +818,6 @@
   "@questionnaireNotYetAvailable": {
     "description": "Label under a greyed-out questionnaire in the profile's Health Questionnaires list that has never been completed and has no open window yet"
   },
-  "questionnaireReminderMessage": "回答可能な健康質問票があります。",
-  "@questionnaireReminderMessage": {
-    "description": "Snackbar shown after app startup when at least one study questionnaire is currently due"
-  },
-  "questionnaireReminderAction": "回答する",
-  "@questionnaireReminderAction": {
-    "description": "Snackbar action button that opens the due questionnaire"
-  },
   "myHabitsTab": "マイ習慣",
   "exploreSavedTab": "保存済み",
   "navTabShare": "共有",
@@ -848,7 +840,6 @@
     "description": "Button on habit card to log today's enactment"
   },
   "loggedToday": "記録済み ✓",
-  "habitUnlogged": "記録を削除しました",
   "@loggedToday": {
     "description": "Shown on habit card when today is already logged"
   },
@@ -1444,7 +1435,8 @@
   "habitWellbeingFilterLow": "Low wellbeing",
   "exploreFiltersClearAll": "Clear all",
   "exploreFiltersDone": "Done",
-  "informationOverloadInfo": "To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.",
+  "informationOverloadTitle": "One habit at a time",
+  "informationOverloadInfo": "To help habits stick, we ask you to focus on your current ones before adding new ones of the same type. New slots open up automatically as your habits become more automatic. Habit stacking isn't affected by this limit. You can turn this off in Settings, but we don't recommend it.",
   "informationOverloadBlocked": "Let's focus on your current habit first — a new slot opens once it becomes more automatic.",
   "stackOntoExistingHabitTitle": "Stack onto an existing habit",
   "stackOntoExistingHabitSubtitle": "Anchor this new habit to one you already do",

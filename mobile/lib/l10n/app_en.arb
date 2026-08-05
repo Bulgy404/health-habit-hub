@@ -821,14 +821,6 @@
   "@questionnaireNotYetAvailable": {
     "description": "Label under a greyed-out questionnaire in the profile's Health Questionnaires list that has never been completed and has no open window yet"
   },
-  "questionnaireReminderMessage": "You have a health questionnaire ready to fill out.",
-  "@questionnaireReminderMessage": {
-    "description": "Snackbar shown after app startup when at least one study questionnaire is currently due"
-  },
-  "questionnaireReminderAction": "Fill out",
-  "@questionnaireReminderAction": {
-    "description": "Snackbar action button that opens the due questionnaire"
-  },
   "myHabitsTab": "My Habits",
   "@myHabitsTab": {
     "description": "Bottom nav tab label for My Habits"
@@ -868,10 +860,6 @@
   "loggedToday": "Logged ✓",
   "@loggedToday": {
     "description": "Shown on habit card when today is already logged"
-  },
-  "habitUnlogged": "Log removed",
-  "@habitUnlogged": {
-    "description": "Snackbar shown after tapping an already-logged habit card's button again to undo today's log"
   },
   "pickBehaviorTitle": "What habit do you want to form?",
   "@pickBehaviorTitle": {
@@ -2149,7 +2137,14 @@
   "habitWellbeingFilterLow": "Low wellbeing",
   "exploreFiltersClearAll": "Clear all",
   "exploreFiltersDone": "Done",
-  "informationOverloadInfo": "To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.",
+  "informationOverloadTitle": "One habit at a time",
+  "@informationOverloadTitle": {
+    "description": "Title of the dismissible explainer card shown when the §7.3 information-overload guard is active for this study"
+  },
+  "informationOverloadInfo": "To help habits stick, we ask you to focus on your current ones before adding new ones of the same type. New slots open up automatically as your habits become more automatic. Habit stacking isn't affected by this limit. You can turn this off in Settings, but we don't recommend it.",
+  "@informationOverloadInfo": {
+    "description": "Body of the dismissible explainer card shown when the §7.3 information-overload guard is active for this study"
+  },
   "informationOverloadBlocked": "Let's focus on your current habit first — a new slot opens once it becomes more automatic.",
   "stackOntoExistingHabitTitle": "Stack onto an existing habit",
   "stackOntoExistingHabitSubtitle": "Anchor this new habit to one you already do",

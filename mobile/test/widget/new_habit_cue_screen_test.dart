@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/features/my_habits/my_habits_models.dart';
+import 'package:hhh/features/my_habits/my_habits_provider.dart';
 import 'package:hhh/features/my_habits/new_habit_screen_2_cue.dart';
 import 'package:hhh/providers/locale_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -522,5 +523,144 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('STITCH:0:true'), findsOneWidget);
+  });
+
+  group('picking a tracked anchor from the dropdown', () {
+    final existingHabit = Intention(
+      id: 'anchor-1',
+      behaviorKey: 'read_before_bed',
+      behaviorLabel: 'Read a book for ten minutes',
+      durationMinutes: 10,
+      cues: [IntentionCue(text: 'I get into bed', source: 'pre_rated')],
+      intentionStatement: 'I get into bed, I will read for ten minutes.',
+      status: 'active',
+      createdAt: DateTime(2026, 1, 1),
+    );
+
+    /// Same shape as _buildSubject, but with intentionsProvider overridden
+    /// (so the anchor dropdown renders) and the stitching route also
+    /// exposing anchorText/stackedOn, which _buildSubject's shared route
+    /// doesn't capture (changing that would break every STITCH: assertion
+    /// elsewhere in this file).
+    Widget buildWithExistingHabit() {
+      final router = GoRouter(
+        initialLocation: '/habits/new/cue',
+        routes: [
+          GoRoute(
+            path: '/habits/new/cue',
+            builder: (context, state) => SetCueScreen(
+              behaviorKey: 'walk',
+              behaviorLabel: 'Walking',
+              config: _selfSelectedConfig,
+              habitType: HabitType.build,
+            ),
+          ),
+          GoRoute(
+            path: '/habits/new/stitching',
+            builder: (context, state) {
+              final extra = state.extra as Map<String, dynamic>;
+              return Scaffold(
+                body: Text(
+                  'STITCH stackedOn=${extra['stackedOn']} anchorText=${extra['anchorText']}',
+                ),
+              );
+            },
+          ),
+        ],
+      );
+      return ProviderScope(
+        overrides: [
+          localeProvider.overrideWith(() => _FakeLocaleNotifier()),
+          intentionsProvider.overrideWith((ref) async => [existingHabit]),
+        ],
+        child: MaterialApp.router(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('en')],
+          routerConfig: router,
+        ),
+      );
+    }
+
+    testWidgets('hides the free-text anchor field instead of populating it',
+        (tester) async {
+      _growView(tester);
+      await tester.pumpWidget(buildWithExistingHabit());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Stack onto an existing habit'));
+      await tester.pumpAndSettle();
+
+      // Present before a pick is made.
+      expect(
+        find.widgetWithText(TextField, 'Or type an anchor habit'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Anchor habit'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(existingHabit.behaviorLabel).last);
+      await tester.pumpAndSettle();
+
+      // Hidden now, not shown-and-populated with the picked label.
+      expect(
+        find.widgetWithText(TextField, 'Or type an anchor habit'),
+        findsNothing,
+      );
+      expect(find.text(existingHabit.behaviorLabel), findsOneWidget);
+    });
+
+    testWidgets(
+        'still forwards the picked habit as stackedOn/anchorText on Next',
+        (tester) async {
+      _growView(tester);
+      await tester.pumpWidget(buildWithExistingHabit());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Stack onto an existing habit'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Anchor habit'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(existingHabit.behaviorLabel).last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'STITCH stackedOn=${existingHabit.id} anchorText=${existingHabit.behaviorLabel}',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('picking None after a pick clears the anchor and re-shows the field',
+        (tester) async {
+      _growView(tester);
+      await tester.pumpWidget(buildWithExistingHabit());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Stack onto an existing habit'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Anchor habit'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(existingHabit.behaviorLabel).last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Anchor habit'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('None').last);
+      await tester.pumpAndSettle();
+
+      final field = find.widgetWithText(TextField, 'Or type an anchor habit');
+      expect(field, findsOneWidget);
+      // Not left over from the earlier pick.
+      expect(tester.widget<TextField>(field).controller!.text, isEmpty);
+    });
   });
 }

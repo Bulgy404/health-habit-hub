@@ -43,9 +43,46 @@ function makeToken(roles = ['user'], sub = 'test-user') {
 
 function createMockDb() {
   const srhiWindows = [];
+  const intentions = [];
 
   return {
     collection(name) {
+      if (name === 'implementation_intentions') {
+        return {
+          async insertOne(doc) {
+            intentions.push({ _id: new ObjectId(), ...doc });
+          },
+          async findOne(q = {}) {
+            return (
+              intentions.find((i) => {
+                if (q._id && i._id?.toString() !== q._id?.toString())
+                  return false;
+                if (q.userId && i.userId !== q.userId) return false;
+                return true;
+              }) ?? null
+            );
+          },
+          find(q = {}) {
+            const filtered = intentions.filter((i) => {
+              if (q._id?.$in) {
+                const ids = q._id.$in.map((id) => id.toString());
+                if (!ids.includes(i._id.toString())) return false;
+              }
+              if (q.status && i.status !== q.status) return false;
+              return true;
+            });
+            return { toArray: async () => filtered };
+          },
+          async updateOne(q, update) {
+            const idx = intentions.findIndex(
+              (i) => q._id && i._id?.toString() === q._id?.toString()
+            );
+            if (idx === -1) return { matchedCount: 0 };
+            if (update.$set) Object.assign(intentions[idx], update.$set);
+            return { matchedCount: 1 };
+          },
+        };
+      }
       if (name === 'srhi_responses') {
         return {
           async insertOne(doc) {
@@ -218,6 +255,13 @@ test('GET /srhi/due returns 200 with empty array when no windows', async () => {
 test('GET /srhi/due returns pending windows for user', async () => {
   const userId = 'srhi-due-user';
   const intentionId = new ObjectId();
+  // getDueWindows only returns windows whose habit is still active — see
+  // srhiService.js's getDueWindows join against implementation_intentions.
+  await mockDb.collection('implementation_intentions').insertOne({
+    _id: intentionId,
+    userId,
+    status: 'active',
+  });
   // Seed a window that is due (scheduledFor in the past, not submitted)
   await mockDb.collection('srhi_responses').insertOne({
     intentionId,

@@ -129,7 +129,28 @@ export default function TeamPage() {
       {error && <p className={styles.error}>{error}</p>}
 
       {loading ? (
-        <p>{tc("loading")}</p>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>{t("member")}</th>
+                <th>{t("roles")}</th>
+                <th>{t("actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i} className={styles.skeletonRow}>
+                  {Array.from({ length: 3 }).map((__, j) => (
+                    <td key={j}>
+                      <span className={styles.skeletonBar} style={{ width: "80%" }} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>

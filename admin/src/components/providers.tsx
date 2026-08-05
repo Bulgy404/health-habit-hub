@@ -5,6 +5,7 @@ import { SessionProvider } from "next-auth/react";
 import { useEffect } from "react";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { ThemeProvider } from "@mui/material/styles";
+import { MotionConfig } from "motion/react";
 import { muiTheme } from "@/lib/mui-theme";
 import { useIdleLogout } from "@/lib/useIdleLogout";
 
@@ -37,19 +38,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <AppRouterCacheProvider options={{ key: "mui" }}>
       <ThemeProvider theme={muiTheme}>
         {/*
-          Keycloak access tokens live ~5 min (realm default). Poll the session
-          a bit sooner so NextAuth's jwt callback re-issues the access token
-          before it expires, keeping session.accessToken valid for API calls
-          without a manual page reload. refetchOnWindowFocus additionally
-          recovers the moment the user returns to an idle tab.
+          reducedMotion="user" makes every `motion`-driven component in the
+          app honor prefers-reduced-motion automatically (springs/slides
+          collapse to opacity-only), set once here instead of per component.
         */}
-        <SessionProvider
-          basePath={authBasePath}
-          refetchInterval={4 * 60}
-          refetchOnWindowFocus
-        >
-          <SessionGuard>{children}</SessionGuard>
-        </SessionProvider>
+        <MotionConfig reducedMotion="user">
+          {/*
+            Keycloak access tokens live ~5 min (realm default). Poll the session
+            a bit sooner so NextAuth's jwt callback re-issues the access token
+            before it expires, keeping session.accessToken valid for API calls
+            without a manual page reload. refetchOnWindowFocus additionally
+            recovers the moment the user returns to an idle tab.
+          */}
+          <SessionProvider
+            basePath={authBasePath}
+            refetchInterval={4 * 60}
+            refetchOnWindowFocus
+          >
+            <SessionGuard>{children}</SessionGuard>
+          </SessionProvider>
+        </MotionConfig>
       </ThemeProvider>
     </AppRouterCacheProvider>
   );

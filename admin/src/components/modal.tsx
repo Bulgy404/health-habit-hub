@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { motion } from "motion/react";
+import { defaultSpring } from "@/lib/motion";
 import styles from "./modal.module.css";
 
 const FOCUSABLE_SELECTOR =
@@ -16,6 +18,12 @@ interface ModalProps {
  * Shared modal primitive: one backdrop, a focus trap, ESC-to-close, and a
  * body scroll-lock while open. Replaces the per-page overlay/backdrop combos
  * that previously varied in behaviour (some had no keyboard support at all).
+ *
+ * The overlay and dialog materialize together on mount (blur + scale + fade,
+ * not a flat opacity fade) — see apple-design skill §12. Callers still
+ * mount/unmount this conditionally, so only the entrance is animated; an
+ * animated exit would require lifting an `AnimatePresence` into every call
+ * site and is left as a follow-up.
  *
  * @returns The modal overlay and dialog.
  */
@@ -62,8 +70,20 @@ export function Modal({ onClose, children, maxWidth }: ModalProps) {
   }, [onClose]);
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div
+    <motion.div
+      className={styles.overlay}
+      data-scrim
+      onClick={onClose}
+      // backdrop-filter is static, not animated (paint-heavy, not
+      // GPU-composited like transform/opacity) — the opacity fade alone
+      // still reads as the blur materializing in, since the backdrop
+      // effect is invisible until the element's own opacity rises.
+      style={{ backdropFilter: "blur(6px)" }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+    >
+      <motion.div
         ref={dialogRef}
         className={styles.modal}
         role="dialog"
@@ -71,9 +91,12 @@ export function Modal({ onClose, children, maxWidth }: ModalProps) {
         tabIndex={-1}
         style={maxWidth ? { maxWidth } : undefined}
         onClick={(e) => e.stopPropagation()}
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={defaultSpring}
       >
         {children}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

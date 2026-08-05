@@ -103,7 +103,7 @@ class _StudyCodeScreenState extends ConsumerState<StudyCodeScreen> {
       await storage.write(key: kStudyEnrolledKey, value: 'true');
 
       if (!mounted) return;
-      context.go('/habits/new/behavior');
+      context.go('/share');
     } on DioException catch (e) {
       if (!mounted) return;
       final statusCode = e.response?.statusCode;

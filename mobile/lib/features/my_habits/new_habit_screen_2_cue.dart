@@ -287,15 +287,25 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
         leading: const Icon(Icons.link),
         title: Text(l10n.stackOntoExistingHabitTitle),
         subtitle: Text(l10n.stackOntoExistingHabitSubtitle),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        // Top was 0 — with no headroom above it, the dropdown's floating
+        // label (which sits half-above its OutlineInputBorder) got clipped
+        // by the ExpansionTile's content edge instead of fully visible.
+        childrenPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         children: [
           if (active.isNotEmpty)
             DropdownButtonFormField<String>(
               initialValue: _stackedOnId,
               isExpanded: true,
+              // Rounds the popup menu overlay to match the field itself —
+              // this is a separate shape from the InputDecoration border
+              // above (that one shapes the closed field, this shapes the
+              // opened options list), so both need setting.
+              borderRadius: BorderRadius.circular(14),
               decoration: InputDecoration(
                 labelText: l10n.stackAnchorPickLabel,
-                border: const OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
               items: [
                 DropdownMenuItem<String>(
@@ -315,36 +325,52 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
                 setState(() {
                   _stackedOnId = id;
                   if (id != null) {
-                    // Picking a tracked habit fills the free-text field with
-                    // its label (kept as its own field, not a cue) and
-                    // clears any opt-in from a previous free-typed anchor —
+                    // Picking a tracked habit still records its label in
+                    // the (now hidden, see below) controller — the confirm/
+                    // detail screens display it via anchorLabel — but
+                    // doesn't show it in an editable-looking field, and
+                    // clears any opt-in from a previous free-typed anchor:
                     // an already-tracked anchor never needs re-creating.
                     _anchorController.text =
                         active.firstWhere((i) => i.id == id).behaviorLabel;
                     _alsoTrackAnchor = false;
+                  } else {
+                    // Back to "None" — drop whatever label the previous
+                    // pick left in the controller so it doesn't linger as a
+                    // phantom free-typed anchor once the field reappears.
+                    _anchorController.clear();
                   }
                 });
               },
             ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _anchorController,
-            decoration: InputDecoration(
-              labelText: l10n.stackAnchorFreeTextLabel,
-              hintText: l10n.stackAnchorFreeTextHint,
-              border: const OutlineInputBorder(),
+          // The free-text field only makes sense for an anchor that isn't
+          // already tracked — once a dropdown pick sets _stackedOnId, the
+          // anchor is fully specified and showing this field would just
+          // duplicate that pick in an editable-looking box (and editing it
+          // would silently swap the tracked stack for a free-typed one).
+          if (_stackedOnId == null) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _anchorController,
+              decoration: InputDecoration(
+                labelText: l10n.stackAnchorFreeTextLabel,
+                hintText: l10n.stackAnchorFreeTextHint,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              textCapitalization: TextCapitalization.sentences,
+              maxLength: 100,
+              onChanged: (_) => setState(() {
+                // A tracked pick and a free-typed anchor are mutually
+                // exclusive — typing here after picking from the dropdown
+                // means the user is overriding that choice. Always rebuild
+                // (not just when clearing the pick) so the opt-in checkbox
+                // below shows/hides as the anchor text is typed/cleared.
+                _stackedOnId = null;
+              }),
             ),
-            textCapitalization: TextCapitalization.sentences,
-            maxLength: 100,
-            onChanged: (_) => setState(() {
-              // A tracked pick and a free-typed anchor are mutually
-              // exclusive — typing here after picking from the dropdown
-              // means the user is overriding that choice. Always rebuild
-              // (not just when clearing the pick) so the opt-in checkbox
-              // below shows/hides as the anchor text is typed/cleared.
-              _stackedOnId = null;
-            }),
-          ),
+          ],
           // Opt-in: only offered for a free-typed anchor that isn't already
           // one of the user's tracked habits — picking from the dropdown
           // above means it's tracked already, nothing to add.
@@ -423,7 +449,9 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
                     hintText: i == 0
                         ? l10n.setCuePlaceholder
                         : l10n.setCueExtraPlaceholder,
-                    border: const OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   maxLength: 200,
                   onChanged: (_) {

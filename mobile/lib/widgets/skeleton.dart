@@ -6,6 +6,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../theme/motion.dart';
+
 /// A single pulsing placeholder block. Compose these to build skeleton
 /// layouts that mirror the real content's shape.
 class SkeletonBox extends StatefulWidget {
@@ -42,11 +44,24 @@ class _SkeletonBoxState extends State<SkeletonBox>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
+    );
     _opacity = Tween<double>(
       begin: 0.4,
       end: 1.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // §1.7 — an indefinitely-repeating pulse is exactly what reduced motion
+    // asks us to avoid; show a static mid-opacity block instead of looping.
+    if (reducedMotion(context)) {
+      _controller.stop();
+      _controller.value = 0.5;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
   }
 
   @override

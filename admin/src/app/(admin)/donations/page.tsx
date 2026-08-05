@@ -227,7 +227,30 @@ export default function DonationsPage() {
       {error && <p className={styles.error}>{error}</p>}
 
       {loading ? (
-        <p>{tc("loading")}</p>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>{t("habitHeader")}</th>
+                <th>{t("categoryLabel")}</th>
+                <th>{t("groupLabel")}</th>
+                <th>{t("participantHeader")}</th>
+                <th>{t("donatedHeader")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <tr key={i} className={styles.skeletonRow}>
+                  {Array.from({ length: 5 }).map((__, j) => (
+                    <td key={j}>
+                      <span className={styles.skeletonBar} style={{ width: "80%" }} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <>
           <div className={styles.tableWrap}>

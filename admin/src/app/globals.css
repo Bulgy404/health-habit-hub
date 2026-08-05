@@ -46,8 +46,14 @@
   --fs-xs: 0.75rem;
   --fs-sm: 0.875rem;
   --fs-base: 0.9375rem;
+  --fs-md: 0.95rem;
   --fs-lg: 1.15rem;
   --fs-xl: 1.75rem;
+
+  /* Shared tracking (letter-spacing) for uppercase micro-labels — replaces
+     15 call sites that each hand-picked a value between 0.01em and 0.08em
+     for the same visual role. */
+  --tracking-label: 0.05em;
 
   /* Spacing scale */
   --sp-1: 0.25rem;
@@ -56,6 +62,13 @@
   --sp-4: 1rem;
   --sp-5: 1.5rem;
   --sp-6: 2rem;
+
+  /* Transition tokens — most hover/focus rules in this app either had no
+     transition at all (instant hard cuts) or an inconsistent bare `ease`.
+     Use these instead of hand-picking a duration per component. */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 0.15s;
+  --dur-base: 0.3s;
 }
 
 /* Dark mode: surfaces use #0f172a-style near-navy, not pure black, per 2026
@@ -113,6 +126,7 @@
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
   border-radius: 4px;
+  transition: outline-offset var(--dur-fast) var(--ease-standard);
 }
 
 html,
@@ -122,9 +136,49 @@ body {
   background-color: var(--color-bg);
   color: var(--color-text);
   color-scheme: light dark;
+  line-height: 1.45;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+/* Reduced motion: keep status/feedback (spinners, focus rings) but strip
+   slides/springs/parallax down to a short opacity cross-fade. Individual
+   `motion`-driven components additionally read this via MotionConfig
+   (see providers.tsx), which handles React-driven animations; this covers
+   plain CSS transitions/keyframes. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Reduced transparency: raise translucent/backdrop-blur surfaces to solid
+   backgrounds instead of frosted glass. */
+@media (prefers-reduced-transparency: reduce) {
+  [data-material] {
+    backdrop-filter: none !important;
+    background-color: var(--color-surface) !important;
+  }
+  /* Scrims (modal/drawer backdrops) aren't a surface — drop the blur and
+     darken instead of going opaque, so content still reads as "behind". */
+  [data-scrim] {
+    backdrop-filter: none !important;
+    background-color: rgba(15, 23, 42, 0.7) !important;
+  }
+}
+
+/* Higher contrast: give the flat scrims (modal/drawer backdrops) a visible
+   border instead of relying on blur/opacity alone to read as a surface. */
+@media (prefers-contrast: more) {
+  [data-scrim] {
+    border: 1px solid var(--color-border);
+  }
 }

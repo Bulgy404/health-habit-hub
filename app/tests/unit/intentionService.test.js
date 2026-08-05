@@ -201,6 +201,55 @@ test('createIntention: persists anchorLabel and allows empty cues when stacked (
   assert.deepEqual(result.cues, []);
 });
 
+test('createIntention: skips the §7.3 information-overload guard for a stacked habit', async () => {
+  const anchorId = new ObjectId();
+  // Deliberately the plain implementation_intentions-only mock (see makeDb
+  // above) — checkOverloadGuard needs srhi_responses/daily_behavior_logs/
+  // admin_settings too, so if the guard were NOT skipped for a stacked
+  // creation, this mock's `assert.equal(name, 'implementation_intentions')`
+  // would throw the moment checkOverloadGuard asked for another collection,
+  // failing this test.
+  const db = makeDb();
+  const result = await createIntention({
+    db,
+    userId: 'u1',
+    behaviorKey: 'flossing',
+    behaviorLabel: 'Flossing',
+    durationMinutes: 2,
+    cues: [{ text: 'After brushing', cueId: null, source: 'self_selected' }],
+    intentionStatement: 'After I brush my teeth, I will floss.',
+    habitType: 'build',
+    stackedOn: anchorId.toString(),
+    creationMode: 'stacked',
+    cueConfig: { maxHabits: null },
+    overload: { enabled: true, unlockTier: 'weekly' },
+  });
+  assert.equal(result.limitReached, undefined);
+  assert.equal(result.creationMode, 'stacked');
+});
+
+test('createIntention: enforces the §7.3 information-overload guard for a standalone habit', async () => {
+  // Same mock as above, deliberately missing srhi_responses/etc — a
+  // standalone creation *should* reach checkOverloadGuard and hit that
+  // gap and throw, proving the guard isn't skipped unconditionally (only
+  // for stacked creations, per the test above).
+  const db = makeDb();
+  await assert.rejects(
+    createIntention({
+      db,
+      userId: 'u1',
+      behaviorKey: 'yoga',
+      behaviorLabel: 'Yoga',
+      durationMinutes: 20,
+      cues: [],
+      intentionStatement: '',
+      creationMode: 'standalone',
+      cueConfig: { maxHabits: null },
+      overload: { enabled: true, unlockTier: 'weekly' },
+    })
+  );
+});
+
 test('createIntention: anchorLabel defaults to null and trims whitespace', async () => {
   const db = makeDb();
   const withoutAnchor = await createIntention({

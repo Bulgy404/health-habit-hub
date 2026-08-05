@@ -34,6 +34,9 @@
   background: var(--color-bg);
   color: var(--color-text);
   font-family: inherit;
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard);
 }
 
 .input:focus,

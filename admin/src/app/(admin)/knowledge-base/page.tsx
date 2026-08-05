@@ -4,8 +4,9 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import { apiUrl } from "@/lib/api";
-import { Spinner } from "@/components/spinner";
+import { SpinnerLabel } from "@/components/spinner";
 import styles from "./page.module.css";
+import sharedStyles from "@/components/admin-page.module.css";
 import { useKnowledgeBaseData } from "./useKnowledgeBaseData";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -120,7 +121,7 @@ function UploadModal({
             {tc("cancel")}
           </button>
           <button className={styles.saveBtn} onClick={handleUpload} disabled={uploading}>
-            {uploading ? <Spinner /> : tc("upload")}
+            <SpinnerLabel loading={uploading} label={tc("upload")} />
           </button>
         </div>
       </div>
@@ -247,7 +248,30 @@ export default function KnowledgeBasePage() {
       {successMsg && <div className={styles.successMsg}>{successMsg}</div>}
 
       {loading ? (
-        <div className={styles.loadingState}>{tc("loading")}</div>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>{t("filenameColumn")}</th>
+                <th>{t("sizeColumn")}</th>
+                <th>{t("summaryColumn")}</th>
+                <th>{t("uploadDateColumn")}</th>
+                <th>{tc("actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i} className={sharedStyles.skeletonRow}>
+                  {Array.from({ length: 5 }).map((__, j) => (
+                    <td key={j}>
+                      <span className={sharedStyles.skeletonBar} style={{ width: "80%" }} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : entries.length === 0 ? (
         <div className={styles.emptyState}>{t("emptyState")}</div>
       ) : (

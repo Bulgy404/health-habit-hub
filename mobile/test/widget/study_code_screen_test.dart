@@ -195,6 +195,26 @@ void main() {
     expect(find.text('This code has already been used.'), findsOneWidget);
   });
 
+  testWidgets('redeeming a valid code navigates to Share, same as Skip',
+      (tester) async {
+    adapter.onPost(
+      '$_base/onboarding/redeem-code',
+      (server) => server.reply(200, <String, dynamic>{
+        'studyId': 'study-1',
+        'groupId': 'group-1',
+      }),
+    );
+
+    await tester.pumpWidget(_buildSubject(dio));
+    await tester.pump();
+
+    await tester.enterText(find.byType(TextField), 'HHH-ABCDE');
+    await tester.tap(find.text('Continue with code'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Share'), findsOneWidget);
+  });
+
   testWidgets('tapping Skip enrols in the default study and navigates on success',
       (tester) async {
     adapter.onPost(

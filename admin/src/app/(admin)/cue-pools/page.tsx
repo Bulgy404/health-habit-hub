@@ -5,8 +5,9 @@ import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { apiFetch, apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
-import { Spinner } from "@/components/spinner";
+import { SpinnerLabel } from "@/components/spinner";
 import styles from "./page.module.css";
+import sharedStyles from "@/components/admin-page.module.css";
 import { useCuePoolsData } from "./useCuePoolsData";
 
 /** Per-language text, e.g. `{ en: 'Hello', de: 'Hallo' }`. */
@@ -313,7 +314,7 @@ export default function CuePoolsPage() {
           </div>
           <div className={styles.formFooter}>
             <button className={styles.saveBtn} onClick={handleCreate} disabled={creating}>
-              {creating ? <Spinner /> : t("create")}
+              <SpinnerLabel loading={creating} label={t("create")} />
             </button>
           </div>
         </div>
@@ -366,7 +367,31 @@ export default function CuePoolsPage() {
       {importError && <div className={styles.errorMsg}>{importError}</div>}
 
       {loading ? (
-        <div className={styles.loadingState}>{tc("loading")}</div>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>{t("textHeader")}</th>
+                <th>{t("qualityLabel")}</th>
+                <th>{t("dimensionsHeader")}</th>
+                <th>{t("domainLabel")}</th>
+                <th>{t("langHeader")}</th>
+                <th>{t("actionHeader")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <tr key={i} className={sharedStyles.skeletonRow}>
+                  {Array.from({ length: 6 }).map((__, j) => (
+                    <td key={j}>
+                      <span className={sharedStyles.skeletonBar} style={{ width: "80%" }} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : cues.length === 0 ? (
         <div className={styles.emptyState}>{t("emptyState", { addCue: t("addCue") })}</div>
       ) : (

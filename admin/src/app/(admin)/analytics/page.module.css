@@ -80,7 +80,7 @@
   font-size: var(--fs-xs);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-label);
   color: var(--color-text-muted);
 }
 
@@ -206,7 +206,7 @@
   font-size: var(--fs-xs);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-label);
   color: var(--color-text-muted);
   background: var(--color-surface-alt);
   border-bottom: 1px solid var(--color-border);
@@ -220,6 +220,11 @@
 
 .table tr:last-child td {
   border-bottom: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .table tbody tr td {
+    transition: background-color var(--dur-fast) var(--ease-standard);
+  }
 }
 .table tbody tr:hover td {
   background: var(--color-surface-alt);
@@ -357,6 +362,12 @@
   flex-shrink: 0;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .drawerClose {
+    transition: background-color var(--dur-fast) var(--ease-standard);
+  }
+}
+
 .drawerClose:hover {
   background: var(--color-surface-alt);
 }
@@ -380,7 +391,7 @@
   font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--tracking-label);
   color: var(--color-text-muted);
   margin-bottom: 0.25rem;
 }
@@ -572,7 +583,7 @@
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: var(--tracking-label);
 }
 
 .frequencyDaily {
@@ -628,7 +639,7 @@
   height: 100%;
   background: var(--color-primary, #3b82f6);
   border-radius: 3px;
-  transition: width 0.3s ease;
+  transition: width var(--dur-base) var(--ease-standard);
 }
 
 .componentTable {
@@ -700,10 +711,16 @@
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--color-info);
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+}
+@media (hover: hover) and (pointer: fine) {
+  .queryLinks a {
+    transition: text-decoration-color var(--dur-fast) var(--ease-standard);
+  }
 }
 .queryLinks a:hover {
-  text-decoration: underline;
+  text-decoration-color: currentColor;
 }
 .queryItem {
   margin-bottom: 0.75rem;

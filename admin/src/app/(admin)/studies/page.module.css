@@ -69,7 +69,7 @@
   color: var(--color-text-muted);
   font-size: var(--fs-xs);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: var(--tracking-label);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -405,6 +405,7 @@
 }
 
 .tab {
+  position: relative;
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   font-weight: 500;
@@ -415,6 +416,10 @@
   margin-bottom: -1px;
   cursor: pointer;
   font-family: inherit;
+  /* Not gated behind (hover: hover) — this transition also carries the
+     .tabActive color change below, which is set via className on tab
+     click, not :hover, so touch devices still need it. */
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
 .tab:hover {
@@ -423,8 +428,19 @@
 
 .tabActive {
   color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
   font-weight: 600;
+}
+
+/* Sliding underline — a `motion` layoutId element (see page.tsx) painted
+   under the active tab instead of the old instant border-bottom-color
+   snap. */
+.tabIndicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--color-primary);
 }
 
 /* ── Codes tab ─────────────────────────────────────────────────────────────── */
@@ -1212,7 +1228,11 @@
   cursor: pointer;
   border-radius: 6px;
   padding: 0.2rem 0.35rem;
-  transition: background 0.15s;
+}
+@media (hover: hover) and (pointer: fine) {
+  .barRow {
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
 }
 .barRow:hover {
   background: var(--color-surface-alt);
@@ -1250,7 +1270,7 @@
 .barFill {
   height: 100%;
   border-radius: 6px;
-  transition: width 0.4s ease;
+  transition: width var(--dur-base) var(--ease-standard);
 }
 .barValue {
   font-size: 0.8rem;
@@ -1355,7 +1375,7 @@
   font-weight: 600;
   font-size: var(--fs-xs);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking-label);
   color: var(--color-text-muted);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-alt);

@@ -106,13 +106,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
   }
 
   void _openFilterSheet() {
+    // shape: now comes from the app-wide BottomSheetThemeData (app.dart).
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) => _FilterSheet(
         habitTypeFilter: _habitTypeFilter,
         healthBenefitFilter: _healthBenefitFilter,
@@ -169,13 +167,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen>
         .map((h) => _toHabitNode(h, dimension))
         .toList();
 
+    // shape: now comes from the app-wide BottomSheetThemeData (app.dart).
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (ctx) => _NodeDetailSheet(
         initialNode: habitNode,
         allHabits: allHabitNodes,

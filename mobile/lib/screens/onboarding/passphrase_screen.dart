@@ -166,9 +166,12 @@ class _PassphraseScreenState extends ConsumerState<PassphraseScreen> {
     // doesn't have to manually scroll down to tap it.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
+      // ScrollController.animateTo drives the Scrollable's own internal
+      // animation, not an AnimationController we own — duration tightened
+      // to AppSpring.standard's ~0.35s response, curve kept non-overshooting.
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 350),
         curve: Curves.easeOut,
       );
     });

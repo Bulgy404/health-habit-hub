@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { motion } from "motion/react";
 import styles from "./page.module.css";
 
 import { useStudiesData } from "./useStudiesData";
@@ -11,7 +12,8 @@ import { CueConfigForm } from "@/components/cue-config-form";
 import { HabitEntryModeForm } from "@/components/habit-entry-mode-form";
 import { ActivityTypesManager } from "@/components/activity-types-manager";
 import { ToggleSwitch } from "@/components/toggle-switch";
-import { Spinner } from "@/components/spinner";
+import { SpinnerLabel } from "@/components/spinner";
+import { defaultSpring } from "@/lib/motion";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -749,7 +751,7 @@ function CadenceEditor({
           </button>
         )}
         <button className={styles.saveBtn} onClick={handleSave} disabled={disabled || saving}>
-          {saving ? <Spinner /> : tc("save")}
+          <SpinnerLabel loading={saving} label={tc("save")} />
         </button>
       </div>
     </div>
@@ -1232,10 +1234,8 @@ function CodesTab({ study, token }: { study: StudySummary; token: string }) {
           <button className={styles.saveBtn} onClick={handleSaveAllocation} disabled={savingAlloc}>
             {allocSaved ? (
               t("codesTab.savedAllocation")
-            ) : savingAlloc ? (
-              <Spinner />
             ) : (
-              t("codesTab.saveAllocation")
+              <SpinnerLabel loading={savingAlloc} label={t("codesTab.saveAllocation")} />
             )}
           </button>
         </div>
@@ -1283,7 +1283,7 @@ function CodesTab({ study, token }: { study: StudySummary; token: string }) {
         </div>
         {studyGenError && <div className={styles.errorMsg}>{studyGenError}</div>}
         <button className={styles.saveBtn} onClick={handleStudyGenerate} disabled={studyGenerating}>
-          {studyGenerating ? <Spinner /> : t("codesTab.generateCodes")}
+          <SpinnerLabel loading={studyGenerating} label={t("codesTab.generateCodes")} />
         </button>
         {studyGenCodes.length > 0 && (
           <div className={styles.genResult}>
@@ -1367,7 +1367,7 @@ function CodesTab({ study, token }: { study: StudySummary; token: string }) {
             </div>
             {genError && <div className={styles.errorMsg}>{genError}</div>}
             <button className={styles.saveBtn} onClick={handleGenerate} disabled={generating}>
-              {generating ? <Spinner /> : t("codesTab.generateTargeted")}
+              <SpinnerLabel loading={generating} label={t("codesTab.generateTargeted")} />
             </button>
             {generatedCodes.length > 0 && (
               <div className={styles.genResult}>
@@ -1793,7 +1793,7 @@ function CueConfigTab({ study, token }: { study: StudySummary; token: string }) 
                 onClick={() => handleSave(g.id)}
                 disabled={s.saving}
               >
-                {s.saving ? <Spinner /> : tc("save")}
+                <SpinnerLabel loading={s.saving} label={tc("save")} />
               </button>
             </div>
           </div>
@@ -2245,7 +2245,7 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
             onClick={handleSaveRecommender}
             disabled={saving.recommender}
           >
-            {saving.recommender ? <Spinner /> : tc("save")}
+            <SpinnerLabel loading={saving.recommender} label={tc("save")} />
           </button>
         </div>
       </div>
@@ -2299,7 +2299,7 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
             onClick={handleSaveOnboarding}
             disabled={saving.onboarding}
           >
-            {saving.onboarding ? <Spinner /> : tc("save")}
+            <SpinnerLabel loading={saving.onboarding} label={tc("save")} />
           </button>
         </div>
       </div>
@@ -2406,7 +2406,7 @@ function HabitCreationTab({ study, token }: { study: StudySummary; token: string
             onClick={handleSaveHabitCreation}
             disabled={saving.habitCreation}
           >
-            {saving.habitCreation ? <Spinner /> : tc("save")}
+            <SpinnerLabel loading={saving.habitCreation} label={tc("save")} />
           </button>
         </div>
       </div>
@@ -2987,7 +2987,7 @@ function RemindersTab({ study, token }: { study: StudySummary; token: string }) 
               onClick={() => handleSaveType(type)}
               disabled={saving[type]}
             >
-              {saving[type] ? <Spinner /> : tc("save")}
+              <SpinnerLabel loading={saving[type]} label={tc("save")} />
             </button>
           </div>
 
@@ -3263,13 +3263,14 @@ function StudyUpdateManualSend({ study, token }: { study: StudySummary; token: s
 
           <div className={styles.notifFormFooter}>
             <button className={styles.saveBtn} onClick={handleSend} disabled={sending}>
-              {sending ? (
-                <Spinner />
-              ) : sendMode === "now" ? (
-                t("notificationsTab.send")
-              ) : (
-                t("notificationsTab.scheduleOption")
-              )}
+              <SpinnerLabel
+                loading={sending}
+                label={
+                  sendMode === "now"
+                    ? t("notificationsTab.send")
+                    : t("notificationsTab.scheduleOption")
+                }
+              />
             </button>
           </div>
         </div>
@@ -3568,7 +3569,7 @@ function BehaviorChangeTab({ study, token }: { study: StudySummary; token: strin
     <div className={styles.cueConfigFooter}>
       {saved[section] && <span className={styles.savedMsg}>{t("saved")}</span>}
       <button className={styles.saveBtn} onClick={onSave} disabled={saving[section]}>
-        {saving[section] ? <Spinner /> : tc("save")}
+        <SpinnerLabel loading={saving[section]} label={tc("save")} />
       </button>
     </div>
   );
@@ -3850,7 +3851,7 @@ function GamificationTab({ study, token }: { study: StudySummary; token: string 
         <div className={styles.cueConfigFooter}>
           {saved && <span className={styles.savedMsg}>{t("saved")}</span>}
           <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-            {saving ? <Spinner /> : tc("save")}
+            <SpinnerLabel loading={saving} label={tc("save")} />
           </button>
         </div>
       </div>
@@ -4082,167 +4083,163 @@ function StudyModal({
 
         {isEdit && (
           <div className={styles.tabs}>
-            <button
-              className={`${styles.tab} ${activeTab === "details" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("details")}
-            >
-              {t("modal.tabs.details")}
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === "questionnaires" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("questionnaires")}
-            >
-              {t("modal.tabs.questionnaires")}
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === "codes" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("codes")}
-            >
-              {t("modal.tabs.codes")}
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === "participants" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("participants")}
-            >
-              {t("modal.tabs.participants")}
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === "cue-config" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("cue-config")}
-            >
-              {t("modal.tabs.cueConfig")}
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === "habit-creation" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("habit-creation")}
-            >
-              {t("modal.tabs.habitCreation")}
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === "reminders" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("reminders")}
-            >
-              {t("modal.tabs.reminders")}
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === "behavior-change" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("behavior-change")}
-            >
-              {t("modal.tabs.behaviorChange")}
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === "gamification" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("gamification")}
-            >
-              {t("modal.tabs.gamification")}
-            </button>
+            {(
+              [
+                ["details", t("modal.tabs.details")],
+                ["questionnaires", t("modal.tabs.questionnaires")],
+                ["codes", t("modal.tabs.codes")],
+                ["participants", t("modal.tabs.participants")],
+                ["cue-config", t("modal.tabs.cueConfig")],
+                ["habit-creation", t("modal.tabs.habitCreation")],
+                ["reminders", t("modal.tabs.reminders")],
+                ["behavior-change", t("modal.tabs.behaviorChange")],
+                ["gamification", t("modal.tabs.gamification")],
+              ] as [ModalTab, string][]
+            ).map(([tabKey, tabLabel]) => (
+              <button
+                key={tabKey}
+                className={`${styles.tab} ${activeTab === tabKey ? styles.tabActive : ""}`}
+                onClick={() => setActiveTab(tabKey)}
+              >
+                {tabLabel}
+                {activeTab === tabKey && (
+                  <motion.div
+                    className={styles.tabIndicator}
+                    layoutId="studyTabIndicator"
+                    transition={defaultSpring}
+                  />
+                )}
+              </button>
+            ))}
           </div>
         )}
 
         <div className={styles.modalBody}>
-          {activeTab === "details" ? (
-            <>
-              {error && <div className={styles.errorMsg}>{error}</div>}
+          {
+            // Fade the incoming panel in on tab change rather than a hard
+            // swap. Deliberately NOT `AnimatePresence`-based, and this one
+            // is a real UX call, not a test workaround (unlike the
+            // SpinnerLabel/ThemeToggle crossfades, which now do use
+            // AnimatePresence): these are full-height form panels of very
+            // different sizes per tab. A true exit+enter crossfade would
+            // either overlap the outgoing and incoming panels' form fields
+            // for the transition's duration (mode: sync/popLayout) or leave
+            // the new tab's fields uninteractive until the old panel
+            // finishes exiting (mode: wait) — both worse than the instant
+            // swap this uses. The outgoing panel is removed the instant
+            // `activeTab` changes (ordinary React unmount); only the
+            // incoming one fades in.
+          }
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.15 }}
+          >
+            {activeTab === "details" ? (
+              <>
+                {error && <div className={styles.errorMsg}>{error}</div>}
 
-              {isEdit && initial?.isDefault && (
-                <div className={styles.defaultBadgeRow}>
-                  <span className={styles.badgeDefault}>{t("modal.defaultBadge")}</span>
-                </div>
-              )}
+                {isEdit && initial?.isDefault && (
+                  <div className={styles.defaultBadgeRow}>
+                    <span className={styles.badgeDefault}>{t("modal.defaultBadge")}</span>
+                  </div>
+                )}
 
-              <div className={styles.formGrid}>
-                <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <label className={styles.label}>{t("modal.fields.nameLabel")}</label>
-                  <input
-                    className={styles.input}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder={t("modal.fields.namePlaceholder")}
-                  />
-                  <span className={styles.hint}>{t("modal.fields.nameHint")}</span>
+                <div className={styles.formGrid}>
+                  <div className={`${styles.formGroup} ${styles.formFull}`}>
+                    <label className={styles.label}>{t("modal.fields.nameLabel")}</label>
+                    <input
+                      className={styles.input}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder={t("modal.fields.namePlaceholder")}
+                    />
+                    <span className={styles.hint}>{t("modal.fields.nameHint")}</span>
+                  </div>
+
+                  <div className={`${styles.formGroup} ${styles.formFull}`}>
+                    <label className={styles.label}>{tc("description")}</label>
+                    <textarea
+                      className={styles.textarea}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder={t("modal.fields.descriptionPlaceholder")}
+                    />
+                    <span className={styles.hint}>{t("modal.fields.descriptionHint")}</span>
+                  </div>
+
+                  <div className={`${styles.formGroup} ${styles.formFull}`}>
+                    <label className={styles.label}>{t("modal.fields.endDateLabel")}</label>
+                    <input
+                      type="date"
+                      className={styles.input}
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                    <span className={styles.hint}>{t("modal.fields.endDateHint")}</span>
+                    <span className={styles.hint}>{t("modal.fields.remindersMovedHint")}</span>
+                    <span className={styles.hint}>{t("modal.fields.habitCreationMovedHint")}</span>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>{t("modal.fields.groupCountLabel")}</label>
+                    <select
+                      className={styles.select}
+                      value={groupCount}
+                      onChange={(e) => handleGroupCountChange(Number(e.target.value))}
+                    >
+                      <option value={1}>1</option>
+                      <option value={2}>2</option>
+                      <option value={3}>3</option>
+                      <option value={4}>4</option>
+                    </select>
+                    <span className={styles.hint}>{t("modal.fields.groupCountHint")}</span>
+                    {isEdit && groupCount < (initial?.groups.length ?? groupCount) && (
+                      <span className={styles.hint} style={{ color: "#b45309" }}>
+                        {t("modal.fields.groupCountRemovalWarning")}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <label className={styles.label}>{tc("description")}</label>
-                  <textarea
-                    className={styles.textarea}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder={t("modal.fields.descriptionPlaceholder")}
-                  />
-                  <span className={styles.hint}>{t("modal.fields.descriptionHint")}</span>
+                <div className={styles.groupLabelsSection}>
+                  <p className={styles.groupLabelsTitle}>{t("modal.fields.groupLabelsTitle")}</p>
+                  <div className={styles.groupLabelsGrid}>
+                    {Array.from({ length: groupCount }).map((_, i) => (
+                      <div key={i} className={styles.formGroup}>
+                        <label className={styles.label}>
+                          {t("groupFallbackLabel", { index: i + 1 })}
+                        </label>
+                        <input
+                          className={styles.input}
+                          value={groupLabels[i] ?? ""}
+                          onChange={(e) => handleGroupLabelChange(i, e.target.value)}
+                          placeholder={t("groupFallbackLabel", { index: i + 1 })}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
-
-                <div className={`${styles.formGroup} ${styles.formFull}`}>
-                  <label className={styles.label}>{t("modal.fields.endDateLabel")}</label>
-                  <input
-                    type="date"
-                    className={styles.input}
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                  <span className={styles.hint}>{t("modal.fields.endDateHint")}</span>
-                  <span className={styles.hint}>{t("modal.fields.remindersMovedHint")}</span>
-                  <span className={styles.hint}>{t("modal.fields.habitCreationMovedHint")}</span>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>{t("modal.fields.groupCountLabel")}</label>
-                  <select
-                    className={styles.select}
-                    value={groupCount}
-                    onChange={(e) => handleGroupCountChange(Number(e.target.value))}
-                  >
-                    <option value={1}>1</option>
-                    <option value={2}>2</option>
-                    <option value={3}>3</option>
-                    <option value={4}>4</option>
-                  </select>
-                  <span className={styles.hint}>{t("modal.fields.groupCountHint")}</span>
-                  {isEdit && groupCount < (initial?.groups.length ?? groupCount) && (
-                    <span className={styles.hint} style={{ color: "#b45309" }}>
-                      {t("modal.fields.groupCountRemovalWarning")}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className={styles.groupLabelsSection}>
-                <p className={styles.groupLabelsTitle}>{t("modal.fields.groupLabelsTitle")}</p>
-                <div className={styles.groupLabelsGrid}>
-                  {Array.from({ length: groupCount }).map((_, i) => (
-                    <div key={i} className={styles.formGroup}>
-                      <label className={styles.label}>
-                        {t("groupFallbackLabel", { index: i + 1 })}
-                      </label>
-                      <input
-                        className={styles.input}
-                        value={groupLabels[i] ?? ""}
-                        onChange={(e) => handleGroupLabelChange(i, e.target.value)}
-                        placeholder={t("groupFallbackLabel", { index: i + 1 })}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          ) : activeTab === "questionnaires" ? (
-            initial && <QuestionnairesTab study={initial} token={token} />
-          ) : activeTab === "codes" ? (
-            initial && <CodesTab study={initial} token={token} />
-          ) : activeTab === "participants" ? (
-            initial && <ParticipantsTab study={initial} token={token} />
-          ) : activeTab === "cue-config" ? (
-            initial && <CueConfigTab study={initial} token={token} />
-          ) : activeTab === "habit-creation" ? (
-            initial && <HabitCreationTab study={initial} token={token} />
-          ) : activeTab === "reminders" ? (
-            initial && <RemindersTab study={initial} token={token} />
-          ) : activeTab === "behavior-change" ? (
-            initial && <BehaviorChangeTab study={initial} token={token} />
-          ) : (
-            initial && <GamificationTab study={initial} token={token} />
-          )}
+              </>
+            ) : activeTab === "questionnaires" ? (
+              initial && <QuestionnairesTab study={initial} token={token} />
+            ) : activeTab === "codes" ? (
+              initial && <CodesTab study={initial} token={token} />
+            ) : activeTab === "participants" ? (
+              initial && <ParticipantsTab study={initial} token={token} />
+            ) : activeTab === "cue-config" ? (
+              initial && <CueConfigTab study={initial} token={token} />
+            ) : activeTab === "habit-creation" ? (
+              initial && <HabitCreationTab study={initial} token={token} />
+            ) : activeTab === "reminders" ? (
+              initial && <RemindersTab study={initial} token={token} />
+            ) : activeTab === "behavior-change" ? (
+              initial && <BehaviorChangeTab study={initial} token={token} />
+            ) : (
+              initial && <GamificationTab study={initial} token={token} />
+            )}
+          </motion.div>
         </div>
 
         {confirmDefaultOpen && (
@@ -4367,13 +4364,10 @@ function StudyModal({
                 {tc("cancel")}
               </button>
               <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-                {saving ? (
-                  <Spinner />
-                ) : isEdit ? (
-                  t("modal.footer.saveChanges")
-                ) : (
-                  t("modal.footer.create")
-                )}
+                <SpinnerLabel
+                  loading={saving}
+                  label={isEdit ? t("modal.footer.saveChanges") : t("modal.footer.create")}
+                />
               </button>
             </div>
           </div>

@@ -635,13 +635,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String get questionnaireNotYetAvailable => 'Nog niet beschikbaar';
 
   @override
-  String get questionnaireReminderMessage =>
-      'Er staat een gezondheidsvragenlijst voor je klaar.';
-
-  @override
-  String get questionnaireReminderAction => 'Invullen';
-
-  @override
   String get myHabitsTab => 'Mijn gewoontes';
 
   @override
@@ -671,9 +664,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get loggedToday => 'Geregistreerd ✓';
-
-  @override
-  String get habitUnlogged => 'Registratie verwijderd';
 
   @override
   String get pickBehaviorTitle => 'Welke gewoonte wil je vormen?';
@@ -1713,8 +1703,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get exploreFiltersDone => 'Done';
 
   @override
+  String get informationOverloadTitle => 'One habit at a time';
+
+  @override
   String get informationOverloadInfo =>
-      'To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.';
+      'To help habits stick, we ask you to focus on your current ones before adding new ones of the same type. New slots open up automatically as your habits become more automatic. Habit stacking isn\'t affected by this limit. You can turn this off in Settings, but we don\'t recommend it.';
 
   @override
   String get informationOverloadBlocked =>

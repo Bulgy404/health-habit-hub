@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/motion.dart';
 import '../widgets/entrance_fade.dart';
 
 const _kProjectGithubUrl =
@@ -358,18 +359,30 @@ class _RecommenderFlowDiagramState extends State<_RecommenderFlowDiagram>
   @override
   void initState() {
     super.initState();
-    _entrance = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..forward();
+    _entrance = AnimationController(vsync: this)..animateWithSpring(1);
     _flow = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
-    )..repeat();
+    );
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // §1.7 — these two loop indefinitely for as long as the About screen is
+    // open; under reduced motion, don't start them at all and leave the
+    // diagram on its static (frame-zero) state instead of animating forever.
+    if (reducedMotion(context)) {
+      _flow.stop();
+      _pulse.stop();
+    } else if (!_flow.isAnimating) {
+      _flow.repeat();
+      _pulse.repeat(reverse: true);
+    }
   }
 
   @override

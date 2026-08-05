@@ -1238,18 +1238,6 @@ abstract class AppLocalizations {
   /// **'Not yet available'**
   String get questionnaireNotYetAvailable;
 
-  /// Snackbar shown after app startup when at least one study questionnaire is currently due
-  ///
-  /// In en, this message translates to:
-  /// **'You have a health questionnaire ready to fill out.'**
-  String get questionnaireReminderMessage;
-
-  /// Snackbar action button that opens the due questionnaire
-  ///
-  /// In en, this message translates to:
-  /// **'Fill out'**
-  String get questionnaireReminderAction;
-
   /// Bottom nav tab label for My Habits
   ///
   /// In en, this message translates to:
@@ -1309,12 +1297,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Logged ✓'**
   String get loggedToday;
-
-  /// Snackbar shown after tapping an already-logged habit card's button again to undo today's log
-  ///
-  /// In en, this message translates to:
-  /// **'Log removed'**
-  String get habitUnlogged;
 
   /// Screen 1 of new habit flow
   ///
@@ -3134,10 +3116,16 @@ abstract class AppLocalizations {
   /// **'Done'**
   String get exploreFiltersDone;
 
-  /// No description provided for @informationOverloadInfo.
+  /// Title of the dismissible explainer card shown when the §7.3 information-overload guard is active for this study
   ///
   /// In en, this message translates to:
-  /// **'To help habits stick, focus on your current ones before starting new ones of the same type. New slots open up as your habits become automatic.'**
+  /// **'One habit at a time'**
+  String get informationOverloadTitle;
+
+  /// Body of the dismissible explainer card shown when the §7.3 information-overload guard is active for this study
+  ///
+  /// In en, this message translates to:
+  /// **'To help habits stick, we ask you to focus on your current ones before adding new ones of the same type. New slots open up automatically as your habits become more automatic. Habit stacking isn\'t affected by this limit. You can turn this off in Settings, but we don\'t recommend it.'**
   String get informationOverloadInfo;
 
   /// No description provided for @informationOverloadBlocked.

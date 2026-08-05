@@ -294,7 +294,12 @@
   border-radius: 12px;
   padding: 1.1rem 1.25rem;
   text-decoration: none;
-  transition: border-color 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .toolCard {
+    transition: border-color var(--dur-fast) var(--ease-standard);
+  }
 }
 
 .toolCard:hover {

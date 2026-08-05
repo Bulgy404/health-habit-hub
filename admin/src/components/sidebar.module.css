@@ -37,14 +37,11 @@
     display: flex;
   }
 
+  /* transform is driven by `motion` (see sidebar.tsx's drawerSpring
+     animation on isMobile/mobileOpen) — not a CSS transition, so the drawer
+     is interruptible and carries gesture-adjacent velocity. */
   .sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.2s ease;
     box-shadow: 2px 0 16px rgba(0, 0, 0, 0.25);
-  }
-
-  .sidebarOpen {
-    transform: translateX(0);
   }
 
   .backdrop {
@@ -73,7 +70,7 @@
   font-size: 1.05rem;
   font-weight: 700;
   color: #ffffff;
-  letter-spacing: 0.01em;
+  letter-spacing: var(--tracking-label);
 }
 
 .nav {
@@ -95,7 +92,7 @@
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: var(--tracking-label);
   color: rgba(255, 255, 255, 0.35);
 }
 
@@ -107,6 +104,8 @@
 }
 
 .navLink {
+  position: relative;
+  z-index: 0;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -115,9 +114,20 @@
   color: var(--color-sidebar-text);
   font-size: 0.9rem;
   font-weight: 500;
-  transition:
-    background-color 0.15s,
-    color 0.15s;
+  /* color transition not gated behind (hover: hover) — .navLinkActive below
+     also sets color via className on route change, not :hover, so touch
+     devices still need it. background-color is hover-only (the active-route
+     background now comes from .navActivePill, not this rule), so that part
+     is gated. */
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .navLink {
+    transition:
+      background-color var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
 }
 
 .navLink:hover {
@@ -126,8 +136,18 @@
 }
 
 .navLinkActive {
-  background-color: var(--color-sidebar-active) !important;
   color: #ffffff !important;
+}
+
+/* Sliding active-route indicator — a `motion` layoutId element (see
+   sidebar.tsx) painted behind the link's icon/label instead of the old
+   instant background-color swap, so route changes get a spatial anchor. */
+.navActivePill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--color-sidebar-active);
+  border-radius: 8px;
 }
 
 .navLink svg {
@@ -189,11 +209,17 @@
   color: var(--color-sidebar-text);
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background-color 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .signOutButton,
+  .themeToggle {
+    transition: background-color var(--dur-fast) var(--ease-standard);
+  }
 }
 
 .themeToggle {

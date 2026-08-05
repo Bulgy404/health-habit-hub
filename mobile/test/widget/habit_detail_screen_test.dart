@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hhh/features/my_habits/habit_detail_screen.dart';
 import 'package:hhh/features/my_habits/my_habits_models.dart';
+import 'package:hhh/features/my_habits/my_habits_provider.dart';
 import 'package:hhh/features/my_habits/my_habits_service.dart';
 import 'package:hhh/l10n/app_localizations.dart';
 import 'package:hhh/widgets/contribution_graph_widget.dart';
@@ -23,6 +24,8 @@ class _FakeMyHabitsService extends MyHabitsService {
   final List<Intention> intentions;
   final List<DailyLog> logs;
   final List<SrhiTrajectoryPoint> trajectory;
+  String? lastUpdatedStatus;
+  int fetchDueSrhiCallCount = 0;
 
   @override
   Future<List<Intention>> listIntentions() async => intentions;
@@ -38,6 +41,17 @@ class _FakeMyHabitsService extends MyHabitsService {
   Future<List<SrhiTrajectoryPoint>> fetchTrajectory(
     String intentionId,
   ) async => trajectory;
+
+  @override
+  Future<void> updateStatus(String intentionId, String status) async {
+    lastUpdatedStatus = status;
+  }
+
+  @override
+  Future<List<SrhiWindow>> fetchDueSrhi() async {
+    fetchDueSrhiCallCount++;
+    return [];
+  }
 }
 
 final _intention = Intention(
@@ -382,4 +396,78 @@ void main() {
     // Navigated to the anchor's own detail page.
     expect(find.text('Every morning, I will brush my teeth.'), findsOneWidget);
   });
+
+  testWidgets(
+    'abandoning a habit invalidates dueSrhiProvider so a stale check-in for it disappears',
+    (tester) async {
+      final service = _FakeMyHabitsService(intentions: [_intention]);
+      final container = ProviderContainer(
+        overrides: [
+          myHabitsServiceProvider.overrideWithValue(service),
+          // Without this, habitConfigProvider hits the fake service's real
+          // (network-backed) fetchHabitConfig, which fails in the test
+          // sandbox and — under Riverpod 3's default retry-with-backoff —
+          // leaves a pending Timer behind once the screen is popped and
+          // nothing pumps again to let it fire, tripping flutter_test's
+          // "Timer still pending" teardown check.
+          habitConfigProvider.overrideWith(
+            (ref) async => const HabitConfig(
+              cueCount: 'single',
+              cueSource: 'pre_rated',
+              behaviorOptions: [],
+              srhiItems: [],
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Read once up front, like My Habits screen does, so there's a cached
+      // value that must be invalidated (not just left never-fetched).
+      await container.read(dueSrhiProvider.future);
+      expect(service.fetchDueSrhiCallCount, 1);
+
+      // A real GoRouter (with a route beneath it) so the screen's
+      // `context.pop()` on successful abandon has somewhere to go —
+      // `home:` under a plain MaterialApp has no GoRouter in context.
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(path: '/', builder: (context, state) => const Scaffold()),
+          GoRoute(
+            path: '/habits/:intentionId',
+            builder: (context, state) => HabitDetailScreen(
+              intentionId: state.pathParameters['intentionId']!,
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      router.push('/habits/intent-1');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Abandon habit'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+
+      expect(service.lastUpdatedStatus, 'abandoned');
+      // dueSrhiProvider was invalidated, so reading it again re-fetches
+      // instead of serving the stale cached list.
+      await container.read(dueSrhiProvider.future);
+      expect(service.fetchDueSrhiCallCount, 2);
+    },
+  );
 }

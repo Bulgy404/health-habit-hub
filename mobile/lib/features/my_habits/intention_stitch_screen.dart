@@ -15,6 +15,7 @@ import '../../providers/locale_provider.dart';
 import '../../services/study_config_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_icons.dart';
+import '../../theme/motion.dart';
 import 'habit_onboarding_widgets.dart';
 import 'my_habits_models.dart';
 
@@ -99,7 +100,7 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 3000),
-    )..repeat();
+    );
     // Messages change gently, well spaced apart (~2.6s), matching the calm
     // cadence of the recommender's waiting screen.
     _messageTimer = Timer.periodic(const Duration(milliseconds: 2600), (_) {
@@ -110,6 +111,21 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
       });
     });
     _runStitch();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // §1.7 — the "joining orbs" loop is purely decorative; under reduced
+    // motion, hold it on a static frame instead of looping for however long
+    // the stitch call takes.
+    if (!_revealed) {
+      if (reducedMotion(context)) {
+        _controller.stop();
+      } else if (!_controller.isAnimating) {
+        _controller.repeat();
+      }
+    }
   }
 
   @override
@@ -197,8 +213,14 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
+        // Implicit widget, no owned AnimationController to hook a spring
+        // into — duration tightened to match AppSpring.standard's ~0.35s
+        // response and curve kept non-overshooting (easeOut) since
+        // AnimatedSwitcher can't take a SpringDescription.
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 400),
+          duration: const Duration(milliseconds: 350),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeOut,
           child: _revealed ? _buildReveal(context) : _buildLoading(context),
         ),
       ),
@@ -249,8 +271,13 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
               ),
             ),
             const SizedBox(height: 36),
+            // Same rationale as the loading/reveal switch above: implicit
+            // widget, no controller to spring — duration/curve tightened
+            // instead.
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 600),
+              duration: const Duration(milliseconds: 350),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeOut,
               child: Text(
                 messages[_messageIndex],
                 key: ValueKey(_messageIndex),
@@ -460,8 +487,12 @@ class _ProgressDots extends StatelessWidget {
       children: List.generate(count, (i) {
         final isActive = i == active;
         final isDone = i < active;
+        // Implicit widget driven by an index, not a boolean an
+        // AnimationController could own per-dot — duration tightened to
+        // AppSpring.standard's response and curve kept non-overshooting.
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
           margin: const EdgeInsets.symmetric(horizontal: 4),
           width: isActive ? 14 : 8,
           height: 8,

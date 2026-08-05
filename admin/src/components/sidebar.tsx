@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
+import { motion } from "motion/react";
+import { drawerSpring, defaultSpring } from "@/lib/motion";
 import {
   FlaskConical,
   BarChart2,
@@ -113,6 +115,7 @@ export function Sidebar() {
   const t = useTranslations("sidebar");
   const locale = useLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const isAdmin = (session?.roles ?? []).includes("admin");
 
@@ -120,6 +123,17 @@ export function Sidebar() {
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  // Tracks the same breakpoint as the .sidebar/.menuButton CSS media query,
+  // so the drawer's motion-driven transform only hides the sidebar on small
+  // screens — on desktop it must stay visible regardless of `mobileOpen`.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1024px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   function handleLocaleChange(next: string) {
     // A plain preference cookie, not security-sensitive — set client-side and
@@ -140,9 +154,28 @@ export function Sidebar() {
         {mobileOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
       {mobileOpen && (
-        <div className={styles.backdrop} onClick={() => setMobileOpen(false)} aria-hidden />
+        <motion.div
+          className={styles.backdrop}
+          data-scrim
+          onClick={() => setMobileOpen(false)}
+          aria-hidden
+          // backdrop-filter is static, not animated (paint-heavy, not
+          // GPU-composited like transform/opacity) — the opacity fade alone
+          // still reads as the blur materializing in, since the backdrop
+          // effect is invisible until the element's own opacity rises.
+          style={{ backdropFilter: "blur(4px)" }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        />
       )}
-      <aside className={`${styles.sidebar} ${mobileOpen ? styles.sidebarOpen : ""}`}>
+      <motion.aside
+        className={styles.sidebar}
+        animate={{
+          transform: isMobile && !mobileOpen ? "translateX(-100%)" : "translateX(0%)",
+        }}
+        transition={drawerSpring}
+      >
         <div className={styles.brand}>
           <Activity size={20} strokeWidth={2} className={styles.brandIcon} />
           <span className={styles.brandName}>{t("brand")}</span>
@@ -156,17 +189,27 @@ export function Sidebar() {
               <div key={section.titleKey} className={styles.navSection}>
                 <div className={styles.navSectionTitle}>{t(`sections.${section.titleKey}`)}</div>
                 <ul className={styles.navList}>
-                  {visible.map((item) => (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        className={`${styles.navLink} ${pathname.startsWith(item.href) ? styles.navLinkActive : ""}`}
-                      >
-                        <item.Icon size={16} strokeWidth={1.75} />
-                        {t(`nav.${item.labelKey}`)}
-                      </Link>
-                    </li>
-                  ))}
+                  {visible.map((item) => {
+                    const isActive = pathname.startsWith(item.href);
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          className={`${styles.navLink} ${isActive ? styles.navLinkActive : ""}`}
+                        >
+                          {isActive && (
+                            <motion.div
+                              className={styles.navActivePill}
+                              layoutId="navActivePill"
+                              transition={defaultSpring}
+                            />
+                          )}
+                          <item.Icon size={16} strokeWidth={1.75} />
+                          {t(`nav.${item.labelKey}`)}
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             );
@@ -196,7 +239,7 @@ export function Sidebar() {
             {t("signOut")}
           </button>
         </div>
-      </aside>
+      </motion.aside>
     </>
   );
 }

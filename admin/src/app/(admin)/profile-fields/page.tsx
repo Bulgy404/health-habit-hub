@@ -5,8 +5,9 @@ import { useTranslations } from "next-intl";
 import { useAdminGuard } from "@/lib/useAdminGuard";
 import { apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
-import { Spinner } from "@/components/spinner";
+import { SpinnerLabel } from "@/components/spinner";
 import styles from "./page.module.css";
+import sharedStyles from "@/components/admin-page.module.css";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -359,7 +360,7 @@ function FieldModal({
             {tc("cancel")}
           </button>
           <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-            {saving ? <Spinner /> : isEdit ? t("saveChanges") : t("create")}
+            <SpinnerLabel loading={saving} label={isEdit ? t("saveChanges") : t("create")} />
           </button>
         </div>
       </div>
@@ -501,11 +502,7 @@ export default function ProfileFieldsPage() {
     setError("");
     try {
       const data = await apiFetch(API_BASE, token);
-      setDefs(
-        (data as ProfileFieldDefinition[])
-          .slice()
-          .sort((a, b) => a.order - b.order)
-      );
+      setDefs((data as ProfileFieldDefinition[]).slice().sort((a, b) => a.order - b.order));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("saveFailed"));
     } finally {
@@ -595,7 +592,32 @@ export default function ProfileFieldsPage() {
       {error && <div className={styles.errorMsg}>{error}</div>}
 
       {loading ? (
-        <div className={styles.loadingState}>{tc("loading")}</div>
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>{t("labelColumn")}</th>
+                <th>{t("fieldIdColumn")}</th>
+                <th>{t("typeColumn")}</th>
+                <th>{t("languagesHeader")}</th>
+                <th>{t("requiredColumn")}</th>
+                {tab === "custom" && <th>{t("orderColumn")}</th>}
+                <th>{tc("actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i} className={sharedStyles.skeletonRow}>
+                  {Array.from({ length: tab === "custom" ? 7 : 6 }).map((__, j) => (
+                    <td key={j}>
+                      <span className={sharedStyles.skeletonBar} style={{ width: "80%" }} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <>
           {/* Library tab */}

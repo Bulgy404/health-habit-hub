@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/motion.dart';
 import 'habit_onboarding_prefs.dart';
 import 'habit_onboarding_widgets.dart';
 import 'my_habits_models.dart';
@@ -34,6 +35,10 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
   // "don't show yet" so the card doesn't flash in then disappear.
   bool? _hasSeenIntro;
 
+  // Same pattern, separate flag: the §7.3 information-overload explainer is
+  // dismissed independently of the "what's a habit?" card above.
+  bool? _hasSeenOverloadIntro;
+
   // §7.4 Habit Distinction — the build/quit choice is made here, up front,
   // because it changes downstream cue guidance (build → trigger cues; quit →
   // disruption/removal cues, per Verplanken & Wood 2006) and is a standard
@@ -46,11 +51,19 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
     HabitOnboardingPrefs.hasSeenHabitIntro().then((seen) {
       if (mounted) setState(() => _hasSeenIntro = seen);
     });
+    HabitOnboardingPrefs.hasSeenOverloadGuardIntro().then((seen) {
+      if (mounted) setState(() => _hasSeenOverloadIntro = seen);
+    });
   }
 
   void _dismissIntro() {
     setState(() => _hasSeenIntro = true);
     HabitOnboardingPrefs.markHabitIntroSeen();
+  }
+
+  void _dismissOverloadIntro() {
+    setState(() => _hasSeenOverloadIntro = true);
+    HabitOnboardingPrefs.markOverloadGuardIntroSeen();
   }
 
   @override
@@ -81,26 +94,18 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
                 ),
               // §7.3 Information Overload — brief rationale so the growing
               // per-type cap doesn't feel arbitrary if it blocks creation.
-              if (config.informationOverloadEnabled)
+              // Same dismissible explainer-card style as the "what's a
+              // habit?" intro above, and tracked independently so
+              // dismissing one doesn't hide the other.
+              if (config.informationOverloadEnabled &&
+                  _hasSeenOverloadIntro == false)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Card(
-                    color: Theme.of(context).colorScheme.secondaryContainer,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.lightbulb_outline, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              l10n.informationOverloadInfo,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: OnboardingExplainerCard(
+                    icon: Icons.lightbulb_outline,
+                    title: l10n.informationOverloadTitle,
+                    body: l10n.informationOverloadInfo,
+                    onDismiss: _dismissOverloadIntro,
                   ),
                 ),
               Padding(
@@ -184,7 +189,7 @@ class _HabitTypeSelector extends StatelessWidget {
 /// light/dark tint recipe as the "logged today" habit card background
 /// (`Colors.X.shade50` in light mode, `Colors.X.shade900.withAlpha(90)` in
 /// dark) so it holds up in both themes.
-class _HabitTypeCard extends StatelessWidget {
+class _HabitTypeCard extends StatefulWidget {
   const _HabitTypeCard({
     required this.icon,
     required this.label,
@@ -200,42 +205,88 @@ class _HabitTypeCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_HabitTypeCard> createState() => _HabitTypeCardState();
+}
+
+class _HabitTypeCardState extends State<_HabitTypeCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller =
+        AnimationController(vsync: this, value: widget.selected ? 1 : 0);
+  }
+
+  @override
+  void didUpdateWidget(covariant _HabitTypeCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A user can flip between cards quickly — retarget from the live value
+    // instead of restarting so a fast double-tap doesn't jump.
+    // AppSpring.quick, not .standard: this is a plain selection color/border
+    // change (state indication, not momentum-driven), so it wants to be
+    // fast — not the reveal-grade timing .standard is tuned for.
+    if (oldWidget.selected != widget.selected) {
+      _controller.animateWithSpring(
+        widget.selected ? 1 : 0,
+        spring: AppSpring.quick,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fill = !selected
-        ? Colors.transparent
-        : isDark
-            ? color.withAlpha(40)
-            : color.withAlpha(25);
-    final borderColor = selected ? color : context.appColors.border;
-    final contentColor =
-        selected ? color : Theme.of(context).textTheme.bodyMedium?.color;
+    final selectedFill =
+        isDark ? widget.color.withAlpha(40) : widget.color.withAlpha(25);
+    final unselectedBorder = context.appColors.border;
+    final contentColor = widget.selected
+        ? widget.color
+        : Theme.of(context).textTheme.bodyMedium?.color;
 
     return Semantics(
       button: true,
-      selected: selected,
-      label: label,
+      selected: widget.selected,
+      label: widget.label,
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
         borderRadius: BorderRadius.circular(16),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-          decoration: BoxDecoration(
-            color: fill,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: borderColor, width: selected ? 1.5 : 1),
-          ),
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            final t = _controller.value;
+            return Container(
+              padding:
+                  const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+              decoration: BoxDecoration(
+                color: Color.lerp(Colors.transparent, selectedFill, t),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Color.lerp(unselectedBorder, widget.color, t)!,
+                  width: 1 + 0.5 * t,
+                ),
+              ),
+              child: child,
+            );
+          },
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: contentColor, size: 22),
+              Icon(widget.icon, color: contentColor, size: 22),
               const SizedBox(height: 6),
               Text(
-                label,
+                widget.label,
                 style: TextStyle(
                   color: contentColor,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight:
+                      widget.selected ? FontWeight.w700 : FontWeight.w500,
                   fontSize: 13,
                 ),
               ),
