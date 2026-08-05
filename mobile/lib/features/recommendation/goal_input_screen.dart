@@ -42,18 +42,6 @@ class _GoalInputScreenState extends State<GoalInputScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Green icon box
-              Center(
-                child: Container(
-                  width: 72, height: 72,
-                  decoration: BoxDecoration(
-                    color: context.appColors.greenLight,
-                    borderRadius: BorderRadius.circular(22),
-                    boxShadow: [BoxShadow(color: context.appColors.primary.withAlpha(46), blurRadius: 20, offset: const Offset(0, 6))],
-                  ),
-                  child: Icon(Icons.lightbulb, size: 36, color: context.appColors.primary),
-                ),
-              ),
               const SizedBox(height: 20),
               Text(
                 l10n.healthGoalPrompt,
@@ -106,9 +94,87 @@ class _GoalInputScreenState extends State<GoalInputScreen> {
                 onPressed: _submit,
                 child: Text(l10n.getRecommendations),
               ),
+              const SizedBox(height: 24),
+              _RecommendWhyCard(l10n: l10n),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A short explainer + link into the "About the Health Habit Hub" page's
+/// how-recommendations-work section, mirroring the donate screen's "Why
+/// share?" card so the two primary flows explain themselves consistently.
+class _RecommendWhyCard extends StatelessWidget {
+  const _RecommendWhyCard({required this.l10n});
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x14000000),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.help_outline,
+                size: 18,
+                color: context.appColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                l10n.recommendWhyCardTitle,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.recommendWhyCardBody,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.45),
+          ),
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () => context.push('/about-project'),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.recommendWhyCardLink,
+                  style: TextStyle(
+                    color: context.appColors.primary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_forward,
+                  size: 14,
+                  color: context.appColors.primary,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

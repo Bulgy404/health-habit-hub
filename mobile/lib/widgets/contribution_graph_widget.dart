@@ -2,7 +2,7 @@
 ///
 /// Renders weeks as columns (Monday at the top of each column — unlike
 /// GitHub's own Sunday-start graph, chosen to match the ISO/European week
-/// convention), with month labels above and weekday labels on the left.
+/// convention), with month labels above and weekday labels on the right.
 /// Colour intensity scales with the count for that day; an all-zero grid
 /// (e.g. before any habit has been logged) still renders — every cell simply
 /// shows as "empty".
@@ -157,10 +157,22 @@ class _ContributionGraphWidgetState extends State<ContributionGraphWidget> {
   ) {
     // Start on the Monday on/before (today - weeks*7 + 1 days), so the grid
     // always ends with the current, possibly-partial week.
+    //
+    // All the day-stepping below happens in UTC rather than local time.
+    // `DateTime.add`/`.subtract` on a *local* DateTime is real-elapsed-time
+    // based (exactly 24h per "day"), not calendar-aware — crossing a
+    // Daylight Saving Time transition (e.g. the EU spring-forward on the
+    // last Sunday of March, a 23-hour day) makes "+1 day" overshoot to
+    // 01:00 instead of 00:00, which silently drops a calendar day and
+    // shifts every subsequent date in the grid one weekday late. UTC has no
+    // DST, so stepping there is exact; each day is converted back to a
+    // local Y/M/D (still midnight) only once it's stored, for lookups
+    // against `today` and `widget.counts`.
+    final todayUtc = DateTime.utc(today.year, today.month, today.day);
     final daysBack = visibleWeeks * 7 - 1;
-    final rangeStart = today.subtract(Duration(days: daysBack));
-    final gridStart = rangeStart.subtract(
-      Duration(days: (rangeStart.weekday - DateTime.monday) % 7),
+    final rangeStartUtc = todayUtc.subtract(Duration(days: daysBack));
+    final gridStartUtc = rangeStartUtc.subtract(
+      Duration(days: (rangeStartUtc.weekday - DateTime.monday) % 7),
     );
 
     final resolvedMax =
@@ -168,12 +180,16 @@ class _ContributionGraphWidgetState extends State<ContributionGraphWidget> {
         widget.counts.values.fold<int>(1, (a, b) => a > b ? a : b);
 
     final columns = <List<DateTime?>>[];
-    var cursor = gridStart;
-    while (!cursor.isAfter(today)) {
+    var cursorUtc = gridStartUtc;
+    while (!cursorUtc.isAfter(todayUtc)) {
       final column = <DateTime?>[];
       for (var i = 0; i < 7; i++) {
-        column.add(cursor.isAfter(today) ? null : cursor);
-        cursor = cursor.add(const Duration(days: 1));
+        column.add(
+          cursorUtc.isAfter(todayUtc)
+              ? null
+              : DateTime(cursorUtc.year, cursorUtc.month, cursorUtc.day),
+        );
+        cursorUtc = cursorUtc.add(const Duration(days: 1));
       }
       columns.add(column);
     }
@@ -225,89 +241,98 @@ class _ContributionGraphWidgetState extends State<ContributionGraphWidget> {
     // clipping, across every supported locale.
     const monthLabelHeight = 48.0;
 
-    return SingleChildScrollView(
-      controller: _scrollController,
-      scrollDirection: Axis.horizontal,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Weekday labels (Mon/Wed/Fri, GitHub-style sparse labelling).
-            Padding(
-              padding: EdgeInsets.only(top: monthLabelHeight + 2),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              scrollDirection: Axis.horizontal,
               child: Column(
-                children: List.generate(7, (i) {
-                  return SizedBox(
-                    width: 28,
-                    height: widget.cellSize + 2,
-                    child: Text(weekdayLabelFor(i), style: labelStyle),
-                  );
-                }),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: List.generate(columns.length, (i) {
-                    final label = monthLabelFor(i);
-                    return SizedBox(
-                      width: _columnWidth,
-                      height: monthLabelHeight,
-                      child: label == null
-                          ? null
-                          : Align(
-                              alignment: Alignment.topCenter,
-                              child: RotatedBox(
-                                // quarterTurns counts clockwise; 3 == 90°
-                                // counter-clockwise, as requested, and lets
-                                // the label run the full label height
-                                // instead of wrapping in a narrow column.
-                                quarterTurns: 3,
-                                child: Text(
-                                  label,
-                                  style: labelStyle,
-                                  softWrap: false,
-                                  overflow: TextOverflow.visible,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: List.generate(columns.length, (i) {
+                      final label = monthLabelFor(i);
+                      return SizedBox(
+                        width: _columnWidth,
+                        height: monthLabelHeight,
+                        child: label == null
+                            ? null
+                            : Align(
+                                alignment: Alignment.topCenter,
+                                child: RotatedBox(
+                                  // quarterTurns counts clockwise; 3 == 90°
+                                  // counter-clockwise, as requested, and
+                                  // lets the label run the full label
+                                  // height instead of wrapping in a narrow
+                                  // column.
+                                  quarterTurns: 3,
+                                  child: Text(
+                                    label,
+                                    style: labelStyle,
+                                    softWrap: false,
+                                    overflow: TextOverflow.visible,
+                                  ),
+                                ),
+                              ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: columns.map((column) {
+                      return Column(
+                        children: column.map((day) {
+                          return Padding(
+                            padding: const EdgeInsets.all(1),
+                            child: Tooltip(
+                              message: day == null
+                                  ? ''
+                                  : '${formatDateYmd(day)}: '
+                                      '${widget.counts[_atMidnight(day)] ?? 0}',
+                              child: Container(
+                                width: widget.cellSize,
+                                height: widget.cellSize,
+                                decoration: BoxDecoration(
+                                  color: colorFor(day),
+                                  borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
                             ),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: columns.map((column) {
-                    return Column(
-                      children: column.map((day) {
-                        return Padding(
-                          padding: const EdgeInsets.all(1),
-                          child: Tooltip(
-                            message: day == null
-                                ? ''
-                                : '${formatDateYmd(day)}: '
-                                    '${widget.counts[_atMidnight(day)] ?? 0}',
-                            child: Container(
-                              width: widget.cellSize,
-                              height: widget.cellSize,
-                              decoration: BoxDecoration(
-                                color: colorFor(day),
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    );
-                  }).toList(),
-                ),
-              ],
+                          );
+                        }).toList(),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 4),
+          // Weekday labels (Mon/Wed/Fri, GitHub-style sparse labelling), on
+          // the right of the grid, deliberately kept OUTSIDE the horizontal
+          // scroll area (unlike the day/month grid above) so they stay
+          // fixed on screen and don't shift where `_jumpToToday` lands —
+          // if this column scrolled along with the grid, jumping to
+          // maxScrollExtent would land on the label gutter instead of
+          // today's column, pushing the most recent day(s) off-screen.
+          Padding(
+            padding: EdgeInsets.only(top: monthLabelHeight + 2),
+            child: Column(
+              children: List.generate(7, (i) {
+                return SizedBox(
+                  width: 28,
+                  height: widget.cellSize + 2,
+                  child: Text(weekdayLabelFor(i), style: labelStyle),
+                );
+              }),
+            ),
+          ),
+        ],
       ),
     );
   }

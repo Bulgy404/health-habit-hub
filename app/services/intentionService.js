@@ -14,7 +14,7 @@ import {
  *   - { limitReached: true, unlockTier, currentTier }     — §7.3 Information
  *     Overload per-type build/quit cap (see checkOverloadGuard)
  *
- * @param {{ db: object, userId: string, enrollmentId?: string|null, studyId?: string|null, groupId?: string|null, behaviorKey: string, behaviorLabel: string, durationMinutes: number, cues: Array, intentionStatement: string, habitType?: string, stackedOn?: string|null, creationMode?: string, cueConfig?: object, overload?: object|null }} deps
+ * @param {{ db: object, userId: string, enrollmentId?: string|null, studyId?: string|null, groupId?: string|null, behaviorKey: string, behaviorLabel: string, durationMinutes: number, cues: Array, intentionStatement: string, habitType?: string, stackedOn?: string|null, anchorLabel?: string|null, creationMode?: string, cueConfig?: object, overload?: object|null }} deps
  * @returns {Promise<object|{ limitReached: boolean }>} Serialized intention or limit indicator.
  */
 export async function createIntention({
@@ -30,6 +30,7 @@ export async function createIntention({
   intentionStatement,
   habitType = 'build',
   stackedOn = null,
+  anchorLabel = null,
   creationMode = 'standalone',
   reminderTime = null,
   cueConfig,
@@ -77,6 +78,7 @@ export async function createIntention({
     intentionStatement,
     habitType: normalizedType,
     stackedOn: stackedOnOid,
+    anchorLabel: anchorLabel ? String(anchorLabel).trim() || null : null,
     creationMode: creationMode === 'stacked' ? 'stacked' : 'standalone',
     earnedBadges: [],
     reminderTime,
@@ -245,6 +247,7 @@ function serialize(doc) {
     // §7.4 / §7.1 — default legacy docs so the app always receives a value.
     habitType: doc.habitType ?? 'build',
     stackedOn: doc.stackedOn?.toString() ?? null,
+    anchorLabel: doc.anchorLabel ?? null,
     creationMode: doc.creationMode ?? 'standalone',
     earnedBadges: (doc.earnedBadges ?? []).map((b) => ({
       badgeKey: b.badgeKey,

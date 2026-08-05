@@ -22,6 +22,16 @@ import 'my_habits_models.dart';
 import 'my_habits_provider.dart';
 import 'my_habits_service.dart';
 
+// The app's shape language (see app.dart's CardThemeData/ButtonThemeData) is
+// two shapes only: cards are a 20px rounded rect, and every interactive
+// control (buttons, dots, this screen's log toggle) is fully round. Several
+// cards on this screen need a custom `shape` anyway (a coloured border side,
+// or a non-default elevation/fill), which forces overriding the app-wide
+// CardTheme default — these constants keep every one of those overrides
+// pinned to the same values instead of drifting to one-off numbers.
+const double _kCardRadius = 20;
+const double _kCardBorderWidth = 1.5;
+
 /// Displays the user's active habit intentions with daily log strips and
 /// SRHI sparklines.  Opens SRHI prompts when weekly check-ins are due.
 class MyHabitsScreen extends ConsumerWidget {
@@ -213,26 +223,60 @@ class _SrhiPromptCard extends StatelessWidget {
       margin: const EdgeInsets.all(16),
       color: colorScheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: colors.primary, width: 1),
+        borderRadius: BorderRadius.circular(_kCardRadius),
+        side: BorderSide(color: colors.primary, width: _kCardBorderWidth),
       ),
-      child: ListTile(
-        leading: Icon(Icons.psychology, color: colors.primary),
-        title: Text(
-          l10n.srhiCheckInTitle,
-          style: TextStyle(color: colors.primaryDark, fontWeight: FontWeight.w700),
-        ),
-        subtitle: Text(
-          l10n.srhiCheckInSubtitle,
-          style: TextStyle(color: colorScheme.onSurfaceVariant),
-        ),
-        trailing: FilledButton(
-          style: FilledButton.styleFrom(minimumSize: Size.zero),
-          onPressed: () => context.push(
-            '/habits/${first.intentionId}/srhi/${first.weekNumber}',
-            extra: {'behaviorLabel': behaviorLabel, 'srhiItems': srhiItems},
-          ),
-          child: Text(l10n.srhiStartButton),
+      // A plain Row+Padding instead of ListTile: ListTile's default vertical
+      // padding is tight enough that the button ends up crowding the card's
+      // green border. Generous padding here gives the button room to breathe
+      // inside the frame instead of looking smashed against it.
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(Icons.psychology, color: colors.primary, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.srhiCheckInTitle,
+                    style: TextStyle(
+                      color: colors.primaryDark,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.srhiCheckInSubtitle,
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                // The app-wide FilledButton theme defaults to a
+                // full-width minimumSize (for primary CTAs); this button
+                // instead sizes to its content inside the Row, so that
+                // default must be overridden or it blows up layout with
+                // an infinite-width constraint.
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+              ),
+              onPressed: () => context.push(
+                '/habits/${first.intentionId}/srhi/${first.weekNumber}',
+                extra: {'behaviorLabel': behaviorLabel, 'srhiItems': srhiItems},
+              ),
+              child: Text(l10n.srhiStartButton),
+            ),
+          ],
         ),
       ),
     );
@@ -317,120 +361,148 @@ class _HabitCard extends ConsumerWidget {
       ),
       color: todayLogged ? loggedColor : null,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: typeColor, width: 1.5),
+        borderRadius: BorderRadius.circular(_kCardRadius),
+        side: BorderSide(color: typeColor, width: _kCardBorderWidth),
       ),
+      // Matches the Card's own shape above — previously mismatched (12 vs
+      // 20), so the ripple's rounded corners poked out past the card's
+      // actual visible border on tap.
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(_kCardRadius),
         onTap: () {
           context.push('/habits/${intention.id}');
         },
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Outer Row: habit content on the left, the log checkbox on the
+          // right — centered on the *whole* card's height (title + subtitle
+          // + trend), not just squeezed into the title row.
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                children: [
-                  // §7.5 Gamification — traffic-light of the reminder-frequency
-                  // tier (red = daily … green = weekly/off), a direct read of
-                  // the fading-reminders signal.
-                  _TrafficLightDot(intentionId: intention.id),
-                  const SizedBox(width: 8),
-                  // §7.1 — a stacked habit shows a small link glyph.
-                  if (intention.isStacked) ...[
-                    const SizedBox(width: 4),
-                    Icon(Icons.link, size: 16, color: typeColor),
-                  ],
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      intention.behaviorLabel,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                intention.intentionStatement,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withAlpha(153),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              trajectoryAsync.when(
-                data: (trajectory) {
-                  final submitted = trajectory
-                      .where((p) => p.score != null)
-                      .toList();
-                  if (submitted.length < 2) return const SizedBox.shrink();
-                  final latest = submitted.last.score!;
-                  final previous = submitted[submitted.length - 2].score!;
-                  final delta = latest - previous;
-                  final trendIcon = delta > 0.05
-                      ? Icons.trending_up
-                      : delta < -0.05
-                      ? Icons.trending_down
-                      : Icons.trending_flat;
-                  final trendColor = delta > 0.05
-                      ? Colors.green.shade700
-                      : delta < -0.05
-                      ? Colors.orange.shade800
-                      : Colors.grey;
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              l10n.habitStrengthLabel,
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                            const Spacer(),
-                            Icon(trendIcon, size: 16, color: trendColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${latest.toStringAsFixed(1)} / 7',
-                              style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: trendColor,
-                                  ),
-                            ),
-                          ],
+                        // §7.5 Gamification — traffic-light of the
+                        // reminder-frequency tier (red = daily … green =
+                        // weekly/off), a direct read of the
+                        // fading-reminders signal.
+                        _TrafficLightDot(intentionId: intention.id),
+                        const SizedBox(width: 8),
+                        // §7.1 — a stacked habit shows a small link glyph.
+                        if (intention.isStacked) ...[
+                          const SizedBox(width: 4),
+                          Icon(Icons.link, size: 16, color: typeColor),
+                        ],
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            intention.behaviorLabel,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        SrhiSparklineWidget(trajectory: trajectory),
                       ],
                     ),
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, _) => const SizedBox.shrink(),
-              ),
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.center,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                    const SizedBox(height: 4),
+                    Text(
+                      intention.intentionStatement,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withAlpha(153),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  // Tapping again while logged un-logs today, so the button is
-                  // always tappable and always does something visible.
-                  onPressed: () async {
-                    // Capture the messenger before the await so feedback still
-                    // shows if the widget rebuilds.
+                    trajectoryAsync.when(
+                      data: (trajectory) {
+                        final submitted = trajectory
+                            .where((p) => p.score != null)
+                            .toList();
+                        if (submitted.length < 2) {
+                          return const SizedBox.shrink();
+                        }
+                        final latest = submitted.last.score!;
+                        final previous =
+                            submitted[submitted.length - 2].score!;
+                        final delta = latest - previous;
+                        final trendIcon = delta > 0.05
+                            ? Icons.trending_up
+                            : delta < -0.05
+                            ? Icons.trending_down
+                            : Icons.trending_flat;
+                        final trendColor = delta > 0.05
+                            ? Colors.green.shade700
+                            : delta < -0.05
+                            ? Colors.orange.shade800
+                            : Colors.grey;
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    l10n.habitStrengthLabel,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.labelSmall,
+                                  ),
+                                  const Spacer(),
+                                  Icon(trendIcon, size: 16, color: trendColor),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${latest.toStringAsFixed(1)} / 7',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          color: trendColor,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              SrhiSparklineWidget(trajectory: trajectory),
+                            ],
+                          ),
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Moved here (from the title row, then from its own full-width
+              // row below the card) so it stays vertically centered against
+              // the card's full content height regardless of how tall the
+              // trend section makes the card. A checkbox rather than a
+              // labelled button — logging today is the single most frequent
+              // action on this screen, so it reads faster as an at-a-glance
+              // on/off toggle than as text.
+              Tooltip(
+                message: todayLogged ? l10n.loggedToday : l10n.logToday,
+                child: _LogCheckbox(
+                  checked: todayLogged,
+                  color: typeColor,
+                  // Tapping again while logged un-logs today, so the
+                  // checkbox is always tappable and always does something
+                  // visible.
+                  onTap: () async {
+                    // Capture the messenger before the await so feedback
+                    // still shows if the widget rebuilds.
                     final messenger = ScaffoldMessenger.of(context);
                     final wasLogged = todayLogged;
                     try {
@@ -447,18 +519,18 @@ class _HabitCard extends ConsumerWidget {
                           enacted: true,
                         );
                       }
-                      // A short tap confirms the log landed without requiring
-                      // the user to read the snackbar — this is the app's
-                      // core loop, so it should feel rewarding.
+                      // A short tap confirms the log landed without
+                      // requiring the user to read the snackbar — this is
+                      // the app's core loop, so it should feel rewarding.
                       unawaited(HapticFeedback.lightImpact());
                       ref.invalidate(intentionLogsProvider(intention.id));
                       // Also refresh the page-level aggregate contribution
-                      // graph, so today's log shows up immediately instead of
-                      // only after a manual pull-to-refresh.
+                      // graph, so today's log shows up immediately instead
+                      // of only after a manual pull-to-refresh.
                       ref.invalidate(allHabitsActivityProvider);
-                      // Logging XP-earns immediately — refresh so the level/XP
-                      // display doesn't show stale numbers until some other
-                      // screen happens to refetch it.
+                      // Logging XP-earns immediately — refresh so the
+                      // level/XP display doesn't show stale numbers until
+                      // some other screen happens to refetch it.
                       ref.invalidate(gamificationProvider);
                       messenger.showSnackBar(
                         SnackBar(
@@ -470,10 +542,11 @@ class _HabitCard extends ConsumerWidget {
                       );
                     } catch (e) {
                       // A dead session already gets ShellScreen's global
-                      // "session expired, sign in again" prompt (triggered by
-                      // the same 401 via sessionExpiredProvider) — showing
-                      // this generic snackbar too would just be a confusing
-                      // second, contradictory-looking toast on top of it.
+                      // "session expired, sign in again" prompt (triggered
+                      // by the same 401 via sessionExpiredProvider) —
+                      // showing this generic snackbar too would just be a
+                      // confusing second, contradictory-looking toast on
+                      // top of it.
                       if (e is UnauthorisedException) return;
                       // Otherwise surface the real reason so failures are
                       // diagnosable instead of silently doing nothing.
@@ -484,17 +557,6 @@ class _HabitCard extends ConsumerWidget {
                       );
                     }
                   },
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    transitionBuilder: (child, animation) => ScaleTransition(
-                      scale: animation,
-                      child: FadeTransition(opacity: animation, child: child),
-                    ),
-                    child: Text(
-                      todayLogged ? l10n.loggedToday : l10n.logToday,
-                      key: ValueKey(todayLogged),
-                    ),
-                  ),
                 ),
               ),
             ],
@@ -519,6 +581,59 @@ class _HabitCard extends ConsumerWidget {
         ),
         Expanded(child: card),
       ],
+    );
+  }
+}
+
+/// Big, tappable on/off checkbox for "did you do this today", shown on each
+/// habit tile. Deliberately larger than a stock [Checkbox] (which renders at
+/// a fixed ~18dp regardless of layout) so it reads clearly at a glance
+/// instead of looking like a squeezed-in afterthought next to the habit name.
+/// Fully circular rather than a rounded square — this screen's cards are all
+/// a 20px rounded rect, and every *interactive control* (buttons, the
+/// traffic-light dot right next to this one) is fully round; a rounded
+/// square here would be a third, off-brand shape mixed into both.
+class _LogCheckbox extends StatelessWidget {
+  const _LogCheckbox({
+    required this.checked,
+    required this.color,
+    required this.onTap,
+  });
+
+  final bool checked;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      shape: const CircleBorder(),
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: checked ? color : Colors.transparent,
+            border: Border.all(color: color, width: 2),
+            shape: BoxShape.circle,
+          ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: checked
+                ? const Icon(
+                    Icons.check,
+                    color: Colors.white,
+                    size: 26,
+                    key: ValueKey('checked'),
+                  )
+                : const SizedBox.shrink(key: ValueKey('unchecked')),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -609,7 +724,9 @@ class _DotLegendCardState extends State<_DotLegendCard> {
       child: Card(
         elevation: 0,
         color: colors.greenLight,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_kCardRadius),
+        ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
           child: Row(
@@ -714,6 +831,9 @@ class _GraduatedHabitCard extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.fromLTRB(16, 6, 16, 6),
       color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_kCardRadius),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(

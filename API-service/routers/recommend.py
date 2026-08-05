@@ -66,6 +66,12 @@ _RECOMMEND_MODEL = os.getenv("LLM_RECOMMEND_MODEL") or None
 _MAX_CONTEXT_CHARS = int(os.getenv("RECOMMEND_MAX_CONTEXT_CHARS", "0"))
 _RECOMMEND_MAX_TOKENS = int(os.getenv("LLM_RECOMMEND_MAX_TOKENS", "0"))
 
+# Hard cap on how many recommendations a single call returns, enforced here
+# rather than trusting the prompt alone (recommend.txt asks the model for
+# "up to 3", but LLMs don't always follow count instructions exactly). Also
+# what the mobile app's loading-screen skeleton and results list assume.
+_MAX_RECOMMENDATIONS = int(os.getenv("MAX_RECOMMENDATIONS", "3"))
+
 _PROMPT_PATH = Path(__file__).parent.parent / "prompts" / "recommend.txt"
 _PROMPT_TEMPLATE = _PROMPT_PATH.read_text(encoding="utf-8")
 
@@ -252,7 +258,7 @@ def _parse_llm_response(
                     "selected_habit_uuids": [str(u) for u in uuids if u],
                 }
             )
-        return result
+        return result[:_MAX_RECOMMENDATIONS]
     except (json.JSONDecodeError, TypeError) as exc:
         logger.error("LLM returned unexpected format: %r (%s)", raw, exc)
         return []

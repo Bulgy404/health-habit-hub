@@ -35,6 +35,7 @@ void _mockBaseline(DioAdapter adapter) {
   adapter.onGet(
     '$_base/profile-field-definitions',
     (server) => server.reply(200, <dynamic>[]),
+    queryParameters: {'lang': 'en'},
   );
   adapter.onGet(
     '$_base/user-profile',

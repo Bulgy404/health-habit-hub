@@ -126,8 +126,10 @@ class MyHabitsService {
     // §7.4 Habit Distinction — required build/quit choice.
     required HabitType habitType,
     String? reminderTime,
-    // §7.1 Habit Stacking — anchor reference + creation mode.
+    // §7.1 Habit Stacking — anchor reference, human-readable anchor label
+    // (shown as its own field, not folded into cues), and creation mode.
     String? stackedOn,
+    String? anchorLabel,
     String creationMode = 'standalone',
   }) async {
     try {
@@ -142,6 +144,7 @@ class MyHabitsService {
           'habitType': habitType.wire,
           'creationMode': creationMode,
           'stackedOn': ?stackedOn,
+          'anchorLabel': ?anchorLabel,
           'reminderTime': ?reminderTime,
         },
       );

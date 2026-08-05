@@ -108,22 +108,4 @@ void main() {
     // GoalInputScreen trims the input before passing it as `extra`.
     expect(find.text('Loading: I want to sleep better'), findsOneWidget);
   });
-
-  testWidgets('icon box uses the theme-aware green, not the old hardcoded pink accent',
-      (tester) async {
-    await tester.pumpWidget(_buildSubject());
-    await tester.pump();
-
-    final container = tester.widget<Container>(
-      find
-          .ancestor(
-            of: find.byIcon(Icons.lightbulb),
-            matching: find.byType(Container),
-          )
-          .first,
-    );
-    final decoration = container.decoration as BoxDecoration;
-
-    expect(decoration.color, isNot(equals(const Color(0xFFE679AB))));
-  });
 }

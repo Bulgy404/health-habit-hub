@@ -411,16 +411,29 @@ export const updateActivityTypeSchema = z
 
 const fieldType = z.enum(['text', 'number', 'date', 'select']);
 
+const profileFieldOptionSchema = z.object({
+  value: z.string().min(1).max(100),
+  label: localeText(200),
+});
+
 export const createProfileFieldSchema = z.object({
   fieldId: slugString,
-  label: shortString,
+  label: localeText(200),
   type: fieldType,
-  options: z.array(z.string().max(200)).max(50).optional(),
+  options: z.array(profileFieldOptionSchema).max(50).optional(),
+  languages: languagesSchema,
   required: z.boolean().optional(),
   order: z.number().int().optional(),
 });
 
-export const updateProfileFieldSchema = createProfileFieldSchema.partial();
+export const updateProfileFieldSchema = z.object({
+  label: localeText(200).optional(),
+  type: fieldType.optional(),
+  options: z.array(profileFieldOptionSchema).max(50).optional(),
+  languages: languagesSchema.optional(),
+  required: z.boolean().optional(),
+  order: z.number().int().optional(),
+});
 
 // ── Backups ───────────────────────────────────────────────────────────────────
 

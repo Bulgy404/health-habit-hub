@@ -12,6 +12,7 @@ import '../features/my_habits/my_habits_provider.dart';
 import '../features/questionnaire/questionnaire_models.dart';
 import '../features/questionnaire/questionnaire_service.dart';
 import '../l10n/app_localizations.dart';
+import '../providers/locale_provider.dart';
 import '../screens/onboarding/profile_fields.dart';
 import '../widgets/offline_banner.dart';
 
@@ -63,9 +64,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     });
     try {
       final dio = ref.read(dioProvider);
+      final lang = ref.read(localeProvider).languageCode;
 
       final defsResp = await dio.get<dynamic>(
         '$_baseUrl/profile-field-definitions',
+        queryParameters: {'lang': lang},
       );
       final defsData = defsResp.data as List<dynamic>? ?? [];
       final defs = defsData
@@ -74,6 +77,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           )
           .toList()
         ..sort((a, b) => a.order.compareTo(b.order));
+      final defsById = {for (final d in defs) d.fieldId: d};
 
       // Fetch existing profile — 404 means no profile yet, which is fine.
       final Map<String, dynamic> existing = {};
@@ -91,6 +95,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (qid != null && value != null) {
             if (type == 'date' && value is String) {
               value = DateTime.tryParse(value) ?? value;
+            } else if (type == 'select' && value is String) {
+              // Stored value is the stable option key (e.g. 'male'); resolve
+              // it back to the ProfileFieldOption (value+localized label) so
+              // the summary/picker can display it, not the raw key.
+              final def = defsById[qid];
+              final match = def?.options.where((o) => o.value == value);
+              if (match != null && match.isNotEmpty) value = match.first;
             }
             existing[qid] = value;
           }
@@ -187,8 +198,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (_submitting) return;
     final options = def.options;
     if (options.isEmpty) return;
-    String temp = _values[def.fieldId] as String? ?? options.first;
-    final initialIndex = options.indexOf(temp);
+    final currentValue = _values[def.fieldId] as ProfileFieldOption?;
+    ProfileFieldOption temp = currentValue ?? options.first;
+    final initialIndex = options.indexWhere((o) => o.value == temp.value);
     final sc = FixedExtentScrollController(
       initialItem: initialIndex < 0 ? 0 : initialIndex,
     );
@@ -216,7 +228,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   scrollController: sc,
                   onSelectedItemChanged: (i) => temp = options[i],
                   children: [
-                    for (final opt in options) Center(child: Text(opt)),
+                    for (final opt in options) Center(child: Text(opt.label)),
                   ],
                 ),
               ),
@@ -232,6 +244,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final val = _values[def.fieldId];
     if (val == null) return '';
     if (def.type == 'date' && val is DateTime) return formatDate(val);
+    if (val is ProfileFieldOption) return val.label;
     return val.toString();
   }
 
@@ -249,6 +262,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         final n = double.tryParse(val.toString()) ?? 0.0;
         submittedValue = n;
         label = n.toString();
+      } else if (val is ProfileFieldOption) {
+        submittedValue = val.value;
+        label = val.label;
       } else {
         submittedValue = val.toString();
         label = val.toString();

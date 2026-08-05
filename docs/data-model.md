@@ -40,6 +40,8 @@ The graph has two active parts: the **habit knowledge graph** (§1.1) and the
 > are `(:Comment {id, text, createdAt})-[:COMMENT_ON]->(:Habit)` nodes whose
 > authorship exists only in MongoDB `habit_comments`.
 
+![Neo4j habit knowledge graph: User -DONATED-> Habit -HAS_CONTEXT-> Context -MAPS_TO-> BCIOConcept; Habit -DONATED_IN-> Study (immutable); Comment -COMMENT_ON-> Habit; User -ENROLLED_IN-> Study](docs/assets/architecture/neo4j-graph-schema.svg)
+
 #### `Habit`
 
 Created by `POST /api/v1/habits/donate`. Each donated habit that is classified as valid becomes one `Habit` node.
@@ -69,6 +71,13 @@ Extracted contextual phrases linked to a `Habit`. Created/merged by `classify-co
 | `dimension` | String | Yes      | Context dimension: `TIME`, `PHYSICAL_SETTING`, `PRIOR_BEHAVIOR`, `OTHER_PEOPLE`, `INTERNAL_STATE`, `BEHAVIOR`, or `REASONING` |
 
 Uniqueness is enforced on `(text, dimension)` — an index on this pair is needed.
+
+`GET /habits/bubble-graph` returns each habit's matched phrase per dimension
+bubble as `contextText` (`habitQueries.js` → `habitsGraphRouter.js`, scoped
+per-dimension since the same habit can match a different phrase under each
+dimension it's grouped by). The Explore graph's habit detail sheet uses it to
+bold the matched span within the habit sentence, alongside the dimension
+badge (`HighlightedText`, `mobile/lib/widgets/highlighted_text.dart`).
 
 ---
 
@@ -637,6 +646,13 @@ ORDER BY ?parent, ?child
 ## 3. MongoDB
 
 MongoDB stores operational data: survey definitions, participant records, profile questionnaire answers, habit annotations, and recommendation logs. Database name is set via `MONGO_DB` environment variable (default `hhh`).
+
+![MongoDB collection relationships: participants and studies are the two root entities; enrollments links them; implementation_intentions references participants and feeds daily_behavior_logs and srhi_responses; questionnaire_assignments references studies and questionnaires and feeds questionnaire_windows (referencing participants, and optionally implementation_intentions for habit-scoped questionnaires), which feeds form_responses](docs/assets/architecture/mongo-collections.svg)
+
+The diagram above focuses on the actively-growing DFG study core and how it
+connects to the base schema — see §3.1 below for the full 28-collection table
+(including `consents`, `backup_audit_log`, `restore_attempts`, and other
+collections with no direct foreign-key relationships shown here).
 
 ### 3.1 Collections Overview
 

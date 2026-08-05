@@ -776,6 +776,18 @@
   "@goalInputValidationError": {
     "description": "Validation error when the goal-description field is submitted empty"
   },
+  "recommendWhyCardTitle": "How do recommendations work?",
+  "@recommendWhyCardTitle": {
+    "description": "Heading for the explanatory card on the goal-input screen linking to the how-recommendations-work page"
+  },
+  "recommendWhyCardBody": "We match your goal against similar habits shared by others, then a language model turns the best matches into a personalized suggestion.",
+  "@recommendWhyCardBody": {
+    "description": "Body copy for the explanatory card on the goal-input screen"
+  },
+  "recommendWhyCardLink": "See how it works",
+  "@recommendWhyCardLink": {
+    "description": "Tap target on the recommend-why card opening the About the Health Habit Hub info page, scrolled to the how-recommendations-work section"
+  },
   "questionnaireResponseSubmitted": "Response submitted!",
   "@questionnaireResponseSubmitted": {
     "description": "Heading on the questionnaire confirmation screen"
@@ -1632,21 +1644,21 @@
   "@recommendationSourceLinkError": {
     "description": "Error shown when a citation source link fails to open"
   },
-  "recommendationLoadingPhaseExperts": "Asking experts…",
-  "@recommendationLoadingPhaseExperts": {
-    "description": "First phase label on the recommendation loading screen"
+  "recommendationLoadingPhaseCommunity": "Comparing with habits people like you have tried…",
+  "@recommendationLoadingPhaseCommunity": {
+    "description": "First phase label on the recommendation loading screen — matches the 'Community habits' data source on the About page's diagram"
   },
-  "recommendationLoadingPhaseHabitsDb": "Looking through your habits database…",
-  "@recommendationLoadingPhaseHabitsDb": {
-    "description": "Second phase label on the recommendation loading screen"
+  "recommendationLoadingPhaseHistory": "Checking what's already working for you…",
+  "@recommendationLoadingPhaseHistory": {
+    "description": "Second phase label on the recommendation loading screen — matches the 'Your habits & answers' data source"
   },
-  "recommendationLoadingPhasePapers": "Reading academic papers…",
-  "@recommendationLoadingPhasePapers": {
-    "description": "Third phase label on the recommendation loading screen"
+  "recommendationLoadingPhaseResearch": "Consulting behaviour-change research…",
+  "@recommendationLoadingPhaseResearch": {
+    "description": "Third phase label on the recommendation loading screen — matches the 'Research' data source"
   },
-  "recommendationLoadingPhaseGenerating": "Generating your personalised recommendations…",
+  "recommendationLoadingPhaseGenerating": "Writing your personalized suggestion…",
   "@recommendationLoadingPhaseGenerating": {
-    "description": "Fourth phase label on the recommendation loading screen"
+    "description": "Fourth (final) phase label on the recommendation loading screen — the AI-writing step"
   },
   "recommendationLoadingTimeoutError": "Generating recommendations took too long. Please try again.",
   "@recommendationLoadingTimeoutError": {
@@ -2145,6 +2157,26 @@
   "stackAnchorNone": "None",
   "stackAnchorFreeTextLabel": "Or type an anchor habit",
   "stackAnchorFreeTextHint": "e.g. After my morning coffee",
+  "stackAlsoTrackAnchor": "Also track \"{anchor}\" as a habit I'm building",
+  "@stackAlsoTrackAnchor": {
+    "description": "Opt-in checkbox offering to also create a tracked habit for a free-typed stacking anchor",
+    "placeholders": {
+      "anchor": {
+        "type": "String",
+        "example": "Drink my morning coffee"
+      }
+    }
+  },
+  "stackedOntoLabel": "Stacked onto: {anchor}",
+  "@stackedOntoLabel": {
+    "description": "Shown on the confirm/detail screens for a habit stacked onto an anchor",
+    "placeholders": {
+      "anchor": {
+        "type": "String",
+        "example": "Drink my morning coffee"
+      }
+    }
+  },
   "habitsSection": "Habits",
   "informationOverloadOptOutTitle": "Allow multiple new habits",
   "informationOverloadOptOutSubtitle": "Turn off the one-habit-at-a-time focus guard",

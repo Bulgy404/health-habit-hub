@@ -245,6 +245,7 @@ class Intention {
     required this.createdAt,
     this.habitType = HabitType.build,
     this.stackedOn,
+    this.anchorLabel,
     this.creationMode = 'standalone',
     this.earnedBadges = const [],
     this.completedReason,
@@ -279,8 +280,14 @@ class Intention {
   final HabitType habitType;
 
   /// When set, the id of the anchor intention this habit was stacked onto
-  /// (§7.1 Habit Stacking); `null` for standalone habits.
+  /// (§7.1 Habit Stacking); `null` for standalone habits or when the anchor
+  /// was free-typed rather than an already-tracked habit.
   final String? stackedOn;
+
+  /// Human-readable anchor habit name for a stacked habit (§7.1), shown as
+  /// its own field — e.g. "Drink my morning coffee". Set whenever the habit
+  /// is stacked, whether or not the anchor is itself tracked (`stackedOn`).
+  final String? anchorLabel;
 
   /// How the habit was created: `'standalone'` or `'stacked'` (§7.1).
   final String creationMode;
@@ -319,6 +326,7 @@ class Intention {
         createdAt: DateTime.parse(json['createdAt'] as String),
         habitType: HabitType.fromWire(json['habitType'] as String?),
         stackedOn: json['stackedOn'] as String?,
+        anchorLabel: json['anchorLabel'] as String?,
         creationMode: json['creationMode'] as String? ?? 'standalone',
         earnedBadges: (json['earnedBadges'] as List<dynamic>?)
                 ?.cast<Map<String, dynamic>>()

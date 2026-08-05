@@ -1,0 +1,69 @@
+<svg width="1220" height="240" viewBox="0 0 1220 240" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .bg { fill: #FFFFFF; }
+      .step-label { font-size: 13px; font-weight: 700; fill: #1E2422; text-anchor: middle; }
+      .step-num { font-size: 13px; font-weight: 800; text-anchor: middle; }
+      .step-sub { font-size: 10.5px; fill: #6B6B67; text-anchor: middle; }
+    </style>
+    <marker id="arrow7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#9A9A94"/>
+    </marker>
+  </defs>
+  <rect width="1220" height="240" class="bg"/>
+
+  <g stroke="#9A9A94" stroke-width="1.6" fill="none" marker-end="url(#arrow7)">
+    <path d="M175 90 L205 90"/>
+    <path d="M345 90 L375 90"/>
+    <path d="M515 90 L545 90"/>
+    <path d="M685 90 L715 90"/>
+    <path d="M855 90 L885 90"/>
+    <path d="M1025 90 L1055 90"/>
+  </g>
+
+  <!-- 7 steps -->
+  <g transform="translate(35,50)">
+    <circle cx="40" cy="40" r="38" fill="#F1F0FB" stroke="#4F46E5" stroke-width="2.5"/>
+    <text x="40" y="45" class="step-num" fill="#4F46E5">1</text>
+    <text x="40" y="98" class="step-label">Tools</text>
+    <text x="40" y="114" class="step-sub">Docker, Flutter, Node, Python</text>
+  </g>
+  <g transform="translate(205,50)">
+    <circle cx="40" cy="40" r="38" fill="#F1F0FB" stroke="#4F46E5" stroke-width="2.5"/>
+    <text x="40" y="45" class="step-num" fill="#4F46E5">2</text>
+    <text x="40" y="98" class="step-label">Clone + .env</text>
+    <text x="40" y="114" class="step-sub">from stack.env template</text>
+  </g>
+  <g transform="translate(375,50)">
+    <circle cx="40" cy="40" r="38" fill="#E3F2FD" stroke="#1976D2" stroke-width="2.5"/>
+    <text x="40" y="45" class="step-num" fill="#1976D2">3</text>
+    <text x="40" y="98" class="step-label">make dev</text>
+    <text x="40" y="114" class="step-sub">docker-compose.local.yml up</text>
+  </g>
+  <g transform="translate(545,50)">
+    <circle cx="40" cy="40" r="38" fill="#E3F2FD" stroke="#1976D2" stroke-width="2.5"/>
+    <text x="40" y="45" class="step-num" fill="#1976D2">4</text>
+    <text x="40" y="98" class="step-label">make seed</text>
+    <text x="40" y="114" class="step-sub">Mongo, Neo4j, Keycloak</text>
+  </g>
+  <g transform="translate(715,50)">
+    <circle cx="40" cy="40" r="38" fill="#EDE7F6" stroke="#7C4DFF" stroke-width="2.5"/>
+    <text x="40" y="45" class="step-num" fill="#7C4DFF">5</text>
+    <text x="40" y="98" class="step-label">Run the app</text>
+    <text x="40" y="114" class="step-sub">Chrome, iOS sim, or Android emu</text>
+  </g>
+  <g transform="translate(885,50)">
+    <circle cx="40" cy="40" r="38" fill="#FFF8E1" stroke="#FFA000" stroke-width="2.5"/>
+    <text x="40" y="45" class="step-num" fill="#FFA000">6</text>
+    <text x="40" y="98" class="step-label">make test</text>
+    <text x="40" y="114" class="step-sub">backend, Flutter, Python, admin</text>
+  </g>
+  <g transform="translate(1055,50)">
+    <circle cx="40" cy="40" r="38" fill="#E0F7FA" stroke="#00897B" stroke-width="2.5"/>
+    <text x="40" y="45" class="step-num" fill="#00897B">✓</text>
+    <text x="40" y="98" class="step-label">Ready</text>
+    <text x="40" y="114" class="step-sub">§10 checklist</text>
+  </g>
+
+  <text x="610" y="200" font-size="11" fill="#9A9A94" text-anchor="middle">Hit a snag along the way? §9 Common Pitfalls covers port conflicts, Keycloak startup timing, and Node version mismatches.</text>
+</svg>

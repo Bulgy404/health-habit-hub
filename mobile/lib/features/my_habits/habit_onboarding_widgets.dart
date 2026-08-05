@@ -72,6 +72,24 @@ class HabitOnboardingCopy {
         'きっかけを一つ以上追加しましょう。',
   );
 
+  /// Appended to [cueBody] when habit stacking is available for this
+  /// participant, so the "what's a cue" explainer also introduces stacking
+  /// as an alternative to typing a separate cue.
+  static const cueStackingHint = _Copy(
+    en:
+        ' You can also stack this habit onto one you already do — the '
+        'existing habit becomes the cue, so you may not need to write a '
+        'separate one.',
+    de:
+        ' Du kannst diese Gewohnheit auch an eine bestehende „anstapeln" – '
+        'die bestehende Gewohnheit wird dann selbst zum Auslöser, sodass du '
+        'keinen separaten Auslöser formulieren musst.',
+    ja:
+        'また、すでに行っている習慣にこの習慣を「積み重ねる」こともできます。'
+        'その場合、既存の習慣自体がきっかけになるため、別のきっかけを'
+        '書く必要がない場合があります。',
+  );
+
   static const intentionRevealTitle = _Copy(
     en: 'Your implementation intention is ready',
     de: 'Deine Wenn-Dann-Absicht ist fertig',
@@ -102,7 +120,9 @@ class HabitOnboardingCopy {
   static String habitTitleFor(String lang) => habitTitle.forLocale(lang);
   static String habitBodyFor(String lang) => habitBody.forLocale(lang);
   static String cueTitleFor(String lang) => cueTitle.forLocale(lang);
-  static String cueBodyFor(String lang) => cueBody.forLocale(lang);
+  static String cueBodyFor(String lang, {bool includeStackingHint = false}) =>
+      cueBody.forLocale(lang) +
+      (includeStackingHint ? cueStackingHint.forLocale(lang) : '');
   static String intentionRevealTitleFor(String lang) =>
       intentionRevealTitle.forLocale(lang);
   static String intentionExplainerFor(String lang) =>

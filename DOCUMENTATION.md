@@ -36,6 +36,7 @@
 > | [`docs/architecture.md`](docs/architecture.md) | Extended architecture narrative |
 > | [`docs/diagrams/`](docs/diagrams/README.md) | Diagrams-as-code (system, sequences, use cases, class model) |
 > | [`docs/migration.md`](docs/migration.md) | Fuseki → Neo4j/LightRAG migration history |
+> | [`docs/design-system.md`](docs/design-system.md) | Mobile app color tokens, the primary/primaryDark usage rule, icon-style convention |
 
 ## 1. Project Overview
 
@@ -63,37 +64,13 @@ single domain (`habit.wiwi.tu-dresden.de`). The Flutter app and admin panel are
 the public entrypoints; a set of internal admin/debug tools sit behind a Keycloak
 SSO gate (`oauth2-proxy`).
 
-```
- Participants (Flutter app)          Researchers / Admins (browser)
-        │  HTTPS / WSS                        │  HTTPS
-        └──────────────┬──────────────────────┘
-                       ▼
-        ┌──────────────────────────────────────────────┐
-        │  proxy — Traefik v3 (TLS, Let's Encrypt)       │  :80/:443, bolt :7687
-        └──┬───────────┬───────────┬──────────┬─────────┘
-           │ /api/v1   │ /admin    │ /auth     │ (internal tools)
-           ▼           ▼           ▼           ▼
-      ┌────────┐  ┌────────┐  ┌──────────┐  ┌───────────────────────────┐
-      │  app   │  │ admin  │  │ keycloak │  │ oauth2-proxy (SSO gate)   │
-      │ Node   │  │ Next.js│  │  + kc-db │  │ forward-auth, admin role  │
-      │ :3000  │  │ :3001  │  │ (postgres)│ └──────────────┬────────────┘
-      └───┬────┘  └────────┘  └──────────┘                 │ gated
-          │ service token                    ┌─────────────┴─────────────────┐
-          ▼                                   ▼      ▼       ▼        ▼       ▼
-   ┌────────────┐                        Prometheus Grafana RedisInsight  Bull  mongo-
-   │ recommender│                                                         Board express
-   │ Python API │──chat/embed──▶ LLM (llm.scads.ai)                    (/queues) (/mongo)
-   │ :8000      │──▶ lightrag ──entity/embed──▶ LLM      LightRAG WebUI (/lightrag,
-   └─────┬──────┘   (graph+vector KB, :9621)              own login, not SSO)
-         │
-  ┌──────┼───────────┬──────────────┐        Data stores
-  ▼      ▼           ▼              ▼
-┌──────┐┌──────┐  ┌──────┐    ┌───────────┐
-│mongo ││neo4j │  │redis │    │ knowledge │  Ops/support: config-sync (git pull),
-│ :27017││bolt  │  │ :6379│    │ -mcp :8002│  backup, docker-socket-proxy,
-│      ││:7687 │  │      │    │ (MCP/SSE) │  blackbox-exporter, keycloak-init
-└──────┘└──────┘  └──────┘    └───────────┘
-```
+![System diagram: Flutter app and admin browser enter through Traefik, which routes to app/admin/keycloak/oauth2-proxy; app calls the Python recommender, which calls LightRAG and an external LLM; app, recommender, and LightRAG share MongoDB, Neo4j, and Redis; oauth2-proxy gates the internal tools (Grafana, Prometheus, Bull Board, mongo-express, RedisInsight)](docs/assets/architecture/system-diagram.svg)
+
+The diagram above shows the main request path. Not pictured (see the service
+tables below for the full picture): `knowledge-mcp` (MCP/SSE server exposing the
+LightRAG KB to AI agents, :8002), `translate` (self-hosted LibreTranslate), and
+ops/support containers with no inbound routes — `config-sync` (git pull),
+`backup`, `docker-socket-proxy`, `blackbox-exporter`, `keycloak-init`.
 
 ### Service Responsibilities
 
@@ -603,6 +580,8 @@ Researchers assign questionnaires to a study (all groups) or a specific group on
 questionnaire *definition* has a `scope` — `study` (default) or `habit` — which decides what an
 assignment's cadence anchors to, not a separate per-assignment flag:
 
+![Questionnaire delivery flow: scope 'study' windows anchor to enrollment via generateWindowsForUser; scope 'habit' windows anchor to each habit's creation via generateHabitCreationWindows and stay invisible until a relevant habit exists; SRHI is a separate, unconditional system entirely outside this scheduling model](docs/assets/architecture/questionnaire-scope-flow.svg)
+
 - **`scope: 'study'`** — windows anchor to **enrollment**, generated per participant
   (`generateWindowsForUser`, back-filled for already-enrolled participants whenever an
   assignment is created/changed). This is SLIQ/RAND-36 and any other general study questionnaire.
@@ -802,6 +781,8 @@ Rules:
 - Never machine-translate these documents; translations require professional/legal review.
 
 ### Authentication Model
+
+![Authentication model: Flutter authenticates to the backend with a Bearer JWT; the backend talks to Keycloak on the participant's behalf via ROPC (passphrase) and via client credentials for admin ops; the admin Next.js app uses NextAuth OIDC; internal tools sit behind oauth2-proxy SSO; the backend calls the Python recommender with a shared secret header, not OAuth at all](docs/assets/architecture/auth-relationships.svg)
 
 - **Flutter app ↔ Keycloak:** the app never talks to Keycloak directly. It authenticates via a 24-word recovery passphrase against the Node.js backend (`/onboard` for new accounts, `/restore` for an existing account on a new device, `/users/me/rotate-credentials` to rotate the passphrase), which exchanges it for a Keycloak token pair server-side — see **Session & Token Lifetime** below. A PKCE authorization code flow via the public client `hhh-flutter` also exists in the mobile codebase (`AuthService.login()`, no client secret required or stored on device) but has no current call site.
 - **Flutter app ↔ Node.js backend:** Bearer JWT in the `Authorization` header. The backend validates JWTs against Keycloak's JWKS endpoint.
@@ -1099,11 +1080,12 @@ milestones, not the market's fire-on-every-log pattern.
   (habit created), *Building Momentum* (first tier-up), *Steady Habit* (14-day
   streak), *Second Nature* (habit reaches `off`), *Habit Architect* (created via
   stacking — rewards §7.1), *Quit Champion* (a quit habit reaches `off`),
-  *Community Contributor* (shares/donates habits for several consecutive weeks
-  — see "Sharing" below). Exact trigger predicates:
+  *First Share* (shared/donated a habit for the first time), *Community
+  Contributor* (shares/donates habits for several consecutive weeks — see
+  "Sharing" below). Exact trigger predicates:
   [§13.7](#137-scoring-algorithms--full-reference).
 
-  ![The seven badges: icon, colour, and unlock condition for each](docs/assets/gamification/badges-showcase.svg)
+  ![The nine badges: icon, colour, and unlock condition for each](docs/assets/gamification/badges-showcase.svg)
 
   Colours aren't decorative: amber matches the traffic light's amber tiers,
   green matches the `off` tier's green, and *Quit Champion* reuses the same red
@@ -1111,14 +1093,17 @@ milestones, not the market's fire-on-every-log pattern.
   already-established meaning, never an arbitrary series order.
 - **Sharing (user-level, not tied to any one habit):** donating a habit to the
   community corpus (`POST /habits/share`) earns `xpPerShare` XP (default 20)
-  per share. *Community Contributor* requires sharing in each of the last
-  `shareStreakWeeksForBadge` (default 4) **consecutive weeks** — rewarding
-  sustained contribution, not a single one-off share — computed from Neo4j
-  donation timestamps (`getDonationDatesByUser`) via `currentShareStreakWeeks`,
-  the same day-streak logic as `currentStreakDays` but bucketed by week. Since
-  a share isn't scoped to one tracked intention, its earned-badge state is
-  persisted on a small per-user Mongo doc (`user_gamification`) rather than on
-  an `implementation_intentions` document.
+  per share. *First Share* is awarded the moment `shareCount ≥ 1` — an
+  immediate, one-off acknowledgement of the very first contribution, deliberately
+  low-friction unlike the streak badge below. *Community Contributor* requires
+  sharing in each of the last `shareStreakWeeksForBadge` (default 4)
+  **consecutive weeks** — rewarding sustained contribution, not a single
+  one-off share — computed from Neo4j donation timestamps
+  (`getDonationDatesByUser`) via `currentShareStreakWeeks`, the same day-streak
+  logic as `currentStreakDays` but bucketed by week. Since a share isn't scoped
+  to one tracked intention, both badges' earned state is persisted on a small
+  per-user Mongo doc (`user_gamification`) rather than on an
+  `implementation_intentions` document.
 - **API:** `GET /habits/intentions/gamification` returns `{ enabled, totalXp,
   level, xpIntoLevel, xpToNextLevel, badges, newlyEarned, newlyLost, perHabit,
   shareCount, shareStreakWeeks }` and persists newly earned/lost badges.
@@ -1139,9 +1124,10 @@ milestones, not the market's fire-on-every-log pattern.
 **revocable** (`REVOCABLE_BADGES` in `gamificationService.js`): if a tier or
 streak that earned one of them regresses, the badge is `$pull`-ed from
 `earnedBadges` and reported in `newlyLost`, mirroring `newlyEarned`.
-`FIRST_STEP`, `HABIT_ARCHITECT`, and `COMMUNITY_CONTRIBUTOR` are never revoked
-— they record historical facts (the habit was created; it was created via
-stacking; sharing was sustained at the time) rather than current state.
+`FIRST_STEP`, `HABIT_ARCHITECT`, `FIRST_SHARE`, and `COMMUNITY_CONTRIBUTOR` are
+never revoked — they record historical facts (the habit was created; it was
+created via stacking; a share happened; sharing was sustained at the time)
+rather than current state.
 
 Mobile fires a **distinct**, deliberately supportive notification for a lost
 badge (`showGetBackOnTrackNotifications`, its own channel `hhh_recovery`, own
@@ -1376,12 +1362,14 @@ farmed by volume.
 | Second Nature | `second_nature` | `frequency === 'off'` | per habit | Yes (§13.5.1) |
 | Habit Architect | `habit_architect` | `creationMode === 'stacked'` (§7.1) | per habit | No |
 | Quit Champion | `quit_champion` | `habitType === 'quit'` **and** `frequency === 'off'` | per habit | Yes (§13.5.1) |
+| First Share | `first_share` | `shareCount ≥ 1` (the very first share/donation) | per user | No |
 | Community Contributor | `community_contributor` | `currentShareStreakWeeks ≥ shareStreakWeeksForBadge` (default 4 consecutive weeks with ≥1 share) | per user | No |
 | Habit Graduate | `habit_graduate` | Awarded once, at the moment `checkAutomaticityGraduation` graduates the habit (§13.5.2) | per habit | No |
 
 Per-habit badges persist on `implementation_intentions.earnedBadges`; the
-user-scoped Community Contributor persists on `user_gamification.earnedBadges`
-instead, since it isn't tied to any one tracked intention. "Revocable" badges
+user-scoped First Share and Community Contributor persist on
+`user_gamification.earnedBadges` instead, since neither is tied to any one
+tracked intention. "Revocable" badges
 are removed (`$pull`) when their predicate stops holding, per §13.5.1 — every
 other badge records a historical fact and is never revoked.
 

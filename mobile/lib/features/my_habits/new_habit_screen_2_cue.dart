@@ -2,6 +2,7 @@
 library;
 
 // mobile/lib/features/my_habits/new_habit_screen_2_cue.dart
+import 'package:flutter/cupertino.dart' show CupertinoSwitch;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -59,6 +60,11 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
   // Free-typed anchor habit text to donate through /habits/share, tagged as an
   // anchor (§7.1). The anchor need not already be tracked in the app.
   final TextEditingController _anchorController = TextEditingController();
+  // §7.1 — opt-in: when stacking onto a free-typed (not already tracked)
+  // anchor, offers to also start tracking the anchor itself as a habit.
+  // Only meaningful while _stackedOnId is null (an already-tracked anchor
+  // has nothing to add).
+  bool _alsoTrackAnchor = false;
   // Persisted per-device (see HabitOnboardingPrefs): once dismissed, the
   // explainer stays dismissed across app restarts, not just this session.
   // Null while the stored value is still loading — showIntro treats that as
@@ -123,6 +129,10 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
     final l10n = AppLocalizations.of(context)!;
     final isPreRated = widget.config.cueSource != 'self_selected';
 
+    final anchorText = _anchorController.text.trim();
+    // §7.1 — stacked if the user picked an existing anchor OR free-typed one.
+    final isStacked = _stackedOnId != null || anchorText.isNotEmpty;
+
     final List<IntentionCue> cues;
     if (isPreRated) {
       if (widget.config.assignedCues.isNotEmpty) {
@@ -137,25 +147,31 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
       }
     } else {
       final texts = _collectSelfCues();
-      if (texts.isEmpty || texts.first.length < 10) {
-        setState(() => _error = l10n.setCueTooShort);
-        return;
+      if (isStacked) {
+        // Stacking anchors the habit to an existing routine — that anchor
+        // *is* the trigger (see anchorText below), so a cue is genuinely
+        // optional here, not auto-derived to satisfy a hidden requirement.
+        cues = [
+          for (final t in texts) IntentionCue(text: t, source: 'self_selected'),
+        ];
+      } else {
+        if (texts.isEmpty || texts.first.length < 10) {
+          setState(() => _error = l10n.setCueTooShort);
+          return;
+        }
+        // Any additional cue that was typed must be substantive.
+        if (texts.skip(1).any((t) => t.length < 3)) {
+          setState(() => _error = l10n.setCueTooShort);
+          return;
+        }
+        cues = [
+          for (final t in texts) IntentionCue(text: t, source: 'self_selected'),
+        ];
       }
-      // Any additional cue that was typed must be substantive.
-      if (texts.skip(1).any((t) => t.length < 3)) {
-        setState(() => _error = l10n.setCueTooShort);
-        return;
-      }
-      cues = [
-        for (final t in texts) IntentionCue(text: t, source: 'self_selected'),
-      ];
     }
 
     setState(() => _error = null);
 
-    final anchorText = _anchorController.text.trim();
-    // §7.1 — stacked if the user picked an existing anchor OR free-typed one.
-    final isStacked = _stackedOnId != null || anchorText.isNotEmpty;
     final extra = <String, dynamic>{
       'behaviorKey': widget.behaviorKey,
       'behaviorLabel': widget.behaviorLabel,
@@ -163,9 +179,11 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
       'habitType': widget.habitType.wire,
       'cues': cues,
       // §7.1 Habit Stacking — anchor reference (when tracked), free-typed
-      // anchor text (donated as an anchor), and the creation mode.
+      // anchor text (donated as an anchor), the opt-in to also track the
+      // anchor as its own habit, and the creation mode.
       'stackedOn': ?_stackedOnId,
       'anchorText': anchorText.isNotEmpty ? anchorText : null,
+      'alsoTrackAnchor': _stackedOnId == null && _alsoTrackAnchor,
       'creationMode': isStacked ? 'stacked' : 'standalone',
     };
 
@@ -197,7 +215,10 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
               OnboardingExplainerCard(
                 icon: Icons.alarm_on,
                 title: HabitOnboardingCopy.cueTitleFor(lang),
-                body: HabitOnboardingCopy.cueBodyFor(lang),
+                body: HabitOnboardingCopy.cueBodyFor(
+                  lang,
+                  includeStackingHint: widget.config.habitStackingEnabled,
+                ),
                 onDismiss: _dismissIntro,
               ),
               const SizedBox(height: 16),
@@ -240,11 +261,14 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
   }
 
   /// §7.1 Habit Stacking — lets the user anchor this new habit onto one they
-  /// already have. Picking an existing active habit sets [_stackedOnId] to its
-  /// id (a real STACKED_WITH edge in the graph) and prefills the first cue with
-  /// "After I [anchor]". The anchor need not be tracked: the free-text field
-  /// records an anchor the app doesn't know about, still tagging this habit as
-  /// stacked so the research signal (creationMode) is captured.
+  /// already have. Picking an existing active habit sets [_stackedOnId] to
+  /// its id (a real STACKED_WITH edge in the graph); the anchor's label is
+  /// kept as its own field ([_anchorController]) rather than folded into the
+  /// cue text, so stacking reads as a distinct mechanism from typing a cue —
+  /// it's shown separately on the confirm/detail screens. The anchor need
+  /// not be tracked: the free-text field records an anchor the app doesn't
+  /// know about, still tagging this habit as stacked so the research signal
+  /// (creationMode) is captured.
   Widget _buildStackingCard(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final intentionsAsync = ref.watch(intentionsProvider);
@@ -255,6 +279,11 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
 
     return Card(
       child: ExpansionTile(
+        // ExpansionTile draws its own top/bottom divider border by default
+        // (shape/collapsedShape), which shows up as two thin lines inside
+        // the Card that already provides its own border — suppress it.
+        shape: const RoundedRectangleBorder(side: BorderSide.none),
+        collapsedShape: const RoundedRectangleBorder(side: BorderSide.none),
         leading: const Icon(Icons.link),
         title: Text(l10n.stackOntoExistingHabitTitle),
         subtitle: Text(l10n.stackOntoExistingHabitSubtitle),
@@ -286,13 +315,13 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
                 setState(() {
                   _stackedOnId = id;
                   if (id != null) {
-                    final anchor =
+                    // Picking a tracked habit fills the free-text field with
+                    // its label (kept as its own field, not a cue) and
+                    // clears any opt-in from a previous free-typed anchor —
+                    // an already-tracked anchor never needs re-creating.
+                    _anchorController.text =
                         active.firstWhere((i) => i.id == id).behaviorLabel;
-                    _anchorController.text = anchor;
-                    // Prefill the first cue as the anchor trigger.
-                    if (widget.config.cueSource == 'self_selected') {
-                      _cueControllers.first.text = 'After I $anchor';
-                    }
+                    _alsoTrackAnchor = false;
                   }
                 });
               },
@@ -307,7 +336,35 @@ class _SetCueScreenState extends ConsumerState<SetCueScreen> {
             ),
             textCapitalization: TextCapitalization.sentences,
             maxLength: 100,
+            onChanged: (_) => setState(() {
+              // A tracked pick and a free-typed anchor are mutually
+              // exclusive — typing here after picking from the dropdown
+              // means the user is overriding that choice. Always rebuild
+              // (not just when clearing the pick) so the opt-in checkbox
+              // below shows/hides as the anchor text is typed/cleared.
+              _stackedOnId = null;
+            }),
           ),
+          // Opt-in: only offered for a free-typed anchor that isn't already
+          // one of the user's tracked habits — picking from the dropdown
+          // above means it's tracked already, nothing to add.
+          if (_stackedOnId == null && _anchorController.text.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.stackAlsoTrackAnchor(_anchorController.text.trim()),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                CupertinoSwitch(
+                  value: _alsoTrackAnchor,
+                  onChanged: (v) => setState(() => _alsoTrackAnchor = v),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

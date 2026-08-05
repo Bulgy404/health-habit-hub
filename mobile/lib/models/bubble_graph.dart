@@ -86,6 +86,12 @@ class HabitBubble {
   /// donation time.
   final int? wellbeingImpact;
 
+  /// The exact phrase the classifier matched for this habit's dimension
+  /// (e.g. `'at the gym'` for a habit under the Location dimension) — a
+  /// substring of [originalText]. Empty when the habit predates this field
+  /// or nothing was matched.
+  final String contextText;
+
   /// Creates a [HabitBubble].
   const HabitBubble({
     required this.id,
@@ -96,6 +102,7 @@ class HabitBubble {
     this.habitType = 'build',
     this.healthBenefit,
     this.wellbeingImpact,
+    this.contextText = '',
   });
 
   /// Sum of all annotation counts across all annotation types.
@@ -118,6 +125,7 @@ class HabitBubble {
       habitType: json['habitType'] as String? ?? 'build',
       healthBenefit: (json['healthBenefit'] as num?)?.toInt(),
       wellbeingImpact: (json['wellbeingImpact'] as num?)?.toInt(),
+      contextText: json['contextText'] as String? ?? '',
     );
   }
 }

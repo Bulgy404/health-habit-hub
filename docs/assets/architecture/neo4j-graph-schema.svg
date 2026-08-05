@@ -1,0 +1,82 @@
+<svg width="1080" height="500" viewBox="0 0 1080 500" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .bg { fill: #FFFFFF; }
+      .node-label { font-size: 14px; font-weight: 700; fill: #1E2422; text-anchor: middle; }
+      .edge-label { font-size: 11px; font-weight: 600; fill: #6B6B67; text-anchor: middle; }
+      .edge-prop { font-size: 9.5px; fill: #9A9A94; text-anchor: middle; }
+    </style>
+    <marker id="arrow5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#9A9A94"/>
+    </marker>
+  </defs>
+  <rect width="1080" height="500" class="bg"/>
+
+  <text x="30" y="34" font-size="16" font-weight="800" fill="#1E2422">Neo4j habit knowledge graph — node labels and relationship types</text>
+  <text x="30" y="54" font-size="12" fill="#6B6B67">(:Node {key props}) — see §1.1 for the full property tables.</text>
+
+  <g stroke="#9A9A94" stroke-width="1.6" fill="none" marker-end="url(#arrow5)">
+    <path d="M200 130 L390 220"/>                                    <!-- User -DONATED-> Habit -->
+    <path d="M145 148 C 100 320, 280 490, 565 410"/>                  <!-- User -ENROLLED_IN-> Study -->
+    <path d="M520 238 L650 238"/>                                     <!-- Habit -HAS_CONTEXT-> Context -->
+    <path d="M810 238 L850 238"/>                                     <!-- Context -MAPS_TO-> BCIOConcept -->
+    <path d="M392 372 L408 278"/>                                     <!-- Comment -COMMENT_ON-> Habit -->
+    <path d="M480 270 L610 375"/>                                     <!-- Habit -DONATED_IN-> Study -->
+  </g>
+
+  <!-- User -->
+  <g transform="translate(90,76)">
+    <ellipse cx="80" cy="34" rx="80" ry="34" fill="#F1F0FB" stroke="#4F46E5" stroke-width="2.5"/>
+    <text x="80" y="39" class="node-label">User</text>
+  </g>
+
+  <!-- Habit (central) -->
+  <g transform="translate(340,200)">
+    <ellipse cx="90" cy="38" rx="90" ry="38" fill="#FFF8E1" stroke="#FFA000" stroke-width="2.5"/>
+    <text x="90" y="43" class="node-label">Habit</text>
+  </g>
+
+  <!-- Context -->
+  <g transform="translate(650,204)">
+    <ellipse cx="80" cy="34" rx="80" ry="34" fill="#E3F2FD" stroke="#1976D2" stroke-width="2.5"/>
+    <text x="80" y="39" class="node-label">Context</text>
+  </g>
+
+  <!-- BCIOConcept -->
+  <g transform="translate(850,204)">
+    <ellipse cx="90" cy="34" rx="90" ry="34" fill="#EDE7F6" stroke="#7C4DFF" stroke-width="2.5"/>
+    <text x="90" y="39" class="node-label">BCIOConcept</text>
+  </g>
+
+  <!-- Comment -->
+  <g transform="translate(330,370)">
+    <ellipse cx="80" cy="34" rx="80" ry="34" fill="#FDECEA" stroke="#E53935" stroke-width="2.5"/>
+    <text x="80" y="39" class="node-label">Comment</text>
+  </g>
+
+  <!-- Study -->
+  <g transform="translate(560,370)">
+    <ellipse cx="80" cy="34" rx="80" ry="34" fill="#E0F7FA" stroke="#00897B" stroke-width="2.5"/>
+    <text x="80" y="39" class="node-label">Study</text>
+  </g>
+
+  <!-- edge labels -->
+  <text x="300" y="170" class="edge-label">DONATED</text>
+  <text x="300" y="182" class="edge-prop">at</text>
+
+  <text x="128" y="300" class="edge-label">ENROLLED_IN</text>
+  <text x="128" y="312" class="edge-prop">groupId, enrolledAt, droppedOutAt</text>
+
+  <text x="585" y="225" class="edge-label">HAS_CONTEXT</text>
+  <text x="585" y="237" class="edge-prop">dimension</text>
+
+  <text x="830" y="225" class="edge-label">MAPS_TO</text>
+  <text x="830" y="237" class="edge-prop">confidence, phrase, dimension</text>
+
+  <text x="345" y="335" class="edge-label">COMMENT_ON</text>
+
+  <text x="565" y="335" class="edge-label">DONATED_IN</text>
+  <text x="565" y="347" class="edge-prop">immutable — never rewritten</text>
+
+  <text x="30" y="470" font-size="11" fill="#9A9A94">Authorship of a Comment is kept only in MongoDB `habit_comments` — never on the graph node itself — so account deletion can't de-anonymise it.</text>
+</svg>

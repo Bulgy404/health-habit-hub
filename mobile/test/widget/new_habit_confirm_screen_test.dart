@@ -99,8 +99,15 @@ class _FakeMyHabitsService extends MyHabitsService {
 
   final _Mode _mode;
 
-  /// Captures the arguments of the most recent [createIntention] call.
-  Map<String, dynamic>? lastCall;
+  /// Captures the arguments of every [createIntention] call, in order — the
+  /// opt-in anchor-tracking flow makes two calls (anchor, then the habit
+  /// stacked onto it), so a single `lastCall` isn't enough to inspect both.
+  final List<Map<String, dynamic>> calls = [];
+
+  /// Convenience accessor for the most recent call.
+  Map<String, dynamic>? get lastCall => calls.isEmpty ? null : calls.last;
+
+  int _created = 0;
 
   @override
   Future<Intention> createIntention({
@@ -112,9 +119,10 @@ class _FakeMyHabitsService extends MyHabitsService {
     required HabitType habitType,
     String? reminderTime,
     String? stackedOn,
+    String? anchorLabel,
     String creationMode = 'standalone',
   }) async {
-    lastCall = {
+    calls.add({
       'behaviorKey': behaviorKey,
       'behaviorLabel': behaviorLabel,
       'durationMinutes': durationMinutes,
@@ -123,12 +131,17 @@ class _FakeMyHabitsService extends MyHabitsService {
       'habitType': habitType,
       'reminderTime': reminderTime,
       'stackedOn': stackedOn,
+      'anchorLabel': anchorLabel,
       'creationMode': creationMode,
-    };
+    });
     switch (_mode) {
       case _Mode.success:
+        _created += 1;
         return Intention(
-          id: 'intent-1',
+          // Distinct, deterministic ids per call so a test can assert the
+          // second (main habit) call's stackedOn equals the first (anchor)
+          // call's returned id.
+          id: 'intent-$_created',
           behaviorKey: behaviorKey,
           behaviorLabel: behaviorLabel,
           durationMinutes: durationMinutes,
@@ -173,6 +186,10 @@ Widget _buildSubject({
   String? stitchedSentence,
   List<IntentionCue> cues = _cues,
   String behaviorLabel = 'Walking',
+  String? stackedOn,
+  String creationMode = 'standalone',
+  String? anchorText,
+  bool alsoTrackAnchor = false,
 }) {
   final router = GoRouter(
     initialLocation: '/habits/new/confirm',
@@ -186,6 +203,10 @@ Widget _buildSubject({
           habitType: HabitType.build,
           cues: cues,
           stitchedSentence: stitchedSentence,
+          stackedOn: stackedOn,
+          creationMode: creationMode,
+          anchorText: anchorText,
+          alsoTrackAnchor: alsoTrackAnchor,
         ),
       ),
       GoRoute(
@@ -539,5 +560,131 @@ void main() {
       find.text('You have reached the habit limit for your study condition.'),
       findsNothing,
     );
+  });
+
+  // ── §7.1 Habit Stacking ──────────────────────────────────────────────────
+
+  testWidgets(
+      'shows a "Stacked onto" chip, separate from the intention sentence, when stacked',
+      (tester) async {
+    await tester.pumpWidget(_buildSubject(
+      config: _userControlledConfig,
+      myHabitsService: _FakeMyHabitsService.pending(),
+      creationMode: 'stacked',
+      anchorText: 'Drink my morning coffee',
+      cues: const [],
+    ));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Stacked onto: Drink my morning coffee'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('shows no "Stacked onto" chip for a standalone habit',
+      (tester) async {
+    await tester.pumpWidget(_buildSubject(
+      config: _userControlledConfig,
+      myHabitsService: _FakeMyHabitsService.pending(),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Stacked onto'), findsNothing);
+  });
+
+  testWidgets(
+      'falls back to an anchor-driven sentence (not a dangling comma) when stacked with no cues',
+      (tester) async {
+    await tester.pumpWidget(_buildSubject(
+      config: _userControlledConfig,
+      myHabitsService: _FakeMyHabitsService.pending(),
+      creationMode: 'stacked',
+      anchorText: 'Drink my morning coffee',
+      cues: const [],
+      behaviorLabel: 'Walking',
+    ));
+    await tester.pumpAndSettle();
+
+    final field = tester.widget<TextField>(find.byType(TextField).first);
+    expect(
+      field.controller!.text,
+      'After I Drink my morning coffee, I will walking.',
+    );
+  });
+
+  testWidgets(
+      'sends anchorLabel and the picked stackedOn id when the anchor is already tracked',
+      (tester) async {
+    final service = _FakeMyHabitsService.success();
+    await tester.pumpWidget(_buildSubject(
+      config: _userControlledConfig,
+      myHabitsService: service,
+      creationMode: 'stacked',
+      anchorText: 'Drink my morning coffee',
+      stackedOn: 'existing-anchor-id',
+      cues: const [],
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create habit'));
+    await tester.pumpAndSettle();
+
+    expect(service.calls, hasLength(1));
+    expect(service.lastCall!['stackedOn'], 'existing-anchor-id');
+    expect(service.lastCall!['anchorLabel'], 'Drink my morning coffee');
+  });
+
+  testWidgets(
+      'opt-in: creates the free-typed anchor as its own habit first, then links stackedOn to it',
+      (tester) async {
+    final service = _FakeMyHabitsService.success();
+    await tester.pumpWidget(_buildSubject(
+      config: _userControlledConfig,
+      myHabitsService: service,
+      creationMode: 'stacked',
+      anchorText: 'Drink my morning coffee',
+      alsoTrackAnchor: true,
+      cues: const [],
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create habit'));
+    await tester.pumpAndSettle();
+
+    // Two calls: the anchor habit first (standalone, no stackedOn), then the
+    // habit the user actually came here to create, linked to the anchor's
+    // freshly-created id.
+    expect(service.calls, hasLength(2));
+    final anchorCall = service.calls.first;
+    expect(anchorCall['behaviorLabel'], 'Drink my morning coffee');
+    expect(anchorCall['creationMode'], 'standalone');
+    expect(anchorCall['stackedOn'], isNull);
+
+    final mainCall = service.calls.last;
+    expect(mainCall['behaviorLabel'], 'Walking');
+    expect(mainCall['stackedOn'], 'intent-1');
+    expect(mainCall['anchorLabel'], 'Drink my morning coffee');
+  });
+
+  testWidgets(
+      'without the opt-in, a free-typed anchor is sent as anchorLabel only (stackedOn null)',
+      (tester) async {
+    final service = _FakeMyHabitsService.success();
+    await tester.pumpWidget(_buildSubject(
+      config: _userControlledConfig,
+      myHabitsService: service,
+      creationMode: 'stacked',
+      anchorText: 'Drink my morning coffee',
+      cues: const [],
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Create habit'));
+    await tester.pumpAndSettle();
+
+    expect(service.calls, hasLength(1));
+    expect(service.lastCall!['stackedOn'], isNull);
+    expect(service.lastCall!['anchorLabel'], 'Drink my morning coffee');
   });
 }

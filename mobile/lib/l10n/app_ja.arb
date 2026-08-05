@@ -773,6 +773,18 @@
   "@goalInputValidationError": {
     "description": "Validation error when the goal-description field is submitted empty"
   },
+  "recommendWhyCardTitle": "おすすめはどのように作られますか？",
+  "@recommendWhyCardTitle": {
+    "description": "Heading for the explanatory card on the goal-input screen linking to the how-recommendations-work page"
+  },
+  "recommendWhyCardBody": "あなたの目標を他の人が共有した似た習慣と照合し、言語モデルが最も近い事例をパーソナライズされた提案に変換します。",
+  "@recommendWhyCardBody": {
+    "description": "Body copy for the explanatory card on the goal-input screen"
+  },
+  "recommendWhyCardLink": "仕組みを見る",
+  "@recommendWhyCardLink": {
+    "description": "Tap target on the recommend-why card opening the About the Health Habit Hub info page, scrolled to the how-recommendations-work section"
+  },
   "questionnaireResponseSubmitted": "回答を送信しました！",
   "@questionnaireResponseSubmitted": {
     "description": "Heading on the questionnaire confirmation screen"
@@ -1307,10 +1319,10 @@
   "recommendationFeedbackHint": "フィードバックを入力…",
   "recommendationFeedbackFailed": "フィードバックを送信できませんでした",
   "recommendationSourceLinkError": "情報源のリンクを開けませんでした。",
-  "recommendationLoadingPhaseExperts": "専門家に確認しています…",
-  "recommendationLoadingPhaseHabitsDb": "習慣データベースを調べています…",
-  "recommendationLoadingPhasePapers": "学術論文を読んでいます…",
-  "recommendationLoadingPhaseGenerating": "あなた専用のおすすめを生成しています…",
+  "recommendationLoadingPhaseCommunity": "あなたと似た人が試した習慣と比較しています…",
+  "recommendationLoadingPhaseHistory": "あなたにすでに効果があることを確認しています…",
+  "recommendationLoadingPhaseResearch": "行動変容研究を参照しています…",
+  "recommendationLoadingPhaseGenerating": "あなた専用の提案を作成しています…",
   "recommendationLoadingTimeoutError": "おすすめの生成に時間がかかりすぎました。もう一度お試しください。",
   "recommendationLoadingGenericError": "おすすめの生成中に問題が発生しました。もう一度お試しください。",
   "bubbleGraphNoHabitsInDimension": "このカテゴリにはまだ習慣がありません。",
@@ -1440,6 +1452,8 @@
   "stackAnchorNone": "None",
   "stackAnchorFreeTextLabel": "Or type an anchor habit",
   "stackAnchorFreeTextHint": "e.g. After my morning coffee",
+  "stackAlsoTrackAnchor": "「{anchor}」も習慣として記録する",
+  "stackedOntoLabel": "積み重ね先: {anchor}",
   "habitsSection": "Habits",
   "informationOverloadOptOutTitle": "Allow multiple new habits",
   "informationOverloadOptOutSubtitle": "Turn off the one-habit-at-a-time focus guard",

@@ -575,6 +575,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get goalInputValidationError => '目標を入力してください';
 
   @override
+  String get recommendWhyCardTitle => 'おすすめはどのように作られますか？';
+
+  @override
+  String get recommendWhyCardBody =>
+      'あなたの目標を他の人が共有した似た習慣と照合し、言語モデルが最も近い事例をパーソナライズされた提案に変換します。';
+
+  @override
+  String get recommendWhyCardLink => '仕組みを見る';
+
+  @override
   String get questionnaireResponseSubmitted => '回答を送信しました！';
 
   @override
@@ -1215,16 +1225,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get recommendationSourceLinkError => '情報源のリンクを開けませんでした。';
 
   @override
-  String get recommendationLoadingPhaseExperts => '専門家に確認しています…';
+  String get recommendationLoadingPhaseCommunity => 'あなたと似た人が試した習慣と比較しています…';
 
   @override
-  String get recommendationLoadingPhaseHabitsDb => '習慣データベースを調べています…';
+  String get recommendationLoadingPhaseHistory => 'あなたにすでに効果があることを確認しています…';
 
   @override
-  String get recommendationLoadingPhasePapers => '学術論文を読んでいます…';
+  String get recommendationLoadingPhaseResearch => '行動変容研究を参照しています…';
 
   @override
-  String get recommendationLoadingPhaseGenerating => 'あなた専用のおすすめを生成しています…';
+  String get recommendationLoadingPhaseGenerating => 'あなた専用の提案を作成しています…';
 
   @override
   String get recommendationLoadingTimeoutError =>
@@ -1649,6 +1659,16 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get stackAnchorFreeTextHint => 'e.g. After my morning coffee';
+
+  @override
+  String stackAlsoTrackAnchor(String anchor) {
+    return '「$anchor」も習慣として記録する';
+  }
+
+  @override
+  String stackedOntoLabel(String anchor) {
+    return '積み重ね先: $anchor';
+  }
 
   @override
   String get habitsSection => 'Habits';

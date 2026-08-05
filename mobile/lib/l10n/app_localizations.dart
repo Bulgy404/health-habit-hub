@@ -1178,6 +1178,24 @@ abstract class AppLocalizations {
   /// **'Please describe your goal'**
   String get goalInputValidationError;
 
+  /// Heading for the explanatory card on the goal-input screen linking to the how-recommendations-work page
+  ///
+  /// In en, this message translates to:
+  /// **'How do recommendations work?'**
+  String get recommendWhyCardTitle;
+
+  /// Body copy for the explanatory card on the goal-input screen
+  ///
+  /// In en, this message translates to:
+  /// **'We match your goal against similar habits shared by others, then a language model turns the best matches into a personalized suggestion.'**
+  String get recommendWhyCardBody;
+
+  /// Tap target on the recommend-why card opening the About the Health Habit Hub info page, scrolled to the how-recommendations-work section
+  ///
+  /// In en, this message translates to:
+  /// **'See how it works'**
+  String get recommendWhyCardLink;
+
   /// Heading on the questionnaire confirmation screen
   ///
   /// In en, this message translates to:
@@ -2366,28 +2384,28 @@ abstract class AppLocalizations {
   /// **'Could not open the source link.'**
   String get recommendationSourceLinkError;
 
-  /// First phase label on the recommendation loading screen
+  /// First phase label on the recommendation loading screen — matches the 'Community habits' data source on the About page's diagram
   ///
   /// In en, this message translates to:
-  /// **'Asking experts…'**
-  String get recommendationLoadingPhaseExperts;
+  /// **'Comparing with habits people like you have tried…'**
+  String get recommendationLoadingPhaseCommunity;
 
-  /// Second phase label on the recommendation loading screen
+  /// Second phase label on the recommendation loading screen — matches the 'Your habits & answers' data source
   ///
   /// In en, this message translates to:
-  /// **'Looking through your habits database…'**
-  String get recommendationLoadingPhaseHabitsDb;
+  /// **'Checking what\'s already working for you…'**
+  String get recommendationLoadingPhaseHistory;
 
-  /// Third phase label on the recommendation loading screen
+  /// Third phase label on the recommendation loading screen — matches the 'Research' data source
   ///
   /// In en, this message translates to:
-  /// **'Reading academic papers…'**
-  String get recommendationLoadingPhasePapers;
+  /// **'Consulting behaviour-change research…'**
+  String get recommendationLoadingPhaseResearch;
 
-  /// Fourth phase label on the recommendation loading screen
+  /// Fourth (final) phase label on the recommendation loading screen — the AI-writing step
   ///
   /// In en, this message translates to:
-  /// **'Generating your personalised recommendations…'**
+  /// **'Writing your personalized suggestion…'**
   String get recommendationLoadingPhaseGenerating;
 
   /// Error shown when the recommendation request times out
@@ -3163,6 +3181,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'e.g. After my morning coffee'**
   String get stackAnchorFreeTextHint;
+
+  /// Opt-in checkbox offering to also create a tracked habit for a free-typed stacking anchor
+  ///
+  /// In en, this message translates to:
+  /// **'Also track \"{anchor}\" as a habit I\'m building'**
+  String stackAlsoTrackAnchor(String anchor);
+
+  /// Shown on the confirm/detail screens for a habit stacked onto an anchor
+  ///
+  /// In en, this message translates to:
+  /// **'Stacked onto: {anchor}'**
+  String stackedOntoLabel(String anchor);
 
   /// No description provided for @habitsSection.
   ///

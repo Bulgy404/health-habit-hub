@@ -25,6 +25,7 @@ const Map<String, BadgeMeta> kBadgeMeta = {
   'second_nature': BadgeMeta('Second Nature', Icons.auto_awesome),
   'habit_architect': BadgeMeta('Habit Architect', Icons.account_tree_outlined),
   'quit_champion': BadgeMeta('Quit Champion', Icons.emoji_events_outlined),
+  'first_share': BadgeMeta('First Share', Icons.volunteer_activism_outlined),
   'community_contributor':
       BadgeMeta('Community Contributor', Icons.diversity_3_outlined),
   'habit_graduate': BadgeMeta('Habit Graduate', Icons.school_outlined),
@@ -67,6 +68,10 @@ const Map<String, List<String>> kPraiseMessages = {
     'Quit Champion — you broke the pattern. Huge.',
     "You've left that habit behind for good. Champion.",
   ],
+  'first_share': [
+    'First Share — thanks for contributing to the research!',
+    "You've shared your first habit. This helps researchers worldwide.",
+  ],
   'community_contributor': [
     'Community Contributor — thanks for sharing, week after week.',
     'Your shared habits are helping others find theirs. Keep it up.',
@@ -89,7 +94,8 @@ String praiseFor(String badgeKey, {int rotation = 0}) {
 
 /// A badge that was revoked because its tier/streak regressed (see
 /// `REVOCABLE_BADGES` in `gamificationService.js`) — never for `first_step`,
-/// `habit_architect`, or `community_contributor`, which aren't revocable.
+/// `habit_architect`, `first_share`, or `community_contributor`, which
+/// aren't revocable.
 /// Deliberately supportive, not shaming: a lapse is normal, not a failure.
 const Map<String, List<String>> kGetBackOnTrackMessages = {
   'building_momentum': [

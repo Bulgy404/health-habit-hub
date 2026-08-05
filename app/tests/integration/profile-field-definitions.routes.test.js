@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { generateKeyPairSync, createSign } from 'node:crypto';
 import express from 'express';
 import { createApiRouter } from '../../routes/apiRouter.js';
+import { seedDefaultProfileFields } from '../../db/seedProfileFields.js';
 
 // ── Key material ────────────────────────────────────────────────────────────
 
@@ -107,10 +108,11 @@ function createMockDb() {
 
 let server;
 let baseUrl;
+let db;
 const realFetch = global.fetch;
 
 before(async () => {
-  const db = createMockDb();
+  db = createMockDb();
   const app = express();
   app.use(express.json());
   const v1 = createApiRouter({
@@ -166,9 +168,10 @@ const USER_TOKEN = makeToken('user-1', ['user']);
 const RESEARCHER_TOKEN = makeToken('researcher-1', ['researcher']);
 const VALID_DEF = {
   fieldId: 'height',
-  label: 'Your height (cm)',
+  label: { en: 'Your height (cm)', de: 'Ihre Größe (cm)' },
   type: 'number',
   options: [],
+  languages: ['en', 'de'],
   required: false,
   order: 5,
 };
@@ -226,9 +229,10 @@ test('POST /admin/profile-field-definitions — 400 for select type without opti
     token: ADMIN_TOKEN,
     body: {
       fieldId: 'mood',
-      label: 'Mood',
+      label: { en: 'Mood' },
       type: 'select',
       options: [],
+      languages: ['en'],
       required: false,
       order: 1,
     },
@@ -245,6 +249,8 @@ test('POST /admin/profile-field-definitions — 201 creates definition', async (
   const body = await res.json();
   assert.strictEqual(body.fieldId, 'height');
   assert.strictEqual(body.type, 'number');
+  assert.deepStrictEqual(body.label, VALID_DEF.label);
+  assert.strictEqual(body.isLibrary, false);
   assert.ok(!('_id' in body));
 });
 
@@ -262,12 +268,44 @@ test('PUT /admin/profile-field-definitions/:fieldId — 200 updates label', asyn
     '/api/v1/admin/profile-field-definitions/height',
     {
       token: ADMIN_TOKEN,
-      body: { label: 'Height in cm' },
+      body: { label: { en: 'Height in cm' } },
     }
   );
   assert.strictEqual(res.status, 200);
   const body = await res.json();
-  assert.strictEqual(body.label, 'Height in cm');
+  assert.deepStrictEqual(body.label, { en: 'Height in cm' });
+});
+
+test('library fields (gender, age_group) are seeded with isLibrary: true', async () => {
+  await seedDefaultProfileFields(db);
+  const res = await req('GET', '/api/v1/admin/profile-field-definitions', {
+    token: ADMIN_TOKEN,
+  });
+  const body = await res.json();
+  const gender = body.find((d) => d.fieldId === 'gender');
+  assert.ok(gender);
+  assert.strictEqual(gender.isLibrary, true);
+});
+
+test('PUT /admin/profile-field-definitions/:fieldId — 403 for a library field', async () => {
+  const res = await req(
+    'PUT',
+    '/api/v1/admin/profile-field-definitions/gender',
+    {
+      token: ADMIN_TOKEN,
+      body: { label: { en: 'Renamed' } },
+    }
+  );
+  assert.strictEqual(res.status, 403);
+});
+
+test('DELETE /admin/profile-field-definitions/:fieldId — 403 for a library field', async () => {
+  const res = await req(
+    'DELETE',
+    '/api/v1/admin/profile-field-definitions/gender',
+    { token: ADMIN_TOKEN }
+  );
+  assert.strictEqual(res.status, 403);
 });
 
 test('PUT /admin/profile-field-definitions/:fieldId — 404 for unknown fieldId', async () => {
@@ -276,7 +314,7 @@ test('PUT /admin/profile-field-definitions/:fieldId — 404 for unknown fieldId'
     '/api/v1/admin/profile-field-definitions/unknown_field',
     {
       token: ADMIN_TOKEN,
-      body: { label: 'Whatever' },
+      body: { label: { en: 'Whatever' } },
     }
   );
   assert.strictEqual(res.status, 404);
@@ -313,15 +351,19 @@ test('GET /profile-field-definitions — 401 without token', async () => {
   assert.strictEqual(res.status, 401);
 });
 
-test('GET /profile-field-definitions — 200 for user role', async () => {
+test('GET /profile-field-definitions — 200 for user role, resolved to plain strings', async () => {
   // Seed one definition first via admin
   await req('POST', '/api/v1/admin/profile-field-definitions', {
     token: ADMIN_TOKEN,
     body: {
       fieldId: 'mood',
-      label: 'Mood',
+      label: { en: 'Mood', de: 'Stimmung' },
       type: 'select',
-      options: ['Happy', 'Sad'],
+      options: [
+        { value: 'happy', label: { en: 'Happy', de: 'Glücklich' } },
+        { value: 'sad', label: { en: 'Sad', de: 'Traurig' } },
+      ],
+      languages: ['en', 'de'],
       required: false,
       order: 1,
     },
@@ -332,7 +374,26 @@ test('GET /profile-field-definitions — 200 for user role', async () => {
   assert.strictEqual(res.status, 200);
   const body = await res.json();
   assert.ok(Array.isArray(body));
-  assert.ok(body.some((d) => d.fieldId === 'mood'));
+  const mood = body.find((d) => d.fieldId === 'mood');
+  assert.ok(mood);
+  assert.strictEqual(mood.label, 'Mood');
+  assert.deepStrictEqual(mood.options, [
+    { value: 'happy', label: 'Happy' },
+    { value: 'sad', label: 'Sad' },
+  ]);
+});
+
+test('GET /profile-field-definitions?lang=de — resolves the requested language', async () => {
+  const res = await req('GET', '/api/v1/profile-field-definitions?lang=de', {
+    token: USER_TOKEN,
+  });
+  const body = await res.json();
+  const mood = body.find((d) => d.fieldId === 'mood');
+  assert.strictEqual(mood.label, 'Stimmung');
+  assert.deepStrictEqual(mood.options, [
+    { value: 'happy', label: 'Glücklich' },
+    { value: 'sad', label: 'Traurig' },
+  ]);
 });
 
 test('GET /profile-field-definitions — sorted by order', async () => {
@@ -340,9 +401,10 @@ test('GET /profile-field-definitions — sorted by order', async () => {
     token: ADMIN_TOKEN,
     body: {
       fieldId: 'zzz_last',
-      label: 'Last',
+      label: { en: 'Last' },
       type: 'text',
       options: [],
+      languages: ['en'],
       required: false,
       order: 99,
     },
@@ -351,9 +413,10 @@ test('GET /profile-field-definitions — sorted by order', async () => {
     token: ADMIN_TOKEN,
     body: {
       fieldId: 'aaa_first',
-      label: 'First',
+      label: { en: 'First' },
       type: 'text',
       options: [],
+      languages: ['en'],
       required: false,
       order: 1,
     },

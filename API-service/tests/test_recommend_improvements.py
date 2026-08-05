@@ -118,6 +118,43 @@ async def test_context_cap_truncates_prompt(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_recommendations_capped_at_max_even_if_llm_returns_more():
+    """The prompt asks for "up to 3", but nothing stops a model from
+    ignoring that — _MAX_RECOMMENDATIONS is the actual enforcement point."""
+    five_items_reply = json.dumps(
+        {
+            "recommendations": [
+                {
+                    "title": f"Habit {i}",
+                    "body": "Body",
+                    "rationale": "Rationale",
+                    "suggested_cue": "",
+                    "selected_habit_uuids": [],
+                    "sources": [],
+                }
+                for i in range(5)
+            ]
+        }
+    )
+
+    async def mock_llm(messages, **kwargs):
+        return five_items_reply
+
+    with ExitStack() as stack:
+        for p in _patches(mock_llm):
+            stack.enter_context(p)
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            resp = await _post(client)
+
+    assert resp.status_code == 200
+    recs = resp.json()["recommendations"]
+    assert len(recs) == 3
+    assert [r["title"] for r in recs] == ["Habit 0", "Habit 1", "Habit 2"]
+
+
+@pytest.mark.asyncio
 async def test_fetch_previous_titles_dedupes_and_caps():
     class FakeCursor:
         def __init__(self, docs):

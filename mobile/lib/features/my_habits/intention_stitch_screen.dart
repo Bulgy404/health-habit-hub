@@ -34,6 +34,7 @@ class IntentionStitchScreen extends ConsumerStatefulWidget {
     this.stackedOn,
     this.creationMode = 'standalone',
     this.anchorText,
+    this.alsoTrackAnchor = false,
     super.key,
   });
 
@@ -60,6 +61,10 @@ class IntentionStitchScreen extends ConsumerStatefulWidget {
 
   /// Free-typed anchor habit text, forwarded to the confirm step (§7.1).
   final String? anchorText;
+
+  /// Opt-in to also create a tracked habit for a free-typed anchor (§7.1),
+  /// forwarded to the confirm step.
+  final bool alsoTrackAnchor;
 
   @override
   ConsumerState<IntentionStitchScreen> createState() =>
@@ -115,6 +120,11 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
   }
 
   String _localFallbackSentence() {
+    final anchor = widget.anchorText?.trim();
+    if (widget.cues.isEmpty && anchor != null && anchor.isNotEmpty) {
+      // §7.1 — stacked with no separate cue: the anchor is the trigger.
+      return 'After I $anchor, I will ${widget.behaviorLabel.toLowerCase()}.';
+    }
     final cueText = widget.cues.map((c) => c.text).join(', ');
     return '$cueText, I will ${widget.behaviorLabel.toLowerCase()}.';
   }
@@ -122,16 +132,29 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
   Future<void> _runStitch() async {
     final lang = ref.read(localeProvider).languageCode;
     final started = DateTime.now();
+    final anchor = widget.anchorText?.trim();
 
     String? stitched;
     try {
-      stitched = await ref
-          .read(studyConfigServiceProvider)
-          .stitchIntention(
-            action: widget.behaviorLabel,
-            cues: widget.cues.map((c) => c.text).toList(),
-            language: lang,
-          );
+      // §7.1 Habit Stacking — use the purpose-built stack-merge endpoint
+      // (anchor + new behaviour -> one sentence) rather than treating the
+      // anchor as a generic cue, so the composed sentence — and the
+      // mechanism behind it — is actually different from a cue-based habit.
+      stitched = (anchor != null && anchor.isNotEmpty)
+          ? await ref
+              .read(studyConfigServiceProvider)
+              .stackMerge(
+                anchorText: anchor,
+                newBehaviorText: widget.behaviorLabel,
+                language: lang,
+              )
+          : await ref
+              .read(studyConfigServiceProvider)
+              .stitchIntention(
+                action: widget.behaviorLabel,
+                cues: widget.cues.map((c) => c.text).toList(),
+                language: lang,
+              );
     } catch (_) {
       stitched = null;
     }
@@ -164,6 +187,7 @@ class _IntentionStitchScreenState extends ConsumerState<IntentionStitchScreen>
         'stackedOn': ?widget.stackedOn,
         'creationMode': widget.creationMode,
         'anchorText': ?widget.anchorText,
+        'alsoTrackAnchor': widget.alsoTrackAnchor,
         'stitchedSentence': _sentence,
       },
     );

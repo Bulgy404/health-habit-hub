@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/entrance_fade.dart';
+import '../../widgets/skeleton.dart';
 import 'recommendation_feature_service.dart';
 import 'recommendation_models.dart';
 import 'results_screen.dart';
@@ -15,18 +17,43 @@ import 'results_screen.dart';
 // Phase descriptor
 // ---------------------------------------------------------------------------
 
-/// Number of phases the loading animation cycles through. Kept independent of
-/// the localized labels below so the cycling logic never needs `context`.
+/// Number of phase labels the rotating heading cycles through. Kept
+/// independent of the localized strings below so the cycling logic never
+/// needs `context`.
 const _phaseCount = 4;
 
-const _minPhaseDuration = Duration(seconds: 2);
+/// How long each phase label stays on screen before rotating to the next —
+/// looping indefinitely, not stopping after one pass. The old version waited
+/// a fixed 4 × 2s = 8s regardless of how long the actual recommend call
+/// took, then sat stalled on the last phase for however much longer the API
+/// needed — looking broken on a slow call and rushed on a fast one. The
+/// label rotation and the skeleton pulse below are both now driven purely by
+/// how long the request actually takes.
+const _phaseDuration = Duration(milliseconds: 2500);
+
+/// Matches the backend's `_MAX_RECOMMENDATIONS` cap (recommend.py) — the
+/// skeleton previews exactly as many cards as can actually come back.
+const _skeletonCardCount = 3;
+
+/// How long the one-time staggered build-up of the skeleton cards takes —
+/// they appear one at a time, not all at once, while the request is still
+/// in flight; once built, they just sit there pulsing for the rest of the
+/// wait.
+const _skeletonBuildDuration = Duration(milliseconds: 2200);
+
+/// Floor under the total time this screen is shown. At least
+/// [_skeletonBuildDuration] plus a short settle, so a near-instant response
+/// (e.g. a cache hit) can never cut the staggered card build-up off
+/// mid-animation — the user always sees all three cards finish appearing.
+const _minDisplayDuration = Duration(milliseconds: 2600);
 
 // ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
 
-/// Animated loading screen that cycles through four phases while the
-/// recommendation API call runs in the background.
+/// Loading screen shown while the recommendation API call runs in the
+/// background: a rotating status label above a green-tinted pulsing
+/// skeleton previewing the shape of the results screen's cards.
 class RecommendationLoadingScreen extends ConsumerStatefulWidget {
   /// The user's health goal passed from [GoalInputScreen].
   final String goal;
@@ -43,31 +70,37 @@ class _RecommendationLoadingScreenState
     extends ConsumerState<RecommendationLoadingScreen>
     with TickerProviderStateMixin {
   int _phaseIndex = 0;
-
-  // Animation controllers
-  late AnimationController _iconPulse;
-  late AnimationController _labelFade;
+  late final AnimationController _labelFade;
+  late final AnimationController _skeletonBuild;
+  Timer? _phaseTimer;
+  final _startedAt = DateTime.now();
 
   // Holds the API result (null while in-flight, error or response when done)
   RecommendationResponse? _response;
   String? _error;
-  bool _apiDone = false;
 
   @override
   void initState() {
     super.initState();
-    _iconPulse = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat(reverse: true);
     _labelFade = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
       value: 1,
     );
-
+    _skeletonBuild = AnimationController(
+      vsync: this,
+      duration: _skeletonBuildDuration,
+    )..forward();
+    _phaseTimer = Timer.periodic(_phaseDuration, (_) => _advancePhase());
     _startApiCall();
-    _runPhases();
+  }
+
+  Future<void> _advancePhase() async {
+    if (!mounted) return;
+    await _labelFade.reverse();
+    if (!mounted) return;
+    setState(() => _phaseIndex = (_phaseIndex + 1) % _phaseCount);
+    await _labelFade.forward();
   }
 
   // ---------------------------------------------------------------------------
@@ -82,9 +115,7 @@ class _RecommendationLoadingScreenState
         // failure rather than clearing the session. The session is only
         // ever cleared by an explicit user action (Settings -> Sign out).
         if (mounted) {
-          setState(
-            () => _error = AppLocalizations.of(context)!.recommendationLoadingGenericError,
-          );
+          _error = AppLocalizations.of(context)!.recommendationLoadingGenericError;
         }
         return;
       }
@@ -94,11 +125,11 @@ class _RecommendationLoadingScreenState
         goal: widget.goal,
         sessionId: DateTime.now().millisecondsSinceEpoch.toString(),
       );
-      if (mounted) setState(() => _response = response);
+      _response = response;
     } catch (e) {
-      if (mounted) setState(() => _error = _friendlyErrorMessage(e));
+      if (mounted) _error = _friendlyErrorMessage(e);
     } finally {
-      if (mounted) setState(() => _apiDone = true);
+      await _finishAndNavigate();
     }
   }
 
@@ -121,36 +152,12 @@ class _RecommendationLoadingScreenState
     return l10n.recommendationLoadingGenericError;
   }
 
-  // ---------------------------------------------------------------------------
-  // Phase cycling — each phase lasts at least _minPhaseDuration
-  // ---------------------------------------------------------------------------
-
-  Future<void> _runPhases() async {
-    for (var i = 0; i < _phaseCount; i++) {
-      if (!mounted) return;
-      final phaseStart = DateTime.now();
-
-      if (i > 0) {
-        // Fade out then in for the label transition
-        await _labelFade.reverse();
-        if (mounted) setState(() => _phaseIndex = i);
-        await _labelFade.forward();
-      }
-
-      // Wait for the minimum phase time
-      final elapsed = DateTime.now().difference(phaseStart);
-      final remaining = _minPhaseDuration - elapsed;
-      if (remaining > Duration.zero) {
-        await Future.delayed(remaining);
-      }
-    }
-
-    // All phases done — wait for API if still in-flight
-    while (!_apiDone && mounted) {
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
-
+  Future<void> _finishAndNavigate() async {
+    final elapsed = DateTime.now().difference(_startedAt);
+    final remaining = _minDisplayDuration - elapsed;
+    if (remaining > Duration.zero) await Future.delayed(remaining);
     if (!mounted) return;
+    _phaseTimer?.cancel();
     _navigate();
   }
 
@@ -180,8 +187,9 @@ class _RecommendationLoadingScreenState
 
   @override
   void dispose() {
-    _iconPulse.dispose();
+    _phaseTimer?.cancel();
     _labelFade.dispose();
+    _skeletonBuild.dispose();
     super.dispose();
   }
 
@@ -189,52 +197,46 @@ class _RecommendationLoadingScreenState
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final phaseLabels = [
-      l10n.recommendationLoadingPhaseExperts,
-      l10n.recommendationLoadingPhaseHabitsDb,
-      l10n.recommendationLoadingPhasePapers,
+      l10n.recommendationLoadingPhaseCommunity,
+      l10n.recommendationLoadingPhaseHistory,
+      l10n.recommendationLoadingPhaseResearch,
       l10n.recommendationLoadingPhaseGenerating,
     ];
-    final phaseLabel = phaseLabels[_phaseIndex];
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Phase-specific widget
-                SizedBox(
-                  height: 120,
-                  child: _PhaseWidget(
-                    phaseIndex: _phaseIndex,
-                    pulseController: _iconPulse,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                // Phase label
-                FadeTransition(
-                  opacity: _labelFade,
-                  child: Text(
-                    phaseLabel,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Progress dots
-                _PhaseDots(
-                  total: _phaseCount,
-                  current: _phaseIndex,
-                  color: colorScheme.primary,
-                ),
-              ],
+        child: Column(
+          children: [
+            const SizedBox(height: 32),
+            FadeTransition(
+              opacity: _labelFade,
+              child: Text(
+                phaseLabels[_phaseIndex],
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
             ),
-          ),
+            const SizedBox(height: 24),
+            Expanded(
+              child: ListView(
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  for (var i = 0; i < _skeletonCardCount; i++)
+                    EntranceFade(
+                      animation: _skeletonBuild,
+                      interval: Interval(
+                        (i * 0.32).clamp(0.0, 1.0),
+                        (i * 0.32 + 0.5).clamp(0.0, 1.0),
+                        curve: Curves.easeOut,
+                      ),
+                      child: const _RecommendationCardSkeleton(),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -242,233 +244,46 @@ class _RecommendationLoadingScreenState
 }
 
 // ---------------------------------------------------------------------------
-// Phase widget — renders different animation per phase
+// Skeleton preview of the results screen's recommendation cards
 // ---------------------------------------------------------------------------
 
-class _PhaseWidget extends StatelessWidget {
-  final int phaseIndex;
-  final AnimationController pulseController;
-
-  const _PhaseWidget({required this.phaseIndex, required this.pulseController});
+/// Mirrors `_RecommendationCard` in results_screen.dart (title, body lines,
+/// rationale, action button) so the loading state previews the shape of
+/// what's about to appear, tinted green via [SkeletonBox]'s `color`.
+class _RecommendationCardSkeleton extends StatelessWidget {
+  const _RecommendationCardSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    final color = Theme.of(context).colorScheme.primary;
-    switch (phaseIndex) {
-      case 0:
-        // Book icon — gentle pulse
-        return AnimatedBuilder(
-          animation: pulseController,
-          builder: (context, _) => Transform.scale(
-            scale: 1.0 + pulseController.value * 0.12,
-            child: Icon(Icons.menu_book, size: 80, color: color),
-          ),
-        );
-      case 1:
-        // Force-directed graph (simple animated nodes)
-        return _ForceDirectedGraph(controller: pulseController, color: color);
-      case 2:
-        // Document with scanning line
-        return _ScanningDocument(controller: pulseController, color: color);
-      case 3:
-        // Pulsing sparkle / brain icon
-        return AnimatedBuilder(
-          animation: pulseController,
-          builder: (context, _) => Transform.scale(
-            scale: 1.0 + pulseController.value * 0.18,
-            child: Icon(Icons.auto_awesome, size: 80, color: color),
-          ),
-        );
-      default:
-        return Icon(Icons.hourglass_empty, size: 80, color: color);
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Force-directed graph animation (phase 2)
-// ---------------------------------------------------------------------------
-
-class _ForceDirectedGraph extends StatelessWidget {
-  final AnimationController controller;
-  final Color color;
-
-  const _ForceDirectedGraph({required this.controller, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        return CustomPaint(
-          size: const Size(120, 120),
-          painter: _GraphPainter(animValue: controller.value, color: color),
-        );
-      },
-    );
-  }
-}
-
-class _GraphPainter extends CustomPainter {
-  final double animValue;
-  final Color color;
-
-  _GraphPainter({required this.animValue, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final r = math.min(cx, cy) * 0.8;
-
-    // 7 nodes: 1 center + 6 around
-    final nodes = <Offset>[
-      Offset(cx, cy),
-      ...List.generate(6, (i) {
-        final angle = (i / 6) * 2 * math.pi + animValue * 0.4;
-        return Offset(cx + r * math.cos(angle), cy + r * math.sin(angle));
-      }),
-    ];
-
-    final linePaint = Paint()
-      ..color = color.withAlpha((60 + (animValue * 40).round()))
-      ..strokeWidth = 1.2
-      ..style = PaintingStyle.stroke;
-    final nodePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    // Draw edges from center to all outer nodes and between adjacent outer nodes
-    for (var i = 1; i < nodes.length; i++) {
-      canvas.drawLine(nodes[0], nodes[i], linePaint);
-    }
-    for (var i = 1; i < nodes.length; i++) {
-      final j = i % (nodes.length - 1) + 1;
-      canvas.drawLine(nodes[i], nodes[j], linePaint);
-    }
-
-    // Draw nodes
-    for (var i = 0; i < nodes.length; i++) {
-      final radius = i == 0 ? 6.0 : 4.0 + animValue * 2;
-      canvas.drawCircle(nodes[i], radius, nodePaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_GraphPainter old) =>
-      old.animValue != animValue || old.color != color;
-}
-
-// ---------------------------------------------------------------------------
-// Scanning document animation (phase 3)
-// ---------------------------------------------------------------------------
-
-class _ScanningDocument extends StatelessWidget {
-  final AnimationController controller;
-  final Color color;
-
-  const _ScanningDocument({required this.controller, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        return CustomPaint(
-          size: const Size(90, 110),
-          painter: _DocumentPainter(
-            scanProgress: controller.value,
-            color: color,
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _DocumentPainter extends CustomPainter {
-  final double scanProgress;
-  final Color color;
-
-  _DocumentPainter({required this.scanProgress, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final docPaint = Paint()
-      ..color = color.withAlpha(30)
-      ..style = PaintingStyle.fill;
-    final outlinePaint = Paint()
-      ..color = color
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-    final linePaint = Paint()
-      ..color = color.withAlpha(80)
-      ..strokeWidth = 1.5;
-    final scanPaint = Paint()
-      ..color = color.withAlpha(200)
-      ..strokeWidth = 2.5;
-
-    final rect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      const Radius.circular(4),
-    );
-
-    canvas.drawRRect(rect, docPaint);
-    canvas.drawRRect(rect, outlinePaint);
-
-    // Text lines
-    final lineCount = 5;
-    for (var i = 0; i < lineCount; i++) {
-      final y = 20.0 + i * 16;
-      final lineWidth = i == lineCount - 1
-          ? size.width * 0.55
-          : size.width - 20;
-      canvas.drawLine(Offset(10, y), Offset(lineWidth, y), linePaint);
-    }
-
-    // Scanning line
-    final scanY = scanProgress * size.height;
-    canvas.drawLine(Offset(0, scanY), Offset(size.width, scanY), scanPaint);
-  }
-
-  @override
-  bool shouldRepaint(_DocumentPainter old) =>
-      old.scanProgress != scanProgress || old.color != color;
-}
-
-// ---------------------------------------------------------------------------
-// Progress dots
-// ---------------------------------------------------------------------------
-
-class _PhaseDots extends StatelessWidget {
-  final int total;
-  final int current;
-  final Color color;
-
-  const _PhaseDots({
-    required this.total,
-    required this.current,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(total, (i) {
-        final active = i == current;
-        final done = i < current;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: active ? 14 : 8,
-          height: 8,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(4),
-            color: done || active ? color : color.withAlpha(60),
-          ),
-        );
-      }),
+    final green = context.appColors.primary;
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SkeletonBox(width: 180, height: 18, color: green),
+            const SizedBox(height: 12),
+            SkeletonBox(width: double.infinity, height: 13, color: green),
+            const SizedBox(height: 6),
+            SkeletonBox(width: double.infinity, height: 13, color: green),
+            const SizedBox(height: 6),
+            SkeletonBox(width: 220, height: 13, color: green),
+            const SizedBox(height: 16),
+            SkeletonBox(width: 90, height: 11, color: green),
+            const SizedBox(height: 6),
+            SkeletonBox(width: double.infinity, height: 12, color: green),
+            const SizedBox(height: 16),
+            SkeletonBox(
+              width: double.infinity,
+              height: 40,
+              borderRadius: 100,
+              color: green,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

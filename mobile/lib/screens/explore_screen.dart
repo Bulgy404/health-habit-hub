@@ -13,6 +13,7 @@ import '../providers/locale_provider.dart';
 import '../providers/show_in_graph_provider.dart';
 import '../services/habit_service.dart';
 import '../widgets/bubble_graph_widget.dart';
+import '../widgets/highlighted_text.dart';
 import 'stats_screen.dart';
 
 /// Converts a [HabitBubble] from the graph model to a [HabitNode] used by
@@ -28,6 +29,7 @@ HabitNode _toHabitNode(HabitBubble bubble, DimensionBubble dimension) {
     language: bubble.language,
     hasTranslation:
         bubble.originalText.isNotEmpty && bubble.originalText != bubble.label,
+    contextText: bubble.contextText,
   );
 }
 
@@ -554,6 +556,7 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
         annotationCounts: newCounts,
         language: _node.language,
         hasTranslation: _node.hasTranslation,
+        contextText: _node.contextText,
       );
       widget.onNodeUpdated(updated);
       if (mounted) setState(() => _node = updated);
@@ -630,7 +633,11 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
             ),
           ),
 
-          Text(_node.name, style: tt.titleLarge?.copyWith(height: 1.35)),
+          HighlightedText(
+            text: _node.name,
+            highlight: _node.contextText,
+            style: tt.titleLarge?.copyWith(height: 1.35),
+          ),
 
           if (_node.hasTranslation &&
               _node.originalText.isNotEmpty &&
@@ -642,8 +649,9 @@ class _NodeDetailSheetState extends ConsumerState<_NodeDetailSheet> {
                 Icon(Icons.translate, size: 14, color: cs.outline),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    'Original: ${_node.originalText}',
+                  child: HighlightedText(
+                    text: 'Original: ${_node.originalText}',
+                    highlight: _node.contextText,
                     style: tt.bodySmall?.copyWith(color: cs.outline),
                   ),
                 ),

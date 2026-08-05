@@ -1,0 +1,77 @@
+<svg width="1180" height="520" viewBox="0 0 1180 520" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .bg { fill: #FFFFFF; }
+      .box-label { font-size: 13.5px; font-weight: 700; fill: #1E2422; text-anchor: middle; }
+      .box-sub { font-size: 11px; fill: #6B6B67; text-anchor: middle; }
+      .lane-title { font-size: 13px; font-weight: 700; fill: #6B6B67; text-anchor: middle; letter-spacing: 0.3px; }
+    </style>
+    <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#9A9A94"/>
+    </marker>
+  </defs>
+  <rect width="1180" height="520" class="bg"/>
+
+  <text x="30" y="34" font-size="16" font-weight="800" fill="#1E2422">Questionnaire delivery: scope decides the anchor</text>
+  <text x="30" y="54" font-size="12" fill="#6B6B67">Every questionnaire definition has a `scope`, deciding what its cadence anchors to — not a per-assignment flag.</text>
+
+  <!-- Lane dividers -->
+  <line x1="30" y1="80" x2="1150" y2="80" stroke="#E5E4DC" stroke-width="1"/>
+  <line x1="590" y1="90" x2="590" y2="330" stroke="#E5E4DC" stroke-width="1" stroke-dasharray="4 4"/>
+
+  <text x="290" y="105" class="lane-title">scope: 'study' (default)</text>
+  <text x="880" y="105" class="lane-title">scope: 'habit'</text>
+
+  <!-- connectors -->
+  <g stroke="#9A9A94" stroke-width="1.6" fill="none" marker-end="url(#arrow2)">
+    <path d="M290 165 L290 205"/>
+    <path d="M290 265 L290 305"/>
+    <path d="M880 165 L880 205"/>
+    <path d="M880 265 L880 305"/>
+    <!-- SRHI lane, separate -->
+    <path d="M290 425 L580 425"/>
+  </g>
+
+  <!-- study lane -->
+  <g transform="translate(160,120)">
+    <rect width="260" height="46" rx="10" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+    <text x="130" y="20" class="box-label">Participant enrolls</text>
+    <text x="130" y="36" class="box-sub">study/group enrollment event</text>
+  </g>
+  <g transform="translate(160,220)">
+    <rect width="260" height="46" rx="10" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+    <text x="130" y="20" class="box-label">generateWindowsForUser</text>
+    <text x="130" y="36" class="box-sub">back-filled on assignment changes too</text>
+  </g>
+  <g transform="translate(160,320)">
+    <rect width="260" height="52" rx="10" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+    <text x="130" y="22" class="box-label">Windows anchor to enrollment</text>
+    <text x="130" y="38" class="box-sub">e.g. SLIQ, RAND-36, general study forms</text>
+  </g>
+
+  <!-- habit lane -->
+  <g transform="translate(750,120)">
+    <rect width="260" height="46" rx="10" fill="#EDE7F6" stroke="#7C4DFF" stroke-width="2"/>
+    <text x="130" y="20" class="box-label">Habit created</text>
+    <text x="130" y="36" class="box-sub">POST /habits/intentions</text>
+  </g>
+  <g transform="translate(750,220)">
+    <rect width="260" height="46" rx="10" fill="#EDE7F6" stroke="#7C4DFF" stroke-width="2"/>
+    <text x="130" y="20" class="box-label">generateHabitCreationWindows</text>
+    <text x="130" y="36" class="box-sub">never back-filled for pre-existing habits</text>
+  </g>
+  <g transform="translate(750,320)">
+    <rect width="260" height="52" rx="10" fill="#EDE7F6" stroke="#7C4DFF" stroke-width="2"/>
+    <text x="130" y="22" class="box-label">Windows anchor to habit creation (+~5s)</text>
+    <text x="130" y="38" class="box-sub">invisible until a relevant habit exists</text>
+  </g>
+
+  <!-- SRHI, separate system -->
+  <g transform="translate(30,400)">
+    <rect width="1120" height="90" rx="12" fill="#FFF8E1" stroke="#FFA000" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="560" y="26" font-size="13" font-weight="700" fill="#1E2422" text-anchor="middle">SRHI (weekly habit-strength check-in) is NOT part of this system</text>
+    <text x="560" y="46" class="box-sub">Every POST /habits/intentions call fires srhiService.generateWindows directly — no questionnaires</text>
+    <text x="560" y="62" class="box-sub">library entry, no assignment row, no admin toggle. 4 weekly srhi_responses rows, week 1 = creation day.</text>
+    <text x="560" y="78" class="box-sub">Its own dedicated slider UI in My Habits — not the generic questionnaire renderer used by the two lanes above.</text>
+  </g>
+</svg>

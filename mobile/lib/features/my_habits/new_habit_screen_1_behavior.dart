@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
+import '../../theme/app_colors.dart';
 import 'habit_onboarding_prefs.dart';
 import 'habit_onboarding_widgets.dart';
 import 'my_habits_models.dart';
@@ -103,20 +104,25 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
                   ),
                 ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                child: _HabitTypeSelector(
-                  value: _habitType,
-                  onChanged: (t) => setState(() => _habitType = t),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+                child: Center(
+                  child: Text(
+                    l10n.pickBehaviorTitle,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-                child: Text(
-                  l10n.pickBehaviorTitle,
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w700),
+                child: Center(
+                  child: _HabitTypeSelector(
+                    value: _habitType,
+                    onChanged: (t) => setState(() => _habitType = t),
+                  ),
                 ),
               ),
               Expanded(
@@ -133,8 +139,11 @@ class _PickBehaviorScreenState extends ConsumerState<PickBehaviorScreen> {
   }
 }
 
-/// §7.4 Habit Distinction — prominent build/quit choice. Rendered as a pair of
-/// segmented buttons (not a buried field) so the distinction is deliberate.
+/// §7.4 Habit Distinction — prominent build/quit choice. Rendered as a pair
+/// of tappable cards using the same green/red border accent as the habit
+/// list cards (see `_HabitCard` in my_habits_screen.dart), rather than a
+/// stock Material [SegmentedButton], to match this app's card-based
+/// selection idiom (cf. the donate form's option picker).
 class _HabitTypeSelector extends StatelessWidget {
   const _HabitTypeSelector({required this.value, required this.onChanged});
 
@@ -144,31 +153,95 @@ class _HabitTypeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-    return SegmentedButton<HabitType>(
-      segments: [
-        ButtonSegment(
-          value: HabitType.build,
-          icon: const Icon(Icons.add_circle_outline),
-          label: Text(l10n.habitTypeBuild),
+    return Row(
+      children: [
+        Expanded(
+          child: _HabitTypeCard(
+            icon: Icons.add_circle_outline,
+            label: l10n.habitTypeBuild,
+            color: Colors.green.shade500,
+            selected: value == HabitType.build,
+            onTap: () => onChanged(HabitType.build),
+          ),
         ),
-        ButtonSegment(
-          value: HabitType.quit,
-          icon: const Icon(Icons.do_not_disturb_alt),
-          label: Text(l10n.habitTypeQuit),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _HabitTypeCard(
+            icon: Icons.do_not_disturb_alt,
+            label: l10n.habitTypeQuit,
+            color: Colors.red.shade400,
+            selected: value == HabitType.quit,
+            onTap: () => onChanged(HabitType.quit),
+          ),
         ),
       ],
-      selected: {value},
-      onSelectionChanged: (s) => onChanged(s.first),
-      style: ButtonStyle(
-        // Tint the selection to match the card colours used elsewhere
-        // (green = build, red = quit) for a consistent visual language.
-        backgroundColor: WidgetStateProperty.resolveWith((states) {
-          if (!states.contains(WidgetState.selected)) return null;
-          return value == HabitType.build
-              ? scheme.primaryContainer
-              : scheme.errorContainer;
-        }),
+    );
+  }
+}
+
+/// A single build/quit option card. Unselected uses the app's neutral card
+/// border; selected tints the fill and border in [color], reusing the same
+/// light/dark tint recipe as the "logged today" habit card background
+/// (`Colors.X.shade50` in light mode, `Colors.X.shade900.withAlpha(90)` in
+/// dark) so it holds up in both themes.
+class _HabitTypeCard extends StatelessWidget {
+  const _HabitTypeCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fill = !selected
+        ? Colors.transparent
+        : isDark
+            ? color.withAlpha(40)
+            : color.withAlpha(25);
+    final borderColor = selected ? color : context.appColors.border;
+    final contentColor =
+        selected ? color : Theme.of(context).textTheme.bodyMedium?.color;
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor, width: selected ? 1.5 : 1),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: contentColor, size: 22),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: contentColor,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

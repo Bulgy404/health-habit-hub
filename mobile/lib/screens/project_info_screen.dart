@@ -1,7 +1,7 @@
-/// "About the project" info page — explains how shared habits are used, what
-/// cues and implementation intentions are, how recommendations and adaptive
-/// reminders work, and what SRHI measures. Linked from the "Why share?" card
-/// on the donate screen via a "Read more" tap target.
+/// "About the project" info page — kept deliberately short: how a shared
+/// habit is used, and how recommendations are generated (with a data-flow
+/// diagram). Linked from the donate screen's "Why share?" card and the
+/// goal-input screen's "How do recommendations work?" card.
 ///
 /// Copy is provided inline (en/de/ja), the same set of languages used by
 /// habit_onboarding_widgets.dart for large explanatory blocks, rather than
@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_colors.dart';
+import '../widgets/entrance_fade.dart';
 
 const _kProjectGithubUrl =
     'https://github.com/Bulgy404/health-habit-hub';
@@ -32,10 +33,20 @@ class _Copy {
 }
 
 class _Section {
-  const _Section({required this.icon, required this.title, required this.body});
+  const _Section({
+    required this.icon,
+    required this.title,
+    required this.body,
+    this.showFlowDiagramAfter = false,
+  });
   final IconData icon;
   final _Copy title;
   final _Copy body;
+
+  /// Renders [_RecommenderFlowDiagram] directly beneath this section, so the
+  /// step-by-step visual sits right next to the text explaining it instead
+  /// of floating at the end of the page after unrelated sections.
+  final bool showFlowDiagramAfter;
 }
 
 const _intro = _Copy(
@@ -96,67 +107,7 @@ const _sections = [
     ),
   ),
   _Section(
-    icon: Icons.bolt,
-    title: _Copy(
-      en: "What's a cue?",
-      de: "Was ist ein Auslöser?",
-      ja: "きっかけとは？",
-    ),
-    body: _Copy(
-      en:
-          'A cue is the moment or situation that triggers a habit, like '
-          '"after my morning coffee" or "when I sit down at my desk". '
-          "Pairing a new habit with something you already do every day, an "
-          "established technique called an implementation intention, makes "
-          "it far more likely to become automatic.",
-      de:
-          "Ein Auslöser ist der Moment oder die Situation, die eine "
-          'Gewohnheit anstößt, zum Beispiel „nach meinem Morgenkaffee" oder '
-          '„wenn ich mich an meinen Schreibtisch setze". Eine neue '
-          "Gewohnheit mit etwas zu verknüpfen, das du ohnehin täglich tust, "
-          "eine etablierte Technik namens Wenn-Dann-Plan, macht es deutlich "
-          "wahrscheinlicher, dass sie automatisch wird.",
-      ja:
-          "きっかけとは、習慣を引き起こす瞬間や状況のことです。例えば「朝の"
-          "コーヒーを飲んだ後」や「デスクに座ったとき」などです。新しい習慣"
-          "をすでに毎日行っていることと結びつける、実行意図と呼ばれる確立さ"
-          "れた手法により、習慣が自動化される可能性が大きく高まります。",
-    ),
-  ),
-  _Section(
-    icon: Icons.public,
-    title: _Copy(
-      en: "Why this matters",
-      de: "Warum das wichtig ist",
-      ja: "なぜ重要なのか",
-    ),
-    body: _Copy(
-      en:
-          "Most health advice is generic. The Health Habit Hub study's "
-          "goal is the opposite: recommendations built from real examples "
-          "of how real people actually build habits, tested and refined "
-          "with the community that uses this app. The more habits shared, "
-          "the better those recommendations get for everyone, including "
-          "future participants.",
-      de:
-          "Die meisten Gesundheitstipps sind allgemein gehalten. Das Ziel "
-          "der Health Habit Hub-Studie ist das Gegenteil: Empfehlungen, "
-          "die auf echten Beispielen basieren, wie Menschen tatsächlich "
-          "Gewohnheiten aufbauen, getestet und verfeinert mit der "
-          "Community, die diese App nutzt. Je mehr Gewohnheiten geteilt "
-          "werden, desto besser werden diese Empfehlungen für alle, auch "
-          "für zukünftige Teilnehmende.",
-      ja:
-          "多くの健康アドバイスは一般的なものです。Health Habit Hub研究の"
-          "目的はその逆です。実際に人々がどのように習慣を築いているかとい"
-          "う実例に基づき、このアプリを使うコミュニティとともにテストと改"
-          "善を重ねた推奨を提供することです。共有される習慣が増えるほど、"
-          "これらの推奨は将来の参加者を含むすべての人にとってより良いもの"
-          "になります。",
-    ),
-  ),
-  _Section(
-    icon: Icons.lightbulb,
+    icon: Icons.lightbulb_outline,
     title: _Copy(
       en: "How recommendations work",
       de: "Wie Empfehlungen entstehen",
@@ -164,97 +115,109 @@ const _sections = [
     ),
     body: _Copy(
       en:
-          "When you ask for a recommendation, the system searches the "
-          "shared-habit dataset for people in similar situations, then a "
-          "language model turns the best matches into a suggestion "
-          "tailored to your goal.",
+          "The system compares your goal with anonymized habits from other "
+          "participants and behaviour-change research, then an AI model "
+          "writes a suggestion using your goal, your own habits, and your "
+          "questionnaire answers.",
       de:
-          "Wenn du eine Empfehlung anfragst, durchsucht das System den "
-          "Datensatz geteilter Gewohnheiten nach Menschen in ähnlichen "
-          "Situationen. Ein Sprachmodell verwandelt die besten Treffer dann "
-          "in einen auf dein Ziel zugeschnittenen Vorschlag.",
+          "Das System vergleicht dein Ziel mit anonymisierten Gewohnheiten "
+          "anderer Teilnehmender und Verhaltensänderungsforschung. Ein "
+          "KI-Modell erstellt daraus einen Vorschlag – basierend auf deinem "
+          "Ziel, deinen eigenen Gewohnheiten und deinen "
+          "Fragebogenantworten.",
       ja:
-          "推奨をリクエストすると、システムは似た状況にある人々を共有習慣"
-          "データセットから検索します。そして言語モデルが最も近い事例を、あ"
-          "なたの目標に合わせた提案へと変換します。",
+          "システムはあなたの目標を、他の参加者の匿名化された習慣や行動変容"
+          "研究と照合します。そしてAIモデルが、あなたの目標・自分の習慣・"
+          "アンケートの回答をもとに提案を作成します。",
+    ),
+    showFlowDiagramAfter: true,
+  ),
+];
+
+/// One data source feeding the recommender, shown as a chip in
+/// [_RecommenderFlowDiagram] above the central AI node.
+class _DataSource {
+  final IconData icon;
+  final _Copy label;
+
+  /// A short, one-line explanation shown in the legend below the diagram.
+  final _Copy explanation;
+
+  const _DataSource({
+    required this.icon,
+    required this.label,
+    required this.explanation,
+  });
+}
+
+const _dataSources = [
+  _DataSource(
+    icon: Icons.flag_outlined,
+    label: _Copy(en: 'Your goal', de: 'Dein Ziel', ja: 'あなたの目標'),
+    explanation: _Copy(
+      en: 'what you just typed',
+      de: 'was du gerade eingegeben hast',
+      ja: 'たった今入力した内容',
     ),
   ),
-  _Section(
-    icon: Icons.notifications_active,
-    title: _Copy(
-      en: "Adaptive reminders",
-      de: "Anpassungsfähige Erinnerungen",
-      ja: "適応型リマインダー",
+  _DataSource(
+    icon: Icons.history,
+    label: _Copy(
+      en: 'Your habits & answers',
+      de: 'Deine Gewohnheiten & Antworten',
+      ja: 'あなたの習慣と回答',
     ),
-    body: _Copy(
-      en:
-          "Reminders for a new habit start daily. As you log it "
-          "consistently and your SRHI score rises (meaning the habit is "
-          "becoming automatic), reminders taper off on their own. You're "
-          "always in control from the habit's settings.",
-      de:
-          "Erinnerungen für eine neue Gewohnheit beginnen täglich. Wenn du "
-          "sie konsequent protokollierst und dein SRHI-Wert steigt (das "
-          "heißt, die Gewohnheit wird automatischer), lassen die "
-          "Erinnerungen von selbst nach. Du behältst über die Einstellungen "
-          "der Gewohnheit jederzeit die Kontrolle.",
-      ja:
-          "新しい習慣のリマインダーは毎日届きます。一貫して記録を続けSRHIス"
-          "コアが上がる（つまり習慣がより自動的になる）につれて、リマイン"
-          "ダーは自然と少なくなっていきます。習慣の設定からいつでも自分でコ"
-          "ントロールできます。",
+    explanation: _Copy(
+      en: 'habits you track and your questionnaire answers',
+      de: 'deine verfolgten Gewohnheiten und Fragebogenantworten',
+      ja: '記録している習慣とアンケートの回答',
     ),
   ),
-  _Section(
-    icon: Icons.psychology,
-    title: _Copy(
-      en: "What's SRHI?",
-      de: "Was ist SRHI?",
-      ja: "SRHIとは？",
+  _DataSource(
+    icon: Icons.groups_outlined,
+    label: _Copy(
+      en: 'Community habits',
+      de: 'Community-Gewohnheiten',
+      ja: 'コミュニティの習慣',
     ),
-    body: _Copy(
-      en:
-          "The Self-Report Habit Index (SRHI) is a short weekly check-in "
-          "that measures how automatic a habit feels, on a 1–7 scale. "
-          "Tracking it over time shows your habit-strength trajectory, and "
-          "the app uses it to know when to ease off reminders.",
-      de:
-          "Der Self-Report Habit Index (SRHI) ist ein kurzer wöchentlicher "
-          "Check-in, der misst, wie automatisch sich eine Gewohnheit "
-          "anfühlt, auf einer Skala von 1 bis 7. Er zeigt im Zeitverlauf, "
-          "wie stark deine Gewohnheit geworden ist, und die App nutzt ihn, "
-          "um zu wissen, wann Erinnerungen reduziert werden können.",
-      ja:
-          "自己報告習慣指標（SRHI）は、習慣がどれくらい自動的に感じられるか"
-          "を1〜7の尺度で測定する、短い週次チェックインです。時間の経過に伴"
-          "う習慣の強さの推移を示し、アプリはこれを使ってリマインダーを減ら"
-          "すタイミングを判断します。",
+    explanation: _Copy(
+      en: 'anonymized habits shared by other participants',
+      de: 'anonymisierte Gewohnheiten anderer Teilnehmender',
+      ja: '他の参加者が共有した匿名の習慣',
+    ),
+  ),
+  _DataSource(
+    icon: Icons.menu_book_outlined,
+    label: _Copy(en: 'Research', de: 'Forschung', ja: '研究'),
+    explanation: _Copy(
+      en: 'established behaviour-change literature',
+      de: 'etablierte Verhaltensänderungsforschung',
+      ja: '確立された行動変容研究',
     ),
   ),
 ];
 
-const _flowSteps = [
-  _Copy(en: 'Your goal', de: 'Dein Ziel', ja: 'あなたの目標'),
-  _Copy(
-    en: 'Similar shared habits',
-    de: 'Ähnliche geteilte Gewohnheiten',
-    ja: '似た共有習慣',
-  ),
-  _Copy(
-    en: 'Behaviour-change technique',
-    de: 'Verhaltensänderungstechnik',
-    ja: '行動変容技法',
-  ),
-  _Copy(
-    en: 'Personalized suggestion',
-    de: 'Personalisierter Vorschlag',
-    ja: 'パーソナライズされた提案',
-  ),
-];
+const _aiRecommenderLabel = _Copy(
+  en: 'AI Recommender',
+  de: 'KI-Empfehlungssystem',
+  ja: 'AIレコメンダー',
+);
+
+const _outputSuggestionLabel = _Copy(
+  en: 'Personalized suggestion',
+  de: 'Personalisierter Vorschlag',
+  ja: 'パーソナライズされた提案',
+);
+
+const _flowDiagramHeading = _Copy(
+  en: 'Where your recommendation comes from:',
+  de: 'Woher deine Empfehlung kommt:',
+  ja: '推奨の情報源：',
+);
 
 const _pageTitle = _Copy(
-  en: 'About Health Habit Hub',
-  de: 'Über Health Habit Hub',
+  en: 'About the Health Habit Hub',
+  de: 'Über das Health Habit Hub',
   ja: 'Health Habit Hubについて',
 );
 
@@ -303,10 +266,12 @@ class ProjectInfoScreen extends StatelessWidget {
           const SizedBox(height: 24),
           for (final section in _sections) ...[
             _InfoSection(section: section, lang: lang),
+            if (section.showFlowDiagramAfter) ...[
+              const SizedBox(height: 16),
+              _RecommenderFlowDiagram(lang: lang),
+            ],
             const SizedBox(height: 24),
           ],
-          _RecommenderFlowDiagram(lang: lang),
-          const SizedBox(height: 32),
           Center(
             child: Column(
               children: [
@@ -368,11 +333,52 @@ class _InfoSection extends StatelessWidget {
   }
 }
 
-/// Small step-by-step visualization of the recommender pipeline: goal in,
-/// personalized suggestion out.
-class _RecommenderFlowDiagram extends StatelessWidget {
+/// Animated data-flow diagram: the four inputs the recommender actually
+/// reads (see docs/architecture.md § M3 Recommendation Pipeline, simplified
+/// for a participant audience) converging into one AI step, producing one
+/// suggestion. Entrance is a staggered fade/slide per source chip; once
+/// settled, small dots continuously travel down each connector toward the
+/// AI node, which pulses gently — a lightweight, deliberately subtle way to
+/// read as "your data flows in, continuously," not a static chart.
+class _RecommenderFlowDiagram extends StatefulWidget {
   const _RecommenderFlowDiagram({required this.lang});
   final String lang;
+
+  @override
+  State<_RecommenderFlowDiagram> createState() =>
+      _RecommenderFlowDiagramState();
+}
+
+class _RecommenderFlowDiagramState extends State<_RecommenderFlowDiagram>
+    with TickerProviderStateMixin {
+  late final AnimationController _entrance;
+  late final AnimationController _flow;
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _entrance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..forward();
+    _flow = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _entrance.dispose();
+    _flow.dispose();
+    _pulse.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -383,45 +389,350 @@ class _RecommenderFlowDiagram extends StatelessWidget {
         color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        alignment: WrapAlignment.center,
-        spacing: 6,
-        runSpacing: 12,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (var i = 0; i < _flowSteps.length; i++) ...[
-            if (i > 0)
-              Icon(
-                Icons.arrow_forward,
-                size: 16,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            _FlowChip(label: _flowSteps[i].forLocale(lang)),
-          ],
+          Text(
+            _flowDiagramHeading.forLocale(widget.lang),
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          // Every source sits in its own equal-width column, and
+          // _ConvergingConnectorPainter computes each column's center-x with
+          // the exact same "width * (i + 0.5) / count" formula the Row below
+          // uses implicitly via Expanded — so the lines drawn are guaranteed
+          // to start exactly under each source, not just approximately.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < _dataSources.length; i++)
+                Expanded(
+                  child: EntranceFade(
+                    animation: _entrance,
+                    interval: Interval(
+                      (i * 0.15).clamp(0.0, 1.0),
+                      (i * 0.15 + 0.6).clamp(0.0, 1.0),
+                      curve: Curves.easeOut,
+                    ),
+                    child: _SourceNode(
+                      icon: _dataSources[i].icon,
+                      label: _dataSources[i].label.forLocale(widget.lang),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          SizedBox(
+            height: 40,
+            child: _ConvergingConnector(
+              animation: _flow,
+              sourceCount: _dataSources.length,
+            ),
+          ),
+          Center(
+            child: _PulsingNode(
+              pulse: _pulse,
+              label: _aiRecommenderLabel.forLocale(widget.lang),
+            ),
+          ),
+          SizedBox(height: 40, child: _FlowConnector(animation: _flow)),
+          Center(
+            child: _OutputChip(
+              label: _outputSuggestionLabel.forLocale(widget.lang),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Divider(color: colorScheme.outlineVariant, height: 1),
+          const SizedBox(height: 12),
+          _InputLegend(lang: widget.lang),
         ],
       ),
     );
   }
 }
 
-class _FlowChip extends StatelessWidget {
-  const _FlowChip({required this.label});
+/// A short vertical connector with 3 dots continuously travelling downward,
+/// looping — "data flowing in," not a one-off transition.
+class _FlowConnector extends StatelessWidget {
+  const _FlowConnector({required this.animation});
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.appColors.primary;
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) => CustomPaint(
+        size: const Size(double.infinity, 48),
+        painter: _FlowConnectorPainter(t: animation.value, color: color),
+      ),
+    );
+  }
+}
+
+class _FlowConnectorPainter extends CustomPainter {
+  _FlowConnectorPainter({required this.t, required this.color});
+  final double t;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final linePaint = Paint()
+      ..color = color.withAlpha(60)
+      ..strokeWidth = 2;
+    canvas.drawLine(Offset(cx, 0), Offset(cx, size.height), linePaint);
+
+    final dotPaint = Paint()..color = color;
+    for (final phase in const [0.0, 0.34, 0.68]) {
+      final dt = (t + phase) % 1.0;
+      canvas.drawCircle(Offset(cx, size.height * dt), 3.5, dotPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FlowConnectorPainter oldDelegate) =>
+      oldDelegate.t != t;
+}
+
+/// Draws one vertical drop per source (from directly under each
+/// [_SourceNode] down to a shared horizontal bus), the bus itself, and one
+/// final drop from the bus's center into the AI node — so every source
+/// visibly links into the node via an unbroken line, not just the one
+/// nearest the center. An animated dot per source travels down its drop and
+/// along the bus toward the center, in lockstep, so the "all four feed in"
+/// reading holds even without pausing on the static lines.
+class _ConvergingConnector extends StatelessWidget {
+  const _ConvergingConnector({required this.animation, required this.sourceCount});
+  final Animation<double> animation;
+  final int sourceCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.appColors.primary;
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) => CustomPaint(
+        size: const Size(double.infinity, 40),
+        painter: _ConvergingConnectorPainter(
+          t: animation.value,
+          color: color,
+          sourceCount: sourceCount,
+        ),
+      ),
+    );
+  }
+}
+
+class _ConvergingConnectorPainter extends CustomPainter {
+  _ConvergingConnectorPainter({
+    required this.t,
+    required this.color,
+    required this.sourceCount,
+  });
+  final double t;
+  final Color color;
+  final int sourceCount;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final busY = size.height * 0.5;
+    final centerX = size.width / 2;
+    final linePaint = Paint()
+      ..color = color.withAlpha(60)
+      ..strokeWidth = 2;
+    final dotPaint = Paint()..color = color;
+
+    // Same "column center" formula the Row of Expanded source nodes uses
+    // implicitly, so each line starts exactly under its source.
+    final xs = [
+      for (var i = 0; i < sourceCount; i++) size.width * (i + 0.5) / sourceCount,
+    ];
+
+    for (final x in xs) {
+      canvas.drawLine(Offset(x, 0), Offset(x, busY), linePaint);
+    }
+    canvas.drawLine(Offset(xs.first, busY), Offset(xs.last, busY), linePaint);
+    canvas.drawLine(Offset(centerX, busY), Offset(centerX, size.height), linePaint);
+
+    for (final x in xs) {
+      if (t < 0.5) {
+        final localT = t / 0.5;
+        canvas.drawCircle(Offset(x, busY * localT), 3.2, dotPaint);
+      } else {
+        final localT = (t - 0.5) / 0.5;
+        canvas.drawCircle(Offset(x + (centerX - x) * localT, busY), 3.2, dotPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ConvergingConnectorPainter oldDelegate) =>
+      oldDelegate.t != t;
+}
+
+/// Central "processing" node. Solid primaryDark fill with white content —
+/// per docs/design-system.md's rule for any solid fill, not the bright
+/// accent shade — gently pulsing to read as active/continuous.
+class _PulsingNode extends StatelessWidget {
+  const _PulsingNode({required this.pulse, required this.label});
+  final Animation<double> pulse;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: pulse,
+      builder: (context, child) =>
+          Transform.scale(scale: 1.0 + pulse.value * 0.06, child: child),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: context.appColors.primaryDark,
+          borderRadius: BorderRadius.circular(100),
+          boxShadow: [
+            BoxShadow(
+              color: context.appColors.primary.withAlpha(70),
+              blurRadius: 24,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.auto_awesome, size: 18, color: Colors.white),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One data-source node: icon badge above a short label, stacked vertically
+/// so it stays readable inside a narrow 1/4-width column (unlike a
+/// horizontal chip, whose Row could overflow on a long label — see
+/// CHANGELOG). `maxLines`/`ellipsis` is a hard backstop against that same
+/// class of bug even if a future label runs long.
+class _SourceNode extends StatelessWidget {
+  const _SourceNode({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Theme.of(context).colorScheme.surface,
+            border: Border.all(color: context.appColors.primary, width: 1.5),
+          ),
+          child: Icon(icon, size: 16, color: context.appColors.primary),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+}
+
+/// The diagram's output — same accent styling as [_SourceNode] (an
+/// announcement on a light surface, not a solid fill) but visually distinct
+/// via a filled icon, since it's the result, not an input.
+class _OutputChip extends StatelessWidget {
+  const _OutputChip({required this.label});
   final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: context.appColors.primary),
+        border: Border.all(color: context.appColors.primary, width: 1.5),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-        textAlign: TextAlign.center,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle, size: 16, color: context.appColors.primary),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: context.appColors.primary,
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+/// One short line per data source explaining what it actually is — the
+/// diagram's icon + 2-word label alone isn't self-explanatory.
+class _InputLegend extends StatelessWidget {
+  const _InputLegend({required this.lang});
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final source in _dataSources)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text.rich(
+              TextSpan(
+                style: TextStyle(
+                  fontSize: 11.5,
+                  height: 1.4,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                children: [
+                  TextSpan(
+                    text: '${source.label.forLocale(lang)}: ',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.onSurface,
+                    ),
+                  ),
+                  TextSpan(text: source.explanation.forLocale(lang)),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

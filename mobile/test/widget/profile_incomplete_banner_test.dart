@@ -46,7 +46,11 @@ void main() {
           'fieldId': 'gender',
           'label': 'Gender',
           'type': 'select',
-          'options': ['Male', 'Female', 'Other'],
+          'options': [
+            {'value': 'male', 'label': 'Male'},
+            {'value': 'female', 'label': 'Female'},
+            {'value': 'other', 'label': 'Other'},
+          ],
           'required': false,
           'order': 1,
         },
@@ -59,6 +63,7 @@ void main() {
           'order': 2,
         },
       ]),
+      queryParameters: {'lang': 'en'},
     );
     // No profile saved yet — both optional fields are unfilled.
     adapter.onGet(

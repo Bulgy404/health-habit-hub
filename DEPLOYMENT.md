@@ -390,7 +390,7 @@ ALERT_EMAIL=<address-to-receive-critical-alerts>
 # LLM provider (for habit classification, BCIO mapping, translation refinement, recommendations)
 LLM_API_KEY=<your-api-key>
 LLM_API_BASE=https://llm.scads.ai/v1  # omit to use OpenAI directly
-LLM_MODEL=alias-ha                     # or gpt-4o-mini, alias-huge, etc.
+LLM_MODEL=alias-ha                     # a SCADS.AI alias — or alias-huge, alias-reasoning, etc. (not a real OpenAI model name; llm.scads.ai doesn't serve gpt-4o-mini/gpt-4o)
 ```
 
 #### Optional Overrides
@@ -410,8 +410,7 @@ BACKUP_SCHEDULED_LIMIT=10
 LT_LOAD_ONLY=de,en,ja   # comma-separated ISO codes
 LT_REQ_LIMIT=0           # max chars per request (0 = unlimited)
 
-# LLM model and sampling
-LLM_MODEL=gpt-4o-mini    # or gpt-4o for higher accuracy
+# LLM sampling temperature (LLM_MODEL is set in the required env vars above)
 LLM_TEMPERATURE=0.2      # 0.0 = deterministic, 1.0 = creative
 ```
 

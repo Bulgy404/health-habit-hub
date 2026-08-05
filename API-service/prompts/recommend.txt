@@ -30,7 +30,7 @@ PREVIOUSLY RECOMMENDED TO THIS USER (avoid repeating these unless clearly the be
 {previous_titles}
 
 Your task:
-1. Generate 3 to 5 personalised habit recommendations tailored to the user's goal, profile, and habits.
+1. Generate up to 3 personalised habit recommendations tailored to the user's goal, profile, and habits (extras beyond 3 are discarded, so put your best ones first).
 2. For each recommendation, list in `selected_habit_uuids` the 1–3 habit UUIDs (from the candidate lists above) that most informed it. Leave the list empty if the recommendation draws primarily from academic sources rather than specific candidate habits.
 3. Give priority to bookmarked habits — they signal explicit interest. Build on or extend those rather than copying verbatim.
 4. Prefer community habits whose `bcio_concepts` align with the user's goal mechanism. Use these concepts for selection only — in the rationale, explain the mechanism in plain everyday language and never mention BCIO codes, UUIDs, ontology terms, or other internal identifiers.

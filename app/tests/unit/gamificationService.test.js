@@ -284,6 +284,10 @@ test('computeUserGamification: no neo4jRun contributes zero share XP/badges', as
   assert.equal(summary.shareCount, 0);
   assert.equal(summary.shareStreakWeeks, 0);
   assert.equal(
+    summary.badges.some((b) => b.badgeKey === BADGES.FIRST_SHARE),
+    false
+  );
+  assert.equal(
     summary.badges.some((b) => b.badgeKey === BADGES.COMMUNITY_CONTRIBUTOR),
     false
   );
@@ -309,10 +313,11 @@ test('computeUserGamification: awards share XP and Community Contributor for reg
   assert.ok(
     summary.newlyEarned.some((b) => b.badgeKey === BADGES.COMMUNITY_CONTRIBUTOR)
   );
-  assert.equal(db._userGamification.earnedBadges.length, 1);
+  assert.ok(summary.newlyEarned.some((b) => b.badgeKey === BADGES.FIRST_SHARE));
+  assert.equal(db._userGamification.earnedBadges.length, 2);
 });
 
-test('computeUserGamification: a single share earns XP but not the streak badge', async () => {
+test('computeUserGamification: a single share earns XP, First Share, but not the streak badge', async () => {
   const db = makeDb({ intentions: [] });
   const neo4jRun = makeNeo4jRun([daysAgo(1)]);
   const summary = await computeUserGamification({
@@ -323,8 +328,30 @@ test('computeUserGamification: a single share earns XP but not the streak badge'
   });
   assert.equal(summary.shareCount, 1);
   assert.equal(summary.totalXp, DEFAULT_GAMIFICATION_CONFIG.xpPerShare);
+  assert.ok(summary.newlyEarned.some((b) => b.badgeKey === BADGES.FIRST_SHARE));
   assert.equal(
     summary.badges.some((b) => b.badgeKey === BADGES.COMMUNITY_CONTRIBUTOR),
+    false
+  );
+});
+
+test('computeUserGamification: First Share is not re-earned once persisted', async () => {
+  const db = makeDb({
+    intentions: [],
+    userGamificationDoc: {
+      userId: 'u1',
+      earnedBadges: [{ badgeKey: BADGES.FIRST_SHARE, earnedAt: NOW }],
+    },
+  });
+  const neo4jRun = makeNeo4jRun([daysAgo(1)]);
+  const summary = await computeUserGamification({
+    db,
+    userId: 'u1',
+    neo4jRun,
+    now: NOW,
+  });
+  assert.equal(
+    summary.newlyEarned.some((b) => b.badgeKey === BADGES.FIRST_SHARE),
     false
   );
 });
@@ -367,6 +394,7 @@ test('REVOCABLE_BADGES contains only the tier/streak badges, not historical fact
   assert.equal(REVOCABLE_BADGES.has(BADGES.FIRST_STEP), false);
   assert.equal(REVOCABLE_BADGES.has(BADGES.HABIT_ARCHITECT), false);
   assert.equal(REVOCABLE_BADGES.has(BADGES.COMMUNITY_CONTRIBUTOR), false);
+  assert.equal(REVOCABLE_BADGES.has(BADGES.FIRST_SHARE), false);
 });
 
 test('computeUserGamification: revokes Steady Habit once the streak breaks', async () => {

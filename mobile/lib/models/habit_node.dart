@@ -31,6 +31,12 @@ class HabitNode {
   /// false when [name] is the original text (no translation available).
   final bool hasTranslation;
 
+  /// The exact phrase the classifier matched for [category] (e.g.
+  /// `'at the gym'` for Location) — a substring of [originalText], used to
+  /// bold that span in the detail sheet instead of only showing the
+  /// category badge. Empty when nothing was matched.
+  final String contextText;
+
   /// Creates a [HabitNode].
   const HabitNode({
     required this.id,
@@ -41,6 +47,7 @@ class HabitNode {
     required this.annotationCounts,
     this.language = '',
     this.hasTranslation = true,
+    this.contextText = '',
   });
 
   /// Sum of all annotation counts across all annotation types.

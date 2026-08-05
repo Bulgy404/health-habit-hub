@@ -2,6 +2,8 @@
 
 Welcome to the Health Habit Hub project. This guide takes you from zero to a fully working local development environment.
 
+![Onboarding journey: install tools, clone the repo and create .env, run make dev, run make seed, run the app (Chrome/iOS/Android), run make test, then verify with the §10 checklist](../assets/architecture/onboarding-journey.svg)
+
 > **vs. [`local-dev.md`](local-dev.md):** this guide is Docker-Compose-first and platform-agnostic (Chrome or Android Emulator for the Flutter app). If you're on a Mac and want the iOS Simulator plus the `Makefile`-driven workflow (`make dev`, `make ios`), use `local-dev.md` instead — the two guides cover overlapping ground from different angles, pick whichever matches your setup rather than reading both.
 
 ---

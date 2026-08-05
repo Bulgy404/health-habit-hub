@@ -10,7 +10,10 @@
  *   behaviorKey        string     Required. Unique behavior identifier.
  *   behaviorLabel      string     Required. Display label for the behavior.
  *   durationMinutes    int        Required. Duration of behavior in minutes.
- *   cues               Array<{    Required. 1-2 cue objects.
+ *   cues               Array<{    0-2 cue objects. Required to be non-empty EXCEPT when
+ *                                 creationMode is 'stacked' — a stacked habit's anchor
+ *                                 habit (see stackedOn/anchorLabel) already serves as the
+ *                                 trigger, so a separate cue is optional (§7.1).
  *     text:     string
  *     cueId:    ObjectId (optional)
  *     source:   'pre_rated' | 'self_selected'
@@ -23,8 +26,15 @@
  *                                 Defaults to 'build' for documents created before this field
  *                                 existed (see ensureIndexes backfill note).
  *   stackedOn          ObjectId   Optional. When set, this intention was created by stacking
- *                                 onto an existing anchor habit (§7.1 Habit Stacking). Points
- *                                 at the anchor intention's _id, or null for standalone habits.
+ *                                 onto an existing *tracked* anchor habit (§7.1 Habit
+ *                                 Stacking). Points at the anchor intention's _id; null when
+ *                                 the anchor was free-typed (not itself tracked) or the habit
+ *                                 is standalone.
+ *   anchorLabel        string     Optional. Human-readable anchor habit name for a stacked
+ *                                 habit, shown as its own field (not folded into cues) on the
+ *                                 confirm/detail screens — e.g. "Drink my morning coffee".
+ *                                 Set whether the anchor is tracked (stackedOn) or free-typed
+ *                                 (stackedOn null). Null for standalone habits.
  *   creationMode       string     Required. 'standalone' | 'stacked' — how the habit was
  *                                 created. Lets researchers compare autonomy-tier progression
  *                                 speed for stacked vs. standalone habits. Defaults to
@@ -76,7 +86,10 @@ export const VALIDATOR = {
       durationMinutes: { bsonType: 'int' },
       cues: {
         bsonType: 'array',
-        minItems: 1,
+        // 0 allowed only for creationMode: 'stacked' (enforced in
+        // intentionsRouter.js, not expressible in JSON Schema here) — the
+        // anchor (stackedOn/anchorLabel) serves as the trigger instead.
+        minItems: 0,
         maxItems: 2,
         items: {
           bsonType: 'object',
@@ -96,6 +109,7 @@ export const VALIDATOR = {
       habitType: { bsonType: 'string', enum: ['build', 'quit'] },
       // §7.1 Habit Stacking — anchor reference + creation mode.
       stackedOn: { bsonType: ['objectId', 'null'] },
+      anchorLabel: { bsonType: ['string', 'null'] },
       creationMode: {
         bsonType: 'string',
         enum: ['standalone', 'stacked'],

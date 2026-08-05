@@ -614,6 +614,17 @@ class AppLocalizationsFr extends AppLocalizations {
   String get goalInputValidationError => 'Veuillez décrire votre objectif';
 
   @override
+  String get recommendWhyCardTitle =>
+      'Comment fonctionnent les recommandations ?';
+
+  @override
+  String get recommendWhyCardBody =>
+      'Nous comparons ton objectif à des habitudes similaires partagées par d\'autres, puis un modèle de langage transforme les meilleures correspondances en une suggestion personnalisée.';
+
+  @override
+  String get recommendWhyCardLink => 'Voir comment ça marche';
+
+  @override
   String get questionnaireResponseSubmitted => 'Réponse envoyée !';
 
   @override
@@ -1290,19 +1301,20 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible d\'ouvrir le lien de la source.';
 
   @override
-  String get recommendationLoadingPhaseExperts => 'Consultation d\'experts…';
+  String get recommendationLoadingPhaseCommunity =>
+      'Comparaison avec des habitudes essayées par des personnes comme toi…';
 
   @override
-  String get recommendationLoadingPhaseHabitsDb =>
-      'Analyse de votre base de données d\'habitudes…';
+  String get recommendationLoadingPhaseHistory =>
+      'Vérification de ce qui fonctionne déjà pour toi…';
 
   @override
-  String get recommendationLoadingPhasePapers =>
-      'Lecture d\'articles scientifiques…';
+  String get recommendationLoadingPhaseResearch =>
+      'Consultation de la recherche sur le changement de comportement…';
 
   @override
   String get recommendationLoadingPhaseGenerating =>
-      'Génération de vos recommandations personnalisées…';
+      'Rédaction de ta suggestion personnalisée…';
 
   @override
   String get recommendationLoadingTimeoutError =>
@@ -1754,6 +1766,16 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get stackAnchorFreeTextHint => 'e.g. After my morning coffee';
+
+  @override
+  String stackAlsoTrackAnchor(String anchor) {
+    return 'Suivre aussi « $anchor » comme habitude';
+  }
+
+  @override
+  String stackedOntoLabel(String anchor) {
+    return 'Rattaché à : $anchor';
+  }
 
   @override
   String get habitsSection => 'Habits';

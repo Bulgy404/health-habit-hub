@@ -39,6 +39,33 @@ class StudyConfigService {
       return null;
     }
   }
+
+  /// §7.1 Habit Stacking — calls the stack-merge LLM endpoint, which is
+  /// purpose-built to combine an anchor habit and a new behaviour into one
+  /// "after/when I [anchor], I will [behaviour]" sentence, rather than
+  /// treating the anchor as a generic cue (see stitchIntention above).
+  ///
+  /// Returns the merged sentence, or null on failure (caller should fall
+  /// back to local assembly).
+  Future<String?> stackMerge({
+    required String anchorText,
+    required String newBehaviorText,
+    String language = 'en',
+  }) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '${AppConfig.apiBaseUrl}/habits/stack-merge',
+        data: {
+          'anchor_text': anchorText,
+          'new_behavior_text': newBehaviorText,
+          'language': language,
+        },
+      );
+      return res.data?['sentence'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 final studyConfigServiceProvider = Provider<StudyConfigService>(

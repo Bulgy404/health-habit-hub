@@ -600,6 +600,16 @@ class AppLocalizationsNl extends AppLocalizations {
   String get goalInputValidationError => 'Beschrijf je doel';
 
   @override
+  String get recommendWhyCardTitle => 'Hoe werken aanbevelingen?';
+
+  @override
+  String get recommendWhyCardBody =>
+      'We vergelijken je doel met vergelijkbare gewoontes die door anderen zijn gedeeld. Een taalmodel zet de beste overeenkomsten vervolgens om in een gepersonaliseerde suggestie.';
+
+  @override
+  String get recommendWhyCardLink => 'Bekijk hoe het werkt';
+
+  @override
   String get questionnaireResponseSubmitted => 'Antwoord verzonden!';
 
   @override
@@ -1271,20 +1281,20 @@ class AppLocalizationsNl extends AppLocalizations {
   String get recommendationSourceLinkError => 'Kon de bronlink niet openen.';
 
   @override
-  String get recommendationLoadingPhaseExperts =>
-      'Experts worden geraadpleegd…';
+  String get recommendationLoadingPhaseCommunity =>
+      'Vergelijken met gewoontes die mensen zoals jij hebben geprobeerd…';
 
   @override
-  String get recommendationLoadingPhaseHabitsDb =>
-      'Je gewoontedatabase wordt doorzocht…';
+  String get recommendationLoadingPhaseHistory =>
+      'Controleren wat al voor jou werkt…';
 
   @override
-  String get recommendationLoadingPhasePapers =>
-      'Wetenschappelijke publicaties worden gelezen…';
+  String get recommendationLoadingPhaseResearch =>
+      'Onderzoek naar gedragsverandering raadplegen…';
 
   @override
   String get recommendationLoadingPhaseGenerating =>
-      'Je persoonlijke aanbevelingen worden gegenereerd…';
+      'Jouw persoonlijke suggestie wordt geschreven…';
 
   @override
   String get recommendationLoadingTimeoutError =>
@@ -1728,6 +1738,16 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get stackAnchorFreeTextHint => 'e.g. After my morning coffee';
+
+  @override
+  String stackAlsoTrackAnchor(String anchor) {
+    return '\"$anchor\" ook bijhouden als gewoonte';
+  }
+
+  @override
+  String stackedOntoLabel(String anchor) {
+    return 'Gekoppeld aan: $anchor';
+  }
 
   @override
   String get habitsSection => 'Habits';

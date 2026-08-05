@@ -169,6 +169,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         creationMode:
                             extra['creationMode'] as String? ?? 'standalone',
                         anchorText: extra['anchorText'] as String?,
+                        alsoTrackAnchor:
+                            extra['alsoTrackAnchor'] as bool? ?? false,
                         cues: (extra['cues'] as List<dynamic>)
                             .cast<IntentionCue>(),
                       );
@@ -188,6 +190,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         creationMode:
                             extra['creationMode'] as String? ?? 'standalone',
                         anchorText: extra['anchorText'] as String?,
+                        alsoTrackAnchor:
+                            extra['alsoTrackAnchor'] as bool? ?? false,
                         cues: (extra['cues'] as List<dynamic>)
                             .cast<IntentionCue>(),
                         stitchedSentence:

@@ -181,6 +181,55 @@ test('createIntention: records stacking metadata (§7.1)', async () => {
   assert.equal(result.stackedOn, anchorId.toString());
 });
 
+test('createIntention: persists anchorLabel and allows empty cues when stacked (§7.1)', async () => {
+  const db = makeDb();
+  const result = await createIntention({
+    db,
+    userId: 'u1',
+    behaviorKey: 'flossing',
+    behaviorLabel: 'Flossing',
+    durationMinutes: 2,
+    cues: [],
+    intentionStatement: 'After I brush my teeth, I will floss.',
+    habitType: 'build',
+    anchorLabel: 'Brush my teeth',
+    creationMode: 'stacked',
+    cueConfig: { maxHabits: null },
+  });
+  assert.equal(result.creationMode, 'stacked');
+  assert.equal(result.anchorLabel, 'Brush my teeth');
+  assert.deepEqual(result.cues, []);
+});
+
+test('createIntention: anchorLabel defaults to null and trims whitespace', async () => {
+  const db = makeDb();
+  const withoutAnchor = await createIntention({
+    db,
+    userId: 'u1',
+    behaviorKey: 'walking',
+    behaviorLabel: 'Walking',
+    durationMinutes: 20,
+    cues: [{ text: 'After lunch', cueId: null, source: 'self_selected' }],
+    intentionStatement: 'After lunch, I will walk.',
+    cueConfig: { maxHabits: null },
+  });
+  assert.equal(withoutAnchor.anchorLabel, null);
+
+  const withWhitespaceAnchor = await createIntention({
+    db,
+    userId: 'u1',
+    behaviorKey: 'walking2',
+    behaviorLabel: 'Walking',
+    durationMinutes: 20,
+    cues: [],
+    intentionStatement: 'After lunch, I will walk.',
+    anchorLabel: '  Lunch break  ',
+    creationMode: 'stacked',
+    cueConfig: { maxHabits: null },
+  });
+  assert.equal(withWhitespaceAnchor.anchorLabel, 'Lunch break');
+});
+
 test('updateIntentionStatus: sets new status', async () => {
   const id = new ObjectId();
   const db = makeDb([

@@ -1,0 +1,117 @@
+<svg width="1040" height="640" viewBox="0 0 1040 640" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .bg { fill: #FFFFFF; }
+      .box-label { font-size: 13px; font-weight: 700; fill: #1E2422; text-anchor: middle; }
+      .box-sub { font-size: 10.5px; fill: #6B6B67; text-anchor: middle; }
+      .edge-label { font-size: 11.5px; font-weight: 600; fill: #1E2422; text-anchor: middle; }
+      .edge-sub { font-size: 10px; fill: #6B6B67; text-anchor: middle; }
+    </style>
+    <marker id="arrow3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#9A9A94"/>
+    </marker>
+  </defs>
+  <rect width="1040" height="640" class="bg"/>
+
+  <text x="30" y="34" font-size="16" font-weight="800" fill="#1E2422">Authentication model — who authenticates with whom, and how</text>
+  <text x="30" y="54" font-size="12" fill="#6B6B67">The Flutter app never talks to Keycloak directly — only the backend does, on its behalf.</text>
+
+  <!-- 6 rows, each: client box -> arrow+label -> target box -->
+  <!-- Row geometry -->
+  <!-- client box x=30 w=230, target box x=770 w=230, row height 80, first row y=80 -->
+
+  <g stroke="#9A9A94" stroke-width="1.6" fill="none" marker-end="url(#arrow3)">
+    <path d="M260 105 L768 105"/>
+    <path d="M260 185 L768 185"/>
+    <path d="M260 265 L768 265"/>
+    <path d="M260 345 L768 345"/>
+    <path d="M260 425 L768 425"/>
+    <path d="M260 505 L768 505"/>
+  </g>
+
+  <!-- Row 1: Flutter -> app -->
+  <g transform="translate(30,80)">
+    <rect width="230" height="50" rx="10" fill="#F1F0FB" stroke="#4F46E5" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">Flutter App</text>
+    <text x="115" y="37" class="box-sub">participant device</text>
+  </g>
+  <text x="514" y="97" class="edge-label">Bearer JWT</text>
+  <text x="514" y="112" class="edge-sub">Authorization header, verified via Keycloak JWKS</text>
+  <g transform="translate(770,80)">
+    <rect width="230" height="50" rx="10" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">app — Node.js backend</text>
+    <text x="115" y="37" class="box-sub">/api/v1/*</text>
+  </g>
+
+  <!-- Row 2: app -> Keycloak (ROPC) -->
+  <g transform="translate(30,160)">
+    <rect width="230" height="50" rx="10" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">app — Node.js backend</text>
+    <text x="115" y="37" class="box-sub">on the participant's behalf</text>
+  </g>
+  <text x="514" y="177" class="edge-label">passphrase → hhh-ropc (ROPC grant)</text>
+  <text x="514" y="192" class="edge-sub">/onboard · /restore · rotate-credentials</text>
+  <g transform="translate(770,160)">
+    <rect width="230" height="50" rx="10" fill="#FDECEA" stroke="#E53935" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">Keycloak</text>
+    <text x="115" y="37" class="box-sub">realm: hhh</text>
+  </g>
+
+  <!-- Row 3: app -> Keycloak (client credentials) -->
+  <g transform="translate(30,240)">
+    <rect width="230" height="50" rx="10" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">app — Node.js backend</text>
+    <text x="115" y="37" class="box-sub">admin / service-account ops</text>
+  </g>
+  <text x="514" y="257" class="edge-label">client credentials → hhh-backend</text>
+  <text x="514" y="272" class="edge-sub">confidential service-account client</text>
+  <g transform="translate(770,240)">
+    <rect width="230" height="50" rx="10" fill="#FDECEA" stroke="#E53935" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">Keycloak</text>
+    <text x="115" y="37" class="box-sub">realm: hhh</text>
+  </g>
+
+  <!-- Row 4: admin -> Keycloak -->
+  <g transform="translate(30,320)">
+    <rect width="230" height="50" rx="10" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">admin — Next.js</text>
+    <text x="115" y="37" class="box-sub">researcher / admin dashboard</text>
+  </g>
+  <text x="514" y="337" class="edge-label">NextAuth OIDC → hhh-admin</text>
+  <text x="514" y="352" class="edge-sub">session kept server-side, not exposed to browser</text>
+  <g transform="translate(770,320)">
+    <rect width="230" height="50" rx="10" fill="#FDECEA" stroke="#E53935" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">Keycloak</text>
+    <text x="115" y="37" class="box-sub">realm: hhh</text>
+  </g>
+
+  <!-- Row 5: internal tools -> Keycloak -->
+  <g transform="translate(30,400)">
+    <rect width="230" height="50" rx="10" fill="#F5F5F0" stroke="#9A9A94" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">Internal tools</text>
+    <text x="115" y="37" class="box-sub">Grafana · Bull Board · mongo-express …</text>
+  </g>
+  <text x="514" y="417" class="edge-label">SSO forward-auth via oauth2-proxy</text>
+  <text x="514" y="432" class="edge-sub">realm role "admin" required</text>
+  <g transform="translate(770,400)">
+    <rect width="230" height="50" rx="10" fill="#FDECEA" stroke="#E53935" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">Keycloak</text>
+    <text x="115" y="37" class="box-sub">realm: hhh</text>
+  </g>
+
+  <!-- Row 6: app -> recommender (not Keycloak at all) -->
+  <g transform="translate(30,480)">
+    <rect width="230" height="50" rx="10" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">app — Node.js backend</text>
+    <text x="115" y="37" class="box-sub">calling the recommender</text>
+  </g>
+  <text x="514" y="497" class="edge-label">X-API-Service-Secret header</text>
+  <text x="514" y="512" class="edge-sub">shared secret, not OAuth at all</text>
+  <g transform="translate(770,480)">
+    <rect width="230" height="50" rx="10" fill="#EDE7F6" stroke="#7C4DFF" stroke-width="2"/>
+    <text x="115" y="21" class="box-label">recommender — Python</text>
+    <text x="115" y="37" class="box-sub">not a Keycloak client at all</text>
+  </g>
+
+  <text x="520" y="580" font-size="11" fill="#9A9A94" text-anchor="middle">The Flutter app's PKCE flow (public client hhh-flutter, see UC-01) exists in the codebase but has no current call site — the passphrase/ROPC path above is what's actually used.</text>
+</svg>

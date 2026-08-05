@@ -28,5 +28,28 @@ void main() {
       expect(bubble.healthBenefit, isNull);
       expect(bubble.wellbeingImpact, isNull);
     });
+
+    test('parses contextText when present', () {
+      final bubble = HabitBubble.fromJson({
+        'id': 'uuid-1',
+        'label': 'I meditate at the gym',
+        'originalText': 'I meditate at the gym',
+        'language': 'en',
+        'annotationCounts': {'helpful': 0, 'iDoThis': 0},
+        'contextText': 'at the gym',
+      });
+      expect(bubble.contextText, 'at the gym');
+    });
+
+    test('defaults contextText to empty string when absent', () {
+      final bubble = HabitBubble.fromJson({
+        'id': 'uuid-1',
+        'label': 'Meditate',
+        'originalText': 'Meditate',
+        'language': 'en',
+        'annotationCounts': {'helpful': 0, 'iDoThis': 0},
+      });
+      expect(bubble.contextText, '');
+    });
   });
 }

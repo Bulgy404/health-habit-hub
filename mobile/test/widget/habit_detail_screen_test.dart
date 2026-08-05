@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hhh/features/my_habits/habit_detail_screen.dart';
 import 'package:hhh/features/my_habits/my_habits_models.dart';
 import 'package:hhh/features/my_habits/my_habits_service.dart';
@@ -57,6 +58,30 @@ Widget _buildSubject(_FakeMyHabitsService service) {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: const HabitDetailScreen(intentionId: 'intent-1'),
+    ),
+  );
+}
+
+/// A [GoRouter]-backed variant so tapping the anchor tile's navigation
+/// (`context.push('/habits/:id')`) can actually be exercised.
+Widget _buildRoutedSubject(_FakeMyHabitsService service, {required String initialIntentionId}) {
+  final router = GoRouter(
+    initialLocation: '/habits/$initialIntentionId',
+    routes: [
+      GoRoute(
+        path: '/habits/:intentionId',
+        builder: (context, state) => HabitDetailScreen(
+          intentionId: state.pathParameters['intentionId']!,
+        ),
+      ),
+    ],
+  );
+  return ProviderScope(
+    overrides: [myHabitsServiceProvider.overrideWithValue(service)],
+    child: MaterialApp.router(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      routerConfig: router,
     ),
   );
 }
@@ -166,6 +191,104 @@ void main() {
     expect(find.text('Due now'), findsOneWidget);
   });
 
+  testWidgets(
+    'shows a "Start check-in" button when a check-in is due for this habit',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildSubject(
+          _FakeMyHabitsService(
+            intentions: [_intention],
+            trajectory: [
+              SrhiTrajectoryPoint(
+                weekNumber: 3,
+                scheduledFor: DateTime.now().subtract(const Duration(days: 1)),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Start check-in'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'hides the "Start check-in" button when nothing is due yet',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildSubject(
+          _FakeMyHabitsService(
+            intentions: [_intention],
+            trajectory: const [
+              SrhiTrajectoryPoint(weekNumber: 1, score: 4.0),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Start check-in'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    "tapping \"Start check-in\" routes to this habit's SRHI form at the due week number",
+    (tester) async {
+      final router = GoRouter(
+        initialLocation: '/habits/intent-1',
+        routes: [
+          GoRoute(
+            path: '/habits/:intentionId',
+            builder: (context, state) => HabitDetailScreen(
+              intentionId: state.pathParameters['intentionId']!,
+            ),
+            routes: [
+              GoRoute(
+                path: 'srhi/:weekNumber',
+                builder: (context, state) => Scaffold(
+                  body: Text(
+                    'srhi-form:${state.pathParameters['intentionId']}'
+                    ':${state.pathParameters['weekNumber']}',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            myHabitsServiceProvider.overrideWithValue(
+              _FakeMyHabitsService(
+                intentions: [_intention],
+                trajectory: [
+                  SrhiTrajectoryPoint(
+                    weekNumber: 3,
+                    scheduledFor:
+                        DateTime.now().subtract(const Duration(days: 1)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          child: MaterialApp.router(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Start check-in'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('srhi-form:intent-1:3'), findsOneWidget);
+    },
+  );
+
   testWidgets('dismissing the SRHI explanation hides it', (tester) async {
     await tester.pumpWidget(
       _buildSubject(_FakeMyHabitsService(intentions: [_intention])),
@@ -177,5 +300,86 @@ void main() {
     await tester.pump();
 
     expect(find.text("What's SRHI?"), findsNothing);
+  });
+
+  // ── §7.1 Habit Stacking ──────────────────────────────────────────────────
+
+  testWidgets('shows a "Stacked onto" chip for a stacked habit', (
+    tester,
+  ) async {
+    final stacked = Intention(
+      id: 'intent-1',
+      behaviorKey: 'flossing',
+      behaviorLabel: 'Flossing',
+      durationMinutes: 2,
+      cues: const [],
+      intentionStatement: 'After I brush my teeth, I will floss.',
+      status: 'active',
+      createdAt: DateTime(2026, 1, 1),
+      stackedOn: 'anchor-1',
+      anchorLabel: 'Brush my teeth',
+      creationMode: 'stacked',
+    );
+    await tester.pumpWidget(
+      _buildSubject(_FakeMyHabitsService(intentions: [stacked])),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stacked onto: Brush my teeth'), findsOneWidget);
+  });
+
+  testWidgets('shows no "Stacked onto" chip for a standalone habit', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildSubject(_FakeMyHabitsService(intentions: [_intention])),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Stacked onto'), findsNothing);
+  });
+
+  testWidgets(
+      'shows a tappable anchor tile (not a plain chip) when the anchor is itself a tracked habit',
+      (tester) async {
+    final anchor = Intention(
+      id: 'anchor-1',
+      behaviorKey: 'brush_teeth',
+      behaviorLabel: 'Brush my teeth',
+      durationMinutes: 3,
+      cues: const [],
+      intentionStatement: 'Every morning, I will brush my teeth.',
+      status: 'active',
+      createdAt: DateTime(2026, 1, 1),
+    );
+    final stacked = Intention(
+      id: 'intent-1',
+      behaviorKey: 'flossing',
+      behaviorLabel: 'Flossing',
+      durationMinutes: 2,
+      cues: const [],
+      intentionStatement: 'After I brush my teeth, I will floss.',
+      status: 'active',
+      createdAt: DateTime(2026, 1, 1),
+      stackedOn: 'anchor-1',
+      anchorLabel: 'Brush my teeth',
+      creationMode: 'stacked',
+    );
+    await tester.pumpWidget(
+      _buildRoutedSubject(
+        _FakeMyHabitsService(intentions: [stacked, anchor]),
+        initialIntentionId: 'intent-1',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stacked onto: Brush my teeth'), findsOneWidget);
+    expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+
+    await tester.tap(find.text('Stacked onto: Brush my teeth'));
+    await tester.pumpAndSettle();
+
+    // Navigated to the anchor's own detail page.
+    expect(find.text('Every morning, I will brush my teeth.'), findsOneWidget);
   });
 }

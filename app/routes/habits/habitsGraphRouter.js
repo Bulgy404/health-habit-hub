@@ -190,6 +190,13 @@ export function createHabitsGraphRouter({ queryNeo4j, getDb } = {}) {
             // low". Not clamped/defaulted here; the client owns that logic.
             healthBenefit: neoIntOrNull(row.healthBenefit),
             wellbeingImpact: neoIntOrNull(row.wellbeingImpact),
+            // The exact phrase the classifier matched for *this* dimension
+            // (e.g. "at the gym" for Location) — lets the mobile detail sheet
+            // bold it within the habit sentence instead of only showing the
+            // dimension badge. Scoped per-dimension (not on the habit as a
+            // whole), since the same habit can carry a different phrase under
+            // a different dimension bubble.
+            contextText: row.contextText || '',
           });
         }
       }

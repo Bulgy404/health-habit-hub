@@ -1,0 +1,122 @@
+<svg width="1300" height="650" viewBox="0 0 1300 650" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <style>
+      .bg { fill: #FFFFFF; }
+      .box-label { font-size: 13px; font-weight: 700; fill: #1E2422; text-anchor: middle; }
+      .box-sub { font-size: 10.5px; fill: #6B6B67; text-anchor: middle; }
+      .edge-label { font-size: 10.5px; fill: #6B6B67; }
+    </style>
+    <marker id="arrow4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#9A9A94"/>
+    </marker>
+  </defs>
+  <rect width="1300" height="650" class="bg"/>
+
+  <text x="30" y="34" font-size="16" font-weight="800" fill="#1E2422">MongoDB collections — DFG study module + how it hooks into the base schema</text>
+  <text x="30" y="54" font-size="12" fill="#6B6B67">Arrows point from a referencing collection to the collection it references (source → foreign key's target). 28 collections total exist; this shows the actively-growing core — see §3.1 for the full table.</text>
+
+  <!-- connectors -->
+  <g stroke="#9A9A94" stroke-width="1.5" fill="none" marker-end="url(#arrow4)">
+    <path d="M470 165 L470 120"/>              <!-- enrollments -> participants -->
+    <path d="M650 165 L850 120"/>              <!-- enrollments -> studies -->
+    <path d="M250 275 L400 120"/>              <!-- intentions -> participants (userId) -->
+    <path d="M850 275 L850 165"/>              <!-- cue_pools -> studies -->
+    <path d="M1090 260 L950 120"/>             <!-- q_assignments -> studies -->
+    <path d="M1150 260 L1150 165"/>            <!-- q_assignments -> questionnaires -->
+    <path d="M150 395 L200 335"/>              <!-- daily_logs -> intentions -->
+    <path d="M370 395 L280 335"/>              <!-- srhi -> intentions -->
+    <path d="M1050 395 L1130 300"/>            <!-- q_windows -> q_assignments -->
+    <path d="M960 395 L520 130"/>              <!-- q_windows -> participants (userId), long diagonal -->
+    <path d="M1000 395 L260 320"/>             <!-- q_windows -> intentions (habit-scope, optional) -->
+    <path d="M1080 505 L1080 455"/>            <!-- form_responses -> q_windows -->
+  </g>
+
+  <!-- Row A: participants, studies -->
+  <g transform="translate(350,60)">
+    <rect width="240" height="56" rx="10" fill="#F1F0FB" stroke="#4F46E5" stroke-width="2.5"/>
+    <text x="120" y="24" class="box-label">participants</text>
+    <text x="120" y="42" class="box-sub">admin-created accounts</text>
+  </g>
+  <g transform="translate(830,60)">
+    <rect width="240" height="56" rx="10" fill="#F1F0FB" stroke="#4F46E5" stroke-width="2.5"/>
+    <text x="120" y="24" class="box-label">studies</text>
+    <text x="120" y="42" class="box-sub">groups, feature toggles</text>
+  </g>
+
+  <!-- Row B: enrollments, questionnaires -->
+  <g transform="translate(380,170)">
+    <rect width="220" height="52" rx="10" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+    <text x="110" y="22" class="box-label">enrollments</text>
+    <text x="110" y="38" class="box-sub">Mongo mirror of Neo4j ENROLLED_IN</text>
+  </g>
+  <g transform="translate(1040,170)">
+    <rect width="220" height="52" rx="10" fill="#E0F7FA" stroke="#00897B" stroke-width="2"/>
+    <text x="110" y="22" class="box-label">questionnaires</text>
+    <text x="110" y="38" class="box-sub">definitions: scope, slug, items</text>
+  </g>
+
+  <!-- Row C: intentions, cue_pools, q_assignments -->
+  <g transform="translate(30,280)">
+    <rect width="260" height="56" rx="10" fill="#FFF8E1" stroke="#FFA000" stroke-width="2.5"/>
+    <text x="130" y="24" class="box-label">implementation_intentions</text>
+    <text x="130" y="42" class="box-sub">habitType, cue, stackedOn, earnedBadges</text>
+  </g>
+  <g transform="translate(730,280)">
+    <rect width="200" height="56" rx="10" fill="#E0F7FA" stroke="#00897B" stroke-width="2"/>
+    <text x="100" y="24" class="box-label">cue_pools</text>
+    <text x="100" y="42" class="box-sub">pre-rated contextual cues</text>
+  </g>
+  <g transform="translate(1000,280)">
+    <rect width="230" height="56" rx="10" fill="#E0F7FA" stroke="#00897B" stroke-width="2"/>
+    <text x="115" y="24" class="box-label">questionnaire_assignments</text>
+    <text x="115" y="42" class="box-sub">study/group + cadence</text>
+  </g>
+
+  <!-- Row D: daily_logs, srhi, q_windows -->
+  <g transform="translate(30,400)">
+    <rect width="220" height="56" rx="10" fill="#FFF8E1" stroke="#FFA000" stroke-width="2"/>
+    <text x="110" y="24" class="box-label">daily_behavior_logs</text>
+    <text x="110" y="42" class="box-sub">per-day enactment</text>
+  </g>
+  <g transform="translate(280,400)">
+    <rect width="200" height="56" rx="10" fill="#FFF8E1" stroke="#FFA000" stroke-width="2"/>
+    <text x="100" y="24" class="box-label">srhi_responses</text>
+    <text x="100" y="42" class="box-sub">weekly habit-strength score</text>
+  </g>
+  <g transform="translate(950,400)">
+    <rect width="260" height="56" rx="10" fill="#E0F7FA" stroke="#00897B" stroke-width="2"/>
+    <text x="130" y="24" class="box-label">questionnaire_windows</text>
+    <text x="130" y="42" class="box-sub">per-participant scheduled occurrence</text>
+  </g>
+
+  <!-- Row E: form_responses -->
+  <g transform="translate(950,510)">
+    <rect width="260" height="56" rx="10" fill="#E0F7FA" stroke="#00897B" stroke-width="2"/>
+    <text x="130" y="24" class="box-label">form_responses</text>
+    <text x="130" y="42" class="box-sub">submitted answers</text>
+  </g>
+
+  <!-- edge labels -->
+  <text x="480" y="152" class="edge-label">userId</text>
+  <text x="700" y="150" class="edge-label">studyId</text>
+  <text x="270" y="230" class="edge-label">userId</text>
+  <text x="860" y="230" class="edge-label">studyId</text>
+  <text x="1010" y="200" class="edge-label">studyId</text>
+  <text x="1160" y="230" class="edge-label">questionnaireSlug</text>
+  <text x="90" y="370" class="edge-label">intentionId</text>
+  <text x="320" y="370" class="edge-label">intentionId</text>
+  <text x="1120" y="350" class="edge-label">assignmentId</text>
+  <text x="700" y="270" class="edge-label">userId (long link — every participant)</text>
+  <text x="560" y="370" class="edge-label">intentionId — only when questionnaire scope: 'habit'</text>
+  <text x="1090" y="480" class="edge-label">windowId</text>
+
+  <!-- legend -->
+  <g transform="translate(30,590)" font-size="11" fill="#6B6B67">
+    <circle cx="0" cy="0" r="6" fill="#F1F0FB" stroke="#4F46E5" stroke-width="1.5"/>
+    <text x="12" y="4">Identity / enrollment</text>
+    <circle cx="170" cy="0" r="6" fill="#FFF8E1" stroke="#FFA000" stroke-width="1.5"/>
+    <text x="182" y="4">Habit tracking (DFG)</text>
+    <circle cx="340" cy="0" r="6" fill="#E0F7FA" stroke="#00897B" stroke-width="1.5"/>
+    <text x="352" y="4">Questionnaire system</text>
+  </g>
+</svg>

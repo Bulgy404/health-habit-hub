@@ -209,7 +209,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Log today'), findsOneWidget);
+    // The log toggle is a checkbox (no visible label), identified by its
+    // tooltip.
+    expect(find.byTooltip('Log today'), findsOneWidget);
     // Before logging, the page-level graph (fed by allHabitsActivityProvider)
     // has no data yet.
     expect(
@@ -219,13 +221,13 @@ void main() {
       isEmpty,
     );
 
-    await tester.tap(find.text('Log today'));
+    await tester.tap(find.byTooltip('Log today'));
     // Lets the logDay POST, the intentionLogsProvider + allHabitsActivityProvider
     // invalidation, and the resulting refetch all settle — with no manual
     // RefreshIndicator pull in between.
     await tester.pumpAndSettle();
 
-    expect(find.text('Logged ✓'), findsWidgets);
+    expect(find.byTooltip('Logged ✓'), findsWidgets);
     // The page-level graph must reflect today's log immediately, not just
     // the per-habit day strip — this is the bug: allHabitsActivityProvider
     // wasn't being invalidated alongside intentionLogsProvider.

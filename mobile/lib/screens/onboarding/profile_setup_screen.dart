@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/dio_provider.dart';
 import '../../config/app_config.dart';
+import '../../providers/locale_provider.dart';
 import 'profile_fields.dart';
 
 /// Onboarding step where the participant fills in optional profile fields.
@@ -40,8 +41,10 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   Future<void> _fetchDefinitions() async {
     try {
       final dio = ref.read(dioProvider);
+      final lang = ref.read(localeProvider).languageCode;
       final response = await dio.get(
         '${AppConfig.apiBaseUrl}/profile-field-definitions',
+        queryParameters: {'lang': lang},
       );
       final List<dynamic> data = response.data as List<dynamic>;
       setState(() {
@@ -106,8 +109,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     if (_submitting) return;
     final options = def.options;
     if (options.isEmpty) return;
-    String temp = _values[def.fieldId] as String? ?? options.first;
-    final initialIndex = options.indexOf(temp);
+    final currentValue = _values[def.fieldId] as ProfileFieldOption?;
+    ProfileFieldOption temp = currentValue ?? options.first;
+    final initialIndex = options.indexWhere((o) => o.value == temp.value);
     final controller = FixedExtentScrollController(
       initialItem: initialIndex < 0 ? 0 : initialIndex,
     );
@@ -135,7 +139,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                   scrollController: controller,
                   onSelectedItemChanged: (i) => temp = options[i],
                   children: [
-                    for (final opt in options) Center(child: Text(opt)),
+                    for (final opt in options) Center(child: Text(opt.label)),
                   ],
                 ),
               ),
@@ -151,6 +155,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     final val = _values[def.fieldId];
     if (val == null) return '';
     if (def.type == 'date' && val is DateTime) return formatDate(val);
+    if (val is ProfileFieldOption) return val.label;
     return val.toString();
   }
 
@@ -168,6 +173,9 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         final n = double.tryParse(val.toString()) ?? 0.0;
         submittedValue = n;
         label = n.toString();
+      } else if (val is ProfileFieldOption) {
+        submittedValue = val.value;
+        label = val.label;
       } else {
         submittedValue = val.toString();
         label = val.toString();

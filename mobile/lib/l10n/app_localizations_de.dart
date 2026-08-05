@@ -618,6 +618,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get goalInputValidationError => 'Bitte beschreibe dein Ziel';
 
   @override
+  String get recommendWhyCardTitle => 'Wie entstehen Empfehlungen?';
+
+  @override
+  String get recommendWhyCardBody =>
+      'Wir gleichen dein Ziel mit ähnlichen, von anderen geteilten Gewohnheiten ab. Ein Sprachmodell verwandelt die besten Treffer dann in einen personalisierten Vorschlag.';
+
+  @override
+  String get recommendWhyCardLink => 'So funktioniert\'s';
+
+  @override
   String get questionnaireResponseSubmitted => 'Antwort eingereicht!';
 
   @override
@@ -1292,19 +1302,20 @@ class AppLocalizationsDe extends AppLocalizations {
       'Der Quellenlink konnte nicht geöffnet werden.';
 
   @override
-  String get recommendationLoadingPhaseExperts => 'Experten werden befragt…';
+  String get recommendationLoadingPhaseCommunity =>
+      'Vergleich mit Gewohnheiten von Menschen wie dir…';
 
   @override
-  String get recommendationLoadingPhaseHabitsDb =>
-      'Deine Gewohnheitendatenbank wird durchsucht…';
+  String get recommendationLoadingPhaseHistory =>
+      'Prüfung, was bei dir bereits funktioniert…';
 
   @override
-  String get recommendationLoadingPhasePapers =>
-      'Wissenschaftliche Studien werden gelesen…';
+  String get recommendationLoadingPhaseResearch =>
+      'Einbeziehung von Verhaltensänderungsforschung…';
 
   @override
   String get recommendationLoadingPhaseGenerating =>
-      'Deine persönlichen Empfehlungen werden erstellt…';
+      'Dein persönlicher Vorschlag wird geschrieben…';
 
   @override
   String get recommendationLoadingTimeoutError =>
@@ -1755,6 +1766,16 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get stackAnchorFreeTextHint => 'e.g. After my morning coffee';
+
+  @override
+  String stackAlsoTrackAnchor(String anchor) {
+    return '„$anchor“ ebenfalls als Gewohnheit verfolgen';
+  }
+
+  @override
+  String stackedOntoLabel(String anchor) {
+    return 'Angeknüpft an: $anchor';
+  }
 
   @override
   String get habitsSection => 'Habits';

@@ -415,24 +415,49 @@ describe('createProfileFieldSchema', () => {
   it('accepts valid field', () => {
     ok(createProfileFieldSchema, {
       fieldId: 'age',
-      label: 'Age',
+      label: { en: 'Age' },
       type: 'number',
+      languages: ['en'],
     });
   });
 
   it('rejects invalid fieldId (uppercase)', () => {
     fail(createProfileFieldSchema, {
       fieldId: 'Age',
-      label: 'Age',
+      label: { en: 'Age' },
       type: 'number',
+      languages: ['en'],
     });
   });
 
   it('rejects invalid type', () => {
     fail(createProfileFieldSchema, {
       fieldId: 'x',
-      label: 'X',
+      label: { en: 'X' },
       type: 'boolean',
+      languages: ['en'],
+    });
+  });
+
+  it('rejects a plain-string label (must be a locale-text map)', () => {
+    fail(createProfileFieldSchema, {
+      fieldId: 'x',
+      label: 'X',
+      type: 'text',
+      languages: ['en'],
+    });
+  });
+
+  it('accepts select-type options as {value, label} objects', () => {
+    ok(createProfileFieldSchema, {
+      fieldId: 'gender',
+      label: { en: 'Gender' },
+      type: 'select',
+      languages: ['en', 'de'],
+      options: [
+        { value: 'male', label: { en: 'Male', de: 'Männlich' } },
+        { value: 'female', label: { en: 'Female', de: 'Weiblich' } },
+      ],
     });
   });
 });

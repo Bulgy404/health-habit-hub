@@ -34,6 +34,7 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
     this.stackedOn,
     this.creationMode = 'standalone',
     this.anchorText,
+    this.alsoTrackAnchor = false,
     this.stitchedSentence,
     super.key,
   });
@@ -61,8 +62,14 @@ class ConfirmPlanScreen extends ConsumerStatefulWidget {
 
   /// Free-typed anchor habit text when the anchor isn't a tracked habit (§7.1).
   /// Donated to the community first (best-effort) so a STACKED_WITH edge can
-  /// form between it and this new habit in the graph.
+  /// form between it and this new habit in the graph. Also shown as its own
+  /// "Stacked onto" field (not folded into the intention sentence).
   final String? anchorText;
+
+  /// Opt-in: when stacking onto a free-typed anchor (stackedOn is null),
+  /// also create a standalone tracked habit for the anchor itself and link
+  /// this habit's stackedOn to it (§7.1).
+  final bool alsoTrackAnchor;
 
   /// LLM-stitched intention sentence (from /habits/stitch-intention), if available.
   final String? stitchedSentence;
@@ -103,6 +110,11 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
   }
 
   String _buildFallbackStatement() {
+    final anchor = widget.anchorText?.trim();
+    if (widget.cues.isEmpty && anchor != null && anchor.isNotEmpty) {
+      // §7.1 — stacked with no separate cue: the anchor is the trigger.
+      return 'After I $anchor, I will ${widget.behaviorLabel.toLowerCase()}.';
+    }
     final cueText = widget.cues.map((c) => c.text).join(', ');
     return '$cueText, I will ${widget.behaviorLabel.toLowerCase()}.';
   }
@@ -155,6 +167,55 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
     );
   }
 
+  /// Derives a stable snake_case key from a free-typed label, matching
+  /// new_habit_screen_1_behavior.dart's `_slugify` for custom behaviours.
+  String _slugify(String label) {
+    final slug = label
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), '_')
+        .replaceAll(RegExp(r'[^a-z0-9_]'), '');
+    return slug.isEmpty ? 'anchor' : slug;
+  }
+
+  /// §7.1 — opt-in: when stacking onto a free-typed anchor, create a minimal
+  /// standalone tracked habit for the anchor itself and return its id so the
+  /// main habit's `stackedOn` can link to it, upgrading a "just a name" free
+  /// text anchor into a real tracked+linked one. Best-effort: on any failure
+  /// (including the anchor alone hitting a habit-limit cap) this falls back
+  /// to `widget.stackedOn` (the free-typed anchor is still recorded via
+  /// anchorLabel either way) rather than blocking the habit the user is
+  /// actually here to create.
+  Future<String?> _resolveStackedOn() async {
+    if (widget.stackedOn != null) return widget.stackedOn;
+    final anchor = widget.anchorText?.trim();
+    if (!widget.alsoTrackAnchor || anchor == null || anchor.isEmpty) {
+      return widget.stackedOn;
+    }
+    try {
+      final anchorIntention = await ref.read(myHabitsServiceProvider).createIntention(
+            behaviorKey: _slugify(anchor),
+            behaviorLabel: anchor,
+            // No dedicated duration UI for an anchor created this way — a
+            // short default; the participant can edit it like any habit
+            // afterwards (My Habits > this habit > edit).
+            durationMinutes: 5,
+            cues: const [
+              IntentionCue(
+                text: 'Already part of my daily routine',
+                source: 'self_selected',
+              ),
+            ],
+            intentionStatement: '$anchor is already part of my routine.',
+            habitType: HabitType.build,
+            creationMode: 'standalone',
+          );
+      return anchorIntention.id;
+    } catch (_) {
+      return widget.stackedOn;
+    }
+  }
+
   Future<void> _submit() async {
     final l10n = AppLocalizations.of(context)!;
     final studyConfig = ref.read(studyConfigProvider).value;
@@ -184,6 +245,7 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
     final language = ref.read(localeProvider).languageCode;
 
     try {
+      final resolvedStackedOn = await _resolveStackedOn();
       await ref.read(myHabitsServiceProvider).createIntention(
             behaviorKey: widget.behaviorKey,
             behaviorLabel: widget.behaviorLabel,
@@ -191,7 +253,8 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             cues: widget.cues,
             intentionStatement: _intentionStatementEditable,
             habitType: widget.habitType,
-            stackedOn: widget.stackedOn,
+            stackedOn: resolvedStackedOn,
+            anchorLabel: widget.anchorText,
             creationMode: widget.creationMode,
             reminderTime: effectiveReminderTime,
           );
@@ -333,6 +396,19 @@ class _ConfirmPlanScreenState extends ConsumerState<ConfirmPlanScreen> {
             Text(l10n.confirmPlanSubtitle,
                 style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 24),
+            // §7.1 — the stacking anchor is shown as its own field, not
+            // folded into the intention sentence, so stacking reads as a
+            // distinct mechanism from typing a cue.
+            if (widget.creationMode == 'stacked' &&
+                (widget.anchorText?.trim().isNotEmpty ?? false)) ...[
+              Chip(
+                avatar: const Icon(Icons.link, size: 18),
+                label: Text(
+                  l10n.stackedOntoLabel(widget.anchorText!.trim()),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             // Editable intention statement card
             Card(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,

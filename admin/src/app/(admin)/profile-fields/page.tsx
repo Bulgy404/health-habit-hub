@@ -3,32 +3,479 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAdminGuard } from "@/lib/useAdminGuard";
-import { apiFetch, apiUrl } from "@/lib/api";
+import { apiUrl } from "@/lib/api";
 import { ToggleSwitch } from "@/components/toggle-switch";
 import { Spinner } from "@/components/spinner";
 import styles from "./page.module.css";
 
-const VALID_TYPES = ["text", "number", "date", "select"] as const;
-type FieldType = (typeof VALID_TYPES)[number];
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Tab = "library" | "custom";
+type FieldType = "text" | "number" | "date" | "select";
+const VALID_TYPES: FieldType[] = ["text", "number", "date", "select"];
+
+/** Per-language text, e.g. `{ en: 'Hello', de: 'Hallo' }`. */
+type LocaleText = Partial<Record<"en" | "de" | "fr" | "ja" | "nl", string>>;
+type Lang = keyof Required<LocaleText>;
+const SUPPORTED_LANGS: Lang[] = ["en", "de", "fr", "ja", "nl"];
+const LANG_LABELS: Record<Lang, string> = {
+  en: "English",
+  de: "Deutsch",
+  fr: "Français",
+  ja: "日本語",
+  nl: "Nederlands",
+};
+
+interface ProfileFieldOption {
+  value: string;
+  label: LocaleText;
+}
 
 interface ProfileFieldDefinition {
   fieldId: string;
-  label: string;
+  label: LocaleText;
   type: FieldType;
-  options: string[];
+  options: ProfileFieldOption[];
+  languages: Lang[];
   required: boolean;
   order: number;
+  isLibrary: boolean;
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Resolves a locale-text map to a single string for display (admin-side preview only). */
+function previewText(map: LocaleText | undefined, lang: Lang = "en"): string {
+  if (!map) return "";
+  return map[lang] || map.en || Object.values(map).find(Boolean) || "";
+}
+
+/** Strips language keys not in [languages] from a locale-text map. */
+function pruneLocaleText(map: LocaleText, languages: Lang[]): LocaleText {
+  const next: LocaleText = {};
+  for (const lang of languages) {
+    if (map[lang]) next[lang] = map[lang];
+  }
+  return next;
+}
+
+function emptyForm(): ProfileFieldDefinition {
+  return {
+    fieldId: "",
+    label: {},
+    type: "text",
+    options: [],
+    languages: ["en"],
+    required: false,
+    order: 0,
+    isLibrary: false,
+  };
+}
+
+// ── API helpers ───────────────────────────────────────────────────────────────
 
 const API_BASE = apiUrl("/admin/profile-field-definitions");
 
-function emptyForm(): ProfileFieldDefinition {
-  return { fieldId: "", label: "", type: "text", options: [], required: false, order: 0 };
+async function apiFetch(url: string, token: string, opts: RequestInit = {}) {
+  const res = await fetch(url, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...(opts.headers ?? {}),
+    },
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      details?: { path: string; message: string }[];
+    };
+    const detailText = body.details?.length
+      ? `: ${body.details.map((d) => `${d.path} — ${d.message}`).join("; ")}`
+      : "";
+    const err = new Error((body.error ?? `HTTP ${res.status}`) + detailText);
+    (err as Error & { status?: number }).status = res.status;
+    throw err;
+  }
+  return res.json();
 }
 
+// ── Form modal (create / edit custom field) ───────────────────────────────────
+
+function FieldModal({
+  initial,
+  token,
+  onClose,
+  onSaved,
+}: {
+  initial: ProfileFieldDefinition | null;
+  token: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const t = useTranslations("profileFields");
+  const tc = useTranslations("common");
+  const isEdit = initial !== null;
+  const [fieldId, setFieldId] = useState(initial?.fieldId ?? "");
+  const [label, setLabel] = useState<LocaleText>(initial?.label ?? {});
+  const [type, setType] = useState<FieldType>(initial?.type ?? "text");
+  const [languages, setLanguages] = useState<Lang[]>(initial?.languages ?? ["en"]);
+  const [activeLang, setActiveLang] = useState<Lang>(initial?.languages?.[0] ?? "en");
+  const [options, setOptions] = useState<ProfileFieldOption[]>(initial?.options ?? []);
+  const [required, setRequired] = useState(initial?.required ?? false);
+  const [order, setOrder] = useState(initial?.order ?? 0);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  function toggleLanguage(lang: Lang) {
+    setLanguages((prev) => {
+      const next = prev.includes(lang) ? prev.filter((l) => l !== lang) : [...prev, lang];
+      if (next.length === 0) return prev;
+      if (activeLang === lang && !next.includes(lang)) {
+        setActiveLang(next[0]);
+      }
+      return next;
+    });
+  }
+
+  function addOption() {
+    setOptions((prev) => [...prev, { value: "", label: {} }]);
+  }
+
+  function updateOptionValue(i: number, value: string) {
+    setOptions((prev) => prev.map((o, idx) => (idx === i ? { ...o, value } : o)));
+  }
+
+  function updateOptionLabel(i: number, val: string) {
+    setOptions((prev) =>
+      prev.map((o, idx) => (idx === i ? { ...o, label: { ...o.label, [activeLang]: val } } : o))
+    );
+  }
+
+  function removeOption(i: number) {
+    setOptions((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  async function handleSave() {
+    const prunedLabel = pruneLocaleText(label, languages);
+    if (!Object.values(prunedLabel).some(Boolean)) {
+      setError(t("labelRequiredError"));
+      return;
+    }
+    if (!isEdit && !/^[a-z][a-z0-9_-]*$/.test(fieldId)) {
+      setError(t("fieldIdInvalidError"));
+      return;
+    }
+    const prunedOptions = options.map((o) => ({
+      ...o,
+      label: pruneLocaleText(o.label, languages),
+    }));
+    if (type === "select") {
+      if (prunedOptions.length === 0) {
+        setError(t("optionsRequiredError"));
+        return;
+      }
+      const emptyOptionIndex = prunedOptions.findIndex(
+        (o) => !o.value.trim() || !Object.values(o.label).some(Boolean)
+      );
+      if (emptyOptionIndex !== -1) {
+        setError(t("optionIncompleteError", { number: emptyOptionIndex + 1 }));
+        return;
+      }
+    }
+    setSaving(true);
+    setError("");
+    try {
+      const payload = {
+        ...(isEdit ? {} : { fieldId }),
+        label: prunedLabel,
+        type,
+        options: type === "select" ? prunedOptions : [],
+        languages,
+        required,
+        order,
+      };
+      if (isEdit) {
+        await apiFetch(`${API_BASE}/${initial!.fieldId}`, token, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch(API_BASE, token, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("saveFailed"));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          <span className={styles.modalTitle}>
+            {isEdit ? t("editFieldTitle") : t("addFieldTitle")}
+          </span>
+          <button className={styles.closeBtn} onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <div className={styles.modalBody}>
+          {error && <div className={styles.errorMsg}>{error}</div>}
+
+          <div className={styles.formGroup} style={{ marginBottom: "1rem" }}>
+            <label className={styles.label}>{t("languagesLabel")}</label>
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+              {SUPPORTED_LANGS.map((lang) => (
+                <ToggleSwitch
+                  key={lang}
+                  checked={languages.includes(lang)}
+                  onChange={() => toggleLanguage(lang)}
+                  label={LANG_LABELS[lang]}
+                />
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: "6px", marginTop: "8px", flexWrap: "wrap" }}>
+              {languages.map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  className={styles.actionBtn}
+                  onClick={() => setActiveLang(lang)}
+                  style={
+                    activeLang === lang
+                      ? { fontWeight: 700, textDecoration: "underline" }
+                      : undefined
+                  }
+                >
+                  {t("editingLanguage", { language: LANG_LABELS[lang] })}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.formGrid}>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>{t("fieldIdColumn")}</label>
+              <input
+                className={styles.input}
+                value={fieldId}
+                onChange={(e) => setFieldId(e.target.value)}
+                placeholder={t("fieldIdPlaceholder")}
+                disabled={isEdit}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>{t("labelColumn")}</label>
+              <input
+                className={styles.input}
+                value={label[activeLang] ?? ""}
+                onChange={(e) => setLabel((prev) => ({ ...prev, [activeLang]: e.target.value }))}
+                placeholder={t("labelPlaceholder")}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>{t("typeColumn")}</label>
+              <select
+                className={styles.select}
+                value={type}
+                onChange={(e) => setType(e.target.value as FieldType)}
+              >
+                {VALID_TYPES.map((ft) => (
+                  <option key={ft} value={ft}>
+                    {t(`types.${ft}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>{t("orderColumn")}</label>
+              <input
+                className={styles.input}
+                type="number"
+                value={order}
+                onChange={(e) => setOrder(parseInt(e.target.value, 10) || 0)}
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>{t("requiredColumn")}</label>
+              <ToggleSwitch
+                checked={required}
+                onChange={(e) => setRequired(e.target.checked)}
+                aria-label={t("requiredColumn")}
+              />
+            </div>
+          </div>
+
+          {type === "select" && (
+            <div className={styles.builderSection}>
+              <div className={styles.builderHeader}>
+                <span className={styles.builderTitle}>{t("optionsLabel")}</span>
+                <button className={styles.addQBtn} onClick={addOption} type="button">
+                  {t("addOption")}
+                </button>
+              </div>
+
+              {options.length === 0 ? (
+                <div className={styles.emptyQuestions}>{t("noOptionsYet")}</div>
+              ) : (
+                options.map((opt, i) => (
+                  <div key={i} className={styles.optionRow}>
+                    <input
+                      className={styles.optionInput}
+                      style={{ maxWidth: "160px", fontFamily: "monospace" }}
+                      value={opt.value}
+                      onChange={(e) => updateOptionValue(i, e.target.value)}
+                      placeholder={t("optionValuePlaceholder")}
+                    />
+                    <input
+                      className={styles.optionInput}
+                      value={opt.label[activeLang] ?? ""}
+                      onChange={(e) => updateOptionLabel(i, e.target.value)}
+                      placeholder={t("optionLabelPlaceholder")}
+                    />
+                    <button
+                      className={styles.removeOptionBtn}
+                      onClick={() => removeOption(i)}
+                      type="button"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className={styles.modalFooter}>
+          <button className={styles.cancelBtn} onClick={onClose}>
+            {tc("cancel")}
+          </button>
+          <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
+            {saving ? <Spinner /> : isEdit ? t("saveChanges") : t("create")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Preview modal (read-only, for library fields) ─────────────────────────────
+
+function FieldPreviewModal({
+  field,
+  onClose,
+}: {
+  field: ProfileFieldDefinition;
+  onClose: () => void;
+}) {
+  const t = useTranslations("profileFields");
+  const tc = useTranslations("common");
+  const [previewLang, setPreviewLang] = useState<Lang>(field.languages?.[0] ?? "en");
+  const languages = field.languages?.length ? field.languages : (["en"] as Lang[]);
+
+  return (
+    <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          <span className={styles.modalTitle}>{previewText(field.label, previewLang)}</span>
+          <button className={styles.closeBtn} onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <div className={styles.modalBody}>
+          {languages.length > 1 && (
+            <div style={{ display: "flex", gap: "6px", marginBottom: "12px", flexWrap: "wrap" }}>
+              {languages.map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  className={styles.actionBtn}
+                  onClick={() => setPreviewLang(lang)}
+                  style={
+                    previewLang === lang
+                      ? { fontWeight: 700, textDecoration: "underline" }
+                      : undefined
+                  }
+                >
+                  {LANG_LABELS[lang]}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className={styles.previewMeta}>
+            <span>{t(`types.${field.type}`)}</span>
+            <span className={`${styles.badge} ${styles.badgeLibrary}`}>{t("libraryBadge")}</span>
+          </div>
+
+          {field.options.length > 0 && (
+            <ul className={styles.previewOptions}>
+              {field.options.map((opt, i) => (
+                <li key={i}>
+                  <code>{opt.value}</code> — {previewText(opt.label, previewLang)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className={styles.modalFooter}>
+          <button className={styles.saveBtn} onClick={onClose}>
+            {tc("close")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Confirm delete dialog ─────────────────────────────────────────────────────
+
+function ConfirmDeleteDialog({
+  label,
+  onCancel,
+  onConfirm,
+}: {
+  label: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const t = useTranslations("profileFields");
+  const tc = useTranslations("common");
+  return (
+    <div className={styles.confirmOverlay}>
+      <div className={styles.confirmDialog}>
+        <p className={styles.confirmTitle}>{t("deleteFieldTitle")}</p>
+        <p className={styles.confirmText}>
+          {t.rich("deleteConfirmText", { label, strong: (chunks) => <strong>{chunks}</strong> })}
+        </p>
+        <div className={styles.confirmActions}>
+          <button className={styles.cancelBtn} onClick={onCancel}>
+            {tc("cancel")}
+          </button>
+          <button className={styles.confirmDeleteBtn} onClick={onConfirm}>
+            {tc("delete")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 /**
- * Displays and manages user profile field definitions that appear during
- * onboarding. Supports creating, editing, and deleting field definitions.
+ * Displays and manages profile field definitions shown during onboarding,
+ * mirroring the Questionnaires page: a Library tab of shipped defaults (age
+ * group, gender) and a Custom tab for study-specific fields.
  *
  * @returns The profile fields management page.
  */
@@ -36,73 +483,77 @@ export default function ProfileFieldsPage() {
   const { token } = useAdminGuard();
   const t = useTranslations("profileFields");
   const tc = useTranslations("common");
+
+  const [tab, setTab] = useState<Tab>("library");
   const [defs, setDefs] = useState<ProfileFieldDefinition[]>([]);
-  const [form, setForm] = useState<ProfileFieldDefinition>(emptyForm());
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [newOption, setNewOption] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<ProfileFieldDefinition | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<ProfileFieldDefinition | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProfileFieldDefinition | null>(null);
+  const [actionError, setActionError] = useState("");
+
+  async function fetchList() {
+    if (!token) return;
+    setLoading(true);
+    setError("");
+    try {
+      const data = await apiFetch(API_BASE, token);
+      setDefs(
+        (data as ProfileFieldDefinition[])
+          .slice()
+          .sort((a, b) => a.order - b.order)
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("saveFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    if (!token) return;
-    apiFetch(API_BASE, token)
-      .then(setDefs)
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+    fetchList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  async function handleSave() {
-    if (!token) return;
-    setError(null);
-    setSaving(true);
+  function handleOpenCreate() {
+    setEditTarget(null);
+    setModalOpen(true);
+    setActionError("");
+  }
+
+  function handleOpenEdit(def: ProfileFieldDefinition) {
+    setEditTarget(def);
+    setModalOpen(true);
+    setActionError("");
+  }
+
+  function handleModalClose() {
+    setModalOpen(false);
+    setEditTarget(null);
+  }
+
+  async function handleModalSaved() {
+    setModalOpen(false);
+    setEditTarget(null);
+    await fetchList();
+  }
+
+  async function handleDelete(def: ProfileFieldDefinition) {
+    setDeleteTarget(null);
+    setActionError("");
     try {
-      if (editingId) {
-        const { label, type, options, required, order } = form;
-        const updated = await apiFetch(`${API_BASE}/${editingId}`, token, {
-          method: "PUT",
-          body: JSON.stringify({ label, type, options, required, order }),
-        });
-        setDefs(defs.map((d) => (d.fieldId === editingId ? updated : d)));
-      } else {
-        const created = await apiFetch(API_BASE, token, {
-          method: "POST",
-          body: JSON.stringify(form),
-        });
-        setDefs([...defs, created]);
-      }
-      setShowForm(false);
-      setEditingId(null);
-      setForm(emptyForm());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("saveFailed"));
-    } finally {
-      setSaving(false);
+      await apiFetch(`${API_BASE}/${def.fieldId}`, token, { method: "DELETE" });
+      await fetchList();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : t("deleteFailed"));
     }
   }
 
-  async function handleDelete(fieldId: string) {
-    if (!token || !confirm(t("confirmDelete", { fieldId }))) return;
-    try {
-      await apiFetch(`${API_BASE}/${fieldId}`, token, { method: "DELETE" });
-      setDefs(defs.filter((d) => d.fieldId !== fieldId));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("deleteFailed"));
-    }
-  }
-
-  function startEdit(def: ProfileFieldDefinition) {
-    setForm({ ...def });
-    setEditingId(def.fieldId);
-    setShowForm(true);
-  }
-
-  function addOption() {
-    if (!newOption.trim()) return;
-    setForm({ ...form, options: [...form.options, newOption.trim()] });
-    setNewOption("");
-  }
+  const libraryFields = defs.filter((d) => d.isLibrary);
+  const customFields = defs.filter((d) => !d.isLibrary);
 
   return (
     <div className={styles.page}>
@@ -111,188 +562,169 @@ export default function ProfileFieldsPage() {
           <h1 className={styles.title}>{t("title")}</h1>
           <p className={styles.subtitle}>{t("subtitle")}</p>
         </div>
+        {tab === "custom" && (
+          <button className={styles.addButton} onClick={handleOpenCreate}>
+            {t("addField")}
+          </button>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className={styles.tabs}>
         <button
-          className={styles.addButton}
+          className={`${styles.tab} ${tab === "library" ? styles.tabActive : ""}`}
           onClick={() => {
-            setForm(emptyForm());
-            setEditingId(null);
-            setShowForm(true);
+            setTab("library");
+            setActionError("");
           }}
         >
-          {t("addField")}
+          {t("libraryTab")}
+        </button>
+        <button
+          className={`${styles.tab} ${tab === "custom" ? styles.tabActive : ""}`}
+          onClick={() => {
+            setTab("custom");
+            setActionError("");
+          }}
+        >
+          {t("customTab")}
         </button>
       </div>
 
-      {error && <p className={styles.error}>{error}</p>}
+      {actionError && <div className={styles.errorMsg}>{actionError}</div>}
+      {error && <div className={styles.errorMsg}>{error}</div>}
 
       {loading ? (
-        <p>{tc("loading")}</p>
+        <div className={styles.loadingState}>{tc("loading")}</div>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>{t("labelColumn")}</th>
-                <th>{t("fieldIdColumn")}</th>
-                <th>{t("typeColumn")}</th>
-                <th>{t("requiredColumn")}</th>
-                <th>{t("orderColumn")}</th>
-                <th>{tc("actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {defs.map((def) => (
-                <tr key={def.fieldId}>
-                  <td>{def.label}</td>
-                  <td>
-                    <code>{def.fieldId}</code>
-                  </td>
-                  <td>{def.type}</td>
-                  <td>{def.required ? tc("yes") : tc("no")}</td>
-                  <td>{def.order}</td>
-                  <td>
-                    <button
-                      className={`${styles.actionBtn} ${styles.editBtn}`}
-                      onClick={() => startEdit(def)}
-                    >
-                      {tc("edit")}
-                    </button>
-                    <button
-                      className={`${styles.actionBtn} ${styles.deleteBtn}`}
-                      onClick={() => handleDelete(def.fieldId)}
-                    >
-                      {tc("delete")}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {defs.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    style={{
-                      textAlign: "center",
-                      color: "var(--color-text-muted)",
-                      padding: "2rem",
-                    }}
-                  >
-                    {t("emptyState")}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {showForm && (
-        <div className={styles.formSection}>
-          <h2>{editingId ? t("editFieldTitle") : t("addFieldTitle")}</h2>
-
-          <div className={styles.formRow}>
-            <label className={styles.formLabel}>{t("fieldIdColumn")}</label>
-            <input
-              className={styles.formInput}
-              value={form.fieldId}
-              onChange={(e) => setForm({ ...form, fieldId: e.target.value })}
-              disabled={!!editingId}
-              placeholder={t("fieldIdPlaceholder")}
-            />
-          </div>
-
-          <div className={styles.formRow}>
-            <label className={styles.formLabel}>{t("labelColumn")}</label>
-            <input
-              className={styles.formInput}
-              value={form.label}
-              onChange={(e) => setForm({ ...form, label: e.target.value })}
-              placeholder={t("labelPlaceholder")}
-            />
-          </div>
-
-          <div className={styles.formRow}>
-            <label className={styles.formLabel}>{t("typeColumn")}</label>
-            <select
-              className={styles.formSelect}
-              value={form.type}
-              onChange={(e) => {
-                setForm({ ...form, type: e.target.value as FieldType, options: [] });
-                setNewOption("");
-              }}
-            >
-              {VALID_TYPES.map((fieldType) => (
-                <option key={fieldType} value={fieldType}>
-                  {fieldType}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {form.type === "select" && (
-            <div className={styles.formRow}>
-              <label className={styles.formLabel}>{t("optionsLabel")}</label>
-              <div>
-                {form.options.map((opt, i) => (
-                  <div key={`${opt}-${i}`} className={styles.optionRow}>
-                    <span>{opt}</span>
-                    <button
-                      onClick={() =>
-                        setForm({ ...form, options: form.options.filter((_, j) => j !== i) })
-                      }
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-                <div className={styles.addOptionRow}>
-                  <input
-                    className={styles.formInput}
-                    value={newOption}
-                    onChange={(e) => setNewOption(e.target.value)}
-                    placeholder={t("newOptionPlaceholder")}
-                    onKeyDown={(e) => e.key === "Enter" && addOption()}
-                  />
-                  <button onClick={addOption}>{tc("add")}</button>
-                </div>
-              </div>
+        <>
+          {/* Library tab */}
+          {tab === "library" && (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>{t("labelColumn")}</th>
+                    <th>{t("fieldIdColumn")}</th>
+                    <th>{t("typeColumn")}</th>
+                    <th>{t("languagesHeader")}</th>
+                    <th>{t("requiredColumn")}</th>
+                    <th>{tc("actions")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {libraryFields.length === 0 ? (
+                    <tr>
+                      <td colSpan={6}>
+                        <div className={styles.emptyState}>{t("noLibraryFields")}</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    libraryFields.map((def) => (
+                      <tr key={def.fieldId}>
+                        <td>{previewText(def.label)}</td>
+                        <td>
+                          <code>{def.fieldId}</code>
+                        </td>
+                        <td>{t(`types.${def.type}`)}</td>
+                        <td>{(def.languages ?? []).map((l) => l.toUpperCase()).join(", ")}</td>
+                        <td>{def.required ? tc("yes") : tc("no")}</td>
+                        <td>
+                          <div className={styles.actions}>
+                            <button
+                              className={styles.actionBtn}
+                              onClick={() => setPreviewTarget(def)}
+                            >
+                              {t("preview")}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
 
-          <div className={styles.formRow}>
-            <label className={styles.formLabel}>{t("requiredColumn")}</label>
-            <ToggleSwitch
-              checked={form.required}
-              onChange={(e) => setForm({ ...form, required: e.target.checked })}
-              aria-label={t("requiredColumn")}
-            />
-          </div>
+          {/* Custom tab */}
+          {tab === "custom" && (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>{t("labelColumn")}</th>
+                    <th>{t("fieldIdColumn")}</th>
+                    <th>{t("typeColumn")}</th>
+                    <th>{t("languagesHeader")}</th>
+                    <th>{t("requiredColumn")}</th>
+                    <th>{t("orderColumn")}</th>
+                    <th>{tc("actions")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customFields.length === 0 ? (
+                    <tr>
+                      <td colSpan={7}>
+                        <div className={styles.emptyState}>{t("emptyState")}</div>
+                      </td>
+                    </tr>
+                  ) : (
+                    customFields.map((def) => (
+                      <tr key={def.fieldId}>
+                        <td>{previewText(def.label)}</td>
+                        <td>
+                          <code>{def.fieldId}</code>
+                        </td>
+                        <td>{t(`types.${def.type}`)}</td>
+                        <td>{(def.languages ?? []).map((l) => l.toUpperCase()).join(", ")}</td>
+                        <td>{def.required ? tc("yes") : tc("no")}</td>
+                        <td>{def.order}</td>
+                        <td>
+                          <div className={styles.actions}>
+                            <button
+                              className={styles.actionBtn}
+                              onClick={() => handleOpenEdit(def)}
+                            >
+                              {tc("edit")}
+                            </button>
+                            <button
+                              className={`${styles.actionBtn} ${styles.actionBtnDanger}`}
+                              onClick={() => setDeleteTarget(def)}
+                            >
+                              {tc("delete")}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
 
-          <div className={styles.formRow}>
-            <label className={styles.formLabel}>{t("orderColumn")}</label>
-            <input
-              className={styles.formInput}
-              type="number"
-              value={form.order}
-              onChange={(e) => setForm({ ...form, order: parseInt(e.target.value, 10) || 0 })}
-            />
-          </div>
+      {modalOpen && (
+        <FieldModal
+          initial={editTarget}
+          token={token}
+          onClose={handleModalClose}
+          onSaved={handleModalSaved}
+        />
+      )}
 
-          <div className={styles.formActions}>
-            <button className={styles.saveButton} onClick={handleSave} disabled={saving}>
-              {saving ? <Spinner /> : editingId ? tc("save") : t("create")}
-            </button>
-            <button
-              className={styles.cancelButton}
-              onClick={() => {
-                setShowForm(false);
-                setEditingId(null);
-                setForm(emptyForm());
-              }}
-            >
-              {tc("cancel")}
-            </button>
-          </div>
-        </div>
+      {previewTarget && (
+        <FieldPreviewModal field={previewTarget} onClose={() => setPreviewTarget(null)} />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDeleteDialog
+          label={previewText(deleteTarget.label)}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => handleDelete(deleteTarget)}
+        />
       )}
     </div>
   );

@@ -104,6 +104,7 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         intentionStatement,
         habitType,
         stackedOn,
+        anchorLabel,
         creationMode,
         reminderTime,
       } = req.body;
@@ -115,16 +116,21 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
           .status(400)
           .json({ error: 'reminderTime must be HH:mm (24h) or null' });
       }
+      // §7.1 Habit Stacking — cues are normally required, but a stacked habit's
+      // anchor (anchorLabel/stackedOn) already serves as the trigger, so an
+      // empty cues array is accepted when creationMode is 'stacked'.
+      const isStacking = creationMode === 'stacked';
       if (
         !behaviorKey ||
         !behaviorLabel ||
         !durationMinutes ||
-        !cues?.length ||
+        (!cues?.length && !isStacking) ||
         !intentionStatement
       ) {
         return res.status(400).json({
-          error:
-            'behaviorKey, behaviorLabel, durationMinutes, cues, and intentionStatement are required',
+          error: isStacking
+            ? 'behaviorKey, behaviorLabel, durationMinutes, and intentionStatement are required'
+            : 'behaviorKey, behaviorLabel, durationMinutes, cues, and intentionStatement are required',
         });
       }
       // §7.4 Habit Distinction — habitType is a build/quit choice made at the
@@ -132,11 +138,7 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
       // this feature never send it) falls back to 'build', same as the
       // donation flow and the intentionService default, so pre-update clients
       // keep working; an explicit but unrecognised value is still rejected.
-      if (
-        habitType != null &&
-        habitType !== 'build' &&
-        habitType !== 'quit'
-      ) {
+      if (habitType != null && habitType !== 'build' && habitType !== 'quit') {
         return res
           .status(400)
           .json({ error: "habitType must be 'build' or 'quit'" });
@@ -216,10 +218,11 @@ export function createIntentionsRouter({ db, neo4jRun } = {}) {
         behaviorKey,
         behaviorLabel,
         durationMinutes,
-        cues,
+        cues: cues ?? [],
         intentionStatement,
         habitType: effectiveHabitType,
         stackedOn: stackedOn ?? null,
+        anchorLabel: anchorLabel ?? null,
         creationMode: creationMode ?? 'standalone',
         reminderTime: reminderTimeToStore,
         cueConfig,

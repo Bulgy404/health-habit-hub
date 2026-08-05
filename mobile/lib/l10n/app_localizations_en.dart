@@ -595,6 +595,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalInputValidationError => 'Please describe your goal';
 
   @override
+  String get recommendWhyCardTitle => 'How do recommendations work?';
+
+  @override
+  String get recommendWhyCardBody =>
+      'We match your goal against similar habits shared by others, then a language model turns the best matches into a personalized suggestion.';
+
+  @override
+  String get recommendWhyCardLink => 'See how it works';
+
+  @override
   String get questionnaireResponseSubmitted => 'Response submitted!';
 
   @override
@@ -1261,18 +1271,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recommendationSourceLinkError => 'Could not open the source link.';
 
   @override
-  String get recommendationLoadingPhaseExperts => 'Asking experts…';
+  String get recommendationLoadingPhaseCommunity =>
+      'Comparing with habits people like you have tried…';
 
   @override
-  String get recommendationLoadingPhaseHabitsDb =>
-      'Looking through your habits database…';
+  String get recommendationLoadingPhaseHistory =>
+      'Checking what\'s already working for you…';
 
   @override
-  String get recommendationLoadingPhasePapers => 'Reading academic papers…';
+  String get recommendationLoadingPhaseResearch =>
+      'Consulting behaviour-change research…';
 
   @override
   String get recommendationLoadingPhaseGenerating =>
-      'Generating your personalised recommendations…';
+      'Writing your personalized suggestion…';
 
   @override
   String get recommendationLoadingTimeoutError =>
@@ -1715,6 +1727,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stackAnchorFreeTextHint => 'e.g. After my morning coffee';
+
+  @override
+  String stackAlsoTrackAnchor(String anchor) {
+    return 'Also track \"$anchor\" as a habit I\'m building';
+  }
+
+  @override
+  String stackedOntoLabel(String anchor) {
+    return 'Stacked onto: $anchor';
+  }
 
   @override
   String get habitsSection => 'Habits';

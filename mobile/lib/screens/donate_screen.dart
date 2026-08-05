@@ -155,7 +155,10 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF45B700),
+        // primaryDark, not primary: matches every other solid-fill CTA in the
+        // app (white content needs the darker shade for contrast) — see
+        // docs/design-system.md.
+        color: context.appColors.primaryDark,
         borderRadius: BorderRadius.circular(20),
         boxShadow: _kGreenGlow,
       ),
@@ -198,8 +201,8 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
               ),
               child: Text(
                 l10n.donateStartSharingButton,
-                style: const TextStyle(
-                  color: Color(0xFF2E8C00),
+                style: TextStyle(
+                  color: context.appColors.primaryDark,
                   fontWeight: FontWeight.w800,
                   fontSize: 14,
                 ),
@@ -329,16 +332,15 @@ class _ShareHabitScreenState extends ConsumerState<ShareHabitScreen> {
               onPressed: () => setState(() => _surveyMode = true),
               icon: const Icon(AppIcons.addMore),
               label: Text(l10n.donateShareAnotherButton),
+              // No backgroundColor override here (unlike this screen used to
+              // do): the theme's filledButtonTheme already supplies
+              // primaryDark/white/pill-shape, matching every other CTA
+              // button in the app — see docs/design-system.md.
               style: FilledButton.styleFrom(
-                backgroundColor: green,
-                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 textStyle: const TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 15,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(100),
                 ),
               ),
             ),

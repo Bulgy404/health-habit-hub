@@ -204,6 +204,7 @@ const FIXTURE_BUBBLE_GRAPH_ROWS = [
     healthBenefit: fakeNeoInt(4),
     wellbeingImpact: fakeNeoInt(5),
     dimension: 'BEHAVIOR',
+    contextText: 'daily',
   },
   {
     habitId: 'uuid-2',
@@ -214,6 +215,7 @@ const FIXTURE_BUBBLE_GRAPH_ROWS = [
     healthBenefit: null,
     wellbeingImpact: null,
     dimension: 'BEHAVIOR',
+    contextText: '',
   },
 ];
 
@@ -623,6 +625,22 @@ test('GET /api/v1/habits/bubble-graph includes healthBenefit/wellbeingImpact, un
   assert.strictEqual(rated.wellbeingImpact, 5);
   assert.strictEqual(unrated.healthBenefit, null);
   assert.strictEqual(unrated.wellbeingImpact, null);
+});
+
+test('GET /api/v1/habits/bubble-graph includes the classifier-matched contextText per dimension, so the mobile detail sheet can highlight it', async () => {
+  const res = await get('/api/v1/habits/bubble-graph', makeToken());
+  assert.strictEqual(res.status, 200);
+  const body = await res.json();
+
+  const habits = body.dimensions.flatMap((d) => d.habits);
+  const withPhrase = habits.find((h) => h.id === 'uuid-1');
+  const withoutPhrase = habits.find((h) => h.id === 'uuid-2');
+
+  assert.strictEqual(withPhrase.contextText, 'daily');
+  // Missing/empty Context.text (e.g. an older habit predating this field)
+  // degrades to '', not undefined/null, so the client never has to
+  // null-check before a substring search.
+  assert.strictEqual(withoutPhrase.contextText, '');
 });
 
 // ── Community comments ───────────────────────────────────────────────────────

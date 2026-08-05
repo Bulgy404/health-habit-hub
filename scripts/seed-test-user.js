@@ -235,6 +235,79 @@ function newIntentionBase({ userId, behaviorKey, behaviorLabel, cueText, habitTy
   };
 }
 
+/**
+ * Minimal Neo4j write for a donated habit — mirrors the real donation
+ * pipeline's Habit node shape but skips the LLM classification/translation
+ * pipeline (see module doc comment), same simplification already used
+ * elsewhere in this script. Always attaches one Context node so the habit
+ * is correctly bucketed in the Explore > Graph tab.
+ */
+async function donateHabit({
+  uuid,
+  sentence,
+  donorId,
+  studyId,
+  createdAt,
+  frequency = 2,
+  duration = 2,
+  healthBenefit = 4,
+  wellbeingImpact = 4,
+  habitType = 'build',
+  creationMode = 'standalone',
+  contextText,
+  contextDimension,
+}) {
+  await neo4jQuery(
+    `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: 'en',
+       is_habit: true, habit_confidence: 0.96, userID: $donorId,
+       studyId: $studyId, created_at: $createdAt,
+       translationEN: null, translationDE: null, translationJA: null,
+       translationFR: null, translationNL: null,
+       frequency: $frequency, duration: $duration,
+       health_benefit: $healthBenefit, wellbeing_impact: $wellbeingImpact,
+       habit_type: $habitType, creation_mode: $creationMode,
+       annotations_helpful: 0, annotations_iDoThis: 0, annotations_like: 0})
+     WITH h
+     CREATE (c:Context {text: $contextText, dimension: $contextDimension})
+     CREATE (h)-[:HAS_CONTEXT {dimension: $contextDimension}]->(c)
+     WITH h
+     MERGE (u:User {userID: $donorId})
+     MERGE (u)-[d:DONATED]->(h)
+       ON CREATE SET d.at = $createdAt`,
+    {
+      uuid,
+      sentence,
+      donorId,
+      studyId,
+      createdAt,
+      frequency,
+      duration,
+      healthBenefit,
+      wellbeingImpact,
+      habitType,
+      creationMode,
+      contextText,
+      contextDimension,
+    }
+  );
+}
+
+/**
+ * §7.1 Habit Stacking — links two already-donated Habit nodes as
+ * (:Habit {anchor})-[:STACKED_WITH]->(:Habit {stacked}), the same edge the
+ * real donation pipeline creates when `stackedOnUuid` is passed (see
+ * `_writeHabitNode` in `app/services/habitDonationService.js`).
+ */
+async function linkStackedWith(anchorUuid, stackedUuid, createdAt) {
+  await neo4jQuery(
+    `MATCH (anchor:Habit {uuid: $anchorUuid})
+     MATCH (h:Habit {uuid: $stackedUuid})
+     MERGE (anchor)-[r:STACKED_WITH]->(h)
+       ON CREATE SET r.at = $createdAt`,
+    { anchorUuid, stackedUuid, createdAt }
+  );
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────
 async function main() {
   console.log('[1/6] Resolving Keycloak account...');
@@ -433,36 +506,88 @@ async function main() {
   });
   await intentions.insertOne(habitE);
 
-  console.log('[6/6] Writing donated habit, community habits, comments, and likes...');
+  console.log('[6/6] Writing donated habits, community habits, comments, and likes...');
 
   // The seeded user's own donated habit, from partway through their journey
-  // (day 10) — minimal Neo4j write (no LLM classification/translation),
-  // tagged with one Context node so it's bucketed correctly in the
-  // Explore > Graph tab.
+  // (day 10) — standalone, not part of any stack.
   const donatedUuid = randomUUID();
-  await neo4jQuery(
-    `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: 'en',
-       is_habit: true, habit_confidence: 0.97, userID: $userId,
-       studyId: $studyId, created_at: $createdAt,
-       translationEN: null, translationDE: null, translationJA: null,
-       translationFR: null, translationNL: null,
-       frequency: 2, duration: 2, health_benefit: 4, wellbeing_impact: 5,
-       habit_type: 'build', creation_mode: 'standalone',
-       annotations_helpful: 0, annotations_iDoThis: 0, annotations_like: 0})
-     WITH h
-     CREATE (c:Context {text: 'before bed', dimension: 'TIME'})
-     CREATE (h)-[:HAS_CONTEXT {dimension: 'TIME'}]->(c)
-     WITH h
-     MERGE (u:User {userID: $userId})
-     MERGE (u)-[d:DONATED]->(h)
-       ON CREATE SET d.at = $createdAt`,
-    {
-      uuid: donatedUuid,
-      sentence: 'I stretch for five minutes before bed to sleep better.',
-      userId,
-      studyId: defaultStudy._id.toString(),
-      createdAt: daysAgo(10).toISOString(),
-    }
+  await donateHabit({
+    uuid: donatedUuid,
+    sentence: 'I stretch for five minutes before bed to sleep better.',
+    donorId: userId,
+    studyId: defaultStudy._id.toString(),
+    createdAt: daysAgo(10).toISOString(),
+    wellbeingImpact: 5,
+    contextText: 'before bed',
+    contextDimension: 'TIME',
+  });
+
+  // Habits C and D (see step 5) donated too, so the stacking relationship
+  // already tracked in the app (Mongo `stackedOn`/`creationMode` on the
+  // intentions) is *also* visible in the community graph as a STACKED_WITH
+  // edge — a stack that's both actively tracked and shared, not just one or
+  // the other.
+  const donatedHabitCUuid = randomUUID();
+  const donatedHabitDUuid = randomUUID();
+  await donateHabit({
+    uuid: donatedHabitCUuid,
+    sentence: 'I read a book for ten minutes before I go to sleep.',
+    donorId: userId,
+    studyId: defaultStudy._id.toString(),
+    createdAt: daysAgo(14).toISOString(),
+    healthBenefit: 3,
+    contextText: 'before I go to sleep',
+    contextDimension: 'TIME',
+  });
+  await donateHabit({
+    uuid: donatedHabitDUuid,
+    sentence:
+      'After I finish reading before bed, I write down one thing I am grateful for.',
+    donorId: userId,
+    studyId: defaultStudy._id.toString(),
+    createdAt: daysAgo(4).toISOString(),
+    healthBenefit: 3,
+    creationMode: 'stacked',
+    contextText: 'After I finish reading before bed',
+    contextDimension: 'PRIOR_BEHAVIOR',
+  });
+  await linkStackedWith(
+    donatedHabitCUuid,
+    donatedHabitDUuid,
+    daysAgo(4).toISOString()
+  );
+
+  // A second stack, donated only — never tracked as an intention at all, so
+  // the seed user also has a stack that exists purely in the community
+  // graph (the flip side of the C/D pair above).
+  const donatedAnchorUuid = randomUUID();
+  const donatedStackedUuid = randomUUID();
+  await donateHabit({
+    uuid: donatedAnchorUuid,
+    sentence: 'I do ten push-ups right after I get out of the shower.',
+    donorId: userId,
+    studyId: defaultStudy._id.toString(),
+    createdAt: daysAgo(18).toISOString(),
+    wellbeingImpact: 3,
+    contextText: 'right after I get out of the shower',
+    contextDimension: 'PRIOR_BEHAVIOR',
+  });
+  await donateHabit({
+    uuid: donatedStackedUuid,
+    sentence: 'After my push-ups, I drink a full glass of water.',
+    donorId: userId,
+    studyId: defaultStudy._id.toString(),
+    createdAt: daysAgo(18).toISOString(),
+    healthBenefit: 3,
+    wellbeingImpact: 3,
+    creationMode: 'stacked',
+    contextText: 'After my push-ups',
+    contextDimension: 'PRIOR_BEHAVIOR',
+  });
+  await linkStackedWith(
+    donatedAnchorUuid,
+    donatedStackedUuid,
+    daysAgo(18).toISOString()
   );
 
   // Two community habits from a synthetic other donor, pre-dating the
@@ -483,31 +608,17 @@ async function main() {
     },
   ];
   for (const habit of communityHabits) {
-    await neo4jQuery(
-      `CREATE (h:Habit {uuid: $uuid, sentence: $sentence, language: 'en',
-         is_habit: true, habit_confidence: 0.95, userID: $donorId,
-         studyId: null, created_at: $createdAt,
-         translationEN: null, translationDE: null, translationJA: null,
-         translationFR: null, translationNL: null,
-         frequency: 3, duration: 1, health_benefit: 4, wellbeing_impact: 4,
-         habit_type: 'build', creation_mode: 'standalone',
-         annotations_helpful: 0, annotations_iDoThis: 0, annotations_like: 0})
-       WITH h
-       CREATE (c:Context {text: $contextText, dimension: $dimension})
-       CREATE (h)-[:HAS_CONTEXT {dimension: $dimension}]->(c)
-       WITH h
-       MERGE (u:User {userID: $donorId})
-       MERGE (u)-[d:DONATED]->(h)
-         ON CREATE SET d.at = $createdAt`,
-      {
-        uuid: habit.uuid,
-        sentence: habit.sentence,
-        dimension: habit.dimension,
-        contextText: habit.contextText,
-        donorId: COMMUNITY_DONOR_ID,
-        createdAt: daysAgo(50).toISOString(),
-      }
-    );
+    await donateHabit({
+      uuid: habit.uuid,
+      sentence: habit.sentence,
+      donorId: COMMUNITY_DONOR_ID,
+      studyId: null,
+      createdAt: daysAgo(50).toISOString(),
+      frequency: 3,
+      duration: 1,
+      contextText: habit.contextText,
+      contextDimension: habit.dimension,
+    });
   }
 
   // "I do this too" on the first community habit, "helpful" on the second.
@@ -589,7 +700,9 @@ async function main() {
   console.log('  - Habit C "Read a book for ten minutes" — added 2 weeks ago, still finding its rhythm');
   console.log('  - Habit D "Write down one thing I am grateful for" — stacked onto habit C 4 days ago');
   console.log('  - Habit E "Leave my phone in another room" — created today, no logs yet');
-  console.log('  - 1 habit donated to the community graph');
+  console.log('  - 5 habits donated to the community graph, including 2 STACKED_WITH pairs:');
+  console.log('      - habits C & D — tracked in the app AND donated, stack visible in the graph');
+  console.log('      - push-ups -> glass of water — donation-only stack, not tracked as an intention');
   console.log('  - 2 community habits from another donor, with 1 like, 1 "I do this too", and 1 comment from this user');
 }
 

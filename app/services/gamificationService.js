@@ -35,6 +35,7 @@ export const BADGES = {
   SECOND_NATURE: 'second_nature', // habit reaches the 'off' tier
   HABIT_ARCHITECT: 'habit_architect', // created via habit stacking (§7.1)
   QUIT_CHAMPION: 'quit_champion', // a quit habit reaches 'off'
+  FIRST_SHARE: 'first_share', // shared/donated a habit for the first time
   COMMUNITY_CONTRIBUTOR: 'community_contributor', // shares habits regularly
   HABIT_GRADUATE: 'habit_graduate', // graduated: self-sustained, no longer tracked
 };
@@ -45,7 +46,8 @@ export const BADGES = {
  * `HABIT_ARCHITECT`, which record a historical fact (the habit was created;
  * it was created via stacking) that never un-happens. Revoking one of these
  * fires a "get back on track" notification (mobile) instead of a praise one.
- * `COMMUNITY_CONTRIBUTOR` (sharing) is user-level and out of scope here.
+ * `FIRST_SHARE` and `COMMUNITY_CONTRIBUTOR` (sharing) are user-level and out
+ * of scope here.
  */
 export const REVOCABLE_BADGES = new Set([
   BADGES.BUILDING_MOMENTUM,
@@ -353,11 +355,11 @@ function disabledGamificationSummary() {
 }
 
 /**
- * §7.5 — XP and the Community Contributor badge for sharing/donating habits.
- * User-level (not tied to any one tracked intention), so it reads Neo4j
- * donation timestamps directly rather than a Mongo per-habit doc, and
- * persists any newly-earned badge onto a small per-user Mongo doc
- * (`user_gamification`) instead of onto an intention.
+ * §7.5 — XP and the First Share / Community Contributor badges for
+ * sharing/donating habits. User-level (not tied to any one tracked
+ * intention), so it reads Neo4j donation timestamps directly rather than a
+ * Mongo per-habit doc, and persists any newly-earned badge onto a small
+ * per-user Mongo doc (`user_gamification`) instead of onto an intention.
  *
  * Best-effort: with no `neo4jRun` (e.g. some test setups), or on a query
  * error, contributes zero XP/badges rather than failing the whole summary —
@@ -402,6 +404,7 @@ async function computeShareGamification({
   const xp = shareCount * config.xpPerShare;
 
   const badges = [];
+  if (shareCount >= 1) badges.push(BADGES.FIRST_SHARE);
   if (shareStreakWeeks >= config.shareStreakWeeksForBadge) {
     badges.push(BADGES.COMMUNITY_CONTRIBUTOR);
   }

@@ -14,11 +14,18 @@ class SkeletonBox extends StatefulWidget {
     this.width,
     this.height = 16,
     this.borderRadius = 8,
+    this.color,
   });
 
   final double? width;
   final double height;
   final double borderRadius;
+
+  /// Tint for the pulsing block. Defaults to a neutral
+  /// `colorScheme.onSurface`-based grey when null (existing call sites are
+  /// unaffected); pass a brand color (e.g. `context.appColors.primary`) for
+  /// a themed skeleton, such as the recommendation loading screen's green.
+  final Color? color;
 
   @override
   State<SkeletonBox> createState() => _SkeletonBoxState();
@@ -50,7 +57,8 @@ class _SkeletonBoxState extends State<SkeletonBox>
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = Theme.of(context).colorScheme.onSurface.withAlpha(20);
+    final baseColor = widget.color?.withAlpha(38) ??
+        Theme.of(context).colorScheme.onSurface.withAlpha(20);
     return FadeTransition(
       opacity: _opacity,
       child: Container(

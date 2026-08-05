@@ -89,7 +89,11 @@ const _fieldDefinitions = [
     'fieldId': 'gender',
     'label': 'Gender',
     'type': 'select',
-    'options': ['Female', 'Male', 'Other'],
+    'options': [
+      {'value': 'female', 'label': 'Female'},
+      {'value': 'male', 'label': 'Male'},
+      {'value': 'other', 'label': 'Other'},
+    ],
     'required': false,
     'order': 3,
   },
@@ -102,6 +106,7 @@ void _mockDefinitions(DioAdapter adapter, {int statusCode = 200}) {
       statusCode,
       statusCode == 200 ? _fieldDefinitions : <dynamic>[],
     ),
+    queryParameters: {'lang': 'en'},
   );
 }
 

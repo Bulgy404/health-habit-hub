@@ -370,6 +370,33 @@ test('POST /habits/intentions returns 400 when required fields missing', async (
   assert.strictEqual(res.status, 400);
 });
 
+test('POST /habits/intentions returns 400 for empty cues on a standalone habit', async () => {
+  const res = await post(
+    INTENTIONS,
+    { ...validBody, cues: [] },
+    makeToken(['user'], 'no-cue-standalone-user')
+  );
+  assert.strictEqual(res.status, 400);
+});
+
+test('POST /habits/intentions accepts empty cues when creationMode is stacked (§7.1)', async () => {
+  const { cues: _drop, ...noCues } = validBody;
+  const res = await post(
+    INTENTIONS,
+    {
+      ...noCues,
+      creationMode: 'stacked',
+      anchorLabel: 'Drink my morning coffee',
+    },
+    makeToken(['user'], 'stacked-no-cue-user')
+  );
+  assert.strictEqual(res.status, 201);
+  const body = await res.json();
+  assert.strictEqual(body.creationMode, 'stacked');
+  assert.strictEqual(body.anchorLabel, 'Drink my morning coffee');
+  assert.deepStrictEqual(body.cues, []);
+});
+
 test('POST /habits/intentions creates intention and returns 201', async () => {
   const res = await post(
     INTENTIONS,
