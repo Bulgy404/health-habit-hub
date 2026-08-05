@@ -126,6 +126,10 @@
   border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
+  /* Without this, a 1fr grid track won't shrink below its content's
+     min-content size — a wide (scrollable) chart inside would stretch the
+     whole card/track instead of scrolling within it. */
+  min-width: 0;
 }
 
 .chartCard.wide {
