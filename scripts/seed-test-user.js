@@ -159,6 +159,15 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const daysAgo = (n) => new Date(Date.now() - n * DAY_MS);
 const ymd = (date) => date.toISOString().slice(0, 10);
 
+/** MongoDB rejects `insertMany([])` outright — `buildRampedLogs`'s per-day
+ * coin flip can legitimately come up empty over a short span (e.g. a
+ * 3-day-old habit at ~50% adherence has a real chance of zero logged days),
+ * which would otherwise crash the whole persona build. */
+async function insertManyIfAny(collection, docs) {
+  if (docs.length === 0) return;
+  await collection.insertMany(docs);
+}
+
 /**
  * Enacted logs for [intentionId] over the [fromDaysAgo]..[toDaysAgo] window
  * (inclusive, fromDaysAgo further in the past than toDaysAgo), with the
@@ -422,8 +431,8 @@ async function buildSteadyStory(ctx) {
   });
   habitA.reachedAutomaticityAt = daysAgo(8);
   const habitAId = (await intentions.insertOne(habitA)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitAId, userId, 41, 8, 0.35, 0.92));
-  await srhi.insertMany(buildSrhiHistory(habitAId, userId, 5, 39, 2.5, 6.0));
+  await insertManyIfAny(logs, buildRampedLogs(habitAId, userId, 41, 8, 0.35, 0.92));
+  await insertManyIfAny(srhi, buildSrhiHistory(habitAId, userId, 5, 39, 2.5, 6.0));
   const graduation = await runGraduationFlow({
     db,
     intentionId: habitAId,
@@ -446,8 +455,8 @@ async function buildSteadyStory(ctx) {
     createdAt: daysAgo(28),
   });
   const habitBId = (await intentions.insertOne(habitB)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitBId, userId, 27, 0, 0.3, 0.75));
-  await srhi.insertMany(buildSrhiHistory(habitBId, userId, 4, 21, 2.8, 4.8));
+  await insertManyIfAny(logs, buildRampedLogs(habitBId, userId, 27, 0, 0.3, 0.75));
+  await insertManyIfAny(srhi, buildSrhiHistory(habitBId, userId, 4, 21, 2.8, 4.8));
   lines.push(`Habit B "${habitB.behaviorLabel}" — added 4 weeks ago, steadily improving, still active`);
 
   const habitC = newIntentionBase({
@@ -459,8 +468,8 @@ async function buildSteadyStory(ctx) {
     createdAt: daysAgo(14),
   });
   const habitCId = (await intentions.insertOne(habitC)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitCId, userId, 13, 0, 0.35, 0.65));
-  await srhi.insertMany(buildSrhiHistory(habitCId, userId, 2, 7, 3.0, 4.2));
+  await insertManyIfAny(logs, buildRampedLogs(habitCId, userId, 13, 0, 0.35, 0.65));
+  await insertManyIfAny(srhi, buildSrhiHistory(habitCId, userId, 2, 7, 3.0, 4.2));
   lines.push(`Habit C "${habitC.behaviorLabel}" — added 2 weeks ago, still finding its rhythm`);
 
   const habitD = newIntentionBase({
@@ -474,7 +483,7 @@ async function buildSteadyStory(ctx) {
   habitD.stackedOn = habitCId;
   habitD.creationMode = 'stacked';
   const habitDId = (await intentions.insertOne(habitD)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitDId, userId, 3, 0, 0.4, 0.7));
+  await insertManyIfAny(logs, buildRampedLogs(habitDId, userId, 3, 0, 0.4, 0.7));
   lines.push(`Habit D "${habitD.behaviorLabel}" — stacked onto habit C 4 days ago`);
 
   const habitE = newIntentionBase({
@@ -617,8 +626,8 @@ async function buildBeginnerStory(ctx) {
     createdAt: daysAgo(3),
   });
   const habitAId = (await intentions.insertOne(habitA)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitAId, userId, 2, 0, 0.4, 0.6));
-  await srhi.insertMany(buildSrhiHistory(habitAId, userId, 1, 1, 2.5, 2.5));
+  await insertManyIfAny(logs, buildRampedLogs(habitAId, userId, 2, 0, 0.4, 0.6));
+  await insertManyIfAny(srhi, buildSrhiHistory(habitAId, userId, 1, 1, 2.5, 2.5));
   lines.push(`Habit A "${habitA.behaviorLabel}" — started 3 days ago, still tentative`);
 
   const habitB = newIntentionBase({
@@ -654,8 +663,8 @@ async function buildStrugglerStory(ctx) {
     createdAt: daysAgo(35),
   });
   const habitAId = (await intentions.insertOne(habitA)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitAId, userId, 34, 0, 0.8, 0.25));
-  await srhi.insertMany(buildSrhiHistory(habitAId, userId, 5, 32, 5.5, 2.8));
+  await insertManyIfAny(logs, buildRampedLogs(habitAId, userId, 34, 0, 0.8, 0.25));
+  await insertManyIfAny(srhi, buildSrhiHistory(habitAId, userId, 5, 32, 5.5, 2.8));
   lines.push(`Habit A "${habitA.behaviorLabel}" — started strong 5 weeks ago, adherence declining`);
 
   const habitB = newIntentionBase({
@@ -667,8 +676,8 @@ async function buildStrugglerStory(ctx) {
     createdAt: daysAgo(21),
   });
   const habitBId = (await intentions.insertOne(habitB)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitBId, userId, 20, 0, 0.6, 0.3));
-  await srhi.insertMany(buildSrhiHistory(habitBId, userId, 3, 14, 4.0, 3.0));
+  await insertManyIfAny(logs, buildRampedLogs(habitBId, userId, 20, 0, 0.6, 0.3));
+  await insertManyIfAny(srhi, buildSrhiHistory(habitBId, userId, 3, 14, 4.0, 3.0));
   lines.push(`Habit B "${habitB.behaviorLabel}" — added 3 weeks ago, also slipping`);
 
   const habitC = newIntentionBase({
@@ -682,7 +691,7 @@ async function buildStrugglerStory(ctx) {
   const habitCId = (await intentions.insertOne(habitC)).insertedId;
   // Logged consistently for the first week, then nothing for the last
   // week — abandoned, not a gradual decline like A/B.
-  await logs.insertMany(buildRampedLogs(habitCId, userId, 13, 7, 0.75, 0.75));
+  await insertManyIfAny(logs, buildRampedLogs(habitCId, userId, 13, 7, 0.75, 0.75));
   lines.push(`Habit C "${habitC.behaviorLabel}" — logged for a week, then stopped entirely (abandoned)`);
 
   const donatedUuid = randomUUID();
@@ -720,8 +729,8 @@ async function buildPowerUserStory(ctx) {
   });
   habitH1.reachedAutomaticityAt = daysAgo(15);
   const habitH1Id = (await intentions.insertOne(habitH1)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitH1Id, userId, 69, 15, 0.5, 0.9));
-  await srhi.insertMany(buildSrhiHistory(habitH1Id, userId, 6, 67, 3.0, 6.5));
+  await insertManyIfAny(logs, buildRampedLogs(habitH1Id, userId, 69, 15, 0.5, 0.9));
+  await insertManyIfAny(srhi, buildSrhiHistory(habitH1Id, userId, 6, 67, 3.0, 6.5));
   const grad1 = await runGraduationFlow({
     db,
     intentionId: habitH1Id,
@@ -743,8 +752,8 @@ async function buildPowerUserStory(ctx) {
   });
   habitH2.reachedAutomaticityAt = daysAgo(10);
   const habitH2Id = (await intentions.insertOne(habitH2)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitH2Id, userId, 55, 10, 0.55, 0.88));
-  await srhi.insertMany(buildSrhiHistory(habitH2Id, userId, 5, 52, 3.2, 6.2));
+  await insertManyIfAny(logs, buildRampedLogs(habitH2Id, userId, 55, 10, 0.55, 0.88));
+  await insertManyIfAny(srhi, buildSrhiHistory(habitH2Id, userId, 5, 52, 3.2, 6.2));
   const grad2 = await runGraduationFlow({
     db,
     intentionId: habitH2Id,
@@ -765,8 +774,8 @@ async function buildPowerUserStory(ctx) {
     createdAt: daysAgo(42),
   });
   const habitH3Id = (await intentions.insertOne(habitH3)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitH3Id, userId, 41, 0, 0.5, 0.85));
-  await srhi.insertMany(buildSrhiHistory(habitH3Id, userId, 6, 35, 3.5, 5.8));
+  await insertManyIfAny(logs, buildRampedLogs(habitH3Id, userId, 41, 0, 0.5, 0.85));
+  await insertManyIfAny(srhi, buildSrhiHistory(habitH3Id, userId, 6, 35, 3.5, 5.8));
   lines.push(`Habit H3 "${habitH3.behaviorLabel}" — active, high adherence, not graduated yet`);
 
   const habitH4 = newIntentionBase({
@@ -780,7 +789,7 @@ async function buildPowerUserStory(ctx) {
   habitH4.stackedOn = habitH2Id;
   habitH4.creationMode = 'stacked';
   const habitH4Id = (await intentions.insertOne(habitH4)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitH4Id, userId, 27, 0, 0.5, 0.8));
+  await insertManyIfAny(logs, buildRampedLogs(habitH4Id, userId, 27, 0, 0.5, 0.8));
   lines.push(`Habit H4 "${habitH4.behaviorLabel}" — stacked onto H2, 4 weeks ago`);
 
   const habitH5 = newIntentionBase({
@@ -792,7 +801,7 @@ async function buildPowerUserStory(ctx) {
     createdAt: daysAgo(14),
   });
   const habitH5Id = (await intentions.insertOne(habitH5)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitH5Id, userId, 13, 0, 0.4, 0.7));
+  await insertManyIfAny(logs, buildRampedLogs(habitH5Id, userId, 13, 0, 0.4, 0.7));
   lines.push(`Habit H5 "${habitH5.behaviorLabel}" — added 2 weeks ago`);
 
   const habitH6 = newIntentionBase({
@@ -804,7 +813,7 @@ async function buildPowerUserStory(ctx) {
     createdAt: daysAgo(5),
   });
   const habitH6Id = (await intentions.insertOne(habitH6)).insertedId;
-  await logs.insertMany(buildRampedLogs(habitH6Id, userId, 4, 0, 0.5, 0.75));
+  await insertManyIfAny(logs, buildRampedLogs(habitH6Id, userId, 4, 0, 0.5, 0.75));
   lines.push(`Habit H6 "${habitH6.behaviorLabel}" — newest habit, added 5 days ago`);
 
   // Donate all six, and mirror the H2/H4 stack in the community graph too.
@@ -908,11 +917,11 @@ async function buildReturningStory(ctx) {
   const habitAId = (await intentions.insertOne(habitA)).insertedId;
   // Strong start (weeks 1-3), then a 3-week silent gap (no logs generated at
   // all for days 34-14), then resuming at a more tentative pace.
-  await logs.insertMany(buildRampedLogs(habitAId, userId, 55, 35, 0.5, 0.85));
-  await logs.insertMany(buildRampedLogs(habitAId, userId, 13, 0, 0.3, 0.6));
-  await srhi.insertMany(buildSrhiHistory(habitAId, userId, 3, 53, 3.5, 5.5));
+  await insertManyIfAny(logs, buildRampedLogs(habitAId, userId, 55, 35, 0.5, 0.85));
+  await insertManyIfAny(logs, buildRampedLogs(habitAId, userId, 13, 0, 0.3, 0.6));
+  await insertManyIfAny(srhi, buildSrhiHistory(habitAId, userId, 3, 53, 3.5, 5.5));
   // One more check-in after resuming, showing the dip from starting over.
-  await srhi.insertMany(buildSrhiHistory(habitAId, userId, 1, 10, 3.0, 3.0, 4));
+  await insertManyIfAny(srhi, buildSrhiHistory(habitAId, userId, 1, 10, 3.0, 3.0, 4));
   lines.push(
     `Habit A "${habitA.behaviorLabel}" — strong for 3 weeks, 3 weeks of total silence, now rebuilding`
   );
