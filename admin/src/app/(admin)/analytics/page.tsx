@@ -29,6 +29,17 @@ const GROUP_COLORS = ["#45B700", "#E679AB", "#3B82F6", "#F59E0B", "#8B5CF6", "#E
 const NEO4J_BROWSER_URL = process.env.NEXT_PUBLIC_NEO4J_BROWSER_URL ?? "http://localhost:7474";
 const MONGO_EXPRESS_URL = process.env.NEXT_PUBLIC_MONGO_EXPRESS_URL ?? "http://localhost:8081";
 
+// Minimum horizontal space per data point on timeline charts (line charts
+// keyed by date/week). Below this, tick labels start to overlap — instead of
+// squeezing every point into the card's width, the chart is given a pixel
+// width to match its data and scrolls inside `.chartWrap` (overflow-x: auto).
+const CHART_PX_PER_POINT = 46;
+const CHART_MIN_WIDTH = 320;
+
+function timelineWidth(pointCount: number) {
+  return Math.max(CHART_MIN_WIDTH, pointCount * CHART_PX_PER_POINT);
+}
+
 /** The DB queries behind each analytics metric, for transparency/debugging. */
 function metricQueries(
   studyId: string,
@@ -1029,41 +1040,43 @@ function AnalyticsView() {
                 <div className={styles.emptyState}>{t("charts.srhiTrajectory.empty")}</div>
               ) : (
                 <div className={styles.chartWrap}>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart data={srhiData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="week" tick={{ fontSize: 12 }} />
-                      <YAxis
-                        domain={[1, 7]}
-                        ticks={[1, 2, 3, 4, 5, 6, 7]}
-                        tick={{ fontSize: 11 }}
-                        width={24}
-                      />
-                      <Tooltip content={<RcTooltip />} />
-                      <ReferenceLine
-                        y={4}
-                        stroke="#94a3b8"
-                        strokeDasharray="4 2"
-                        label={{
-                          value: t("charts.srhiTrajectory.habitThreshold"),
-                          fontSize: 10,
-                          fill: "#94a3b8",
-                        }}
-                      />
-                      {srhiGroups.map((g, i) => (
-                        <Line
-                          key={g}
-                          type="monotone"
-                          dataKey={g}
-                          stroke={GROUP_COLORS[i % GROUP_COLORS.length]}
-                          strokeWidth={2.5}
-                          dot={{ r: 4, strokeWidth: 2, fill: "#fff" }}
-                          activeDot={{ r: 6 }}
-                          connectNulls
+                  <div style={{ minWidth: timelineWidth(srhiData.length) }}>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart data={srhiData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+                        <YAxis
+                          domain={[1, 7]}
+                          ticks={[1, 2, 3, 4, 5, 6, 7]}
+                          tick={{ fontSize: 11 }}
+                          width={28}
                         />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
+                        <Tooltip content={<RcTooltip />} />
+                        <ReferenceLine
+                          y={4}
+                          stroke="#94a3b8"
+                          strokeDasharray="4 2"
+                          label={{
+                            value: t("charts.srhiTrajectory.habitThreshold"),
+                            fontSize: 10,
+                            fill: "#94a3b8",
+                          }}
+                        />
+                        {srhiGroups.map((g, i) => (
+                          <Line
+                            key={g}
+                            type="monotone"
+                            dataKey={g}
+                            stroke={GROUP_COLORS[i % GROUP_COLORS.length]}
+                            strokeWidth={2.5}
+                            dot={{ r: 4, strokeWidth: 2, fill: "#fff" }}
+                            activeDot={{ r: 6 }}
+                            connectNulls
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                   <div className={styles.legend}>
                     {srhiGroups.map((g, i) => (
                       <span key={g} className={styles.legendItem}>
@@ -1087,29 +1100,31 @@ function AnalyticsView() {
                 <div className={styles.emptyState}>{t("charts.cumulativeDropout.empty")}</div>
               ) : (
                 <div className={styles.chartWrap}>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart
-                      data={dropoutData}
-                      margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
-                      <Tooltip content={<RcTooltip />} />
-                      {dropoutGroups.map((g, i) => (
-                        <Line
-                          key={g}
-                          type="stepAfter"
-                          dataKey={g}
-                          stroke={GROUP_COLORS[i % GROUP_COLORS.length]}
-                          strokeWidth={2.5}
-                          strokeDasharray="6 3"
-                          dot={{ r: 4, strokeWidth: 2, fill: "#fff" }}
-                          connectNulls
-                        />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <div style={{ minWidth: timelineWidth(dropoutData.length) }}>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart
+                        data={dropoutData}
+                        margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={32} />
+                        <Tooltip content={<RcTooltip />} />
+                        {dropoutGroups.map((g, i) => (
+                          <Line
+                            key={g}
+                            type="stepAfter"
+                            dataKey={g}
+                            stroke={GROUP_COLORS[i % GROUP_COLORS.length]}
+                            strokeWidth={2.5}
+                            strokeDasharray="6 3"
+                            dot={{ r: 4, strokeWidth: 2, fill: "#fff" }}
+                            connectNulls
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                   <div className={styles.legend}>
                     {dropoutGroups.map((g, i) => (
                       <span key={g} className={styles.legendItem}>
@@ -1201,36 +1216,45 @@ function AnalyticsView() {
                 <div className={styles.emptyState}>{t("charts.enrollmentOverTime.empty")}</div>
               ) : (
                 <div className={styles.chartWrap}>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart
-                      data={enrollmentView === "percent" ? enrollmentDataPercent : enrollmentData}
-                      margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                      <YAxis
-                        allowDecimals={false}
-                        tick={{ fontSize: 11 }}
-                        width={28}
-                        domain={enrollmentView === "percent" ? [0, 100] : undefined}
-                        tickFormatter={
-                          enrollmentView === "percent" ? (v) => `${v}%` : undefined
-                        }
-                      />
-                      <Tooltip content={<RcTooltip />} />
-                      {enrollmentGroups.map((g, i) => (
-                        <Line
-                          key={g}
-                          type="stepAfter"
-                          dataKey={g}
-                          stroke={GROUP_COLORS[i % GROUP_COLORS.length]}
-                          strokeWidth={2.5}
-                          dot={{ r: 3, strokeWidth: 2, fill: "#fff" }}
-                          connectNulls
+                  <div
+                    style={{
+                      minWidth: timelineWidth(
+                        (enrollmentView === "percent" ? enrollmentDataPercent : enrollmentData)
+                          .length
+                      ),
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart
+                        data={enrollmentView === "percent" ? enrollmentDataPercent : enrollmentData}
+                        margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                        <YAxis
+                          allowDecimals={false}
+                          tick={{ fontSize: 11 }}
+                          width={enrollmentView === "percent" ? 40 : 32}
+                          domain={enrollmentView === "percent" ? [0, 100] : undefined}
+                          tickFormatter={
+                            enrollmentView === "percent" ? (v) => `${v}%` : undefined
+                          }
                         />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
+                        <Tooltip content={<RcTooltip />} />
+                        {enrollmentGroups.map((g, i) => (
+                          <Line
+                            key={g}
+                            type="stepAfter"
+                            dataKey={g}
+                            stroke={GROUP_COLORS[i % GROUP_COLORS.length]}
+                            strokeWidth={2.5}
+                            dot={{ r: 3, strokeWidth: 2, fill: "#fff" }}
+                            connectNulls
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                   <div className={styles.legend}>
                     {enrollmentGroups.map((g, i) => (
                       <span key={g} className={styles.legendItem}>
@@ -1266,32 +1290,41 @@ function AnalyticsView() {
                 <div className={styles.emptyState}>{t("charts.dailyActive.empty")}</div>
               ) : (
                 <div className={styles.chartWrap}>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <LineChart
-                      data={dailyActiveView === "percent" ? dailyActiveDataPercent : dailyActiveData}
-                      margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={16} />
-                      <YAxis
-                        allowDecimals={false}
-                        tick={{ fontSize: 11 }}
-                        width={28}
-                        domain={dailyActiveView === "percent" ? [0, 100] : undefined}
-                        tickFormatter={
-                          dailyActiveView === "percent" ? (v) => `${v}%` : undefined
-                        }
-                      />
-                      <Tooltip content={<RcTooltip />} />
-                      <Line
-                        type="monotone"
-                        dataKey="Active"
-                        stroke={GROUP_COLORS[2]}
-                        strokeWidth={2.5}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <div
+                    style={{
+                      minWidth: timelineWidth(
+                        (dailyActiveView === "percent" ? dailyActiveDataPercent : dailyActiveData)
+                          .length
+                      ),
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart
+                        data={dailyActiveView === "percent" ? dailyActiveDataPercent : dailyActiveData}
+                        margin={{ top: 8, right: 16, left: 0, bottom: 4 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={16} />
+                        <YAxis
+                          allowDecimals={false}
+                          tick={{ fontSize: 11 }}
+                          width={dailyActiveView === "percent" ? 40 : 32}
+                          domain={dailyActiveView === "percent" ? [0, 100] : undefined}
+                          tickFormatter={
+                            dailyActiveView === "percent" ? (v) => `${v}%` : undefined
+                          }
+                        />
+                        <Tooltip content={<RcTooltip />} />
+                        <Line
+                          type="monotone"
+                          dataKey="Active"
+                          stroke={GROUP_COLORS[2]}
+                          strokeWidth={2.5}
+                          dot={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               )}
             </div>
