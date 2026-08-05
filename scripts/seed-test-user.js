@@ -1116,7 +1116,14 @@ async function main() {
     console.log(`  ${r.persona.description}`);
     console.log(`  userId (sub): ${r.userId}`);
     console.log(`  username:     ${r.username}`);
+    // codeql[js/clear-text-logging]: intentional — this is a local-only QA
+    // seeding script (never run in CI, see Makefile's seed-user target) and
+    // the whole point of the run is to hand the developer freshly generated,
+    // disposable test-persona credentials to log in with. There is no real
+    // user secret here to protect.
     console.log(`  password:     ${r.password}`);
+    // codeql[js/clear-text-logging]: same as above — a freshly generated
+    // disposable test-persona recovery phrase, not a real user's.
     console.log(`  recovery phrase: ${r.phrase}`);
     for (const line of r.summaryLines) console.log(`  - ${line}`);
   }
